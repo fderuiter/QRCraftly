@@ -155,7 +155,7 @@ export default function QRTool({ initialConfig }: { initialConfig?: Partial<QRCo
   };
 
   return (
-    <div className={`${isDarkMode ? 'dark' : ''} h-full`}>
+    <div className={`${isDarkMode ? 'dark' : ''} h-full w-full`}>
       <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col md:flex-row transition-colors duration-300">
         {/* Sidebar Controls */}
         <div className="w-full md:w-[480px] bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 h-auto md:h-screen overflow-y-auto flex flex-col shadow-xl z-10 transition-colors duration-300">
