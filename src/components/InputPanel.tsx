@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { QRConfig, QRType, WifiData, EmailData, VCardData, PhoneData, SmsData } from '../types';
-import { Wifi, Link, Type, Mail, UserSquare2, Phone, MessageSquare } from 'lucide-react';
+import { QRConfig, QRType, WifiData, EmailData, VCardData, PhoneData, SmsData, PaymentData } from '../types';
+import { Wifi, Link, Type, Mail, UserSquare2, Phone, MessageSquare, CreditCard } from 'lucide-react';
 
 /**
  * Props for the InputPanel component.
@@ -30,6 +30,9 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
   });
   const [phoneData, setPhoneData] = useState<PhoneData>({ number: '' });
   const [smsData, setSmsData] = useState<SmsData>({ number: '', message: '' });
+  const [paymentData, setPaymentData] = useState<PaymentData>({
+    network: 'bitcoin', address: '', amount: '', label: ''
+  });
 
   // Update handlers
 
@@ -108,6 +111,46 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
       onChange({ value: `smsto:${newData.number}:${newData.message}` });
   };
 
+  /**
+   * Updates Payment data and formats the crypto URI string.
+   * @param updates - Partial Payment data updates.
+   */
+  const handlePaymentChange = (updates: Partial<PaymentData>) => {
+    const newData = { ...paymentData, ...updates };
+    setPaymentData(newData);
+    let paymentString = '';
+
+    // Construct URI based on network
+    // Most follow scheme:address?amount=X&label=Y&message=Z
+    // We will support a generic builder
+    if (newData.network === 'custom') {
+         paymentString = newData.address;
+    } else {
+        paymentString = `${newData.network}:${newData.address}`;
+        const params: string[] = [];
+
+        if (newData.amount) {
+            // Ethereum uses 'value', others often 'amount'
+            // But strict BIP-21 is amount.
+            // For simplicity/compatibility we stick to 'amount' unless known otherwise or user can just edit string?
+            // Actually, let's just use 'amount' as it's the most common URI standard parameter.
+            // Ethereum standard is messy, but wallets often parse amount.
+            // However, to be safe, we will just use standard BIP-21 style params for now.
+            params.push(`amount=${newData.amount}`);
+        }
+
+        if (newData.label) {
+            params.push(`label=${encodeURIComponent(newData.label)}`);
+        }
+
+        if (params.length > 0) {
+            paymentString += `?${params.join('&')}`;
+        }
+    }
+
+    onChange({ value: paymentString });
+  };
+
   const inputClasses = "w-full px-4 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-4 focus:ring-teal-100 dark:focus:ring-teal-900/30 focus:border-teal-500 outline-none transition-all text-slate-700 dark:text-slate-100 placeholder-slate-400 font-mono text-sm";
   const textAreaClasses = "w-full px-4 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-4 focus:ring-teal-100 dark:focus:ring-teal-900/30 focus:border-teal-500 outline-none transition-all text-slate-700 dark:text-slate-100 placeholder-slate-400 font-sans text-sm";
   const selectClasses = "w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-sm focus:ring-4 focus:ring-teal-100 dark:focus:ring-teal-900/30 focus:border-teal-500 outline-none text-slate-700 dark:text-slate-100 font-mono";
@@ -124,6 +167,7 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
           { type: QRType.EMAIL, icon: Mail, label: 'Email' },
           { type: QRType.PHONE, icon: Phone, label: 'Phone' },
           { type: QRType.SMS, icon: MessageSquare, label: 'SMS' },
+          { type: QRType.PAYMENT, icon: CreditCard, label: 'Payment' },
         ].map((item) => (
           <button
             key={item.type}
@@ -272,6 +316,68 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
                         className={textAreaClasses}
                     />
                 </div>
+            </div>
+        )}
+
+        {config.type === QRType.PAYMENT && (
+            <div className="space-y-3">
+                <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Crypto Payment</h3>
+
+                <div>
+                    <label htmlFor="payment-network" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Currency / Network</label>
+                    <select
+                      id="payment-network"
+                      value={paymentData.network}
+                      onChange={(e) => handlePaymentChange({ network: e.target.value })}
+                      className={selectClasses}
+                    >
+                      <option value="bitcoin">Bitcoin (BTC)</option>
+                      <option value="ethereum">Ethereum (ETH)</option>
+                      <option value="solana">Solana (SOL)</option>
+                      <option value="litecoin">Litecoin (LTC)</option>
+                      <option value="custom">Custom / Raw Address</option>
+                    </select>
+                </div>
+
+                <div>
+                     <label htmlFor="payment-address" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Receiver Address</label>
+                     <input
+                        id="payment-address"
+                        type="text"
+                        placeholder="Wallet Address"
+                        value={paymentData.address}
+                        onChange={(e) => handlePaymentChange({ address: e.target.value })}
+                        className={inputClasses}
+                     />
+                </div>
+
+                {paymentData.network !== 'custom' && (
+                <>
+                    <div>
+                        <label htmlFor="payment-amount" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Amount (Optional)</label>
+                        <input
+                            id="payment-amount"
+                            type="number"
+                            step="any"
+                            placeholder="0.00"
+                            value={paymentData.amount}
+                            onChange={(e) => handlePaymentChange({ amount: e.target.value })}
+                            className={inputClasses}
+                        />
+                    </div>
+                    <div>
+                        <label htmlFor="payment-label" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Label / Note (Optional)</label>
+                        <input
+                            id="payment-label"
+                            type="text"
+                            placeholder="e.g. Donation"
+                            value={paymentData.label}
+                            onChange={(e) => handlePaymentChange({ label: e.target.value })}
+                            className={inputClasses}
+                        />
+                    </div>
+                </>
+                )}
             </div>
         )}
 
