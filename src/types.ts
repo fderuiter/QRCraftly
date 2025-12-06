@@ -8,6 +8,8 @@ export enum QRStyle {
   ROUNDED = 'rounded',
   DIAMOND = 'diamond',
   CROSS = 'cross',
+  STAR = 'star',
+  HEART = 'heart',
 }
 
 /**
