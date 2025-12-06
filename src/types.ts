@@ -23,6 +23,7 @@ export enum QRType {
   VCARD = 'VCARD',
   PHONE = 'PHONE',
   SMS = 'SMS',
+  PAYMENT = 'PAYMENT',
 }
 
 /**
@@ -129,4 +130,18 @@ export interface SmsData {
   number: string;
   /** The text message body. */
   message: string;
+}
+
+/**
+ * Data structure for Payment information (Crypto).
+ */
+export interface PaymentData {
+  /** The cryptocurrency network (e.g. bitcoin, ethereum). */
+  network: string;
+  /** The wallet address. */
+  address: string;
+  /** The amount to request (optional). */
+  amount: string;
+  /** Label or message for the transaction (optional). */
+  label: string;
 }

@@ -199,4 +199,35 @@ describe('InputPanel Component', () => {
 
       expect(mockOnChange).toHaveBeenLastCalledWith({ value: expectedVCard });
   });
+
+  it('formats Payment (Crypto) correctly', () => {
+    renderPanel({ type: QRType.PAYMENT });
+
+    const addressInput = screen.getByLabelText('Receiver Address');
+    fireEvent.change(addressInput, { target: { value: '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa' } });
+
+    // Default is Bitcoin
+    expect(mockOnChange).toHaveBeenLastCalledWith({ value: 'bitcoin:1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa' });
+
+    // Add amount
+    const amountInput = screen.getByLabelText('Amount (Optional)');
+    fireEvent.change(amountInput, { target: { value: '0.005' } });
+    expect(mockOnChange).toHaveBeenLastCalledWith({ value: 'bitcoin:1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa?amount=0.005' });
+
+    // Add label
+    const labelInput = screen.getByLabelText('Label / Note (Optional)');
+    fireEvent.change(labelInput, { target: { value: 'Donation for Coffee' } });
+    expect(mockOnChange).toHaveBeenLastCalledWith({ value: 'bitcoin:1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa?amount=0.005&label=Donation%20for%20Coffee' });
+
+    // Change Network to Ethereum
+    const networkSelect = screen.getByLabelText('Currency / Network');
+    fireEvent.change(networkSelect, { target: { value: 'ethereum' } });
+    // State persists, so params are re-applied to new network scheme
+    expect(mockOnChange).toHaveBeenLastCalledWith({ value: 'ethereum:1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa?amount=0.005&label=Donation%20for%20Coffee' });
+
+    // Change to Custom
+    fireEvent.change(networkSelect, { target: { value: 'custom' } });
+    // Should output raw address/string
+    expect(mockOnChange).toHaveBeenLastCalledWith({ value: '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa' });
+  });
 });
