@@ -1,10 +1,19 @@
 
 import React from 'react';
-import { Github, Shield, Database, Code } from 'lucide-react';
+import { Github, Shield, Database, Code, ArrowLeft } from 'lucide-react';
 
 export default function Page() {
   return (
     <div className="max-w-4xl mx-auto px-4 py-12">
+      <div className="mb-8">
+        <a
+          href="/"
+          className="inline-flex items-center gap-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+        >
+          <ArrowLeft className="w-5 h-5" />
+          Back to Home
+        </a>
+      </div>
       <div className="text-center mb-16">
         <h1 className="text-4xl font-bold text-slate-900 dark:text-white mb-4">
           About QRCraftly
