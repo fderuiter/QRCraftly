@@ -47,4 +47,7 @@ export const PRESET_COLORS = [
   { bg: '#fff1f2', fg: '#9f1239', eye: '#881337', label: 'Rose' },
   { bg: '#faf5ff', fg: '#6b21a8', eye: '#581c87', label: 'Purple' },
   { bg: '#27272a', fg: '#e4e4e7', eye: '#facc15', label: 'Cyber' },
+  { bg: '#0c2340', fg: '#ffffff', eye: '#78be20', label: 'Timberwolves' },
+  { bg: '#ffffff', fg: '#154734', eye: '#a6192e', label: 'Wild' },
+  { bg: '#4f2683', fg: '#ffffff', eye: '#ffc62f', label: 'Vikings' },
 ];
