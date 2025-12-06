@@ -275,7 +275,8 @@ const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) =
     <div className={className} style={{ aspectRatio: '1/1' }}>
       <canvas
         ref={canvasRef}
-        className="w-full h-full"
+        className="w-full h-auto block"
+        style={{ aspectRatio: '1/1' }}
         role="img"
         aria-label={ariaLabel}
       />
