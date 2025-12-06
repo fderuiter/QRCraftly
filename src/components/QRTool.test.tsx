@@ -48,14 +48,31 @@ describe('QRTool Component', () => {
     expect(screen.getByText('Design beautiful QR codes in seconds.')).toBeInTheDocument();
   });
 
+  it('applies initial config if provided', () => {
+      const initialConfig = { value: 'https://initial-test.com' };
+      render(<QRTool initialConfig={initialConfig} />);
+      // We check if the input panel reflects this value.
+      // Since InputPanel is not mocked here (we want to test integration), we check the input value.
+      const urlInput = screen.getByDisplayValue('https://initial-test.com');
+      expect(urlInput).toBeInTheDocument();
+  });
+
   it('toggles dark mode', () => {
-    render(<QRTool />);
+    // We can also check the class on the container
+    const { container } = render(<QRTool />);
+
+    // Initially light mode (no 'dark' class on top div)
+    // The top div is the first child of the container
+    const appDiv = container.firstChild as HTMLElement;
+    expect(appDiv).not.toHaveClass('dark');
+
     const toggleButtons = screen.getAllByTitle('Switch to Dark Mode');
     expect(toggleButtons[0]).toBeInTheDocument();
 
     fireEvent.click(toggleButtons[0]);
 
     expect(screen.getByTitle('Switch to Light Mode')).toBeInTheDocument();
+    expect(appDiv).toHaveClass('dark');
   });
 
   it('renders InputPanel and StyleControls', () => {
@@ -146,6 +163,34 @@ describe('QRTool Component', () => {
         expect(showSaveFilePicker).toHaveBeenCalled();
         expect(mockHandle.createWritable).toHaveBeenCalled();
     });
+  });
+
+  it('handles AbortError in handleSaveAs gracefully', async () => {
+      // Simulate user cancelling the picker
+      const showSaveFilePicker = vi.fn().mockRejectedValue({ name: 'AbortError' });
+
+      Object.defineProperty(global, 'showSaveFilePicker', {
+          value: showSaveFilePicker,
+          writable: true,
+          configurable: true
+      });
+
+      // Spy on downloadToDevice (by spying on anchor click)
+      const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click');
+
+      render(<QRTool />);
+      const downloadBtns = screen.getAllByText('Download');
+      fireEvent.click(downloadBtns[0]);
+
+      const pngOption = screen.getByText('PNG (High Quality)');
+      fireEvent.click(pngOption);
+
+      await waitFor(() => {
+          expect(showSaveFilePicker).toHaveBeenCalled();
+      });
+
+      // Should NOT fall back to downloadToDevice for AbortError
+      expect(clickSpy).not.toHaveBeenCalled();
   });
 
   it('falls back to download if File System Access API fails/missing', async () => {

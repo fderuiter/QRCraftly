@@ -311,6 +311,46 @@ describe('QRCanvas Component', () => {
       expect(mockContext.arc).not.toHaveBeenCalled();
   });
 
+  it('handles logo loading error', async () => {
+      const config = { ...DEFAULT_CONFIG, logoUrl: 'https://example.com/bad-logo.png' };
+      render(<QRCanvas config={config} />);
+
+      await waitFor(() => {
+          expect(createdImages.length).toBeGreaterThan(0);
+      });
+      const img = createdImages[0];
+
+      // Simulate error
+      if (img.onerror) {
+          img.onerror();
+      }
+
+      // Should still finish rendering but without logo
+      await waitFor(() => {
+          // drawImage should NOT be called for the logo
+          expect(mockContext.drawImage).not.toHaveBeenCalled();
+          // But modules should still be drawn (fillRect/rect from earlier)
+          expect(mockContext.fill).toHaveBeenCalled();
+      });
+  });
+
+  it('handles QR generation failure', async () => {
+      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      // Make QRCode.create throw
+      (QRCode.default.create as unknown as Mock).mockImplementationOnce(() => {
+          throw new Error('Generation failed');
+      });
+
+      render(<QRCanvas config={DEFAULT_CONFIG} />);
+
+      await waitFor(() => {
+          expect(consoleSpy).toHaveBeenCalledWith("QR generation failed:", expect.any(Error));
+      });
+
+      consoleSpy.mockRestore();
+  });
+
   it('does not render if value is empty', async () => {
     const config = { ...DEFAULT_CONFIG, value: '' };
     render(<QRCanvas config={config} />);
