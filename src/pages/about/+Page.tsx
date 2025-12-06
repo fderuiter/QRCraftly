@@ -2,6 +2,15 @@
 import React from 'react';
 import { Github, Shield, Database, Code, ArrowLeft } from 'lucide-react';
 
+/**
+ * About Page Component
+ *
+ * Displays information about the QRCraftly project, including its core values
+ * (Privacy, No Database, Open Source) and licensing information.
+ * Includes a link to the GitHub repository.
+ *
+ * @returns {JSX.Element} The About page layout.
+ */
 export default function Page() {
   return (
     <div className="max-w-4xl mx-auto px-4 py-12">

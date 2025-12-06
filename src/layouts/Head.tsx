@@ -1,6 +1,14 @@
 import React from 'react';
 import logoUrl from '@/assets/logo.svg'; // Example if we had one
 
+/**
+ * HeadDefault Component
+ *
+ * Renders the default `<head>` meta tags and link elements for the application.
+ * This includes viewport settings, description, favicon, and font preconnections.
+ *
+ * @returns {JSX.Element} The fragment containing meta and link tags.
+ */
 export default function HeadDefault() {
   return (
     <>

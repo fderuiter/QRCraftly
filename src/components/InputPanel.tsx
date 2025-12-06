@@ -16,6 +16,11 @@ interface InputPanelProps {
  * A component that provides input fields for different QR code types.
  * Allows users to enter data for URL, Text, WiFi, Email, vCard, Phone, and SMS.
  * It updates the main configuration with the formatted string for the QR code.
+ *
+ * @param props - The component props.
+ * @param props.config - The current QR code configuration state.
+ * @param props.onChange - Callback function to update the configuration.
+ * @returns The InputPanel component.
  */
 const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
   const [wifiData, setWifiData] = useState<WifiData>({ ssid: '', password: '', encryption: 'WPA', hidden: false, eapIdentity: '' });

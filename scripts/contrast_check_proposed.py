@@ -1,15 +1,49 @@
 import math
 
+"""
+Script to check WCAG contrast ratios for proposed UI color changes.
+"""
+
 def hex_to_rgb(hex_color):
+    """
+    Converts a hex color string to an RGB tuple.
+
+    Args:
+        hex_color (str): The hex color string (e.g., '#ffffff' or 'ffffff').
+
+    Returns:
+        tuple: A tuple of (r, g, b) integers.
+    """
     hex_color = hex_color.lstrip('#')
     return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
 
 def luminance(rgb):
+    """
+    Calculates the relative luminance of an RGB color.
+
+    Formula from WCAG 2.0.
+
+    Args:
+        rgb (tuple): A tuple of (r, g, b) values, where each is 0-255.
+
+    Returns:
+        float: The relative luminance value (0 to 1).
+    """
     a = [x / 255.0 for x in rgb]
     a = [((x + 0.055) / 1.055) ** 2.4 if x > 0.03928 else x / 12.92 for x in a]
     return 0.2126 * a[0] + 0.7152 * a[1] + 0.0722 * a[2]
 
 def contrast_ratio(rgb1, rgb2):
+    """
+    Calculates the contrast ratio between two RGB colors.
+
+    Args:
+        rgb1 (tuple): The first RGB color tuple.
+        rgb2 (tuple): The second RGB color tuple.
+
+    Returns:
+        float: The contrast ratio (1 to 21).
+    """
     lum1 = luminance(rgb1)
     lum2 = luminance(rgb2)
     brightest = max(lum1, lum2)
@@ -17,6 +51,17 @@ def contrast_ratio(rgb1, rgb2):
     return (brightest + 0.05) / (darkest + 0.05)
 
 def blend_color(fg_rgb, bg_rgb, alpha):
+    """
+    Blends a foreground color onto a background color with a given alpha.
+
+    Args:
+        fg_rgb (tuple): The foreground RGB tuple.
+        bg_rgb (tuple): The background RGB tuple.
+        alpha (float): The alpha opacity of the foreground (0 to 1).
+
+    Returns:
+        tuple: The blended RGB color tuple.
+    """
     return tuple(int(fg * alpha + bg * (1 - alpha)) for fg, bg in zip(fg_rgb, bg_rgb))
 
 # Tailwind Colors (Slate, Teal, Rose, Indigo)
