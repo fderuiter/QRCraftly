@@ -222,8 +222,9 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
         {config.type === QRType.EMAIL && (
             <div className="space-y-3">
                 <div>
-                    <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Email Address</label>
+                    <label htmlFor="email-address" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Email Address</label>
                     <input
+                        id="email-address"
                         type="email"
                         value={emailData.email}
                         onChange={(e) => handleEmailChange({ email: e.target.value })}
@@ -231,8 +232,9 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
                     />
                 </div>
                 <div>
-                    <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Subject</label>
+                    <label htmlFor="email-subject" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Subject</label>
                     <input
+                        id="email-subject"
                         type="text"
                         value={emailData.subject}
                         onChange={(e) => handleEmailChange({ subject: e.target.value })}
@@ -240,8 +242,9 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
                     />
                 </div>
                 <div>
-                    <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Body</label>
+                    <label htmlFor="email-body" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Body</label>
                     <textarea
+                        id="email-body"
                         rows={3}
                         value={emailData.body}
                         onChange={(e) => handleEmailChange({ body: e.target.value })}
@@ -256,48 +259,48 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
                  <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Contact Details (vCard)</h3>
                  <div className="grid grid-cols-2 gap-3">
                      <div>
-                        <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">First Name</label>
-                        <input type="text" value={vCardData.firstName} onChange={(e) => handleVCardChange({ firstName: e.target.value })} className={inputClasses} />
+                        <label htmlFor="vcard-firstname" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">First Name</label>
+                        <input id="vcard-firstname" type="text" value={vCardData.firstName} onChange={(e) => handleVCardChange({ firstName: e.target.value })} className={inputClasses} />
                      </div>
                      <div>
-                        <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Last Name</label>
-                        <input type="text" value={vCardData.lastName} onChange={(e) => handleVCardChange({ lastName: e.target.value })} className={inputClasses} />
+                        <label htmlFor="vcard-lastname" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Last Name</label>
+                        <input id="vcard-lastname" type="text" value={vCardData.lastName} onChange={(e) => handleVCardChange({ lastName: e.target.value })} className={inputClasses} />
                      </div>
                  </div>
                  
                  <div className="grid grid-cols-2 gap-3">
                     <div>
-                        <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Mobile Phone</label>
-                        <input type="tel" value={vCardData.phone} onChange={(e) => handleVCardChange({ phone: e.target.value })} className={inputClasses} />
+                        <label htmlFor="vcard-phone" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Mobile Phone</label>
+                        <input id="vcard-phone" type="tel" value={vCardData.phone} onChange={(e) => handleVCardChange({ phone: e.target.value })} className={inputClasses} />
                     </div>
                     <div>
-                        <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Email</label>
-                        <input type="email" value={vCardData.email} onChange={(e) => handleVCardChange({ email: e.target.value })} className={inputClasses} />
+                        <label htmlFor="vcard-email" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Email</label>
+                        <input id="vcard-email" type="email" value={vCardData.email} onChange={(e) => handleVCardChange({ email: e.target.value })} className={inputClasses} />
                     </div>
                  </div>
 
                  <div>
-                    <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Company / Organization</label>
-                    <input type="text" value={vCardData.organization} onChange={(e) => handleVCardChange({ organization: e.target.value })} className={inputClasses} />
+                    <label htmlFor="vcard-org" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Company / Organization</label>
+                    <input id="vcard-org" type="text" value={vCardData.organization} onChange={(e) => handleVCardChange({ organization: e.target.value })} className={inputClasses} />
                  </div>
                  
                  <div>
-                    <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Job Title</label>
-                    <input type="text" value={vCardData.title} onChange={(e) => handleVCardChange({ title: e.target.value })} className={inputClasses} />
+                    <label htmlFor="vcard-title" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Job Title</label>
+                    <input id="vcard-title" type="text" value={vCardData.title} onChange={(e) => handleVCardChange({ title: e.target.value })} className={inputClasses} />
                  </div>
 
                  <div>
-                    <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Website</label>
-                    <input type="url" value={vCardData.website} onChange={(e) => handleVCardChange({ website: e.target.value })} className={inputClasses} />
+                    <label htmlFor="vcard-website" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Website</label>
+                    <input id="vcard-website" type="url" value={vCardData.website} onChange={(e) => handleVCardChange({ website: e.target.value })} className={inputClasses} />
                  </div>
 
                  <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
                     <label className="block text-xs font-bold text-slate-400 dark:text-slate-500 mb-2">Address</label>
                     <div className="space-y-3">
-                        <input type="text" placeholder="Street" value={vCardData.street} onChange={(e) => handleVCardChange({ street: e.target.value })} className={inputClasses} />
+                        <input aria-label="Street" type="text" placeholder="Street" value={vCardData.street} onChange={(e) => handleVCardChange({ street: e.target.value })} className={inputClasses} />
                         <div className="grid grid-cols-2 gap-3">
-                             <input type="text" placeholder="City" value={vCardData.city} onChange={(e) => handleVCardChange({ city: e.target.value })} className={inputClasses} />
-                             <input type="text" placeholder="Country" value={vCardData.country} onChange={(e) => handleVCardChange({ country: e.target.value })} className={inputClasses} />
+                             <input aria-label="City" type="text" placeholder="City" value={vCardData.city} onChange={(e) => handleVCardChange({ city: e.target.value })} className={inputClasses} />
+                             <input aria-label="Country" type="text" placeholder="Country" value={vCardData.country} onChange={(e) => handleVCardChange({ country: e.target.value })} className={inputClasses} />
                         </div>
                     </div>
                  </div>
@@ -306,8 +309,9 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
 
         {config.type === QRType.PHONE && (
             <div>
-                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Phone Number</label>
+                 <label htmlFor="phone-number" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Phone Number</label>
                  <input
+                    id="phone-number"
                     type="tel"
                     placeholder="+1 555 000 0000"
                     value={phoneData.number}
@@ -320,8 +324,9 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
         {config.type === QRType.SMS && (
             <div className="space-y-3">
                 <div>
-                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Phone Number</label>
+                     <label htmlFor="sms-number" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Phone Number</label>
                      <input
+                        id="sms-number"
                         type="tel"
                         placeholder="+1 555 000 0000"
                         value={smsData.number}
@@ -330,8 +335,9 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
                      />
                 </div>
                 <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Pre-filled Message</label>
+                    <label htmlFor="sms-message" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Pre-filled Message</label>
                     <textarea
+                        id="sms-message"
                         rows={3}
                         value={smsData.message}
                         onChange={(e) => handleSmsChange({ message: e.target.value })}

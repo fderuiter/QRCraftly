@@ -3,7 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach, afterEach, Mock } from 'vitest';
 import QRCanvas from './QRCanvas';
 import { DEFAULT_CONFIG } from '../constants';
-import { QRStyle } from '../types';
+import { QRStyle, LogoPaddingStyle } from '../types';
 import * as QRCode from 'qrcode';
 
 // Mock qrcode module
@@ -39,6 +39,10 @@ describe('QRCanvas Component', () => {
       restore: vi.fn(),
       scale: vi.fn(),
       drawImage: vi.fn(),
+      moveTo: vi.fn(),
+      lineTo: vi.fn(),
+      closePath: vi.fn(),
+      bezierCurveTo: vi.fn(),
       canvas: { width: 0, height: 0 },
       fillStyle: '',
     };
@@ -166,6 +170,52 @@ describe('QRCanvas Component', () => {
      });
   });
 
+  it('draws cross for data modules when style is CROSS', async () => {
+      mockModules.get.mockImplementation((r: number, c: number) => {
+          if (r === 10 && c === 10) return true;
+          return false;
+      });
+
+      const config = { ...DEFAULT_CONFIG, style: QRStyle.CROSS };
+      render(<QRCanvas config={config} />);
+
+      await waitFor(() => {
+          // Cross draws two rects
+          expect(mockContext.rect).toHaveBeenCalled();
+      });
+  });
+
+  it('draws star for data modules when style is STAR', async () => {
+      mockModules.get.mockImplementation((r: number, c: number) => {
+          if (r === 10 && c === 10) return true;
+          return false;
+      });
+
+      const config = { ...DEFAULT_CONFIG, style: QRStyle.STAR };
+      render(<QRCanvas config={config} />);
+
+      await waitFor(() => {
+          // Star uses lineTo
+          expect(mockContext.lineTo).toHaveBeenCalled();
+          expect(mockContext.closePath).toHaveBeenCalled();
+      });
+  });
+
+  it('draws heart for data modules when style is HEART', async () => {
+      mockModules.get.mockImplementation((r: number, c: number) => {
+          if (r === 10 && c === 10) return true;
+          return false;
+      });
+
+      const config = { ...DEFAULT_CONFIG, style: QRStyle.HEART };
+      render(<QRCanvas config={config} />);
+
+      await waitFor(() => {
+          // Heart uses bezierCurveTo
+          expect(mockContext.bezierCurveTo).toHaveBeenCalled();
+      });
+  });
+
   it('handles logo rendering', async () => {
     const config = { ...DEFAULT_CONFIG, logoUrl: 'https://example.com/logo.png' };
     
@@ -179,7 +229,6 @@ describe('QRCanvas Component', () => {
     const img = createdImages[0];
     
     // Simulate load
-    // Need to wrap in act? component state doesn't change, just canvas context calls
     if (img.onload) {
         img.complete = true;
         img.onload();
@@ -188,6 +237,78 @@ describe('QRCanvas Component', () => {
     await waitFor(() => {
         expect(mockContext.drawImage).toHaveBeenCalled();
     });
+  });
+
+  it('renders logo with circle padding', async () => {
+      const config = {
+          ...DEFAULT_CONFIG,
+          logoUrl: 'https://example.com/logo.png',
+          logoPaddingStyle: 'circle' as LogoPaddingStyle
+      };
+
+      render(<QRCanvas config={config} />);
+
+      await waitFor(() => {
+          expect(createdImages.length).toBeGreaterThan(0);
+      });
+      const img = createdImages[0];
+      if (img.onload) { img.complete = true; img.onload(); }
+
+      await waitFor(() => {
+          // Should draw a circle background (arc)
+          expect(mockContext.arc).toHaveBeenCalled();
+          expect(mockContext.drawImage).toHaveBeenCalled();
+      });
+  });
+
+  it('renders logo with square padding', async () => {
+      const config = {
+          ...DEFAULT_CONFIG,
+          logoUrl: 'https://example.com/logo.png',
+          logoPaddingStyle: 'square' as LogoPaddingStyle
+      };
+
+      render(<QRCanvas config={config} />);
+
+      await waitFor(() => {
+          expect(createdImages.length).toBeGreaterThan(0);
+      });
+      const img = createdImages[0];
+      if (img.onload) { img.complete = true; img.onload(); }
+
+      await waitFor(() => {
+          // Should draw a rect background
+          expect(mockContext.fillRect).toHaveBeenCalled();
+          expect(mockContext.drawImage).toHaveBeenCalled();
+      });
+  });
+
+  it('does not draw logo background when padding style is none', async () => {
+      const config = {
+          ...DEFAULT_CONFIG,
+          logoUrl: 'https://example.com/logo.png',
+          logoPaddingStyle: 'none' as LogoPaddingStyle
+      };
+
+      render(<QRCanvas config={config} />);
+
+      await waitFor(() => {
+          expect(createdImages.length).toBeGreaterThan(0);
+      });
+      const img = createdImages[0];
+      if (img.onload) { img.complete = true; img.onload(); }
+
+      // Reset mock to check for subsequent calls
+      mockContext.fillRect.mockClear();
+      mockContext.arc.mockClear();
+
+      await waitFor(() => {
+          expect(mockContext.drawImage).toHaveBeenCalled();
+      });
+
+      // Should NOT draw background for logo
+      expect(mockContext.fillRect).not.toHaveBeenCalled();
+      expect(mockContext.arc).not.toHaveBeenCalled();
   });
 
   it('does not render if value is empty', async () => {
