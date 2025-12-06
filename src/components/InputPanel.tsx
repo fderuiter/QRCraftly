@@ -44,7 +44,8 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
     if (newData.encryption === 'WPA2-EAP') {
         wifiString = `WIFI:T:WPA2-EAP;S:${newData.ssid};I:${newData.eapIdentity};P:${newData.password};H:${newData.hidden};;`;
     } else {
-        wifiString = `WIFI:T:${newData.encryption};S:${newData.ssid};P:${newData.password};H:${newData.hidden};;`;
+        const password = newData.encryption === 'nopass' ? '' : newData.password;
+        wifiString = `WIFI:T:${newData.encryption};S:${newData.ssid};P:${password};H:${newData.hidden};;`;
     }
     onChange({ value: wifiString });
   };

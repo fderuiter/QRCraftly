@@ -98,6 +98,24 @@ describe('InputPanel Component', () => {
     expect(mockOnChange).toHaveBeenLastCalledWith({ value: expectedValue });
   });
 
+  it('clears password in WIFI string when encryption is changed to nopass after setting password', () => {
+    renderPanel({ type: QRType.WIFI });
+
+    // 1. Enter a password with WPA (default)
+    const passwordInput = screen.getByLabelText('Password');
+    fireEvent.change(passwordInput, { target: { value: 'secret123' } });
+
+    // 2. Change encryption to nopass
+    const encryptionSelect = screen.getByLabelText('Encryption');
+    fireEvent.change(encryptionSelect, { target: { value: 'nopass' } });
+
+    // 3. Verify the output string does NOT contain the password
+    const lastCall = mockOnChange.mock.calls[mockOnChange.mock.calls.length - 1][0];
+    expect(lastCall.value).not.toContain('P:secret123');
+    // It should have an empty password field
+    expect(lastCall.value).toContain('P:;');
+  });
+
   it('formats Email correctly', () => {
       renderPanel({ type: QRType.EMAIL });
 
