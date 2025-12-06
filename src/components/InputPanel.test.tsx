@@ -98,6 +98,33 @@ describe('InputPanel Component', () => {
     expect(mockOnChange).toHaveBeenLastCalledWith({ value: expectedValue });
   });
 
+  it('updates WiFi Hidden Network toggle', () => {
+      renderPanel({ type: QRType.WIFI });
+
+      const hiddenCheckbox = screen.getByLabelText('Hidden Network');
+
+      // Toggle ON
+      fireEvent.click(hiddenCheckbox);
+
+      // We expect the LAST call to have H:true
+      const lastCall = mockOnChange.mock.calls[mockOnChange.mock.calls.length - 1][0];
+      expect(lastCall.value).toContain('H:true');
+
+      // Toggle OFF
+      fireEvent.click(hiddenCheckbox);
+      const veryLastCall = mockOnChange.mock.calls[mockOnChange.mock.calls.length - 1][0];
+      expect(veryLastCall.value).toContain('H:false');
+  });
+
+  it('updates Text content', () => {
+      renderPanel({ type: QRType.TEXT });
+
+      const textArea = screen.getByLabelText('Content');
+      fireEvent.change(textArea, { target: { value: 'Some text content' } });
+
+      expect(mockOnChange).toHaveBeenCalledWith({ value: 'Some text content' });
+  });
+
   it('clears password in WIFI string when encryption is changed to nopass after setting password', () => {
     renderPanel({ type: QRType.WIFI });
 
