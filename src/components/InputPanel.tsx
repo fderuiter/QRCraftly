@@ -135,7 +135,7 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
             }`}
           >
             <item.icon className="w-4 h-4" />
-            <span className="truncate w-full text-center">{item.label}</span>
+            <span className="truncate w-full text-center text-slate-700 dark:text-slate-200">{item.label}</span>
           </button>
         ))}
       </div>
