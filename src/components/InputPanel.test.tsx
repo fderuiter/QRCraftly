@@ -7,29 +7,27 @@ import { describe, it, expect, vi } from 'vitest';
 describe('InputPanel Component', () => {
   const mockOnChange = vi.fn();
 
+  const renderPanel = (configUpdates: Partial<QRConfig> = {}) => {
+    const config = { ...DEFAULT_CONFIG, ...configUpdates };
+    render(<InputPanel config={config} onChange={mockOnChange} />);
+  };
+
   it('renders URL input by default', () => {
-    render(<InputPanel config={DEFAULT_CONFIG} onChange={mockOnChange} />);
+    renderPanel();
 
     expect(screen.getByLabelText('Website URL')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('https://example.com')).toBeInTheDocument();
   });
 
   it('changes content type', () => {
-    render(<InputPanel config={DEFAULT_CONFIG} onChange={mockOnChange} />);
-
-    // Find one of the type buttons (e.g., WiFi)
-    // The buttons have text inside span or just text.
-    // Let's find by text.
+    renderPanel();
     const wifiButton = screen.getByText('WiFi');
     fireEvent.click(wifiButton);
-
     expect(mockOnChange).toHaveBeenCalledWith({ type: QRType.WIFI, value: '' });
   });
 
   it('renders WiFi inputs when WiFi type is selected', () => {
-    const wifiConfig: QRConfig = { ...DEFAULT_CONFIG, type: QRType.WIFI };
-    render(<InputPanel config={wifiConfig} onChange={mockOnChange} />);
-
+    renderPanel({ type: QRType.WIFI });
     expect(screen.getByLabelText('Network Name (SSID)')).toBeInTheDocument();
     expect(screen.getByLabelText('Password')).toBeInTheDocument();
     expect(screen.getByLabelText('Encryption')).toBeInTheDocument();
@@ -37,25 +35,123 @@ describe('InputPanel Component', () => {
   });
 
   it('updates URL value', () => {
-    render(<InputPanel config={DEFAULT_CONFIG} onChange={mockOnChange} />);
-
+    renderPanel();
     const input = screen.getByLabelText('Website URL');
     fireEvent.change(input, { target: { value: 'https://new-url.com' } });
-
     expect(mockOnChange).toHaveBeenCalledWith({ value: 'https://new-url.com' });
   });
 
   it('updates WiFi SSID', () => {
-    const wifiConfig: QRConfig = { ...DEFAULT_CONFIG, type: QRType.WIFI };
-    render(<InputPanel config={wifiConfig} onChange={mockOnChange} />);
-
+    renderPanel({ type: QRType.WIFI });
     const ssidInput = screen.getByLabelText('Network Name (SSID)');
     fireEvent.change(ssidInput, { target: { value: 'MyWiFi' } });
 
-    // Based on InputPanel implementation:
-    // wifiString = `WIFI:T:${newData.encryption};S:${newData.ssid};P:${newData.password};H:${newData.hidden};;`;
-    // Default encryption is WPA, password empty, hidden false
+    // Default encryption is WPA
     const expectedValue = `WIFI:T:WPA;S:MyWiFi;P:;H:false;;`;
     expect(mockOnChange).toHaveBeenCalledWith({ value: expectedValue });
+  });
+
+  it('updates WiFi Encryption and formats correctly (WPA2-EAP)', () => {
+    renderPanel({ type: QRType.WIFI });
+
+    // Change encryption to WPA2-EAP
+    const encryptionSelect = screen.getByLabelText('Encryption');
+    fireEvent.change(encryptionSelect, { target: { value: 'WPA2-EAP' } });
+
+    // Should reveal Identity input
+    const identityInput = screen.getByLabelText('Identity / Username');
+    expect(identityInput).toBeInTheDocument();
+
+    // Fill details
+    const ssidInput = screen.getByLabelText('Network Name (SSID)');
+    fireEvent.change(ssidInput, { target: { value: 'EnterpriseWiFi' } });
+
+    fireEvent.change(identityInput, { target: { value: 'user123' } });
+
+    const passwordInput = screen.getByLabelText('Password');
+    fireEvent.change(passwordInput, { target: { value: 'secretPass' } });
+
+    // Check final string construction
+    // We need to trigger a change to see the full string construction from the component's state
+    // Since state is local to InputPanel, we can only verify the output of onChange for the LAST interaction
+    // The previous interactions would have called onChange with partial updates based on the local state at that time.
+
+    // Let's verify the call for the last change (password)
+    // At this point: SSID=EnterpriseWiFi, Encryption=WPA2-EAP, Identity=user123, Password=secretPass
+    const expectedValue = `WIFI:T:WPA2-EAP;S:EnterpriseWiFi;I:user123;P:secretPass;H:false;;`;
+    expect(mockOnChange).toHaveBeenLastCalledWith({ value: expectedValue });
+  });
+
+  it('updates WiFi Encryption and formats correctly (nopass)', () => {
+    renderPanel({ type: QRType.WIFI });
+
+    const encryptionSelect = screen.getByLabelText('Encryption');
+    fireEvent.change(encryptionSelect, { target: { value: 'nopass' } });
+
+    // Password field should disappear
+    expect(screen.queryByLabelText('Password')).not.toBeInTheDocument();
+
+    const ssidInput = screen.getByLabelText('Network Name (SSID)');
+    fireEvent.change(ssidInput, { target: { value: 'OpenWiFi' } });
+
+    const expectedValue = `WIFI:T:nopass;S:OpenWiFi;P:;H:false;;`;
+    expect(mockOnChange).toHaveBeenLastCalledWith({ value: expectedValue });
+  });
+
+  it('formats Email correctly', () => {
+      renderPanel({ type: QRType.EMAIL });
+
+      const emailInput = screen.getByLabelText('Email Address');
+      const subjectInput = screen.getByLabelText('Subject');
+      const bodyInput = screen.getByLabelText('Body');
+
+      fireEvent.change(emailInput, { target: { value: 'test@example.com' } });
+      fireEvent.change(subjectInput, { target: { value: 'Hello World' } });
+      fireEvent.change(bodyInput, { target: { value: 'This is a test.' } });
+
+      const expectedValue = `mailto:test@example.com?subject=Hello%20World&body=This%20is%20a%20test.`;
+      expect(mockOnChange).toHaveBeenLastCalledWith({ value: expectedValue });
+  });
+
+  it('formats Phone correctly', () => {
+      renderPanel({ type: QRType.PHONE });
+
+      const phoneInput = screen.getByLabelText('Phone Number');
+      fireEvent.change(phoneInput, { target: { value: '+1234567890' } });
+
+      expect(mockOnChange).toHaveBeenCalledWith({ value: 'tel:+1234567890' });
+  });
+
+  it('formats SMS correctly', () => {
+      renderPanel({ type: QRType.SMS });
+
+      const phoneInput = screen.getByLabelText('Phone Number');
+      const msgInput = screen.getByLabelText('Pre-filled Message');
+
+      fireEvent.change(phoneInput, { target: { value: '+1234567890' } });
+      fireEvent.change(msgInput, { target: { value: 'Hello there' } });
+
+      expect(mockOnChange).toHaveBeenLastCalledWith({ value: 'smsto:+1234567890:Hello there' });
+  });
+
+  it('formats vCard correctly', () => {
+      renderPanel({ type: QRType.VCARD });
+
+      fireEvent.change(screen.getByLabelText('First Name'), { target: { value: 'John' } });
+      fireEvent.change(screen.getByLabelText('Last Name'), { target: { value: 'Doe' } });
+      fireEvent.change(screen.getByLabelText('Company / Organization'), { target: { value: 'Acme Corp' } });
+      fireEvent.change(screen.getByLabelText('Job Title'), { target: { value: 'Engineer' } });
+      fireEvent.change(screen.getByLabelText('Mobile Phone'), { target: { value: '555-0199' } });
+      fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'john@example.com' } });
+      fireEvent.change(screen.getByLabelText('Website'), { target: { value: 'https://example.com' } });
+
+      // Address
+      fireEvent.change(screen.getByLabelText('Street'), { target: { value: '123 Main St' } });
+      fireEvent.change(screen.getByLabelText('City'), { target: { value: 'Metropolis' } });
+      fireEvent.change(screen.getByLabelText('Country'), { target: { value: 'USA' } });
+
+      const expectedVCard = `BEGIN:VCARD\nVERSION:3.0\nN:Doe;John;;;\nFN:John Doe\nORG:Acme Corp\nTITLE:Engineer\nTEL:555-0199\nEMAIL:john@example.com\nURL:https://example.com\nADR:;;123 Main St;Metropolis;;;USA\nEND:VCARD`;
+
+      expect(mockOnChange).toHaveBeenLastCalledWith({ value: expectedVCard });
   });
 });
