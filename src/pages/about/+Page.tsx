@@ -16,7 +16,7 @@ export default function Page() {
 
       <div className="grid md:grid-cols-3 gap-8 mb-16">
         <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 text-center">
-          <div className="w-12 h-12 bg-teal-100 dark:bg-teal-900/30 text-teal-600 dark:text-teal-400 rounded-xl flex items-center justify-center mx-auto mb-4">
+          <div className="w-12 h-12 bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-400 rounded-xl flex items-center justify-center mx-auto mb-4">
             <Shield className="w-6 h-6" />
           </div>
           <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">No Tracking</h3>
@@ -26,7 +26,7 @@ export default function Page() {
         </div>
 
         <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 text-center">
-          <div className="w-12 h-12 bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 rounded-xl flex items-center justify-center mx-auto mb-4">
+          <div className="w-12 h-12 bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400 rounded-xl flex items-center justify-center mx-auto mb-4">
             <Database className="w-6 h-6" />
           </div>
           <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">No Database</h3>
