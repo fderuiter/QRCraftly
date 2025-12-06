@@ -168,6 +168,54 @@ const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) =
                     // Vertical rect
                     ctx.rect(cx - thickness/2, cy - length/2, thickness, length);
                     ctx.fill();
+                } else if (config.style === QRStyle.STAR) {
+                    const cx = x + cellSize / 2;
+                    const cy = y + cellSize / 2;
+                    const outerRadius = cellSize / 2;
+                    const innerRadius = cellSize / 4;
+                    const spikes = 5;
+
+                    ctx.beginPath();
+                    for(let i=0; i<spikes*2; i++){
+                        const r = (i%2 === 0) ? outerRadius : innerRadius;
+                        const currX = cx + Math.cos(i * Math.PI / spikes - Math.PI / 2) * r;
+                        const currY = cy + Math.sin(i * Math.PI / spikes - Math.PI / 2) * r;
+                        if(i===0) ctx.moveTo(currX, currY);
+                        else ctx.lineTo(currX, currY);
+                    }
+                    ctx.closePath();
+                    ctx.fill();
+                } else if (config.style === QRStyle.HEART) {
+                    const cx = x + cellSize / 2;
+                    const cy = y + cellSize / 2;
+                    // Slightly reduce size to prevent overlapping
+                    const size = cellSize * 0.9;
+
+                    ctx.beginPath();
+                    const topCurveHeight = size * 0.3;
+                    ctx.moveTo(cx, cy + size * 0.2);
+                    // Bezier curves for heart shape
+                    ctx.bezierCurveTo(
+                      cx, cy - size * 0.3,
+                      cx - size * 0.5, cy - size * 0.3,
+                      cx - size * 0.5, cy + topCurveHeight * 0.2
+                    );
+                    ctx.bezierCurveTo(
+                      cx - size * 0.5, cy + (size + topCurveHeight) / 2,
+                      cx, cy + size * 0.4,
+                      cx, cy + size * 0.5
+                    );
+                    ctx.bezierCurveTo(
+                      cx, cy + size * 0.4,
+                      cx + size * 0.5, cy + (size + topCurveHeight) / 2,
+                      cx + size * 0.5, cy + topCurveHeight * 0.2
+                    );
+                    ctx.bezierCurveTo(
+                      cx + size * 0.5, cy - size * 0.3,
+                      cx, cy - size * 0.3,
+                      cx, cy + size * 0.2
+                    );
+                    ctx.fill();
                 } else {
                   // Squares (Default)
                   ctx.fillRect(Math.floor(x), Math.floor(y), Math.ceil(cellSize), Math.ceil(cellSize));

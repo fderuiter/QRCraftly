@@ -4,7 +4,7 @@ import { DEFAULT_CONFIG } from '@/constants';
 import InputPanel from '@/components/InputPanel';
 import StyleControls from '@/components/StyleControls';
 import QRCanvas from '@/components/QRCanvas';
-import { Download, Share2, QrCode, ChevronDown, Camera, Moon, Sun } from 'lucide-react';
+import { Download, Share2, QrCode, ChevronDown, Camera, Moon, Sun, Info } from 'lucide-react';
 
 /**
  * The main Application component.
@@ -168,13 +168,22 @@ export default function QRTool({ initialConfig }: { initialConfig?: Partial<QRCo
               <p className="text-sm text-slate-500 dark:text-slate-400">Design beautiful QR codes in seconds.</p>
             </div>
             
-            <button 
-              onClick={toggleDarkMode}
-              className="p-2 rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-              title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
-            >
-              {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-            </button>
+            <div className="flex gap-2">
+              <a
+                href="/about"
+                className="p-2 rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                title="About Us"
+              >
+                <Info className="w-5 h-5" />
+              </a>
+              <button
+                onClick={toggleDarkMode}
+                className="p-2 rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+              >
+                {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+              </button>
+            </div>
           </div>
 
           <div className="p-6 space-y-8 pb-24">

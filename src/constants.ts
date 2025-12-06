@@ -29,6 +29,8 @@ export const PATTERNS = [
   { id: QRStyle.ROUNDED, label: 'Soft Rounded' },
   { id: QRStyle.DIAMOND, label: 'Luxury Diamond' },
   { id: QRStyle.CROSS, label: 'Swiss Cross' },
+  { id: QRStyle.STAR, label: 'Star Dust' },
+  { id: QRStyle.HEART, label: 'Love Heart' },
 ];
 
 /**
