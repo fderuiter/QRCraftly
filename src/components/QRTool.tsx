@@ -161,7 +161,7 @@ export default function QRTool({ initialConfig }: { initialConfig?: Partial<QRCo
         <div className="w-full md:w-[480px] bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 h-auto md:h-screen overflow-y-auto flex flex-col shadow-xl z-10 transition-colors duration-300">
           <div className="p-6 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 sticky top-0 z-20 flex justify-between items-center transition-colors duration-300">
             <div>
-              <div className="flex items-center gap-2 text-teal-600 dark:text-teal-400 mb-1">
+              <div className="flex items-center gap-2 text-teal-700 dark:text-teal-400 mb-1">
                 <QrCode className="w-6 h-6" />
                 <h1 className="text-xl font-bold tracking-tight text-slate-700 dark:text-slate-100">QRCraftly</h1>
               </div>
@@ -226,7 +226,7 @@ export default function QRTool({ initialConfig }: { initialConfig?: Partial<QRCo
                        <div className="relative flex-1">
                           <button 
                               onClick={() => setShowDownloadMenu(!showDownloadMenu)}
-                              className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-teal-600 dark:bg-teal-700 text-white rounded-xl font-medium hover:bg-teal-700 dark:hover:bg-teal-600 transition-colors shadow-lg shadow-teal-900/10 dark:shadow-teal-900/40"
+                              className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-teal-700 dark:bg-teal-700 text-white rounded-xl font-medium hover:bg-teal-800 dark:hover:bg-teal-600 transition-colors shadow-lg shadow-teal-900/10 dark:shadow-teal-900/40"
                           >
                               <Download className="w-4 h-4" />
                               Download

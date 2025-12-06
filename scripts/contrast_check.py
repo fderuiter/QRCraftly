@@ -80,14 +80,17 @@ colors = {
     'teal-100': '#ccfbf1',
     'teal-400': '#2dd4bf',
     'teal-600': '#0d9488',
+    'teal-700': '#0f766e',
     'teal-900': '#134e4a',
     'rose-100': '#ffe4e6',
     'rose-400': '#fb7185',
     'rose-600': '#e11d48',
+    'rose-700': '#be123c',
     'rose-900': '#881337',
     'indigo-100': '#e0e7ff',
     'indigo-400': '#818cf8',
     'indigo-600': '#4f46e5',
+    'indigo-700': '#4338ca',
     'indigo-900': '#312e81',
 }
 
@@ -98,9 +101,9 @@ scenarios = [
     {'mode': 'Light', 'element': 'Page Background', 'bg': 'slate-50', 'fg': 'slate-600', 'text': 'Intro Paragraph', 'size': 'normal'},
     {'mode': 'Light', 'element': 'Card', 'bg': 'white', 'fg': 'slate-900', 'text': 'Card H3', 'size': 'normal'},
     {'mode': 'Light', 'element': 'Card', 'bg': 'white', 'fg': 'slate-600', 'text': 'Card Paragraph', 'size': 'normal'},
-    {'mode': 'Light', 'element': 'Icon Teal', 'bg': 'teal-100', 'fg': 'teal-600', 'text': 'Shield Icon', 'size': 'large'}, # Icons are graphic but good to check
-    {'mode': 'Light', 'element': 'Icon Rose', 'bg': 'rose-100', 'fg': 'rose-600', 'text': 'Database Icon', 'size': 'large'},
-    {'mode': 'Light', 'element': 'Icon Indigo', 'bg': 'indigo-100', 'fg': 'indigo-600', 'text': 'Code Icon', 'size': 'large'},
+    {'mode': 'Light', 'element': 'Icon Teal', 'bg': 'teal-100', 'fg': 'teal-700', 'text': 'Shield Icon', 'size': 'large'}, # Icons are graphic but good to check
+    {'mode': 'Light', 'element': 'Icon Rose', 'bg': 'rose-100', 'fg': 'rose-700', 'text': 'Database Icon', 'size': 'large'},
+    {'mode': 'Light', 'element': 'Icon Indigo', 'bg': 'indigo-100', 'fg': 'indigo-700', 'text': 'Code Icon', 'size': 'large'},
     {'mode': 'Light', 'element': 'License Section', 'bg': 'slate-50', 'fg': 'slate-900', 'text': 'License H2', 'size': 'large'},
     {'mode': 'Light', 'element': 'License Section', 'bg': 'slate-50', 'fg': 'slate-600', 'text': 'License P', 'size': 'normal'},
     {'mode': 'Light', 'element': 'Button', 'bg': 'slate-900', 'fg': 'white', 'text': 'Github Button', 'size': 'normal'},
