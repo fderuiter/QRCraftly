@@ -29,6 +29,50 @@ describe('StyleControls Component', () => {
     expect(mockOnChange).toHaveBeenCalledWith({ style: QRStyle.DOTS });
   });
 
+  it('renders pattern preview icons for all styles', () => {
+     // We iterate through all pattern options and check if the corresponding visual logic runs.
+     // Since the icons are rendered conditionally based on `config.style === pattern.id` OR just mapped.
+     // Wait, in the component, the map iterates PATTERNS, and inside checking `pattern.id === QRStyle.STAR` etc.
+     // So rendering them all once (the default state) covers the "else" branches (SQUARES/default).
+     // To cover the specific branches for STAR, HEART, CROSS, DIAMOND, we need to make sure the loop runs.
+     // The loop runs unconditionally.
+     // BUT, the specific SVG rendering logic is inside the map:
+     // if (pattern.id === QRStyle.STAR) { ... }
+     // So we just need to ensure the component is rendered.
+     // However, to be "meaningful", we should assert that these SVGs are indeed present in the DOM.
+
+     const { container } = render(<StyleControls config={DEFAULT_CONFIG} onChange={mockOnChange} />);
+
+     // Check for STAR path
+     // <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+     // Since there are 4 preview items per button, we expect multiple.
+     // Just checking one existence is enough to prove the branch was taken.
+
+     // Star
+     // eslint-disable-next-line testing-library/no-container, testing-library/no-node-access
+     const starPath = container.querySelector('path[d^="M12 2l3.09 6.26"]');
+     expect(starPath).toBeInTheDocument();
+
+     // Heart
+     // <path d="M12 21.35l-1.45-1.32C5.4 15.36..."/>
+     // eslint-disable-next-line testing-library/no-container, testing-library/no-node-access
+     const heartPath = container.querySelector('path[d^="M12 21.35"]');
+     expect(heartPath).toBeInTheDocument();
+
+     // Cross (uses clipPath in style)
+     // style="clipPath: polygon(35% 0%, ...)"
+     // We can look for the style attribute
+     // eslint-disable-next-line testing-library/no-container, testing-library/no-node-access
+     const crossElements = container.querySelectorAll('div[style*="polygon(35% 0%, 65% 0%"]');
+     expect(crossElements.length).toBeGreaterThan(0);
+
+     // Diamond (uses transform rotate)
+     // style="transform: rotate(45deg) scale(0.7)"
+     // eslint-disable-next-line testing-library/no-container, testing-library/no-node-access
+     const diamondElements = container.querySelectorAll('div[style*="rotate(45deg)"]');
+     expect(diamondElements.length).toBeGreaterThan(0);
+  });
+
   it('updates colors via inputs', () => {
     render(<StyleControls config={DEFAULT_CONFIG} onChange={mockOnChange} />);
 
