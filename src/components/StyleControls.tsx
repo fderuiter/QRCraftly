@@ -237,7 +237,7 @@ const StyleControls: React.FC<StyleControlsProps> = ({ config, onChange }) => {
         {!config.logoUrl ? (
           <div 
             onClick={() => fileInputRef.current?.click()}
-            className="border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl p-6 flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 hover:bg-teal-50 dark:hover:bg-teal-900/10 hover:border-teal-400 dark:hover:border-teal-600 hover:text-teal-600 dark:hover:text-teal-400 transition-all cursor-pointer group"
+            className="border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl p-6 flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 hover:bg-teal-50 dark:hover:bg-teal-900/10 hover:border-teal-400 dark:hover:border-teal-600 hover:text-teal-700 dark:hover:text-teal-400 transition-all cursor-pointer group"
           >
             <div className="w-10 h-10 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-2 group-hover:bg-teal-100 dark:group-hover:bg-teal-900/30 transition-colors">
                  <Upload className="w-5 h-5" />
@@ -294,7 +294,7 @@ const StyleControls: React.FC<StyleControlsProps> = ({ config, onChange }) => {
                               step="0.5"
                               value={config.logoPadding}
                               onChange={(e) => onChange({ logoPadding: parseFloat(e.target.value) })}
-                              className="w-full accent-teal-600 dark:accent-teal-500"
+                              className="w-full accent-teal-700 dark:accent-teal-500"
                            />
                       </div>
                       <div>
@@ -325,7 +325,7 @@ const StyleControls: React.FC<StyleControlsProps> = ({ config, onChange }) => {
                         step="0.01"
                         value={config.logoSize}
                         onChange={(e) => onChange({ logoSize: parseFloat(e.target.value) })}
-                        className="w-full accent-teal-600 dark:accent-teal-500"
+                        className="w-full accent-teal-700 dark:accent-teal-500"
                      />
                 </div>
             </div>

@@ -54,7 +54,7 @@ export default function Page() {
         </div>
 
         <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 text-center">
-          <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-xl flex items-center justify-center mx-auto mb-4">
+          <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 rounded-xl flex items-center justify-center mx-auto mb-4">
             <Code className="w-6 h-6" />
           </div>
           <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">Open Source</h3>
