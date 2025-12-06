@@ -2,7 +2,7 @@
 
 ## HIPAA Compliance Alignment
 
-This application is designed to support HIPAA-compliant workflows through a **Zero Knowledge Client-Side Architecture**.
+This application is designed to **support** HIPAA-compliant workflows through a **Zero Knowledge Client-Side Architecture**.
 
 ### 1. Data Privacy (The "Won't Use Your Data" Guarantee)
 *   **Local Processing:** All QR code generation happens locally within the user's browser using HTML5 Canvas and JavaScript.
@@ -27,4 +27,12 @@ To maintain security, performance, and legal accountability, we collect basic ac
 
 ## Certification Note
 
-While this software is architected to support HIPAA compliance by preventing PHI from reaching the server, "HIPAA Certification" is a process that applies to the *organization* and its *practices*. This tool provides the *technical safeguards* to allow you to use it within a compliant environment legally, provided you ensure the physical security of the client device.
+While this software is architected to support HIPAA compliance by preventing PHI from reaching the server, "HIPAA Certification" is a process that applies to the *organization* and its *practices*, not just the software. This tool provides the *technical safeguards* (specifically regarding Transmission Security and Data Integrity) to allow you to use it within a compliant environment.
+
+## Legal Disclaimer
+
+**NO LEGAL ADVICE:** The information provided in this document does not constitute legal advice.
+
+**NO WARRANTY:** This software is provided "as is", without warranty of any kind, express or implied, including but not limited to the warranties of merchantability, fitness for a particular purpose and noninfringement. In no event shall the authors or copyright holders be liable for any claim, damages or other liability, whether in an action of contract, tort or otherwise, arising from, out of or in connection with the software or the use or other dealings in the software.
+
+**USER RESPONSIBILITY:** Compliance with HIPAA is the responsibility of the covered entity or business associate. Using this tool does not automatically ensure compliance. Users must ensure that their specific use case, device security, and internal policies align with regulatory requirements.
