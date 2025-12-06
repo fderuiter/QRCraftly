@@ -188,14 +188,14 @@ export default function QRTool({ initialConfig }: { initialConfig?: Partial<QRCo
 
           <div className="p-6 space-y-8 pb-24">
             <section>
-              <h2 className="text-xs uppercase tracking-wider text-slate-400 dark:text-slate-500 font-bold mb-4">Content</h2>
+              <h2 className="text-xs uppercase tracking-wider text-slate-600 dark:text-slate-400 font-bold mb-4">Content</h2>
               <InputPanel config={config} onChange={handleConfigChange} />
             </section>
 
             <div className="h-px bg-slate-100 dark:bg-slate-800" />
 
             <section>
-              <h2 className="text-xs uppercase tracking-wider text-slate-400 dark:text-slate-500 font-bold mb-4">Appearance</h2>
+              <h2 className="text-xs uppercase tracking-wider text-slate-600 dark:text-slate-400 font-bold mb-4">Appearance</h2>
               <StyleControls config={config} onChange={handleConfigChange} />
             </section>
           </div>
