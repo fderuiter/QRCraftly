@@ -37,9 +37,9 @@ export default function Page() {
           <div className="w-12 h-12 bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-400 rounded-xl flex items-center justify-center mx-auto mb-4">
             <Shield className="w-6 h-6" />
           </div>
-          <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">No Tracking</h3>
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">No Third-Party Tracking</h3>
           <p className="text-slate-600 dark:text-slate-400">
-            We don't track your usage or collect any analytics data. Your privacy is our priority.
+            We do not use tracking pixels, cookies, or third-party analytics. We only collect basic server logs for performance and reliability.
           </p>
         </div>
 
@@ -47,9 +47,9 @@ export default function Page() {
           <div className="w-12 h-12 bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400 rounded-xl flex items-center justify-center mx-auto mb-4">
             <Database className="w-6 h-6" />
           </div>
-          <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">No Database</h3>
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">Zero Knowledge</h3>
           <p className="text-slate-600 dark:text-slate-400">
-            We don't store your QR codes or the content you enter. Everything is generated instantly in your browser.
+            We utilize a Zero Knowledge architecture. Your content is processed entirely in your browser and never transmitted to our servers.
           </p>
         </div>
 
