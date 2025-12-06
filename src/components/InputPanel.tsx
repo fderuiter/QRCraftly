@@ -34,6 +34,15 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
   // Update handlers
 
   /**
+   * Escapes special characters for WiFi QR code string.
+   * Characters to escape: \ ; , " :
+   */
+  const escapeWifiString = (str: string | undefined): string => {
+    if (!str) return '';
+    return str.replace(/([\\;,":])/g, '\\$1');
+  };
+
+  /**
    * Updates WiFi data and formats the WIFI string for the QR code.
    * @param updates - Partial WiFi data updates.
    */
@@ -41,11 +50,17 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
     const newData = { ...wifiData, ...updates };
     setWifiData(newData);
     let wifiString = '';
+    const ssid = escapeWifiString(newData.ssid);
+    const hidden = newData.hidden;
+
     if (newData.encryption === 'WPA2-EAP') {
-        wifiString = `WIFI:T:WPA2-EAP;S:${newData.ssid};I:${newData.eapIdentity};P:${newData.password};H:${newData.hidden};;`;
+        const identity = escapeWifiString(newData.eapIdentity);
+        const password = escapeWifiString(newData.password);
+        wifiString = `WIFI:T:WPA2-EAP;S:${ssid};I:${identity};P:${password};H:${hidden};;`;
     } else {
-        const password = newData.encryption === 'nopass' ? '' : newData.password;
-        wifiString = `WIFI:T:${newData.encryption};S:${newData.ssid};P:${password};H:${newData.hidden};;`;
+        const rawPassword = newData.encryption === 'nopass' ? '' : newData.password;
+        const password = escapeWifiString(rawPassword);
+        wifiString = `WIFI:T:${newData.encryption};S:${ssid};P:${password};H:${hidden};;`;
     }
     onChange({ value: wifiString });
   };
