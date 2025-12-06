@@ -11,10 +11,10 @@ import { Download, Share2, QrCode, ChevronDown, Camera, Moon, Sun, Info } from '
  * Manages the global state for the QR code configuration and coordinates
  * the input panel, style controls, and the preview canvas.
  * Handles downloading and sharing of the generated QR code.
- */
-/**
- * The main QR Code Generator Tool component.
- * Can be embedded in different pages with optional initial configuration.
+ *
+ * @param props - The component props.
+ * @param props.initialConfig - Optional initial configuration for the QR code.
+ * @returns The QRTool component.
  */
 export default function QRTool({ initialConfig }: { initialConfig?: Partial<QRConfig> }) {
   const [config, setConfig] = useState<QRConfig>({ ...DEFAULT_CONFIG, ...initialConfig });

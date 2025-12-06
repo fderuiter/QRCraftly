@@ -1,5 +1,13 @@
 import React from 'react';
 
+/**
+ * 404 Error Page Component
+ *
+ * Renders a user-friendly error message when a requested page is not found.
+ * Provides a link to navigate back to the home page.
+ *
+ * @returns {JSX.Element} The error page layout.
+ */
 export default function Page() {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 text-slate-700">

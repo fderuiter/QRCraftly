@@ -24,6 +24,7 @@ Ensure you have the following installed on your machine:
 
 - [Node.js](https://nodejs.org/) (version 14 or higher recommended)
 - npm (usually comes with Node.js) or yarn
+- Python 3 (optional, for running utility scripts)
 
 ### Installation
 
@@ -64,6 +65,14 @@ yarn build
 
 The build artifacts will be stored in the `dist/` directory.
 
+### Running Tests
+
+To run the test suite:
+
+```bash
+npm test
+```
+
 ## Usage Guide
 
 1.  **Select Content Type**: Use the icon grid at the top of the input panel to choose the type of QR code you want to create (e.g., URL, WiFi).
@@ -88,8 +97,18 @@ The build artifacts will be stored in the `dist/` directory.
     - `InputPanel.tsx`: Handles data input for different QR types.
     - `StyleControls.tsx`: UI for customizing colors, patterns, and logos.
     - `QRCanvas.tsx`: The core component that renders the QR code using HTML5 Canvas.
+    - `QRTool.tsx`: The main container component that integrates inputs, controls, and canvas.
+- `layouts/`: Application layouts.
+    - `LayoutDefault.tsx`: The main layout wrapper.
+    - `Head.tsx`: Manages document head elements.
+- `pages/`: Page-level components (Vike routing).
+    - `index/+Page.tsx`: The home page.
+    - `about/+Page.tsx`: The about page.
+    - `wifi-qr-code/+Page.tsx`: Specialized WiFi QR code page.
 - `types.ts`: TypeScript definitions for application state and data structures.
 - `constants.ts`: Default configurations and preset data.
+- `scripts/`: Utility scripts.
+    - `contrast_check.py`: Python script to verify WCAG contrast compliance for UI elements.
 
 ## Technologies Used
 
@@ -99,6 +118,7 @@ The build artifacts will be stored in the `dist/` directory.
 - **Tailwind CSS**: Utility-first CSS framework for styling.
 - **node-qrcode**: Library for generating QR code data.
 - **Lucide React**: Icon set.
+- **Vike**: Server-side rendering and routing framework (formerly vite-plugin-ssr).
 
 ## License
 
