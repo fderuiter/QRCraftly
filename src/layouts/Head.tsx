@@ -31,18 +31,13 @@ export default function HeadDefault() {
 
       {/*
         Load the stylesheet asynchronously using the media="print" onload="this.media='all'" pattern.
-        We use dangerouslySetInnerHTML to ensure the 'onload' attribute is rendered into the HTML
-        exactly as needed for the browser to execute it immediately upon load, without waiting for React hydration.
-
-        The hack involves rendering a style tag (which is void of content here or just used as a wrapper)
-        and breaking out of it, or simpler: just use a script tag or similar.
-        But standard React pattern for raw HTML in head is just:
+        We use dangerouslySetInnerHTML on a style tag to inject the link tag without a wrapper div,
+        ensuring valid HTML in the head.
       */}
-      <div
+      <style
         dangerouslySetInnerHTML={{
-          __html: `<link rel="stylesheet" href="${fontUrl}" media="print" onload="this.media='all'" />`
+          __html: `</style><link rel="stylesheet" href="${fontUrl}" media="print" onload="this.media='all'" /><style>`
         }}
-        style={{ display: 'none' }}
       />
 
       <noscript>
