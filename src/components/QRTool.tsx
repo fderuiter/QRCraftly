@@ -165,7 +165,7 @@ export default function QRTool({ initialConfig }: { initialConfig?: Partial<QRCo
                 <QrCode className="w-6 h-6" />
                 <h1 className="text-xl font-bold tracking-tight text-slate-700 dark:text-slate-100">QRCraftly</h1>
               </div>
-              <p className="text-sm text-slate-500 dark:text-slate-400">Design beautiful QR codes in seconds.</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">Design beautiful QR codes in seconds.</p>
             </div>
             
             <div className="flex gap-2">

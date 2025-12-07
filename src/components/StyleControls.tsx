@@ -243,7 +243,7 @@ const StyleControls: React.FC<StyleControlsProps> = ({ config, onChange }) => {
                  <Upload className="w-5 h-5" />
             </div>
             <span className="text-sm font-medium">Upload Logo</span>
-            <span className="text-xs text-slate-400 dark:text-slate-500 mt-1">PNG, JPG (Square recommended)</span>
+            <span className="text-xs text-slate-600 dark:text-slate-400 mt-1">PNG, JPG (Square recommended)</span>
           </div>
         ) : (
             <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700 space-y-5">

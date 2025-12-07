@@ -422,7 +422,7 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
                  </div>
 
                  <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
-                    <label className="block text-xs font-bold text-slate-400 dark:text-slate-500 mb-2">Address</label>
+                    <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-2">Address</label>
                     <div className="space-y-3">
                         <input aria-label="Street" type="text" placeholder="Street" value={vCardData.street} onChange={(e) => handleVCardChange({ street: e.target.value })} className={inputClasses} />
                         <div className="grid grid-cols-2 gap-3">
