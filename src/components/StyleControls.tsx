@@ -59,10 +59,11 @@ const getContrastRatio = (fg: string, bg: string) => {
  */
 const StyleControls: React.FC<StyleControlsProps> = ({ config, onChange }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const borderLogoInputRef = useRef<HTMLInputElement>(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   /**
-   * Handles the file upload for the logo.
+   * Handles the file upload for the center logo.
    * Reads the file as a Data URL and updates the config.
    * @param e - The change event from the file input.
    */
@@ -77,15 +78,34 @@ const StyleControls: React.FC<StyleControlsProps> = ({ config, onChange }) => {
     }
   };
 
+  /**
+   * Handles the file upload for the border logo.
+   */
+  const handleBorderLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        onChange({ borderLogoUrl: event.target?.result as string });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const contrastRatios = useMemo(() => {
       const fgContrast = getContrastRatio(config.fgColor, config.bgColor);
       const eyeContrast = getContrastRatio(config.eyeColor, config.bgColor);
-      return { fg: fgContrast, eye: eyeContrast };
-  }, [config.fgColor, config.bgColor, config.eyeColor]);
+      const borderTextContrast = config.isBorderEnabled && config.borderText
+          ? getContrastRatio(config.borderTextColor, config.borderColor)
+          : 21; // Default to max if not relevant
+      return { fg: fgContrast, eye: eyeContrast, borderText: borderTextContrast };
+  }, [config.fgColor, config.bgColor, config.eyeColor, config.isBorderEnabled, config.borderText, config.borderTextColor, config.borderColor]);
 
   // Increased sensitivity threshold to 4.5 (WCAG AA for text, better for scanning)
   const isLowContrast = contrastRatios.fg < 4.5 || contrastRatios.eye < 4.5;
   const worstContrast = Math.min(contrastRatios.fg, contrastRatios.eye);
+
+  const isLowBorderContrast = contrastRatios.borderText < 4.5;
 
   return (
     <div className="space-y-8">
@@ -108,20 +128,38 @@ const StyleControls: React.FC<StyleControlsProps> = ({ config, onChange }) => {
 
         {config.isBorderEnabled && (
             <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
-                <div>
-                    <label htmlFor="border-size" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
-                        Border Width
-                    </label>
-                    <input
-                        id="border-size"
-                        type="range"
-                        min="0.01"
-                        max="0.15"
-                        step="0.005"
-                        value={config.borderSize}
-                        onChange={(e) => onChange({ borderSize: parseFloat(e.target.value) })}
-                        className="w-full accent-teal-700 dark:accent-teal-500"
-                    />
+                <div className="grid grid-cols-2 gap-4">
+                     <div>
+                        <label htmlFor="border-style" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
+                            Style
+                        </label>
+                        <select
+                            id="border-style"
+                            value={config.borderStyle || 'solid'}
+                            onChange={(e) => onChange({ borderStyle: e.target.value as any })}
+                            className="w-full px-2 py-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs text-slate-700 dark:text-slate-200 focus:outline-none focus:border-teal-500"
+                        >
+                            <option value="solid">Solid</option>
+                            <option value="dashed">Dashed</option>
+                            <option value="dotted">Dotted</option>
+                            <option value="double">Double</option>
+                        </select>
+                    </div>
+                     <div>
+                        <label htmlFor="border-size" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
+                            Width
+                        </label>
+                        <input
+                            id="border-size"
+                            type="range"
+                            min="0.01"
+                            max="0.15"
+                            step="0.005"
+                            value={config.borderSize}
+                            onChange={(e) => onChange({ borderSize: parseFloat(e.target.value) })}
+                            className="w-full accent-teal-700 dark:accent-teal-500"
+                        />
+                    </div>
                 </div>
 
                 <div>
@@ -138,6 +176,91 @@ const StyleControls: React.FC<StyleControlsProps> = ({ config, onChange }) => {
                         />
                         <span className="text-xs text-slate-600 dark:text-slate-300 font-mono">{config.borderColor}</span>
                     </div>
+                </div>
+
+                {/* Border Content Section */}
+                <div className="pt-2 border-t border-slate-200 dark:border-slate-700">
+                     <div className="flex justify-between items-baseline mb-2">
+                        <p className="text-xs font-medium text-slate-700 dark:text-slate-300">Content</p>
+                        {isLowBorderContrast && (
+                             <span className="flex items-center gap-1 text-[10px] text-amber-600 dark:text-amber-400 font-medium">
+                                 <AlertTriangle className="w-3 h-3" />
+                                 Low Contrast ({contrastRatios.borderText.toFixed(1)})
+                             </span>
+                        )}
+                     </div>
+
+                     {/* Border Text */}
+                     <div className="space-y-2 mb-3">
+                         <input
+                            type="text"
+                            placeholder="Text on border..."
+                            value={config.borderText}
+                            onChange={(e) => onChange({ borderText: e.target.value })}
+                            className="w-full px-2 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs text-slate-700 dark:text-slate-200 focus:outline-none focus:border-teal-500"
+                         />
+                         <div className="flex gap-2">
+                             <select
+                                value={config.borderTextPosition || 'bottom-center'}
+                                onChange={(e) => onChange({ borderTextPosition: e.target.value as any })}
+                                className="flex-1 px-2 py-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs text-slate-700 dark:text-slate-200 focus:outline-none focus:border-teal-500"
+                            >
+                                <option value="top-center">Top Center</option>
+                                <option value="bottom-center">Bottom Center</option>
+                            </select>
+                             <div className="flex items-center gap-1">
+                                <input
+                                    type="color"
+                                    value={config.borderTextColor || '#ffffff'}
+                                    onChange={(e) => onChange({ borderTextColor: e.target.value })}
+                                    className="w-6 h-6 rounded cursor-pointer border-0 p-0 bg-transparent"
+                                    title="Text Color"
+                                />
+                            </div>
+                         </div>
+                     </div>
+
+                     {/* Border Logo */}
+                     <div className="flex items-center justify-between">
+                         <div className="flex items-center gap-2">
+                             {config.borderLogoUrl ? (
+                                 <img src={config.borderLogoUrl} alt="Border Logo" className="w-8 h-8 object-contain bg-white rounded border border-slate-200" />
+                             ) : (
+                                 <span className="text-xs text-slate-500 dark:text-slate-400 italic">No secondary logo</span>
+                             )}
+                             {config.borderLogoUrl && (
+                                <button onClick={() => onChange({ borderLogoUrl: null })} className="text-xs text-rose-600 hover:underline">
+                                    <X className="w-3 h-3"/>
+                                </button>
+                             )}
+                         </div>
+                         <button
+                            onClick={() => borderLogoInputRef.current?.click()}
+                            className="text-xs text-teal-600 dark:text-teal-400 hover:underline font-medium flex items-center gap-1"
+                         >
+                             <Upload className="w-3 h-3" />
+                             {config.borderLogoUrl ? 'Change' : 'Add Logo'}
+                         </button>
+                         <input
+                            ref={borderLogoInputRef}
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={handleBorderLogoUpload}
+                         />
+                     </div>
+                     {config.borderLogoUrl && (
+                        <div className="mt-2">
+                            <select
+                                value={config.borderLogoPosition || 'bottom-center'}
+                                onChange={(e) => onChange({ borderLogoPosition: e.target.value as any })}
+                                className="w-full px-2 py-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs text-slate-700 dark:text-slate-200 focus:outline-none focus:border-teal-500"
+                            >
+                                <option value="bottom-center">Bottom Center</option>
+                                <option value="bottom-right">Bottom Right</option>
+                            </select>
+                        </div>
+                     )}
                 </div>
             </div>
         )}

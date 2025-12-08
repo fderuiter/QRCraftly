@@ -21,6 +21,12 @@ export const DEFAULT_CONFIG = {
   isBorderEnabled: false,
   borderSize: 0.05,
   borderColor: '#000000',
+  borderStyle: 'solid' as const,
+  borderText: '',
+  borderTextPosition: 'bottom-center' as const,
+  borderTextColor: '#ffffff',
+  borderLogoUrl: null,
+  borderLogoPosition: 'bottom-center' as const,
 };
 
 /**
