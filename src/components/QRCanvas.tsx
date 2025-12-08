@@ -66,9 +66,31 @@ const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) =
         
         ctx.scale(pixelRatio, pixelRatio);
         
-        // Fill Background
-        ctx.fillStyle = config.bgColor;
-        ctx.fillRect(0, 0, displaySize, displaySize);
+        let drawX = 0;
+        let drawY = 0;
+        let drawSize = displaySize;
+
+        // Draw Border if enabled
+        if (config.isBorderEnabled && config.borderSize > 0) {
+            const borderPx = displaySize * config.borderSize;
+
+            // Fill canvas with border color
+            ctx.fillStyle = config.borderColor;
+            ctx.fillRect(0, 0, displaySize, displaySize);
+
+            // Adjust area for QR code
+            drawX = borderPx;
+            drawY = borderPx;
+            drawSize = displaySize - (borderPx * 2);
+
+            // Fill background for QR code
+            ctx.fillStyle = config.bgColor;
+            ctx.fillRect(drawX, drawY, drawSize, drawSize);
+        } else {
+            // Fill Background
+            ctx.fillStyle = config.bgColor;
+            ctx.fillRect(0, 0, displaySize, displaySize);
+        }
 
         // Helper to determine if a module is an "eye"
         const isEye = (row: number, col: number): boolean => {
@@ -78,7 +100,7 @@ const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) =
           return false;
         };
 
-        const cellSize = displaySize / moduleCount;
+        const cellSize = drawSize / moduleCount;
         
         // Determine safe limit for logo size based on error correction level
         // The safe area ratio is the max linear dimension of the logo relative to QR size.
@@ -149,8 +171,8 @@ const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) =
               const isEyeModule = isEye(r, c);
               ctx.fillStyle = isEyeModule ? config.eyeColor : config.fgColor;
 
-              const x = c * cellSize;
-              const y = r * cellSize;
+              const x = drawX + c * cellSize;
+              const y = drawY + r * cellSize;
 
               // Apply Style
               if (isEyeModule) {
