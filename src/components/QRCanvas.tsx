@@ -60,7 +60,7 @@ const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) =
 
       try {
         // 1. Generate QR Data (Modules)
-        const qrData = QRCode.create(config.value, { errorCorrectionLevel: 'H' });
+        const qrData = QRCode.create(config.value, { errorCorrectionLevel: config.errorCorrectionLevel });
         const modules = qrData.modules;
         const moduleCount = modules.size;
         
@@ -80,11 +80,20 @@ const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) =
 
         const cellSize = displaySize / moduleCount;
         
-        // Determine safe limit for logo size
-        // Error correction H allows ~30% damage.
-        // We set a safe limit of 25% area coverage to be robust.
-        // sqrt(0.25) = 0.5. So the linear dimension of the cutout should not exceed 50% of the QR code size.
-        const SAFE_AREA_RATIO = 0.50;
+        // Determine safe limit for logo size based on error correction level
+        // The safe area ratio is the max linear dimension of the logo relative to QR size.
+        // L: ~7% damage -> Safe ~5% -> sqrt(0.05) ~ 0.22
+        // M: ~15% damage -> Safe ~12% -> sqrt(0.12) ~ 0.35
+        // Q: ~25% damage -> Safe ~20% -> sqrt(0.20) ~ 0.45
+        // H: ~30% damage -> Safe ~25% -> sqrt(0.25) ~ 0.50
+        const SAFE_AREA_RATIO = (() => {
+           switch(config.errorCorrectionLevel) {
+               case 'L': return 0.22;
+               case 'M': return 0.35;
+               case 'Q': return 0.45;
+               case 'H': default: return 0.50;
+           }
+        })();
         
         // Calculate requested sizes in modules
         const requestedLogoSizeModules = config.logoSize * moduleCount;
