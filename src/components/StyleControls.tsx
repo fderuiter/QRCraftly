@@ -269,7 +269,7 @@ const StyleControls: React.FC<StyleControlsProps> = ({ config, onChange }) => {
       {/* Pattern Style */}
       <div>
         <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">Pattern Style</h3>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-4 gap-3">
           {PATTERNS.map((pattern) => (
             <button
               key={pattern.id}
@@ -295,13 +295,6 @@ const StyleControls: React.FC<StyleControlsProps> = ({ config, onChange }) => {
                           // Hexagon clip path
                           return (
                               <div key={i} className="flex items-center justify-center bg-current" style={{ clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)' }} />
-                          );
-                      }
-                      if (pattern.id === QRStyle.KINETIC) {
-                           return (
-                              <div key={i} className="flex items-center justify-center">
-                                  <div className="bg-current w-full h-full" style={{ transform: 'rotate(45deg) scale(0.7)' }} />
-                              </div>
                           );
                       }
                       if (pattern.id === QRStyle.SWISS) {

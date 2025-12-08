@@ -10,7 +10,6 @@ export enum QRStyle {
   FLUID = 'fluid',
   CIRCUIT = 'circuit',
   HIVE = 'hive',
-  KINETIC = 'kinetic',
   GRUNGE = 'grunge',
   STARBURST = 'starburst',
 }
