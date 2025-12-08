@@ -79,19 +79,37 @@ const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) =
         };
 
         const cellSize = displaySize / moduleCount;
-        const logoSizePx = displaySize * config.logoSize;
-        const logoPaddingPx = config.logoPadding * cellSize; // Padding in pixels based on module size
         
+        // Determine safe limit for logo size
+        // Error correction H allows ~30% damage.
+        // We set a safe limit of 25% area coverage to be robust.
+        // sqrt(0.25) = 0.5. So the linear dimension of the cutout should not exceed 50% of the QR code size.
+        const SAFE_AREA_RATIO = 0.50;
+        
+        // Calculate requested sizes in modules
+        const requestedLogoSizeModules = config.logoSize * moduleCount;
+        const paddingModules = config.logoPaddingStyle === 'none' ? 0 : config.logoPadding;
+        const requestedCutoutModules = requestedLogoSizeModules + (paddingModules * 2);
+
+        // Clamp logic
+        let effectiveLogoSizeModules = requestedLogoSizeModules;
+        let effectivePaddingModules = paddingModules;
+
+        if (requestedCutoutModules > moduleCount * SAFE_AREA_RATIO) {
+            // If too big, scale down proportionally
+            const maxCutoutModules = moduleCount * SAFE_AREA_RATIO;
+            const scaleFactor = maxCutoutModules / requestedCutoutModules;
+
+            effectiveLogoSizeModules = requestedLogoSizeModules * scaleFactor;
+            effectivePaddingModules = paddingModules * scaleFactor;
+        }
+
+        const logoSizePx = effectiveLogoSizeModules * cellSize;
+        const logoPaddingPx = effectivePaddingModules * cellSize;
+        const cutoutModuleSize = effectiveLogoSizeModules + (effectivePaddingModules * 2);
+
         // Calculate Center
         const center = moduleCount / 2;
-        
-        // The size of the logo IMAGE in terms of modules
-        const logoImageModuleSize = config.logoSize * moduleCount;
-        
-        // The size of the CUTOUT (Image + Padding) in terms of modules
-        // If style is none, we don't clear extra space, but we still might clear the image area
-        const paddingModules = config.logoPaddingStyle === 'none' ? 0 : config.logoPadding;
-        const cutoutModuleSize = logoImageModuleSize + (paddingModules * 2);
 
         // Logic to determine if a module should be skipped (hidden) for the logo
         const isCoveredByLogo = (r: number, c: number) => {
