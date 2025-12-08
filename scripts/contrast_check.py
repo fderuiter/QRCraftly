@@ -1,5 +1,6 @@
 
 import math
+import sys
 
 """
 Script to check WCAG contrast ratios for various UI elements in QRCraftly.
@@ -126,6 +127,8 @@ if __name__ == "__main__":
     print(f"{'Mode':<6} | {'Element':<20} | {'Contrast':<8} | {'Pass?':<6} | {'Level':<5} | {'Details'}")
     print("-" * 80)
 
+    any_fail = False
+
     for s in scenarios:
         # Resolve BG
         if isinstance(s['bg'], tuple):
@@ -169,4 +172,10 @@ if __name__ == "__main__":
         elif passed:
             level = "AA"
 
+        if not passed:
+            any_fail = True
+
         print(f"{s['mode']:<6} | {s['text']:<20} | {ratio:.2f}:1   | {'YES' if passed else 'NO':<6} | {level:<5} | {s['bg']} vs {s['fg']}")
+
+    if any_fail:
+        sys.exit(1)
