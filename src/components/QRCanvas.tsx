@@ -74,9 +74,27 @@ const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) =
         if (config.isBorderEnabled && config.borderSize > 0) {
             const borderPx = displaySize * config.borderSize;
 
-            // Fill canvas with border color
+            // Draw Border Background
             ctx.fillStyle = config.borderColor;
             ctx.fillRect(0, 0, displaySize, displaySize);
+
+            // Draw Patterns based on style
+            if (config.borderStyle === 'dashed' || config.borderStyle === 'dotted') {
+                ctx.strokeStyle = config.bgColor; // Use background color for contrast
+                ctx.lineWidth = borderPx * 0.2;
+                if (config.borderStyle === 'dashed') {
+                    ctx.setLineDash([borderPx * 0.5, borderPx * 0.5]);
+                } else {
+                    ctx.setLineDash([borderPx * 0.2, borderPx * 0.2]); // Dotted
+                }
+                ctx.strokeRect(borderPx * 0.5, borderPx * 0.5, displaySize - borderPx, displaySize - borderPx);
+                ctx.setLineDash([]); // Reset
+            } else if (config.borderStyle === 'double') {
+                ctx.strokeStyle = config.bgColor;
+                ctx.lineWidth = borderPx * 0.15;
+                const offset = borderPx * 0.3;
+                ctx.strokeRect(offset, offset, displaySize - offset * 2, displaySize - offset * 2);
+            }
 
             // Adjust area for QR code
             drawX = borderPx;
@@ -280,7 +298,7 @@ const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) =
           }
         }
 
-        // Draw Logo
+        // Draw Center Logo
         if (config.logoUrl) {
           const logoImg = new Image();
           logoImg.crossOrigin = 'Anonymous';
@@ -314,6 +332,61 @@ const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) =
               
               ctx.drawImage(logoImg, lx, ly, logoSizePx, logoSizePx);
           }
+        }
+
+        // Draw Border Text and Logo
+        if (config.isBorderEnabled && config.borderSize > 0) {
+            const borderPx = displaySize * config.borderSize;
+
+            // Text
+            if (config.borderText) {
+                ctx.fillStyle = config.borderTextColor;
+                // Font size proportional to border size
+                const fontSize = borderPx * 0.4;
+                ctx.font = `bold ${fontSize}px sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+
+                let tx = displaySize / 2;
+                let ty = borderPx / 2; // Default Top
+
+                if (config.borderTextPosition === 'bottom-center') {
+                    ty = displaySize - (borderPx / 2);
+                } else if (config.borderTextPosition === 'top-center') {
+                    ty = borderPx / 2;
+                }
+
+                ctx.fillText(config.borderText, tx, ty);
+            }
+
+            // Border Logo
+            if (config.borderLogoUrl) {
+                const borderLogoImg = new Image();
+                borderLogoImg.crossOrigin = 'Anonymous';
+                borderLogoImg.src = config.borderLogoUrl;
+
+                await new Promise((resolve) => {
+                    borderLogoImg.onload = resolve;
+                    borderLogoImg.onerror = resolve;
+                });
+
+                if (borderLogoImg.complete) {
+                    const blSize = borderPx * 0.8;
+                    let blx = (displaySize - blSize) / 2;
+                    let bly = displaySize - borderPx + (borderPx - blSize) / 2; // Default Bottom Center
+
+                    if (config.borderLogoPosition === 'bottom-center') {
+                        blx = (displaySize - blSize) / 2;
+                        bly = displaySize - borderPx + (borderPx - blSize) / 2;
+                    } else if (config.borderLogoPosition === 'bottom-right') {
+                        blx = displaySize - borderPx - blSize; // Corner
+                        bly = displaySize - borderPx + (borderPx - blSize) / 2;
+                    }
+
+                    // Optional: Draw background for logo? Assuming transparent PNG usually.
+                    ctx.drawImage(borderLogoImg, blx, bly, blSize, blSize);
+                }
+            }
         }
       } catch (err) {
         console.warn("QR generation failed:", err);

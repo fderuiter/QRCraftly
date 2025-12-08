@@ -66,6 +66,18 @@ export interface QRConfig {
   borderSize: number;
   /** The color of the border. */
   borderColor: string;
+  /** The visual style of the border. */
+  borderStyle: 'solid' | 'dashed' | 'dotted' | 'double';
+  /** Text to display on the border. */
+  borderText: string;
+  /** Position of the border text. */
+  borderTextPosition: 'top-center' | 'bottom-center';
+  /** Color of the border text. */
+  borderTextColor: string;
+  /** Secondary logo to display on the border. */
+  borderLogoUrl: string | null;
+  /** Position of the border logo. */
+  borderLogoPosition: 'bottom-center' | 'bottom-right';
 }
 
 /**
