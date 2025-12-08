@@ -200,6 +200,21 @@ describe('InputPanel Component', () => {
       expect(mockOnChange).toHaveBeenLastCalledWith({ value: expectedVCard });
   });
 
+  it('escapes special characters in vCard fields', () => {
+      renderPanel({ type: QRType.VCARD });
+
+      fireEvent.change(screen.getByLabelText('First Name'), { target: { value: 'John;Bad' } });
+      fireEvent.change(screen.getByLabelText('Last Name'), { target: { value: 'Doe,Jr' } });
+      fireEvent.change(screen.getByLabelText('Company / Organization'), { target: { value: 'Acme\\Corp' } });
+
+      const lastCall = mockOnChange.mock.calls[mockOnChange.mock.calls.length - 1][0];
+      const vcard = lastCall.value;
+
+      expect(vcard).toContain('John\\;Bad');
+      expect(vcard).toContain('Doe\\,Jr');
+      expect(vcard).toContain('Acme\\\\Corp');
+  });
+
   it('formats Payment (Crypto) correctly', () => {
     renderPanel({ type: QRType.PAYMENT });
 

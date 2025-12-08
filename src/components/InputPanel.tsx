@@ -49,6 +49,24 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
   };
 
   /**
+   * Escapes special characters for vCard property values.
+   * Characters to escape: \ ; , and newlines.
+   *
+   * @param str - The string to escape.
+   * @returns The escaped string.
+   */
+  const escapeVCardString = (str: string | undefined): string => {
+    if (!str) return '';
+    // 1. Escape backslashes first to avoid double escaping
+    // 2. Escape newlines as \n
+    // 3. Escape commas and semicolons
+    return str
+      .replace(/\\/g, '\\\\')
+      .replace(/\n/g, '\\n')
+      .replace(/([;,])/g, '\\$1');
+  };
+
+  /**
    * Updates WiFi data and formats the WIFI string for the QR code.
    * @param updates - Partial WiFi data updates.
    */
@@ -89,8 +107,21 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
   const handleVCardChange = (updates: Partial<VCardData>) => {
       const newData = { ...vCardData, ...updates };
       setVCardData(newData);
+
+      // Escape all fields
+      const lastName = escapeVCardString(newData.lastName);
+      const firstName = escapeVCardString(newData.firstName);
+      const organization = escapeVCardString(newData.organization);
+      const title = escapeVCardString(newData.title);
+      const phone = escapeVCardString(newData.phone);
+      const email = escapeVCardString(newData.email);
+      const website = escapeVCardString(newData.website);
+      const street = escapeVCardString(newData.street);
+      const city = escapeVCardString(newData.city);
+      const country = escapeVCardString(newData.country);
+
       // Construct VCard 3.0 string
-      const vcard = `BEGIN:VCARD\nVERSION:3.0\nN:${newData.lastName};${newData.firstName};;;\nFN:${newData.firstName} ${newData.lastName}\nORG:${newData.organization}\nTITLE:${newData.title}\nTEL:${newData.phone}\nEMAIL:${newData.email}\nURL:${newData.website}\nADR:;;${newData.street};${newData.city};;;${newData.country}\nEND:VCARD`;
+      const vcard = `BEGIN:VCARD\nVERSION:3.0\nN:${lastName};${firstName};;;\nFN:${firstName} ${lastName}\nORG:${organization}\nTITLE:${title}\nTEL:${phone}\nEMAIL:${email}\nURL:${website}\nADR:;;${street};${city};;;${country}\nEND:VCARD`;
       onChange({ value: vcard });
   };
 
