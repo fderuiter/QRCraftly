@@ -361,4 +361,52 @@ describe('QRCanvas Component', () => {
     
     expect(QRCode.default.create).not.toHaveBeenCalled();
   });
+
+  it('should ensure the logo cutout does not exceed safe error correction limits', async () => {
+    // Setup a scenario where user config would break the QR code
+    // Version 3 (29x29)
+    // Logo Size 0.35
+    // Padding 4 modules
+
+    // We mock the modules size to be small to exaggerate the issue
+    const moduleCount = 29;
+    mockModules.size = moduleCount;
+
+    const dangerousConfig = {
+      ...DEFAULT_CONFIG,
+      value: 'https://example.com',
+      logoUrl: 'https://example.com/logo.png', // valid url to trigger image loading
+      logoSize: 0.35,
+      logoPaddingStyle: 'square' as LogoPaddingStyle,
+      logoPadding: 4,
+    };
+
+    render(<QRCanvas config={dangerousConfig} size={100} />);
+
+    await waitFor(() => {
+        expect(createdImages.length).toBeGreaterThan(0);
+    });
+
+    const img = createdImages[0];
+    if (img.onload) { img.complete = true; img.onload(); }
+
+    await waitFor(() => {
+        // Find the logo background call. It should be the one centered.
+        // displaySize 100. Center 50.
+        const fillRectCalls = mockContext.fillRect.mock.calls;
+        const logoBgCall = fillRectCalls.find((args: any[]) => {
+            const [x, y, w, h] = args;
+            // Check if it's roughly square and centered
+            return Math.abs(w - h) < 0.1 && w > 20 && w < 90 && Math.abs(x - (100-w)/2) < 2;
+        });
+
+        expect(logoBgCall).toBeDefined();
+        const drawnWidth = logoBgCall[2];
+        const relativeWidth = drawnWidth / 100;
+
+        // This assertion ensures the fix is working
+        // We want the relative width to be <= 0.50 (SAFE_AREA_RATIO) + buffer
+        expect(relativeWidth).toBeLessThanOrEqual(0.51);
+    });
+  });
 });
