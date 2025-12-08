@@ -1,3 +1,4 @@
+
 import math
 
 """
@@ -102,32 +103,33 @@ scenarios = [
     {'mode': 'Light', 'element': 'Icon Indigo (Existing)', 'bg': 'indigo-100', 'fg': 'indigo-600', 'text': 'Code Icon', 'size': 'large'}, # Existing is 5.10
 ]
 
-print(f"{'Mode':<6} | {'Element':<20} | {'Contrast':<8} | {'Pass?':<6} | {'Level':<5} | {'Details'}")
-print("-" * 80)
+if __name__ == "__main__":
+    print(f"{'Mode':<6} | {'Element':<20} | {'Contrast':<8} | {'Pass?':<6} | {'Level':<5} | {'Details'}")
+    print("-" * 80)
 
-for s in scenarios:
-    bg_rgb = hex_to_rgb(colors[s['bg']])
-    fg_rgb = hex_to_rgb(colors[s['fg']])
+    for s in scenarios:
+        bg_rgb = hex_to_rgb(colors[s['bg']])
+        fg_rgb = hex_to_rgb(colors[s['fg']])
 
-    ratio = contrast_ratio(fg_rgb, bg_rgb)
+        ratio = contrast_ratio(fg_rgb, bg_rgb)
 
-    # Check WCAG
-    min_ratio = 4.5
-    if s['size'] == 'large':
-        min_ratio = 3.0
+        # Check WCAG
+        min_ratio = 4.5
+        if s['size'] == 'large':
+            min_ratio = 3.0
 
-    passed = ratio >= min_ratio
+        passed = ratio >= min_ratio
 
-    # AAA check
-    aaa_ratio = 7.0
-    if s['size'] == 'large':
-        aaa_ratio = 4.5
-    aaa_passed = ratio >= aaa_ratio
+        # AAA check
+        aaa_ratio = 7.0
+        if s['size'] == 'large':
+            aaa_ratio = 4.5
+        aaa_passed = ratio >= aaa_ratio
 
-    level = "Fail"
-    if aaa_passed:
-        level = "AAA"
-    elif passed:
-        level = "AA"
+        level = "Fail"
+        if aaa_passed:
+            level = "AAA"
+        elif passed:
+            level = "AA"
 
-    print(f"{s['mode']:<6} | {s['text']:<20} | {ratio:.2f}:1   | {'YES' if passed else 'NO':<6} | {level:<5} | {s['bg']} vs {s['fg']}")
+        print(f"{s['mode']:<6} | {s['text']:<20} | {ratio:.2f}:1   | {'YES' if passed else 'NO':<6} | {level:<5} | {s['bg']} vs {s['fg']}")

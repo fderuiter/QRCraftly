@@ -2,7 +2,21 @@ import os
 from PIL import Image
 
 def optimize_image(filepath, size=(192, 192)):
-    """Resizes an image to the specified size and saves it."""
+    """
+    Resizes an image to the specified size and saves it.
+
+    This function opens an image from the given filepath, resizes it using
+    LANCZOS resampling for high quality, and saves it back to the same path
+    as a PNG file with optimization enabled.
+
+    Args:
+        filepath (str): The path to the image file to be optimized.
+        size (tuple): A tuple (width, height) representing the target size.
+                      Defaults to (192, 192).
+
+    Returns:
+        None: This function prints the result to stdout but does not return a value.
+    """
     if not os.path.exists(filepath):
         print(f"File not found: {filepath}")
         return

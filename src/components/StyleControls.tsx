@@ -51,6 +51,11 @@ const getContrastRatio = (fg: string, bg: string) => {
  * A component providing UI controls for styling the QR code.
  * Allows users to change patterns, colors, and upload logos.
  * Also checks and warns about low contrast ratios.
+ *
+ * @param props - The component props.
+ * @param props.config - The current configuration.
+ * @param props.onChange - Callback to update configuration.
+ * @returns The StyleControls component.
  */
 const StyleControls: React.FC<StyleControlsProps> = ({ config, onChange }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
