@@ -33,6 +33,10 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
+            if (!process.env.LINKS || !process.env.MANIFEST) {
+               core.setFailed('Lighthouse outputs (LINKS or MANIFEST) are missing.');
+               return;
+            }
             const links = JSON.parse(process.env.LINKS);
             const manifest = JSON.parse(process.env.MANIFEST);
 
