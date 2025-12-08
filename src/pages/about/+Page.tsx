@@ -1,19 +1,19 @@
 
 import React from 'react';
-import { Github, Shield, Database, Code, ArrowLeft } from 'lucide-react';
+import { Github, Shield, Database, Code, ArrowLeft, Zap } from 'lucide-react';
 
 /**
  * About Page Component
  *
  * Displays information about the QRCraftly project, including its core values
- * (Privacy, No Database, Open Source) and licensing information.
+ * (Privacy, No Database, Open Source, Free Use) and licensing information.
  * Includes a link to the GitHub repository.
  *
  * @returns {JSX.Element} The About page layout.
  */
 export default function Page() {
   return (
-    <div className="max-w-4xl mx-auto px-4 py-12">
+    <div className="max-w-5xl mx-auto px-4 py-12">
       <div className="mb-8">
         <a
           href="/"
@@ -29,10 +29,21 @@ export default function Page() {
         </h1>
         <p className="text-lg text-slate-600 dark:text-slate-300 max-w-2xl mx-auto">
           A privacy-focused QR code generator built with modern web technologies.
+          Entirely free with no login required.
         </p>
       </div>
 
-      <div className="grid md:grid-cols-3 gap-8 mb-16">
+      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 mb-16">
+        <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 text-center">
+          <div className="w-12 h-12 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-xl flex items-center justify-center mx-auto mb-4">
+            <Zap className="w-6 h-6" />
+          </div>
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">Free & No Login</h2>
+          <p className="text-slate-600 dark:text-slate-400">
+            QRCraftly is completely free to use. No sign-up, no login, and no hidden fees. Just generate your QR codes instantly.
+          </p>
+        </div>
+
         <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 text-center">
           <div className="w-12 h-12 bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-400 rounded-xl flex items-center justify-center mx-auto mb-4">
             <Shield className="w-6 h-6" />
