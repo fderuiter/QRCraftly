@@ -40,7 +40,6 @@ export const PATTERNS = [
   { id: QRStyle.FLUID, label: 'Fluid Ink' },
   { id: QRStyle.CIRCUIT, label: 'Cyber Circuit' },
   { id: QRStyle.HIVE, label: 'The Hive' },
-  { id: QRStyle.KINETIC, label: 'Kinetic' },
   { id: QRStyle.GRUNGE, label: 'Grunge' },
   { id: QRStyle.STARBURST, label: 'Starburst' },
 ];

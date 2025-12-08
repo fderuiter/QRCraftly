@@ -38,11 +38,6 @@ describe('StyleControls Component', () => {
      const starPath = container.querySelector('path[d^="M12 2l3.09 6.26"]');
      expect(starPath).toBeInTheDocument();
 
-     // Kinetic uses rotate(45deg)
-     // eslint-disable-next-line testing-library/no-container, testing-library/no-node-access
-     const kineticElements = container.querySelectorAll('div[style*="rotate(45deg)"]');
-     expect(kineticElements.length).toBeGreaterThan(0);
-
      // Hive uses clipPath
      // eslint-disable-next-line testing-library/no-container, testing-library/no-node-access
      const hiveElements = container.querySelectorAll('div[style*="polygon(50% 0%"]');

@@ -140,20 +140,6 @@ describe('QRCanvas Component', () => {
      });
   });
 
-  it('draws diamond shape for KINETIC style', async () => {
-     mockModules.get.mockImplementation((r: number, c: number) => {
-        if (r === 10 && c === 10) return true;
-        return false;
-     });
-     
-     const config = { ...DEFAULT_CONFIG, style: QRStyle.KINETIC };
-     render(<QRCanvas config={config} />);
-     
-     await waitFor(() => {
-        expect(mockContext.rotate).toHaveBeenCalled();
-     });
-  });
-
   it('draws star for data modules when style is STARBURST', async () => {
       mockModules.get.mockImplementation((r: number, c: number) => {
           if (r === 10 && c === 10) return true;
