@@ -6,7 +6,7 @@ import { QRStyle, QRType } from './types';
  * Used to initialize the application state.
  */
 export const DEFAULT_CONFIG = {
-  value: 'https://google.com',
+  value: 'https://qrcraftly.com',
   type: QRType.URL,
   fgColor: '#000000',
   bgColor: '#ffffff',
