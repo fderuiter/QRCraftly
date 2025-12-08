@@ -58,6 +58,8 @@ export interface QRConfig {
   logoBackgroundColor: string;
   /** The color of the position detection patterns (eyes) in the corners. */
   eyeColor: string;
+  /** The error correction level (L, M, Q, H). */
+  errorCorrectionLevel: 'L' | 'M' | 'Q' | 'H';
 }
 
 /**

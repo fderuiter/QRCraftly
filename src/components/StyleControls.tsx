@@ -1,8 +1,8 @@
 
-import React, { useRef, useMemo } from 'react';
+import React, { useRef, useMemo, useState } from 'react';
 import { QRConfig, QRStyle, LogoPaddingStyle } from '../types';
 import { PATTERNS, PRESET_COLORS } from '../constants';
-import { Upload, X, AlertTriangle, Circle, Square, Minus } from 'lucide-react';
+import { Upload, X, AlertTriangle, Circle, Square, Minus, ChevronDown, ChevronUp } from 'lucide-react';
 
 /**
  * Props for the StyleControls component.
@@ -59,6 +59,7 @@ const getContrastRatio = (fg: string, bg: string) => {
  */
 const StyleControls: React.FC<StyleControlsProps> = ({ config, onChange }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   /**
    * Handles the file upload for the logo.
@@ -342,6 +343,60 @@ const StyleControls: React.FC<StyleControlsProps> = ({ config, onChange }) => {
           className="hidden"
           onChange={handleLogoUpload}
         />
+      </div>
+
+      {/* Advanced Mode */}
+      <div className="border-t border-slate-200 dark:border-slate-700 pt-5">
+        <button
+          onClick={() => setShowAdvanced(!showAdvanced)}
+          className="flex items-center justify-between w-full text-left"
+        >
+          <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Advanced Mode</span>
+          {showAdvanced ? (
+            <ChevronUp className="w-4 h-4 text-slate-500" />
+          ) : (
+            <ChevronDown className="w-4 h-4 text-slate-500" />
+          )}
+        </button>
+
+        {showAdvanced && (
+          <div className="mt-4 space-y-4">
+             <div>
+                <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-2">Error Correction Level</label>
+                <div className="grid grid-cols-2 gap-2">
+                   {[
+                       { id: 'L', label: 'Low (~7%)', desc: 'Best for screens' },
+                       { id: 'M', label: 'Medium (~15%)', desc: 'Standard' },
+                       { id: 'Q', label: 'Quartile (~25%)', desc: 'Good for print' },
+                       { id: 'H', label: 'High (~30%)', desc: 'Best for logos' },
+                   ].map((level) => (
+                       <button
+                           key={level.id}
+                           onClick={() => onChange({ errorCorrectionLevel: level.id as any })}
+                           className={`p-2 rounded-lg text-left border transition-all ${
+                               config.errorCorrectionLevel === level.id
+                               ? 'border-teal-500 bg-teal-50 dark:bg-teal-900/30 text-teal-900 dark:text-teal-200'
+                               : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
+                           }`}
+                       >
+                           <div className="flex items-center gap-2">
+                               <div className={`w-3 h-3 rounded-full border ${
+                                   config.errorCorrectionLevel === level.id
+                                   ? 'border-teal-600 bg-teal-600'
+                                   : 'border-slate-400'
+                               }`}></div>
+                               <span className="text-xs font-medium">{level.label}</span>
+                           </div>
+                           <span className="text-[10px] text-slate-500 dark:text-slate-400 pl-5 block mt-0.5">{level.desc}</span>
+                       </button>
+                   ))}
+                </div>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-2">
+                    Higher levels allow the QR code to be scanned even if damaged or covered (e.g., by a logo), but result in a denser code.
+                </p>
+             </div>
+          </div>
+        )}
       </div>
     </div>
   );

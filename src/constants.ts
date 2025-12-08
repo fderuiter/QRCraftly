@@ -16,7 +16,8 @@ export const DEFAULT_CONFIG = {
   logoPaddingStyle: 'square' as const,
   logoPadding: 1,
   logoBackgroundColor: '#ffffff',
-  eyeColor: '#000000'
+  eyeColor: '#000000',
+  errorCorrectionLevel: 'H' as const
 };
 
 /**
