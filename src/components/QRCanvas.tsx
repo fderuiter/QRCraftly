@@ -19,6 +19,12 @@ interface QRCanvasProps {
  * A component that renders a QR code to a canvas element.
  * It supports customization of colors, styles (squares, dots, rounded, etc.),
  * and embedded logos with various padding options.
+ *
+ * @param props - The component props.
+ * @param props.config - The configuration object.
+ * @param props.size - The canvas resolution size (default: 1024).
+ * @param props.className - Optional CSS classes.
+ * @returns The QRCanvas component.
  */
 const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);

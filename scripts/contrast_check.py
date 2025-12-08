@@ -1,3 +1,4 @@
+
 import math
 
 """
@@ -121,50 +122,51 @@ scenarios = [
     {'mode': 'Dark', 'element': 'Button', 'bg': 'white', 'fg': 'slate-900', 'text': 'Github Button', 'size': 'normal'},
 ]
 
-print(f"{'Mode':<6} | {'Element':<20} | {'Contrast':<8} | {'Pass?':<6} | {'Level':<5} | {'Details'}")
-print("-" * 80)
+if __name__ == "__main__":
+    print(f"{'Mode':<6} | {'Element':<20} | {'Contrast':<8} | {'Pass?':<6} | {'Level':<5} | {'Details'}")
+    print("-" * 80)
 
-for s in scenarios:
-    # Resolve BG
-    if isinstance(s['bg'], tuple):
-        # Blend
-        overlay_color = s['bg'][0]
-        opacity = s['bg'][1]
-        base_color_name = s['bg'][2]
+    for s in scenarios:
+        # Resolve BG
+        if isinstance(s['bg'], tuple):
+            # Blend
+            overlay_color = s['bg'][0]
+            opacity = s['bg'][1]
+            base_color_name = s['bg'][2]
 
-        overlay_rgb = hex_to_rgb(colors[overlay_color])
-        base_rgb = hex_to_rgb(colors[base_color_name])
+            overlay_rgb = hex_to_rgb(colors[overlay_color])
+            base_rgb = hex_to_rgb(colors[base_color_name])
 
-        bg_rgb = blend_color(overlay_rgb, base_rgb, opacity)
-    else:
-        bg_rgb = hex_to_rgb(colors[s['bg']])
+            bg_rgb = blend_color(overlay_rgb, base_rgb, opacity)
+        else:
+            bg_rgb = hex_to_rgb(colors[s['bg']])
 
-    # Resolve FG
-    fg_rgb = hex_to_rgb(colors[s['fg']])
+        # Resolve FG
+        fg_rgb = hex_to_rgb(colors[s['fg']])
 
-    ratio = contrast_ratio(fg_rgb, bg_rgb)
+        ratio = contrast_ratio(fg_rgb, bg_rgb)
 
-    # Check WCAG
-    # Normal Text: AA >= 4.5, AAA >= 7
-    # Large Text (18pt or 14pt bold): AA >= 3, AAA >= 4.5
-    # Icons/UI: AA >= 3
+        # Check WCAG
+        # Normal Text: AA >= 4.5, AAA >= 7
+        # Large Text (18pt or 14pt bold): AA >= 3, AAA >= 4.5
+        # Icons/UI: AA >= 3
 
-    min_ratio = 4.5
-    if s['size'] == 'large':
-        min_ratio = 3.0
+        min_ratio = 4.5
+        if s['size'] == 'large':
+            min_ratio = 3.0
 
-    passed = ratio >= min_ratio
+        passed = ratio >= min_ratio
 
-    # AAA check
-    aaa_ratio = 7.0
-    if s['size'] == 'large':
-        aaa_ratio = 4.5
-    aaa_passed = ratio >= aaa_ratio
+        # AAA check
+        aaa_ratio = 7.0
+        if s['size'] == 'large':
+            aaa_ratio = 4.5
+        aaa_passed = ratio >= aaa_ratio
 
-    level = "Fail"
-    if aaa_passed:
-        level = "AAA"
-    elif passed:
-        level = "AA"
+        level = "Fail"
+        if aaa_passed:
+            level = "AAA"
+        elif passed:
+            level = "AA"
 
-    print(f"{s['mode']:<6} | {s['text']:<20} | {ratio:.2f}:1   | {'YES' if passed else 'NO':<6} | {level:<5} | {s['bg']} vs {s['fg']}")
+        print(f"{s['mode']:<6} | {s['text']:<20} | {ratio:.2f}:1   | {'YES' if passed else 'NO':<6} | {level:<5} | {s['bg']} vs {s['fg']}")

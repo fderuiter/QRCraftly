@@ -39,6 +39,9 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
   /**
    * Escapes special characters for WiFi QR code string.
    * Characters to escape: \ ; , " :
+   *
+   * @param str - The string to escape.
+   * @returns The escaped string.
    */
   const escapeWifiString = (str: string | undefined): string => {
     if (!str) return '';

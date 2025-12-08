@@ -1,16 +1,23 @@
 # QRCraftly
 
-QRCraftly is a powerful and user-friendly React application for generating customized QR codes. It supports various data types including URLs, text, WiFi credentials, vCards, emails, and more. Users can extensively customize the appearance of their QR codes, including colors, patterns, and embedded logos.
+QRCraftly is a powerful, privacy-focused, and user-friendly React application for generating customized QR codes. It supports various data types including URLs, text, WiFi credentials, vCards, emails, and crypto payments. Users can extensively customize the appearance of their QR codes, including colors, patterns, and embedded logos, all while ensuring data privacy through client-side processing.
 
 ## Features
 
-- **Multiple Data Types**: Generate QR codes for URLs, plain text, WiFi networks, Email, vCard contacts, Phone numbers, and SMS.
+- **Multiple Data Types**: Generate QR codes for URLs, plain text, WiFi networks (WPA/WEP/EAP/Open), Email, vCard contacts, Phone numbers, SMS, and Cryptocurrency payments.
 - **Visual Customization**:
-    - **Patterns**: Choose from Classic Squares, Modern Dots, Rounded, Diamond, and Swiss Cross styles.
-    - **Colors**: Customize foreground, background, and corner eye colors. Includes preset themes.
-    - **Logos**: Upload and embed custom logos with configurable padding and border styles (Square, Circle).
+    - **Patterns**: Choose from Classic Squares, Modern Dots, Rounded, Diamond, Swiss Cross, Star, and Heart styles.
+    - **Colors**: Customize foreground, background, and corner eye colors. Includes accessibility-checked preset themes.
+    - **Logos**: Upload and embed custom logos with configurable padding, sizes, and border styles (Square, Circle, None).
+- **Privacy First**: Zero Knowledge architecture. All data processing happens in your browser; no user data is sent to a server.
 - **Live Preview**: See your changes instantly as you edit.
-- **Download Options**: Save your QR codes as PNG, JPEG, or WebP formats.
+- **Download & Share**:
+    - Save as high-quality PNG, JPEG, or WebP.
+    - Native "Save As" support via File System Access API.
+    - Web Share API integration for mobile sharing.
+- **Accessibility**:
+    - WCAG contrast checks for generated codes.
+    - Fully accessible UI with keyboard navigation and screen reader support.
 - **Dark Mode**: Fully supported dark mode interface.
 - **Responsive Design**: Works seamlessly on desktop and mobile devices.
 
@@ -22,9 +29,9 @@ Follow these instructions to get a copy of the project up and running on your lo
 
 Ensure you have the following installed on your machine:
 
-- [Node.js](https://nodejs.org/) (version 14 or higher recommended)
+- [Node.js](https://nodejs.org/) (version 18 or higher recommended)
 - npm (usually comes with Node.js) or yarn
-- Python 3 (optional, for running utility scripts)
+- Python 3 (optional, for running `scripts/` utilities)
 
 ### Installation
 
@@ -55,7 +62,7 @@ The application will typically start at `http://localhost:3000` (or another avai
 
 ### Building for Production
 
-To create a production-ready build:
+To create a production-ready build (Static Site Generation via Vike):
 
 ```bash
 npm run build
@@ -67,10 +74,15 @@ The build artifacts will be stored in the `dist/` directory.
 
 ### Running Tests
 
-To run the test suite:
+To run the test suite (Vitest):
 
 ```bash
 npm test
+```
+
+To run coverage reports:
+```bash
+npm test -- run --coverage
 ```
 
 ## Usage Guide
@@ -92,33 +104,37 @@ npm test
 
 ## Project Structure
 
-- `App.tsx`: The main application component managing global state.
-- `components/`: Contains reusable UI components.
-    - `InputPanel.tsx`: Handles data input for different QR types.
-    - `StyleControls.tsx`: UI for customizing colors, patterns, and logos.
-    - `QRCanvas.tsx`: The core component that renders the QR code using HTML5 Canvas.
-    - `QRTool.tsx`: The main container component that integrates inputs, controls, and canvas.
-- `layouts/`: Application layouts.
-    - `LayoutDefault.tsx`: The main layout wrapper.
-    - `Head.tsx`: Manages document head elements.
-- `pages/`: Page-level components (Vike routing).
-    - `index/+Page.tsx`: The home page.
-    - `about/+Page.tsx`: The about page.
-    - `wifi-qr-code/+Page.tsx`: Specialized WiFi QR code page.
-- `types.ts`: TypeScript definitions for application state and data structures.
-- `constants.ts`: Default configurations and preset data.
-- `scripts/`: Utility scripts.
-    - `contrast_check.py`: Python script to verify WCAG contrast compliance for UI elements.
+- `src/`: Source code.
+    - `components/`: Reusable React components.
+        - `InputPanel.tsx`: Handles data input for different QR types.
+        - `StyleControls.tsx`: UI for customizing colors, patterns, and logos.
+        - `QRCanvas.tsx`: The core component that renders the QR code using HTML5 Canvas.
+        - `QRTool.tsx`: The main container component that integrates inputs, controls, and canvas.
+    - `layouts/`: Application layouts.
+        - `LayoutDefault.tsx`: The main layout wrapper.
+        - `Head.tsx`: Manages document head elements.
+    - `pages/`: Page-level components (Vike routing).
+        - `index/+Page.tsx`: The home page.
+        - `about/+Page.tsx`: The about page.
+        - `wifi-qr-code/+Page.tsx`: Specialized WiFi QR code page.
+        - `+config.ts`: Global Vike configuration.
+    - `types.ts`: TypeScript definitions for application state and data structures.
+    - `constants.ts`: Default configurations and preset data.
+- `scripts/`: Utility scripts (Python).
+    - `contrast_check.py`: Checks WCAG contrast compliance for UI elements.
+    - `optimize_assets.py`: Optimizes static image assets.
+- `public/`: Static assets (favicon, etc.).
 
 ## Technologies Used
 
-- **React**: UI library.
+- **React 19**: UI library.
 - **TypeScript**: Static typing for better code quality.
-- **Vite**: Fast build tool and development server.
-- **Tailwind CSS**: Utility-first CSS framework for styling.
-- **node-qrcode**: Library for generating QR code data.
+- **Vite 6**: Fast build tool and development server.
+- **Vike**: Server-side rendering and routing framework.
+- **Tailwind CSS v4**: Utility-first CSS framework for styling.
+- **qrcode**: Library for generating QR code module data.
 - **Lucide React**: Icon set.
-- **Vike**: Server-side rendering and routing framework (formerly vite-plugin-ssr).
+- **Vitest**: Testing framework.
 
 ## License
 
