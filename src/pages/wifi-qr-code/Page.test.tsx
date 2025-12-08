@@ -19,6 +19,6 @@ describe('WiFi QR Code Page', () => {
     
     const qrTool = screen.getByTestId('qr-tool-mock');
     expect(qrTool).toBeInTheDocument();
-    expect(qrTool).toHaveTextContent('QRTool with type: wifi');
+    expect(qrTool).toHaveTextContent('QRTool with type: WIFI');
   });
 });

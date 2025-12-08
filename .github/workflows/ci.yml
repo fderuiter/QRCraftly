@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  typecheck:
+    name: Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.19.0'
+          cache: 'npm'
+      - run: npm ci
+      - run: npx tsc --noEmit
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.19.0'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm test -- run --coverage
+
+  build:
+    name: Build & Size Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.19.0'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run build
+      - name: Check Bundle Size
+        run: |
+          SIZE=$(du -sk dist/client | cut -f1)
+          # 3MB = 3072KB
+          if [ $SIZE -gt 3072 ]; then
+            echo "Bundle size ($SIZE KB) exceeds limit of 3MB (3072 KB)."
+            exit 1
+          else
+            echo "Bundle size ($SIZE KB) is within limit."
+          fi

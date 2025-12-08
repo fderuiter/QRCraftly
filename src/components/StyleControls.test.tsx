@@ -154,7 +154,7 @@ describe('StyleControls Component', () => {
       global.FileReader = mockFileReader;
 
       if (fileInput) {
-          await user.upload(fileInput, file);
+          await user.upload(fileInput as HTMLElement, file);
           await waitFor(() => {
               expect(mockOnChange).toHaveBeenCalledWith({ logoUrl: 'data:image/png;base64,mocklogo' });
           });
