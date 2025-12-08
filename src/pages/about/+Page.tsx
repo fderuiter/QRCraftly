@@ -37,7 +37,7 @@ export default function Page() {
           <div className="w-12 h-12 bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-400 rounded-xl flex items-center justify-center mx-auto mb-4">
             <Shield className="w-6 h-6" />
           </div>
-          <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">No Third-Party Tracking</h3>
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">No Third-Party Tracking</h2>
           <p className="text-slate-600 dark:text-slate-400">
             We do not use tracking pixels, cookies, or third-party analytics. We only collect basic server logs for performance and reliability.
           </p>
@@ -47,7 +47,7 @@ export default function Page() {
           <div className="w-12 h-12 bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400 rounded-xl flex items-center justify-center mx-auto mb-4">
             <Database className="w-6 h-6" />
           </div>
-          <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">Zero Knowledge</h3>
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">Zero Knowledge</h2>
           <p className="text-slate-600 dark:text-slate-400">
             We utilize a Zero Knowledge architecture. Your content is processed entirely in your browser and never transmitted to our servers.
           </p>
@@ -57,7 +57,7 @@ export default function Page() {
           <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 rounded-xl flex items-center justify-center mx-auto mb-4">
             <Code className="w-6 h-6" />
           </div>
-          <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">Open Source</h3>
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">Open Source</h2>
           <p className="text-slate-600 dark:text-slate-400">
             Our code is open for inspection and contribution. We believe in transparency.
           </p>
