@@ -60,6 +60,12 @@ export interface QRConfig {
   eyeColor: string;
   /** The error correction level (L, M, Q, H). */
   errorCorrectionLevel: 'L' | 'M' | 'Q' | 'H';
+  /** Whether to draw a border around the QR code. */
+  isBorderEnabled: boolean;
+  /** The size of the border relative to the QR code size (0.0 to 0.1). */
+  borderSize: number;
+  /** The color of the border. */
+  borderColor: string;
 }
 
 /**

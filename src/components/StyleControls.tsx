@@ -89,6 +89,60 @@ const StyleControls: React.FC<StyleControlsProps> = ({ config, onChange }) => {
 
   return (
     <div className="space-y-8">
+      {/* Border Controls */}
+      <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
+        <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Border</h3>
+            <div className="flex items-center">
+                <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                        type="checkbox"
+                        className="sr-only peer"
+                        checked={config.isBorderEnabled}
+                        onChange={(e) => onChange({ isBorderEnabled: e.target.checked })}
+                    />
+                    <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-teal-300 dark:peer-focus:ring-teal-800 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-teal-600"></div>
+                </label>
+            </div>
+        </div>
+
+        {config.isBorderEnabled && (
+            <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+                <div>
+                    <label htmlFor="border-size" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
+                        Border Width
+                    </label>
+                    <input
+                        id="border-size"
+                        type="range"
+                        min="0.01"
+                        max="0.15"
+                        step="0.005"
+                        value={config.borderSize}
+                        onChange={(e) => onChange({ borderSize: parseFloat(e.target.value) })}
+                        className="w-full accent-teal-700 dark:accent-teal-500"
+                    />
+                </div>
+
+                <div>
+                    <label htmlFor="border-color" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
+                        Border Color
+                    </label>
+                    <div className="flex items-center gap-2">
+                        <input
+                            id="border-color"
+                            type="color"
+                            value={config.borderColor}
+                            onChange={(e) => onChange({ borderColor: e.target.value })}
+                            className="w-10 h-10 rounded cursor-pointer border-0 p-0 bg-transparent"
+                        />
+                        <span className="text-xs text-slate-600 dark:text-slate-300 font-mono">{config.borderColor}</span>
+                    </div>
+                </div>
+            </div>
+        )}
+      </div>
+
       {/* Pattern Style */}
       <div>
         <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">Pattern Style</h3>

@@ -17,7 +17,10 @@ export const DEFAULT_CONFIG = {
   logoPadding: 1,
   logoBackgroundColor: '#ffffff',
   eyeColor: '#000000',
-  errorCorrectionLevel: 'H' as const
+  errorCorrectionLevel: 'H' as const,
+  isBorderEnabled: false,
+  borderSize: 0.05,
+  borderColor: '#000000',
 };
 
 /**
