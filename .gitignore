@@ -14,6 +14,9 @@ dist-ssr
 /.vike
 coverage
 
+# Verification scripts and artifacts
+verification/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
