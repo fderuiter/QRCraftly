@@ -282,7 +282,7 @@ const StyleControls: React.FC<StyleControlsProps> = ({ config, onChange }) => {
             >
               <div className="w-8 h-8 mb-2 grid grid-cols-2 gap-0.5 p-1">
                   {[1, 2, 3, 4].map((i) => {
-                      if (pattern.id === QRStyle.STAR) {
+                      if (pattern.id === QRStyle.STARBURST) {
                          return (
                              <div key={i} className="flex items-center justify-center">
                                  <svg viewBox="0 0 24 24" fill="currentColor" className="w-full h-full">
@@ -291,36 +291,46 @@ const StyleControls: React.FC<StyleControlsProps> = ({ config, onChange }) => {
                              </div>
                          );
                       }
-                      if (pattern.id === QRStyle.HEART) {
+                      if (pattern.id === QRStyle.HIVE) {
+                          // Hexagon clip path
                           return (
-                              <div key={i} className="flex items-center justify-center">
-                                 <svg viewBox="0 0 24 24" fill="currentColor" className="w-full h-full">
-                                     <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                                 </svg>
-                              </div>
+                              <div key={i} className="flex items-center justify-center bg-current" style={{ clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)' }} />
                           );
                       }
-                      if (pattern.id === QRStyle.CROSS) {
-                          return (
-                              <div key={i} className="flex items-center justify-center bg-current" style={{ clipPath: 'polygon(35% 0%, 65% 0%, 65% 35%, 100% 35%, 100% 65%, 65% 65%, 65% 100%, 35% 100%, 35% 65%, 0% 65%, 0% 35%, 35% 35%)' }} />
-                          );
-                      }
-                      if (pattern.id === QRStyle.DIAMOND) {
+                      if (pattern.id === QRStyle.KINETIC) {
                            return (
                               <div key={i} className="flex items-center justify-center">
                                   <div className="bg-current w-full h-full" style={{ transform: 'rotate(45deg) scale(0.7)' }} />
                               </div>
                           );
                       }
+                      if (pattern.id === QRStyle.SWISS) {
+                           return <div key={i} className="bg-current rounded-full" />;
+                      }
+                      if (pattern.id === QRStyle.MODERN) {
+                           return <div key={i} className="bg-current rounded-sm" />;
+                      }
+                      if (pattern.id === QRStyle.FLUID) {
+                           return <div key={i} className="bg-current rounded-lg" style={{ borderRadius: '50%' }} />;
+                      }
+                      if (pattern.id === QRStyle.CIRCUIT) {
+                           return (
+                             <div key={i} className="relative w-full h-full bg-transparent flex items-center justify-center">
+                                <div className="w-1.5 h-1.5 bg-current rounded-full" />
+                                <div className="absolute inset-0 border border-current opacity-50" />
+                             </div>
+                           );
+                      }
+                      if (pattern.id === QRStyle.GRUNGE) {
+                           return <div key={i} className="bg-current" style={{ clipPath: 'polygon(10% 0, 100% 10%, 90% 100%, 0 90%)' }} />;
+                      }
+                      // Standard and others
                       return (
-                        <div key={i} className={`bg-current ${
-                            pattern.id === QRStyle.DOTS ? 'rounded-full' :
-                            pattern.id === QRStyle.ROUNDED ? 'rounded-sm' : 'rounded-none'
-                        }`} />
+                        <div key={i} className="bg-current" />
                     );
                   })}
               </div>
-              <span className="text-xs font-medium">{pattern.label}</span>
+              <span className="text-xs font-medium text-center leading-tight">{pattern.label}</span>
             </button>
           ))}
         </div>

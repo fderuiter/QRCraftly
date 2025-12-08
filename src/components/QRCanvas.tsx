@@ -119,13 +119,256 @@ const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) =
         };
 
         const cellSize = drawSize / moduleCount;
+
+        // --- DRAWING HELPERS ---
         
-        // Determine safe limit for logo size based on error correction level
-        // The safe area ratio is the max linear dimension of the logo relative to QR size.
-        // L: ~7% damage -> Safe ~5% -> sqrt(0.05) ~ 0.22
-        // M: ~15% damage -> Safe ~12% -> sqrt(0.12) ~ 0.35
-        // Q: ~25% damage -> Safe ~20% -> sqrt(0.20) ~ 0.45
-        // H: ~30% damage -> Safe ~25% -> sqrt(0.25) ~ 0.50
+        const drawRoundRect = (ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) => {
+             // @ts-ignore
+             if (ctx.roundRect) {
+                 // @ts-ignore
+                 ctx.roundRect(x, y, w, h, r);
+             } else {
+                 ctx.beginPath();
+                 ctx.moveTo(x + r, y);
+                 ctx.lineTo(x + w - r, y);
+                 ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+                 ctx.lineTo(x + w, y + h - r);
+                 ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+                 ctx.lineTo(x + r, y + h);
+                 ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+                 ctx.lineTo(x, y + r);
+                 ctx.quadraticCurveTo(x, y, x + r, y);
+                 ctx.closePath();
+             }
+        };
+
+        const drawPoly = (ctx: CanvasRenderingContext2D, x: number, y: number, r: number, sides: number, rotate: number = 0, fill: boolean = true) => {
+            ctx.beginPath();
+            for (let i = 0; i < sides; i++) {
+                const theta = rotate + (i * 2 * Math.PI / sides);
+                const px = x + r * Math.cos(theta);
+                const py = y + r * Math.sin(theta);
+                if (i===0) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+            }
+            ctx.closePath();
+            if(fill) ctx.fill(); else ctx.stroke();
+        };
+
+        const drawStar = (ctx: CanvasRenderingContext2D, cx: number, cy: number, outerR: number, innerR: number, spikes: number, fill: boolean = true) => {
+            let rot = Math.PI / 2 * 3;
+            let x = cx;
+            let y = cy;
+            const step = Math.PI / spikes;
+
+            ctx.beginPath();
+            ctx.moveTo(cx, cy - outerR);
+            for (let i = 0; i < spikes; i++) {
+                x = cx + Math.cos(rot) * outerR;
+                y = cy + Math.sin(rot) * outerR;
+                ctx.lineTo(x, y);
+                rot += step;
+
+                x = cx + Math.cos(rot) * innerR;
+                y = cy + Math.sin(rot) * innerR;
+                ctx.lineTo(x, y);
+                rot += step;
+            }
+            ctx.lineTo(cx, cy - outerR);
+            ctx.closePath();
+            if (fill) ctx.fill(); else ctx.stroke();
+        };
+
+        const drawRoughRect = (ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number) => {
+             ctx.save();
+             ctx.translate(x+w/2, y+h/2);
+             ctx.rotate(0.02);
+             ctx.fillRect(-w/2, -h/2, w, h);
+             ctx.rotate(-0.04);
+             ctx.fillStyle = config.eyeColor + "AA";
+             ctx.fillRect(-w/2 + 1, -h/2 + 1, w-2, h-2);
+             ctx.restore();
+        };
+
+        const drawScribble = (ctx: CanvasRenderingContext2D, x: number, y: number, s: number) => {
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            for(let i=0; i<10; i++) {
+                ctx.lineTo(x + Math.random()*s, y + Math.random()*s);
+            }
+            ctx.stroke();
+            ctx.fillRect(x + s*0.2, y + s*0.2, s*0.6, s*0.6);
+        };
+
+        const drawEyePattern = (r: number, c: number) => {
+            const x = drawX + c * cellSize;
+            const y = drawY + r * cellSize;
+            const size = 7 * cellSize;
+
+            ctx.fillStyle = config.eyeColor;
+
+            const cx = x + size / 2;
+            const cy = y + size / 2;
+
+            switch (config.style) {
+                case QRStyle.MODERN: // Rounded Squares
+                    // Frame
+                    ctx.beginPath();
+                    drawRoundRect(ctx, x, y, size, size, cellSize * 2.5);
+                    ctx.globalCompositeOperation = 'destination-out';
+                    drawRoundRect(ctx, x + cellSize, y + cellSize, size - 2*cellSize, size - 2*cellSize, cellSize * 1.5);
+                    ctx.fill();
+                    ctx.globalCompositeOperation = 'source-over';
+                    ctx.fillStyle = config.eyeColor;
+
+                    // Eyeball
+                    ctx.beginPath();
+                    drawRoundRect(ctx, x + 2*cellSize, y + 2*cellSize, 3*cellSize, 3*cellSize, cellSize);
+                    ctx.fill();
+                    break;
+
+                case QRStyle.SWISS: // Swiss Dot
+                    // Frame: Thin Ring
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, size / 2, 0, Math.PI * 2);
+                    ctx.globalCompositeOperation = 'destination-out';
+                    ctx.arc(cx, cy, (size / 2) - cellSize, 0, Math.PI * 2, true);
+                    ctx.fill();
+                    ctx.globalCompositeOperation = 'source-over';
+                    ctx.fillStyle = config.eyeColor;
+
+                    // Eyeball: Floating Dot
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, 1.5 * cellSize, 0, Math.PI * 2);
+                    ctx.fill();
+                    break;
+
+                case QRStyle.FLUID: // Fluid (Loop + Distorted Drop)
+                    // Frame: Smooth thick ring
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, size/2, 0, Math.PI*2);
+                    ctx.globalCompositeOperation = 'destination-out';
+                    ctx.arc(cx, cy, (size/2) - cellSize, 0, Math.PI*2, true);
+                    ctx.fill();
+                    ctx.globalCompositeOperation = 'source-over';
+                    ctx.fillStyle = config.eyeColor;
+
+                    // Eyeball: Teardrop
+                    ctx.beginPath();
+                    ctx.arc(cx, cy + cellSize * 0.5, cellSize * 1.2, 0, Math.PI, false); // Bottom half
+                    ctx.lineTo(cx, cy - cellSize * 1.5); // Top point
+                    ctx.closePath();
+                    ctx.fill();
+                    break;
+
+                case QRStyle.CIRCUIT: // Cyber-Circuit (Brackets + Notched)
+                     // Frame: Brackets
+                     ctx.lineWidth = cellSize;
+                     ctx.strokeStyle = config.eyeColor;
+                     ctx.lineCap = 'butt';
+                     const bLen = 2 * cellSize;
+
+                     // TL
+                     ctx.beginPath(); ctx.moveTo(x + bLen, y + cellSize/2); ctx.lineTo(x + cellSize/2, y + cellSize/2); ctx.lineTo(x + cellSize/2, y + bLen); ctx.stroke();
+                     // TR
+                     ctx.beginPath(); ctx.moveTo(x + size - bLen, y + cellSize/2); ctx.lineTo(x + size - cellSize/2, y + cellSize/2); ctx.lineTo(x + size - cellSize/2, y + bLen); ctx.stroke();
+                     // BL
+                     ctx.beginPath(); ctx.moveTo(x + bLen, y + size - cellSize/2); ctx.lineTo(x + cellSize/2, y + size - cellSize/2); ctx.lineTo(x + cellSize/2, y + size - bLen); ctx.stroke();
+                     // BR
+                     ctx.beginPath(); ctx.moveTo(x + size - bLen, y + size - cellSize/2); ctx.lineTo(x + size - cellSize/2, y + size - cellSize/2); ctx.lineTo(x + size - cellSize/2, y + size - bLen); ctx.stroke();
+
+                     // Eyeball: Notched Square
+                     ctx.beginPath();
+                     ctx.moveTo(x + 2*cellSize, y + 2*cellSize);
+                     ctx.lineTo(x + 5*cellSize, y + 2*cellSize);
+                     ctx.lineTo(x + 5*cellSize, y + 4*cellSize); // Notch
+                     ctx.lineTo(x + 4*cellSize, y + 5*cellSize);
+                     ctx.lineTo(x + 2*cellSize, y + 5*cellSize);
+                     ctx.closePath();
+                     ctx.fill();
+                     break;
+
+                case QRStyle.HIVE: // Hexagon
+                    // Frame: Hex Ring
+                    drawPoly(ctx, cx, cy, size/2, 6, 0, true);
+                    ctx.globalCompositeOperation = 'destination-out';
+                    drawPoly(ctx, cx, cy, size/2 - cellSize, 6, 0, true);
+                    ctx.globalCompositeOperation = 'source-over';
+                    ctx.fillStyle = config.eyeColor;
+
+                    // Eyeball: Solid Hex
+                    drawPoly(ctx, cx, cy, 1.5 * cellSize, 6, 0, true);
+                    break;
+
+                case QRStyle.KINETIC: // Diamond
+                    // Frame: Diamond Outline
+                    ctx.beginPath();
+                    ctx.moveTo(cx, y);
+                    ctx.lineTo(x + size, cy);
+                    ctx.lineTo(cx, y + size);
+                    ctx.lineTo(x, cy);
+                    ctx.closePath();
+                    ctx.fill();
+
+                    // Inner cutout
+                    ctx.globalCompositeOperation = 'destination-out';
+                    ctx.beginPath();
+                    ctx.moveTo(cx, y + cellSize);
+                    ctx.lineTo(x + size - cellSize, cy);
+                    ctx.lineTo(cx, y + size - cellSize);
+                    ctx.lineTo(x + cellSize, cy);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.globalCompositeOperation = 'source-over';
+                    ctx.fillStyle = config.eyeColor;
+
+                    // Eyeball: Solid Diamond
+                    ctx.beginPath();
+                    ctx.moveTo(cx, y + 2*cellSize);
+                    ctx.lineTo(x + size - 2*cellSize, cy);
+                    ctx.lineTo(cx, y + size - 2*cellSize);
+                    ctx.lineTo(x + 2*cellSize, cy);
+                    ctx.fill();
+                    break;
+
+                case QRStyle.GRUNGE: // Grunge
+                    // Frame
+                    drawRoughRect(ctx, x, y, size, size);
+                    ctx.globalCompositeOperation = 'destination-out';
+                    ctx.fillRect(x + cellSize, y + cellSize, size - 2*cellSize, size - 2*cellSize);
+                    ctx.globalCompositeOperation = 'source-over';
+                    ctx.fillStyle = config.eyeColor;
+
+                    // Eyeball
+                    drawScribble(ctx, x + 2*cellSize, y + 2*cellSize, 3*cellSize);
+                    break;
+
+                case QRStyle.STARBURST:
+                     // Frame: Spiky Ring
+                     drawStar(ctx, cx, cy, size/2, size/2 - cellSize/2, 12, true);
+                     ctx.globalCompositeOperation = 'destination-out';
+                     ctx.beginPath();
+                     ctx.arc(cx, cy, size/2 - cellSize, 0, Math.PI*2);
+                     ctx.fill();
+                     ctx.globalCompositeOperation = 'source-over';
+                     ctx.fillStyle = config.eyeColor;
+
+                     // Eyeball: Star
+                     drawStar(ctx, cx, cy, 1.5*cellSize, 0.7*cellSize, 5, true);
+                     break;
+
+                case QRStyle.STANDARD:
+                default:
+                    // Standard
+                    ctx.fillRect(x, y, size, size);
+                    ctx.clearRect(x + cellSize, y + cellSize, size - 2*cellSize, size - 2*cellSize);
+                    ctx.fillRect(x + 2*cellSize, y + 2*cellSize, 3*cellSize, 3*cellSize);
+                    break;
+            }
+        };
+
+
+        // Determine safe limit for logo size
         const SAFE_AREA_RATIO = (() => {
            switch(config.errorCorrectionLevel) {
                case 'L': return 0.22;
@@ -135,20 +378,16 @@ const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) =
            }
         })();
         
-        // Calculate requested sizes in modules
         const requestedLogoSizeModules = config.logoSize * moduleCount;
         const paddingModules = config.logoPaddingStyle === 'none' ? 0 : config.logoPadding;
         const requestedCutoutModules = requestedLogoSizeModules + (paddingModules * 2);
 
-        // Clamp logic
         let effectiveLogoSizeModules = requestedLogoSizeModules;
         let effectivePaddingModules = paddingModules;
 
         if (requestedCutoutModules > moduleCount * SAFE_AREA_RATIO) {
-            // If too big, scale down proportionally
             const maxCutoutModules = moduleCount * SAFE_AREA_RATIO;
             const scaleFactor = maxCutoutModules / requestedCutoutModules;
-
             effectiveLogoSizeModules = requestedLogoSizeModules * scaleFactor;
             effectivePaddingModules = paddingModules * scaleFactor;
         }
@@ -156,147 +395,101 @@ const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) =
         const logoSizePx = effectiveLogoSizeModules * cellSize;
         const logoPaddingPx = effectivePaddingModules * cellSize;
         const cutoutModuleSize = effectiveLogoSizeModules + (effectivePaddingModules * 2);
-
-        // Calculate Center
         const center = moduleCount / 2;
 
-        // Logic to determine if a module should be skipped (hidden) for the logo
         const isCoveredByLogo = (r: number, c: number) => {
           if (!config.logoUrl) return false;
-          
-          // Coordinate space centered at 0,0
-          const x = c - center + 0.5; // +0.5 to center on the module grid
+          const x = c - center + 0.5;
           const y = r - center + 0.5;
-          
           if (config.logoPaddingStyle === 'circle') {
-            // Check distance from center
             const radius = (cutoutModuleSize / 2); 
             return (x * x + y * y) < (radius * radius);
           } else {
-            // Square (default and 'none' for clearing purposes)
             const halfSize = (cutoutModuleSize / 2);
             return Math.abs(x) < halfSize && Math.abs(y) < halfSize;
           }
         };
 
         // Draw Modules
+        ctx.fillStyle = config.fgColor;
         for (let r = 0; r < moduleCount; r++) {
           for (let c = 0; c < moduleCount; c++) {
-            if (modules.get(r, c)) {
-              // Check if this module is hidden by logo
-              if (isCoveredByLogo(r, c)) continue;
+            if (isEye(r, c)) continue;
 
-              const isEyeModule = isEye(r, c);
-              ctx.fillStyle = isEyeModule ? config.eyeColor : config.fgColor;
+            if (modules.get(r, c)) {
+              if (isCoveredByLogo(r, c)) continue;
 
               const x = drawX + c * cellSize;
               const y = drawY + r * cellSize;
+              const cx = x + cellSize/2;
+              const cy = y + cellSize/2;
 
-              // Apply Style
-              if (isEyeModule) {
-                // Eyes are always clearer as simple shapes, but we can style them slightly
-                ctx.beginPath();
-                if (config.style === QRStyle.ROUNDED || config.style === QRStyle.DOTS) {
-                    const radius = cellSize * 0.4;
-                    ctx.roundRect(x, y, cellSize, cellSize, radius);
-                } else if (config.style === QRStyle.DIAMOND) {
-                    ctx.rect(x, y, cellSize, cellSize);
-                } else {
-                    ctx.rect(x, y, cellSize, cellSize);
-                }
-                ctx.fill();
-              } else {
-                // DATA MODULES
-                if (config.style === QRStyle.DOTS) {
-                  ctx.beginPath();
-                  ctx.arc(x + cellSize / 2, y + cellSize / 2, cellSize / 2.5, 0, Math.PI * 2);
-                  ctx.fill();
-                } else if (config.style === QRStyle.ROUNDED) {
-                  ctx.beginPath();
-                  ctx.roundRect(x, y, cellSize, cellSize, cellSize * 0.35);
-                  ctx.fill();
-                } else if (config.style === QRStyle.DIAMOND) {
-                   // Draw rotated square
-                   const cx = x + cellSize / 2;
-                   const cy = y + cellSize / 2;
-                   const size = cellSize / 1.4; // Adjust size to fit when rotated
-                   
-                   ctx.save();
-                   ctx.translate(cx, cy);
-                   ctx.rotate(45 * Math.PI / 180);
-                   ctx.beginPath();
-                   ctx.rect(-size/2, -size/2, size, size);
-                   ctx.fill();
-                   ctx.restore();
-                } else if (config.style === QRStyle.CROSS) {
-                    // Draw a plus sign
-                    const thickness = cellSize / 3;
-                    const length = cellSize * 0.8;
-                    const cx = x + cellSize / 2;
-                    const cy = y + cellSize / 2;
-                    
-                    ctx.beginPath();
-                    // Horizontal rect
-                    ctx.rect(cx - length/2, cy - thickness/2, length, thickness);
-                    // Vertical rect
-                    ctx.rect(cx - thickness/2, cy - length/2, thickness, length);
-                    ctx.fill();
-                } else if (config.style === QRStyle.STAR) {
-                    const cx = x + cellSize / 2;
-                    const cy = y + cellSize / 2;
-                    const outerRadius = cellSize / 2;
-                    const innerRadius = cellSize / 4;
-                    const spikes = 5;
+              // Neighbors
+              const hasTop = r > 0 && modules.get(r-1, c) && !isCoveredByLogo(r-1, c) && !isEye(r-1, c);
+              const hasBottom = r < moduleCount-1 && modules.get(r+1, c) && !isCoveredByLogo(r+1, c) && !isEye(r+1, c);
+              const hasLeft = c > 0 && modules.get(r, c-1) && !isCoveredByLogo(r, c-1) && !isEye(r, c-1);
+              const hasRight = c < moduleCount-1 && modules.get(r, c+1) && !isCoveredByLogo(r, c+1) && !isEye(r, c+1);
 
+              switch(config.style) {
+                  case QRStyle.MODERN:
                     ctx.beginPath();
-                    for(let i=0; i<spikes*2; i++){
-                        const r = (i%2 === 0) ? outerRadius : innerRadius;
-                        const currX = cx + Math.cos(i * Math.PI / spikes - Math.PI / 2) * r;
-                        const currY = cy + Math.sin(i * Math.PI / spikes - Math.PI / 2) * r;
-                        if(i===0) ctx.moveTo(currX, currY);
-                        else ctx.lineTo(currX, currY);
-                    }
-                    ctx.closePath();
+                    drawRoundRect(ctx, x, y, cellSize, cellSize, cellSize * 0.4);
                     ctx.fill();
-                } else if (config.style === QRStyle.HEART) {
-                    const cx = x + cellSize / 2;
-                    const cy = y + cellSize / 2;
-                    // Slightly reduce size to prevent overlapping
-                    const size = cellSize * 0.9;
-
+                    break;
+                  case QRStyle.SWISS:
                     ctx.beginPath();
-                    const topCurveHeight = size * 0.3;
-                    ctx.moveTo(cx, cy + size * 0.2);
-                    // Bezier curves for heart shape
-                    ctx.bezierCurveTo(
-                      cx, cy - size * 0.3,
-                      cx - size * 0.5, cy - size * 0.3,
-                      cx - size * 0.5, cy + topCurveHeight * 0.2
-                    );
-                    ctx.bezierCurveTo(
-                      cx - size * 0.5, cy + (size + topCurveHeight) / 2,
-                      cx, cy + size * 0.4,
-                      cx, cy + size * 0.5
-                    );
-                    ctx.bezierCurveTo(
-                      cx, cy + size * 0.4,
-                      cx + size * 0.5, cy + (size + topCurveHeight) / 2,
-                      cx + size * 0.5, cy + topCurveHeight * 0.2
-                    );
-                    ctx.bezierCurveTo(
-                      cx + size * 0.5, cy - size * 0.3,
-                      cx, cy - size * 0.3,
-                      cx, cy + size * 0.2
-                    );
+                    ctx.arc(cx, cy, cellSize/2.5, 0, Math.PI*2);
                     ctx.fill();
-                } else {
-                  // Squares (Default)
-                  ctx.fillRect(Math.floor(x), Math.floor(y), Math.ceil(cellSize), Math.ceil(cellSize));
-                }
+                    break;
+                  case QRStyle.FLUID:
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, cellSize/2 + 0.5, 0, Math.PI*2); // +0.5 to reduce gaps
+                    ctx.fill();
+                    // Connect neighbors
+                    if (hasRight) ctx.fillRect(cx, y, cellSize/2 + 1, cellSize);
+                    if (hasBottom) ctx.fillRect(x, cy, cellSize, cellSize/2 + 1);
+                    if (hasLeft) ctx.fillRect(x, y, cellSize/2 + 1, cellSize);
+                    if (hasTop) ctx.fillRect(x, y, cellSize, cellSize/2 + 1);
+                    break;
+                  case QRStyle.CIRCUIT:
+                    // Center node
+                    ctx.fillRect(cx - cellSize*0.15, cy - cellSize*0.15, cellSize*0.3, cellSize*0.3);
+                    // Lines
+                    const thickness = cellSize * 0.15;
+                    if (hasRight) ctx.fillRect(cx, cy - thickness/2, cellSize/2 + 1, thickness);
+                    if (hasBottom) ctx.fillRect(cx - thickness/2, cy, thickness, cellSize/2 + 1);
+                    if (hasLeft) ctx.fillRect(x, cy - thickness/2, cellSize/2 + 1, thickness);
+                    if (hasTop) ctx.fillRect(cx - thickness/2, y, thickness, cellSize/2 + 1);
+                    break;
+                  case QRStyle.HIVE:
+                    drawPoly(ctx, cx, cy, cellSize/1.8, 6, 0, true);
+                    break;
+                  case QRStyle.KINETIC:
+                    ctx.save();
+                    ctx.translate(cx, cy);
+                    ctx.rotate(Math.PI/4);
+                    ctx.fillRect(-cellSize/2.2, -cellSize/2.2, cellSize/1.1, cellSize/1.1);
+                    ctx.restore();
+                    break;
+                  case QRStyle.GRUNGE:
+                    ctx.fillRect(x + Math.random()*2, y + Math.random()*2, cellSize-2, cellSize-2);
+                    break;
+                  case QRStyle.STARBURST:
+                    drawStar(ctx, cx, cy, cellSize/2, cellSize/4, 5, true);
+                    break;
+                  case QRStyle.STANDARD:
+                  default:
+                    ctx.fillRect(Math.floor(x), Math.floor(y), Math.ceil(cellSize), Math.ceil(cellSize));
+                    break;
               }
             }
           }
         }
+
+        // Draw Eyes (Last to ensure they overlap nicely if needed)
+        drawEyePattern(0, 0);
+        drawEyePattern(0, moduleCount - 7);
+        drawEyePattern(moduleCount - 7, 0);
 
         // Draw Center Logo
         if (config.logoUrl) {
@@ -313,18 +506,14 @@ const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) =
               const lx = (displaySize - logoSizePx) / 2;
               const ly = (displaySize - logoSizePx) / 2;
               
-              // Draw background for logo to ensure contrast/separation
               if (config.logoPaddingStyle !== 'none') {
                   ctx.fillStyle = config.logoBackgroundColor || config.bgColor;
-                  
                   if (config.logoPaddingStyle === 'circle') {
                       ctx.beginPath();
-                      // Radius = half image + padding
                       const radius = (logoSizePx / 2) + logoPaddingPx;
                       ctx.arc(displaySize/2, displaySize/2, radius, 0, Math.PI*2);
                       ctx.fill();
                   } else {
-                      // Square
                       const padding = logoPaddingPx;
                       ctx.fillRect(lx - padding, ly - padding, logoSizePx + (padding*2), logoSizePx + (padding*2));
                   }
@@ -337,29 +526,24 @@ const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) =
         // Draw Border Text and Logo
         if (config.isBorderEnabled && config.borderSize > 0) {
             const borderPx = displaySize * config.borderSize;
-
-            // Text
             if (config.borderText) {
                 ctx.fillStyle = config.borderTextColor;
-                // Font size proportional to border size
                 const fontSize = borderPx * 0.4;
                 ctx.font = `bold ${fontSize}px sans-serif`;
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
 
                 let tx = displaySize / 2;
-                let ty = borderPx / 2; // Default Top
+                let ty = borderPx / 2;
 
                 if (config.borderTextPosition === 'bottom-center') {
                     ty = displaySize - (borderPx / 2);
                 } else if (config.borderTextPosition === 'top-center') {
                     ty = borderPx / 2;
                 }
-
                 ctx.fillText(config.borderText, tx, ty);
             }
 
-            // Border Logo
             if (config.borderLogoUrl) {
                 const borderLogoImg = new Image();
                 borderLogoImg.crossOrigin = 'Anonymous';
@@ -373,17 +557,15 @@ const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) =
                 if (borderLogoImg.complete) {
                     const blSize = borderPx * 0.8;
                     let blx = (displaySize - blSize) / 2;
-                    let bly = displaySize - borderPx + (borderPx - blSize) / 2; // Default Bottom Center
+                    let bly = displaySize - borderPx + (borderPx - blSize) / 2;
 
                     if (config.borderLogoPosition === 'bottom-center') {
                         blx = (displaySize - blSize) / 2;
                         bly = displaySize - borderPx + (borderPx - blSize) / 2;
                     } else if (config.borderLogoPosition === 'bottom-right') {
-                        blx = displaySize - borderPx - blSize; // Corner
+                        blx = displaySize - borderPx - blSize;
                         bly = displaySize - borderPx + (borderPx - blSize) / 2;
                     }
-
-                    // Optional: Draw background for logo? Assuming transparent PNG usually.
                     ctx.drawImage(borderLogoImg, blx, bly, blSize, blSize);
                 }
             }

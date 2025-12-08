@@ -1,15 +1,18 @@
 
 /**
- * Defines the visual style of the QR code data modules.
+ * Defines the visual style of the QR code.
+ * Each style dictates the data modules, eye frame, and eyeball appearance.
  */
 export enum QRStyle {
-  SQUARES = 'squares',
-  DOTS = 'dots',
-  ROUNDED = 'rounded',
-  DIAMOND = 'diamond',
-  CROSS = 'cross',
-  STAR = 'star',
-  HEART = 'heart',
+  STANDARD = 'standard',
+  MODERN = 'modern',
+  SWISS = 'swiss',
+  FLUID = 'fluid',
+  CIRCUIT = 'circuit',
+  HIVE = 'hive',
+  KINETIC = 'kinetic',
+  GRUNGE = 'grunge',
+  STARBURST = 'starburst',
 }
 
 /**

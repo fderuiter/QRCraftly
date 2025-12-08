@@ -10,7 +10,7 @@ export const DEFAULT_CONFIG = {
   type: QRType.URL,
   fgColor: '#000000',
   bgColor: '#ffffff',
-  style: QRStyle.SQUARES,
+  style: QRStyle.STANDARD,
   logoUrl: null,
   logoSize: 0.2,
   logoPaddingStyle: 'square' as const,
@@ -34,13 +34,15 @@ export const DEFAULT_CONFIG = {
  * Used for the style selection UI.
  */
 export const PATTERNS = [
-  { id: QRStyle.SQUARES, label: 'Classic Squares' },
-  { id: QRStyle.DOTS, label: 'Modern Dots' },
-  { id: QRStyle.ROUNDED, label: 'Soft Rounded' },
-  { id: QRStyle.DIAMOND, label: 'Luxury Diamond' },
-  { id: QRStyle.CROSS, label: 'Swiss Cross' },
-  { id: QRStyle.STAR, label: 'Star Dust' },
-  { id: QRStyle.HEART, label: 'Love Heart' },
+  { id: QRStyle.STANDARD, label: 'Standard Industrial' },
+  { id: QRStyle.MODERN, label: 'Modern Soft' },
+  { id: QRStyle.SWISS, label: 'Swiss Dot' },
+  { id: QRStyle.FLUID, label: 'Fluid Ink' },
+  { id: QRStyle.CIRCUIT, label: 'Cyber Circuit' },
+  { id: QRStyle.HIVE, label: 'The Hive' },
+  { id: QRStyle.KINETIC, label: 'Kinetic' },
+  { id: QRStyle.GRUNGE, label: 'Grunge' },
+  { id: QRStyle.STARBURST, label: 'Starburst' },
 ];
 
 /**
