@@ -295,10 +295,10 @@ const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) =
                      // Simulate brackets by drawing small white lines over the frame
                      ctx.fillStyle = config.bgColor;
                      const gap = cellSize * 0.5;
-                     ctx.fillRect(cx - gap/2, y, gap, cellSize * 0.2); // Top cut
-                     ctx.fillRect(cx - gap/2, y + size - cellSize*0.2, gap, cellSize*0.2); // Bottom cut
-                     ctx.fillRect(x, cy - gap/2, cellSize * 0.2, gap); // Left cut
-                     ctx.fillRect(x + size - cellSize*0.2, cy - gap/2, cellSize * 0.2, gap); // Right cut
+                     ctx.fillRect(cx - gap/2, y, gap, cellSize * 1.1); // Top cut
+                     ctx.fillRect(cx - gap/2, y + size - cellSize*1.1, gap, cellSize*1.1); // Bottom cut
+                     ctx.fillRect(x, cy - gap/2, cellSize * 1.1, gap); // Left cut
+                     ctx.fillRect(x + size - cellSize*1.1, cy - gap/2, cellSize * 1.1, gap); // Right cut
                      ctx.fillStyle = config.eyeColor;
 
                      // Eyeball: Notched Square
