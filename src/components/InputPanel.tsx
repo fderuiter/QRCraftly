@@ -135,7 +135,7 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
   const handlePhoneChange = (updates: Partial<PhoneData>) => {
       const newData = { ...phoneData, ...updates };
       setPhoneData(newData);
-      const cleanNumber = newData.number.replace(/\s+/g, '');
+      const cleanNumber = newData.number.replace(/[\s:]+/g, '');
       onChange({ value: `tel:${cleanNumber}` });
   };
 
@@ -146,7 +146,7 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
   const handleSmsChange = (updates: Partial<SmsData>) => {
       const newData = { ...smsData, ...updates };
       setSmsData(newData);
-      const cleanNumber = newData.number.replace(/\s+/g, '');
+      const cleanNumber = newData.number.replace(/[\s:]+/g, '');
       onChange({ value: `smsto:${cleanNumber}:${newData.message}` });
   };
 
