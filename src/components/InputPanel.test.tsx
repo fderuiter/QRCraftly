@@ -94,7 +94,7 @@ describe('InputPanel Component', () => {
     const ssidInput = screen.getByLabelText('Network Name (SSID)');
     fireEvent.change(ssidInput, { target: { value: 'OpenWiFi' } });
 
-    const expectedValue = `WIFI:T:nopass;S:OpenWiFi;P:;H:false;;`;
+    const expectedValue = `WIFI:T:nopass;S:OpenWiFi;H:false;;`;
     expect(mockOnChange).toHaveBeenLastCalledWith({ value: expectedValue });
   });
 
@@ -139,8 +139,8 @@ describe('InputPanel Component', () => {
     // 3. Verify the output string does NOT contain the password
     const lastCall = mockOnChange.mock.calls[mockOnChange.mock.calls.length - 1][0];
     expect(lastCall.value).not.toContain('P:secret123');
-    // It should have an empty password field
-    expect(lastCall.value).toContain('P:;');
+    // It should NOT have a password field at all
+    expect(lastCall.value).not.toContain('P:');
   });
 
   it('formats Email correctly', () => {
