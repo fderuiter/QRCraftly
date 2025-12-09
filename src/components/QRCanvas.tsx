@@ -453,10 +453,10 @@ const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) =
 
                     // Draw lines to neighbors
                     const thickness = cellSize * 0.4;
-                    if (hasRight) ctx.fillRect(cx, y, cellSize/2 + 1, thickness);
-                    if (hasBottom) ctx.fillRect(x, cy, cellSize, cellSize/2 + 1);
-                    if (hasLeft) ctx.fillRect(x, y, cellSize/2 + 1, thickness);
-                    if (hasTop) ctx.fillRect(cx, y, thickness, cellSize/2 + 1);
+                    if (hasRight) ctx.fillRect(cx, cy - thickness/2, cellSize/2 + 1, thickness);
+                    if (hasBottom) ctx.fillRect(cx - thickness/2, cy, thickness, cellSize/2 + 1);
+                    if (hasLeft) ctx.fillRect(x, cy - thickness/2, cellSize/2 + 1, thickness);
+                    if (hasTop) ctx.fillRect(cx - thickness/2, y, thickness, cellSize/2 + 1);
                     break;
                   case QRStyle.HIVE:
                     // Massive Hexagon
