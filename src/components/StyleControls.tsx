@@ -115,6 +115,7 @@ const StyleControls: React.FC<StyleControlsProps> = ({ config, onChange }) => {
             <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Border</h3>
             <div className="flex items-center">
                 <label className="relative inline-flex items-center cursor-pointer">
+                    <span className="sr-only">Enable Border</span>
                     <input
                         type="checkbox"
                         className="sr-only peer"
