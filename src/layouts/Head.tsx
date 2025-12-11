@@ -15,8 +15,26 @@ export default function HeadDefault() {
 
   return (
     <>
-      <meta name="viewport" content="width=device-width, initial-scale=1" />
-      <meta name="description" content="Free Custom QR Code Generator" />
+      {/*
+        Note: 'viewport' and 'description' are handled by Vike/Config to avoid duplicates.
+        Build output confirmed Vike injects: <meta name="viewport" content="width=device-width,initial-scale=1">
+
+        The 'title' is also injected by Vike based on +config.ts
+      */}
+
+      {/* Social Signals (Open Graph) */}
+      <meta property="og:site_name" content="QRCraftly" />
+      <meta property="og:type" content="website" />
+      {/*
+        TODO: Replace with a dedicated social share image (1200x630px) when available.
+        Current fallback is favicon.png to ensure *some* image appears.
+      */}
+      <meta property="og:image" content="https://qrcraftly.com/favicon.png" />
+
+      {/* Social Signals (Twitter) */}
+      <meta name="twitter:card" content="summary" />
+      <meta name="twitter:image" content="https://qrcraftly.com/favicon.png" />
+
       <link rel="icon" type="image/png" href="/favicon.png" />
       <link rel="apple-touch-icon" href="/favicon.png" />
       <link rel="preconnect" href="https://fonts.googleapis.com" />
