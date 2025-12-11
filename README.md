@@ -29,7 +29,7 @@ Follow these instructions to get a copy of the project up and running on your lo
 
 Ensure you have the following installed on your machine:
 
-- [Node.js](https://nodejs.org/) (version 18 or higher recommended)
+- [Node.js](https://nodejs.org/) (version 20.19.0 or higher required)
 - npm (usually comes with Node.js) or yarn
 - Python 3 (optional, for running `scripts/` utilities)
 
@@ -85,6 +85,22 @@ To run coverage reports:
 npm test -- run --coverage
 ```
 
+## Troubleshooting
+
+### Canvas Installation Issues
+This project relies on `node-canvas` which may require system dependencies on Linux/WSL. If `npm install` fails, try installing the following packages:
+
+**Ubuntu/Debian:**
+```bash
+sudo apt-get update
+sudo apt-get install build-essential libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev
+```
+
+**macOS:**
+```bash
+brew install pkg-config cairo pango libpng jpeg giflib librsvg
+```
+
 ## Usage Guide
 
 1.  **Select Content Type**: Use the icon grid at the top of the input panel to choose the type of QR code you want to create (e.g., URL, WiFi).
@@ -122,7 +138,7 @@ npm test -- run --coverage
     - `constants.ts`: Default configurations and preset data.
 - `scripts/`: Utility scripts (Python).
     - `contrast_check.py`: Checks WCAG contrast compliance for UI elements.
-    - `optimize_assets.py`: Optimizes static image assets.
+    - `optimize_assets.py`: Optimizes static image assets (requires `pip install -r scripts/requirements.txt`).
 - `public/`: Static assets (favicon, etc.).
 
 ## Technologies Used
