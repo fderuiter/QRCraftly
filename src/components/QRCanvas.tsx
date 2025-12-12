@@ -1,5 +1,5 @@
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useMemo, useState } from 'react';
 import QRCode from 'qrcode';
 import { QRConfig, QRStyle } from '../types';
 
@@ -16,6 +16,38 @@ interface QRCanvasProps {
 }
 
 /**
+ * Custom hook to load an image and memoize it.
+ * Prevents flickering and unnecessary re-downloads during re-renders.
+ */
+const useImage = (url?: string) => {
+  const [image, setImage] = useState<HTMLImageElement | null>(null);
+
+  useEffect(() => {
+    if (!url) {
+      setImage(null);
+      return;
+    }
+
+    const img = new Image();
+    img.crossOrigin = 'Anonymous';
+    img.src = url;
+
+    img.onload = () => setImage(img);
+    img.onerror = () => {
+        // Silently fail or console warn, but don't set image
+        console.warn(`Failed to load image: ${url}`);
+    };
+
+    return () => {
+        img.onload = null;
+        img.onerror = null;
+    };
+  }, [url]);
+
+  return image;
+};
+
+/**
  * A component that renders a QR code to a canvas element.
  * It supports customization of colors, styles (squares, dots, rounded, etc.),
  * and embedded logos with various padding options.
@@ -28,13 +60,26 @@ interface QRCanvasProps {
  */
 const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const logoImg = useImage(config.logoUrl);
+  const borderLogoImg = useImage(config.borderLogoUrl);
+
+  // Memoize QR data generation to avoid expensive re-computation on every render
+  const qrData = useMemo(() => {
+      if (!config.value) return null;
+      try {
+          return QRCode.create(config.value, { errorCorrectionLevel: config.errorCorrectionLevel });
+      } catch (err) {
+          console.warn("QR generation failed:", err);
+          return null;
+      }
+  }, [config.value, config.errorCorrectionLevel]);
 
   useEffect(() => {
     /**
      * Renders the QR code onto the canvas.
      * This function handles module generation, styling, and logo embedding.
      */
-    const renderQR = async () => {
+    const renderQR = () => {
       const canvas = canvasRef.current;
       if (!canvas) return;
 
@@ -53,14 +98,12 @@ const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) =
       // Clear canvas initially
       ctx.clearRect(0, 0, rawSize, rawSize);
 
-      // Guard against empty input
-      if (!config.value) {
+      // Guard against empty input or failed generation
+      if (!qrData) {
         return;
       }
 
       try {
-        // 1. Generate QR Data (Modules)
-        const qrData = QRCode.create(config.value, { errorCorrectionLevel: config.errorCorrectionLevel });
         const modules = qrData.modules;
         const moduleCount = modules.size;
         
@@ -485,17 +528,7 @@ const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) =
         drawEyePattern(moduleCount - 7, 0);
 
         // Draw Center Logo
-        if (config.logoUrl) {
-          const logoImg = new Image();
-          logoImg.crossOrigin = 'Anonymous';
-          logoImg.src = config.logoUrl;
-          
-          await new Promise((resolve) => {
-            logoImg.onload = resolve;
-            logoImg.onerror = resolve;
-          });
-
-          if (logoImg.complete) {
+        if (config.logoUrl && logoImg) {
               const lx = (displaySize - logoSizePx) / 2;
               const ly = (displaySize - logoSizePx) / 2;
               
@@ -513,7 +546,6 @@ const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) =
               }
               
               ctx.drawImage(logoImg, lx, ly, logoSizePx, logoSizePx);
-          }
         }
 
         // Draw Border Text and Logo
@@ -537,17 +569,7 @@ const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) =
                 ctx.fillText(config.borderText, tx, ty);
             }
 
-            if (config.borderLogoUrl) {
-                const borderLogoImg = new Image();
-                borderLogoImg.crossOrigin = 'Anonymous';
-                borderLogoImg.src = config.borderLogoUrl;
-
-                await new Promise((resolve) => {
-                    borderLogoImg.onload = resolve;
-                    borderLogoImg.onerror = resolve;
-                });
-
-                if (borderLogoImg.complete) {
+            if (config.borderLogoUrl && borderLogoImg) {
                     const blSize = borderPx * 0.8;
                     let blx = (displaySize - blSize) / 2;
                     let bly = displaySize - borderPx + (borderPx - blSize) / 2;
@@ -560,7 +582,6 @@ const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) =
                         bly = displaySize - borderPx + (borderPx - blSize) / 2;
                     }
                     ctx.drawImage(borderLogoImg, blx, bly, blSize, blSize);
-                }
             }
         }
       } catch (err) {
@@ -569,7 +590,7 @@ const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) =
     };
 
     renderQR();
-  }, [config, size]);
+  }, [config, size, logoImg, borderLogoImg, qrData]);
 
   const typeLabel = config.type.charAt(0).toUpperCase() + config.type.slice(1).toLowerCase();
   const ariaLabel = `QR Code for ${typeLabel} - ${config.value ? 'Scan to view content' : 'Empty'}`;

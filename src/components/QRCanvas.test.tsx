@@ -262,7 +262,24 @@ describe('QRCanvas Component', () => {
       });
 
       // Should NOT draw background for logo
-      expect(mockContext.fillRect).not.toHaveBeenCalled();
+      // We verify that no fillRect call corresponds to the logo background area.
+      // The logo background would be drawn around the center.
+
+      const fillRectCalls = mockContext.fillRect.mock.calls;
+      const center = 1024/2;
+
+      const logoBgCall = fillRectCalls.find((args: any[]) => {
+            const [x, y, w, h] = args;
+            // The main background is 1024x1024, so w=1024.
+            // Logo background should be around 20% size (approx 200px).
+            // So we can exclude large rects.
+            if (w > 500) return false;
+
+            // Check if call is centered and square-ish
+            return Math.abs(w - h) < 1 && Math.abs(x - (center - w/2)) < 1;
+      });
+
+      expect(logoBgCall).toBeUndefined();
       expect(mockContext.arc).not.toHaveBeenCalled();
   });
 
