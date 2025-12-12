@@ -1,5 +1,5 @@
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useMemo } from 'react';
 import QRCode from 'qrcode';
 import { QRConfig, QRStyle } from '../types';
 
@@ -29,6 +29,17 @@ interface QRCanvasProps {
 const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
+  // Memoize QR data generation to avoid re-computation on style changes
+  const qrData = useMemo(() => {
+    if (!config.value) return null;
+    try {
+      return QRCode.create(config.value, { errorCorrectionLevel: config.errorCorrectionLevel });
+    } catch (e) {
+      console.warn("QR generation failed:", e);
+      return null;
+    }
+  }, [config.value, config.errorCorrectionLevel]);
+
   useEffect(() => {
     /**
      * Renders the QR code onto the canvas.
@@ -54,13 +65,12 @@ const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) =
       ctx.clearRect(0, 0, rawSize, rawSize);
 
       // Guard against empty input
-      if (!config.value) {
+      if (!qrData) {
         return;
       }
 
       try {
         // 1. Generate QR Data (Modules)
-        const qrData = QRCode.create(config.value, { errorCorrectionLevel: config.errorCorrectionLevel });
         const modules = qrData.modules;
         const moduleCount = modules.size;
         
@@ -569,7 +579,7 @@ const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) =
     };
 
     renderQR();
-  }, [config, size]);
+  }, [config, size, qrData]);
 
   const typeLabel = config.type.charAt(0).toUpperCase() + config.type.slice(1).toLowerCase();
   const ariaLabel = `QR Code for ${typeLabel} - ${config.value ? 'Scan to view content' : 'Empty'}`;
