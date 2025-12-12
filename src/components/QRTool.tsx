@@ -173,6 +173,7 @@ export default function QRTool({ initialConfig }: { initialConfig?: Partial<QRCo
                 href="/about"
                 className="p-2 rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                 title="About Us"
+                aria-label="About QRCraftly"
               >
                 <Info className="w-5 h-5" />
               </a>
@@ -180,6 +181,7 @@ export default function QRTool({ initialConfig }: { initialConfig?: Partial<QRCo
                 onClick={toggleDarkMode}
                 className="p-2 rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                 title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+                aria-label={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
               >
                 {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
               </button>
@@ -227,6 +229,8 @@ export default function QRTool({ initialConfig }: { initialConfig?: Partial<QRCo
                           <button 
                               onClick={() => setShowDownloadMenu(!showDownloadMenu)}
                               className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-teal-700 dark:bg-teal-700 text-white rounded-xl font-medium hover:bg-teal-800 dark:hover:bg-teal-600 transition-colors shadow-lg shadow-teal-900/10 dark:shadow-teal-900/40"
+                              aria-expanded={showDownloadMenu}
+                              aria-haspopup="true"
                           >
                               <Download className="w-4 h-4" />
                               Download
@@ -252,6 +256,7 @@ export default function QRTool({ initialConfig }: { initialConfig?: Partial<QRCo
                           onClick={handleShare}
                           className="flex items-center justify-center w-12 bg-teal-50 dark:bg-slate-800 border border-teal-200 dark:border-slate-700 text-teal-700 dark:text-teal-400 rounded-xl font-medium hover:bg-teal-100 dark:hover:bg-slate-700 transition-colors"
                           title="Share"
+                          aria-label="Share QR code"
                        >
                           <Share2 className="w-5 h-5" />
                        </button>
@@ -261,6 +266,7 @@ export default function QRTool({ initialConfig }: { initialConfig?: Partial<QRCo
                    <button 
                       onClick={() => downloadToDevice('png')}
                       className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-xl font-medium hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+                      aria-label="Save QR code to photos"
                    >
                       <Camera className="w-4 h-4" />
                       Save to Photos
