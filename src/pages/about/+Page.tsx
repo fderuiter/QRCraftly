@@ -22,7 +22,7 @@ export default function Page() {
       "name": "QRCraftly",
       "description": "Privacy-focused, client-side QR code generator.",
       "slogan": "Free. Secure. Open Source.",
-      "foundingDate": "2024"
+      "foundingDate": "2025"
     }
   };
 
