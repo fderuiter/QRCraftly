@@ -1,10 +1,12 @@
 import React from 'react';
+import { usePageContext } from 'vike-react/usePageContext';
 
 /**
  * HeadDefault Component
  *
  * Renders the default `<head>` meta tags and link elements for the application.
- * This includes viewport settings, description, favicon, and font preconnections.
+ * This includes viewport settings, description, favicon, font preconnections,
+ * and global structured data (JSON-LD) for SEO.
  *
  * Optimized to load Google Fonts non-blockingly to improve First Contentful Paint.
  *
@@ -12,6 +14,27 @@ import React from 'react';
  */
 export default function HeadDefault() {
   const fontUrl = "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap";
+
+  const pageContext = usePageContext();
+  // Ensure we don't end up with double slashes if urlPathname is just '/'
+  const path = pageContext.urlPathname === '/' ? '' : pageContext.urlPathname;
+  const canonicalUrl = `https://qrcraftly.com${path}`;
+
+  const schemaData = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "QRCraftly",
+    "url": "https://qrcraftly.com",
+    "description": "Free, secure, and client-side QR code generator with zero-knowledge architecture.",
+    "publisher": {
+      "@type": "Organization",
+      "name": "QRCraftly",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://qrcraftly.com/favicon.png"
+      }
+    }
+  };
 
   return (
     <>
@@ -22,9 +45,16 @@ export default function HeadDefault() {
         The 'title' is also injected by Vike based on +config.ts
       */}
 
+      {/* Global Structured Data */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaData) }} />
+
+      {/* Canonical URL */}
+      <link rel="canonical" href={canonicalUrl} />
+
       {/* Social Signals (Open Graph) */}
       <meta property="og:site_name" content="QRCraftly" />
       <meta property="og:type" content="website" />
+      <meta property="og:url" content={canonicalUrl} />
       {/*
         TODO: Replace with a dedicated social share image (1200x630px) when available.
         Current fallback is favicon.png to ensure *some* image appears.
