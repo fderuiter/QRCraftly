@@ -24,11 +24,6 @@ export default defineConfig(({ mode }) => {
         environment: 'jsdom',
         setupFiles: './vitest.setup.ts',
       },
-      define: {
-        // Expose env variables to the client
-        'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-        'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)
-      },
       resolve: {
         alias: {
           '@': path.resolve(__dirname, './src'),
