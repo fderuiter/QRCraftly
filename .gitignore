@@ -27,3 +27,4 @@ verification/
 *.njsproj
 *.sln
 *.sw?
+.Jules/*
