@@ -12,8 +12,23 @@ import { Github, Shield, Database, Code, ArrowLeft, Zap } from 'lucide-react';
  * @returns {JSX.Element} The About page layout.
  */
 export default function Page() {
+  const schemaData = {
+    "@context": "https://schema.org",
+    "@type": "AboutPage",
+    "name": "About QRCraftly",
+    "url": "https://qrcraftly.com/about",
+    "mainEntity": {
+      "@type": "Organization",
+      "name": "QRCraftly",
+      "description": "Privacy-focused, client-side QR code generator.",
+      "slogan": "Free. Secure. Open Source.",
+      "foundingDate": "2024"
+    }
+  };
+
   return (
     <div className="max-w-5xl mx-auto px-4 py-12">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaData) }} />
       <div className="mb-8">
         <a
           href="/"

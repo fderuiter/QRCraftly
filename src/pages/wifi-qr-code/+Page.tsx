@@ -17,7 +17,25 @@ export default function Page() {
     type: QRType.WIFI,
   };
 
+  const schemaData = {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "WiFi QR Code Generator",
+    "url": "https://qrcraftly.com/wifi-qr-code",
+    "applicationCategory": "Utilities",
+    "operatingSystem": "All",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "featureList": "Generate WiFi Access QR Codes, WPA/WPA2 Support, Hidden SSID Support"
+  };
+
   return (
-    <QRTool initialConfig={wifiConfig} />
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaData) }} />
+      <QRTool initialConfig={wifiConfig} title="WiFi QR Code" />
+    </>
   );
 }
