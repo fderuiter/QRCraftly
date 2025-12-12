@@ -16,7 +16,7 @@ import { Download, Share2, QrCode, ChevronDown, Camera, Moon, Sun, Info } from '
  * @param props.initialConfig - Optional initial configuration for the QR code.
  * @returns The QRTool component.
  */
-export default function QRTool({ initialConfig }: { initialConfig?: Partial<QRConfig> }) {
+export default function QRTool({ initialConfig, title }: { initialConfig?: Partial<QRConfig>, title?: string }) {
   const [config, setConfig] = useState<QRConfig>({ ...DEFAULT_CONFIG, ...initialConfig });
   const [showDownloadMenu, setShowDownloadMenu] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -163,7 +163,7 @@ export default function QRTool({ initialConfig }: { initialConfig?: Partial<QRCo
             <div>
               <div className="flex items-center gap-2 text-teal-700 dark:text-teal-400 mb-1">
                 <QrCode className="w-6 h-6" />
-                <h1 className="text-xl font-bold tracking-tight text-slate-700 dark:text-slate-100">QRCraftly</h1>
+                <h1 className="text-xl font-bold tracking-tight text-slate-700 dark:text-slate-100">{title || "QRCraftly"}</h1>
               </div>
               <p className="text-sm text-slate-600 dark:text-slate-400">Design beautiful QR codes in seconds.</p>
             </div>
