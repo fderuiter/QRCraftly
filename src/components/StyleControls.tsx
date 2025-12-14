@@ -584,4 +584,33 @@ const StyleControls: React.FC<StyleControlsProps> = ({ config, onChange }) => {
   );
 };
 
-export default StyleControls;
+/**
+ * Comparison function for React.memo.
+ * Returns true if the next props are equivalent to the previous props (skipping re-render).
+ * It ignores changes to 'value' and 'type' as they don't affect visual style controls.
+ */
+function arePropsEqual(prev: StyleControlsProps, next: StyleControlsProps) {
+  // If the onChange handler changed, we must re-render
+  if (prev.onChange !== next.onChange) return false;
+
+  // Check referential equality first
+  if (prev.config === next.config) return true;
+
+  // Compare all config properties except 'value' and 'type'
+  // We iterate over keys of next.config to ensure we catch any new properties
+  const keys = Object.keys(next.config) as (keyof QRConfig)[];
+
+  for (const key of keys) {
+    // Skip content-related properties
+    if (key === 'value' || key === 'type') continue;
+
+    // If any style property differs, re-render
+    if (prev.config[key] !== next.config[key]) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+export default React.memo(StyleControls, arePropsEqual);

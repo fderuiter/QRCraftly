@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { QRConfig } from '@/types';
 import { DEFAULT_CONFIG } from '@/constants';
 import InputPanel from '@/components/InputPanel';
@@ -26,9 +26,9 @@ export default function QRTool({ initialConfig, title }: { initialConfig?: Parti
    * Updates the QR configuration state.
    * @param updates - Partial configuration object to merge into the current state.
    */
-  const handleConfigChange = (updates: Partial<QRConfig>) => {
+  const handleConfigChange = useCallback((updates: Partial<QRConfig>) => {
     setConfig((prev) => ({ ...prev, ...updates }));
-  };
+  }, []);
 
   /**
    * Toggles the application between light and dark mode.
