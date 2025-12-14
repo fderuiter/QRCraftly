@@ -1,5 +1,4 @@
-
-import React, { useEffect, useRef, useMemo } from 'react';
+import React, { useEffect, useRef, useMemo, useState } from 'react';
 import QRCode from 'qrcode';
 import { QRConfig, QRStyle } from '../types';
 import { drawRoundRect, drawPoly, drawStar, drawRoughRect, drawScribble } from '../utils/canvasHelpers';
@@ -17,6 +16,41 @@ interface QRCanvasProps {
 }
 
 /**
+ * Hook to load an image asynchronously.
+ * Returns the HTMLImageElement once loaded, or null.
+ */
+const useImage = (url: string | null) => {
+  const [image, setImage] = useState<HTMLImageElement | null>(null);
+
+  useEffect(() => {
+    if (!url) {
+      setImage(null);
+      return;
+    }
+
+    const img = new Image();
+    img.crossOrigin = 'Anonymous';
+    img.src = url;
+
+    // If image is already cached and loaded immediately
+    if (img.complete && img.naturalHeight !== 0) {
+        setImage(img);
+        return;
+    }
+
+    img.onload = () => setImage(img);
+    img.onerror = () => setImage(null);
+
+    return () => {
+      img.onload = null;
+      img.onerror = null;
+    };
+  }, [url]);
+
+  return image;
+};
+
+/**
  * A component that renders a QR code to a canvas element.
  * It supports customization of colors, styles (squares, dots, rounded, etc.),
  * and embedded logos with various padding options.
@@ -29,6 +63,10 @@ interface QRCanvasProps {
  */
 const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  // Pre-load images to avoid async rendering and flickering
+  const logoImg = useImage(config.logoUrl);
+  const borderLogoImg = useImage(config.isBorderEnabled ? config.borderLogoUrl : null);
 
   // Memoize QR data generation to avoid re-computation on style changes
   const qrData = useMemo(() => {
@@ -46,7 +84,7 @@ const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) =
      * Renders the QR code onto the canvas.
      * This function handles module generation, styling, and logo embedding.
      */
-    const renderQR = async () => {
+    const renderQR = () => {
       const canvas = canvasRef.current;
       if (!canvas) return;
 
@@ -410,35 +448,24 @@ const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) =
         drawEyePattern(moduleCount - 7, 0);
 
         // Draw Center Logo
-        if (config.logoUrl) {
-          const logoImg = new Image();
-          logoImg.crossOrigin = 'Anonymous';
-          logoImg.src = config.logoUrl;
-          
-          await new Promise((resolve) => {
-            logoImg.onload = resolve;
-            logoImg.onerror = resolve;
-          });
+        if (config.logoUrl && logoImg) {
+            const lx = (displaySize - logoSizePx) / 2;
+            const ly = (displaySize - logoSizePx) / 2;
 
-          if (logoImg.complete) {
-              const lx = (displaySize - logoSizePx) / 2;
-              const ly = (displaySize - logoSizePx) / 2;
-              
-              if (config.logoPaddingStyle !== 'none') {
-                  ctx.fillStyle = config.logoBackgroundColor || config.bgColor;
-                  if (config.logoPaddingStyle === 'circle') {
-                      ctx.beginPath();
-                      const radius = (logoSizePx / 2) + logoPaddingPx;
-                      ctx.arc(displaySize/2, displaySize/2, radius, 0, Math.PI*2);
-                      ctx.fill();
-                  } else {
-                      const padding = logoPaddingPx;
-                      ctx.fillRect(lx - padding, ly - padding, logoSizePx + (padding*2), logoSizePx + (padding*2));
-                  }
-              }
-              
-              ctx.drawImage(logoImg, lx, ly, logoSizePx, logoSizePx);
-          }
+            if (config.logoPaddingStyle !== 'none') {
+                ctx.fillStyle = config.logoBackgroundColor || config.bgColor;
+                if (config.logoPaddingStyle === 'circle') {
+                    ctx.beginPath();
+                    const radius = (logoSizePx / 2) + logoPaddingPx;
+                    ctx.arc(displaySize/2, displaySize/2, radius, 0, Math.PI*2);
+                    ctx.fill();
+                } else {
+                    const padding = logoPaddingPx;
+                    ctx.fillRect(lx - padding, ly - padding, logoSizePx + (padding*2), logoSizePx + (padding*2));
+                }
+            }
+
+            ctx.drawImage(logoImg, lx, ly, logoSizePx, logoSizePx);
         }
 
         // Draw Border Text and Logo
@@ -462,30 +489,19 @@ const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) =
                 ctx.fillText(config.borderText, tx, ty);
             }
 
-            if (config.borderLogoUrl) {
-                const borderLogoImg = new Image();
-                borderLogoImg.crossOrigin = 'Anonymous';
-                borderLogoImg.src = config.borderLogoUrl;
+            if (config.borderLogoUrl && borderLogoImg) {
+                const blSize = borderPx * 0.8;
+                let blx = (displaySize - blSize) / 2;
+                let bly = displaySize - borderPx + (borderPx - blSize) / 2;
 
-                await new Promise((resolve) => {
-                    borderLogoImg.onload = resolve;
-                    borderLogoImg.onerror = resolve;
-                });
-
-                if (borderLogoImg.complete) {
-                    const blSize = borderPx * 0.8;
-                    let blx = (displaySize - blSize) / 2;
-                    let bly = displaySize - borderPx + (borderPx - blSize) / 2;
-
-                    if (config.borderLogoPosition === 'bottom-center') {
-                        blx = (displaySize - blSize) / 2;
-                        bly = displaySize - borderPx + (borderPx - blSize) / 2;
-                    } else if (config.borderLogoPosition === 'bottom-right') {
-                        blx = displaySize - borderPx - blSize;
-                        bly = displaySize - borderPx + (borderPx - blSize) / 2;
-                    }
-                    ctx.drawImage(borderLogoImg, blx, bly, blSize, blSize);
+                if (config.borderLogoPosition === 'bottom-center') {
+                    blx = (displaySize - blSize) / 2;
+                    bly = displaySize - borderPx + (borderPx - blSize) / 2;
+                } else if (config.borderLogoPosition === 'bottom-right') {
+                    blx = displaySize - borderPx - blSize;
+                    bly = displaySize - borderPx + (borderPx - blSize) / 2;
                 }
+                ctx.drawImage(borderLogoImg, blx, bly, blSize, blSize);
             }
         }
       } catch (err) {
@@ -494,7 +510,7 @@ const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) =
     };
 
     renderQR();
-  }, [config, size, qrData]);
+  }, [config, size, qrData, logoImg, borderLogoImg]);
 
   const typeLabel = config.type.charAt(0).toUpperCase() + config.type.slice(1).toLowerCase();
   const ariaLabel = `QR Code for ${typeLabel} - ${config.value ? 'Scan to view content' : 'Empty'}`;
