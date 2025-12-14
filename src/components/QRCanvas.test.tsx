@@ -262,7 +262,16 @@ describe('QRCanvas Component', () => {
       });
 
       // Should NOT draw background for logo
-      expect(mockContext.fillRect).not.toHaveBeenCalled();
+      // Since we optimized rendering to do a full redraw on image load, we expect main background calls.
+      // But we shouldn't see a "logo padding" call.
+      // Standard QR: 1 bg + 1 module (0,0) + 3 eyes (2 fillRects each) = 8 calls?
+      // Wait, eyes have fillRect (frame), clearShape, fillRect (hole), fillRect (eyeball)?
+      // Standard Eye: fillRect (frame), clearShape -> clearRect, fillRect (hole), fillRect (eyeball).
+      // So 3 fillRects per eye.
+      // 3 * 3 = 9.
+      // Background = 1.
+      // Total 10.
+      expect(mockContext.fillRect).toHaveBeenCalledTimes(10);
       expect(mockContext.arc).not.toHaveBeenCalled();
   });
 
