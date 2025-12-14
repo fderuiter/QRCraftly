@@ -165,7 +165,9 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
     if (newData.network === 'custom') {
          paymentString = newData.address;
     } else {
-        paymentString = `${newData.network}:${newData.address}`;
+        // Encode address to prevent parameter injection or invalid URI structure
+        const encodedAddress = encodeURIComponent(newData.address);
+        paymentString = `${newData.network}:${encodedAddress}`;
         const params: string[] = [];
 
         if (newData.amount) {
@@ -175,7 +177,9 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
             // Actually, let's just use 'amount' as it's the most common URI standard parameter.
             // Ethereum standard is messy, but wallets often parse amount.
             // However, to be safe, we will just use standard BIP-21 style params for now.
-            params.push(`amount=${newData.amount}`);
+
+            // Encode amount to ensure safety (though type=number blocks most issues in UI)
+            params.push(`amount=${encodeURIComponent(newData.amount)}`);
         }
 
         if (newData.label) {
