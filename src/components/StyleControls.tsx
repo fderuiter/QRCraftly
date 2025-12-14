@@ -274,6 +274,8 @@ const StyleControls: React.FC<StyleControlsProps> = ({ config, onChange }) => {
           {PATTERNS.map((pattern) => (
             <button
               key={pattern.id}
+              type="button"
+              aria-pressed={config.style === pattern.id}
               onClick={() => onChange({ style: pattern.id })}
               className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all ${
                 config.style === pattern.id
@@ -346,6 +348,8 @@ const StyleControls: React.FC<StyleControlsProps> = ({ config, onChange }) => {
           {PRESET_COLORS.map((preset, idx) => (
             <button
               key={idx}
+              type="button"
+              aria-label={preset.label}
               onClick={() => onChange({ fgColor: preset.fg, bgColor: preset.bg, eyeColor: preset.eye })}
               className="group relative w-10 h-10 rounded-lg shadow-sm hover:scale-110 transition-transform duration-200 ring-1 ring-slate-200 dark:ring-slate-700 overflow-hidden"
               title={preset.label}
@@ -530,6 +534,9 @@ const StyleControls: React.FC<StyleControlsProps> = ({ config, onChange }) => {
       {/* Advanced Mode */}
       <div className="border-t border-slate-200 dark:border-slate-700 pt-5">
         <button
+          type="button"
+          aria-expanded={showAdvanced}
+          aria-controls="advanced-panel"
           onClick={() => setShowAdvanced(!showAdvanced)}
           className="flex items-center justify-between w-full text-left"
         >
@@ -542,7 +549,7 @@ const StyleControls: React.FC<StyleControlsProps> = ({ config, onChange }) => {
         </button>
 
         {showAdvanced && (
-          <div className="mt-4 space-y-4">
+          <div id="advanced-panel" className="mt-4 space-y-4">
              <div>
                 <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-2">Error Correction Level</label>
                 <div className="grid grid-cols-2 gap-2">
