@@ -125,6 +125,7 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
           <button
             key={item.type}
             onClick={() => onChange({ type: item.type, value: '' })}
+            aria-pressed={config.type === item.type}
             className={`flex flex-col items-center justify-center gap-1 px-2 py-2 rounded-lg text-xs font-medium transition-all ${
               config.type === item.type
                 ? 'bg-white dark:bg-slate-700 text-teal-700 dark:text-teal-400 shadow-sm'
