@@ -146,6 +146,7 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
             <input
               id="url-input"
               type="url"
+              maxLength={2048}
               placeholder="https://example.com"
               className={inputClasses}
               value={config.value}
@@ -160,6 +161,7 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
             <textarea
               id="text-content"
               rows={4}
+              maxLength={2500}
               placeholder="Enter your text here..."
               className={textAreaClasses}
               value={config.value}
@@ -176,6 +178,7 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
               <input
                 id="wifi-ssid"
                 type="text"
+                maxLength={32}
                 value={wifiData.ssid}
                 onChange={(e) => handleWifiChange({ ssid: e.target.value })}
                 className={inputClasses}
@@ -203,6 +206,7 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
                     <input
                         id="wifi-identity"
                         type="text"
+                        maxLength={128}
                         value={wifiData.eapIdentity}
                         onChange={(e) => handleWifiChange({ eapIdentity: e.target.value })}
                         className={inputClasses}
@@ -216,6 +220,7 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
                 <input
                     id="wifi-password"
                     type="text"
+                    maxLength={63}
                     value={wifiData.password}
                     onChange={(e) => handleWifiChange({ password: e.target.value })}
                     className={inputClasses}
@@ -245,6 +250,7 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
                     <input
                         id="email-address"
                         type="email"
+                        maxLength={254}
                         value={emailData.email}
                         onChange={(e) => handleEmailChange({ email: e.target.value })}
                         className={inputClasses}
@@ -255,6 +261,7 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
                     <input
                         id="email-subject"
                         type="text"
+                        maxLength={200}
                         value={emailData.subject}
                         onChange={(e) => handleEmailChange({ subject: e.target.value })}
                         className={inputClasses}
@@ -265,6 +272,7 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
                     <textarea
                         id="email-body"
                         rows={3}
+                        maxLength={2000}
                         value={emailData.body}
                         onChange={(e) => handleEmailChange({ body: e.target.value })}
                         className={textAreaClasses}
@@ -298,6 +306,7 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
                      <input
                         id="payment-address"
                         type="text"
+                        maxLength={128}
                         placeholder="Wallet Address"
                         value={paymentData.address}
                         onChange={(e) => handlePaymentChange({ address: e.target.value })}
@@ -313,6 +322,7 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
                             id="payment-amount"
                             type="number"
                             step="any"
+                            max="999999999"
                             placeholder="0.00"
                             value={paymentData.amount}
                             onChange={(e) => handlePaymentChange({ amount: e.target.value })}
@@ -324,6 +334,7 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
                         <input
                             id="payment-label"
                             type="text"
+                            maxLength={200}
                             placeholder="e.g. Donation"
                             value={paymentData.label}
                             onChange={(e) => handlePaymentChange({ label: e.target.value })}
@@ -341,47 +352,47 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
                  <div className="grid grid-cols-2 gap-3">
                      <div>
                         <label htmlFor="vcard-firstname" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">First Name</label>
-                        <input id="vcard-firstname" type="text" value={vCardData.firstName} onChange={(e) => handleVCardChange({ firstName: e.target.value })} className={inputClasses} />
+                        <input id="vcard-firstname" type="text" maxLength={100} value={vCardData.firstName} onChange={(e) => handleVCardChange({ firstName: e.target.value })} className={inputClasses} />
                      </div>
                      <div>
                         <label htmlFor="vcard-lastname" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Last Name</label>
-                        <input id="vcard-lastname" type="text" value={vCardData.lastName} onChange={(e) => handleVCardChange({ lastName: e.target.value })} className={inputClasses} />
+                        <input id="vcard-lastname" type="text" maxLength={100} value={vCardData.lastName} onChange={(e) => handleVCardChange({ lastName: e.target.value })} className={inputClasses} />
                      </div>
                  </div>
                  
                  <div className="grid grid-cols-2 gap-3">
                     <div>
                         <label htmlFor="vcard-phone" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Mobile Phone</label>
-                        <input id="vcard-phone" type="tel" value={vCardData.phone} onChange={(e) => handleVCardChange({ phone: e.target.value })} className={inputClasses} />
+                        <input id="vcard-phone" type="tel" maxLength={20} value={vCardData.phone} onChange={(e) => handleVCardChange({ phone: e.target.value })} className={inputClasses} />
                     </div>
                     <div>
                         <label htmlFor="vcard-email" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Email</label>
-                        <input id="vcard-email" type="email" value={vCardData.email} onChange={(e) => handleVCardChange({ email: e.target.value })} className={inputClasses} />
+                        <input id="vcard-email" type="email" maxLength={254} value={vCardData.email} onChange={(e) => handleVCardChange({ email: e.target.value })} className={inputClasses} />
                     </div>
                  </div>
 
                  <div>
                     <label htmlFor="vcard-org" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Company / Organization</label>
-                    <input id="vcard-org" type="text" value={vCardData.organization} onChange={(e) => handleVCardChange({ organization: e.target.value })} className={inputClasses} />
+                    <input id="vcard-org" type="text" maxLength={100} value={vCardData.organization} onChange={(e) => handleVCardChange({ organization: e.target.value })} className={inputClasses} />
                  </div>
                  
                  <div>
                     <label htmlFor="vcard-title" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Job Title</label>
-                    <input id="vcard-title" type="text" value={vCardData.title} onChange={(e) => handleVCardChange({ title: e.target.value })} className={inputClasses} />
+                    <input id="vcard-title" type="text" maxLength={100} value={vCardData.title} onChange={(e) => handleVCardChange({ title: e.target.value })} className={inputClasses} />
                  </div>
 
                  <div>
                     <label htmlFor="vcard-website" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Website</label>
-                    <input id="vcard-website" type="url" value={vCardData.website} onChange={(e) => handleVCardChange({ website: e.target.value })} className={inputClasses} />
+                    <input id="vcard-website" type="url" maxLength={2048} value={vCardData.website} onChange={(e) => handleVCardChange({ website: e.target.value })} className={inputClasses} />
                  </div>
 
                  <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
                     <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-2">Address</label>
                     <div className="space-y-3">
-                        <input aria-label="Street" type="text" placeholder="Street" value={vCardData.street} onChange={(e) => handleVCardChange({ street: e.target.value })} className={inputClasses} />
+                        <input aria-label="Street" type="text" maxLength={100} placeholder="Street" value={vCardData.street} onChange={(e) => handleVCardChange({ street: e.target.value })} className={inputClasses} />
                         <div className="grid grid-cols-2 gap-3">
-                             <input aria-label="City" type="text" placeholder="City" value={vCardData.city} onChange={(e) => handleVCardChange({ city: e.target.value })} className={inputClasses} />
-                             <input aria-label="Country" type="text" placeholder="Country" value={vCardData.country} onChange={(e) => handleVCardChange({ country: e.target.value })} className={inputClasses} />
+                             <input aria-label="City" type="text" maxLength={100} placeholder="City" value={vCardData.city} onChange={(e) => handleVCardChange({ city: e.target.value })} className={inputClasses} />
+                             <input aria-label="Country" type="text" maxLength={100} placeholder="Country" value={vCardData.country} onChange={(e) => handleVCardChange({ country: e.target.value })} className={inputClasses} />
                         </div>
                     </div>
                  </div>
@@ -394,6 +405,7 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
                  <input
                     id="phone-number"
                     type="tel"
+                    maxLength={20}
                     placeholder="+1 555 000 0000"
                     value={phoneData.number}
                     onChange={(e) => handlePhoneChange({ number: e.target.value })}
@@ -409,6 +421,7 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
                      <input
                         id="sms-number"
                         type="tel"
+                        maxLength={20}
                         placeholder="+1 555 000 0000"
                         value={smsData.number}
                         onChange={(e) => handleSmsChange({ number: e.target.value })}
@@ -420,6 +433,7 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
                     <textarea
                         id="sms-message"
                         rows={3}
+                        maxLength={1600}
                         value={smsData.message}
                         onChange={(e) => handleSmsChange({ message: e.target.value })}
                         className={textAreaClasses}
