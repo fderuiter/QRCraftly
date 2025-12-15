@@ -1,6 +1,14 @@
 import React, { useState } from 'react';
 import { QRConfig, QRType, WifiData, EmailData, VCardData, PhoneData, SmsData, PaymentData } from '../types';
 import { Wifi, Link, Type, Mail, UserSquare2, Phone, MessageSquare, CreditCard } from 'lucide-react';
+import {
+  constructWifiString,
+  constructEmailString,
+  constructVCardString,
+  constructPhoneString,
+  constructSmsString,
+  constructPaymentString
+} from '../utils/qrHelpers';
 
 /**
  * Props for the InputPanel component.
@@ -37,59 +45,13 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
   // Update handlers
 
   /**
-   * Escapes special characters for WiFi QR code string.
-   * Characters to escape: \ ; , " :
-   *
-   * @param str - The string to escape.
-   * @returns The escaped string.
-   */
-  const escapeWifiString = (str: string | undefined): string => {
-    if (!str) return '';
-    return str.replace(/([\\;,":])/g, '\\$1');
-  };
-
-  /**
-   * Escapes special characters for vCard property values.
-   * Characters to escape: \ ; , and newlines.
-   *
-   * @param str - The string to escape.
-   * @returns The escaped string.
-   */
-  const escapeVCardString = (str: string | undefined): string => {
-    if (!str) return '';
-    // 1. Escape backslashes first to avoid double escaping
-    // 2. Escape newlines as \n
-    // 3. Escape commas and semicolons
-    return str
-      .replace(/\\/g, '\\\\')
-      .replace(/\n/g, '\\n')
-      .replace(/([;,])/g, '\\$1');
-  };
-
-  /**
    * Updates WiFi data and formats the WIFI string for the QR code.
    * @param updates - Partial WiFi data updates.
    */
   const handleWifiChange = (updates: Partial<WifiData>) => {
     const newData = { ...wifiData, ...updates };
     setWifiData(newData);
-    let wifiString = '';
-    const ssid = escapeWifiString(newData.ssid);
-    const hidden = newData.hidden;
-
-    if (newData.encryption === 'WPA2-EAP') {
-        const identity = escapeWifiString(newData.eapIdentity);
-        const password = escapeWifiString(newData.password);
-        wifiString = `WIFI:T:WPA2-EAP;S:${ssid};I:${identity};P:${password};H:${hidden};;`;
-    } else {
-        if (newData.encryption === 'nopass') {
-            wifiString = `WIFI:T:${newData.encryption};S:${ssid};H:${hidden};;`;
-        } else {
-            const password = escapeWifiString(newData.password);
-            wifiString = `WIFI:T:${newData.encryption};S:${ssid};P:${password};H:${hidden};;`;
-        }
-    }
-    onChange({ value: wifiString });
+    onChange({ value: constructWifiString(newData) });
   };
 
   /**
@@ -99,8 +61,7 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
   const handleEmailChange = (updates: Partial<EmailData>) => {
     const newData = { ...emailData, ...updates };
     setEmailData(newData);
-    const mailto = `mailto:${newData.email}?subject=${encodeURIComponent(newData.subject)}&body=${encodeURIComponent(newData.body)}`;
-    onChange({ value: mailto });
+    onChange({ value: constructEmailString(newData) });
   };
 
   /**
@@ -108,24 +69,9 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
    * @param updates - Partial vCard data updates.
    */
   const handleVCardChange = (updates: Partial<VCardData>) => {
-      const newData = { ...vCardData, ...updates };
-      setVCardData(newData);
-
-      // Escape all fields
-      const lastName = escapeVCardString(newData.lastName);
-      const firstName = escapeVCardString(newData.firstName);
-      const organization = escapeVCardString(newData.organization);
-      const title = escapeVCardString(newData.title);
-      const phone = escapeVCardString(newData.phone);
-      const email = escapeVCardString(newData.email);
-      const website = escapeVCardString(newData.website);
-      const street = escapeVCardString(newData.street);
-      const city = escapeVCardString(newData.city);
-      const country = escapeVCardString(newData.country);
-
-      // Construct VCard 3.0 string
-      const vcard = `BEGIN:VCARD\nVERSION:3.0\nN:${lastName};${firstName};;;\nFN:${firstName} ${lastName}\nORG:${organization}\nTITLE:${title}\nTEL:${phone}\nEMAIL:${email}\nURL:${website}\nADR:;;${street};${city};;;${country}\nEND:VCARD`;
-      onChange({ value: vcard });
+    const newData = { ...vCardData, ...updates };
+    setVCardData(newData);
+    onChange({ value: constructVCardString(newData) });
   };
 
   /**
@@ -133,10 +79,9 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
    * @param updates - Partial Phone data updates.
    */
   const handlePhoneChange = (updates: Partial<PhoneData>) => {
-      const newData = { ...phoneData, ...updates };
-      setPhoneData(newData);
-      const cleanNumber = newData.number.replace(/[\s:]+/g, '');
-      onChange({ value: `tel:${cleanNumber}` });
+    const newData = { ...phoneData, ...updates };
+    setPhoneData(newData);
+    onChange({ value: constructPhoneString(newData) });
   };
 
   /**
@@ -144,10 +89,9 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
    * @param updates - Partial SMS data updates.
    */
   const handleSmsChange = (updates: Partial<SmsData>) => {
-      const newData = { ...smsData, ...updates };
-      setSmsData(newData);
-      const cleanNumber = newData.number.replace(/[\s:]+/g, '');
-      onChange({ value: `smsto:${cleanNumber}:${newData.message}` });
+    const newData = { ...smsData, ...updates };
+    setSmsData(newData);
+    onChange({ value: constructSmsString(newData) });
   };
 
   /**
@@ -157,37 +101,7 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
   const handlePaymentChange = (updates: Partial<PaymentData>) => {
     const newData = { ...paymentData, ...updates };
     setPaymentData(newData);
-    let paymentString = '';
-
-    // Construct URI based on network
-    // Most follow scheme:address?amount=X&label=Y&message=Z
-    // We will support a generic builder
-    if (newData.network === 'custom') {
-         paymentString = newData.address;
-    } else {
-        paymentString = `${newData.network}:${newData.address}`;
-        const params: string[] = [];
-
-        if (newData.amount) {
-            // Ethereum uses 'value', others often 'amount'
-            // But strict BIP-21 is amount.
-            // For simplicity/compatibility we stick to 'amount' unless known otherwise or user can just edit string?
-            // Actually, let's just use 'amount' as it's the most common URI standard parameter.
-            // Ethereum standard is messy, but wallets often parse amount.
-            // However, to be safe, we will just use standard BIP-21 style params for now.
-            params.push(`amount=${newData.amount}`);
-        }
-
-        if (newData.label) {
-            params.push(`label=${encodeURIComponent(newData.label)}`);
-        }
-
-        if (params.length > 0) {
-            paymentString += `?${params.join('&')}`;
-        }
-    }
-
-    onChange({ value: paymentString });
+    onChange({ value: constructPaymentString(newData) });
   };
 
   const inputClasses = "w-full px-4 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-4 focus:ring-teal-100 dark:focus:ring-teal-900/30 focus:border-teal-500 outline-none transition-all text-slate-700 dark:text-slate-100 placeholder-slate-400 font-mono text-sm";
