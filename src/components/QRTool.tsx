@@ -5,6 +5,7 @@ import InputPanel from '@/components/InputPanel';
 import StyleControls from '@/components/StyleControls';
 import QRCanvas from '@/components/QRCanvas';
 import { Download, Share2, QrCode, ChevronDown, Camera, Moon, Sun, Info } from 'lucide-react';
+import { useDebounce } from '@/utils/hooks';
 
 /**
  * The main Application component.
@@ -21,6 +22,10 @@ export default function QRTool({ initialConfig, title }: { initialConfig?: Parti
   const [showDownloadMenu, setShowDownloadMenu] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const qrRef = useRef<HTMLDivElement>(null);
+
+  // Debounce the config for QRCanvas to prevent lag during rapid typing or style changes.
+  // 100ms is a good balance between responsiveness and performance.
+  const debouncedConfig = useDebounce(config, 100);
 
   /**
    * Updates the QR configuration state.
@@ -219,7 +224,8 @@ export default function QRTool({ initialConfig, title }: { initialConfig?: Parti
                 </div>
                 
                 <div ref={qrRef} className="flex justify-center mb-8">
-                   <QRCanvas config={config} className="w-full aspect-square rounded-lg shadow-sm" />
+                   {/* Pass debounced config to QRCanvas to prevent heavy rendering on every keystroke */}
+                   <QRCanvas config={debouncedConfig} className="w-full aspect-square rounded-lg shadow-sm" />
                 </div>
 
                 <div className="grid grid-cols-1 gap-3 w-full">
