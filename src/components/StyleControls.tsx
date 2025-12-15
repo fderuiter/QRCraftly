@@ -275,6 +275,7 @@ const StyleControls: React.FC<StyleControlsProps> = ({ config, onChange }) => {
             <button
               key={pattern.id}
               onClick={() => onChange({ style: pattern.id })}
+              aria-pressed={config.style === pattern.id}
               className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all ${
                 config.style === pattern.id
                   ? 'border-teal-500 bg-teal-50 dark:bg-teal-900/30 text-teal-700 dark:text-teal-400'
@@ -347,6 +348,7 @@ const StyleControls: React.FC<StyleControlsProps> = ({ config, onChange }) => {
             <button
               key={idx}
               onClick={() => onChange({ fgColor: preset.fg, bgColor: preset.bg, eyeColor: preset.eye })}
+              aria-pressed={config.fgColor === preset.fg && config.bgColor === preset.bg && config.eyeColor === preset.eye}
               className="group relative w-10 h-10 rounded-lg shadow-sm hover:scale-110 transition-transform duration-200 ring-1 ring-slate-200 dark:ring-slate-700 overflow-hidden"
               title={preset.label}
             >
@@ -555,6 +557,7 @@ const StyleControls: React.FC<StyleControlsProps> = ({ config, onChange }) => {
                        <button
                            key={level.id}
                            onClick={() => onChange({ errorCorrectionLevel: level.id as any })}
+                           aria-pressed={config.errorCorrectionLevel === level.id}
                            className={`p-2 rounded-lg text-left border transition-all ${
                                config.errorCorrectionLevel === level.id
                                ? 'border-teal-500 bg-teal-50 dark:bg-teal-900/30 text-teal-900 dark:text-teal-200'
