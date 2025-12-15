@@ -19,17 +19,48 @@ export default function Page() {
 
   const schemaData = {
     "@context": "https://schema.org",
-    "@type": "WebApplication",
-    "name": "WiFi QR Code Generator",
-    "url": "https://qrcraftly.com/wifi-qr-code",
-    "applicationCategory": "Utilities",
-    "operatingSystem": "All",
-    "offers": {
-      "@type": "Offer",
-      "price": "0",
-      "priceCurrency": "USD"
-    },
-    "featureList": "Generate WiFi Access QR Codes, WPA/WPA2 Support, Hidden SSID Support"
+    "@graph": [
+      {
+        "@type": "WebApplication",
+        "name": "WiFi QR Code Generator",
+        "url": "https://qrcraftly.com/wifi-qr-code",
+        "applicationCategory": "Utilities",
+        "operatingSystem": "All",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        },
+        "featureList": "Generate WiFi Access QR Codes, WPA/WPA2 Support, Hidden SSID Support"
+      },
+      {
+        "@type": "HowTo",
+        "name": "How to Create a WiFi QR Code",
+        "description": "Generate a QR code to share your WiFi network instantly.",
+        "step": [
+          {
+            "@type": "HowToStep",
+            "name": "Enter Network Name",
+            "text": "Input your WiFi SSID (Network Name) into the designated field."
+          },
+          {
+            "@type": "HowToStep",
+            "name": "Enter Password",
+            "text": "Enter your WiFi password. Your data remains local and secure."
+          },
+          {
+            "@type": "HowToStep",
+            "name": "Select Encryption",
+            "text": "Choose your network encryption type (WPA/WPA2 is most common)."
+          },
+          {
+            "@type": "HowToStep",
+            "name": "Download or Share",
+            "text": "Click 'Download' to save the QR code or scan it directly from the screen."
+          }
+        ]
+      }
+    ]
   };
 
   return (

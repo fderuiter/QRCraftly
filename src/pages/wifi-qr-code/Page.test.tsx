@@ -21,4 +21,18 @@ describe('WiFi QR Code Page', () => {
     expect(qrTool).toBeInTheDocument();
     expect(qrTool).toHaveTextContent('QRTool with type: WIFI');
   });
+
+  it('renders structured data schema', () => {
+    const { container } = render(<Page />);
+    const script = container.querySelector('script[type="application/ld+json"]');
+    expect(script).toBeInTheDocument();
+    const json = JSON.parse(script?.textContent || '{}');
+    expect(json['@context']).toBe('https://schema.org');
+    expect(json['@graph']).toBeDefined();
+    expect(json['@graph']).toHaveLength(2); // WebApplication and HowTo
+
+    const types = json['@graph'].map((item: any) => item['@type']);
+    expect(types).toContain('WebApplication');
+    expect(types).toContain('HowTo');
+  });
 });
