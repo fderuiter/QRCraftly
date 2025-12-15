@@ -22,10 +22,20 @@ export default defineConfig(({ mode }) => {
       build: {
         rollupOptions: {
           output: {
-            manualChunks: {
-              'vendor-react': ['react', 'react-dom'],
-              'vendor-vike': ['vike', 'vike-react'],
-              'vendor-utils': ['lucide-react', 'qrcode'],
+            // Vike requires manualChunks to be a function
+            manualChunks: (id) => {
+              if (id.includes('node_modules')) {
+                if (id.includes('react') || id.includes('react-dom')) {
+                  return 'vendor-react';
+                }
+                if (id.includes('vike') || id.includes('vike-react')) {
+                  return 'vendor-vike';
+                }
+                if (id.includes('lucide-react') || id.includes('qrcode')) {
+                  return 'vendor-utils';
+                }
+                // Determine other vendor chunks if necessary, or let Vite handle the rest
+              }
             }
           }
         }
