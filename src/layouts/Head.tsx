@@ -106,27 +106,12 @@ export default function HeadDefault() {
       <link rel="preconnect" href="https://fonts.googleapis.com" />
       <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
 
-      {/* Preload the font stylesheet */}
-      <link
-        rel="preload"
-        as="style"
-        href={fontUrl}
-      />
-
       {/*
-        Load the stylesheet asynchronously using the media="print" onload="this.media='all'" pattern.
-        We use dangerouslySetInnerHTML on a style tag to inject the link tag without a wrapper div,
-        ensuring valid HTML in the head.
+         Load fonts synchronously to prevent Layout Shifts (CLS).
+         While async loading improves FCP, the shift when the font swaps
+         negatively impacts the user experience and CLS score.
       */}
-      <style
-        dangerouslySetInnerHTML={{
-          __html: `</style><link rel="stylesheet" href="${fontUrl}" media="print" onload="this.media='all'" /><style>`
-        }}
-      />
-
-      <noscript>
-        <link href={fontUrl} rel="stylesheet" />
-      </noscript>
+      <link rel="stylesheet" href={fontUrl} />
     </>
   );
 }

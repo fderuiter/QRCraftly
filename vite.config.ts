@@ -19,6 +19,17 @@ export default defineConfig(({ mode }) => {
         react(),
         vike()
       ],
+      build: {
+        rollupOptions: {
+          output: {
+            manualChunks: {
+              'vendor-react': ['react', 'react-dom'],
+              'vendor-vike': ['vike', 'vike-react'],
+              'vendor-utils': ['lucide-react', 'qrcode'],
+            }
+          }
+        }
+      },
       test: {
         globals: true,
         environment: 'jsdom',
