@@ -431,4 +431,19 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
   );
 };
 
-export default InputPanel;
+/**
+ * Comparison function for React.memo.
+ * Returns true if the next props are equivalent to the previous props (skipping re-render).
+ * It ignores changes to 'fgColor', 'bgColor', 'style', etc. as they don't affect the input panel.
+ */
+function areInputPropsEqual(prev: InputPanelProps, next: InputPanelProps) {
+  // If the onChange handler changed, we must re-render
+  if (prev.onChange !== next.onChange) return false;
+
+  // We only care about config.type and config.value for the input panel.
+  // Style changes (colors, etc.) should NOT trigger a re-render of inputs.
+  return prev.config.type === next.config.type &&
+         prev.config.value === next.config.value;
+}
+
+export default React.memo(InputPanel, areInputPropsEqual);
