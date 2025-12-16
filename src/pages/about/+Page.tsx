@@ -14,16 +14,57 @@ import { Github, Shield, Database, Code, ArrowLeft, Zap } from 'lucide-react';
 export default function Page() {
   const schemaData = {
     "@context": "https://schema.org",
-    "@type": "AboutPage",
-    "name": "About QRCraftly",
-    "url": "https://qrcraftly.com/about",
-    "mainEntity": {
-      "@type": "Organization",
-      "name": "QRCraftly",
-      "description": "Privacy-focused, client-side QR code generator.",
-      "slogan": "Free. Secure. Open Source.",
-      "foundingDate": "2025"
-    }
+    "@graph": [
+      {
+        "@type": "AboutPage",
+        "name": "About QRCraftly",
+        "url": "https://qrcraftly.com/about",
+        "mainEntity": {
+          "@type": "Organization",
+          "name": "QRCraftly",
+          "description": "Privacy-focused, client-side QR code generator.",
+          "slogan": "Free. Secure. Open Source.",
+          "foundingDate": "2025"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Is QRCraftly free?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "QRCraftly is completely free to use. No sign-up, no login, and no hidden fees. Just generate your QR codes instantly."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Does QRCraftly track users?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "We do not use tracking pixels, cookies, or third-party analytics. We only collect basic server logs for performance and reliability."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Is my data secure?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "We utilize a Zero Knowledge architecture. Your content is processed entirely in your browser and never transmitted to our servers."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Is QRCraftly open source?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Our code is open for inspection and contribution. We believe in transparency."
+            }
+          }
+        ]
+      }
+    ]
   };
 
   return (
