@@ -97,11 +97,14 @@ export const constructPaymentString = (data: PaymentData): string => {
   if (data.network === 'custom') {
     paymentString = data.address;
   } else {
-    paymentString = `${data.network}:${data.address}`;
+    // Sanitize address to prevent parameter injection if user accidentally pastes a full URI or malicious string
+    const safeAddress = data.address.split('?')[0];
+    paymentString = `${data.network}:${safeAddress}`;
     const params: string[] = [];
 
     if (data.amount) {
-      params.push(`amount=${data.amount}`);
+      // Encode amount to prevent parameter injection
+      params.push(`amount=${encodeURIComponent(data.amount)}`);
     }
 
     if (data.label) {
