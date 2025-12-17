@@ -21,6 +21,31 @@ interface InputPanelProps {
 }
 
 /**
+ * Custom hook to manage input state for complex QR types (WiFi, Email, etc.).
+ * Automatically updates the global QR config string when local input state changes.
+ *
+ * @param initialState - The initial state object for the input type.
+ * @param constructorFn - Function to convert the state object to a QR code string.
+ * @param onChange - The global config change handler.
+ * @returns A tuple containing the current data and a function to update it.
+ */
+function useQRInputState<T>(
+  initialState: T,
+  constructorFn: (data: T) => string,
+  onChange: (updates: Partial<QRConfig>) => void
+) {
+  const [data, setData] = useState<T>(initialState);
+
+  const update = (updates: Partial<T>) => {
+    const newData = { ...data, ...updates };
+    setData(newData);
+    onChange({ value: constructorFn(newData) });
+  };
+
+  return [data, update] as const;
+}
+
+/**
  * A component that provides input fields for different QR code types.
  * Allows users to enter data for URL, Text, WiFi, Email, vCard, Phone, and SMS.
  * It updates the main configuration with the formatted string for the QR code.
@@ -31,78 +56,41 @@ interface InputPanelProps {
  * @returns The InputPanel component.
  */
 const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
-  const [wifiData, setWifiData] = useState<WifiData>({ ssid: '', password: '', encryption: 'WPA', hidden: false, eapIdentity: '' });
-  const [emailData, setEmailData] = useState<EmailData>({ email: '', subject: '', body: '' });
-  const [vCardData, setVCardData] = useState<VCardData>({ 
-    firstName: '', lastName: '', organization: '', title: '', phone: '', email: '', website: '', street: '', city: '', country: '' 
-  });
-  const [phoneData, setPhoneData] = useState<PhoneData>({ number: '' });
-  const [smsData, setSmsData] = useState<SmsData>({ number: '', message: '' });
-  const [paymentData, setPaymentData] = useState<PaymentData>({
-    network: 'bitcoin', address: '', amount: '', label: ''
-  });
+  const [wifiData, handleWifiChange] = useQRInputState<WifiData>(
+    { ssid: '', password: '', encryption: 'WPA', hidden: false, eapIdentity: '' },
+    constructWifiString,
+    onChange
+  );
 
-  // Update handlers
+  const [emailData, handleEmailChange] = useQRInputState<EmailData>(
+    { email: '', subject: '', body: '' },
+    constructEmailString,
+    onChange
+  );
 
-  /**
-   * Updates WiFi data and formats the WIFI string for the QR code.
-   * @param updates - Partial WiFi data updates.
-   */
-  const handleWifiChange = (updates: Partial<WifiData>) => {
-    const newData = { ...wifiData, ...updates };
-    setWifiData(newData);
-    onChange({ value: constructWifiString(newData) });
-  };
+  const [vCardData, handleVCardChange] = useQRInputState<VCardData>(
+    { firstName: '', lastName: '', organization: '', title: '', phone: '', email: '', website: '', street: '', city: '', country: '' },
+    constructVCardString,
+    onChange
+  );
 
-  /**
-   * Updates Email data and formats the mailto string.
-   * @param updates - Partial Email data updates.
-   */
-  const handleEmailChange = (updates: Partial<EmailData>) => {
-    const newData = { ...emailData, ...updates };
-    setEmailData(newData);
-    onChange({ value: constructEmailString(newData) });
-  };
+  const [phoneData, handlePhoneChange] = useQRInputState<PhoneData>(
+    { number: '' },
+    constructPhoneString,
+    onChange
+  );
 
-  /**
-   * Updates vCard data and formats the vCard 3.0 string.
-   * @param updates - Partial vCard data updates.
-   */
-  const handleVCardChange = (updates: Partial<VCardData>) => {
-    const newData = { ...vCardData, ...updates };
-    setVCardData(newData);
-    onChange({ value: constructVCardString(newData) });
-  };
+  const [smsData, handleSmsChange] = useQRInputState<SmsData>(
+    { number: '', message: '' },
+    constructSmsString,
+    onChange
+  );
 
-  /**
-   * Updates Phone data and formats the tel string.
-   * @param updates - Partial Phone data updates.
-   */
-  const handlePhoneChange = (updates: Partial<PhoneData>) => {
-    const newData = { ...phoneData, ...updates };
-    setPhoneData(newData);
-    onChange({ value: constructPhoneString(newData) });
-  };
-
-  /**
-   * Updates SMS data and formats the smsto string.
-   * @param updates - Partial SMS data updates.
-   */
-  const handleSmsChange = (updates: Partial<SmsData>) => {
-    const newData = { ...smsData, ...updates };
-    setSmsData(newData);
-    onChange({ value: constructSmsString(newData) });
-  };
-
-  /**
-   * Updates Payment data and formats the crypto URI string.
-   * @param updates - Partial Payment data updates.
-   */
-  const handlePaymentChange = (updates: Partial<PaymentData>) => {
-    const newData = { ...paymentData, ...updates };
-    setPaymentData(newData);
-    onChange({ value: constructPaymentString(newData) });
-  };
+  const [paymentData, handlePaymentChange] = useQRInputState<PaymentData>(
+    { network: 'bitcoin', address: '', amount: '', label: '' },
+    constructPaymentString,
+    onChange
+  );
 
   const inputClasses = "w-full px-4 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-4 focus:ring-teal-100 dark:focus:ring-teal-900/30 focus:border-teal-500 outline-none transition-all text-slate-700 dark:text-slate-100 placeholder-slate-400 font-mono text-sm";
   const textAreaClasses = "w-full px-4 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-4 focus:ring-teal-100 dark:focus:ring-teal-900/30 focus:border-teal-500 outline-none transition-all text-slate-700 dark:text-slate-100 placeholder-slate-400 font-sans text-sm";
