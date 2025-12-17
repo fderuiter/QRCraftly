@@ -371,6 +371,14 @@ const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) =
 
         // Draw Modules
         ctx.fillStyle = config.fgColor;
+
+        // Optimization: Batch drawing for compatible styles to reduce draw calls
+        const isBatchable = [QRStyle.STANDARD, QRStyle.MODERN, QRStyle.SWISS, QRStyle.FLUID].includes(config.style);
+
+        if (isBatchable) {
+            ctx.beginPath();
+        }
+
         for (let r = 0; r < moduleCount; r++) {
           for (let c = 0; c < moduleCount; c++) {
             if (isEye(r, c)) continue;
@@ -383,63 +391,65 @@ const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) =
               const cx = x + cellSize/2;
               const cy = y + cellSize/2;
 
-              // Neighbors
-              const hasTop = r > 0 && modules.get(r-1, c) && !isCoveredByLogo(r-1, c) && !isEye(r-1, c);
-              const hasBottom = r < moduleCount-1 && modules.get(r+1, c) && !isCoveredByLogo(r+1, c) && !isEye(r+1, c);
-              const hasLeft = c > 0 && modules.get(r, c-1) && !isCoveredByLogo(r, c-1) && !isEye(r, c-1);
-              const hasRight = c < moduleCount-1 && modules.get(r, c+1) && !isCoveredByLogo(r, c+1) && !isEye(r, c+1);
+              if (isBatchable) {
+                   switch(config.style) {
+                       case QRStyle.MODERN:
+                           drawRoundRect(ctx, x, y, cellSize, cellSize, cellSize * 0.3);
+                           break;
+                       case QRStyle.SWISS:
+                           ctx.moveTo(cx + (cellSize/2 * 1.05), cy);
+                           ctx.arc(cx, cy, cellSize/2 * 1.05, 0, Math.PI*2);
+                           break;
+                       case QRStyle.FLUID:
+                           ctx.moveTo(cx + (cellSize/2 * 1.1), cy);
+                           ctx.arc(cx, cy, cellSize/2 * 1.1, 0, Math.PI*2);
+                           break;
+                       case QRStyle.STANDARD:
+                       default:
+                           ctx.rect(Math.floor(x), Math.floor(y), Math.ceil(cellSize), Math.ceil(cellSize));
+                           break;
+                   }
+              } else {
+                  // Neighbors (only needed for Circuit currently)
+                  const hasTop = r > 0 && modules.get(r-1, c) && !isCoveredByLogo(r-1, c) && !isEye(r-1, c);
+                  const hasBottom = r < moduleCount-1 && modules.get(r+1, c) && !isCoveredByLogo(r+1, c) && !isEye(r+1, c);
+                  const hasLeft = c > 0 && modules.get(r, c-1) && !isCoveredByLogo(r, c-1) && !isEye(r, c-1);
+                  const hasRight = c < moduleCount-1 && modules.get(r, c+1) && !isCoveredByLogo(r, c+1) && !isEye(r, c+1);
 
-              switch(config.style) {
-                  case QRStyle.MODERN:
-                    ctx.beginPath();
-                    // Larger fill
-                    drawRoundRect(ctx, x, y, cellSize, cellSize, cellSize * 0.3);
-                    ctx.fill();
-                    break;
-                  case QRStyle.SWISS:
-                    ctx.beginPath();
-                    // Full size circle
-                    ctx.arc(cx, cy, cellSize/2 * 1.05, 0, Math.PI*2);
-                    ctx.fill();
-                    break;
-                  case QRStyle.FLUID:
-                    // REMOVE CONNECTIONS (Causes blobs). Use overlapping circles like Swiss.
-                    ctx.beginPath();
-                    ctx.arc(cx, cy, cellSize/2 * 1.1, 0, Math.PI*2);
-                    ctx.fill();
-                    break;
-                  case QRStyle.CIRCUIT:
-                    // Full square with very tiny notches
-                    ctx.beginPath();
-                    drawRoundRect(ctx, x, y, cellSize, cellSize, cellSize * 0.1);
-                    ctx.fill();
+                  switch(config.style) {
+                      case QRStyle.CIRCUIT:
+                        // Full square with very tiny notches
+                        ctx.beginPath();
+                        drawRoundRect(ctx, x, y, cellSize, cellSize, cellSize * 0.1);
+                        ctx.fill();
 
-                    // Draw lines to neighbors
-                    const thickness = cellSize * 0.4;
-                    if (hasRight) ctx.fillRect(cx, cy - thickness/2, cellSize/2 + 1, thickness);
-                    if (hasBottom) ctx.fillRect(cx - thickness/2, cy, thickness, cellSize/2 + 1);
-                    if (hasLeft) ctx.fillRect(x, cy - thickness/2, cellSize/2 + 1, thickness);
-                    if (hasTop) ctx.fillRect(cx - thickness/2, y, thickness, cellSize/2 + 1);
-                    break;
-                  case QRStyle.HIVE:
-                    // Massive Hexagon
-                    drawPoly(ctx, cx, cy, cellSize/1.55, 6, 0, true);
-                    break;
-                  case QRStyle.GRUNGE:
-                    // Full size rough rect, minimal jitter
-                    drawRoughRect(ctx, x, y, cellSize, cellSize);
-                    break;
-                  case QRStyle.STARBURST:
-                     // Fat star - nearly a square
-                    drawStar(ctx, cx, cy, cellSize/1.5, cellSize/2.2, 5, true);
-                    break;
-                  case QRStyle.STANDARD:
-                  default:
-                    ctx.fillRect(Math.floor(x), Math.floor(y), Math.ceil(cellSize), Math.ceil(cellSize));
-                    break;
+                        // Draw lines to neighbors
+                        const thickness = cellSize * 0.4;
+                        if (hasRight) ctx.fillRect(cx, cy - thickness/2, cellSize/2 + 1, thickness);
+                        if (hasBottom) ctx.fillRect(cx - thickness/2, cy, thickness, cellSize/2 + 1);
+                        if (hasLeft) ctx.fillRect(x, cy - thickness/2, cellSize/2 + 1, thickness);
+                        if (hasTop) ctx.fillRect(cx - thickness/2, y, thickness, cellSize/2 + 1);
+                        break;
+                      case QRStyle.HIVE:
+                        // Massive Hexagon
+                        drawPoly(ctx, cx, cy, cellSize/1.55, 6, 0, true);
+                        break;
+                      case QRStyle.GRUNGE:
+                        // Full size rough rect, minimal jitter
+                        drawRoughRect(ctx, x, y, cellSize, cellSize);
+                        break;
+                      case QRStyle.STARBURST:
+                         // Fat star - nearly a square
+                        drawStar(ctx, cx, cy, cellSize/1.5, cellSize/2.2, 5, true);
+                        break;
+                  }
               }
             }
           }
+        }
+
+        if (isBatchable) {
+            ctx.fill();
         }
 
         // Draw Eyes (Last to ensure they overlap nicely if needed)

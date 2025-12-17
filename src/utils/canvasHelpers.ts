@@ -14,7 +14,6 @@ export const drawRoundRect = (ctx: CanvasRenderingContext2D, x: number, y: numbe
     // @ts-ignore
     ctx.roundRect(x, y, w, h, r);
   } else {
-    ctx.beginPath();
     ctx.moveTo(x + r, y);
     ctx.lineTo(x + w - r, y);
     ctx.quadraticCurveTo(x + w, y, x + w, y + r);
