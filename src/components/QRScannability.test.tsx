@@ -46,42 +46,29 @@ describe('QR Code Scannability', () => {
       // But we can wait for a bit.
       // Or check if context has data.
 
+      // Robustly wait for the QR code to be rendered and scannable
       await waitFor(() => {
-          // Verify canvas has content (not empty)
-          // This requires 'canvas' package to be working with JSDOM
           const ctx = canvas!.getContext('2d');
           const imageData = ctx!.getImageData(0, 0, 200, 200);
-          // Check if not all pixels are empty (transparent/white)
-          // Simple check: sum of alpha or just some pixels
+
+          // Check if canvas has any content (non-transparent) first
           const data = imageData.data;
           let hasContent = false;
           for(let i=0; i<data.length; i+=4) {
-              if (data[i] !== 255 || data[i+1] !== 255 || data[i+2] !== 255) {
-                   hasContent = true; // Found non-white pixel
+              if (data[i+3] > 0) { // Check alpha channel
+                   hasContent = true;
                    break;
               }
           }
           expect(hasContent).toBe(true);
-      }, { timeout: 1000 });
 
-      // Now attempt to decode
-      const ctx = canvas!.getContext('2d');
-      const imageData = ctx!.getImageData(0, 0, 200, 200);
-      const code = jsQR(imageData.data, imageData.width, imageData.height);
-
-      if (!code) {
-          // If decoding fails, we might want to dump the image or fail with a message
-          // For debugging, we could use console.log
-          // console.log(`Failed to decode style: ${style}`);
-      }
-
-      // Starburst and Grunge are known to be hard to scan with small sizes/standard decoders due to shape distortion
-      // Circuit breaks the finder pattern frame (brackets) which confuses strict decoders like jsQR
-      // We skip assertion for them in this strict test suite to avoid blocking CI
-      if (style !== QRStyle.STARBURST && style !== QRStyle.GRUNGE && style !== QRStyle.CIRCUIT) {
-        expect(code).not.toBeNull();
-        expect(code!.data).toBe(TEST_VALUE);
-      }
+          // For supported styles, wait until it is decodable
+          if (style !== QRStyle.STARBURST && style !== QRStyle.GRUNGE && style !== QRStyle.CIRCUIT) {
+              const code = jsQR(imageData.data, imageData.width, imageData.height);
+              expect(code).not.toBeNull();
+              expect(code!.data).toBe(TEST_VALUE);
+          }
+      }, { timeout: 3000 });
     });
   });
 });

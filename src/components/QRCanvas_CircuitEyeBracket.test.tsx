@@ -7,11 +7,15 @@ import { QRStyle } from '../types';
 import * as QRCode from 'qrcode';
 
 // Mock qrcode module
-vi.mock('qrcode', () => ({
-  default: {
-    create: vi.fn(),
-  },
-}));
+vi.mock('qrcode', () => {
+  const createMock = vi.fn();
+  return {
+    create: createMock,
+    default: {
+      create: createMock,
+    },
+  };
+});
 
 // Mock Image
 const originalImage = window.Image;
