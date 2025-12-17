@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { QRConfig, QRType, WifiData, EmailData, VCardData, PhoneData, SmsData, PaymentData } from '../types';
-import { Wifi, Link, Type, Mail, UserSquare2, Phone, MessageSquare, CreditCard } from 'lucide-react';
+import { Wifi, Link, Type, Mail, UserSquare2, Phone, MessageSquare, CreditCard, Eye, EyeOff } from 'lucide-react';
 import {
   constructWifiString,
   constructEmailString,
@@ -56,6 +56,8 @@ function useQRInputState<T>(
  * @returns The InputPanel component.
  */
 const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
+  const [showWifiPassword, setShowWifiPassword] = useState(false);
+
   const [wifiData, handleWifiChange] = useQRInputState<WifiData>(
     { ssid: '', password: '', encryption: 'WPA', hidden: false, eapIdentity: '' },
     constructWifiString,
@@ -205,14 +207,24 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
             {wifiData.encryption !== 'nopass' && (
                 <div>
                 <label htmlFor="wifi-password" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Password</label>
-                <input
-                    id="wifi-password"
-                    type="text"
-                    maxLength={63}
-                    value={wifiData.password}
-                    onChange={(e) => handleWifiChange({ password: e.target.value })}
-                    className={inputClasses}
-                />
+                <div className="relative">
+                  <input
+                      id="wifi-password"
+                      type={showWifiPassword ? 'text' : 'password'}
+                      maxLength={63}
+                      value={wifiData.password}
+                      onChange={(e) => handleWifiChange({ password: e.target.value })}
+                      className={`${inputClasses} pr-10`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowWifiPassword(!showWifiPassword)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors rounded-full hover:bg-slate-100 dark:hover:bg-slate-800"
+                    aria-label={showWifiPassword ? "Hide password" : "Show password"}
+                  >
+                    {showWifiPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
                 </div>
             )}
             
