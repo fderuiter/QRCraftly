@@ -502,6 +502,8 @@ const StyleControls: React.FC<StyleControlsProps> = ({ config, onChange }) => {
         <button
           onClick={() => setShowAdvanced(!showAdvanced)}
           className="flex items-center justify-between w-full text-left"
+          aria-expanded={showAdvanced}
+          aria-controls="advanced-settings-panel"
         >
           <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Advanced Mode</span>
           {showAdvanced ? (
@@ -512,7 +514,7 @@ const StyleControls: React.FC<StyleControlsProps> = ({ config, onChange }) => {
         </button>
 
         {showAdvanced && (
-          <div className="mt-4 space-y-4">
+          <div className="mt-4 space-y-4" id="advanced-settings-panel">
              <div>
                 <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-2">Error Correction Level</label>
                 <div className="grid grid-cols-2 gap-2">
