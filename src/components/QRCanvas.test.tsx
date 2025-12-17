@@ -7,11 +7,15 @@ import { QRStyle, LogoPaddingStyle } from '../types';
 import * as QRCode from 'qrcode';
 
 // Mock qrcode module
-vi.mock('qrcode', () => ({
-  default: {
-    create: vi.fn(),
-  },
-}));
+vi.mock('qrcode', () => {
+  const createMock = vi.fn();
+  return {
+    create: createMock,
+    default: {
+      create: createMock,
+    },
+  };
+});
 
 // Mock Image
 const originalImage = window.Image;
@@ -103,12 +107,14 @@ describe('QRCanvas Component', () => {
         expect(QRCode.default.create).toHaveBeenCalledWith(DEFAULT_CONFIG.value, { errorCorrectionLevel: 'H' });
     });
 
-    expect(mockContext.clearRect).toHaveBeenCalled();
-    expect(mockContext.fillRect).toHaveBeenCalledWith(0, 0, 1024, 1024);
-    
-    // Check drawing
-    // expect(mockContext.beginPath).toHaveBeenCalled(); // STANDARD uses fillRect mainly
-    expect(mockContext.fillRect).toHaveBeenCalled();
+    await waitFor(() => {
+        expect(mockContext.clearRect).toHaveBeenCalled();
+        expect(mockContext.fillRect).toHaveBeenCalledWith(0, 0, 1024, 1024);
+
+        // Check drawing
+        // expect(mockContext.beginPath).toHaveBeenCalled(); // STANDARD uses fillRect mainly
+        expect(mockContext.fillRect).toHaveBeenCalled();
+    });
   });
 
   it('renders different styles correctly (SWISS)', async () => {

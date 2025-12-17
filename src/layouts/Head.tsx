@@ -111,7 +111,14 @@ export default function HeadDefault() {
          While async loading improves FCP, the shift when the font swaps
          negatively impacts the user experience and CLS score.
       */}
-      <link rel="stylesheet" href={fontUrl} />
+      {/* Use a raw style tag to inject the link with onload attribute, ensuring it works in SSG */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        </style>
+        <link rel="preload" href="${fontUrl}" as="style" />
+        <link rel="stylesheet" href="${fontUrl}" media="print" onload="this.media='all'" />
+        <noscript><link rel="stylesheet" href="${fontUrl}" /></noscript>
+        <style>`
+      }} />
     </>
   );
 }

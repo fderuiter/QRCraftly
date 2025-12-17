@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useMemo, useState } from 'react';
-import QRCode from 'qrcode';
 import { QRConfig, QRStyle } from '../types';
 import { drawRoundRect, drawPoly, drawStar, drawRoughRect, drawScribble } from '../utils/canvasHelpers';
 
@@ -68,15 +67,28 @@ const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) =
   const logoImg = useImage(config.logoUrl);
   const borderLogoImg = useImage(config.isBorderEnabled ? config.borderLogoUrl : null);
 
-  // Memoize QR data generation to avoid re-computation on style changes
-  const qrData = useMemo(() => {
-    if (!config.value) return null;
-    try {
-      return QRCode.create(config.value, { errorCorrectionLevel: config.errorCorrectionLevel });
-    } catch (e) {
-      console.warn("QR generation failed:", e);
-      return null;
+  const [qrData, setQrData] = useState<any>(null);
+
+  // Dynamically load QRCode and generate data
+  useEffect(() => {
+    if (!config.value) {
+      setQrData(null);
+      return;
     }
+
+    let isMounted = true;
+    import('qrcode').then((QRCode) => {
+      if (!isMounted) return;
+      try {
+        const data = QRCode.create(config.value, { errorCorrectionLevel: config.errorCorrectionLevel });
+        setQrData(data);
+      } catch (e) {
+        console.warn("QR generation failed:", e);
+        setQrData(null);
+      }
+    });
+
+    return () => { isMounted = false; };
   }, [config.value, config.errorCorrectionLevel]);
 
   useEffect(() => {
