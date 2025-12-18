@@ -40,16 +40,21 @@ const ColorInput: React.FC<ColorInputProps> = ({
       {label}
     </label>
     <div className="flex items-center gap-2">
-        <input
+      <input
         id={id}
         type="color"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className={`${sizeClass} rounded cursor-pointer border-0 p-0 bg-transparent`}
-        />
-        <span className="text-xs text-slate-600 dark:text-slate-300 font-mono">
-          {displayValue || value}
-        </span>
+        className={`${sizeClass} rounded cursor-pointer border-0 p-0 bg-transparent flex-shrink-0`}
+      />
+      <input
+        type="text"
+        value={displayValue || value}
+        onChange={(e) => onChange(e.target.value)}
+        maxLength={9}
+        className="w-24 px-2 py-1 text-xs font-mono text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none uppercase"
+        aria-label={`${label} hex code`}
+      />
     </div>
   </div>
 );
