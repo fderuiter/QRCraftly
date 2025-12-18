@@ -16,6 +16,45 @@ interface StyleControlsProps {
 }
 
 /**
+ * Helper component for color inputs to reduce duplication.
+ */
+interface ColorInputProps {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  displayValue?: string;
+  sizeClass?: string;
+}
+
+const ColorInput: React.FC<ColorInputProps> = ({
+  id,
+  label,
+  value,
+  onChange,
+  displayValue,
+  sizeClass = "w-10 h-10"
+}) => (
+  <div>
+    <label htmlFor={id} className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
+      {label}
+    </label>
+    <div className="flex items-center gap-2">
+        <input
+        id={id}
+        type="color"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className={`${sizeClass} rounded cursor-pointer border-0 p-0 bg-transparent`}
+        />
+        <span className="text-xs text-slate-600 dark:text-slate-300 font-mono">
+          {displayValue || value}
+        </span>
+    </div>
+  </div>
+);
+
+/**
  * A component providing UI controls for styling the QR code.
  * Allows users to change patterns, colors, and upload logos.
  * Also checks and warns about low contrast ratios.
@@ -131,21 +170,12 @@ const StyleControls: React.FC<StyleControlsProps> = ({ config, onChange }) => {
                     </div>
                 </div>
 
-                <div>
-                    <label htmlFor="border-color" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
-                        Border Color
-                    </label>
-                    <div className="flex items-center gap-2">
-                        <input
-                            id="border-color"
-                            type="color"
-                            value={config.borderColor}
-                            onChange={(e) => onChange({ borderColor: e.target.value })}
-                            className="w-10 h-10 rounded cursor-pointer border-0 p-0 bg-transparent"
-                        />
-                        <span className="text-xs text-slate-600 dark:text-slate-300 font-mono">{config.borderColor}</span>
-                    </div>
-                </div>
+                <ColorInput
+                  id="border-color"
+                  label="Border Color"
+                  value={config.borderColor}
+                  onChange={(val) => onChange({ borderColor: val })}
+                />
 
                 {/* Border Content Section */}
                 <div className="pt-2 border-t border-slate-200 dark:border-slate-700">
@@ -333,44 +363,25 @@ const StyleControls: React.FC<StyleControlsProps> = ({ config, onChange }) => {
         </div>
         
         <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label htmlFor="fg-color" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Foreground</label>
-            <div className="flex items-center gap-2">
-                <input
-                id="fg-color"
-                type="color"
-                value={config.fgColor}
-                onChange={(e) => onChange({ fgColor: e.target.value })}
-                className="w-10 h-10 rounded cursor-pointer border-0 p-0 bg-transparent"
-                />
-                <span className="text-xs text-slate-600 dark:text-slate-300 font-mono">{config.fgColor}</span>
-            </div>
-          </div>
-          <div>
-            <label htmlFor="bg-color" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Background</label>
-            <div className="flex items-center gap-2">
-                <input
-                id="bg-color"
-                type="color"
-                value={config.bgColor}
-                onChange={(e) => onChange({ bgColor: e.target.value })}
-                className="w-10 h-10 rounded cursor-pointer border-0 p-0 bg-transparent"
-                />
-                <span className="text-xs text-slate-600 dark:text-slate-300 font-mono">{config.bgColor}</span>
-            </div>
-          </div>
+          <ColorInput
+            id="fg-color"
+            label="Foreground"
+            value={config.fgColor}
+            onChange={(val) => onChange({ fgColor: val })}
+          />
+          <ColorInput
+            id="bg-color"
+            label="Background"
+            value={config.bgColor}
+            onChange={(val) => onChange({ bgColor: val })}
+          />
            <div className="col-span-2">
-            <label htmlFor="eye-color" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Eye Color (Corners)</label>
-            <div className="flex items-center gap-2">
-                <input
+            <ColorInput
                 id="eye-color"
-                type="color"
+                label="Eye Color (Corners)"
                 value={config.eyeColor}
-                onChange={(e) => onChange({ eyeColor: e.target.value })}
-                className="w-10 h-10 rounded cursor-pointer border-0 p-0 bg-transparent"
-                />
-                <span className="text-xs text-slate-600 dark:text-slate-300 font-mono">{config.eyeColor}</span>
-            </div>
+                onChange={(val) => onChange({ eyeColor: val })}
+            />
           </div>
         </div>
         {isLowContrast && (
@@ -455,21 +466,14 @@ const StyleControls: React.FC<StyleControlsProps> = ({ config, onChange }) => {
                               className="w-full accent-teal-700 dark:accent-teal-500"
                            />
                       </div>
-                      <div>
-                        <label htmlFor="logo-bg-color" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Background Color</label>
-                        <div className="flex items-center gap-2">
-                            <input
-                            id="logo-bg-color"
-                            type="color"
-                            value={config.logoBackgroundColor || config.bgColor}
-                            onChange={(e) => onChange({ logoBackgroundColor: e.target.value })}
-                            className="w-8 h-8 rounded cursor-pointer border-0 p-0 bg-transparent"
-                            />
-                            <span className="text-xs text-slate-600 dark:text-slate-300 font-mono">
-                                {config.logoBackgroundColor || 'Auto'}
-                            </span>
-                        </div>
-                      </div>
+                      <ColorInput
+                        id="logo-bg-color"
+                        label="Background Color"
+                        value={config.logoBackgroundColor || config.bgColor}
+                        onChange={(val) => onChange({ logoBackgroundColor: val })}
+                        displayValue={config.logoBackgroundColor || 'Auto'}
+                        sizeClass="w-8 h-8"
+                      />
                   </div>
                 )}
 
