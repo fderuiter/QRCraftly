@@ -18,6 +18,8 @@ QRCraftly is a powerful, privacy-focused, and user-friendly React application fo
 - **Accessibility**:
     - WCAG contrast checks for generated codes.
     - Fully accessible UI with keyboard navigation and screen reader support.
+- **Compliance**:
+    - Privacy-first architecture aligned with [HIPAA Technical Safeguards](COMPLIANCE.md).
 - **Dark Mode**: Fully supported dark mode interface.
 - **Responsive Design**: Works seamlessly on desktop and mobile devices.
 
@@ -83,6 +85,28 @@ npm test
 To run coverage reports:
 ```bash
 npm test -- run --coverage
+```
+
+### Quality Assurance
+
+This project enforces strict quality checks in CI. Run these locally to prevent build failures:
+
+**Type Checking:**
+```bash
+npx tsc --noEmit
+```
+
+**Accessibility & Contrast Check:**
+```bash
+python3 scripts/contrast_check.py
+```
+
+**Bundle Size Check:**
+The build pipeline enforces a 3MB limit on the client bundle.
+```bash
+npm run build
+# Check size of dist/client directory
+du -sh dist/client
 ```
 
 ## Troubleshooting
