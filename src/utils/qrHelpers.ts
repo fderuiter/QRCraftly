@@ -34,7 +34,9 @@ export const constructWifiString = (data: WifiData): string => {
  * Constructs the mailto string for Email QR code.
  */
 export const constructEmailString = (data: EmailData): string => {
-  return `mailto:${data.email}?subject=${encodeURIComponent(data.subject)}&body=${encodeURIComponent(data.body)}`;
+  // Sanitize email to prevent header injection (e.g. ?cc=attacker@example.com)
+  const safeEmail = data.email.split('?')[0];
+  return `mailto:${safeEmail}?subject=${encodeURIComponent(data.subject)}&body=${encodeURIComponent(data.body)}`;
 };
 
 /**
