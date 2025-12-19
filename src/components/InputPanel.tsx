@@ -9,6 +9,7 @@ import {
   constructSmsString,
   constructPaymentString
 } from '../utils/qrHelpers';
+import { useQRInputState } from '../utils/hooks';
 
 /**
  * Props for the InputPanel component.
@@ -18,31 +19,6 @@ interface InputPanelProps {
   config: QRConfig;
   /** Callback to update the configuration. */
   onChange: (updates: Partial<QRConfig>) => void;
-}
-
-/**
- * Custom hook to manage input state for complex QR types (WiFi, Email, etc.).
- * Automatically updates the global QR config string when local input state changes.
- *
- * @param initialState - The initial state object for the input type.
- * @param constructorFn - Function to convert the state object to a QR code string.
- * @param onChange - The global config change handler.
- * @returns A tuple containing the current data and a function to update it.
- */
-function useQRInputState<T>(
-  initialState: T,
-  constructorFn: (data: T) => string,
-  onChange: (updates: Partial<QRConfig>) => void
-) {
-  const [data, setData] = useState<T>(initialState);
-
-  const update = (updates: Partial<T>) => {
-    const newData = { ...data, ...updates };
-    setData(newData);
-    onChange({ value: constructorFn(newData) });
-  };
-
-  return [data, update] as const;
 }
 
 /**
