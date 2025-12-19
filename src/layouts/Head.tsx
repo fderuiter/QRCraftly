@@ -16,6 +16,11 @@ export default function HeadDefault() {
   const fontUrl = "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap";
 
   const pageContext = usePageContext();
+  // Vike-react exposes the resolved config in pageContext.config
+  const { config } = pageContext;
+  const title = config?.title || "QRCraftly - Free Custom QR Code Generator";
+  const description = config?.description || "Generate beautiful, custom QR codes for free. No sign-up required.";
+
   // Ensure we don't end up with double slashes if urlPathname is just '/'
   const path = pageContext.urlPathname === '/' ? '' : pageContext.urlPathname;
 
@@ -91,15 +96,21 @@ export default function HeadDefault() {
       <meta property="og:site_name" content="QRCraftly" />
       <meta property="og:type" content="website" />
       <meta property="og:url" content={canonicalUrl} />
+      <meta property="og:title" content={title} />
+      <meta property="og:description" content={description} />
       {/*
         TODO: Replace with a dedicated social share image (1200x630px) when available.
         Current fallback is favicon.png to ensure *some* image appears.
       */}
       <meta property="og:image" content={`${DOMAIN}/favicon.png`} />
+      <meta property="og:image:alt" content="QRCraftly Logo" />
 
       {/* Social Signals (Twitter) */}
       <meta name="twitter:card" content="summary" />
+      <meta name="twitter:title" content={title} />
+      <meta name="twitter:description" content={description} />
       <meta name="twitter:image" content={`${DOMAIN}/favicon.png`} />
+      <meta name="twitter:image:alt" content="QRCraftly Logo" />
 
       <link rel="icon" type="image/png" href="/favicon.png" />
       <link rel="apple-touch-icon" href="/favicon.png" />
