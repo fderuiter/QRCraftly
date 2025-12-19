@@ -18,8 +18,15 @@ export default function HeadDefault() {
   const pageContext = usePageContext();
   // Vike-react exposes the resolved config in pageContext.config
   const { config } = pageContext;
-  const title = config?.title || "QRCraftly - Free Custom QR Code Generator";
-  const description = config?.description || "Generate beautiful, custom QR codes for free. No sign-up required.";
+
+  // Helper to resolve potentially functional config values
+  const getString = (val: string | ((pageContext: any) => string) | undefined, context: any, fallback: string): string => {
+    if (!val) return fallback;
+    return typeof val === 'function' ? val(context) : val;
+  };
+
+  const title = getString(config?.title, pageContext, "QRCraftly - Free Custom QR Code Generator");
+  const description = getString(config?.description, pageContext, "Generate beautiful, custom QR codes for free. No sign-up required.");
 
   // Ensure we don't end up with double slashes if urlPathname is just '/'
   const path = pageContext.urlPathname === '/' ? '' : pageContext.urlPathname;
