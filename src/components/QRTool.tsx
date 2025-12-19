@@ -25,10 +25,27 @@ export default function QRTool({ initialConfig, title }: { initialConfig?: Parti
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const qrRef = useRef<HTMLDivElement>(null);
+  const downloadMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  // Close download menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (downloadMenuRef.current && !downloadMenuRef.current.contains(event.target as Node)) {
+        setShowDownloadMenu(false);
+      }
+    };
+
+    if (showDownloadMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showDownloadMenu]);
 
   // Debounce the config for QRCanvas to prevent lag during rapid typing or style changes.
   // 100ms is a good balance between responsiveness and performance.
@@ -244,7 +261,7 @@ export default function QRTool({ initialConfig, title }: { initialConfig?: Parti
                 <div className="grid grid-cols-1 gap-3 w-full">
                    {/* Row 1: Download & Share */}
                    <div className="flex gap-2">
-                       <div className="relative flex-1">
+                       <div className="relative flex-1" ref={downloadMenuRef}>
                           <button 
                               onClick={() => setShowDownloadMenu(!showDownloadMenu)}
                               className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-teal-700 dark:bg-teal-700 text-white rounded-xl font-medium hover:bg-teal-800 dark:hover:bg-teal-600 transition-colors shadow-lg shadow-teal-900/10 dark:shadow-teal-900/40"
@@ -257,14 +274,14 @@ export default function QRTool({ initialConfig, title }: { initialConfig?: Parti
                           </button>
                           
                           {showDownloadMenu && (
-                              <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-100 dark:border-slate-700 py-1 z-50 animate-in fade-in zoom-in-95 duration-100 overflow-hidden">
-                                  <button onClick={() => handleSaveAs('png')} className="w-full text-left px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200 text-sm font-medium flex items-center gap-2">
+                              <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-100 dark:border-slate-700 py-1 z-50 animate-in fade-in zoom-in-95 duration-100 overflow-hidden" role="menu">
+                                  <button onClick={() => handleSaveAs('png')} role="menuitem" className="w-full text-left px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200 text-sm font-medium flex items-center gap-2">
                                       <div className="w-1.5 h-1.5 rounded-full bg-teal-500"></div> PNG (High Quality)
                                   </button>
-                                  <button onClick={() => handleSaveAs('jpeg')} className="w-full text-left px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200 text-sm font-medium flex items-center gap-2">
+                                  <button onClick={() => handleSaveAs('jpeg')} role="menuitem" className="w-full text-left px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200 text-sm font-medium flex items-center gap-2">
                                       <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div> JPEG (Compact)
                                   </button>
-                                  <button onClick={() => handleSaveAs('webp')} className="w-full text-left px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200 text-sm font-medium flex items-center gap-2">
+                                  <button onClick={() => handleSaveAs('webp')} role="menuitem" className="w-full text-left px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200 text-sm font-medium flex items-center gap-2">
                                       <div className="w-1.5 h-1.5 rounded-full bg-purple-500"></div> WebP (Modern)
                                   </button>
                               </div>
