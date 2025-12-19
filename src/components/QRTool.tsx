@@ -6,8 +6,7 @@ import QRCanvas from '@/components/QRCanvas';
 import { Download, Share2, QrCode, ChevronDown, Camera, Moon, Sun, Info } from 'lucide-react';
 import { useDebounce } from '@/utils/hooks';
 
-// Lazy load StyleControls to reduce initial bundle size
-const StyleControls = React.lazy(() => import('@/components/StyleControls'));
+import StyleControls from '@/components/StyleControls';
 
 /**
  * The main Application component.
@@ -205,9 +204,7 @@ export default function QRTool({ initialConfig, title }: { initialConfig?: Parti
 
             <section>
               <h2 className="text-xs uppercase tracking-wider text-slate-600 dark:text-slate-400 font-bold mb-4">Appearance</h2>
-              <Suspense fallback={<div className="h-64 bg-slate-100 dark:bg-slate-800 rounded-xl animate-pulse" />}>
-                <StyleControls config={config} onChange={handleConfigChange} />
-              </Suspense>
+              <StyleControls config={config} onChange={handleConfigChange} />
             </section>
           </div>
         </div>
