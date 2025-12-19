@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, Suspense } from 'react';
+import React, { useState, useRef, useCallback, Suspense, useEffect } from 'react';
 import { QRConfig } from '@/types';
 import { DEFAULT_CONFIG } from '@/constants';
 import InputPanel from '@/components/InputPanel';
@@ -6,7 +6,8 @@ import QRCanvas from '@/components/QRCanvas';
 import { Download, Share2, QrCode, ChevronDown, Camera, Moon, Sun, Info } from 'lucide-react';
 import { useDebounce } from '@/utils/hooks';
 
-import StyleControls from '@/components/StyleControls';
+// Lazy load StyleControls to reduce initial bundle size and avoid SSR issues
+const StyleControls = React.lazy(() => import('@/components/StyleControls'));
 
 /**
  * The main Application component.
@@ -22,7 +23,12 @@ export default function QRTool({ initialConfig, title }: { initialConfig?: Parti
   const [config, setConfig] = useState<QRConfig>({ ...DEFAULT_CONFIG, ...initialConfig });
   const [showDownloadMenu, setShowDownloadMenu] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
   const qrRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Debounce the config for QRCanvas to prevent lag during rapid typing or style changes.
   // 100ms is a good balance between responsiveness and performance.
@@ -204,7 +210,13 @@ export default function QRTool({ initialConfig, title }: { initialConfig?: Parti
 
             <section>
               <h2 className="text-xs uppercase tracking-wider text-slate-600 dark:text-slate-400 font-bold mb-4">Appearance</h2>
-              <StyleControls config={config} onChange={handleConfigChange} />
+              {isMounted ? (
+                <Suspense fallback={<div className="h-64 bg-slate-100 dark:bg-slate-800 rounded-xl animate-pulse" />}>
+                  <StyleControls config={config} onChange={handleConfigChange} />
+                </Suspense>
+              ) : (
+                <div className="h-64 bg-slate-100 dark:bg-slate-800 rounded-xl animate-pulse" />
+              )}
             </section>
           </div>
         </div>
