@@ -29,11 +29,16 @@ export default function HeadDefault() {
   const description = getString(config?.description, pageContext, "Generate beautiful, custom QR codes for free. No sign-up required.");
 
   // Ensure we don't end up with double slashes if urlPathname is just '/'
-  const path = pageContext.urlPathname === '/' ? '' : pageContext.urlPathname;
+  let path = pageContext.urlPathname;
+  // Normalize path to remove trailing slash for canonical URL
+  if (path !== '/' && path.endsWith('/')) {
+    path = path.slice(0, -1);
+  }
+  const canonicalPath = path === '/' ? '' : path;
 
   // Define domain constant to ensure consistency
   const DOMAIN = "https://qrcraftly.com";
-  const canonicalUrl = `${DOMAIN}${path}`;
+  const canonicalUrl = `${DOMAIN}${canonicalPath}`;
 
   const schemaData = {
     "@context": "https://schema.org",
