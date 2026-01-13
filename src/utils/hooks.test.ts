@@ -74,6 +74,14 @@ describe('useQRInputState', () => {
   type TestData = { field: string };
   const mockConstructor = (data: TestData) => `constructed:${data.field}`;
 
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('should initialize with provided state', () => {
     const mockOnChange = vi.fn();
     const { result } = renderHook(() =>
@@ -85,10 +93,10 @@ describe('useQRInputState', () => {
     expect(mockOnChange).not.toHaveBeenCalled();
   });
 
-  it('should update state and call onChange with constructed string', () => {
+  it('should update state and call onChange with constructed string after debounce', () => {
     const mockOnChange = vi.fn();
     const { result } = renderHook(() =>
-      useQRInputState({ field: 'init' }, mockConstructor, mockOnChange)
+      useQRInputState({ field: 'init' }, mockConstructor, mockOnChange, 100)
     );
 
     const [, update] = result.current;
@@ -99,10 +107,18 @@ describe('useQRInputState', () => {
 
     const [data] = result.current;
     expect(data).toEqual({ field: 'new' });
+
+    // Should not be called immediately due to debounce
+    expect(mockOnChange).not.toHaveBeenCalled();
+
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
+
     expect(mockOnChange).toHaveBeenCalledWith({ value: 'constructed:new' });
   });
 
-  it('should merge partial updates', () => {
+  it('should merge partial updates and respect debounce', () => {
     type ComplexData = { a: string; b: number };
     const complexConstructor = (d: ComplexData) => `${d.a}:${d.b}`;
     const mockOnChange = vi.fn();
@@ -111,7 +127,8 @@ describe('useQRInputState', () => {
       useQRInputState<ComplexData>(
         { a: 'start', b: 1 },
         complexConstructor,
-        mockOnChange
+        mockOnChange,
+        100
       )
     );
 
@@ -123,6 +140,28 @@ describe('useQRInputState', () => {
 
     const [data] = result.current;
     expect(data).toEqual({ a: 'start', b: 2 });
+
+    expect(mockOnChange).not.toHaveBeenCalled();
+
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
+
     expect(mockOnChange).toHaveBeenCalledWith({ value: 'start:2' });
+  });
+
+  it('should run immediately if debounceDelay is 0', () => {
+    const mockOnChange = vi.fn();
+    const { result } = renderHook(() =>
+      useQRInputState({ field: 'init' }, mockConstructor, mockOnChange, 0)
+    );
+
+    const [, update] = result.current;
+
+    act(() => {
+      update({ field: 'new' });
+    });
+
+    expect(mockOnChange).toHaveBeenCalledWith({ value: 'constructed:new' });
   });
 });

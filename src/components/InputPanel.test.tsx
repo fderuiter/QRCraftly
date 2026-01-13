@@ -1,11 +1,19 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import InputPanel from './InputPanel';
 import { DEFAULT_CONFIG } from '../constants';
 import { QRType, QRConfig } from '../types';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 describe('InputPanel Component', () => {
   const mockOnChange = vi.fn();
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
 
   const renderPanel = (configUpdates: Partial<QRConfig> = {}) => {
     const config = { ...DEFAULT_CONFIG, ...configUpdates };
@@ -46,6 +54,10 @@ describe('InputPanel Component', () => {
     const ssidInput = screen.getByLabelText('Network Name (SSID)');
     fireEvent.change(ssidInput, { target: { value: 'MyWiFi' } });
 
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
+
     // Default encryption is WPA
     const expectedValue = `WIFI:T:WPA;S:MyWiFi;P:;H:false;;`;
     expect(mockOnChange).toHaveBeenCalledWith({ value: expectedValue });
@@ -58,6 +70,10 @@ describe('InputPanel Component', () => {
     const encryptionSelect = screen.getByLabelText('Encryption');
     fireEvent.change(encryptionSelect, { target: { value: 'WPA2-EAP' } });
 
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
+
     // Should reveal Identity input
     const identityInput = screen.getByLabelText('Identity / Username');
     expect(identityInput).toBeInTheDocument();
@@ -66,10 +82,22 @@ describe('InputPanel Component', () => {
     const ssidInput = screen.getByLabelText('Network Name (SSID)');
     fireEvent.change(ssidInput, { target: { value: 'EnterpriseWiFi' } });
 
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
+
     fireEvent.change(identityInput, { target: { value: 'user123' } });
+
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
 
     const passwordInput = screen.getByLabelText('Password');
     fireEvent.change(passwordInput, { target: { value: 'secretPass' } });
+
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
 
     // Check final string construction
     // We need to trigger a change to see the full string construction from the component's state
@@ -88,11 +116,19 @@ describe('InputPanel Component', () => {
     const encryptionSelect = screen.getByLabelText('Encryption');
     fireEvent.change(encryptionSelect, { target: { value: 'nopass' } });
 
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
+
     // Password field should disappear
     expect(screen.queryByLabelText('Password')).not.toBeInTheDocument();
 
     const ssidInput = screen.getByLabelText('Network Name (SSID)');
     fireEvent.change(ssidInput, { target: { value: 'OpenWiFi' } });
+
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
 
     const expectedValue = `WIFI:T:nopass;S:OpenWiFi;H:false;;`;
     expect(mockOnChange).toHaveBeenLastCalledWith({ value: expectedValue });
@@ -106,12 +142,21 @@ describe('InputPanel Component', () => {
       // Toggle ON
       fireEvent.click(hiddenCheckbox);
 
+      act(() => {
+        vi.advanceTimersByTime(100);
+      });
+
       // We expect the LAST call to have H:true
       const lastCall = mockOnChange.mock.calls[mockOnChange.mock.calls.length - 1][0];
       expect(lastCall.value).toContain('H:true');
 
       // Toggle OFF
       fireEvent.click(hiddenCheckbox);
+
+      act(() => {
+        vi.advanceTimersByTime(100);
+      });
+
       const veryLastCall = mockOnChange.mock.calls[mockOnChange.mock.calls.length - 1][0];
       expect(veryLastCall.value).toContain('H:false');
   });
@@ -132,9 +177,17 @@ describe('InputPanel Component', () => {
     const passwordInput = screen.getByLabelText('Password');
     fireEvent.change(passwordInput, { target: { value: 'secret123' } });
 
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
+
     // 2. Change encryption to nopass
     const encryptionSelect = screen.getByLabelText('Encryption');
     fireEvent.change(encryptionSelect, { target: { value: 'nopass' } });
+
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
 
     // 3. Verify the output string does NOT contain the password
     const lastCall = mockOnChange.mock.calls[mockOnChange.mock.calls.length - 1][0];
@@ -151,8 +204,13 @@ describe('InputPanel Component', () => {
       const bodyInput = screen.getByLabelText('Body');
 
       fireEvent.change(emailInput, { target: { value: 'test@example.com' } });
+      act(() => { vi.advanceTimersByTime(100); });
+
       fireEvent.change(subjectInput, { target: { value: 'Hello World' } });
+      act(() => { vi.advanceTimersByTime(100); });
+
       fireEvent.change(bodyInput, { target: { value: 'This is a test.' } });
+      act(() => { vi.advanceTimersByTime(100); });
 
       const expectedValue = `mailto:test@example.com?subject=Hello%20World&body=This%20is%20a%20test.`;
       expect(mockOnChange).toHaveBeenLastCalledWith({ value: expectedValue });
@@ -164,6 +222,8 @@ describe('InputPanel Component', () => {
       const phoneInput = screen.getByLabelText('Phone Number');
       fireEvent.change(phoneInput, { target: { value: '+1234567890' } });
 
+      act(() => { vi.advanceTimersByTime(100); });
+
       expect(mockOnChange).toHaveBeenCalledWith({ value: 'tel:+1234567890' });
   });
 
@@ -174,7 +234,10 @@ describe('InputPanel Component', () => {
       const msgInput = screen.getByLabelText('Pre-filled Message');
 
       fireEvent.change(phoneInput, { target: { value: '+1234567890' } });
+      act(() => { vi.advanceTimersByTime(100); });
+
       fireEvent.change(msgInput, { target: { value: 'Hello there' } });
+      act(() => { vi.advanceTimersByTime(100); });
 
       expect(mockOnChange).toHaveBeenLastCalledWith({ value: 'smsto:+1234567890:Hello there' });
   });
@@ -195,6 +258,8 @@ describe('InputPanel Component', () => {
       fireEvent.change(screen.getByLabelText('City'), { target: { value: 'Metropolis' } });
       fireEvent.change(screen.getByLabelText('Country'), { target: { value: 'USA' } });
 
+      act(() => { vi.advanceTimersByTime(1000); }); // Wait for all updates
+
       const expectedVCard = `BEGIN:VCARD\nVERSION:3.0\nN:Doe;John;;;\nFN:John Doe\nORG:Acme Corp\nTITLE:Engineer\nTEL:555-0199\nEMAIL:john@example.com\nURL:https://example.com\nADR:;;123 Main St;Metropolis;;;USA\nEND:VCARD`;
 
       expect(mockOnChange).toHaveBeenLastCalledWith({ value: expectedVCard });
@@ -206,6 +271,8 @@ describe('InputPanel Component', () => {
       fireEvent.change(screen.getByLabelText('First Name'), { target: { value: 'John;Bad' } });
       fireEvent.change(screen.getByLabelText('Last Name'), { target: { value: 'Doe,Jr' } });
       fireEvent.change(screen.getByLabelText('Company / Organization'), { target: { value: 'Acme\\Corp' } });
+
+      act(() => { vi.advanceTimersByTime(1000); });
 
       const lastCall = mockOnChange.mock.calls[mockOnChange.mock.calls.length - 1][0];
       const vcard = lastCall.value;
@@ -220,6 +287,7 @@ describe('InputPanel Component', () => {
 
     const addressInput = screen.getByLabelText('Receiver Address');
     fireEvent.change(addressInput, { target: { value: '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa' } });
+    act(() => { vi.advanceTimersByTime(100); });
 
     // Default is Bitcoin
     expect(mockOnChange).toHaveBeenLastCalledWith({ value: 'bitcoin:1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa' });
@@ -227,21 +295,25 @@ describe('InputPanel Component', () => {
     // Add amount
     const amountInput = screen.getByLabelText('Amount (Optional)');
     fireEvent.change(amountInput, { target: { value: '0.005' } });
+    act(() => { vi.advanceTimersByTime(100); });
     expect(mockOnChange).toHaveBeenLastCalledWith({ value: 'bitcoin:1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa?amount=0.005' });
 
     // Add label
     const labelInput = screen.getByLabelText('Label / Note (Optional)');
     fireEvent.change(labelInput, { target: { value: 'Donation for Coffee' } });
+    act(() => { vi.advanceTimersByTime(100); });
     expect(mockOnChange).toHaveBeenLastCalledWith({ value: 'bitcoin:1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa?amount=0.005&label=Donation%20for%20Coffee' });
 
     // Change Network to Ethereum
     const networkSelect = screen.getByLabelText('Currency / Network');
     fireEvent.change(networkSelect, { target: { value: 'ethereum' } });
+    act(() => { vi.advanceTimersByTime(100); });
     // State persists, so params are re-applied to new network scheme
     expect(mockOnChange).toHaveBeenLastCalledWith({ value: 'ethereum:1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa?amount=0.005&label=Donation%20for%20Coffee' });
 
     // Change to Custom
     fireEvent.change(networkSelect, { target: { value: 'custom' } });
+    act(() => { vi.advanceTimersByTime(100); });
     // Should output raw address/string
     expect(mockOnChange).toHaveBeenLastCalledWith({ value: '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa' });
   });

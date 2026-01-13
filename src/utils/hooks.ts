@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { QRConfig } from '../types';
 
 /**
@@ -40,14 +40,35 @@ export function useDebounce<T>(value: T, delay: number): T {
 export function useQRInputState<T>(
   initialState: T,
   constructorFn: (data: T) => string,
-  onChange: (updates: Partial<QRConfig>) => void
+  onChange: (updates: Partial<QRConfig>) => void,
+  debounceDelay: number = 100
 ) {
   const [data, setData] = useState<T>(initialState);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
 
   const update = (updates: Partial<T>) => {
     const newData = { ...data, ...updates };
     setData(newData);
-    onChange({ value: constructorFn(newData) });
+
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+
+    if (debounceDelay === 0) {
+      onChange({ value: constructorFn(newData) });
+    } else {
+      timeoutRef.current = setTimeout(() => {
+        onChange({ value: constructorFn(newData) });
+      }, debounceDelay);
+    }
   };
 
   return [data, update] as const;
