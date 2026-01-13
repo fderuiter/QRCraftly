@@ -85,7 +85,7 @@ export const constructVCardString = (data: VCardData): string => {
   const title = escapeVCardString(data.title);
   const phone = escapeVCardString(data.phone);
   const email = escapeVCardString(data.email);
-  const website = escapeVCardString(data.website);
+  const website = isDangerousUrl(data.website) ? '' : escapeVCardString(data.website);
   const street = escapeVCardString(data.street);
   const city = escapeVCardString(data.city);
   const country = escapeVCardString(data.country);
