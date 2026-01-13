@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import InputPanel from './InputPanel';
 import { DEFAULT_CONFIG } from '../constants';
 import { QRType } from '../types';
@@ -40,5 +40,22 @@ describe('InputPanel Security (Input Limits)', () => {
 
     const body = screen.getByLabelText('Body');
     expect(body).toHaveAttribute('maxLength', '2000');
+  });
+
+  it('rejects dangerous protocols in URL input', () => {
+    const config = { ...DEFAULT_CONFIG, type: QRType.URL, value: 'https://safe.com' };
+    render(<InputPanel config={config} onChange={mockOnChange} />);
+
+    const input = screen.getByLabelText('Website URL');
+
+    // Safe update
+    fireEvent.change(input, { target: { value: 'https://safe.com/test' } });
+    expect(mockOnChange).toHaveBeenCalledWith({ value: 'https://safe.com/test' });
+
+    mockOnChange.mockClear();
+
+    // Dangerous update
+    fireEvent.change(input, { target: { value: 'javascript:alert(1)' } });
+    expect(mockOnChange).not.toHaveBeenCalled();
   });
 });

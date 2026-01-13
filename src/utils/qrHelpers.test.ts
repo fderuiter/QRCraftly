@@ -146,6 +146,16 @@ describe('QR Helpers', () => {
       // Backslash escaped: Senior\\Principal
       expect(result).toContain('TITLE:Senior\\\\Principal');
     });
+
+    it('removes dangerous URLs from website field', () => {
+      const dangerousVCard: VCardData = {
+        ...baseVCard,
+        website: 'javascript:alert(1)'
+      };
+      const result = constructVCardString(dangerousVCard);
+      expect(result).toContain('URL:');
+      expect(result).not.toContain('javascript:alert(1)');
+    });
   });
 
   describe('constructPhoneString', () => {

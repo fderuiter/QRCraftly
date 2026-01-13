@@ -116,7 +116,15 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
               placeholder="https://example.com"
               className={inputClasses}
               value={config.value}
-              onChange={(e) => onChange({ value: e.target.value })}
+              onChange={(e) => {
+                if (!isDangerousUrl(e.target.value)) {
+                  onChange({ value: e.target.value });
+                } else {
+                  // Force reset the input value to prevent the dangerous string from persisting in the DOM
+                  // when React skips re-render due to unchanged props.
+                  e.target.value = config.value;
+                }
+              }}
             />
           </div>
         )}
