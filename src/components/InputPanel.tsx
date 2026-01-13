@@ -7,7 +7,8 @@ import {
   constructVCardString,
   constructPhoneString,
   constructSmsString,
-  constructPaymentString
+  constructPaymentString,
+  isDangerousUrl
 } from '../utils/qrHelpers';
 import { useQRInputState } from '../utils/hooks';
 
