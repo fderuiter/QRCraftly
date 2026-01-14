@@ -550,4 +550,4 @@ const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) =
   );
 };
 
-export default QRCanvas;
+export default React.memo(QRCanvas);
