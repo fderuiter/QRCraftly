@@ -40,14 +40,14 @@ export const constructWifiString = (data: WifiData): string => {
     const identity = escapeWifiString(data.eapIdentity);
     const password = escapeWifiString(data.password);
     return `WIFI:T:WPA2-EAP;S:${ssid};I:${identity};P:${password};H:${hidden};;`;
-  } else {
-    if (data.encryption === 'nopass') {
-      return `WIFI:T:${data.encryption};S:${ssid};H:${hidden};;`;
-    } else {
-      const password = escapeWifiString(data.password);
-      return `WIFI:T:${data.encryption};S:${ssid};P:${password};H:${hidden};;`;
-    }
   }
+
+  if (data.encryption === 'nopass') {
+    return `WIFI:T:${data.encryption};S:${ssid};H:${hidden};;`;
+  }
+
+  const password = escapeWifiString(data.password);
+  return `WIFI:T:${data.encryption};S:${ssid};P:${password};H:${hidden};;`;
 };
 
 /**
@@ -95,10 +95,17 @@ export const constructVCardString = (data: VCardData): string => {
 };
 
 /**
+ * Removes spaces and colons from a phone number string.
+ */
+export const cleanPhoneNumber = (number: string): string => {
+  return number.replace(/[\s:]+/g, '');
+};
+
+/**
  * Constructs the tel string for Phone QR code.
  */
 export const constructPhoneString = (data: PhoneData): string => {
-  const cleanNumber = data.number.replace(/[\s:]+/g, '');
+  const cleanNumber = cleanPhoneNumber(data.number);
   return `tel:${cleanNumber}`;
 };
 
@@ -106,7 +113,7 @@ export const constructPhoneString = (data: PhoneData): string => {
  * Constructs the smsto string for SMS QR code.
  */
 export const constructSmsString = (data: SmsData): string => {
-  const cleanNumber = data.number.replace(/[\s:]+/g, '');
+  const cleanNumber = cleanPhoneNumber(data.number);
   return `smsto:${cleanNumber}:${data.message}`;
 };
 
