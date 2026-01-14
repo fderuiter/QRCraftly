@@ -112,6 +112,8 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
             <label htmlFor="url-input" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Website URL</label>
             <input
               id="url-input"
+              name="url"
+              autoComplete="url"
               type="url"
               maxLength={2048}
               placeholder="https://example.com"
@@ -195,6 +197,8 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
                 <div className="relative">
                   <input
                       id="wifi-password"
+                      name="password"
+                      autoComplete="off"
                       type={showWifiPassword ? 'text' : 'password'}
                       maxLength={63}
                       value={wifiData.password}
@@ -234,6 +238,8 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
                     <label htmlFor="email-address" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Email Address</label>
                     <input
                         id="email-address"
+                        name="email"
+                        autoComplete="email"
                         type="email"
                         maxLength={254}
                         value={emailData.email}
@@ -332,56 +338,56 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
         )}
 
         {config.type === QRType.VCARD && (
-            <div className="space-y-3">
-                 <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Contact Details (vCard)</h3>
+            <fieldset className="space-y-3 min-w-0">
+                 <legend className="text-sm font-semibold text-slate-700 dark:text-slate-200 w-full mb-3">Contact Details (vCard)</legend>
                  <div className="grid grid-cols-2 gap-3">
                      <div>
                         <label htmlFor="vcard-firstname" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">First Name</label>
-                        <input id="vcard-firstname" type="text" maxLength={100} value={vCardData.firstName} onChange={(e) => handleVCardChange({ firstName: e.target.value })} className={inputClasses} />
+                        <input id="vcard-firstname" name="firstName" autoComplete="given-name" type="text" maxLength={100} value={vCardData.firstName} onChange={(e) => handleVCardChange({ firstName: e.target.value })} className={inputClasses} />
                      </div>
                      <div>
                         <label htmlFor="vcard-lastname" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Last Name</label>
-                        <input id="vcard-lastname" type="text" maxLength={100} value={vCardData.lastName} onChange={(e) => handleVCardChange({ lastName: e.target.value })} className={inputClasses} />
+                        <input id="vcard-lastname" name="lastName" autoComplete="family-name" type="text" maxLength={100} value={vCardData.lastName} onChange={(e) => handleVCardChange({ lastName: e.target.value })} className={inputClasses} />
                      </div>
                  </div>
                  
                  <div className="grid grid-cols-2 gap-3">
                     <div>
                         <label htmlFor="vcard-phone" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Mobile Phone</label>
-                        <input id="vcard-phone" type="tel" maxLength={20} value={vCardData.phone} onChange={(e) => handleVCardChange({ phone: e.target.value })} className={inputClasses} />
+                        <input id="vcard-phone" name="phone" autoComplete="tel" type="tel" maxLength={20} value={vCardData.phone} onChange={(e) => handleVCardChange({ phone: e.target.value })} className={inputClasses} />
                     </div>
                     <div>
                         <label htmlFor="vcard-email" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Email</label>
-                        <input id="vcard-email" type="email" maxLength={254} value={vCardData.email} onChange={(e) => handleVCardChange({ email: e.target.value })} className={inputClasses} />
+                        <input id="vcard-email" name="email" autoComplete="email" type="email" maxLength={254} value={vCardData.email} onChange={(e) => handleVCardChange({ email: e.target.value })} className={inputClasses} />
                     </div>
                  </div>
 
                  <div>
                     <label htmlFor="vcard-org" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Company / Organization</label>
-                    <input id="vcard-org" type="text" maxLength={100} value={vCardData.organization} onChange={(e) => handleVCardChange({ organization: e.target.value })} className={inputClasses} />
+                    <input id="vcard-org" name="organization" autoComplete="organization" type="text" maxLength={100} value={vCardData.organization} onChange={(e) => handleVCardChange({ organization: e.target.value })} className={inputClasses} />
                  </div>
                  
                  <div>
                     <label htmlFor="vcard-title" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Job Title</label>
-                    <input id="vcard-title" type="text" maxLength={100} value={vCardData.title} onChange={(e) => handleVCardChange({ title: e.target.value })} className={inputClasses} />
+                    <input id="vcard-title" name="title" autoComplete="organization-title" type="text" maxLength={100} value={vCardData.title} onChange={(e) => handleVCardChange({ title: e.target.value })} className={inputClasses} />
                  </div>
 
                  <div>
                     <label htmlFor="vcard-website" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Website</label>
-                    <input id="vcard-website" type="url" maxLength={2048} value={vCardData.website} onChange={(e) => handleVCardChange({ website: e.target.value })} className={inputClasses} />
+                    <input id="vcard-website" name="website" autoComplete="url" type="url" maxLength={2048} value={vCardData.website} onChange={(e) => handleVCardChange({ website: e.target.value })} className={inputClasses} />
                  </div>
 
-                 <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
-                    <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-2">Address</label>
+                 <fieldset className="pt-2 border-t border-slate-100 dark:border-slate-800 min-w-0">
+                    <legend className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-2 w-full">Address</legend>
                     <div className="space-y-3">
-                        <input aria-label="Street" type="text" maxLength={100} placeholder="Street" value={vCardData.street} onChange={(e) => handleVCardChange({ street: e.target.value })} className={inputClasses} />
+                        <input aria-label="Street" name="street" autoComplete="street-address" type="text" maxLength={100} placeholder="Street" value={vCardData.street} onChange={(e) => handleVCardChange({ street: e.target.value })} className={inputClasses} />
                         <div className="grid grid-cols-2 gap-3">
-                             <input aria-label="City" type="text" maxLength={100} placeholder="City" value={vCardData.city} onChange={(e) => handleVCardChange({ city: e.target.value })} className={inputClasses} />
-                             <input aria-label="Country" type="text" maxLength={100} placeholder="Country" value={vCardData.country} onChange={(e) => handleVCardChange({ country: e.target.value })} className={inputClasses} />
+                             <input aria-label="City" name="city" autoComplete="address-level2" type="text" maxLength={100} placeholder="City" value={vCardData.city} onChange={(e) => handleVCardChange({ city: e.target.value })} className={inputClasses} />
+                             <input aria-label="Country" name="country" autoComplete="country-name" type="text" maxLength={100} placeholder="Country" value={vCardData.country} onChange={(e) => handleVCardChange({ country: e.target.value })} className={inputClasses} />
                         </div>
                     </div>
-                 </div>
-            </div>
+                 </fieldset>
+            </fieldset>
         )}
 
         {config.type === QRType.PHONE && (
@@ -389,6 +395,8 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
                  <label htmlFor="phone-number" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Phone Number</label>
                  <input
                     id="phone-number"
+                    name="phone"
+                    autoComplete="tel"
                     type="tel"
                     maxLength={20}
                     placeholder="+1 555 000 0000"
@@ -405,6 +413,8 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
                      <label htmlFor="sms-number" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Phone Number</label>
                      <input
                         id="sms-number"
+                        name="phone"
+                        autoComplete="tel"
                         type="tel"
                         maxLength={20}
                         placeholder="+1 555 000 0000"
