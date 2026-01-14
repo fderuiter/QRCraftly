@@ -11,6 +11,7 @@ import {
   isDangerousUrl
 } from '../utils/qrHelpers';
 import { useQRInputState } from '../utils/hooks';
+import { CharCount } from './CharCount';
 
 /**
  * Props for the InputPanel component.
@@ -134,7 +135,10 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
 
         {config.type === QRType.TEXT && (
           <div>
-            <label htmlFor="text-content" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Content</label>
+            <div className="flex justify-between items-center mb-1">
+              <label htmlFor="text-content" className="block text-sm font-medium text-slate-700 dark:text-slate-300">Content</label>
+              <CharCount current={config.value.length} max={2500} />
+            </div>
             <textarea
               id="text-content"
               rows={4}
@@ -259,7 +263,10 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
                     />
                 </div>
                 <div>
-                    <label htmlFor="email-body" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Body</label>
+                    <div className="flex justify-between items-center mb-1">
+                        <label htmlFor="email-body" className="block text-xs font-medium text-slate-500 dark:text-slate-400">Body</label>
+                        <CharCount current={emailData.body.length} max={2000} />
+                    </div>
                     <textarea
                         id="email-body"
                         rows={3}
@@ -424,7 +431,10 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
                      />
                 </div>
                 <div>
-                    <label htmlFor="sms-message" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Pre-filled Message</label>
+                    <div className="flex justify-between items-center mb-1">
+                        <label htmlFor="sms-message" className="block text-sm font-medium text-slate-700 dark:text-slate-300">Pre-filled Message</label>
+                        <CharCount current={smsData.message.length} max={1600} />
+                    </div>
                     <textarea
                         id="sms-message"
                         rows={3}
