@@ -57,6 +57,14 @@ describe('colorUtils', () => {
       expect(getContrastRatio('#000000', undefined as any)).toBe(0);
     });
 
+    it('returns 0 for non-hex characters', () => {
+      // #GGGGGG is invalid but has length 7. Currently it silently returns 21 (black).
+      // We want it to be 0 to indicate failure.
+      expect(getContrastRatio('#GGGGGG', '#FFFFFF')).toBe(0);
+      expect(getContrastRatio('#FFFFFF', '#GGGGGG')).toBe(0);
+      expect(getContrastRatio('#12345Z', '#FFFFFF')).toBe(0);
+    });
+
     it('calculates WCAG 2.0 contrast ratio correctly', () => {
       // #205081 (Blue) on #FFFFFF (White) -> Approx 8.31
       // L_blue ≈ 0.076, L_white = 1.0

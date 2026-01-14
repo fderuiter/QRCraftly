@@ -24,6 +24,7 @@ export const getLuminance = (hex: string) => {
  */
 export const getContrastRatio = (fg: string, bg: string) => {
   if (!fg || !bg || fg.length !== 7 || bg.length !== 7) return 0;
+  if (!/^#[0-9A-Fa-f]{6}$/.test(fg) || !/^#[0-9A-Fa-f]{6}$/.test(bg)) return 0;
   const l1 = getLuminance(fg);
   const l2 = getLuminance(bg);
   const lighter = Math.max(l1, l2);
