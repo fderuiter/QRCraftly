@@ -1,4 +1,5 @@
 import QRTool from '@/components/QRTool';
+import { safeJsonLdStringify } from '@/utils/security';
 
 /**
  * Home Page Component
@@ -34,7 +35,7 @@ export default function Page() {
 
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaData) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(schemaData) }} />
       <QRTool />
     </>
   );

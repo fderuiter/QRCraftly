@@ -1,6 +1,7 @@
 import QRTool from '@/components/QRTool';
 import { DEFAULT_CONFIG } from '@/constants';
 import { QRType } from '@/types';
+import { safeJsonLdStringify } from '@/utils/security';
 
 /**
  * WiFi QR Code Page Component
@@ -72,7 +73,7 @@ export default function Page() {
 
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaData) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(schemaData) }} />
       <QRTool initialConfig={wifiConfig} title="WiFi QR Code" />
     </>
   );
