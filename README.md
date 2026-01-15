@@ -1,5 +1,7 @@
 # QRCraftly
 
+[![CI/CD Pipeline](https://github.com/fderuiter/QRCraftly/actions/workflows/main.yml/badge.svg)](https://github.com/fderuiter/QRCraftly/actions/workflows/main.yml) [![Deploy to Cloudflare](https://github.com/fderuiter/QRCraftly/actions/workflows/deploy.yml/badge.svg)](https://github.com/fderuiter/QRCraftly/actions/workflows/deploy.yml)
+
 QRCraftly is a powerful, privacy-focused, and user-friendly React application for generating customized QR codes. It supports various data types including URLs, text, WiFi credentials, vCards, emails, and crypto payments. Users can extensively customize the appearance of their QR codes, including colors, patterns, and embedded logos, all while ensuring data privacy through client-side processing.
 
 ## Features
