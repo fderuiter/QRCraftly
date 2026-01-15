@@ -29,6 +29,16 @@ export enum QRType {
 }
 
 /**
+ * Defines the encryption type for WiFi networks.
+ */
+export enum WifiEncryption {
+  WPA = 'WPA',
+  WEP = 'WEP',
+  NOPASS = 'nopass',
+  WPA2_EAP = 'WPA2-EAP',
+}
+
+/**
  * Defines the shape of the padding area around an embedded logo.
  */
 export type LogoPaddingStyle = 'square' | 'circle' | 'none';
@@ -91,7 +101,7 @@ export interface WifiData {
   /** The password for the WiFi network. */
   password: string;
   /** The encryption type used by the network. */
-  encryption: 'WPA' | 'WEP' | 'nopass' | 'WPA2-EAP';
+  encryption: WifiEncryption;
   /** Whether the network SSID is hidden. */
   hidden: boolean;
   /** The identity for WPA2-EAP enterprise networks (optional). */

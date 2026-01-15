@@ -1,4 +1,4 @@
-import { WifiData, EmailData, VCardData, PhoneData, SmsData, PaymentData } from '../types';
+import { WifiData, EmailData, VCardData, PhoneData, SmsData, PaymentData, WifiEncryption } from '../types';
 
 /**
  * Checks if a URL string contains a dangerous protocol.
@@ -36,13 +36,13 @@ export const constructWifiString = (data: WifiData): string => {
   const ssid = escapeWifiString(data.ssid);
   const hidden = data.hidden;
 
-  if (data.encryption === 'WPA2-EAP') {
+  if (data.encryption === WifiEncryption.WPA2_EAP) {
     const identity = escapeWifiString(data.eapIdentity);
     const password = escapeWifiString(data.password);
-    return `WIFI:T:WPA2-EAP;S:${ssid};I:${identity};P:${password};H:${hidden};;`;
+    return `WIFI:T:${WifiEncryption.WPA2_EAP};S:${ssid};I:${identity};P:${password};H:${hidden};;`;
   }
 
-  if (data.encryption === 'nopass') {
+  if (data.encryption === WifiEncryption.NOPASS) {
     return `WIFI:T:${data.encryption};S:${ssid};H:${hidden};;`;
   }
 

@@ -9,7 +9,7 @@ import {
   escapeWifiString,
   escapeVCardString
 } from './qrHelpers';
-import { WifiData, EmailData, VCardData, PhoneData, SmsData, PaymentData } from '../types';
+import { WifiData, EmailData, VCardData, PhoneData, SmsData, PaymentData, WifiEncryption } from '../types';
 
 describe('QR Helpers', () => {
   describe('constructWifiString', () => {
@@ -17,7 +17,7 @@ describe('QR Helpers', () => {
       const data: WifiData = {
         ssid: 'MyNetwork',
         password: 'password123',
-        encryption: 'WPA',
+        encryption: WifiEncryption.WPA,
         hidden: false
       };
       expect(constructWifiString(data)).toBe('WIFI:T:WPA;S:MyNetwork;P:password123;H:false;;');
@@ -27,7 +27,7 @@ describe('QR Helpers', () => {
       const data: WifiData = {
         ssid: 'EnterpriseNet',
         password: 'securepass',
-        encryption: 'WPA2-EAP',
+        encryption: WifiEncryption.WPA2_EAP,
         hidden: false,
         eapIdentity: 'user@domain.com'
       };
@@ -38,7 +38,7 @@ describe('QR Helpers', () => {
       const data: WifiData = {
         ssid: 'OpenNet',
         password: 'ignored',
-        encryption: 'nopass',
+        encryption: WifiEncryption.NOPASS,
         hidden: false
       };
       expect(constructWifiString(data)).toBe('WIFI:T:nopass;S:OpenNet;H:false;;');
@@ -48,7 +48,7 @@ describe('QR Helpers', () => {
       const data: WifiData = {
         ssid: 'Net;Work',
         password: 'pass:word\\',
-        encryption: 'WPA',
+        encryption: WifiEncryption.WPA,
         hidden: false
       };
       // Expect: Net\;Work and pass\:word\\
@@ -59,7 +59,7 @@ describe('QR Helpers', () => {
       const data: WifiData = {
         ssid: 'HiddenNet',
         password: 'pass',
-        encryption: 'WPA',
+        encryption: WifiEncryption.WPA,
         hidden: true
       };
       expect(constructWifiString(data)).toContain('H:true');
