@@ -2,7 +2,6 @@
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import Page from './+Page';
-import { DEFAULT_CONFIG } from '../../constants';
 
 // Mock QRTool component since we only want to test if it's passed correct props
 vi.mock('../../components/QRTool', () => ({

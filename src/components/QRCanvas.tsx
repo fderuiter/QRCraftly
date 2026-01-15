@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useMemo, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { QRConfig, QRStyle } from '../types';
 import { drawRoundRect, drawPoly, drawStar, drawRoughRect, drawScribble } from '../utils/canvasHelpers';
 

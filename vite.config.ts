@@ -9,7 +9,7 @@ import vike from 'vike/plugin';
  */
 export default defineConfig(({ mode }) => {
     // Load environment variables based on the current mode
-    const env = loadEnv(mode, '.', '');
+    loadEnv(mode, '.', '');
     return {
       server: {
         port: 3000,
@@ -22,21 +22,6 @@ export default defineConfig(({ mode }) => {
       build: {
         rollupOptions: {
           output: {
-            // Vike requires manualChunks to be a function
-            manualChunks: (id) => {
-              if (id.includes('node_modules')) {
-                if (id.includes('react') || id.includes('react-dom')) {
-                  return 'vendor-react';
-                }
-                if (id.includes('vike') || id.includes('vike-react')) {
-                  return 'vendor-vike';
-                }
-                if (id.includes('lucide-react') || id.includes('qrcode')) {
-                  return 'vendor-utils';
-                }
-                // Determine other vendor chunks if necessary, or let Vite handle the rest
-              }
-            }
           }
         }
       },

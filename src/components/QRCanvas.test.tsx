@@ -4,13 +4,16 @@ import { vi, describe, it, expect, beforeEach, afterEach, Mock } from 'vitest';
 import QRCanvas from './QRCanvas';
 import { DEFAULT_CONFIG } from '../constants';
 import { QRStyle, LogoPaddingStyle } from '../types';
-import * as QRCode from 'qrcode';
+import QRCode from 'qrcode';
 
 // Mock qrcode module
 vi.mock('qrcode', () => {
   const createMock = vi.fn();
   return {
     create: createMock,
+    // When import * as QRCode is used (common in tests/mocks mismatch), default might be needed.
+    // But since we switched to default import, we need to ensure compatibility.
+    // In our test we access QRCode.create directly now.
     default: {
       create: createMock,
     },
@@ -72,7 +75,7 @@ describe('QRCanvas Component', () => {
         return false;
     });
 
-    (QRCode.default.create as unknown as Mock).mockReturnValue({
+    (QRCode.create as unknown as Mock).mockReturnValue({
       modules: mockModules,
     });
 
@@ -104,7 +107,7 @@ describe('QRCanvas Component', () => {
     expect(canvas).toHaveAttribute('aria-label', expect.stringContaining('QR Code for Url'));
 
     await waitFor(() => {
-        expect(QRCode.default.create).toHaveBeenCalledWith(DEFAULT_CONFIG.value, { errorCorrectionLevel: 'H' });
+        expect(QRCode.create).toHaveBeenCalledWith(DEFAULT_CONFIG.value, { errorCorrectionLevel: 'H' });
     });
 
     await waitFor(() => {
@@ -122,7 +125,7 @@ describe('QRCanvas Component', () => {
     render(<QRCanvas config={config} />);
 
     await waitFor(() => {
-         expect(QRCode.default.create).toHaveBeenCalled();
+         expect(QRCode.create).toHaveBeenCalled();
     });
 
     // SWISS uses arc for modules and eyes
@@ -314,7 +317,7 @@ describe('QRCanvas Component', () => {
       const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
       // Make QRCode.create throw
-      (QRCode.default.create as unknown as Mock).mockImplementationOnce(() => {
+      (QRCode.create as unknown as Mock).mockImplementationOnce(() => {
           throw new Error('Generation failed');
       });
 
@@ -335,7 +338,7 @@ describe('QRCanvas Component', () => {
        expect(mockContext.clearRect).toHaveBeenCalled();
     });
     
-    expect(QRCode.default.create).not.toHaveBeenCalled();
+    expect(QRCode.create).not.toHaveBeenCalled();
   });
 
   it('should ensure the logo cutout does not exceed safe error correction limits', async () => {
@@ -371,7 +374,7 @@ describe('QRCanvas Component', () => {
         // displaySize 100. Center 50.
         const fillRectCalls = mockContext.fillRect.mock.calls;
         const logoBgCall = fillRectCalls.find((args: any[]) => {
-            const [x, y, w, h] = args;
+            const [x, _y, w, h] = args;
             // Check if it's roughly square and centered
             return Math.abs(w - h) < 0.1 && w > 20 && w < 90 && Math.abs(x - (100-w)/2) < 2;
         });

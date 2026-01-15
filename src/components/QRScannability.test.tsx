@@ -1,7 +1,6 @@
 
 import { render, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
-import React from 'react';
+import { describe, it, expect } from 'vitest';
 import QRCanvas from './QRCanvas';
 import { DEFAULT_CONFIG } from '../constants';
 import { QRStyle } from '../types';

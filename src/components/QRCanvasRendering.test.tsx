@@ -4,7 +4,7 @@ import { vi, describe, it, expect, beforeEach, afterEach, Mock } from 'vitest';
 import QRCanvas from './QRCanvas';
 import { DEFAULT_CONFIG } from '../constants';
 import { QRStyle } from '../types';
-import * as QRCode from 'qrcode';
+import QRCode from 'qrcode';
 
 // Mock qrcode module
 vi.mock('qrcode', () => {
@@ -74,7 +74,7 @@ describe('QRCanvas Rendering Logic Extended', () => {
       get: vi.fn().mockReturnValue(false),
     };
 
-    (QRCode.default.create as unknown as Mock).mockReturnValue({
+    (QRCode.create as unknown as Mock).mockReturnValue({
       modules: mockModules,
     });
 

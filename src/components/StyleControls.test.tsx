@@ -330,7 +330,7 @@ describe('StyleControls Component', () => {
 
       // Remove button (X icon)
       // It's a button with an X icon next to the logo preview
-      const removeBtns = screen.getAllByRole('button');
+      screen.getAllByRole('button');
       // Find the one that calls onChange({ borderLogoUrl: null })
       // It has className text-rose-600
       // We can just click the one inside the border section
