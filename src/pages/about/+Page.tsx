@@ -1,5 +1,4 @@
 
-import React from 'react';
 import { Github, Shield, Database, Code, ArrowLeft, Zap } from 'lucide-react';
 
 /**

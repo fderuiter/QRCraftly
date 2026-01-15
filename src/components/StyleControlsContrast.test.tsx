@@ -1,7 +1,6 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import StyleControls from './StyleControls';
 import { DEFAULT_CONFIG } from '../constants';
 import { QRConfig } from '../types';

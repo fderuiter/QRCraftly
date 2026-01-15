@@ -13,7 +13,6 @@ vi.mock('./QRCanvas', () => ({
 
 describe('QRTool Component', () => {
   // Store original globals
-  const originalNavigator = global.navigator;
   const originalShowSaveFilePicker = (global as any).showSaveFilePicker;
 
   beforeEach(() => {
@@ -249,7 +248,7 @@ describe('QRTool Component', () => {
 
     const alertMock = vi.spyOn(window, 'alert').mockImplementation(() => {});
     const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click');
-    const appendSpy = vi.spyOn(document.body, 'appendChild');
+    vi.spyOn(document.body, 'appendChild');
 
     render(<QRTool />);
     const shareBtn = screen.getByTitle('Share');

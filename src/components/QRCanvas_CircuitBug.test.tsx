@@ -1,10 +1,10 @@
 
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, waitFor } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach, afterEach, Mock } from 'vitest';
 import QRCanvas from './QRCanvas';
 import { DEFAULT_CONFIG } from '../constants';
 import { QRStyle } from '../types';
-import * as QRCode from 'qrcode';
+import QRCode from 'qrcode';
 
 // Mock qrcode module
 vi.mock('qrcode', () => {
@@ -70,7 +70,7 @@ describe('QRCanvas Circuit Style Bug', () => {
       get: vi.fn().mockReturnValue(false),
     };
 
-    (QRCode.default.create as unknown as Mock).mockReturnValue({
+    (QRCode.create as unknown as Mock).mockReturnValue({
       modules: mockModules,
     });
 
@@ -104,7 +104,7 @@ describe('QRCanvas Circuit Style Bug', () => {
      render(<QRCanvas config={config} size={size} />);
 
      await waitFor(() => {
-        expect(QRCode.default.create).toHaveBeenCalled();
+        expect(QRCode.create).toHaveBeenCalled();
      });
 
      // Calculate expected coordinates
@@ -142,7 +142,7 @@ describe('QRCanvas Circuit Style Bug', () => {
      // and height approx thickness
 
      const traceCall = calls.find((args: any[]) => {
-         const [dx, dy, dw, dh] = args;
+         const [dx, _dy, dw, dh] = args;
          // Check dimensions
          const widthMatch = Math.abs(dw - (cellSize/2 + 1)) < 0.1;
          const heightMatch = Math.abs(dh - thickness) < 0.1;
@@ -153,7 +153,7 @@ describe('QRCanvas Circuit Style Bug', () => {
 
      expect(traceCall).toBeDefined();
 
-     const [drawnX, drawnY, drawnW, drawnH] = traceCall;
+     const [_drawnX, drawnY, _drawnW, _drawnH] = traceCall;
 
      expect(drawnY).toBeCloseTo(expectedY, 0.01);
   });
@@ -172,7 +172,7 @@ describe('QRCanvas Circuit Style Bug', () => {
      render(<QRCanvas config={config} size={size} />);
 
      await waitFor(() => {
-        expect(QRCode.default.create).toHaveBeenCalled();
+        expect(QRCode.create).toHaveBeenCalled();
      });
 
      const moduleCount = 21;
@@ -200,7 +200,7 @@ describe('QRCanvas Circuit Style Bug', () => {
      const calls = mockContext.fillRect.mock.calls;
 
      const traceCall = calls.find((args: any[]) => {
-         const [dx, dy, dw, dh] = args;
+         const [_dx, dy, dw, dh] = args;
          const widthMatch = Math.abs(dw - thickness) < 0.1;
          const heightMatch = Math.abs(dh - (cellSize/2 + 1)) < 0.1;
          const yMatch = Math.abs(dy - cy) < 0.1;

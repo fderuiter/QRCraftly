@@ -1,0 +1,218 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel previous runs if a new commit is pushed to the same PR
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # JOB 1: Install Deps & Cache
+  setup:
+    name: Setup & Install
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Cache System Dependencies (libcairo) to speed up canvas install
+      - name: Cache System Libs
+        id: cache-syslibs
+        uses: actions/cache@v4
+        with:
+          path: /usr/lib/x86_64-linux-gnu/libcairo*
+          key: ${{ runner.os }}-syslibs-cairo-v1
+
+      - name: Install System Dependencies
+        if: steps.cache-syslibs.outputs.cache-hit != 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.19.0'
+          cache: 'npm'
+
+      - name: Install NPM Dependencies
+        run: npm ci
+
+      # Save node_modules to be used by other jobs
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+
+      - name: Audit Dependencies
+        run: npm audit --audit-level=high
+
+  # JOB 2: Quality Checks (Parallel)
+  quality:
+    name: Quality Checks
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.19.0'
+
+      # Restore node_modules
+      - name: Restore node_modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+
+      - run: npm run lint
+
+  # JOB 3: Unit Tests
+  test:
+    name: Unit Tests
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Re-install system deps strictly for runtime needs (faster than full dev install)
+      - name: Install Runtime Deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libcairo2 libpango-1.0-0 libpangocairo-1.0-0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.19.0'
+
+      - name: Restore node_modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+
+      - run: npm test -- run --coverage
+
+  # JOB 4: Compliance (Python)
+  compliance:
+    name: Compliance & Contrast
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - run: python3 scripts/contrast_check.py
+
+  # JOB 5: Build Application
+  build:
+    name: Build & Artifact
+    needs: [quality, test] # Wait for quality checks before burning CPU on build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.19.0'
+
+      - name: Restore node_modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+
+      - run: npm run build
+
+      - name: Check Bundle Size
+        run: |
+          SIZE=$(du -sk dist/client | cut -f1)
+          if [ $SIZE -gt 3072 ]; then
+            echo "Bundle size ($SIZE KB) exceeds limit." && exit 1
+          fi
+
+      # UPLOAD ARTIFACT for Lighthouse and Deployment
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist
+          retention-days: 1
+
+  # JOB 6: Lighthouse (Consumes Build Artifact)
+  lighthouse:
+    name: Lighthouse CI
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write # Required for Lighthouse to comment
+    steps:
+      - uses: actions/checkout@v4
+
+      # DOWNLOAD ARTIFACT
+      - name: Download Build Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+
+      - name: Run Lighthouse CI
+        id: lighthouse_audit
+        uses: treosh/lighthouse-ci-action@v12
+        with:
+          configPath: './lighthouserc.json'
+          uploadArtifacts: true
+          temporaryPublicStorage: true
+
+      - name: Post Lighthouse Comment
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        env:
+          LINKS: ${{ steps.lighthouse_audit.outputs.links }}
+          MANIFEST: ${{ steps.lighthouse_audit.outputs.manifest }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const links = process.env.LINKS ? JSON.parse(process.env.LINKS) : {};
+            const manifest = process.env.MANIFEST ? JSON.parse(process.env.MANIFEST) : [];
+
+            if (!manifest || manifest.length === 0) {
+               core.setFailed('Lighthouse MANIFEST is missing or empty. Please check the Lighthouse CI action logs.');
+               return;
+            }
+
+            const formatScore = (score) => Math.round(score * 100);
+            const scoreIcon = (score) => score >= 0.9 ? '🟢' : score >= 0.5 ? '🟠' : '🔴';
+
+            let comment = '## ⚡️ Lighthouse Report\n\n';
+
+            manifest.forEach((result) => {
+              const summary = result.summary;
+              const reportUrl = links[result.url];
+
+              comment += `### URL: ${result.url}\n`;
+              if (reportUrl) comment += `[View Full Report](${reportUrl})\n\n`;
+
+              comment += '| Category | Score |\n';
+              comment += '| --- | --- |\n';
+
+              ['performance', 'accessibility', 'best-practices', 'seo', 'pwa'].forEach(key => {
+                if (summary[key] !== undefined) {
+                  const score = summary[key];
+                  comment += `| ${key} | ${scoreIcon(score)} ${formatScore(score)} |\n`;
+                }
+              });
+              comment += '\n';
+            });
+
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });

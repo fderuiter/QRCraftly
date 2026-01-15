@@ -1,5 +1,3 @@
-import React from 'react';
-
 /**
  * 404 Error Page Component
  *

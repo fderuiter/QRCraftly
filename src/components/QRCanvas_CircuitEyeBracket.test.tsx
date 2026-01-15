@@ -4,7 +4,7 @@ import { vi, describe, it, expect, beforeEach, afterEach, Mock } from 'vitest';
 import QRCanvas from './QRCanvas';
 import { DEFAULT_CONFIG } from '../constants';
 import { QRStyle } from '../types';
-import * as QRCode from 'qrcode';
+import QRCode from 'qrcode';
 
 // Mock qrcode module
 vi.mock('qrcode', () => {
@@ -70,7 +70,7 @@ describe('QRCanvas Circuit Style Eye Bracket Bug', () => {
       get: vi.fn().mockReturnValue(false),
     };
 
-    (QRCode.default.create as unknown as Mock).mockReturnValue({
+    (QRCode.create as unknown as Mock).mockReturnValue({
       modules: mockModules,
     });
 
@@ -95,22 +95,12 @@ describe('QRCanvas Circuit Style Eye Bracket Bug', () => {
      render(<QRCanvas config={config} size={size} />);
 
      await waitFor(() => {
-        expect(QRCode.default.create).toHaveBeenCalled();
+        expect(QRCode.create).toHaveBeenCalled();
      });
 
      const moduleCount = 21;
      const displaySize = size; // 100
      const cellSize = displaySize / moduleCount;
-
-     // Top-left eye is at (0, 0)
-     const r = 0;
-     const c = 0;
-     const x = 0; // drawX is 0 if no border
-     const y = 0; // drawY is 0
-     const eyeSize = 7 * cellSize;
-
-     const cx = x + eyeSize / 2;
-     const cy = y + eyeSize / 2;
 
      // The implementation draws the cuts using fillRect with bgColor
      // We are looking for the calls to fillRect that make the cuts
@@ -123,7 +113,7 @@ describe('QRCanvas Circuit Style Eye Bracket Bug', () => {
      // Look for the Top Cut
      // It should have height = cellSize * 1.1
      const topCutCall = calls.find((args: any[]) => {
-         const [dx, dy, dw, dh] = args;
+         const [_dx, _dy, _dw, dh] = args;
          // Check dimensions
          const heightMatch = Math.abs(dh - (cellSize * 1.1)) < 0.01;
          return heightMatch;

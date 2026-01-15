@@ -1,4 +1,3 @@
-import React from 'react';
 import QRTool from '@/components/QRTool';
 import { DEFAULT_CONFIG } from '@/constants';
 import { QRType } from '@/types';
