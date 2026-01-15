@@ -1,5 +1,6 @@
 
 import { Github, Shield, Database, Code, ArrowLeft, Zap } from 'lucide-react';
+import { safeJsonLdStringify } from '@/utils/security';
 
 /**
  * About Page Component
@@ -68,7 +69,7 @@ export default function Page() {
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-12">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaData) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(schemaData) }} />
       <div className="mb-8">
         <a
           href="/"

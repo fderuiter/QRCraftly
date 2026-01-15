@@ -1,4 +1,5 @@
 import { usePageContext } from 'vike-react/usePageContext';
+import { safeJsonLdStringify } from '@/utils/security';
 
 /**
  * HeadDefault Component
@@ -98,8 +99,8 @@ export default function HeadDefault() {
       */}
 
       {/* Global Structured Data */}
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaData) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(schemaData) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(breadcrumbSchema) }} />
 
       {/* Canonical URL */}
       <link rel="canonical" href={canonicalUrl} />
