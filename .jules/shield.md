@@ -11,3 +11,7 @@
 ## 2025-02-18 - [Silent Failure in Color Contrast Calc]
 **Discovery:** `getContrastRatio` silently treats invalid hex strings (e.g. `#GGGGGG`) as Black (`#000000`) due to `parseInt` returning `NaN` and bitwise operators converting `NaN` to `0`. This results in a false positive contrast ratio of 21 against white, masking potential data issues.
 **Defense:** Implement strict regex validation for hex strings in `getContrastRatio` to ensure invalid inputs return 0 (failure), matching the behavior for invalid lengths.
+
+## 2025-02-18 - Playwright Label Ambiguity
+**Discovery:** Using `page.get_by_label("Content")` in Playwright failed because it matched both the textarea (correct) and the QR Code canvas (incorrect) which had a descriptive `aria-label` containing "Content".
+**Defense:** Use specific locators like `page.locator("#id")` or strict role matching `page.get_by_role("textbox", name="Content", exact=True)` to avoid ambiguity with non-interactive elements that have rich accessibility labels.
