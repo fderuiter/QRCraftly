@@ -111,20 +111,19 @@ export default function HeadDefault() {
       <meta property="og:url" content={canonicalUrl} />
       <meta property="og:title" content={title} />
       <meta property="og:description" content={description} />
-      {/*
-        TODO: Replace with a dedicated social share image (1200x630px) when available.
-        Current fallback is favicon.png to ensure *some* image appears.
-      */}
-      <meta property="og:image" content={`${DOMAIN}/favicon.png`} />
-      <meta property="og:image:alt" content="QRCraftly Logo" />
+      <meta property="og:image" content={`${DOMAIN}/og-image.png`} />
+      <meta property="og:image:alt" content="QRCraftly QR Code Example" />
 
       {/* Social Signals (Twitter) */}
-      <meta name="twitter:card" content="summary" />
+      <meta name="twitter:card" content="summary_large_image" />
       <meta name="twitter:title" content={title} />
       <meta name="twitter:description" content={description} />
-      <meta name="twitter:image" content={`${DOMAIN}/favicon.png`} />
-      <meta name="twitter:image:alt" content="QRCraftly Logo" />
+      <meta name="twitter:image" content={`${DOMAIN}/og-image.png`} />
+      <meta name="twitter:image:alt" content="QRCraftly QR Code Example" />
 
+      {/* Mobile & PWA */}
+      <meta name="theme-color" content="#0f766e" />
+      <link rel="manifest" href="/manifest.json" />
       <link rel="icon" type="image/png" href="/favicon.png" />
       <link rel="apple-touch-icon" href="/favicon.png" />
       <link rel="preconnect" href="https://fonts.googleapis.com" />
