@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { QRConfig, QRType, WifiData, EmailData, VCardData, PhoneData, SmsData, PaymentData } from '../types';
+import { QRConfig, QRType, WifiData, EmailData, VCardData, PhoneData, SmsData, PaymentData, WifiEncryption } from '../types';
 import { Wifi, Link, Type, Mail, UserSquare2, Phone, MessageSquare, CreditCard, Eye, EyeOff } from 'lucide-react';
 import {
   constructWifiString,
@@ -36,7 +36,7 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
   const [showWifiPassword, setShowWifiPassword] = useState(false);
 
   const [wifiData, handleWifiChange] = useQRInputState<WifiData>(
-    { ssid: '', password: '', encryption: 'WPA', hidden: false, eapIdentity: '' },
+    { ssid: '', password: '', encryption: WifiEncryption.WPA, hidden: false, eapIdentity: '' },
     constructWifiString,
     onChange
   );
@@ -167,17 +167,17 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
                 <select
                   id="wifi-encryption"
                   value={wifiData.encryption}
-                  onChange={(e) => handleWifiChange({ encryption: e.target.value as any })}
+                  onChange={(e) => handleWifiChange({ encryption: e.target.value as WifiEncryption })}
                   className={selectClasses}
                 >
-                  <option value="WPA">WPA / WPA2 / WPA3 (Standard)</option>
-                  <option value="WEP">WEP (Legacy)</option>
-                  <option value="WPA2-EAP">WPA2 Enterprise (EAP)</option>
-                  <option value="nopass">None (Open Network)</option>
+                  <option value={WifiEncryption.WPA}>WPA / WPA2 / WPA3 (Standard)</option>
+                  <option value={WifiEncryption.WEP}>WEP (Legacy)</option>
+                  <option value={WifiEncryption.WPA2_EAP}>WPA2 Enterprise (EAP)</option>
+                  <option value={WifiEncryption.NOPASS}>None (Open Network)</option>
                 </select>
             </div>
 
-            {wifiData.encryption === 'WPA2-EAP' && (
+            {wifiData.encryption === WifiEncryption.WPA2_EAP && (
                 <div>
                     <label htmlFor="wifi-identity" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Identity / Username</label>
                     <input
@@ -191,7 +191,7 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
                 </div>
             )}
 
-            {wifiData.encryption !== 'nopass' && (
+            {wifiData.encryption !== WifiEncryption.NOPASS && (
                 <div>
                 <label htmlFor="wifi-password" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Password</label>
                 <div className="relative">

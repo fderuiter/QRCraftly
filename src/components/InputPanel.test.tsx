@@ -1,7 +1,7 @@
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import InputPanel from './InputPanel';
 import { DEFAULT_CONFIG } from '../constants';
-import { QRType, QRConfig } from '../types';
+import { QRType, QRConfig, WifiEncryption } from '../types';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 describe('InputPanel Component', () => {
@@ -68,7 +68,7 @@ describe('InputPanel Component', () => {
 
     // Change encryption to WPA2-EAP
     const encryptionSelect = screen.getByLabelText('Encryption');
-    fireEvent.change(encryptionSelect, { target: { value: 'WPA2-EAP' } });
+    fireEvent.change(encryptionSelect, { target: { value: WifiEncryption.WPA2_EAP } });
 
     act(() => {
       vi.advanceTimersByTime(100);
@@ -114,7 +114,7 @@ describe('InputPanel Component', () => {
     renderPanel({ type: QRType.WIFI });
 
     const encryptionSelect = screen.getByLabelText('Encryption');
-    fireEvent.change(encryptionSelect, { target: { value: 'nopass' } });
+    fireEvent.change(encryptionSelect, { target: { value: WifiEncryption.NOPASS } });
 
     act(() => {
       vi.advanceTimersByTime(100);
@@ -183,7 +183,7 @@ describe('InputPanel Component', () => {
 
     // 2. Change encryption to nopass
     const encryptionSelect = screen.getByLabelText('Encryption');
-    fireEvent.change(encryptionSelect, { target: { value: 'nopass' } });
+    fireEvent.change(encryptionSelect, { target: { value: WifiEncryption.NOPASS } });
 
     act(() => {
       vi.advanceTimersByTime(100);
