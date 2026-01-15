@@ -55,6 +55,55 @@ const ColorInput: React.FC<ColorInputProps> = ({
 );
 
 /**
+ * Memoized component for rendering pattern preview icons.
+ * Prevents expensive SVG re-generation when parent component re-renders.
+ */
+const PatternPreviewIcon = React.memo(({ id }: { id: QRStyle }) => {
+  return (
+    <div className="w-8 h-8 mb-2 grid grid-cols-2 gap-0.5 p-1">
+      {[1, 2, 3, 4].map((i) => {
+        if (id === QRStyle.STARBURST) {
+          return (
+            <div key={i} className="flex items-center justify-center">
+              <svg viewBox="0 0 24 24" fill="currentColor" className="w-full h-full">
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+              </svg>
+            </div>
+          );
+        }
+        if (id === QRStyle.HIVE) {
+          return (
+            <div key={i} className="flex items-center justify-center bg-current" style={{ clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)' }} />
+          );
+        }
+        if (id === QRStyle.SWISS) {
+          return <div key={i} className="bg-current rounded-full" />;
+        }
+        if (id === QRStyle.MODERN) {
+          return <div key={i} className="bg-current rounded-sm" />;
+        }
+        if (id === QRStyle.FLUID) {
+          return <div key={i} className="bg-current rounded-lg" style={{ borderRadius: '50%' }} />;
+        }
+        if (id === QRStyle.CIRCUIT) {
+          return (
+            <div key={i} className="relative w-full h-full bg-transparent flex items-center justify-center">
+              <div className="w-1.5 h-1.5 bg-current rounded-full" />
+              <div className="absolute inset-0 border border-current opacity-50" />
+            </div>
+          );
+        }
+        if (id === QRStyle.GRUNGE) {
+          return <div key={i} className="bg-current" style={{ clipPath: 'polygon(10% 0, 100% 10%, 90% 100%, 0 90%)' }} />;
+        }
+        // Standard and others
+        return <div key={i} className="bg-current" />;
+      })}
+    </div>
+  );
+});
+
+/**
  * A component providing UI controls for styling the QR code.
  * Allows users to change patterns, colors, and upload logos.
  * Also checks and warns about low contrast ratios.
@@ -280,49 +329,7 @@ const StyleControls: React.FC<StyleControlsProps> = ({ config, onChange }) => {
                   : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 text-slate-500 dark:text-slate-400'
               }`}
             >
-              <div className="w-8 h-8 mb-2 grid grid-cols-2 gap-0.5 p-1">
-                  {[1, 2, 3, 4].map((i) => {
-                      if (pattern.id === QRStyle.STARBURST) {
-                         return (
-                             <div key={i} className="flex items-center justify-center">
-                                 <svg viewBox="0 0 24 24" fill="currentColor" className="w-full h-full">
-                                     <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                                 </svg>
-                             </div>
-                         );
-                      }
-                      if (pattern.id === QRStyle.HIVE) {
-                          // Hexagon clip path
-                          return (
-                              <div key={i} className="flex items-center justify-center bg-current" style={{ clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)' }} />
-                          );
-                      }
-                      if (pattern.id === QRStyle.SWISS) {
-                           return <div key={i} className="bg-current rounded-full" />;
-                      }
-                      if (pattern.id === QRStyle.MODERN) {
-                           return <div key={i} className="bg-current rounded-sm" />;
-                      }
-                      if (pattern.id === QRStyle.FLUID) {
-                           return <div key={i} className="bg-current rounded-lg" style={{ borderRadius: '50%' }} />;
-                      }
-                      if (pattern.id === QRStyle.CIRCUIT) {
-                           return (
-                             <div key={i} className="relative w-full h-full bg-transparent flex items-center justify-center">
-                                <div className="w-1.5 h-1.5 bg-current rounded-full" />
-                                <div className="absolute inset-0 border border-current opacity-50" />
-                             </div>
-                           );
-                      }
-                      if (pattern.id === QRStyle.GRUNGE) {
-                           return <div key={i} className="bg-current" style={{ clipPath: 'polygon(10% 0, 100% 10%, 90% 100%, 0 90%)' }} />;
-                      }
-                      // Standard and others
-                      return (
-                        <div key={i} className="bg-current" />
-                    );
-                  })}
-              </div>
+              <PatternPreviewIcon id={pattern.id} />
               <span className="text-xs font-medium text-center leading-tight">{pattern.label}</span>
             </button>
           ))}
