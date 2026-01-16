@@ -39,6 +39,17 @@ export enum WifiEncryption {
 }
 
 /**
+ * Defines the supported cryptocurrency networks.
+ */
+export enum CryptoNetwork {
+  BITCOIN = 'bitcoin',
+  ETHEREUM = 'ethereum',
+  SOLANA = 'solana',
+  LITECOIN = 'litecoin',
+  CUSTOM = 'custom',
+}
+
+/**
  * Defines the shape of the padding area around an embedded logo.
  */
 export type LogoPaddingStyle = 'square' | 'circle' | 'none';
@@ -169,7 +180,7 @@ export interface SmsData {
  */
 export interface PaymentData {
   /** The cryptocurrency network (e.g. bitcoin, ethereum). */
-  network: string;
+  network: CryptoNetwork;
   /** The wallet address. */
   address: string;
   /** The amount to request (optional). */

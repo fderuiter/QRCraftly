@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { QRConfig, QRType, WifiData, EmailData, VCardData, PhoneData, SmsData, PaymentData, WifiEncryption } from '../types';
+import { QRConfig, QRType, WifiData, EmailData, VCardData, PhoneData, SmsData, PaymentData, WifiEncryption, CryptoNetwork } from '../types';
 import { Wifi, Link, Type, Mail, UserSquare2, Phone, MessageSquare, CreditCard, Eye, EyeOff } from 'lucide-react';
 import {
   constructWifiString,
@@ -66,7 +66,7 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
   );
 
   const [paymentData, handlePaymentChange] = useQRInputState<PaymentData>(
-    { network: 'bitcoin', address: '', amount: '', label: '' },
+    { network: CryptoNetwork.BITCOIN, address: '', amount: '', label: '' },
     constructPaymentString,
     onChange
   );
@@ -281,14 +281,14 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
                     <select
                       id="payment-network"
                       value={paymentData.network}
-                      onChange={(e) => handlePaymentChange({ network: e.target.value })}
+                      onChange={(e) => handlePaymentChange({ network: e.target.value as CryptoNetwork })}
                       className={selectClasses}
                     >
-                      <option value="bitcoin">Bitcoin (BTC)</option>
-                      <option value="ethereum">Ethereum (ETH)</option>
-                      <option value="solana">Solana (SOL)</option>
-                      <option value="litecoin">Litecoin (LTC)</option>
-                      <option value="custom">Custom / Raw Address</option>
+                      <option value={CryptoNetwork.BITCOIN}>Bitcoin (BTC)</option>
+                      <option value={CryptoNetwork.ETHEREUM}>Ethereum (ETH)</option>
+                      <option value={CryptoNetwork.SOLANA}>Solana (SOL)</option>
+                      <option value={CryptoNetwork.LITECOIN}>Litecoin (LTC)</option>
+                      <option value={CryptoNetwork.CUSTOM}>Custom / Raw Address</option>
                     </select>
                 </div>
 
@@ -305,7 +305,7 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
                      />
                 </div>
 
-                {paymentData.network !== 'custom' && (
+                {paymentData.network !== CryptoNetwork.CUSTOM && (
                 <>
                     <div>
                         <label htmlFor="payment-amount" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Amount (Optional)</label>
