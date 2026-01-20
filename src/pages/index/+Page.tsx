@@ -12,25 +12,57 @@ import { safeJsonLdStringify } from '@/utils/security';
 export default function Page() {
   const schemaData = {
     "@context": "https://schema.org",
-    "@type": "WebApplication",
-    "name": "QRCraftly",
-    "url": "https://qrcraftly.com",
-    "applicationCategory": "Utilities",
-    "operatingSystem": "All",
-    "softwareVersion": "0.1.0",
-    "image": "https://qrcraftly.com/favicon.png",
-    "datePublished": "2025-01-01",
-    "author": {
-      "@type": "Organization",
-      "name": "QRCraftly"
-    },
-    "browserRequirements": "Requires JavaScript. Works in all modern browsers.",
-    "offers": {
-      "@type": "Offer",
-      "price": "0",
-      "priceCurrency": "USD"
-    },
-    "featureList": "Custom QR Codes, WiFi QR Codes, vCard, Secure Client-Side Generation, Artistic Styles"
+    "@graph": [
+      {
+        "@type": "WebApplication",
+        "name": "QRCraftly",
+        "url": "https://qrcraftly.com",
+        "applicationCategory": "Utilities",
+        "operatingSystem": "All",
+        "softwareVersion": "0.1.0",
+        "image": "https://qrcraftly.com/og-image.png",
+        "datePublished": "2025-01-01",
+        "author": {
+          "@type": "Organization",
+          "name": "QRCraftly"
+        },
+        "browserRequirements": "Requires JavaScript. Works in all modern browsers.",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        },
+        "featureList": "Custom QR Codes, WiFi QR Codes, vCard, Secure Client-Side Generation, Artistic Styles"
+      },
+      {
+        "@type": "HowTo",
+        "name": "How to Create a Custom QR Code",
+        "description": "Create a free, custom QR code in seconds. No sign-up required.",
+        "image": "https://qrcraftly.com/og-image.png",
+        "step": [
+          {
+            "@type": "HowToStep",
+            "name": "Select Content Type",
+            "text": "Choose from URL, Text, WiFi, vCard, and more."
+          },
+          {
+            "@type": "HowToStep",
+            "name": "Enter Details",
+            "text": "Input your content such as website URL or contact information."
+          },
+          {
+            "@type": "HowToStep",
+            "name": "Customize Design",
+            "text": "Choose colors, patterns (like Hive or Starburst), and add a logo."
+          },
+          {
+            "@type": "HowToStep",
+            "name": "Download",
+            "text": "Download your high-quality QR code in PNG or SVG format."
+          }
+        ]
+      }
+    ]
   };
 
   return (
