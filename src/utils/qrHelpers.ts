@@ -1,24 +1,6 @@
 import { WifiData, EmailData, VCardData, PhoneData, SmsData, PaymentData, WifiEncryption } from '../types';
-
-/**
- * Checks if a URL string contains a dangerous protocol.
- * Dangerous protocols: javascript:, vbscript:, file:, data:, mk:
- */
-export const isDangerousUrl = (url: string | undefined): boolean => {
-  if (!url) return false;
-  // Remove control characters (00-1F, 7F-9F) and whitespace from the start
-  const normalized = url.replace(/[\x00-\x1F\x7F-\x9F\s]+/g, '').toLowerCase();
-
-  const dangerousProtocols = [
-    'javascript:',
-    'vbscript:',
-    'file:',
-    'data:',
-    'mk:',
-  ];
-
-  return dangerousProtocols.some(p => normalized.startsWith(p));
-};
+import { isDangerousUrl, cleanPhoneNumber } from './security';
+export { isDangerousUrl, cleanPhoneNumber };
 
 /**
  * Escapes special characters for WiFi QR code string.
@@ -92,13 +74,6 @@ export const constructVCardString = (data: VCardData): string => {
 
   // Construct VCard 3.0 string
   return `BEGIN:VCARD\nVERSION:3.0\nN:${lastName};${firstName};;;\nFN:${firstName} ${lastName}\nORG:${organization}\nTITLE:${title}\nTEL:${phone}\nEMAIL:${email}\nURL:${website}\nADR:;;${street};${city};;;${country}\nEND:VCARD`;
-};
-
-/**
- * Removes spaces and colons from a phone number string.
- */
-export const cleanPhoneNumber = (number: string): string => {
-  return number.replace(/[\s:]+/g, '');
 };
 
 /**
