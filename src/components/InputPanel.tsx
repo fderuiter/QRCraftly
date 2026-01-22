@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { QRConfig, QRType, WifiData, EmailData, VCardData, PhoneData, SmsData, PaymentData, WifiEncryption } from '../types';
 import { Wifi, Link, Type, Mail, UserSquare2, Phone, MessageSquare, CreditCard, Eye, EyeOff } from 'lucide-react';
+import CharCount from './CharCount';
 import {
   constructWifiString,
   constructEmailString,
@@ -134,9 +135,13 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
 
         {config.type === QRType.TEXT && (
           <div>
-            <label htmlFor="text-content" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Content</label>
+            <div className="flex justify-between items-center mb-1">
+              <label htmlFor="text-content" className="block text-sm font-medium text-slate-700 dark:text-slate-300">Content</label>
+              <CharCount id="text-count" current={config.value.length} max={2500} />
+            </div>
             <textarea
               id="text-content"
+              aria-describedby="text-count"
               rows={4}
               maxLength={2500}
               placeholder="Enter your text here..."
@@ -259,9 +264,13 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
                     />
                 </div>
                 <div>
-                    <label htmlFor="email-body" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Body</label>
+                    <div className="flex justify-between items-center mb-1">
+                        <label htmlFor="email-body" className="block text-xs font-medium text-slate-500 dark:text-slate-400">Body</label>
+                        <CharCount id="email-count" current={emailData.body.length} max={2000} />
+                    </div>
                     <textarea
                         id="email-body"
+                        aria-describedby="email-count"
                         rows={3}
                         maxLength={2000}
                         value={emailData.body}
@@ -424,9 +433,13 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
                      />
                 </div>
                 <div>
-                    <label htmlFor="sms-message" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Pre-filled Message</label>
+                    <div className="flex justify-between items-center mb-1">
+                        <label htmlFor="sms-message" className="block text-sm font-medium text-slate-700 dark:text-slate-300">Pre-filled Message</label>
+                        <CharCount id="sms-count" current={smsData.message.length} max={1600} />
+                    </div>
                     <textarea
                         id="sms-message"
+                        aria-describedby="sms-count"
                         rows={3}
                         maxLength={1600}
                         value={smsData.message}
