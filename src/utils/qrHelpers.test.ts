@@ -171,14 +171,29 @@ describe('QR Helpers', () => {
   });
 
   describe('constructSmsString', () => {
-    it('constructs an smsto URI with number and message', () => {
+    it('constructs an sms URI with number and encoded message', () => {
       const data: SmsData = {
         number: '+1 (555) 999-8888',
         message: 'Hello there'
       };
-      // Note: The current implementation does NOT encode the message body in the URI structure for smsto:Number:Message
-      // It returns `smsto:${cleanNumber}:${data.message}`
-      expect(constructSmsString(data)).toBe('smsto:+1(555)999-8888:Hello there');
+      expect(constructSmsString(data)).toBe('sms:+1(555)999-8888?body=Hello%20there');
+    });
+
+    it('handles special characters in message body', () => {
+      const data: SmsData = {
+        number: '123456',
+        message: 'Hello? & Welcome! 100% Free'
+      };
+      // Should encode ?, &, % and spaces
+      expect(constructSmsString(data)).toBe('sms:123456?body=Hello%3F%20%26%20Welcome!%20100%25%20Free');
+    });
+
+    it('omits body parameter when message is empty', () => {
+      const data: SmsData = {
+        number: '123456',
+        message: ''
+      };
+      expect(constructSmsString(data)).toBe('sms:123456');
     });
   });
 

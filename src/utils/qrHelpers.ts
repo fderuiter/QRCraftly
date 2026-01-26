@@ -89,7 +89,10 @@ export const constructPhoneString = (data: PhoneData): string => {
  */
 export const constructSmsString = (data: SmsData): string => {
   const cleanNumber = cleanPhoneNumber(data.number);
-  return `smsto:${cleanNumber}:${data.message}`;
+  if (!data.message) {
+    return `sms:${cleanNumber}`;
+  }
+  return `sms:${cleanNumber}?body=${encodeURIComponent(data.message)}`;
 };
 
 /**

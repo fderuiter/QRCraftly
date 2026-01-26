@@ -88,9 +88,9 @@ describe('InputPanel Edge Cases', () => {
     fireEvent.change(msgInput, { target: { value: 'Time: 12:30 PM' } });
     act(() => { vi.advanceTimersByTime(100); });
 
-    // Format: smsto:number:message
-    // Colons in message should be preserved as-is
-    expect(mockOnChange).toHaveBeenLastCalledWith({ value: 'smsto:123:Time: 12:30 PM' });
+    // Format: sms:number?body=message
+    // Colons and spaces should be encoded
+    expect(mockOnChange).toHaveBeenLastCalledWith({ value: 'sms:123?body=Time%3A%2012%3A30%20PM' });
   });
 
   it('escapes special characters in WPA2-EAP Identity', () => {
