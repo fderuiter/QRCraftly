@@ -28,6 +28,26 @@ export const drawRoundRect = (ctx: CanvasRenderingContext2D, x: number, y: numbe
 };
 
 /**
+ * Generates a regular polygon path.
+ * @param ctx The canvas context.
+ * @param x The center x coordinate.
+ * @param y The center y coordinate.
+ * @param r The radius.
+ * @param sides The number of sides.
+ * @param rotate Rotation angle in radians (default: 0).
+ */
+export const drawPolyPath = (ctx: CanvasRenderingContext2D, x: number, y: number, r: number, sides: number, rotate: number = 0) => {
+  for (let i = 0; i < sides; i++) {
+    const theta = rotate + (i * 2 * Math.PI / sides);
+    const px = x + r * Math.cos(theta);
+    const py = y + r * Math.sin(theta);
+    if (i === 0) ctx.moveTo(px, py);
+    else ctx.lineTo(px, py);
+  }
+  ctx.closePath();
+};
+
+/**
  * Draws a regular polygon.
  * @param ctx The canvas context.
  * @param x The center x coordinate.
@@ -39,34 +59,25 @@ export const drawRoundRect = (ctx: CanvasRenderingContext2D, x: number, y: numbe
  */
 export const drawPoly = (ctx: CanvasRenderingContext2D, x: number, y: number, r: number, sides: number, rotate: number = 0, fill: boolean = true) => {
   ctx.beginPath();
-  for (let i = 0; i < sides; i++) {
-    const theta = rotate + (i * 2 * Math.PI / sides);
-    const px = x + r * Math.cos(theta);
-    const py = y + r * Math.sin(theta);
-    if (i === 0) ctx.moveTo(px, py);
-    else ctx.lineTo(px, py);
-  }
-  ctx.closePath();
+  drawPolyPath(ctx, x, y, r, sides, rotate);
   if (fill) ctx.fill(); else ctx.stroke();
 };
 
 /**
- * Draws a star shape.
+ * Generates a star path.
  * @param ctx The canvas context.
  * @param cx The center x coordinate.
  * @param cy The center y coordinate.
  * @param outerR The outer radius.
  * @param innerR The inner radius.
  * @param spikes The number of spikes.
- * @param fill Whether to fill the star (default: true).
  */
-export const drawStar = (ctx: CanvasRenderingContext2D, cx: number, cy: number, outerR: number, innerR: number, spikes: number, fill: boolean = true) => {
+export const drawStarPath = (ctx: CanvasRenderingContext2D, cx: number, cy: number, outerR: number, innerR: number, spikes: number) => {
   let rot = Math.PI / 2 * 3;
   let x = cx;
   let y = cy;
   const step = Math.PI / spikes;
 
-  ctx.beginPath();
   ctx.moveTo(cx, cy - outerR);
   for (let i = 0; i < spikes; i++) {
     x = cx + Math.cos(rot) * outerR;
@@ -81,6 +92,21 @@ export const drawStar = (ctx: CanvasRenderingContext2D, cx: number, cy: number, 
   }
   ctx.lineTo(cx, cy - outerR);
   ctx.closePath();
+};
+
+/**
+ * Draws a star shape.
+ * @param ctx The canvas context.
+ * @param cx The center x coordinate.
+ * @param cy The center y coordinate.
+ * @param outerR The outer radius.
+ * @param innerR The inner radius.
+ * @param spikes The number of spikes.
+ * @param fill Whether to fill the star (default: true).
+ */
+export const drawStar = (ctx: CanvasRenderingContext2D, cx: number, cy: number, outerR: number, innerR: number, spikes: number, fill: boolean = true) => {
+  ctx.beginPath();
+  drawStarPath(ctx, cx, cy, outerR, innerR, spikes);
   if (fill) ctx.fill(); else ctx.stroke();
 };
 
