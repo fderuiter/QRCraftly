@@ -11,6 +11,7 @@ import {
   isDangerousUrl
 } from '../utils/qrHelpers';
 import { useQRInputState } from '../utils/hooks';
+import { CharCount } from './CharCount';
 
 /**
  * Props for the InputPanel component.
@@ -144,6 +145,7 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
               value={config.value}
               onChange={(e) => onChange({ value: e.target.value })}
             />
+            <CharCount current={config.value.length} max={2500} />
           </div>
         )}
 
@@ -268,6 +270,7 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
                         onChange={(e) => handleEmailChange({ body: e.target.value })}
                         className={textAreaClasses}
                     />
+                    <CharCount current={emailData.body.length} max={2000} />
                 </div>
             </div>
         )}
@@ -433,6 +436,7 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
                         onChange={(e) => handleSmsChange({ message: e.target.value })}
                         className={textAreaClasses}
                     />
+                    <CharCount current={smsData.message.length} max={1600} />
                 </div>
             </div>
         )}
