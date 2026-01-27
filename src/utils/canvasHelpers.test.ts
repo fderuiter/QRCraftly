@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { drawRoundRect, drawPoly, drawStar, drawRoughRect, drawScribble } from './canvasHelpers';
+import { drawRoundRect, drawPoly, drawPolyPath, drawStar, drawStarPath, drawRoughRect, drawScribble } from './canvasHelpers';
 
 describe('canvasHelpers', () => {
   let ctx: any;
@@ -68,6 +68,20 @@ describe('canvasHelpers', () => {
     });
   });
 
+  describe('drawPolyPath', () => {
+    it('should draw a polygon path without starting path or filling', () => {
+      const sides = 6;
+      drawPolyPath(ctx, 50, 50, 20, sides);
+
+      expect(ctx.beginPath).not.toHaveBeenCalled();
+      expect(ctx.moveTo).toHaveBeenCalledTimes(1);
+      expect(ctx.lineTo).toHaveBeenCalledTimes(sides - 1);
+      expect(ctx.closePath).toHaveBeenCalled();
+      expect(ctx.fill).not.toHaveBeenCalled();
+      expect(ctx.stroke).not.toHaveBeenCalled();
+    });
+  });
+
   describe('drawStar', () => {
     it('should draw a star with correct spikes', () => {
       const spikes = 5;
@@ -87,6 +101,20 @@ describe('canvasHelpers', () => {
       drawStar(ctx, 50, 50, 20, 10, 5, false);
       expect(ctx.fill).not.toHaveBeenCalled();
       expect(ctx.stroke).toHaveBeenCalled();
+    });
+  });
+
+  describe('drawStarPath', () => {
+    it('should draw a star path without starting path or filling', () => {
+      const spikes = 5;
+      drawStarPath(ctx, 50, 50, 20, 10, spikes);
+
+      expect(ctx.beginPath).not.toHaveBeenCalled();
+      expect(ctx.moveTo).toHaveBeenCalledTimes(1);
+      expect(ctx.lineTo).toHaveBeenCalledTimes((spikes * 2) + 1);
+      expect(ctx.closePath).toHaveBeenCalled();
+      expect(ctx.fill).not.toHaveBeenCalled();
+      expect(ctx.stroke).not.toHaveBeenCalled();
     });
   });
 

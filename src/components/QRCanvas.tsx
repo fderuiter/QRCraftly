@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { QRConfig, QRStyle } from '../types';
-import { drawRoundRect, drawPoly, drawStar, drawRoughRect, drawScribble } from '../utils/canvasHelpers';
+import { drawRoundRect, drawPoly, drawStar, drawRoughRect, drawScribble, drawPolyPath, drawStarPath } from '../utils/canvasHelpers';
 
 /**
  * Props for the QRCanvas component.
@@ -385,7 +385,7 @@ const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) =
         ctx.fillStyle = config.fgColor;
 
         // Optimization: Batch drawing for compatible styles to reduce draw calls
-        const isBatchable = [QRStyle.STANDARD, QRStyle.MODERN, QRStyle.SWISS, QRStyle.FLUID].includes(config.style);
+        const isBatchable = [QRStyle.STANDARD, QRStyle.MODERN, QRStyle.SWISS, QRStyle.FLUID, QRStyle.HIVE, QRStyle.STARBURST].includes(config.style);
 
         if (isBatchable) {
             ctx.beginPath();
@@ -416,6 +416,12 @@ const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) =
                            ctx.moveTo(cx + (cellSize/2 * 1.1), cy);
                            ctx.arc(cx, cy, cellSize/2 * 1.1, 0, Math.PI*2);
                            break;
+                       case QRStyle.HIVE:
+                           drawPolyPath(ctx, cx, cy, cellSize/1.55, 6, 0);
+                           break;
+                       case QRStyle.STARBURST:
+                           drawStarPath(ctx, cx, cy, cellSize/1.5, cellSize/2.2, 5);
+                           break;
                        case QRStyle.STANDARD:
                        default:
                            ctx.rect(Math.floor(x), Math.floor(y), Math.ceil(cellSize), Math.ceil(cellSize));
@@ -442,17 +448,9 @@ const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) =
                         if (hasLeft) ctx.fillRect(x, cy - thickness/2, cellSize/2 + 1, thickness);
                         if (hasTop) ctx.fillRect(cx - thickness/2, y, thickness, cellSize/2 + 1);
                         break;
-                      case QRStyle.HIVE:
-                        // Massive Hexagon
-                        drawPoly(ctx, cx, cy, cellSize/1.55, 6, 0, true);
-                        break;
                       case QRStyle.GRUNGE:
                         // Full size rough rect, minimal jitter
                         drawRoughRect(ctx, x, y, cellSize, cellSize);
-                        break;
-                      case QRStyle.STARBURST:
-                         // Fat star - nearly a square
-                        drawStar(ctx, cx, cy, cellSize/1.5, cellSize/2.2, 5, true);
                         break;
                   }
               }
