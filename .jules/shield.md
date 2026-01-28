@@ -11,3 +11,7 @@
 ## 2025-02-18 - [Silent Failure in Color Contrast Calc]
 **Discovery:** `getContrastRatio` silently treats invalid hex strings (e.g. `#GGGGGG`) as Black (`#000000`) due to `parseInt` returning `NaN` and bitwise operators converting `NaN` to `0`. This results in a false positive contrast ratio of 21 against white, masking potential data issues.
 **Defense:** Implement strict regex validation for hex strings in `getContrastRatio` to ensure invalid inputs return 0 (failure), matching the behavior for invalid lengths.
+
+## 2025-02-18 - Flaky Canvas Tests with setTimeout
+**Discovery:** `QRCanvasExtended.test.tsx` used hardcoded `setTimeout` delays (100ms, 200ms) to wait for async canvas rendering. This causes flakiness if the environment is slow, or wastes time if it's fast. It also triggered `act(...)` warnings because state updates happened outside React's test loop.
+**Defense:** Replaced `setTimeout` with `waitFor` from `@testing-library/react`. This makes the test deterministic, faster, and implicitly handles async state updates correctly.

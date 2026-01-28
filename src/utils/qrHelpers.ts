@@ -1,6 +1,5 @@
 import { WifiData, EmailData, VCardData, PhoneData, SmsData, PaymentData, WifiEncryption } from '../types';
 import { isDangerousUrl, cleanPhoneNumber } from './security';
-export { isDangerousUrl, cleanPhoneNumber };
 
 /**
  * Escapes special characters for WiFi QR code string.

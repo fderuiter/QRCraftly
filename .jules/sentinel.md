@@ -7,3 +7,7 @@
 **Vulnerability:** Constructing SMS URIs using string concatenation (`smsto:number:message`) allows users to break the format or inject content if the message contains delimiters.
 **Learning:** Legacy schemes like `smsto:` rely on positional arguments and lack standard encoding support, making them brittle and insecure for arbitrary input.
 **Prevention:** Prefer standard URI schemes (like `sms:`) that support URL-encoded parameters (`?body=...`) to safely encapsulate user input.
+## 2025-02-18 - CSP Meta Tag Limitations
+**Discovery:** Content Security Policy (CSP) delivered via `<meta>` tag ignores the `frame-ancestors` directive.
+**Learning:** `frame-ancestors` must be delivered via HTTP headers to be effective against Clickjacking. Using it in a meta tag provides false security.
+**Prevention:** Do not rely on `<meta>` tags for Clickjacking protection. Use HTTP headers or legacy frame-busting scripts if headers are not controllable (e.g. static hosting without header config).

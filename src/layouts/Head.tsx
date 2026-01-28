@@ -92,6 +92,14 @@ export default function HeadDefault() {
   return (
     <>
       {/*
+        Content Security Policy (CSP)
+        - script-src 'unsafe-inline': Required for JSON-LD scripts and Vike hydration in SSG.
+        - style-src 'unsafe-inline': Required for the font loading hack and CSS extraction.
+        - object-src 'none': Prevents Flash/Java applets.
+      */}
+      <meta httpEquiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests;" />
+
+      {/*
         Note: 'viewport' and 'description' are handled by Vike/Config to avoid duplicates.
         Build output confirmed Vike injects: <meta name="viewport" content="width=device-width,initial-scale=1">
 

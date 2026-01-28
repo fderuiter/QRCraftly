@@ -317,4 +317,9 @@ describe('InputPanel Component', () => {
     // Should output raw address/string
     expect(mockOnChange).toHaveBeenLastCalledWith({ value: '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa' });
   });
+
+  it('shows character count for TEXT input', () => {
+      renderPanel({ type: QRType.TEXT, value: 'Hello' });
+      expect(screen.getByText('5 / 2500')).toBeInTheDocument();
+  });
 });
