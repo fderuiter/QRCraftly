@@ -190,6 +190,19 @@ const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) =
             ctx.fillStyle = config.eyeColor; // Restore
         };
 
+        const drawRoundedSquareEyeFrame = (x: number, y: number, size: number) => {
+            // Frame: Standard Square with Rounded Corners
+            ctx.beginPath();
+            drawRoundRect(ctx, x, y, size, size, cellSize * 1.5);
+            ctx.fill();
+            // Hole
+            clearShape(() => {
+                ctx.beginPath();
+                drawRoundRect(ctx, x + cellSize, y + cellSize, size - 2*cellSize, size - 2*cellSize, cellSize * 0.8);
+                ctx.fill();
+            });
+        };
+
         const drawEyePattern = (r: number, c: number) => {
             const x = drawX + c * cellSize;
             const y = drawY + r * cellSize;
@@ -202,16 +215,7 @@ const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) =
 
             switch (config.style) {
                 case QRStyle.MODERN: // Rounded Squares
-                    // Frame (Less rounded for robustness)
-                    ctx.beginPath();
-                    drawRoundRect(ctx, x, y, size, size, cellSize * 1.5);
-                    ctx.fill();
-                    // Hole
-                    clearShape(() => {
-                         ctx.beginPath();
-                         drawRoundRect(ctx, x + cellSize, y + cellSize, size - 2*cellSize, size - 2*cellSize, cellSize * 0.8);
-                         ctx.fill();
-                    });
+                    drawRoundedSquareEyeFrame(x, y, size);
 
                     // Eyeball (Solid Square with slight rounding)
                     ctx.beginPath();
@@ -220,40 +224,12 @@ const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) =
                     break;
 
                 case QRStyle.SWISS: // Swiss Dot
-                    // Frame: Standard Square with Rounded Corners (Like Modern, robust)
-                    ctx.beginPath();
-                    drawRoundRect(ctx, x, y, size, size, cellSize * 1.5);
-                    ctx.fill();
-                    // Hole
-                    clearShape(() => {
-                        ctx.beginPath();
-                        // Standard Hole (Radius 2.5, Diameter 5)
-                        drawRoundRect(ctx, x + cellSize, y + cellSize, size - 2*cellSize, size - 2*cellSize, cellSize * 0.8);
-                        ctx.fill();
-                    });
+                case QRStyle.FLUID: // Fluid (Same as Swiss)
+                    drawRoundedSquareEyeFrame(x, y, size);
 
                     // Eyeball: Floating Dot (Circular)
                     ctx.beginPath();
                     // Standard Radius 1.5 (Diameter 3)
-                    ctx.arc(cx, cy, 1.5 * cellSize, 0, Math.PI * 2);
-                    ctx.fill();
-                    break;
-
-                case QRStyle.FLUID: // Fluid
-                    // COPY OF SWISS (Proven to pass)
-                    // Frame: Standard Square with Rounded Corners
-                    ctx.beginPath();
-                    drawRoundRect(ctx, x, y, size, size, cellSize * 1.5);
-                    ctx.fill();
-
-                    clearShape(() => {
-                        ctx.beginPath();
-                        drawRoundRect(ctx, x + cellSize, y + cellSize, size - 2*cellSize, size - 2*cellSize, cellSize * 0.8);
-                        ctx.fill();
-                    });
-
-                    // Eyeball: Circular (Same as Swiss)
-                    ctx.beginPath();
                     ctx.arc(cx, cy, 1.5 * cellSize, 0, Math.PI * 2);
                     ctx.fill();
                     break;
