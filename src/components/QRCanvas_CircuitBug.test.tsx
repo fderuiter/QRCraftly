@@ -132,9 +132,9 @@ describe('QRCanvas Circuit Style Bug', () => {
 
      // Find calls that look like the trace
      // The main cell is also drawn using drawRoundRect -> ctx.roundRect or fallback
-     // The trace is drawn using ctx.fillRect
+     // The trace is drawn using ctx.rect (batched)
 
-     const calls = mockContext.fillRect.mock.calls;
+     const calls = mockContext.rect.mock.calls;
 
      // Filter for calls that match the dimensions of the trace
      // We are looking for the 'hasRight' trace
@@ -197,7 +197,7 @@ describe('QRCanvas Circuit Style Bug', () => {
 
      const expectedX = cx - thickness / 2;
 
-     const calls = mockContext.fillRect.mock.calls;
+     const calls = mockContext.rect.mock.calls;
 
      const traceCall = calls.find((args: any[]) => {
          const [_dx, dy, dw, dh] = args;

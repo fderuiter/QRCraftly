@@ -385,7 +385,7 @@ const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) =
         ctx.fillStyle = config.fgColor;
 
         // Optimization: Batch drawing for compatible styles to reduce draw calls
-        const isBatchable = [QRStyle.STANDARD, QRStyle.MODERN, QRStyle.SWISS, QRStyle.FLUID].includes(config.style);
+        const isBatchable = [QRStyle.STANDARD, QRStyle.MODERN, QRStyle.SWISS, QRStyle.FLUID, QRStyle.CIRCUIT].includes(config.style);
 
         if (isBatchable) {
             ctx.beginPath();
@@ -416,32 +416,31 @@ const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) =
                            ctx.moveTo(cx + (cellSize/2 * 1.1), cy);
                            ctx.arc(cx, cy, cellSize/2 * 1.1, 0, Math.PI*2);
                            break;
+                       case QRStyle.CIRCUIT:
+                           {
+                             const hasTop = r > 0 && modules.get(r-1, c) && !isCoveredByLogo(r-1, c) && !isEye(r-1, c);
+                             const hasBottom = r < moduleCount-1 && modules.get(r+1, c) && !isCoveredByLogo(r+1, c) && !isEye(r+1, c);
+                             const hasLeft = c > 0 && modules.get(r, c-1) && !isCoveredByLogo(r, c-1) && !isEye(r, c-1);
+                             const hasRight = c < moduleCount-1 && modules.get(r, c+1) && !isCoveredByLogo(r, c+1) && !isEye(r, c+1);
+
+                             // Full square with very tiny notches
+                             drawRoundRect(ctx, x, y, cellSize, cellSize, cellSize * 0.1);
+
+                             // Draw lines to neighbors
+                             const thickness = cellSize * 0.4;
+                             if (hasRight) ctx.rect(cx, cy - thickness/2, cellSize/2 + 1, thickness);
+                             if (hasBottom) ctx.rect(cx - thickness/2, cy, thickness, cellSize/2 + 1);
+                             if (hasLeft) ctx.rect(x, cy - thickness/2, cellSize/2 + 1, thickness);
+                             if (hasTop) ctx.rect(cx - thickness/2, y, thickness, cellSize/2 + 1);
+                           }
+                           break;
                        case QRStyle.STANDARD:
                        default:
                            ctx.rect(Math.floor(x), Math.floor(y), Math.ceil(cellSize), Math.ceil(cellSize));
                            break;
                    }
               } else {
-                  // Neighbors (only needed for Circuit currently)
-                  const hasTop = r > 0 && modules.get(r-1, c) && !isCoveredByLogo(r-1, c) && !isEye(r-1, c);
-                  const hasBottom = r < moduleCount-1 && modules.get(r+1, c) && !isCoveredByLogo(r+1, c) && !isEye(r+1, c);
-                  const hasLeft = c > 0 && modules.get(r, c-1) && !isCoveredByLogo(r, c-1) && !isEye(r, c-1);
-                  const hasRight = c < moduleCount-1 && modules.get(r, c+1) && !isCoveredByLogo(r, c+1) && !isEye(r, c+1);
-
                   switch(config.style) {
-                      case QRStyle.CIRCUIT:
-                        // Full square with very tiny notches
-                        ctx.beginPath();
-                        drawRoundRect(ctx, x, y, cellSize, cellSize, cellSize * 0.1);
-                        ctx.fill();
-
-                        // Draw lines to neighbors
-                        const thickness = cellSize * 0.4;
-                        if (hasRight) ctx.fillRect(cx, cy - thickness/2, cellSize/2 + 1, thickness);
-                        if (hasBottom) ctx.fillRect(cx - thickness/2, cy, thickness, cellSize/2 + 1);
-                        if (hasLeft) ctx.fillRect(x, cy - thickness/2, cellSize/2 + 1, thickness);
-                        if (hasTop) ctx.fillRect(cx - thickness/2, y, thickness, cellSize/2 + 1);
-                        break;
                       case QRStyle.HIVE:
                         // Massive Hexagon
                         drawPoly(ctx, cx, cy, cellSize/1.55, 6, 0, true);
