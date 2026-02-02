@@ -18,7 +18,7 @@ export default function Page() {
     "applicationCategory": "Utilities",
     "operatingSystem": "All",
     "softwareVersion": "0.1.0",
-    "image": "https://qrcraftly.com/favicon.png",
+    "image": "https://qrcraftly.com/og-image.png",
     "datePublished": "2025-01-01",
     "author": {
       "@type": "Organization",
