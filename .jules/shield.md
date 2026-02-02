@@ -15,3 +15,7 @@
 ## 2025-02-18 - Flaky Canvas Tests with setTimeout
 **Discovery:** `QRCanvasExtended.test.tsx` used hardcoded `setTimeout` delays (100ms, 200ms) to wait for async canvas rendering. This causes flakiness if the environment is slow, or wastes time if it's fast. It also triggered `act(...)` warnings because state updates happened outside React's test loop.
 **Defense:** Replaced `setTimeout` with `waitFor` from `@testing-library/react`. This makes the test deterministic, faster, and implicitly handles async state updates correctly.
+
+## 2025-02-18 - Unsupported 3-digit Hex in Color Utils
+**Discovery:** `getContrastRatio` treated valid 3-digit hex codes (e.g., `#FFF`) as invalid inputs, returning 0 contrast. This caused false positive "Low Contrast" warnings in the UI when users manually entered short hex codes.
+**Defense:** Updated `getLuminance` to expand 3-digit hex codes to 6-digit equivalents and updated `getContrastRatio` to validate and accept length-4 hex strings.

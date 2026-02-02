@@ -1,11 +1,16 @@
 /**
  * Utility to calculate relative luminance of a color.
  * Used for contrast ratio calculation.
- * @param hex - The hex color code (e.g. #RRGGBB).
+ * @param hex - The hex color code (e.g. #RRGGBB or #RGB).
  * @returns The relative luminance value.
  */
 export const getLuminance = (hex: string) => {
-  const rgb = parseInt(hex.slice(1), 16);
+  let normalizedHex = hex;
+  if (hex.length === 4) {
+    normalizedHex = '#' + hex[1] + hex[1] + hex[2] + hex[2] + hex[3] + hex[3];
+  }
+
+  const rgb = parseInt(normalizedHex.slice(1), 16);
   const r = ((rgb >> 16) & 0xff) / 255;
   const g = ((rgb >> 8) & 0xff) / 255;
   const b = (rgb & 0xff) / 255;
@@ -23,8 +28,12 @@ export const getLuminance = (hex: string) => {
  * @returns The contrast ratio (1 to 21).
  */
 export const getContrastRatio = (fg: string, bg: string) => {
-  if (!fg || !bg || fg.length !== 7 || bg.length !== 7) return 0;
-  if (!/^#[0-9A-Fa-f]{6}$/.test(fg) || !/^#[0-9A-Fa-f]{6}$/.test(bg)) return 0;
+  if (!fg || !bg) return 0;
+  if ((fg.length !== 7 && fg.length !== 4) || (bg.length !== 7 && bg.length !== 4)) return 0;
+
+  const hexRegex = /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/;
+  if (!hexRegex.test(fg) || !hexRegex.test(bg)) return 0;
+
   const l1 = getLuminance(fg);
   const l2 = getLuminance(bg);
   const lighter = Math.max(l1, l2);
