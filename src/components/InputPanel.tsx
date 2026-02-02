@@ -383,10 +383,19 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
                  <fieldset className="pt-2 border-t border-slate-100 dark:border-slate-800 min-w-0">
                     <legend className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-2 w-full">Address</legend>
                     <div className="space-y-3">
-                        <input aria-label="Street" name="street" autoComplete="street-address" type="text" maxLength={100} placeholder="Street" value={vCardData.street} onChange={(e) => handleVCardChange({ street: e.target.value })} className={inputClasses} />
+                        <div>
+                           <label htmlFor="vcard-street" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Street</label>
+                           <input id="vcard-street" name="street" autoComplete="street-address" type="text" maxLength={100} placeholder="Street" value={vCardData.street} onChange={(e) => handleVCardChange({ street: e.target.value })} className={inputClasses} />
+                        </div>
                         <div className="grid grid-cols-2 gap-3">
-                             <input aria-label="City" name="city" autoComplete="address-level2" type="text" maxLength={100} placeholder="City" value={vCardData.city} onChange={(e) => handleVCardChange({ city: e.target.value })} className={inputClasses} />
-                             <input aria-label="Country" name="country" autoComplete="country-name" type="text" maxLength={100} placeholder="Country" value={vCardData.country} onChange={(e) => handleVCardChange({ country: e.target.value })} className={inputClasses} />
+                            <div>
+                               <label htmlFor="vcard-city" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">City</label>
+                               <input id="vcard-city" name="city" autoComplete="address-level2" type="text" maxLength={100} placeholder="City" value={vCardData.city} onChange={(e) => handleVCardChange({ city: e.target.value })} className={inputClasses} />
+                            </div>
+                            <div>
+                               <label htmlFor="vcard-country" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Country</label>
+                               <input id="vcard-country" name="country" autoComplete="country-name" type="text" maxLength={100} placeholder="Country" value={vCardData.country} onChange={(e) => handleVCardChange({ country: e.target.value })} className={inputClasses} />
+                            </div>
                         </div>
                     </div>
                  </fieldset>
