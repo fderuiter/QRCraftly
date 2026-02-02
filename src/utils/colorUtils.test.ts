@@ -12,6 +12,13 @@ describe('colorUtils', () => {
       expect(getLuminance('#000000')).toBe(0);
     });
 
+    it('calculates correct luminance for 3-digit hex', () => {
+      expect(getLuminance('#fff')).toBeCloseTo(1, 4);
+      expect(getLuminance('#FFF')).toBeCloseTo(1, 4);
+      expect(getLuminance('#000')).toBe(0);
+      expect(getLuminance('#F00')).toBeCloseTo(0.2126, 4); // Red
+    });
+
     it('calculates correct luminance for primary red', () => {
       // sRGB Red relative luminance is approx 0.2126
       expect(getLuminance('#FF0000')).toBeCloseTo(0.2126, 4);
@@ -39,16 +46,23 @@ describe('colorUtils', () => {
       expect(contrast).toBeCloseTo(21, 1);
     });
 
+    it('supports 3-digit hex codes', () => {
+      expect(getContrastRatio('#fff', '#000')).toBeCloseTo(21, 1);
+      expect(getContrastRatio('#000', '#fff')).toBeCloseTo(21, 1);
+      expect(getContrastRatio('#fff', '#000000')).toBeCloseTo(21, 1);
+      // Mixed length
+      expect(getContrastRatio('#F00', '#000000')).toBeCloseTo(5.25, 2); // Red on Black
+    });
+
     it('returns 1 for same colors', () => {
       expect(getContrastRatio('#ffffff', '#ffffff')).toBe(1);
       expect(getContrastRatio('#000000', '#000000')).toBe(1);
       expect(getContrastRatio('#123456', '#123456')).toBe(1);
+      expect(getContrastRatio('#123', '#123')).toBe(1);
     });
 
     it('returns 0 for invalid inputs', () => {
       // Test length checks
-      expect(getContrastRatio('#fff', '#000000')).toBe(0); // 3-digit hex
-      expect(getContrastRatio('#000000', '#fff')).toBe(0);
       expect(getContrastRatio('', '#000000')).toBe(0);
 
       // We can't easily test null/undefined types in TS without casting,
@@ -58,11 +72,12 @@ describe('colorUtils', () => {
     });
 
     it('returns 0 for non-hex characters', () => {
-      // #GGGGGG is invalid but has length 7. Currently it silently returns 21 (black).
-      // We want it to be 0 to indicate failure.
+      // #GGGGGG is invalid but has length 7.
       expect(getContrastRatio('#GGGGGG', '#FFFFFF')).toBe(0);
       expect(getContrastRatio('#FFFFFF', '#GGGGGG')).toBe(0);
       expect(getContrastRatio('#12345Z', '#FFFFFF')).toBe(0);
+      // Invalid 3-digit-like
+      expect(getContrastRatio('#GGG', '#FFFFFF')).toBe(0);
     });
 
     it('calculates WCAG 2.0 contrast ratio correctly', () => {
