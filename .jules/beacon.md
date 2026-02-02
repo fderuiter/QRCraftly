@@ -11,3 +11,7 @@ Implemented logic to pull `title` and `description` from `pageContext.config` an
 Identified that social sharing previews were suboptimal due to using the small `favicon.png` as the Open Graph image.
 Found a high-resolution asset (`star_style.png`) in the root and promoted it to `public/og-image.png` to serve as the standard social share image.
 Updated `Head.tsx` to use this new asset and upgraded the Twitter Card type to `summary_large_image` for better visibility.
+
+## 2025-02-14 - [Structured Data] High-Res Images for WebApplication Schema
+Switched from low-res `favicon.png` to high-res `og-image.png` in `WebApplication` schema to improve rich result appearance.
+Updated `src/pages/index/+Page.tsx` and `src/pages/wifi-qr-code/+Page.tsx` and their respective tests.

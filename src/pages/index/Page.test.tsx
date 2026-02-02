@@ -20,7 +20,7 @@ describe('Home Page', () => {
 
     // Check for critical SEO properties
     expect(json.softwareVersion).toBe('0.1.0');
-    expect(json.image).toBe('https://qrcraftly.com/favicon.png');
+    expect(json.image).toBe('https://qrcraftly.com/og-image.png');
     expect(json.datePublished).toBe('2025-01-01');
     expect(json.browserRequirements).toBe('Requires JavaScript. Works in all modern browsers.');
 
