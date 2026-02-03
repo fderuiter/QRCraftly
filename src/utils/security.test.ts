@@ -59,8 +59,27 @@ describe('Security Utils', () => {
   });
 
   describe('cleanPhoneNumber', () => {
-      it('removes spaces and colons', () => {
-          expect(cleanPhoneNumber('123 456:789')).toBe('123456789');
-      });
+    it('removes spaces and colons', () => {
+      expect(cleanPhoneNumber('123 456:789')).toBe('123456789');
+    });
+
+    it('allows valid phone characters', () => {
+      expect(cleanPhoneNumber('+1(555)123-4567')).toBe('+1(555)123-4567');
+      expect(cleanPhoneNumber('*#06#')).toBe('*#06#');
+      expect(cleanPhoneNumber('123,456')).toBe('123,456');
+    });
+
+    it('strips dangerous characters and letters', () => {
+      // 123?body=evil -> 123
+      expect(cleanPhoneNumber('123?body=evil')).toBe('123');
+      // 123;phone-context=evil -> 123-
+      expect(cleanPhoneNumber('123;phone-context=evil')).toBe('123-');
+      // 123&other=param -> 123
+      expect(cleanPhoneNumber('123&other=param')).toBe('123');
+    });
+
+    it('strips letters (vanity numbers)', () => {
+      expect(cleanPhoneNumber('1-800-FLOWERS')).toBe('1-800-');
+    });
   });
 });
