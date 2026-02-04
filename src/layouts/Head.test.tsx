@@ -35,4 +35,17 @@ describe('HeadDefault', () => {
     expect(content).toContain("font-src 'self' https://fonts.gstatic.com");
     expect(content).toContain("img-src 'self' data:");
   });
+
+  it('includes explicit Open Graph image dimensions', () => {
+    const { container } = render(<HeadDefault />, { container: document.head });
+
+    const widthMeta = container.querySelector('meta[property="og:image:width"]');
+    const heightMeta = container.querySelector('meta[property="og:image:height"]');
+
+    expect(widthMeta).toBeInTheDocument();
+    expect(widthMeta?.getAttribute('content')).toBe('1200');
+
+    expect(heightMeta).toBeInTheDocument();
+    expect(heightMeta?.getAttribute('content')).toBe('630');
+  });
 });

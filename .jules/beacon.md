@@ -15,3 +15,9 @@ Updated `Head.tsx` to use this new asset and upgraded the Twitter Card type to `
 ## 2025-02-14 - [Structured Data] High-Res Images for WebApplication Schema
 Switched from low-res `favicon.png` to high-res `og-image.png` in `WebApplication` schema to improve rich result appearance.
 Updated `src/pages/index/+Page.tsx` and `src/pages/wifi-qr-code/+Page.tsx` and their respective tests.
+
+## 2025-02-18 - Open Graph Image Dimensions
+**Discovery:** Social platforms (like WhatsApp, iMessage, Slack) often delay rendering link previews or display them as small thumbnails if the image dimensions are not explicitly declared in the meta tags.
+**Signal:** Added `og:image:width` and `og:image:height` tags to `src/layouts/Head.tsx`.
+**Impact:** Ensures immediate, large-card rendering on social platforms by preventing the need for the scraper to download the image to determine its size.
+**Verification:** Validated via `src/layouts/Head.test.tsx` checking for specific meta content values (1200x630).
