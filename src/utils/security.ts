@@ -35,3 +35,11 @@ export const isDangerousUrl = (url: string | undefined): boolean => {
 export const cleanPhoneNumber = (number: string): string => {
   return number.replace(/[\s:]+/g, '');
 };
+
+/**
+ * Sanitizes input by stripping query parameters.
+ * Useful for preventing parameter injection in constructed URIs.
+ */
+export const sanitizeInput = (str: string): string => {
+  return str.split('?')[0];
+};

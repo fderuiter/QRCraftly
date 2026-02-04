@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isDangerousUrl, safeJsonLdStringify, cleanPhoneNumber } from './security';
+import { isDangerousUrl, safeJsonLdStringify, cleanPhoneNumber, sanitizeInput } from './security';
 
 describe('Security Utils', () => {
   describe('isDangerousUrl', () => {
@@ -61,6 +61,21 @@ describe('Security Utils', () => {
   describe('cleanPhoneNumber', () => {
       it('removes spaces and colons', () => {
           expect(cleanPhoneNumber('123 456:789')).toBe('123456789');
+      });
+  });
+
+  describe('sanitizeInput', () => {
+      it('strips query parameters', () => {
+          expect(sanitizeInput('test@example.com?foo=bar')).toBe('test@example.com');
+          expect(sanitizeInput('bitcoin:addr?amount=1')).toBe('bitcoin:addr');
+      });
+
+      it('returns original string if no query parameters', () => {
+          expect(sanitizeInput('test@example.com')).toBe('test@example.com');
+      });
+
+      it('returns empty string if input is empty', () => {
+          expect(sanitizeInput('')).toBe('');
       });
   });
 });
