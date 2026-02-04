@@ -1,5 +1,5 @@
 import { WifiData, EmailData, VCardData, PhoneData, SmsData, PaymentData, WifiEncryption } from '../types';
-import { isDangerousUrl, cleanPhoneNumber } from './security';
+import { isDangerousUrl, cleanPhoneNumber, sanitizeInput } from './security';
 
 /**
  * Escapes special characters for WiFi QR code string.
@@ -36,7 +36,7 @@ export const constructWifiString = (data: WifiData): string => {
  */
 export const constructEmailString = (data: EmailData): string => {
   // Sanitize email to prevent header injection (e.g. ?cc=attacker@example.com)
-  const safeEmail = data.email.split('?')[0];
+  const safeEmail = sanitizeInput(data.email);
   return `mailto:${safeEmail}?subject=${encodeURIComponent(data.subject)}&body=${encodeURIComponent(data.body)}`;
 };
 
@@ -105,7 +105,7 @@ export const constructPaymentString = (data: PaymentData): string => {
     paymentString = data.address;
   } else {
     // Sanitize address to prevent parameter injection if user accidentally pastes a full URI or malicious string
-    const safeAddress = data.address.split('?')[0];
+    const safeAddress = sanitizeInput(data.address);
     paymentString = `${data.network}:${safeAddress}`;
     const params: string[] = [];
 
