@@ -30,8 +30,10 @@ export const isDangerousUrl = (url: string | undefined): boolean => {
 };
 
 /**
- * Removes spaces and colons from a phone number string.
+ * Cleans a phone number string by removing potentially dangerous characters.
+ * Allows digits, +, -, (, ), ., *, #, and ,
+ * Strips everything else to prevent parameter injection (e.g. ?body=)
  */
 export const cleanPhoneNumber = (number: string): string => {
-  return number.replace(/[\s:]+/g, '');
+  return number.replace(/[^0-9+\-().*#,]/g, '');
 };
