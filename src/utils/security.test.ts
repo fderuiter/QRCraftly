@@ -62,5 +62,15 @@ describe('Security Utils', () => {
       it('removes spaces and colons', () => {
           expect(cleanPhoneNumber('123 456:789')).toBe('123456789');
       });
+
+      it('removes dangerous characters and non-digits', () => {
+          expect(cleanPhoneNumber('123?body=evil')).toBe('123');
+          expect(cleanPhoneNumber('123&body=evil')).toBe('123');
+          expect(cleanPhoneNumber('123#fragment')).toBe('123');
+          expect(cleanPhoneNumber('123=value')).toBe('123');
+          expect(cleanPhoneNumber('123%20encoded')).toBe('12320');
+          expect(cleanPhoneNumber('123;ext=456')).toBe('123456');
+          expect(cleanPhoneNumber('123,456')).toBe('123456');
+      });
   });
 });
