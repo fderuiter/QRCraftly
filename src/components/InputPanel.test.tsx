@@ -239,7 +239,7 @@ describe('InputPanel Component', () => {
       fireEvent.change(msgInput, { target: { value: 'Hello there' } });
       act(() => { vi.advanceTimersByTime(100); });
 
-      expect(mockOnChange).toHaveBeenLastCalledWith({ value: 'smsto:+1234567890:Hello there' });
+      expect(mockOnChange).toHaveBeenLastCalledWith({ value: 'sms:+1234567890?body=Hello%20there' });
   });
 
   it('formats vCard correctly', () => {
