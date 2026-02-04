@@ -385,7 +385,7 @@ const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) =
         ctx.fillStyle = config.fgColor;
 
         // Optimization: Batch drawing for compatible styles to reduce draw calls
-        const isBatchable = [QRStyle.STANDARD, QRStyle.MODERN, QRStyle.SWISS, QRStyle.FLUID, QRStyle.CIRCUIT].includes(config.style);
+        const isBatchable = [QRStyle.STANDARD, QRStyle.MODERN, QRStyle.SWISS, QRStyle.FLUID, QRStyle.CIRCUIT, QRStyle.HIVE, QRStyle.STARBURST].includes(config.style);
 
         if (isBatchable) {
             ctx.beginPath();
@@ -434,6 +434,14 @@ const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) =
                              if (hasTop) ctx.rect(cx - thickness/2, y, thickness, cellSize/2 + 1);
                            }
                            break;
+                       case QRStyle.HIVE:
+                           // Massive Hexagon
+                           drawPoly(ctx, cx, cy, cellSize/1.55, 6, 0, true, true);
+                           break;
+                       case QRStyle.STARBURST:
+                           // Fat star - nearly a square
+                           drawStar(ctx, cx, cy, cellSize/1.5, cellSize/2.2, 5, true, true);
+                           break;
                        case QRStyle.STANDARD:
                        default:
                            ctx.rect(Math.floor(x), Math.floor(y), Math.ceil(cellSize), Math.ceil(cellSize));
@@ -441,17 +449,9 @@ const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) =
                    }
               } else {
                   switch(config.style) {
-                      case QRStyle.HIVE:
-                        // Massive Hexagon
-                        drawPoly(ctx, cx, cy, cellSize/1.55, 6, 0, true);
-                        break;
                       case QRStyle.GRUNGE:
                         // Full size rough rect, minimal jitter
                         drawRoughRect(ctx, x, y, cellSize, cellSize);
-                        break;
-                      case QRStyle.STARBURST:
-                         // Fat star - nearly a square
-                        drawStar(ctx, cx, cy, cellSize/1.5, cellSize/2.2, 5, true);
                         break;
                   }
               }

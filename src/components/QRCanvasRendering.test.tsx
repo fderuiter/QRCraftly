@@ -225,4 +225,18 @@ describe('QRCanvas Rendering Logic Extended', () => {
          expect(mockContext.rotate).toHaveBeenCalled();
      });
   });
+
+  it('batches draw calls for HIVE style', async () => {
+      setModule(10, 10, true);
+      const config = { ...DEFAULT_CONFIG, style: QRStyle.HIVE };
+      render(<QRCanvas config={config} />);
+
+      await waitFor(() => {
+          // HIVE uses drawPoly with addToPath=true
+          // This should trigger moveTo/lineTo calls but NOT individual fills
+          expect(mockContext.moveTo).toHaveBeenCalled();
+          expect(mockContext.lineTo).toHaveBeenCalled();
+          expect(mockContext.fill).toHaveBeenCalled(); // Called once for the batch (plus eyes)
+      });
+  });
 });

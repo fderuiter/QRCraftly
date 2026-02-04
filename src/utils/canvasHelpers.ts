@@ -37,8 +37,8 @@ export const drawRoundRect = (ctx: CanvasRenderingContext2D, x: number, y: numbe
  * @param rotate Rotation angle in radians (default: 0).
  * @param fill Whether to fill the polygon (default: true).
  */
-export const drawPoly = (ctx: CanvasRenderingContext2D, x: number, y: number, r: number, sides: number, rotate: number = 0, fill: boolean = true) => {
-  ctx.beginPath();
+export const drawPoly = (ctx: CanvasRenderingContext2D, x: number, y: number, r: number, sides: number, rotate: number = 0, fill: boolean = true, addToPath: boolean = false) => {
+  if (!addToPath) ctx.beginPath();
   for (let i = 0; i < sides; i++) {
     const theta = rotate + (i * 2 * Math.PI / sides);
     const px = x + r * Math.cos(theta);
@@ -47,7 +47,9 @@ export const drawPoly = (ctx: CanvasRenderingContext2D, x: number, y: number, r:
     else ctx.lineTo(px, py);
   }
   ctx.closePath();
-  if (fill) ctx.fill(); else ctx.stroke();
+  if (!addToPath) {
+    if (fill) ctx.fill(); else ctx.stroke();
+  }
 };
 
 /**
@@ -60,13 +62,13 @@ export const drawPoly = (ctx: CanvasRenderingContext2D, x: number, y: number, r:
  * @param spikes The number of spikes.
  * @param fill Whether to fill the star (default: true).
  */
-export const drawStar = (ctx: CanvasRenderingContext2D, cx: number, cy: number, outerR: number, innerR: number, spikes: number, fill: boolean = true) => {
+export const drawStar = (ctx: CanvasRenderingContext2D, cx: number, cy: number, outerR: number, innerR: number, spikes: number, fill: boolean = true, addToPath: boolean = false) => {
   let rot = Math.PI / 2 * 3;
   let x = cx;
   let y = cy;
   const step = Math.PI / spikes;
 
-  ctx.beginPath();
+  if (!addToPath) ctx.beginPath();
   ctx.moveTo(cx, cy - outerR);
   for (let i = 0; i < spikes; i++) {
     x = cx + Math.cos(rot) * outerR;
@@ -81,7 +83,9 @@ export const drawStar = (ctx: CanvasRenderingContext2D, cx: number, cy: number, 
   }
   ctx.lineTo(cx, cy - outerR);
   ctx.closePath();
-  if (fill) ctx.fill(); else ctx.stroke();
+  if (!addToPath) {
+    if (fill) ctx.fill(); else ctx.stroke();
+  }
 };
 
 /**
