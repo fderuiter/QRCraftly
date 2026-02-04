@@ -350,4 +350,22 @@ describe('StyleControls Component', () => {
           expect(mockOnChange).toHaveBeenCalledWith({ borderLogoUrl: null });
       }
   });
+
+  it('displays formatted values for range inputs', () => {
+    // Config with specific values to verify formatting
+    const configWithValues = {
+        ...DEFAULT_CONFIG,
+        isBorderEnabled: true,
+        borderSize: 0.1, // Should render as 10%
+        logoUrl: 'data:fake',
+        logoPaddingStyle: 'square' as LogoPaddingStyle,
+        logoPadding: 2.5, // Should render as 2.5 mod
+        logoSize: 0.25 // Should render as 25%
+    };
+    render(<StyleControls config={configWithValues} onChange={mockOnChange} />);
+
+    expect(screen.getByText('10%')).toBeInTheDocument();
+    expect(screen.getByText('2.5 mod')).toBeInTheDocument();
+    expect(screen.getByText('25%')).toBeInTheDocument();
+  });
 });

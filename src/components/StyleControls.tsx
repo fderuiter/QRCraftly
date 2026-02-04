@@ -154,9 +154,14 @@ const StyleControls: React.FC<StyleControlsProps> = ({ config, onChange }) => {
                         </select>
                     </div>
                      <div>
-                        <label htmlFor="border-size" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
-                            Width
-                        </label>
+                        <div className="flex justify-between items-center mb-1">
+                            <label htmlFor="border-size" className="block text-xs font-medium text-slate-500 dark:text-slate-400">
+                                Width
+                            </label>
+                            <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500">
+                                {Math.round(config.borderSize * 100)}%
+                            </span>
+                        </div>
                         <input
                             id="border-size"
                             type="range"
@@ -454,7 +459,12 @@ const StyleControls: React.FC<StyleControlsProps> = ({ config, onChange }) => {
                 {config.logoPaddingStyle !== 'none' && (
                   <div className="grid grid-cols-2 gap-4">
                       <div>
-                          <label htmlFor="logo-padding" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Padding</label>
+                          <div className="flex justify-between items-center mb-1">
+                              <label htmlFor="logo-padding" className="block text-xs font-medium text-slate-500 dark:text-slate-400">Padding</label>
+                              <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500">
+                                  {config.logoPadding.toFixed(1)} mod
+                              </span>
+                          </div>
                            <input 
                               id="logo-padding"
                               type="range" 
@@ -478,7 +488,12 @@ const StyleControls: React.FC<StyleControlsProps> = ({ config, onChange }) => {
                 )}
 
                 <div>
-                     <label htmlFor="logo-size" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Logo Size</label>
+                     <div className="flex justify-between items-center mb-1">
+                         <label htmlFor="logo-size" className="block text-xs font-medium text-slate-500 dark:text-slate-400">Logo Size</label>
+                         <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500">
+                             {Math.round(config.logoSize * 100)}%
+                         </span>
+                     </div>
                      <input 
                         id="logo-size"
                         type="range" 
