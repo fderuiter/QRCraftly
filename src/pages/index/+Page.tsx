@@ -12,25 +12,38 @@ import { safeJsonLdStringify } from '@/utils/security';
 export default function Page() {
   const schemaData = {
     "@context": "https://schema.org",
-    "@type": "WebApplication",
-    "name": "QRCraftly",
-    "url": "https://qrcraftly.com",
-    "applicationCategory": "Utilities",
-    "operatingSystem": "All",
-    "softwareVersion": "0.1.0",
-    "image": "https://qrcraftly.com/og-image.png",
-    "datePublished": "2025-01-01",
-    "author": {
-      "@type": "Organization",
-      "name": "QRCraftly"
-    },
-    "browserRequirements": "Requires JavaScript. Works in all modern browsers.",
-    "offers": {
-      "@type": "Offer",
-      "price": "0",
-      "priceCurrency": "USD"
-    },
-    "featureList": "Custom QR Codes, WiFi QR Codes, vCard, Secure Client-Side Generation, Artistic Styles"
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": "https://qrcraftly.com/#organization",
+        "name": "QRCraftly",
+        "url": "https://qrcraftly.com",
+        "logo": "https://qrcraftly.com/favicon.png",
+        "sameAs": [
+          "https://github.com/fderuiter/QRCraftly"
+        ]
+      },
+      {
+        "@type": "WebApplication",
+        "name": "QRCraftly",
+        "url": "https://qrcraftly.com",
+        "applicationCategory": "Utilities",
+        "operatingSystem": "All",
+        "softwareVersion": "0.1.0",
+        "image": "https://qrcraftly.com/og-image.png",
+        "datePublished": "2025-01-01",
+        "author": {
+          "@id": "https://qrcraftly.com/#organization"
+        },
+        "browserRequirements": "Requires JavaScript. Works in all modern browsers.",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        },
+        "featureList": "Custom QR Codes, WiFi QR Codes, vCard, Secure Client-Side Generation, Artistic Styles"
+      }
+    ]
   };
 
   return (
