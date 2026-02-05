@@ -165,11 +165,22 @@ export interface SmsData {
 }
 
 /**
+ * Supported cryptocurrency networks for payment.
+ */
+export enum CryptoNetwork {
+  BITCOIN = 'bitcoin',
+  ETHEREUM = 'ethereum',
+  SOLANA = 'solana',
+  LITECOIN = 'litecoin',
+  CUSTOM = 'custom',
+}
+
+/**
  * Data structure for Payment information (Crypto).
  */
 export interface PaymentData {
   /** The cryptocurrency network (e.g. bitcoin, ethereum). */
-  network: string;
+  network: CryptoNetwork;
   /** The wallet address. */
   address: string;
   /** The amount to request (optional). */

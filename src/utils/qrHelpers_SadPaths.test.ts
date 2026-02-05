@@ -5,7 +5,7 @@ import {
   constructVCardString,
   constructPaymentString
 } from './qrHelpers';
-import { EmailData, VCardData, PaymentData } from '../types';
+import { EmailData, VCardData, PaymentData, CryptoNetwork } from '../types';
 
 describe('QR Helpers Sad Paths', () => {
   describe('escapeVCardString', () => {
@@ -83,7 +83,7 @@ describe('QR Helpers Sad Paths', () => {
   describe('constructPaymentString', () => {
     it('should handle parameter injection attempts in amount', () => {
       const data: PaymentData = {
-        network: 'bitcoin',
+        network: CryptoNetwork.BITCOIN,
         address: '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa',
         amount: '0.1&label=Hacked',
         label: 'Donation'

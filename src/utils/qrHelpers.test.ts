@@ -9,7 +9,7 @@ import {
   escapeWifiString,
   escapeVCardString
 } from './qrHelpers';
-import { WifiData, EmailData, VCardData, PhoneData, SmsData, PaymentData, WifiEncryption } from '../types';
+import { WifiData, EmailData, VCardData, PhoneData, SmsData, PaymentData, WifiEncryption, CryptoNetwork } from '../types';
 
 describe('QR Helpers', () => {
   describe('constructWifiString', () => {
@@ -192,7 +192,7 @@ describe('QR Helpers', () => {
   describe('constructPaymentString', () => {
     it('constructs a basic crypto URI', () => {
       const data: PaymentData = {
-        network: 'bitcoin',
+        network: CryptoNetwork.BITCOIN,
         address: '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa',
         amount: '',
         label: ''
@@ -202,7 +202,7 @@ describe('QR Helpers', () => {
 
     it('constructs a crypto URI with amount and label', () => {
       const data: PaymentData = {
-        network: 'ethereum',
+        network: CryptoNetwork.ETHEREUM,
         address: '0x123...',
         amount: '1.5',
         label: 'Payment for Services'
@@ -215,7 +215,7 @@ describe('QR Helpers', () => {
 
     it('sanitizes address input to prevent parameter injection', () => {
       const data: PaymentData = {
-        network: 'bitcoin',
+        network: CryptoNetwork.BITCOIN,
         address: '1A1...?amount=1000',
         amount: '0.1',
         label: ''
@@ -228,7 +228,7 @@ describe('QR Helpers', () => {
 
     it('encodes amount to prevent injection', () => {
         const data: PaymentData = {
-            network: 'bitcoin',
+            network: CryptoNetwork.BITCOIN,
             address: '1A1...',
             amount: '1&label=hacked',
             label: ''
@@ -240,7 +240,7 @@ describe('QR Helpers', () => {
 
     it('returns raw address for custom network', () => {
          const data: PaymentData = {
-            network: 'custom',
+            network: CryptoNetwork.CUSTOM,
             address: 'myprotocol://addr',
             amount: '10', // Should be ignored or handled by the user in the address field
             label: 'label'

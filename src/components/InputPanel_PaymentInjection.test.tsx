@@ -1,11 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { constructPaymentString } from '../utils/qrHelpers';
+import { CryptoNetwork } from '../types';
 
 describe('Payment String Construction - Injection Risks', () => {
   it('prevents parameter injection via label in Amount field', () => {
     // Attack vector: User inputs "1&label=Hacked" into amount field
     const data = {
-      network: 'bitcoin',
+      network: CryptoNetwork.BITCOIN,
       address: '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa',
       amount: '1&label=Hacked',
       label: 'Official Donation'
@@ -27,7 +28,7 @@ describe('Payment String Construction - Injection Risks', () => {
      // Attack vector: User inputs address "1A...?amount=100" and sets amount empty
      // Or user inputs address "1A...?label=Malicious"
      const data = {
-       network: 'bitcoin',
+       network: CryptoNetwork.BITCOIN,
        address: '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa?label=Evil',
        amount: '0.5',
        label: 'Good'

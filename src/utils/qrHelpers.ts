@@ -1,4 +1,4 @@
-import { WifiData, EmailData, VCardData, PhoneData, SmsData, PaymentData, WifiEncryption } from '../types';
+import { WifiData, EmailData, VCardData, PhoneData, SmsData, PaymentData, WifiEncryption, CryptoNetwork } from '../types';
 import { isDangerousUrl, cleanPhoneNumber, sanitizeInput } from './security';
 
 /**
@@ -98,7 +98,7 @@ export const constructSmsString = (data: SmsData): string => {
 export const constructPaymentString = (data: PaymentData): string => {
   let paymentString = '';
 
-  if (data.network === 'custom') {
+  if (data.network === CryptoNetwork.CUSTOM) {
     if (isDangerousUrl(data.address)) {
       return '';
     }
