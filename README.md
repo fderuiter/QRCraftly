@@ -95,7 +95,7 @@ This project enforces strict quality checks in CI. Run these locally to prevent 
 
 **Type Checking:**
 ```bash
-npx tsc --noEmit
+npm run lint
 ```
 
 **Accessibility & Contrast Check:**
@@ -110,6 +110,9 @@ npm run build
 # Check size of dist/client directory
 du -sh dist/client
 ```
+
+**Performance & SEO:**
+Lighthouse CI runs on every Pull Request to audit performance, accessibility, best practices, and SEO.
 
 ## Troubleshooting
 
