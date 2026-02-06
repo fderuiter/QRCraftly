@@ -3,9 +3,10 @@ import {
   escapeVCardString,
   constructEmailString,
   constructVCardString,
-  constructPaymentString
+  constructPaymentString,
+  constructSmsString
 } from './qrHelpers';
-import { EmailData, VCardData, PaymentData, CryptoNetwork } from '../types';
+import { EmailData, VCardData, PaymentData, CryptoNetwork, SmsData } from '../types';
 
 describe('QR Helpers Sad Paths', () => {
   describe('escapeVCardString', () => {
@@ -91,6 +92,21 @@ describe('QR Helpers Sad Paths', () => {
       const result = constructPaymentString(data);
       // Should encode the ampersand
       expect(result).toContain('amount=0.1%26label%3DHacked');
+    });
+  });
+
+  describe('constructSmsString', () => {
+    it('should prevent parameter injection in SMS number', () => {
+      const data: SmsData = {
+        number: '123?body=injected',
+        message: 'hello'
+      };
+      // If we don't sanitize the number, we get sms:123?body=injected?body=hello
+      // We expect the number to be cleaned of URI control characters
+      const result = constructSmsString(data);
+      // It should NOT contain two 'body=' params or two '?'
+      expect(result).not.toMatch(/\?.*\?/);
+      expect(result).toBe('sms:123bodyinjected?body=hello');
     });
   });
 });
