@@ -19,3 +19,7 @@
 ## 2025-02-18 - Unsupported 3-digit Hex in Color Utils
 **Discovery:** `getContrastRatio` treated valid 3-digit hex codes (e.g., `#FFF`) as invalid inputs, returning 0 contrast. This caused false positive "Low Contrast" warnings in the UI when users manually entered short hex codes.
 **Defense:** Updated `getLuminance` to expand 3-digit hex codes to 6-digit equivalents and updated `getContrastRatio` to validate and accept length-4 hex strings.
+
+## 2025-02-18 - [URI Injection in SMS/Tel Schemas]
+**Discovery:** `cleanPhoneNumber` was too permissive, allowing URI control characters (`?`, `&`, `=`) to persist. This enabled parameter injection in `sms:` and `tel:` URIs (e.g., `sms:123?body=hacked` resulting in `sms:123?body=hacked?body=hello`).
+**Defense:** Updated `cleanPhoneNumber` regex to strictly strip `?`, `&`, and `=` characters, ensuring that user input in the number field cannot alter the URI structure or inject parameters.

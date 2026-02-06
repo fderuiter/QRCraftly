@@ -62,6 +62,11 @@ describe('Security Utils', () => {
       it('removes spaces and colons', () => {
           expect(cleanPhoneNumber('123 456:789')).toBe('123456789');
       });
+
+      it('removes URI control characters', () => {
+          expect(cleanPhoneNumber('123?body=hacked')).toBe('123bodyhacked');
+          expect(cleanPhoneNumber('123&foo=bar')).toBe('123foobar');
+      });
   });
 
   describe('sanitizeInput', () => {
