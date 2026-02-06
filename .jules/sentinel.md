@@ -12,3 +12,8 @@
 **Vulnerability:** The deprecated `smsto:` scheme was used without encoding the message body, allowing injection of delimiters (like `:`) to potentially alter the target number or break the URI.
 **Learning:** `smsto:` does not have a standard way to encode bodies. The standard `sms:` scheme supports `?body=` with URL-encoded values.
 **Prevention:** Use standard URI schemes (RFC 5724 for SMS) and always `encodeURIComponent` user-supplied data in URI parameters.
+
+## 2025-02-18 - SMS/Tel Parameter Injection
+**Vulnerability:** Input fields for phone numbers (in `sms:` and `tel:` schemes) were only sanitized for whitespace and colons, allowing injection of URI delimiters (`?`, `&`) to manipulate the URI structure.
+**Learning:** Even "clean" inputs must be stripped of URI control characters (like `?`, `&`, `#`) if they are directly embedded into a URI path.
+**Prevention:** Strictly sanitize user inputs that form the path component of a URI by removing or encoding reserved URI characters that can alter the URI scheme structure.

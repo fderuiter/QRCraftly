@@ -30,10 +30,11 @@ export const isDangerousUrl = (url: string | undefined): boolean => {
 };
 
 /**
- * Removes spaces and colons from a phone number string.
+ * Removes spaces, colons, and URI control characters from a phone number string.
+ * Prevents parameter injection in sms: and tel: URIs.
  */
 export const cleanPhoneNumber = (number: string): string => {
-  return number.replace(/[\s:]+/g, '');
+  return number.replace(/[\s:?&#]+/g, '');
 };
 
 /**

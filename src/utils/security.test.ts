@@ -62,6 +62,15 @@ describe('Security Utils', () => {
       it('removes spaces and colons', () => {
           expect(cleanPhoneNumber('123 456:789')).toBe('123456789');
       });
+
+      it('removes URI control characters to prevent injection', () => {
+          expect(cleanPhoneNumber('123?body=evil')).toBe('123body=evil');
+          expect(cleanPhoneNumber('123&foo=bar')).toBe('123foo=bar');
+          // = and ; are allowed for tel: extensions
+          expect(cleanPhoneNumber('123=456')).toBe('123=456');
+          expect(cleanPhoneNumber('123#fragment')).toBe('123fragment');
+          expect(cleanPhoneNumber('123;ext=456')).toBe('123;ext=456');
+      });
   });
 
   describe('sanitizeInput', () => {
