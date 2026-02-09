@@ -38,9 +38,11 @@ export const cleanPhoneNumber = (number: string): string => {
 };
 
 /**
- * Sanitizes input by stripping query parameters.
- * Useful for preventing parameter injection in constructed URIs.
+ * Sanitizes input by stripping query parameters and control characters.
+ * Useful for preventing parameter injection in constructed URIs and header injection.
  */
 export const sanitizeInput = (str: string): string => {
-  return str.split('?')[0];
+  // Remove control characters (00-1F, 7F-9F) to prevent header injection
+  const noControl = str.replace(/[\x00-\x1F\x7F-\x9F]+/g, '');
+  return noControl.split('?')[0];
 };

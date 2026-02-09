@@ -23,3 +23,7 @@
 ## 2025-02-18 - [URI Injection in SMS/Tel Schemas]
 **Discovery:** `cleanPhoneNumber` was too permissive, allowing URI control characters (`?`, `&`, `=`) to persist. This enabled parameter injection in `sms:` and `tel:` URIs (e.g., `sms:123?body=hacked` resulting in `sms:123?body=hacked?body=hello`).
 **Defense:** Updated `cleanPhoneNumber` regex to strictly strip `?`, `&`, and `=` characters, ensuring that user input in the number field cannot alter the URI structure or inject parameters.
+
+## 2025-02-18 - [Header Injection in Email Schemas]
+**Discovery:** `constructEmailString` did not sanitize newlines from email inputs, allowing attackers to inject arbitrary headers (e.g. `cc:`) into `mailto:` links via crafted input (e.g., `user@example.com\ncc:attacker`).
+**Defense:** Updated `sanitizeInput` in `src/utils/security.ts` to strictly strip all control characters (0x00-0x1F, 0x7F-0x9F), neutralizing newline injection attacks across email and other URI schemes.
