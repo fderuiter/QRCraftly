@@ -27,3 +27,6 @@
 ## 2024-05-24 - Scrollable Sidebar Testing
 **Discovery:** Playwright's `window.scrollTo` fails to scroll elements inside a fixed sidebar with `overflow-y-auto`.
 **Defense:** Target the specific scrollable container (e.g., `.overflow-y-auto`) and scroll it directly or use `scroll_into_view_if_needed()` on the target element.
+## 2025-02-18 - [Header Injection in Email Schemas]
+**Discovery:** `constructEmailString` did not sanitize newlines from email inputs, allowing attackers to inject arbitrary headers (e.g. `cc:`) into `mailto:` links via crafted input (e.g., `user@example.com\ncc:attacker`).
+**Defense:** Updated `sanitizeInput` in `src/utils/security.ts` to strictly strip all control characters (0x00-0x1F, 0x7F-0x9F), neutralizing newline injection attacks across email and other URI schemes.
