@@ -23,3 +23,7 @@
 ## 2025-02-18 - [URI Injection in SMS/Tel Schemas]
 **Discovery:** `cleanPhoneNumber` was too permissive, allowing URI control characters (`?`, `&`, `=`) to persist. This enabled parameter injection in `sms:` and `tel:` URIs (e.g., `sms:123?body=hacked` resulting in `sms:123?body=hacked?body=hello`).
 **Defense:** Updated `cleanPhoneNumber` regex to strictly strip `?`, `&`, and `=` characters, ensuring that user input in the number field cannot alter the URI structure or inject parameters.
+
+## 2024-05-24 - Scrollable Sidebar Testing
+**Discovery:** Playwright's `window.scrollTo` fails to scroll elements inside a fixed sidebar with `overflow-y-auto`.
+**Defense:** Target the specific scrollable container (e.g., `.overflow-y-auto`) and scroll it directly or use `scroll_into_view_if_needed()` on the target element.
