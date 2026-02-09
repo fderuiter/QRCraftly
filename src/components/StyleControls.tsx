@@ -54,6 +54,49 @@ const ColorInput: React.FC<ColorInputProps> = ({
   </div>
 );
 
+interface RangeInputProps {
+  id: string;
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  step: number;
+  onChange: (value: number) => void;
+  formatValue?: (value: number) => string;
+}
+
+const RangeInput: React.FC<RangeInputProps> = ({
+  id,
+  label,
+  value,
+  min,
+  max,
+  step,
+  onChange,
+  formatValue = (v) => v.toString(),
+}) => (
+  <div>
+    <div className="flex justify-between mb-1">
+        <label htmlFor={id} className="block text-xs font-medium text-slate-500 dark:text-slate-400">
+            {label}
+        </label>
+        <span className="text-xs font-mono text-slate-600 dark:text-slate-300">
+            {formatValue(value)}
+        </span>
+    </div>
+    <input
+        id={id}
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(e) => onChange(parseFloat(e.target.value))}
+        className="w-full accent-teal-700 dark:accent-teal-500 cursor-pointer"
+    />
+  </div>
+);
+
 /**
  * A component providing UI controls for styling the QR code.
  * Allows users to change patterns, colors, and upload logos.
@@ -154,18 +197,15 @@ const StyleControls: React.FC<StyleControlsProps> = ({ config, onChange }) => {
                         </select>
                     </div>
                      <div>
-                        <label htmlFor="border-size" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
-                            Width
-                        </label>
-                        <input
+                        <RangeInput
                             id="border-size"
-                            type="range"
-                            min="0.01"
-                            max="0.15"
-                            step="0.005"
+                            label="Width"
                             value={config.borderSize}
-                            onChange={(e) => onChange({ borderSize: parseFloat(e.target.value) })}
-                            className="w-full accent-teal-700 dark:accent-teal-500"
+                            min={0.01}
+                            max={0.15}
+                            step={0.005}
+                            onChange={(val) => onChange({ borderSize: val })}
+                            formatValue={(v) => `${Math.round(v * 100)}%`}
                         />
                     </div>
                 </div>
@@ -454,16 +494,15 @@ const StyleControls: React.FC<StyleControlsProps> = ({ config, onChange }) => {
                 {config.logoPaddingStyle !== 'none' && (
                   <div className="grid grid-cols-2 gap-4">
                       <div>
-                          <label htmlFor="logo-padding" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Padding</label>
-                           <input 
+                           <RangeInput
                               id="logo-padding"
-                              type="range" 
-                              min="0" 
-                              max="4" 
-                              step="0.5"
+                              label="Padding"
                               value={config.logoPadding}
-                              onChange={(e) => onChange({ logoPadding: parseFloat(e.target.value) })}
-                              className="w-full accent-teal-700 dark:accent-teal-500"
+                              min={0}
+                              max={4}
+                              step={0.5}
+                              onChange={(val) => onChange({ logoPadding: val })}
+                              formatValue={(v) => v.toFixed(1)}
                            />
                       </div>
                       <ColorInput
@@ -478,16 +517,15 @@ const StyleControls: React.FC<StyleControlsProps> = ({ config, onChange }) => {
                 )}
 
                 <div>
-                     <label htmlFor="logo-size" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Logo Size</label>
-                     <input 
+                     <RangeInput
                         id="logo-size"
-                        type="range" 
-                        min="0.1" 
-                        max="0.35" 
-                        step="0.01"
+                        label="Logo Size"
                         value={config.logoSize}
-                        onChange={(e) => onChange({ logoSize: parseFloat(e.target.value) })}
-                        className="w-full accent-teal-700 dark:accent-teal-500"
+                        min={0.1}
+                        max={0.35}
+                        step={0.01}
+                        onChange={(val) => onChange({ logoSize: val })}
+                        formatValue={(v) => `${Math.round(v * 100)}%`}
                      />
                 </div>
             </div>
