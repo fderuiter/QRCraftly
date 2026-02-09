@@ -20,6 +20,7 @@ describe('canvasHelpers', () => {
       translate: vi.fn(),
       rotate: vi.fn(),
       fillRect: vi.fn(),
+      rect: vi.fn(),
     } as unknown as CanvasRenderingContext2D;
   });
 
@@ -66,6 +67,14 @@ describe('canvasHelpers', () => {
       expect(ctx.fill).not.toHaveBeenCalled();
       expect(ctx.stroke).toHaveBeenCalled();
     });
+
+    it('should add to path without beginPath/fill if addToPath is true', () => {
+      drawPoly(ctx, 50, 50, 20, 6, 0, true, true);
+      expect(ctx.beginPath).not.toHaveBeenCalled();
+      expect(ctx.fill).not.toHaveBeenCalled();
+      expect(ctx.moveTo).toHaveBeenCalled();
+      expect(ctx.closePath).toHaveBeenCalled();
+    });
   });
 
   describe('drawStar', () => {
@@ -88,6 +97,14 @@ describe('canvasHelpers', () => {
       expect(ctx.fill).not.toHaveBeenCalled();
       expect(ctx.stroke).toHaveBeenCalled();
     });
+
+    it('should add to path without beginPath/fill if addToPath is true', () => {
+      drawStar(ctx, 50, 50, 20, 10, 5, true, true);
+      expect(ctx.beginPath).not.toHaveBeenCalled();
+      expect(ctx.fill).not.toHaveBeenCalled();
+      expect(ctx.moveTo).toHaveBeenCalled();
+      expect(ctx.closePath).toHaveBeenCalled();
+    });
   });
 
   describe('drawRoughRect', () => {
@@ -99,6 +116,13 @@ describe('canvasHelpers', () => {
       expect(ctx.rotate).toHaveBeenCalledWith(0.02);
       expect(ctx.fillRect).toHaveBeenCalledWith(-50, -25, 100, 50); // -w/2, -h/2
       expect(ctx.restore).toHaveBeenCalled();
+    });
+
+    it('should use rect instead of fillRect if addToPath is true', () => {
+      drawRoughRect(ctx, 10, 10, 100, 50, true);
+
+      expect(ctx.fillRect).not.toHaveBeenCalled();
+      expect(ctx.rect).toHaveBeenCalledWith(-50, -25, 100, 50);
     });
   });
 
