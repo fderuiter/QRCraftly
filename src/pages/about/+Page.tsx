@@ -1,5 +1,5 @@
 
-import { Github, Shield, Database, Code, ArrowLeft, Zap } from 'lucide-react';
+import { Github, Shield, Database, Code, ArrowLeft, Zap, Wifi } from 'lucide-react';
 import { safeJsonLdStringify } from '@/utils/security';
 
 /**
@@ -129,6 +129,20 @@ export default function Page() {
             Our code is open for inspection and contribution. We believe in transparency.
           </p>
         </div>
+      </div>
+
+      <div className="mb-16 text-center">
+        <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-4">Specialized Generators</h2>
+        <p className="text-lg text-slate-600 dark:text-slate-300 max-w-2xl mx-auto mb-6">
+          Looking for a specific use case? Try our dedicated tools.
+        </p>
+        <a
+          href="/wifi-qr-code"
+          className="inline-flex items-center gap-2 px-6 py-3 bg-teal-700 text-white rounded-xl font-medium hover:bg-teal-800 transition-colors shadow-lg shadow-teal-900/20"
+        >
+          <Wifi className="w-5 h-5" />
+          Create WiFi QR Code
+        </a>
       </div>
 
       <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-8 border border-slate-200 dark:border-slate-700 text-center">
