@@ -16,19 +16,22 @@ export const escapeWifiString = (str: string | undefined): string => {
 export const constructWifiString = (data: WifiData): string => {
   const ssid = escapeWifiString(data.ssid);
   const hidden = data.hidden;
+  const parts = [
+    `T:${data.encryption}`,
+    `S:${ssid}`
+  ];
 
   if (data.encryption === WifiEncryption.WPA2_EAP) {
-    const identity = escapeWifiString(data.eapIdentity);
-    const password = escapeWifiString(data.password);
-    return `WIFI:T:${WifiEncryption.WPA2_EAP};S:${ssid};I:${identity};P:${password};H:${hidden};;`;
+    parts.push(`I:${escapeWifiString(data.eapIdentity)}`);
   }
 
-  if (data.encryption === WifiEncryption.NOPASS) {
-    return `WIFI:T:${data.encryption};S:${ssid};H:${hidden};;`;
+  if (data.encryption !== WifiEncryption.NOPASS) {
+    parts.push(`P:${escapeWifiString(data.password)}`);
   }
 
-  const password = escapeWifiString(data.password);
-  return `WIFI:T:${data.encryption};S:${ssid};P:${password};H:${hidden};;`;
+  parts.push(`H:${hidden}`);
+
+  return `WIFI:${parts.join(';')};;`;
 };
 
 /**
