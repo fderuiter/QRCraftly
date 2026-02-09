@@ -14,21 +14,22 @@ export const escapeWifiString = (str: string | undefined): string => {
  * Constructs the WiFi QR code string from the given data.
  */
 export const constructWifiString = (data: WifiData): string => {
-  const ssid = escapeWifiString(data.ssid);
-  const hidden = data.hidden;
+  const parts = [
+    `T:${data.encryption}`,
+    `S:${escapeWifiString(data.ssid)}`,
+  ];
 
   if (data.encryption === WifiEncryption.WPA2_EAP) {
-    const identity = escapeWifiString(data.eapIdentity);
-    const password = escapeWifiString(data.password);
-    return `WIFI:T:${WifiEncryption.WPA2_EAP};S:${ssid};I:${identity};P:${password};H:${hidden};;`;
+    parts.push(`I:${escapeWifiString(data.eapIdentity)}`);
   }
 
-  if (data.encryption === WifiEncryption.NOPASS) {
-    return `WIFI:T:${data.encryption};S:${ssid};H:${hidden};;`;
+  if (data.encryption !== WifiEncryption.NOPASS) {
+    parts.push(`P:${escapeWifiString(data.password)}`);
   }
 
-  const password = escapeWifiString(data.password);
-  return `WIFI:T:${data.encryption};S:${ssid};P:${password};H:${hidden};;`;
+  parts.push(`H:${data.hidden}`);
+
+  return `WIFI:${parts.join(';')};;`;
 };
 
 /**
@@ -59,20 +60,25 @@ export const escapeVCardString = (str: string | undefined): string => {
  * Constructs the vCard 3.0 string.
  */
 export const constructVCardString = (data: VCardData): string => {
-  // Escape all fields
   const lastName = escapeVCardString(data.lastName);
   const firstName = escapeVCardString(data.firstName);
-  const organization = escapeVCardString(data.organization);
-  const title = escapeVCardString(data.title);
-  const phone = escapeVCardString(data.phone);
-  const email = escapeVCardString(data.email);
   const website = isDangerousUrl(data.website) ? '' : escapeVCardString(data.website);
-  const street = escapeVCardString(data.street);
-  const city = escapeVCardString(data.city);
-  const country = escapeVCardString(data.country);
 
-  // Construct VCard 3.0 string
-  return `BEGIN:VCARD\nVERSION:3.0\nN:${lastName};${firstName};;;\nFN:${firstName} ${lastName}\nORG:${organization}\nTITLE:${title}\nTEL:${phone}\nEMAIL:${email}\nURL:${website}\nADR:;;${street};${city};;;${country}\nEND:VCARD`;
+  const parts = [
+    'BEGIN:VCARD',
+    'VERSION:3.0',
+    `N:${lastName};${firstName};;;`,
+    `FN:${firstName} ${lastName}`,
+    `ORG:${escapeVCardString(data.organization)}`,
+    `TITLE:${escapeVCardString(data.title)}`,
+    `TEL:${escapeVCardString(data.phone)}`,
+    `EMAIL:${escapeVCardString(data.email)}`,
+    `URL:${website}`,
+    `ADR:;;${escapeVCardString(data.street)};${escapeVCardString(data.city)};;;${escapeVCardString(data.country)}`,
+    'END:VCARD',
+  ];
+
+  return parts.join('\n');
 };
 
 /**
