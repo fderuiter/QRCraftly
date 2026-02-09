@@ -5,3 +5,7 @@
 ## 2024-05-23 - Accessibility roles
 **Learning:** Adding `role="menu"` and `role="menuitem"` to custom dropdowns helps screen readers understand the structure better than just a list of buttons.
 **Action:** Use these roles for custom action menus.
+
+## 2025-02-14 - Range Input Visibility
+**Learning:** Users lack context when adjusting range sliders without visible values.
+**Action:** Use a `RangeInput` component that displays the formatted value alongside the label.
