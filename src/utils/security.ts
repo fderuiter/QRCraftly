@@ -8,7 +8,17 @@ export const safeJsonLdStringify = (data: any): string => {
                              .replace(/&/g, '\\u0026');
 };
 
-const CONTROL_CHARS_REGEX = /[\x00-\x1F\x7F-\x9F\s]+/g;
+/**
+ * Regex to match all control characters (\p{C}) and separators (\p{Z}).
+ * Includes:
+ * - \p{Cc}: Control (e.g., \x00-\x1F, \x7F-\x9F)
+ * - \p{Cf}: Format (e.g., Zero Width Space \u200B, Joiners \u200C/D)
+ * - \p{Co}: Private Use
+ * - \p{Cs}: Surrogate
+ * - \p{Cn}: Unassigned
+ * - \p{Z}: Separators (Space, Line Sep, Para Sep)
+ */
+const CONTROL_CHARS_REGEX = /[\p{C}\p{Z}]+/gu;
 
 const DANGEROUS_PROTOCOLS = [
   'javascript:',
@@ -24,7 +34,7 @@ const DANGEROUS_PROTOCOLS = [
  */
 export const isDangerousUrl = (url: string | undefined): boolean => {
   if (!url) return false;
-  // Remove control characters (00-1F, 7F-9F) and whitespace globally
+  // Remove all control characters, invisible formatting, and whitespace globally
   const normalized = url.replace(CONTROL_CHARS_REGEX, '').toLowerCase();
 
   return DANGEROUS_PROTOCOLS.some(p => normalized.startsWith(p));

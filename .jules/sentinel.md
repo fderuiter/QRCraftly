@@ -12,3 +12,8 @@
 **Vulnerability:** The deprecated `smsto:` scheme was used without encoding the message body, allowing injection of delimiters (like `:`) to potentially alter the target number or break the URI.
 **Learning:** `smsto:` does not have a standard way to encode bodies. The standard `sms:` scheme supports `?body=` with URL-encoded values.
 **Prevention:** Use standard URI schemes (RFC 5724 for SMS) and always `encodeURIComponent` user-supplied data in URI parameters.
+
+## 2026-02-08 - Unicode Bypass in URL Validation
+**Vulnerability:** `isDangerousUrl` stripped ASCII control characters but failed to handle Unicode zero-width characters (e.g., `\u200B`), allowing `jav\u200Bascript:` to bypass the check while potentially executing in browsers.
+**Learning:** Standard regex character classes like `\s` or ranges `\x00-\x1F` are insufficient for security sanitization in a global context. Unicode Property Escapes (`\p{C}`, `\p{Z}`) are essential for robustly matching invisible characters.
+**Prevention:** Use `const CONTROL_CHARS_REGEX = /[\p{C}\p{Z}]+/gu;` to strip all control, format, and separator characters when normalizing strings for security checks.
