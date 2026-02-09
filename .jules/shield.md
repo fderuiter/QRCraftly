@@ -23,3 +23,7 @@
 ## 2025-02-18 - [URI Injection in SMS/Tel Schemas]
 **Discovery:** `cleanPhoneNumber` was too permissive, allowing URI control characters (`?`, `&`, `=`) to persist. This enabled parameter injection in `sms:` and `tel:` URIs (e.g., `sms:123?body=hacked` resulting in `sms:123?body=hacked?body=hello`).
 **Defense:** Updated `cleanPhoneNumber` regex to strictly strip `?`, `&`, and `=` characters, ensuring that user input in the number field cannot alter the URI structure or inject parameters.
+
+## 2025-02-18 - [Broken WiFi QR Format on Newlines]
+**Discovery:** `escapeWifiString` did not handle newline characters, causing `constructWifiString` to output multi-line strings when a password contained a newline (e.g., via copy-paste). This breaks the expected single-line format of the WiFi configuration string.
+**Defense:** Updated `escapeWifiString` to escape newlines as `\n` (literal backslash-n), ensuring the generated string remains valid and on a single line, consistent with `escapeVCardString`.

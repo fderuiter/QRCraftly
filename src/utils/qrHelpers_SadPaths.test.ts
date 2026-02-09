@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   escapeVCardString,
+  escapeWifiString,
   constructEmailString,
   constructVCardString,
   constructPaymentString,
@@ -26,6 +27,22 @@ describe('QR Helpers Sad Paths', () => {
       const input = 'Win\r\nMac\rUnix\n';
       const result = escapeVCardString(input);
       expect(result).toBe('Win\\nMac\\nUnix\\n');
+    });
+  });
+
+  describe('escapeWifiString', () => {
+    it('should escape newlines as \\n', () => {
+      const input = 'pass\nword';
+      const result = escapeWifiString(input);
+      expect(result).toBe('pass\\nword');
+    });
+
+    it('should escape newlines and other special chars correctly', () => {
+      const input = 'a;b\nc';
+      const result = escapeWifiString(input);
+      // ; -> \;
+      // \n -> \n
+      expect(result).toBe('a\\;b\\nc');
     });
   });
 

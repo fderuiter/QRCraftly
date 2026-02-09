@@ -7,7 +7,10 @@ import { isDangerousUrl, cleanPhoneNumber, sanitizeInput } from './security';
  */
 export const escapeWifiString = (str: string | undefined): string => {
   if (!str) return '';
-  return str.replace(/([\\;,":])/g, '\\$1');
+  return str
+    .replace(/\\/g, '\\\\')
+    .replace(/\r\n|\r|\n/g, '\\n')
+    .replace(/([;,":])/g, '\\$1');
 };
 
 /**
