@@ -172,10 +172,11 @@ const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) =
         }
 
         // Helper to determine if a module is an "eye"
+        const eyeEnd = 7;
+        const eyeStart2 = moduleCount - 7;
         const isEye = (row: number, col: number): boolean => {
-          if (row < 7 && col < 7) return true;
-          if (row < 7 && col >= moduleCount - 7) return true;
-          if (row >= moduleCount - 7 && col < 7) return true;
+          if (row < eyeEnd) return col < eyeEnd || col >= eyeStart2;
+          if (row >= eyeStart2) return col < eyeEnd;
           return false;
         };
 
@@ -368,17 +369,48 @@ const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) =
         const cutoutModuleSize = effectiveLogoSizeModules + (effectivePaddingModules * 2);
         const center = moduleCount / 2;
 
+        // Optimization: Pre-calculate logo bounds and radius
+        const hasLogo = !!config.logoUrl;
+        let logoMinR = 0, logoMaxR = 0, logoMinC = 0, logoMaxC = 0;
+        let logoRadiusSq = 0;
+
+        if (hasLogo) {
+             const halfSize = cutoutModuleSize / 2;
+             // Bounds in module coordinates (centered around 'center')
+             // r, c are 0-indexed integers.
+             // Logo coverage check uses center of module (c - center + 0.5)
+             // So boundaries should be adjusted to allow for that.
+             // We use a slightly generous bound to be safe, then exact check inside.
+             logoMinR = Math.floor(center - halfSize);
+             logoMaxR = Math.ceil(center + halfSize);
+             logoMinC = Math.floor(center - halfSize);
+             logoMaxC = Math.ceil(center + halfSize);
+
+             if (config.logoPaddingStyle === 'circle') {
+                 // radius is halfSize
+                 logoRadiusSq = (halfSize) * (halfSize);
+             }
+        }
+
         const isCoveredByLogo = (r: number, c: number) => {
-          if (!config.logoUrl) return false;
+          if (!hasLogo) return false;
+
+          // Fast bounding box check
+          // If the module is outside the bounding box of the logo, it's definitely not covered
+          if (r < logoMinR || r > logoMaxR || c < logoMinC || c > logoMaxC) return false;
+
+          if (config.logoPaddingStyle === 'circle') {
+            const x = c - center + 0.5;
+            const y = r - center + 0.5;
+            return (x * x + y * y) < logoRadiusSq;
+          }
+
+          // If square and inside bounds (already checked), check exact mathematical bounds
+          // The bounding box check above is integer-based and slightly loose.
           const x = c - center + 0.5;
           const y = r - center + 0.5;
-          if (config.logoPaddingStyle === 'circle') {
-            const radius = (cutoutModuleSize / 2); 
-            return (x * x + y * y) < (radius * radius);
-          } else {
-            const halfSize = (cutoutModuleSize / 2);
-            return Math.abs(x) < halfSize && Math.abs(y) < halfSize;
-          }
+          const halfSize = (cutoutModuleSize / 2);
+          return Math.abs(x) < halfSize && Math.abs(y) < halfSize;
         };
 
         // Draw Modules
@@ -395,16 +427,19 @@ const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) =
         }
 
         for (let r = 0; r < moduleCount; r++) {
+          const y = drawY + r * cellSize;
+          const cy = y + cellSize/2;
+
           for (let c = 0; c < moduleCount; c++) {
             if (isEye(r, c)) continue;
 
             if (modules.get(r, c)) {
-              if (isCoveredByLogo(r, c)) continue;
+              if (hasLogo && isCoveredByLogo(r, c)) continue;
 
               const x = drawX + c * cellSize;
-              const y = drawY + r * cellSize;
+              // y is calculated in outer loop
               const cx = x + cellSize/2;
-              const cy = y + cellSize/2;
+              // cy is calculated in outer loop
 
               if (isBatchable) {
                    switch(config.style) {
