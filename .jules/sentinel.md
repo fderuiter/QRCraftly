@@ -12,3 +12,8 @@
 **Vulnerability:** The deprecated `smsto:` scheme was used without encoding the message body, allowing injection of delimiters (like `:`) to potentially alter the target number or break the URI.
 **Learning:** `smsto:` does not have a standard way to encode bodies. The standard `sms:` scheme supports `?body=` with URL-encoded values.
 **Prevention:** Use standard URI schemes (RFC 5724 for SMS) and always `encodeURIComponent` user-supplied data in URI parameters.
+
+## 2026-02-07 - Invisible Character Filter Bypass
+**Vulnerability:** Input validation filters using standard regex whitespace (`\s`) can be bypassed using invisible Unicode characters like Zero Width Space (`\u200B`), which are ignored by some URL parsers but not matched by `\s`.
+**Learning:** `\s` in JavaScript RegExp does not include all invisible Unicode characters. Attackers can interleave `\u200B` into dangerous protocols (e.g., `java\u200Bscript:`) to evade detection while still executing in lenient contexts.
+**Prevention:** Explicitly strip a broader range of control and format characters (including `\u200B-\u200D`, `\uFEFF`) during input normalization before security checks.

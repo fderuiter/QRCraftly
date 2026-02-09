@@ -8,7 +8,9 @@ export const safeJsonLdStringify = (data: any): string => {
                              .replace(/&/g, '\\u0026');
 };
 
-const CONTROL_CHARS_REGEX = /[\x00-\x1F\x7F-\x9F\s]+/g;
+// Includes standard control chars, unicode control chars (0080-009F), whitespace,
+// and invisible chars like Zero Width Space (200B), ZWNJ (200C), ZWJ (200D), BOM (FEFF)
+const CONTROL_CHARS_REGEX = /[\x00-\x1F\x7F-\x9F\s\u200B-\u200D\uFEFF]+/g;
 
 const DANGEROUS_PROTOCOLS = [
   'javascript:',

@@ -27,6 +27,17 @@ describe('Security Utils', () => {
       expect(isDangerousUrl('\x00javascript:alert(1)')).toBe(true);
     });
 
+    it('detects zero-width characters bypass attempts', () => {
+      // Zero Width Space \u200B
+      expect(isDangerousUrl('java\u200Bscript:alert(1)')).toBe(true);
+      // Zero Width Non-Joiner \u200C
+      expect(isDangerousUrl('java\u200Cscript:alert(1)')).toBe(true);
+      // Zero Width Joiner \u200D
+      expect(isDangerousUrl('java\u200Dscript:alert(1)')).toBe(true);
+      // Zero Width No-Break Space \uFEFF
+      expect(isDangerousUrl('java\uFEFFscript:alert(1)')).toBe(true);
+    });
+
     it('allows safe protocols', () => {
       expect(isDangerousUrl('https://example.com')).toBe(false);
       expect(isDangerousUrl('http://example.com')).toBe(false);
