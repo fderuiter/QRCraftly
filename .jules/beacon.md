@@ -20,3 +20,11 @@ Updated `src/pages/index/+Page.tsx` and `src/pages/wifi-qr-code/+Page.tsx` and t
 **Discovery:** Social platforms often delay rendering link previews or fallback to smaller cards if they cannot immediately determine the image dimensions.
 **Signal:** Added explicit `og:image:width`, `og:image:height`, and `og:image:type` meta tags to `src/layouts/Head.tsx`.
 **Impact:** Ensures immediate, full-size rendering of social cards on platforms like Facebook, LinkedIn, and Discord without requiring them to download the image first.
+## 2025-05-18 - Enriching HowTo Schema
+**Signal:** Enhanced  schema on  with , , , and .
+**Impact:** Enables Rich Results in Google Search, showing time (1 min) and cost (Free) directly in snippets.
+**Verification:** Validated via JSON-LD inspection in tests and rendered HTML.
+## 2025-05-18 - Enriching HowTo Schema
+**Signal:** Enhanced `HowTo` schema on `/wifi-qr-code` with `totalTime`, `estimatedCost`, `supply`, and `tool`.
+**Impact:** Enables Rich Results in Google Search, showing time (1 min) and cost (Free) directly in snippets.
+**Verification:** Validated via JSON-LD inspection in tests and rendered HTML.
