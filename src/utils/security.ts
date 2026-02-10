@@ -36,11 +36,17 @@ const DANGEROUS_PROTOCOLS = [
   'file:',
   'data:',
   'mk:',
+  'blob:',
+  'filesystem:',
+  'jscript:',
+  'wscript:',
+  'mocha:',
+  'about:',
 ];
 
 /**
  * Checks if a URL string contains a dangerous protocol.
- * Dangerous protocols: javascript:, vbscript:, file:, data:, mk:
+ * Dangerous protocols: javascript:, vbscript:, file:, data:, mk:, blob:, filesystem:, jscript:, wscript:, mocha:, about:
  */
 export const isDangerousUrl = (url: string | undefined): boolean => {
   if (!url) return false;

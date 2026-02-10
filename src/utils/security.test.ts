@@ -38,6 +38,24 @@ describe('Security Utils', () => {
       expect(isDangerousUrl('file:///etc/passwd')).toBe(true);
     });
 
+    it('detects blob: protocol', () => {
+      expect(isDangerousUrl('blob:https://example.com/uuid')).toBe(true);
+    });
+
+    it('detects filesystem: protocol', () => {
+      expect(isDangerousUrl('filesystem:http://example.com/temporary/')).toBe(true);
+    });
+
+    it('detects legacy scripting protocols', () => {
+      expect(isDangerousUrl('jscript:alert(1)')).toBe(true);
+      expect(isDangerousUrl('wscript:alert(1)')).toBe(true);
+      expect(isDangerousUrl('mocha:alert(1)')).toBe(true);
+    });
+
+    it('detects about: protocol', () => {
+      expect(isDangerousUrl('about:blank')).toBe(true);
+    });
+
     it('detects protocols with leading whitespace or control characters', () => {
       expect(isDangerousUrl('  javascript:alert(1)')).toBe(true);
       expect(isDangerousUrl('\njavascript:alert(1)')).toBe(true);
