@@ -45,6 +45,32 @@ export default function Page() {
         "@type": "HowTo",
         "name": "How to Create a WiFi QR Code",
         "description": "Generate a QR code to share your WiFi network instantly.",
+        "totalTime": "PT1M",
+        "estimatedCost": {
+          "@type": "MonetaryAmount",
+          "currency": "USD",
+          "value": "0"
+        },
+        "supply": [
+          {
+            "@type": "HowToSupply",
+            "name": "WiFi Network Name (SSID)"
+          },
+          {
+            "@type": "HowToSupply",
+            "name": "WiFi Password"
+          },
+          {
+            "@type": "HowToSupply",
+            "name": "Encryption Type"
+          }
+        ],
+        "tool": [
+          {
+            "@type": "HowToTool",
+            "name": "QRCraftly WiFi Generator"
+          }
+        ],
         "step": [
           {
             "@type": "HowToStep",

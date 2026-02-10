@@ -42,5 +42,25 @@ describe('WiFi QR Code Page', () => {
       '@type': 'Organization',
       name: 'QRCraftly'
     });
+
+    // Check HowTo schema properties
+    const howTo = json['@graph'].find((item: any) => item['@type'] === 'HowTo');
+    expect(howTo).toBeDefined();
+    expect(howTo.totalTime).toBe('PT1M');
+    expect(howTo.estimatedCost).toEqual({
+      '@type': 'MonetaryAmount',
+      currency: 'USD',
+      value: '0'
+    });
+
+    expect(howTo.supply).toHaveLength(3);
+    expect(howTo.supply[0].name).toBe('WiFi Network Name (SSID)');
+    expect(howTo.supply[1].name).toBe('WiFi Password');
+    expect(howTo.supply[2].name).toBe('Encryption Type');
+
+    expect(howTo.tool).toHaveLength(1);
+    expect(howTo.tool[0].name).toBe('QRCraftly WiFi Generator');
+
+    expect(howTo.step).toHaveLength(4);
   });
 });
