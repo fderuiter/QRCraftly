@@ -17,3 +17,8 @@
 **Vulnerability:** Input validation filters using standard regex whitespace (`\s`) can be bypassed using invisible Unicode characters like Zero Width Space (`\u200B`), which are ignored by some URL parsers but not matched by `\s`.
 **Learning:** `\s` in JavaScript RegExp does not include all invisible Unicode characters. Attackers can interleave `\u200B` into dangerous protocols (e.g., `java\u200Bscript:`) to evade detection while still executing in lenient contexts.
 **Prevention:** Explicitly strip a broader range of control and format characters (including `\u200B-\u200D`, `\uFEFF`) during input normalization before security checks.
+
+## 2026-05-12 - Obscure Dangerous Protocols
+**Vulnerability:** Blocking only common XSS vectors (`javascript:`, `data:`, `file:`) leaves gaps for obscure or browser-specific protocols like `blob:`, `filesystem:`, or legacy scripting schemes (`jscript:`, `mocha:`).
+**Learning:** Attackers can utilize generated `blob:` URLs or legacy IE protocols to execute code or spoof content if the validation allowlist is too permissive or the blocklist is too narrow.
+**Prevention:** Maintain a comprehensive blocklist of dangerous protocols, including `blob:`, `filesystem:`, and legacy scripting schemes, to practice defense-in-depth against protocol handler abuse.
