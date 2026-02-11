@@ -107,49 +107,52 @@ export default function Page() {
         </p>
       </div>
 
-      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 mb-16">
-        <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 text-center">
-          <div className="w-12 h-12 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-xl flex items-center justify-center mx-auto mb-4">
-            <Zap className="w-6 h-6" />
+      <section className="mb-16">
+        <h2 className="sr-only">Why Choose QRCraftly?</h2>
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 text-center">
+            <div className="w-12 h-12 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-xl flex items-center justify-center mx-auto mb-4">
+              <Zap className="w-6 h-6" />
+            </div>
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">Free & No Login</h3>
+            <p className="text-slate-600 dark:text-slate-400">
+              QRCraftly is completely free to use. No sign-up, no login, and no hidden fees. Just generate your QR codes instantly.
+            </p>
           </div>
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">Free & No Login</h2>
-          <p className="text-slate-600 dark:text-slate-400">
-            QRCraftly is completely free to use. No sign-up, no login, and no hidden fees. Just generate your QR codes instantly.
-          </p>
-        </div>
 
-        <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 text-center">
-          <div className="w-12 h-12 bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-400 rounded-xl flex items-center justify-center mx-auto mb-4">
-            <Shield className="w-6 h-6" />
+          <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 text-center">
+            <div className="w-12 h-12 bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-400 rounded-xl flex items-center justify-center mx-auto mb-4">
+              <Shield className="w-6 h-6" />
+            </div>
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">No Third-Party Tracking</h3>
+            <p className="text-slate-600 dark:text-slate-400">
+              We do not use tracking pixels, cookies, or third-party analytics. We only collect basic server logs for performance and reliability.
+            </p>
           </div>
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">No Third-Party Tracking</h2>
-          <p className="text-slate-600 dark:text-slate-400">
-            We do not use tracking pixels, cookies, or third-party analytics. We only collect basic server logs for performance and reliability.
-          </p>
-        </div>
 
-        <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 text-center">
-          <div className="w-12 h-12 bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400 rounded-xl flex items-center justify-center mx-auto mb-4">
-            <Database className="w-6 h-6" />
+          <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 text-center">
+            <div className="w-12 h-12 bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400 rounded-xl flex items-center justify-center mx-auto mb-4">
+              <Database className="w-6 h-6" />
+            </div>
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">Zero Knowledge</h3>
+            <p className="text-slate-600 dark:text-slate-400">
+              We utilize a Zero Knowledge architecture. Your content is processed entirely in your browser and never transmitted to our servers.
+            </p>
           </div>
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">Zero Knowledge</h2>
-          <p className="text-slate-600 dark:text-slate-400">
-            We utilize a Zero Knowledge architecture. Your content is processed entirely in your browser and never transmitted to our servers.
-          </p>
-        </div>
 
-        <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 text-center">
-          <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 rounded-xl flex items-center justify-center mx-auto mb-4">
-            <Code className="w-6 h-6" />
+          <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 text-center">
+            <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 rounded-xl flex items-center justify-center mx-auto mb-4">
+              <Code className="w-6 h-6" />
+            </div>
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">Open Source</h3>
+            <p className="text-slate-600 dark:text-slate-400">
+              Our code is open for inspection and contribution. We believe in transparency.
+            </p>
           </div>
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">Open Source</h2>
-          <p className="text-slate-600 dark:text-slate-400">
-            Our code is open for inspection and contribution. We believe in transparency.
-          </p>
         </div>
-      </div>
+      </section>
 
-      <div className="mb-16 text-center">
+      <section className="mb-16 text-center">
         <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-4">Specialized Generators</h2>
         <p className="text-lg text-slate-600 dark:text-slate-300 max-w-2xl mx-auto mb-6">
           Looking for a specific use case? Try our dedicated tools.
@@ -161,9 +164,9 @@ export default function Page() {
           <Wifi className="w-5 h-5" />
           Create WiFi QR Code
         </a>
-      </div>
+      </section>
 
-      <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-8 border border-slate-200 dark:border-slate-700 text-center">
+      <section className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-8 border border-slate-200 dark:border-slate-700 text-center">
         <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-4">
           Open Source License
         </h2>
@@ -180,7 +183,7 @@ export default function Page() {
           <Github className="w-5 h-5" />
           View on GitHub
         </a>
-      </div>
+      </section>
     </div>
   );
 }
