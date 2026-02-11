@@ -27,3 +27,7 @@
 ## 2025-02-18 - [Header Injection in Email Schemas]
 **Discovery:** `constructEmailString` did not sanitize newlines from email inputs, allowing attackers to inject arbitrary headers (e.g. `cc:`) into `mailto:` links via crafted input (e.g., `user@example.com\ncc:attacker`).
 **Defense:** Updated `sanitizeInput` in `src/utils/security.ts` to strictly strip all control characters (0x00-0x1F, 0x7F-0x9F), neutralizing newline injection attacks across email and other URI schemes.
+
+## 2026-02-11 - Act Warnings in Canvas Tests
+**Discovery:** `QRCanvas.test.tsx` triggered multiple `act(...)` warnings because manual `img.onload` calls updated state outside the React test loop. Additionally, `QRCanvasBorder.test.tsx` used brittle `setTimeout` calls to wait for async rendering.
+**Defense:** Wrapped all manual event triggers in `act(...)` and replaced `setTimeout` with `waitFor(...)` to ensure tests are deterministic and free of console noise.
