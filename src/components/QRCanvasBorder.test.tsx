@@ -18,7 +18,7 @@
 
 
 import { describe, it, expect, vi } from 'vitest';
-import { render } from '@testing-library/react';
+import { render, waitFor } from '@testing-library/react';
 import QRCanvas from './QRCanvas';
 import { DEFAULT_CONFIG } from '../constants';
 import { QRConfig } from '../types';
@@ -69,7 +69,9 @@ describe('QRCanvas Border Rendering', () => {
 
     render(<QRCanvas config={config} size={100} />);
 
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    await waitFor(() => {
+        expect(mockContext.fillRect).toHaveBeenCalled();
+    });
 
     const fillRectCalls = mockContext.fillRect.mock.calls;
 
@@ -100,7 +102,10 @@ describe('QRCanvas Border Rendering', () => {
 
     mockContext.fillRect.mockClear();
     render(<QRCanvas config={config} size={100} />);
-    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    await waitFor(() => {
+        expect(mockContext.fillRect).toHaveBeenCalled();
+    });
 
     const fillRectCalls = mockContext.fillRect.mock.calls;
 

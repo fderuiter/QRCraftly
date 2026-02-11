@@ -17,7 +17,7 @@
 */
 
 
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, act } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach, afterEach, Mock } from 'vitest';
 import QRCanvas from './QRCanvas';
 import { DEFAULT_CONFIG } from '../constants';
@@ -211,10 +211,12 @@ describe('QRCanvas Component', () => {
     const img = createdImages[0];
     
     // Simulate load
-    if (img.onload) {
-        img.complete = true;
-        img.onload();
-    }
+    act(() => {
+      if (img.onload) {
+          img.complete = true;
+          img.onload();
+      }
+    });
 
     await waitFor(() => {
         expect(mockContext.drawImage).toHaveBeenCalled();
@@ -234,7 +236,9 @@ describe('QRCanvas Component', () => {
           expect(createdImages.length).toBeGreaterThan(0);
       });
       const img = createdImages[0];
-      if (img.onload) { img.complete = true; img.onload(); }
+      act(() => {
+        if (img.onload) { img.complete = true; img.onload(); }
+      });
 
       await waitFor(() => {
           // Should draw a circle background (arc)
@@ -256,7 +260,9 @@ describe('QRCanvas Component', () => {
           expect(createdImages.length).toBeGreaterThan(0);
       });
       const img = createdImages[0];
-      if (img.onload) { img.complete = true; img.onload(); }
+      act(() => {
+        if (img.onload) { img.complete = true; img.onload(); }
+      });
 
       await waitFor(() => {
           // Should draw a rect background
@@ -278,11 +284,15 @@ describe('QRCanvas Component', () => {
           expect(createdImages.length).toBeGreaterThan(0);
       });
       const img = createdImages[0];
-      if (img.onload) { img.complete = true; img.onload(); }
 
       // Reset mock to check for subsequent calls
       mockContext.fillRect.mockClear();
       mockContext.arc.mockClear();
+      mockContext.drawImage.mockClear();
+
+      act(() => {
+        if (img.onload) { img.complete = true; img.onload(); }
+      });
 
       await waitFor(() => {
           expect(mockContext.drawImage).toHaveBeenCalled();
@@ -313,9 +323,11 @@ describe('QRCanvas Component', () => {
       const img = createdImages[0];
 
       // Simulate error
-      if (img.onerror) {
-          img.onerror();
-      }
+      act(() => {
+        if (img.onerror) {
+            img.onerror();
+        }
+      });
 
       // Should still finish rendering but without logo
       await waitFor(() => {
@@ -385,7 +397,9 @@ describe('QRCanvas Component', () => {
     });
 
     const img = createdImages[0];
-    if (img.onload) { img.complete = true; img.onload(); }
+    act(() => {
+      if (img.onload) { img.complete = true; img.onload(); }
+    });
 
     await waitFor(() => {
         // Find the logo background call. It should be the one centered.
