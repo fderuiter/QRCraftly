@@ -28,3 +28,9 @@ Updated `src/pages/index/+Page.tsx` and `src/pages/wifi-qr-code/+Page.tsx` and t
 **Signal:** Enhanced `HowTo` schema on `/wifi-qr-code` with `totalTime`, `estimatedCost`, `supply`, and `tool`.
 **Impact:** Enables Rich Results in Google Search, showing time (1 min) and cost (Free) directly in snippets.
 **Verification:** Validated via JSON-LD inspection in tests and rendered HTML.
+
+## 2025-05-19 - [Structured Data] Dynamic BreadcrumbList Schema
+**Discovery:** Breadcrumbs were hardcoded for only two pages, leaving new or nested routes without proper navigational schema.
+**Signal:** Implemented dynamic `BreadcrumbList` generation in `src/layouts/Head.tsx` by parsing `pageContext.urlPathname`.
+**Impact:** Ensures all current and future pages (e.g. `/products/item`) automatically receive Rich Result eligibility for breadcrumbs in SERPs.
+**Verification:** Added comprehensive tests in `src/layouts/Head.test.tsx` verifying path parsing and JSON-LD structure.

@@ -76,7 +76,26 @@ export default function HeadDefault() {
   };
 
   // Breadcrumb Schema Generation
-  const breadcrumbItems = [
+  // Helper to format path segments into readable names
+  const formatPathName = (segment: string): string => {
+    // Dictionary for specific overrides
+    const overrides: Record<string, string> = {
+      'wifi-qr-code': 'WiFi QR Code',
+      'about': 'About',
+    };
+
+    if (overrides[segment]) {
+      return overrides[segment];
+    }
+
+    // Default: Capitalize each word (replace dashes with spaces)
+    return segment
+      .split('-')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  };
+
+  const breadcrumbItems: any[] = [
     {
       "@type": "ListItem",
       "position": 1,
@@ -85,21 +104,19 @@ export default function HeadDefault() {
     }
   ];
 
-  if (pageContext.urlPathname === '/about') {
+  // Dynamically generate breadcrumbs from path
+  const pathSegments = pageContext.urlPathname.split('/').filter(Boolean);
+  let currentPath = '';
+
+  pathSegments.forEach((segment: string, index: number) => {
+    currentPath += `/${segment}`;
     breadcrumbItems.push({
       "@type": "ListItem",
-      "position": 2,
-      "name": "About",
-      "item": `${DOMAIN}/about`
+      "position": index + 2, // 1 is Home, so start at 2
+      "name": formatPathName(segment),
+      "item": `${DOMAIN}${currentPath}`
     });
-  } else if (pageContext.urlPathname === '/wifi-qr-code') {
-    breadcrumbItems.push({
-      "@type": "ListItem",
-      "position": 2,
-      "name": "WiFi QR Code",
-      "item": `${DOMAIN}/wifi-qr-code`
-    });
-  }
+  });
 
   const breadcrumbSchema = {
     "@context": "https://schema.org",
