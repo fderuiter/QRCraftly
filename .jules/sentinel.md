@@ -22,3 +22,13 @@
 **Vulnerability:** Blocking only common XSS vectors (`javascript:`, `data:`, `file:`) leaves gaps for obscure or browser-specific protocols like `blob:`, `filesystem:`, or legacy scripting schemes (`jscript:`, `mocha:`).
 **Learning:** Attackers can utilize generated `blob:` URLs or legacy IE protocols to execute code or spoof content if the validation allowlist is too permissive or the blocklist is too narrow.
 **Prevention:** Maintain a comprehensive blocklist of dangerous protocols, including `blob:`, `filesystem:`, and legacy scripting schemes, to practice defense-in-depth against protocol handler abuse.
+
+## 2025-02-18 - Phone Number Sanitization Gap
+**Vulnerability:** The  function used a blacklist approach (removing only spaces and specific chars), allowing injection of letters and script tags into `tel:` and `sms:` URIs.
+**Learning:** Blacklists are prone to incompleteness. A previous memory claimed strict whitelisting was in place, but the code did not reflect this, leading to a false sense of security.
+**Prevention:** Implement strict whitelisting (`/[^0-9+*#\-().]/g`) for phone numbers and verify implementation against security claims in documentation/memory.
+
+## 2025-02-18 - Phone Number Sanitization Gap
+**Vulnerability:** The `cleanPhoneNumber` function used a blacklist approach (removing only spaces and specific chars), allowing injection of letters and script tags into `tel:` and `sms:` URIs.
+**Learning:** Blacklists are prone to incompleteness. A previous memory claimed strict whitelisting was in place, but the code did not reflect this, leading to a false sense of security.
+**Prevention:** Implement strict whitelisting (`/[^0-9+*#\-().]/g`) for phone numbers and verify implementation against security claims in documentation/memory.
