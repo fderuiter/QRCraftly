@@ -120,11 +120,12 @@ describe('QR Helpers Sad Paths', () => {
         message: 'hello'
       };
       // If we don't sanitize the number, we get sms:123?body=injected?body=hello
-      // We expect the number to be cleaned of URI control characters
+      // We expect the number to be cleaned of URI control characters AND non-phone chars
       const result = constructSmsString(data);
       // It should NOT contain two 'body=' params or two '?'
       expect(result).not.toMatch(/\?.*\?/);
-      expect(result).toBe('sms:123bodyinjected?body=hello');
+      // With strict whitelist, 'bodyinjected' is removed
+      expect(result).toBe('sms:123?body=hello');
     });
   });
 });

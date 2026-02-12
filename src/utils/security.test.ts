@@ -110,9 +110,16 @@ describe('Security Utils', () => {
           expect(cleanPhoneNumber('123 456:789')).toBe('123456789');
       });
 
-      it('removes URI control characters', () => {
-          expect(cleanPhoneNumber('123?body=hacked')).toBe('123bodyhacked');
-          expect(cleanPhoneNumber('123&foo=bar')).toBe('123foobar');
+      it('removes URI control characters and non-whitelisted chars', () => {
+          expect(cleanPhoneNumber('123?body=hacked')).toBe('123');
+          expect(cleanPhoneNumber('123&foo=bar')).toBe('123');
+      });
+
+      it('enforces strict whitelist', () => {
+         expect(cleanPhoneNumber('1-800-ABC-DEFG')).toBe('1-800--'); // Letters removed
+         expect(cleanPhoneNumber('+1 (555) 123-4567')).toBe('+1(555)123-4567');
+         expect(cleanPhoneNumber('<script>alert(1)</script>')).toBe('(1)');
+         expect(cleanPhoneNumber('123#*')).toBe('123#*');
       });
   });
 
