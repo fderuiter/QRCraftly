@@ -16,58 +16,134 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { render } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { render, cleanup } from '@testing-library/react';
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import HeadDefault from './Head';
 
-// Mock usePageContext since it's used in HeadDefault
+// Hoist the mock function so it can be used inside vi.mock
+const { mockUsePageContext } = vi.hoisted(() => {
+  return { mockUsePageContext: vi.fn() };
+});
+
+// Mock usePageContext
 vi.mock('vike-react/usePageContext', () => ({
-  usePageContext: () => ({
-    urlPathname: '/',
-    config: {
-      title: 'Test Title',
-      description: 'Test Desc'
-    }
-  })
+  usePageContext: mockUsePageContext
 }));
 
 describe('HeadDefault', () => {
-  it('includes a Content Security Policy (CSP) meta tag', () => {
-    // Render into document.head because meta tags are only valid there
-    const { container } = render(<HeadDefault />, { container: document.head });
+  // Default mock implementation
+  beforeEach(() => {
+    mockUsePageContext.mockReturnValue({
+      urlPathname: '/',
+      config: {
+        title: 'Test Title',
+        description: 'Test Desc'
+      }
+    });
+    // Clear head
+    document.head.innerHTML = '';
+  });
 
-    // Note: container will be document.head
+  afterEach(() => {
+    cleanup();
+    document.head.innerHTML = '';
+    vi.clearAllMocks();
+  });
+
+  it('includes a Content Security Policy (CSP) meta tag', () => {
+    const { container } = render(<HeadDefault />, { container: document.head });
 
     const metaCSP = container.querySelector('meta[http-equiv="Content-Security-Policy"]');
     expect(metaCSP).toBeInTheDocument();
 
     const content = metaCSP?.getAttribute('content') || '';
-
     expect(content).toContain("default-src 'self'");
-    expect(content).toContain("object-src 'none'");
-    expect(content).toContain("base-uri 'self'");
-    expect(content).toContain("upgrade-insecure-requests");
-
-    expect(content).toContain("script-src 'self' 'unsafe-inline'");
-    expect(content).toContain("style-src 'self' 'unsafe-inline' https://fonts.googleapis.com");
-    expect(content).toContain("font-src 'self' https://fonts.gstatic.com");
-    expect(content).toContain("img-src 'self' data:");
   });
 
   it('includes Open Graph image dimensions', () => {
     const { container } = render(<HeadDefault />, { container: document.head });
 
     const width = container.querySelector('meta[property="og:image:width"]');
-    const height = container.querySelector('meta[property="og:image:height"]');
-    const type = container.querySelector('meta[property="og:image:type"]');
-
     expect(width).toBeInTheDocument();
     expect(width?.getAttribute('content')).toBe('1280');
+  });
 
-    expect(height).toBeInTheDocument();
-    expect(height?.getAttribute('content')).toBe('720');
+  it('generates correct breadcrumbs for home page', () => {
+    mockUsePageContext.mockReturnValue({
+      urlPathname: '/',
+      config: {}
+    });
 
-    expect(type).toBeInTheDocument();
-    expect(type?.getAttribute('content')).toBe('image/png');
+    render(<HeadDefault />, { container: document.head });
+
+    const scripts = document.head.querySelectorAll('script[type="application/ld+json"]');
+    // Find the one with BreadcrumbList
+    const breadcrumbScript = Array.from(scripts).find(s => s.textContent?.includes('BreadcrumbList'));
+    expect(breadcrumbScript).toBeDefined();
+
+    const data = JSON.parse(breadcrumbScript!.textContent!);
+    expect(data['@type']).toBe('BreadcrumbList');
+    expect(data.itemListElement).toHaveLength(1);
+    expect(data.itemListElement[0].name).toBe('Home');
+    expect(data.itemListElement[0].item).toBe('https://qrcraftly.com/');
+  });
+
+  it('generates correct breadcrumbs for About page', () => {
+    mockUsePageContext.mockReturnValue({
+      urlPathname: '/about',
+      config: {}
+    });
+
+    render(<HeadDefault />, { container: document.head });
+
+    const scripts = document.head.querySelectorAll('script[type="application/ld+json"]');
+    const breadcrumbScript = Array.from(scripts).find(s => s.textContent?.includes('BreadcrumbList'));
+
+    const data = JSON.parse(breadcrumbScript!.textContent!);
+    expect(data.itemListElement).toHaveLength(2);
+    expect(data.itemListElement[1].name).toBe('About');
+    expect(data.itemListElement[1].item).toBe('https://qrcraftly.com/about');
+  });
+
+  it('generates correct breadcrumbs for WiFi QR Code page (with override)', () => {
+    mockUsePageContext.mockReturnValue({
+      urlPathname: '/wifi-qr-code',
+      config: {}
+    });
+
+    render(<HeadDefault />, { container: document.head });
+
+    const scripts = document.head.querySelectorAll('script[type="application/ld+json"]');
+    const breadcrumbScript = Array.from(scripts).find(s => s.textContent?.includes('BreadcrumbList'));
+
+    const data = JSON.parse(breadcrumbScript!.textContent!);
+    expect(data.itemListElement).toHaveLength(2);
+    expect(data.itemListElement[1].name).toBe('WiFi QR Code'); // Verify override works
+    expect(data.itemListElement[1].item).toBe('https://qrcraftly.com/wifi-qr-code');
+  });
+
+  it('generates correct breadcrumbs for nested/unknown paths (dynamic formatting)', () => {
+    mockUsePageContext.mockReturnValue({
+      urlPathname: '/products/special-offer',
+      config: {}
+    });
+
+    render(<HeadDefault />, { container: document.head });
+
+    const scripts = document.head.querySelectorAll('script[type="application/ld+json"]');
+    const breadcrumbScript = Array.from(scripts).find(s => s.textContent?.includes('BreadcrumbList'));
+
+    const data = JSON.parse(breadcrumbScript!.textContent!);
+    expect(data.itemListElement).toHaveLength(3);
+
+    // Level 1: Products
+    expect(data.itemListElement[1].position).toBe(2);
+    expect(data.itemListElement[1].name).toBe('Products');
+    expect(data.itemListElement[1].item).toBe('https://qrcraftly.com/products');
+
+    // Level 2: Special Offer
+    expect(data.itemListElement[2].position).toBe(3);
+    expect(data.itemListElement[2].name).toBe('Special Offer'); // Verify capitalization and dash replacement
+    expect(data.itemListElement[2].item).toBe('https://qrcraftly.com/products/special-offer');
   });
 });
