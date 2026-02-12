@@ -18,7 +18,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { QRConfig, QRStyle } from '../types';
-import { drawRoundRect, drawPoly, drawStar, drawRoughRect, drawScribble } from '../utils/canvasHelpers';
+import { drawEyePattern, drawModuleBatch, ModuleNeighbors } from '../utils/qrRenderHelpers';
 
 /**
  * Props for the QRCanvas component.
@@ -199,164 +199,6 @@ const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) =
 
         const cellSize = drawSize / moduleCount;
 
-        // --- DRAWING HELPERS ---
-
-        // Helper to punch hole with bgColor
-        const clearShape = (drawFn: () => void) => {
-            ctx.fillStyle = config.bgColor;
-            drawFn();
-            ctx.fillStyle = config.eyeColor; // Restore
-        };
-
-        const drawEyePattern = (r: number, c: number) => {
-            const x = drawX + c * cellSize;
-            const y = drawY + r * cellSize;
-            const size = 7 * cellSize;
-
-            ctx.fillStyle = config.eyeColor;
-
-            const cx = x + size / 2;
-            const cy = y + size / 2;
-
-            switch (config.style) {
-                case QRStyle.MODERN: // Rounded Squares
-                    // Frame (Less rounded for robustness)
-                    ctx.beginPath();
-                    drawRoundRect(ctx, x, y, size, size, cellSize * 1.5);
-                    ctx.fill();
-                    // Hole
-                    clearShape(() => {
-                         ctx.beginPath();
-                         drawRoundRect(ctx, x + cellSize, y + cellSize, size - 2*cellSize, size - 2*cellSize, cellSize * 0.8);
-                         ctx.fill();
-                    });
-
-                    // Eyeball (Solid Square with slight rounding)
-                    ctx.beginPath();
-                    drawRoundRect(ctx, x + 2*cellSize, y + 2*cellSize, 3*cellSize, 3*cellSize, cellSize * 0.5);
-                    ctx.fill();
-                    break;
-
-                case QRStyle.SWISS: // Swiss Dot
-                    // Frame: Standard Square with Rounded Corners (Like Modern, robust)
-                    ctx.beginPath();
-                    drawRoundRect(ctx, x, y, size, size, cellSize * 1.5);
-                    ctx.fill();
-                    // Hole
-                    clearShape(() => {
-                        ctx.beginPath();
-                        // Standard Hole (Radius 2.5, Diameter 5)
-                        drawRoundRect(ctx, x + cellSize, y + cellSize, size - 2*cellSize, size - 2*cellSize, cellSize * 0.8);
-                        ctx.fill();
-                    });
-
-                    // Eyeball: Floating Dot (Circular)
-                    ctx.beginPath();
-                    // Standard Radius 1.5 (Diameter 3)
-                    ctx.arc(cx, cy, 1.5 * cellSize, 0, Math.PI * 2);
-                    ctx.fill();
-                    break;
-
-                case QRStyle.FLUID: // Fluid
-                    // COPY OF SWISS (Proven to pass)
-                    // Frame: Standard Square with Rounded Corners
-                    ctx.beginPath();
-                    drawRoundRect(ctx, x, y, size, size, cellSize * 1.5);
-                    ctx.fill();
-
-                    clearShape(() => {
-                        ctx.beginPath();
-                        drawRoundRect(ctx, x + cellSize, y + cellSize, size - 2*cellSize, size - 2*cellSize, cellSize * 0.8);
-                        ctx.fill();
-                    });
-
-                    // Eyeball: Circular (Same as Swiss)
-                    ctx.beginPath();
-                    ctx.arc(cx, cy, 1.5 * cellSize, 0, Math.PI * 2);
-                    ctx.fill();
-                    break;
-
-                case QRStyle.CIRCUIT: // Cyber-Circuit (Brackets + Notched)
-                     // Frame: Solid box with "simulated" brackets via small white lines
-                     ctx.fillRect(x, y, size, size);
-
-                     clearShape(() => {
-                         // Standard Hole
-                         ctx.fillRect(x + cellSize, y + cellSize, size - 2*cellSize, size - 2*cellSize);
-                     });
-
-                     // Simulate brackets by drawing small white lines over the frame
-                     ctx.fillStyle = config.bgColor;
-                     const gap = cellSize * 0.5;
-                     ctx.fillRect(cx - gap/2, y, gap, cellSize * 1.1); // Top cut
-                     ctx.fillRect(cx - gap/2, y + size - cellSize*1.1, gap, cellSize*1.1); // Bottom cut
-                     ctx.fillRect(x, cy - gap/2, cellSize * 1.1, gap); // Left cut
-                     ctx.fillRect(x + size - cellSize*1.1, cy - gap/2, cellSize * 1.1, gap); // Right cut
-                     ctx.fillStyle = config.eyeColor;
-
-                     // Eyeball: Notched Square
-                     ctx.beginPath();
-                     // Standard 3x3 square
-                     ctx.rect(x + 2*cellSize, y + 2*cellSize, 3*cellSize, 3*cellSize);
-                     ctx.fill();
-                     // Add slight notch via clearing
-                     clearShape(() => {
-                        ctx.fillRect(x + 4.6*cellSize, y + 4.6*cellSize, 0.4*cellSize, 0.4*cellSize);
-                     });
-                     break;
-
-                case QRStyle.HIVE: // Hexagon
-                    // Frame: Standard Square
-                    ctx.fillRect(x, y, size, size);
-
-                    clearShape(() => {
-                        // Standard Hole
-                        ctx.fillRect(x + cellSize, y + cellSize, size - 2*cellSize, size - 2*cellSize);
-                    });
-
-                    // Eyeball: Solid Hex (This is fine usually if large enough)
-                    drawPoly(ctx, cx, cy, 1.8 * cellSize, 6, 0, true);
-                    break;
-
-                case QRStyle.GRUNGE: // Grunge
-                    // Frame
-                    drawRoughRect(ctx, x, y, size, size);
-
-                    clearShape(() => {
-                        ctx.fillRect(x + cellSize, y + cellSize, size - 2*cellSize, size - 2*cellSize);
-                    });
-
-                    // Eyeball - Solid rough polygon
-                    drawScribble(ctx, x + 2*cellSize, y + 2*cellSize, 3*cellSize);
-                    break;
-
-                case QRStyle.STARBURST:
-                     // Frame: Standard Square (Spikes on outside kill detection)
-                     ctx.fillRect(x, y, size, size);
-
-                     clearShape(() => {
-                         // Standard Hole
-                         ctx.fillRect(x + cellSize, y + cellSize, size - 2*cellSize, size - 2*cellSize);
-                     });
-
-                     // Eyeball: Star
-                     // Make it fat
-                     drawStar(ctx, cx, cy, 1.9*cellSize, 1.2*cellSize, 5, true);
-                     break;
-
-                case QRStyle.STANDARD:
-                default:
-                    // Standard
-                    ctx.fillRect(x, y, size, size);
-                    clearShape(() => {
-                         ctx.clearRect(x + cellSize, y + cellSize, size - 2*cellSize, size - 2*cellSize);
-                         ctx.fillRect(x + cellSize, y + cellSize, size - 2*cellSize, size - 2*cellSize);
-                    });
-                    ctx.fillRect(x + 2*cellSize, y + 2*cellSize, 3*cellSize, 3*cellSize);
-                    break;
-            }
-        };
-
         // Determine safe limit for logo size
         const SAFE_AREA_RATIO = (() => {
            switch(config.errorCorrectionLevel) {
@@ -425,53 +267,15 @@ const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) =
               const cy = y + cellSize/2;
 
               if (isBatchable) {
-                   switch(config.style) {
-                       case QRStyle.MODERN:
-                           drawRoundRect(ctx, x, y, cellSize, cellSize, cellSize * 0.3);
-                           break;
-                       case QRStyle.SWISS:
-                           ctx.moveTo(cx + (cellSize/2 * 1.05), cy);
-                           ctx.arc(cx, cy, cellSize/2 * 1.05, 0, Math.PI*2);
-                           break;
-                       case QRStyle.FLUID:
-                           ctx.moveTo(cx + (cellSize/2 * 1.1), cy);
-                           ctx.arc(cx, cy, cellSize/2 * 1.1, 0, Math.PI*2);
-                           break;
-                       case QRStyle.CIRCUIT:
-                           {
-                             const hasTop = r > 0 && modules.get(r-1, c) && !isCoveredByLogo(r-1, c) && !isEye(r-1, c);
-                             const hasBottom = r < moduleCount-1 && modules.get(r+1, c) && !isCoveredByLogo(r+1, c) && !isEye(r+1, c);
-                             const hasLeft = c > 0 && modules.get(r, c-1) && !isCoveredByLogo(r, c-1) && !isEye(r, c-1);
-                             const hasRight = c < moduleCount-1 && modules.get(r, c+1) && !isCoveredByLogo(r, c+1) && !isEye(r, c+1);
-
-                             // Full square with very tiny notches
-                             drawRoundRect(ctx, x, y, cellSize, cellSize, cellSize * 0.1);
-
-                             // Draw lines to neighbors
-                             const thickness = cellSize * 0.4;
-                             if (hasRight) ctx.rect(cx, cy - thickness/2, cellSize/2 + 1, thickness);
-                             if (hasBottom) ctx.rect(cx - thickness/2, cy, thickness, cellSize/2 + 1);
-                             if (hasLeft) ctx.rect(x, cy - thickness/2, cellSize/2 + 1, thickness);
-                             if (hasTop) ctx.rect(cx - thickness/2, y, thickness, cellSize/2 + 1);
-                           }
-                           break;
-                       case QRStyle.HIVE:
-                           // Massive Hexagon
-                           drawPoly(ctx, cx, cy, cellSize/1.55, 6, 0, true, true);
-                           break;
-                       case QRStyle.GRUNGE:
-                           // Full size rough rect, minimal jitter
-                           drawRoughRect(ctx, x, y, cellSize, cellSize, true);
-                           break;
-                       case QRStyle.STARBURST:
-                           // Fat star - nearly a square
-                           drawStar(ctx, cx, cy, cellSize/1.5, cellSize/2.2, 5, true, true);
-                           break;
-                       case QRStyle.STANDARD:
-                       default:
-                           ctx.rect(Math.floor(x), Math.floor(y), Math.ceil(cellSize), Math.ceil(cellSize));
-                           break;
-                   }
+                let neighbors: ModuleNeighbors | undefined;
+                if (config.style === QRStyle.CIRCUIT) {
+                  const hasTop = r > 0 && modules.get(r - 1, c) && !isCoveredByLogo(r - 1, c) && !isEye(r - 1, c);
+                  const hasBottom = r < moduleCount - 1 && modules.get(r + 1, c) && !isCoveredByLogo(r + 1, c) && !isEye(r + 1, c);
+                  const hasLeft = c > 0 && modules.get(r, c - 1) && !isCoveredByLogo(r, c - 1) && !isEye(r, c - 1);
+                  const hasRight = c < moduleCount - 1 && modules.get(r, c + 1) && !isCoveredByLogo(r, c + 1) && !isEye(r, c + 1);
+                  neighbors = { top: !!hasTop, bottom: !!hasBottom, left: !!hasLeft, right: !!hasRight };
+                }
+                drawModuleBatch(ctx, config, x, y, cellSize, neighbors);
               }
             }
           }
@@ -482,9 +286,9 @@ const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) =
         }
 
         // Draw Eyes (Last to ensure they overlap nicely if needed)
-        drawEyePattern(0, 0);
-        drawEyePattern(0, moduleCount - 7);
-        drawEyePattern(moduleCount - 7, 0);
+        drawEyePattern(ctx, config, drawX, drawY, cellSize);
+        drawEyePattern(ctx, config, drawX + (moduleCount - 7) * cellSize, drawY, cellSize);
+        drawEyePattern(ctx, config, drawX, drawY + (moduleCount - 7) * cellSize, cellSize);
 
         // Draw Center Logo
         if (config.logoUrl && logoImg) {
