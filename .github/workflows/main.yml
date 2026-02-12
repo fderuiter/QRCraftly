@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 # Cancel previous runs if a new commit is pushed to the same PR
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
