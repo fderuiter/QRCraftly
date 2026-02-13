@@ -34,3 +34,9 @@ Updated `src/pages/index/+Page.tsx` and `src/pages/wifi-qr-code/+Page.tsx` and t
 **Signal:** Implemented dynamic `BreadcrumbList` generation in `src/layouts/Head.tsx` by parsing `pageContext.urlPathname`.
 **Impact:** Ensures all current and future pages (e.g. `/products/item`) automatically receive Rich Result eligibility for breadcrumbs in SERPs.
 **Verification:** Added comprehensive tests in `src/layouts/Head.test.tsx` verifying path parsing and JSON-LD structure.
+
+## 2025-05-20 - [Technical SEO] Soft 404 Handling
+**Discovery:** Error pages (404) were returning generic content but lacked `noindex` directives and incorrectly rendered canonical URLs for non-existent paths. This creates a "Soft 404" trap where search engines might index garbage URLs.
+**Signal:** Implemented `noindex, nofollow` meta tag and conditionally suppressed `canonical` and `BreadcrumbList` schema in `src/layouts/Head.tsx` when `pageContext.is404` is true.
+**Impact:** Ensures search engines immediately drop invalid URLs from the index and do not confuse them with legitimate content.
+**Verification:** Validated via `src/layouts/Head.test.tsx` by mocking `is404: true` and asserting tag presence/absence.

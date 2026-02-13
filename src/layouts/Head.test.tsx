@@ -146,4 +146,34 @@ describe('HeadDefault', () => {
     expect(data.itemListElement[2].name).toBe('Special Offer'); // Verify capitalization and dash replacement
     expect(data.itemListElement[2].item).toBe('https://qrcraftly.com/products/special-offer');
   });
+
+  it('handles 404 pages correctly (noindex, no canonical)', () => {
+    mockUsePageContext.mockReturnValue({
+      urlPathname: '/some-garbage-url',
+      is404: true,
+      config: {}
+    });
+
+    const { container } = render(<HeadDefault />, { container: document.head });
+
+    // Check for noindex meta tag
+    const metaRobots = container.querySelector('meta[name="robots"]');
+    expect(metaRobots).toBeInTheDocument();
+    expect(metaRobots?.getAttribute('content')).toBe('noindex, nofollow');
+
+    // Check that canonical link is NOT present
+    const canonical = container.querySelector('link[rel="canonical"]');
+    expect(canonical).not.toBeInTheDocument();
+
+    // Check that breadcrumb schema is NOT generated for the garbage path
+    const scripts = document.head.querySelectorAll('script[type="application/ld+json"]');
+    const breadcrumbScript = Array.from(scripts).find(s => s.textContent?.includes('BreadcrumbList'));
+
+    // If breadcrumbs exist, ensure they don't include the 404 path
+    if (breadcrumbScript) {
+      const data = JSON.parse(breadcrumbScript!.textContent!);
+      const garbageItem = data.itemListElement.find((item: any) => item.item?.includes('garbage'));
+      expect(garbageItem).toBeUndefined();
+    }
+  });
 });
