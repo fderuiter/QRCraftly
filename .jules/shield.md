@@ -31,3 +31,7 @@
 ## 2026-02-11 - Act Warnings in Canvas Tests
 **Discovery:** `QRCanvas.test.tsx` triggered multiple `act(...)` warnings because manual `img.onload` calls updated state outside the React test loop. Additionally, `QRCanvasBorder.test.tsx` used brittle `setTimeout` calls to wait for async rendering.
 **Defense:** Wrapped all manual event triggers in `act(...)` and replaced `setTimeout` with `waitFor(...)` to ensure tests are deterministic and free of console noise.
+
+## 2026-02-18 - [Unchecked Control Characters in vCard]
+**Discovery:** `escapeVCardString` failed to sanitize non-printable ASCII control characters (like `\x00` or `\x1B`) from vCard fields, potentially corrupting QR code data or causing truncation in legacy readers.
+**Defense:** Updated `escapeVCardString` to strip all control characters in the range `\x00-\x1F` (except Tab, LF, CR) and `\x7F-\x9F` before other processing.

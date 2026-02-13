@@ -65,10 +65,12 @@ export const constructEmailString = (data: EmailData): string => {
  */
 export const escapeVCardString = (str: string | undefined): string => {
   if (!str) return '';
-  // 1. Escape backslashes first to avoid double escaping
-  // 2. Normalize and escape newlines (CRLF, CR, LF) as \n
-  // 3. Escape commas and semicolons
+  // 1. Strip non-printable control characters (except newlines and tabs)
+  // 2. Escape backslashes first to avoid double escaping
+  // 3. Normalize and escape newlines (CRLF, CR, LF) as \n
+  // 4. Escape commas and semicolons
   return str
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, '')
     .replace(/\\/g, '\\\\')
     .replace(/\r\n|\r|\n/g, '\\n')
     .replace(/([;,])/g, '\\$1');
