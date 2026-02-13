@@ -35,7 +35,8 @@ export default function HeadDefault() {
 
   const pageContext = usePageContext();
   // Vike-react exposes the resolved config in pageContext.config
-  const { config } = pageContext;
+  // Cast to any to access is404 which might not be in the default type definition
+  const { config, is404 } = pageContext as any;
 
   // Helper to resolve potentially functional config values
   const getString = (val: string | ((pageContext: any) => string | null | undefined) | undefined | null, context: any, fallback: string): string => {
@@ -143,10 +144,13 @@ export default function HeadDefault() {
 
       {/* Global Structured Data */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(schemaData) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(breadcrumbSchema) }} />
+      {!is404 && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(breadcrumbSchema) }} />}
 
-      {/* Canonical URL */}
-      <link rel="canonical" href={canonicalUrl} />
+      {/* Canonical URL - Do not render for 404 pages to avoid indexing errors */}
+      {!is404 && <link rel="canonical" href={canonicalUrl} />}
+
+      {/* Robots Meta for 404 */}
+      {is404 && <meta name="robots" content="noindex, nofollow" />}
 
       {/* Social Signals (Open Graph) */}
       <meta property="og:site_name" content="QRCraftly" />
