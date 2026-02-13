@@ -78,6 +78,23 @@ describe('StyleControls Component', () => {
     expect(mockOnChange).toHaveBeenCalledWith({ eyeColor: '#0000ff' });
   });
 
+  it('updates colors via hex text inputs', () => {
+    render(<StyleControls config={DEFAULT_CONFIG} onChange={mockOnChange} />);
+
+    const fgHexInput = screen.getByLabelText('Foreground Hex Code');
+    fireEvent.change(fgHexInput, { target: { value: '#123456' } });
+    expect(mockOnChange).toHaveBeenCalledWith({ fgColor: '#123456' });
+
+    // Test 3-digit hex expansion
+    fireEvent.change(fgHexInput, { target: { value: '#abc' } });
+    expect(mockOnChange).toHaveBeenCalledWith({ fgColor: '#aabbcc' });
+
+    // Test invalid hex (should not trigger onChange)
+    mockOnChange.mockClear();
+    fireEvent.change(fgHexInput, { target: { value: 'invalid' } });
+    expect(mockOnChange).not.toHaveBeenCalled();
+  });
+
   it('updates colors via preset buttons', async () => {
     const user = userEvent.setup();
     render(<StyleControls config={DEFAULT_CONFIG} onChange={mockOnChange} />);
