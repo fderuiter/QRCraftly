@@ -45,6 +45,19 @@ describe('QR Helpers Sad Paths', () => {
       const result = escapeVCardString(input);
       expect(result).toBe('Win\\nMac\\nUnix\\n');
     });
+
+    it('should strip non-printable control characters from vCard fields', () => {
+      // \x00 (NUL), \x07 (BEL), \x1B (ESC), \x7F (DEL)
+      const input = 'Clean\x00Text\x07With\x1BControl\x7FChars';
+      const result = escapeVCardString(input);
+      expect(result).toBe('CleanTextWithControlChars');
+    });
+
+    it('should preserve tabs but escape newlines', () => {
+      const input = 'Line\t1\nLine\t2';
+      const result = escapeVCardString(input);
+      expect(result).toBe('Line\t1\\nLine\t2');
+    });
   });
 
   describe('constructEmailString', () => {
