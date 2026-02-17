@@ -32,6 +32,12 @@ interface QRCanvasProps {
   className?: string;
 }
 
+// Define batchable styles outside the component to avoid recreation
+const BATCHABLE_STYLES = [
+    QRStyle.STANDARD, QRStyle.MODERN, QRStyle.SWISS, QRStyle.FLUID, QRStyle.CIRCUIT,
+    QRStyle.HIVE, QRStyle.GRUNGE, QRStyle.STARBURST
+];
+
 /**
  * Hook to load an image asynchronously.
  * Returns the HTMLImageElement once loaded, or null.
@@ -386,27 +392,43 @@ const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) =
         const cutoutModuleSize = effectiveLogoSizeModules + (effectivePaddingModules * 2);
         const center = moduleCount / 2;
 
-        const isCoveredByLogo = (r: number, c: number) => {
-          if (!config.logoUrl) return false;
-          const x = c - center + 0.5;
-          const y = r - center + 0.5;
-          if (config.logoPaddingStyle === 'circle') {
-            const radius = (cutoutModuleSize / 2); 
-            return (x * x + y * y) < (radius * radius);
-          } else {
-            const halfSize = (cutoutModuleSize / 2);
-            return Math.abs(x) < halfSize && Math.abs(y) < halfSize;
-          }
-        };
+        // Optimization: Pre-calculate logo bounds to avoid repetitive math in loop
+        // Standard check: Math.abs(c - center + 0.5) < halfSize && Math.abs(r - center + 0.5) < halfSize
+        let isCoveredByLogo: (r: number, c: number) => boolean = () => false;
+
+        if (config.logoUrl) {
+            const halfSize = cutoutModuleSize / 2;
+            const centerMinusHalf = center - 0.5;
+
+            // Bounds for the square area covering the logo
+            // If |x| < halfSize, then -halfSize < c - center + 0.5 < halfSize
+            // lowerBound = center - 0.5 - halfSize < c < center - 0.5 + halfSize = upperBound
+            const lowerBound = centerMinusHalf - halfSize;
+            const upperBound = centerMinusHalf + halfSize;
+
+            if (config.logoPaddingStyle === 'circle') {
+                const radiusSq = halfSize * halfSize;
+                isCoveredByLogo = (r: number, c: number) => {
+                    // Fast bounding box check first
+                    if (r <= lowerBound || r >= upperBound || c <= lowerBound || c >= upperBound) return false;
+
+                    const x = c - centerMinusHalf;
+                    const y = r - centerMinusHalf;
+                    return (x * x + y * y) < radiusSq;
+                };
+            } else {
+                // Square - simple bounds check
+                isCoveredByLogo = (r: number, c: number) => {
+                    return r > lowerBound && r < upperBound && c > lowerBound && c < upperBound;
+                };
+            }
+        }
 
         // Draw Modules
         ctx.fillStyle = config.fgColor;
 
         // Optimization: Batch drawing for compatible styles to reduce draw calls
-        const isBatchable = [
-            QRStyle.STANDARD, QRStyle.MODERN, QRStyle.SWISS, QRStyle.FLUID, QRStyle.CIRCUIT,
-            QRStyle.HIVE, QRStyle.GRUNGE, QRStyle.STARBURST
-        ].includes(config.style);
+        const isBatchable = BATCHABLE_STYLES.includes(config.style);
 
         if (isBatchable) {
             ctx.beginPath();
