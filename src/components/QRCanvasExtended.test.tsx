@@ -32,6 +32,7 @@ describe('QRCanvas Border Extended Features', () => {
     vi.clearAllMocks();
 
     mockContext = {
+      canvas: { width: 0, height: 0 },
       fillRect: vi.fn(),
       clearRect: vi.fn(),
       scale: vi.fn(),
