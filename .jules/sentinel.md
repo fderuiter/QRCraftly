@@ -32,3 +32,8 @@
 **Vulnerability:** The `cleanPhoneNumber` function used a blacklist approach (removing only spaces and specific chars), allowing injection of letters and script tags into `tel:` and `sms:` URIs.
 **Learning:** Blacklists are prone to incompleteness. A previous memory claimed strict whitelisting was in place, but the code did not reflect this, leading to a false sense of security.
 **Prevention:** Implement strict whitelisting (`/[^0-9+*#\-().]/g`) for phone numbers and verify implementation against security claims in documentation/memory.
+
+## 2026-05-25 - WiFi QR Code Malformation
+**Vulnerability:** WiFi configuration strings (MECARD-like format) can be broken or exploited by injecting non-printable control characters (like newlines or null bytes) into the SSID or password fields, which were not being stripped.
+**Learning:** While `WIFI:` URI schemes are generally parsed as text, some parsers (especially in embedded devices or mobile OS) may have undefined behavior when encountering control characters like `\0` or `\n` within fields, potentially leading to denial of service or configuration injection.
+**Prevention:** Strictly sanitize WiFi credentials by stripping all non-printable control characters (0x00-0x1F, 0x7F-0x9F) before constructing the QR payload.
