@@ -25,7 +25,11 @@ import { isDangerousUrl, cleanPhoneNumber, sanitizeInput } from './security';
  */
 export const escapeWifiString = (str: string | undefined): string => {
   if (!str) return '';
-  return str.replace(/([\\;,":])/g, '\\$1');
+  // Strip control characters including newlines (0x00-0x1F, 0x7F-0x9F)
+  // because WiFi SSIDs and passwords generally shouldn't have them,
+  // and they can break the MECARD/WIFI format or cause parsing issues.
+  const cleaned = str.replace(/[\x00-\x1F\x7F-\x9F]+/g, '');
+  return cleaned.replace(/([\\;,":])/g, '\\$1');
 };
 
 /**
