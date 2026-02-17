@@ -91,3 +91,38 @@ export function useQRInputState<T>(
 
   return [data, update] as const;
 }
+
+/**
+ * Hook to load an image asynchronously.
+ * Returns the HTMLImageElement once loaded, or null.
+ */
+export const useImage = (url: string | null) => {
+  const [image, setImage] = useState<HTMLImageElement | null>(null);
+
+  useEffect(() => {
+    if (!url) {
+      setImage(null);
+      return;
+    }
+
+    const img = new Image();
+    img.crossOrigin = 'Anonymous';
+    img.src = url;
+
+    // If image is already cached and loaded immediately
+    if (img.complete && img.naturalHeight !== 0) {
+        setImage(img);
+        return;
+    }
+
+    img.onload = () => setImage(img);
+    img.onerror = () => setImage(null);
+
+    return () => {
+      img.onload = null;
+      img.onerror = null;
+    };
+  }, [url]);
+
+  return image;
+};
