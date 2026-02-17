@@ -3,11 +3,11 @@ import { isDangerousUrl } from '../../utils/security';
 import { INPUT_CLASSES } from './styles';
 
 interface UrlInputProps {
-  value: string;
+  data: string;
   onChange: (value: string) => void;
 }
 
-export const UrlInput: React.FC<UrlInputProps> = ({ value, onChange }) => {
+export const UrlInput: React.FC<UrlInputProps> = ({ data, onChange }) => {
   return (
     <div>
       <label htmlFor="url-input" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Website URL</label>
@@ -20,13 +20,13 @@ export const UrlInput: React.FC<UrlInputProps> = ({ value, onChange }) => {
         maxLength={2048}
         placeholder="https://example.com"
         className={INPUT_CLASSES}
-        value={value}
+        value={data}
         onChange={(e) => {
           if (!isDangerousUrl(e.target.value)) {
             onChange(e.target.value);
           } else {
             // Force reset the input value to prevent the dangerous string from persisting in the DOM
-            e.target.value = value;
+            e.target.value = data;
           }
         }}
       />
