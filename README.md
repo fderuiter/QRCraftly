@@ -151,7 +151,8 @@ brew install pkg-config cairo pango libpng jpeg giflib librsvg
 
 - `src/`: Source code.
     - `components/`: Reusable React components.
-        - `InputPanel.tsx`: Handles data input for different QR types.
+        - `InputPanel.tsx`: Main controller for data input; orchestrates sub-components.
+        - `inputs/`: Modular input components for each QR type (e.g., `WifiInput`, `VCardInput`).
         - `StyleControls.tsx`: UI for customizing colors, patterns, and logos.
         - `QRCanvas.tsx`: The core component that renders the QR code using HTML5 Canvas.
         - `QRTool.tsx`: The main container component that integrates inputs, controls, and canvas.
