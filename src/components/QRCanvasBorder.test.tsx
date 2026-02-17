@@ -47,7 +47,8 @@ describe('QRCanvas Border Rendering', () => {
   const setupCanvasMock = (originalCreateElement: any) => {
     // Use the original create element to make a real canvas, then mock getContext
     const canvas = originalCreateElement.call(document, 'canvas');
-    canvas.getContext = vi.fn().mockReturnValue(mockContext);
+    const context = { ...mockContext, canvas };
+    canvas.getContext = vi.fn().mockReturnValue(context);
     return canvas;
   };
 
