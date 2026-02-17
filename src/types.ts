@@ -206,3 +206,11 @@ export interface PaymentData {
   /** Label or message for the transaction (optional). */
   label: string;
 }
+
+/**
+ * Interface representing the modules of a QR code.
+ */
+export interface QRModules {
+  size: number;
+  get(row: number, col: number): boolean;
+}
