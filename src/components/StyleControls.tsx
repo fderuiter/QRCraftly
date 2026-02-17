@@ -17,11 +17,14 @@
 */
 
 
-import React, { useRef, useMemo, useState, useEffect } from 'react';
-import { QRConfig, QRStyle, LogoPaddingStyle } from '../types';
+import React, { useRef, useMemo, useState } from 'react';
+import { QRConfig, LogoPaddingStyle } from '../types';
 import { PATTERNS, PRESET_COLORS } from '../constants';
 import { Upload, X, AlertTriangle, Circle, Square, Minus, ChevronDown, ChevronUp } from 'lucide-react';
 import { getContrastRatio } from '../utils/colorUtils';
+import { ColorInput } from './ui/ColorInput';
+import { RangeInput } from './ui/RangeInput';
+import { PatternModule } from './ui/PatternModule';
 
 /**
  * Props for the StyleControls component.
@@ -32,189 +35,6 @@ interface StyleControlsProps {
   /** Callback to update the configuration. */
   onChange: (updates: Partial<QRConfig>) => void;
 }
-
-/**
- * Helper component for color inputs to reduce duplication.
- */
-interface ColorInputProps {
-  id: string;
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  displayValue?: string;
-  sizeClass?: string;
-}
-
-const ColorInput: React.FC<ColorInputProps> = ({
-  id,
-  label,
-  value,
-  onChange,
-  displayValue,
-  sizeClass = "w-10 h-10"
-}) => {
-  const [textValue, setTextValue] = useState(displayValue || value);
-  const textValueRef = useRef(textValue);
-
-  // Keep ref updated with latest textValue for use in useEffect
-  useEffect(() => {
-    textValueRef.current = textValue;
-  }, [textValue]);
-
-  // Sync textValue when prop value changes, but avoid overwriting user input while typing
-  useEffect(() => {
-    const normalize = (val: string) => {
-      const match = val.match(/^#?([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/);
-      if (!match) return null;
-      let hex = match[1];
-      if (hex.length === 3) {
-        hex = hex.split('').map(c => c + c).join('');
-      }
-      return '#' + hex.toLowerCase();
-    };
-
-    const currentText = textValueRef.current;
-    const currentNormalized = normalize(currentText);
-    const propNormalized = normalize(displayValue || value);
-
-    // Only update textValue if the prop value is different from what we currently have
-    // (after normalization). This prevents overwriting shorthand inputs (e.g. "#123")
-    // with the expanded version ("#112233") while the user is typing.
-    if (currentNormalized !== propNormalized) {
-      setTextValue(displayValue || value);
-    }
-  }, [value, displayValue]);
-
-  const handleTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newVal = e.target.value;
-    setTextValue(newVal);
-
-    // Validate and trigger change if valid hex
-    const hexMatch = newVal.match(/^#?([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/);
-    if (hexMatch) {
-      let hex = hexMatch[1];
-      if (hex.length === 3) {
-        hex = hex.split('').map(c => c + c).join('');
-      }
-      onChange('#' + hex);
-    }
-  };
-
-  return (
-    <div>
-      <label htmlFor={id} className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
-        {label}
-      </label>
-      <div className="flex items-center gap-2">
-          <input
-            id={id}
-            type="color"
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            className={`${sizeClass} rounded cursor-pointer border-0 p-0 bg-transparent`}
-          />
-          <input
-            type="text"
-            value={textValue}
-            onChange={handleTextChange}
-            className="text-xs text-slate-600 dark:text-slate-300 font-mono bg-transparent border border-transparent hover:border-slate-300 focus:border-teal-500 rounded px-1 py-0.5 w-24 outline-none transition-colors"
-            aria-label={`${label} Hex Code`}
-          />
-      </div>
-    </div>
-  );
-};
-
-/**
- * Helper component for range inputs to display current value.
- */
-interface RangeInputProps {
-  id: string;
-  label: string;
-  value: number;
-  onChange: (value: number) => void;
-  min: number;
-  max: number;
-  step: number;
-  formatValue?: (value: number) => string;
-}
-
-const RangeInput: React.FC<RangeInputProps> = ({
-  id,
-  label,
-  value,
-  onChange,
-  min,
-  max,
-  step,
-  formatValue = (val) => val.toString(),
-}) => (
-  <div>
-    <div className="flex justify-between items-center mb-1">
-      <label htmlFor={id} className="block text-xs font-medium text-slate-500 dark:text-slate-400">
-        {label}
-      </label>
-      <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">
-        {formatValue(value)}
-      </span>
-    </div>
-    <input
-      id={id}
-      type="range"
-      min={min}
-      max={max}
-      step={step}
-      value={value}
-      onChange={(e) => onChange(parseFloat(e.target.value))}
-      className="w-full accent-teal-700 dark:accent-teal-500 cursor-pointer"
-    />
-  </div>
-);
-
-/**
- * Helper component for rendering pattern preview modules.
- */
-const PatternModule: React.FC<{ style: QRStyle }> = ({ style }) => {
-  if (style === QRStyle.STARBURST) {
-    return (
-      <div className="flex items-center justify-center">
-        <svg viewBox="0 0 24 24" fill="currentColor" className="w-full h-full">
-          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-        </svg>
-      </div>
-    );
-  }
-  if (style === QRStyle.HIVE) {
-    // Hexagon clip path
-    return (
-      <div className="flex items-center justify-center bg-current" style={{ clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)' }} />
-    );
-  }
-  if (style === QRStyle.SWISS) {
-    return <div className="bg-current rounded-full" />;
-  }
-  if (style === QRStyle.MODERN) {
-    return <div className="bg-current rounded-sm" />;
-  }
-  if (style === QRStyle.FLUID) {
-    return <div className="bg-current rounded-lg" style={{ borderRadius: '50%' }} />;
-  }
-  if (style === QRStyle.CIRCUIT) {
-    return (
-      <div className="relative w-full h-full bg-transparent flex items-center justify-center">
-        <div className="w-1.5 h-1.5 bg-current rounded-full" />
-        <div className="absolute inset-0 border border-current opacity-50" />
-      </div>
-    );
-  }
-  if (style === QRStyle.GRUNGE) {
-    return <div className="bg-current" style={{ clipPath: 'polygon(10% 0, 100% 10%, 90% 100%, 0 90%)' }} />;
-  }
-  // Standard and others
-  return (
-    <div className="bg-current" />
-  );
-};
 
 /**
  * A component providing UI controls for styling the QR code.
