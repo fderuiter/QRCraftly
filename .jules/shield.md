@@ -35,3 +35,7 @@
 ## 2026-02-18 - [Unchecked Control Characters in vCard]
 **Discovery:** `escapeVCardString` failed to sanitize non-printable ASCII control characters (like `\x00` or `\x1B`) from vCard fields, potentially corrupting QR code data or causing truncation in legacy readers.
 **Defense:** Updated `escapeVCardString` to strip all control characters in the range `\x00-\x1F` (except Tab, LF, CR) and `\x7F-\x9F` before other processing.
+
+## 2026-02-18 - [Uncovered Dangerous Custom Payment URI]
+**Discovery:** `constructPaymentString` contained logic to block dangerous URLs for custom networks, but this specific security-critical branch was completely untested, creating a false sense of security.
+**Defense:** Added a specific "Sad Path" test case to `src/utils/qrHelpers.test.ts` to explicitly verify that dangerous custom URIs (like `javascript:`) are rejected.

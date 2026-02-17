@@ -266,6 +266,16 @@ describe('QR Helpers', () => {
         // For custom, it just returns the address field as is
         expect(constructPaymentString(data)).toBe('myprotocol://addr');
     });
+
+    it('returns empty string for dangerous custom network address', () => {
+      const data: PaymentData = {
+        network: CryptoNetwork.CUSTOM,
+        address: 'javascript:alert(1)',
+        amount: '10',
+        label: 'label'
+      };
+      expect(constructPaymentString(data)).toBe('');
+    });
   });
 
   describe('escapeWifiString', () => {
