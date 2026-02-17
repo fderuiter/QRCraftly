@@ -30,6 +30,11 @@ export const safeJsonLdStringify = (data: any): string => {
 // and invisible chars like Zero Width Space (200B), ZWNJ (200C), ZWJ (200D), BOM (FEFF)
 const CONTROL_CHARS_REGEX = /[\x00-\x1F\x7F-\x9F\s\u200B-\u200D\uFEFF]+/g;
 
+// Matches C0/C1 control chars, unicode format chars (200B-200D, FEFF),
+// and line/paragraph separators (2028, 2029).
+// Does NOT match standard whitespace (space).
+export const REGEX_STRICT_CONTROL_CHARS = /[\x00-\x1F\x7F-\x9F\u200B-\u200D\uFEFF\u2028\u2029]+/g;
+
 const DANGEROUS_PROTOCOLS = [
   'javascript:',
   'vbscript:',
@@ -69,7 +74,7 @@ export const cleanPhoneNumber = (number: string): string => {
  * Useful for preventing parameter injection in constructed URIs and header injection.
  */
 export const sanitizeInput = (str: string): string => {
-  // Remove control characters (00-1F, 7F-9F) to prevent header injection
-  const noControl = str.replace(/[\x00-\x1F\x7F-\x9F]+/g, '');
+  // Remove control characters (00-1F, 7F-9F) and invisible chars to prevent header/parameter injection
+  const noControl = str.replace(REGEX_STRICT_CONTROL_CHARS, '');
   return noControl.split('?')[0];
 };

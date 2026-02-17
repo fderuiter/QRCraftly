@@ -17,7 +17,7 @@
 */
 
 import { WifiData, EmailData, VCardData, PhoneData, SmsData, PaymentData, WifiEncryption, CryptoNetwork } from '../types';
-import { isDangerousUrl, cleanPhoneNumber, sanitizeInput } from './security';
+import { isDangerousUrl, cleanPhoneNumber, sanitizeInput, REGEX_STRICT_CONTROL_CHARS } from './security';
 
 /**
  * Escapes special characters for WiFi QR code string.
@@ -25,10 +25,10 @@ import { isDangerousUrl, cleanPhoneNumber, sanitizeInput } from './security';
  */
 export const escapeWifiString = (str: string | undefined): string => {
   if (!str) return '';
-  // Strip control characters including newlines (0x00-0x1F, 0x7F-0x9F)
+  // Strip control characters including newlines (0x00-0x1F, 0x7F-0x9F) and invisible chars
   // because WiFi SSIDs and passwords generally shouldn't have them,
   // and they can break the MECARD/WIFI format or cause parsing issues.
-  const cleaned = str.replace(/[\x00-\x1F\x7F-\x9F]+/g, '');
+  const cleaned = str.replace(REGEX_STRICT_CONTROL_CHARS, '');
   return cleaned.replace(/([\\;,":])/g, '\\$1');
 };
 
@@ -69,12 +69,13 @@ export const constructEmailString = (data: EmailData): string => {
  */
 export const escapeVCardString = (str: string | undefined): string => {
   if (!str) return '';
-  // 1. Strip non-printable control characters (except newlines and tabs)
+  // 1. Strip non-printable control characters (except newlines and tabs) and invisible chars
   // 2. Escape backslashes first to avoid double escaping
   // 3. Normalize and escape newlines (CRLF, CR, LF) as \n
   // 4. Escape commas and semicolons
   return str
     .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, '')
+    .replace(/[\u200B-\u200D\uFEFF\u2028\u2029]/g, '')
     .replace(/\\/g, '\\\\')
     .replace(/\r\n|\r|\n/g, '\\n')
     .replace(/([;,])/g, '\\$1');
