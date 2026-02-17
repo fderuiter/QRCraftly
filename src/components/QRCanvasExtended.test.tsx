@@ -17,7 +17,7 @@
 */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, waitFor } from '@testing-library/react';
+import { render, waitFor, act } from '@testing-library/react';
 import QRCanvas from './QRCanvas';
 import { DEFAULT_CONFIG } from '../constants';
 import { QRConfig } from '../types';
@@ -27,6 +27,7 @@ const originalImage = window.Image;
 
 describe('QRCanvas Border Extended Features', () => {
   let mockContext: any;
+  let createdImages: any[];
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -53,9 +54,13 @@ describe('QRCanvas Border Extended Features', () => {
       setLineDash: vi.fn(),
       fillText: vi.fn(),
       measureText: vi.fn().mockReturnValue({ width: 10 }),
+      canvas: { width: 0, height: 0 }, // Added mock canvas property
       font: '',
       textAlign: '',
       textBaseline: '',
+      fillStyle: '',
+      strokeStyle: '',
+      lineWidth: 0,
     };
 
     // Spy on getContext to return our mock context
@@ -66,6 +71,7 @@ describe('QRCanvas Border Extended Features', () => {
       return null;
     });
 
+    createdImages = [];
     // Mock Image to simulate loading
     class MockImage {
       onload: (() => void) | null = null;
@@ -74,13 +80,7 @@ describe('QRCanvas Border Extended Features', () => {
       complete = false;
       crossOrigin = '';
       constructor() {
-        // Simulate async loading with a small delay
-        setTimeout(() => {
-          if (this.onload) {
-            this.complete = true;
-            this.onload();
-          }
-        }, 10);
+        createdImages.push(this);
       }
     }
     window.Image = MockImage as any;
@@ -103,7 +103,9 @@ describe('QRCanvas Border Extended Features', () => {
     render(<QRCanvas config={config} size={100} />);
 
     await waitFor(() => {
-      expect(mockContext.setLineDash).toHaveBeenCalled();
+      // It might be called multiple times, we just need to ensure it's called
+      // We expect setLineDash to be called with non-empty array for dashed
+      expect(mockContext.setLineDash).toHaveBeenCalledWith(expect.arrayContaining([expect.any(Number), expect.any(Number)]));
       expect(mockContext.strokeRect).toHaveBeenCalled();
     });
   });
@@ -133,6 +135,22 @@ describe('QRCanvas Border Extended Features', () => {
     };
 
     render(<QRCanvas config={config} size={100} />);
+
+    // Trigger image load manually
+    await waitFor(() => {
+        expect(createdImages.length).toBeGreaterThan(0);
+    });
+
+    // Find the border logo image (assuming it's one of them)
+    // Actually we can just trigger all
+    act(() => {
+        createdImages.forEach(img => {
+            if (img.onload) {
+                img.complete = true;
+                img.onload();
+            }
+        });
+    });
 
     // Wait for image to load and draw
     await waitFor(() => {
