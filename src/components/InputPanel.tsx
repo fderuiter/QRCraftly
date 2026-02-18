@@ -17,26 +17,9 @@
 */
 
 import React from 'react';
-import { QRConfig, QRType, WifiData, EmailData, VCardData, PhoneData, SmsData, PaymentData, WifiEncryption, CryptoNetwork } from '../types';
-import {
-  constructWifiString,
-  constructEmailString,
-  constructVCardString,
-  constructPhoneString,
-  constructSmsString,
-  constructPaymentString
-} from '../utils/qrHelpers';
-import { useQRInputState } from '../utils/hooks';
-
+import { QRConfig } from '../types';
 import { TypeSelector } from './inputs/TypeSelector';
-import { UrlInput } from './inputs/UrlInput';
-import { TextInput } from './inputs/TextInput';
-import { WifiInput } from './inputs/WifiInput';
-import { EmailInput } from './inputs/EmailInput';
-import { VCardInput } from './inputs/VCardInput';
-import { PhoneInput } from './inputs/PhoneInput';
-import { SmsInput } from './inputs/SmsInput';
-import { PaymentInput } from './inputs/PaymentInput';
+import { useInputLogic } from './inputs/useInputLogic';
 
 /**
  * Props for the InputPanel component.
@@ -59,42 +42,7 @@ interface InputPanelProps {
  * @returns The InputPanel component.
  */
 const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
-  // We keep the state here to preserve data when switching types
-  const [wifiData, handleWifiChange] = useQRInputState<WifiData>(
-    { ssid: '', password: '', encryption: WifiEncryption.WPA, hidden: false, eapIdentity: '' },
-    constructWifiString,
-    onChange
-  );
-
-  const [emailData, handleEmailChange] = useQRInputState<EmailData>(
-    { email: '', subject: '', body: '' },
-    constructEmailString,
-    onChange
-  );
-
-  const [vCardData, handleVCardChange] = useQRInputState<VCardData>(
-    { firstName: '', lastName: '', organization: '', title: '', phone: '', email: '', website: '', street: '', city: '', country: '' },
-    constructVCardString,
-    onChange
-  );
-
-  const [phoneData, handlePhoneChange] = useQRInputState<PhoneData>(
-    { number: '' },
-    constructPhoneString,
-    onChange
-  );
-
-  const [smsData, handleSmsChange] = useQRInputState<SmsData>(
-    { number: '', message: '' },
-    constructSmsString,
-    onChange
-  );
-
-  const [paymentData, handlePaymentChange] = useQRInputState<PaymentData>(
-    { network: CryptoNetwork.BITCOIN, address: '', amount: '', label: '' },
-    constructPaymentString,
-    onChange
-  );
+  const { InputComponent, inputProps } = useInputLogic(config, onChange);
 
   return (
     <div className="space-y-6">
@@ -106,60 +54,8 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
 
       {/* Inputs */}
       <div className="space-y-4">
-        {config.type === QRType.URL && (
-          <UrlInput
-            value={config.value}
-            onChange={(val) => onChange({ value: val })}
-          />
-        )}
-
-        {config.type === QRType.TEXT && (
-          <TextInput
-            value={config.value}
-            onChange={(val) => onChange({ value: val })}
-          />
-        )}
-
-        {config.type === QRType.WIFI && (
-          <WifiInput
-            data={wifiData}
-            onChange={handleWifiChange}
-          />
-        )}
-
-        {config.type === QRType.EMAIL && (
-          <EmailInput
-            data={emailData}
-            onChange={handleEmailChange}
-          />
-        )}
-
-        {config.type === QRType.PAYMENT && (
-          <PaymentInput
-            data={paymentData}
-            onChange={handlePaymentChange}
-          />
-        )}
-
-        {config.type === QRType.VCARD && (
-          <VCardInput
-            data={vCardData}
-            onChange={handleVCardChange}
-          />
-        )}
-
-        {config.type === QRType.PHONE && (
-          <PhoneInput
-            data={phoneData}
-            onChange={handlePhoneChange}
-          />
-        )}
-
-        {config.type === QRType.SMS && (
-          <SmsInput
-            data={smsData}
-            onChange={handleSmsChange}
-          />
+        {InputComponent && (
+          <InputComponent {...inputProps} />
         )}
       </div>
     </div>
