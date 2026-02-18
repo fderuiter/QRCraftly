@@ -39,3 +39,7 @@
 ## 2026-02-18 - [Uncovered Dangerous Custom Payment URI]
 **Discovery:** `constructPaymentString` contained logic to block dangerous URLs for custom networks, but this specific security-critical branch was completely untested, creating a false sense of security.
 **Defense:** Added a specific "Sad Path" test case to `src/utils/qrHelpers.test.ts` to explicitly verify that dangerous custom URIs (like `javascript:`) are rejected.
+
+## 2026-02-18 - [Missing Tests for QR Logo Scaling Logic]
+**Discovery:** Critical logic in `getLogoMetrics` for scaling down logos based on error correction level was completely untested. This could lead to unscannable QR codes if the logic was broken or modified without awareness.
+**Defense:** Created `src/utils/qr-renderers/utils.test.ts` to strictly verify logo scaling behavior across all error correction levels and padding styles.
