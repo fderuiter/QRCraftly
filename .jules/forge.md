@@ -12,3 +12,8 @@ Consequence: Drastically reduced cognitive load (main file < 60 lines). Each sty
 Context: `src/utils/qrRenderer.ts` was a "God Function" (`drawQR`) handling complex logic for layout, borders, modules, eyes, and logos in a single procedural flow. This violated SRP and made extending styles risky.
 Decision: Decomposed `drawQR` into specialized render functions (`renderBorder`, `renderModules`, `renderEyes`, `renderLogo`) located in `src/utils/qr-renderers/`. The main function now acts purely as an orchestrator.
 Consequence: Drastically reduced cognitive load and cyclomatic complexity. Future style additions (e.g., new eye patterns) can be done in isolated files without touching the main rendering loop.
+
+## 2025-05-21 - Input Logic Extraction
+Context: `InputPanel.tsx` contained significant state management logic for 8 input types, mixing UI rendering with complex state initialization and updates.
+Decision: Extracted the state management and component selection logic into a custom hook `useInputLogic`.
+Consequence: `InputPanel.tsx` is now a pure presentational component. The logic for input handling is encapsulated, reducing cognitive load and making it easier to test or modify input behaviors in isolation.
