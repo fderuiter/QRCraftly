@@ -101,7 +101,7 @@ export default function QRTool({ initialConfig, title }: { initialConfig?: Parti
     <div className={`${isDarkMode ? 'dark' : ''} h-full w-full`}>
       <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col-reverse md:flex-row transition-colors duration-300">
         {/* Sidebar Controls */}
-        <div className="w-full md:w-[480px] bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 h-auto md:h-screen overflow-y-auto flex flex-col shadow-xl z-10 transition-colors duration-300">
+        <aside className="w-full md:w-[480px] bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 h-auto md:h-screen overflow-y-auto flex flex-col shadow-xl z-10 transition-colors duration-300">
           <div className="p-6 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 sticky top-0 z-20 flex justify-between items-center transition-colors duration-300">
             <div>
               <div className="flex items-center gap-2 text-teal-700 dark:text-teal-400 mb-1">
@@ -149,8 +149,21 @@ export default function QRTool({ initialConfig, title }: { initialConfig?: Parti
                 <div className="h-64 bg-slate-100 dark:bg-slate-800 rounded-xl animate-pulse" />
               )}
             </section>
+
+            <footer className="pt-8 mt-8 border-t border-slate-100 dark:border-slate-800">
+              <nav aria-label="Site Map">
+                <ul className="flex flex-wrap gap-4 text-sm text-slate-500 dark:text-slate-400">
+                  <li><a href="/" className="hover:text-teal-600 dark:hover:text-teal-400">Home</a></li>
+                  <li><a href="/wifi-qr-code" className="hover:text-teal-600 dark:hover:text-teal-400">WiFi QR Code</a></li>
+                  <li><a href="/about" className="hover:text-teal-600 dark:hover:text-teal-400">About</a></li>
+                </ul>
+              </nav>
+              <p className="mt-4 text-xs text-slate-500 dark:text-slate-400">
+                &copy; {new Date().getFullYear()} QRCraftly. Open Source.
+              </p>
+            </footer>
           </div>
-        </div>
+        </aside>
 
         {/* Preview Area */}
         <div className="flex-1 bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-4 md:p-8 relative overflow-hidden transition-colors duration-300">
