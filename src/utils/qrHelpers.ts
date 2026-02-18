@@ -36,20 +36,26 @@ export const escapeWifiString = (str: string | undefined): string => {
  * Constructs the WiFi QR code string from the given data.
  */
 export const constructWifiString = (data: WifiData): string => {
+  // Validate encryption type to prevent injection
+  const encryption = Object.values(WifiEncryption).includes(data.encryption)
+    ? data.encryption
+    : WifiEncryption.WPA;
+
   const parts = [
-    `T:${data.encryption}`,
+    `T:${encryption}`,
     `S:${escapeWifiString(data.ssid)}`,
   ];
 
-  if (data.encryption === WifiEncryption.WPA2_EAP) {
+  if (encryption === WifiEncryption.WPA2_EAP) {
     parts.push(`I:${escapeWifiString(data.eapIdentity)}`);
   }
 
-  if (data.encryption !== WifiEncryption.NOPASS) {
+  if (encryption !== WifiEncryption.NOPASS) {
     parts.push(`P:${escapeWifiString(data.password)}`);
   }
 
-  parts.push(`H:${data.hidden}`);
+  // Explicitly cast hidden to boolean to prevent string injection
+  parts.push(`H:${!!data.hidden}`);
 
   return `WIFI:${parts.join(';')};;`;
 };
@@ -134,6 +140,18 @@ export const constructPaymentString = (data: PaymentData): string => {
     }
     paymentString = data.address;
   } else {
+    // Ensure network is a valid known network to prevent protocol injection
+    const validNetworks = [
+      CryptoNetwork.BITCOIN,
+      CryptoNetwork.ETHEREUM,
+      CryptoNetwork.SOLANA,
+      CryptoNetwork.LITECOIN,
+    ];
+
+    if (!validNetworks.includes(data.network)) {
+      return '';
+    }
+
     // Sanitize address to prevent parameter injection if user accidentally pastes a full URI or malicious string
     const safeAddress = sanitizeInput(data.address);
     paymentString = `${data.network}:${safeAddress}`;
