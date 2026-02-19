@@ -19,7 +19,7 @@ export const EmailInput: React.FC<EmailInputProps> = ({ data, onChange }) => {
             maxLength={254}
             value={data.email}
             onChange={(e) => onChange({ email: e.target.value })}
-            size="xs"
+            fieldSize="xs"
         />
         <TextField
             id="email-subject"
@@ -28,7 +28,7 @@ export const EmailInput: React.FC<EmailInputProps> = ({ data, onChange }) => {
             maxLength={200}
             value={data.subject}
             onChange={(e) => onChange({ subject: e.target.value })}
-            size="xs"
+            fieldSize="xs"
         />
         <TextAreaField
             id="email-body"
@@ -37,7 +37,7 @@ export const EmailInput: React.FC<EmailInputProps> = ({ data, onChange }) => {
             maxLength={2000}
             value={data.body}
             onChange={(e) => onChange({ body: e.target.value })}
-            size="xs"
+            fieldSize="xs"
             showCharCount
         />
     </div>

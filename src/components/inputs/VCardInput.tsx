@@ -20,7 +20,7 @@ export const VCardInput: React.FC<VCardInputProps> = ({ data, onChange }) => {
                 maxLength={100}
                 value={data.firstName}
                 onChange={(e) => onChange({ firstName: e.target.value })}
-                size="xs"
+                fieldSize="xs"
              />
              <TextField
                 id="vcard-lastname"
@@ -30,7 +30,7 @@ export const VCardInput: React.FC<VCardInputProps> = ({ data, onChange }) => {
                 maxLength={100}
                 value={data.lastName}
                 onChange={(e) => onChange({ lastName: e.target.value })}
-                size="xs"
+                fieldSize="xs"
              />
          </div>
 
@@ -44,7 +44,7 @@ export const VCardInput: React.FC<VCardInputProps> = ({ data, onChange }) => {
                 maxLength={20}
                 value={data.phone}
                 onChange={(e) => onChange({ phone: e.target.value })}
-                size="xs"
+                fieldSize="xs"
             />
             <TextField
                 id="vcard-email"
@@ -55,7 +55,7 @@ export const VCardInput: React.FC<VCardInputProps> = ({ data, onChange }) => {
                 maxLength={254}
                 value={data.email}
                 onChange={(e) => onChange({ email: e.target.value })}
-                size="xs"
+                fieldSize="xs"
             />
          </div>
 
@@ -67,7 +67,7 @@ export const VCardInput: React.FC<VCardInputProps> = ({ data, onChange }) => {
             maxLength={100}
             value={data.organization}
             onChange={(e) => onChange({ organization: e.target.value })}
-            size="xs"
+            fieldSize="xs"
          />
 
          <TextField
@@ -78,7 +78,7 @@ export const VCardInput: React.FC<VCardInputProps> = ({ data, onChange }) => {
             maxLength={100}
             value={data.title}
             onChange={(e) => onChange({ title: e.target.value })}
-            size="xs"
+            fieldSize="xs"
          />
 
          <TextField
@@ -90,7 +90,7 @@ export const VCardInput: React.FC<VCardInputProps> = ({ data, onChange }) => {
             maxLength={2048}
             value={data.website}
             onChange={(e) => onChange({ website: e.target.value })}
-            size="xs"
+            fieldSize="xs"
          />
 
          <fieldset className="pt-2 border-t border-slate-100 dark:border-slate-800 min-w-0">
@@ -105,7 +105,7 @@ export const VCardInput: React.FC<VCardInputProps> = ({ data, onChange }) => {
                    placeholder="Street"
                    value={data.street}
                    onChange={(e) => onChange({ street: e.target.value })}
-                   size="xs"
+                   fieldSize="xs"
                 />
                 <div className="grid grid-cols-2 gap-3">
                     <TextField
@@ -117,7 +117,7 @@ export const VCardInput: React.FC<VCardInputProps> = ({ data, onChange }) => {
                        placeholder="City"
                        value={data.city}
                        onChange={(e) => onChange({ city: e.target.value })}
-                       size="xs"
+                       fieldSize="xs"
                     />
                     <TextField
                        id="vcard-country"
@@ -128,7 +128,7 @@ export const VCardInput: React.FC<VCardInputProps> = ({ data, onChange }) => {
                        placeholder="Country"
                        value={data.country}
                        onChange={(e) => onChange({ country: e.target.value })}
-                       size="xs"
+                       fieldSize="xs"
                     />
                 </div>
             </div>
