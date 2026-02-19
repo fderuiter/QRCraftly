@@ -17,141 +17,101 @@
 */
 
 import type { ElementType } from 'react';
-import { QRConfig, QRType, WifiData, EmailData, VCardData, PhoneData, SmsData, PaymentData, WifiEncryption, CryptoNetwork } from '../../types';
-import {
-  constructWifiString,
-  constructEmailString,
-  constructVCardString,
-  constructPhoneString,
-  constructSmsString,
-  constructPaymentString
-} from '../../utils/qrHelpers';
-import { useQRInputState } from '../../utils/hooks';
-
+import { useState, useRef, useEffect } from 'react';
+import { QRConfig, QRType } from '../../types';
+import { INPUT_REGISTRY } from './InputRegistry';
 import { UrlInput } from './UrlInput';
 import { TextInput } from './TextInput';
-import { WifiInput } from './WifiInput';
-import { EmailInput } from './EmailInput';
-import { VCardInput } from './VCardInput';
-import { PhoneInput } from './PhoneInput';
-import { SmsInput } from './SmsInput';
-import { PaymentInput } from './PaymentInput';
 
 /**
  * Hook to encapsulate the state management and component selection logic for the InputPanel.
- * It maintains the state for each input type so that data is preserved when switching types.
+ * It uses a registry pattern to handle complex input types and maintains their state.
  *
  * @param config - The current QR configuration.
  * @param onChange - Callback to update the configuration.
  * @returns An object containing the component to render and its props.
  */
 export function useInputLogic(config: QRConfig, onChange: (updates: Partial<QRConfig>) => void): { InputComponent: ElementType | null, inputProps: any } {
-  // We keep the state here to preserve data when switching types
-  const [wifiData, handleWifiChange] = useQRInputState<WifiData>(
-    { ssid: '', password: '', encryption: WifiEncryption.WPA, hidden: false, eapIdentity: '' },
-    constructWifiString,
-    onChange
-  );
+  // Initialize state map with initial values from registry
+  const [inputStates, setInputStates] = useState<Record<string, any>>(() => {
+    const initialState: Record<string, any> = {};
+    (Object.keys(INPUT_REGISTRY) as QRType[]).forEach((type) => {
+        const entry = INPUT_REGISTRY[type];
+        if (entry) {
+            initialState[type] = entry.initialState;
+        }
+    });
+    return initialState;
+  });
 
-  const [emailData, handleEmailChange] = useQRInputState<EmailData>(
-    { email: '', subject: '', body: '' },
-    constructEmailString,
-    onChange
-  );
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const [vCardData, handleVCardChange] = useQRInputState<VCardData>(
-    { firstName: '', lastName: '', organization: '', title: '', phone: '', email: '', website: '', street: '', city: '', country: '' },
-    constructVCardString,
-    onChange
-  );
+  // Clear timeout on unmount or type change to prevent race conditions
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, [config.type]);
 
-  const [phoneData, handlePhoneChange] = useQRInputState<PhoneData>(
-    { number: '' },
-    constructPhoneString,
-    onChange
-  );
+  /**
+   * Updates the local state for a specific input type and debounces the global config update.
+   */
+  const handleInputChange = (type: QRType, updates: any) => {
+    // Calculate new data based on current state
+    // We use the current state from the closure, which is sufficient for user input events
+    const currentData = inputStates[type];
+    const newData = { ...currentData, ...updates };
 
-  const [smsData, handleSmsChange] = useQRInputState<SmsData>(
-    { number: '', message: '' },
-    constructSmsString,
-    onChange
-  );
+    // Update React State
+    setInputStates((prev) => ({ ...prev, [type]: newData }));
 
-  const [paymentData, handlePaymentChange] = useQRInputState<PaymentData>(
-    { network: CryptoNetwork.BITCOIN, address: '', amount: '', label: '' },
-    constructPaymentString,
-    onChange
-  );
+    // Handle Side Effect (Debounce global update)
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
 
-  switch (config.type) {
-    case QRType.URL:
-      return {
-        InputComponent: UrlInput,
-        inputProps: {
-          value: config.value,
-          onChange: (val: string) => onChange({ value: val })
+    timeoutRef.current = setTimeout(() => {
+        const entry = INPUT_REGISTRY[type];
+        if (entry) {
+            onChange({ value: entry.construct(newData) });
         }
-      };
-    case QRType.TEXT:
+    }, 100);
+  };
+
+  // Direct handling for simple types (URL, TEXT) that map directly to config.value
+  if (config.type === QRType.URL) {
       return {
-        InputComponent: TextInput,
-        inputProps: {
-          value: config.value,
-          onChange: (val: string) => onChange({ value: val })
-        }
-      };
-    case QRType.WIFI:
-      return {
-        InputComponent: WifiInput,
-        inputProps: {
-          data: wifiData,
-          onChange: handleWifiChange
-        }
-      };
-    case QRType.EMAIL:
-      return {
-        InputComponent: EmailInput,
-        inputProps: {
-          data: emailData,
-          onChange: handleEmailChange
-        }
-      };
-    case QRType.PAYMENT:
-      return {
-        InputComponent: PaymentInput,
-        inputProps: {
-          data: paymentData,
-          onChange: handlePaymentChange
-        }
-      };
-    case QRType.VCARD:
-      return {
-        InputComponent: VCardInput,
-        inputProps: {
-          data: vCardData,
-          onChange: handleVCardChange
-        }
-      };
-    case QRType.PHONE:
-      return {
-        InputComponent: PhoneInput,
-        inputProps: {
-          data: phoneData,
-          onChange: handlePhoneChange
-        }
-      };
-    case QRType.SMS:
-      return {
-        InputComponent: SmsInput,
-        inputProps: {
-          data: smsData,
-          onChange: handleSmsChange
-        }
-      };
-    default:
-      return {
-        InputComponent: null,
-        inputProps: {}
+          InputComponent: UrlInput,
+          inputProps: {
+              value: config.value,
+              onChange: (val: string) => onChange({ value: val })
+          }
       };
   }
+
+  if (config.type === QRType.TEXT) {
+      return {
+          InputComponent: TextInput,
+          inputProps: {
+              value: config.value,
+              onChange: (val: string) => onChange({ value: val })
+          }
+      };
+  }
+
+  // Registry handling for complex types (WIFI, EMAIL, etc.)
+  const entry = INPUT_REGISTRY[config.type];
+  if (entry) {
+      return {
+          InputComponent: entry.Component,
+          inputProps: {
+              // Fallback to initial state if key is missing (shouldn't happen if initialized correctly)
+              data: inputStates[config.type] || entry.initialState,
+              onChange: (updates: any) => handleInputChange(config.type, updates)
+          }
+      };
+  }
+
+  return {
+    InputComponent: null,
+    inputProps: {}
+  };
 }
