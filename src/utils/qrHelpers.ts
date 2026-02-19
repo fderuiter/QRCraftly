@@ -180,7 +180,8 @@ export const constructPaymentString = (data: PaymentData): string => {
     }
 
     // Sanitize address to prevent parameter injection if user accidentally pastes a full URI or malicious string
-    const safeAddress = sanitizeInput(data.address);
+    // We also explicitly remove '&' to prevent parameter injection in the generated URI
+    const safeAddress = sanitizeInput(data.address).replace(/&/g, '');
     paymentString = `${data.network}:${safeAddress}`;
     const params: string[] = [];
 
