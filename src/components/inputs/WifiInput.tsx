@@ -18,7 +18,7 @@ export const WifiInput: React.FC<WifiInputProps> = ({ data, onChange }) => {
         maxLength={32}
         value={data.ssid}
         onChange={(e) => onChange({ ssid: e.target.value })}
-        size="xs"
+        fieldSize="xs"
       />
 
       <div className="flex-1">
@@ -27,7 +27,7 @@ export const WifiInput: React.FC<WifiInputProps> = ({ data, onChange }) => {
             label="Encryption"
             value={data.encryption}
             onChange={(e) => onChange({ encryption: e.target.value as WifiEncryption })}
-            size="xs"
+            fieldSize="xs"
           >
             <option value={WifiEncryption.WPA}>WPA / WPA2 / WPA3 (Standard)</option>
             <option value={WifiEncryption.WEP}>WEP (Legacy)</option>
@@ -44,7 +44,7 @@ export const WifiInput: React.FC<WifiInputProps> = ({ data, onChange }) => {
               maxLength={128}
               value={data.eapIdentity}
               onChange={(e) => onChange({ eapIdentity: e.target.value })}
-              size="xs"
+              fieldSize="xs"
           />
       )}
 
@@ -58,7 +58,7 @@ export const WifiInput: React.FC<WifiInputProps> = ({ data, onChange }) => {
                 maxLength={63}
                 value={data.password}
                 onChange={(e) => onChange({ password: e.target.value })}
-                size="xs"
+                fieldSize="xs"
                 showPasswordToggle
             />
       )}

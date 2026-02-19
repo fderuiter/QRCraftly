@@ -7,8 +7,8 @@ type FieldSize = 'sm' | 'xs';
 
 interface BaseFieldProps {
   label: string;
-  id: string;
-  size?: FieldSize;
+  id: string; // explicitly required
+  fieldSize?: FieldSize; // renamed from 'size' to avoid conflict with HTML input 'size'
   className?: string; // wrapper className
   labelClassName?: string; // optional override
 }
@@ -21,14 +21,15 @@ const getLabelClass = (size: FieldSize, customClass?: string) => {
   return "block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1";
 };
 
-interface TextFieldProps extends React.InputHTMLAttributes<HTMLInputElement>, BaseFieldProps {
+// Omit 'size' to prevent conflict, and 'id' to ensure our required 'id' overrides the optional one cleanly (though TS usually handles required overriding optional, explicit omit is safer for strict configs)
+interface TextFieldProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size' | 'id'>, BaseFieldProps {
   showPasswordToggle?: boolean;
 }
 
 export const TextField: React.FC<TextFieldProps> = ({
   label,
   id,
-  size = 'sm',
+  fieldSize = 'sm',
   className,
   labelClassName,
   showPasswordToggle,
@@ -42,7 +43,7 @@ export const TextField: React.FC<TextFieldProps> = ({
 
   return (
     <div className={className}>
-      <label htmlFor={id} className={getLabelClass(size, labelClassName)}>{label}</label>
+      <label htmlFor={id} className={getLabelClass(fieldSize, labelClassName)}>{label}</label>
       <div className={showPasswordToggle ? "relative" : ""}>
         <input
           id={id}
@@ -65,14 +66,14 @@ export const TextField: React.FC<TextFieldProps> = ({
   );
 };
 
-interface TextAreaFieldProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement>, BaseFieldProps {
+interface TextAreaFieldProps extends Omit<React.TextareaHTMLAttributes<HTMLTextAreaElement>, 'id'>, BaseFieldProps {
   showCharCount?: boolean;
 }
 
 export const TextAreaField: React.FC<TextAreaFieldProps> = ({
   label,
   id,
-  size = 'sm',
+  fieldSize = 'sm',
   className,
   labelClassName,
   showCharCount,
@@ -82,7 +83,7 @@ export const TextAreaField: React.FC<TextAreaFieldProps> = ({
 }) => {
   return (
     <div className={className}>
-      <label htmlFor={id} className={getLabelClass(size, labelClassName)}>{label}</label>
+      <label htmlFor={id} className={getLabelClass(fieldSize, labelClassName)}>{label}</label>
       <textarea
         id={id}
         maxLength={maxLength}
@@ -97,12 +98,13 @@ export const TextAreaField: React.FC<TextAreaFieldProps> = ({
   );
 };
 
-interface SelectFieldProps extends React.SelectHTMLAttributes<HTMLSelectElement>, BaseFieldProps {}
+// Select element also has a 'size' attribute (number of visible options), so we omit it here too.
+interface SelectFieldProps extends Omit<React.SelectHTMLAttributes<HTMLSelectElement>, 'size' | 'id'>, BaseFieldProps {}
 
 export const SelectField: React.FC<SelectFieldProps> = ({
   label,
   id,
-  size = 'sm',
+  fieldSize = 'sm',
   className,
   labelClassName,
   children,
@@ -110,7 +112,7 @@ export const SelectField: React.FC<SelectFieldProps> = ({
 }) => {
   return (
     <div className={className}>
-      <label htmlFor={id} className={getLabelClass(size, labelClassName)}>{label}</label>
+      <label htmlFor={id} className={getLabelClass(fieldSize, labelClassName)}>{label}</label>
       <select
         id={id}
         className={SELECT_CLASSES}

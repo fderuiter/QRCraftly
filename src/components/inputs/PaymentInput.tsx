@@ -17,7 +17,7 @@ export const PaymentInput: React.FC<PaymentInputProps> = ({ data, onChange }) =>
             label="Currency / Network"
             value={data.network}
             onChange={(e) => onChange({ network: e.target.value as CryptoNetwork })}
-            size="xs"
+            fieldSize="xs"
         >
               <option value={CryptoNetwork.BITCOIN}>Bitcoin (BTC)</option>
               <option value={CryptoNetwork.ETHEREUM}>Ethereum (ETH)</option>
@@ -34,7 +34,7 @@ export const PaymentInput: React.FC<PaymentInputProps> = ({ data, onChange }) =>
              placeholder="Wallet Address"
              value={data.address}
              onChange={(e) => onChange({ address: e.target.value })}
-             size="xs"
+             fieldSize="xs"
         />
 
         {data.network !== CryptoNetwork.CUSTOM && (
@@ -48,7 +48,7 @@ export const PaymentInput: React.FC<PaymentInputProps> = ({ data, onChange }) =>
                 placeholder="0.00"
                 value={data.amount}
                 onChange={(e) => onChange({ amount: e.target.value })}
-                size="xs"
+                fieldSize="xs"
             />
             <TextField
                 id="payment-label"
@@ -58,7 +58,7 @@ export const PaymentInput: React.FC<PaymentInputProps> = ({ data, onChange }) =>
                 placeholder="e.g. Donation"
                 value={data.label}
                 onChange={(e) => onChange({ label: e.target.value })}
-                size="xs"
+                fieldSize="xs"
             />
         </>
         )}
