@@ -54,20 +54,30 @@ export const getLogoMetrics = (config: QRConfig, moduleCount: number, cellSize: 
 };
 
 export const getIsCoveredByLogo = (config: QRConfig, moduleCount: number, logoMetrics: LogoMetrics) => {
+    if (!config.logoUrl) return () => false;
+
+    // Optimization: Lift constant calculations out of the returned closure (hot path).
+    // This avoids recalculating center, halfSize, radiusSquared and checking config style for every module.
+    // Since this is called N^2 times (e.g. 30k+ for V40), this reduces overhead significantly.
     const center = moduleCount / 2;
     const { cutoutModuleSize } = logoMetrics;
+    const halfSize = cutoutModuleSize / 2;
+    const radiusSquared = halfSize * halfSize;
 
-    return !config.logoUrl ? (() => false) : (r: number, c: number) => {
-      const x = c - center + 0.5;
-      const y = r - center + 0.5;
-      if (config.logoPaddingStyle === 'circle') {
-        const radius = (cutoutModuleSize / 2);
-        return (x * x + y * y) < (radius * radius);
-      } else {
-        const halfSize = (cutoutModuleSize / 2);
-        return Math.abs(x) < halfSize && Math.abs(y) < halfSize;
-      }
-    };
+    if (config.logoPaddingStyle === 'circle') {
+        return (r: number, c: number) => {
+            const x = c - center + 0.5;
+            const y = r - center + 0.5;
+            return (x * x + y * y) < radiusSquared;
+        };
+    } else {
+        // Square or none (uses square bounds)
+        return (r: number, c: number) => {
+             const x = c - center + 0.5;
+             const y = r - center + 0.5;
+             return Math.abs(x) < halfSize && Math.abs(y) < halfSize;
+        };
+    }
 };
 
 export interface LayoutMetrics {
