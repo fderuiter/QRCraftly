@@ -70,6 +70,31 @@ export const constructEmailString = (data: EmailData): string => {
 };
 
 /**
+ * Normalizes a URL string to ensure it is valid and properly encoded.
+ * Uses native URL API to handle spaces and missing protocols.
+ */
+export const normalizeUrl = (url: string | undefined): string => {
+  if (!url) return '';
+  try {
+    // 1. Try parsing as is (absolute URL)
+    return new URL(url).href;
+  } catch (e) {
+    try {
+      // 2. Try adding http:// (domain/path only)
+      return new URL(`http://${url}`).href;
+    } catch (e2) {
+      // 3. Fallback: encodeURI (handles spaces but not protocol)
+      try {
+        return encodeURI(url);
+      } catch (e3) {
+        // 4. Absolute fallback
+        return url;
+      }
+    }
+  }
+};
+
+/**
  * Escapes special characters for vCard property values.
  * Characters to escape: \ ; , and newlines.
  */
@@ -92,7 +117,9 @@ export const escapeVCardString = (str: string | undefined): string => {
 export const constructVCardString = (data: VCardData): string => {
   const lastName = escapeVCardString(data.lastName);
   const firstName = escapeVCardString(data.firstName);
-  const website = isDangerousUrl(data.website) ? '' : escapeVCardString(data.website);
+  // Normalize URL first to handle spaces/protocols, then check for dangerous protocols on the normalized string
+  const normalizedWebsite = normalizeUrl(data.website);
+  const website = isDangerousUrl(normalizedWebsite) ? '' : escapeVCardString(normalizedWebsite);
 
   const parts = [
     'BEGIN:VCARD',
