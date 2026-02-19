@@ -1,6 +1,6 @@
 
 import { describe, it, expect } from 'vitest';
-import { constructVCardString } from './qrHelpers';
+import { constructVCardString } from '../strategies/vcard';
 import { VCardData } from '../types';
 
 describe('VCard URL Normalization', () => {

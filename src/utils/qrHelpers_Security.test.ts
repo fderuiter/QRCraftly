@@ -17,7 +17,8 @@
 */
 
 import { describe, it, expect } from 'vitest';
-import { constructPaymentString, escapeWifiString } from './qrHelpers';
+import { constructPaymentString } from '../strategies/payment';
+import { escapeWifiString } from '../strategies/wifi';
 import { CryptoNetwork } from '../types';
 
 describe('qrHelpers Security', () => {

@@ -17,25 +17,19 @@
 */
 
 import type { ElementType } from 'react';
-import { QRConfig, QRType, WifiData, EmailData, VCardData, PhoneData, SmsData, PaymentData, WifiEncryption, CryptoNetwork } from '../../types';
-import {
-  constructWifiString,
-  constructEmailString,
-  constructVCardString,
-  constructPhoneString,
-  constructSmsString,
-  constructPaymentString
-} from '../../utils/qrHelpers';
+import { QRConfig, QRType, WifiData, EmailData, VCardData, PhoneData, SmsData, PaymentData } from '../../types';
 import { useQRInputState } from '../../utils/hooks';
 
 import { UrlInput } from './UrlInput';
 import { TextInput } from './TextInput';
-import { WifiInput } from './WifiInput';
-import { EmailInput } from './EmailInput';
-import { VCardInput } from './VCardInput';
-import { PhoneInput } from './PhoneInput';
-import { SmsInput } from './SmsInput';
-import { PaymentInput } from './PaymentInput';
+
+// Import Strategies
+import { WifiStrategy } from '../../strategies/wifi';
+import { EmailStrategy } from '../../strategies/email';
+import { VCardStrategy } from '../../strategies/vcard';
+import { PhoneStrategy } from '../../strategies/phone';
+import { SmsStrategy } from '../../strategies/sms';
+import { PaymentStrategy } from '../../strategies/payment';
 
 /**
  * Hook to encapsulate the state management and component selection logic for the InputPanel.
@@ -48,38 +42,38 @@ import { PaymentInput } from './PaymentInput';
 export function useInputLogic(config: QRConfig, onChange: (updates: Partial<QRConfig>) => void): { InputComponent: ElementType | null, inputProps: any } {
   // We keep the state here to preserve data when switching types
   const [wifiData, handleWifiChange] = useQRInputState<WifiData>(
-    { ssid: '', password: '', encryption: WifiEncryption.WPA, hidden: false, eapIdentity: '' },
-    constructWifiString,
+    WifiStrategy.initialState,
+    WifiStrategy.constructString,
     onChange
   );
 
   const [emailData, handleEmailChange] = useQRInputState<EmailData>(
-    { email: '', subject: '', body: '' },
-    constructEmailString,
+    EmailStrategy.initialState,
+    EmailStrategy.constructString,
     onChange
   );
 
   const [vCardData, handleVCardChange] = useQRInputState<VCardData>(
-    { firstName: '', lastName: '', organization: '', title: '', phone: '', email: '', website: '', street: '', city: '', country: '' },
-    constructVCardString,
+    VCardStrategy.initialState,
+    VCardStrategy.constructString,
     onChange
   );
 
   const [phoneData, handlePhoneChange] = useQRInputState<PhoneData>(
-    { number: '' },
-    constructPhoneString,
+    PhoneStrategy.initialState,
+    PhoneStrategy.constructString,
     onChange
   );
 
   const [smsData, handleSmsChange] = useQRInputState<SmsData>(
-    { number: '', message: '' },
-    constructSmsString,
+    SmsStrategy.initialState,
+    SmsStrategy.constructString,
     onChange
   );
 
   const [paymentData, handlePaymentChange] = useQRInputState<PaymentData>(
-    { network: CryptoNetwork.BITCOIN, address: '', amount: '', label: '' },
-    constructPaymentString,
+    PaymentStrategy.initialState,
+    PaymentStrategy.constructString,
     onChange
   );
 
@@ -102,7 +96,7 @@ export function useInputLogic(config: QRConfig, onChange: (updates: Partial<QRCo
       };
     case QRType.WIFI:
       return {
-        InputComponent: WifiInput,
+        InputComponent: WifiStrategy.InputComponent,
         inputProps: {
           data: wifiData,
           onChange: handleWifiChange
@@ -110,7 +104,7 @@ export function useInputLogic(config: QRConfig, onChange: (updates: Partial<QRCo
       };
     case QRType.EMAIL:
       return {
-        InputComponent: EmailInput,
+        InputComponent: EmailStrategy.InputComponent,
         inputProps: {
           data: emailData,
           onChange: handleEmailChange
@@ -118,7 +112,7 @@ export function useInputLogic(config: QRConfig, onChange: (updates: Partial<QRCo
       };
     case QRType.PAYMENT:
       return {
-        InputComponent: PaymentInput,
+        InputComponent: PaymentStrategy.InputComponent,
         inputProps: {
           data: paymentData,
           onChange: handlePaymentChange
@@ -126,7 +120,7 @@ export function useInputLogic(config: QRConfig, onChange: (updates: Partial<QRCo
       };
     case QRType.VCARD:
       return {
-        InputComponent: VCardInput,
+        InputComponent: VCardStrategy.InputComponent,
         inputProps: {
           data: vCardData,
           onChange: handleVCardChange
@@ -134,7 +128,7 @@ export function useInputLogic(config: QRConfig, onChange: (updates: Partial<QRCo
       };
     case QRType.PHONE:
       return {
-        InputComponent: PhoneInput,
+        InputComponent: PhoneStrategy.InputComponent,
         inputProps: {
           data: phoneData,
           onChange: handlePhoneChange
@@ -142,7 +136,7 @@ export function useInputLogic(config: QRConfig, onChange: (updates: Partial<QRCo
       };
     case QRType.SMS:
       return {
-        InputComponent: SmsInput,
+        InputComponent: SmsStrategy.InputComponent,
         inputProps: {
           data: smsData,
           onChange: handleSmsChange

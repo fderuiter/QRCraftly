@@ -1,6 +1,6 @@
 # Input Components
 
-This directory contains modular React components for each specific QR code data type. These components are orchestrated by `src/components/InputPanel.tsx`.
+This directory contains modular React components for each specific QR code data type. These components are orchestrated by `src/components/InputPanel.tsx` and `useInputLogic.ts`.
 
 ## Component Pattern
 
@@ -38,7 +38,10 @@ export const WifiInput: React.FC<WifiInputProps> = ({ data, onChange }) => {
 ## Adding a New Input Type
 
 1.  Define the data structure in `src/types.ts`.
-2.  Create a construction helper in `src/utils/qrHelpers.ts`.
+2.  Create a new Strategy file in `src/strategies/` (e.g., `src/strategies/newType.ts`).
+    - Define initial state.
+    - Implement string construction logic.
+    - Export a Strategy object.
 3.  Create a new component file in this directory (e.g., `NewTypeInput.tsx`).
-4.  Import and add the component to the conditional rendering block in `src/components/InputPanel.tsx`.
+4.  Import the new Strategy in `src/components/inputs/useInputLogic.ts` and add it to the state hooks and switch statement.
 5.  Add the new type to the `TypeSelector` options.

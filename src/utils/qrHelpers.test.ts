@@ -17,16 +17,12 @@
 */
 
 import { describe, it, expect } from 'vitest';
-import {
-  constructWifiString,
-  constructEmailString,
-  constructVCardString,
-  constructPhoneString,
-  constructSmsString,
-  constructPaymentString,
-  escapeWifiString,
-  escapeVCardString
-} from './qrHelpers';
+import { constructWifiString, escapeWifiString } from '../strategies/wifi';
+import { constructEmailString } from '../strategies/email';
+import { constructVCardString, escapeVCardString } from '../strategies/vcard';
+import { constructPhoneString } from '../strategies/phone';
+import { constructSmsString } from '../strategies/sms';
+import { constructPaymentString } from '../strategies/payment';
 import { WifiData, EmailData, VCardData, PhoneData, SmsData, PaymentData, WifiEncryption, CryptoNetwork } from '../types';
 
 describe('QR Helpers', () => {
