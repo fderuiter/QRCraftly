@@ -24,6 +24,7 @@ const getLabelClass = (size: FieldSize, customClass?: string) => {
 // Omit 'size' to prevent conflict, and 'id' to ensure our required 'id' overrides the optional one cleanly (though TS usually handles required overriding optional, explicit omit is safer for strict configs)
 interface TextFieldProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size' | 'id'>, BaseFieldProps {
   showPasswordToggle?: boolean;
+  showCharCount?: boolean;
 }
 
 export const TextField: React.FC<TextFieldProps> = ({
@@ -33,7 +34,10 @@ export const TextField: React.FC<TextFieldProps> = ({
   className,
   labelClassName,
   showPasswordToggle,
+  showCharCount,
   type = 'text',
+  value,
+  maxLength,
   ...props
 }) => {
   const [showPassword, setShowPassword] = useState(false);
@@ -49,6 +53,8 @@ export const TextField: React.FC<TextFieldProps> = ({
           id={id}
           type={effectiveType}
           className={`${INPUT_CLASSES} ${showPasswordToggle ? 'pr-10' : ''}`}
+          value={value}
+          maxLength={maxLength}
           {...props}
         />
         {showPasswordToggle && (
@@ -62,6 +68,9 @@ export const TextField: React.FC<TextFieldProps> = ({
             </button>
         )}
       </div>
+      {showCharCount && maxLength && (
+        <CharCount current={String(value || '').length} max={maxLength} />
+      )}
     </div>
   );
 };
