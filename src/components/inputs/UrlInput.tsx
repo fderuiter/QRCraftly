@@ -1,6 +1,6 @@
 import React from 'react';
 import { isDangerousUrl } from '../../utils/security';
-import { INPUT_CLASSES } from './styles';
+import { TextField } from './FormFields';
 
 interface UrlInputProps {
   value: string;
@@ -10,16 +10,15 @@ interface UrlInputProps {
 export const UrlInput: React.FC<UrlInputProps> = ({ value, onChange }) => {
   return (
     <div>
-      <label htmlFor="url-input" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Website URL</label>
-      <input
+      <TextField
         id="url-input"
+        label="Website URL"
         suppressHydrationWarning={true}
         name="url"
         autoComplete="url"
         type="url"
         maxLength={2048}
         placeholder="https://example.com"
-        className={INPUT_CLASSES}
         value={value}
         onChange={(e) => {
           if (!isDangerousUrl(e.target.value)) {

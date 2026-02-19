@@ -1,6 +1,5 @@
 import React from 'react';
-import { CharCount } from '../CharCount';
-import { TEXT_AREA_CLASSES } from './styles';
+import { TextAreaField } from './FormFields';
 
 interface TextInputProps {
   value: string;
@@ -10,17 +9,16 @@ interface TextInputProps {
 export const TextInput: React.FC<TextInputProps> = ({ value, onChange }) => {
   return (
     <div>
-      <label htmlFor="text-content" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Content</label>
-      <textarea
+      <TextAreaField
         id="text-content"
+        label="Content"
         rows={4}
         maxLength={2500}
         placeholder="Enter your text here..."
-        className={TEXT_AREA_CLASSES}
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        showCharCount
       />
-      <CharCount current={value.length} max={2500} />
     </div>
   );
 };

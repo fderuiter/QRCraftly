@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { WifiData, WifiEncryption } from '../../types';
-import { Eye, EyeOff } from 'lucide-react';
-import { INPUT_CLASSES, SELECT_CLASSES } from './styles';
+import { TextField, SelectField } from './FormFields';
 
 interface WifiInputProps {
   data: WifiData;
@@ -9,76 +8,59 @@ interface WifiInputProps {
 }
 
 export const WifiInput: React.FC<WifiInputProps> = ({ data, onChange }) => {
-  const [showWifiPassword, setShowWifiPassword] = useState(false);
-
   return (
     <div className="space-y-3">
        <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Network Details</h3>
-      <div>
-        <label htmlFor="wifi-ssid" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Network Name (SSID)</label>
-        <input
-          id="wifi-ssid"
-          type="text"
-          maxLength={32}
-          value={data.ssid}
-          onChange={(e) => onChange({ ssid: e.target.value })}
-          className={INPUT_CLASSES}
-        />
-      </div>
+      <TextField
+        id="wifi-ssid"
+        label="Network Name (SSID)"
+        type="text"
+        maxLength={32}
+        value={data.ssid}
+        onChange={(e) => onChange({ ssid: e.target.value })}
+        size="xs"
+      />
 
       <div className="flex-1">
-          <label htmlFor="wifi-encryption" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Encryption</label>
-          <select
+          <SelectField
             id="wifi-encryption"
+            label="Encryption"
             value={data.encryption}
             onChange={(e) => onChange({ encryption: e.target.value as WifiEncryption })}
-            className={SELECT_CLASSES}
+            size="xs"
           >
             <option value={WifiEncryption.WPA}>WPA / WPA2 / WPA3 (Standard)</option>
             <option value={WifiEncryption.WEP}>WEP (Legacy)</option>
             <option value={WifiEncryption.WPA2_EAP}>WPA2 Enterprise (EAP)</option>
             <option value={WifiEncryption.NOPASS}>None (Open Network)</option>
-          </select>
+          </SelectField>
       </div>
 
       {data.encryption === WifiEncryption.WPA2_EAP && (
-          <div>
-              <label htmlFor="wifi-identity" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Identity / Username</label>
-              <input
-                  id="wifi-identity"
-                  type="text"
-                  maxLength={128}
-                  value={data.eapIdentity}
-                  onChange={(e) => onChange({ eapIdentity: e.target.value })}
-                  className={INPUT_CLASSES}
-              />
-          </div>
+          <TextField
+              id="wifi-identity"
+              label="Identity / Username"
+              type="text"
+              maxLength={128}
+              value={data.eapIdentity}
+              onChange={(e) => onChange({ eapIdentity: e.target.value })}
+              size="xs"
+          />
       )}
 
       {data.encryption !== WifiEncryption.NOPASS && (
-          <div>
-          <label htmlFor="wifi-password" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Password</label>
-          <div className="relative">
-            <input
+          <TextField
                 id="wifi-password"
                 name="password"
+                label="Password"
                 autoComplete="off"
-                type={showWifiPassword ? 'text' : 'password'}
+                type="password"
                 maxLength={63}
                 value={data.password}
                 onChange={(e) => onChange({ password: e.target.value })}
-                className={`${INPUT_CLASSES} pr-10`}
+                size="xs"
+                showPasswordToggle
             />
-            <button
-              type="button"
-              onClick={() => setShowWifiPassword(!showWifiPassword)}
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors rounded-full hover:bg-slate-100 dark:hover:bg-slate-800"
-              aria-label={showWifiPassword ? "Hide password" : "Show password"}
-            >
-              {showWifiPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-            </button>
-          </div>
-          </div>
       )}
 
       <div className="flex items-center pt-2">
