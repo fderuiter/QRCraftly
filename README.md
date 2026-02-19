@@ -36,6 +36,22 @@ Ensure you have the following installed on your machine:
 - [Node.js](https://nodejs.org/) (version 20.19.0 or higher required)
 - npm (usually comes with Node.js) or yarn
 - Python 3 (optional, for running `scripts/` utilities)
+  - To run optimization scripts, install dependencies: `pip install -r scripts/requirements.txt`
+
+**System Dependencies (Linux/WSL/macOS):**
+
+This project uses `node-canvas` which requires system libraries. **Install these before running `npm install`:**
+
+*   **Ubuntu/Debian:**
+    ```bash
+    sudo apt-get update
+    sudo apt-get install build-essential libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev
+    ```
+
+*   **macOS:**
+    ```bash
+    brew install pkg-config cairo pango libpng jpeg giflib librsvg
+    ```
 
 ### Installation
 
@@ -76,6 +92,12 @@ yarn build
 
 The build artifacts will be stored in the `dist/` directory.
 
+To preview the production build locally:
+
+```bash
+npm run preview
+```
+
 ### Running Tests
 
 To run the test suite (Vitest):
@@ -114,21 +136,6 @@ du -sh dist/client
 **Performance & SEO:**
 Lighthouse CI runs on every Pull Request to audit performance, accessibility, best practices, and SEO.
 
-## Troubleshooting
-
-### Canvas Installation Issues
-This project relies on `node-canvas` which may require system dependencies on Linux/WSL. If `npm install` fails, try installing the following packages:
-
-**Ubuntu/Debian:**
-```bash
-sudo apt-get update
-sudo apt-get install build-essential libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev
-```
-
-**macOS:**
-```bash
-brew install pkg-config cairo pango libpng jpeg giflib librsvg
-```
 
 ## Usage Guide
 
