@@ -45,7 +45,6 @@ describe('VCard URL Normalization', () => {
     // So encodeURI won't throw for %.
     // However, new URL() throws for invalid URLs.
     // If we pass a string that is completely invalid for URL constructor:
-    const invalid = 'http://example.com/%';
     // new URL('http://example.com/%') throws? No, % is allowed in path?
     // Chrome: new URL('http://example.com/%').href -> 'http://example.com/%'
     // It normalizes it.
