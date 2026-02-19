@@ -7,6 +7,11 @@ interface TypeSelectorProps {
   onSelect: (type: QRType) => void;
 }
 
+const TYPE_ROUTES: Partial<Record<QRType, string>> = {
+  [QRType.URL]: '/',
+  [QRType.WIFI]: '/wifi-qr-code',
+};
+
 export const TypeSelector: React.FC<TypeSelectorProps> = ({ currentType, onSelect }) => {
   return (
     <div className="grid grid-cols-4 gap-2 p-2 bg-slate-100 dark:bg-slate-800 rounded-xl transition-colors duration-300">
@@ -19,21 +24,42 @@ export const TypeSelector: React.FC<TypeSelectorProps> = ({ currentType, onSelec
           { type: QRType.PHONE, icon: Phone, label: 'Phone' },
           { type: QRType.SMS, icon: MessageSquare, label: 'SMS' },
           { type: QRType.PAYMENT, icon: CreditCard, label: 'Payment' },
-        ].map((item) => (
-          <button
-            key={item.type}
-            onClick={() => onSelect(item.type)}
-            aria-pressed={currentType === item.type}
-            className={`flex flex-col items-center justify-center gap-1 px-2 py-2 rounded-lg text-xs font-medium transition-all ${
-              currentType === item.type
-                ? 'bg-white dark:bg-slate-700 text-teal-700 dark:text-teal-400 shadow-sm'
-                : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-slate-700/50'
-            }`}
-          >
-            <item.icon className="w-4 h-4" />
-            <span className="truncate w-full text-center text-slate-700 dark:text-slate-200">{item.label}</span>
-          </button>
-        ))}
+        ].map((item) => {
+          const route = TYPE_ROUTES[item.type];
+          const isActive = currentType === item.type;
+          const className = `flex flex-col items-center justify-center gap-1 px-2 py-2 rounded-lg text-xs font-medium transition-all ${
+            isActive
+              ? 'bg-white dark:bg-slate-700 text-teal-700 dark:text-teal-400 shadow-sm'
+              : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-slate-700/50'
+          }`;
+
+          if (route) {
+            return (
+              <a
+                key={item.type}
+                href={route}
+                onClick={() => onSelect(item.type)}
+                aria-current={isActive ? 'page' : undefined}
+                className={className}
+              >
+                <item.icon className="w-4 h-4" />
+                <span className="truncate w-full text-center text-slate-700 dark:text-slate-200">{item.label}</span>
+              </a>
+            );
+          }
+
+          return (
+            <button
+              key={item.type}
+              onClick={() => onSelect(item.type)}
+              aria-pressed={isActive}
+              className={className}
+            >
+              <item.icon className="w-4 h-4" />
+              <span className="truncate w-full text-center text-slate-700 dark:text-slate-200">{item.label}</span>
+            </button>
+          );
+        })}
     </div>
   );
 };
