@@ -278,7 +278,7 @@ describe('InputPanel Component', () => {
 
       act(() => { vi.advanceTimersByTime(1000); }); // Wait for all updates
 
-      const expectedVCard = `BEGIN:VCARD\nVERSION:3.0\nN:Doe;John;;;\nFN:John Doe\nORG:Acme Corp\nTITLE:Engineer\nTEL:555-0199\nEMAIL:john@example.com\nURL:https://example.com\nADR:;;123 Main St;Metropolis;;;USA\nEND:VCARD`;
+      const expectedVCard = `BEGIN:VCARD\nVERSION:3.0\nN:Doe;John;;;\nFN:John Doe\nORG:Acme Corp\nTITLE:Engineer\nTEL:555-0199\nEMAIL:john@example.com\nURL:https://example.com/\nADR:;;123 Main St;Metropolis;;;USA\nEND:VCARD`;
 
       expect(mockOnChange).toHaveBeenLastCalledWith({ value: expectedVCard });
   });
