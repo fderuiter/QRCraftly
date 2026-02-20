@@ -16,8 +16,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { useState, useEffect, useRef } from 'react';
-import { QRConfig } from '../types';
+import { useState, useEffect } from 'react';
 
 /**
  * A hook that returns a debounced value.
@@ -44,52 +43,6 @@ export function useDebounce<T>(value: T, delay: number): T {
   }, [value, delay]);
 
   return debouncedValue;
-}
-
-/**
- * Custom hook to manage input state for complex QR types (WiFi, Email, etc.).
- * Automatically updates the global QR config string when local input state changes.
- *
- * @param initialState - The initial state object for the input type.
- * @param constructorFn - Function to convert the state object to a QR code string.
- * @param onChange - The global config change handler.
- * @returns A tuple containing the current data and a function to update it.
- */
-export function useQRInputState<T>(
-  initialState: T,
-  constructorFn: (data: T) => string,
-  onChange: (updates: Partial<QRConfig>) => void,
-  debounceDelay: number = 100
-) {
-  const [data, setData] = useState<T>(initialState);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-    };
-  }, []);
-
-  const update = (updates: Partial<T>) => {
-    const newData = { ...data, ...updates };
-    setData(newData);
-
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
-
-    if (debounceDelay === 0) {
-      onChange({ value: constructorFn(newData) });
-    } else {
-      timeoutRef.current = setTimeout(() => {
-        onChange({ value: constructorFn(newData) });
-      }, debounceDelay);
-    }
-  };
-
-  return [data, update] as const;
 }
 
 /**
