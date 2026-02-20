@@ -16,10 +16,11 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { QRConfig } from '../types';
 import { drawQR } from '../utils/qrRenderer';
 import { useImage } from '../utils/hooks';
+import { useQRModules } from '../utils/useQRModules';
 
 /**
  * Props for the QRCanvas component.
@@ -51,29 +52,8 @@ const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) =
   const logoImg = useImage(config.logoUrl);
   const borderLogoImg = useImage(config.isBorderEnabled ? config.borderLogoUrl : null);
 
-  const [qrData, setQrData] = useState<any>(null);
-
-  // Dynamically load QRCode and generate data
-  useEffect(() => {
-    if (!config.value) {
-      setQrData(null);
-      return;
-    }
-
-    let isMounted = true;
-    import('qrcode').then((QRCode) => {
-      if (!isMounted) return;
-      try {
-        const data = QRCode.create(config.value, { errorCorrectionLevel: config.errorCorrectionLevel });
-        setQrData(data);
-      } catch (e) {
-        console.warn("QR generation failed:", e);
-        setQrData(null);
-      }
-    });
-
-    return () => { isMounted = false; };
-  }, [config.value, config.errorCorrectionLevel]);
+  // Generate QR modules
+  const modules = useQRModules(config.value, config.errorCorrectionLevel);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -82,7 +62,7 @@ const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) =
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    if (!qrData) {
+    if (!modules) {
         // Clear if no data
         const pixelRatio = window.devicePixelRatio || 1;
         const rawSize = size * pixelRatio;
@@ -93,9 +73,9 @@ const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) =
     }
 
     // Delegate rendering to utility function
-    drawQR(ctx, qrData.modules, config, logoImg, borderLogoImg, size);
+    drawQR(ctx, modules, config, logoImg, borderLogoImg, size);
 
-  }, [config, size, qrData, logoImg, borderLogoImg]);
+  }, [config, size, modules, logoImg, borderLogoImg]);
 
   const typeLabel = config.type.charAt(0).toUpperCase() + config.type.slice(1).toLowerCase();
   const ariaLabel = `QR Code for ${typeLabel} - ${config.value ? 'Scan to view content' : 'Empty'}`;
