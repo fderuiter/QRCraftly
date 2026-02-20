@@ -10,6 +10,12 @@ interface TypeSelectorProps {
 const TYPE_ROUTES: Partial<Record<QRType, string>> = {
   [QRType.URL]: '/',
   [QRType.WIFI]: '/wifi-qr-code',
+  [QRType.TEXT]: '/text-qr-code',
+  [QRType.VCARD]: '/vcard-qr-code',
+  [QRType.EMAIL]: '/email-qr-code',
+  [QRType.PHONE]: '/phone-qr-code',
+  [QRType.SMS]: '/sms-qr-code',
+  [QRType.PAYMENT]: '/payment-qr-code',
 };
 
 export const TypeSelector: React.FC<TypeSelectorProps> = ({ currentType, onSelect }) => {
