@@ -57,17 +57,27 @@ export const getIsCoveredByLogo = (config: QRConfig, moduleCount: number, logoMe
     const center = moduleCount / 2;
     const { cutoutModuleSize } = logoMetrics;
 
-    return !config.logoUrl ? (() => false) : (r: number, c: number) => {
-      const x = c - center + 0.5;
-      const y = r - center + 0.5;
-      if (config.logoPaddingStyle === 'circle') {
-        const radius = (cutoutModuleSize / 2);
-        return (x * x + y * y) < (radius * radius);
-      } else {
-        const halfSize = (cutoutModuleSize / 2);
+    if (!config.logoUrl) {
+      return () => false;
+    }
+
+    // Optimization: Pre-calculate metrics to avoid re-computation in the render loop
+    if (config.logoPaddingStyle === 'circle') {
+      const radius = cutoutModuleSize / 2;
+      const radiusSq = radius * radius;
+      return (r: number, c: number) => {
+        const x = c - center + 0.5;
+        const y = r - center + 0.5;
+        return (x * x + y * y) < radiusSq;
+      };
+    } else {
+      const halfSize = cutoutModuleSize / 2;
+      return (r: number, c: number) => {
+        const x = c - center + 0.5;
+        const y = r - center + 0.5;
         return Math.abs(x) < halfSize && Math.abs(y) < halfSize;
-      }
-    };
+      };
+    }
 };
 
 export interface LayoutMetrics {
