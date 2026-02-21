@@ -15,16 +15,16 @@ export interface LogoMetrics {
   effectivePaddingModules: number;
 }
 
+const SAFE_AREA_RATIOS: Record<string, number> = {
+    L: 0.22,
+    M: 0.35,
+    Q: 0.45,
+    H: 0.50,
+};
+
 export const getLogoMetrics = (config: QRConfig, moduleCount: number, cellSize: number): LogoMetrics => {
     // Determine safe limit for logo size
-    const SAFE_AREA_RATIO = (() => {
-       switch(config.errorCorrectionLevel) {
-           case 'L': return 0.22;
-           case 'M': return 0.35;
-           case 'Q': return 0.45;
-           case 'H': default: return 0.50;
-       }
-    })();
+    const SAFE_AREA_RATIO = SAFE_AREA_RATIOS[config.errorCorrectionLevel] ?? 0.50;
 
     const requestedLogoSizeModules = config.logoSize * moduleCount;
     const paddingModules = config.logoPaddingStyle === 'none' ? 0 : config.logoPadding;
