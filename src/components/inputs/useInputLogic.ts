@@ -20,7 +20,11 @@ import { useState, useRef, useEffect, ElementType } from 'react';
 import { QRConfig, QRType } from '../../types';
 import { UrlInput } from './UrlInput';
 import { TextInput } from './TextInput';
-import { INPUT_REGISTRY } from './InputRegistry';
+import { INPUT_REGISTRY, isComplexQRType, ComplexQRType, QRDataMap } from './InputRegistry';
+
+type InputStates = {
+  [K in ComplexQRType]: QRDataMap[K];
+};
 
 /**
  * Hook to encapsulate the state management and component selection logic for the InputPanel.
@@ -32,10 +36,11 @@ import { INPUT_REGISTRY } from './InputRegistry';
  */
 export function useInputLogic(config: QRConfig, onChange: (updates: Partial<QRConfig>) => void): { InputComponent: ElementType | null, inputProps: any } {
   // Initialize state for all complex types from registry
-  const [inputStates, setInputStates] = useState<Record<string, any>>(() => {
-    const states: Record<string, any> = {};
-    Object.keys(INPUT_REGISTRY).forEach(key => {
-      states[key] = INPUT_REGISTRY[key].initialState;
+  const [inputStates, setInputStates] = useState<InputStates>(() => {
+    const states = {} as InputStates;
+    (Object.keys(INPUT_REGISTRY) as ComplexQRType[]).forEach(key => {
+      // Cast to any to avoid TS intersection requirement when assigning with union key
+      (states as any)[key] = INPUT_REGISTRY[key].initialState;
     });
     return states;
   });
@@ -52,24 +57,27 @@ export function useInputLogic(config: QRConfig, onChange: (updates: Partial<QRCo
   }, [config.type]);
 
   // Generic handler for all complex inputs
-  const handleInputChange = (type: string, updates: any) => {
+  const handleInputChange = <K extends ComplexQRType>(type: K, updates: Partial<QRDataMap[K]>) => {
     const currentData = inputStates[type];
     const newData = { ...currentData, ...updates };
 
     setInputStates(prev => ({
       ...prev,
       [type]: newData
-    }));
+    } as InputStates));
 
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
 
     timeoutRef.current = setTimeout(() => {
+      // Because we are inside the timeout, we need to be careful with closure capture.
+      // However, INPUT_REGISTRY is constant.
       const entry = INPUT_REGISTRY[type];
-      if (entry) {
-        onChange({ value: entry.constructFn(newData) });
-      }
+      // Type assertion needed because entry.constructFn expects exactly QRDataMap[K]
+      // and TS might infer newData as merging Partial.
+      // But newData is constructed from currentData (complete) + updates (partial), so it is complete.
+      onChange({ value: entry.constructFn(newData as QRDataMap[K]) });
     }, 100);
   };
 
@@ -95,13 +103,13 @@ export function useInputLogic(config: QRConfig, onChange: (updates: Partial<QRCo
   }
 
   // Handle complex types via registry
-  const registryEntry = INPUT_REGISTRY[config.type];
-  if (registryEntry) {
+  if (isComplexQRType(config.type)) {
+    const registryEntry = INPUT_REGISTRY[config.type];
     return {
       InputComponent: registryEntry.Component,
       inputProps: {
         data: inputStates[config.type],
-        onChange: (updates: any) => handleInputChange(config.type, updates)
+        onChange: (updates: any) => handleInputChange(config.type as ComplexQRType, updates)
       }
     };
   }

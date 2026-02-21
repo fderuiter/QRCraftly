@@ -26,13 +26,42 @@ import { PhoneInput } from './PhoneInput';
 import { SmsInput } from './SmsInput';
 import { PaymentInput } from './PaymentInput';
 
+/**
+ * Mapping of QR Types to their corresponding data interfaces.
+ * Excludes URL and TEXT which are handled as simple string values.
+ */
+export interface QRDataMap {
+  [QRType.WIFI]: WifiData;
+  [QRType.EMAIL]: EmailData;
+  [QRType.VCARD]: VCardData;
+  [QRType.PHONE]: PhoneData;
+  [QRType.SMS]: SmsData;
+  [QRType.PAYMENT]: PaymentData;
+}
+
+/**
+ * Type representing the keys of QRDataMap (i.e., complex QR types).
+ */
+export type ComplexQRType = keyof QRDataMap;
+
+/**
+ * Type guard to check if a QRType is a complex type.
+ */
+export function isComplexQRType(type: string): type is ComplexQRType {
+  return type in INPUT_REGISTRY;
+}
+
 export interface InputRegistryEntry<T> {
   Component: React.ComponentType<{ data: T; onChange: (updates: Partial<T>) => void }>;
   initialState: T;
   constructFn: (data: T) => string;
 }
 
-export const INPUT_REGISTRY: Record<string, InputRegistryEntry<any>> = {
+/**
+ * Registry mapping complex QR types to their components, initial states, and construction functions.
+ * Strictly typed to ensure type safety across the application.
+ */
+export const INPUT_REGISTRY: { [K in ComplexQRType]: InputRegistryEntry<QRDataMap[K]> } = {
   [QRType.WIFI]: {
     Component: WifiInput,
     initialState: {
@@ -41,7 +70,7 @@ export const INPUT_REGISTRY: Record<string, InputRegistryEntry<any>> = {
       encryption: WifiEncryption.WPA,
       hidden: false,
       eapIdentity: ''
-    } as WifiData,
+    },
     constructFn: constructWifiString,
   },
   [QRType.EMAIL]: {
@@ -50,7 +79,7 @@ export const INPUT_REGISTRY: Record<string, InputRegistryEntry<any>> = {
       email: '',
       subject: '',
       body: ''
-    } as EmailData,
+    },
     constructFn: constructEmailString,
   },
   [QRType.VCARD]: {
@@ -66,14 +95,14 @@ export const INPUT_REGISTRY: Record<string, InputRegistryEntry<any>> = {
       street: '',
       city: '',
       country: ''
-    } as VCardData,
+    },
     constructFn: constructVCardString,
   },
   [QRType.PHONE]: {
     Component: PhoneInput,
     initialState: {
       number: ''
-    } as PhoneData,
+    },
     constructFn: constructPhoneString,
   },
   [QRType.SMS]: {
@@ -81,7 +110,7 @@ export const INPUT_REGISTRY: Record<string, InputRegistryEntry<any>> = {
     initialState: {
       number: '',
       message: ''
-    } as SmsData,
+    },
     constructFn: constructSmsString,
   },
   [QRType.PAYMENT]: {
@@ -91,7 +120,7 @@ export const INPUT_REGISTRY: Record<string, InputRegistryEntry<any>> = {
       address: '',
       amount: '',
       label: ''
-    } as PaymentData,
+    },
     constructFn: constructPaymentString,
   },
 };
