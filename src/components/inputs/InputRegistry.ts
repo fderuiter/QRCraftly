@@ -1,6 +1,6 @@
 import React from 'react';
+import { QRType } from '../../types';
 import {
-  QRType,
   WifiEncryption,
   CryptoNetwork,
   WifiData,
@@ -8,16 +8,14 @@ import {
   VCardData,
   PhoneData,
   SmsData,
-  PaymentData
-} from '../../types';
-import {
+  PaymentData,
   constructWifiString,
   constructEmailString,
   constructVCardString,
   constructPhoneString,
   constructSmsString,
   constructPaymentString
-} from '../../utils/qrHelpers';
+} from '../../utils/qr-formatters';
 
 import { WifiInput } from './WifiInput';
 import { EmailInput } from './EmailInput';

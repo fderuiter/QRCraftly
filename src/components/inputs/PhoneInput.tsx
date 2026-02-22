@@ -1,5 +1,5 @@
 import React from 'react';
-import { PhoneData } from '../../types';
+import { PhoneData } from '../../utils/qr-formatters/phone';
 import { TextField } from './FormFields';
 
 interface PhoneInputProps {

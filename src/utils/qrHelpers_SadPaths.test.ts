@@ -22,9 +22,13 @@ import {
   constructEmailString,
   constructVCardString,
   constructPaymentString,
-  constructSmsString
-} from './qrHelpers';
-import { EmailData, VCardData, PaymentData, CryptoNetwork, SmsData } from '../types';
+  constructSmsString,
+  EmailData,
+  VCardData,
+  PaymentData,
+  CryptoNetwork,
+  SmsData
+} from './qr-formatters';
 
 describe('QR Helpers Sad Paths', () => {
   describe('escapeVCardString', () => {

@@ -1,7 +1,6 @@
 
 import { describe, it, expect } from 'vitest';
-import { constructWifiString, constructPaymentString } from './qrHelpers';
-import { WifiEncryption, WifiData, PaymentData } from '../types';
+import { constructWifiString, constructPaymentString, WifiEncryption, WifiData, PaymentData } from './qr-formatters';
 
 describe('QR Helper Injection', () => {
   describe('WiFi String Injection', () => {

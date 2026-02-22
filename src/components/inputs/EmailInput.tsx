@@ -1,5 +1,5 @@
 import React from 'react';
-import { EmailData } from '../../types';
+import { EmailData } from '../../utils/qr-formatters/email';
 import { TextField, TextAreaField } from './FormFields';
 
 interface EmailInputProps {

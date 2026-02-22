@@ -1,5 +1,5 @@
 import React from 'react';
-import { WifiData, WifiEncryption } from '../../types';
+import { WifiData, WifiEncryption } from '../../utils/qr-formatters/wifi';
 import { TextField, SelectField } from './FormFields';
 
 interface WifiInputProps {

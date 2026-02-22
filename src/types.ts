@@ -16,7 +16,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-
 /**
  * Defines the visual style of the QR code.
  * Each style dictates the data modules, eye frame, and eyeball appearance.
@@ -44,16 +43,6 @@ export enum QRType {
   PHONE = 'PHONE',
   SMS = 'SMS',
   PAYMENT = 'PAYMENT',
-}
-
-/**
- * Defines the encryption type for WiFi networks.
- */
-export enum WifiEncryption {
-  WPA = 'WPA',
-  WEP = 'WEP',
-  NOPASS = 'nopass',
-  WPA2_EAP = 'WPA2-EAP',
 }
 
 /**
@@ -111,106 +100,19 @@ export interface QRConfig {
 }
 
 /**
- * Data structure for WiFi network configuration.
- */
-export interface WifiData {
-  /** The SSID (network name) of the WiFi network. */
-  ssid: string;
-  /** The password for the WiFi network. */
-  password: string;
-  /** The encryption type used by the network. */
-  encryption: WifiEncryption;
-  /** Whether the network SSID is hidden. */
-  hidden: boolean;
-  /** The identity for WPA2-EAP enterprise networks (optional). */
-  eapIdentity?: string;
-}
-
-/**
- * Data structure for an Email message.
- */
-export interface EmailData {
-  /** The recipient's email address. */
-  email: string;
-  /** The subject line of the email. */
-  subject: string;
-  /** The body content of the email. */
-  body: string;
-}
-
-/**
- * Data structure for a vCard (electronic business card).
- */
-export interface VCardData {
-  /** The first name of the contact. */
-  firstName: string;
-  /** The last name of the contact. */
-  lastName: string;
-  /** The organization or company name. */
-  organization: string;
-  /** The job title of the contact. */
-  title: string;
-  /** The phone number of the contact. */
-  phone: string;
-  /** The email address of the contact. */
-  email: string;
-  /** The website URL of the contact. */
-  website: string;
-  /** The street address of the contact. */
-  street: string;
-  /** The city of the contact. */
-  city: string;
-  /** The country of the contact. */
-  country: string;
-}
-
-/**
- * Data structure for a phone number.
- */
-export interface PhoneData {
-  /** The phone number to dial. */
-  number: string;
-}
-
-/**
- * Data structure for an SMS message.
- */
-export interface SmsData {
-  /** The recipient's phone number. */
-  number: string;
-  /** The text message body. */
-  message: string;
-}
-
-/**
- * Supported cryptocurrency networks for payment.
- */
-export enum CryptoNetwork {
-  BITCOIN = 'bitcoin',
-  ETHEREUM = 'ethereum',
-  SOLANA = 'solana',
-  LITECOIN = 'litecoin',
-  CUSTOM = 'custom',
-}
-
-/**
- * Data structure for Payment information (Crypto).
- */
-export interface PaymentData {
-  /** The cryptocurrency network (e.g. bitcoin, ethereum). */
-  network: CryptoNetwork;
-  /** The wallet address. */
-  address: string;
-  /** The amount to request (optional). */
-  amount: string;
-  /** Label or message for the transaction (optional). */
-  label: string;
-}
-
-/**
  * Interface representing the modules of a QR code.
  */
 export interface QRModules {
   size: number;
   get(row: number, col: number): boolean;
 }
+
+// Re-export types from modular formatters
+export { WifiEncryption } from './utils/qr-formatters/wifi';
+export type { WifiData } from './utils/qr-formatters/wifi';
+export type { EmailData } from './utils/qr-formatters/email';
+export type { VCardData } from './utils/qr-formatters/vcard';
+export type { PhoneData } from './utils/qr-formatters/phone';
+export type { SmsData } from './utils/qr-formatters/sms';
+export { CryptoNetwork } from './utils/qr-formatters/payment';
+export type { PaymentData } from './utils/qr-formatters/payment';

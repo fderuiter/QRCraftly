@@ -1,5 +1,5 @@
 import React from 'react';
-import { PaymentData, CryptoNetwork } from '../../types';
+import { PaymentData, CryptoNetwork } from '../../utils/qr-formatters/payment';
 import { TextField, SelectField } from './FormFields';
 
 interface PaymentInputProps {

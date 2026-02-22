@@ -17,8 +17,7 @@
 */
 
 import { describe, it, expect } from 'vitest';
-import { constructPaymentString } from '../utils/qrHelpers';
-import { CryptoNetwork } from '../types';
+import { constructPaymentString, CryptoNetwork } from '../utils/qr-formatters/payment';
 
 describe('Payment String Construction - Injection Risks', () => {
   it('prevents parameter injection via label in Amount field', () => {

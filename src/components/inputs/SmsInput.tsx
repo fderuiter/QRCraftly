@@ -1,5 +1,5 @@
 import React from 'react';
-import { SmsData } from '../../types';
+import { SmsData } from '../../utils/qr-formatters/sms';
 import { TextField, TextAreaField } from './FormFields';
 
 interface SmsInputProps {

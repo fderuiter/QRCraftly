@@ -1,5 +1,5 @@
 import React from 'react';
-import { VCardData } from '../../types';
+import { VCardData } from '../../utils/qr-formatters/vcard';
 import { TextField } from './FormFields';
 
 interface VCardInputProps {

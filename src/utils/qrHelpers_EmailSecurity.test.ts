@@ -17,8 +17,7 @@
 */
 
 import { describe, it, expect } from 'vitest';
-import { constructEmailString } from './qrHelpers';
-import { EmailData } from '../types';
+import { constructEmailString, EmailData } from './qr-formatters';
 
 describe('QR Helpers Email Security', () => {
   it('constructEmailString should strip newlines from email to prevent header injection', () => {
