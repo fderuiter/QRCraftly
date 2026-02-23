@@ -77,5 +77,5 @@ export const cleanPhoneNumber = (number: string): string => {
 export const sanitizeInput = (str: string): string => {
   // Remove control characters (00-1F, 7F-9F) to prevent header injection
   const noControl = str.replace(REGEX_STRICT_CONTROL_CHARS, '');
-  return noControl.split('?')[0];
+  return noControl.split('?')[0].trim();
 };

@@ -81,6 +81,16 @@ describe('QR Helpers Sad Paths', () => {
       };
       expect(constructEmailString(data)).toBe('mailto:?subject=&body=');
     });
+
+    it('should trim leading and trailing whitespace from email address', () => {
+      const data: EmailData = {
+        email: '  test@example.com  ',
+        subject: 'Subject',
+        body: 'Body'
+      };
+      // Spaces in mailto URI are invalid and should be trimmed
+      expect(constructEmailString(data)).toBe('mailto:test@example.com?subject=Subject&body=Body');
+    });
   });
 
   describe('constructVCardString', () => {
@@ -123,6 +133,17 @@ describe('QR Helpers Sad Paths', () => {
       const result = constructPaymentString(data);
       // Should encode the ampersand
       expect(result).toContain('amount=0.1%26label%3DHacked');
+    });
+
+    it('should trim leading and trailing whitespace from payment address', () => {
+      const data: PaymentData = {
+        network: CryptoNetwork.BITCOIN,
+        address: '  1Address  ',
+        amount: '',
+        label: ''
+      };
+      // Spaces in crypto URI are invalid and should be trimmed
+      expect(constructPaymentString(data)).toBe('bitcoin:1Address');
     });
   });
 

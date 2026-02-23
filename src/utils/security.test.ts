@@ -136,5 +136,10 @@ describe('Security Utils', () => {
       it('returns empty string if input is empty', () => {
           expect(sanitizeInput('')).toBe('');
       });
+
+      it('trims leading and trailing whitespace', () => {
+          expect(sanitizeInput('  test@example.com  ')).toBe('test@example.com');
+          expect(sanitizeInput('  bitcoin:addr  ')).toBe('bitcoin:addr');
+      });
   });
 });
