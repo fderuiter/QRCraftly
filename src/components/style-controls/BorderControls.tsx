@@ -1,5 +1,6 @@
 import React, { useRef, useMemo } from 'react';
 import { QRConfig } from '../../types';
+import { validateImageUpload } from '../../utils/security';
 import { Upload, X, AlertTriangle } from 'lucide-react';
 import { getContrastRatio } from '../../utils/colorUtils';
 import { ColorInput } from '../ui/ColorInput';
@@ -16,6 +17,12 @@ export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange
   const handleBorderLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      const validation = validateImageUpload(file);
+      if (!validation.valid) {
+        alert(validation.error);
+        return;
+      }
+
       const reader = new FileReader();
       reader.onload = (event) => {
         onChange({ borderLogoUrl: event.target?.result as string });

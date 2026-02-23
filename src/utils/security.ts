@@ -79,3 +79,21 @@ export const sanitizeInput = (str: string): string => {
   const noControl = str.replace(REGEX_STRICT_CONTROL_CHARS, '');
   return noControl.split('?')[0];
 };
+
+const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
+const ALLOWED_MIME_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
+
+/**
+ * Validates an uploaded image file for size and type.
+ * @param file - The file to validate.
+ * @returns Object indicating validity and optional error message.
+ */
+export const validateImageUpload = (file: File): { valid: boolean; error?: string } => {
+  if (!ALLOWED_MIME_TYPES.includes(file.type)) {
+    return { valid: false, error: 'Invalid file type. Please upload a PNG, JPEG, or WebP image.' };
+  }
+  if (file.size > MAX_FILE_SIZE) {
+    return { valid: false, error: 'File size too large. Maximum size is 2MB.' };
+  }
+  return { valid: true };
+};

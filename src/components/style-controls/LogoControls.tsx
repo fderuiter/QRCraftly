@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
 import { QRConfig, LogoPaddingStyle } from '../../types';
+import { validateImageUpload } from '../../utils/security';
 import { Upload, X, Square, Circle, Minus } from 'lucide-react';
 import { ColorInput } from '../ui/ColorInput';
 import { RangeInput } from '../ui/RangeInput';
@@ -15,6 +16,12 @@ export const LogoControls: React.FC<LogoControlsProps> = ({ config, onChange }) 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      const validation = validateImageUpload(file);
+      if (!validation.valid) {
+        alert(validation.error);
+        return;
+      }
+
       const reader = new FileReader();
       reader.onload = (event) => {
         onChange({ logoUrl: event.target?.result as string });
