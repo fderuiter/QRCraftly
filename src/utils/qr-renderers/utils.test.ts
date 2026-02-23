@@ -145,6 +145,40 @@ describe('QR Renderer Utils', () => {
         // Padding should also be scaled
         expect(metrics.effectivePaddingModules).toBeLessThan(1);
     });
+
+    it('calculates safe limits correctly for Quartile (Q) error correction', () => {
+      const config: QRConfig = {
+        ...DEFAULT_CONFIG,
+        logoSize: 0.5, // 50% of 21 = 10.5 modules
+        logoPadding: 0,
+        logoPaddingStyle: 'none',
+        errorCorrectionLevel: 'Q' // Safe ratio 0.45 -> 21 * 0.45 = 9.45
+      };
+
+      // Requested: 10.5
+      // Max allowed: 9.45
+      // Should scale down to 9.45
+      const metrics = getLogoMetrics(config, moduleCount, cellSize);
+      expect(metrics.effectiveLogoSizeModules).toBeCloseTo(9.45);
+      expect(metrics.cutoutModuleSize).toBeCloseTo(9.45);
+    });
+
+    it('handles negative logo size gracefully', () => {
+      const config: QRConfig = {
+        ...DEFAULT_CONFIG,
+        logoSize: -0.2,
+        logoPadding: 0,
+        logoPaddingStyle: 'none',
+        errorCorrectionLevel: 'H'
+      };
+
+      const metrics = getLogoMetrics(config, moduleCount, cellSize);
+      // Should be clamped to 0 or handled safely.
+      // Currently, code allows negative values.
+      // Let's assert what we WANT (0) to verify if it fails.
+      expect(metrics.effectiveLogoSizeModules).toBeGreaterThanOrEqual(0);
+      expect(metrics.logoSizePx).toBeGreaterThanOrEqual(0);
+    });
   });
 
   describe('getIsCoveredByLogo', () => {

@@ -26,8 +26,8 @@ export const getLogoMetrics = (config: QRConfig, moduleCount: number, cellSize: 
        }
     })();
 
-    const requestedLogoSizeModules = config.logoSize * moduleCount;
-    const paddingModules = config.logoPaddingStyle === 'none' ? 0 : config.logoPadding;
+    const requestedLogoSizeModules = Math.max(0, config.logoSize * moduleCount);
+    const paddingModules = config.logoPaddingStyle === 'none' ? 0 : Math.max(0, config.logoPadding);
     const requestedCutoutModules = requestedLogoSizeModules + (paddingModules * 2);
 
     let effectiveLogoSizeModules = requestedLogoSizeModules;
