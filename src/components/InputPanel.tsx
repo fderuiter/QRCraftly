@@ -139,6 +139,8 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
               className={inputClasses}
               value={config.value}
               onChange={(e) => {
+                // Security: Prevent users from generating QR codes that start with dangerous protocols
+                // like javascript: even in Text mode, as many scanners will execute them.
                 if (!isDangerousUrl(e.target.value)) {
                   onChange({ value: e.target.value });
                 } else {
@@ -161,7 +163,13 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
               placeholder="Enter your text here..."
               className={textAreaClasses}
               value={config.value}
-              onChange={(e) => onChange({ value: e.target.value })}
+              onChange={(e) => {
+                if (!isDangerousUrl(e.target.value)) {
+                  onChange({ value: e.target.value });
+                } else {
+                  e.target.value = config.value;
+                }
+              }}
             />
             <CharCount current={config.value.length} max={2500} />
           </div>

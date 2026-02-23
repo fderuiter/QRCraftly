@@ -76,4 +76,21 @@ describe('InputPanel Security (Input Limits)', () => {
     fireEvent.change(input, { target: { value: 'javascript:alert(1)' } });
     expect(mockOnChange).not.toHaveBeenCalled();
   });
+
+  it('rejects dangerous protocols in Text input', () => {
+    const config = { ...DEFAULT_CONFIG, type: QRType.TEXT, value: 'Safe text' };
+    render(<InputPanel config={config} onChange={mockOnChange} />);
+
+    const input = screen.getByLabelText('Content');
+
+    // Safe update
+    fireEvent.change(input, { target: { value: 'Safe text updated' } });
+    expect(mockOnChange).toHaveBeenCalledWith({ value: 'Safe text updated' });
+
+    mockOnChange.mockClear();
+
+    // Dangerous update
+    fireEvent.change(input, { target: { value: 'javascript:alert(1)' } });
+    expect(mockOnChange).not.toHaveBeenCalled();
+  });
 });

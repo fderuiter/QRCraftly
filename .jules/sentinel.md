@@ -24,11 +24,11 @@
 **Prevention:** Maintain a comprehensive blocklist of dangerous protocols, including `blob:`, `filesystem:`, and legacy scripting schemes, to practice defense-in-depth against protocol handler abuse.
 
 ## 2025-02-18 - Phone Number Sanitization Gap
-**Vulnerability:** The  function used a blacklist approach (removing only spaces and specific chars), allowing injection of letters and script tags into `tel:` and `sms:` URIs.
-**Learning:** Blacklists are prone to incompleteness. A previous memory claimed strict whitelisting was in place, but the code did not reflect this, leading to a false sense of security.
-**Prevention:** Implement strict whitelisting (`/[^0-9+*#\-().]/g`) for phone numbers and verify implementation against security claims in documentation/memory.
-
-## 2025-02-18 - Phone Number Sanitization Gap
 **Vulnerability:** The `cleanPhoneNumber` function used a blacklist approach (removing only spaces and specific chars), allowing injection of letters and script tags into `tel:` and `sms:` URIs.
 **Learning:** Blacklists are prone to incompleteness. A previous memory claimed strict whitelisting was in place, but the code did not reflect this, leading to a false sense of security.
 **Prevention:** Implement strict whitelisting (`/[^0-9+*#\-().]/g`) for phone numbers and verify implementation against security claims in documentation/memory.
+
+## 2025-05-18 - [Preventing QR Protocol Bypass in Text Inputs]
+**Vulnerability:** QR Code "Text" inputs were not validated against dangerous protocols, allowing users to generate QR codes containing payloads like `javascript:alert(1)`.
+**Learning:** Even if a field is labeled "Text", scanners may interpret the content as a URI if it matches a protocol schema. Malicious actors can use "Text" fields to bypass "URL" field validation.
+**Prevention:** Apply protocol validation (e.g., `isDangerousUrl`) to "Text" inputs as well, specifically checking if the text *starts with* a dangerous protocol, to prevent the QR code from becoming an executable payload while still allowing discussion of such protocols in body text.
