@@ -39,4 +39,19 @@ describe('InputPanel UX', () => {
     const streetInput = screen.getByLabelText('Street');
     expect(streetLabel.getAttribute('for')).toBe(streetInput.id);
   });
+
+  it('renders character count for limited text fields in vCard', () => {
+    render(<InputPanel config={{ ...DEFAULT_CONFIG, type: QRType.VCARD }} onChange={mockOnChange} />);
+
+    // Street has maxLength 100.
+    // Assuming default value is empty, it should show "0 / 100"
+    expect(screen.getAllByText('0 / 100')[0]).toBeInTheDocument();
+  });
+
+  it('renders character count for SSID in WiFi', () => {
+    render(<InputPanel config={{ ...DEFAULT_CONFIG, type: QRType.WIFI }} onChange={mockOnChange} />);
+
+    // SSID has maxLength 32
+    expect(screen.getByText('0 / 32')).toBeInTheDocument();
+  });
 });
