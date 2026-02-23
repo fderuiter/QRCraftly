@@ -16,13 +16,13 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-// Re-export specific generators
-export * from './qr-generators/wifi';
-export * from './qr-generators/email';
-export * from './qr-generators/vcard';
-export * from './qr-generators/phone';
-export * from './qr-generators/sms';
-export * from './qr-generators/payment';
+import { PhoneData } from '../../types';
+import { cleanPhoneNumber } from '../security';
 
-// Re-export generic URL utility
-export * from './url';
+/**
+ * Constructs the tel string for Phone QR code.
+ */
+export const constructPhoneString = (data: PhoneData): string => {
+  const cleanNumber = cleanPhoneNumber(data.number);
+  return `tel:${cleanNumber}`;
+};

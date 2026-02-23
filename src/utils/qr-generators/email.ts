@@ -16,13 +16,14 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-// Re-export specific generators
-export * from './qr-generators/wifi';
-export * from './qr-generators/email';
-export * from './qr-generators/vcard';
-export * from './qr-generators/phone';
-export * from './qr-generators/sms';
-export * from './qr-generators/payment';
+import { EmailData } from '../../types';
+import { sanitizeInput } from '../security';
 
-// Re-export generic URL utility
-export * from './url';
+/**
+ * Constructs the mailto string for Email QR code.
+ */
+export const constructEmailString = (data: EmailData): string => {
+  // Sanitize email to prevent header injection (e.g. ?cc=attacker@example.com)
+  const safeEmail = sanitizeInput(data.email);
+  return `mailto:${safeEmail}?subject=${encodeURIComponent(data.subject)}&body=${encodeURIComponent(data.body)}`;
+};

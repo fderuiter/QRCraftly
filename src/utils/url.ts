@@ -16,13 +16,27 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-// Re-export specific generators
-export * from './qr-generators/wifi';
-export * from './qr-generators/email';
-export * from './qr-generators/vcard';
-export * from './qr-generators/phone';
-export * from './qr-generators/sms';
-export * from './qr-generators/payment';
-
-// Re-export generic URL utility
-export * from './url';
+/**
+ * Normalizes a URL string to ensure it is valid and properly encoded.
+ * Uses native URL API to handle spaces and missing protocols.
+ */
+export const normalizeUrl = (url: string | undefined): string => {
+  if (!url) return '';
+  try {
+    // 1. Try parsing as is (absolute URL)
+    return new URL(url).href;
+  } catch (e) {
+    try {
+      // 2. Try adding http:// (domain/path only)
+      return new URL(`http://${url}`).href;
+    } catch (e2) {
+      // 3. Fallback: encodeURI (handles spaces but not protocol)
+      try {
+        return encodeURI(url);
+      } catch (e3) {
+        // 4. Absolute fallback
+        return url;
+      }
+    }
+  }
+};

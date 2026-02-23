@@ -16,13 +16,14 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-// Re-export specific generators
-export * from './qr-generators/wifi';
-export * from './qr-generators/email';
-export * from './qr-generators/vcard';
-export * from './qr-generators/phone';
-export * from './qr-generators/sms';
-export * from './qr-generators/payment';
+import { SmsData } from '../../types';
+import { cleanPhoneNumber } from '../security';
 
-// Re-export generic URL utility
-export * from './url';
+/**
+ * Constructs the smsto string for SMS QR code.
+ */
+export const constructSmsString = (data: SmsData): string => {
+  const cleanNumber = cleanPhoneNumber(data.number);
+  const encodedBody = encodeURIComponent(data.message);
+  return `sms:${cleanNumber}?body=${encodedBody}`;
+};
