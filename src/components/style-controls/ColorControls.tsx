@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { QRConfig } from '../../types';
 import { PRESET_COLORS } from '../../constants';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Check } from 'lucide-react';
 import { getContrastRatio } from '../../utils/colorUtils';
 import { ColorInput } from '../ui/ColorInput';
 
@@ -33,24 +33,40 @@ export const ColorControls: React.FC<ColorControlsProps> = ({ config, onChange }
       </div>
 
       <div className="flex flex-wrap gap-3 mb-5">
-        {PRESET_COLORS.map((preset, idx) => (
-          <button
-            key={idx}
-            onClick={() => onChange({ fgColor: preset.fg, bgColor: preset.bg, eyeColor: preset.eye })}
-            aria-pressed={config.fgColor === preset.fg && config.bgColor === preset.bg && config.eyeColor === preset.eye}
-            className="group relative w-10 h-10 rounded-lg shadow-sm hover:scale-110 transition-transform duration-200 ring-1 ring-slate-200 dark:ring-slate-700 overflow-hidden"
-            title={preset.label}
-          >
-            {/* Background */}
-            <div className="absolute inset-0" style={{ backgroundColor: preset.bg }}></div>
+        {PRESET_COLORS.map((preset, idx) => {
+          const isActive = config.fgColor === preset.fg && config.bgColor === preset.bg && config.eyeColor === preset.eye;
 
-            {/* Foreground Ring (Simulating Modules) */}
-            <div className="absolute inset-1.5 border-[3px] rounded-sm" style={{ borderColor: preset.fg }}></div>
+          return (
+            <button
+              key={idx}
+              onClick={() => onChange({ fgColor: preset.fg, bgColor: preset.bg, eyeColor: preset.eye })}
+              aria-pressed={isActive}
+              aria-label={`${preset.label}${isActive ? ' (Selected)' : ''}`}
+              className={`group relative w-10 h-10 rounded-lg shadow-sm hover:scale-110 transition-transform duration-200 overflow-hidden ${
+                isActive
+                  ? 'ring-2 ring-offset-2 ring-teal-500 dark:ring-teal-400 dark:ring-offset-slate-900'
+                  : 'ring-1 ring-slate-200 dark:ring-slate-700'
+              }`}
+              title={preset.label}
+            >
+              {/* Background */}
+              <div className="absolute inset-0" style={{ backgroundColor: preset.bg }}></div>
 
-            {/* Eye Center */}
-            <div className="absolute inset-[11px] rounded-[1px]" style={{ backgroundColor: preset.eye }}></div>
-          </button>
-        ))}
+              {/* Foreground Ring (Simulating Modules) */}
+              <div className="absolute inset-1.5 border-[3px] rounded-sm" style={{ borderColor: preset.fg }}></div>
+
+              {/* Eye Center */}
+              <div className="absolute inset-[11px] rounded-[1px]" style={{ backgroundColor: preset.eye }}></div>
+
+              {/* Checkmark for Active State */}
+              {isActive && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <Check className="w-4 h-4" style={{ color: preset.bg }} strokeWidth={3} />
+                </div>
+              )}
+            </button>
+          );
+        })}
       </div>
 
       <div className="grid grid-cols-2 gap-4">
