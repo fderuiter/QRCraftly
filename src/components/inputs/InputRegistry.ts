@@ -10,14 +10,12 @@ import {
   SmsData,
   PaymentData
 } from '../../types';
-import {
-  constructWifiString,
-  constructEmailString,
-  constructVCardString,
-  constructPhoneString,
-  constructSmsString,
-  constructPaymentString
-} from '../../utils/qrHelpers';
+import { constructWifiString } from '../../utils/qr-generators/wifi';
+import { constructEmailString } from '../../utils/qr-generators/email';
+import { constructVCardString } from '../../utils/qr-generators/vcard';
+import { constructPhoneString } from '../../utils/qr-generators/phone';
+import { constructSmsString } from '../../utils/qr-generators/sms';
+import { constructPaymentString } from '../../utils/qr-generators/payment';
 
 import { WifiInput } from './WifiInput';
 import { EmailInput } from './EmailInput';
