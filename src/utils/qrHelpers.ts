@@ -17,7 +17,7 @@
 */
 
 import { WifiData, EmailData, VCardData, PhoneData, SmsData, PaymentData, WifiEncryption, CryptoNetwork } from '../types';
-import { isDangerousUrl, cleanPhoneNumber, sanitizeInput, REGEX_STRICT_CONTROL_CHARS, REGEX_PRESERVE_FORMAT_CONTROL_CHARS } from './security';
+import { isDangerousUrl, cleanPhoneNumber, sanitizeInput, REGEX_STRICT_CONTROL_CHARS, REGEX_PRESERVE_FORMAT_CONTROL_CHARS, REGEX_INVISIBLE_CHARS, REGEX_UNICODE_NEWLINES } from './security';
 
 /**
  * Escapes special characters for WiFi QR code string.
@@ -100,13 +100,15 @@ export const normalizeUrl = (url: string | undefined): string => {
  */
 export const escapeVCardString = (str: string | undefined): string => {
   if (!str) return '';
-  // 1. Strip non-printable control characters (except newlines and tabs)
+  // 1. Strip non-printable control characters (except newlines and tabs) and invisible chars
   // 2. Escape backslashes first to avoid double escaping
-  // 3. Normalize and escape newlines (CRLF, CR, LF) as \n
+  // 3. Normalize and escape newlines (CRLF, CR, LF, LS, PS) as \n
   // 4. Escape commas and semicolons
   return str
     .replace(REGEX_PRESERVE_FORMAT_CONTROL_CHARS, '')
+    .replace(REGEX_INVISIBLE_CHARS, '')
     .replace(/\\/g, '\\\\')
+    .replace(REGEX_UNICODE_NEWLINES, '\n') // Normalize LS/PS to \n before escaping
     .replace(/\r\n|\r|\n/g, '\\n')
     .replace(/([;,])/g, '\\$1');
 };

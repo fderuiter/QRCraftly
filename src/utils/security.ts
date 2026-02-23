@@ -36,6 +36,12 @@ export const REGEX_PRESERVE_FORMAT_CONTROL_CHARS = /[\x00-\x08\x0B\x0C\x0E-\x1F\
 // and invisible chars like Zero Width Space (200B), ZWNJ (200C), ZWJ (200D), BOM (FEFF)
 export const REGEX_URL_UNSAFE_CHARS = /[\x00-\x1F\x7F-\x9F\s\u200B-\u200D\uFEFF]+/g;
 
+// Invisible characters: Zero Width Space (200B), ZWNJ (200C), ZWJ (200D), BOM (FEFF)
+export const REGEX_INVISIBLE_CHARS = /[\u200B-\u200D\uFEFF]+/g;
+
+// Unicode line separators: Line Separator (2028), Paragraph Separator (2029)
+export const REGEX_UNICODE_NEWLINES = /[\u2028\u2029]/g;
+
 const DANGEROUS_PROTOCOLS = [
   'javascript:',
   'vbscript:',
