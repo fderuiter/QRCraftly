@@ -136,5 +136,12 @@ describe('Security Utils', () => {
       it('returns empty string if input is empty', () => {
           expect(sanitizeInput('')).toBe('');
       });
+
+      it('strips control characters to prevent header injection', () => {
+          expect(sanitizeInput('test@example.com\nSubject:Hacked')).toBe('test@example.comSubject:Hacked');
+          expect(sanitizeInput('test@example.com\rSubject:Hacked')).toBe('test@example.comSubject:Hacked');
+          expect(sanitizeInput('test@example.com\t')).toBe('test@example.com');
+          expect(sanitizeInput('test@example.com\x00')).toBe('test@example.com');
+      });
   });
 });

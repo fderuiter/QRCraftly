@@ -35,3 +35,7 @@
 ## 2026-02-18 - [Unchecked Control Characters in vCard]
 **Discovery:** `escapeVCardString` failed to sanitize non-printable ASCII control characters (like `\x00` or `\x1B`) from vCard fields, potentially corrupting QR code data or causing truncation in legacy readers.
 **Defense:** Updated `escapeVCardString` to strip all control characters in the range `\x00-\x1F` (except Tab, LF, CR) and `\x7F-\x9F` before other processing.
+
+## 2026-02-18 - [Missing Sanitization Tests]
+**Discovery:** `sanitizeInput` was implemented to strip control characters but lacked explicit test coverage for characters like `\n` and `\r`. This created a silent failure risk if the implementation inadvertently changed.
+**Defense:** Added explicit test cases in `src/utils/security.test.ts` to verify strict stripping of control characters, ensuring robust protection against header injection.
