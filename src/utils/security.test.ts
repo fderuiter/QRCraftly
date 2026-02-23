@@ -136,5 +136,16 @@ describe('Security Utils', () => {
       it('returns empty string if input is empty', () => {
           expect(sanitizeInput('')).toBe('');
       });
+
+      it('removes control characters to prevent header injection', () => {
+          // CRLF injection attempt
+          expect(sanitizeInput('subject\r\nBcc: hacker@example.com')).toBe('subjectBcc: hacker@example.com');
+          // Tab injection
+          expect(sanitizeInput('user\tname')).toBe('username');
+          // Null byte injection
+          expect(sanitizeInput('user\x00name')).toBe('username');
+          // Unit Separator injection
+          expect(sanitizeInput('user\x1Fname')).toBe('username');
+      });
   });
 });
