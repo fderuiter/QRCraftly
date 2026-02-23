@@ -79,3 +79,22 @@ export const sanitizeInput = (str: string): string => {
   const noControl = str.replace(REGEX_STRICT_CONTROL_CHARS, '');
   return noControl.split('?')[0];
 };
+
+/**
+ * Validates an uploaded file to ensure it is a safe image and within size limits.
+ * Max size: 2MB.
+ * Allowed types: image/*
+ */
+export const validateImageUpload = (file: File): { valid: boolean; error?: string } => {
+  const MAX_SIZE = 2 * 1024 * 1024; // 2MB
+
+  if (file.size > MAX_SIZE) {
+    return { valid: false, error: 'File size exceeds 2MB limit.' };
+  }
+
+  if (!file.type.startsWith('image/')) {
+    return { valid: false, error: 'Invalid file type. Only images are allowed.' };
+  }
+
+  return { valid: true };
+};

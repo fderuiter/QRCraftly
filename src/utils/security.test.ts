@@ -17,7 +17,7 @@
 */
 
 import { describe, it, expect } from 'vitest';
-import { isDangerousUrl, safeJsonLdStringify, cleanPhoneNumber, sanitizeInput } from './security';
+import { isDangerousUrl, safeJsonLdStringify, cleanPhoneNumber, sanitizeInput, validateImageUpload } from './security';
 
 describe('Security Utils', () => {
   describe('isDangerousUrl', () => {
@@ -136,5 +136,39 @@ describe('Security Utils', () => {
       it('returns empty string if input is empty', () => {
           expect(sanitizeInput('')).toBe('');
       });
+  });
+
+  describe('validateImageUpload', () => {
+    // Helper to create a mock file
+    const createFile = (name: string, type: string, size: number) => {
+      // In Node environment, we can construct a mock object if File is not available,
+      // or use the global File if provided by jsdom/node setup.
+      // Assuming standard File API is available or polyfilled by vitest/jsdom.
+      return {
+          name,
+          type,
+          size,
+      } as File;
+    };
+
+    it('accepts valid images under 2MB', () => {
+      const file = createFile('test.png', 'image/png', 1024); // 1KB
+      expect(validateImageUpload(file)).toEqual({ valid: true });
+    });
+
+    it('rejects files larger than 2MB', () => {
+      const file = createFile('huge.png', 'image/png', 2 * 1024 * 1024 + 1); // 2MB + 1 byte
+      expect(validateImageUpload(file)).toEqual({ valid: false, error: 'File size exceeds 2MB limit.' });
+    });
+
+    it('rejects non-image files', () => {
+      const file = createFile('script.js', 'application/javascript', 1024);
+      expect(validateImageUpload(file)).toEqual({ valid: false, error: 'Invalid file type. Only images are allowed.' });
+    });
+
+    it('rejects empty type', () => {
+        const file = createFile('unknown', '', 1024);
+        expect(validateImageUpload(file)).toEqual({ valid: false, error: 'Invalid file type. Only images are allowed.' });
+    });
   });
 });
