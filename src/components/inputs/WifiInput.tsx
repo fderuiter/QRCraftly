@@ -19,6 +19,7 @@ export const WifiInput: React.FC<WifiInputProps> = ({ data, onChange }) => {
         value={data.ssid}
         onChange={(e) => onChange({ ssid: e.target.value })}
         fieldSize="xs"
+        showCharCount
       />
 
       <div className="flex-1">
@@ -60,6 +61,7 @@ export const WifiInput: React.FC<WifiInputProps> = ({ data, onChange }) => {
                 onChange={(e) => onChange({ password: e.target.value })}
                 fieldSize="xs"
                 showPasswordToggle
+                showCharCount
             />
       )}
 

@@ -29,6 +29,7 @@ export const EmailInput: React.FC<EmailInputProps> = ({ data, onChange }) => {
             value={data.subject}
             onChange={(e) => onChange({ subject: e.target.value })}
             fieldSize="xs"
+            showCharCount
         />
         <TextAreaField
             id="email-body"
