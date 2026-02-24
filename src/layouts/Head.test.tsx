@@ -176,4 +176,55 @@ describe('HeadDefault', () => {
       expect(garbageItem).toBeUndefined();
     }
   });
+
+  it('uses custom Open Graph image from config', () => {
+    mockUsePageContext.mockReturnValue({
+      urlPathname: '/custom-image-page',
+      config: {
+        image: '/custom-og-image.png',
+        imageAlt: 'Custom OG Image Alt Text'
+      }
+    });
+
+    const { container } = render(<HeadDefault />, { container: document.head });
+
+    // Check og:image
+    const ogImage = container.querySelector('meta[property="og:image"]');
+    expect(ogImage).toBeInTheDocument();
+    expect(ogImage?.getAttribute('content')).toBe('https://qrcraftly.com/custom-og-image.png');
+
+    // Check og:image:alt
+    const ogImageAlt = container.querySelector('meta[property="og:image:alt"]');
+    expect(ogImageAlt).toBeInTheDocument();
+    expect(ogImageAlt?.getAttribute('content')).toBe('Custom OG Image Alt Text');
+
+    // Check twitter:image
+    const twitterImage = container.querySelector('meta[name="twitter:image"]');
+    expect(twitterImage).toBeInTheDocument();
+    expect(twitterImage?.getAttribute('content')).toBe('https://qrcraftly.com/custom-og-image.png');
+
+    // Check twitter:image:alt
+    const twitterImageAlt = container.querySelector('meta[name="twitter:image:alt"]');
+    expect(twitterImageAlt).toBeInTheDocument();
+    expect(twitterImageAlt?.getAttribute('content')).toBe('Custom OG Image Alt Text');
+  });
+
+  it('falls back to default Open Graph image if config is missing', () => {
+    mockUsePageContext.mockReturnValue({
+      urlPathname: '/default-image-page',
+      config: {}
+    });
+
+    const { container } = render(<HeadDefault />, { container: document.head });
+
+    // Check og:image
+    const ogImage = container.querySelector('meta[property="og:image"]');
+    expect(ogImage).toBeInTheDocument();
+    expect(ogImage?.getAttribute('content')).toBe('https://qrcraftly.com/og-image.png');
+
+    // Check og:image:alt
+    const ogImageAlt = container.querySelector('meta[property="og:image:alt"]');
+    expect(ogImageAlt).toBeInTheDocument();
+    expect(ogImageAlt?.getAttribute('content')).toBe('QRCraftly QR Code Example');
+  });
 });
