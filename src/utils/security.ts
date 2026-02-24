@@ -32,6 +32,9 @@ export const REGEX_STRICT_CONTROL_CHARS = /[\x00-\x1F\x7F-\x9F]+/g;
 // Standard control chars except Tab (0x09), Line Feed (0x0A), and Carriage Return (0x0D)
 export const REGEX_PRESERVE_FORMAT_CONTROL_CHARS = /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g;
 
+// Matches Unicode line (U+2028) and paragraph (U+2029) separators which can be used for injection
+export const REGEX_UNICODE_NEWLINES = /[\u2028\u2029]/g;
+
 // Includes standard control chars, unicode control chars (0080-009F), whitespace,
 // and invisible chars like Zero Width Space (200B), ZWNJ (200C), ZWJ (200D), BOM (FEFF)
 export const REGEX_URL_UNSAFE_CHARS = /[\x00-\x1F\x7F-\x9F\s\u200B-\u200D\uFEFF]+/g;

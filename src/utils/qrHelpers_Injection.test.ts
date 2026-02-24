@@ -1,7 +1,7 @@
 
 import { describe, it, expect } from 'vitest';
-import { constructWifiString, constructPaymentString } from './qrHelpers';
-import { WifiEncryption, WifiData, PaymentData } from '../types';
+import { constructWifiString, constructPaymentString, constructVCardString } from './qrHelpers';
+import { WifiEncryption, WifiData, PaymentData, VCardData } from '../types';
 
 describe('QR Helper Injection', () => {
   describe('WiFi String Injection', () => {
@@ -49,6 +49,32 @@ describe('QR Helper Injection', () => {
       expect(result).not.toContain('javascript:alert(1)');
       // Ideally it should fall back to empty or safe string
       expect(result).toBe('');
+    });
+  });
+
+  describe('vCard String Injection', () => {
+    it('should sanitize Unicode line separators (U+2028, U+2029)', () => {
+      const maliciousData = {
+        firstName: 'Bob\u2028ORG:InjectedOrg',
+        lastName: 'Smith',
+        organization: 'Acme',
+        title: 'Manager',
+        phone: '1234567890',
+        email: 'bob@example.com',
+        website: 'https://example.com',
+        street: '123 Main St',
+        city: 'Metropolis',
+        country: 'USA'
+      } as VCardData;
+
+      const result = constructVCardString(maliciousData);
+      console.log('vCard Result:', result);
+
+      // Should check that the injected content is not present as a separate field
+      // The injected newline should be escaped or removed
+      expect(result).not.toMatch(/\nORG:InjectedOrg/);
+      // It should be part of the FN or N field, escaped
+      expect(result).toContain('Bob\\nORG:InjectedOrg');
     });
   });
 });
