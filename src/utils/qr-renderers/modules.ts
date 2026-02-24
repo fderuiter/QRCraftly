@@ -8,9 +8,8 @@ const getModuleDrawer = (
     style: QRStyle,
     ctx: CanvasRenderingContext2D,
     cellSize: number,
-    modules: QRModules,
-    moduleCount: number,
-    isCoveredByLogo: (r: number, c: number) => boolean
+    renderable: Uint8Array,
+    moduleCount: number
 ): DrawModuleFn => {
     switch(style) {
         case QRStyle.MODERN:
@@ -27,10 +26,16 @@ const getModuleDrawer = (
             };
         case QRStyle.CIRCUIT:
             return (r, c, x, y, cx, cy) => {
-                const hasTop = r > 0 && modules.get(r-1, c) && !isCoveredByLogo(r-1, c) && !isEye(r-1, c, moduleCount);
-                const hasBottom = r < moduleCount-1 && modules.get(r+1, c) && !isCoveredByLogo(r+1, c) && !isEye(r+1, c, moduleCount);
-                const hasLeft = c > 0 && modules.get(r, c-1) && !isCoveredByLogo(r, c-1) && !isEye(r, c-1, moduleCount);
-                const hasRight = c < moduleCount-1 && modules.get(r, c+1) && !isCoveredByLogo(r, c+1) && !isEye(r, c+1, moduleCount);
+                // Use renderable map for neighbor checks
+                // renderable uses index r * moduleCount + c
+                const idx = r * moduleCount + c;
+
+                // Check neighbors using the pre-calculated map
+                // Boundary checks are handled by r > 0, etc.
+                const hasTop = r > 0 && renderable[idx - moduleCount];
+                const hasBottom = r < moduleCount - 1 && renderable[idx + moduleCount];
+                const hasLeft = c > 0 && renderable[idx - 1];
+                const hasRight = c < moduleCount - 1 && renderable[idx + 1];
 
                 // Full square with very tiny notches
                 drawRoundRect(ctx, x, y, cellSize, cellSize, cellSize * 0.1);
@@ -69,15 +74,47 @@ export const renderModules = (
 
     const isCoveredByLogo = getIsCoveredByLogo(config, moduleCount, logoMetrics);
 
+    // 1. Build renderable map (Pass 1)
+    // 0 = not renderable (off, covered, or eye)
+    // 1 = renderable
+    const renderable = new Uint8Array(moduleCount * moduleCount);
+
+    const markRenderable = (r: number, c: number) => {
+        if (modules.get(r, c) && !isCoveredByLogo(r, c)) {
+             renderable[r * moduleCount + c] = 1;
+        }
+    };
+
+    // Use the same split loop strategy to avoid explicit isEye checks during population
+    // Top Section (Rows 0-6): Skip TL (0-6) and TR (size-7 to size-1)
+    for (let r = 0; r < 7; r++) {
+        for (let c = 7; c < moduleCount - 7; c++) {
+            markRenderable(r, c);
+        }
+    }
+
+    // Middle Section (Rows 7 to size-8): No eyes
+    for (let r = 7; r < moduleCount - 7; r++) {
+        for (let c = 0; c < moduleCount; c++) {
+            markRenderable(r, c);
+        }
+    }
+
+    // Bottom Section (Rows size-7 to size-1): Skip BL (0-6)
+    for (let r = moduleCount - 7; r < moduleCount; r++) {
+        for (let c = 7; c < moduleCount; c++) {
+            markRenderable(r, c);
+        }
+    }
+
     // Batch drawing for performance
     ctx.beginPath();
 
-    const drawModuleFn = getModuleDrawer(config.style, ctx, cellSize, modules, moduleCount, isCoveredByLogo);
+    const drawModuleFn = getModuleDrawer(config.style, ctx, cellSize, renderable, moduleCount);
 
-    const drawModuleAt = (r: number, c: number) => {
-        if (modules.get(r, c)) {
-            if (isCoveredByLogo(r, c)) return;
-
+    const drawRenderableAt = (r: number, c: number) => {
+        // Use pre-calculated map
+        if (renderable[r * moduleCount + c]) {
             const x = drawX + c * cellSize;
             const y = drawY + r * cellSize;
             const cx = x + cellSize / 2;
@@ -87,27 +124,26 @@ export const renderModules = (
         }
     };
 
-    // Optimization: Split loops to skip eye regions (TL, TR, BL) directly.
-    // This avoids calling isEye() inside the loop for every module.
-
-    // Top Section (Rows 0-6): Skip TL (0-6) and TR (size-7 to size-1)
+    // 2. Draw (Pass 2)
+    // Iterate same loops to draw
+    // Top Section
     for (let r = 0; r < 7; r++) {
         for (let c = 7; c < moduleCount - 7; c++) {
-            drawModuleAt(r, c);
+            drawRenderableAt(r, c);
         }
     }
 
-    // Middle Section (Rows 7 to size-8): No eyes
+    // Middle Section
     for (let r = 7; r < moduleCount - 7; r++) {
         for (let c = 0; c < moduleCount; c++) {
-            drawModuleAt(r, c);
+            drawRenderableAt(r, c);
         }
     }
 
-    // Bottom Section (Rows size-7 to size-1): Skip BL (0-6)
+    // Bottom Section
     for (let r = moduleCount - 7; r < moduleCount; r++) {
         for (let c = 7; c < moduleCount; c++) {
-            drawModuleAt(r, c);
+            drawRenderableAt(r, c);
         }
     }
 
