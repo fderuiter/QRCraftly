@@ -21,5 +21,8 @@
  */
 export default {
     title: 'Free Text QR Code Generator | Convert Text to QR - QRCraftly',
-    description: 'Convert any text into a QR code instantly. Free, secure, and customizable. Perfect for sharing messages, notes, or codes.'
+    description: 'Convert any text into a QR code instantly. Free, secure, and customizable. Perfect for sharing messages, notes, or codes.',
+    // Custom Open Graph image for this specific tool
+    image: '/og-image.png?type=text',
+    imageAlt: 'Preview of the Text QR Code Generator tool'
 }

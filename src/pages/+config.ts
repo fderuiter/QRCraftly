@@ -39,5 +39,16 @@ export default {
   extends: vikeReact,
 
   // https://vike.dev/prerender
-  prerender: true
+  prerender: true,
+
+  // Register custom config for Open Graph images
+  // https://vike.dev/meta
+  meta: {
+    image: {
+      env: { server: true, client: true }
+    },
+    imageAlt: {
+      env: { server: true, client: true }
+    }
+  }
 } satisfies Config;

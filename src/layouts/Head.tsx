@@ -48,6 +48,26 @@ export default function HeadDefault() {
   const title = getString(config?.title ?? undefined, pageContext, "QRCraftly - Free Custom QR Code Generator");
   const description = getString(config?.description ?? undefined, pageContext, "Generate beautiful, custom QR codes for free. No sign-up required.");
 
+  // Define domain constant to ensure consistency
+  const DOMAIN = "https://qrcraftly.com";
+
+  // Resolve Open Graph Image
+  // Allows pages to override the default OG image via config.image
+  const imageConfig = config?.image;
+  let imageUrl = `${DOMAIN}/og-image.png`; // Default
+
+  if (imageConfig) {
+      if (imageConfig.startsWith('http')) {
+          imageUrl = imageConfig;
+      } else if (imageConfig.startsWith('/')) {
+          imageUrl = `${DOMAIN}${imageConfig}`;
+      } else {
+          imageUrl = `${DOMAIN}/${imageConfig}`;
+      }
+  }
+
+  const imageAlt = config?.imageAlt || "QRCraftly QR Code Example";
+
   // Ensure we don't end up with double slashes if urlPathname is just '/'
   let path = pageContext.urlPathname;
   // Normalize path to remove trailing slash for canonical URL
@@ -56,8 +76,6 @@ export default function HeadDefault() {
   }
   const canonicalPath = path === '/' ? '' : path;
 
-  // Define domain constant to ensure consistency
-  const DOMAIN = "https://qrcraftly.com";
   const canonicalUrl = `${DOMAIN}${canonicalPath}`;
 
   const schemaData = {
@@ -158,18 +176,18 @@ export default function HeadDefault() {
       <meta property="og:url" content={canonicalUrl} />
       <meta property="og:title" content={title} />
       <meta property="og:description" content={description} />
-      <meta property="og:image" content={`${DOMAIN}/og-image.png`} />
+      <meta property="og:image" content={imageUrl} />
       <meta property="og:image:type" content="image/png" />
       <meta property="og:image:width" content="1280" />
       <meta property="og:image:height" content="720" />
-      <meta property="og:image:alt" content="QRCraftly QR Code Example" />
+      <meta property="og:image:alt" content={imageAlt} />
 
       {/* Social Signals (Twitter) */}
       <meta name="twitter:card" content="summary_large_image" />
       <meta name="twitter:title" content={title} />
       <meta name="twitter:description" content={description} />
-      <meta name="twitter:image" content={`${DOMAIN}/og-image.png`} />
-      <meta name="twitter:image:alt" content="QRCraftly QR Code Example" />
+      <meta name="twitter:image" content={imageUrl} />
+      <meta name="twitter:image:alt" content={imageAlt} />
 
       {/* Mobile & PWA */}
       <meta name="theme-color" content="#0f766e" />
