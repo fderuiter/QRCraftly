@@ -152,13 +152,30 @@ export default function QRTool({ initialConfig, title }: { initialConfig?: Parti
 
             <footer className="pt-8 mt-8 border-t border-slate-100 dark:border-slate-800">
               <nav aria-label="Site Map">
-                <ul className="flex flex-wrap gap-4 text-sm text-slate-500 dark:text-slate-400">
-                  <li><a href="/" className="hover:text-teal-600 dark:hover:text-teal-400">Home</a></li>
-                  <li><a href="/wifi-qr-code" className="hover:text-teal-600 dark:hover:text-teal-400">WiFi QR Code</a></li>
-                  <li><a href="/about" className="hover:text-teal-600 dark:hover:text-teal-400">About</a></li>
-                </ul>
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <h3 className="font-semibold text-xs uppercase tracking-wider text-slate-900 dark:text-slate-200 mb-3">Generators</h3>
+                    <ul className="space-y-2 text-sm text-slate-500 dark:text-slate-400">
+                      <li><a href="/" className="hover:text-teal-600 dark:hover:text-teal-400 transition-colors">URL QR Code</a></li>
+                      <li><a href="/text-qr-code" className="hover:text-teal-600 dark:hover:text-teal-400 transition-colors">Text QR Code</a></li>
+                      <li><a href="/wifi-qr-code" className="hover:text-teal-600 dark:hover:text-teal-400 transition-colors">WiFi QR Code</a></li>
+                      <li><a href="/vcard-qr-code" className="hover:text-teal-600 dark:hover:text-teal-400 transition-colors">vCard QR Code</a></li>
+                      <li><a href="/email-qr-code" className="hover:text-teal-600 dark:hover:text-teal-400 transition-colors">Email QR Code</a></li>
+                      <li><a href="/phone-qr-code" className="hover:text-teal-600 dark:hover:text-teal-400 transition-colors">Phone QR Code</a></li>
+                      <li><a href="/sms-qr-code" className="hover:text-teal-600 dark:hover:text-teal-400 transition-colors">SMS QR Code</a></li>
+                      <li><a href="/payment-qr-code" className="hover:text-teal-600 dark:hover:text-teal-400 transition-colors">Payment QR Code</a></li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-xs uppercase tracking-wider text-slate-900 dark:text-slate-200 mb-3">Company</h3>
+                    <ul className="space-y-2 text-sm text-slate-500 dark:text-slate-400">
+                      <li><a href="/about" className="hover:text-teal-600 dark:hover:text-teal-400 transition-colors">About</a></li>
+                      <li><a href="https://github.com/fderuiter/QRCraftly" className="hover:text-teal-600 dark:hover:text-teal-400 transition-colors">GitHub</a></li>
+                    </ul>
+                  </div>
+                </div>
               </nav>
-              <p className="mt-4 text-xs text-slate-500 dark:text-slate-400">
+              <p className="mt-6 text-xs text-slate-400 dark:text-slate-500 border-t border-slate-100 dark:border-slate-800 pt-4">
                 &copy; {new Date().getFullYear()} QRCraftly. Open Source.
               </p>
             </footer>
