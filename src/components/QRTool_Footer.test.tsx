@@ -22,7 +22,7 @@ describe('QRTool Footer', () => {
     expect(nav).toHaveAttribute('aria-label', 'Site Map');
 
     // Check for specific links
-    const homeLink = within(nav).getByRole('link', { name: /home/i });
+    const homeLink = within(nav).getByRole('link', { name: /url qr code/i });
     expect(homeLink).toHaveAttribute('href', '/');
 
     const wifiLink = within(nav).getByRole('link', { name: /wifi qr code/i });
