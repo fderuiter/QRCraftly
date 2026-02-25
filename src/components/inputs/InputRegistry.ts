@@ -3,6 +3,8 @@ import {
   QRType,
   WifiEncryption,
   CryptoNetwork,
+  UrlData,
+  TextData,
   WifiData,
   EmailData,
   VCardData,
@@ -10,6 +12,8 @@ import {
   SmsData,
   PaymentData
 } from '../../types';
+import { constructUrlString, hydrateUrlData } from '../../utils/qr-generators/url';
+import { constructTextString, hydrateTextData } from '../../utils/qr-generators/text';
 import { constructWifiString } from '../../utils/qr-generators/wifi';
 import { constructEmailString } from '../../utils/qr-generators/email';
 import { constructVCardString } from '../../utils/qr-generators/vcard';
@@ -17,6 +21,8 @@ import { constructPhoneString } from '../../utils/qr-generators/phone';
 import { constructSmsString } from '../../utils/qr-generators/sms';
 import { constructPaymentString } from '../../utils/qr-generators/payment';
 
+import { UrlInput } from './UrlInput';
+import { TextInput } from './TextInput';
 import { WifiInput } from './WifiInput';
 import { EmailInput } from './EmailInput';
 import { VCardInput } from './VCardInput';
@@ -28,9 +34,26 @@ export interface InputRegistryEntry<T> {
   Component: React.ComponentType<{ data: T; onChange: (updates: Partial<T>) => void }>;
   initialState: T;
   constructFn: (data: T) => string;
+  hydrateFn?: (raw: string) => T;
 }
 
 export const INPUT_REGISTRY: Record<string, InputRegistryEntry<any>> = {
+  [QRType.URL]: {
+    Component: UrlInput,
+    initialState: {
+      url: 'https://qrcraftly.com'
+    } as UrlData,
+    constructFn: constructUrlString,
+    hydrateFn: hydrateUrlData,
+  },
+  [QRType.TEXT]: {
+    Component: TextInput,
+    initialState: {
+      text: ''
+    } as TextData,
+    constructFn: constructTextString,
+    hydrateFn: hydrateTextData,
+  },
   [QRType.WIFI]: {
     Component: WifiInput,
     initialState: {

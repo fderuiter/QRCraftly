@@ -17,9 +17,7 @@
 */
 
 import { useState, useRef, useEffect, ElementType } from 'react';
-import { QRConfig, QRType } from '../../types';
-import { UrlInput } from './UrlInput';
-import { TextInput } from './TextInput';
+import { QRConfig } from '../../types';
 import { INPUT_REGISTRY } from './InputRegistry';
 
 /**
@@ -31,11 +29,23 @@ import { INPUT_REGISTRY } from './InputRegistry';
  * @returns An object containing the component to render and its props.
  */
 export function useInputLogic(config: QRConfig, onChange: (updates: Partial<QRConfig>) => void): { InputComponent: ElementType | null, inputProps: any } {
-  // Initialize state for all complex types from registry
+  // Initialize state for all types from registry
   const [inputStates, setInputStates] = useState<Record<string, any>>(() => {
     const states: Record<string, any> = {};
     Object.keys(INPUT_REGISTRY).forEach(key => {
-      states[key] = INPUT_REGISTRY[key].initialState;
+      const entry = INPUT_REGISTRY[key];
+      // If this is the current type and we have a value, try to hydrate
+      // This ensures that initial config values (e.g. from URL or defaults) are reflected in the inputs
+      if (key === config.type && config.value && entry.hydrateFn) {
+        try {
+          states[key] = entry.hydrateFn(config.value);
+        } catch (e) {
+          console.warn(`Failed to hydrate state for ${key}`, e);
+          states[key] = entry.initialState;
+        }
+      } else {
+        states[key] = entry.initialState;
+      }
     });
     return states;
   });
@@ -51,7 +61,7 @@ export function useInputLogic(config: QRConfig, onChange: (updates: Partial<QRCo
     };
   }, [config.type]);
 
-  // Generic handler for all complex inputs
+  // Generic handler for all inputs
   const handleInputChange = (type: string, updates: any) => {
     const currentData = inputStates[type];
     const newData = { ...currentData, ...updates };
@@ -73,34 +83,13 @@ export function useInputLogic(config: QRConfig, onChange: (updates: Partial<QRCo
     }, 100);
   };
 
-  // Handle simple types (URL, Text) separately as they map directly to config.value
-  if (config.type === QRType.URL) {
-    return {
-      InputComponent: UrlInput,
-      inputProps: {
-        value: config.value,
-        onChange: (val: string) => onChange({ value: val })
-      }
-    };
-  }
-
-  if (config.type === QRType.TEXT) {
-    return {
-      InputComponent: TextInput,
-      inputProps: {
-        value: config.value,
-        onChange: (val: string) => onChange({ value: val })
-      }
-    };
-  }
-
-  // Handle complex types via registry
+  // Handle all types via registry
   const registryEntry = INPUT_REGISTRY[config.type];
   if (registryEntry) {
     return {
       InputComponent: registryEntry.Component,
       inputProps: {
-        data: inputStates[config.type],
+        data: inputStates[config.type] || registryEntry.initialState,
         onChange: (updates: any) => handleInputChange(config.type, updates)
       }
     };
