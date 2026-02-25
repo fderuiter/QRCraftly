@@ -32,13 +32,18 @@ export const ColorControls: React.FC<ColorControlsProps> = ({ config, onChange }
         )}
       </div>
 
-      <div className="flex flex-wrap gap-3 mb-5">
+      <div
+        className="flex flex-wrap gap-3 mb-5"
+        role="group"
+        aria-label="Color Presets"
+      >
         {PRESET_COLORS.map((preset, idx) => (
           <button
             key={idx}
             onClick={() => onChange({ fgColor: preset.fg, bgColor: preset.bg, eyeColor: preset.eye })}
             aria-pressed={config.fgColor === preset.fg && config.bgColor === preset.bg && config.eyeColor === preset.eye}
-            className="group relative w-10 h-10 rounded-lg shadow-sm hover:scale-110 transition-transform duration-200 ring-1 ring-slate-200 dark:ring-slate-700 overflow-hidden"
+            aria-label={`Select ${preset.label} theme`}
+            className="group relative w-10 h-10 rounded-lg shadow-sm hover:scale-110 transition-transform duration-200 ring-1 ring-slate-200 dark:ring-slate-700 overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
             title={preset.label}
           >
             {/* Background */}
