@@ -1,4 +1,3 @@
-import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { PatternControls } from './style-controls/PatternControls';
 import { ColorControls } from './style-controls/ColorControls';
