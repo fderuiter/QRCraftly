@@ -27,6 +27,7 @@ describe('InputPanel Component', () => {
 
   beforeEach(() => {
     vi.useFakeTimers();
+    mockOnChange.mockClear();
   });
 
   afterEach(() => {
@@ -64,6 +65,11 @@ describe('InputPanel Component', () => {
     renderPanel();
     const input = screen.getByLabelText('Website URL');
     fireEvent.change(input, { target: { value: 'https://new-url.com' } });
+
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
+
     expect(mockOnChange).toHaveBeenCalledWith({ value: 'https://new-url.com' });
   });
 
@@ -184,6 +190,10 @@ describe('InputPanel Component', () => {
 
       const textArea = screen.getByLabelText('Content');
       fireEvent.change(textArea, { target: { value: 'Some text content' } });
+
+      act(() => {
+        vi.advanceTimersByTime(100);
+      });
 
       expect(mockOnChange).toHaveBeenCalledWith({ value: 'Some text content' });
   });

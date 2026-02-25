@@ -16,15 +16,18 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-// Re-export specific generators
-export * from './qr-generators/wifi';
-export * from './qr-generators/email';
-export * from './qr-generators/vcard';
-export * from './qr-generators/phone';
-export * from './qr-generators/sms';
-export * from './qr-generators/payment';
-export * from './qr-generators/url';
-export * from './qr-generators/text';
+import { TextData } from '../../types';
 
-// Re-export generic URL utility
-export * from './url';
+/**
+ * Constructs the plain text QR code string.
+ */
+export const constructTextString = (data: TextData): string => {
+  return data.text;
+};
+
+/**
+ * Hydrates TextData from a raw string.
+ */
+export const hydrateTextData = (raw: string): TextData => {
+  return { text: raw };
+};

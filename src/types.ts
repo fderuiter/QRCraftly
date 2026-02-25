@@ -208,6 +208,22 @@ export interface PaymentData {
 }
 
 /**
+ * Data structure for URL information.
+ */
+export interface UrlData {
+  /** The URL to encode. */
+  url: string;
+}
+
+/**
+ * Data structure for plain text information.
+ */
+export interface TextData {
+  /** The text content to encode. */
+  text: string;
+}
+
+/**
  * Interface representing the modules of a QR code.
  */
 export interface QRModules {

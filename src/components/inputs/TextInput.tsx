@@ -1,12 +1,13 @@
 import React from 'react';
+import { TextData } from '../../types';
 import { TextAreaField } from './FormFields';
 
 interface TextInputProps {
-  value: string;
-  onChange: (value: string) => void;
+  data: TextData;
+  onChange: (updates: Partial<TextData>) => void;
 }
 
-export const TextInput: React.FC<TextInputProps> = ({ value, onChange }) => {
+export const TextInput: React.FC<TextInputProps> = ({ data, onChange }) => {
   return (
     <div>
       <TextAreaField
@@ -15,8 +16,8 @@ export const TextInput: React.FC<TextInputProps> = ({ value, onChange }) => {
         rows={4}
         maxLength={2500}
         placeholder="Enter your text here..."
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
+        value={data.text}
+        onChange={(e) => onChange({ text: e.target.value })}
         showCharCount
       />
     </div>
