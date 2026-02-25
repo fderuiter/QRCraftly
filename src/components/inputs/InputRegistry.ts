@@ -8,7 +8,9 @@ import {
   VCardData,
   PhoneData,
   SmsData,
-  PaymentData
+  PaymentData,
+  UrlData,
+  TextData
 } from '../../types';
 import { constructWifiString } from '../../utils/qr-generators/wifi';
 import { constructEmailString } from '../../utils/qr-generators/email';
@@ -23,14 +25,33 @@ import { VCardInput } from './VCardInput';
 import { PhoneInput } from './PhoneInput';
 import { SmsInput } from './SmsInput';
 import { PaymentInput } from './PaymentInput';
+import { UrlInput } from './UrlInput';
+import { TextInput } from './TextInput';
 
 export interface InputRegistryEntry<T> {
   Component: React.ComponentType<{ data: T; onChange: (updates: Partial<T>) => void }>;
   initialState: T;
   constructFn: (data: T) => string;
+  hydrateFn?: (value: string) => T;
 }
 
 export const INPUT_REGISTRY: Record<string, InputRegistryEntry<any>> = {
+  [QRType.URL]: {
+    Component: UrlInput,
+    initialState: {
+      url: ''
+    } as UrlData,
+    constructFn: (data: UrlData) => data.url,
+    hydrateFn: (value: string) => ({ url: value }),
+  },
+  [QRType.TEXT]: {
+    Component: TextInput,
+    initialState: {
+      text: ''
+    } as TextData,
+    constructFn: (data: TextData) => data.text,
+    hydrateFn: (value: string) => ({ text: value }),
+  },
   [QRType.WIFI]: {
     Component: WifiInput,
     initialState: {

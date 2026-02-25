@@ -1,13 +1,14 @@
 import React from 'react';
 import { isDangerousUrl } from '../../utils/security';
 import { TextField } from './FormFields';
+import { UrlData } from '../../types';
 
 interface UrlInputProps {
-  value: string;
-  onChange: (value: string) => void;
+  data: UrlData;
+  onChange: (updates: Partial<UrlData>) => void;
 }
 
-export const UrlInput: React.FC<UrlInputProps> = ({ value, onChange }) => {
+export const UrlInput: React.FC<UrlInputProps> = ({ data, onChange }) => {
   return (
     <div>
       <TextField
@@ -19,13 +20,13 @@ export const UrlInput: React.FC<UrlInputProps> = ({ value, onChange }) => {
         type="url"
         maxLength={2048}
         placeholder="https://example.com"
-        value={value}
+        value={data.url}
         onChange={(e) => {
           if (!isDangerousUrl(e.target.value)) {
-            onChange(e.target.value);
+            onChange({ url: e.target.value });
           } else {
             // Force reset the input value to prevent the dangerous string from persisting in the DOM
-            e.target.value = value;
+            e.target.value = data.url;
           }
         }}
       />

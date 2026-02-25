@@ -16,14 +16,22 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import InputPanel from './InputPanel';
 import { DEFAULT_CONFIG } from '../constants';
 import { QRType } from '../types';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 describe('InputPanel Security (Input Limits)', () => {
   const mockOnChange = vi.fn();
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
 
   it('enforces maxLength on URL input', () => {
     render(<InputPanel config={{ ...DEFAULT_CONFIG, type: QRType.URL }} onChange={mockOnChange} />);
@@ -68,12 +76,22 @@ describe('InputPanel Security (Input Limits)', () => {
 
     // Safe update
     fireEvent.change(input, { target: { value: 'https://safe.com/test' } });
+
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
+
     expect(mockOnChange).toHaveBeenCalledWith({ value: 'https://safe.com/test' });
 
     mockOnChange.mockClear();
 
     // Dangerous update
     fireEvent.change(input, { target: { value: 'javascript:alert(1)' } });
+
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
+
     expect(mockOnChange).not.toHaveBeenCalled();
   });
 });
