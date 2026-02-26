@@ -52,14 +52,14 @@ export const DEFAULT_CONFIG = {
  * Used for the style selection UI.
  */
 export const PATTERNS = [
-  { id: QRStyle.STANDARD, label: 'Standard Industrial' },
-  { id: QRStyle.MODERN, label: 'Modern Soft' },
-  { id: QRStyle.SWISS, label: 'Swiss Dot' },
-  { id: QRStyle.FLUID, label: 'Fluid Ink' },
-  { id: QRStyle.CIRCUIT, label: 'Cyber Circuit' },
-  { id: QRStyle.HIVE, label: 'The Hive' },
-  { id: QRStyle.GRUNGE, label: 'Grunge' },
-  { id: QRStyle.STARBURST, label: 'Starburst' },
+  { id: QRStyle.STANDARD, label: 'Standard Industrial', description: 'Classic square modules. Reliable and universally scannable.' },
+  { id: QRStyle.MODERN, label: 'Modern Soft', description: 'Rounded corners for a friendlier, contemporary look.' },
+  { id: QRStyle.SWISS, label: 'Swiss Dot', description: 'Minimalist circular dots. Clean and elegant.' },
+  { id: QRStyle.FLUID, label: 'Fluid Ink', description: 'Organic, flowing shapes that mimic ink on paper.' },
+  { id: QRStyle.CIRCUIT, label: 'Cyber Circuit', description: 'Tech-inspired connections. Perfect for digital brands.' },
+  { id: QRStyle.HIVE, label: 'The Hive', description: 'Hexagonal pattern inspired by nature and structure.' },
+  { id: QRStyle.GRUNGE, label: 'Grunge', description: 'Rough, textured edges for an artistic, urban feel.' },
+  { id: QRStyle.STARBURST, label: 'Starburst', description: 'Radiating patterns that draw the eye to the center.' },
 ];
 
 /**

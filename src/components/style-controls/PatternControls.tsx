@@ -23,6 +23,7 @@ export const PatternControls: React.FC<PatternControlsProps> = ({ config, onChan
             onClick={() => onChange({ style: pattern.id })}
             aria-pressed={config.style === pattern.id}
             aria-label={`Select ${pattern.label} pattern`}
+            title={pattern.description}
             className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 ${
               config.style === pattern.id
                 ? 'border-teal-500 bg-teal-50 dark:bg-teal-900/30 text-teal-700 dark:text-teal-400'
