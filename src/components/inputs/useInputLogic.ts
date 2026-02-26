@@ -17,8 +17,8 @@
 */
 
 import { useState, useRef, useEffect, ElementType } from 'react';
-import { QRConfig } from '../../types';
-import { INPUT_REGISTRY } from './InputRegistry';
+import { QRConfig, QRType } from '../../types';
+import { INPUT_REGISTRY, InputDataMap } from './InputRegistry';
 
 /**
  * Hook to encapsulate the state management and component selection logic for the InputPanel.
@@ -30,9 +30,11 @@ import { INPUT_REGISTRY } from './InputRegistry';
  */
 export function useInputLogic(config: QRConfig, onChange: (updates: Partial<QRConfig>) => void): { InputComponent: ElementType | null, inputProps: any } {
   // Initialize state for all types from registry
-  const [inputStates, setInputStates] = useState<Record<string, any>>(() => {
-    const states: Record<string, any> = {};
-    Object.keys(INPUT_REGISTRY).forEach(key => {
+  const [inputStates, setInputStates] = useState<InputDataMap>(() => {
+    // Use any during construction to avoid complex union/intersection type issues
+    // when assigning to a generic key. We cast back to InputDataMap at the end.
+    const states: any = {};
+    (Object.keys(INPUT_REGISTRY) as QRType[]).forEach(key => {
       const entry = INPUT_REGISTRY[key];
       // If this is the current type and we have a value, try to hydrate
       // This ensures that initial config values (e.g. from URL or defaults) are reflected in the inputs
@@ -47,7 +49,7 @@ export function useInputLogic(config: QRConfig, onChange: (updates: Partial<QRCo
         states[key] = entry.initialState;
       }
     });
-    return states;
+    return states as InputDataMap;
   });
 
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -62,7 +64,7 @@ export function useInputLogic(config: QRConfig, onChange: (updates: Partial<QRCo
   }, [config.type]);
 
   // Generic handler for all inputs
-  const handleInputChange = (type: string, updates: any) => {
+  const handleInputChange = <K extends QRType>(type: K, updates: Partial<InputDataMap[K]>) => {
     const currentData = inputStates[type];
     const newData = { ...currentData, ...updates };
 
@@ -78,6 +80,10 @@ export function useInputLogic(config: QRConfig, onChange: (updates: Partial<QRCo
     timeoutRef.current = setTimeout(() => {
       const entry = INPUT_REGISTRY[type];
       if (entry) {
+        // We know entry matches type K, so constructFn handles newData (InputDataMap[K])
+        // We need to cast entry to any because TS struggles with correlating `entry` (Registry[K])
+        // and `newData` (InputDataMap[K]) inside this generic context without more verbose typing.
+        // @ts-ignore
         onChange({ value: entry.constructFn(newData) });
       }
     }, 100);

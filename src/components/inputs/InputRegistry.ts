@@ -30,6 +30,17 @@ import { PhoneInput } from './PhoneInput';
 import { SmsInput } from './SmsInput';
 import { PaymentInput } from './PaymentInput';
 
+export type InputDataMap = {
+  [QRType.URL]: UrlData;
+  [QRType.TEXT]: TextData;
+  [QRType.WIFI]: WifiData;
+  [QRType.EMAIL]: EmailData;
+  [QRType.VCARD]: VCardData;
+  [QRType.PHONE]: PhoneData;
+  [QRType.SMS]: SmsData;
+  [QRType.PAYMENT]: PaymentData;
+};
+
 export interface InputRegistryEntry<T> {
   Component: React.ComponentType<{ data: T; onChange: (updates: Partial<T>) => void }>;
   initialState: T;
@@ -37,7 +48,11 @@ export interface InputRegistryEntry<T> {
   hydrateFn?: (raw: string) => T;
 }
 
-export const INPUT_REGISTRY: Record<string, InputRegistryEntry<any>> = {
+export type Registry = {
+  [K in QRType]: InputRegistryEntry<InputDataMap[K]>;
+};
+
+export const INPUT_REGISTRY: Registry = {
   [QRType.URL]: {
     Component: UrlInput,
     initialState: {
