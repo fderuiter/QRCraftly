@@ -60,6 +60,40 @@ export default function Page() {
           "priceCurrency": "USD"
         },
         "featureList": "Custom QR Codes, WiFi QR Codes, vCard, Secure Client-Side Generation, Artistic Styles"
+      },
+      {
+        "@type": "HowTo",
+        "name": "How to Create a URL QR Code",
+        "description": "Convert any website URL into a scannable QR code instantly.",
+        "totalTime": "PT1M",
+        "estimatedCost": {
+          "@type": "MonetaryAmount",
+          "currency": "USD",
+          "value": "0"
+        },
+        "tool": [
+          {
+            "@type": "HowToTool",
+            "name": "QRCraftly URL Generator"
+          }
+        ],
+        "step": [
+          {
+            "@type": "HowToStep",
+            "name": "Enter URL",
+            "text": "Paste your website address (URL) into the input field."
+          },
+          {
+            "@type": "HowToStep",
+            "name": "Customize Design",
+            "text": "Adjust colors, add a logo, or change the pattern style."
+          },
+          {
+            "@type": "HowToStep",
+            "name": "Download QR Code",
+            "text": "Save your custom QR code in PNG, JPEG, or WebP format."
+          }
+        ]
       }
     ]
   };
