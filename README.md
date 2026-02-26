@@ -40,7 +40,7 @@ Ensure you have the following installed on your machine:
 
 **System Dependencies (Linux/WSL/macOS):**
 
-This project uses `node-canvas` which requires system libraries. **Install these before running `npm install`:**
+This project uses `node-canvas` for testing (via JSDOM). Because `npm install` installs development dependencies by default, **you must install these system libraries before running `npm install`** or the installation will fail.
 
 *   **Ubuntu/Debian:**
     ```bash
@@ -116,6 +116,7 @@ npm test -- run --coverage
 This project enforces strict quality checks in CI. Run these locally to prevent build failures:
 
 **Type Checking:**
+(Runs TypeScript compiler to catch type errors)
 ```bash
 npm run lint
 ```
@@ -136,6 +137,21 @@ du -sh dist/client
 **Performance & SEO:**
 Lighthouse CI runs on every Pull Request to audit performance, accessibility, best practices, and SEO.
 
+## Troubleshooting
+
+### `npm install` fails with `gyp ERR!` or `Package cairo was not found`
+
+This usually happens because `node-canvas` (a development dependency used for testing) requires system-level libraries to be installed.
+
+**Solution:**
+1. Install the system dependencies listed in the [Prerequisites](#prerequisites) section for your operating system.
+2. Run `npm install` again.
+
+Alternatively, if you only want to run the application without running tests, you can skip installing development dependencies:
+
+```bash
+npm install --omit=dev
+```
 
 ## Usage Guide
 
