@@ -18,7 +18,7 @@
 
 
 /**
- * Draws a rounded rectangle.
+ * Traces a rounded rectangle path.
  * @param ctx The canvas context.
  * @param x The top-left x coordinate.
  * @param y The top-left y coordinate.
@@ -26,7 +26,7 @@
  * @param h The height of the rectangle.
  * @param r The corner radius.
  */
-export const drawRoundRect = (ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) => {
+export const traceRoundRect = (ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) => {
   // @ts-ignore - roundRect is part of newer Canvas API
   if (ctx.roundRect) {
     // @ts-ignore
@@ -46,18 +46,15 @@ export const drawRoundRect = (ctx: CanvasRenderingContext2D, x: number, y: numbe
 };
 
 /**
- * Draws a regular polygon.
+ * Traces a regular polygon path.
  * @param ctx The canvas context.
  * @param x The center x coordinate.
  * @param y The center y coordinate.
  * @param r The radius.
  * @param sides The number of sides.
  * @param rotate Rotation angle in radians (default: 0).
- * @param fill Whether to fill the polygon (default: true).
- * @param addToPath Whether to add to the current path without starting a new one or filling (default: false).
  */
-export const drawPoly = (ctx: CanvasRenderingContext2D, x: number, y: number, r: number, sides: number, rotate: number = 0, fill: boolean = true, addToPath: boolean = false) => {
-  if (!addToPath) ctx.beginPath();
+export const tracePoly = (ctx: CanvasRenderingContext2D, x: number, y: number, r: number, sides: number, rotate: number = 0) => {
   for (let i = 0; i < sides; i++) {
     const theta = rotate + (i * 2 * Math.PI / sides);
     const px = x + r * Math.cos(theta);
@@ -66,29 +63,23 @@ export const drawPoly = (ctx: CanvasRenderingContext2D, x: number, y: number, r:
     else ctx.lineTo(px, py);
   }
   ctx.closePath();
-  if (!addToPath) {
-    if (fill) ctx.fill(); else ctx.stroke();
-  }
 };
 
 /**
- * Draws a star shape.
+ * Traces a star shape path.
  * @param ctx The canvas context.
  * @param cx The center x coordinate.
  * @param cy The center y coordinate.
  * @param outerR The outer radius.
  * @param innerR The inner radius.
  * @param spikes The number of spikes.
- * @param fill Whether to fill the star (default: true).
- * @param addToPath Whether to add to the current path without starting a new one or filling (default: false).
  */
-export const drawStar = (ctx: CanvasRenderingContext2D, cx: number, cy: number, outerR: number, innerR: number, spikes: number, fill: boolean = true, addToPath: boolean = false) => {
+export const traceStar = (ctx: CanvasRenderingContext2D, cx: number, cy: number, outerR: number, innerR: number, spikes: number) => {
   let rot = Math.PI / 2 * 3;
   let x = cx;
   let y = cy;
   const step = Math.PI / spikes;
 
-  if (!addToPath) ctx.beginPath();
   ctx.moveTo(cx, cy - outerR);
   for (let i = 0; i < spikes; i++) {
     x = cx + Math.cos(rot) * outerR;
@@ -103,46 +94,37 @@ export const drawStar = (ctx: CanvasRenderingContext2D, cx: number, cy: number, 
   }
   ctx.lineTo(cx, cy - outerR);
   ctx.closePath();
-  if (!addToPath) {
-    if (fill) ctx.fill(); else ctx.stroke();
-  }
 };
 
 /**
- * Draws a roughly rectangular shape (slightly rotated).
+ * Traces a roughly rectangular shape (slightly rotated) path.
  * @param ctx The canvas context.
  * @param x The top-left x coordinate.
  * @param y The top-left y coordinate.
  * @param w The width.
  * @param h The height.
- * @param addToPath Whether to add to the current path instead of filling immediately (default: false).
  */
-export const drawRoughRect = (ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, addToPath: boolean = false) => {
+export const traceRoughRect = (ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number) => {
   ctx.save();
   // Just a slight rotation for style
   ctx.translate(x + w / 2, y + h / 2);
   ctx.rotate(0.02);
-  if (addToPath) {
-    ctx.rect(-w / 2, -h / 2, w, h);
-  } else {
-    ctx.fillRect(-w / 2, -h / 2, w, h);
-  }
+  ctx.rect(-w / 2, -h / 2, w, h);
   ctx.restore();
 };
 
 /**
- * Draws a scribbled shape.
+ * Traces a scribbled shape path.
  * @param ctx The canvas context.
  * @param x The top-left x coordinate.
  * @param y The top-left y coordinate.
  * @param s The size of the bounding box.
  */
-export const drawScribble = (ctx: CanvasRenderingContext2D, x: number, y: number, s: number) => {
+export const traceScribble = (ctx: CanvasRenderingContext2D, x: number, y: number, s: number) => {
   ctx.save();
   ctx.translate(x + s / 2, y + s / 2);
   ctx.rotate(0.1);
   // Draw a rough polygon that fills most of the space
-  ctx.beginPath();
   const r = s / 1.8; // Radius to cover square corners
   for (let i = 0; i < 8; i++) {
     const angle = i * (Math.PI * 2) / 8;
@@ -153,6 +135,5 @@ export const drawScribble = (ctx: CanvasRenderingContext2D, x: number, y: number
     else ctx.lineTo(px, py);
   }
   ctx.closePath();
-  ctx.fill();
   ctx.restore();
 };

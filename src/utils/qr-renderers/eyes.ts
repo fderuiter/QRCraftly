@@ -1,5 +1,5 @@
 import { QRConfig, QRStyle } from '../../types';
-import { drawRoundRect, drawPoly, drawStar, drawRoughRect, drawScribble } from '../canvasHelpers';
+import { traceRoundRect, tracePoly, traceStar, traceRoughRect, traceScribble } from '../canvasHelpers';
 
 export const renderEyes = (
     ctx: CanvasRenderingContext2D,
@@ -29,12 +29,12 @@ export const renderEyes = (
         const drawRoundedEyeFrame = () => {
              // Frame (Less rounded for robustness)
              ctx.beginPath();
-             drawRoundRect(ctx, x, y, size, size, cellSize * 1.5);
+             traceRoundRect(ctx, x, y, size, size, cellSize * 1.5);
              ctx.fill();
              // Hole
              clearShape(() => {
                   ctx.beginPath();
-                  drawRoundRect(ctx, x + cellSize, y + cellSize, size - 2*cellSize, size - 2*cellSize, cellSize * 0.8);
+                  traceRoundRect(ctx, x + cellSize, y + cellSize, size - 2*cellSize, size - 2*cellSize, cellSize * 0.8);
                   ctx.fill();
              });
         };
@@ -55,7 +55,7 @@ export const renderEyes = (
 
                 // Eyeball (Solid Square with slight rounding)
                 ctx.beginPath();
-                drawRoundRect(ctx, x + 2*cellSize, y + 2*cellSize, 3*cellSize, 3*cellSize, cellSize * 0.5);
+                traceRoundRect(ctx, x + 2*cellSize, y + 2*cellSize, 3*cellSize, 3*cellSize, cellSize * 0.5);
                 ctx.fill();
                 break;
 
@@ -106,19 +106,25 @@ export const renderEyes = (
                 drawSquareEyeFrame();
 
                 // Eyeball: Solid Hex (This is fine usually if large enough)
-                drawPoly(ctx, cx, cy, 1.8 * cellSize, 6, 0, true);
+                ctx.beginPath();
+                tracePoly(ctx, cx, cy, 1.8 * cellSize, 6, 0);
+                ctx.fill();
                 break;
 
             case QRStyle.GRUNGE: // Grunge
                 // Frame
-                drawRoughRect(ctx, x, y, size, size);
+                ctx.beginPath();
+                traceRoughRect(ctx, x, y, size, size);
+                ctx.fill();
 
                 clearShape(() => {
                     ctx.fillRect(x + cellSize, y + cellSize, size - 2*cellSize, size - 2*cellSize);
                 });
 
                 // Eyeball - Solid rough polygon
-                drawScribble(ctx, x + 2*cellSize, y + 2*cellSize, 3*cellSize);
+                ctx.beginPath();
+                traceScribble(ctx, x + 2*cellSize, y + 2*cellSize, 3*cellSize);
+                ctx.fill();
                 break;
 
             case QRStyle.STARBURST:
@@ -126,7 +132,9 @@ export const renderEyes = (
 
                  // Eyeball: Star
                  // Make it fat
-                 drawStar(ctx, cx, cy, 1.9*cellSize, 1.2*cellSize, 5, true);
+                 ctx.beginPath();
+                 traceStar(ctx, cx, cy, 1.9*cellSize, 1.2*cellSize, 5);
+                 ctx.fill();
                  break;
 
             case QRStyle.STANDARD:

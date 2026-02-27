@@ -1,5 +1,5 @@
 import { QRConfig, QRStyle, QRModules } from '../../types';
-import { drawRoundRect, drawPoly, drawStar, drawRoughRect } from '../canvasHelpers';
+import { traceRoundRect, tracePoly, traceStar, traceRoughRect } from '../canvasHelpers';
 import { isEye, getIsCoveredByLogo, LogoMetrics } from './utils';
 
 type DrawModuleFn = (r: number, c: number, x: number, y: number, cx: number, cy: number) => void;
@@ -14,7 +14,7 @@ const getModuleDrawer = (
 ): DrawModuleFn => {
     switch(style) {
         case QRStyle.MODERN:
-            return (_r, _c, x, y, _cx, _cy) => drawRoundRect(ctx, x, y, cellSize, cellSize, cellSize * 0.3);
+            return (_r, _c, x, y, _cx, _cy) => traceRoundRect(ctx, x, y, cellSize, cellSize, cellSize * 0.3);
         case QRStyle.SWISS:
             return (_r, _c, _x, _y, cx, cy) => {
                 ctx.moveTo(cx + (cellSize/2 * 1.05), cy);
@@ -33,7 +33,7 @@ const getModuleDrawer = (
                 const hasRight = c < moduleCount-1 && modules.get(r, c+1) && !isCoveredByLogo(r, c+1) && !isEye(r, c+1, moduleCount);
 
                 // Full square with very tiny notches
-                drawRoundRect(ctx, x, y, cellSize, cellSize, cellSize * 0.1);
+                traceRoundRect(ctx, x, y, cellSize, cellSize, cellSize * 0.1);
 
                 // Draw lines to neighbors
                 const thickness = cellSize * 0.4;
@@ -43,11 +43,11 @@ const getModuleDrawer = (
                 if (hasTop) ctx.rect(cx - thickness/2, y, thickness, cellSize/2 + 1);
             };
         case QRStyle.HIVE:
-            return (_r, _c, _x, _y, cx, cy) => drawPoly(ctx, cx, cy, cellSize/1.55, 6, 0, true, true);
+            return (_r, _c, _x, _y, cx, cy) => tracePoly(ctx, cx, cy, cellSize/1.55, 6, 0);
         case QRStyle.GRUNGE:
-            return (_r, _c, x, y, _cx, _cy) => drawRoughRect(ctx, x, y, cellSize, cellSize, true);
+            return (_r, _c, x, y, _cx, _cy) => traceRoughRect(ctx, x, y, cellSize, cellSize);
         case QRStyle.STARBURST:
-            return (_r, _c, _x, _y, cx, cy) => drawStar(ctx, cx, cy, cellSize/1.5, cellSize/2.2, 5, true, true);
+            return (_r, _c, _x, _y, cx, cy) => traceStar(ctx, cx, cy, cellSize/1.5, cellSize/2.2, 5);
         case QRStyle.STANDARD:
         default:
             return (_r, _c, x, y, _cx, _cy) => ctx.rect(Math.floor(x), Math.floor(y), Math.ceil(cellSize), Math.ceil(cellSize));

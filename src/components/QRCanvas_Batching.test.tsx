@@ -108,7 +108,7 @@ describe('QRCanvas Batch Rendering', () => {
       });
   };
 
-  it('batches HIVE style (drawPoly) calls', async () => {
+  it('batches HIVE style (tracePoly) calls', async () => {
       setModulesPattern();
       const config = { ...DEFAULT_CONFIG, style: QRStyle.HIVE };
       render(<QRCanvas config={config} />);
@@ -125,7 +125,7 @@ describe('QRCanvas Batch Rendering', () => {
       expect(fillCallCount).toBeLessThan(10);
   });
 
-  it('batches STARBURST style (drawStar) calls', async () => {
+  it('batches STARBURST style (traceStar) calls', async () => {
       setModulesPattern();
       const config = { ...DEFAULT_CONFIG, style: QRStyle.STARBURST };
       render(<QRCanvas config={config} />);
@@ -138,7 +138,7 @@ describe('QRCanvas Batch Rendering', () => {
       expect(fillCallCount).toBeLessThan(10);
   });
 
-  it('batches GRUNGE style (drawRoughRect) calls', async () => {
+  it('batches GRUNGE style (traceRoughRect) calls', async () => {
       setModulesPattern();
       const config = { ...DEFAULT_CONFIG, style: QRStyle.GRUNGE };
       render(<QRCanvas config={config} />);
