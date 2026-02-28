@@ -22,7 +22,7 @@ import { DEFAULT_CONFIG } from '@/constants';
 import InputPanel from '@/components/InputPanel';
 import QRCanvas from '@/components/QRCanvas';
 import { Download, Share2, QrCode, ChevronDown, Camera, Moon, Sun, Info } from 'lucide-react';
-import { useDebounce } from '@/utils/hooks';
+import { useDebounce, useOnClickOutside } from '@/utils/hooks';
 import { useQRDownload } from '@/utils/useQRDownload';
 
 // Lazy load StyleControls to reduce initial bundle size and avoid SSR issues
@@ -53,20 +53,8 @@ export default function QRTool({ initialConfig, title }: { initialConfig?: Parti
   }, []);
 
   // Close download menu when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (downloadMenuRef.current && !downloadMenuRef.current.contains(event.target as Node)) {
-        setShowDownloadMenu(false);
-      }
-    };
-
-    if (showDownloadMenu) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [showDownloadMenu]);
+  const closeDownloadMenu = useCallback(() => setShowDownloadMenu(false), []);
+  useOnClickOutside(downloadMenuRef, closeDownloadMenu, showDownloadMenu);
 
   // Debounce the config for QRCanvas to prevent lag during rapid typing or style changes.
   // 100ms is a good balance between responsiveness and performance.

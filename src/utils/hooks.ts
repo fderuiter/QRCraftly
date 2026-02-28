@@ -16,7 +16,41 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, RefObject } from 'react';
+
+/**
+ * Hook to handle clicks outside of a specified element.
+ * Useful for closing dropdowns, modals, and menus.
+ *
+ * @param ref The ref of the element to detect outside clicks for.
+ * @param handler Callback fired when an outside click occurs.
+ * @param isActive Boolean indicating if the listener should be attached. Defaults to true.
+ */
+export function useOnClickOutside<T extends HTMLElement>(
+  ref: RefObject<T | null>,
+  handler: (event: MouseEvent | TouchEvent) => void,
+  isActive: boolean = true
+) {
+  useEffect(() => {
+    if (!isActive) return;
+
+    const listener = (event: MouseEvent | TouchEvent) => {
+      // Do nothing if clicking ref's element or descendent elements
+      if (!ref.current || ref.current.contains(event.target as Node)) {
+        return;
+      }
+      handler(event);
+    };
+
+    document.addEventListener('mousedown', listener);
+    document.addEventListener('touchstart', listener);
+
+    return () => {
+      document.removeEventListener('mousedown', listener);
+      document.removeEventListener('touchstart', listener);
+    };
+  }, [ref, handler, isActive]);
+}
 
 /**
  * A hook that returns a debounced value.
