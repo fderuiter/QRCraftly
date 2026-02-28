@@ -40,6 +40,7 @@ export const RangeInput: React.FC<RangeInputProps> = ({
       max={max}
       step={step}
       value={value}
+      aria-valuetext={formatValue(value)}
       onChange={(e) => onChange(parseFloat(e.target.value))}
       className="w-full accent-teal-700 dark:accent-teal-500 cursor-pointer"
     />
