@@ -34,13 +34,13 @@ Follow these instructions to get a copy of the project up and running on your lo
 Ensure you have the following installed on your machine:
 
 - [Node.js](https://nodejs.org/) (version 20.19.0 or higher required)
-- npm (usually comes with Node.js) or yarn
+- [pnpm](https://pnpm.io/) (strictly mandated, do not use `npm` or `yarn`)
 - Python 3 (optional, for running `scripts/` utilities)
   - To run optimization scripts, install dependencies: `pip install -r scripts/requirements.txt`
 
 **System Dependencies (Linux/WSL/macOS):**
 
-This project uses `node-canvas` for testing (via JSDOM). Because `npm install` installs development dependencies by default, **you must install these system libraries before running `npm install`** or the installation will fail.
+This project uses `node-canvas` for testing (via JSDOM). Because `pnpm install` installs development dependencies by default, **you must install these system libraries before running `pnpm install`** or the installation will fail.
 
 *   **Ubuntu/Debian:**
     ```bash
@@ -63,9 +63,7 @@ This project uses `node-canvas` for testing (via JSDOM). Because `npm install` i
 
 2.  **Install dependencies:**
     ```bash
-    npm install
-    # or
-    yarn install
+    pnpm install
     ```
 
 ### Running the Application
@@ -73,9 +71,7 @@ This project uses `node-canvas` for testing (via JSDOM). Because `npm install` i
 To start the development server:
 
 ```bash
-npm run dev
-# or
-yarn dev
+pnpm dev
 ```
 
 The application will typically start at `http://localhost:3000` (or another available port shown in the terminal).
@@ -85,9 +81,7 @@ The application will typically start at `http://localhost:3000` (or another avai
 To create a production-ready build (Static Site Generation via Vike):
 
 ```bash
-npm run build
-# or
-yarn build
+pnpm build
 ```
 
 The build artifacts will be stored in the `dist/` directory.
@@ -95,7 +89,7 @@ The build artifacts will be stored in the `dist/` directory.
 To preview the production build locally:
 
 ```bash
-npm run preview
+pnpm preview
 ```
 
 ### Running Tests
@@ -103,12 +97,12 @@ npm run preview
 To run the test suite (Vitest):
 
 ```bash
-npm test
+pnpm test
 ```
 
 To run coverage reports:
 ```bash
-npm test -- run --coverage
+pnpm test -- run --coverage
 ```
 
 ### Quality Assurance
@@ -118,7 +112,7 @@ This project enforces strict quality checks in CI. Run these locally to prevent 
 **Type Checking:**
 (Runs TypeScript compiler to catch type errors)
 ```bash
-npm run lint
+pnpm lint
 ```
 
 **Accessibility & Contrast Check:**
@@ -129,7 +123,7 @@ python3 scripts/contrast_check.py
 **Bundle Size Check:**
 The build pipeline enforces a 3MB limit on the client bundle.
 ```bash
-npm run build
+pnpm build
 # Check size of dist/client directory
 du -sh dist/client
 ```
@@ -139,18 +133,18 @@ Lighthouse CI runs on every Pull Request to audit performance, accessibility, be
 
 ## Troubleshooting
 
-### `npm install` fails with `gyp ERR!` or `Package cairo was not found`
+### `pnpm install` fails with `gyp ERR!` or `Package cairo was not found`
 
 This usually happens because `node-canvas` (a development dependency used for testing) requires system-level libraries to be installed.
 
 **Solution:**
 1. Install the system dependencies listed in the [Prerequisites](#prerequisites) section for your operating system.
-2. Run `npm install` again.
+2. Run `pnpm install` again.
 
 Alternatively, if you only want to run the application without running tests, you can skip installing development dependencies:
 
 ```bash
-npm install --omit=dev
+pnpm install --prod
 ```
 
 ## Usage Guide
