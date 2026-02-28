@@ -21,5 +21,7 @@
  */
 export default {
     title: 'Free Crypto Payment QR Code Generator | Bitcoin, Ethereum - QRCraftly',
-    description: 'Create secure crypto payment QR codes for Bitcoin, Ethereum, Solana, and more. Accept payments easily.'
+    description: 'Create secure crypto payment QR codes for Bitcoin, Ethereum, Solana, and more. Accept payments easily.',
+    image: '/og-image.png?type=payment',
+    imageAlt: 'Preview of the Payment QR Code Generator tool'
 }

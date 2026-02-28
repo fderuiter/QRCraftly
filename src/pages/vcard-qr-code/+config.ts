@@ -21,5 +21,7 @@
  */
 export default {
     title: 'Free VCard QR Code Generator | Digital Business Cards - QRCraftly',
-    description: 'Generate VCard QR codes for digital business cards. Share contact details easily. Compatible with all smartphones.'
+    description: 'Generate VCard QR codes for digital business cards. Share contact details easily. Compatible with all smartphones.',
+    image: '/og-image.png?type=vcard',
+    imageAlt: 'Preview of the VCard QR Code Generator tool'
 }
