@@ -17,7 +17,7 @@
 */
 
 
-import { QRStyle, QRType } from './types';
+import { QRStyle, QRType, QRErrorCorrectionLevel } from './types';
 
 /**
  * The default configuration settings for the QR code generator.
@@ -35,7 +35,7 @@ export const DEFAULT_CONFIG = {
   logoPadding: 1,
   logoBackgroundColor: '#ffffff',
   eyeColor: '#000000',
-  errorCorrectionLevel: 'H' as const,
+  errorCorrectionLevel: QRErrorCorrectionLevel.H,
   isBorderEnabled: false,
   borderSize: 0.05,
   borderColor: '#000000',
