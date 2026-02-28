@@ -145,6 +145,21 @@ describe('QR Renderer Utils', () => {
         // Padding should also be scaled
         expect(metrics.effectivePaddingModules).toBeLessThan(1);
     });
+
+    it('defaults to 0.50 safe area ratio for invalid error correction levels', () => {
+        const config: any = {
+            ...DEFAULT_CONFIG,
+            logoSize: 0.4, // 40% of 21 = 8.4 modules
+            logoPadding: 0,
+            logoPaddingStyle: 'none',
+            errorCorrectionLevel: 'INVALID' // Trigger the ?? 0.50 fallback
+        };
+
+        const metrics = getLogoMetrics(config, moduleCount, cellSize);
+
+        // Since default is 0.50, and 0.4 < 0.50, no scaling should occur
+        expect(metrics.effectiveLogoSizeModules).toBeCloseTo(8.4);
+    });
   });
 
   describe('getIsCoveredByLogo', () => {
