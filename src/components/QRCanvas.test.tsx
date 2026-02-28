@@ -21,7 +21,7 @@ import { render, screen, waitFor, act } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach, afterEach, Mock } from 'vitest';
 import QRCanvas from './QRCanvas';
 import { DEFAULT_CONFIG } from '../constants';
-import { QRStyle, LogoPaddingStyle } from '../types';
+import { QRStyle, LogoPaddingStyle, QRErrorCorrectionLevel } from '../types';
 import QRCode from 'qrcode';
 
 // Mock qrcode module
@@ -125,7 +125,7 @@ describe('QRCanvas Component', () => {
     expect(canvas).toHaveAttribute('aria-label', expect.stringContaining('QR Code for Url'));
 
     await waitFor(() => {
-        expect(QRCode.create).toHaveBeenCalledWith(DEFAULT_CONFIG.value, { errorCorrectionLevel: 'H' });
+        expect(QRCode.create).toHaveBeenCalledWith(DEFAULT_CONFIG.value, { errorCorrectionLevel: QRErrorCorrectionLevel.H });
     });
 
     await waitFor(() => {

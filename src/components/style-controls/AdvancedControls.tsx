@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { QRConfig } from '../../types';
+import { QRConfig, QRErrorCorrectionLevel } from '../../types';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 
 interface AdvancedControlsProps {
@@ -32,14 +32,14 @@ export const AdvancedControls: React.FC<AdvancedControlsProps> = ({ config, onCh
             <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-2">Error Correction Level</label>
             <div className="grid grid-cols-2 gap-2">
               {[
-                { id: 'L', label: 'Low (~7%)', desc: 'Best for screens' },
-                { id: 'M', label: 'Medium (~15%)', desc: 'Standard' },
-                { id: 'Q', label: 'Quartile (~25%)', desc: 'Good for print' },
-                { id: 'H', label: 'High (~30%)', desc: 'Best for logos' },
+                { id: QRErrorCorrectionLevel.L, label: 'Low (~7%)', desc: 'Best for screens' },
+                { id: QRErrorCorrectionLevel.M, label: 'Medium (~15%)', desc: 'Standard' },
+                { id: QRErrorCorrectionLevel.Q, label: 'Quartile (~25%)', desc: 'Good for print' },
+                { id: QRErrorCorrectionLevel.H, label: 'High (~30%)', desc: 'Best for logos' },
               ].map((level) => (
                 <button
                   key={level.id}
-                  onClick={() => onChange({ errorCorrectionLevel: level.id as any })}
+                  onClick={() => onChange({ errorCorrectionLevel: level.id })}
                   aria-pressed={config.errorCorrectionLevel === level.id}
                   className={`p-2 rounded-lg text-left border transition-all ${
                     config.errorCorrectionLevel === level.id

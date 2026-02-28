@@ -62,6 +62,16 @@ export enum WifiEncryption {
 export type LogoPaddingStyle = 'square' | 'circle' | 'none';
 
 /**
+ * Defines the error correction level for the QR code.
+ */
+export enum QRErrorCorrectionLevel {
+  L = 'L',
+  M = 'M',
+  Q = 'Q',
+  H = 'H',
+}
+
+/**
  * Configuration interface for generating a QR code.
  * Contains all visual and data parameters.
  */
@@ -88,8 +98,8 @@ export interface QRConfig {
   logoBackgroundColor: string;
   /** The color of the position detection patterns (eyes) in the corners. */
   eyeColor: string;
-  /** The error correction level (L, M, Q, H). */
-  errorCorrectionLevel: 'L' | 'M' | 'Q' | 'H';
+  /** The error correction level. */
+  errorCorrectionLevel: QRErrorCorrectionLevel;
   /** Whether to draw a border around the QR code. */
   isBorderEnabled: boolean;
   /** The size of the border relative to the QR code size (0.0 to 0.1). */

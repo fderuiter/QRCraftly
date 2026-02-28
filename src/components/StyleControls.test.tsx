@@ -19,7 +19,7 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import StyleControls from './StyleControls';
 import { DEFAULT_CONFIG } from '../constants';
-import { QRStyle, LogoPaddingStyle } from '../types';
+import { QRStyle, LogoPaddingStyle, QRErrorCorrectionLevel } from '../types';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import userEvent from '@testing-library/user-event';
 
@@ -227,7 +227,7 @@ describe('StyleControls Component', () => {
       const lowLevelBtn = screen.getByText('Low (~7%)');
       await user.click(lowLevelBtn);
 
-      expect(mockOnChange).toHaveBeenCalledWith({ errorCorrectionLevel: 'L' });
+      expect(mockOnChange).toHaveBeenCalledWith({ errorCorrectionLevel: QRErrorCorrectionLevel.L });
   });
 
   it('toggles border visibility', async () => {

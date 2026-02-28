@@ -19,7 +19,7 @@
 import { describe, it, expect } from 'vitest';
 import { isEye, calculateLayout, getLogoMetrics, getIsCoveredByLogo } from './utils';
 import { DEFAULT_CONFIG } from '../../constants';
-import { QRConfig } from '../../types';
+import { QRConfig, QRErrorCorrectionLevel } from '../../types';
 
 describe('QR Renderer Utils', () => {
   describe('isEye', () => {
@@ -95,7 +95,7 @@ describe('QR Renderer Utils', () => {
         logoSize: 0.2, // 20% of 21 = 4.2 modules
         logoPadding: 0,
         logoPaddingStyle: 'none',
-        errorCorrectionLevel: 'H' // Safe ratio 0.50
+        errorCorrectionLevel: QRErrorCorrectionLevel.H // Safe ratio 0.50
       };
 
       const metrics = getLogoMetrics(config, moduleCount, cellSize);
@@ -114,7 +114,7 @@ describe('QR Renderer Utils', () => {
         logoSize: 0.3, // 30% of 21 = 6.3 modules
         logoPadding: 0,
         logoPaddingStyle: 'none',
-        errorCorrectionLevel: 'L' // Safe ratio 0.22
+        errorCorrectionLevel: QRErrorCorrectionLevel.L // Safe ratio 0.22
       };
 
       // Safe limit: 21 * 0.22 = 4.62 modules
@@ -133,7 +133,7 @@ describe('QR Renderer Utils', () => {
             logoSize: 0.3, // 6.3 modules
             logoPadding: 1, // + 2 modules (1 each side) = 8.3 modules total requested
             logoPaddingStyle: 'square',
-            errorCorrectionLevel: 'M'
+            errorCorrectionLevel: QRErrorCorrectionLevel.M
         };
 
         // Requested total cutout: 8.3 modules

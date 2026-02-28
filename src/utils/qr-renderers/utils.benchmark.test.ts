@@ -1,7 +1,7 @@
 import { describe, test, expect } from 'vitest';
 import { getLogoMetrics, getIsCoveredByLogo } from './utils';
 import { DEFAULT_CONFIG } from '../../constants';
-import { QRConfig } from '../../types';
+import { QRConfig, QRErrorCorrectionLevel } from '../../types';
 
 describe('Performance Benchmark: getIsCoveredByLogo', () => {
   test('Benchmark execution time', () => {
@@ -15,7 +15,7 @@ describe('Performance Benchmark: getIsCoveredByLogo', () => {
       logoSize: 0.2,
       logoPadding: 1,
       logoPaddingStyle: 'circle',
-      errorCorrectionLevel: 'H'
+      errorCorrectionLevel: QRErrorCorrectionLevel.H
     };
 
     const metrics = getLogoMetrics(config, moduleCount, cellSize);
