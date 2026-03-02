@@ -1,3 +1,0 @@
-## 2025-02-28 - Range Inputs and Formatted Values
-**Learning:** Screen readers by default read the raw numeric value of a `<input type="range">`. When the UI visually presents a formatted string (like "15.0%" instead of "0.15"), this creates a discrepancy between sighted users and screen reader users. Adding `aria-valuetext` bridges this gap, providing a much better and consistent UX for assistive technology.
-**Action:** Always provide an `aria-valuetext` attribute when wrapping a range input that includes a custom value formatter function, so that assistive tech announces the human-readable formatted text instead of the raw number.
