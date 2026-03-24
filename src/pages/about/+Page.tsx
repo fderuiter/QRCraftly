@@ -17,7 +17,7 @@
 */
 
 
-import { Github, Shield, Database, Code, ArrowLeft, Zap, Wifi } from 'lucide-react';
+import { Github, Shield, Database, Code, ArrowLeft, Zap, Wifi, Coffee } from 'lucide-react';
 import { safeJsonLdStringify } from '@/utils/security';
 
 /**
@@ -164,6 +164,30 @@ export default function Page() {
           <Wifi className="w-5 h-5" />
           Create WiFi QR Code
         </a>
+      </section>
+
+      <section className="mb-16 bg-gradient-to-br from-rose-50 to-orange-50 dark:from-rose-900/20 dark:to-orange-900/20 rounded-2xl p-8 md:p-12 border border-rose-100 dark:border-rose-800/30 text-center relative overflow-hidden">
+        <div className="absolute top-0 right-0 -mt-16 -mr-16 w-64 h-64 bg-rose-300/20 dark:bg-rose-500/10 rounded-full blur-3xl pointer-events-none"></div>
+        <div className="absolute bottom-0 left-0 -mb-16 -ml-16 w-64 h-64 bg-orange-300/20 dark:bg-orange-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+        <div className="relative z-10">
+          <div className="w-16 h-16 bg-white dark:bg-slate-800 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-sm border border-rose-100 dark:border-rose-700/50 rotate-3 transition-transform hover:rotate-12 duration-300">
+            <Coffee className="w-8 h-8 text-[#FF5E5B]" />
+          </div>
+          <h2 className="text-3xl font-bold text-slate-900 dark:text-white mb-4">Support the Project</h2>
+          <p className="text-lg text-slate-600 dark:text-slate-300 max-w-2xl mx-auto mb-8 leading-relaxed">
+            QRCraftly is 100% free, open-source, and privacy-respecting. If you find this tool helpful, consider buying me a coffee! Your support helps cover hosting costs and fuels future development.
+          </p>
+          <a
+            href="https://ko-fi.com/laser_loon"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-3 px-8 py-4 bg-[#FF5E5B] text-white rounded-xl font-bold text-lg hover:bg-[#FF4A47] transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-[#FF5E5B]/25 active:translate-y-0"
+          >
+            <Coffee className="w-6 h-6" />
+            Support me on Ko-fi
+          </a>
+        </div>
       </section>
 
       <section className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-8 border border-slate-200 dark:border-slate-700 text-center">
