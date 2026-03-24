@@ -36,24 +36,29 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y build-essential libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: '20.19.0'
-          cache: 'npm'
+          cache: 'pnpm'
 
       - name: Install NPM Dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       # Save node_modules to be used by other jobs
       - name: Cache node_modules
         uses: actions/cache@v4
         with:
           path: node_modules
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          key: ${{ runner.os }}-node-${{ hashFiles('**/pnpm-lock.yaml') }}
 
       - name: Audit Dependencies
-        run: npm audit --audit-level=high
+        run: pnpm audit --audit-level=high
 
   # JOB 2: Quality Checks (Parallel)
   quality:
@@ -62,18 +67,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
       - uses: actions/setup-node@v4
         with:
           node-version: '20.19.0'
+          cache: 'pnpm'
 
       # Restore node_modules
       - name: Restore node_modules
         uses: actions/cache@v4
         with:
           path: node_modules
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          key: ${{ runner.os }}-node-${{ hashFiles('**/pnpm-lock.yaml') }}
 
-      - run: npm run lint
+      - run: pnpm run lint
 
   # JOB 3: Unit Tests
   test:
@@ -89,17 +99,22 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libcairo2 libpango-1.0-0 libpangocairo-1.0-0
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
       - uses: actions/setup-node@v4
         with:
           node-version: '20.19.0'
+          cache: 'pnpm'
 
       - name: Restore node_modules
         uses: actions/cache@v4
         with:
           path: node_modules
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          key: ${{ runner.os }}-node-${{ hashFiles('**/pnpm-lock.yaml') }}
 
-      - run: npm test -- run --coverage
+      - run: pnpm test -- run --coverage
 
   # JOB 4: Compliance (Python)
   compliance:
@@ -119,17 +134,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
       - uses: actions/setup-node@v4
         with:
           node-version: '20.19.0'
+          cache: 'pnpm'
 
       - name: Restore node_modules
         uses: actions/cache@v4
         with:
           path: node_modules
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          key: ${{ runner.os }}-node-${{ hashFiles('**/pnpm-lock.yaml') }}
 
-      - run: npm run build
+      - run: pnpm run build
 
       - name: Check Bundle Size
         run: |
