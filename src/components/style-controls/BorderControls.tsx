@@ -1,5 +1,5 @@
 import React, { useRef, useMemo } from 'react';
-import { QRConfig } from '../../types';
+import { QRConfig, BorderStyle, BorderTextPosition, BorderLogoPosition } from '../../types';
 import { Upload, X, AlertTriangle } from 'lucide-react';
 import { getContrastRatio } from '../../utils/colorUtils';
 import { ColorInput } from '../ui/ColorInput';
@@ -60,7 +60,7 @@ export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange
               <select
                 id="border-style"
                 value={config.borderStyle || 'solid'}
-                onChange={(e) => onChange({ borderStyle: e.target.value as any })}
+                onChange={(e) => onChange({ borderStyle: e.target.value as BorderStyle })}
                 className="w-full px-2 py-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs text-slate-700 dark:text-slate-200 focus:outline-none focus:border-teal-500"
               >
                 <option value="solid">Solid</option>
@@ -114,7 +114,7 @@ export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange
               <div className="flex gap-2">
                 <select
                   value={config.borderTextPosition || 'bottom-center'}
-                  onChange={(e) => onChange({ borderTextPosition: e.target.value as any })}
+                  onChange={(e) => onChange({ borderTextPosition: e.target.value as BorderTextPosition })}
                   className="flex-1 px-2 py-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs text-slate-700 dark:text-slate-200 focus:outline-none focus:border-teal-500"
                 >
                   <option value="top-center">Top Center</option>
@@ -165,7 +165,7 @@ export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange
               <div className="mt-2">
                 <select
                   value={config.borderLogoPosition || 'bottom-center'}
-                  onChange={(e) => onChange({ borderLogoPosition: e.target.value as any })}
+                  onChange={(e) => onChange({ borderLogoPosition: e.target.value as BorderLogoPosition })}
                   className="w-full px-2 py-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs text-slate-700 dark:text-slate-200 focus:outline-none focus:border-teal-500"
                 >
                   <option value="bottom-center">Bottom Center</option>
