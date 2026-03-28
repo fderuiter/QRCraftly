@@ -107,18 +107,33 @@ export interface QRConfig {
   /** The color of the border. */
   borderColor: string;
   /** The visual style of the border. */
-  borderStyle: 'solid' | 'dashed' | 'dotted' | 'double';
+  borderStyle: BorderStyle;
   /** Text to display on the border. */
   borderText: string;
   /** Position of the border text. */
-  borderTextPosition: 'top-center' | 'bottom-center';
+  borderTextPosition: BorderTextPosition;
   /** Color of the border text. */
   borderTextColor: string;
   /** Secondary logo to display on the border. */
   borderLogoUrl: string | null;
   /** Position of the border logo. */
-  borderLogoPosition: 'bottom-center' | 'bottom-right';
+  borderLogoPosition: BorderLogoPosition;
 }
+
+/**
+ * Defines the style of the border around the QR code.
+ */
+export type BorderStyle = 'solid' | 'dashed' | 'dotted' | 'double';
+
+/**
+ * Defines the position of the text on the border.
+ */
+export type BorderTextPosition = 'top-center' | 'bottom-center';
+
+/**
+ * Defines the position of the logo on the border.
+ */
+export type BorderLogoPosition = 'bottom-center' | 'bottom-right';
 
 /**
  * Data structure for WiFi network configuration.
