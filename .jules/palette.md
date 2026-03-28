@@ -1,0 +1,3 @@
+## 2025-02-14 - Custom Component Focus States
+**Learning:** Custom interactive components like `div`-based button groups or stylised list items often lack native focus rings when tabbed to, making keyboard navigation difficult for users relying on visual focus. Furthermore, screen readers need explicit ARIA grouping when multiple buttons act as a single logical selection group.
+**Action:** Always add `focus-visible` utility classes (e.g., `focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2`) to custom buttons and links. Wrap custom radio/selection buttons in `role="group"` with an appropriate `aria-labelledby` or `aria-label`, and ensure `aria-pressed` is correctly managed.
