@@ -48,8 +48,7 @@ export default function Page() {
         "image": "https://qrcraftly.com/og-image.png",
         "datePublished": "2025-01-01",
         "author": {
-          "@type": "Organization",
-          "name": "QRCraftly"
+          "@id": "https://qrcraftly.com/#organization"
         },
         "browserRequirements": "Requires JavaScript. Works in all modern browsers.",
         "offers": {

@@ -39,6 +39,7 @@ export default function Page() {
         "url": "https://qrcraftly.com/about",
         "mainEntity": {
           "@type": "Organization",
+          "@id": "https://qrcraftly.com/#organization",
           "name": "QRCraftly",
           "description": "Privacy-focused, client-side QR code generator.",
           "slogan": "Free. Secure. Open Source.",

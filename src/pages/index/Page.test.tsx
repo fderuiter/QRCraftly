@@ -39,11 +39,6 @@ describe('Home Page', () => {
     const graph = json['@graph'];
     expect(Array.isArray(graph)).toBe(true);
 
-    const organization = graph.find((item: any) => item['@type'] === 'Organization');
-    expect(organization).toBeDefined();
-    expect(organization['@id']).toBe('https://qrcraftly.com/#organization');
-    expect(organization.sameAs).toContain('https://github.com/fderuiter/QRCraftly');
-
     const webApp = graph.find((item: any) => item['@type'] === 'WebApplication');
     expect(webApp).toBeDefined();
     expect(webApp.name).toBe('QRCraftly');

@@ -57,8 +57,7 @@ describe('WiFi QR Code Page', () => {
     expect(webApp.datePublished).toBe('2025-01-01');
     expect(webApp.browserRequirements).toBe('Requires JavaScript. Works in all modern browsers.');
     expect(webApp.author).toEqual({
-      '@type': 'Organization',
-      name: 'QRCraftly'
+      '@id': 'https://qrcraftly.com/#organization'
     });
 
     // Check HowTo schema properties
