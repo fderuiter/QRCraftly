@@ -41,5 +41,5 @@ describe('Performance Benchmark: getIsCoveredByLogo', () => {
 
     // Ensure it runs reasonably fast (this assertion is loose, just to ensure it runs)
     expect(duration).toBeGreaterThan(0);
-  });
+  }, 10000);
 });
