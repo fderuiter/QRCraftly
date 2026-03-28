@@ -32,16 +32,6 @@ export default function Page() {
     "@context": "https://schema.org",
     "@graph": [
       {
-        "@type": "Organization",
-        "@id": "https://qrcraftly.com/#organization",
-        "name": "QRCraftly",
-        "url": "https://qrcraftly.com",
-        "logo": "https://qrcraftly.com/favicon.png",
-        "sameAs": [
-          "https://github.com/fderuiter/QRCraftly"
-        ]
-      },
-      {
         "@type": "WebApplication",
         "name": "QRCraftly",
         "url": "https://qrcraftly.com",

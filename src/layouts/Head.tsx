@@ -80,18 +80,27 @@ export default function HeadDefault() {
 
   const schemaData = {
     "@context": "https://schema.org",
-    "@type": "WebSite",
-    "name": "QRCraftly",
-    "url": DOMAIN,
-    "description": "Free, secure, and client-side QR code generator with zero-knowledge architecture.",
-    "publisher": {
-      "@type": "Organization",
-      "name": "QRCraftly",
-      "logo": {
-        "@type": "ImageObject",
-        "url": `${DOMAIN}/favicon.png`
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": `${DOMAIN}/#organization`,
+        "name": "QRCraftly",
+        "url": DOMAIN,
+        "logo": `${DOMAIN}/favicon.png`,
+        "sameAs": [
+          "https://github.com/fderuiter/QRCraftly"
+        ]
+      },
+      {
+        "@type": "WebSite",
+        "name": "QRCraftly",
+        "url": DOMAIN,
+        "description": "Free, secure, and client-side QR code generator with zero-knowledge architecture.",
+        "publisher": {
+          "@id": `${DOMAIN}/#organization`
+        }
       }
-    }
+    ]
   };
 
   // Breadcrumb Schema Generation
