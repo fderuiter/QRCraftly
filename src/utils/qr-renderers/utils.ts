@@ -1,5 +1,13 @@
 import { QRConfig } from '../../types';
 
+/**
+ * Determines if a given module at (row, column) is part of the three corner
+ * positioning squares (eyes) of the QR code grid.
+ * @param r - The row index of the module.
+ * @param c - The column index of the module.
+ * @param moduleCount - The total number of modules (rows/columns) in the QR grid.
+ * @returns True if the module is part of a corner eye, false otherwise.
+ */
 export const isEye = (r: number, c: number, moduleCount: number): boolean => {
   if (r < 7 && c < 7) return true;
   if (r < 7 && c >= moduleCount - 7) return true;
@@ -22,6 +30,15 @@ const SAFE_AREA_RATIOS: Record<string, number> = {
   H: 0.50,
 };
 
+/**
+ * Calculates the effective sizes and padding for a central logo, dynamically scaling it
+ * down if it exceeds the safe area ratio determined by the current error correction level
+ * to ensure the QR code remains scannable.
+ * @param config - The QR configuration containing logo settings.
+ * @param moduleCount - The total number of modules in the QR grid.
+ * @param cellSize - The physical size (in pixels) of a single module.
+ * @returns The calculated metrics for rendering the logo and its cutout.
+ */
 export const getLogoMetrics = (config: QRConfig, moduleCount: number, cellSize: number): LogoMetrics => {
     // Determine safe limit for logo size
     const SAFE_AREA_RATIO = SAFE_AREA_RATIOS[config.errorCorrectionLevel] ?? 0.50;
@@ -53,6 +70,15 @@ export const getLogoMetrics = (config: QRConfig, moduleCount: number, cellSize: 
     };
 };
 
+/**
+ * Returns a highly optimized predicate function (closure) used during the rendering loop
+ * to quickly determine if a module is covered by the logo cutout. Supports both square
+ * and circle padding styles.
+ * @param config - The QR configuration containing logo style settings.
+ * @param moduleCount - The total number of modules in the QR grid.
+ * @param logoMetrics - Pre-calculated logo metrics (from `getLogoMetrics`).
+ * @returns A predicate function taking (row, col) and returning true if covered.
+ */
 export const getIsCoveredByLogo = (config: QRConfig, moduleCount: number, logoMetrics: LogoMetrics) => {
     const center = moduleCount / 2;
     const { cutoutModuleSize } = logoMetrics;
@@ -88,6 +114,14 @@ export interface LayoutMetrics {
     borderPx: number;
 }
 
+/**
+ * Calculates the canvas layout metrics, adjusting the inner drawing area and starting
+ * coordinates based on border configurations.
+ * @param config - The QR configuration containing border settings.
+ * @param displaySize - The total available size (in pixels) for the canvas.
+ * @param moduleCount - The total number of modules in the QR grid.
+ * @returns The metrics needed to correctly position and scale the QR grid.
+ */
 export const calculateLayout = (config: QRConfig, displaySize: number, moduleCount: number): LayoutMetrics => {
     let drawX = 0;
     let drawY = 0;
