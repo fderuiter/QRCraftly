@@ -33,7 +33,7 @@ export const TypeSelector: React.FC<TypeSelectorProps> = ({ currentType, onSelec
         ].map((item) => {
           const route = TYPE_ROUTES[item.type];
           const isActive = currentType === item.type;
-          const className = `flex flex-col items-center justify-center gap-1 px-2 py-2 rounded-lg text-xs font-medium transition-all ${
+          const className = `flex flex-col items-center justify-center gap-1 px-2 py-2 rounded-lg text-xs font-medium transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-800 ${
             isActive
               ? 'bg-white dark:bg-slate-700 text-teal-700 dark:text-teal-400 shadow-sm'
               : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-slate-700/50'

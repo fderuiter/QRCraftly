@@ -14,7 +14,7 @@ export const AdvancedControls: React.FC<AdvancedControlsProps> = ({ config, onCh
     <div className="border-t border-slate-200 dark:border-slate-700 pt-5">
       <button
         onClick={() => setShowAdvanced(!showAdvanced)}
-        className="flex items-center justify-between w-full text-left"
+        className="flex items-center justify-between w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 rounded-md"
         aria-expanded={showAdvanced}
         aria-controls="advanced-settings-panel"
       >
@@ -30,7 +30,11 @@ export const AdvancedControls: React.FC<AdvancedControlsProps> = ({ config, onCh
         <div className="mt-4 space-y-4" id="advanced-settings-panel">
           <div>
             <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-2">Error Correction Level</label>
-            <div className="grid grid-cols-2 gap-2">
+            <div
+              className="grid grid-cols-2 gap-2"
+              role="group"
+              aria-label="Error Correction Level"
+            >
               {[
                 { id: QRErrorCorrectionLevel.L, label: 'Low (~7%)', desc: 'Best for screens' },
                 { id: QRErrorCorrectionLevel.M, label: 'Medium (~15%)', desc: 'Standard' },
@@ -41,7 +45,7 @@ export const AdvancedControls: React.FC<AdvancedControlsProps> = ({ config, onCh
                   key={level.id}
                   onClick={() => onChange({ errorCorrectionLevel: level.id })}
                   aria-pressed={config.errorCorrectionLevel === level.id}
-                  className={`p-2 rounded-lg text-left border transition-all ${
+                  className={`p-2 rounded-lg text-left border transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-slate-900 ${
                     config.errorCorrectionLevel === level.id
                       ? 'border-teal-500 bg-teal-50 dark:bg-teal-900/30 text-teal-900 dark:text-teal-200'
                       : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'

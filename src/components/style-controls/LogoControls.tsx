@@ -58,8 +58,12 @@ export const LogoControls: React.FC<LogoControlsProps> = ({ config, onChange }) 
 
           {/* Logo Border Styles */}
           <div>
-            <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-2">Border Style</label>
-            <div className="flex bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-1">
+            <label id="logo-border-style-label" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-2">Border Style</label>
+            <div
+              className="flex bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-1"
+              role="group"
+              aria-labelledby="logo-border-style-label"
+            >
               {[
                 { id: 'square', icon: Square, label: 'Square' },
                 { id: 'circle', icon: Circle, label: 'Circle' },
@@ -68,7 +72,8 @@ export const LogoControls: React.FC<LogoControlsProps> = ({ config, onChange }) 
                 <button
                   key={style.id}
                   onClick={() => onChange({ logoPaddingStyle: style.id as LogoPaddingStyle })}
-                  className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-medium transition-all ${
+                  aria-pressed={config.logoPaddingStyle === style.id}
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-medium transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-slate-800 ${
                     config.logoPaddingStyle === style.id
                       ? 'bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-400'
                       : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'
