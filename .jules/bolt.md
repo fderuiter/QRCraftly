@@ -1,0 +1,3 @@
+## 2025-02-18 - Lift Invariants from Render Loop Closures
+**Learning:** In the heavily-optimized `getIsCoveredByLogo` predicate closure (called for every module during QR generation), seemingly small math operations like subtracting constants or dividing can add up. The square padding bounds checking can be optimized by precalculating the min and max index boundaries (`minBound`, `maxBound`) outside the returned closure instead of doing relative math inside the closure on every call.
+**Action:** When writing high-frequency predicate functions for `canvas` loops, aggressively lift all invariant math (like offsets and boundaries) out of the returned closure into the outer scope.
