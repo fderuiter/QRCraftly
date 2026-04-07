@@ -46,7 +46,7 @@ export default function QRTool({ initialConfig, title }: { initialConfig?: Parti
   const qrRef = useRef<HTMLDivElement>(null);
   const downloadMenuRef = useRef<HTMLDivElement>(null);
 
-  const { downloadToDevice: hookDownload, handleSaveAs: hookSaveAs, handleShare } = useQRDownload(qrRef, config);
+  const { downloadToDevice: hookDownload, handleSaveAs: hookSaveAs, handleSaveSvg: hookSaveSvg, handleShare } = useQRDownload(qrRef, config);
 
   useEffect(() => {
     setIsMounted(true);
@@ -83,6 +83,11 @@ export default function QRTool({ initialConfig, title }: { initialConfig?: Parti
   const handleSaveAs = async (format: 'png' | 'jpeg' | 'webp') => {
     setShowDownloadMenu(false);
     await hookSaveAs(format);
+  };
+
+  const handleSaveSvg = async () => {
+    setShowDownloadMenu(false);
+    await hookSaveSvg();
   };
 
   return (
@@ -216,6 +221,10 @@ export default function QRTool({ initialConfig, title }: { initialConfig?: Parti
                                   </button>
                                   <button onClick={() => handleSaveAs('webp')} role="menuitem" className="w-full text-left px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200 text-sm font-medium flex items-center gap-2">
                                       <div className="w-1.5 h-1.5 rounded-full bg-purple-500"></div> WebP (Modern)
+                                  </button>
+                                  <div className="h-px bg-slate-100 dark:bg-slate-700 my-1" role="separator" />
+                                  <button onClick={handleSaveSvg} role="menuitem" className="w-full text-left px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200 text-sm font-medium flex items-center gap-2">
+                                      <div className="w-1.5 h-1.5 rounded-full bg-orange-500"></div> SVG (Vector)
                                   </button>
                               </div>
                           )}

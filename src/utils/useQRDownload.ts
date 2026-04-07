@@ -18,6 +18,7 @@
 
 import { RefObject, useCallback } from 'react';
 import { QRConfig } from '../types';
+import { generateQRSvg } from './svgExport';
 
 /**
  * Return type for the useQRDownload hook.
@@ -25,6 +26,7 @@ import { QRConfig } from '../types';
 interface UseQRDownloadReturn {
   downloadToDevice: (format: 'png' | 'jpeg' | 'webp') => void;
   handleSaveAs: (format: 'png' | 'jpeg' | 'webp') => Promise<void>;
+  handleSaveSvg: () => Promise<void>;
   handleShare: () => Promise<void>;
 }
 
@@ -155,5 +157,26 @@ export function useQRDownload(
     }
   }, [qrRef, downloadToDevice]);
 
-  return { downloadToDevice, handleSaveAs, handleShare };
+  /**
+   * Generates a vector SVG file from the current QR configuration and triggers
+   * a download. The SVG embeds logos as inline base64 data-URLs for portability.
+   */
+  const handleSaveSvg = useCallback(async () => {
+    try {
+      const svgString = await generateQRSvg(config);
+      const blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.download = getFilename('svg');
+      link.href = url;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.warn('SVG export failed:', err);
+    }
+  }, [config, getFilename]);
+
+  return { downloadToDevice, handleSaveAs, handleSaveSvg, handleShare };
 }
