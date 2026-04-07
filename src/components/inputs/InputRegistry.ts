@@ -3,6 +3,7 @@ import {
   QRType,
   WifiEncryption,
   CryptoNetwork,
+  SocialPlatform,
   UrlData,
   TextData,
   WifiData,
@@ -11,7 +12,10 @@ import {
   PhoneData,
   SmsData,
   PaymentData,
-  EventData
+  EventData,
+  LocationData,
+  MeetingData,
+  SocialData,
 } from '../../types';
 import { constructUrlString, hydrateUrlData } from '../../utils/qr-generators/url';
 import { constructTextString, hydrateTextData } from '../../utils/qr-generators/text';
@@ -22,6 +26,9 @@ import { constructPhoneString } from '../../utils/qr-generators/phone';
 import { constructSmsString } from '../../utils/qr-generators/sms';
 import { constructPaymentString } from '../../utils/qr-generators/payment';
 import { constructEventString } from '../../utils/qr-generators/event';
+import { constructLocationString } from '../../utils/qr-generators/location';
+import { constructMeetingString } from '../../utils/qr-generators/meeting';
+import { constructSocialString } from '../../utils/qr-generators/social';
 
 import { UrlInput } from './UrlInput';
 import { TextInput } from './TextInput';
@@ -32,6 +39,9 @@ import { PhoneInput } from './PhoneInput';
 import { SmsInput } from './SmsInput';
 import { PaymentInput } from './PaymentInput';
 import { EventInput } from './EventInput';
+import { LocationInput } from './LocationInput';
+import { MeetingInput } from './MeetingInput';
+import { SocialInput } from './SocialInput';
 
 export type InputDataMap = {
   [QRType.URL]: UrlData;
@@ -43,6 +53,9 @@ export type InputDataMap = {
   [QRType.PHONE]: PhoneData;
   [QRType.SMS]: SmsData;
   [QRType.PAYMENT]: PaymentData;
+  [QRType.LOCATION]: LocationData;
+  [QRType.MEETING]: MeetingData;
+  [QRType.SOCIAL]: SocialData;
 };
 
 export interface InputRegistryEntry<T> {
@@ -144,5 +157,28 @@ export const INPUT_REGISTRY: Registry = {
       label: ''
     } as PaymentData,
     constructFn: constructPaymentString,
+  },
+  [QRType.LOCATION]: {
+    Component: LocationInput,
+    initialState: {
+      latitude: '',
+      longitude: '',
+    } as LocationData,
+    constructFn: constructLocationString,
+  },
+  [QRType.MEETING]: {
+    Component: MeetingInput,
+    initialState: {
+      url: '',
+    } as MeetingData,
+    constructFn: constructMeetingString,
+  },
+  [QRType.SOCIAL]: {
+    Component: SocialInput,
+    initialState: {
+      platform: SocialPlatform.INSTAGRAM,
+      handle: '',
+    } as SocialData,
+    constructFn: constructSocialString,
   },
 };

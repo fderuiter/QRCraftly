@@ -45,6 +45,9 @@ export enum QRType {
   PHONE = 'PHONE',
   SMS = 'SMS',
   PAYMENT = 'PAYMENT',
+  LOCATION = 'LOCATION',
+  MEETING = 'MEETING',
+  SOCIAL = 'SOCIAL',
 }
 
 /**
@@ -271,4 +274,41 @@ export interface TextData {
 export interface QRModules {
   size: number;
   get(row: number, col: number): boolean;
+}
+
+/**
+ * Data structure for Geo-Location information.
+ */
+export interface LocationData {
+  /** The latitude coordinate (decimal degrees, -90 to 90). */
+  latitude: string;
+  /** The longitude coordinate (decimal degrees, -180 to 180). */
+  longitude: string;
+}
+
+/**
+ * Supported social media platforms for deep links.
+ */
+export enum SocialPlatform {
+  INSTAGRAM = 'instagram',
+  TWITTER = 'twitter',
+  TIKTOK = 'tiktok',
+}
+
+/**
+ * Data structure for Social Media deep links.
+ */
+export interface SocialData {
+  /** The social media platform. */
+  platform: SocialPlatform;
+  /** The username or handle on the platform. */
+  handle: string;
+}
+
+/**
+ * Data structure for Virtual Meeting links (Zoom, Teams, Google Meet).
+ */
+export interface MeetingData {
+  /** The full meeting invite URL. */
+  url: string;
 }
