@@ -148,4 +148,25 @@ describe('useQRDownload', () => {
     expect(alertMock).toHaveBeenCalled();
     expect(appendSpy).toHaveBeenCalled();
   });
+
+  it('handleSaveSvg triggers a download with an .svg file', async () => {
+    const appendSpy = vi.spyOn(document.body, 'appendChild');
+    const removeSpy = vi.spyOn(document.body, 'removeChild');
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click');
+
+    const { result } = renderHook(() => useQRDownload(mockQrRef, DEFAULT_CONFIG as QRConfig));
+
+    await result.current.handleSaveSvg();
+
+    expect(global.URL.createObjectURL).toHaveBeenCalled();
+
+    // Find the <a> element among all appended children
+    const appendedElements = appendSpy.mock.calls.map(call => call[0] as Element);
+    const link = appendedElements.find(el => el.tagName === 'A') as HTMLAnchorElement;
+    expect(link).toBeDefined();
+    expect((link as HTMLAnchorElement).download).toMatch(/url-qr-code-qrcraftly-.*\.svg/);
+    expect(clickSpy).toHaveBeenCalled();
+    expect(removeSpy).toHaveBeenCalledWith(link);
+    expect(global.URL.revokeObjectURL).toHaveBeenCalled();
+  });
 });
