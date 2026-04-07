@@ -33,7 +33,7 @@ describe('SvgContext', () => {
   });
 
   describe('fillRect', () => {
-    it('emits a <path> element with fill colour', () => {
+    it('emits a <path> element with fill color', () => {
       const ctx = new SvgContext(200, 200);
       ctx.fillStyle = '#ff0000';
       ctx.fillRect(10, 10, 50, 50);
