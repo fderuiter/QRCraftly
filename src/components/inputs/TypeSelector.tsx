@@ -1,6 +1,6 @@
 import React from 'react';
 import { QRType } from '../../types';
-import { Wifi, Link, Type, Mail, UserSquare2, Phone, MessageSquare, CreditCard } from 'lucide-react';
+import { Wifi, Link, Type, Mail, UserSquare2, Phone, MessageSquare, CreditCard, Calendar } from 'lucide-react';
 
 interface TypeSelectorProps {
   currentType: QRType;
@@ -25,6 +25,7 @@ export const TypeSelector: React.FC<TypeSelectorProps> = ({ currentType, onSelec
           { type: QRType.URL, icon: Link, label: 'URL' },
           { type: QRType.TEXT, icon: Type, label: 'Text' },
           { type: QRType.WIFI, icon: Wifi, label: 'WiFi' },
+          { type: QRType.EVENT, icon: Calendar, label: 'Event' },
           { type: QRType.VCARD, icon: UserSquare2, label: 'Contact' },
           { type: QRType.EMAIL, icon: Mail, label: 'Email' },
           { type: QRType.PHONE, icon: Phone, label: 'Phone' },

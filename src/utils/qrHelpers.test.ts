@@ -24,10 +24,12 @@ import {
   constructPhoneString,
   constructSmsString,
   constructPaymentString,
+  constructEventString,
   escapeWifiString,
-  escapeVCardString
+  escapeVCardString,
+  escapeEventString
 } from './qrHelpers';
-import { WifiData, EmailData, VCardData, PhoneData, SmsData, PaymentData, WifiEncryption, CryptoNetwork } from '../types';
+import { WifiData, EmailData, VCardData, PhoneData, SmsData, PaymentData, EventData, WifiEncryption, CryptoNetwork } from '../types';
 
 describe('QR Helpers', () => {
   describe('constructWifiString', () => {
@@ -278,6 +280,43 @@ describe('QR Helpers', () => {
     });
   });
 
+  describe('constructEventString', () => {
+    const baseEvent: EventData = {
+      title: 'Team Meeting',
+      startDate: '2026-05-01T09:00',
+      endDate: '2026-05-01T10:00',
+      location: 'HQ Boardroom',
+      description: 'Quarterly planning sync'
+    };
+
+    it('constructs a valid VCALENDAR string', () => {
+      const result = constructEventString(baseEvent);
+      expect(result).toContain('BEGIN:VCALENDAR');
+      expect(result).toContain('VERSION:2.0');
+      expect(result).toContain('BEGIN:VEVENT');
+      expect(result).toContain('SUMMARY:Team Meeting');
+      expect(result).toContain('DTSTART:20260501T090000');
+      expect(result).toContain('DTEND:20260501T100000');
+      expect(result).toContain('LOCATION:HQ Boardroom');
+      expect(result).toContain('DESCRIPTION:Quarterly planning sync');
+      expect(result).toContain('END:VEVENT');
+      expect(result).toContain('END:VCALENDAR');
+    });
+
+    it('escapes special characters in event fields', () => {
+      const result = constructEventString({
+        ...baseEvent,
+        title: 'Launch, Party; 2026',
+        location: 'Office\\Roof',
+        description: 'Line 1\nLine 2, details;'
+      });
+
+      expect(result).toContain('SUMMARY:Launch\\, Party\\; 2026');
+      expect(result).toContain('LOCATION:Office\\\\Roof');
+      expect(result).toContain('DESCRIPTION:Line 1\\nLine 2\\, details\\;');
+    });
+  });
+
   describe('escapeWifiString', () => {
     it('returns empty string for undefined', () => {
       expect(escapeWifiString(undefined)).toBe('');
@@ -287,6 +326,12 @@ describe('QR Helpers', () => {
   describe('escapeVCardString', () => {
     it('returns empty string for undefined', () => {
       expect(escapeVCardString(undefined)).toBe('');
+    });
+  });
+
+  describe('escapeEventString', () => {
+    it('returns empty string for undefined', () => {
+      expect(escapeEventString(undefined)).toBe('');
     });
   });
 });

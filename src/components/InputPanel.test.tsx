@@ -61,6 +61,15 @@ describe('InputPanel Component', () => {
     expect(screen.getByLabelText('Hidden Network')).toBeInTheDocument();
   });
 
+  it('renders Event inputs when Event type is selected', () => {
+    renderPanel({ type: QRType.EVENT });
+    expect(screen.getByLabelText('Event Title')).toBeInTheDocument();
+    expect(screen.getByLabelText('Start Date & Time')).toBeInTheDocument();
+    expect(screen.getByLabelText('End Date & Time')).toBeInTheDocument();
+    expect(screen.getByLabelText('Location')).toBeInTheDocument();
+    expect(screen.getByLabelText('Description')).toBeInTheDocument();
+  });
+
   it('updates URL value', () => {
     renderPanel();
     const input = screen.getByLabelText('Website URL');
@@ -344,6 +353,41 @@ describe('InputPanel Component', () => {
     act(() => { vi.advanceTimersByTime(100); });
     // Should output raw address/string
     expect(mockOnChange).toHaveBeenLastCalledWith({ value: '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa' });
+  });
+
+  it('formats Event data as iCalendar', () => {
+    renderPanel({ type: QRType.EVENT });
+
+    fireEvent.change(screen.getByLabelText('Event Title'), { target: { value: 'Launch Party' } });
+    act(() => { vi.advanceTimersByTime(100); });
+
+    fireEvent.change(screen.getByLabelText('Start Date & Time'), { target: { value: '2026-05-01T18:30' } });
+    act(() => { vi.advanceTimersByTime(100); });
+
+    fireEvent.change(screen.getByLabelText('End Date & Time'), { target: { value: '2026-05-01T21:00' } });
+    act(() => { vi.advanceTimersByTime(100); });
+
+    fireEvent.change(screen.getByLabelText('Location'), { target: { value: 'Main Hall, HQ' } });
+    act(() => { vi.advanceTimersByTime(100); });
+
+    fireEvent.change(screen.getByLabelText('Description'), { target: { value: 'Line 1\nLine 2' } });
+    act(() => { vi.advanceTimersByTime(100); });
+
+    const expected = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//QRCraftly//EN',
+      'BEGIN:VEVENT',
+      'SUMMARY:Launch Party',
+      'DTSTART:20260501T183000',
+      'DTEND:20260501T210000',
+      'LOCATION:Main Hall\\, HQ',
+      'DESCRIPTION:Line 1\\nLine 2',
+      'END:VEVENT',
+      'END:VCALENDAR'
+    ].join('\n');
+
+    expect(mockOnChange).toHaveBeenLastCalledWith({ value: expected });
   });
 
   it('shows character count for TEXT input', () => {
