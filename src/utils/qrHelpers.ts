@@ -23,6 +23,7 @@ export * from './qr-generators/vcard';
 export * from './qr-generators/phone';
 export * from './qr-generators/sms';
 export * from './qr-generators/payment';
+export * from './qr-generators/event';
 export * from './qr-generators/url';
 export * from './qr-generators/text';
 

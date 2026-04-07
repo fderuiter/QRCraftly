@@ -1,0 +1,61 @@
+import React from 'react';
+import { EventData } from '../../types';
+import { TextField, TextAreaField } from './FormFields';
+
+interface EventInputProps {
+  data: EventData;
+  onChange: (updates: Partial<EventData>) => void;
+}
+
+export const EventInput: React.FC<EventInputProps> = ({ data, onChange }) => {
+  return (
+    <div className="space-y-3">
+      <TextField
+        id="event-title"
+        label="Event Title"
+        type="text"
+        maxLength={200}
+        value={data.title}
+        onChange={(e) => onChange({ title: e.target.value })}
+        fieldSize="xs"
+        showCharCount
+      />
+      <TextField
+        id="event-start-date"
+        label="Start Date & Time"
+        type="datetime-local"
+        value={data.startDate}
+        onChange={(e) => onChange({ startDate: e.target.value })}
+        fieldSize="xs"
+      />
+      <TextField
+        id="event-end-date"
+        label="End Date & Time"
+        type="datetime-local"
+        value={data.endDate}
+        onChange={(e) => onChange({ endDate: e.target.value })}
+        fieldSize="xs"
+      />
+      <TextField
+        id="event-location"
+        label="Location"
+        type="text"
+        maxLength={300}
+        value={data.location}
+        onChange={(e) => onChange({ location: e.target.value })}
+        fieldSize="xs"
+        showCharCount
+      />
+      <TextAreaField
+        id="event-description"
+        label="Description"
+        rows={3}
+        maxLength={2000}
+        value={data.description}
+        onChange={(e) => onChange({ description: e.target.value })}
+        fieldSize="xs"
+        showCharCount
+      />
+    </div>
+  );
+};

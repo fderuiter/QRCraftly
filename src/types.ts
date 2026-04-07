@@ -39,6 +39,7 @@ export enum QRType {
   URL = 'URL',
   TEXT = 'TEXT',
   WIFI = 'WIFI',
+  EVENT = 'EVENT',
   EMAIL = 'EMAIL',
   VCARD = 'VCARD',
   PHONE = 'PHONE',
@@ -205,6 +206,22 @@ export interface SmsData {
   number: string;
   /** The text message body. */
   message: string;
+}
+
+/**
+ * Data structure for calendar event information.
+ */
+export interface EventData {
+  /** The event title. */
+  title: string;
+  /** The event start date and time (ISO string from datetime-local input). */
+  startDate: string;
+  /** The event end date and time (ISO string from datetime-local input). */
+  endDate: string;
+  /** The event location. */
+  location: string;
+  /** The event description. */
+  description: string;
 }
 
 /**

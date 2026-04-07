@@ -10,7 +10,8 @@ import {
   VCardData,
   PhoneData,
   SmsData,
-  PaymentData
+  PaymentData,
+  EventData
 } from '../../types';
 import { constructUrlString, hydrateUrlData } from '../../utils/qr-generators/url';
 import { constructTextString, hydrateTextData } from '../../utils/qr-generators/text';
@@ -20,6 +21,7 @@ import { constructVCardString } from '../../utils/qr-generators/vcard';
 import { constructPhoneString } from '../../utils/qr-generators/phone';
 import { constructSmsString } from '../../utils/qr-generators/sms';
 import { constructPaymentString } from '../../utils/qr-generators/payment';
+import { constructEventString } from '../../utils/qr-generators/event';
 
 import { UrlInput } from './UrlInput';
 import { TextInput } from './TextInput';
@@ -29,11 +31,13 @@ import { VCardInput } from './VCardInput';
 import { PhoneInput } from './PhoneInput';
 import { SmsInput } from './SmsInput';
 import { PaymentInput } from './PaymentInput';
+import { EventInput } from './EventInput';
 
 export type InputDataMap = {
   [QRType.URL]: UrlData;
   [QRType.TEXT]: TextData;
   [QRType.WIFI]: WifiData;
+  [QRType.EVENT]: EventData;
   [QRType.EMAIL]: EmailData;
   [QRType.VCARD]: VCardData;
   [QRType.PHONE]: PhoneData;
@@ -79,6 +83,17 @@ export const INPUT_REGISTRY: Registry = {
       eapIdentity: ''
     } as WifiData,
     constructFn: constructWifiString,
+  },
+  [QRType.EVENT]: {
+    Component: EventInput,
+    initialState: {
+      title: '',
+      startDate: '',
+      endDate: '',
+      location: '',
+      description: ''
+    } as EventData,
+    constructFn: constructEventString,
   },
   [QRType.EMAIL]: {
     Component: EmailInput,
