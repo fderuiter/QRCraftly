@@ -18,9 +18,7 @@
 
 import { QRConfig } from '../types';
 import { SvgContext } from './svgContext';
-import { drawQRInternal } from './qrRenderer';
-
-const SVG_SIZE = 1024;
+import { drawWithTemplate, SOCIAL_DIMENSIONS } from './templateRenderer';
 
 /**
  * Converts an image URL to a base64 data-URL so it can be embedded inline in
@@ -60,14 +58,21 @@ function makeImgProxy(src: string): HTMLImageElement {
  * Generates a fully self-contained SVG string that visually matches the QR
  * code that would be rendered to a canvas with the same configuration.
  *
+ * When a social format or template is configured the SVG uses the standard
+ * high-resolution dimensions (e.g. 1080 × 1920 for Story/9:16) and routes
+ * rendering through {@link drawWithTemplate} so the template background and
+ * text are included.
+ *
  * Logos (both center and border) are fetched and embedded as base64 data-URLs
  * so the resulting `.svg` file works without an internet connection.
  *
  * @param config  The QR code configuration.
- * @param size    The logical pixel size for the SVG viewport (default: 1024).
+ * @param _legacySize  Ignored – dimensions are now derived from
+ *   `config.socialFormat` via {@link SOCIAL_DIMENSIONS}.
+ *   @deprecated Pass `config.socialFormat` to control output dimensions.
  * @returns A promise that resolves to the SVG XML string.
  */
-export async function generateQRSvg(config: QRConfig, size: number = SVG_SIZE): Promise<string> {
+export async function generateQRSvg(config: QRConfig, _legacySize?: number): Promise<string> {
   // Dynamically import qrcode to match the pattern used elsewhere in the project
   const QRCode = await import('qrcode');
   const qrData = QRCode.create(config.value, { errorCorrectionLevel: config.errorCorrectionLevel });
@@ -86,17 +91,21 @@ export async function generateQRSvg(config: QRConfig, size: number = SVG_SIZE): 
     ? makeImgProxy(await toDataUrl(config.borderLogoUrl))
     : null;
 
+  // Determine output dimensions from the social format (canonical resolution)
+  const { width: svgWidth, height: svgHeight } = SOCIAL_DIMENSIONS[config.socialFormat];
+
   // Create SVG context and render
-  const ctx = new SvgContext(size, size);
+  const ctx = new SvgContext(svgWidth, svgHeight);
 
   try {
-    drawQRInternal(
+    drawWithTemplate(
       ctx as unknown as CanvasRenderingContext2D,
       modules,
       config,
       logoImg,
       borderLogoImg,
-      size,
+      svgWidth,
+      svgHeight,
       moduleCount
     );
   } catch (err) {

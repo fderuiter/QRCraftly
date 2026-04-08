@@ -24,6 +24,7 @@ import { PatternControls } from './style-controls/PatternControls';
 import { ColorControls } from './style-controls/ColorControls';
 import { LogoControls } from './style-controls/LogoControls';
 import { AdvancedControls } from './style-controls/AdvancedControls';
+import { LayoutControls } from './style-controls/LayoutControls';
 
 /**
  * Props for the StyleControls component.
@@ -48,6 +49,9 @@ interface StyleControlsProps {
 const StyleControls: React.FC<StyleControlsProps> = ({ config, onChange }) => {
   return (
     <div className="space-y-8">
+      {/* Export Layout (Social Media Templates) */}
+      <LayoutControls config={config} onChange={onChange} />
+
       {/* Border Controls */}
       <BorderControls config={config} onChange={onChange} />
 

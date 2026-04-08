@@ -122,6 +122,24 @@ export interface QRConfig {
   borderLogoUrl: string | null;
   /** Position of the border logo. */
   borderLogoPosition: BorderLogoPosition;
+  /** The social media export aspect ratio format. */
+  socialFormat: SocialFormat;
+  /** The visual template style wrapping the QR code in the export. */
+  templateStyle: TemplateStyle;
+  /** Optional headline text rendered above the QR code in a template. */
+  templateHeadline?: string;
+  /** Optional subtext rendered below the QR code in a template. */
+  templateSubtext?: string;
+  /** Optional background color for the template canvas (overrides bgColor when set). */
+  templateBgColor?: string;
+  /** Optional text/accent color used in template backgrounds and text (overrides fgColor when set). */
+  templateTextColor?: string;
+  /**
+   * Scale multiplier for the QR code bounding box within the template canvas.
+   * 1.0 = default size (50 % of canvas width for non-NONE templates).
+   * Valid range: 0.5 – 1.5.
+   */
+  templateQrScale?: number;
 }
 
 /**
@@ -311,4 +329,23 @@ export interface SocialData {
 export interface MeetingData {
   /** The full meeting invite URL. */
   url: string;
+}
+
+/**
+ * Defines the social media export aspect ratio / format.
+ */
+export enum SocialFormat {
+  SQUARE_1_1 = '1:1',
+  PORTRAIT_4_5 = '4:5',
+  STORY_9_16 = '9:16',
+}
+
+/**
+ * Defines the visual template style applied to the social export canvas.
+ */
+export enum TemplateStyle {
+  NONE = 'none',
+  MINIMALIST = 'minimalist',
+  GRADIENT_BLUR = 'gradient_blur',
+  SOLID_FRAME = 'solid_frame',
 }

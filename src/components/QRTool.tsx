@@ -193,7 +193,7 @@ export default function QRTool({ initialConfig, title }: { initialConfig?: Parti
                 
                 <div ref={qrRef} className="flex justify-center mb-8">
                    {/* Pass debounced config to QRCanvas to prevent heavy rendering on every keystroke */}
-                   <QRCanvas config={debouncedConfig} className="w-full aspect-square rounded-lg shadow-sm" />
+                   <QRCanvas config={debouncedConfig} className="w-full max-h-[60vh] object-contain rounded-lg shadow-sm" />
                 </div>
 
                 <div className="grid grid-cols-1 gap-3 w-full">
