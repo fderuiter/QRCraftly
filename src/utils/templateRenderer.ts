@@ -37,6 +37,22 @@ export function getAspectRatioCss(format: SocialFormat): string {
   return `${width}/${height}`;
 }
 
+/**
+ * Resolves the effective template background color.
+ * Returns `templateBgColor` if explicitly set, otherwise falls back to `bgColor`.
+ */
+function resolveTemplateBg(config: QRConfig): string {
+  return config.templateBgColor ?? config.bgColor;
+}
+
+/**
+ * Resolves the effective template text/accent color.
+ * Returns `templateTextColor` if explicitly set, otherwise falls back to `fgColor`.
+ */
+function resolveTemplateText(config: QRConfig): string {
+  return config.templateTextColor ?? config.fgColor;
+}
+
 // ---------------------------------------------------------------------------
 // Private template background painters
 // ---------------------------------------------------------------------------
@@ -51,7 +67,7 @@ function drawNoneBackground(
   width: number,
   height: number
 ): void {
-  ctx.fillStyle = config.bgColor;
+  ctx.fillStyle = resolveTemplateBg(config);
   ctx.fillRect(0, 0, width, height);
 }
 
@@ -66,13 +82,16 @@ function drawMinimalistBackground(
   width: number,
   height: number
 ): void {
+  const bg = resolveTemplateBg(config);
+  const fg = resolveTemplateText(config);
+
   // Background
-  ctx.fillStyle = config.bgColor;
+  ctx.fillStyle = bg;
   ctx.fillRect(0, 0, width, height);
 
   // Outer decorative frame (stroke only, no fill)
   const frameInset = width * 0.03;
-  ctx.strokeStyle = config.fgColor;
+  ctx.strokeStyle = fg;
   ctx.lineWidth = Math.max(1, width * 0.008);
   ctx.strokeRect(
     frameInset,
@@ -93,8 +112,11 @@ function drawGradientBlurBackground(
   width: number,
   height: number
 ): void {
+  const bg = resolveTemplateBg(config);
+  const fg = resolveTemplateText(config);
+
   // Base fill
-  ctx.fillStyle = config.bgColor;
+  ctx.fillStyle = bg;
   ctx.fillRect(0, 0, width, height);
 
   // Draw soft radial blobs using fg colour at low opacity
@@ -107,8 +129,8 @@ function drawGradientBlurBackground(
 
   for (const [bx, by] of blobs) {
     const gradient = ctx.createRadialGradient(bx, by, 0, bx, by, blobRadius);
-    gradient.addColorStop(0, hexToRgba(config.fgColor, 0.18));
-    gradient.addColorStop(1, hexToRgba(config.fgColor, 0));
+    gradient.addColorStop(0, hexToRgba(fg, 0.18));
+    gradient.addColorStop(1, hexToRgba(fg, 0));
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, width, height);
   }
@@ -124,13 +146,16 @@ function drawSolidFrameBackground(
   width: number,
   height: number
 ): void {
+  const bg = resolveTemplateBg(config);
+  const fg = resolveTemplateText(config);
+
   // Outer solid band
-  ctx.fillStyle = config.fgColor;
+  ctx.fillStyle = fg;
   ctx.fillRect(0, 0, width, height);
 
   // Inner recessed area
   const inset = width * 0.06;
-  ctx.fillStyle = config.bgColor;
+  ctx.fillStyle = bg;
   ctx.fillRect(inset, inset, width - 2 * inset, height - 2 * inset);
 }
 
@@ -153,7 +178,7 @@ function drawTemplateText(
 
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillStyle = config.fgColor;
+  ctx.fillStyle = resolveTemplateText(config);
 
   if (headline) {
     const headlineFontSize = Math.round(displayWidth * 0.055);
@@ -224,23 +249,55 @@ export function drawWithTemplate(
   }
 
   // ── 2. QR Bounding-Box ────────────────────────────────────────────────────
-  // QR occupies 50 % of the canvas width (centered horizontally).
   // For NONE template on a square canvas the QR fills 100 % so it looks
   // identical to the previous rendering path.
   const isNoneSquare =
     config.templateStyle === TemplateStyle.NONE &&
     config.socialFormat === SocialFormat.SQUARE_1_1;
 
-  const qrSize = isNoneSquare ? displayWidth : displayWidth * 0.5;
+  // User-controlled scale multiplier (clamped to valid range).
+  const userScale = Math.min(1.5, Math.max(0.5, config.templateQrScale ?? 1.0));
+  const baseQrFraction = isNoneSquare ? 1.0 : 0.5 * userScale;
+
+  const qrSize = displayWidth * baseQrFraction;
   const qrX = (displayWidth - qrSize) / 2;
   const qrY = (displayHeight - qrSize) / 2;
 
-  // ── 3. Draw QR Inside Bounding-Box ────────────────────────────────────────
-  const scale = qrSize / displayWidth;
+  // ── 3. Safe-zone white rectangle behind the QR ────────────────────────────
+  // When a template is active the template background may be dark.  Drawing a
+  // white rounded rectangle (the QR code's own bgColor) behind the matrix
+  // ensures scanners can always read the code regardless of template colours.
+  if (!isNoneSquare) {
+    const safePad = qrSize * 0.05;
+    ctx.save();
+    ctx.fillStyle = config.bgColor; // always the QR's own background
+    const r = qrSize * 0.04; // corner radius
+    const rx = qrX - safePad;
+    const ry = qrY - safePad;
+    const rw = qrSize + safePad * 2;
+    const rh = qrSize + safePad * 2;
+
+    ctx.beginPath();
+    ctx.moveTo(rx + r, ry);
+    ctx.lineTo(rx + rw - r, ry);
+    ctx.quadraticCurveTo(rx + rw, ry, rx + rw, ry + r);
+    ctx.lineTo(rx + rw, ry + rh - r);
+    ctx.quadraticCurveTo(rx + rw, ry + rh, rx + rw - r, ry + rh);
+    ctx.lineTo(rx + r, ry + rh);
+    ctx.quadraticCurveTo(rx, ry + rh, rx, ry + rh - r);
+    ctx.lineTo(rx, ry + r);
+    ctx.quadraticCurveTo(rx, ry, rx + r, ry);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // ── 4. Draw QR Inside Bounding-Box ────────────────────────────────────────
+  const ctxScale = qrSize / displayWidth;
 
   ctx.save();
   ctx.translate(qrX, qrY);
-  ctx.scale(scale, scale);
+  ctx.scale(ctxScale, ctxScale);
 
   // drawQRInternal works in the logical [0, displayWidth] × [0, displayWidth]
   // coordinate space; we pass displayWidth as both width and height because
@@ -257,7 +314,7 @@ export function drawWithTemplate(
 
   ctx.restore();
 
-  // ── 4. Headline / Subtext ─────────────────────────────────────────────────
+  // ── 5. Headline / Subtext ─────────────────────────────────────────────────
   if (config.templateStyle !== TemplateStyle.NONE) {
     drawTemplateText(ctx, config, displayWidth, displayHeight, qrY, qrSize);
   }

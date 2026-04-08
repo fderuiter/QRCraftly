@@ -19,6 +19,8 @@
 import React from 'react';
 import { Square, Smartphone } from 'lucide-react';
 import { QRConfig, SocialFormat, TemplateStyle } from '../../types';
+import { ColorInput } from '../ui/ColorInput';
+import { RangeInput } from '../ui/RangeInput';
 
 interface LayoutControlsProps {
   config: QRConfig;
@@ -63,6 +65,11 @@ const TEMPLATE_OPTIONS: Array<{ id: TemplateStyle; label: string }> = [
  */
 export const LayoutControls: React.FC<LayoutControlsProps> = ({ config, onChange }) => {
   const showTextInputs = config.templateStyle !== TemplateStyle.NONE;
+  const showAdvanced = config.templateStyle !== TemplateStyle.NONE;
+
+  // Whether custom (decoupled) background / text colors are active
+  const hasBgOverride = config.templateBgColor !== undefined;
+  const hasTextOverride = config.templateTextColor !== undefined;
 
   return (
     <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
@@ -140,6 +147,87 @@ export const LayoutControls: React.FC<LayoutControlsProps> = ({ config, onChange
             onChange={(e) => onChange({ templateSubtext: e.target.value })}
             aria-label="Template subtext"
             className="w-full px-2 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs text-slate-700 dark:text-slate-200 focus:outline-none focus:border-teal-500"
+          />
+        </div>
+      )}
+
+      {/* Advanced Template Settings (visible only when a template is active) */}
+      {showAdvanced && (
+        <div className="mt-4 border-t border-slate-200 dark:border-slate-700 pt-4 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+          <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">Advanced Settings</p>
+
+          {/* Template Background Color */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs text-slate-500 dark:text-slate-400">Template Background</span>
+              <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={hasBgOverride}
+                  onChange={(e) =>
+                    onChange({
+                      templateBgColor: e.target.checked ? config.bgColor : undefined,
+                    })
+                  }
+                  aria-label="Override template background color"
+                  className="w-3.5 h-3.5 accent-teal-600 cursor-pointer"
+                />
+                <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                  {hasBgOverride ? 'Custom' : 'Inherit'}
+                </span>
+              </label>
+            </div>
+            {hasBgOverride && (
+              <ColorInput
+                id="templateBgColor"
+                label=""
+                value={config.templateBgColor!}
+                onChange={(val) => onChange({ templateBgColor: val })}
+              />
+            )}
+          </div>
+
+          {/* Template Text / Accent Color */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs text-slate-500 dark:text-slate-400">Template Text Color</span>
+              <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={hasTextOverride}
+                  onChange={(e) =>
+                    onChange({
+                      templateTextColor: e.target.checked ? config.fgColor : undefined,
+                    })
+                  }
+                  aria-label="Override template text color"
+                  className="w-3.5 h-3.5 accent-teal-600 cursor-pointer"
+                />
+                <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                  {hasTextOverride ? 'Custom' : 'Inherit'}
+                </span>
+              </label>
+            </div>
+            {hasTextOverride && (
+              <ColorInput
+                id="templateTextColor"
+                label=""
+                value={config.templateTextColor!}
+                onChange={(val) => onChange({ templateTextColor: val })}
+              />
+            )}
+          </div>
+
+          {/* QR Scale */}
+          <RangeInput
+            id="templateQrScale"
+            label="QR Scale"
+            value={config.templateQrScale ?? 1.0}
+            onChange={(val) => onChange({ templateQrScale: val })}
+            min={0.5}
+            max={1.5}
+            step={0.05}
+            formatValue={(val) => `${Math.round(val * 100)}%`}
           />
         </div>
       )}

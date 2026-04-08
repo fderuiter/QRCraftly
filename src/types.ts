@@ -130,6 +130,16 @@ export interface QRConfig {
   templateHeadline?: string;
   /** Optional subtext rendered below the QR code in a template. */
   templateSubtext?: string;
+  /** Optional background color for the template canvas (overrides bgColor when set). */
+  templateBgColor?: string;
+  /** Optional text/accent color used in template backgrounds and text (overrides fgColor when set). */
+  templateTextColor?: string;
+  /**
+   * Scale multiplier for the QR code bounding box within the template canvas.
+   * 1.0 = default size (50 % of canvas width for non-NONE templates).
+   * Valid range: 0.5 – 1.5.
+   */
+  templateQrScale?: number;
 }
 
 /**

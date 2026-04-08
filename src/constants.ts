@@ -49,6 +49,7 @@ export const DEFAULT_CONFIG = {
   templateStyle: TemplateStyle.NONE,
   templateHeadline: '',
   templateSubtext: '',
+  templateQrScale: 1.0,
 };
 
 /**

@@ -121,3 +121,200 @@ describe('LayoutControls (via StyleControls)', () => {
     expect(storyBtn).toHaveAttribute('aria-pressed', 'true');
   });
 });
+
+// ---------------------------------------------------------------------------
+// Advanced Template Settings: RangeInput + ColorInput
+// ---------------------------------------------------------------------------
+
+describe('Advanced Template Settings (via StyleControls)', () => {
+  const mockOnChange = vi.fn();
+
+  beforeEach(() => {
+    mockOnChange.mockClear();
+  });
+
+  it('does NOT show Advanced Settings section when templateStyle is NONE', () => {
+    render(<StyleControls config={DEFAULT_CONFIG as QRConfig} onChange={mockOnChange} />);
+    expect(screen.queryByText('Advanced Settings')).not.toBeInTheDocument();
+  });
+
+  it('shows Advanced Settings section when a template is selected', () => {
+    const config: QRConfig = {
+      ...(DEFAULT_CONFIG as QRConfig),
+      templateStyle: TemplateStyle.MINIMALIST,
+    };
+    render(<StyleControls config={config} onChange={mockOnChange} />);
+    expect(screen.getByText('Advanced Settings')).toBeInTheDocument();
+  });
+
+  it('shows the QR Scale range slider when a template is active', () => {
+    const config: QRConfig = {
+      ...(DEFAULT_CONFIG as QRConfig),
+      templateStyle: TemplateStyle.GRADIENT_BLUR,
+    };
+    render(<StyleControls config={config} onChange={mockOnChange} />);
+    expect(screen.getByLabelText('QR Scale')).toBeInTheDocument();
+    expect(screen.getByLabelText('QR Scale')).toHaveAttribute('type', 'range');
+  });
+
+  it('calls onChange with templateQrScale when the scale slider changes', () => {
+    const config: QRConfig = {
+      ...(DEFAULT_CONFIG as QRConfig),
+      templateStyle: TemplateStyle.MINIMALIST,
+      templateQrScale: 1.0,
+    };
+    render(<StyleControls config={config} onChange={mockOnChange} />);
+    const slider = screen.getByLabelText('QR Scale');
+    fireEvent.change(slider, { target: { value: '0.75' } });
+    expect(mockOnChange).toHaveBeenCalledWith({ templateQrScale: 0.75 });
+  });
+
+  it('shows the Override template background color checkbox', () => {
+    const config: QRConfig = {
+      ...(DEFAULT_CONFIG as QRConfig),
+      templateStyle: TemplateStyle.SOLID_FRAME,
+    };
+    render(<StyleControls config={config} onChange={mockOnChange} />);
+    expect(
+      screen.getByRole('checkbox', { name: /Override template background color/i })
+    ).toBeInTheDocument();
+  });
+
+  it('shows the Override template text color checkbox', () => {
+    const config: QRConfig = {
+      ...(DEFAULT_CONFIG as QRConfig),
+      templateStyle: TemplateStyle.SOLID_FRAME,
+    };
+    render(<StyleControls config={config} onChange={mockOnChange} />);
+    expect(
+      screen.getByRole('checkbox', { name: /Override template text color/i })
+    ).toBeInTheDocument();
+  });
+
+  it('enables background override and calls onChange with bgColor as initial templateBgColor', async () => {
+    const user = userEvent.setup();
+    const config: QRConfig = {
+      ...(DEFAULT_CONFIG as QRConfig),
+      templateStyle: TemplateStyle.MINIMALIST,
+      bgColor: '#aabbcc',
+    };
+    render(<StyleControls config={config} onChange={mockOnChange} />);
+    const checkbox = screen.getByRole('checkbox', { name: /Override template background color/i });
+    await user.click(checkbox);
+    expect(mockOnChange).toHaveBeenCalledWith({ templateBgColor: '#aabbcc' });
+  });
+
+  it('disables background override and calls onChange with undefined', async () => {
+    const user = userEvent.setup();
+    const config: QRConfig = {
+      ...(DEFAULT_CONFIG as QRConfig),
+      templateStyle: TemplateStyle.MINIMALIST,
+      templateBgColor: '#1a1a2e',
+    };
+    render(<StyleControls config={config} onChange={mockOnChange} />);
+    const checkbox = screen.getByRole('checkbox', { name: /Override template background color/i });
+    // Checkbox should be checked (override active)
+    expect(checkbox).toBeChecked();
+    await user.click(checkbox);
+    expect(mockOnChange).toHaveBeenCalledWith({ templateBgColor: undefined });
+  });
+
+  it('shows the custom background ColorInput only when override is active', () => {
+    // Without override
+    const configNoOverride: QRConfig = {
+      ...(DEFAULT_CONFIG as QRConfig),
+      templateStyle: TemplateStyle.MINIMALIST,
+      templateBgColor: undefined,
+    };
+    const { rerender } = render(
+      <StyleControls config={configNoOverride} onChange={mockOnChange} />
+    );
+    // templateBgColor ColorInput is identified by id="templateBgColor"
+    expect(document.getElementById('templateBgColor')).not.toBeInTheDocument();
+
+    // With override
+    const configWithOverride: QRConfig = {
+      ...configNoOverride,
+      templateBgColor: '#112233',
+    };
+    rerender(<StyleControls config={configWithOverride} onChange={mockOnChange} />);
+    expect(document.getElementById('templateBgColor')).toBeInTheDocument();
+  });
+
+  it('shows the custom text ColorInput only when override is active', () => {
+    const configNoOverride: QRConfig = {
+      ...(DEFAULT_CONFIG as QRConfig),
+      templateStyle: TemplateStyle.MINIMALIST,
+      templateTextColor: undefined,
+    };
+    const { rerender } = render(
+      <StyleControls config={configNoOverride} onChange={mockOnChange} />
+    );
+    expect(document.getElementById('templateTextColor')).not.toBeInTheDocument();
+
+    const configWithOverride: QRConfig = {
+      ...configNoOverride,
+      templateTextColor: '#ff6600',
+    };
+    rerender(<StyleControls config={configWithOverride} onChange={mockOnChange} />);
+    expect(document.getElementById('templateTextColor')).toBeInTheDocument();
+  });
+
+  it('calls onChange with new templateBgColor when color input changes', () => {
+    const config: QRConfig = {
+      ...(DEFAULT_CONFIG as QRConfig),
+      templateStyle: TemplateStyle.MINIMALIST,
+      templateBgColor: '#000000',
+    };
+    render(<StyleControls config={config} onChange={mockOnChange} />);
+    // The color input for templateBgColor (type=color)
+    const colorInput = document.getElementById('templateBgColor') as HTMLInputElement;
+    expect(colorInput).toBeInTheDocument();
+    fireEvent.change(colorInput, { target: { value: '#ff0000' } });
+    expect(mockOnChange).toHaveBeenCalledWith({ templateBgColor: '#ff0000' });
+  });
+
+  it('calls onChange with new templateTextColor when text color input changes', () => {
+    const config: QRConfig = {
+      ...(DEFAULT_CONFIG as QRConfig),
+      templateStyle: TemplateStyle.MINIMALIST,
+      templateTextColor: '#000000',
+    };
+    render(<StyleControls config={config} onChange={mockOnChange} />);
+    const colorInput = document.getElementById('templateTextColor') as HTMLInputElement;
+    expect(colorInput).toBeInTheDocument();
+    fireEvent.change(colorInput, { target: { value: '#0000ff' } });
+    expect(mockOnChange).toHaveBeenCalledWith({ templateTextColor: '#0000ff' });
+  });
+
+  it('Advanced Settings section is hidden again when switching back to None', () => {
+    const config: QRConfig = {
+      ...(DEFAULT_CONFIG as QRConfig),
+      templateStyle: TemplateStyle.MINIMALIST,
+    };
+    const { rerender } = render(
+      <StyleControls config={config} onChange={mockOnChange} />
+    );
+    expect(screen.getByText('Advanced Settings')).toBeInTheDocument();
+
+    rerender(
+      <StyleControls
+        config={{ ...config, templateStyle: TemplateStyle.NONE }}
+        onChange={mockOnChange}
+      />
+    );
+    expect(screen.queryByText('Advanced Settings')).not.toBeInTheDocument();
+  });
+
+  it('QR Scale slider has correct min, max, and step attributes', () => {
+    const config: QRConfig = {
+      ...(DEFAULT_CONFIG as QRConfig),
+      templateStyle: TemplateStyle.GRADIENT_BLUR,
+    };
+    render(<StyleControls config={config} onChange={mockOnChange} />);
+    const slider = screen.getByLabelText('QR Scale');
+    expect(slider).toHaveAttribute('min', '0.5');
+    expect(slider).toHaveAttribute('max', '1.5');
+    expect(slider).toHaveAttribute('step', '0.05');
+  });
+});
