@@ -17,7 +17,7 @@
 */
 
 
-import { QRStyle, QRType, QRErrorCorrectionLevel } from './types';
+import { QRStyle, QRType, QRErrorCorrectionLevel, SocialFormat, TemplateStyle } from './types';
 
 /**
  * The default configuration settings for the QR code generator.
@@ -45,6 +45,10 @@ export const DEFAULT_CONFIG = {
   borderTextColor: '#ffffff',
   borderLogoUrl: null,
   borderLogoPosition: 'bottom-center' as const,
+  socialFormat: SocialFormat.SQUARE_1_1,
+  templateStyle: TemplateStyle.NONE,
+  templateHeadline: '',
+  templateSubtext: '',
 };
 
 /**

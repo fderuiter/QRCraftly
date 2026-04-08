@@ -17,8 +17,9 @@
 */
 
 import React, { useEffect, useRef, useState } from 'react';
-import { QRConfig } from '../types';
+import { QRConfig, SocialFormat, TemplateStyle } from '../types';
 import { drawQR } from '../utils/qrRenderer';
+import { drawWithTemplate, getAspectRatioCss, SOCIAL_DIMENSIONS } from '../utils/templateRenderer';
 import { useImage } from '../utils/hooks';
 
 /**
@@ -82,30 +83,68 @@ const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) =
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+    const pixelRatio = window.devicePixelRatio || 1;
+    const useTemplate =
+      config.templateStyle !== TemplateStyle.NONE ||
+      config.socialFormat !== SocialFormat.SQUARE_1_1;
+
     if (!qrData) {
-        // Clear if no data
-        const pixelRatio = window.devicePixelRatio || 1;
-        const rawSize = size * pixelRatio;
-        canvas.width = rawSize;
-        canvas.height = rawSize;
-        ctx.clearRect(0, 0, rawSize, rawSize);
-        return;
+      // Clear if no data
+      if (useTemplate) {
+        const { width: fw, height: fh } = SOCIAL_DIMENSIONS[config.socialFormat];
+        const displayHeight = Math.round(size * fh / fw);
+        canvas.width = size * pixelRatio;
+        canvas.height = displayHeight * pixelRatio;
+      } else {
+        canvas.width = size * pixelRatio;
+        canvas.height = size * pixelRatio;
+      }
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      return;
     }
 
-    // Delegate rendering to utility function
-    drawQR(ctx, qrData.modules, config, logoImg, borderLogoImg, size);
+    if (useTemplate) {
+      // ── Template / social format rendering ─────────────────────────────────
+      const { width: fw, height: fh } = SOCIAL_DIMENSIONS[config.socialFormat];
+      const displayWidth = size;
+      const displayHeight = Math.round(size * fh / fw);
+
+      canvas.width = displayWidth * pixelRatio;
+      canvas.height = displayHeight * pixelRatio;
+
+      ctx.save();
+      ctx.scale(pixelRatio, pixelRatio);
+
+      drawWithTemplate(
+        ctx as unknown as CanvasRenderingContext2D,
+        qrData.modules,
+        config,
+        logoImg,
+        borderLogoImg,
+        displayWidth,
+        displayHeight,
+        qrData.modules.size
+      );
+
+      ctx.restore();
+    } else {
+      // ── Original square rendering path (no change in behaviour) ────────────
+      drawQR(ctx, qrData.modules, config, logoImg, borderLogoImg, size);
+    }
 
   }, [config, size, qrData, logoImg, borderLogoImg]);
 
   const typeLabel = config.type.charAt(0).toUpperCase() + config.type.slice(1).toLowerCase();
   const ariaLabel = `QR Code for ${typeLabel} - ${config.value ? 'Scan to view content' : 'Empty'}`;
 
+  const aspectRatioCss = getAspectRatioCss(config.socialFormat);
+
   return (
-    <div className={className} style={{ aspectRatio: '1/1' }}>
+    <div className={className} style={{ aspectRatio: aspectRatioCss }}>
       <canvas
         ref={canvasRef}
         className="w-full h-auto block"
-        style={{ aspectRatio: '1/1' }}
+        style={{ aspectRatio: aspectRatioCss }}
         role="img"
         aria-label={ariaLabel}
       />

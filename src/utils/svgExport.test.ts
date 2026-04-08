@@ -19,7 +19,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { generateQRSvg } from './svgExport';
 import { DEFAULT_CONFIG } from '../constants';
-import { QRStyle, QRConfig } from '../types';
+import { QRStyle, QRConfig, SocialFormat, TemplateStyle } from '../types';
 
 describe('generateQRSvg', () => {
   it('returns a valid SVG string for a basic URL', async () => {
@@ -29,11 +29,11 @@ describe('generateQRSvg', () => {
     expect(svg).toContain('xmlns="http://www.w3.org/2000/svg"');
   });
 
-  it('includes the correct viewport dimensions', async () => {
-    const svg = await generateQRSvg(DEFAULT_CONFIG as QRConfig, 512);
-    expect(svg).toContain('width="512"');
-    expect(svg).toContain('height="512"');
-    expect(svg).toContain('viewBox="0 0 512 512"');
+  it('includes the correct viewport dimensions for SQUARE_1_1 (1080x1080)', async () => {
+    const svg = await generateQRSvg(DEFAULT_CONFIG as QRConfig);
+    expect(svg).toContain('width="1080"');
+    expect(svg).toContain('height="1080"');
+    expect(svg).toContain('viewBox="0 0 1080 1080"');
   });
 
   it('encodes foreground colour in generated paths', async () => {
@@ -119,5 +119,37 @@ describe('generateQRSvg', () => {
     const config = { ...DEFAULT_CONFIG, value: '' } as QRConfig;
     // Should reject/throw - wrapped in try/catch by the caller
     await expect(generateQRSvg(config)).rejects.toThrow();
+  });
+
+  it('generates a 9:16 SVG with 1080x1920 dimensions', async () => {
+    const config: QRConfig = {
+      ...(DEFAULT_CONFIG as QRConfig),
+      socialFormat: SocialFormat.STORY_9_16,
+    };
+    const svg = await generateQRSvg(config);
+    expect(svg).toContain('width="1080"');
+    expect(svg).toContain('height="1920"');
+    expect(svg).toContain('viewBox="0 0 1080 1920"');
+  });
+
+  it('generates a 4:5 SVG with 1080x1350 dimensions', async () => {
+    const config: QRConfig = {
+      ...(DEFAULT_CONFIG as QRConfig),
+      socialFormat: SocialFormat.PORTRAIT_4_5,
+    };
+    const svg = await generateQRSvg(config);
+    expect(svg).toContain('width="1080"');
+    expect(svg).toContain('height="1350"');
+    expect(svg).toContain('viewBox="0 0 1080 1350"');
+  });
+
+  it('includes template headline text in the SVG when a template is active', async () => {
+    const config: QRConfig = {
+      ...(DEFAULT_CONFIG as QRConfig),
+      templateStyle: TemplateStyle.MINIMALIST,
+      templateHeadline: 'My Headline',
+    };
+    const svg = await generateQRSvg(config);
+    expect(svg).toContain('My Headline');
   });
 });
