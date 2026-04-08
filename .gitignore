@@ -30,4 +30,7 @@ verification/
 *.njsproj
 *.sln
 *.sw?
-.Jules/*
+# Playwright test artifacts
+/playwright-report/
+/test-results/
+

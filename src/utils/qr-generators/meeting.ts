@@ -16,19 +16,20 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-// Re-export specific generators
-export * from './qr-generators/wifi';
-export * from './qr-generators/email';
-export * from './qr-generators/vcard';
-export * from './qr-generators/phone';
-export * from './qr-generators/sms';
-export * from './qr-generators/payment';
-export * from './qr-generators/event';
-export * from './qr-generators/url';
-export * from './qr-generators/text';
-export * from './qr-generators/location';
-export * from './qr-generators/meeting';
-export * from './qr-generators/social';
+import { MeetingData } from '../../types';
+import { isDangerousUrl } from '../security';
 
-// Re-export generic URL utility
-export * from './url';
+/**
+ * Constructs the QR code string for a virtual meeting link.
+ *
+ * The encoded value is the sanitized meeting URL itself.
+ * The calling component may separately parse the URL to display meeting details.
+ *
+ * @param data - The meeting data containing the URL.
+ * @returns The meeting URL string, or an empty string if the URL is empty or dangerous.
+ */
+export const constructMeetingString = (data: MeetingData): string => {
+  if (!data.url) return '';
+  if (isDangerousUrl(data.url)) return '';
+  return data.url.trim();
+};

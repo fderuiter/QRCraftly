@@ -1,6 +1,6 @@
 import React from 'react';
 import { QRType } from '../../types';
-import { Wifi, Link, Type, Mail, UserSquare2, Phone, MessageSquare, CreditCard, Calendar } from 'lucide-react';
+import { Wifi, Link, Type, Mail, UserSquare2, Phone, MessageSquare, CreditCard, Calendar, MapPin, Video, Share2 } from 'lucide-react';
 
 interface TypeSelectorProps {
   currentType: QRType;
@@ -31,6 +31,9 @@ export const TypeSelector: React.FC<TypeSelectorProps> = ({ currentType, onSelec
           { type: QRType.PHONE, icon: Phone, label: 'Phone' },
           { type: QRType.SMS, icon: MessageSquare, label: 'SMS' },
           { type: QRType.PAYMENT, icon: CreditCard, label: 'Payment' },
+          { type: QRType.LOCATION, icon: MapPin, label: 'Location' },
+          { type: QRType.MEETING, icon: Video, label: 'Meeting' },
+          { type: QRType.SOCIAL, icon: Share2, label: 'Social' },
         ].map((item) => {
           const route = TYPE_ROUTES[item.type];
           const isActive = currentType === item.type;
