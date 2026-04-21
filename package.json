@@ -1,9 +1,22 @@
 {
   "name": "qrcraftly",
+  "description": "A powerful, privacy-focused, and user-friendly React application for generating customized QR codes.",
   "private": true,
   "version": "0.0.0",
   "license": "AGPL-3.0-or-later",
   "type": "module",
+  "homepage": "https://qrcraftly.com",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fderuiter/QRCraftly.git"
+  },
+  "keywords": [
+    "qr-code",
+    "generator",
+    "react",
+    "privacy-focused",
+    "customizable"
+  ],
   "scripts": {
     "dev": "vite",
     "build": "vite build",
