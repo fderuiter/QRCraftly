@@ -1,6 +1,6 @@
-import React from 'react';
-import { EventData } from '../../types';
-import { TextField, TextAreaField } from './FormFields';
+import React from "react";
+import { EventData } from "../../types";
+import { TextField, TextAreaField } from "./FormFields";
 
 interface EventInputProps {
   data: EventData;
@@ -17,7 +17,6 @@ export const EventInput: React.FC<EventInputProps> = ({ data, onChange }) => {
         maxLength={200}
         value={data.title}
         onChange={(e) => onChange({ title: e.target.value })}
-        fieldSize="xs"
         showCharCount
       />
       <TextField
@@ -26,7 +25,6 @@ export const EventInput: React.FC<EventInputProps> = ({ data, onChange }) => {
         type="datetime-local"
         value={data.startDate}
         onChange={(e) => onChange({ startDate: e.target.value })}
-        fieldSize="xs"
       />
       <TextField
         id="event-end-date"
@@ -34,7 +32,6 @@ export const EventInput: React.FC<EventInputProps> = ({ data, onChange }) => {
         type="datetime-local"
         value={data.endDate}
         onChange={(e) => onChange({ endDate: e.target.value })}
-        fieldSize="xs"
       />
       <TextField
         id="event-location"
@@ -43,7 +40,6 @@ export const EventInput: React.FC<EventInputProps> = ({ data, onChange }) => {
         maxLength={300}
         value={data.location}
         onChange={(e) => onChange({ location: e.target.value })}
-        fieldSize="xs"
         showCharCount
       />
       <TextAreaField
@@ -53,7 +49,6 @@ export const EventInput: React.FC<EventInputProps> = ({ data, onChange }) => {
         maxLength={2000}
         value={data.description}
         onChange={(e) => onChange({ description: e.target.value })}
-        fieldSize="xs"
         showCharCount
       />
     </div>
