@@ -15,9 +15,13 @@ export const PatternModule: React.FC<{ style: QRStyle }> = ({ style }) => {
     );
   }
   if (style === QRStyle.HIVE) {
-    // Hexagon clip path
+    // Hexagon
     return (
-      <div className="flex items-center justify-center bg-current" style={{ clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)' }} />
+      <div className="flex items-center justify-center">
+        <svg viewBox="0 0 100 100" fill="currentColor" className="w-full h-full">
+          <polygon points="50,0 100,25 100,75 50,100 0,75 0,25" />
+        </svg>
+      </div>
     );
   }
   if (style === QRStyle.SWISS) {
@@ -27,7 +31,7 @@ export const PatternModule: React.FC<{ style: QRStyle }> = ({ style }) => {
     return <div className="bg-current rounded-sm" />;
   }
   if (style === QRStyle.FLUID) {
-    return <div className="bg-current rounded-lg" style={{ borderRadius: '50%' }} />;
+    return <div className="bg-current rounded-full" />;
   }
   if (style === QRStyle.CIRCUIT) {
     return (
@@ -38,7 +42,13 @@ export const PatternModule: React.FC<{ style: QRStyle }> = ({ style }) => {
     );
   }
   if (style === QRStyle.GRUNGE) {
-    return <div className="bg-current" style={{ clipPath: 'polygon(10% 0, 100% 10%, 90% 100%, 0 90%)' }} />;
+    return (
+      <div className="flex items-center justify-center">
+        <svg viewBox="0 0 100 100" fill="currentColor" className="w-full h-full">
+          <polygon points="10,0 100,10 90,100 0,90" />
+        </svg>
+      </div>
+    );
   }
   // Standard and others
   return (

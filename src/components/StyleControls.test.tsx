@@ -56,9 +56,9 @@ describe('StyleControls Component', () => {
      const starPath = container.querySelector('path[d^="M12 2l3.09 6.26"]');
      expect(starPath).toBeInTheDocument();
 
-     // Hive uses clipPath
+     // Hive uses SVG polygon
      // eslint-disable-next-line testing-library/no-container, testing-library/no-node-access
-     const hiveElements = container.querySelectorAll('div[style*="polygon(50% 0%"]');
+     const hiveElements = container.querySelectorAll('polygon[points="50,0 100,25 100,75 50,100 0,75 0,25"]');
      expect(hiveElements.length).toBeGreaterThan(0);
   });
 
