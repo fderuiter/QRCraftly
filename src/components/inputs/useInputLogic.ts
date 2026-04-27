@@ -16,9 +16,9 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { useState, useRef, useEffect, ElementType } from 'react';
-import { QRConfig, QRType } from '../../types';
-import { INPUT_REGISTRY, InputDataMap } from './InputRegistry';
+import { useState, useRef, useEffect, ElementType } from "react";
+import { QRConfig, QRType } from "../../types";
+import { INPUT_REGISTRY, InputDataMap } from "./InputRegistry";
 
 /**
  * Hook to encapsulate the state management and component selection logic for the InputPanel.
@@ -28,13 +28,16 @@ import { INPUT_REGISTRY, InputDataMap } from './InputRegistry';
  * @param onChange - Callback to update the configuration.
  * @returns An object containing the component to render and its props.
  */
-export function useInputLogic(config: QRConfig, onChange: (updates: Partial<QRConfig>) => void): { InputComponent: ElementType | null, inputProps: any } {
+export function useInputLogic(
+  config: QRConfig,
+  onChange: (updates: Partial<QRConfig>) => void,
+): { InputComponent: ElementType | null; inputProps: any } {
   // Initialize state for all types from registry
   const [inputStates, setInputStates] = useState<InputDataMap>(() => {
     // Use any during construction to avoid complex union/intersection type issues
     // when assigning to a generic key. We cast back to InputDataMap at the end.
     const states: any = {};
-    (Object.keys(INPUT_REGISTRY) as QRType[]).forEach(key => {
+    (Object.keys(INPUT_REGISTRY) as QRType[]).forEach((key) => {
       const entry = INPUT_REGISTRY[key];
       // If this is the current type and we have a value, try to hydrate
       // This ensures that initial config values (e.g. from URL or defaults) are reflected in the inputs
@@ -64,13 +67,16 @@ export function useInputLogic(config: QRConfig, onChange: (updates: Partial<QRCo
   }, [config.type]);
 
   // Generic handler for all inputs
-  const handleInputChange = <K extends QRType>(type: K, updates: Partial<InputDataMap[K]>) => {
+  const handleInputChange = <K extends QRType>(
+    type: K,
+    updates: Partial<InputDataMap[K]>,
+  ) => {
     const currentData = inputStates[type];
     const newData = { ...currentData, ...updates };
 
-    setInputStates(prev => ({
+    setInputStates((prev) => ({
       ...prev,
-      [type]: newData
+      [type]: newData,
     }));
 
     if (timeoutRef.current) {
@@ -96,13 +102,13 @@ export function useInputLogic(config: QRConfig, onChange: (updates: Partial<QRCo
       InputComponent: registryEntry.Component,
       inputProps: {
         data: inputStates[config.type] || registryEntry.initialState,
-        onChange: (updates: any) => handleInputChange(config.type, updates)
-      }
+        onChange: (updates: any) => handleInputChange(config.type, updates),
+      },
     };
   }
 
   return {
     InputComponent: null,
-    inputProps: {}
+    inputProps: {},
   };
 }

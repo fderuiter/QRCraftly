@@ -1,6 +1,6 @@
-import React from 'react';
-import { SmsData } from '../../types';
-import { TextField, TextAreaField } from './FormFields';
+import React from "react";
+import { SmsData } from "../../types";
+import { TextField, TextAreaField } from "./FormFields";
 
 interface SmsInputProps {
   data: SmsData;
@@ -10,26 +10,26 @@ interface SmsInputProps {
 export const SmsInput: React.FC<SmsInputProps> = ({ data, onChange }) => {
   return (
     <div className="space-y-3">
-        <TextField
-            id="sms-number"
-            name="phone"
-            label="Phone Number"
-            autoComplete="tel"
-            type="tel"
-            maxLength={20}
-            placeholder="+1 555 000 0000"
-            value={data.number}
-            onChange={(e) => onChange({ number: e.target.value })}
-        />
-        <TextAreaField
-            id="sms-message"
-            label="Pre-filled Message"
-            rows={3}
-            maxLength={1600}
-            value={data.message}
-            onChange={(e) => onChange({ message: e.target.value })}
-            showCharCount
-        />
+      <TextField
+        id="sms-number"
+        name="phone"
+        label="Phone Number"
+        autoComplete="tel"
+        type="tel"
+        maxLength={20}
+        placeholder="+1 555 000 0000"
+        value={data.number}
+        onChange={(e) => onChange({ number: e.target.value })}
+      />
+      <TextAreaField
+        id="sms-message"
+        label="Pre-filled Message"
+        rows={3}
+        maxLength={1600}
+        value={data.message}
+        onChange={(e) => onChange({ message: e.target.value })}
+        showCharCount
+      />
     </div>
   );
 };
