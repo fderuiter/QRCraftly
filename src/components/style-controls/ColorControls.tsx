@@ -46,14 +46,15 @@ export const ColorControls: React.FC<ColorControlsProps> = ({ config, onChange }
             className="group relative w-10 h-10 rounded-lg shadow-sm hover:scale-110 transition-transform duration-200 ring-1 ring-slate-200 dark:ring-slate-700 overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
             title={preset.label}
           >
-            {/* Background */}
-            <div className="absolute inset-0" style={{ backgroundColor: preset.bg }}></div>
-
-            {/* Foreground Ring (Simulating Modules) */}
-            <div className="absolute inset-1.5 border-[3px] rounded-sm" style={{ borderColor: preset.fg }}></div>
-
-            {/* Eye Center */}
-            <div className="absolute inset-[11px] rounded-[1px]" style={{ backgroundColor: preset.eye }}></div>
+            {/* Use SVG presentation attributes instead of inline styles for CSP compliance */}
+            <svg viewBox="0 0 40 40" className="absolute inset-0 w-full h-full">
+              {/* Background */}
+              <rect width="40" height="40" fill={preset.bg} />
+              {/* Foreground Ring (Simulating Modules) */}
+              <rect x="6" y="6" width="28" height="28" rx="2" fill="none" stroke={preset.fg} strokeWidth="6" />
+              {/* Eye Center */}
+              <rect x="11" y="11" width="18" height="18" rx="1" fill={preset.eye} />
+            </svg>
           </button>
         ))}
       </div>

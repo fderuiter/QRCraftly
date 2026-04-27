@@ -157,10 +157,10 @@ export default function HeadDefault() {
       {/*
         Content Security Policy (CSP)
         - script-src 'unsafe-inline': Required for JSON-LD scripts and Vike hydration in SSG.
-        - style-src 'unsafe-inline': Required for the font loading hack and CSS extraction.
+        - style-src: Removed 'unsafe-inline' by refactoring font loading and dynamic preview styles.
         - object-src 'none': Prevents Flash/Java applets.
       */}
-      <meta httpEquiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests;" />
+      <meta httpEquiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests;" />
 
       {/*
         Note: 'viewport' and 'description' are handled by Vike/Config to avoid duplicates.
@@ -208,17 +208,10 @@ export default function HeadDefault() {
 
       {/*
          Load fonts synchronously to prevent Layout Shifts (CLS).
-         While async loading improves FCP, the shift when the font swaps
-         negatively impacts the user experience and CLS score.
+         Standard link tag is render-blocking which ensures fonts are ready
+         before first paint, avoiding layout shifts.
       */}
-      {/* Use a raw style tag to inject the link with onload attribute, ensuring it works in SSG */}
-      <style dangerouslySetInnerHTML={{ __html: `
-        </style>
-        <link rel="preload" href="${fontUrl}" as="style" />
-        <link rel="stylesheet" href="${fontUrl}" media="print" onload="this.media='all'" />
-        <noscript><link rel="stylesheet" href="${fontUrl}" /></noscript>
-        <style>`
-      }} />
+      <link rel="stylesheet" href={fontUrl} />
     </>
   );
 }

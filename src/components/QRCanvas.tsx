@@ -19,7 +19,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { QRConfig, SocialFormat, TemplateStyle } from '../types';
 import { drawQR } from '../utils/qrRenderer';
-import { drawWithTemplate, getAspectRatioCss, SOCIAL_DIMENSIONS } from '../utils/templateRenderer';
+import { drawWithTemplate, SOCIAL_DIMENSIONS } from '../utils/templateRenderer';
 import { useImage } from '../utils/hooks';
 
 /**
@@ -137,14 +137,19 @@ const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) =
   const typeLabel = config.type.charAt(0).toUpperCase() + config.type.slice(1).toLowerCase();
   const ariaLabel = `QR Code for ${typeLabel} - ${config.value ? 'Scan to view content' : 'Empty'}`;
 
-  const aspectRatioCss = getAspectRatioCss(config.socialFormat);
+  const aspectRatioClass = {
+    [SocialFormat.SQUARE_1_1]: 'aspect-square',
+    [SocialFormat.PORTRAIT_4_5]: 'aspect-[4/5]',
+    [SocialFormat.STORY_9_16]: 'aspect-[9/16]',
+  }[config.socialFormat];
+
+  const containerClasses = className ? `${className} ${aspectRatioClass}` : aspectRatioClass;
 
   return (
-    <div className={className} style={{ aspectRatio: aspectRatioCss }}>
+    <div className={containerClasses}>
       <canvas
         ref={canvasRef}
-        className="w-full h-auto block"
-        style={{ aspectRatio: aspectRatioCss }}
+        className={`w-full h-auto block ${aspectRatioClass}`}
         role="img"
         aria-label={ariaLabel}
       />
