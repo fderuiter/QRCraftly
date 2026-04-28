@@ -19,12 +19,14 @@
 
 import React from 'react';
 import { QRConfig } from '../types';
-import { BorderControls } from './style-controls/BorderControls';
-import { PatternControls } from './style-controls/PatternControls';
-import { ColorControls } from './style-controls/ColorControls';
-import { LogoControls } from './style-controls/LogoControls';
-import { AdvancedControls } from './style-controls/AdvancedControls';
-import { LayoutControls } from './style-controls/LayoutControls';
+import {
+  BorderControls,
+  PatternControls,
+  ColorControls,
+  LogoControls,
+  AdvancedControls,
+  LayoutControls
+} from './style-controls';
 
 /**
  * Props for the StyleControls component.
