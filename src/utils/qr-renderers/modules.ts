@@ -25,12 +25,22 @@ const getModuleDrawer = (
                 ctx.moveTo(cx + (cellSize/2 * 1.1), cy);
                 ctx.arc(cx, cy, cellSize/2 * 1.1, 0, Math.PI*2);
             };
-        case QRStyle.CIRCUIT:
+        case QRStyle.CIRCUIT: {
+            // Pre-calculate valid modules for CIRCUIT style to avoid repeated expensive checks
+            // (isCoveredByLogo and isEye) for every neighbor of every module.
+            const validGrid = new Uint8Array(moduleCount * moduleCount);
+            for (let r = 0; r < moduleCount; r++) {
+                for (let c = 0; c < moduleCount; c++) {
+                    if (modules.get(r, c) && !isEye(r, c, moduleCount) && !isCoveredByLogo(r, c)) {
+                        validGrid[r * moduleCount + c] = 1;
+                    }
+                }
+            }
             return (r, c, x, y, cx, cy) => {
-                const hasTop = r > 0 && modules.get(r-1, c) && !isCoveredByLogo(r-1, c) && !isEye(r-1, c, moduleCount);
-                const hasBottom = r < moduleCount-1 && modules.get(r+1, c) && !isCoveredByLogo(r+1, c) && !isEye(r+1, c, moduleCount);
-                const hasLeft = c > 0 && modules.get(r, c-1) && !isCoveredByLogo(r, c-1) && !isEye(r, c-1, moduleCount);
-                const hasRight = c < moduleCount-1 && modules.get(r, c+1) && !isCoveredByLogo(r, c+1) && !isEye(r, c+1, moduleCount);
+                const hasTop = r > 0 && validGrid[(r-1) * moduleCount + c];
+                const hasBottom = r < moduleCount-1 && validGrid[(r+1) * moduleCount + c];
+                const hasLeft = c > 0 && validGrid[r * moduleCount + (c-1)];
+                const hasRight = c < moduleCount-1 && validGrid[r * moduleCount + (c+1)];
 
                 // Full square with very tiny notches
                 drawRoundRect(ctx, x, y, cellSize, cellSize, cellSize * 0.1);
@@ -42,6 +52,7 @@ const getModuleDrawer = (
                 if (hasLeft) ctx.rect(x, cy - thickness/2, cellSize/2 + 1, thickness);
                 if (hasTop) ctx.rect(cx - thickness/2, y, thickness, cellSize/2 + 1);
             };
+        }
         case QRStyle.HIVE:
             return (_r, _c, _x, _y, cx, cy) => drawPoly(ctx, cx, cy, cellSize/1.55, 6, 0, true, true);
         case QRStyle.GRUNGE:
