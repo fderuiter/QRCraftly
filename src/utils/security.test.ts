@@ -17,7 +17,7 @@
 */
 
 import { describe, it, expect } from 'vitest';
-import { isDangerousUrl, safeJsonLdStringify, cleanPhoneNumber, sanitizeInput } from './security';
+import { isDangerousUrl, safeJsonLdStringify, cleanPhoneNumber, sanitizeInput, validateImageUpload } from './security';
 
 describe('Security Utils', () => {
   describe('isDangerousUrl', () => {
@@ -138,3 +138,39 @@ describe('Security Utils', () => {
       });
   });
 });
+
+  describe('validateImageUpload', () => {
+      it('returns null for valid file types and sizes', () => {
+          const validPng = new File([''], 'test.png', { type: 'image/png' });
+          expect(validateImageUpload(validPng)).toBeNull();
+
+          const validJpeg = new File([''], 'test.jpg', { type: 'image/jpeg' });
+          expect(validateImageUpload(validJpeg)).toBeNull();
+
+          const validWebp = new File([''], 'test.webp', { type: 'image/webp' });
+          expect(validateImageUpload(validWebp)).toBeNull();
+
+          const validSvg = new File(['<svg></svg>'], 'test.svg', { type: 'image/svg+xml' });
+          expect(validateImageUpload(validSvg)).toBeNull();
+      });
+
+      it('returns error for unsupported file types', () => {
+          const invalidGif = new File([''], 'test.gif', { type: 'image/gif' });
+          expect(validateImageUpload(invalidGif)).toBe('Invalid file type. Only JPEG, PNG, WebP, and SVG are allowed.');
+
+          const invalidTxt = new File(['text'], 'test.txt', { type: 'text/plain' });
+          expect(validateImageUpload(invalidTxt)).toBe('Invalid file type. Only JPEG, PNG, WebP, and SVG are allowed.');
+      });
+
+      it('returns error for files larger than 2MB', () => {
+          const largeFile = new File([''], 'large.png', { type: 'image/png' });
+          Object.defineProperty(largeFile, 'size', { value: 2 * 1024 * 1024 + 1 });
+          expect(validateImageUpload(largeFile)).toBe('File size exceeds the 2MB limit.');
+      });
+
+      it('returns null for files exactly 2MB', () => {
+          const borderFile = new File([''], 'border.png', { type: 'image/png' });
+          Object.defineProperty(borderFile, 'size', { value: 2 * 1024 * 1024 });
+          expect(validateImageUpload(borderFile)).toBeNull();
+      });
+  });
