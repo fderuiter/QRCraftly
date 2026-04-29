@@ -17,8 +17,17 @@
 */
 
 /**
- * Utility to calculate relative luminance of a color.
+ * Utility to calculate relative luminance of a color based on the WCAG 2.0 formula.
  * Used for contrast ratio calculation.
+ *
+ * The magic numbers in this formula are defined by the sRGB color space specification:
+ * - 0.03928: The threshold where the sRGB gamma correction curve changes from linear to exponential.
+ * - 12.92: The linear scaling factor for low luminance values.
+ * - 2.4: The gamma exponent for sRGB conversion.
+ * - 0.2126, 0.7152, 0.0722: The relative weights (luminance contributions) of Red, Green, and Blue,
+ *   based on human eye sensitivity (green appears much brighter than blue).
+ *
+ * @see https://www.w3.org/TR/WCAG20/#relativeluminancedef
  * @param hex - The hex color code (e.g. #RRGGBB or #RGB).
  * @returns The relative luminance value.
  */
