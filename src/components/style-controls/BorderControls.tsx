@@ -1,9 +1,10 @@
-import React, { useRef, useMemo } from 'react';
+import React, { useRef, useMemo, useState } from 'react';
 import { QRConfig, BorderStyle, BorderTextPosition, BorderLogoPosition } from '../../types';
 import { Upload, X, AlertTriangle } from 'lucide-react';
 import { getContrastRatio } from '../../utils/colorUtils';
 import { ColorInput } from '../ui/ColorInput';
 import { RangeInput } from '../ui/RangeInput';
+import { validateImageUpload } from '../../utils/security';
 
 interface BorderControlsProps {
   config: QRConfig;
@@ -12,10 +13,17 @@ interface BorderControlsProps {
 
 export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange }) => {
   const borderLogoInputRef = useRef<HTMLInputElement>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const handleBorderLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    setError(null);
     if (file) {
+      const validationError = validateImageUpload(file);
+      if (validationError) {
+        setError(validationError);
+        return;
+      }
       const reader = new FileReader();
       reader.onload = (event) => {
         onChange({ borderLogoUrl: event.target?.result as string });
@@ -161,6 +169,7 @@ export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange
                 onChange={handleBorderLogoUpload}
               />
             </div>
+            {error && <div className="mt-1 text-xs text-rose-600 dark:text-rose-400">{error}</div>}
             {config.borderLogoUrl && (
               <div className="mt-2">
                 <select

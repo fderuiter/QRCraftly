@@ -1,8 +1,9 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { QRConfig, LogoPaddingStyle } from '../../types';
 import { Upload, X, Square, Circle, Minus } from 'lucide-react';
 import { ColorInput } from '../ui/ColorInput';
 import { RangeInput } from '../ui/RangeInput';
+import { validateImageUpload } from '../../utils/security';
 
 interface LogoControlsProps {
   config: QRConfig;
@@ -11,10 +12,17 @@ interface LogoControlsProps {
 
 export const LogoControls: React.FC<LogoControlsProps> = ({ config, onChange }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    setError(null);
     if (file) {
+      const validationError = validateImageUpload(file);
+      if (validationError) {
+        setError(validationError);
+        return;
+      }
       const reader = new FileReader();
       reader.onload = (event) => {
         onChange({ logoUrl: event.target?.result as string });
@@ -45,6 +53,7 @@ export const LogoControls: React.FC<LogoControlsProps> = ({ config, onChange }) 
           </div>
           <span className="text-sm font-medium">Upload Logo</span>
           <span className="text-xs text-slate-600 dark:text-slate-400 mt-1">PNG, JPG (Square recommended)</span>
+          {error && <span className="text-xs text-rose-600 dark:text-rose-400 mt-2">{error}</span>}
         </button>
       ) : (
         <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700 space-y-5">
