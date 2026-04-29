@@ -1,3 +1,0 @@
-## 2025-02-18 - [Optimizing QR Circuit Renderers]
-**Learning:** In the `QRStyle.CIRCUIT` renderer, checking neighbors involves calling `isEye` and `isCoveredByLogo` for every direction. Doing this inside a loop for each element causes redundant calculations which degrade performance significantly. Pre-calculating these conditions into a `Uint8Array` dramatically reduces the number of function calls, improving render time by almost 5%.
-**Action:** Always consider using a flat array cache (e.g. `Uint8Array`) to pre-calculate neighborhood checks in tight rendering loops to optimize bounds and condition validations.
