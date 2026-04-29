@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest';
-import { getLogoMetrics, getIsCoveredByLogo } from './utils';
+import { getLogoMetrics } from './utils';
 import { DEFAULT_CONFIG } from '../../constants';
 import { QRConfig, QRErrorCorrectionLevel, QRStyle } from '../../types';
 import { renderModules } from './modules';
