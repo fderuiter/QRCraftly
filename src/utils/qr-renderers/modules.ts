@@ -53,12 +53,47 @@ const getModuleDrawer = (
                 if (hasTop) ctx.rect(cx - thickness/2, y, thickness, cellSize/2 + 1);
             };
         }
-        case QRStyle.HIVE:
-            return (_r, _c, _x, _y, cx, cy) => drawPoly(ctx, cx, cy, cellSize/1.55, 6, 0, true, true);
+        case QRStyle.HIVE: {
+            // Pre-calculate hexagon offsets to avoid Math.cos/sin in the hot loop
+            const rHive = cellSize / 1.55;
+            const sidesHive = 6;
+            const offsetsHive = Array.from({ length: sidesHive }, (_, i) => {
+                const theta = (i * 2 * Math.PI) / sidesHive;
+                return { x: rHive * Math.cos(theta), y: rHive * Math.sin(theta) };
+            });
+            return (_r, _c, _x, _y, cx, cy) => {
+                ctx.moveTo(cx + offsetsHive[0].x, cy + offsetsHive[0].y);
+                for (let i = 1; i < sidesHive; i++) {
+                    ctx.lineTo(cx + offsetsHive[i].x, cy + offsetsHive[i].y);
+                }
+                ctx.closePath();
+            };
+        }
         case QRStyle.GRUNGE:
             return (_r, _c, x, y, _cx, _cy) => drawRoughRect(ctx, x, y, cellSize, cellSize, true);
-        case QRStyle.STARBURST:
-            return (_r, _c, _x, _y, cx, cy) => drawStar(ctx, cx, cy, cellSize/1.5, cellSize/2.2, 5, true, true);
+        case QRStyle.STARBURST: {
+            // Pre-calculate starburst offsets to avoid Math.cos/sin in the hot loop
+            const outerR = cellSize / 1.5;
+            const innerR = cellSize / 2.2;
+            const spikes = 5;
+            const step = Math.PI / spikes;
+            const offsetsStar: {x: number, y: number}[] = [];
+            let rot = Math.PI / 2 * 3;
+            for (let i = 0; i < spikes; i++) {
+                offsetsStar.push({ x: Math.cos(rot) * outerR, y: Math.sin(rot) * outerR });
+                rot += step;
+                offsetsStar.push({ x: Math.cos(rot) * innerR, y: Math.sin(rot) * innerR });
+                rot += step;
+            }
+            return (_r, _c, _x, _y, cx, cy) => {
+                ctx.moveTo(cx, cy - outerR);
+                for (let i = 0; i < offsetsStar.length; i++) {
+                    ctx.lineTo(cx + offsetsStar[i].x, cy + offsetsStar[i].y);
+                }
+                ctx.lineTo(cx, cy - outerR);
+                ctx.closePath();
+            };
+        }
         case QRStyle.STANDARD:
         default:
             return (_r, _c, x, y, _cx, _cy) => ctx.rect(Math.floor(x), Math.floor(y), Math.ceil(cellSize), Math.ceil(cellSize));
