@@ -107,7 +107,7 @@ export default function QRTool({ initialConfig, title }: { initialConfig?: Parti
             <div className="flex gap-2">
               <a
                 href="/about"
-                className="p-2 rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                className="p-2 rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
                 title="About Us"
                 aria-label="About QRCraftly"
               >
@@ -115,7 +115,7 @@ export default function QRTool({ initialConfig, title }: { initialConfig?: Parti
               </a>
               <button
                 onClick={toggleDarkMode}
-                className="p-2 rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                className="p-2 rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
                 title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
                 aria-label={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
               >
@@ -202,7 +202,7 @@ export default function QRTool({ initialConfig, title }: { initialConfig?: Parti
                        <div className="relative flex-1" ref={downloadMenuRef}>
                           <button 
                               onClick={() => setShowDownloadMenu(!showDownloadMenu)}
-                              className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-teal-700 dark:bg-teal-700 text-white rounded-xl font-medium hover:bg-teal-800 dark:hover:bg-teal-600 transition-colors shadow-lg shadow-teal-900/10 dark:shadow-teal-900/40"
+                              className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-teal-700 dark:bg-teal-700 text-white rounded-xl font-medium hover:bg-teal-800 dark:hover:bg-teal-600 transition-colors shadow-lg shadow-teal-900/10 dark:shadow-teal-900/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
                               aria-expanded={showDownloadMenu}
                               aria-haspopup="true"
                           >
@@ -232,7 +232,7 @@ export default function QRTool({ initialConfig, title }: { initialConfig?: Parti
                        
                        <button 
                           onClick={handleShare}
-                          className="flex items-center justify-center w-12 bg-teal-50 dark:bg-slate-800 border border-teal-200 dark:border-slate-700 text-teal-700 dark:text-teal-400 rounded-xl font-medium hover:bg-teal-100 dark:hover:bg-slate-700 transition-colors"
+                          className="flex items-center justify-center w-12 bg-teal-50 dark:bg-slate-800 border border-teal-200 dark:border-slate-700 text-teal-700 dark:text-teal-400 rounded-xl font-medium hover:bg-teal-100 dark:hover:bg-slate-700 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
                           title="Share"
                           aria-label="Share QR code"
                        >
@@ -243,7 +243,7 @@ export default function QRTool({ initialConfig, title }: { initialConfig?: Parti
                    {/* Row 2: Save to Camera Roll */}
                    <button 
                       onClick={() => downloadToDevice('png')}
-                      className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-xl font-medium hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+                      className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-xl font-medium hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
                       aria-label="Save QR code to photos"
                    >
                       <Camera className="w-4 h-4" />
