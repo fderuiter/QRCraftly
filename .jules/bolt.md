@@ -1,7 +1,0 @@
-## 2025-02-18 - [Optimizing QR Circuit Renderers]
-**Learning:** In the `QRStyle.CIRCUIT` renderer, checking neighbors involves calling `isEye` and `isCoveredByLogo` for every direction. Doing this inside a loop for each element causes redundant calculations which degrade performance significantly. Pre-calculating these conditions into a `Uint8Array` dramatically reduces the number of function calls, improving render time by almost 5%.
-**Action:** Always consider using a flat array cache (e.g. `Uint8Array`) to pre-calculate neighborhood checks in tight rendering loops to optimize bounds and condition validations.
-
-## 2025-04-29 - [Optimizing HIVE and STARBURST Path Pre-calculation]
-**Learning:** Functions like `drawPoly` and `drawStar` in `canvasHelpers.ts` calculate points dynamically using `Math.sin` and `Math.cos` for every module that gets rendered in tight loops when rendering HIVE or STARBURST QR patterns. Because these modules are effectively the same shape and size relative to their center, pre-calculating the points offset from the center outside of the `renderModules` loop and only shifting the points with `cx` and `cy` during the inner loop execution provides a consistent ~15-20% performance boost for HIVE/STARBURST styles.
-**Action:** Identify repeated calculations in hot loops that yield constant relative offsets (e.g., drawing standard shapes across a grid) and move these calculations to the outer scope to act as a pre-calculated cache.
