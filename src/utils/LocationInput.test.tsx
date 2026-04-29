@@ -18,7 +18,7 @@
 
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { LocationInput } from '../components/inputs/LocationInput';
+import { LocationInput } from '../components/inputs';
 import { LocationData } from '../types';
 
 // ---------------------------------------------------------------------------
