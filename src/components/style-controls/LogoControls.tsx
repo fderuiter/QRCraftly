@@ -28,7 +28,7 @@ export const LogoControls: React.FC<LogoControlsProps> = ({ config, onChange }) 
       <div className="flex justify-between items-center mb-3">
         <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Logo</h3>
         {config.logoUrl && (
-          <button onClick={() => onChange({ logoUrl: null })} className="text-xs text-rose-600 dark:text-rose-400 hover:underline flex items-center gap-1">
+          <button onClick={() => onChange({ logoUrl: null })} className="text-xs text-rose-600 dark:text-rose-400 hover:underline flex items-center gap-1 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-slate-900">
             <X className="w-3 h-3"/> Remove
           </button>
         )}
@@ -38,7 +38,7 @@ export const LogoControls: React.FC<LogoControlsProps> = ({ config, onChange }) 
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
-          className="w-full border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl p-6 flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 hover:bg-teal-50 dark:hover:bg-teal-900/10 hover:border-teal-400 dark:hover:border-teal-600 hover:text-teal-700 dark:hover:text-teal-400 transition-all cursor-pointer group"
+          className="w-full border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl p-6 flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 hover:bg-teal-50 dark:hover:bg-teal-900/10 hover:border-teal-400 dark:hover:border-teal-600 hover:text-teal-700 dark:hover:text-teal-400 transition-all cursor-pointer group focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
         >
           <div className="w-10 h-10 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-2 group-hover:bg-teal-100 dark:group-hover:bg-teal-900/30 transition-colors">
             <Upload className="w-5 h-5" />
