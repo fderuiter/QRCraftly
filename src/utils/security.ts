@@ -79,23 +79,3 @@ export const sanitizeInput = (str: string): string => {
   const noControl = str.replace(REGEX_STRICT_CONTROL_CHARS, '');
   return noControl.split('?')[0];
 };
-
-/**
- * Validates an uploaded image file for size and type.
- * Enforces a 2MB size limit and allows jpeg, png, webp, and svg formats.
- * @param file The file to validate.
- * @returns A string with an error message if invalid, or null if valid.
- */
-export const validateImageUpload = (file: File): string | null => {
-  const MAX_SIZE = 2 * 1024 * 1024; // 2MB
-  if (file.size > MAX_SIZE) {
-    return 'File size exceeds the 2MB limit.';
-  }
-
-  const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'];
-  if (!allowedTypes.includes(file.type)) {
-    return 'Invalid file type. Only JPEG, PNG, WebP, and SVG are allowed.';
-  }
-
-  return null;
-};
