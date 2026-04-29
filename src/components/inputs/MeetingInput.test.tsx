@@ -68,4 +68,18 @@ describe('MeetingInput', () => {
     expect(screen.queryByText(/link detected/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Meeting ID:/i)).not.toBeInTheDocument();
   });
+
+  it('renders correctly with an unknown URL and does not show details', () => {
+    const data: MeetingData = { url: 'https://example.com/unknown-meeting' };
+    render(<MeetingInput data={data} onChange={mockOnChange} />);
+
+    expect(screen.getByText('Meeting Link')).toBeInTheDocument();
+
+    const input = screen.getByLabelText('Paste Meeting Link') as HTMLInputElement;
+    expect(input).toBeInTheDocument();
+    expect(input.value).toBe('https://example.com/unknown-meeting');
+
+    expect(screen.queryByText(/link detected/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Meeting ID:/i)).not.toBeInTheDocument();
+  });
 });
