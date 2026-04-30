@@ -20,21 +20,19 @@ import {
 import {
   constructUrlString,
   hydrateUrlData,
-} from "../../utils/qr-generators/url";
-import {
   constructTextString,
   hydrateTextData,
-} from "../../utils/qr-generators/text";
-import { constructWifiString } from "../../utils/qr-generators/wifi";
-import { constructEmailString } from "../../utils/qr-generators/email";
-import { constructVCardString } from "../../utils/qr-generators/vcard";
-import { constructPhoneString } from "../../utils/qr-generators/phone";
-import { constructSmsString } from "../../utils/qr-generators/sms";
-import { constructPaymentString } from "../../utils/qr-generators/payment";
-import { constructEventString } from "../../utils/qr-generators/event";
-import { constructLocationString } from "../../utils/qr-generators/location";
-import { constructMeetingString } from "../../utils/qr-generators/meeting";
-import { constructSocialString } from "../../utils/qr-generators/social";
+  constructWifiString,
+  constructEmailString,
+  constructVCardString,
+  constructPhoneString,
+  constructSmsString,
+  constructPaymentString,
+  constructEventString,
+  constructLocationString,
+  constructMeetingString,
+  constructSocialString,
+} from "../../utils/qrHelpers";
 
 import { UrlInput } from "./UrlInput";
 import { TextInput } from "./TextInput";
