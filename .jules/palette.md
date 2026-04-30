@@ -1,0 +1,4 @@
+## 2025-04-30 - Custom Control Groups Missing Labels
+
+**Learning:** When building complex inline custom control groups (like the `BorderControls.tsx` logo and text configurations), native `<label>` elements are often omitted for layout aesthetics. However, nested inputs and selects within these groups will lose their accessible name if explicit `aria-label`s are not provided, leading to a degraded screen reader experience. Icon-only buttons (like the X to clear a logo) are particularly prone to lacking `aria-label` and `focus-visible` states.
+**Action:** Always verify that every interactive element within a custom UI group has a distinct accessible name (via `aria-label` or `aria-labelledby`) and an explicit `focus-visible` styling for keyboard users, even if the parent container implies context visually.

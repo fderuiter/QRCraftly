@@ -117,12 +117,14 @@ export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange
                 placeholder="Text on border..."
                 value={config.borderText}
                 onChange={(e) => onChange({ borderText: e.target.value })}
+                aria-label="Border text"
                 className="w-full px-2 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs text-slate-700 dark:text-slate-200 focus:outline-none focus:border-teal-500"
               />
               <div className="flex gap-2">
                 <select
                   value={config.borderTextPosition || 'bottom-center'}
                   onChange={(e) => onChange({ borderTextPosition: e.target.value as BorderTextPosition })}
+                  aria-label="Border text position"
                   className="flex-1 px-2 py-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs text-slate-700 dark:text-slate-200 focus:outline-none focus:border-teal-500"
                 >
                   <option value="top-center">Top Center</option>
@@ -133,6 +135,7 @@ export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange
                     type="color"
                     value={config.borderTextColor || '#ffffff'}
                     onChange={(e) => onChange({ borderTextColor: e.target.value })}
+                    aria-label="Border text color"
                     className="w-6 h-6 rounded cursor-pointer border-0 p-0 bg-transparent"
                     title="Text Color"
                   />
@@ -149,14 +152,19 @@ export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange
                   <span className="text-xs text-slate-500 dark:text-slate-400 italic">No secondary logo</span>
                 )}
                 {config.borderLogoUrl && (
-                  <button onClick={() => onChange({ borderLogoUrl: null })} className="text-xs text-rose-600 hover:underline">
+                  <button
+                    onClick={() => onChange({ borderLogoUrl: null })}
+                    aria-label="Remove border logo"
+                    title="Remove border logo"
+                    className="text-xs text-rose-600 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 rounded"
+                  >
                     <X className="w-3 h-3" />
                   </button>
                 )}
               </div>
               <button
                 onClick={() => borderLogoInputRef.current?.click()}
-                className="text-xs text-teal-600 dark:text-teal-400 hover:underline font-medium flex items-center gap-1"
+                className="text-xs text-teal-600 dark:text-teal-400 hover:underline font-medium flex items-center gap-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 rounded px-1 py-0.5"
               >
                 <Upload className="w-3 h-3" />
                 {config.borderLogoUrl ? 'Change' : 'Add Logo'}
@@ -175,6 +183,7 @@ export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange
                 <select
                   value={config.borderLogoPosition || 'bottom-center'}
                   onChange={(e) => onChange({ borderLogoPosition: e.target.value as BorderLogoPosition })}
+                  aria-label="Border logo position"
                   className="w-full px-2 py-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs text-slate-700 dark:text-slate-200 focus:outline-none focus:border-teal-500"
                 >
                   <option value="bottom-center">Bottom Center</option>
