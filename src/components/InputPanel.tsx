@@ -18,8 +18,7 @@
 
 import React from 'react';
 import { QRConfig } from '../types';
-import { TypeSelector } from './inputs/TypeSelector';
-import { useInputLogic } from './inputs/useInputLogic';
+import { TypeSelector, useInputLogic } from './inputs';
 
 /**
  * Props for the InputPanel component.

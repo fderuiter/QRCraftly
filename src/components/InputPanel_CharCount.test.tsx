@@ -1,7 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
-import { WifiInput } from './inputs/WifiInput';
-import { EmailInput } from './inputs/EmailInput';
+import { WifiInput, EmailInput } from './inputs';
 import { WifiEncryption, WifiData, EmailData } from '../types';
 
 describe('Input Character Counts', () => {
