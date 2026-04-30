@@ -96,7 +96,7 @@ pnpm preview
 
 ### Running Tests
 
-To run the test suite (Vitest):
+To run the unit test suite (Vitest):
 
 ```bash
 pnpm test
@@ -105,6 +105,14 @@ pnpm test
 To run coverage reports:
 ```bash
 pnpm test -- run --coverage
+```
+
+To run End-to-End (E2E) tests (Playwright):
+
+Note: On a fresh environment, you must install the required browsers first.
+```bash
+pnpm exec playwright install
+pnpm test:e2e
 ```
 
 ### Quality Assurance
