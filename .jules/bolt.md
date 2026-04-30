@@ -1,0 +1,3 @@
+## 2025-04-30 - Chunking spatial loops avoids redundant work
+**Learning:** For rendering styles with complex neighboring-cell dependencies (like the CIRCUIT mode which checks surrounding cells), pre-calculating state into a flat `Uint8Array` cache significantly speeds up execution. More importantly, when calculating this valid state grid, we can avoid looping through large predictable dead zones (like corner eye markers) using the same section-splitting strategy applied to the final render loop. This avoids redundant calls to predicates like `isEye` or `isCoveredByLogo`.
+**Action:** Always identify spatial regions that are guaranteed to have consistent logic (e.g. always empty) and split loops to skip them entirely rather than relying on conditionals inside hot loops.

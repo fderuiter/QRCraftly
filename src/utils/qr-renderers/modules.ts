@@ -1,6 +1,6 @@
 import { QRConfig, QRStyle, QRModules } from '../../types';
 import { drawRoundRect, drawRoughRect } from '../canvasHelpers';
-import { isEye, getIsCoveredByLogo, LogoMetrics } from './utils';
+import { getIsCoveredByLogo, LogoMetrics } from './utils';
 
 type DrawModuleFn = (r: number, c: number, x: number, y: number, cx: number, cy: number) => void;
 
@@ -29,13 +29,34 @@ const getModuleDrawer = (
             // Pre-calculate valid modules for CIRCUIT style to avoid repeated expensive checks
             // (isCoveredByLogo and isEye) for every neighbor of every module.
             const validGrid = new Uint8Array(moduleCount * moduleCount);
-            for (let r = 0; r < moduleCount; r++) {
-                for (let c = 0; c < moduleCount; c++) {
-                    if (modules.get(r, c) && !isEye(r, c, moduleCount) && !isCoveredByLogo(r, c)) {
-                        validGrid[r * moduleCount + c] = 1;
-                    }
+
+            // Optimization: Apply the same section-splitting strategy used in renderModules
+            // to avoid calling isEye() and isCoveredByLogo() for every single cell.
+
+            const checkAndSet = (r: number, c: number) => {
+                if (modules.get(r, c) && !isCoveredByLogo(r, c)) {
+                    validGrid[r * moduleCount + c] = 1;
+                }
+            };
+
+            for (let r = 0; r < 7; r++) {
+                for (let c = 7; c < moduleCount - 7; c++) {
+                    checkAndSet(r, c);
                 }
             }
+
+            for (let r = 7; r < moduleCount - 7; r++) {
+                for (let c = 0; c < moduleCount; c++) {
+                    checkAndSet(r, c);
+                }
+            }
+
+            for (let r = moduleCount - 7; r < moduleCount; r++) {
+                for (let c = 7; c < moduleCount; c++) {
+                    checkAndSet(r, c);
+                }
+            }
+
             return (r, c, x, y, cx, cy) => {
                 const hasTop = r > 0 && validGrid[(r-1) * moduleCount + c];
                 const hasBottom = r < moduleCount-1 && validGrid[(r+1) * moduleCount + c];
