@@ -1,0 +1,3 @@
+## 2025-05-01 - Missing ARIA Labels in Complex Inline Form Groups
+**Learning:** Complex inline custom control groups (like logo position selections and nested text input configurations in `BorderControls`) frequently omit native `<label>` elements in favor of layout aesthetics. This breaks accessibility for screen reader users and keyboard navigation.
+**Action:** When working on form controls, especially those using Flexbox/Grid layouts where visual text labels are detached from inputs or replaced with placeholders, ensure explicit `aria-label` and `focus-visible` styling are added to maintain accessibility.
