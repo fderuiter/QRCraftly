@@ -92,6 +92,11 @@ describe('Security Utils', () => {
       expect(safeJsonLdStringify(data)).toBe('{"name":"Test","value":123}');
     });
 
+    it('handles undefined and un-stringifyable inputs gracefully', () => {
+      expect(safeJsonLdStringify(undefined)).toBe('{}');
+      expect(safeJsonLdStringify(() => {})).toBe('{}');
+    });
+
     it('escapes <, >, and & characters', () => {
         const data = {
             malicious: '<script>alert("xss")</script> & more'

@@ -21,9 +21,12 @@
  * Escapes <, >, and & to prevent XSS via </script> injection.
  */
 export const safeJsonLdStringify = (data: any): string => {
-  return JSON.stringify(data).replace(/</g, '\\u003c')
-                             .replace(/>/g, '\\u003e')
-                             .replace(/&/g, '\\u0026');
+  const str = JSON.stringify(data);
+  if (!str) return '{}';
+
+  return str.replace(/</g, '\\u003c')
+            .replace(/>/g, '\\u003e')
+            .replace(/&/g, '\\u0026');
 };
 
 // Standard control chars (0x00-0x1F) and DEL (0x7F) + C1 control chars (0x80-0x9F)
