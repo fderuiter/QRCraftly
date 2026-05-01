@@ -1,0 +1,4 @@
+## 2025-05-18 - Enforce strict typing in useInputLogic
+**Context:** The `useInputLogic` hook in `src/components/inputs/useInputLogic.ts` used `any` types for state management and props, which bypassed TypeScript's checking and increased cognitive load when reasoning about component inputs. This violated Type Safety.
+**Decision:** Standardized and enforced strong typing using `Partial<InputDataMap>` for local state and exact mapping of `InputDataMap` keys to infer prop types correctly. Replaced generic fallback `any` types with structural constraints to ensure strict alignment with the QR Component Registry.
+**Consequence:** The `useInputLogic` hook is now fully type-safe. It eliminates "magic" `any` usage, which improves the developer experience and ensures the state passed matches the specific input types (e.g. WiFi vs SMS).
