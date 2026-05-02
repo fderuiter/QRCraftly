@@ -13,18 +13,24 @@ const getModuleDrawer = (
     isCoveredByLogo: (r: number, c: number) => boolean
 ): DrawModuleFn => {
     switch(style) {
-        case QRStyle.MODERN:
-            return (_r, _c, x, y, _cx, _cy) => drawRoundRect(ctx, x, y, cellSize, cellSize, cellSize * 0.3);
-        case QRStyle.SWISS:
+        case QRStyle.MODERN: {
+            const rModern = cellSize * 0.3;
+            return (_r, _c, x, y, _cx, _cy) => drawRoundRect(ctx, x, y, cellSize, cellSize, rModern);
+        }
+        case QRStyle.SWISS: {
+            const rSwiss = (cellSize / 2) * 1.05;
             return (_r, _c, _x, _y, cx, cy) => {
-                ctx.moveTo(cx + (cellSize/2 * 1.05), cy);
-                ctx.arc(cx, cy, cellSize/2 * 1.05, 0, Math.PI*2);
+                ctx.moveTo(cx + rSwiss, cy);
+                ctx.arc(cx, cy, rSwiss, 0, Math.PI*2);
             };
-        case QRStyle.FLUID:
+        }
+        case QRStyle.FLUID: {
+            const rFluid = (cellSize / 2) * 1.1;
             return (_r, _c, _x, _y, cx, cy) => {
-                ctx.moveTo(cx + (cellSize/2 * 1.1), cy);
-                ctx.arc(cx, cy, cellSize/2 * 1.1, 0, Math.PI*2);
+                ctx.moveTo(cx + rFluid, cy);
+                ctx.arc(cx, cy, rFluid, 0, Math.PI*2);
             };
+        }
         case QRStyle.CIRCUIT: {
             // Pre-calculate valid modules for CIRCUIT style to avoid repeated expensive checks
             // (isCoveredByLogo and isEye) for every neighbor of every module.
@@ -36,6 +42,12 @@ const getModuleDrawer = (
                     }
                 }
             }
+            // Pre-calculate dimensional constants
+            const rCircuit = cellSize * 0.1;
+            const thickness = cellSize * 0.4;
+            const thicknessHalf = thickness / 2;
+            const linkLen = cellSize / 2 + 1;
+
             return (r, c, x, y, cx, cy) => {
                 const hasTop = r > 0 && validGrid[(r-1) * moduleCount + c];
                 const hasBottom = r < moduleCount-1 && validGrid[(r+1) * moduleCount + c];
@@ -43,14 +55,13 @@ const getModuleDrawer = (
                 const hasRight = c < moduleCount-1 && validGrid[r * moduleCount + (c+1)];
 
                 // Full square with very tiny notches
-                drawRoundRect(ctx, x, y, cellSize, cellSize, cellSize * 0.1);
+                drawRoundRect(ctx, x, y, cellSize, cellSize, rCircuit);
 
                 // Draw lines to neighbors
-                const thickness = cellSize * 0.4;
-                if (hasRight) ctx.rect(cx, cy - thickness/2, cellSize/2 + 1, thickness);
-                if (hasBottom) ctx.rect(cx - thickness/2, cy, thickness, cellSize/2 + 1);
-                if (hasLeft) ctx.rect(x, cy - thickness/2, cellSize/2 + 1, thickness);
-                if (hasTop) ctx.rect(cx - thickness/2, y, thickness, cellSize/2 + 1);
+                if (hasRight) ctx.rect(cx, cy - thicknessHalf, linkLen, thickness);
+                if (hasBottom) ctx.rect(cx - thicknessHalf, cy, thickness, linkLen);
+                if (hasLeft) ctx.rect(x, cy - thicknessHalf, linkLen, thickness);
+                if (hasTop) ctx.rect(cx - thicknessHalf, y, thickness, linkLen);
             };
         }
         case QRStyle.HIVE: {
