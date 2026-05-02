@@ -22,9 +22,10 @@ import {
   constructEmailString,
   constructVCardString,
   constructPaymentString,
-  constructSmsString
+  constructSmsString,
+  constructPhoneString
 } from './qrHelpers';
-import { EmailData, VCardData, PaymentData, CryptoNetwork, SmsData } from '../types';
+import { EmailData, VCardData, PaymentData, CryptoNetwork, SmsData, PhoneData } from '../types';
 
 describe('QR Helpers Sad Paths', () => {
   describe('escapeVCardString', () => {
@@ -139,6 +140,24 @@ describe('QR Helpers Sad Paths', () => {
       expect(result).not.toMatch(/\?.*\?/);
       // With strict whitelist, 'bodyinjected' is removed
       expect(result).toBe('sms:123?body=hello');
+    });
+  });
+
+  describe('constructPhoneString', () => {
+    it('should strip malicious parameter injections', () => {
+      const data: PhoneData = {
+        number: '123?body=injected'
+      };
+      const result = constructPhoneString(data);
+      expect(result).toBe('tel:123');
+    });
+
+    it('should handle empty input', () => {
+      const data: PhoneData = {
+        number: ''
+      };
+      const result = constructPhoneString(data);
+      expect(result).toBe('tel:');
     });
   });
 });
