@@ -18,7 +18,7 @@
 
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
-import { useDebounce } from './hooks';
+import { useOnClickOutside, useDebounce, useImage } from './hooks';
 
 describe('useDebounce', () => {
   beforeEach(() => {
@@ -85,5 +85,179 @@ describe('useDebounce', () => {
       vi.advanceTimersByTime(200); // Total 500ms from second update
     });
     expect(result.current).toBe('update2');
+  });
+});
+
+describe('useOnClickOutside', () => {
+  let container: HTMLDivElement;
+  let child: HTMLSpanElement;
+  let ref: { current: HTMLDivElement };
+
+  beforeEach(() => {
+    container = document.createElement('div');
+    child = document.createElement('span');
+    container.appendChild(child);
+    document.body.appendChild(container);
+    ref = { current: container };
+  });
+
+  afterEach(() => {
+    if (document.body.contains(container)) {
+      document.body.removeChild(container);
+    }
+  });
+
+  it('should call handler when clicking outside the element', () => {
+    const handler = vi.fn();
+
+    renderHook(() => useOnClickOutside(ref, handler));
+
+    // Click outside
+    const outsideEvent = new MouseEvent('mousedown', { bubbles: true });
+    document.dispatchEvent(outsideEvent);
+
+    expect(handler).toHaveBeenCalledTimes(1);
+  });
+
+  it('should not call handler when clicking inside the element', () => {
+    const handler = vi.fn();
+
+    renderHook(() => useOnClickOutside(ref, handler));
+
+    // Click inside
+    const insideEvent = new MouseEvent('mousedown', { bubbles: true });
+    Object.defineProperty(insideEvent, 'target', { value: child });
+    document.dispatchEvent(insideEvent);
+
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  it('should not call handler when isActive is false', () => {
+    const handler = vi.fn();
+
+    renderHook(() => useOnClickOutside(ref, handler, false));
+
+    const outsideEvent = new MouseEvent('mousedown', { bubbles: true });
+    document.dispatchEvent(outsideEvent);
+
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  it('should clean up event listeners on unmount', () => {
+    const handler = vi.fn();
+
+    const { unmount } = renderHook(() => useOnClickOutside(ref, handler));
+
+    unmount();
+
+    const outsideEvent = new MouseEvent('mousedown', { bubbles: true });
+    document.dispatchEvent(outsideEvent);
+
+    expect(handler).not.toHaveBeenCalled();
+  });
+});
+
+describe('useImage', () => {
+  let originalImage: any;
+
+  beforeEach(() => {
+    originalImage = window.Image;
+  });
+
+  afterEach(() => {
+    window.Image = originalImage;
+  });
+
+  it('should return null when url is null', () => {
+    const { result } = renderHook(() => useImage(null));
+    expect(result.current).toBeNull();
+  });
+
+  it('should successfully load an image', () => {
+    let mockImg: any;
+    window.Image = class {
+      onload: any;
+      onerror: any;
+      src = '';
+      complete = false;
+      naturalHeight = 0;
+      constructor() {
+        mockImg = this;
+      }
+    } as any;
+
+    const { result } = renderHook(() => useImage('http://example.com/image.png'));
+
+    expect(result.current).toBeNull();
+
+    act(() => {
+      mockImg.onload();
+    });
+
+    expect(result.current).toBe(mockImg);
+  });
+
+  it('should return null if the image fails to load', () => {
+    let mockImg: any;
+    window.Image = class {
+      onload: any;
+      onerror: any;
+      src = '';
+      complete = false;
+      naturalHeight = 0;
+      constructor() {
+        mockImg = this;
+      }
+    } as any;
+
+    const { result } = renderHook(() => useImage('http://example.com/image.png'));
+
+    act(() => {
+      mockImg.onerror();
+    });
+
+    expect(result.current).toBeNull();
+  });
+
+  it('should handle cached images immediately', () => {
+    let mockImg: any;
+    window.Image = class {
+      onload: any;
+      onerror: any;
+      src = '';
+      complete = true;
+      naturalHeight = 100; // Simulated as loaded
+      constructor() {
+        mockImg = this;
+      }
+    } as any;
+
+    const { result } = renderHook(() => useImage('http://example.com/image.png'));
+
+    expect(result.current).toBe(mockImg);
+  });
+
+  it('should clean up handlers on unmount', () => {
+    let mockImg: any;
+    window.Image = class {
+      onload: any;
+      onerror: any;
+      src = '';
+      complete = false;
+      naturalHeight = 0;
+      constructor() {
+        mockImg = this;
+      }
+    } as any;
+
+    const { unmount } = renderHook(() => useImage('http://example.com/image.png'));
+
+    expect(mockImg.onload).not.toBeNull();
+    expect(mockImg.onerror).not.toBeNull();
+
+    unmount();
+
+    expect(mockImg.onload).toBeNull();
+    expect(mockImg.onerror).toBeNull();
   });
 });
