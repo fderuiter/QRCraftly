@@ -1,0 +1,3 @@
+## 2024-05-18 - Improve Keyboard Accessibility on Native Inputs
+**Learning:** Native input elements like `<input type="color">` and `<input type="range">` might not have obvious focus rings in all browsers when interacted with via keyboard, or they may lack consistency with the app's design system. Relying purely on browser defaults can sometimes cause reduced accessibility for keyboard users, particularly when custom styles or transparent backgrounds are used.
+**Action:** Always ensure that native form inputs receive explicit `focus-visible` utility classes (e.g., `focus-visible:ring-2`, `focus-visible:ring-offset-1`) so they provide clear and consistent visual feedback during keyboard navigation.
