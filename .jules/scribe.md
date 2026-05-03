@@ -1,0 +1,3 @@
+## 2025-05-18 - JSDoc documentation missing from core security utils
+**Insight:** Several core utility functions in `src/utils/security.ts` (`safeJsonLdStringify`, `isDangerousUrl`, `cleanPhoneNumber`, `sanitizeInput`) lacked proper JSDoc `@param` and `@returns` tags.
+**Guideline:** Ensure all public utility functions are documented with `@param` and `@returns` tags to reduce cognitive load for developers consuming them.
