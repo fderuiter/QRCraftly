@@ -1,0 +1,9 @@
+--- src/utils/qr-renderers/modules.ts
++++ src/utils/qr-renderers/modules.ts
+@@ -1,6 +1,6 @@
+ import { QRConfig, QRStyle, QRModules } from '../../types';
+ import { drawRoundRect, drawRoughRect } from '../canvasHelpers';
+-import { isEye, getIsCoveredByLogo, LogoMetrics } from './utils';
++import { getIsCoveredByLogo, LogoMetrics } from './utils';
+
+ type DrawModuleFn = (r: number, c: number, x: number, y: number, cx: number, cy: number) => void;
