@@ -1,7 +1,0 @@
-## $(date +%Y-%m-%d) - Prevent TypeError in safeJsonLdStringify
-**Discovery:** The `safeJsonLdStringify` function implicitly assumes `JSON.stringify(data)` always returns a string. However, passing `undefined` or a function causes `JSON.stringify` to evaluate to `undefined`, which led to a runtime `TypeError` when `.replace` was chained onto the result. This creates a risk of rendering crashes if unhandled input reaches the `<script type="application/ld+json">` tag.
-**Defense:** Added a boundary test in `src/utils/security.test.ts` to assert `safeJsonLdStringify` returns `"{}"` when passed `undefined` or un-stringifyable inputs. Refactored the implementation in `src/utils/security.ts` to check the result of `JSON.stringify()` before attempting to apply `.replace` transformations.
-
-## $(date +%Y-%m-%d) - Prevent flaky async hooks tests
-**Discovery:** The `useImage` hook relies on the `onload` and `onerror` properties of an `Image` object. When attempting to test this via mocking, `setTimeout` or `vi.useFakeTimers` can introduce flakes, as they try to control time against React rendering cycles which sometimes evaluate eagerly or late depending on other microtasks.
-**Defense:** Explicitly mock the `Image` class inside tests and synchronously invoke `.onload()` or `.onerror()` from inside an `act` block in the test itself. This guarantees the react hook updates are immediately evaluated and asserted sequentially without any race conditions.
