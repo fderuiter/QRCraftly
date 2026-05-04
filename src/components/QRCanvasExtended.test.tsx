@@ -16,8 +16,8 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach, Mock } from 'vitest';
+import { render, waitFor, act } from '@testing-library/react';
 import QRCanvas from './QRCanvas';
 import { DEFAULT_CONFIG } from '../constants';
 import { QRConfig } from '../types';
@@ -27,9 +27,11 @@ const originalImage = window.Image;
 
 describe('QRCanvas Border Extended Features', () => {
   let mockContext: any;
+  let createdImages: any[] = [];
 
   beforeEach(() => {
     vi.clearAllMocks();
+    createdImages = [];
 
     mockContext = {
       canvas: { width: 0, height: 0 },
@@ -76,12 +78,7 @@ describe('QRCanvas Border Extended Features', () => {
       crossOrigin = '';
       constructor() {
         // Simulate async loading with a small delay
-        setTimeout(() => {
-          if (this.onload) {
-            this.complete = true;
-            this.onload();
-          }
-        }, 10);
+        createdImages.push(this);
       }
     }
     window.Image = MockImage as any;
@@ -136,6 +133,18 @@ describe('QRCanvas Border Extended Features', () => {
     render(<QRCanvas config={config} size={100} />);
 
     // Wait for image to load and draw
+    await waitFor(() => {
+      expect(createdImages.length).toBeGreaterThan(0);
+    });
+
+    act(() => {
+      const img = createdImages[0];
+      if (img && img.onload) {
+        img.complete = true;
+        img.onload();
+      }
+    });
+
     await waitFor(() => {
       expect(mockContext.drawImage).toHaveBeenCalled();
     });
