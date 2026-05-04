@@ -21,6 +21,37 @@ const getLabelClass = (size: FieldSize, customClass?: string) => {
   return "block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1";
 };
 
+interface FieldWrapperProps extends BaseFieldProps {
+  children: React.ReactNode;
+  showCharCount?: boolean;
+  maxLength?: number;
+  currentLength?: number;
+}
+
+const FieldWrapper: React.FC<FieldWrapperProps> = ({
+  label,
+  id,
+  fieldSize = "xs",
+  className,
+  labelClassName,
+  children,
+  showCharCount,
+  maxLength,
+  currentLength = 0,
+}) => {
+  return (
+    <div className={className}>
+      <label htmlFor={id} className={getLabelClass(fieldSize, labelClassName)}>
+        {label}
+      </label>
+      {children}
+      {showCharCount && maxLength && (
+        <CharCount current={currentLength} max={maxLength} />
+      )}
+    </div>
+  );
+};
+
 // Omit 'size' to prevent conflict, and 'id' to ensure our required 'id' overrides the optional one cleanly (though TS usually handles required overriding optional, explicit omit is safer for strict configs)
 interface TextFieldProps
   extends
@@ -53,10 +84,16 @@ export const TextField: React.FC<TextFieldProps> = ({
     : type;
 
   return (
-    <div className={className}>
-      <label htmlFor={id} className={getLabelClass(fieldSize, labelClassName)}>
-        {label}
-      </label>
+    <FieldWrapper
+      label={label}
+      id={id}
+      fieldSize={fieldSize}
+      className={className}
+      labelClassName={labelClassName}
+      showCharCount={showCharCount}
+      maxLength={maxLength}
+      currentLength={String(value || "").length}
+    >
       <div className={showPasswordToggle ? "relative" : ""}>
         <input
           id={id}
@@ -81,10 +118,7 @@ export const TextField: React.FC<TextFieldProps> = ({
           </button>
         )}
       </div>
-      {showCharCount && maxLength && (
-        <CharCount current={String(value || "").length} max={maxLength} />
-      )}
-    </div>
+    </FieldWrapper>
   );
 };
 
@@ -107,10 +141,16 @@ export const TextAreaField: React.FC<TextAreaFieldProps> = ({
   ...props
 }) => {
   return (
-    <div className={className}>
-      <label htmlFor={id} className={getLabelClass(fieldSize, labelClassName)}>
-        {label}
-      </label>
+    <FieldWrapper
+      label={label}
+      id={id}
+      fieldSize={fieldSize}
+      className={className}
+      labelClassName={labelClassName}
+      showCharCount={showCharCount}
+      maxLength={maxLength}
+      currentLength={String(value || "").length}
+    >
       <textarea
         id={id}
         maxLength={maxLength}
@@ -118,10 +158,7 @@ export const TextAreaField: React.FC<TextAreaFieldProps> = ({
         value={value}
         {...props}
       />
-      {showCharCount && maxLength && (
-        <CharCount current={String(value || "").length} max={maxLength} />
-      )}
-    </div>
+    </FieldWrapper>
   );
 };
 
@@ -141,13 +178,16 @@ export const SelectField: React.FC<SelectFieldProps> = ({
   ...props
 }) => {
   return (
-    <div className={className}>
-      <label htmlFor={id} className={getLabelClass(fieldSize, labelClassName)}>
-        {label}
-      </label>
+    <FieldWrapper
+      label={label}
+      id={id}
+      fieldSize={fieldSize}
+      className={className}
+      labelClassName={labelClassName}
+    >
       <select id={id} className={SELECT_CLASSES} {...props}>
         {children}
       </select>
-    </div>
+    </FieldWrapper>
   );
 };

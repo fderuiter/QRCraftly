@@ -1,0 +1,4 @@
+## 2025-05-18 - Component Composition for Form Field Layouts
+**Context:** Form input components (`TextField`, `TextAreaField`, `SelectField`) were duplicating container layout, `<label>` rendering, and conditional `<CharCount>` logic, leading to inconsistencies and visual drift.
+**Decision:** Extracted a shared `FieldWrapper` component to handle the cross-cutting concerns (container, labels, character counting) using component composition (passing the actual input element as `children`).
+**Consequence:** Layout logic is strictly localized to `FieldWrapper`. New input components only need to concern themselves with their specific interactive element, reducing boilerplate and risk of accessibility omissions (like missing labels).
