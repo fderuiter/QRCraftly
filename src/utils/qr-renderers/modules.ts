@@ -1,6 +1,6 @@
 import { QRConfig, QRStyle, QRModules } from '../../types';
 import { drawRoundRect, drawRoughRect } from '../canvasHelpers';
-import { isEye, getIsCoveredByLogo, LogoMetrics } from './utils';
+import { getIsCoveredByLogo, LogoMetrics } from './utils';
 
 type DrawModuleFn = (r: number, c: number, x: number, y: number, cx: number, cy: number) => void;
 
@@ -35,11 +35,26 @@ const getModuleDrawer = (
             // Pre-calculate valid modules for CIRCUIT style to avoid repeated expensive checks
             // (isCoveredByLogo and isEye) for every neighbor of every module.
             const validGrid = new Uint8Array(moduleCount * moduleCount);
-            for (let r = 0; r < moduleCount; r++) {
+
+            const populateValidGrid = (r: number, c: number) => {
+                if (modules.get(r, c) && !isCoveredByLogo(r, c)) {
+                    validGrid[r * moduleCount + c] = 1;
+                }
+            };
+
+            for (let r = 0; r < 7; r++) {
+                for (let c = 7; c < moduleCount - 7; c++) {
+                    populateValidGrid(r, c);
+                }
+            }
+            for (let r = 7; r < moduleCount - 7; r++) {
                 for (let c = 0; c < moduleCount; c++) {
-                    if (modules.get(r, c) && !isEye(r, c, moduleCount) && !isCoveredByLogo(r, c)) {
-                        validGrid[r * moduleCount + c] = 1;
-                    }
+                    populateValidGrid(r, c);
+                }
+            }
+            for (let r = moduleCount - 7; r < moduleCount; r++) {
+                for (let c = 7; c < moduleCount; c++) {
+                    populateValidGrid(r, c);
                 }
             }
             // Pre-calculate dimensional constants

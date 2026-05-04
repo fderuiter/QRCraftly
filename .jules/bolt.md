@@ -1,0 +1,4 @@
+
+## 2024-05-23 - Section-splitting for Pre-calculated Spatial Grids
+**Learning:** For rendering logic that depends on neighboring modules (like the `CIRCUIT` style), pre-calculating a `validGrid` array avoids redundant mathematical and boolean checks. However, iterating over the entire grid and running `isEye()` and `isCoveredByLogo()` on every cell is still expensive. The `isEye()` check, in particular, looks for known boundary zones.
+**Action:** When building intermediate spatial grid caches, apply "section-splitting" directly to the loops. By explicitly splitting the iteration into Top (skipping TL/TR eyes), Middle (no eyes), and Bottom (skipping BL eye) sections, we eliminate the need for an `isEye()` conditional check on every single iteration, shaving off significant execution time on hot code paths like QR code generation.
