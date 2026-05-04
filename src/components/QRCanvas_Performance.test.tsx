@@ -1,5 +1,5 @@
 
-import { render, waitFor } from '@testing-library/react';
+import { render, waitFor, act } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach, afterEach, Mock } from 'vitest';
 import QRCanvas from './QRCanvas';
 import { DEFAULT_CONFIG } from '../constants';
@@ -22,9 +22,11 @@ describe('QRCanvas Performance Refactoring', () => {
   let mockContext: any;
   let mockModules: any;
   let originalImage: any;
+  let createdImages: any[] = [];
 
   beforeEach(() => {
     vi.clearAllMocks();
+    createdImages = [];
 
     mockContext = {
       clearRect: vi.fn(),
@@ -79,9 +81,7 @@ describe('QRCanvas Performance Refactoring', () => {
       naturalHeight = 100;
 
       constructor() {
-          setTimeout(() => {
-              if (this.onload) this.onload();
-          }, 10);
+          createdImages.push(this);
       }
     } as any;
   });
@@ -138,8 +138,20 @@ describe('QRCanvas Performance Refactoring', () => {
     render(<QRCanvas config={config} />);
 
     await waitFor(() => {
+        expect(createdImages.length).toBeGreaterThan(0);
+    });
+
+    act(() => {
+        const img = createdImages[0];
+        if (img && img.onload) {
+            img.complete = true;
+            img.onload();
+        }
+    });
+
+    await waitFor(() => {
         expect(mockContext.drawImage).toHaveBeenCalled();
-    }, { timeout: 2000 });
+    });
   });
 
   it('renders STANDARD style using rect', async () => {

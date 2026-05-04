@@ -143,9 +143,7 @@ describe('StyleControls Component', () => {
       const mockFileReader = class {
           onload: any;
           readAsDataURL() {
-             setTimeout(() => {
-                 this.onload({ target: { result: 'data:image/png;base64,mocklogo' } });
-             }, 0);
+             this.onload({ target: { result: 'data:image/png;base64,mocklogo' } });
           }
       } as any;
       global.FileReader = mockFileReader;
@@ -292,9 +290,7 @@ describe('StyleControls Component', () => {
       const mockFileReader = class {
           onload: any;
           readAsDataURL() {
-             setTimeout(() => {
-                 this.onload({ target: { result: 'data:image/png;base64,borderlogo' } });
-             }, 0);
+             this.onload({ target: { result: 'data:image/png;base64,borderlogo' } });
           }
       } as any;
       global.FileReader = mockFileReader;
