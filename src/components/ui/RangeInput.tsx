@@ -42,7 +42,7 @@ export const RangeInput: React.FC<RangeInputProps> = ({
       value={value}
       aria-valuetext={formatValue(value)}
       onChange={(e) => onChange(parseFloat(e.target.value))}
-      className="w-full accent-teal-700 dark:accent-teal-500 cursor-pointer"
+      className="w-full accent-teal-700 dark:accent-teal-500 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-slate-900 rounded-lg"
     />
   </div>
 );

@@ -78,7 +78,7 @@ export const ColorInput: React.FC<ColorInputProps> = ({
             type="color"
             value={value}
             onChange={(e) => onChange(e.target.value)}
-            className={`${sizeClass} rounded cursor-pointer border-0 p-0 bg-transparent`}
+            className={`${sizeClass} rounded cursor-pointer border-0 p-0 bg-transparent focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-slate-900`}
           />
           <input
             type="text"
