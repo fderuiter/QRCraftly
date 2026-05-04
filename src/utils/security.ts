@@ -19,6 +19,9 @@
 /**
  * Safely serializes data for use in a JSON-LD script tag.
  * Escapes <, >, and & to prevent XSS via </script> injection.
+ *
+ * @param data The JSON-LD schema object to serialize.
+ * @returns A safe, escaped JSON string representation of the data, or '{}' if undefined/invalid.
  */
 export const safeJsonLdStringify = (data: any): string => {
   const str = JSON.stringify(data);
@@ -56,6 +59,9 @@ const DANGEROUS_PROTOCOLS = [
 /**
  * Checks if a URL string contains a dangerous protocol.
  * Dangerous protocols: javascript:, vbscript:, file:, data:, mk:, blob:, filesystem:, jscript:, wscript:, mocha:, about:
+ *
+ * @param url The URL string to check.
+ * @returns True if the URL contains a dangerous protocol, false otherwise.
  */
 export const isDangerousUrl = (url: string | undefined): boolean => {
   if (!url) return false;
@@ -68,6 +74,9 @@ export const isDangerousUrl = (url: string | undefined): boolean => {
 /**
  * Removes all characters that are not digits or valid phone symbols (+, *, #, -, ., (, )).
  * This prevents injection of arbitrary characters into tel: or sms: URIs.
+ *
+ * @param number The phone number string to clean.
+ * @returns The cleaned phone number string.
  */
 export const cleanPhoneNumber = (number: string): string => {
   return number.replace(/[^0-9+*#\-().]/g, '');
@@ -76,6 +85,9 @@ export const cleanPhoneNumber = (number: string): string => {
 /**
  * Sanitizes input by stripping query parameters and control characters.
  * Useful for preventing parameter injection in constructed URIs and header injection.
+ *
+ * @param str The input string to sanitize.
+ * @returns The sanitized string without control characters or query parameters.
  */
 export const sanitizeInput = (str: string): string => {
   // Remove control characters (00-1F, 7F-9F) to prevent header injection
