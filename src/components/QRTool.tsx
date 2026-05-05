@@ -92,14 +92,15 @@ export default function QRTool({ initialConfig, title }: { initialConfig?: Parti
 
   return (
     <div className={`${isDarkMode ? 'dark' : ''} h-full w-full`}>
+      <h1 className="sr-only">{title ? `${title} Generator` : "Free Custom QR Code Generator"}</h1>
       <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col-reverse md:flex-row transition-colors duration-300">
         {/* Sidebar Controls */}
-        <aside className="w-full md:w-[480px] bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 h-auto md:h-screen overflow-y-auto flex flex-col shadow-xl z-10 transition-colors duration-300">
+        <section aria-label="QR Code Settings" className="w-full md:w-[480px] bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 h-auto md:h-screen overflow-y-auto flex flex-col shadow-xl z-10 transition-colors duration-300">
           <div className="p-6 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 sticky top-0 z-20 flex justify-between items-center transition-colors duration-300">
             <div>
               <div className="flex items-center gap-2 text-teal-700 dark:text-teal-400 mb-1">
                 <QrCode className="w-6 h-6" />
-                <h1 className="text-xl font-bold tracking-tight text-slate-700 dark:text-slate-100">{title || "QRCraftly"}</h1>
+                <span className="text-xl font-bold tracking-tight text-slate-700 dark:text-slate-100">{title || "QRCraftly"}</span>
               </div>
               <p className="text-sm text-slate-600 dark:text-slate-400">Design beautiful QR codes in seconds.</p>
             </div>
@@ -174,10 +175,10 @@ export default function QRTool({ initialConfig, title }: { initialConfig?: Parti
               </p>
             </footer>
           </div>
-        </aside>
+        </section>
 
         {/* Preview Area */}
-        <div className="flex-1 bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-4 md:p-8 relative overflow-hidden transition-colors duration-300">
+        <section aria-label="QR Code Preview" className="flex-1 bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-4 md:p-8 relative overflow-hidden transition-colors duration-300">
            {/* Background Decoration */}
            <div className="absolute inset-0 pointer-events-none opacity-40 dark:opacity-20">
                <div className="absolute top-0 left-0 w-96 h-96 bg-teal-200 dark:bg-teal-900 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2 transition-colors duration-300"></div>
@@ -252,7 +253,7 @@ export default function QRTool({ initialConfig, title }: { initialConfig?: Parti
                 </div>
              </div>
           </div>
-        </div>
+        </section>
       </div>
     </div>
   );
