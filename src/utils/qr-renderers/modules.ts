@@ -1,6 +1,6 @@
 import { QRConfig, QRStyle, QRModules } from '../../types';
 import { drawRoundRect, drawRoughRect } from '../canvasHelpers';
-import { isEye, getIsCoveredByLogo, LogoMetrics } from './utils';
+import { getIsCoveredByLogo, LogoMetrics } from './utils';
 
 type DrawModuleFn = (r: number, c: number, x: number, y: number, cx: number, cy: number) => void;
 
@@ -35,13 +35,30 @@ const getModuleDrawer = (
             // Pre-calculate valid modules for CIRCUIT style to avoid repeated expensive checks
             // (isCoveredByLogo and isEye) for every neighbor of every module.
             const validGrid = new Uint8Array(moduleCount * moduleCount);
-            for (let r = 0; r < moduleCount; r++) {
-                for (let c = 0; c < moduleCount; c++) {
-                    if (modules.get(r, c) && !isEye(r, c, moduleCount) && !isCoveredByLogo(r, c)) {
-                        validGrid[r * moduleCount + c] = 1;
-                    }
+
+            // Optimization: Split loops to skip eye regions (TL, TR, BL) directly.
+            // This avoids calling isEye() inside the loop for every module.
+            // Top Section (Rows 0-6): Skip TL (0-6) and TR (size-7 to size-1)
+            for (let r = 0; r < 7; r++) {
+                for (let c = 7; c < moduleCount - 7; c++) {
+                    if (modules.get(r, c) && !isCoveredByLogo(r, c)) validGrid[r * moduleCount + c] = 1;
                 }
             }
+
+            // Middle Section (Rows 7 to size-8): No eyes
+            for (let r = 7; r < moduleCount - 7; r++) {
+                for (let c = 0; c < moduleCount; c++) {
+                    if (modules.get(r, c) && !isCoveredByLogo(r, c)) validGrid[r * moduleCount + c] = 1;
+                }
+            }
+
+            // Bottom Section (Rows size-7 to size-1): Skip BL (0-6)
+            for (let r = moduleCount - 7; r < moduleCount; r++) {
+                for (let c = 7; c < moduleCount; c++) {
+                    if (modules.get(r, c) && !isCoveredByLogo(r, c)) validGrid[r * moduleCount + c] = 1;
+                }
+            }
+
             // Pre-calculate dimensional constants
             const rCircuit = cellSize * 0.1;
             const thickness = cellSize * 0.4;

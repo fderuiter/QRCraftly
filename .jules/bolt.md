@@ -1,0 +1,3 @@
+## 2024-05-05 - Optimization of 2D Grid Operations via Section-Splitting
+**Learning:** In the `CIRCUIT` QR style rendering, a tight loop iterating over the entire module grid was performing expensive and redundant checks (`isEye`) for every single module. Calling functions inside deeply nested hot loops has a measurable overhead.
+**Action:** When pre-calculating spatial grids or mapping 2D structures (e.g., `validGrid` in `src/utils/qr-renderers/modules.ts`), apply 'section-splitting' to skip known dead zones like corner eye markers entirely instead of running conditional checks (`isEye`) inside flat loops.
