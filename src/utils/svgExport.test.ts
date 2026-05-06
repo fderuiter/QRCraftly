@@ -114,6 +114,42 @@ describe('generateQRSvg', () => {
     expect(svg).toContain('data:image/png;base64,iVBORw0KGgo=');
   });
 
+  it('falls back to original url if FileReader fails', async () => {
+    const originalFileReader = global.FileReader;
+    const originalFetch = global.fetch;
+
+    try {
+      // Create a mock FileReader that immediately triggers onerror
+      class MockFileReader {
+        onload: any = null;
+        onerror: any = null;
+        readAsDataURL() {
+          if (this.onerror) {
+            this.onerror(new Error('Mocked FileReader error'));
+          }
+        }
+      }
+
+      global.FileReader = MockFileReader as any;
+      global.fetch = vi.fn().mockResolvedValue({
+        blob: vi.fn().mockResolvedValue(new Blob(['fake data'])),
+      });
+
+      const config: QRConfig = {
+        ...DEFAULT_CONFIG as QRConfig,
+        logoUrl: 'http://example.com/logo.png',
+      };
+
+      const svg = await generateQRSvg(config);
+
+      expect(svg).toContain('<image');
+      expect(svg).toContain('href="http://example.com/logo.png"');
+    } finally {
+      global.FileReader = originalFileReader;
+      global.fetch = originalFetch;
+    }
+  });
+
   it('gracefully handles an empty value string', async () => {
     // qrcode.create() throws for empty input; generateQRSvg should not crash
     const config = { ...DEFAULT_CONFIG, value: '' } as QRConfig;

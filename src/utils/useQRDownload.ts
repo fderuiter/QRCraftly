@@ -28,10 +28,11 @@ interface UseQRDownloadReturn {
   handleSaveAs: (format: 'png' | 'jpeg' | 'webp') => Promise<void>;
   handleSaveSvg: () => Promise<void>;
   handleShare: () => Promise<void>;
+  handleCopy: () => Promise<boolean>;
 }
 
 /**
- * Hook to handle downloading and sharing of the QR code.
+ * Hook to handle downloading, sharing, and copying of the QR code.
  * Extracts this logic from the main component to reduce cognitive load.
  *
  * @param qrRef Reference to the container element containing the canvas.
@@ -130,6 +131,32 @@ export function useQRDownload(
    * Uses the Web Share API to share the QR code image directly to other apps.
    * Falls back to downloading if sharing is not supported.
    */
+  /**
+   * Copies the QR code image directly to the clipboard.
+   * @returns A boolean indicating if the copy operation was successful.
+   */
+  const handleCopy = useCallback(async (): Promise<boolean> => {
+    const canvas = qrRef.current?.querySelector('canvas');
+    if (!canvas) return false;
+
+    try {
+      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
+      if (!blob) return false;
+
+      // Note: ClipboardItem is not supported in all browsers, but works in modern ones
+      // We check for ClipboardItem to avoid throwing errors on older devices
+      if (typeof ClipboardItem !== 'undefined') {
+        const item = new ClipboardItem({ 'image/png': blob });
+        await navigator.clipboard.write([item]);
+        return true;
+      }
+      return false;
+    } catch (err) {
+      console.warn('Failed to copy to clipboard:', err);
+      return false;
+    }
+  }, [qrRef]);
+
   const handleShare = useCallback(async () => {
     const canvas = qrRef.current?.querySelector('canvas');
     if (canvas) {
@@ -178,5 +205,5 @@ export function useQRDownload(
     }
   }, [config, getFilename]);
 
-  return { downloadToDevice, handleSaveAs, handleSaveSvg, handleShare };
+  return { downloadToDevice, handleSaveAs, handleSaveSvg, handleShare, handleCopy };
 }

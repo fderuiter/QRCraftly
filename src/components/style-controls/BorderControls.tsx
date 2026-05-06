@@ -1,10 +1,10 @@
-import React, { useRef, useMemo, useState } from 'react';
+import React, { useRef, useMemo } from 'react';
 import { QRConfig, BorderStyle, BorderTextPosition, BorderLogoPosition } from '../../types';
 import { Upload, X, AlertTriangle } from 'lucide-react';
 import { getContrastRatio } from '../../utils/colorUtils';
 import { ColorInput } from '../ui/ColorInput';
 import { RangeInput } from '../ui/RangeInput';
-import { validateImageUpload } from '../../utils/security';
+import { useImageUpload } from '../../hooks/useImageUpload';
 
 interface BorderControlsProps {
   config: QRConfig;
@@ -13,23 +13,10 @@ interface BorderControlsProps {
 
 export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange }) => {
   const borderLogoInputRef = useRef<HTMLInputElement>(null);
-  const [error, setError] = useState<string | null>(null);
+  const { error, handleUpload, setError } = useImageUpload();
 
   const handleBorderLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    setError(null);
-    if (file) {
-      const validationError = validateImageUpload(file);
-      if (validationError) {
-        setError(validationError);
-        return;
-      }
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        onChange({ borderLogoUrl: event.target?.result as string });
-      };
-      reader.readAsDataURL(file);
-    }
+    handleUpload(e, (dataUrl) => onChange({ borderLogoUrl: dataUrl }));
   };
 
   const borderTextContrast = useMemo(() => {
@@ -153,7 +140,7 @@ export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange
                 )}
                 {config.borderLogoUrl && (
                   <button
-                    onClick={() => onChange({ borderLogoUrl: null })}
+                    onClick={() => { onChange({ borderLogoUrl: null }); setError(null); }}
                     className="text-xs text-rose-600 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 rounded focus-visible:ring-offset-1 dark:focus-visible:ring-offset-slate-800"
                     aria-label="Remove border logo"
                   >
