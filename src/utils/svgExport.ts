@@ -34,7 +34,7 @@ async function toDataUrl(url: string): Promise<string> {
   try {
     const response = await fetch(url, { mode: 'cors' });
     const blob = await response.blob();
-    return new Promise<string>((resolve, reject) => {
+    return await new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(reader.result as string);
       reader.onerror = () => reject(new Error('FileReader error'));
