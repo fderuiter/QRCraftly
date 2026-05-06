@@ -188,4 +188,40 @@ describe('generateQRSvg', () => {
     const svg = await generateQRSvg(config);
     expect(svg).toContain('My Headline');
   });
+
+  it('falls back to the original URL if FileReader fails to read blob', async () => {
+    // Mock fetch to successfully return a blob
+    const originalFetch = global.fetch;
+    global.fetch = vi.fn().mockResolvedValue({
+      blob: () => Promise.resolve(new Blob(['fake data'])),
+    } as any);
+
+    // Mock FileReader to fail when readAsDataURL is called
+    const originalFileReader = global.FileReader;
+    class MockFileReader {
+      onerror: () => void = () => {};
+      readAsDataURL() {
+        setTimeout(() => this.onerror(), 0);
+      }
+    }
+    global.FileReader = MockFileReader as any;
+
+    try {
+      const config: QRConfig = {
+        ...(DEFAULT_CONFIG as QRConfig),
+        logoUrl: 'https://example.com/fail-logo.png',
+      };
+
+      const svg = await generateQRSvg(config);
+
+      // Because we added `await` to the new Promise in toDataUrl,
+      // the error should be caught by the try/catch,
+      // and it should gracefully fall back to the external URL.
+      expect(svg).toContain('<image');
+      expect(svg).toContain('https://example.com/fail-logo.png');
+    } finally {
+      global.FileReader = originalFileReader;
+      global.fetch = originalFetch;
+    }
+  });
 });
