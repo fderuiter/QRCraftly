@@ -1,3 +1,0 @@
-## 2024-05-18 - Visual Feedback for Clipboard Actions
-**Learning:** Adding a "Copy Image" button for the generated QR code significantly improves the interaction flow by eliminating the need to save a file locally just to paste it elsewhere. Furthermore, providing immediate visual feedback (such as temporarily changing the copy icon to a checkmark) builds confidence and reduces user frustration from uncertain clipboard writes.
-**Action:** Whenever implementing a clipboard copy feature, always include a visual confirmation state (like a temporary checkmark icon and updated aria-label) that lasts for a few seconds.
