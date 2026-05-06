@@ -3,7 +3,7 @@ import { QRConfig, LogoPaddingStyle } from '../../types';
 import { Upload, X, Square, Circle, Minus } from 'lucide-react';
 import { ColorInput } from '../ui/ColorInput';
 import { RangeInput } from '../ui/RangeInput';
-import { validateImageUpload } from '../../utils/security';
+import { useImageUpload } from '../../hooks/useImageUpload';
 
 interface LogoControlsProps {
   config: QRConfig;
@@ -12,23 +12,10 @@ interface LogoControlsProps {
 
 export const LogoControls: React.FC<LogoControlsProps> = ({ config, onChange }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [error, setError] = useState<string | null>(null);
+  const { error, handleUpload, setError } = useImageUpload();
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    setError(null);
-    if (file) {
-      const validationError = validateImageUpload(file);
-      if (validationError) {
-        setError(validationError);
-        return;
-      }
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        onChange({ logoUrl: event.target?.result as string });
-      };
-      reader.readAsDataURL(file);
-    }
+    handleUpload(e, (dataUrl) => onChange({ logoUrl: dataUrl }));
   };
 
   return (
@@ -36,7 +23,7 @@ export const LogoControls: React.FC<LogoControlsProps> = ({ config, onChange }) 
       <div className="flex justify-between items-center mb-3">
         <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Logo</h3>
         {config.logoUrl && (
-          <button onClick={() => onChange({ logoUrl: null })} className="text-xs text-rose-600 dark:text-rose-400 hover:underline flex items-center gap-1 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-slate-900">
+          <button onClick={() => { onChange({ logoUrl: null }); setError(null); }} className="text-xs text-rose-600 dark:text-rose-400 hover:underline flex items-center gap-1 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-slate-900">
             <X className="w-3 h-3"/> Remove
           </button>
         )}
