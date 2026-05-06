@@ -21,7 +21,7 @@ import { QRConfig } from '@/types';
 import { DEFAULT_CONFIG } from '@/constants';
 import InputPanel from '@/components/InputPanel';
 import QRCanvas from '@/components/QRCanvas';
-import { Download, Share2, QrCode, ChevronDown, Camera, Moon, Sun, Info } from 'lucide-react';
+import { Download, Share2, Copy, Check, QrCode, ChevronDown, Camera, Moon, Sun, Info } from 'lucide-react';
 import { useDebounce, useOnClickOutside } from '@/utils/hooks';
 import { useQRDownload } from '@/utils/useQRDownload';
 
@@ -45,8 +45,9 @@ export default function QRTool({ initialConfig, title }: { initialConfig?: Parti
   const [isMounted, setIsMounted] = useState(false);
   const qrRef = useRef<HTMLDivElement>(null);
   const downloadMenuRef = useRef<HTMLDivElement>(null);
+  const [copied, setCopied] = useState(false);
 
-  const { downloadToDevice: hookDownload, handleSaveAs: hookSaveAs, handleSaveSvg: hookSaveSvg, handleShare } = useQRDownload(qrRef, config);
+  const { downloadToDevice: hookDownload, handleSaveAs: hookSaveAs, handleSaveSvg: hookSaveSvg, handleShare, handleCopy } = useQRDownload(qrRef, config);
 
   useEffect(() => {
     setIsMounted(true);
@@ -88,6 +89,19 @@ export default function QRTool({ initialConfig, title }: { initialConfig?: Parti
   const handleSaveSvg = async () => {
     setShowDownloadMenu(false);
     await hookSaveSvg();
+  };
+
+  const onCopy = async () => {
+    try {
+      await handleCopy();
+      setCopied(true);
+      setTimeout(() => {
+        setCopied(false);
+      }, 2000);
+    } catch (err) {
+      // Failed to copy
+      console.warn("Failed to copy image", err);
+    }
   };
 
   return (
@@ -230,6 +244,14 @@ export default function QRTool({ initialConfig, title }: { initialConfig?: Parti
                           )}
                        </div>
                        
+                       <button
+                          onClick={onCopy}
+                          className="flex items-center justify-center w-12 bg-teal-50 dark:bg-slate-800 border border-teal-200 dark:border-slate-700 text-teal-700 dark:text-teal-400 rounded-xl font-medium hover:bg-teal-100 dark:hover:bg-slate-700 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
+                          title={copied ? "Copied!" : "Copy Image"}
+                          aria-label={copied ? "Copied to clipboard" : "Copy QR code image to clipboard"}
+                       >
+                          {copied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
+                       </button>
                        <button 
                           onClick={handleShare}
                           className="flex items-center justify-center w-12 bg-teal-50 dark:bg-slate-800 border border-teal-200 dark:border-slate-700 text-teal-700 dark:text-teal-400 rounded-xl font-medium hover:bg-teal-100 dark:hover:bg-slate-700 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"

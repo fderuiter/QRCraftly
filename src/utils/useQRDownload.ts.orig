@@ -164,16 +164,15 @@ export function useQRDownload(
   const handleCopy = useCallback(async () => {
     const canvas = qrRef.current?.querySelector('canvas');
     if (canvas) {
-      try {
-        const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
-        if (!blob) throw new Error('Failed to create image blob for copy');
-
-        const item = new ClipboardItem({ 'image/png': blob });
-        await navigator.clipboard.write([item]);
-      } catch (error) {
-        console.warn('Error copying to clipboard:', error);
-        throw error;
-      }
+      canvas.toBlob(async (blob) => {
+        if (!blob) return;
+        try {
+          const item = new ClipboardItem({ 'image/png': blob });
+          await navigator.clipboard.write([item]);
+        } catch (error) {
+          console.warn('Error copying to clipboard:', error);
+        }
+      }, 'image/png');
     }
   }, [qrRef]);
 
