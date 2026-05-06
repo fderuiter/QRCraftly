@@ -1,5 +1,13 @@
 import { QRConfig } from '../../types';
 
+/**
+ * Draws the background and pattern (such as dashed or dotted) of the outer border.
+ *
+ * @param ctx - The canvas 2D rendering context.
+ * @param config - The QR configuration object specifying border style and colors.
+ * @param displaySize - The total size of the QR code canvas.
+ * @param borderPx - The thickness of the border in pixels.
+ */
 export const renderBorder = (
   ctx: CanvasRenderingContext2D,
   config: QRConfig,
