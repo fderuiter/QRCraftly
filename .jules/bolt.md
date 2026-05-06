@@ -1,0 +1,3 @@
+## 2025-01-20 - Pre-calculate spatial grids correctly with section-splitting
+**Learning:** In 2D grid rendering operations where performance is sensitive (like in QR code drawing with complex neighboring dependencies such as `QRStyle.CIRCUIT`), flat looping across all `x` and `y` while applying multiple `if` conditions (e.g., `isEye`) incurs significant overhead.
+**Action:** When pre-calculating spatial grids, apply 'section-splitting' to loop independently around known dead zones (like corner eye markers) instead of running conditional checks inside a flat loop. Also, use pre-calculated 1D array index offsets instead of redundant row/col math to speed up neighborhood checks.

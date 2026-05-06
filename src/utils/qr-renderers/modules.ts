@@ -1,6 +1,6 @@
 import { QRConfig, QRStyle, QRModules } from '../../types';
 import { drawRoundRect, drawRoughRect } from '../canvasHelpers';
-import { isEye, getIsCoveredByLogo, LogoMetrics } from './utils';
+import { getIsCoveredByLogo, LogoMetrics } from './utils';
 
 type DrawModuleFn = (r: number, c: number, x: number, y: number, cx: number, cy: number) => void;
 
@@ -34,14 +34,37 @@ const getModuleDrawer = (
         case QRStyle.CIRCUIT: {
             // Pre-calculate valid modules for CIRCUIT style to avoid repeated expensive checks
             // (isCoveredByLogo and isEye) for every neighbor of every module.
+            // Optimization: Apply section-splitting to skip known dead zones like corner eye markers entirely
+            // instead of running conditional checks inside flat loops.
             const validGrid = new Uint8Array(moduleCount * moduleCount);
-            for (let r = 0; r < moduleCount; r++) {
-                for (let c = 0; c < moduleCount; c++) {
-                    if (modules.get(r, c) && !isEye(r, c, moduleCount) && !isCoveredByLogo(r, c)) {
-                        validGrid[r * moduleCount + c] = 1;
-                    }
+
+            const markValid = (r: number, c: number) => {
+                if (modules.get(r, c) && !isCoveredByLogo(r, c)) {
+                    validGrid[r * moduleCount + c] = 1;
+                }
+            };
+
+            // Top Section (Rows 0-6): Skip TL (0-6) and TR (size-7 to size-1)
+            for (let r = 0; r < 7; r++) {
+                for (let c = 7; c < moduleCount - 7; c++) {
+                    markValid(r, c);
                 }
             }
+
+            // Middle Section (Rows 7 to size-8): No eyes
+            for (let r = 7; r < moduleCount - 7; r++) {
+                for (let c = 0; c < moduleCount; c++) {
+                    markValid(r, c);
+                }
+            }
+
+            // Bottom Section (Rows size-7 to size-1): Skip BL (0-6)
+            for (let r = moduleCount - 7; r < moduleCount; r++) {
+                for (let c = 7; c < moduleCount; c++) {
+                    markValid(r, c);
+                }
+            }
+
             // Pre-calculate dimensional constants
             const rCircuit = cellSize * 0.1;
             const thickness = cellSize * 0.4;
@@ -49,10 +72,13 @@ const getModuleDrawer = (
             const linkLen = cellSize / 2 + 1;
 
             return (r, c, x, y, cx, cy) => {
-                const hasTop = r > 0 && validGrid[(r-1) * moduleCount + c];
-                const hasBottom = r < moduleCount-1 && validGrid[(r+1) * moduleCount + c];
-                const hasLeft = c > 0 && validGrid[r * moduleCount + (c-1)];
-                const hasRight = c < moduleCount-1 && validGrid[r * moduleCount + (c+1)];
+                // Optimization: Use flat 1D indexing and pre-calculated offsets to avoid redundant multiplications
+                const idx = r * moduleCount + c;
+
+                const hasTop = r > 0 && validGrid[idx - moduleCount];
+                const hasBottom = r < moduleCount - 1 && validGrid[idx + moduleCount];
+                const hasLeft = c > 0 && validGrid[idx - 1];
+                const hasRight = c < moduleCount - 1 && validGrid[idx + 1];
 
                 // Full square with very tiny notches
                 drawRoundRect(ctx, x, y, cellSize, cellSize, rCircuit);
