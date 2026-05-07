@@ -143,6 +143,13 @@ Lighthouse CI runs on every Pull Request to audit performance, accessibility, be
 
 ## Troubleshooting
 
+### Playwright E2E tests fail to start or hang
+
+The Playwright configuration (`playwright.config.ts`) currently hardcodes `npm run dev` to start the local development server. If you strictly use `pnpm` and do not have `npm` installed (or your environment blocks it), the tests will hang waiting for the server to start.
+
+**Solution:**
+Ensure `npm` is available in your path, or manually start the development server using `pnpm dev` in a separate terminal before running `pnpm test:e2e`.
+
 ### `pnpm install` fails with `gyp ERR!` or `Package cairo was not found`
 
 This usually happens because `node-canvas` (a development dependency used for testing) requires system-level libraries to be installed.
