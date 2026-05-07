@@ -176,11 +176,11 @@ describe('StyleControls Component', () => {
       const logoConfig = { ...DEFAULT_CONFIG, logoUrl: 'data:image/png;base64,fake', logoPaddingStyle: 'square' as LogoPaddingStyle };
       render(<StyleControls config={logoConfig} onChange={mockOnChange} />);
 
-      const circleBtn = screen.getByRole('button', { name: 'Circle' });
+      const circleBtn = screen.getByRole('button', { name: 'Set logo border style to Circle' });
       await user.click(circleBtn);
       expect(mockOnChange).toHaveBeenCalledWith({ logoPaddingStyle: 'circle' });
 
-      const noneBtn = screen.getByRole('button', { name: 'None' });
+      const noneBtn = screen.getByRole('button', { name: 'Set logo border style to None' });
       await user.click(noneBtn);
       expect(mockOnChange).toHaveBeenCalledWith({ logoPaddingStyle: 'none' });
   });

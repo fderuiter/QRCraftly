@@ -45,6 +45,7 @@ export const AdvancedControls: React.FC<AdvancedControlsProps> = ({ config, onCh
                   key={level.id}
                   onClick={() => onChange({ errorCorrectionLevel: level.id })}
                   aria-pressed={config.errorCorrectionLevel === level.id}
+                  aria-label={`Set error correction level to ${level.label}`}
                   className={`p-2 rounded-lg text-left border transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-slate-900 ${
                     config.errorCorrectionLevel === level.id
                       ? 'border-teal-500 bg-teal-50 dark:bg-teal-900/30 text-teal-900 dark:text-teal-200'
