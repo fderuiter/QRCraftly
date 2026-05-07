@@ -1,6 +1,6 @@
 import React from "react";
 import { WifiData, WifiEncryption } from "../../types";
-import { TextField, SelectField } from "./FormFields";
+import { TextField, SelectField, CheckboxField } from "./FormFields";
 
 interface WifiInputProps {
   data: WifiData;
@@ -67,23 +67,13 @@ export const WifiInput: React.FC<WifiInputProps> = ({ data, onChange }) => {
         />
       )}
 
-      <div className="flex items-center pt-2">
-        <label
-          htmlFor="wifi-hidden"
-          className="flex items-center gap-2 cursor-pointer"
-        >
-          <input
-            id="wifi-hidden"
-            type="checkbox"
-            checked={data.hidden}
-            onChange={(e) => onChange({ hidden: e.target.checked })}
-            className="rounded text-teal-700 dark:text-teal-600 focus:ring-teal-500 border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900"
-          />
-          <span className="text-sm text-slate-600 dark:text-slate-400 font-sans">
-            Hidden Network
-          </span>
-        </label>
-      </div>
+      <CheckboxField
+        id="wifi-hidden"
+        label="Hidden Network"
+        checked={data.hidden}
+        onChange={(e) => onChange({ hidden: e.target.checked })}
+        className="pt-2"
+      />
     </div>
   );
 };
