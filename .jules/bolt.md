@@ -1,0 +1,3 @@
+## 2024-05-07 - Section-Splitting in Spatial Grids
+**Learning:** In 2D grid rendering where logic depends on neighborhood state (e.g., `QRStyle.CIRCUIT`), pre-calculating the entire grid state is essential for performance. However, looping over the full grid and applying conditional constraints (like `isEye()`) on every cell creates unnecessary overhead. The corners are known dead zones (7x7 modules).
+**Action:** Apply "section-splitting" to loops when building pre-calculated grids or rendering modules. By physically splitting the loop into Top, Middle, and Bottom sections, we can completely bypass checking known dead zones without any `if` statements inside the loops, measurably improving layout computation times.
