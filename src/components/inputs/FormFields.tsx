@@ -191,3 +191,34 @@ export const SelectField: React.FC<SelectFieldProps> = ({
     </FieldWrapper>
   );
 };
+
+interface CheckboxFieldProps
+  extends
+    Omit<React.InputHTMLAttributes<HTMLInputElement>, "id" | "type">,
+    BaseFieldProps {}
+
+export const CheckboxField: React.FC<CheckboxFieldProps> = ({
+  label,
+  id,
+  fieldSize = "xs",
+  className,
+  labelClassName,
+  ...props
+}) => {
+  return (
+    <div className={className}>
+      <label
+        htmlFor={id}
+        className={`flex items-center gap-2 cursor-pointer ${getLabelClass(fieldSize, labelClassName).replace('mb-1', '')} ${fieldSize === 'xs' ? 'font-sans' : ''}`}
+      >
+        <input
+          id={id}
+          type="checkbox"
+          className="rounded text-teal-700 dark:text-teal-600 focus:ring-teal-500 border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900"
+          {...props}
+        />
+        <span>{label}</span>
+      </label>
+    </div>
+  );
+};
