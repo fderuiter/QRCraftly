@@ -69,6 +69,7 @@ export const LogoControls: React.FC<LogoControlsProps> = ({ config, onChange }) 
                   key={style.id}
                   onClick={() => onChange({ logoPaddingStyle: style.id as LogoPaddingStyle })}
                   aria-pressed={config.logoPaddingStyle === style.id}
+                  aria-label={`Set logo border style to ${style.label}`}
                   className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-medium transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-slate-800 ${
                     config.logoPaddingStyle === style.id
                       ? 'bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-400'
