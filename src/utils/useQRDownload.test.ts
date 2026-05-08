@@ -169,4 +169,81 @@ describe('useQRDownload', () => {
     expect(removeSpy).toHaveBeenCalledWith(link);
     expect(global.URL.revokeObjectURL).toHaveBeenCalled();
   });
+
+  describe('handleCopy', () => {
+    let originalClipboardItem: any;
+    let originalClipboard: any;
+
+    beforeEach(() => {
+      originalClipboardItem = (global as any).ClipboardItem;
+      originalClipboard = global.navigator.clipboard;
+    });
+
+    afterEach(() => {
+      (global as any).ClipboardItem = originalClipboardItem;
+      Object.defineProperty(global.navigator, 'clipboard', {
+        value: originalClipboard,
+        writable: true,
+        configurable: true,
+      });
+    });
+
+    it('copies to clipboard when supported', async () => {
+      const mockWrite = vi.fn().mockResolvedValue(undefined);
+      Object.defineProperty(global.navigator, 'clipboard', {
+        value: { write: mockWrite },
+        writable: true,
+        configurable: true,
+      });
+
+      const MockClipboardItem = vi.fn().mockImplementation(function(this: any, data) { this.data = data; });
+      (global as any).ClipboardItem = MockClipboardItem;
+
+      const { result } = renderHook(() => useQRDownload(mockQrRef, DEFAULT_CONFIG as QRConfig));
+
+      const success = await result.current.handleCopy();
+
+      expect(success).toBe(true);
+      expect(mockCanvas.toBlob).toHaveBeenCalled();
+      expect(MockClipboardItem).toHaveBeenCalledWith(expect.objectContaining({ 'image/png': expect.any(Blob) }));
+      expect(mockWrite).toHaveBeenCalled();
+    });
+
+    it('returns false if canvas is not found', async () => {
+      const emptyRef = { current: { querySelector: vi.fn(() => null) } } as any;
+      const { result } = renderHook(() => useQRDownload(emptyRef, DEFAULT_CONFIG as QRConfig));
+
+      const success = await result.current.handleCopy();
+      expect(success).toBe(false);
+    });
+
+    it('returns false if ClipboardItem is not supported', async () => {
+      (global as any).ClipboardItem = undefined;
+      const { result } = renderHook(() => useQRDownload(mockQrRef, DEFAULT_CONFIG as QRConfig));
+
+      const success = await result.current.handleCopy();
+      expect(success).toBe(false);
+    });
+
+    it('returns false and logs warning if write fails', async () => {
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const mockWrite = vi.fn().mockRejectedValue(new Error('Clipboard error'));
+      Object.defineProperty(global.navigator, 'clipboard', {
+        value: { write: mockWrite },
+        writable: true,
+        configurable: true,
+      });
+
+      const MockClipboardItem = vi.fn().mockImplementation(function(this: any, data) { this.data = data; });
+      (global as any).ClipboardItem = MockClipboardItem;
+
+      const { result } = renderHook(() => useQRDownload(mockQrRef, DEFAULT_CONFIG as QRConfig));
+
+      const success = await result.current.handleCopy();
+
+      expect(success).toBe(false);
+      expect(consoleWarnSpy).toHaveBeenCalledWith('Failed to copy to clipboard:', expect.any(Error));
+    });
+  });
+
 });
