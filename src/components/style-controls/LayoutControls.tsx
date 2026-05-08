@@ -21,6 +21,7 @@ import { Square, Smartphone } from 'lucide-react';
 import { QRConfig, SocialFormat, TemplateStyle } from '../../types';
 import { ColorInput } from '../ui/ColorInput';
 import { RangeInput } from '../ui/RangeInput';
+import { CheckboxField } from '../inputs/FormFields';
 
 interface LayoutControlsProps {
   config: QRConfig;
@@ -160,22 +161,18 @@ export const LayoutControls: React.FC<LayoutControlsProps> = ({ config, onChange
           <div>
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs text-slate-500 dark:text-slate-400">Template Background</span>
-              <label className="flex items-center gap-1.5 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={hasBgOverride}
-                  onChange={(e) =>
-                    onChange({
-                      templateBgColor: e.target.checked ? config.bgColor : undefined,
-                    })
-                  }
-                  aria-label="Override template background color"
-                  className="w-3.5 h-3.5 accent-teal-600 cursor-pointer"
-                />
-                <span className="text-[10px] text-slate-500 dark:text-slate-400">
-                  {hasBgOverride ? 'Custom' : 'Inherit'}
-                </span>
-              </label>
+              <CheckboxField
+                id="override-bg-color"
+                checked={hasBgOverride}
+                onChange={(e) =>
+                  onChange({
+                    templateBgColor: e.target.checked ? config.bgColor : undefined,
+                  })
+                }
+                aria-label="Override template background color"
+                label={hasBgOverride ? 'Custom' : 'Inherit'}
+                labelClassName="text-[10px] text-slate-500 dark:text-slate-400"
+              />
             </div>
             {hasBgOverride && (
               <ColorInput
@@ -191,22 +188,18 @@ export const LayoutControls: React.FC<LayoutControlsProps> = ({ config, onChange
           <div>
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs text-slate-500 dark:text-slate-400">Template Text Color</span>
-              <label className="flex items-center gap-1.5 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={hasTextOverride}
-                  onChange={(e) =>
-                    onChange({
-                      templateTextColor: e.target.checked ? config.fgColor : undefined,
-                    })
-                  }
-                  aria-label="Override template text color"
-                  className="w-3.5 h-3.5 accent-teal-600 cursor-pointer"
-                />
-                <span className="text-[10px] text-slate-500 dark:text-slate-400">
-                  {hasTextOverride ? 'Custom' : 'Inherit'}
-                </span>
-              </label>
+              <CheckboxField
+                id="override-text-color"
+                checked={hasTextOverride}
+                onChange={(e) =>
+                  onChange({
+                    templateTextColor: e.target.checked ? config.fgColor : undefined,
+                  })
+                }
+                aria-label="Override template text color"
+                label={hasTextOverride ? 'Custom' : 'Inherit'}
+                labelClassName="text-[10px] text-slate-500 dark:text-slate-400"
+              />
             </div>
             {hasTextOverride && (
               <ColorInput
