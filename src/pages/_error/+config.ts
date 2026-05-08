@@ -21,5 +21,7 @@
  */
 export default {
     title: '404 Page Not Found - QRCraftly',
-    description: 'The page you are looking for does not exist.'
+    description: 'The page you are looking for does not exist.',
+    image: '/og-image.png?type=error',
+    imageAlt: '404 Page Not Found - QRCraftly'
 }
