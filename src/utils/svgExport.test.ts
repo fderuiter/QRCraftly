@@ -201,7 +201,7 @@ describe('generateQRSvg', () => {
     class MockFileReader {
       onerror: () => void = () => {};
       readAsDataURL() {
-        setTimeout(() => this.onerror(), 0);
+        this.onerror();
       }
     }
     global.FileReader = MockFileReader as any;
