@@ -1,0 +1,3 @@
+## 2025-05-09 - Pre-calculating constants in hot rendering loops
+**Learning:** Even simple, native Math operations like `Math.ceil(cellSize)` add measurable performance overhead when called thousands of times per frame in a tight Canvas drawing loop (like QR code module rendering). Since `cellSize` is constant per QR code, calculating it inside the module closure causes redundant execution.
+**Action:** Always inspect inner closures/hot loops (e.g. `getModuleDrawer`) for mathematical constants or object property lookups that can be extracted and pre-calculated in the outer scope, drastically reducing the operation count per-render.
