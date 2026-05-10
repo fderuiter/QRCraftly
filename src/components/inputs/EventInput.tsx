@@ -14,6 +14,7 @@ export const EventInput: React.FC<EventInputProps> = ({ data, onChange }) => {
         id="event-title"
         label="Event Title"
         type="text"
+        placeholder="e.g. Birthday Party"
         maxLength={200}
         value={data.title}
         onChange={(e) => onChange({ title: e.target.value })}
@@ -37,6 +38,7 @@ export const EventInput: React.FC<EventInputProps> = ({ data, onChange }) => {
         id="event-location"
         label="Location"
         type="text"
+        placeholder="e.g. 123 Main St, City"
         maxLength={300}
         value={data.location}
         onChange={(e) => onChange({ location: e.target.value })}
@@ -46,6 +48,7 @@ export const EventInput: React.FC<EventInputProps> = ({ data, onChange }) => {
         id="event-description"
         label="Description"
         rows={3}
+        placeholder="Event details..."
         maxLength={2000}
         value={data.description}
         onChange={(e) => onChange({ description: e.target.value })}
