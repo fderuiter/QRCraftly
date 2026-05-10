@@ -93,10 +93,21 @@ export const getIsCoveredByLogo = (config: QRConfig, moduleCount: number, logoMe
     if (config.logoPaddingStyle === 'circle') {
       const radius = cutoutModuleSize / 2;
       const radiusSq = radius * radius;
-      return (r: number, c: number) => {
+
+      const xsSq = new Float64Array(moduleCount);
+      for (let c = 0; c < moduleCount; c++) {
         const x = c - centerOffset;
+        xsSq[c] = x * x;
+      }
+
+      const ysSq = new Float64Array(moduleCount);
+      for (let r = 0; r < moduleCount; r++) {
         const y = r - centerOffset;
-        return (x * x + y * y) < radiusSq;
+        ysSq[r] = y * y;
+      }
+
+      return (r: number, c: number) => {
+        return (xsSq[c] + ysSq[r]) < radiusSq;
       };
     } else {
       const halfSize = cutoutModuleSize / 2;
