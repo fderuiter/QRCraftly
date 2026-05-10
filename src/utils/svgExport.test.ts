@@ -199,9 +199,11 @@ describe('generateQRSvg', () => {
     // Mock FileReader to fail when readAsDataURL is called
     const originalFileReader = global.FileReader;
     class MockFileReader {
-      onerror: () => void = () => {};
+      onerror: any = null;
       readAsDataURL() {
-        setTimeout(() => this.onerror(), 0);
+        if (this.onerror) {
+          this.onerror(new Error('Mocked FileReader error'));
+        }
       }
     }
     global.FileReader = MockFileReader as any;
