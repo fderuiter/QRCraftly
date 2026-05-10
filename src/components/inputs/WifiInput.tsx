@@ -17,6 +17,7 @@ export const WifiInput: React.FC<WifiInputProps> = ({ data, onChange }) => {
         id="wifi-ssid"
         label="Network Name (SSID)"
         type="text"
+        placeholder="e.g. MyHomeNetwork"
         maxLength={32}
         value={data.ssid}
         onChange={(e) => onChange({ ssid: e.target.value })}
@@ -46,6 +47,7 @@ export const WifiInput: React.FC<WifiInputProps> = ({ data, onChange }) => {
           id="wifi-identity"
           label="Identity / Username"
           type="text"
+          placeholder="e.g. user@domain.com"
           maxLength={128}
           value={data.eapIdentity}
           onChange={(e) => onChange({ eapIdentity: e.target.value })}
@@ -59,6 +61,7 @@ export const WifiInput: React.FC<WifiInputProps> = ({ data, onChange }) => {
           label="Password"
           autoComplete="off"
           type="password"
+          placeholder="Network password"
           maxLength={63}
           value={data.password}
           onChange={(e) => onChange({ password: e.target.value })}
