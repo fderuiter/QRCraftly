@@ -5,6 +5,7 @@ import { getContrastRatio } from '../../utils/colorUtils';
 import { ColorInput } from '../ui/ColorInput';
 import { RangeInput } from '../ui/RangeInput';
 import { useImageUpload } from '../../hooks/useImageUpload';
+import { ToggleSwitch } from '../inputs/ToggleSwitch';
 
 interface BorderControlsProps {
   config: QRConfig;
@@ -31,18 +32,13 @@ export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange
     <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Border</h3>
-        <div className="flex items-center">
-          <label className="relative inline-flex items-center cursor-pointer">
-            <span className="sr-only">Enable Border</span>
-            <input
-              type="checkbox"
-              className="sr-only peer"
-              checked={config.isBorderEnabled}
-              onChange={(e) => onChange({ isBorderEnabled: e.target.checked })}
-            />
-            <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-teal-300 dark:peer-focus:ring-teal-800 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-teal-600"></div>
-          </label>
-        </div>
+        <ToggleSwitch
+          id="enable-border"
+          label="Enable Border"
+          srLabel={true}
+          checked={config.isBorderEnabled}
+          onChange={(checked) => onChange({ isBorderEnabled: checked })}
+        />
       </div>
 
       {config.isBorderEnabled && (
