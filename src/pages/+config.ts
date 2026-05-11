@@ -41,6 +41,8 @@ export default {
   // https://vike.dev/prerender
   prerender: true,
 
+  lang: 'en',
+
   // Register custom config for Open Graph images
   // https://vike.dev/meta
   meta: {
