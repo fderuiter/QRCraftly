@@ -94,17 +94,24 @@ const getModuleDrawer = (
             };
         }
         case QRStyle.HIVE: {
-            // Pre-calculate hexagon offsets to avoid Math.cos/sin in the hot loop
+            // Optimization: Pre-calculate hexagon offsets using a flat Float64Array
+            // instead of objects or nested arrays. This improves performance in the
+            // hot rendering loop by avoiding object allocations and taking advantage
+            // of continuous memory, without sacrificing readability.
             const rHive = cellSize / 1.55;
             const sidesHive = 6;
-            const offsetsHive = Array.from({ length: sidesHive }, (_, i) => {
+
+            const offsets = new Float64Array(sidesHive * 2);
+            for (let i = 0; i < sidesHive; i++) {
                 const theta = (i * 2 * Math.PI) / sidesHive;
-                return { x: rHive * Math.cos(theta), y: rHive * Math.sin(theta) };
-            });
+                offsets[i * 2] = rHive * Math.cos(theta);
+                offsets[i * 2 + 1] = rHive * Math.sin(theta);
+            }
+
             return (_r, _c, _x, _y, cx, cy) => {
-                ctx.moveTo(cx + offsetsHive[0].x, cy + offsetsHive[0].y);
+                ctx.moveTo(cx + offsets[0], cy + offsets[1]);
                 for (let i = 1; i < sidesHive; i++) {
-                    ctx.lineTo(cx + offsetsHive[i].x, cy + offsetsHive[i].y);
+                    ctx.lineTo(cx + offsets[i * 2], cy + offsets[i * 2 + 1]);
                 }
                 ctx.closePath();
             };
@@ -112,23 +119,32 @@ const getModuleDrawer = (
         case QRStyle.GRUNGE:
             return (_r, _c, x, y, _cx, _cy) => drawRoughRect(ctx, x, y, cellSize, cellSize, true);
         case QRStyle.STARBURST: {
-            // Pre-calculate starburst offsets to avoid Math.cos/sin in the hot loop
+            // Optimization: Pre-calculate starburst offsets using a flat Float64Array
+            // instead of an array of objects. This improves performance in the hot
+            // rendering loop by avoiding object allocations while maintaining clean loops.
             const outerR = cellSize / 1.5;
             const innerR = cellSize / 2.2;
             const spikes = 5;
             const step = Math.PI / spikes;
-            const offsetsStar: {x: number, y: number}[] = [];
+
+            const offsets = new Float64Array(spikes * 4); // 2 points per spike, 2 coords per point
             let rot = Math.PI / 2 * 3;
+
             for (let i = 0; i < spikes; i++) {
-                offsetsStar.push({ x: Math.cos(rot) * outerR, y: Math.sin(rot) * outerR });
+                const baseIdx = i * 4;
+                offsets[baseIdx] = Math.cos(rot) * outerR;
+                offsets[baseIdx + 1] = Math.sin(rot) * outerR;
                 rot += step;
-                offsetsStar.push({ x: Math.cos(rot) * innerR, y: Math.sin(rot) * innerR });
+
+                offsets[baseIdx + 2] = Math.cos(rot) * innerR;
+                offsets[baseIdx + 3] = Math.sin(rot) * innerR;
                 rot += step;
             }
+
             return (_r, _c, _x, _y, cx, cy) => {
                 ctx.moveTo(cx, cy - outerR);
-                for (let i = 0; i < offsetsStar.length; i++) {
-                    ctx.lineTo(cx + offsetsStar[i].x, cy + offsetsStar[i].y);
+                for (let i = 0; i < offsets.length; i += 2) {
+                    ctx.lineTo(cx + offsets[i], cy + offsets[i + 1]);
                 }
                 ctx.lineTo(cx, cy - outerR);
                 ctx.closePath();
