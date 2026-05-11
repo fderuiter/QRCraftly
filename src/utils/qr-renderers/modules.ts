@@ -165,14 +165,31 @@ export const renderModules = (
 
     const drawModuleFn = getModuleDrawer(config.style, ctx, cellSize, modules, moduleCount, isCoveredByLogo);
 
+    const cellSizeHalf = cellSize / 2;
+
+    // Pre-calculate X and Y coordinates to avoid redundant math in hot loops
+    const xs = new Float64Array(moduleCount);
+    const cxs = new Float64Array(moduleCount);
+    for (let c = 0; c < moduleCount; c++) {
+        xs[c] = drawX + c * cellSize;
+        cxs[c] = xs[c] + cellSizeHalf;
+    }
+
+    const ys = new Float64Array(moduleCount);
+    const cys = new Float64Array(moduleCount);
+    for (let r = 0; r < moduleCount; r++) {
+        ys[r] = drawY + r * cellSize;
+        cys[r] = ys[r] + cellSizeHalf;
+    }
+
     const drawModuleAt = (r: number, c: number) => {
         if (modules.get(r, c)) {
             if (isCoveredByLogo(r, c)) return;
 
-            const x = drawX + c * cellSize;
-            const y = drawY + r * cellSize;
-            const cx = x + cellSize / 2;
-            const cy = y + cellSize / 2;
+            const x = xs[c];
+            const y = ys[r];
+            const cx = cxs[c];
+            const cy = cys[r];
 
             drawModuleFn(r, c, x, y, cx, cy);
         }
