@@ -34,3 +34,5 @@ verification/
 /playwright-report/
 /test-results/
 
+jules/*
+.jules/*
