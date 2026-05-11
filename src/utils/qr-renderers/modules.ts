@@ -135,8 +135,13 @@ const getModuleDrawer = (
             };
         }
         case QRStyle.STANDARD:
-        default:
-            return (_r, _c, x, y, _cx, _cy) => ctx.rect(Math.floor(x), Math.floor(y), Math.ceil(cellSize), Math.ceil(cellSize));
+        default: {
+            // Optimization: Pre-calculate Math.ceil(cellSize) outside the inner rendering loop
+            // to avoid redundant math operations for every drawn module.
+            // Performance impact: Reduces execution time of STANDARD style rendering loop.
+            const ceilCellSize = Math.ceil(cellSize);
+            return (_r, _c, x, y, _cx, _cy) => ctx.rect(Math.floor(x), Math.floor(y), ceilCellSize, ceilCellSize);
+        }
     }
 };
 
