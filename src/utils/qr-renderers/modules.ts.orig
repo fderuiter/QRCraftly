@@ -97,8 +97,7 @@ const getModuleDrawer = (
             // Optimization: Pre-calculate hexagon offsets using a flat Float64Array
             // instead of objects or nested arrays. This improves performance in the
             // hot rendering loop by avoiding object allocations and taking advantage
-            // of continuous memory. We also explicitly unroll the loop for drawing
-            // the 6 sides to avoid iteration overhead in the hot path.
+            // of continuous memory, without sacrificing readability.
             const rHive = cellSize / 1.55;
             const sidesHive = 6;
 
@@ -111,11 +110,9 @@ const getModuleDrawer = (
 
             return (_r, _c, _x, _y, cx, cy) => {
                 ctx.moveTo(cx + offsets[0], cy + offsets[1]);
-                ctx.lineTo(cx + offsets[2], cy + offsets[3]);
-                ctx.lineTo(cx + offsets[4], cy + offsets[5]);
-                ctx.lineTo(cx + offsets[6], cy + offsets[7]);
-                ctx.lineTo(cx + offsets[8], cy + offsets[9]);
-                ctx.lineTo(cx + offsets[10], cy + offsets[11]);
+                for (let i = 1; i < sidesHive; i++) {
+                    ctx.lineTo(cx + offsets[i * 2], cy + offsets[i * 2 + 1]);
+                }
                 ctx.closePath();
             };
         }
@@ -123,9 +120,8 @@ const getModuleDrawer = (
             return (_r, _c, x, y, _cx, _cy) => drawRoughRect(ctx, x, y, cellSize, cellSize, true);
         case QRStyle.STARBURST: {
             // Optimization: Pre-calculate starburst offsets using a flat Float64Array
-            // instead of an array of objects. We explicitly unroll the 10-point line drawing
-            // to eliminate the for-loop overhead, which significantly improves
-            // execution time in the extremely hot rendering path.
+            // instead of an array of objects. This improves performance in the hot
+            // rendering loop by avoiding object allocations while maintaining clean loops.
             const outerR = cellSize / 1.5;
             const innerR = cellSize / 2.2;
             const spikes = 5;
@@ -147,16 +143,9 @@ const getModuleDrawer = (
 
             return (_r, _c, _x, _y, cx, cy) => {
                 ctx.moveTo(cx, cy - outerR);
-                ctx.lineTo(cx + offsets[0], cy + offsets[1]);
-                ctx.lineTo(cx + offsets[2], cy + offsets[3]);
-                ctx.lineTo(cx + offsets[4], cy + offsets[5]);
-                ctx.lineTo(cx + offsets[6], cy + offsets[7]);
-                ctx.lineTo(cx + offsets[8], cy + offsets[9]);
-                ctx.lineTo(cx + offsets[10], cy + offsets[11]);
-                ctx.lineTo(cx + offsets[12], cy + offsets[13]);
-                ctx.lineTo(cx + offsets[14], cy + offsets[15]);
-                ctx.lineTo(cx + offsets[16], cy + offsets[17]);
-                ctx.lineTo(cx + offsets[18], cy + offsets[19]);
+                for (let i = 0; i < offsets.length; i += 2) {
+                    ctx.lineTo(cx + offsets[i], cy + offsets[i + 1]);
+                }
                 ctx.lineTo(cx, cy - outerR);
                 ctx.closePath();
             };
