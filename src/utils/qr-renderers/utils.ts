@@ -23,6 +23,16 @@ export interface LogoMetrics {
   effectivePaddingModules: number;
 }
 
+/**
+ * Defines the maximum percentage of the total QR code area that can safely be obscured
+ * by a central logo for each Error Correction Level (L, M, Q, H).
+ *
+ * These 'magic numbers' are scaled-up derivations of the standard Reed-Solomon capacities
+ * (L: 7%, M: 15%, Q: 25%, H: 30%). They are higher than the standard capacities because
+ * central logos obscure the redundant data region rather than the critical timing
+ * patterns or corner positioning squares (eyes), allowing for a larger safe area limit
+ * before structural damage prevents scanning.
+ */
 const SAFE_AREA_RATIOS: Record<string, number> = {
   L: 0.22,
   M: 0.35,
