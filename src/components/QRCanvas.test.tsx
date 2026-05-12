@@ -21,7 +21,7 @@ import { render, screen, waitFor, act } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach, afterEach, Mock } from 'vitest';
 import QRCanvas from './QRCanvas';
 import { DEFAULT_CONFIG } from '../constants';
-import { QRStyle, LogoPaddingStyle, QRErrorCorrectionLevel } from '../types';
+import { QRStyle, LogoPaddingStyle, QRErrorCorrectionLevel, SocialFormat } from '../types';
 import QRCode from 'qrcode';
 
 // Mock qrcode module
@@ -369,6 +369,24 @@ describe('QRCanvas Component', () => {
     });
     
     expect(QRCode.create).not.toHaveBeenCalled();
+  });
+
+  it('does not render if value is empty and template mode is enabled', async () => {
+    const config = { ...DEFAULT_CONFIG, value: '', enableTemplate: true, socialFormat: SocialFormat.STORY_9_16 };
+    render(<QRCanvas config={config} size={1080} />);
+
+    await waitFor(() => {
+       expect(mockContext.clearRect).toHaveBeenCalled();
+    });
+
+    expect(QRCode.create).not.toHaveBeenCalled();
+
+    // Check that canvas was sized correctly based on template height ratio
+    const canvasElement = document.querySelector('canvas');
+    expect(canvasElement?.width).toBe(1080);
+    // STORY_9_16 height ratio = 1920 / 1080 = 1.7777...
+    // Expected height = 1080 * 1.7777... = 1920
+    expect(canvasElement?.height).toBe(1920);
   });
 
   it('should ensure the logo cutout does not exceed safe error correction limits', async () => {
