@@ -107,10 +107,10 @@ export default function QRTool({ initialConfig, title }: { initialConfig?: Parti
         <section aria-label="QR Code Settings" className="w-full md:w-[480px] bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 h-auto md:h-screen overflow-y-auto flex flex-col shadow-xl z-10 transition-colors duration-300">
           <div className="p-6 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 sticky top-0 z-20 flex justify-between items-center transition-colors duration-300">
             <div>
-              <div className="flex items-center gap-2 text-teal-700 dark:text-teal-400 mb-1">
+              <a href="/" aria-label="QRCraftly Home" className="flex items-center gap-2 text-teal-700 dark:text-teal-400 mb-1 hover:opacity-80 transition-opacity">
                 <QrCode className="w-6 h-6" />
                 <span className="text-xl font-bold tracking-tight text-slate-700 dark:text-slate-100">{title || "QRCraftly"}</span>
-              </div>
+              </a>
               <p className="text-sm text-slate-600 dark:text-slate-400">Design beautiful QR codes in seconds.</p>
             </div>
             
