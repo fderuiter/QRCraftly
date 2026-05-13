@@ -32,6 +32,12 @@ export const sanitizeSocialHandle = (handle: string): string => {
   return withoutAt.replace(/[^a-zA-Z0-9_.\-]/g, '');
 };
 
+const SOCIAL_PLATFORM_URLS: Record<SocialPlatform, (handle: string) => string> = {
+  [SocialPlatform.INSTAGRAM]: (handle) => `https://instagram.com/${handle}`,
+  [SocialPlatform.TWITTER]: (handle) => `https://x.com/${handle}`,
+  [SocialPlatform.TIKTOK]: (handle) => `https://tiktok.com/@${handle}`,
+};
+
 /**
  * Constructs a standard HTTPS social media profile URL from the given data.
  *
@@ -45,14 +51,6 @@ export const constructSocialString = (data: SocialData): string => {
   const cleanHandle = sanitizeSocialHandle(data.handle);
   if (!cleanHandle) return '';
 
-  switch (data.platform) {
-    case SocialPlatform.INSTAGRAM:
-      return `https://instagram.com/${cleanHandle}`;
-    case SocialPlatform.TWITTER:
-      return `https://x.com/${cleanHandle}`;
-    case SocialPlatform.TIKTOK:
-      return `https://tiktok.com/@${cleanHandle}`;
-    default:
-      return '';
-  }
+  const constructUrl = SOCIAL_PLATFORM_URLS[data.platform];
+  return constructUrl ? constructUrl(cleanHandle) : '';
 };

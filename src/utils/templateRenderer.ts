@@ -195,6 +195,23 @@ function drawTemplateText(
   }
 }
 
+/**
+ * Strategy map for template background rendering.
+ */
+type BackgroundPainter = (
+  ctx: CanvasRenderingContext2D,
+  config: QRConfig,
+  width: number,
+  height: number
+) => void;
+
+const BACKGROUND_PAINTERS: Record<TemplateStyle, BackgroundPainter> = {
+  [TemplateStyle.NONE]: drawNoneBackground,
+  [TemplateStyle.MINIMALIST]: drawMinimalistBackground,
+  [TemplateStyle.GRADIENT_BLUR]: drawGradientBlurBackground,
+  [TemplateStyle.SOLID_FRAME]: drawSolidFrameBackground,
+};
+
 // ---------------------------------------------------------------------------
 // Main public API
 // ---------------------------------------------------------------------------
@@ -234,19 +251,8 @@ export function drawWithTemplate(
   ctx.clearRect(0, 0, displayWidth, displayHeight);
 
   // ── 1. Background ──────────────────────────────────────────────────────────
-  switch (config.templateStyle) {
-    case TemplateStyle.MINIMALIST:
-      drawMinimalistBackground(ctx, config, displayWidth, displayHeight);
-      break;
-    case TemplateStyle.GRADIENT_BLUR:
-      drawGradientBlurBackground(ctx, config, displayWidth, displayHeight);
-      break;
-    case TemplateStyle.SOLID_FRAME:
-      drawSolidFrameBackground(ctx, config, displayWidth, displayHeight);
-      break;
-    default:
-      drawNoneBackground(ctx, config, displayWidth, displayHeight);
-  }
+  const drawBackground = BACKGROUND_PAINTERS[config.templateStyle] ?? drawNoneBackground;
+  drawBackground(ctx, config, displayWidth, displayHeight);
 
   // ── 2. QR Bounding-Box ────────────────────────────────────────────────────
   // For NONE template on a square canvas the QR fills 100 % so it looks
