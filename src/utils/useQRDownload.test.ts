@@ -108,6 +108,59 @@ describe('useQRDownload', () => {
     expect(appendSpy).toHaveBeenCalled();
   });
 
+  it('handleSaveAs returns early if canvas is not found', async () => {
+    const emptyRef = { current: { querySelector: vi.fn(() => null) } } as any;
+    const { result } = renderHook(() => useQRDownload(emptyRef, DEFAULT_CONFIG as QRConfig));
+    const appendSpy = vi.spyOn(document.body, 'appendChild');
+
+    await result.current.handleSaveAs('png');
+
+    expect(appendSpy).not.toHaveBeenCalled();
+  });
+
+  it('handleSaveAs falls back to downloadToDevice if File System Access API is not available', async () => {
+    const tempOriginal = (global as any).showSaveFilePicker;
+    delete (global as any).showSaveFilePicker;
+
+    const { result } = renderHook(() => useQRDownload(mockQrRef, DEFAULT_CONFIG as QRConfig));
+
+    const appendSpy = vi.spyOn(document.body, 'appendChild');
+
+    await result.current.handleSaveAs('png');
+
+    expect(appendSpy).toHaveBeenCalled();
+
+    (global as any).showSaveFilePicker = tempOriginal;
+  });
+
+  it('handleSaveAs throws error when toBlob fails', async () => {
+    mockCanvas.toBlob = vi.fn((callback) => callback(null));
+    const showSaveFilePicker = vi.fn();
+    (global as any).showSaveFilePicker = showSaveFilePicker;
+
+    const { result } = renderHook(() => useQRDownload(mockQrRef, DEFAULT_CONFIG as QRConfig));
+    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    await result.current.handleSaveAs('png');
+
+    expect(consoleWarnSpy).toHaveBeenCalledWith('File System Access API failed, falling back to standard download:', expect.any(Error));
+  });
+
+  it('handleSaveAs aborts silently if AbortError is thrown', async () => {
+    const abortError = new Error('Abort');
+    abortError.name = 'AbortError';
+    (global as any).showSaveFilePicker = vi.fn().mockRejectedValue(abortError);
+
+    const { result } = renderHook(() => useQRDownload(mockQrRef, DEFAULT_CONFIG as QRConfig));
+    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const appendSpy = vi.spyOn(document.body, 'appendChild');
+
+    await result.current.handleSaveAs('png');
+
+    expect(consoleWarnSpy).not.toHaveBeenCalled();
+    expect(appendSpy).not.toHaveBeenCalled();
+  });
+
   it('handleShare uses Web Share API', async () => {
     const mockShare = vi.fn().mockResolvedValue(undefined);
     const mockCanShare = vi.fn().mockReturnValue(true);
@@ -130,6 +183,55 @@ describe('useQRDownload', () => {
     await waitFor(() => {
         expect(mockShare).toHaveBeenCalled();
     });
+  });
+
+  it('handleShare catches and logs errors when sharing fails', async () => {
+    const mockError = new Error('Sharing failed');
+    const mockShare = vi.fn().mockRejectedValue(mockError);
+    const mockCanShare = vi.fn().mockReturnValue(true);
+
+    Object.defineProperty(global.navigator, 'share', {
+      value: mockShare,
+      writable: true,
+      configurable: true,
+    });
+    Object.defineProperty(global.navigator, 'canShare', {
+      value: mockCanShare,
+      writable: true,
+      configurable: true,
+    });
+
+    const { result } = renderHook(() => useQRDownload(mockQrRef, DEFAULT_CONFIG as QRConfig));
+    const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    await result.current.handleShare();
+
+    await waitFor(() => {
+        expect(mockShare).toHaveBeenCalled();
+        expect(consoleLogSpy).toHaveBeenCalledWith('Error sharing:', mockError);
+    });
+  });
+
+  it('handleShare aborts silently if toBlob returns null', async () => {
+    mockCanvas.toBlob = vi.fn((callback) => callback(null));
+
+    const mockShare = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(global.navigator, 'share', {
+      value: mockShare,
+      writable: true,
+      configurable: true,
+    });
+    Object.defineProperty(global.navigator, 'canShare', {
+      value: vi.fn().mockReturnValue(true),
+      writable: true,
+      configurable: true,
+    });
+
+    const { result } = renderHook(() => useQRDownload(mockQrRef, DEFAULT_CONFIG as QRConfig));
+
+    await result.current.handleShare();
+
+    expect(mockShare).not.toHaveBeenCalled();
   });
 
   it('handleShare falls back if sharing not supported', async () => {
@@ -168,6 +270,23 @@ describe('useQRDownload', () => {
     expect(clickSpy).toHaveBeenCalled();
     expect(removeSpy).toHaveBeenCalledWith(link);
     expect(global.URL.revokeObjectURL).toHaveBeenCalled();
+  });
+
+  it('handleSaveSvg catches and logs errors when Blob generation fails', async () => {
+    // We mock the Blob constructor to throw an error to test the catch block.
+    const originalBlob = global.Blob;
+    global.Blob = vi.fn().mockImplementation(() => {
+      throw new Error('Blob Error');
+    });
+
+    const { result } = renderHook(() => useQRDownload(mockQrRef, DEFAULT_CONFIG as QRConfig));
+    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    await result.current.handleSaveSvg();
+
+    expect(consoleWarnSpy).toHaveBeenCalledWith('SVG export failed:', expect.any(Error));
+
+    global.Blob = originalBlob;
   });
 
   describe('handleCopy', () => {
