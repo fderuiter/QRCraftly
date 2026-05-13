@@ -20,6 +20,7 @@ export const VCardInput: React.FC<VCardInputProps> = ({ data, onChange }) => {
           label="First Name"
           autoComplete="given-name"
           maxLength={100}
+          placeholder="e.g. Jane"
           value={data.firstName}
           onChange={(e) => onChange({ firstName: e.target.value })}
         />
@@ -29,6 +30,7 @@ export const VCardInput: React.FC<VCardInputProps> = ({ data, onChange }) => {
           label="Last Name"
           autoComplete="family-name"
           maxLength={100}
+          placeholder="e.g. Doe"
           value={data.lastName}
           onChange={(e) => onChange({ lastName: e.target.value })}
         />
@@ -42,6 +44,7 @@ export const VCardInput: React.FC<VCardInputProps> = ({ data, onChange }) => {
           autoComplete="tel"
           type="tel"
           maxLength={20}
+          placeholder="+1 555 000 0000"
           value={data.phone}
           onChange={(e) => onChange({ phone: e.target.value })}
         />
@@ -52,6 +55,7 @@ export const VCardInput: React.FC<VCardInputProps> = ({ data, onChange }) => {
           autoComplete="email"
           type="email"
           maxLength={254}
+          placeholder="name@example.com"
           value={data.email}
           onChange={(e) => onChange({ email: e.target.value })}
         />
@@ -63,6 +67,7 @@ export const VCardInput: React.FC<VCardInputProps> = ({ data, onChange }) => {
         label="Company / Organization"
         autoComplete="organization"
         maxLength={100}
+        placeholder="e.g. Acme Corp"
         value={data.organization}
         onChange={(e) => onChange({ organization: e.target.value })}
       />
@@ -73,6 +78,7 @@ export const VCardInput: React.FC<VCardInputProps> = ({ data, onChange }) => {
         label="Job Title"
         autoComplete="organization-title"
         maxLength={100}
+        placeholder="e.g. Software Engineer"
         value={data.title}
         onChange={(e) => onChange({ title: e.target.value })}
       />
@@ -84,6 +90,7 @@ export const VCardInput: React.FC<VCardInputProps> = ({ data, onChange }) => {
         autoComplete="url"
         type="url"
         maxLength={2048}
+        placeholder="https://example.com"
         value={data.website}
         onChange={(e) => onChange({ website: e.target.value })}
       />
