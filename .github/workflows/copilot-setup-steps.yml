@@ -1,0 +1,38 @@
+name: "Copilot Setup Steps"
+
+# Re-evaluate the workspace layout automatically if this definition is updated
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
+  pull_request:
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
+
+jobs:
+  # CRITICAL: This exact job key name is required by GitHub Copilot
+  copilot-setup-steps:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          # Avoid running an auto-install before setup-node configures caching
+          run_install: false 
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20" # Secure Active LTS target for modern Vite + React configurations
+          cache: "pnpm"      # Instructs the runner to capture pnpm global content stores
+
+      - name: Install Project Dependencies
+        # Enforces a clean, reproducible terminal footprint via your lockfile topology
+        run: pnpm install --frozen-lockfile
