@@ -27,6 +27,7 @@
   },
   "dependencies": {
     "cross-env": "^10.1.0",
+    "jsqr": "^1.4.0",
     "lucide-react": "^0.556.0",
     "qrcode": "^1.5.4",
     "react": "^19.2.1",
@@ -35,8 +36,11 @@
     "vike-react": "^0.6.13"
   },
   "pnpm": {
-    "onlyBuiltDependencies": [
-      "canvas"
+    "approvedBuilds": [
+      "canvas",
+      "esbuild",
+      "sharp",
+      "workerd"
     ]
   },
   "devDependencies": {
@@ -55,7 +59,6 @@
     "autoprefixer": "^10.4.22",
     "canvas": "^3.2.0",
     "jsdom": "^27.2.0",
-    "jsqr": "^1.4.0",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.17",
     "typescript": "~5.8.2",

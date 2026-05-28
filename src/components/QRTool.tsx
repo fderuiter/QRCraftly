@@ -25,6 +25,8 @@ import QRCanvas from '@/components/QRCanvas';
 import { Download, Share2, QrCode, ChevronDown, Camera, Moon, Sun, Info, Copy, Check } from 'lucide-react';
 import { useDebounce, useOnClickOutside } from '@/utils/hooks';
 import { useQRDownload } from '@/utils/useQRDownload';
+import { useScannability } from '@/hooks/useScannability';
+import { ScannabilityIndicator } from '@/components/ScannabilityIndicator';
 
 // Lazy load StyleControls to reduce initial bundle size and avoid SSR issues
 const StyleControls = React.lazy(() => import('@/components/StyleControls'));
@@ -45,14 +47,64 @@ export default function QRTool({ initialConfig, title }: { initialConfig?: Parti
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const qrRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const downloadMenuRef = useRef<HTMLDivElement>(null);
 
   const { downloadToDevice: hookDownload, handleSaveAs: hookSaveAs, handleSaveSvg: hookSaveSvg, handleShare, handleCopy } = useQRDownload(qrRef, config);
   const [copied, setCopied] = useState(false);
 
+  // Scannability & Telemetry
+  const { status: scannabilityStatus, checkScannability } = useScannability(canvasRef, config);
+  const [showTelemetryPrompt, setShowTelemetryPrompt] = useState(false);
+
   useEffect(() => {
     setIsMounted(true);
+    const optedIn = localStorage.getItem('qr-telemetry-opt-in') === 'true';
+
+    const handleScannabilityFail = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (optedIn) {
+        // Send anonymous ping
+        sendTelemetryPing(customEvent.detail);
+      } else {
+        // Show prompt if not already prompted and not opted out explicitly
+        if (localStorage.getItem('qr-telemetry-opt-in') === null) {
+          setShowTelemetryPrompt(true);
+        }
+      }
+    };
+
+    window.addEventListener('qr-scannability-fail', handleScannabilityFail);
+    return () => window.removeEventListener('qr-scannability-fail', handleScannabilityFail);
   }, []);
+
+  const sendTelemetryPing = (detail: any) => {
+    // Fire and forget (No PII, just metadata: engine, style, error)
+    try {
+      fetch('/api/telemetry/scannability', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(detail),
+        // use keepalive to ensure it sends even if page unloads
+        keepalive: true
+      }).catch(() => { /* silent fail for telemetry */ });
+    } catch { /* silent fail */ }
+  };
+
+  const handleOptIn = (optIn: boolean) => {
+    localStorage.setItem('qr-telemetry-opt-in', optIn ? 'true' : 'false');
+    setShowTelemetryPrompt(false);
+    
+    // If they just opted in and status is fail, send the ping now.
+    if (optIn && scannabilityStatus === 'fail') {
+       sendTelemetryPing({
+         engine: navigator.userAgent.includes('Safari') && !navigator.userAgent.includes('Chrome') ? 'WebKit' : 
+                 navigator.userAgent.includes('Firefox') ? 'Firefox' : 'Chromium',
+         styleId: config.style || 'default',
+         errorType: 'NOT_FOUND'
+       });
+    }
+  };
 
   // Close download menu when clicking outside
   const closeDownloadMenu = useCallback(() => setShowDownloadMenu(false), []);
@@ -201,12 +253,15 @@ export default function QRTool({ initialConfig, title }: { initialConfig?: Parti
              <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl p-8 border border-slate-200 dark:border-slate-800 transform transition-all hover:scale-[1.01] duration-300">
                 <div className="flex justify-between items-center mb-6">
                     <h3 className="font-semibold text-slate-700 dark:text-slate-200">Live Preview</h3>
-                    <span className="px-2 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-xs font-bold rounded-full border border-emerald-200 dark:border-emerald-800">Active</span>
+                    <div className="flex items-center gap-2">
+                       <ScannabilityIndicator status={scannabilityStatus} />
+                       <span className="px-2 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-xs font-bold rounded-full border border-emerald-200 dark:border-emerald-800">Active</span>
+                    </div>
                 </div>
                 
                 <div ref={qrRef} className="flex justify-center mb-8">
                    {/* Pass debounced config to QRCanvas to prevent heavy rendering on every keystroke */}
-                   <QRCanvas config={debouncedConfig} className="w-full max-h-[60vh] object-contain rounded-lg shadow-sm" />
+                   <QRCanvas ref={canvasRef} onRendered={checkScannability} config={debouncedConfig} className="w-full max-h-[60vh] object-contain rounded-lg shadow-sm" />
                 </div>
 
                 <div className="grid grid-cols-1 gap-3 w-full">
@@ -275,6 +330,23 @@ export default function QRTool({ initialConfig, title }: { initialConfig?: Parti
                       <Camera className="w-4 h-4" />
                       Save to Photos
                    </Button>
+
+                   {showTelemetryPrompt && (
+                      <div className="mt-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 text-sm">
+                         <h4 className="font-semibold text-slate-800 dark:text-slate-200 mb-2 flex items-center gap-2">
+                           <Info className="w-4 h-4 text-blue-500" /> Help Improve Scannability
+                         </h4>
+                         <p className="text-slate-600 dark:text-slate-400 mb-3 text-xs leading-relaxed">
+                           We noticed your QR code might be hard to scan. Would you like to send an anonymous telemetry ping to help us fix bugs?
+                           <br/><br/>
+                           <strong>Privacy Guarantee:</strong> We only send your device engine and style settings. We <strong>never</strong> send the QR content or image.
+                         </p>
+                         <div className="flex gap-2">
+                           <Button variant="primary" size="sm" onClick={() => handleOptIn(true)} className="flex-1 text-xs">Yes, Help Fix This</Button>
+                           <Button variant="outline" size="sm" onClick={() => handleOptIn(false)} className="flex-1 text-xs">No Thanks</Button>
+                         </div>
+                      </div>
+                   )}
                 </div>
              </div>
           </div>
