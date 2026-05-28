@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { LocationData } from "../../types";
-import { TextField } from "./FormFields";
+import { TextField } from "../ui/TextField";
 
 interface LocationInputProps {
   data: LocationData;
@@ -87,7 +87,7 @@ export const LocationInput: React.FC<LocationInputProps> = ({
         {isLoading ? "Fetching location…" : "Use Current Location"}
       </button>
       {geoError && (
-        <p role="alert" className="text-xs text-red-600 dark:text-red-400">
+        <p role="alert" className="text-xs text-rose-600 dark:text-rose-400">
           {geoError}
         </p>
       )}

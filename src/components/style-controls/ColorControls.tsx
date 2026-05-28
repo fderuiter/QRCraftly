@@ -1,8 +1,6 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { QRConfig } from '../../types';
 import { PRESET_COLORS } from '../../constants';
-import { AlertTriangle } from 'lucide-react';
-import { getContrastRatio } from '../../utils/colorUtils';
 import { ColorInput } from '../ui/ColorInput';
 
 interface ColorControlsProps {
@@ -11,25 +9,10 @@ interface ColorControlsProps {
 }
 
 export const ColorControls: React.FC<ColorControlsProps> = ({ config, onChange }) => {
-  const contrastRatios = useMemo(() => {
-    const fgContrast = getContrastRatio(config.fgColor, config.bgColor);
-    const eyeContrast = getContrastRatio(config.eyeColor, config.bgColor);
-    return { fg: fgContrast, eye: eyeContrast };
-  }, [config.fgColor, config.bgColor, config.eyeColor]);
-
-  const isLowContrast = contrastRatios.fg < 4.5 || contrastRatios.eye < 4.5;
-  const worstContrast = Math.min(contrastRatios.fg, contrastRatios.eye);
-
   return (
     <div>
       <div className="flex justify-between items-baseline mb-3">
         <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Colors</h3>
-        {isLowContrast && (
-          <span className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400 font-medium">
-            <AlertTriangle className="w-3 h-3" />
-            Low Contrast ({worstContrast.toFixed(1)})
-          </span>
-        )}
       </div>
 
       <div
@@ -81,11 +64,6 @@ export const ColorControls: React.FC<ColorControlsProps> = ({ config, onChange }
           />
         </div>
       </div>
-      {isLowContrast && (
-        <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 rounded-lg text-xs text-amber-800 dark:text-amber-400">
-          Warning: The contrast ratio is low ({worstContrast.toFixed(2)}). QR codes should have high contrast (aim for 4.5:1) to be scannable by all devices.
-        </div>
-      )}
     </div>
   );
 };

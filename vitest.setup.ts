@@ -17,3 +17,5 @@
 */
 
 import '@testing-library/jest-dom';
+import { vi } from "vitest"; vi.mock("@/components/ui/Toast", () => ({ useToast: () => ({ addToast: mockAddToast }), ToastProvider: ({ children }: {children: any}) => children }));
+export const mockAddToast = vi.fn();

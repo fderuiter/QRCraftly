@@ -24,6 +24,7 @@ import QRCanvas from '@/components/QRCanvas';
 import { Download, Share2, QrCode, ChevronDown, Camera, Moon, Sun, Info, Copy, Check } from 'lucide-react';
 import { useDebounce, useOnClickOutside } from '@/utils/hooks';
 import { useQRDownload } from '@/utils/useQRDownload';
+import { Button } from '@/components/ui/Button';
 
 // Lazy load StyleControls to reduce initial bundle size and avoid SSR issues
 const StyleControls = React.lazy(() => import('@/components/StyleControls'));
@@ -210,16 +211,16 @@ export default function QRTool({ initialConfig, title }: { initialConfig?: Parti
                    {/* Row 1: Download & Share */}
                    <div className="flex gap-2">
                        <div className="relative flex-1" ref={downloadMenuRef}>
-                          <button 
+                          <Button 
                               onClick={() => setShowDownloadMenu(!showDownloadMenu)}
-                              className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-teal-700 dark:bg-teal-700 text-white rounded-xl font-medium hover:bg-teal-800 dark:hover:bg-teal-600 transition-colors shadow-lg shadow-teal-900/10 dark:shadow-teal-900/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
+                              className="w-full gap-2 py-3"
                               aria-expanded={showDownloadMenu}
                               aria-haspopup="true"
                           >
                               <Download className="w-4 h-4" />
                               Download
                               <ChevronDown className="w-4 h-4 ml-auto opacity-80" />
-                          </button>
+                          </Button>
                           
                           {showDownloadMenu && (
                               <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-100 dark:border-slate-700 py-1 z-50 animate-in fade-in zoom-in-95 duration-100 overflow-hidden" role="menu">
@@ -240,34 +241,37 @@ export default function QRTool({ initialConfig, title }: { initialConfig?: Parti
                           )}
                        </div>
                        
-                       <button
+                       <Button
                           onClick={onCopy}
-                          className="flex items-center justify-center w-12 bg-teal-50 dark:bg-slate-800 border border-teal-200 dark:border-slate-700 text-teal-700 dark:text-teal-400 rounded-xl font-medium hover:bg-teal-100 dark:hover:bg-slate-700 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
+                          variant="secondary"
+                          className="w-12 px-0 py-3 border border-teal-200 dark:border-slate-700 text-teal-700 dark:text-teal-400 bg-teal-50 hover:bg-teal-100"
                           title="Copy Image"
                           aria-label={copied ? "Copied to clipboard" : "Copy QR code to clipboard"}
                        >
                           {copied ? <Check className="w-5 h-5 text-emerald-500" /> : <Copy className="w-5 h-5" />}
-                       </button>
+                       </Button>
 
-                       <button 
+                       <Button 
                           onClick={handleShare}
-                          className="flex items-center justify-center w-12 bg-teal-50 dark:bg-slate-800 border border-teal-200 dark:border-slate-700 text-teal-700 dark:text-teal-400 rounded-xl font-medium hover:bg-teal-100 dark:hover:bg-slate-700 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
+                          variant="secondary"
+                          className="w-12 px-0 py-3 border border-teal-200 dark:border-slate-700 text-teal-700 dark:text-teal-400 bg-teal-50 hover:bg-teal-100"
                           title="Share"
                           aria-label="Share QR code"
                        >
                           <Share2 className="w-5 h-5" />
-                       </button>
+                       </Button>
                    </div>
 
                    {/* Row 2: Save to Camera Roll */}
-                   <button 
+                   <Button 
                       onClick={() => downloadToDevice('png')}
-                      className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-xl font-medium hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
+                      variant="outline"
+                      className="w-full gap-2 py-3"
                       aria-label="Save QR code to photos"
                    >
                       <Camera className="w-4 h-4" />
                       Save to Photos
-                   </button>
+                   </Button>
                 </div>
              </div>
           </div>

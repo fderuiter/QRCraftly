@@ -1,3 +1,4 @@
+import { ToastProvider } from "../components/ui/Toast";
 /*
     QRCraftly
     Copyright (C) 2025 fderuiter
@@ -21,6 +22,7 @@ import { useQRDownload } from './useQRDownload';
 import { DEFAULT_CONFIG } from '../constants';
 import { QRConfig } from '../types';
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
+vi.mock("../components/ui/Toast", () => ({ useToast: () => ({ addToast: vi.fn() }) }));
 
 describe('useQRDownload', () => {
   let mockCanvas: HTMLCanvasElement;
@@ -242,12 +244,11 @@ describe('useQRDownload', () => {
     });
 
     const { result } = renderHook(() => useQRDownload(mockQrRef, DEFAULT_CONFIG as QRConfig));
-    const alertMock = vi.spyOn(window, 'alert').mockImplementation(() => {});
+    
     const appendSpy = vi.spyOn(document.body, 'appendChild');
 
     await result.current.handleShare();
 
-    expect(alertMock).toHaveBeenCalled();
     expect(appendSpy).toHaveBeenCalled();
   });
 

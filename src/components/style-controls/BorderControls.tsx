@@ -159,7 +159,7 @@ export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange
                 onChange={handleBorderLogoUpload}
               />
             </div>
-            {error && <div className="mt-1 text-xs text-rose-600 dark:text-rose-400">{error}</div>}
+            {error && <div role="alert" className="mt-1 text-xs text-rose-600 dark:text-rose-400">{error}</div>}
             {config.borderLogoUrl && (
               <div className="mt-2">
                 <select

@@ -27,6 +27,7 @@ import {
   AdvancedControls,
   LayoutControls
 } from './style-controls';
+import { ScannabilityMonitor } from './style-controls/ScannabilityMonitor';
 
 /**
  * Props for the StyleControls component.
@@ -51,6 +52,9 @@ interface StyleControlsProps {
 const StyleControls: React.FC<StyleControlsProps> = ({ config, onChange }) => {
   return (
     <div className="space-y-8">
+      {/* Scannability Monitor */}
+      <ScannabilityMonitor config={config} />
+
       {/* Export Layout (Social Media Templates) */}
       <LayoutControls config={config} onChange={onChange} />
 

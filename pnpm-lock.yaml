@@ -70,7 +70,7 @@ importers:
         specifier: ^10.4.22
         version: 10.4.27(postcss@8.5.8)
       canvas:
-        specifier: ^3.2.0
+        specifier: ^3.2.2
         version: 3.2.2
       jsdom:
         specifier: ^27.2.0

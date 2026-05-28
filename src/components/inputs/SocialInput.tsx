@@ -1,6 +1,7 @@
 import React from "react";
 import { SocialData, SocialPlatform } from "../../types";
-import { TextField, SelectField } from "./FormFields";
+import { TextField } from "../ui/TextField";
+import { SelectField } from "./FormFields";
 
 interface SocialInputProps {
   data: SocialData;

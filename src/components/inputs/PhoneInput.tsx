@@ -1,6 +1,6 @@
 import React from "react";
 import { PhoneData } from "../../types";
-import { TextField } from "./FormFields";
+import { TextField } from "../ui/TextField";
 
 interface PhoneInputProps {
   data: PhoneData;

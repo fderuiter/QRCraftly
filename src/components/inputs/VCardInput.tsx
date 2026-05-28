@@ -1,6 +1,6 @@
 import React from "react";
 import { VCardData } from "../../types";
-import { TextField } from "./FormFields";
+import { TextField } from "../ui/TextField";
 
 interface VCardInputProps {
   data: VCardData;

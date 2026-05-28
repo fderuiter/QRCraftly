@@ -115,15 +115,14 @@ describe('StyleControls Component', () => {
     const lowContrastConfig = { ...DEFAULT_CONFIG, fgColor: '#ffffff', bgColor: '#ffffff' };
     render(<StyleControls config={lowContrastConfig} onChange={mockOnChange} />);
 
-    expect(screen.getByText(/Low Contrast/)).toBeInTheDocument();
-    expect(screen.getByText(/Warning: The contrast ratio is low/)).toBeInTheDocument();
+    expect(screen.getByText(/Low contrast/i)).toBeInTheDocument();
   });
 
   it('hides low contrast warning when contrast is good', () => {
     const highContrastConfig = { ...DEFAULT_CONFIG, fgColor: '#000000', bgColor: '#ffffff' };
     render(<StyleControls config={highContrastConfig} onChange={mockOnChange} />);
 
-    expect(screen.queryByText(/Low Contrast/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Low contrast/i)).not.toBeInTheDocument();
   });
 
   it('renders logo upload section', () => {

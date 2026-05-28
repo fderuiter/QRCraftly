@@ -1,6 +1,6 @@
 import React, { useMemo } from "react";
 import { MeetingData } from "../../types";
-import { TextField } from "./FormFields";
+import { TextField } from "../ui/TextField";
 import { parseMeetingUrl } from "../../utils/meetingParsers";
 
 interface MeetingInputProps {

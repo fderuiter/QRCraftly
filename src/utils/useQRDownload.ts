@@ -19,6 +19,7 @@
 import { RefObject, useCallback } from 'react';
 import { QRConfig } from '../types';
 import { generateQRSvg } from './svgExport';
+import { useToast } from '../components/ui/Toast';
 
 /**
  * Return type for the useQRDownload hook.
@@ -43,6 +44,7 @@ export function useQRDownload(
   qrRef: RefObject<HTMLDivElement | null>,
   config: QRConfig
 ): UseQRDownloadReturn {
+  const { addToast } = useToast();
 
   /**
    * Helper function to normalize file extensions.
@@ -177,7 +179,7 @@ export function useQRDownload(
           }
         } else {
           // Fallback for devices that don't support sharing files
-          alert("Sharing is not supported on this device/browser. The image will be downloaded instead.");
+          addToast("Sharing is not supported on this device/browser. The image will be downloaded instead.", "info");
           downloadToDevice('png');
         }
       }, 'image/png');
