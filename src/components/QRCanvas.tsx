@@ -22,6 +22,11 @@ import { drawQR } from '../utils/qrRenderer';
 import { drawWithTemplate, SOCIAL_DIMENSIONS } from '../utils/templateRenderer';
 import { useImage } from '../utils/hooks';
 
+export interface ScanResult {
+  isScannable: boolean;
+  errorReason?: string;
+}
+
 /**
  * Props for the QRCanvas component.
  */
@@ -32,6 +37,8 @@ interface QRCanvasProps {
   size?: number;
   /** Optional CSS class names to apply to the canvas element. */
   className?: string;
+  /** Callback fired when the scannability simulation completes */
+  onScanResult?: (result: ScanResult) => void;
 }
 
 /**
@@ -45,14 +52,29 @@ interface QRCanvasProps {
  * @param props.className - Optional CSS classes.
  * @returns The QRCanvas component.
  */
-const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) => {
+const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className, onScanResult }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const workerRef = useRef<Worker | null>(null);
 
   // Pre-load images to avoid async rendering and flickering
   const logoImg = useImage(config.logoUrl);
   const borderLogoImg = useImage(config.isBorderEnabled ? config.borderLogoUrl : null);
 
   const [qrData, setQrData] = useState<any>(null);
+
+  useEffect(() => {
+    if (typeof Worker !== 'undefined') {
+      workerRef.current = new Worker(new URL('../utils/scanWorker.ts', import.meta.url), { type: 'module' });
+      workerRef.current.onmessage = (e) => {
+        if (e.data.type === 'SCAN_RESULT' && onScanResult) {
+          onScanResult({ isScannable: e.data.scannable });
+        }
+      };
+    }
+    return () => {
+      workerRef.current?.terminate();
+    };
+  }, [onScanResult]);
 
   // Dynamically load QRCode and generate data
   useEffect(() => {
@@ -132,7 +154,14 @@ const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) =
       drawQR(ctx, qrData.modules, config, logoImg, borderLogoImg, size);
     }
 
-  }, [config, size, qrData, logoImg, borderLogoImg]);
+    if (onScanResult && workerRef.current) {
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      workerRef.current.postMessage(
+        { type: 'SCAN', data: imageData.data, width: canvas.width, height: canvas.height }
+      );
+    }
+
+  }, [config, size, qrData, logoImg, borderLogoImg, onScanResult]);
 
   const typeLabel = config.type.charAt(0).toUpperCase() + config.type.slice(1).toLowerCase();
   const ariaLabel = `QR Code for ${typeLabel} - ${config.value ? 'Scan to view content' : 'Empty'}`;

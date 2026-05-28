@@ -21,10 +21,12 @@ import { Button } from "./ui/Button";
 import { QRConfig } from '@/types';
 import { DEFAULT_CONFIG } from '@/constants';
 import InputPanel from '@/components/InputPanel';
-import QRCanvas from '@/components/QRCanvas';
+import QRCanvas, { ScanResult } from '@/components/QRCanvas';
+import ScannabilityStatus from '@/components/ScannabilityStatus';
 import { Download, Share2, QrCode, ChevronDown, Camera, Moon, Sun, Info, Copy, Check } from 'lucide-react';
 import { useDebounce, useOnClickOutside } from '@/utils/hooks';
 import { useQRDownload } from '@/utils/useQRDownload';
+import { getContrastRatio } from '@/utils/colorUtils';
 
 // Lazy load StyleControls to reduce initial bundle size and avoid SSR issues
 const StyleControls = React.lazy(() => import('@/components/StyleControls'));
@@ -44,6 +46,10 @@ export default function QRTool({ initialConfig, title }: { initialConfig?: Parti
   const [showDownloadMenu, setShowDownloadMenu] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [scanStatus, setScanStatus] = useState<{ isScannable: boolean | null; errorReason?: string }>({
+    isScannable: null
+  });
+  
   const qrRef = useRef<HTMLDivElement>(null);
   const downloadMenuRef = useRef<HTMLDivElement>(null);
 
@@ -75,8 +81,28 @@ export default function QRTool({ initialConfig, title }: { initialConfig?: Parti
    * @param updates - Partial configuration object to merge into the current state.
    */
   const handleConfigChange = useCallback((updates: Partial<QRConfig>) => {
-    setConfig((prev) => ({ ...prev, ...updates }));
+    setConfig((prev) => {
+      // Whenever config changes, mark scan status as checking
+      setScanStatus({ isScannable: null });
+      return { ...prev, ...updates };
+    });
   }, []);
+
+  const handleScanResult = useCallback((result: ScanResult) => {
+    if (result.isScannable) {
+      setScanStatus({ isScannable: true });
+    } else {
+      // Determine probable cause of unscannability
+      let errorReason = "Design may be difficult to scan";
+      const contrast = getContrastRatio(debouncedConfig.fgColor, debouncedConfig.bgColor);
+      if (contrast < 3) {
+        errorReason = "Contrast too low";
+      } else if (['circuit', 'grunge', 'starburst'].includes(debouncedConfig.style)) {
+        errorReason = "Pattern too complex";
+      }
+      setScanStatus({ isScannable: false, errorReason });
+    }
+  }, [debouncedConfig.fgColor, debouncedConfig.bgColor, debouncedConfig.style]);
 
   /**
    * Toggles the application between light and dark mode.
@@ -138,6 +164,11 @@ export default function QRTool({ initialConfig, title }: { initialConfig?: Parti
           </div>
 
           <div className="p-6 space-y-8 pb-24">
+            {/* Scannability Status Indicator */}
+            <div className="sticky top-24 z-10 bg-white dark:bg-slate-900 pt-2 pb-4">
+              <ScannabilityStatus isScannable={scanStatus.isScannable} errorReason={scanStatus.errorReason} />
+            </div>
+
             <section>
               <h2 className="text-xs uppercase tracking-wider text-slate-600 dark:text-slate-400 font-bold mb-4">Content</h2>
               <InputPanel config={config} onChange={handleConfigChange} />
@@ -206,7 +237,7 @@ export default function QRTool({ initialConfig, title }: { initialConfig?: Parti
                 
                 <div ref={qrRef} className="flex justify-center mb-8">
                    {/* Pass debounced config to QRCanvas to prevent heavy rendering on every keystroke */}
-                   <QRCanvas config={debouncedConfig} className="w-full max-h-[60vh] object-contain rounded-lg shadow-sm" />
+                   <QRCanvas config={debouncedConfig} onScanResult={handleScanResult} className="w-full max-h-[60vh] object-contain rounded-lg shadow-sm" />
                 </div>
 
                 <div className="grid grid-cols-1 gap-3 w-full">
