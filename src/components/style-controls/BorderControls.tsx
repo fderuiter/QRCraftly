@@ -118,7 +118,7 @@ export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange
                     type="color"
                     value={config.borderTextColor || '#ffffff'}
                     onChange={(e) => onChange({ borderTextColor: e.target.value })}
-                    className="w-6 h-6 rounded cursor-pointer border-0 p-0 bg-transparent focus-visible:ring-2 focus-visible:ring-teal-500 focus:outline-none focus-visible:ring-offset-1 dark:focus-visible:ring-offset-slate-800"
+                    className="w-6 h-6 rounded cursor-pointer border-0 p-0 bg-transparent focus-visible:ring-2 focus-visible:ring-teal-500 focus:outline-none focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
                     title="Text Color"
                     aria-label="Border text color"
                   />
@@ -137,7 +137,7 @@ export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange
                 {config.borderLogoUrl && (
                   <button
                     onClick={() => { onChange({ borderLogoUrl: null }); setError(null); }}
-                    className="text-xs text-rose-600 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 rounded focus-visible:ring-offset-1 dark:focus-visible:ring-offset-slate-800"
+                    className="text-xs text-rose-600 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 rounded focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
                     aria-label="Remove border logo"
                   >
                     <X className="w-3 h-3" />
@@ -146,7 +146,7 @@ export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange
               </div>
               <button
                 onClick={() => borderLogoInputRef.current?.click()}
-                className="text-xs text-teal-600 dark:text-teal-400 hover:underline font-medium flex items-center gap-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 rounded focus-visible:ring-offset-1 dark:focus-visible:ring-offset-slate-800"
+                className="text-xs text-teal-600 dark:text-teal-400 hover:underline font-medium flex items-center gap-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 rounded focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
               >
                 <Upload className="w-3 h-3" />
                 {config.borderLogoUrl ? 'Change' : 'Add Logo'}
@@ -159,7 +159,7 @@ export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange
                 onChange={handleBorderLogoUpload}
               />
             </div>
-            {error && <div className="mt-1 text-xs text-rose-600 dark:text-rose-400">{error}</div>}
+            {error && <div role="alert" className="mt-1 text-xs text-rose-600 dark:text-rose-400">{error}</div>}
             {config.borderLogoUrl && (
               <div className="mt-2">
                 <select

@@ -78,13 +78,13 @@ export const ColorInput: React.FC<ColorInputProps> = ({
             type="color"
             value={value}
             onChange={(e) => onChange(e.target.value)}
-            className={`${sizeClass} rounded cursor-pointer border-0 p-0 bg-transparent focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-slate-900`}
+            className={`${sizeClass} rounded cursor-pointer border-0 p-0 bg-transparent focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900`}
           />
           <input
             type="text"
             value={textValue}
             onChange={handleTextChange}
-            className="text-xs text-slate-600 dark:text-slate-300 font-mono bg-transparent border border-transparent hover:border-slate-300 focus:border-teal-500 rounded px-1 py-0.5 w-24 outline-none transition-colors focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-slate-900"
+            className="text-xs text-slate-600 dark:text-slate-300 font-mono bg-transparent border border-transparent hover:border-slate-300 focus:border-teal-500 rounded px-1 py-0.5 w-24 outline-none transition-colors focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
             aria-label={`${label} Hex Code`}
           />
       </div>

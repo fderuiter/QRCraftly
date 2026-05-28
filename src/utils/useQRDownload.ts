@@ -16,7 +16,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { RefObject, useCallback } from 'react';
+import React, { RefObject, useCallback, useState } from 'react';
 import { QRConfig } from '../types';
 import { generateQRSvg } from './svgExport';
 
@@ -29,6 +29,8 @@ interface UseQRDownloadReturn {
   handleSaveSvg: () => Promise<void>;
   handleShare: () => Promise<void>;
   handleCopy: () => Promise<boolean>;
+  shareFallbackMessage: string | null;
+  clearShareFallback: () => void;
 }
 
 /**
@@ -43,6 +45,9 @@ export function useQRDownload(
   qrRef: RefObject<HTMLDivElement | null>,
   config: QRConfig
 ): UseQRDownloadReturn {
+  const [shareFallbackMessage, setShareFallbackMessage] = React.useState<string | null>(null);
+
+  const clearShareFallback = useCallback(() => setShareFallbackMessage(null), []);
 
   /**
    * Helper function to normalize file extensions.
@@ -177,7 +182,7 @@ export function useQRDownload(
           }
         } else {
           // Fallback for devices that don't support sharing files
-          alert("Sharing is not supported on this device/browser. The image will be downloaded instead.");
+          setShareFallbackMessage("Sharing is not supported on this device/browser. The image will be downloaded instead.");
           downloadToDevice('png');
         }
       }, 'image/png');
@@ -205,5 +210,5 @@ export function useQRDownload(
     }
   }, [config, getFilename]);
 
-  return { downloadToDevice, handleSaveAs, handleSaveSvg, handleShare, handleCopy };
+  return { downloadToDevice, handleSaveAs, handleSaveSvg, handleShare, handleCopy, shareFallbackMessage, clearShareFallback };
 }

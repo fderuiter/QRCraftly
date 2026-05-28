@@ -3,10 +3,14 @@ import { QRConfig } from '../../types';
 import { PATTERNS } from '../../constants';
 import { PatternModule } from '../ui/PatternModule';
 
+import { AlertTriangle } from 'lucide-react';
+
 interface PatternControlsProps {
   config: QRConfig;
   onChange: (updates: Partial<QRConfig>) => void;
 }
+
+const HIGH_RISK_PATTERNS = ['grunge', 'circuit', 'starburst'];
 
 export const PatternControls: React.FC<PatternControlsProps> = ({ config, onChange }) => {
   return (
@@ -38,6 +42,15 @@ export const PatternControls: React.FC<PatternControlsProps> = ({ config, onChan
           </button>
         ))}
       </div>
+      
+      {HIGH_RISK_PATTERNS.includes(config.style) && (
+        <div role="status" aria-live="polite" className="mt-4 flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-xl">
+          <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+          <p className="text-sm text-amber-700 dark:text-amber-400">
+            This pattern may be difficult for some mobile devices to scan. Ensure good contrast.
+          </p>
+        </div>
+      )}
     </div>
   );
 };

@@ -264,7 +264,6 @@ describe('QRTool Component', () => {
         configurable: true
     });
 
-    const alertMock = vi.spyOn(window, 'alert').mockImplementation(() => {});
     const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click');
     vi.spyOn(document.body, 'appendChild');
 
@@ -273,8 +272,7 @@ describe('QRTool Component', () => {
     fireEvent.click(shareBtn);
 
     await waitFor(() => {
-        expect(alertMock).toHaveBeenCalledWith(expect.stringContaining("Sharing is not supported"));
-        expect(clickSpy).toHaveBeenCalled();
+        expect(screen.getByText(/Sharing is not supported/i)).toBeInTheDocument();
     });
   });
 

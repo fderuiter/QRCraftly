@@ -16,7 +16,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { renderHook, waitFor } from '@testing-library/react';
+import { renderHook, waitFor, act } from '@testing-library/react';
 import { useQRDownload } from './useQRDownload';
 import { DEFAULT_CONFIG } from '../constants';
 import { QRConfig } from '../types';
@@ -242,12 +242,13 @@ describe('useQRDownload', () => {
     });
 
     const { result } = renderHook(() => useQRDownload(mockQrRef, DEFAULT_CONFIG as QRConfig));
-    const alertMock = vi.spyOn(window, 'alert').mockImplementation(() => {});
     const appendSpy = vi.spyOn(document.body, 'appendChild');
 
-    await result.current.handleShare();
+    await act(async () => {
+      await result.current.handleShare();
+    });
 
-    expect(alertMock).toHaveBeenCalled();
+    expect(result.current.shareFallbackMessage).toBe("Sharing is not supported on this device/browser. The image will be downloaded instead.");
     expect(appendSpy).toHaveBeenCalled();
   });
 

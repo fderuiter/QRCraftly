@@ -21,7 +21,7 @@ import { QRConfig } from '@/types';
 import { DEFAULT_CONFIG } from '@/constants';
 import InputPanel from '@/components/InputPanel';
 import QRCanvas from '@/components/QRCanvas';
-import { Download, Share2, QrCode, ChevronDown, Camera, Moon, Sun, Info, Copy, Check } from 'lucide-react';
+import { Download, Share2, QrCode, ChevronDown, Camera, Moon, Sun, Info, Copy, Check, X } from 'lucide-react';
 import { useDebounce, useOnClickOutside } from '@/utils/hooks';
 import { useQRDownload } from '@/utils/useQRDownload';
 
@@ -46,7 +46,7 @@ export default function QRTool({ initialConfig, title }: { initialConfig?: Parti
   const qrRef = useRef<HTMLDivElement>(null);
   const downloadMenuRef = useRef<HTMLDivElement>(null);
 
-  const { downloadToDevice: hookDownload, handleSaveAs: hookSaveAs, handleSaveSvg: hookSaveSvg, handleShare, handleCopy } = useQRDownload(qrRef, config);
+  const { downloadToDevice: hookDownload, handleSaveAs: hookSaveAs, handleSaveSvg: hookSaveSvg, handleShare, handleCopy, shareFallbackMessage, clearShareFallback } = useQRDownload(qrRef, config);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -207,6 +207,20 @@ export default function QRTool({ initialConfig, title }: { initialConfig?: Parti
                 </div>
 
                 <div className="grid grid-cols-1 gap-3 w-full">
+                   {shareFallbackMessage && (
+                     <div role="alert" className="flex items-start justify-between gap-2 p-3 bg-rose-50 dark:bg-rose-900/30 border border-rose-200 dark:border-rose-800 rounded-xl">
+                       <p className="text-sm text-rose-600 dark:text-rose-400 font-medium">
+                         {shareFallbackMessage}
+                       </p>
+                       <button
+                         onClick={clearShareFallback}
+                         className="p-1 text-rose-500 hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300 rounded-md hover:bg-rose-100 dark:hover:bg-rose-900/50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
+                         aria-label="Dismiss error message"
+                       >
+                         <X className="w-4 h-4" />
+                       </button>
+                     </div>
+                   )}
                    {/* Row 1: Download & Share */}
                    <div className="flex gap-2">
                        <div className="relative flex-1" ref={downloadMenuRef}>

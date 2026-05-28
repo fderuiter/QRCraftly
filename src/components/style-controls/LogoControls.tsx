@@ -23,7 +23,7 @@ export const LogoControls: React.FC<LogoControlsProps> = ({ config, onChange }) 
       <div className="flex justify-between items-center mb-3">
         <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Logo</h3>
         {config.logoUrl && (
-          <button onClick={() => { onChange({ logoUrl: null }); setError(null); }} className="text-xs text-rose-600 dark:text-rose-400 hover:underline flex items-center gap-1 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-slate-900">
+          <button onClick={() => { onChange({ logoUrl: null }); setError(null); }} className="text-xs text-rose-600 dark:text-rose-400 hover:underline flex items-center gap-1 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900">
             <X className="w-3 h-3"/> Remove
           </button>
         )}
@@ -40,7 +40,7 @@ export const LogoControls: React.FC<LogoControlsProps> = ({ config, onChange }) 
           </div>
           <span className="text-sm font-medium">Upload Logo</span>
           <span className="text-xs text-slate-600 dark:text-slate-400 mt-1">PNG, JPG (Square recommended)</span>
-          {error && <span className="text-xs text-rose-600 dark:text-rose-400 mt-2">{error}</span>}
+          {error && <span role="alert" className="text-xs text-rose-600 dark:text-rose-400 mt-2">{error}</span>}
         </button>
       ) : (
         <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700 space-y-5">
@@ -70,7 +70,7 @@ export const LogoControls: React.FC<LogoControlsProps> = ({ config, onChange }) 
                   onClick={() => onChange({ logoPaddingStyle: style.id as LogoPaddingStyle })}
                   aria-pressed={config.logoPaddingStyle === style.id}
                   aria-label={`Set logo border style to ${style.label}`}
-                  className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-medium transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-slate-800 ${
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-medium transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 ${
                     config.logoPaddingStyle === style.id
                       ? 'bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-400'
                       : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'

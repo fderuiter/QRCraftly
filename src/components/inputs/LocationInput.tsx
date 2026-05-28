@@ -82,12 +82,12 @@ export const LocationInput: React.FC<LocationInputProps> = ({
         onClick={handleGetCurrentLocation}
         disabled={isLoading}
         aria-busy={isLoading}
-        className="w-full px-3 py-2 text-xs font-medium text-teal-700 dark:text-teal-400 border border-teal-300 dark:border-teal-700 rounded-lg hover:bg-teal-50 dark:hover:bg-teal-900/20 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full px-3 py-2 text-xs font-medium text-teal-700 dark:text-teal-400 border border-teal-300 dark:border-teal-700 rounded-lg hover:bg-teal-50 dark:hover:bg-teal-900/20 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {isLoading ? "Fetching location…" : "Use Current Location"}
       </button>
       {geoError && (
-        <p role="alert" className="text-xs text-red-600 dark:text-red-400">
+        <p role="alert" className="text-xs text-rose-600 dark:text-rose-400">
           {geoError}
         </p>
       )}
