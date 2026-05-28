@@ -17,7 +17,6 @@
 */
 
 import QRTool from '@/components/QRTool';
-import { SEOContent } from '@/components/SEOContent';
 import { DEFAULT_CONFIG } from '@/constants';
 import { QRType } from '@/types';
 import { toolMetadata } from '@/data/metadata';
@@ -42,8 +41,7 @@ export default function Page() {
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(schemaData) }} />
-      <QRTool initialConfig={wifiConfig} title="WiFi QR Code" />
-      <SEOContent schemaData={schemaData} />
-    </>
+      <QRTool initialConfig={wifiConfig} title="WiFi QR Code"  toolId="wifi-qr-code" />
+          </>
   );
 }

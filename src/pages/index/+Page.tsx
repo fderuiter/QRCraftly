@@ -17,7 +17,6 @@
 */
 
 import QRTool from '@/components/QRTool';
-import { SEOContent } from '@/components/SEOContent';
 import { safeJsonLdStringify } from '@/utils/security';
 import { toolMetadata } from '@/data/metadata';
 
@@ -35,8 +34,7 @@ export default function Page() {
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(schemaData) }} />
-      <QRTool />
-      <SEOContent schemaData={schemaData} />
-    </>
+      <QRTool toolId="index" />
+          </>
   );
 }

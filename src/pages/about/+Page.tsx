@@ -20,7 +20,7 @@
 import { Github, Shield, Database, Code, ArrowLeft, Zap, Wifi, Coffee } from 'lucide-react';
 import { safeJsonLdStringify } from '@/utils/security';
 import { toolMetadata } from '@/data/metadata';
-import { SEOContent } from '@/components/SEOContent';
+import { SidebarContent } from '@/components/SidebarContent';
 
 /**
  * About Page Component
@@ -140,7 +140,7 @@ export default function Page() {
         </div>
       </section>
 
-      <section className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-8 border border-slate-200 dark:border-slate-700 text-center">
+      <section className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-8 border border-slate-200 dark:border-slate-700 text-center mb-12">
         <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-4">
           Open Source License
         </h2>
@@ -159,7 +159,9 @@ export default function Page() {
         </a>
       </section>
 
-      <SEOContent schemaData={schemaData} />
+      <div className="max-w-3xl mx-auto">
+        <SidebarContent toolId="about" />
+      </div>
     </div>
   );
 }

@@ -26,5 +26,5 @@ import { toolMetadata } from '@/data/metadata';
 export default function Page() {
   const schemaData = toolMetadata['text-qr-code'];
 
-  return <QRTypePage type={QRType.TEXT} title="Text QR Code" schemaData={schemaData} />;
+  return <QRTypePage type={QRType.TEXT} title="Text QR Code" schemaData={schemaData}  toolId="text-qr-code" />;
 }
