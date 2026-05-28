@@ -37,14 +37,9 @@ export const escapeWifiString = (str: string | undefined): string => {
  */
 export const constructWifiString = (data: WifiData): string => {
   // Validate encryption type to prevent injection
-  const encryption = Object.values(WifiEncryption).includes(data.encryption)
-    ? data.encryption
-    : WifiEncryption.WPA;
+  const encryption = Object.values(WifiEncryption).includes(data.encryption) ? data.encryption : WifiEncryption.WPA;
 
-  const parts = [
-    `T:${encryption}`,
-    `S:${escapeWifiString(data.ssid)}`,
-  ];
+  const parts = [`T:${encryption}`, `S:${escapeWifiString(data.ssid)}`];
 
   if (encryption === WifiEncryption.WPA2_EAP) {
     parts.push(`I:${escapeWifiString(data.eapIdentity)}`);

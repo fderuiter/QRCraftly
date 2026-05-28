@@ -29,12 +29,10 @@ export const AdvancedControls: React.FC<AdvancedControlsProps> = ({ config, onCh
       {showAdvanced && (
         <div className="mt-4 space-y-4" id="advanced-settings-panel">
           <div>
-            <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-2">Error Correction Level</label>
-            <div
-              className="grid grid-cols-2 gap-2"
-              role="group"
-              aria-label="Error Correction Level"
-            >
+            <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-2">
+              Error Correction Level
+            </label>
+            <div className="grid grid-cols-2 gap-2" role="group" aria-label="Error Correction Level">
               {[
                 { id: QRErrorCorrectionLevel.L, label: 'Low (~7%)', desc: 'Best for screens' },
                 { id: QRErrorCorrectionLevel.M, label: 'Medium (~15%)', desc: 'Standard' },
@@ -53,11 +51,11 @@ export const AdvancedControls: React.FC<AdvancedControlsProps> = ({ config, onCh
                   }`}
                 >
                   <div className="flex items-center gap-2">
-                    <div className={`w-3 h-3 rounded-full border ${
-                      config.errorCorrectionLevel === level.id
-                        ? 'border-teal-600 bg-teal-600'
-                        : 'border-slate-400'
-                    }`}></div>
+                    <div
+                      className={`w-3 h-3 rounded-full border ${
+                        config.errorCorrectionLevel === level.id ? 'border-teal-600 bg-teal-600' : 'border-slate-400'
+                      }`}
+                    ></div>
                     <span className="text-xs font-medium">{level.label}</span>
                   </div>
                   <span className="text-[10px] text-slate-500 dark:text-slate-400 pl-5 block mt-0.5">{level.desc}</span>
@@ -65,7 +63,8 @@ export const AdvancedControls: React.FC<AdvancedControlsProps> = ({ config, onCh
               ))}
             </div>
             <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-2">
-              Higher levels allow the QR code to be scanned even if damaged or covered (e.g., by a logo), but result in a denser code.
+              Higher levels allow the QR code to be scanned even if damaged or covered (e.g., by a logo), but result in
+              a denser code.
             </p>
           </div>
         </div>

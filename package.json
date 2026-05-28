@@ -23,7 +23,10 @@
     "preview": "vite preview",
     "test": "vitest",
     "test:e2e": "playwright test",
-    "lint": "tsc --noEmit"
+    "lint": "eslint . && tsc --noEmit",
+    "prepare": "husky",
+    "format:check": "prettier --check .",
+    "format": "prettier --write ."
   },
   "dependencies": {
     "cross-env": "^10.1.0",
@@ -40,6 +43,7 @@
     ]
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.59.1",
     "@tailwindcss/postcss": "^4.1.17",
     "@testing-library/jest-dom": "^6.9.1",
@@ -54,13 +58,33 @@
     "@vitest/coverage-v8": "^4.0.15",
     "autoprefixer": "^10.4.22",
     "canvas": "^3.2.0",
+    "eslint": "^10.4.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.2",
+    "eslint-plugin-testing-library": "^7.16.2",
+    "globals": "^17.6.0",
+    "husky": "^9.1.7",
     "jsdom": "^27.2.0",
     "jsqr": "^1.4.0",
+    "lint-staged": "^17.0.5",
     "postcss": "^8.5.6",
+    "prettier": "^3.8.3",
     "tailwindcss": "^4.1.17",
     "typescript": "~5.8.2",
+    "typescript-eslint": "^8.60.0",
     "vite": "^6.4.2",
     "vitest": "^4.0.15",
     "wrangler": "^4.59.1"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,css}": [
+      "prettier --write"
+    ]
   }
 }

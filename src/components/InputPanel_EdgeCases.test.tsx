@@ -49,10 +49,14 @@ describe('InputPanel Edge Cases', () => {
     const trickyPass = 'P@ssw,or;d\\';
 
     fireEvent.change(ssidInput, { target: { value: trickySSID } });
-    act(() => { vi.advanceTimersByTime(100); });
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
 
     fireEvent.change(passwordInput, { target: { value: trickyPass } });
-    act(() => { vi.advanceTimersByTime(100); });
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
 
     // Expect backslashes before special chars
     // SSID: My "Special" WiFi;\: -> My \"Special\" WiFi\;\\\:
@@ -75,7 +79,9 @@ describe('InputPanel Edge Cases', () => {
 
     // Input with spaces, colons (which should be stripped)
     fireEvent.change(phoneInput, { target: { value: '+1 555 : 123 456' } });
-    act(() => { vi.advanceTimersByTime(100); });
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
 
     // Should result in clean number
     expect(mockOnChange).toHaveBeenCalledWith({ value: 'tel:+1555123456' });
@@ -88,7 +94,9 @@ describe('InputPanel Edge Cases', () => {
 
     // Input with only stripped characters
     fireEvent.change(phoneInput, { target: { value: ' : ' } });
-    act(() => { vi.advanceTimersByTime(100); });
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
 
     // Should result in empty tel: prefix
     expect(mockOnChange).toHaveBeenCalledWith({ value: 'tel:' });
@@ -101,10 +109,14 @@ describe('InputPanel Edge Cases', () => {
     const msgInput = screen.getByLabelText('Pre-filled Message');
 
     fireEvent.change(phoneInput, { target: { value: '123' } });
-    act(() => { vi.advanceTimersByTime(100); });
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
 
     fireEvent.change(msgInput, { target: { value: 'Time: 12:30 PM' } });
-    act(() => { vi.advanceTimersByTime(100); });
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
 
     // Format: sms:number?body=encodedMessage
     expect(mockOnChange).toHaveBeenLastCalledWith({ value: 'sms:123?body=Time%3A%2012%3A30%20PM' });
@@ -116,13 +128,17 @@ describe('InputPanel Edge Cases', () => {
     // Switch to WPA2-EAP
     const encryptionSelect = screen.getByLabelText('Encryption');
     fireEvent.change(encryptionSelect, { target: { value: 'WPA2-EAP' } });
-    act(() => { vi.advanceTimersByTime(100); });
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
 
     const identityInput = screen.getByLabelText('Identity / Username');
 
     const trickyIdentity = 'domain\\user;name';
     fireEvent.change(identityInput, { target: { value: trickyIdentity } });
-    act(() => { vi.advanceTimersByTime(100); });
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
 
     const expectedIdentity = 'domain\\\\user\\;name';
 

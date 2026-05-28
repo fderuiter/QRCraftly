@@ -16,7 +16,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-
 import { render, waitFor } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach, afterEach, Mock } from 'vitest';
 import QRCanvas from './QRCanvas';
@@ -108,39 +107,45 @@ describe('QRCanvas Circuit Style Eye Bracket Bug', () => {
   });
 
   it('verifies that the bracket cuts in Circuit style are deep enough (fixed)', async () => {
-     const config = { ...DEFAULT_CONFIG, style: QRStyle.CIRCUIT, value: 'test', eyeColor: '#000000', bgColor: '#ffffff' };
-     const size = 100;
-     render(<QRCanvas config={config} size={size} />);
+    const config = {
+      ...DEFAULT_CONFIG,
+      style: QRStyle.CIRCUIT,
+      value: 'test',
+      eyeColor: '#000000',
+      bgColor: '#ffffff',
+    };
+    const size = 100;
+    render(<QRCanvas config={config} size={size} />);
 
-     await waitFor(() => {
-        expect(QRCode.create).toHaveBeenCalled();
-     });
+    await waitFor(() => {
+      expect(QRCode.create).toHaveBeenCalled();
+    });
 
-     const moduleCount = 21;
-     const displaySize = size; // 100
-     const cellSize = displaySize / moduleCount;
+    const moduleCount = 21;
+    const displaySize = size; // 100
+    const cellSize = displaySize / moduleCount;
 
-     // The implementation draws the cuts using fillRect with bgColor
-     // We are looking for the calls to fillRect that make the cuts
-     // The fix sets depth to cellSize * 1.1
+    // The implementation draws the cuts using fillRect with bgColor
+    // We are looking for the calls to fillRect that make the cuts
+    // The fix sets depth to cellSize * 1.1
 
-     // Top cut: ctx.fillRect(cx - gap/2, y, gap, cellSize * 1.1);
+    // Top cut: ctx.fillRect(cx - gap/2, y, gap, cellSize * 1.1);
 
-     const calls = mockContext.fillRect.mock.calls;
+    const calls = mockContext.fillRect.mock.calls;
 
-     // Look for the Top Cut
-     // It should have height = cellSize * 1.1
-     const topCutCall = calls.find((args: any[]) => {
-         const [_dx, _dy, _dw, dh] = args;
-         // Check dimensions
-         const heightMatch = Math.abs(dh - (cellSize * 1.1)) < 0.01;
-         return heightMatch;
-     });
+    // Look for the Top Cut
+    // It should have height = cellSize * 1.1
+    const topCutCall = calls.find((args: any[]) => {
+      const [_dx, _dy, _dw, dh] = args;
+      // Check dimensions
+      const heightMatch = Math.abs(dh - cellSize * 1.1) < 0.01;
+      return heightMatch;
+    });
 
-     // Expect to find the cut call
-     expect(topCutCall).toBeDefined();
+    // Expect to find the cut call
+    expect(topCutCall).toBeDefined();
 
-     // Confirm the depth is correct
-     expect(topCutCall[3]).toBeCloseTo(cellSize * 1.1, 0.001);
+    // Confirm the depth is correct
+    expect(topCutCall[3]).toBeCloseTo(cellSize * 1.1, 0.001);
   });
 });

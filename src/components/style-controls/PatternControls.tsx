@@ -12,11 +12,7 @@ export const PatternControls: React.FC<PatternControlsProps> = ({ config, onChan
   return (
     <div>
       <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">Pattern Style</h3>
-      <div
-        className="grid grid-cols-4 gap-3"
-        role="group"
-        aria-label="Pattern Style"
-      >
+      <div className="grid grid-cols-4 gap-3" role="group" aria-label="Pattern Style">
         {PATTERNS.map((pattern) => (
           <button
             key={pattern.id}

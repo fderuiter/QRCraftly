@@ -16,7 +16,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-
 /**
  * Defines the visual style of the QR code.
  * Each style dictates the data modules, eye frame, and eyeball appearance.

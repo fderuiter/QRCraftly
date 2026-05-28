@@ -18,7 +18,7 @@ export const ColorInput: React.FC<ColorInputProps> = ({
   value,
   onChange,
   displayValue,
-  sizeClass = "w-10 h-10"
+  sizeClass = 'w-10 h-10',
 }) => {
   const [textValue, setTextValue] = useState(displayValue || value);
   const textValueRef = useRef(textValue);
@@ -35,7 +35,10 @@ export const ColorInput: React.FC<ColorInputProps> = ({
       if (!match) return null;
       let hex = match[1];
       if (hex.length === 3) {
-        hex = hex.split('').map(c => c + c).join('');
+        hex = hex
+          .split('')
+          .map((c) => c + c)
+          .join('');
       }
       return '#' + hex.toLowerCase();
     };
@@ -61,7 +64,10 @@ export const ColorInput: React.FC<ColorInputProps> = ({
     if (hexMatch) {
       let hex = hexMatch[1];
       if (hex.length === 3) {
-        hex = hex.split('').map(c => c + c).join('');
+        hex = hex
+          .split('')
+          .map((c) => c + c)
+          .join('');
       }
       onChange('#' + hex);
     }
@@ -73,20 +79,20 @@ export const ColorInput: React.FC<ColorInputProps> = ({
         {label}
       </label>
       <div className="flex items-center gap-2">
-          <input
-            id={id}
-            type="color"
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            className={`${sizeClass} rounded cursor-pointer border-0 p-0 bg-transparent focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-slate-900`}
-          />
-          <input
-            type="text"
-            value={textValue}
-            onChange={handleTextChange}
-            className="text-xs text-slate-600 dark:text-slate-300 font-mono bg-transparent border border-transparent hover:border-slate-300 focus:border-teal-500 rounded px-1 py-0.5 w-24 outline-none transition-colors focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-slate-900"
-            aria-label={`${label} Hex Code`}
-          />
+        <input
+          id={id}
+          type="color"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className={`${sizeClass} rounded cursor-pointer border-0 p-0 bg-transparent focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-slate-900`}
+        />
+        <input
+          type="text"
+          value={textValue}
+          onChange={handleTextChange}
+          className="text-xs text-slate-600 dark:text-slate-300 font-mono bg-transparent border border-transparent hover:border-slate-300 focus:border-teal-500 rounded px-1 py-0.5 w-24 outline-none transition-colors focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-slate-900"
+          aria-label={`${label} Hex Code`}
+        />
       </div>
     </div>
   );

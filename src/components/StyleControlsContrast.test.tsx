@@ -16,7 +16,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import StyleControls from './StyleControls';

@@ -1,6 +1,6 @@
-import React from "react";
-import { VCardData } from "../../types";
-import { TextField } from "./FormFields";
+import React from 'react';
+import { VCardData } from '../../types';
+import { TextField } from './FormFields';
 
 interface VCardInputProps {
   data: VCardData;
@@ -96,9 +96,7 @@ export const VCardInput: React.FC<VCardInputProps> = ({ data, onChange }) => {
       />
 
       <fieldset className="pt-2 border-t border-slate-100 dark:border-slate-800 min-w-0">
-        <legend className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-2 w-full">
-          Address
-        </legend>
+        <legend className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-2 w-full">Address</legend>
         <div className="space-y-3">
           <TextField
             id="vcard-street"

@@ -10,20 +10,20 @@
 
 - **Multiple Data Types**: Generate QR codes for URLs, plain text, WiFi networks (WPA/WEP/EAP/Open), Email, vCard contacts, Phone numbers, SMS, and Cryptocurrency payments.
 - **Visual Customization**:
-    - **Patterns**: Choose from Classic Squares, Modern Dots, Rounded, Diamond, Swiss Cross, Star, and Heart styles.
-    - **Colors**: Customize foreground, background, and corner eye colors. Includes accessibility-checked preset themes.
-    - **Logos**: Upload and embed custom logos with configurable padding, sizes, and border styles (Square, Circle, None).
+  - **Patterns**: Choose from Classic Squares, Modern Dots, Rounded, Diamond, Swiss Cross, Star, and Heart styles.
+  - **Colors**: Customize foreground, background, and corner eye colors. Includes accessibility-checked preset themes.
+  - **Logos**: Upload and embed custom logos with configurable padding, sizes, and border styles (Square, Circle, None).
 - **Privacy First**: Zero Knowledge architecture. All data processing happens in your browser; no user data is sent to a server.
 - **Live Preview**: See your changes instantly as you edit.
 - **Download & Share**:
-    - Save as high-quality PNG, JPEG, or WebP.
-    - Native "Save As" support via File System Access API.
-    - Web Share API integration for mobile sharing.
+  - Save as high-quality PNG, JPEG, or WebP.
+  - Native "Save As" support via File System Access API.
+  - Web Share API integration for mobile sharing.
 - **Accessibility**:
-    - WCAG contrast checks for generated codes.
-    - Fully accessible UI with keyboard navigation and screen reader support.
+  - WCAG contrast checks for generated codes.
+  - Fully accessible UI with keyboard navigation and screen reader support.
 - **Compliance**:
-    - Privacy-first architecture aligned with [HIPAA Technical Safeguards](COMPLIANCE.md).
+  - Privacy-first architecture aligned with [HIPAA Technical Safeguards](COMPLIANCE.md).
 - **Dark Mode**: Fully supported dark mode interface.
 - **Responsive Design**: Works seamlessly on desktop and mobile devices.
 
@@ -44,20 +44,22 @@ Ensure you have the following installed on your machine:
 
 This project uses `node-canvas` for testing (via JSDOM). Because `pnpm install` installs development dependencies by default, **you must install these system libraries before running `pnpm install`** or the installation will fail.
 
-*   **Ubuntu/Debian:**
-    ```bash
-    sudo apt-get update
-    sudo apt-get install build-essential libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev
-    ```
+- **Ubuntu/Debian:**
 
-*   **macOS:**
-    ```bash
-    brew install pkg-config cairo pango libpng jpeg giflib librsvg
-    ```
+  ```bash
+  sudo apt-get update
+  sudo apt-get install build-essential libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev
+  ```
+
+- **macOS:**
+  ```bash
+  brew install pkg-config cairo pango libpng jpeg giflib librsvg
+  ```
 
 ### Installation
 
 1.  **Clone the repository:**
+
     ```bash
     git clone https://github.com/fderuiter/QRCraftly.git
     cd QRCraftly
@@ -103,6 +105,7 @@ pnpm test
 ```
 
 To run coverage reports:
+
 ```bash
 pnpm test -- run --coverage
 ```
@@ -110,6 +113,7 @@ pnpm test -- run --coverage
 To run End-to-End (E2E) tests (Playwright):
 
 Note: On a fresh environment, you must install the required browsers first.
+
 ```bash
 pnpm exec playwright install
 pnpm test:e2e
@@ -121,17 +125,20 @@ This project enforces strict quality checks in CI. Run these locally to prevent 
 
 **Type Checking:**
 (Runs TypeScript compiler to catch type errors)
+
 ```bash
 pnpm lint
 ```
 
 **Accessibility & Contrast Check:**
+
 ```bash
 python3 scripts/contrast_check.py
 ```
 
 **Bundle Size Check:**
 The build pipeline enforces a 3MB limit on the client bundle.
+
 ```bash
 pnpm build
 # Check size of dist/client directory
@@ -141,6 +148,18 @@ du -sh dist/client
 **Performance & SEO:**
 Lighthouse CI runs on every Pull Request to audit performance, accessibility, best practices, and SEO.
 
+### Strict Code Health Guidelines
+
+This project enforces high-fidelity strict mode guidelines to ensure code quality and prevent technical debt:
+
+- **Zero 'any' Types**: The use of `any` is strictly prohibited in production code. If you encounter an interface definition problem, define a proper TypeScript interface or use `unknown` and perform runtime type narrowing.
+  - _Fix_: Replace `(data: any)` with `(data: unknown)` and check the type before using it: `if (typeof data === 'string') ...`
+- **Zero Production Console Logs**: Diagnostic statements like `console.log` are blocked.
+  - _Fix_: Remove redundant logs or replace them with structured error reporting like `console.error()` or `console.warn()` for genuine error handling.
+- **Consistent Formatting**: We use a unified formatting standard enforced by Prettier.
+  - _Fix_: If local commits fail, run `pnpm format` or configure your editor to run Prettier "on save" to automatically fix quote usage (single quotes) and spacing issues.
+- **No Bypass**: Please do not use `--no-verify` flags. All code must pass local Husky hooks (ESLint and Prettier checks) before reaching CI pipelines.
+
 ## Troubleshooting
 
 ### `pnpm install` fails with `gyp ERR!` or `Package cairo was not found`
@@ -148,6 +167,7 @@ Lighthouse CI runs on every Pull Request to audit performance, accessibility, be
 This usually happens because `node-canvas` (a development dependency used for testing) requires system-level libraries to be installed.
 
 **Solution:**
+
 1. Install the system dependencies listed in the [Prerequisites](#prerequisites) section for your operating system.
 2. Run `pnpm install` again.
 
@@ -165,7 +185,7 @@ pnpm install --prod
     - Scroll down to the "Appearance" section.
     - Select a **Pattern Style**.
     - Choose a **Color Preset** or manually adjust the Foreground, Background, and Eye colors.
-    - *Tip*: Watch out for the "Low Contrast" warning to ensure your QR code is scannable.
+    - _Tip_: Watch out for the "Low Contrast" warning to ensure your QR code is scannable.
 4.  **Add a Logo (Optional)**:
     - Click "Upload Logo" to add an image to the center of the QR code.
     - Adjust the logo size, border style, and padding.
@@ -177,25 +197,25 @@ pnpm install --prod
 ## Project Structure
 
 - `src/`: Source code.
-    - `components/`: Reusable React components.
-        - `InputPanel.tsx`: Main controller for data input; orchestrates sub-components.
-        - `inputs/`: Modular input components for each QR type (e.g., `WifiInput`, `VCardInput`).
-        - `StyleControls.tsx`: UI for customizing colors, patterns, and logos.
-        - `QRCanvas.tsx`: The core component that renders the QR code using HTML5 Canvas.
-        - `QRTool.tsx`: The main container component that integrates inputs, controls, and canvas.
-    - `layouts/`: Application layouts.
-        - `LayoutDefault.tsx`: The main layout wrapper.
-        - `Head.tsx`: Manages document head elements.
-    - `pages/`: Page-level components (Vike routing).
-        - `index/+Page.tsx`: The home page.
-        - `about/+Page.tsx`: The about page.
-        - `wifi-qr-code/+Page.tsx`: Specialized WiFi QR code page.
-        - `+config.ts`: Global Vike configuration.
-    - `types.ts`: TypeScript definitions for application state and data structures.
-    - `constants.ts`: Default configurations and preset data.
+  - `components/`: Reusable React components.
+    - `InputPanel.tsx`: Main controller for data input; orchestrates sub-components.
+    - `inputs/`: Modular input components for each QR type (e.g., `WifiInput`, `VCardInput`).
+    - `StyleControls.tsx`: UI for customizing colors, patterns, and logos.
+    - `QRCanvas.tsx`: The core component that renders the QR code using HTML5 Canvas.
+    - `QRTool.tsx`: The main container component that integrates inputs, controls, and canvas.
+  - `layouts/`: Application layouts.
+    - `LayoutDefault.tsx`: The main layout wrapper.
+    - `Head.tsx`: Manages document head elements.
+  - `pages/`: Page-level components (Vike routing).
+    - `index/+Page.tsx`: The home page.
+    - `about/+Page.tsx`: The about page.
+    - `wifi-qr-code/+Page.tsx`: Specialized WiFi QR code page.
+    - `+config.ts`: Global Vike configuration.
+  - `types.ts`: TypeScript definitions for application state and data structures.
+  - `constants.ts`: Default configurations and preset data.
 - `scripts/`: Utility scripts (Python).
-    - `contrast_check.py`: Checks WCAG contrast compliance for UI elements.
-    - `optimize_assets.py`: Optimizes static image assets (requires `pip install -r scripts/requirements.txt`).
+  - `contrast_check.py`: Checks WCAG contrast compliance for UI elements.
+  - `optimize_assets.py`: Optimizes static image assets (requires `pip install -r scripts/requirements.txt`).
 - `public/`: Static assets (favicon, etc.).
 
 ## Technologies Used

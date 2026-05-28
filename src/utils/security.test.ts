@@ -98,84 +98,84 @@ describe('Security Utils', () => {
     });
 
     it('escapes <, >, and & characters', () => {
-        const data = {
-            malicious: '<script>alert("xss")</script> & more'
-        };
-        const result = safeJsonLdStringify(data);
-        expect(result).toContain('\\u003cscript\\u003ealert(\\"xss\\")\\u003c/script\\u003e');
-        expect(result).toContain('\\u0026');
-        expect(result).not.toContain('<');
-        expect(result).not.toContain('>');
-        expect(result).not.toContain('&');
+      const data = {
+        malicious: '<script>alert("xss")</script> & more',
+      };
+      const result = safeJsonLdStringify(data);
+      expect(result).toContain('\\u003cscript\\u003ealert(\\"xss\\")\\u003c/script\\u003e');
+      expect(result).toContain('\\u0026');
+      expect(result).not.toContain('<');
+      expect(result).not.toContain('>');
+      expect(result).not.toContain('&');
     });
   });
 
   describe('cleanPhoneNumber', () => {
-      it('removes spaces and colons', () => {
-          expect(cleanPhoneNumber('123 456:789')).toBe('123456789');
-      });
+    it('removes spaces and colons', () => {
+      expect(cleanPhoneNumber('123 456:789')).toBe('123456789');
+    });
 
-      it('removes URI control characters and non-whitelisted chars', () => {
-          expect(cleanPhoneNumber('123?body=hacked')).toBe('123');
-          expect(cleanPhoneNumber('123&foo=bar')).toBe('123');
-      });
+    it('removes URI control characters and non-whitelisted chars', () => {
+      expect(cleanPhoneNumber('123?body=hacked')).toBe('123');
+      expect(cleanPhoneNumber('123&foo=bar')).toBe('123');
+    });
 
-      it('enforces strict whitelist', () => {
-         expect(cleanPhoneNumber('1-800-ABC-DEFG')).toBe('1-800--'); // Letters removed
-         expect(cleanPhoneNumber('+1 (555) 123-4567')).toBe('+1(555)123-4567');
-         expect(cleanPhoneNumber('<script>alert(1)</script>')).toBe('(1)');
-         expect(cleanPhoneNumber('123#*')).toBe('123#*');
-      });
+    it('enforces strict whitelist', () => {
+      expect(cleanPhoneNumber('1-800-ABC-DEFG')).toBe('1-800--'); // Letters removed
+      expect(cleanPhoneNumber('+1 (555) 123-4567')).toBe('+1(555)123-4567');
+      expect(cleanPhoneNumber('<script>alert(1)</script>')).toBe('(1)');
+      expect(cleanPhoneNumber('123#*')).toBe('123#*');
+    });
   });
 
   describe('sanitizeInput', () => {
-      it('strips query parameters', () => {
-          expect(sanitizeInput('test@example.com?foo=bar')).toBe('test@example.com');
-          expect(sanitizeInput('bitcoin:addr?amount=1')).toBe('bitcoin:addr');
-      });
+    it('strips query parameters', () => {
+      expect(sanitizeInput('test@example.com?foo=bar')).toBe('test@example.com');
+      expect(sanitizeInput('bitcoin:addr?amount=1')).toBe('bitcoin:addr');
+    });
 
-      it('returns original string if no query parameters', () => {
-          expect(sanitizeInput('test@example.com')).toBe('test@example.com');
-      });
+    it('returns original string if no query parameters', () => {
+      expect(sanitizeInput('test@example.com')).toBe('test@example.com');
+    });
 
-      it('returns empty string if input is empty', () => {
-          expect(sanitizeInput('')).toBe('');
-      });
+    it('returns empty string if input is empty', () => {
+      expect(sanitizeInput('')).toBe('');
+    });
   });
 });
 
-  describe('validateImageUpload', () => {
-      it('returns null for valid file types and sizes', () => {
-          const validPng = new File([''], 'test.png', { type: 'image/png' });
-          expect(validateImageUpload(validPng)).toBeNull();
+describe('validateImageUpload', () => {
+  it('returns null for valid file types and sizes', () => {
+    const validPng = new File([''], 'test.png', { type: 'image/png' });
+    expect(validateImageUpload(validPng)).toBeNull();
 
-          const validJpeg = new File([''], 'test.jpg', { type: 'image/jpeg' });
-          expect(validateImageUpload(validJpeg)).toBeNull();
+    const validJpeg = new File([''], 'test.jpg', { type: 'image/jpeg' });
+    expect(validateImageUpload(validJpeg)).toBeNull();
 
-          const validWebp = new File([''], 'test.webp', { type: 'image/webp' });
-          expect(validateImageUpload(validWebp)).toBeNull();
+    const validWebp = new File([''], 'test.webp', { type: 'image/webp' });
+    expect(validateImageUpload(validWebp)).toBeNull();
 
-          const validSvg = new File(['<svg></svg>'], 'test.svg', { type: 'image/svg+xml' });
-          expect(validateImageUpload(validSvg)).toBeNull();
-      });
-
-      it('returns error for unsupported file types', () => {
-          const invalidGif = new File([''], 'test.gif', { type: 'image/gif' });
-          expect(validateImageUpload(invalidGif)).toBe('Invalid file type. Only JPEG, PNG, WebP, and SVG are allowed.');
-
-          const invalidTxt = new File(['text'], 'test.txt', { type: 'text/plain' });
-          expect(validateImageUpload(invalidTxt)).toBe('Invalid file type. Only JPEG, PNG, WebP, and SVG are allowed.');
-      });
-
-      it('returns error for files larger than 2MB', () => {
-          const largeFile = new File([''], 'large.png', { type: 'image/png' });
-          Object.defineProperty(largeFile, 'size', { value: 2 * 1024 * 1024 + 1 });
-          expect(validateImageUpload(largeFile)).toBe('File size exceeds the 2MB limit.');
-      });
-
-      it('returns null for files exactly 2MB', () => {
-          const borderFile = new File([''], 'border.png', { type: 'image/png' });
-          Object.defineProperty(borderFile, 'size', { value: 2 * 1024 * 1024 });
-          expect(validateImageUpload(borderFile)).toBeNull();
-      });
+    const validSvg = new File(['<svg></svg>'], 'test.svg', { type: 'image/svg+xml' });
+    expect(validateImageUpload(validSvg)).toBeNull();
   });
+
+  it('returns error for unsupported file types', () => {
+    const invalidGif = new File([''], 'test.gif', { type: 'image/gif' });
+    expect(validateImageUpload(invalidGif)).toBe('Invalid file type. Only JPEG, PNG, WebP, and SVG are allowed.');
+
+    const invalidTxt = new File(['text'], 'test.txt', { type: 'text/plain' });
+    expect(validateImageUpload(invalidTxt)).toBe('Invalid file type. Only JPEG, PNG, WebP, and SVG are allowed.');
+  });
+
+  it('returns error for files larger than 2MB', () => {
+    const largeFile = new File([''], 'large.png', { type: 'image/png' });
+    Object.defineProperty(largeFile, 'size', { value: 2 * 1024 * 1024 + 1 });
+    expect(validateImageUpload(largeFile)).toBe('File size exceeds the 2MB limit.');
+  });
+
+  it('returns null for files exactly 2MB', () => {
+    const borderFile = new File([''], 'border.png', { type: 'image/png' });
+    Object.defineProperty(borderFile, 'size', { value: 2 * 1024 * 1024 });
+    expect(validateImageUpload(borderFile)).toBeNull();
+  });
+});

@@ -25,15 +25,15 @@ export const normalizeUrl = (url: string | undefined): string => {
   try {
     // 1. Try parsing as is (absolute URL)
     return new URL(url).href;
-  } catch (e) {
+  } catch (_e) {
     try {
       // 2. Try adding http:// (domain/path only)
       return new URL(`http://${url}`).href;
-    } catch (e2) {
+    } catch (_e2) {
       // 3. Fallback: encodeURI (handles spaces but not protocol)
       try {
         return encodeURI(url);
-      } catch (e3) {
+      } catch (_e3) {
         // 4. Absolute fallback
         return url;
       }

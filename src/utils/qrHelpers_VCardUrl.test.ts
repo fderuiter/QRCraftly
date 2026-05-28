@@ -1,4 +1,3 @@
-
 import { describe, it, expect } from 'vitest';
 import { constructVCardString } from './qrHelpers';
 import { VCardData } from '../types';
@@ -14,7 +13,7 @@ describe('VCard URL Normalization', () => {
     website: '',
     street: '',
     city: '',
-    country: ''
+    country: '',
   };
 
   it('should handle URL with spaces correctly (encode them)', () => {

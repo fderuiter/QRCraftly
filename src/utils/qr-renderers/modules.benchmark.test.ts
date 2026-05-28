@@ -17,12 +17,12 @@ describe('Performance Benchmark: renderModules', () => {
       logoSize: 0.2,
       logoPadding: 1,
       logoPaddingStyle: 'circle',
-      errorCorrectionLevel: QRErrorCorrectionLevel.H
+      errorCorrectionLevel: QRErrorCorrectionLevel.H,
     };
 
     const modules = {
       size: moduleCount,
-      get: (r: number, c: number) => (r + c) % 2 === 0
+      get: (r: number, c: number) => (r + c) % 2 === 0,
     };
 
     const logoMetrics = getLogoMetrics(config, moduleCount, cellSize);
@@ -37,7 +37,7 @@ describe('Performance Benchmark: renderModules', () => {
       stroke: () => {},
       rect: () => {},
       arc: () => {},
-      roundRect: () => {}
+      roundRect: () => {},
     } as any;
 
     const start = performance.now();

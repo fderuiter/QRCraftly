@@ -32,11 +32,11 @@ export const CharCount: React.FC<CharCountProps> = ({ current, max }) => {
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (visualPercentage / 100) * circumference;
 
-  let colorClass = "text-slate-500 dark:text-slate-400";
+  let colorClass = 'text-slate-500 dark:text-slate-400';
   if (percentage >= 100) {
-    colorClass = "text-rose-600 dark:text-rose-500 font-medium";
+    colorClass = 'text-rose-600 dark:text-rose-500 font-medium';
   } else if (percentage >= 90) {
-    colorClass = "text-amber-600 dark:text-amber-500";
+    colorClass = 'text-amber-600 dark:text-amber-500';
   }
 
   return (
@@ -52,23 +52,9 @@ export const CharCount: React.FC<CharCountProps> = ({ current, max }) => {
         {current} of {max} characters used
       </span>
 
-      <svg
-        width="16"
-        height="16"
-        viewBox="0 0 24 24"
-        className="transform -rotate-90"
-        aria-hidden="true"
-      >
+      <svg width="16" height="16" viewBox="0 0 24 24" className="transform -rotate-90" aria-hidden="true">
         {/* Background track */}
-        <circle
-          cx="12"
-          cy="12"
-          r={radius}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="3"
-          className="opacity-20"
-        />
+        <circle cx="12" cy="12" r={radius} fill="none" stroke="currentColor" strokeWidth="3" className="opacity-20" />
         {/* Progress indicator */}
         <circle
           cx="12"

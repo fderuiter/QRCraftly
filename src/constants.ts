@@ -16,7 +16,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-
 import { QRStyle, QRType, QRErrorCorrectionLevel, SocialFormat, TemplateStyle } from './types';
 
 /**

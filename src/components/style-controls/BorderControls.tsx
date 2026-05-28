@@ -45,7 +45,10 @@ export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange
         <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label htmlFor="border-style" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
+              <label
+                htmlFor="border-style"
+                className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1"
+              >
                 Style
               </label>
               <select
@@ -130,13 +133,22 @@ export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 {config.borderLogoUrl ? (
-                  <img src={config.borderLogoUrl} alt="Border Logo" width={32} height={32} className="w-8 h-8 object-contain bg-white rounded border border-slate-200" />
+                  <img
+                    src={config.borderLogoUrl}
+                    alt="Border Logo"
+                    width={32}
+                    height={32}
+                    className="w-8 h-8 object-contain bg-white rounded border border-slate-200"
+                  />
                 ) : (
                   <span className="text-xs text-slate-500 dark:text-slate-400 italic">No secondary logo</span>
                 )}
                 {config.borderLogoUrl && (
                   <button
-                    onClick={() => { onChange({ borderLogoUrl: null }); setError(null); }}
+                    onClick={() => {
+                      onChange({ borderLogoUrl: null });
+                      setError(null);
+                    }}
                     className="text-xs text-rose-600 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 rounded focus-visible:ring-offset-1 dark:focus-visible:ring-offset-slate-800"
                     aria-label="Remove border logo"
                   >

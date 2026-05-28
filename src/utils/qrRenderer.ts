@@ -15,7 +15,7 @@ export const drawQR = (
   config: QRConfig,
   logoImg: HTMLImageElement | null,
   borderLogoImg: HTMLImageElement | null,
-  size: number
+  size: number,
 ) => {
   const canvas = ctx.canvas;
 
@@ -36,10 +36,17 @@ export const drawQR = (
 
     ctx.scale(pixelRatio, pixelRatio);
 
-    drawQRInternal(ctx as unknown as CanvasRenderingContext2D, modules, config, logoImg, borderLogoImg, displaySize, moduleCount);
-
+    drawQRInternal(
+      ctx as unknown as CanvasRenderingContext2D,
+      modules,
+      config,
+      logoImg,
+      borderLogoImg,
+      displaySize,
+      moduleCount,
+    );
   } catch (err) {
-    console.warn("QR generation failed:", err);
+    console.warn('QR generation failed:', err);
   }
 };
 
@@ -62,7 +69,7 @@ export const drawQRInternal = (
   logoImg: HTMLImageElement | null,
   borderLogoImg: HTMLImageElement | null,
   displaySize: number,
-  moduleCount: number
+  moduleCount: number,
 ) => {
   // 1. Calculate Layout
   const { drawX, drawY, drawSize, cellSize, borderPx } = calculateLayout(config, displaySize, moduleCount);

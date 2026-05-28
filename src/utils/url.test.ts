@@ -42,13 +42,13 @@ describe('normalizeUrl', () => {
   });
 
   it('should handle complex URLs with query params containing spaces', () => {
-     const url = 'https://example.com/search?q=hello world';
-     expect(normalizeUrl(url)).toBe('https://example.com/search?q=hello%20world');
+    const url = 'https://example.com/search?q=hello world';
+    expect(normalizeUrl(url)).toBe('https://example.com/search?q=hello%20world');
   });
 
   it('should handle URLs with existing encoded characters', () => {
-      const url = 'http://example.com/foo%20bar';
-      expect(normalizeUrl(url)).toBe('http://example.com/foo%20bar');
+    const url = 'http://example.com/foo%20bar';
+    expect(normalizeUrl(url)).toBe('http://example.com/foo%20bar');
   });
 
   it('should return original string when all parsing/encoding fails (e.g. lone surrogates)', () => {

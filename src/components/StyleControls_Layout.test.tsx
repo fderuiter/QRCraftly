@@ -175,9 +175,7 @@ describe('Advanced Template Settings (via StyleControls)', () => {
       templateStyle: TemplateStyle.SOLID_FRAME,
     };
     render(<StyleControls config={config} onChange={mockOnChange} />);
-    expect(
-      screen.getByRole('checkbox', { name: /Override template background color/i })
-    ).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: /Override template background color/i })).toBeInTheDocument();
   });
 
   it('shows the Override template text color checkbox', () => {
@@ -186,9 +184,7 @@ describe('Advanced Template Settings (via StyleControls)', () => {
       templateStyle: TemplateStyle.SOLID_FRAME,
     };
     render(<StyleControls config={config} onChange={mockOnChange} />);
-    expect(
-      screen.getByRole('checkbox', { name: /Override template text color/i })
-    ).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: /Override template text color/i })).toBeInTheDocument();
   });
 
   it('enables background override and calls onChange with bgColor as initial templateBgColor', async () => {
@@ -226,9 +222,7 @@ describe('Advanced Template Settings (via StyleControls)', () => {
       templateStyle: TemplateStyle.MINIMALIST,
       templateBgColor: undefined,
     };
-    const { rerender } = render(
-      <StyleControls config={configNoOverride} onChange={mockOnChange} />
-    );
+    const { rerender } = render(<StyleControls config={configNoOverride} onChange={mockOnChange} />);
     // templateBgColor ColorInput is identified by id="templateBgColor"
     expect(document.getElementById('templateBgColor')).not.toBeInTheDocument();
 
@@ -247,9 +241,7 @@ describe('Advanced Template Settings (via StyleControls)', () => {
       templateStyle: TemplateStyle.MINIMALIST,
       templateTextColor: undefined,
     };
-    const { rerender } = render(
-      <StyleControls config={configNoOverride} onChange={mockOnChange} />
-    );
+    const { rerender } = render(<StyleControls config={configNoOverride} onChange={mockOnChange} />);
     expect(document.getElementById('templateTextColor')).not.toBeInTheDocument();
 
     const configWithOverride: QRConfig = {
@@ -292,17 +284,10 @@ describe('Advanced Template Settings (via StyleControls)', () => {
       ...(DEFAULT_CONFIG as QRConfig),
       templateStyle: TemplateStyle.MINIMALIST,
     };
-    const { rerender } = render(
-      <StyleControls config={config} onChange={mockOnChange} />
-    );
+    const { rerender } = render(<StyleControls config={config} onChange={mockOnChange} />);
     expect(screen.getByText('Advanced Settings')).toBeInTheDocument();
 
-    rerender(
-      <StyleControls
-        config={{ ...config, templateStyle: TemplateStyle.NONE }}
-        onChange={mockOnChange}
-      />
-    );
+    rerender(<StyleControls config={{ ...config, templateStyle: TemplateStyle.NONE }} onChange={mockOnChange} />);
     expect(screen.queryByText('Advanced Settings')).not.toBeInTheDocument();
   });
 

@@ -15,7 +15,7 @@ describe('Performance Benchmark: getIsCoveredByLogo', () => {
       logoSize: 0.2,
       logoPadding: 1,
       logoPaddingStyle: 'circle',
-      errorCorrectionLevel: QRErrorCorrectionLevel.H
+      errorCorrectionLevel: QRErrorCorrectionLevel.H,
     };
 
     const metrics = getLogoMetrics(config, moduleCount, cellSize);
@@ -35,7 +35,9 @@ describe('Performance Benchmark: getIsCoveredByLogo', () => {
     const duration = end - start;
 
     console.log(`\nBenchmark Results:`);
-    console.log(`Total duration for ${iterations} iterations (x ${moduleCount*moduleCount} calls): ${duration.toFixed(2)}ms`);
+    console.log(
+      `Total duration for ${iterations} iterations (x ${moduleCount * moduleCount} calls): ${duration.toFixed(2)}ms`,
+    );
     console.log(`Average time per iteration: ${(duration / iterations).toFixed(4)}ms`);
     console.log(`Average time per call: ${(duration / (iterations * moduleCount * moduleCount)).toFixed(6)}ms\n`);
 

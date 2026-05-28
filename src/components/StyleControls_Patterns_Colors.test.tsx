@@ -16,7 +16,7 @@ describe('StyleControls Accessibility', () => {
 
       // Check buttons have aria-labels
       const buttons = screen.getAllByRole('button');
-      buttons.forEach(button => {
+      buttons.forEach((button) => {
         expect(button).toHaveAttribute('aria-label');
         expect(button.getAttribute('aria-label')).toMatch(/select .* pattern/i);
       });
@@ -43,7 +43,7 @@ describe('StyleControls Accessibility', () => {
       const presetButtons = presetsGroup.querySelectorAll('button');
 
       expect(presetButtons.length).toBeGreaterThan(0);
-      presetButtons.forEach(button => {
+      presetButtons.forEach((button) => {
         expect(button).toHaveAttribute('aria-label');
         expect(button.getAttribute('aria-label')).toMatch(/select .* theme/i);
       });

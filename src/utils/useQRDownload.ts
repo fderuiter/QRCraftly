@@ -39,11 +39,7 @@ interface UseQRDownloadReturn {
  * @param config Current QR configuration (used for filename generation).
  * @returns Object containing download and share handlers.
  */
-export function useQRDownload(
-  qrRef: RefObject<HTMLDivElement | null>,
-  config: QRConfig
-): UseQRDownloadReturn {
-
+export function useQRDownload(qrRef: RefObject<HTMLDivElement | null>, config: QRConfig): UseQRDownloadReturn {
   /**
    * Helper function to normalize file extensions.
    * @param format - The image format ('png', 'jpeg', 'webp').
@@ -58,74 +54,92 @@ export function useQRDownload(
    * @param ext - The file extension.
    * @returns The generated filename string.
    */
-  const getFilename = useCallback((ext: string) => {
-    const type = config.type.toLowerCase();
-    const date = new Date().toISOString().split('T')[0];
-    return `${type}-qr-code-qrcraftly-${date}.${ext}`;
-  }, [config.type]);
+  const getFilename = useCallback(
+    (ext: string) => {
+      const type = config.type.toLowerCase();
+      const date = new Date().toISOString().split('T')[0];
+      return `${type}-qr-code-qrcraftly-${date}.${ext}`;
+    },
+    [config.type],
+  );
 
   /**
    * Downloads the current QR code canvas content to the user's device.
    * Used as a fallback or direct action for saving to photos.
    * @param format - The desired image format.
    */
-  const downloadToDevice = useCallback((format: 'png' | 'jpeg' | 'webp') => {
-    const canvas = qrRef.current?.querySelector('canvas');
-    if (canvas) {
-      const url = canvas.toDataURL(`image/${format}`);
-      const link = document.createElement('a');
-      const ext = getExtension(format);
-      link.download = getFilename(ext);
-      link.href = url;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
-  }, [qrRef, getFilename]);
+  const downloadToDevice = useCallback(
+    (format: 'png' | 'jpeg' | 'webp') => {
+      const canvas = qrRef.current?.querySelector('canvas');
+      if (canvas) {
+        const url = canvas.toDataURL(`image/${format}`);
+        const link = document.createElement('a');
+        const ext = getExtension(format);
+        link.download = getFilename(ext);
+        link.href = url;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+    },
+    [qrRef, getFilename],
+  );
 
   /**
    * Handles saving the QR code image, attempting to use the File System Access API
    * for a native "Save As" experience, falling back to direct download if unsupported.
    * @param format - The desired image format.
    */
-  const handleSaveAs = useCallback(async (format: 'png' | 'jpeg' | 'webp') => {
-    const canvas = qrRef.current?.querySelector('canvas');
-    if (!canvas) return;
+  const handleSaveAs = useCallback(
+    async (format: 'png' | 'jpeg' | 'webp') => {
+      const canvas = qrRef.current?.querySelector('canvas');
+      if (!canvas) return;
 
-    // Check if the browser supports the File System Access API (e.g., Chrome, Edge Desktop)
-    if ('showSaveFilePicker' in window) {
-      try {
-        const blob = await new Promise<Blob | null>((resolve) =>
-          canvas.toBlob(resolve, `image/${format}`)
-        );
+      // Check if the browser supports the File System Access API (e.g., Chrome, Edge Desktop)
+      if ('showSaveFilePicker' in window) {
+        try {
+          const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, `image/${format}`));
 
-        if (!blob) throw new Error('Failed to create image blob');
+          if (!blob) throw new Error('Failed to create image blob');
 
-        const ext = getExtension(format);
+          const ext = getExtension(format);
 
-        const handle = await (window as any).showSaveFilePicker({
-          suggestedName: getFilename(ext),
-          types: [{
-            description: 'QR Code Image',
-            accept: { [`image/${format}`]: [`.${ext}`] },
-          }],
-        });
+          interface FilePickerOptions {
+            suggestedName?: string;
+            types?: Array<{ description?: string; accept: Record<string, string[]> }>;
+          }
+          type ShowSaveFilePicker = (options?: FilePickerOptions) => Promise<FileSystemFileHandle>;
 
-        const writable = await handle.createWritable();
-        await writable.write(blob);
-        await writable.close();
-      } catch (err: any) {
-        // If user aborted the picker, do nothing.
-        if (err.name === 'AbortError') return;
+          const showSaveFilePicker = (window as unknown as { showSaveFilePicker: ShowSaveFilePicker })
+            .showSaveFilePicker;
+          const handle = await showSaveFilePicker({
+            suggestedName: getFilename(ext),
+            types: [
+              {
+                description: 'QR Code Image',
+                accept: { [`image/${format}`]: [`.${ext}`] },
+              },
+            ],
+          });
 
-        console.warn('File System Access API failed, falling back to standard download:', err);
+          const writable = await handle.createWritable();
+          await writable.write(blob);
+          await writable.close();
+        } catch (err: unknown) {
+          // If user aborted the picker, do nothing.
+          if (err instanceof Error && err.name === 'AbortError') return;
+          if (err && typeof err === 'object' && 'name' in err && (err as Error).name === 'AbortError') return;
+
+          console.warn('File System Access API failed, falling back to standard download:', err);
+          downloadToDevice(format);
+        }
+      } else {
+        // Fallback for browsers that don't support showSaveFilePicker (Safari, Firefox, Mobile)
         downloadToDevice(format);
       }
-    } else {
-      // Fallback for browsers that don't support showSaveFilePicker (Safari, Firefox, Mobile)
-      downloadToDevice(format);
-    }
-  }, [qrRef, getFilename, downloadToDevice]);
+    },
+    [qrRef, getFilename, downloadToDevice],
+  );
 
   /**
    * Uses the Web Share API to share the QR code image directly to other apps.
@@ -172,12 +186,17 @@ export function useQRDownload(
               text: 'Here is a QR code I created with QRCraftly!',
               files: [file],
             });
-          } catch (error) {
-            console.log('Error sharing:', error);
+          } catch (error: unknown) {
+            if (error instanceof Error && error.name === 'AbortError') return;
+            if (error && typeof error === 'object' && 'name' in error && (error as Error).name === 'AbortError') return;
+            console.error('Error sharing:', error);
+            // Fallback if sharing fails
+            alert('Sharing failed. The image will be downloaded instead.');
+            downloadToDevice('png');
           }
         } else {
           // Fallback for devices that don't support sharing files
-          alert("Sharing is not supported on this device/browser. The image will be downloaded instead.");
+          alert('Sharing is not supported on this device/browser. The image will be downloaded instead.');
           downloadToDevice('png');
         }
       }, 'image/png');

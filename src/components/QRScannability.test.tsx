@@ -16,7 +16,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-
 import { render, waitFor } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 import QRCanvas from './QRCanvas';
@@ -64,28 +63,32 @@ describe('QR Code Scannability', () => {
       // Or check if context has data.
 
       // Robustly wait for the QR code to be rendered and scannable
-      await waitFor(() => {
+      await waitFor(
+        () => {
           const ctx = canvas!.getContext('2d');
           const imageData = ctx!.getImageData(0, 0, 200, 200);
 
           // Check if canvas has any content (non-transparent) first
           const data = imageData.data;
           let hasContent = false;
-          for(let i=0; i<data.length; i+=4) {
-              if (data[i+3] > 0) { // Check alpha channel
-                   hasContent = true;
-                   break;
-              }
+          for (let i = 0; i < data.length; i += 4) {
+            if (data[i + 3] > 0) {
+              // Check alpha channel
+              hasContent = true;
+              break;
+            }
           }
           expect(hasContent).toBe(true);
 
           // For supported styles, wait until it is decodable
           if (style !== QRStyle.STARBURST && style !== QRStyle.GRUNGE && style !== QRStyle.CIRCUIT) {
-              const code = jsQR(imageData.data, imageData.width, imageData.height);
-              expect(code).not.toBeNull();
-              expect(code!.data).toBe(TEST_VALUE);
+            const code = jsQR(imageData.data, imageData.width, imageData.height);
+            expect(code).not.toBeNull();
+            expect(code!.data).toBe(TEST_VALUE);
           }
-      }, { timeout: 3000 });
+        },
+        { timeout: 3000 },
+      );
     });
   });
 });

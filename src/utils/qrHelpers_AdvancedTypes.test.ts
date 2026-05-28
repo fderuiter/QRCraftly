@@ -24,8 +24,7 @@ import { SocialPlatform } from '../types';
 
 describe('Location generator', () => {
   it('constructs a valid geo URI', () => {
-    expect(constructLocationString({ latitude: '40.7128', longitude: '-74.0060' }))
-      .toBe('geo:40.7128,-74.006');
+    expect(constructLocationString({ latitude: '40.7128', longitude: '-74.0060' })).toBe('geo:40.7128,-74.006');
   });
 
   it('returns empty string for empty latitude', () => {
@@ -77,8 +76,9 @@ describe('Meeting generator', () => {
   });
 
   it('trims whitespace from the URL', () => {
-    expect(constructMeetingString({ url: '  https://meet.google.com/abc-defg-hij  ' }))
-      .toBe('https://meet.google.com/abc-defg-hij');
+    expect(constructMeetingString({ url: '  https://meet.google.com/abc-defg-hij  ' })).toBe(
+      'https://meet.google.com/abc-defg-hij',
+    );
   });
 });
 
@@ -108,23 +108,27 @@ describe('Social generator', () => {
 
   describe('constructSocialString', () => {
     it('generates an Instagram profile URL', () => {
-      expect(constructSocialString({ platform: SocialPlatform.INSTAGRAM, handle: 'myuser' }))
-        .toBe('https://instagram.com/myuser');
+      expect(constructSocialString({ platform: SocialPlatform.INSTAGRAM, handle: 'myuser' })).toBe(
+        'https://instagram.com/myuser',
+      );
     });
 
     it('generates a Twitter/X profile URL', () => {
-      expect(constructSocialString({ platform: SocialPlatform.TWITTER, handle: 'myuser' }))
-        .toBe('https://x.com/myuser');
+      expect(constructSocialString({ platform: SocialPlatform.TWITTER, handle: 'myuser' })).toBe(
+        'https://x.com/myuser',
+      );
     });
 
     it('generates a TikTok profile URL', () => {
-      expect(constructSocialString({ platform: SocialPlatform.TIKTOK, handle: 'myuser' }))
-        .toBe('https://tiktok.com/@myuser');
+      expect(constructSocialString({ platform: SocialPlatform.TIKTOK, handle: 'myuser' })).toBe(
+        'https://tiktok.com/@myuser',
+      );
     });
 
     it('strips @ from handle in generated URL', () => {
-      expect(constructSocialString({ platform: SocialPlatform.INSTAGRAM, handle: '@myuser' }))
-        .toBe('https://instagram.com/myuser');
+      expect(constructSocialString({ platform: SocialPlatform.INSTAGRAM, handle: '@myuser' })).toBe(
+        'https://instagram.com/myuser',
+      );
     });
 
     it('returns empty string for empty handle', () => {

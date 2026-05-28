@@ -31,42 +31,56 @@ import { safeJsonLdStringify } from '@/utils/security';
  * @returns {JSX.Element} The fragment containing meta and link tags.
  */
 export default function HeadDefault() {
-  const fontUrl = "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap";
+  const fontUrl =
+    'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap';
 
   const pageContext = usePageContext();
   // Vike-react exposes the resolved config in pageContext.config
-  // Cast to any to access is404 which might not be in the default type definition
-  const { config, is404 } = pageContext as any;
+  // Cast to unknown and then check properties
+  const ctx = pageContext as unknown as { config?: Record<string, unknown>; is404?: boolean };
+  const { config, is404 } = ctx;
 
   // Helper to resolve potentially functional config values
-  const getString = (val: string | ((pageContext: any) => string | null | undefined) | undefined | null, context: any, fallback: string): string => {
+  const getString = (
+    val: string | ((pageContext: unknown) => string | null | undefined) | undefined | null,
+    context: unknown,
+    fallback: string,
+  ): string => {
     if (!val) return fallback;
     const result = typeof val === 'function' ? val(context) : val;
     return result || fallback;
   };
 
-  const title = getString(config?.title ?? undefined, pageContext, "QRCraftly - Free Custom QR Code Generator");
-  const description = getString(config?.description ?? undefined, pageContext, "Generate beautiful, custom QR codes for free. No sign-up required.");
+  const title = getString(
+    config?.title as string | undefined,
+    pageContext,
+    'QRCraftly - Free Custom QR Code Generator',
+  );
+  const description = getString(
+    config?.description as string | undefined,
+    pageContext,
+    'Generate beautiful, custom QR codes for free. No sign-up required.',
+  );
 
   // Define domain constant to ensure consistency
-  const DOMAIN = "https://qrcraftly.com";
+  const DOMAIN = 'https://qrcraftly.com';
 
   // Resolve Open Graph Image
   // Allows pages to override the default OG image via config.image
-  const imageConfig = config?.image;
+  const imageConfig = config?.image as string | undefined;
   let imageUrl = `${DOMAIN}/og-image.png`; // Default
 
   if (imageConfig) {
-      if (imageConfig.startsWith('http')) {
-          imageUrl = imageConfig;
-      } else if (imageConfig.startsWith('/')) {
-          imageUrl = `${DOMAIN}${imageConfig}`;
-      } else {
-          imageUrl = `${DOMAIN}/${imageConfig}`;
-      }
+    if (imageConfig.startsWith('http')) {
+      imageUrl = imageConfig;
+    } else if (imageConfig.startsWith('/')) {
+      imageUrl = `${DOMAIN}${imageConfig}`;
+    } else {
+      imageUrl = `${DOMAIN}/${imageConfig}`;
+    }
   }
 
-  const imageAlt = config?.imageAlt || "QRCraftly QR Code Example";
+  const imageAlt = (config?.imageAlt as string | undefined) || 'QRCraftly QR Code Example';
 
   // Ensure we don't end up with double slashes if urlPathname is just '/'
   let path = pageContext.urlPathname;
@@ -79,28 +93,26 @@ export default function HeadDefault() {
   const canonicalUrl = `${DOMAIN}${canonicalPath}`;
 
   const schemaData = {
-    "@context": "https://schema.org",
-    "@graph": [
+    '@context': 'https://schema.org',
+    '@graph': [
       {
-        "@type": "Organization",
-        "@id": `${DOMAIN}/#organization`,
-        "name": "QRCraftly",
-        "url": DOMAIN,
-        "logo": `${DOMAIN}/favicon.png`,
-        "sameAs": [
-          "https://github.com/fderuiter/QRCraftly"
-        ]
+        '@type': 'Organization',
+        '@id': `${DOMAIN}/#organization`,
+        name: 'QRCraftly',
+        url: DOMAIN,
+        logo: `${DOMAIN}/favicon.png`,
+        sameAs: ['https://github.com/fderuiter/QRCraftly'],
       },
       {
-        "@type": "WebSite",
-        "name": "QRCraftly",
-        "url": DOMAIN,
-        "description": "Free, secure, and client-side QR code generator with zero-knowledge architecture.",
-        "publisher": {
-          "@id": `${DOMAIN}/#organization`
-        }
-      }
-    ]
+        '@type': 'WebSite',
+        name: 'QRCraftly',
+        url: DOMAIN,
+        description: 'Free, secure, and client-side QR code generator with zero-knowledge architecture.',
+        publisher: {
+          '@id': `${DOMAIN}/#organization`,
+        },
+      },
+    ],
   };
 
   // Breadcrumb Schema Generation
@@ -109,7 +121,7 @@ export default function HeadDefault() {
     // Dictionary for specific overrides
     const overrides: Record<string, string> = {
       'wifi-qr-code': 'WiFi QR Code',
-      'about': 'About',
+      about: 'About',
     };
 
     if (overrides[segment]) {
@@ -119,17 +131,17 @@ export default function HeadDefault() {
     // Default: Capitalize each word (replace dashes with spaces)
     return segment
       .split('-')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ');
   };
 
-  const breadcrumbItems: any[] = [
+  const breadcrumbItems: Record<string, unknown>[] = [
     {
-      "@type": "ListItem",
-      "position": 1,
-      "name": "Home",
-      "item": `${DOMAIN}/`
-    }
+      '@type': 'ListItem',
+      position: 1,
+      name: 'Home',
+      item: `${DOMAIN}/`,
+    },
   ];
 
   // Dynamically generate breadcrumbs from path
@@ -139,17 +151,17 @@ export default function HeadDefault() {
   pathSegments.forEach((segment: string, index: number) => {
     currentPath += `/${segment}`;
     breadcrumbItems.push({
-      "@type": "ListItem",
-      "position": index + 2, // 1 is Home, so start at 2
-      "name": formatPathName(segment),
-      "item": `${DOMAIN}${currentPath}`
+      '@type': 'ListItem',
+      position: index + 2, // 1 is Home, so start at 2
+      name: formatPathName(segment),
+      item: `${DOMAIN}${currentPath}`,
     });
   });
 
   const breadcrumbSchema = {
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    "itemListElement": breadcrumbItems
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: breadcrumbItems,
   };
 
   return (
@@ -160,7 +172,10 @@ export default function HeadDefault() {
         - style-src: Removed 'unsafe-inline' by refactoring font loading and dynamic preview styles.
         - object-src 'none': Prevents Flash/Java applets.
       */}
-      <meta httpEquiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests;" />
+      <meta
+        httpEquiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests;"
+      />
 
       {/*
         Note: 'viewport' and 'description' are handled by Vike/Config to avoid duplicates.
@@ -171,7 +186,12 @@ export default function HeadDefault() {
 
       {/* Global Structured Data */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(schemaData) }} />
-      {!is404 && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(breadcrumbSchema) }} />}
+      {!is404 && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(breadcrumbSchema) }}
+        />
+      )}
 
       {/* Canonical URL - Do not render for 404 pages to avoid indexing errors */}
       {!is404 && <link rel="canonical" href={canonicalUrl} />}

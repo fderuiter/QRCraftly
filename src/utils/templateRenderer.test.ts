@@ -17,11 +17,7 @@
 */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import {
-  SOCIAL_DIMENSIONS,
-  getAspectRatioCss,
-  drawWithTemplate,
-} from './templateRenderer';
+import { SOCIAL_DIMENSIONS, getAspectRatioCss, drawWithTemplate } from './templateRenderer';
 import { DEFAULT_CONFIG } from '../constants';
 import { SocialFormat, TemplateStyle, QRConfig } from '../types';
 import * as qrRenderer from './qrRenderer';
@@ -89,8 +85,12 @@ function makeMockCtx() {
 
   const ctx = {
     _calls: calls,
-    get _fillStyleHistory() { return fillStyleHistory; },
-    get _strokeStyleHistory() { return strokeStyleHistory; },
+    get _fillStyleHistory() {
+      return fillStyleHistory;
+    },
+    get _strokeStyleHistory() {
+      return strokeStyleHistory;
+    },
     clearRect: vi.fn(),
     fillRect: vi.fn(),
     strokeRect: vi.fn(),
@@ -111,10 +111,20 @@ function makeMockCtx() {
     quadraticCurveTo: vi.fn(),
     closePath: vi.fn(),
     fill: vi.fn(),
-    get fillStyle() { return _fillStyle; },
-    set fillStyle(v: string) { _fillStyle = v; fillStyleHistory.push(v); },
-    get strokeStyle() { return _strokeStyle; },
-    set strokeStyle(v: string) { _strokeStyle = v; strokeStyleHistory.push(v); },
+    get fillStyle() {
+      return _fillStyle;
+    },
+    set fillStyle(v: string) {
+      _fillStyle = v;
+      fillStyleHistory.push(v);
+    },
+    get strokeStyle() {
+      return _strokeStyle;
+    },
+    set strokeStyle(v: string) {
+      _strokeStyle = v;
+      strokeStyleHistory.push(v);
+    },
     lineWidth: 1,
     font: '',
     textAlign: '',
@@ -235,7 +245,7 @@ describe('drawWithTemplate', () => {
       logoImg,
       borderLogoImg,
       expect.any(Number),
-      modules.size
+      modules.size,
     );
   });
 });
@@ -395,9 +405,7 @@ describe('drawWithTemplate – color resolution', () => {
     const modules = makeModules();
 
     // Should not throw and fillRect should be called
-    expect(() =>
-      drawWithTemplate(ctx, modules, config, null, null, 1080, 1920, modules.size)
-    ).not.toThrow();
+    expect(() => drawWithTemplate(ctx, modules, config, null, null, 1080, 1920, modules.size)).not.toThrow();
     expect(ctx.fillRect).toHaveBeenCalled();
   });
 
@@ -412,9 +420,7 @@ describe('drawWithTemplate – color resolution', () => {
     const ctx = makeMockCtx();
     const modules = makeModules();
 
-    expect(() =>
-      drawWithTemplate(ctx, modules, config, null, null, 1080, 1920, modules.size)
-    ).not.toThrow();
+    expect(() => drawWithTemplate(ctx, modules, config, null, null, 1080, 1920, modules.size)).not.toThrow();
   });
 
   it('uses templateTextColor as stroke/text color when explicitly set', () => {

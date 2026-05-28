@@ -29,7 +29,7 @@ describe('useImageUpload', () => {
         mockReadAsDataURL(file);
         // Link the instance to our mock object so we can trigger it
         mockFileReaderInstance.onload = (e: any) => {
-            if (this.onload) this.onload(e);
+          if (this.onload) this.onload(e);
         };
       }
     }
@@ -49,7 +49,7 @@ describe('useImageUpload', () => {
 
     act(() => {
       if (mockFileReaderInstance.onload) {
-          mockFileReaderInstance.onload({ target: { result: 'data:image/png;base64,dummy' } } as any);
+        mockFileReaderInstance.onload({ target: { result: 'data:image/png;base64,dummy' } } as any);
       }
     });
 

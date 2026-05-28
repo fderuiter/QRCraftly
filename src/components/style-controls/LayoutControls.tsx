@@ -79,11 +79,7 @@ export const LayoutControls: React.FC<LayoutControlsProps> = ({ config, onChange
       {/* Aspect Ratio Selector */}
       <div className="mb-4">
         <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-2">Aspect Ratio</p>
-        <div
-          className="grid grid-cols-3 gap-2"
-          role="group"
-          aria-label="Aspect Ratio"
-        >
+        <div className="grid grid-cols-3 gap-2" role="group" aria-label="Aspect Ratio">
           {FORMAT_OPTIONS.map((opt) => (
             <button
               key={opt.id}
@@ -107,11 +103,7 @@ export const LayoutControls: React.FC<LayoutControlsProps> = ({ config, onChange
       {/* Template Style Selector */}
       <div>
         <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-2">Template</p>
-        <div
-          className="grid grid-cols-2 gap-2"
-          role="group"
-          aria-label="Template Style"
-        >
+        <div className="grid grid-cols-2 gap-2" role="group" aria-label="Template Style">
           {TEMPLATE_OPTIONS.map((opt) => (
             <button
               key={opt.id}

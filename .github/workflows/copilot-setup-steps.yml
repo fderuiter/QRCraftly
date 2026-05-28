@@ -1,4 +1,4 @@
-name: "Copilot Setup Steps"
+name: 'Copilot Setup Steps'
 
 # Re-evaluate the workspace layout automatically if this definition is updated
 on:
@@ -25,13 +25,13 @@ jobs:
         uses: pnpm/action-setup@v4
         with:
           # Avoid running an auto-install before setup-node configures caching
-          run_install: false 
+          run_install: false
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20" # Secure Active LTS target for modern Vite + React configurations
-          cache: "pnpm"      # Instructs the runner to capture pnpm global content stores
+          node-version: '20' # Secure Active LTS target for modern Vite + React configurations
+          cache: 'pnpm' # Instructs the runner to capture pnpm global content stores
 
       - name: Install Project Dependencies
         # Enforces a clean, reproducible terminal footprint via your lockfile topology

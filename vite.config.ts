@@ -26,33 +26,29 @@ import vike from 'vike/plugin';
  * Configures the development server, plugins, environment variables, and path aliases.
  */
 export default defineConfig(({ mode }) => {
-    // Load environment variables based on the current mode
-    loadEnv(mode, '.', '');
-    return {
-      server: {
-        port: 3000,
-        host: '0.0.0.0', // Allow access from outside the container
+  // Load environment variables based on the current mode
+  loadEnv(mode, '.', '');
+  return {
+    server: {
+      port: 3000,
+      host: '0.0.0.0', // Allow access from outside the container
+    },
+    plugins: [react(), vike()],
+    build: {
+      rollupOptions: {
+        output: {},
       },
-      plugins: [
-        react(),
-        vike()
-      ],
-      build: {
-        rollupOptions: {
-          output: {
-          }
-        }
+    },
+    test: {
+      globals: true,
+      environment: 'jsdom',
+      setupFiles: './vitest.setup.ts',
+      exclude: ['**/node_modules/**', '**/dist/**', 'e2e/**'],
+    },
+    resolve: {
+      alias: {
+        '@': path.resolve(__dirname, './src'),
       },
-      test: {
-        globals: true,
-        environment: 'jsdom',
-        setupFiles: './vitest.setup.ts',
-        exclude: ['**/node_modules/**', '**/dist/**', 'e2e/**'],
-      },
-      resolve: {
-        alias: {
-          '@': path.resolve(__dirname, './src'),
-        }
-      }
-    };
+    },
+  };
 });

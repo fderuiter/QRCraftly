@@ -80,7 +80,7 @@ describe('generateQRSvg', () => {
 
   it('includes border background when border is enabled', async () => {
     const config: QRConfig = {
-      ...DEFAULT_CONFIG as QRConfig,
+      ...(DEFAULT_CONFIG as QRConfig),
       isBorderEnabled: true,
       borderSize: 0.05,
       borderColor: '#ff0000',
@@ -91,7 +91,7 @@ describe('generateQRSvg', () => {
 
   it('includes border text when provided', async () => {
     const config: QRConfig = {
-      ...DEFAULT_CONFIG as QRConfig,
+      ...(DEFAULT_CONFIG as QRConfig),
       isBorderEnabled: true,
       borderSize: 0.05,
       borderText: 'Scan Me',
@@ -106,7 +106,7 @@ describe('generateQRSvg', () => {
     global.fetch = vi.fn().mockRejectedValue(new Error('no fetch in tests'));
 
     const config: QRConfig = {
-      ...DEFAULT_CONFIG as QRConfig,
+      ...(DEFAULT_CONFIG as QRConfig),
       logoUrl: 'data:image/png;base64,iVBORw0KGgo=',
     };
     const svg = await generateQRSvg(config);
@@ -136,7 +136,7 @@ describe('generateQRSvg', () => {
       });
 
       const config: QRConfig = {
-        ...DEFAULT_CONFIG as QRConfig,
+        ...(DEFAULT_CONFIG as QRConfig),
         logoUrl: 'http://example.com/logo.png',
       };
 

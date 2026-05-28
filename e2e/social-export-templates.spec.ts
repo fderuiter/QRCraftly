@@ -94,7 +94,10 @@ test.describe('Aspect Ratio selection', () => {
 
     await expect(page.getByRole('button', { name: /Select Story format/i })).toHaveAttribute('aria-pressed', 'true');
     await expect(page.getByRole('button', { name: /Select Square format/i })).toHaveAttribute('aria-pressed', 'false');
-    await expect(page.getByRole('button', { name: /Select Portrait format/i })).toHaveAttribute('aria-pressed', 'false');
+    await expect(page.getByRole('button', { name: /Select Portrait format/i })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
   });
 
   test('clicking Square after Story restores Square as pressed', async ({ page }) => {
@@ -155,14 +158,14 @@ test.describe('Canvas internal pixel dimensions', () => {
     await page.waitForTimeout(300);
     const { width, height } = await getCanvasInternalSize(page);
     // height should be ≈ 1350/1080 × width
-    expect(height).toBeCloseTo(Math.round(width * 1350 / 1080), -1);
+    expect(height).toBeCloseTo(Math.round((width * 1350) / 1080), -1);
   });
 
   test('canvas height is 1920/1080 × width after switching to Story', async ({ page }) => {
     await page.getByRole('button', { name: /Select Story format/i }).click();
     await page.waitForTimeout(300);
     const { width, height } = await getCanvasInternalSize(page);
-    expect(height).toBeCloseTo(Math.round(width * 1920 / 1080), -1);
+    expect(height).toBeCloseTo(Math.round((width * 1920) / 1080), -1);
   });
 });
 
@@ -174,21 +177,30 @@ test.describe('Template style selection', () => {
   test('clicking Minimalist marks it as pressed and deselects None', async ({ page }) => {
     await page.getByRole('button', { name: /Select Minimalist template/i }).click();
 
-    await expect(page.getByRole('button', { name: /Select Minimalist template/i })).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByRole('button', { name: /Select Minimalist template/i })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
     await expect(page.getByRole('button', { name: /Select None template/i })).toHaveAttribute('aria-pressed', 'false');
   });
 
   test('clicking Gradient marks it as pressed', async ({ page }) => {
     await page.getByRole('button', { name: /Select Gradient template/i }).click();
 
-    await expect(page.getByRole('button', { name: /Select Gradient template/i })).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByRole('button', { name: /Select Gradient template/i })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
     await expect(page.getByRole('button', { name: /Select None template/i })).toHaveAttribute('aria-pressed', 'false');
   });
 
   test('clicking Solid Frame marks it as pressed', async ({ page }) => {
     await page.getByRole('button', { name: /Select Solid Frame template/i }).click();
 
-    await expect(page.getByRole('button', { name: /Select Solid Frame template/i })).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByRole('button', { name: /Select Solid Frame template/i })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
   });
 
   test('clicking None after Minimalist restores None as pressed', async ({ page }) => {
@@ -196,7 +208,10 @@ test.describe('Template style selection', () => {
     await page.getByRole('button', { name: /Select None template/i }).click();
 
     await expect(page.getByRole('button', { name: /Select None template/i })).toHaveAttribute('aria-pressed', 'true');
-    await expect(page.getByRole('button', { name: /Select Minimalist template/i })).toHaveAttribute('aria-pressed', 'false');
+    await expect(page.getByRole('button', { name: /Select Minimalist template/i })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
   });
 });
 
@@ -351,12 +366,18 @@ test.describe('Format and template persist across QR type changes', () => {
 
   test('selected template is preserved when switching QR type', async ({ page }) => {
     await page.getByRole('button', { name: /Select Gradient template/i }).click();
-    await expect(page.getByRole('button', { name: /Select Gradient template/i })).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByRole('button', { name: /Select Gradient template/i })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
 
     await page.getByRole('button', { name: 'Location' }).click();
     await page.getByText('Export Layout').waitFor({ state: 'visible' });
 
-    await expect(page.getByRole('button', { name: /Select Gradient template/i })).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByRole('button', { name: /Select Gradient template/i })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
   });
 });
 

@@ -32,12 +32,7 @@ export const constructPaymentString = (data: PaymentData): string => {
     paymentString = data.address;
   } else {
     // Ensure network is a valid known network to prevent protocol injection
-    const validNetworks = [
-      CryptoNetwork.BITCOIN,
-      CryptoNetwork.ETHEREUM,
-      CryptoNetwork.SOLANA,
-      CryptoNetwork.LITECOIN,
-    ];
+    const validNetworks = [CryptoNetwork.BITCOIN, CryptoNetwork.ETHEREUM, CryptoNetwork.SOLANA, CryptoNetwork.LITECOIN];
 
     if (!validNetworks.includes(data.network)) {
       return '';

@@ -1,6 +1,6 @@
-import React from "react";
-import { WifiData, WifiEncryption } from "../../types";
-import { TextField, SelectField, CheckboxField } from "./FormFields";
+import React from 'react';
+import { WifiData, WifiEncryption } from '../../types';
+import { TextField, SelectField, CheckboxField } from './FormFields';
 
 interface WifiInputProps {
   data: WifiData;
@@ -10,9 +10,7 @@ interface WifiInputProps {
 export const WifiInput: React.FC<WifiInputProps> = ({ data, onChange }) => {
   return (
     <div className="space-y-3">
-      <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-        Network Details
-      </h3>
+      <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Network Details</h3>
       <TextField
         id="wifi-ssid"
         label="Network Name (SSID)"
@@ -29,13 +27,9 @@ export const WifiInput: React.FC<WifiInputProps> = ({ data, onChange }) => {
           id="wifi-encryption"
           label="Encryption"
           value={data.encryption}
-          onChange={(e) =>
-            onChange({ encryption: e.target.value as WifiEncryption })
-          }
+          onChange={(e) => onChange({ encryption: e.target.value as WifiEncryption })}
         >
-          <option value={WifiEncryption.WPA}>
-            WPA / WPA2 / WPA3 (Standard)
-          </option>
+          <option value={WifiEncryption.WPA}>WPA / WPA2 / WPA3 (Standard)</option>
           <option value={WifiEncryption.WEP}>WEP (Legacy)</option>
           <option value={WifiEncryption.WPA2_EAP}>WPA2 Enterprise (EAP)</option>
           <option value={WifiEncryption.NOPASS}>None (Open Network)</option>

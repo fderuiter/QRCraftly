@@ -27,7 +27,7 @@ const { mockUsePageContext } = vi.hoisted(() => {
 
 // Mock usePageContext
 vi.mock('vike-react/usePageContext', () => ({
-  usePageContext: mockUsePageContext
+  usePageContext: mockUsePageContext,
 }));
 
 describe('HeadDefault', () => {
@@ -37,8 +37,8 @@ describe('HeadDefault', () => {
       urlPathname: '/',
       config: {
         title: 'Test Title',
-        description: 'Test Desc'
-      }
+        description: 'Test Desc',
+      },
     });
     // Clear head
     document.head.innerHTML = '';
@@ -71,14 +71,14 @@ describe('HeadDefault', () => {
   it('generates correct breadcrumbs for home page', () => {
     mockUsePageContext.mockReturnValue({
       urlPathname: '/',
-      config: {}
+      config: {},
     });
 
     render(<HeadDefault />, { container: document.head });
 
     const scripts = document.head.querySelectorAll('script[type="application/ld+json"]');
     // Find the one with BreadcrumbList
-    const breadcrumbScript = Array.from(scripts).find(s => s.textContent?.includes('BreadcrumbList'));
+    const breadcrumbScript = Array.from(scripts).find((s) => s.textContent?.includes('BreadcrumbList'));
     expect(breadcrumbScript).toBeDefined();
 
     const data = JSON.parse(breadcrumbScript!.textContent!);
@@ -91,13 +91,13 @@ describe('HeadDefault', () => {
   it('generates correct breadcrumbs for About page', () => {
     mockUsePageContext.mockReturnValue({
       urlPathname: '/about',
-      config: {}
+      config: {},
     });
 
     render(<HeadDefault />, { container: document.head });
 
     const scripts = document.head.querySelectorAll('script[type="application/ld+json"]');
-    const breadcrumbScript = Array.from(scripts).find(s => s.textContent?.includes('BreadcrumbList'));
+    const breadcrumbScript = Array.from(scripts).find((s) => s.textContent?.includes('BreadcrumbList'));
 
     const data = JSON.parse(breadcrumbScript!.textContent!);
     expect(data.itemListElement).toHaveLength(2);
@@ -108,13 +108,13 @@ describe('HeadDefault', () => {
   it('generates correct breadcrumbs for WiFi QR Code page (with override)', () => {
     mockUsePageContext.mockReturnValue({
       urlPathname: '/wifi-qr-code',
-      config: {}
+      config: {},
     });
 
     render(<HeadDefault />, { container: document.head });
 
     const scripts = document.head.querySelectorAll('script[type="application/ld+json"]');
-    const breadcrumbScript = Array.from(scripts).find(s => s.textContent?.includes('BreadcrumbList'));
+    const breadcrumbScript = Array.from(scripts).find((s) => s.textContent?.includes('BreadcrumbList'));
 
     const data = JSON.parse(breadcrumbScript!.textContent!);
     expect(data.itemListElement).toHaveLength(2);
@@ -125,13 +125,13 @@ describe('HeadDefault', () => {
   it('generates correct breadcrumbs for nested/unknown paths (dynamic formatting)', () => {
     mockUsePageContext.mockReturnValue({
       urlPathname: '/products/special-offer',
-      config: {}
+      config: {},
     });
 
     render(<HeadDefault />, { container: document.head });
 
     const scripts = document.head.querySelectorAll('script[type="application/ld+json"]');
-    const breadcrumbScript = Array.from(scripts).find(s => s.textContent?.includes('BreadcrumbList'));
+    const breadcrumbScript = Array.from(scripts).find((s) => s.textContent?.includes('BreadcrumbList'));
 
     const data = JSON.parse(breadcrumbScript!.textContent!);
     expect(data.itemListElement).toHaveLength(3);
@@ -151,7 +151,7 @@ describe('HeadDefault', () => {
     mockUsePageContext.mockReturnValue({
       urlPathname: '/some-garbage-url',
       is404: true,
-      config: {}
+      config: {},
     });
 
     const { container } = render(<HeadDefault />, { container: document.head });
@@ -167,7 +167,7 @@ describe('HeadDefault', () => {
 
     // Check that breadcrumb schema is NOT generated for the garbage path
     const scripts = document.head.querySelectorAll('script[type="application/ld+json"]');
-    const breadcrumbScript = Array.from(scripts).find(s => s.textContent?.includes('BreadcrumbList'));
+    const breadcrumbScript = Array.from(scripts).find((s) => s.textContent?.includes('BreadcrumbList'));
 
     // If breadcrumbs exist, ensure they don't include the 404 path
     if (breadcrumbScript) {
@@ -182,8 +182,8 @@ describe('HeadDefault', () => {
       urlPathname: '/custom-image-page',
       config: {
         image: '/custom-og-image.png',
-        imageAlt: 'Custom OG Image Alt Text'
-      }
+        imageAlt: 'Custom OG Image Alt Text',
+      },
     });
 
     const { container } = render(<HeadDefault />, { container: document.head });
@@ -212,7 +212,7 @@ describe('HeadDefault', () => {
   it('falls back to default Open Graph image if config is missing', () => {
     mockUsePageContext.mockReturnValue({
       urlPathname: '/default-image-page',
-      config: {}
+      config: {},
     });
 
     const { container } = render(<HeadDefault />, { container: document.head });

@@ -16,24 +16,19 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import Page from './+Page';
 
 // Mock QRTool component since we only want to test if it's passed correct props
 vi.mock('../../components/QRTool', () => ({
-  default: ({ initialConfig }: any) => (
-    <div data-testid="qr-tool-mock">
-      QRTool with type: {initialConfig?.type}
-    </div>
-  ),
+  default: ({ initialConfig }: any) => <div data-testid="qr-tool-mock">QRTool with type: {initialConfig?.type}</div>,
 }));
 
 describe('WiFi QR Code Page', () => {
   it('renders QRTool with WiFi configuration', () => {
     render(<Page />);
-    
+
     const qrTool = screen.getByTestId('qr-tool-mock');
     expect(qrTool).toBeInTheDocument();
     expect(qrTool).toHaveTextContent('QRTool with type: WIFI');
@@ -57,7 +52,7 @@ describe('WiFi QR Code Page', () => {
     expect(webApp.datePublished).toBe('2025-01-01');
     expect(webApp.browserRequirements).toBe('Requires JavaScript. Works in all modern browsers.');
     expect(webApp.author).toEqual({
-      '@id': 'https://qrcraftly.com/#organization'
+      '@id': 'https://qrcraftly.com/#organization',
     });
 
     // Check HowTo schema properties
@@ -67,7 +62,7 @@ describe('WiFi QR Code Page', () => {
     expect(howTo.estimatedCost).toEqual({
       '@type': 'MonetaryAmount',
       currency: 'USD',
-      value: '0'
+      value: '0',
     });
 
     expect(howTo.supply).toHaveLength(3);

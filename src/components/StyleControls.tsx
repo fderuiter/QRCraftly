@@ -16,7 +16,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-
 import React from 'react';
 import { QRConfig } from '../types';
 import {
@@ -25,7 +24,7 @@ import {
   ColorControls,
   LogoControls,
   AdvancedControls,
-  LayoutControls
+  LayoutControls,
 } from './style-controls';
 
 /**

@@ -8,13 +8,7 @@ interface ToggleSwitchProps {
   srLabel?: boolean;
 }
 
-export const ToggleSwitch: React.FC<ToggleSwitchProps> = ({
-  id,
-  label,
-  checked,
-  onChange,
-  srLabel = false,
-}) => {
+export const ToggleSwitch: React.FC<ToggleSwitchProps> = ({ id, label, checked, onChange, srLabel = false }) => {
   return (
     <div className="flex items-center">
       <label htmlFor={id} className="relative inline-flex items-center cursor-pointer">

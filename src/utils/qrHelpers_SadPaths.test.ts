@@ -23,7 +23,7 @@ import {
   constructVCardString,
   constructPaymentString,
   constructSmsString,
-  constructPhoneString
+  constructPhoneString,
 } from './qrHelpers';
 import { EmailData, VCardData, PaymentData, CryptoNetwork, SmsData, PhoneData } from '../types';
 
@@ -66,7 +66,7 @@ describe('QR Helpers Sad Paths', () => {
       const data: EmailData = {
         email: '?subject=bad',
         subject: 'Test',
-        body: 'Body'
+        body: 'Body',
       };
       // Current behavior: mailto:?subject=Test...
       // This is technically valid URI but likely not what was intended if email became empty.
@@ -78,7 +78,7 @@ describe('QR Helpers Sad Paths', () => {
       const data: EmailData = {
         email: '',
         subject: '',
-        body: ''
+        body: '',
       };
       expect(constructEmailString(data)).toBe('mailto:?subject=&body=');
     });
@@ -96,7 +96,7 @@ describe('QR Helpers Sad Paths', () => {
         website: '',
         street: '',
         city: '',
-        country: ''
+        country: '',
       };
       const result = constructVCardString(data);
       // N:lastName;firstName;;;
@@ -119,7 +119,7 @@ describe('QR Helpers Sad Paths', () => {
         network: CryptoNetwork.BITCOIN,
         address: '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa',
         amount: '0.1&label=Hacked',
-        label: 'Donation'
+        label: 'Donation',
       };
       const result = constructPaymentString(data);
       // Should encode the ampersand
@@ -131,7 +131,7 @@ describe('QR Helpers Sad Paths', () => {
     it('should prevent parameter injection in SMS number', () => {
       const data: SmsData = {
         number: '123?body=injected',
-        message: 'hello'
+        message: 'hello',
       };
       // If we don't sanitize the number, we get sms:123?body=injected?body=hello
       // We expect the number to be cleaned of URI control characters AND non-phone chars
@@ -146,7 +146,7 @@ describe('QR Helpers Sad Paths', () => {
   describe('constructPhoneString', () => {
     it('should strip malicious parameter injections', () => {
       const data: PhoneData = {
-        number: '123?body=injected'
+        number: '123?body=injected',
       };
       const result = constructPhoneString(data);
       expect(result).toBe('tel:123');
@@ -154,7 +154,7 @@ describe('QR Helpers Sad Paths', () => {
 
     it('should handle empty input', () => {
       const data: PhoneData = {
-        number: ''
+        number: '',
       };
       const result = constructPhoneString(data);
       expect(result).toBe('tel:');

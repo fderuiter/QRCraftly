@@ -23,23 +23,24 @@
  * @param data The JSON-LD schema object to serialize.
  * @returns A safe, escaped JSON string representation of the data, or '{}' if undefined/invalid.
  */
-export const safeJsonLdStringify = (data: any): string => {
+export const safeJsonLdStringify = (data: unknown): string => {
   const str = JSON.stringify(data);
   if (!str) return '{}';
 
-  return str.replace(/</g, '\\u003c')
-            .replace(/>/g, '\\u003e')
-            .replace(/&/g, '\\u0026');
+  return str.replace(/</g, '\\u003c').replace(/>/g, '\\u003e').replace(/&/g, '\\u0026');
 };
 
 // Standard control chars (0x00-0x1F) and DEL (0x7F) + C1 control chars (0x80-0x9F)
+// eslint-disable-next-line no-control-regex
 export const REGEX_STRICT_CONTROL_CHARS = /[\x00-\x1F\x7F-\x9F]+/g;
 
 // Standard control chars except Tab (0x09), Line Feed (0x0A), and Carriage Return (0x0D)
+// eslint-disable-next-line no-control-regex
 export const REGEX_PRESERVE_FORMAT_CONTROL_CHARS = /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g;
 
 // Includes standard control chars, unicode control chars (0080-009F), whitespace,
 // and invisible chars like Zero Width Space (200B), ZWNJ (200C), ZWJ (200D), BOM (FEFF)
+// eslint-disable-next-line no-control-regex
 export const REGEX_URL_UNSAFE_CHARS = /[\x00-\x1F\x7F-\x9F\s\u200B-\u200D\uFEFF]+/g;
 
 const DANGEROUS_PROTOCOLS = [
@@ -68,7 +69,7 @@ export const isDangerousUrl = (url: string | undefined): boolean => {
   // Remove control characters (00-1F, 7F-9F) and whitespace globally
   const normalized = url.replace(REGEX_URL_UNSAFE_CHARS, '').toLowerCase();
 
-  return DANGEROUS_PROTOCOLS.some(p => normalized.startsWith(p));
+  return DANGEROUS_PROTOCOLS.some((p) => normalized.startsWith(p));
 };
 
 /**

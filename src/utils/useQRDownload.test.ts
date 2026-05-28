@@ -143,7 +143,10 @@ describe('useQRDownload', () => {
 
     await result.current.handleSaveAs('png');
 
-    expect(consoleWarnSpy).toHaveBeenCalledWith('File System Access API failed, falling back to standard download:', expect.any(Error));
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      'File System Access API failed, falling back to standard download:',
+      expect.any(Error),
+    );
   });
 
   it('handleSaveAs aborts silently if AbortError is thrown', async () => {
@@ -181,7 +184,7 @@ describe('useQRDownload', () => {
     await result.current.handleShare();
 
     await waitFor(() => {
-        expect(mockShare).toHaveBeenCalled();
+      expect(mockShare).toHaveBeenCalled();
     });
   });
 
@@ -202,13 +205,15 @@ describe('useQRDownload', () => {
     });
 
     const { result } = renderHook(() => useQRDownload(mockQrRef, DEFAULT_CONFIG as QRConfig));
-    const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
 
     await result.current.handleShare();
 
     await waitFor(() => {
-        expect(mockShare).toHaveBeenCalled();
-        expect(consoleLogSpy).toHaveBeenCalledWith('Error sharing:', mockError);
+      expect(mockShare).toHaveBeenCalled();
+      expect(consoleErrorSpy).toHaveBeenCalledWith('Error sharing:', mockError);
+      expect(alertSpy).toHaveBeenCalledWith('Sharing failed. The image will be downloaded instead.');
     });
   });
 
@@ -263,8 +268,8 @@ describe('useQRDownload', () => {
     expect(global.URL.createObjectURL).toHaveBeenCalled();
 
     // Find the <a> element among all appended children
-    const appendedElements = appendSpy.mock.calls.map(call => call[0] as Element);
-    const link = appendedElements.find(el => el.tagName === 'A') as HTMLAnchorElement;
+    const appendedElements = appendSpy.mock.calls.map((call) => call[0] as Element);
+    const link = appendedElements.find((el) => el.tagName === 'A') as HTMLAnchorElement;
     expect(link).toBeDefined();
     expect((link as HTMLAnchorElement).download).toMatch(/url-qr-code-qrcraftly-.*\.svg/);
     expect(clickSpy).toHaveBeenCalled();
@@ -315,7 +320,9 @@ describe('useQRDownload', () => {
         configurable: true,
       });
 
-      const MockClipboardItem = vi.fn().mockImplementation(function(this: any, data) { this.data = data; });
+      const MockClipboardItem = vi.fn().mockImplementation(function (this: any, data) {
+        this.data = data;
+      });
       (global as any).ClipboardItem = MockClipboardItem;
 
       const { result } = renderHook(() => useQRDownload(mockQrRef, DEFAULT_CONFIG as QRConfig));
@@ -353,7 +360,9 @@ describe('useQRDownload', () => {
         configurable: true,
       });
 
-      const MockClipboardItem = vi.fn().mockImplementation(function(this: any, data) { this.data = data; });
+      const MockClipboardItem = vi.fn().mockImplementation(function (this: any, data) {
+        this.data = data;
+      });
       (global as any).ClipboardItem = MockClipboardItem;
 
       const { result } = renderHook(() => useQRDownload(mockQrRef, DEFAULT_CONFIG as QRConfig));
@@ -364,5 +373,4 @@ describe('useQRDownload', () => {
       expect(consoleWarnSpy).toHaveBeenCalledWith('Failed to copy to clipboard:', expect.any(Error));
     });
   });
-
 });

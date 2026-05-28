@@ -1,11 +1,10 @@
-
 import { render, screen, within } from '@testing-library/react';
 import QRTool from './QRTool';
 import { describe, it, expect, vi } from 'vitest';
 
 // Mock QRCanvas as we don't need its functionality here
 vi.mock('./QRCanvas', () => ({
-  default: () => <div data-testid="qr-canvas-mock" />
+  default: () => <div data-testid="qr-canvas-mock" />,
 }));
 
 describe('QRTool Footer', () => {

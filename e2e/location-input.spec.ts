@@ -96,10 +96,7 @@ test.describe('Location QR type', () => {
     await page.addInitScript(() => {
       Object.defineProperty(navigator, 'geolocation', {
         value: {
-          getCurrentPosition: (
-            _success: PositionCallback,
-            errorCb?: PositionErrorCallback
-          ) => {
+          getCurrentPosition: (_success: PositionCallback, errorCb?: PositionErrorCallback) => {
             errorCb?.({
               code: 1,
               message: 'User denied Geolocation',
@@ -149,10 +146,7 @@ test.describe('Location QR type', () => {
       Object.defineProperty(navigator, 'geolocation', {
         get() {
           return {
-            getCurrentPosition: (
-              successCb: PositionCallback,
-              errorCb?: PositionErrorCallback
-            ) => {
+            getCurrentPosition: (successCb: PositionCallback, errorCb?: PositionErrorCallback) => {
               callCount++;
               if (callCount === 1) {
                 errorCb?.({

@@ -1,4 +1,4 @@
-import React from "react";
+import React from 'react';
 import {
   QRType,
   WifiEncryption,
@@ -16,7 +16,7 @@ import {
   LocationData,
   MeetingData,
   SocialData,
-} from "../../types";
+} from '../../types';
 import {
   constructUrlString,
   hydrateUrlData,
@@ -32,20 +32,20 @@ import {
   constructLocationString,
   constructMeetingString,
   constructSocialString,
-} from "../../utils/qrHelpers";
+} from '../../utils/qrHelpers';
 
-import { UrlInput } from "./UrlInput";
-import { TextInput } from "./TextInput";
-import { WifiInput } from "./WifiInput";
-import { EmailInput } from "./EmailInput";
-import { VCardInput } from "./VCardInput";
-import { PhoneInput } from "./PhoneInput";
-import { SmsInput } from "./SmsInput";
-import { PaymentInput } from "./PaymentInput";
-import { EventInput } from "./EventInput";
-import { LocationInput } from "./LocationInput";
-import { MeetingInput } from "./MeetingInput";
-import { SocialInput } from "./SocialInput";
+import { UrlInput } from './UrlInput';
+import { TextInput } from './TextInput';
+import { WifiInput } from './WifiInput';
+import { EmailInput } from './EmailInput';
+import { VCardInput } from './VCardInput';
+import { PhoneInput } from './PhoneInput';
+import { SmsInput } from './SmsInput';
+import { PaymentInput } from './PaymentInput';
+import { EventInput } from './EventInput';
+import { LocationInput } from './LocationInput';
+import { MeetingInput } from './MeetingInput';
+import { SocialInput } from './SocialInput';
 
 export type InputDataMap = {
   [QRType.URL]: UrlData;
@@ -80,7 +80,7 @@ export const INPUT_REGISTRY: Registry = {
   [QRType.URL]: {
     Component: UrlInput,
     initialState: {
-      url: "https://qrcraftly.com",
+      url: 'https://qrcraftly.com',
     } as UrlData,
     constructFn: constructUrlString,
     hydrateFn: hydrateUrlData,
@@ -88,7 +88,7 @@ export const INPUT_REGISTRY: Registry = {
   [QRType.TEXT]: {
     Component: TextInput,
     initialState: {
-      text: "",
+      text: '',
     } as TextData,
     constructFn: constructTextString,
     hydrateFn: hydrateTextData,
@@ -96,62 +96,62 @@ export const INPUT_REGISTRY: Registry = {
   [QRType.WIFI]: {
     Component: WifiInput,
     initialState: {
-      ssid: "",
-      password: "",
+      ssid: '',
+      password: '',
       encryption: WifiEncryption.WPA,
       hidden: false,
-      eapIdentity: "",
+      eapIdentity: '',
     } as WifiData,
     constructFn: constructWifiString,
   },
   [QRType.EVENT]: {
     Component: EventInput,
     initialState: {
-      title: "",
-      startDate: "",
-      endDate: "",
-      location: "",
-      description: "",
+      title: '',
+      startDate: '',
+      endDate: '',
+      location: '',
+      description: '',
     } as EventData,
     constructFn: constructEventString,
   },
   [QRType.EMAIL]: {
     Component: EmailInput,
     initialState: {
-      email: "",
-      subject: "",
-      body: "",
+      email: '',
+      subject: '',
+      body: '',
     } as EmailData,
     constructFn: constructEmailString,
   },
   [QRType.VCARD]: {
     Component: VCardInput,
     initialState: {
-      firstName: "",
-      lastName: "",
-      organization: "",
-      title: "",
-      phone: "",
-      email: "",
-      website: "",
-      street: "",
-      city: "",
-      country: "",
+      firstName: '',
+      lastName: '',
+      organization: '',
+      title: '',
+      phone: '',
+      email: '',
+      website: '',
+      street: '',
+      city: '',
+      country: '',
     } as VCardData,
     constructFn: constructVCardString,
   },
   [QRType.PHONE]: {
     Component: PhoneInput,
     initialState: {
-      number: "",
+      number: '',
     } as PhoneData,
     constructFn: constructPhoneString,
   },
   [QRType.SMS]: {
     Component: SmsInput,
     initialState: {
-      number: "",
-      message: "",
+      number: '',
+      message: '',
     } as SmsData,
     constructFn: constructSmsString,
   },
@@ -159,24 +159,24 @@ export const INPUT_REGISTRY: Registry = {
     Component: PaymentInput,
     initialState: {
       network: CryptoNetwork.BITCOIN,
-      address: "",
-      amount: "",
-      label: "",
+      address: '',
+      amount: '',
+      label: '',
     } as PaymentData,
     constructFn: constructPaymentString,
   },
   [QRType.LOCATION]: {
     Component: LocationInput,
     initialState: {
-      latitude: "",
-      longitude: "",
+      latitude: '',
+      longitude: '',
     } as LocationData,
     constructFn: constructLocationString,
   },
   [QRType.MEETING]: {
     Component: MeetingInput,
     initialState: {
-      url: "",
+      url: '',
     } as MeetingData,
     constructFn: constructMeetingString,
   },
@@ -184,7 +184,7 @@ export const INPUT_REGISTRY: Registry = {
     Component: SocialInput,
     initialState: {
       platform: SocialPlatform.INSTAGRAM,
-      handle: "",
+      handle: '',
     } as SocialData,
     constructFn: constructSocialString,
   },

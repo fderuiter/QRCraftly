@@ -16,9 +16,9 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { useState, useRef, useEffect, ElementType } from "react";
-import { QRConfig, QRType } from "../../types";
-import { INPUT_REGISTRY, InputDataMap } from "./InputRegistry";
+import { useState, useRef, useEffect, ElementType } from 'react';
+import { QRConfig, QRType } from '../../types';
+import { INPUT_REGISTRY, InputDataMap } from './InputRegistry';
 
 /**
  * Hook to encapsulate the state management and component selection logic for the InputPanel.
@@ -31,7 +31,12 @@ import { INPUT_REGISTRY, InputDataMap } from "./InputRegistry";
 export function useInputLogic(
   config: QRConfig,
   onChange: (updates: Partial<QRConfig>) => void,
-): { InputComponent: ElementType | null; inputProps: { data: InputDataMap[keyof InputDataMap]; onChange: (updates: Partial<InputDataMap[keyof InputDataMap]>) => void } | Record<string, never> } {
+): {
+  InputComponent: ElementType | null;
+  inputProps:
+    | { data: InputDataMap[keyof InputDataMap]; onChange: (updates: Partial<InputDataMap[keyof InputDataMap]>) => void }
+    | Record<string, never>;
+} {
   // Initialize state for all types from registry
   const [inputStates, setInputStates] = useState<InputDataMap>(() => {
     const states = {} as Partial<InputDataMap>;
@@ -66,10 +71,7 @@ export function useInputLogic(
   }, [config.type]);
 
   // Generic handler for all inputs
-  const handleInputChange = <K extends QRType>(
-    type: K,
-    updates: Partial<InputDataMap[K]>,
-  ) => {
+  const handleInputChange = <K extends QRType>(type: K, updates: Partial<InputDataMap[K]>) => {
     const currentData = inputStates[type];
     const newData = { ...currentData, ...updates };
 
@@ -100,7 +102,8 @@ export function useInputLogic(
       InputComponent: registryEntry.Component,
       inputProps: {
         data: inputStates[config.type] || registryEntry.initialState,
-        onChange: (updates: Partial<InputDataMap[keyof InputDataMap]>) => handleInputChange(config.type, updates as unknown as Partial<InputDataMap[QRType]>),
+        onChange: (updates: Partial<InputDataMap[keyof InputDataMap]>) =>
+          handleInputChange(config.type, updates as unknown as Partial<InputDataMap[QRType]>),
       },
     };
   }

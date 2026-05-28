@@ -17,6 +17,7 @@
 */
 
 import React, { useEffect, useRef, useState } from 'react';
+import type { QRCode } from 'qrcode';
 import { QRConfig, SocialFormat, TemplateStyle } from '../types';
 import { drawQR } from '../utils/qrRenderer';
 import { drawWithTemplate, SOCIAL_DIMENSIONS } from '../utils/templateRenderer';
@@ -52,28 +53,33 @@ const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) =
   const logoImg = useImage(config.logoUrl);
   const borderLogoImg = useImage(config.isBorderEnabled ? config.borderLogoUrl : null);
 
-  const [qrData, setQrData] = useState<any>(null);
+  const [qrData, setQrData] = useState<QRCode | null>(null);
 
   // Dynamically load QRCode and generate data
   useEffect(() => {
+    let isMounted = true;
+
     if (!config.value) {
-      setQrData(null);
+      Promise.resolve().then(() => {
+        if (isMounted) setQrData(null);
+      });
       return;
     }
 
-    let isMounted = true;
-    import('qrcode').then((QRCode) => {
+    import('qrcode').then((QRCodeLib) => {
       if (!isMounted) return;
       try {
-        const data = QRCode.create(config.value, { errorCorrectionLevel: config.errorCorrectionLevel });
+        const data = QRCodeLib.create(config.value, { errorCorrectionLevel: config.errorCorrectionLevel });
         setQrData(data);
       } catch (e) {
-        console.warn("QR generation failed:", e);
+        console.warn('QR generation failed:', e);
         setQrData(null);
       }
     });
 
-    return () => { isMounted = false; };
+    return () => {
+      isMounted = false;
+    };
   }, [config.value, config.errorCorrectionLevel]);
 
   useEffect(() => {
@@ -84,15 +90,13 @@ const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) =
     if (!ctx) return;
 
     const pixelRatio = window.devicePixelRatio || 1;
-    const useTemplate =
-      config.templateStyle !== TemplateStyle.NONE ||
-      config.socialFormat !== SocialFormat.SQUARE_1_1;
+    const useTemplate = config.templateStyle !== TemplateStyle.NONE || config.socialFormat !== SocialFormat.SQUARE_1_1;
 
     if (!qrData) {
       // Clear if no data
       if (useTemplate) {
         const { width: fw, height: fh } = SOCIAL_DIMENSIONS[config.socialFormat];
-        const displayHeight = Math.round(size * fh / fw);
+        const displayHeight = Math.round((size * fh) / fw);
         canvas.width = size * pixelRatio;
         canvas.height = displayHeight * pixelRatio;
       } else {
@@ -107,7 +111,7 @@ const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) =
       // ── Template / social format rendering ─────────────────────────────────
       const { width: fw, height: fh } = SOCIAL_DIMENSIONS[config.socialFormat];
       const displayWidth = size;
-      const displayHeight = Math.round(size * fh / fw);
+      const displayHeight = Math.round((size * fh) / fw);
 
       canvas.width = displayWidth * pixelRatio;
       canvas.height = displayHeight * pixelRatio;
@@ -123,7 +127,7 @@ const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) =
         borderLogoImg,
         displayWidth,
         displayHeight,
-        qrData.modules.size
+        qrData.modules.size,
       );
 
       ctx.restore();
@@ -131,7 +135,6 @@ const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) =
       // ── Original square rendering path (no change in behaviour) ────────────
       drawQR(ctx, qrData.modules, config, logoImg, borderLogoImg, size);
     }
-
   }, [config, size, qrData, logoImg, borderLogoImg]);
 
   const typeLabel = config.type.charAt(0).toUpperCase() + config.type.slice(1).toLowerCase();
@@ -147,12 +150,7 @@ const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) =
 
   return (
     <div className={containerClasses}>
-      <canvas
-        ref={canvasRef}
-        className={`w-full h-auto block ${aspectRatioClass}`}
-        role="img"
-        aria-label={ariaLabel}
-      />
+      <canvas ref={canvasRef} className={`w-full h-auto block ${aspectRatioClass}`} role="img" aria-label={ariaLabel} />
     </div>
   );
 };

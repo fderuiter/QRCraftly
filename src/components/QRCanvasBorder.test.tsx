@@ -16,7 +16,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-
 import { describe, it, expect, vi } from 'vitest';
 import { render, waitFor } from '@testing-library/react';
 import QRCanvas from './QRCanvas';
@@ -55,8 +54,8 @@ describe('QRCanvas Border Rendering', () => {
   it('renders border when enabled', async () => {
     const originalCreateElement = document.createElement;
     document.createElement = vi.fn((tagName) => {
-        if (tagName === 'canvas') return setupCanvasMock(originalCreateElement);
-        return originalCreateElement.call(document, tagName);
+      if (tagName === 'canvas') return setupCanvasMock(originalCreateElement);
+      return originalCreateElement.call(document, tagName);
     }) as any;
 
     const config: QRConfig = {
@@ -71,17 +70,21 @@ describe('QRCanvas Border Rendering', () => {
     render(<QRCanvas config={config} size={100} />);
 
     await waitFor(() => {
-        expect(mockContext.fillRect).toHaveBeenCalled();
+      expect(mockContext.fillRect).toHaveBeenCalled();
     });
 
     const fillRectCalls = mockContext.fillRect.mock.calls;
 
     // Find the call for the border: 0, 0, 100, 100
-    const borderCall = fillRectCalls.find(call => call[0] === 0 && call[1] === 0 && call[2] === 100 && call[3] === 100);
+    const borderCall = fillRectCalls.find(
+      (call) => call[0] === 0 && call[1] === 0 && call[2] === 100 && call[3] === 100,
+    );
     expect(borderCall).toBeTruthy();
 
     // Find the call for the inner background: 10, 10, 80, 80 (since 0.1 * 100 = 10px border on each side)
-    const innerBgCall = fillRectCalls.find(call => call[0] === 10 && call[1] === 10 && call[2] === 80 && call[3] === 80);
+    const innerBgCall = fillRectCalls.find(
+      (call) => call[0] === 10 && call[1] === 10 && call[2] === 80 && call[3] === 80,
+    );
     expect(innerBgCall).toBeTruthy();
 
     document.createElement = originalCreateElement;
@@ -90,8 +93,8 @@ describe('QRCanvas Border Rendering', () => {
   it('does not render border when disabled', async () => {
     const originalCreateElement = document.createElement;
     document.createElement = vi.fn((tagName) => {
-        if (tagName === 'canvas') return setupCanvasMock(originalCreateElement);
-        return originalCreateElement.call(document, tagName);
+      if (tagName === 'canvas') return setupCanvasMock(originalCreateElement);
+      return originalCreateElement.call(document, tagName);
     }) as any;
 
     const config: QRConfig = {
@@ -105,13 +108,15 @@ describe('QRCanvas Border Rendering', () => {
     render(<QRCanvas config={config} size={100} />);
 
     await waitFor(() => {
-        expect(mockContext.fillRect).toHaveBeenCalled();
+      expect(mockContext.fillRect).toHaveBeenCalled();
     });
 
     const fillRectCalls = mockContext.fillRect.mock.calls;
 
     // Should NOT have inner background fill (10, 10, 80, 80)
-    const innerBgCall = fillRectCalls.find(call => call[0] === 10 && call[1] === 10 && call[2] === 80 && call[3] === 80);
+    const innerBgCall = fillRectCalls.find(
+      (call) => call[0] === 10 && call[1] === 10 && call[2] === 80 && call[3] === 80,
+    );
     expect(innerBgCall).toBeUndefined();
 
     document.createElement = originalCreateElement;
