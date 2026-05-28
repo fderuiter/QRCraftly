@@ -1,4 +1,5 @@
 import React from "react";
+import { Button } from "../ui/Button";
 import { QRType } from "../../types";
 import {
   Wifi,
@@ -54,10 +55,10 @@ export const TypeSelector: React.FC<TypeSelectorProps> = ({
         ].map((item) => {
           const route = TYPE_ROUTES[item.type];
           const isActive = currentType === item.type;
-          const className = `flex flex-col w-full items-center justify-center gap-1 px-2 py-2 rounded-lg text-xs font-medium transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-800 ${
+          const className = `flex flex-col w-full items-center justify-center gap-1 px-2 py-2 rounded-lg text-xs font-medium transition-all focus:outline-none focus-visible:ring-4 focus-visible:ring-teal-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 ${
           isActive
-            ? "bg-white dark:bg-slate-700 text-teal-700 dark:text-teal-400 shadow-sm"
-            : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-slate-700/50"
+            ? "bg-teal-50 dark:bg-slate-800 border border-teal-200 dark:border-slate-700 text-teal-700 dark:text-teal-400"
+            : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 bg-transparent border border-transparent"
         }`;
 
           if (route) {
@@ -80,16 +81,18 @@ export const TypeSelector: React.FC<TypeSelectorProps> = ({
 
           return (
             <li key={item.type}>
-              <button
+              <Button
+                variant={isActive ? 'secondary' : 'ghost'}
+                size="none"
                 onClick={() => onSelect(item.type)}
                 aria-pressed={isActive}
-                className={className}
+                className="flex-col w-full h-auto items-center justify-center gap-1 px-2 py-2 rounded-lg text-xs font-medium"
               >
                 <item.icon className="w-4 h-4" />
                 <span className="truncate w-full text-center text-slate-700 dark:text-slate-200">
                   {item.label}
                 </span>
-              </button>
+              </Button>
             </li>
           );
         })}

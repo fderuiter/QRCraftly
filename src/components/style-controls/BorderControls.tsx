@@ -1,4 +1,5 @@
 import React, { useRef, useMemo } from 'react';
+import { Button } from '../ui/Button';
 import { QRConfig, BorderStyle, BorderTextPosition, BorderLogoPosition } from '../../types';
 import { Upload, X, AlertTriangle } from 'lucide-react';
 import { getContrastRatio } from '../../utils/colorUtils';
@@ -135,22 +136,26 @@ export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange
                   <span className="text-xs text-slate-500 dark:text-slate-400 italic">No secondary logo</span>
                 )}
                 {config.borderLogoUrl && (
-                  <button
+                  <Button
+                    variant="error"
+                    size="icon"
                     onClick={() => { onChange({ borderLogoUrl: null }); setError(null); }}
-                    className="text-xs text-rose-600 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 rounded focus-visible:ring-offset-1 dark:focus-visible:ring-offset-slate-800"
+                    className="p-1 rounded-full w-auto h-auto min-w-0"
                     aria-label="Remove border logo"
                   >
                     <X className="w-3 h-3" />
-                  </button>
+                  </Button>
                 )}
               </div>
-              <button
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => borderLogoInputRef.current?.click()}
-                className="text-xs text-teal-600 dark:text-teal-400 hover:underline font-medium flex items-center gap-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 rounded focus-visible:ring-offset-1 dark:focus-visible:ring-offset-slate-800"
+                className="text-teal-600 dark:text-teal-400 hover:text-teal-700 hover:bg-teal-50"
               >
-                <Upload className="w-3 h-3" />
+                <Upload className="w-3 h-3 mr-1" />
                 {config.borderLogoUrl ? 'Change' : 'Add Logo'}
-              </button>
+              </Button>
               <input
                 ref={borderLogoInputRef}
                 type="file"
@@ -159,7 +164,7 @@ export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange
                 onChange={handleBorderLogoUpload}
               />
             </div>
-            {error && <div className="mt-1 text-xs text-rose-600 dark:text-rose-400">{error}</div>}
+            {error && <div role="alert" className="mt-1 text-xs text-rose-600 dark:text-rose-400">{error}</div>}
             {config.borderLogoUrl && (
               <div className="mt-2">
                 <select

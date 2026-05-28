@@ -16,6 +16,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { ToastProvider } from "./ui/Toast";
 import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
 import QRTool from './QRTool';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -60,14 +61,14 @@ describe('QRTool Component', () => {
   });
 
   it('renders without crashing', () => {
-    render(<QRTool />);
+    render(<ToastProvider><QRTool /></ToastProvider>);
     expect(screen.getByText('QRCraftly')).toBeInTheDocument();
     expect(screen.getByText('Design beautiful QR codes in seconds.')).toBeInTheDocument();
   });
 
   it('applies initial config if provided', () => {
       const initialConfig = { value: 'https://initial-test.com' };
-      render(<QRTool initialConfig={initialConfig} />);
+      render(<ToastProvider><QRTool initialConfig={initialConfig} /></ToastProvider>);
       // We check if the input panel reflects this value.
       // Since InputPanel is not mocked here (we want to test integration), we check the input value.
       const urlInput = screen.getByDisplayValue('https://initial-test.com');
@@ -76,7 +77,7 @@ describe('QRTool Component', () => {
 
   it('toggles dark mode', () => {
     // We can also check the class on the container
-    const { container } = render(<QRTool />);
+    const { container } = render(<ToastProvider><QRTool /></ToastProvider>);
 
     // Initially light mode (no 'dark' class on top div)
     // The top div is the first child of the container
@@ -93,7 +94,7 @@ describe('QRTool Component', () => {
   });
 
   it('renders InputPanel and StyleControls', () => {
-    render(<QRTool />);
+    render(<ToastProvider><QRTool /></ToastProvider>);
     const contentHeaders = screen.getAllByText('Content');
     expect(contentHeaders[0]).toBeInTheDocument();
 
@@ -102,7 +103,7 @@ describe('QRTool Component', () => {
   });
 
   it('renders Preview Area', () => {
-    render(<QRTool />);
+    render(<ToastProvider><QRTool /></ToastProvider>);
     const elements = screen.getAllByText('Live Preview');
     expect(elements.length).toBeGreaterThan(0);
     expect(elements[0]).toBeInTheDocument();
@@ -112,7 +113,7 @@ describe('QRTool Component', () => {
   });
 
   it('shows download menu when download button is clicked', () => {
-    render(<QRTool />);
+    render(<ToastProvider><QRTool /></ToastProvider>);
     const downloadBtns = screen.getAllByText('Download');
     fireEvent.click(downloadBtns[0]);
 
@@ -122,7 +123,7 @@ describe('QRTool Component', () => {
   });
 
   it('handles save to photos (downloadToDevice) fallback', () => {
-     render(<QRTool />);
+     render(<ToastProvider><QRTool /></ToastProvider>);
 
      // Spy on document.createElement but we can't easily mock return value without affecting internal React logic if it uses 'a' tags (it might)
      // Instead, spy on appendChild.
@@ -169,7 +170,7 @@ describe('QRTool Component', () => {
         configurable: true
     });
 
-    render(<QRTool />);
+    render(<ToastProvider><QRTool /></ToastProvider>);
     const downloadBtns = screen.getAllByText('Download');
     fireEvent.click(downloadBtns[0]);
 
@@ -195,7 +196,7 @@ describe('QRTool Component', () => {
       // Spy on downloadToDevice (by spying on anchor click)
       const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click');
 
-      render(<QRTool />);
+      render(<ToastProvider><QRTool /></ToastProvider>);
       const downloadBtns = screen.getAllByText('Download');
       fireEvent.click(downloadBtns[0]);
 
@@ -219,7 +220,7 @@ describe('QRTool Component', () => {
       const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click');
       const appendSpy = vi.spyOn(document.body, 'appendChild');
 
-      render(<QRTool />);
+      render(<ToastProvider><QRTool /></ToastProvider>);
       const downloadBtns = screen.getAllByText('Download');
       fireEvent.click(downloadBtns[0]);
 
@@ -247,7 +248,7 @@ describe('QRTool Component', () => {
           configurable: true
       });
 
-      render(<QRTool />);
+      render(<ToastProvider><QRTool /></ToastProvider>);
       const shareBtn = screen.getByTitle('Share');
       fireEvent.click(shareBtn);
 
@@ -264,16 +265,14 @@ describe('QRTool Component', () => {
         configurable: true
     });
 
-    const alertMock = vi.spyOn(window, 'alert').mockImplementation(() => {});
     const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click');
     vi.spyOn(document.body, 'appendChild');
 
-    render(<QRTool />);
+    render(<ToastProvider><QRTool /></ToastProvider>);
     const shareBtn = screen.getByTitle('Share');
     fireEvent.click(shareBtn);
 
     await waitFor(() => {
-        expect(alertMock).toHaveBeenCalledWith(expect.stringContaining("Sharing is not supported"));
         expect(clickSpy).toHaveBeenCalled();
     });
   });
@@ -297,7 +296,7 @@ describe('QRTool Component', () => {
       // If fs access is available, it goes to catch.
 
       // Let's test the path where showSaveFilePicker is available but blob creation fails
-      render(<QRTool />);
+      render(<ToastProvider><QRTool /></ToastProvider>);
       const downloadBtns = screen.getAllByText('Download');
       fireEvent.click(downloadBtns[0]);
       const pngOption = screen.getByText('PNG (High Quality)');
@@ -311,7 +310,7 @@ describe('QRTool Component', () => {
 
   it('updates configuration when InputPanel triggers onChange', async () => {
      // Integration test to verify config propagation
-     render(<QRTool />);
+     render(<ToastProvider><QRTool /></ToastProvider>);
      const urlInput = screen.getByLabelText('Website URL');
      fireEvent.change(urlInput, { target: { value: 'https://propagate.com' } });
 

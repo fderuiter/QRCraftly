@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Button } from "../ui/Button";
 import { Eye, EyeOff } from "lucide-react";
 import { INPUT_CLASSES, TEXT_AREA_CLASSES, SELECT_CLASSES } from "./styles";
 import { CharCount } from "../CharCount";
@@ -104,10 +105,12 @@ export const TextField: React.FC<TextFieldProps> = ({
           {...props}
         />
         {showPasswordToggle && (
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="icon"
             onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
+            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full text-slate-400 min-w-0 min-h-0 w-6 h-6 flex items-center justify-center"
             aria-label={showPassword ? "Hide password" : "Show password"}
           >
             {showPassword ? (
@@ -115,7 +118,7 @@ export const TextField: React.FC<TextFieldProps> = ({
             ) : (
               <Eye className="w-4 h-4" />
             )}
-          </button>
+          </Button>
         )}
       </div>
     </FieldWrapper>

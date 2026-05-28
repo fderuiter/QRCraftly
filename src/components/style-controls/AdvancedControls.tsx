@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Button } from '../ui/Button';
 import { QRConfig, QRErrorCorrectionLevel } from '../../types';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 
@@ -12,9 +13,11 @@ export const AdvancedControls: React.FC<AdvancedControlsProps> = ({ config, onCh
 
   return (
     <div className="border-t border-slate-200 dark:border-slate-700 pt-5">
-      <button
+      <Button
+        variant="ghost"
+        size="none"
         onClick={() => setShowAdvanced(!showAdvanced)}
-        className="flex items-center justify-between w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 rounded-md"
+        className="flex items-center justify-between w-full text-left rounded-md"
         aria-expanded={showAdvanced}
         aria-controls="advanced-settings-panel"
       >
@@ -24,7 +27,7 @@ export const AdvancedControls: React.FC<AdvancedControlsProps> = ({ config, onCh
         ) : (
           <ChevronDown className="w-4 h-4 text-slate-500" />
         )}
-      </button>
+      </Button>
 
       {showAdvanced && (
         <div className="mt-4 space-y-4" id="advanced-settings-panel">
@@ -41,16 +44,14 @@ export const AdvancedControls: React.FC<AdvancedControlsProps> = ({ config, onCh
                 { id: QRErrorCorrectionLevel.Q, label: 'Quartile (~25%)', desc: 'Good for print' },
                 { id: QRErrorCorrectionLevel.H, label: 'High (~30%)', desc: 'Best for logos' },
               ].map((level) => (
-                <button
+                <Button
                   key={level.id}
+                  variant={config.errorCorrectionLevel === level.id ? 'secondary' : 'outline'}
+                  size="none"
                   onClick={() => onChange({ errorCorrectionLevel: level.id })}
                   aria-pressed={config.errorCorrectionLevel === level.id}
                   aria-label={`Set error correction level to ${level.label}`}
-                  className={`p-2 rounded-lg text-left border transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-slate-900 ${
-                    config.errorCorrectionLevel === level.id
-                      ? 'border-teal-500 bg-teal-50 dark:bg-teal-900/30 text-teal-900 dark:text-teal-200'
-                      : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
-                  }`}
+                  className="flex-col items-start p-2 rounded-lg border text-left"
                 >
                   <div className="flex items-center gap-2">
                     <div className={`w-3 h-3 rounded-full border ${
@@ -61,7 +62,7 @@ export const AdvancedControls: React.FC<AdvancedControlsProps> = ({ config, onCh
                     <span className="text-xs font-medium">{level.label}</span>
                   </div>
                   <span className="text-[10px] text-slate-500 dark:text-slate-400 pl-5 block mt-0.5">{level.desc}</span>
-                </button>
+                </Button>
               ))}
             </div>
             <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-2">
