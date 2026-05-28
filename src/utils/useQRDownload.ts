@@ -206,10 +206,16 @@ export function useQRDownload(
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
-    } catch (err) {
+    } catch (err: any) {
       console.warn('SVG export failed:', err);
+      addToast({
+        type: 'error',
+        message: err.message || 'SVG export failed due to an unsupported feature or error.',
+        duration: 5000
+      });
+      throw err;
     }
-  }, [config, getFilename]);
+  }, [config, getFilename, addToast]);
 
   return { downloadToDevice, handleSaveAs, handleSaveSvg, handleShare, handleCopy };
 }
