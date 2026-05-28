@@ -97,7 +97,11 @@ export default function QRTool({ initialConfig, title }: { initialConfig?: Parti
 
   const handleSaveSvg = async () => {
     setShowDownloadMenu(false);
-    await hookSaveSvg();
+    try {
+      await hookSaveSvg();
+    } catch (err) {
+      // Error is already logged and toasted in the hook
+    }
   };
 
   return (

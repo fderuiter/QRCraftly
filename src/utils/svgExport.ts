@@ -110,6 +110,7 @@ export async function generateQRSvg(config: QRConfig, _legacySize?: number): Pro
     );
   } catch (err) {
     console.warn('SVG QR generation failed:', err);
+    throw err;
   }
 
   return ctx.serialize();

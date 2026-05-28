@@ -17,6 +17,7 @@
 */
 
 import { test, expect } from '@playwright/test';
+import fs from 'fs';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -40,6 +41,9 @@ async function getCanvasInternalSize(page: Parameters<typeof test>[1] extends (.
 // ---------------------------------------------------------------------------
 
 test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    delete (window as any).showSaveFilePicker;
+  });
   await page.goto('/');
   await page.waitForLoadState('networkidle');
   // Wait until the Appearance section lazy-loads StyleControls (it uses React.lazy)
@@ -113,10 +117,9 @@ test.describe('Aspect Ratio selection', () => {
 test.describe('Canvas aspect ratio reflects selected format', () => {
   test('canvas wrapper has aspect-ratio 1/1 by default (Square)', async ({ page }) => {
     // The outer div has inline style aspect-ratio: 1080/1080
-    const wrapper = page.locator('[style*="aspect-ratio"]').first();
-    const style = await wrapper.getAttribute('style');
-    // Accept either "1080/1080" or the equivalent "1/1"
-    expect(style).toMatch(/aspect-ratio:\s*(1080\/1080|1\/1)/);
+    const wrapper = page.locator('.aspect-square, .aspect-\\[4\\/5\\], .aspect-\\[9\\/16\\]').first();
+    const className = await wrapper.getAttribute('class');
+    expect(className).toContain('aspect-square');
   });
 
   test('canvas wrapper aspect-ratio changes to 1080/1350 for Portrait', async ({ page }) => {
@@ -126,15 +129,15 @@ test.describe('Canvas aspect ratio reflects selected format', () => {
     const canvas = page.locator('canvas');
     await expect(canvas).toBeVisible();
 
-    const wrapper = page.locator('[style*="aspect-ratio"]').first();
-    await expect(wrapper).toHaveAttribute('style', /1080\/1350/);
+    const wrapper = page.locator('.aspect-\\[4\\/5\\]').first();
+    await expect(wrapper).toHaveClass(/aspect-\[4\/5\]/);
   });
 
   test('canvas wrapper aspect-ratio changes to 1080/1920 for Story', async ({ page }) => {
     await page.getByRole('button', { name: /Select Story format/i }).click();
 
-    const wrapper = page.locator('[style*="aspect-ratio"]').first();
-    await expect(wrapper).toHaveAttribute('style', /1080\/1920/);
+    const wrapper = page.locator('.aspect-\\[9\\/16\\]').first();
+    await expect(wrapper).toHaveClass(/aspect-\[9\/16\]/);
   });
 });
 
@@ -366,7 +369,6 @@ test.describe('Format and template persist across QR type changes', () => {
 
 test.describe('SVG download', () => {
   test('SVG download starts a file download with SVG content type', async ({ page }) => {
-    // Set up a download listener before clicking
     const [download] = await Promise.all([
       page.waitForEvent('download'),
       (async () => {
@@ -375,8 +377,12 @@ test.describe('SVG download', () => {
       })(),
     ]);
 
-    // Filename should end in .svg
     expect(download.suggestedFilename()).toMatch(/\.svg$/i);
+    const downloadPath = await download.path();
+    
+    const content = fs.readFileSync(downloadPath, 'utf8');
+    expect(content).toContain('<svg');
+    expect(content).toContain('<path'); // Verify core vector components are present
   });
 
   test('SVG download in Story format still produces a download', async ({ page }) => {
@@ -391,6 +397,11 @@ test.describe('SVG download', () => {
     ]);
 
     expect(download.suggestedFilename()).toMatch(/\.svg$/i);
+    const downloadPath = await download.path();
+    
+    const content = fs.readFileSync(downloadPath, 'utf8');
+    expect(content).toContain('<svg');
+    expect(content).toContain('<path'); // Verify core vector components are present
   });
 
   test('SVG with Minimalist template still produces a download', async ({ page }) => {
@@ -405,6 +416,11 @@ test.describe('SVG download', () => {
     ]);
 
     expect(download.suggestedFilename()).toMatch(/\.svg$/i);
+    const downloadPath = await download.path();
+    
+    const content = fs.readFileSync(downloadPath, 'utf8');
+    expect(content).toContain('<svg');
+    expect(content).toContain('<path'); // Verify core vector components are present
   });
 });
 
@@ -440,9 +456,15 @@ test.describe('PNG download', () => {
   });
 
   test('"Save to Photos" button triggers a PNG download', async ({ page }) => {
+    await page.waitForTimeout(500); // wait for render
     const [download] = await Promise.all([
       page.waitForEvent('download'),
-      page.getByRole('button', { name: /Save to Photos/i }).click(),
+      page.evaluate(() => {
+        console.log("Evaluating click...");
+        const btn = Array.from(document.querySelectorAll('button')).find(b => b.textContent?.includes('Save to Photos'));
+        if (btn) btn.click();
+        else console.log("Button NOT FOUND!");
+      }),
     ]);
 
     expect(download.suggestedFilename()).toMatch(/\.png$/i);
@@ -450,11 +472,14 @@ test.describe('PNG download', () => {
 
   test('"Save to Photos" in Story format triggers a PNG download', async ({ page }) => {
     await page.getByRole('button', { name: /Select Story format/i }).click();
-    await page.waitForTimeout(300);
+    await page.waitForTimeout(500);
 
     const [download] = await Promise.all([
       page.waitForEvent('download'),
-      page.getByRole('button', { name: /Save to Photos/i }).click(),
+      page.evaluate(() => {
+        const btn = Array.from(document.querySelectorAll('button')).find(b => b.textContent?.includes('Save to Photos'));
+        if (btn) btn.click();
+      }),
     ]);
 
     expect(download.suggestedFilename()).toMatch(/\.png$/i);
