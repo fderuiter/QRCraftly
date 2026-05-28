@@ -32,6 +32,8 @@ interface QRCanvasProps {
   size?: number;
   /** Optional CSS class names to apply to the canvas element. */
   className?: string;
+  /** Optional callback fired when rendering is complete. */
+  onRendered?: () => void;
 }
 
 /**
@@ -43,10 +45,21 @@ interface QRCanvasProps {
  * @param props.config - The configuration object.
  * @param props.size - The canvas resolution size (default: 1024).
  * @param props.className - Optional CSS classes.
+ * @param props.onRendered - Callback when render finishes.
  * @returns The QRCanvas component.
  */
-const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({ config, size = 1024, className, onRendered }, ref) => {
+  const localCanvasRef = useRef<HTMLCanvasElement>(null);
+  
+  // Use either the forwarded ref or the local one
+  const handleRef = (node: HTMLCanvasElement | null) => {
+    localCanvasRef.current = node;
+    if (typeof ref === 'function') {
+      ref(node);
+    } else if (ref) {
+      ref.current = node;
+    }
+  };
 
   // Pre-load images to avoid async rendering and flickering
   const logoImg = useImage(config.logoUrl);
@@ -77,7 +90,7 @@ const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) =
   }, [config.value, config.errorCorrectionLevel]);
 
   useEffect(() => {
-    const canvas = canvasRef.current;
+    const canvas = localCanvasRef.current;
     if (!canvas) return;
 
     const ctx = canvas.getContext('2d');
@@ -132,7 +145,11 @@ const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) =
       drawQR(ctx, qrData.modules, config, logoImg, borderLogoImg, size);
     }
 
-  }, [config, size, qrData, logoImg, borderLogoImg]);
+    if (onRendered) {
+      onRendered();
+    }
+
+  }, [config, size, qrData, logoImg, borderLogoImg, onRendered]);
 
   const typeLabel = config.type.charAt(0).toUpperCase() + config.type.slice(1).toLowerCase();
   const ariaLabel = `QR Code for ${typeLabel} - ${config.value ? 'Scan to view content' : 'Empty'}`;
@@ -148,13 +165,13 @@ const QRCanvas: React.FC<QRCanvasProps> = ({ config, size = 1024, className }) =
   return (
     <div className={containerClasses}>
       <canvas
-        ref={canvasRef}
+        ref={handleRef}
         className={`w-full h-auto block ${aspectRatioClass}`}
         role="img"
         aria-label={ariaLabel}
       />
     </div>
   );
-};
+});
 
 export default React.memo(QRCanvas);

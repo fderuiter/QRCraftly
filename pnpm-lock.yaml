@@ -11,6 +11,9 @@ importers:
       cross-env:
         specifier: ^10.1.0
         version: 10.1.0
+      jsqr:
+        specifier: ^1.4.0
+        version: 1.4.0
       lucide-react:
         specifier: ^0.556.0
         version: 0.556.0(react@19.2.4)
@@ -75,9 +78,6 @@ importers:
       jsdom:
         specifier: ^27.2.0
         version: 27.4.0(canvas@3.2.2)
-      jsqr:
-        specifier: ^1.4.0
-        version: 1.4.0
       postcss:
         specifier: ^8.5.6
         version: 8.5.8

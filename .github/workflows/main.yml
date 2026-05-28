@@ -127,10 +127,46 @@ jobs:
           python-version: '3.x'
       - run: python3 scripts/contrast_check.py
 
+  # JOB E2E: Playwright Cross-Browser Tests
+  e2e:
+    name: E2E Tests
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.19.0'
+          cache: 'pnpm'
+
+      - name: Restore node_modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('**/pnpm-lock.yaml') }}
+
+      - name: Install Playwright Browsers
+        run: pnpm exec playwright install --with-deps
+
+      - name: Run Playwright tests
+        run: pnpm run test:e2e
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14
+
   # JOB 5: Build Application
   build:
     name: Build & Artifact
-    needs: [quality, test] # Wait for quality checks before burning CPU on build
+    needs: [quality, test, e2e] # Wait for quality checks before burning CPU on build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

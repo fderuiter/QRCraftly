@@ -79,12 +79,10 @@ describe('QR Code Scannability', () => {
           }
           expect(hasContent).toBe(true);
 
-          // For supported styles, wait until it is decodable
-          if (style !== QRStyle.STARBURST && style !== QRStyle.GRUNGE && style !== QRStyle.CIRCUIT) {
-              const code = jsQR(imageData.data, imageData.width, imageData.height);
-              expect(code).not.toBeNull();
-              expect(code!.data).toBe(TEST_VALUE);
-          }
+          // All styles must be decodable
+          const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "attemptBoth" });
+          expect(code).not.toBeNull();
+          expect(code!.data).toBe(TEST_VALUE);
       }, { timeout: 3000 });
     });
   });
