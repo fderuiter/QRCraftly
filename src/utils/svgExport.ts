@@ -20,20 +20,39 @@ import { QRConfig } from '../types';
 import { SvgContext } from './svgContext';
 import { drawWithTemplate, SOCIAL_DIMENSIONS } from './templateRenderer';
 
+import { isDangerousUrl, REGEX_URL_UNSAFE_CHARS } from './security';
+
 /**
  * Converts an image URL to a base64 data-URL so it can be embedded inline in
  * the SVG, making the output file self-contained (no external HTTP requests).
  *
- * If the URL is already a data-URL it is returned as-is.
- * If conversion fails (e.g. CORS or network error), the original URL is returned
- * so the <image> element still references the asset, just not inline.
+ * If the URL is already a data-URL it is returned as-is (if safe).
+ * If conversion fails (e.g. CORS or network error) or the URL is dangerous,
+ * it returns null so the image is safely omitted.
  */
-async function toDataUrl(url: string): Promise<string> {
-  if (!url || url.startsWith('data:')) return url;
+async function toDataUrl(url: string): Promise<string | null> {
+  if (!url) return null;
+
+  const normalized = url.replace(REGEX_URL_UNSAFE_CHARS, '').toLowerCase();
+
+  if (normalized.startsWith('data:')) {
+    if (normalized.startsWith('data:image/')) {
+      return url;
+    }
+    return null;
+  }
+
+  if (isDangerousUrl(url)) {
+    return null;
+  }
 
   try {
     const response = await fetch(url, { mode: 'cors' });
+    if (!response.ok) return null;
+    
     const blob = await response.blob();
+    if (!blob.type.startsWith('image/')) return null;
+
     return await new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(reader.result as string);
@@ -41,8 +60,8 @@ async function toDataUrl(url: string): Promise<string> {
       reader.readAsDataURL(blob);
     });
   } catch {
-    // Fall back to the original URL; the SVG may not be fully self-contained.
-    return url;
+    // Omit the image if it fails to load
+    return null;
   }
 }
 
@@ -50,7 +69,8 @@ async function toDataUrl(url: string): Promise<string> {
  * Creates a mock HTMLImageElement-like object with an `src` property.
  * This is what SvgContext.drawImage() reads from.
  */
-function makeImgProxy(src: string): HTMLImageElement {
+function makeImgProxy(src: string | null): HTMLImageElement | null {
+  if (!src) return null;
   return { src } as unknown as HTMLImageElement;
 }
 
