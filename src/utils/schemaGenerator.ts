@@ -40,7 +40,7 @@ export function generateSchema(content: ToolContent): any {
       "url": content.url,
       "applicationCategory": "Utilities",
       "operatingSystem": "All",
-      "softwareVersion": "0.1.0",
+      "softwareVersion": __APP_VERSION__,
       "image": "https://qrcraftly.com/og-image.png",
       "datePublished": "2025-01-01",
       "author": {

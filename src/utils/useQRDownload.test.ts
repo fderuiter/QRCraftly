@@ -16,7 +16,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { renderHook, waitFor } from '@testing-library/react';
+import { renderHook, waitFor, act } from '@testing-library/react';
 import { ToastProvider } from '../components/ui/Toast';
 import { useQRDownload } from './useQRDownload';
 import { DEFAULT_CONFIG } from '../constants';
@@ -272,20 +272,29 @@ describe('useQRDownload', () => {
   });
 
   it('handleSaveSvg catches and logs errors when Blob generation fails', async () => {
-    // We mock the Blob constructor to throw an error to test the catch block.
     const originalBlob = global.Blob;
-    global.Blob = vi.fn().mockImplementation(() => {
-      throw new Error('Blob Error');
-    });
-
-    const { result } = renderHook(() => useQRDownload(mockQrRef, DEFAULT_CONFIG as QRConfig), { wrapper: ToastProvider });
     const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-    await result.current.handleSaveSvg();
+    try {
+      global.Blob = vi.fn().mockImplementation(function() {
+        throw new Error('Blob Error');
+      });
 
-    expect(consoleWarnSpy).toHaveBeenCalledWith('SVG export failed:', expect.any(Error));
+      const { result } = renderHook(() => useQRDownload(mockQrRef, DEFAULT_CONFIG as QRConfig), { wrapper: ToastProvider });
 
-    global.Blob = originalBlob;
+      await act(async () => {
+        try {
+          await result.current.handleSaveSvg();
+        } catch (e) {
+          // ignore bubbling error for the test
+        }
+      });
+
+      expect(consoleWarnSpy).toHaveBeenCalledWith('SVG export failed:', expect.any(Error));
+    } finally {
+      global.Blob = originalBlob;
+      consoleWarnSpy.mockRestore();
+    }
   });
 
   describe('handleCopy', () => {

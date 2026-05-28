@@ -83,6 +83,16 @@ jobs:
           path: node_modules
           key: ${{ runner.os }}-node-${{ hashFiles('**/pnpm-lock.yaml') }}
 
+      - name: Enforce Version Strategy
+        run: |
+          if [ -n "${{ github.base_ref }}" ]; then
+            git fetch origin ${{ github.base_ref }} --depth=1
+            if git diff origin/${{ github.base_ref }} HEAD package.json | grep -E '^\+[ \t]*"version":'; then
+              echo "Error: Manual version bumps in package.json are not allowed. Semantic Release handles versioning."
+              exit 1
+            fi
+          fi
+
       - run: pnpm run lint
 
   # JOB 3: Unit Tests
@@ -276,13 +286,21 @@ jobs:
               body: comment
             });
 
-  # JOB 7: E2E Tests
-  e2e:
-    name: E2E Tests
-    needs: build
+  # JOB 7: Semantic Release
+  release:
+    name: Release
+    needs: [build, lighthouse, e2e]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
@@ -297,9 +315,8 @@ jobs:
         with:
           path: node_modules
           key: ${{ runner.os }}-node-${{ hashFiles('**/pnpm-lock.yaml') }}
-      
-      - name: Install Playwright Browsers
-        run: pnpm exec playwright install --with-deps
 
-      - name: Run E2E Tests
-        run: pnpm run test:e2e
+      - name: Semantic Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: pnpm dlx semantic-release

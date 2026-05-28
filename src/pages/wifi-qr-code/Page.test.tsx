@@ -52,7 +52,7 @@ describe('WiFi QR Code Page', () => {
     expect(webApp).toBeDefined();
 
     // Check for critical SEO properties
-    expect(webApp.softwareVersion).toBe('0.1.0');
+    expect(webApp.softwareVersion).toBe(__APP_VERSION__);
     expect(webApp.image).toBe('https://qrcraftly.com/og-image.png');
     expect(webApp.datePublished).toBe('2025-01-01');
     expect(webApp.browserRequirements).toBe('Requires JavaScript. Works in all modern browsers.');

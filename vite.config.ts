@@ -20,6 +20,19 @@ import path from 'path';
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import vike from 'vike/plugin';
+import { execSync } from 'child_process';
+
+// Compute the application version from git tags
+let appVersion = '0.0.0';
+try {
+  appVersion = execSync('git describe --tags --abbrev=0').toString().trim().replace(/^v/, '');
+} catch (e) {
+  appVersion = process.env.npm_package_version || '0.0.0';
+}
+
+if (!appVersion || appVersion === '') {
+  throw new Error('Version injection failed: application version is missing.');
+}
 
 /**
  * Vite configuration file.
@@ -29,6 +42,9 @@ export default defineConfig(({ mode }) => {
     // Load environment variables based on the current mode
     loadEnv(mode, '.', '');
     return {
+      define: {
+        __APP_VERSION__: JSON.stringify(appVersion),
+      },
       server: {
         port: 3000,
         host: '0.0.0.0', // Allow access from outside the container

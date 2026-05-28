@@ -17,3 +17,21 @@
 */
 
 import '@testing-library/jest-dom';
+import { vi } from 'vitest';
+
+// Mock Worker for JSDom
+if (typeof Worker === 'undefined') {
+  global.Worker = class {
+    onmessage: ((this: Worker, ev: MessageEvent) => any) | null = null;
+    postMessage(msg: any) {
+      if (this.onmessage) {
+        this.onmessage({ data: { success: true } } as any);
+      }
+    }
+    terminate() {}
+    addEventListener() {}
+    removeEventListener() {}
+    dispatchEvent() { return true; }
+    onerror: ((this: AbstractWorker, ev: ErrorEvent) => any) | null = null;
+  } as any;
+}
