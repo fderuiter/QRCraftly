@@ -26,5 +26,5 @@ import { toolMetadata } from '@/data/metadata';
 export default function Page() {
   const schemaData = toolMetadata['payment-qr-code'];
 
-  return <QRTypePage type={QRType.PAYMENT} title="Payment QR Code" schemaData={schemaData} />;
+  return <QRTypePage type={QRType.PAYMENT} title="Payment QR Code" schemaData={schemaData}  toolId="payment-qr-code" />;
 }

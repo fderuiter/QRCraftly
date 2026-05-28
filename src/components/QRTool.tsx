@@ -29,6 +29,8 @@ import { useQRDownload } from '@/utils/useQRDownload';
 // Lazy load StyleControls to reduce initial bundle size and avoid SSR issues
 const StyleControls = React.lazy(() => import('@/components/StyleControls'));
 
+import { SidebarContent } from './SidebarContent';
+
 /**
  * The main Application component.
  * Manages the global state for the QR code configuration and coordinates
@@ -39,7 +41,7 @@ const StyleControls = React.lazy(() => import('@/components/StyleControls'));
  * @param props.initialConfig - Optional initial configuration for the QR code.
  * @returns The QRTool component.
  */
-export default function QRTool({ initialConfig, title }: { initialConfig?: Partial<QRConfig>, title?: string }) {
+export default function QRTool({ initialConfig, title, toolId = 'index' }: { initialConfig?: Partial<QRConfig>, title?: string, toolId?: string }) {
   const [config, setConfig] = useState<QRConfig>({ ...DEFAULT_CONFIG, ...initialConfig });
   const [showDownloadMenu, setShowDownloadMenu] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -103,9 +105,9 @@ export default function QRTool({ initialConfig, title }: { initialConfig?: Parti
   return (
     <div className={`${isDarkMode ? 'dark' : ''} w-full`} id="top">
       <h1 className="sr-only">{title ? `${title} Generator` : "Free Custom QR Code Generator"}</h1>
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col-reverse md:flex-row transition-colors duration-300 relative">
+      <div className="min-h-screen md:h-[100dvh] md:overflow-hidden bg-slate-50 dark:bg-slate-950 flex flex-col-reverse md:flex-row transition-colors duration-300 relative">
         {/* Sidebar Controls */}
-        <section aria-label="QR Code Settings" className="w-full md:w-[480px] bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col shadow-xl z-10 transition-colors duration-300 relative">
+        <section aria-label="QR Code Settings" className="w-full md:w-[480px] md:h-full md:overflow-y-auto bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col shadow-xl z-10 transition-colors duration-300 relative">
           <div className="p-6 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 sticky top-0 z-20 flex justify-between items-center transition-colors duration-300">
             <div>
               <a href="/" aria-label="QRCraftly Home" className="flex items-center gap-2 text-teal-700 dark:text-teal-400 mb-1 hover:opacity-80 transition-opacity">
@@ -155,6 +157,8 @@ export default function QRTool({ initialConfig, title }: { initialConfig?: Parti
                 <div className="h-64 bg-slate-100 dark:bg-slate-800 rounded-xl animate-pulse" />
               )}
             </section>
+
+            <SidebarContent toolId={toolId} />
 
             <footer className="pt-8 mt-8 border-t border-slate-100 dark:border-slate-800">
               <nav aria-label="Site Map">
