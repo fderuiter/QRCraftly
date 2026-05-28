@@ -19,6 +19,8 @@
 
 import { Github, Shield, Database, Code, ArrowLeft, Zap, Wifi, Coffee } from 'lucide-react';
 import { safeJsonLdStringify } from '@/utils/security';
+import { toolMetadata } from '@/data/metadata';
+import { SEOContent } from '@/components/SEOContent';
 
 /**
  * About Page Component
@@ -30,66 +32,13 @@ import { safeJsonLdStringify } from '@/utils/security';
  * @returns {JSX.Element} The About page layout.
  */
 export default function Page() {
-  const schemaData = {
-    "@context": "https://schema.org",
-    "@graph": [
-      {
-        "@type": "AboutPage",
-        "name": "About QRCraftly",
-        "url": "https://qrcraftly.com/about",
-        "mainEntity": {
-          "@type": "Organization",
-          "@id": "https://qrcraftly.com/#organization",
-          "name": "QRCraftly",
-          "description": "Privacy-focused, client-side QR code generator.",
-          "slogan": "Free. Secure. Open Source.",
-          "foundingDate": "2025"
-        }
-      },
-      {
-        "@type": "FAQPage",
-        "mainEntity": [
-          {
-            "@type": "Question",
-            "name": "Is QRCraftly free?",
-            "acceptedAnswer": {
-              "@type": "Answer",
-              "text": "QRCraftly is completely free to use. No sign-up, no login, and no hidden fees. Just generate your QR codes instantly."
-            }
-          },
-          {
-            "@type": "Question",
-            "name": "Does QRCraftly track users?",
-            "acceptedAnswer": {
-              "@type": "Answer",
-              "text": "We do not use tracking pixels, cookies, or third-party analytics. We only collect basic server logs for performance and reliability."
-            }
-          },
-          {
-            "@type": "Question",
-            "name": "Is my data secure?",
-            "acceptedAnswer": {
-              "@type": "Answer",
-              "text": "We utilize a Zero Knowledge architecture. Your content is processed entirely in your browser and never transmitted to our servers."
-            }
-          },
-          {
-            "@type": "Question",
-            "name": "Is QRCraftly open source?",
-            "acceptedAnswer": {
-              "@type": "Answer",
-              "text": "Our code is open for inspection and contribution. We believe in transparency."
-            }
-          }
-        ]
-      }
-    ]
-  };
+  const schemaData = toolMetadata['about'];
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-12">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(schemaData) }} />
       <div className="mb-8">
+
         <a
           href="/"
           className="inline-flex items-center gap-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
@@ -209,6 +158,8 @@ export default function Page() {
           View on GitHub
         </a>
       </section>
+
+      <SEOContent schemaData={schemaData} />
     </div>
   );
 }

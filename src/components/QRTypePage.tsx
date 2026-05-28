@@ -18,6 +18,7 @@
 
 import React from 'react';
 import QRTool from '@/components/QRTool';
+import { SEOContent } from '@/components/SEOContent';
 import { DEFAULT_CONFIG } from '@/constants';
 import { QRType } from '@/types';
 import { safeJsonLdStringify } from '@/utils/security';
@@ -28,7 +29,7 @@ interface QRTypePageProps {
   /** The title to display in the QRTool header. */
   title: string;
   /** The structured data (JSON-LD) object to inject. */
-  schemaData: object;
+  schemaData: any;
 }
 
 /**
@@ -45,6 +46,7 @@ export const QRTypePage: React.FC<QRTypePageProps> = ({ type, title, schemaData 
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(schemaData) }} />
       <QRTool initialConfig={config} title={title} />
+      <SEOContent schemaData={schemaData} />
     </>
   );
 };

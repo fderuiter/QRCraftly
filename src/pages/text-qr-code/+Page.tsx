@@ -18,70 +18,13 @@
 
 import { QRTypePage } from '@/components/QRTypePage';
 import { QRType } from '@/types';
+import { toolMetadata } from '@/data/metadata';
 
 /**
  * Text QR Code Page Component
  */
 export default function Page() {
-  const schemaData = {
-    "@context": "https://schema.org",
-    "@graph": [
-      {
-        "@type": "WebApplication",
-        "name": "Text QR Code Generator",
-        "url": "https://qrcraftly.com/text-qr-code",
-        "applicationCategory": "Utilities",
-        "operatingSystem": "All",
-        "softwareVersion": "0.1.0",
-        "image": "https://qrcraftly.com/og-image.png",
-        "datePublished": "2025-01-01",
-        "author": {
-          "@id": "https://qrcraftly.com/#organization"
-        },
-        "browserRequirements": "Requires JavaScript. Works in all modern browsers.",
-        "offers": {
-          "@type": "Offer",
-          "price": "0",
-          "priceCurrency": "USD"
-        },
-        "featureList": "Convert Text to QR, Secure Client-Side, Custom Design"
-      },
-      {
-        "@type": "HowTo",
-        "name": "How to Create a Text QR Code",
-        "description": "Convert plain text into a scannable QR code.",
-        "totalTime": "PT1M",
-        "estimatedCost": {
-          "@type": "MonetaryAmount",
-          "currency": "USD",
-          "value": "0"
-        },
-        "tool": [
-          {
-            "@type": "HowToTool",
-            "name": "QRCraftly Text Generator"
-          }
-        ],
-        "step": [
-          {
-            "@type": "HowToStep",
-            "name": "Enter Text",
-            "text": "Type or paste your text content into the input field."
-          },
-          {
-            "@type": "HowToStep",
-            "name": "Customize",
-            "text": "Adjust colors, patterns, and add a logo if desired."
-          },
-          {
-            "@type": "HowToStep",
-            "name": "Download",
-            "text": "Download your QR code in PNG, JPEG, or WebP format."
-          }
-        ]
-      }
-    ]
-  };
+  const schemaData = toolMetadata['text-qr-code'];
 
   return <QRTypePage type={QRType.TEXT} title="Text QR Code" schemaData={schemaData} />;
 }

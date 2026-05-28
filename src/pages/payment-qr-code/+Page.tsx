@@ -18,70 +18,13 @@
 
 import { QRTypePage } from '@/components/QRTypePage';
 import { QRType } from '@/types';
+import { toolMetadata } from '@/data/metadata';
 
 /**
  * Payment QR Code Page Component
  */
 export default function Page() {
-  const schemaData = {
-    "@context": "https://schema.org",
-    "@graph": [
-      {
-        "@type": "WebApplication",
-        "name": "Payment QR Code Generator",
-        "url": "https://qrcraftly.com/payment-qr-code",
-        "applicationCategory": "Utilities",
-        "operatingSystem": "All",
-        "softwareVersion": "0.1.0",
-        "image": "https://qrcraftly.com/og-image.png",
-        "datePublished": "2025-01-01",
-        "author": {
-          "@id": "https://qrcraftly.com/#organization"
-        },
-        "browserRequirements": "Requires JavaScript. Works in all modern browsers.",
-        "offers": {
-          "@type": "Offer",
-          "price": "0",
-          "priceCurrency": "USD"
-        },
-        "featureList": "Generate Crypto Payment QR, Bitcoin/Ethereum Support, Secure Client-Side"
-      },
-      {
-        "@type": "HowTo",
-        "name": "How to Create a Payment QR Code",
-        "description": "Generate a QR code to receive cryptocurrency payments.",
-        "totalTime": "PT1M",
-        "estimatedCost": {
-          "@type": "MonetaryAmount",
-          "currency": "USD",
-          "value": "0"
-        },
-        "tool": [
-          {
-            "@type": "HowToTool",
-            "name": "QRCraftly Payment Generator"
-          }
-        ],
-        "step": [
-          {
-            "@type": "HowToStep",
-            "name": "Select Network",
-            "text": "Choose the cryptocurrency network (e.g., Bitcoin, Ethereum)."
-          },
-          {
-            "@type": "HowToStep",
-            "name": "Enter Address",
-            "text": "Paste your wallet address and optional amount."
-          },
-          {
-            "@type": "HowToStep",
-            "name": "Customize & Download",
-            "text": "Style your QR code and save it."
-          }
-        ]
-      }
-    ]
-  };
+  const schemaData = toolMetadata['payment-qr-code'];
 
   return <QRTypePage type={QRType.PAYMENT} title="Payment QR Code" schemaData={schemaData} />;
 }

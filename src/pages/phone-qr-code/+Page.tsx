@@ -18,70 +18,13 @@
 
 import { QRTypePage } from '@/components/QRTypePage';
 import { QRType } from '@/types';
+import { toolMetadata } from '@/data/metadata';
 
 /**
  * Phone QR Code Page Component
  */
 export default function Page() {
-  const schemaData = {
-    "@context": "https://schema.org",
-    "@graph": [
-      {
-        "@type": "WebApplication",
-        "name": "Phone QR Code Generator",
-        "url": "https://qrcraftly.com/phone-qr-code",
-        "applicationCategory": "Utilities",
-        "operatingSystem": "All",
-        "softwareVersion": "0.1.0",
-        "image": "https://qrcraftly.com/og-image.png",
-        "datePublished": "2025-01-01",
-        "author": {
-          "@id": "https://qrcraftly.com/#organization"
-        },
-        "browserRequirements": "Requires JavaScript. Works in all modern browsers.",
-        "offers": {
-          "@type": "Offer",
-          "price": "0",
-          "priceCurrency": "USD"
-        },
-        "featureList": "Generate Click-to-Call QR, Secure Client-Side, Custom Design"
-      },
-      {
-        "@type": "HowTo",
-        "name": "How to Create a Phone QR Code",
-        "description": "Create a QR code that prompts the user to dial a number.",
-        "totalTime": "PT1M",
-        "estimatedCost": {
-          "@type": "MonetaryAmount",
-          "currency": "USD",
-          "value": "0"
-        },
-        "tool": [
-          {
-            "@type": "HowToTool",
-            "name": "QRCraftly Phone Generator"
-          }
-        ],
-        "step": [
-          {
-            "@type": "HowToStep",
-            "name": "Enter Number",
-            "text": "Input the phone number you want people to call."
-          },
-          {
-            "@type": "HowToStep",
-            "name": "Customize",
-            "text": "Choose colors and styles for your QR code."
-          },
-          {
-            "@type": "HowToStep",
-            "name": "Download",
-            "text": "Download the image for print or digital use."
-          }
-        ]
-      }
-    ]
-  };
+  const schemaData = toolMetadata['phone-qr-code'];
 
   return <QRTypePage type={QRType.PHONE} title="Phone QR Code" schemaData={schemaData} />;
 }
