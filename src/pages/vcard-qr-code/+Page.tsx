@@ -18,70 +18,13 @@
 
 import { QRTypePage } from '@/components/QRTypePage';
 import { QRType } from '@/types';
+import { toolMetadata } from '@/data/metadata';
 
 /**
  * VCard QR Code Page Component
  */
 export default function Page() {
-  const schemaData = {
-    "@context": "https://schema.org",
-    "@graph": [
-      {
-        "@type": "WebApplication",
-        "name": "VCard QR Code Generator",
-        "url": "https://qrcraftly.com/vcard-qr-code",
-        "applicationCategory": "Utilities",
-        "operatingSystem": "All",
-        "softwareVersion": "0.1.0",
-        "image": "https://qrcraftly.com/og-image.png",
-        "datePublished": "2025-01-01",
-        "author": {
-          "@id": "https://qrcraftly.com/#organization"
-        },
-        "browserRequirements": "Requires JavaScript. Works in all modern browsers.",
-        "offers": {
-          "@type": "Offer",
-          "price": "0",
-          "priceCurrency": "USD"
-        },
-        "featureList": "Generate VCard Contact QR, Secure Client-Side, Custom Design"
-      },
-      {
-        "@type": "HowTo",
-        "name": "How to Create a VCard QR Code",
-        "description": "Create a digital business card that can be scanned to save contact info.",
-        "totalTime": "PT1M",
-        "estimatedCost": {
-          "@type": "MonetaryAmount",
-          "currency": "USD",
-          "value": "0"
-        },
-        "tool": [
-          {
-            "@type": "HowToTool",
-            "name": "QRCraftly VCard Generator"
-          }
-        ],
-        "step": [
-          {
-            "@type": "HowToStep",
-            "name": "Enter Contact Info",
-            "text": "Fill in your name, phone, email, and other contact details."
-          },
-          {
-            "@type": "HowToStep",
-            "name": "Customize",
-            "text": "Add your logo or choose colors to match your brand."
-          },
-          {
-            "@type": "HowToStep",
-            "name": "Download",
-            "text": "Download the QR code for your business cards."
-          }
-        ]
-      }
-    ]
-  };
+  const schemaData = toolMetadata['vcard-qr-code'];
 
   return <QRTypePage type={QRType.VCARD} title="VCard QR Code" schemaData={schemaData} />;
 }

@@ -17,7 +17,9 @@
 */
 
 import QRTool from '@/components/QRTool';
+import { SEOContent } from '@/components/SEOContent';
 import { safeJsonLdStringify } from '@/utils/security';
+import { toolMetadata } from '@/data/metadata';
 
 /**
  * Home Page Component
@@ -28,70 +30,13 @@ import { safeJsonLdStringify } from '@/utils/security';
  * @returns {JSX.Element} The home page layout.
  */
 export default function Page() {
-  const schemaData = {
-    "@context": "https://schema.org",
-    "@graph": [
-      {
-        "@type": "WebApplication",
-        "name": "QRCraftly",
-        "url": "https://qrcraftly.com",
-        "applicationCategory": "Utilities",
-        "operatingSystem": "All",
-        "softwareVersion": "0.1.0",
-        "image": "https://qrcraftly.com/og-image.png",
-        "datePublished": "2025-01-01",
-        "author": {
-          "@id": "https://qrcraftly.com/#organization"
-        },
-        "browserRequirements": "Requires JavaScript. Works in all modern browsers.",
-        "offers": {
-          "@type": "Offer",
-          "price": "0",
-          "priceCurrency": "USD"
-        },
-        "featureList": "Custom QR Codes, WiFi QR Codes, vCard, Secure Client-Side Generation, Artistic Styles"
-      },
-      {
-        "@type": "HowTo",
-        "name": "How to Create a URL QR Code",
-        "description": "Convert any website URL into a scannable QR code instantly.",
-        "totalTime": "PT1M",
-        "estimatedCost": {
-          "@type": "MonetaryAmount",
-          "currency": "USD",
-          "value": "0"
-        },
-        "tool": [
-          {
-            "@type": "HowToTool",
-            "name": "QRCraftly URL Generator"
-          }
-        ],
-        "step": [
-          {
-            "@type": "HowToStep",
-            "name": "Enter URL",
-            "text": "Paste your website address (URL) into the input field."
-          },
-          {
-            "@type": "HowToStep",
-            "name": "Customize Design",
-            "text": "Adjust colors, add a logo, or change the pattern style."
-          },
-          {
-            "@type": "HowToStep",
-            "name": "Download QR Code",
-            "text": "Save your custom QR code in PNG, JPEG, or WebP format."
-          }
-        ]
-      }
-    ]
-  };
+  const schemaData = toolMetadata['index'];
 
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(schemaData) }} />
       <QRTool />
+      <SEOContent schemaData={schemaData} />
     </>
   );
 }
