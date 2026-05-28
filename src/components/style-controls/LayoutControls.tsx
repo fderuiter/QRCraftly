@@ -17,6 +17,7 @@
 */
 
 import React from 'react';
+import { Button } from '../ui/Button';
 import { Square, Smartphone } from 'lucide-react';
 import { QRConfig, SocialFormat, TemplateStyle } from '../../types';
 import { ColorInput } from '../ui/ColorInput';
@@ -85,21 +86,18 @@ export const LayoutControls: React.FC<LayoutControlsProps> = ({ config, onChange
           aria-label="Aspect Ratio"
         >
           {FORMAT_OPTIONS.map((opt) => (
-            <button
+            <Button
               key={opt.id}
+              variant={config.socialFormat === opt.id ? 'secondary' : 'outline'}
               onClick={() => onChange({ socialFormat: opt.id })}
               aria-pressed={config.socialFormat === opt.id}
               aria-label={`Select ${opt.label} format (${opt.sublabel})`}
-              className={`flex flex-col items-center justify-center gap-1 py-2 px-1 rounded-lg border-2 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 ${
-                config.socialFormat === opt.id
-                  ? 'border-teal-500 bg-teal-50 dark:bg-teal-900/30 text-teal-700 dark:text-teal-400'
-                  : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 text-slate-500 dark:text-slate-400'
-              }`}
+              className={`flex-col py-2 px-1 rounded-lg border-2 h-auto ${config.socialFormat === opt.id ? 'border-teal-500' : 'border-transparent'}`}
             >
               {opt.icon}
-              <span className="text-[10px] font-semibold leading-none">{opt.label}</span>
+              <span className="text-[10px] font-semibold leading-none mt-1">{opt.label}</span>
               <span className="text-[10px] leading-none opacity-70">{opt.sublabel}</span>
-            </button>
+            </Button>
           ))}
         </div>
       </div>
@@ -113,19 +111,16 @@ export const LayoutControls: React.FC<LayoutControlsProps> = ({ config, onChange
           aria-label="Template Style"
         >
           {TEMPLATE_OPTIONS.map((opt) => (
-            <button
+            <Button
               key={opt.id}
+              variant={config.templateStyle === opt.id ? 'secondary' : 'outline'}
               onClick={() => onChange({ templateStyle: opt.id })}
               aria-pressed={config.templateStyle === opt.id}
               aria-label={`Select ${opt.label} template`}
-              className={`py-2 px-2 rounded-lg border-2 text-xs font-medium transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 ${
-                config.templateStyle === opt.id
-                  ? 'border-teal-500 bg-teal-50 dark:bg-teal-900/30 text-teal-700 dark:text-teal-400'
-                  : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 text-slate-500 dark:text-slate-400'
-              }`}
+              className={`py-2 px-2 rounded-lg border-2 text-xs h-auto ${config.templateStyle === opt.id ? 'border-teal-500' : 'border-transparent'}`}
             >
               {opt.label}
-            </button>
+            </Button>
           ))}
         </div>
       </div>

@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { Button } from '../ui/Button';
 import { QRConfig } from '../../types';
 import { PRESET_COLORS } from '../../constants';
 import { AlertTriangle } from 'lucide-react';
@@ -38,12 +39,14 @@ export const ColorControls: React.FC<ColorControlsProps> = ({ config, onChange }
         aria-label="Color Presets"
       >
         {PRESET_COLORS.map((preset, idx) => (
-          <button
+          <Button
             key={idx}
+            variant="ghost"
+            size="none"
             onClick={() => onChange({ fgColor: preset.fg, bgColor: preset.bg, eyeColor: preset.eye })}
             aria-pressed={config.fgColor === preset.fg && config.bgColor === preset.bg && config.eyeColor === preset.eye}
             aria-label={`Select ${preset.label} theme`}
-            className="group relative w-10 h-10 rounded-lg shadow-sm hover:scale-110 transition-transform duration-200 ring-1 ring-slate-200 dark:ring-slate-700 overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
+            className="group relative w-10 h-10 rounded-lg shadow-sm hover:scale-110 transition-transform duration-200 ring-1 ring-slate-200 dark:ring-slate-700 overflow-hidden"
             title={preset.label}
           >
             {/* Use SVG presentation attributes instead of inline styles for CSP compliance */}
@@ -55,7 +58,7 @@ export const ColorControls: React.FC<ColorControlsProps> = ({ config, onChange }
               {/* Eye Center */}
               <rect x="11" y="11" width="18" height="18" rx="1" fill={preset.eye} />
             </svg>
-          </button>
+          </Button>
         ))}
       </div>
 

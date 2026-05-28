@@ -17,6 +17,7 @@
 */
 
 import React, { useState, useRef, useCallback, Suspense, useEffect } from 'react';
+import { Button } from "./ui/Button";
 import { QRConfig } from '@/types';
 import { DEFAULT_CONFIG } from '@/constants';
 import InputPanel from '@/components/InputPanel';
@@ -123,14 +124,16 @@ export default function QRTool({ initialConfig, title }: { initialConfig?: Parti
               >
                 <Info className="w-5 h-5" />
               </a>
-              <button
+              <Button
+                variant="icon"
+                size="icon"
                 onClick={toggleDarkMode}
-                className="p-2 rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
+                className="rounded-full"
                 title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
                 aria-label={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
               >
                 {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-              </button>
+              </Button>
             </div>
           </div>
 
@@ -210,64 +213,68 @@ export default function QRTool({ initialConfig, title }: { initialConfig?: Parti
                    {/* Row 1: Download & Share */}
                    <div className="flex gap-2">
                        <div className="relative flex-1" ref={downloadMenuRef}>
-                          <button 
+                          <Button 
+                              variant="primary"
+                              fullWidth
                               onClick={() => setShowDownloadMenu(!showDownloadMenu)}
-                              className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-teal-700 dark:bg-teal-700 text-white rounded-xl font-medium hover:bg-teal-800 dark:hover:bg-teal-600 transition-colors shadow-lg shadow-teal-900/10 dark:shadow-teal-900/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
                               aria-expanded={showDownloadMenu}
                               aria-haspopup="true"
                           >
                               <Download className="w-4 h-4" />
                               Download
                               <ChevronDown className="w-4 h-4 ml-auto opacity-80" />
-                          </button>
+                          </Button>
                           
                           {showDownloadMenu && (
                               <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-100 dark:border-slate-700 py-1 z-50 animate-in fade-in zoom-in-95 duration-100 overflow-hidden" role="menu">
-                                  <button onClick={() => handleSaveAs('png')} role="menuitem" className="w-full text-left px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200 text-sm font-medium flex items-center gap-2">
+                                  <Button onClick={() => handleSaveAs('png')} role="menuitem" variant="menuitem">
                                       <div className="w-1.5 h-1.5 rounded-full bg-teal-500"></div> PNG (High Quality)
-                                  </button>
-                                  <button onClick={() => handleSaveAs('jpeg')} role="menuitem" className="w-full text-left px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200 text-sm font-medium flex items-center gap-2">
+                                  </Button>
+                                  <Button onClick={() => handleSaveAs('jpeg')} role="menuitem" variant="menuitem">
                                       <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div> JPEG (Compact)
-                                  </button>
-                                  <button onClick={() => handleSaveAs('webp')} role="menuitem" className="w-full text-left px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200 text-sm font-medium flex items-center gap-2">
+                                  </Button>
+                                  <Button onClick={() => handleSaveAs('webp')} role="menuitem" variant="menuitem">
                                       <div className="w-1.5 h-1.5 rounded-full bg-purple-500"></div> WebP (Modern)
-                                  </button>
+                                  </Button>
                                   <div className="h-px bg-slate-100 dark:bg-slate-700 my-1" role="separator" />
-                                  <button onClick={handleSaveSvg} role="menuitem" className="w-full text-left px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200 text-sm font-medium flex items-center gap-2">
+                                  <Button onClick={handleSaveSvg} role="menuitem" variant="menuitem">
                                       <div className="w-1.5 h-1.5 rounded-full bg-orange-500"></div> SVG (Vector)
-                                  </button>
+                                  </Button>
                               </div>
                           )}
                        </div>
                        
-                       <button
+                       <Button
+                          variant="secondary"
                           onClick={onCopy}
-                          className="flex items-center justify-center w-12 bg-teal-50 dark:bg-slate-800 border border-teal-200 dark:border-slate-700 text-teal-700 dark:text-teal-400 rounded-xl font-medium hover:bg-teal-100 dark:hover:bg-slate-700 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
+                          className="w-12 px-0"
                           title="Copy Image"
                           aria-label={copied ? "Copied to clipboard" : "Copy QR code to clipboard"}
                        >
                           {copied ? <Check className="w-5 h-5 text-emerald-500" /> : <Copy className="w-5 h-5" />}
-                       </button>
+                       </Button>
 
-                       <button 
+                       <Button 
+                          variant="secondary"
                           onClick={handleShare}
-                          className="flex items-center justify-center w-12 bg-teal-50 dark:bg-slate-800 border border-teal-200 dark:border-slate-700 text-teal-700 dark:text-teal-400 rounded-xl font-medium hover:bg-teal-100 dark:hover:bg-slate-700 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
+                          className="w-12 px-0"
                           title="Share"
                           aria-label="Share QR code"
                        >
                           <Share2 className="w-5 h-5" />
-                       </button>
+                       </Button>
                    </div>
 
                    {/* Row 2: Save to Camera Roll */}
-                   <button 
+                   <Button 
+                      variant="outline"
+                      fullWidth
                       onClick={() => downloadToDevice('png')}
-                      className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-xl font-medium hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
                       aria-label="Save QR code to photos"
                    >
                       <Camera className="w-4 h-4" />
                       Save to Photos
-                   </button>
+                   </Button>
                 </div>
              </div>
           </div>
