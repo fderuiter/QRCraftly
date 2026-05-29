@@ -83,8 +83,18 @@ jobs:
     name: Quality Checks
     needs: setup
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript, typescript
+
       - name: Setup pnpm
         uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
         with:
@@ -102,6 +112,14 @@ jobs:
           key: ${{ runner.os }}-node-${{ hashFiles('**/pnpm-lock.yaml') }}
 
       - run: pnpm run lint
+
+      - name: Run Semgrep
+        run: pip install semgrep && semgrep ci --config=semgrep.yml
+        env:
+          SEMGREP_APP_TOKEN: "" # Local run only
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
 
   # JOB 3: Unit Tests
   test:
