@@ -90,12 +90,12 @@ jobs:
           MANIFEST
 
       - name: Attest Web Build Outputs
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@v4
         with:
           subject-path: 'dist/client/**/*'
 
       - name: Attest Deployment Manifest
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@v4
         with:
           subject-path: 'releases/manifest-${{ env.VERSION }}.json'
 
