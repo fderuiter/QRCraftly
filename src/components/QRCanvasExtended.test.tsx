@@ -118,7 +118,11 @@ describe('QRCanvas Border Extended Features', () => {
     render(<QRCanvas config={config} size={100} />);
 
     await waitFor(() => {
-      expect(mockContext.fillText).toHaveBeenCalledWith('Scan Me', expect.any(Number), expect.any(Number));
+      expect(mockContext.fillText).toHaveBeenCalledWith(
+        'Scan Me',
+        expect.any(Number),
+        expect.any(Number),
+      );
     });
   });
 

@@ -24,8 +24,16 @@ export const LogoControls: React.FC<LogoControlsProps> = ({ config, onChange }) 
       <div className="flex justify-between items-center mb-3">
         <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Logo</h3>
         {config.logoUrl && (
-          <Button variant="error" size="sm" onClick={() => { onChange({ logoUrl: null }); setError(null); }} className="px-2 py-1 rounded">
-            <X className="w-3 h-3 mr-1"/> Remove
+          <Button
+            variant="error"
+            size="sm"
+            onClick={() => {
+              onChange({ logoUrl: null });
+              setError(null);
+            }}
+            className="px-2 py-1 rounded"
+          >
+            <X className="w-3 h-3 mr-1" /> Remove
           </Button>
         )}
       </div>
@@ -42,13 +50,25 @@ export const LogoControls: React.FC<LogoControlsProps> = ({ config, onChange }) 
             <Upload className="w-5 h-5" />
           </div>
           <span className="text-sm font-medium">Upload Logo</span>
-          <span className="text-xs text-slate-600 dark:text-slate-400 mt-1">PNG, JPG (Square recommended)</span>
-          {error && <span role="alert" className="text-xs text-rose-600 dark:text-rose-400 mt-2">{error}</span>}
+          <span className="text-xs text-slate-600 dark:text-slate-400 mt-1">
+            PNG, JPG (Square recommended)
+          </span>
+          {error && (
+            <span role="alert" className="text-xs text-rose-600 dark:text-rose-400 mt-2">
+              {error}
+            </span>
+          )}
         </Button>
       ) : (
         <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700 space-y-5">
           <div className="flex items-center gap-4">
-            <img src={config.logoUrl} alt="Logo" width={48} height={48} className="w-12 h-12 object-contain bg-white rounded-md border border-slate-200 shadow-sm" />
+            <img
+              src={config.logoUrl}
+              alt="Logo"
+              width={48}
+              height={48}
+              className="w-12 h-12 object-contain bg-white rounded-md border border-slate-200 shadow-sm"
+            />
             <div className="flex-1">
               <p className="text-sm font-medium text-slate-700 dark:text-slate-200">Custom Logo</p>
               <p className="text-xs text-slate-500 dark:text-slate-400">Embedded in center</p>
@@ -57,7 +77,12 @@ export const LogoControls: React.FC<LogoControlsProps> = ({ config, onChange }) 
 
           {/* Logo Border Styles */}
           <div>
-            <label id="logo-border-style-label" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-2">Border Style</label>
+            <label
+              id="logo-border-style-label"
+              className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-2"
+            >
+              Border Style
+            </label>
             <div
               className="flex bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-1"
               role="group"

@@ -23,9 +23,12 @@
  *   | 0  0  1 |
  */
 interface Matrix {
-  a: number; b: number;
-  c: number; d: number;
-  e: number; f: number;
+  a: number;
+  b: number;
+  c: number;
+  d: number;
+  e: number;
+  f: number;
 }
 
 function identityMatrix(): Matrix {
@@ -94,10 +97,7 @@ export class SvgContext {
 
   private _applyTransform(x: number, y: number): [number, number] {
     const m = this._transform;
-    return [
-      m.a * x + m.c * y + m.e,
-      m.b * x + m.d * y + m.f,
-    ];
+    return [m.a * x + m.c * y + m.e, m.b * x + m.d * y + m.f];
   }
 
   /** Returns a formatted number with up to 3 decimal places, no trailing zeros. */
@@ -136,13 +136,23 @@ export class SvgContext {
 
   scale(sx: number, sy: number): void {
     this._transform = multiplyMatrix(this._transform, {
-      a: sx, b: 0, c: 0, d: sy, e: 0, f: 0,
+      a: sx,
+      b: 0,
+      c: 0,
+      d: sy,
+      e: 0,
+      f: 0,
     });
   }
 
   translate(tx: number, ty: number): void {
     this._transform = multiplyMatrix(this._transform, {
-      a: 1, b: 0, c: 0, d: 1, e: tx, f: ty,
+      a: 1,
+      b: 0,
+      c: 0,
+      d: 1,
+      e: tx,
+      f: ty,
     });
   }
 
@@ -150,7 +160,12 @@ export class SvgContext {
     const cos = Math.cos(angle);
     const sin = Math.sin(angle);
     this._transform = multiplyMatrix(this._transform, {
-      a: cos, b: sin, c: -sin, d: cos, e: 0, f: 0,
+      a: cos,
+      b: sin,
+      c: -sin,
+      d: cos,
+      e: 0,
+      f: 0,
     });
   }
 
@@ -226,7 +241,14 @@ export class SvgContext {
    * Assumes the current transform contains only translation and uniform scaling
    * (no shear), so the arc remains circular after transformation.
    */
-  arc(cx: number, cy: number, r: number, startAngle: number, endAngle: number, anticlockwise: boolean = false): void {
+  arc(
+    cx: number,
+    cy: number,
+    r: number,
+    startAngle: number,
+    endAngle: number,
+    anticlockwise: boolean = false,
+  ): void {
     // Determine the scale factor from the transform (uniform scale assumed)
     const m = this._transform;
     const scaleX = Math.sqrt(m.a * m.a + m.b * m.b);
@@ -242,7 +264,7 @@ export class SvgContext {
     }
 
     const TWO_PI = Math.PI * 2;
-    const delta = ((ea - sa) % TWO_PI + TWO_PI) % TWO_PI;
+    const delta = (((ea - sa) % TWO_PI) + TWO_PI) % TWO_PI;
 
     if (delta === 0 || Math.abs(delta - TWO_PI) < 1e-10) {
       // Full circle: draw as two half-arcs (SVG can't do a full circle in one A command)
@@ -280,11 +302,10 @@ export class SvgContext {
   stroke(): void {
     if (!this._pathData.trim()) return;
     const stroke = this._cssColor(this.strokeStyle);
-    const dash = this._dashArray.length > 0
-      ? ` stroke-dasharray="${this._dashArray.join(' ')}"`
-      : '';
+    const dash =
+      this._dashArray.length > 0 ? ` stroke-dasharray="${this._dashArray.join(' ')}"` : '';
     this._elements.push(
-      `<path d="${this._pathData.trim()}" fill="none" stroke="${stroke}" stroke-width="${this._n(this.lineWidth)}"${dash}/>`
+      `<path d="${this._pathData.trim()}" fill="none" stroke="${stroke}" stroke-width="${this._n(this.lineWidth)}"${dash}/>`,
     );
     this._pathData = '';
   }
@@ -306,16 +327,15 @@ export class SvgContext {
    */
   strokeRect(x: number, y: number, w: number, h: number): void {
     const stroke = this._cssColor(this.strokeStyle);
-    const dash = this._dashArray.length > 0
-      ? ` stroke-dasharray="${this._dashArray.join(' ')}"`
-      : '';
+    const dash =
+      this._dashArray.length > 0 ? ` stroke-dasharray="${this._dashArray.join(' ')}"` : '';
     const [x0, y0] = this._applyTransform(x, y);
     const [x1, y1] = this._applyTransform(x + w, y);
     const [x2, y2] = this._applyTransform(x + w, y + h);
     const [x3, y3] = this._applyTransform(x, y + h);
     const d = `M ${this._n(x0)} ${this._n(y0)} L ${this._n(x1)} ${this._n(y1)} L ${this._n(x2)} ${this._n(y2)} L ${this._n(x3)} ${this._n(y3)} Z`;
     this._elements.push(
-      `<path d="${d}" fill="none" stroke="${stroke}" stroke-width="${this._n(this.lineWidth)}"${dash}/>`
+      `<path d="${d}" fill="none" stroke="${stroke}" stroke-width="${this._n(this.lineWidth)}"${dash}/>`,
     );
   }
 
@@ -334,7 +354,7 @@ export class SvgContext {
     const anchor = this._svgTextAnchor(this.textAlign);
     const baseline = this._svgDominantBaseline(this.textBaseline);
     this._elements.push(
-      `<text x="${this._n(tx)}" y="${this._n(ty)}" fill="${fill}" font="${this._escapeAttr(this.font)}" text-anchor="${anchor}" dominant-baseline="${baseline}">${this._escapeText(text)}</text>`
+      `<text x="${this._n(tx)}" y="${this._n(ty)}" fill="${fill}" font="${this._escapeAttr(this.font)}" text-anchor="${anchor}" dominant-baseline="${baseline}">${this._escapeText(text)}</text>`,
     );
   }
 
@@ -342,7 +362,13 @@ export class SvgContext {
    * Draws an image into the SVG as a base64-encoded <image> element.
    * Accepts HTMLImageElement (uses .src) or a data URL string.
    */
-  drawImage(image: HTMLImageElement | { src: string }, dx: number, dy: number, dw: number, dh: number): void {
+  drawImage(
+    image: HTMLImageElement | { src: string },
+    dx: number,
+    dy: number,
+    dw: number,
+    dh: number,
+  ): void {
     const href = (image as HTMLImageElement).src ?? '';
     if (!href) return;
     const [tx, ty] = this._applyTransform(dx, dy);
@@ -353,7 +379,7 @@ export class SvgContext {
     const tw = dw * scaleX;
     const th = dh * scaleY;
     this._elements.push(
-      `<image href="${this._escapeAttr(href)}" x="${this._n(tx)}" y="${this._n(ty)}" width="${this._n(tw)}" height="${this._n(th)}" preserveAspectRatio="xMidYMid meet"/>`
+      `<image href="${this._escapeAttr(href)}" x="${this._n(tx)}" y="${this._n(ty)}" width="${this._n(tw)}" height="${this._n(th)}" preserveAspectRatio="xMidYMid meet"/>`,
     );
   }
 
@@ -385,23 +411,37 @@ export class SvgContext {
 
   private _svgTextAnchor(align: string): string {
     switch (align) {
-      case 'center': return 'middle';
-      case 'right': case 'end': return 'end';
-      default: return 'start';
+      case 'center':
+        return 'middle';
+      case 'right':
+      case 'end':
+        return 'end';
+      default:
+        return 'start';
     }
   }
 
   private _svgDominantBaseline(baseline: string): string {
     switch (baseline) {
-      case 'middle': return 'middle';
-      case 'top': case 'hanging': return 'hanging';
-      case 'bottom': case 'ideographic': return 'ideographic';
-      default: return 'auto';
+      case 'middle':
+        return 'middle';
+      case 'top':
+      case 'hanging':
+        return 'hanging';
+      case 'bottom':
+      case 'ideographic':
+        return 'ideographic';
+      default:
+        return 'auto';
     }
   }
 
   private _escapeAttr(s: string): string {
-    return s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return s
+      .replace(/&/g, '&amp;')
+      .replace(/"/g, '&quot;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
   }
 
   private _escapeText(s: string): string {

@@ -16,7 +16,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-
 import { render, waitFor } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach, afterEach, Mock } from 'vitest';
 import QRCanvas from './QRCanvas';
@@ -113,134 +112,155 @@ describe('QRCanvas Rendering Logic Extended', () => {
 
   // Helper to trigger specific module state
   const setModule = (r: number, c: number, val: boolean) => {
-      mockModules.get.mockImplementation((row: number, col: number) => {
-          if (row === r && col === c) return val;
-          return false;
-      });
+    mockModules.get.mockImplementation((row: number, col: number) => {
+      if (row === r && col === c) return val;
+      return false;
+    });
   };
 
   it('draws FLUID style correctly (using arc)', async () => {
-      setModule(10, 10, true);
-      const config = { ...DEFAULT_CONFIG, style: QRStyle.FLUID };
-      render(<QRCanvas config={config} />);
+    setModule(10, 10, true);
+    const config = { ...DEFAULT_CONFIG, style: QRStyle.FLUID };
+    render(<QRCanvas config={config} />);
 
-      await waitFor(() => {
-          expect(mockContext.arc).toHaveBeenCalled();
-          expect(mockContext.fill).toHaveBeenCalled();
-      });
+    await waitFor(() => {
+      expect(mockContext.arc).toHaveBeenCalled();
+      expect(mockContext.fill).toHaveBeenCalled();
+    });
   });
 
   it('draws GRUNGE style correctly (using rough rect / rotation)', async () => {
-      setModule(10, 10, true);
-      const config = { ...DEFAULT_CONFIG, style: QRStyle.GRUNGE };
-      render(<QRCanvas config={config} />);
+    setModule(10, 10, true);
+    const config = { ...DEFAULT_CONFIG, style: QRStyle.GRUNGE };
+    render(<QRCanvas config={config} />);
 
-      await waitFor(() => {
-          expect(mockContext.save).toHaveBeenCalled();
-          expect(mockContext.rotate).toHaveBeenCalled();
-          expect(mockContext.restore).toHaveBeenCalled();
-          expect(mockContext.fillRect).toHaveBeenCalled();
-      });
+    await waitFor(() => {
+      expect(mockContext.save).toHaveBeenCalled();
+      expect(mockContext.rotate).toHaveBeenCalled();
+      expect(mockContext.restore).toHaveBeenCalled();
+      expect(mockContext.fillRect).toHaveBeenCalled();
+    });
   });
 
   it('draws CIRCUIT style correctly (full square + notches)', async () => {
-      setModule(10, 10, true);
-      const config = { ...DEFAULT_CONFIG, style: QRStyle.CIRCUIT };
-      render(<QRCanvas config={config} />);
+    setModule(10, 10, true);
+    const config = { ...DEFAULT_CONFIG, style: QRStyle.CIRCUIT };
+    render(<QRCanvas config={config} />);
 
-      await waitFor(() => {
-          // Should use roundRect for the main body
-          expect(mockContext.roundRect).toHaveBeenCalled();
-          expect(mockContext.fill).toHaveBeenCalled();
-          // And potentially fillRect for connections (though none here)
-      });
+    await waitFor(() => {
+      // Should use roundRect for the main body
+      expect(mockContext.roundRect).toHaveBeenCalled();
+      expect(mockContext.fill).toHaveBeenCalled();
+      // And potentially fillRect for connections (though none here)
+    });
   });
 
   it('draws Border DOTTED style', async () => {
-      const config = { ...DEFAULT_CONFIG, isBorderEnabled: true, borderStyle: 'dotted' as const, borderSize: 0.1 };
-      render(<QRCanvas config={config} />);
+    const config = {
+      ...DEFAULT_CONFIG,
+      isBorderEnabled: true,
+      borderStyle: 'dotted' as const,
+      borderSize: 0.1,
+    };
+    render(<QRCanvas config={config} />);
 
-      await waitFor(() => {
-          expect(mockContext.setLineDash).toHaveBeenCalledWith(expect.arrayContaining([expect.any(Number), expect.any(Number)]));
-          expect(mockContext.strokeRect).toHaveBeenCalled();
-      });
+    await waitFor(() => {
+      expect(mockContext.setLineDash).toHaveBeenCalledWith(
+        expect.arrayContaining([expect.any(Number), expect.any(Number)]),
+      );
+      expect(mockContext.strokeRect).toHaveBeenCalled();
+    });
   });
 
   it('draws Border DOUBLE style', async () => {
-      const config = { ...DEFAULT_CONFIG, isBorderEnabled: true, borderStyle: 'double' as const, borderSize: 0.1 };
-      render(<QRCanvas config={config} />);
+    const config = {
+      ...DEFAULT_CONFIG,
+      isBorderEnabled: true,
+      borderStyle: 'double' as const,
+      borderSize: 0.1,
+    };
+    render(<QRCanvas config={config} />);
 
-      await waitFor(() => {
-          // Double style just draws a strokeRect with offset
-          expect(mockContext.strokeRect).toHaveBeenCalled();
-          // It doesn't use setLineDash
-          expect(mockContext.setLineDash).not.toHaveBeenCalledWith(expect.any(Array));
-      });
+    await waitFor(() => {
+      // Double style just draws a strokeRect with offset
+      expect(mockContext.strokeRect).toHaveBeenCalled();
+      // It doesn't use setLineDash
+      expect(mockContext.setLineDash).not.toHaveBeenCalledWith(expect.any(Array));
+    });
   });
 
   it('draws Border Text Top Center', async () => {
-      const config = { ...DEFAULT_CONFIG, isBorderEnabled: true, borderText: 'TEST', borderTextPosition: 'top-center' as const };
-      render(<QRCanvas config={config} />);
+    const config = {
+      ...DEFAULT_CONFIG,
+      isBorderEnabled: true,
+      borderText: 'TEST',
+      borderTextPosition: 'top-center' as const,
+    };
+    render(<QRCanvas config={config} />);
 
-      await waitFor(() => {
-          expect(mockContext.fillText).toHaveBeenCalledWith('TEST', expect.any(Number), expect.any(Number));
-          // Verify Y position is small (near top)
-          const call = mockContext.fillText.mock.calls[0];
-          expect(call[2]).toBeLessThan(1024 / 2); // y < half height
-      });
+    await waitFor(() => {
+      expect(mockContext.fillText).toHaveBeenCalledWith(
+        'TEST',
+        expect.any(Number),
+        expect.any(Number),
+      );
+      // Verify Y position is small (near top)
+      const call = mockContext.fillText.mock.calls[0];
+      expect(call[2]).toBeLessThan(1024 / 2); // y < half height
+    });
   });
 
   it('uses manual drawRoundRect fallback if ctx.roundRect is missing', async () => {
-      // Delete roundRect from mock
-      mockContext.roundRect = undefined;
+    // Delete roundRect from mock
+    mockContext.roundRect = undefined;
 
-      setModule(10, 10, true);
-      const config = { ...DEFAULT_CONFIG, style: QRStyle.MODERN }; // Modern uses roundRect
-      render(<QRCanvas config={config} />);
+    setModule(10, 10, true);
+    const config = { ...DEFAULT_CONFIG, style: QRStyle.MODERN }; // Modern uses roundRect
+    render(<QRCanvas config={config} />);
 
-      await waitFor(() => {
-          expect(mockContext.quadraticCurveTo).toHaveBeenCalled();
-          expect(mockContext.moveTo).toHaveBeenCalled();
-          expect(mockContext.lineTo).toHaveBeenCalled();
-          expect(mockContext.closePath).toHaveBeenCalled();
-      });
+    await waitFor(() => {
+      expect(mockContext.quadraticCurveTo).toHaveBeenCalled();
+      expect(mockContext.moveTo).toHaveBeenCalled();
+      expect(mockContext.lineTo).toHaveBeenCalled();
+      expect(mockContext.closePath).toHaveBeenCalled();
+    });
   });
 
   it('draws different eye patterns correctly', async () => {
-     // We just want to ensure specific calls happen for eyes.
-     // Eyes are drawn at (0,0), (0, 14), (14, 0) relative to modules... wait size is 21.
-     // Eyes are top-left, top-right, bottom-left.
+    // We just want to ensure specific calls happen for eyes.
+    // Eyes are drawn at (0,0), (0, 14), (14, 0) relative to modules... wait size is 21.
+    // Eyes are top-left, top-right, bottom-left.
 
-     // Check FLUID Eye
-     const fluidConfig = { ...DEFAULT_CONFIG, style: QRStyle.FLUID };
-     render(<QRCanvas config={fluidConfig} />);
-     await waitFor(() => {
-         // Fluid eye uses drawRoundRect for frame and arc for pupil
-         expect(mockContext.roundRect).toHaveBeenCalled();
-         expect(mockContext.arc).toHaveBeenCalled();
-     });
+    // Check FLUID Eye
+    const fluidConfig = { ...DEFAULT_CONFIG, style: QRStyle.FLUID };
+    render(<QRCanvas config={fluidConfig} />);
+    await waitFor(() => {
+      // Fluid eye uses drawRoundRect for frame and arc for pupil
+      expect(mockContext.roundRect).toHaveBeenCalled();
+      expect(mockContext.arc).toHaveBeenCalled();
+    });
 
-     // Reset mocks
-     vi.clearAllMocks();
+    // Reset mocks
+    vi.clearAllMocks();
 
-     // Check STARBURST Eye
-     const starConfig = { ...DEFAULT_CONFIG, style: QRStyle.STARBURST };
-     render(<QRCanvas config={starConfig} />);
-     await waitFor(() => {
-         // Starburst uses fillRect for frame (square) and drawStar for pupil
-         // drawStar uses many lineTo calls
-         expect(mockContext.lineTo).toHaveBeenCalled();
-     });
+    // Check STARBURST Eye
+    const starConfig = { ...DEFAULT_CONFIG, style: QRStyle.STARBURST };
+    render(<QRCanvas config={starConfig} />);
+    await waitFor(() => {
+      // Starburst uses fillRect for frame (square) and drawStar for pupil
+      // drawStar uses many lineTo calls
+      expect(mockContext.lineTo).toHaveBeenCalled();
+    });
 
-     // Reset mocks
-     vi.clearAllMocks();
+    // Reset mocks
+    vi.clearAllMocks();
 
-     // Check GRUNGE Eye
-     const grungeConfig = { ...DEFAULT_CONFIG, style: QRStyle.GRUNGE };
-     render(<QRCanvas config={grungeConfig} />);
-     await waitFor(() => {
-         // Grunge uses drawRoughRect (rotate) and drawScribble (rotate + loop)
-         expect(mockContext.rotate).toHaveBeenCalled();
-     });
+    // Check GRUNGE Eye
+    const grungeConfig = { ...DEFAULT_CONFIG, style: QRStyle.GRUNGE };
+    render(<QRCanvas config={grungeConfig} />);
+    await waitFor(() => {
+      // Grunge uses drawRoughRect (rotate) and drawScribble (rotate + loop)
+      expect(mockContext.rotate).toHaveBeenCalled();
+    });
   });
 });

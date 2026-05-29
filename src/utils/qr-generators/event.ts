@@ -76,20 +76,30 @@ export const hydrateEventData = (raw: string): EventData => {
   if (!raw.includes('BEGIN:VEVENT')) return result;
 
   const lines = raw.split(/\r\n|\r|\n/);
-  lines.forEach(line => {
+  lines.forEach((line) => {
     const splitIndex = line.indexOf(':');
     if (splitIndex <= 0) return;
-    
+
     const fullKey = line.substring(0, splitIndex);
     const key = fullKey.split(';')[0].toUpperCase();
     const value = line.substring(splitIndex + 1);
 
-    switch(key) {
-      case 'SUMMARY': result.title = unescapeEventString(value); break;
-      case 'DTSTART': result.startDate = parseEventDateTime(value); break;
-      case 'DTEND': result.endDate = parseEventDateTime(value); break;
-      case 'LOCATION': result.location = unescapeEventString(value); break;
-      case 'DESCRIPTION': result.description = unescapeEventString(value); break;
+    switch (key) {
+      case 'SUMMARY':
+        result.title = unescapeEventString(value);
+        break;
+      case 'DTSTART':
+        result.startDate = parseEventDateTime(value);
+        break;
+      case 'DTEND':
+        result.endDate = parseEventDateTime(value);
+        break;
+      case 'LOCATION':
+        result.location = unescapeEventString(value);
+        break;
+      case 'DESCRIPTION':
+        result.description = unescapeEventString(value);
+        break;
     }
   });
 

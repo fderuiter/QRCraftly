@@ -46,7 +46,9 @@ describe('MeetingInput', () => {
 
   it('displays Teams meeting details correctly', () => {
     // Basic teams link for testing
-    const data: MeetingData = { url: 'https://teams.microsoft.com/l/meetup-join/19%3Ameeting_MDIxYm...%40thread.v2/0' };
+    const data: MeetingData = {
+      url: 'https://teams.microsoft.com/l/meetup-join/19%3Ameeting_MDIxYm...%40thread.v2/0',
+    };
     render(<MeetingInput data={data} onChange={mockOnChange} />);
 
     expect(screen.getByText('Microsoft Teams link detected')).toBeInTheDocument();

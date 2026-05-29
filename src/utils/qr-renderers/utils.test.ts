@@ -65,7 +65,7 @@ describe('QR Renderer Utils', () => {
         drawY: 0,
         drawSize: 100,
         cellSize: 4,
-        borderPx: 0
+        borderPx: 0,
       });
     });
 
@@ -80,7 +80,7 @@ describe('QR Renderer Utils', () => {
         drawY: 10,
         drawSize: 80,
         cellSize: 4,
-        borderPx: 10
+        borderPx: 10,
       });
     });
   });
@@ -95,7 +95,7 @@ describe('QR Renderer Utils', () => {
         logoSize: 0.2, // 20% of 21 = 4.2 modules
         logoPadding: 0,
         logoPaddingStyle: 'none',
-        errorCorrectionLevel: QRErrorCorrectionLevel.H // Safe ratio 0.50
+        errorCorrectionLevel: QRErrorCorrectionLevel.H, // Safe ratio 0.50
       };
 
       const metrics = getLogoMetrics(config, moduleCount, cellSize);
@@ -114,7 +114,7 @@ describe('QR Renderer Utils', () => {
         logoSize: 0.3, // 30% of 21 = 6.3 modules
         logoPadding: 0,
         logoPaddingStyle: 'none',
-        errorCorrectionLevel: QRErrorCorrectionLevel.L // Safe ratio 0.22
+        errorCorrectionLevel: QRErrorCorrectionLevel.L, // Safe ratio 0.22
       };
 
       // Safe limit: 21 * 0.22 = 4.62 modules
@@ -127,38 +127,38 @@ describe('QR Renderer Utils', () => {
     });
 
     it('scales down logo considering padding', () => {
-        // Safe limit for M is 0.35 * 21 = 7.35 modules
-        const config: QRConfig = {
-            ...DEFAULT_CONFIG,
-            logoSize: 0.3, // 6.3 modules
-            logoPadding: 1, // + 2 modules (1 each side) = 8.3 modules total requested
-            logoPaddingStyle: 'square',
-            errorCorrectionLevel: QRErrorCorrectionLevel.M
-        };
+      // Safe limit for M is 0.35 * 21 = 7.35 modules
+      const config: QRConfig = {
+        ...DEFAULT_CONFIG,
+        logoSize: 0.3, // 6.3 modules
+        logoPadding: 1, // + 2 modules (1 each side) = 8.3 modules total requested
+        logoPaddingStyle: 'square',
+        errorCorrectionLevel: QRErrorCorrectionLevel.M,
+      };
 
-        // Requested total cutout: 8.3 modules
-        // Max allowed: 7.35 modules
-        // Scale factor: 7.35 / 8.3 ≈ 0.8855
+      // Requested total cutout: 8.3 modules
+      // Max allowed: 7.35 modules
+      // Scale factor: 7.35 / 8.3 ≈ 0.8855
 
-        const metrics = getLogoMetrics(config, moduleCount, cellSize);
-        expect(metrics.cutoutModuleSize).toBeCloseTo(7.35);
-        // Padding should also be scaled
-        expect(metrics.effectivePaddingModules).toBeLessThan(1);
+      const metrics = getLogoMetrics(config, moduleCount, cellSize);
+      expect(metrics.cutoutModuleSize).toBeCloseTo(7.35);
+      // Padding should also be scaled
+      expect(metrics.effectivePaddingModules).toBeLessThan(1);
     });
 
     it('defaults to 0.50 safe area ratio for invalid error correction levels', () => {
-        const config: any = {
-            ...DEFAULT_CONFIG,
-            logoSize: 0.4, // 40% of 21 = 8.4 modules
-            logoPadding: 0,
-            logoPaddingStyle: 'none',
-            errorCorrectionLevel: 'INVALID' // Trigger the ?? 0.50 fallback
-        };
+      const config: any = {
+        ...DEFAULT_CONFIG,
+        logoSize: 0.4, // 40% of 21 = 8.4 modules
+        logoPadding: 0,
+        logoPaddingStyle: 'none',
+        errorCorrectionLevel: 'INVALID', // Trigger the ?? 0.50 fallback
+      };
 
-        const metrics = getLogoMetrics(config, moduleCount, cellSize);
+      const metrics = getLogoMetrics(config, moduleCount, cellSize);
 
-        // Since default is 0.50, and 0.4 < 0.50, no scaling should occur
-        expect(metrics.effectiveLogoSizeModules).toBeCloseTo(8.4);
+      // Since default is 0.50, and 0.4 < 0.50, no scaling should occur
+      expect(metrics.effectiveLogoSizeModules).toBeCloseTo(8.4);
     });
   });
 
@@ -177,11 +177,11 @@ describe('QR Renderer Utils', () => {
 
     it('covers square area correctly', () => {
       const config: QRConfig = {
-          ...DEFAULT_CONFIG,
-          logoUrl: 'test.png',
-          logoPaddingStyle: 'square',
-          logoSize: 0.2, // ~4.2 modules
-          logoPadding: 0
+        ...DEFAULT_CONFIG,
+        logoUrl: 'test.png',
+        logoPaddingStyle: 'square',
+        logoSize: 0.2, // ~4.2 modules
+        logoPadding: 0,
       };
       // Effective size ~4.2 modules.
       // Center is 10.5
@@ -216,11 +216,11 @@ describe('QR Renderer Utils', () => {
 
     it('covers circular area correctly', () => {
       const config: QRConfig = {
-          ...DEFAULT_CONFIG,
-          logoUrl: 'test.png',
-          logoPaddingStyle: 'circle',
-          logoSize: 0.2, // ~4.2 modules
-          logoPadding: 0
+        ...DEFAULT_CONFIG,
+        logoUrl: 'test.png',
+        logoPaddingStyle: 'circle',
+        logoSize: 0.2, // ~4.2 modules
+        logoPadding: 0,
       };
 
       const metrics = getLogoMetrics(config, moduleCount, cellSize);

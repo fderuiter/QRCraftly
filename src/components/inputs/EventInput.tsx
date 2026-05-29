@@ -1,6 +1,6 @@
-import React from "react";
-import { EventData } from "../../types";
-import { TextField, TextAreaField } from "./FormFields";
+import React from 'react';
+import { EventData } from '../../types';
+import { TextField, TextAreaField } from './FormFields';
 
 interface EventInputProps {
   data: EventData;

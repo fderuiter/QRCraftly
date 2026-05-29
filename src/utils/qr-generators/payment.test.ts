@@ -8,7 +8,7 @@ describe('Payment generator', () => {
       network: CryptoNetwork.BITCOIN,
       address: '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa',
       amount: '1.5',
-      label: 'Donation'
+      label: 'Donation',
     };
     const str = constructPaymentString(data);
     const hydrated = hydratePaymentData(str);
@@ -20,7 +20,7 @@ describe('Payment generator', () => {
       network: CryptoNetwork.BITCOIN,
       address: '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa',
       amount: '',
-      label: ''
+      label: '',
     };
     const str = constructPaymentString(data);
     const hydrated = hydratePaymentData(str);
@@ -44,8 +44,8 @@ describe('Payment generator', () => {
   });
 });
 
-  it('handles query parameters without amount or label', () => {
-    const result = hydratePaymentData('bitcoin:1A1z?other=123');
-    expect(result.amount).toBe('');
-    expect(result.label).toBe('');
-  });
+it('handles query parameters without amount or label', () => {
+  const result = hydratePaymentData('bitcoin:1A1z?other=123');
+  expect(result.amount).toBe('');
+  expect(result.label).toBe('');
+});

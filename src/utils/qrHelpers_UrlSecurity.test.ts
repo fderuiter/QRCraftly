@@ -5,7 +5,7 @@ describe('qrHelpers Security - URL', () => {
   it('should block javascript: protocol', () => {
     const dangerousPayload = 'javascript:alert(1)';
     const result = constructUrlString({
-      url: dangerousPayload
+      url: dangerousPayload,
     });
     expect(result).toBe('');
   });
@@ -13,7 +13,7 @@ describe('qrHelpers Security - URL', () => {
   it('should block vbscript: protocol', () => {
     const dangerousPayload = 'vbscript:msgbox(1)';
     const result = constructUrlString({
-      url: dangerousPayload
+      url: dangerousPayload,
     });
     expect(result).toBe('');
   });
@@ -21,7 +21,7 @@ describe('qrHelpers Security - URL', () => {
   it('should allow valid protocols like https:', () => {
     const validPayload = 'https://example.com';
     const result = constructUrlString({
-      url: validPayload
+      url: validPayload,
     });
     expect(result).toBe(validPayload);
   });

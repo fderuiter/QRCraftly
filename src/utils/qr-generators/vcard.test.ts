@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { constructVCardString, hydrateVCardData, escapeVCardString, unescapeVCardString } from './vcard';
+import {
+  constructVCardString,
+  hydrateVCardData,
+  escapeVCardString,
+  unescapeVCardString,
+} from './vcard';
 
 describe('VCard generator', () => {
   it('constructs and hydrates successfully', () => {
@@ -13,7 +18,7 @@ describe('VCard generator', () => {
       website: 'https://example.com',
       street: '123 Main St',
       city: 'Anytown',
-      country: 'USA'
+      country: 'USA',
     };
     const str = constructVCardString(data);
     const hydrated = hydrateVCardData(str);
@@ -47,12 +52,12 @@ describe('VCard generator', () => {
   });
 });
 
-  it('handles empty parts in N and ADR', () => {
-    const raw = `BEGIN:VCARD\nN:;\nADR:;;\nEND:VCARD`;
-    const hydrated = hydrateVCardData(raw);
-    expect(hydrated.lastName).toBe('');
-    expect(hydrated.firstName).toBe('');
-    expect(hydrated.street).toBe('');
-    expect(hydrated.city).toBe('');
-    expect(hydrated.country).toBe('');
-  });
+it('handles empty parts in N and ADR', () => {
+  const raw = `BEGIN:VCARD\nN:;\nADR:;;\nEND:VCARD`;
+  const hydrated = hydrateVCardData(raw);
+  expect(hydrated.lastName).toBe('');
+  expect(hydrated.firstName).toBe('');
+  expect(hydrated.street).toBe('');
+  expect(hydrated.city).toBe('');
+  expect(hydrated.country).toBe('');
+});

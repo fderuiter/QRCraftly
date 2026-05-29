@@ -176,7 +176,7 @@ describe('Advanced Template Settings (via StyleControls)', () => {
     };
     render(<StyleControls config={config} onChange={mockOnChange} />);
     expect(
-      screen.getByRole('checkbox', { name: /Override template background color/i })
+      screen.getByRole('checkbox', { name: /Override template background color/i }),
     ).toBeInTheDocument();
   });
 
@@ -187,7 +187,7 @@ describe('Advanced Template Settings (via StyleControls)', () => {
     };
     render(<StyleControls config={config} onChange={mockOnChange} />);
     expect(
-      screen.getByRole('checkbox', { name: /Override template text color/i })
+      screen.getByRole('checkbox', { name: /Override template text color/i }),
     ).toBeInTheDocument();
   });
 
@@ -227,7 +227,7 @@ describe('Advanced Template Settings (via StyleControls)', () => {
       templateBgColor: undefined,
     };
     const { rerender } = render(
-      <StyleControls config={configNoOverride} onChange={mockOnChange} />
+      <StyleControls config={configNoOverride} onChange={mockOnChange} />,
     );
     // templateBgColor ColorInput is identified by id="templateBgColor"
     expect(document.getElementById('templateBgColor')).not.toBeInTheDocument();
@@ -248,7 +248,7 @@ describe('Advanced Template Settings (via StyleControls)', () => {
       templateTextColor: undefined,
     };
     const { rerender } = render(
-      <StyleControls config={configNoOverride} onChange={mockOnChange} />
+      <StyleControls config={configNoOverride} onChange={mockOnChange} />,
     );
     expect(document.getElementById('templateTextColor')).not.toBeInTheDocument();
 
@@ -292,16 +292,14 @@ describe('Advanced Template Settings (via StyleControls)', () => {
       ...(DEFAULT_CONFIG as QRConfig),
       templateStyle: TemplateStyle.MINIMALIST,
     };
-    const { rerender } = render(
-      <StyleControls config={config} onChange={mockOnChange} />
-    );
+    const { rerender } = render(<StyleControls config={config} onChange={mockOnChange} />);
     expect(screen.getByText('Advanced Settings')).toBeInTheDocument();
 
     rerender(
       <StyleControls
         config={{ ...config, templateStyle: TemplateStyle.NONE }}
         onChange={mockOnChange}
-      />
+      />,
     );
     expect(screen.queryByText('Advanced Settings')).not.toBeInTheDocument();
   });

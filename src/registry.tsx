@@ -10,7 +10,9 @@ const ContentControl = () => {
   const { config, updateConfig } = useQRContext();
   return (
     <section>
-      <h2 className="text-xs uppercase tracking-wider text-slate-600 dark:text-slate-400 font-bold mb-4">Content</h2>
+      <h2 className="text-xs uppercase tracking-wider text-slate-600 dark:text-slate-400 font-bold mb-4">
+        Content
+      </h2>
       <InputPanel config={config} onChange={updateConfig} />
     </section>
   );
@@ -19,16 +21,22 @@ const ContentControl = () => {
 const AppearanceControl = () => {
   const { config, updateConfig } = useQRContext();
   const [isMounted, setIsMounted] = React.useState(false);
-  
+
   React.useEffect(() => {
     setIsMounted(true);
   }, []);
 
   return (
     <section>
-      <h2 className="text-xs uppercase tracking-wider text-slate-600 dark:text-slate-400 font-bold mb-4">Appearance</h2>
+      <h2 className="text-xs uppercase tracking-wider text-slate-600 dark:text-slate-400 font-bold mb-4">
+        Appearance
+      </h2>
       {isMounted ? (
-        <Suspense fallback={<div className="h-64 bg-slate-100 dark:bg-slate-800 rounded-xl animate-pulse" />}>
+        <Suspense
+          fallback={
+            <div className="h-64 bg-slate-100 dark:bg-slate-800 rounded-xl animate-pulse" />
+          }
+        >
           <StyleControls config={config} onChange={updateConfig} />
         </Suspense>
       ) : (
@@ -45,17 +53,17 @@ const AdditionalSidebarContent = ({ toolId }: { toolId?: string }) => {
 ComponentRegistry.registerSidebarControl({
   id: 'content',
   component: ContentControl,
-  order: 10
+  order: 10,
 });
 
 ComponentRegistry.registerSidebarControl({
   id: 'appearance',
   component: AppearanceControl,
-  order: 20
+  order: 20,
 });
 
 ComponentRegistry.registerSidebarControl({
   id: 'sidebar-content',
   component: AdditionalSidebarContent,
-  order: 30
+  order: 30,
 });

@@ -23,13 +23,11 @@
  * @param data The JSON-LD schema object to serialize.
  * @returns A safe, escaped JSON string representation of the data, or '{}' if undefined/invalid.
  */
-export const safeJsonLdStringify = (data: any): string => {
+export const safeJsonLdStringify = (data: unknown): string => {
   const str = JSON.stringify(data);
   if (!str) return '{}';
 
-  return str.replace(/</g, '\\u003c')
-            .replace(/>/g, '\\u003e')
-            .replace(/&/g, '\\u0026');
+  return str.replace(/</g, '\\u003c').replace(/>/g, '\\u003e').replace(/&/g, '\\u0026');
 };
 
 // Standard control chars (0x00-0x1F) and DEL (0x7F) + C1 control chars (0x80-0x9F)
@@ -68,7 +66,7 @@ export const isDangerousUrl = (url: string | undefined): boolean => {
   // Remove control characters (00-1F, 7F-9F) and whitespace globally
   const normalized = url.replace(REGEX_URL_UNSAFE_CHARS, '').toLowerCase();
 
-  return DANGEROUS_PROTOCOLS.some(p => normalized.startsWith(p));
+  return DANGEROUS_PROTOCOLS.some((p) => normalized.startsWith(p));
 };
 
 /**

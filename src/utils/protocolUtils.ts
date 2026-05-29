@@ -11,9 +11,7 @@ export const ProtocolUtils = {
    */
   escapeWifi(str: string | undefined): string {
     if (!str) return '';
-    return str
-      .replace(REGEX_STRICT_CONTROL_CHARS, '')
-      .replace(/([\\;,":])/g, '\\$1');
+    return str.replace(REGEX_STRICT_CONTROL_CHARS, '').replace(/([\\;,":])/g, '\\$1');
   },
 
   /**
@@ -53,16 +51,17 @@ export const ProtocolUtils = {
    */
   identifyProtocol(raw: string): QRType | null {
     if (!raw) return null;
-    
+
     // Check specific protocols first
     if (raw.startsWith('WIFI:')) return QRType.WIFI;
     if (raw.includes('BEGIN:VCARD')) return QRType.VCARD;
     if (raw.includes('BEGIN:VEVENT') || raw.includes('BEGIN:VCALENDAR')) return QRType.EVENT;
     if (raw.toLowerCase().startsWith('mailto:') || raw.startsWith('MATMSG:')) return QRType.EMAIL;
     if (raw.toLowerCase().startsWith('tel:')) return QRType.PHONE;
-    if (raw.toLowerCase().startsWith('sms:') || raw.toLowerCase().startsWith('smsto:')) return QRType.SMS;
+    if (raw.toLowerCase().startsWith('sms:') || raw.toLowerCase().startsWith('smsto:'))
+      return QRType.SMS;
     if (raw.toLowerCase().startsWith('geo:')) return QRType.LOCATION;
-    
+
     // Check payment networks
     if (/^(bitcoin|ethereum|litecoin|solana):/i.test(raw)) return QRType.PAYMENT;
 
@@ -70,17 +69,26 @@ export const ProtocolUtils = {
     try {
       const url = new URL(raw);
       const host = url.hostname.toLowerCase();
-      
+
       // Socials
-      if (host.includes('instagram.com') || host.includes('x.com') || host.includes('twitter.com') || host.includes('tiktok.com')) {
+      if (
+        host.includes('instagram.com') ||
+        host.includes('x.com') ||
+        host.includes('twitter.com') ||
+        host.includes('tiktok.com')
+      ) {
         return QRType.SOCIAL;
       }
-      
+
       // Meetings
-      if (host.includes('zoom.us') || host.includes('teams.microsoft.com') || host.includes('meet.google.com')) {
+      if (
+        host.includes('zoom.us') ||
+        host.includes('teams.microsoft.com') ||
+        host.includes('meet.google.com')
+      ) {
         return QRType.MEETING;
       }
-      
+
       // General URL
       if (url.protocol === 'http:' || url.protocol === 'https:') {
         return QRType.URL;
@@ -99,10 +107,10 @@ export const ProtocolUtils = {
   canHydrate(raw: string, type: QRType): boolean {
     const identified = this.identifyProtocol(raw);
     if (identified === type) return true;
-    
+
     // Fallback: anything can be hydrated into TEXT type
     if (type === QRType.TEXT) return true;
-    
+
     return false;
-  }
+  },
 };

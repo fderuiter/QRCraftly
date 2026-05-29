@@ -1,21 +1,16 @@
-import React from "react";
-import { PaymentData, CryptoNetwork } from "../../types";
-import { TextField, SelectField } from "./FormFields";
+import React from 'react';
+import { PaymentData, CryptoNetwork } from '../../types';
+import { TextField, SelectField } from './FormFields';
 
 interface PaymentInputProps {
   data: PaymentData;
   onChange: (updates: Partial<PaymentData>) => void;
 }
 
-export const PaymentInput: React.FC<PaymentInputProps> = ({
-  data,
-  onChange,
-}) => {
+export const PaymentInput: React.FC<PaymentInputProps> = ({ data, onChange }) => {
   return (
     <div className="space-y-3">
-      <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-        Crypto Payment
-      </h3>
+      <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Crypto Payment</h3>
 
       <SelectField
         id="payment-network"

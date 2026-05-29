@@ -29,7 +29,12 @@ interface LayoutControlsProps {
   onChange: (updates: Partial<QRConfig>) => void;
 }
 
-const FORMAT_OPTIONS: Array<{ id: SocialFormat; label: string; sublabel: string; icon: React.ReactNode }> = [
+const FORMAT_OPTIONS: Array<{
+  id: SocialFormat;
+  label: string;
+  sublabel: string;
+  icon: React.ReactNode;
+}> = [
   {
     id: SocialFormat.SQUARE_1_1,
     label: 'Square',
@@ -41,7 +46,13 @@ const FORMAT_OPTIONS: Array<{ id: SocialFormat; label: string; sublabel: string;
     label: 'Portrait',
     sublabel: '4:5',
     icon: (
-      <svg viewBox="0 0 12 15" className="w-4 h-5" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <svg
+        viewBox="0 0 12 15"
+        className="w-4 h-5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+      >
         <rect x="1" y="1" width="10" height="13" rx="1" />
       </svg>
     ),
@@ -75,16 +86,14 @@ export const LayoutControls: React.FC<LayoutControlsProps> = ({ config, onChange
 
   return (
     <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
-      <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-4">Export Layout</h3>
+      <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-4">
+        Export Layout
+      </h3>
 
       {/* Aspect Ratio Selector */}
       <div className="mb-4">
         <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-2">Aspect Ratio</p>
-        <div
-          className="grid grid-cols-3 gap-2"
-          role="group"
-          aria-label="Aspect Ratio"
-        >
+        <div className="grid grid-cols-3 gap-2" role="group" aria-label="Aspect Ratio">
           {FORMAT_OPTIONS.map((opt) => (
             <Button
               key={opt.id}
@@ -105,11 +114,7 @@ export const LayoutControls: React.FC<LayoutControlsProps> = ({ config, onChange
       {/* Template Style Selector */}
       <div>
         <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-2">Template</p>
-        <div
-          className="grid grid-cols-2 gap-2"
-          role="group"
-          aria-label="Template Style"
-        >
+        <div className="grid grid-cols-2 gap-2" role="group" aria-label="Template Style">
           {TEMPLATE_OPTIONS.map((opt) => (
             <Button
               key={opt.id}
@@ -150,12 +155,16 @@ export const LayoutControls: React.FC<LayoutControlsProps> = ({ config, onChange
       {/* Advanced Template Settings (visible only when a template is active) */}
       {showAdvanced && (
         <div className="mt-4 border-t border-slate-200 dark:border-slate-700 pt-4 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
-          <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">Advanced Settings</p>
+          <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">
+            Advanced Settings
+          </p>
 
           {/* Template Background Color */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs text-slate-500 dark:text-slate-400">Template Background</span>
+              <span className="text-xs text-slate-500 dark:text-slate-400">
+                Template Background
+              </span>
               <CheckboxField
                 id="override-bg-color"
                 checked={hasBgOverride}
@@ -182,7 +191,9 @@ export const LayoutControls: React.FC<LayoutControlsProps> = ({ config, onChange
           {/* Template Text / Accent Color */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs text-slate-500 dark:text-slate-400">Template Text Color</span>
+              <span className="text-xs text-slate-500 dark:text-slate-400">
+                Template Text Color
+              </span>
               <CheckboxField
                 id="override-text-color"
                 checked={hasTextOverride}

@@ -26,7 +26,9 @@ describe('InputPanel UX', () => {
   const mockOnChange = vi.fn();
 
   it('renders visible labels for vCard address fields', () => {
-    render(<InputPanel config={{ ...DEFAULT_CONFIG, type: QRType.VCARD }} onChange={mockOnChange} />);
+    render(
+      <InputPanel config={{ ...DEFAULT_CONFIG, type: QRType.VCARD }} onChange={mockOnChange} />,
+    );
 
     // These should exist as visible <label> elements
     // Currently they do not (they are aria-labels on inputs)

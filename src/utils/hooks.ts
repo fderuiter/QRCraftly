@@ -29,7 +29,7 @@ import { useState, useEffect, RefObject } from 'react';
 export function useOnClickOutside<T extends HTMLElement>(
   ref: RefObject<T | null>,
   handler: (event: MouseEvent | TouchEvent) => void,
-  isActive: boolean = true
+  isActive: boolean = true,
 ) {
   useEffect(() => {
     if (!isActive) return;
@@ -98,8 +98,8 @@ export const useImage = (url: string | null) => {
 
     // If image is already cached and loaded immediately
     if (img.complete && img.naturalHeight !== 0) {
-        setImage(img);
-        return;
+      setImage(img);
+      return;
     }
 
     img.onload = () => setImage(img);

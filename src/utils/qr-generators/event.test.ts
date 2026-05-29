@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { constructEventString, hydrateEventData, parseEventDateTime, formatEventDateTime, escapeEventString, unescapeEventString } from './event';
+import {
+  constructEventString,
+  hydrateEventData,
+  parseEventDateTime,
+  formatEventDateTime,
+  escapeEventString,
+  unescapeEventString,
+} from './event';
 
 describe('Event generator', () => {
   it('constructs and hydrates successfully', () => {
@@ -8,7 +15,7 @@ describe('Event generator', () => {
       startDate: '2025-01-01T12:30',
       endDate: '2025-01-01T13:30',
       location: 'Room 1',
-      description: 'Important meeting\nBe there'
+      description: 'Important meeting\nBe there',
     };
     const str = constructEventString(data);
     const hydrated = hydrateEventData(str);
@@ -43,25 +50,25 @@ describe('Event generator', () => {
     expect(formatEventDateTime(undefined)).toBe('');
     expect(formatEventDateTime('INVALID')).toBe('');
   });
-  
+
   it('edge cases for escaping', () => {
     expect(escapeEventString(undefined)).toBe('');
     expect(unescapeEventString(undefined)).toBe('');
   });
 });
 
-  it('handles empty parts in EVENT', () => {
-    const raw = `BEGIN:VEVENT\nSUMMARY:\nDTSTART:\nDTEND:\nLOCATION:\nDESCRIPTION:\nEND:VEVENT`;
-    const hydrated = hydrateEventData(raw);
-    expect(hydrated.title).toBe('');
-    expect(hydrated.startDate).toBe('');
-    expect(hydrated.endDate).toBe('');
-    expect(hydrated.location).toBe('');
-    expect(hydrated.description).toBe('');
-  });
+it('handles empty parts in EVENT', () => {
+  const raw = `BEGIN:VEVENT\nSUMMARY:\nDTSTART:\nDTEND:\nLOCATION:\nDESCRIPTION:\nEND:VEVENT`;
+  const hydrated = hydrateEventData(raw);
+  expect(hydrated.title).toBe('');
+  expect(hydrated.startDate).toBe('');
+  expect(hydrated.endDate).toBe('');
+  expect(hydrated.location).toBe('');
+  expect(hydrated.description).toBe('');
+});
 
-  it('handles lines with only colon', () => {
-    const raw = `BEGIN:VEVENT\n:value\nEND:VEVENT`;
-    const hydrated = hydrateEventData(raw);
-    expect(hydrated.title).toBe('');
-  });
+it('handles lines with only colon', () => {
+  const raw = `BEGIN:VEVENT\n:value\nEND:VEVENT`;
+  const hydrated = hydrateEventData(raw);
+  expect(hydrated.title).toBe('');
+});

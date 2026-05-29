@@ -21,7 +21,10 @@ import { validateImageUpload } from '../utils/security';
 
 interface UseImageUploadReturn {
   error: string | null;
-  handleUpload: (e: React.ChangeEvent<HTMLInputElement>, onSuccess: (dataUrl: string) => void) => void;
+  handleUpload: (
+    e: React.ChangeEvent<HTMLInputElement>,
+    onSuccess: (dataUrl: string) => void,
+  ) => void;
   setError: (error: string | null) => void;
 }
 
@@ -32,22 +35,25 @@ interface UseImageUploadReturn {
 export function useImageUpload(): UseImageUploadReturn {
   const [error, setError] = useState<string | null>(null);
 
-  const handleUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>, onSuccess: (dataUrl: string) => void) => {
-    const file = e.target.files?.[0];
-    setError(null);
-    if (file) {
-      const validationError = validateImageUpload(file);
-      if (validationError) {
-        setError(validationError);
-        return;
+  const handleUpload = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>, onSuccess: (dataUrl: string) => void) => {
+      const file = e.target.files?.[0];
+      setError(null);
+      if (file) {
+        const validationError = validateImageUpload(file);
+        if (validationError) {
+          setError(validationError);
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          onSuccess(event.target?.result as string);
+        };
+        reader.readAsDataURL(file);
       }
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        onSuccess(event.target?.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  }, []);
+    },
+    [],
+  );
 
   return { error, handleUpload, setError };
 }

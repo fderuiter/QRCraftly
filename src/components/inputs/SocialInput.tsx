@@ -1,6 +1,6 @@
-import React from "react";
-import { SocialData, SocialPlatform } from "../../types";
-import { TextField, SelectField } from "./FormFields";
+import React from 'react';
+import { SocialData, SocialPlatform } from '../../types';
+import { TextField, SelectField } from './FormFields';
 
 interface SocialInputProps {
   data: SocialData;
@@ -17,9 +17,7 @@ export const SocialInput: React.FC<SocialInputProps> = ({ data, onChange }) => {
         id="social-platform"
         label="Platform"
         value={data.platform}
-        onChange={(e) =>
-          onChange({ platform: e.target.value as SocialPlatform })
-        }
+        onChange={(e) => onChange({ platform: e.target.value as SocialPlatform })}
       >
         <option value={SocialPlatform.INSTAGRAM}>Instagram</option>
         <option value={SocialPlatform.TWITTER}>Twitter / X</option>

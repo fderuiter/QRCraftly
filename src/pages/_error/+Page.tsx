@@ -28,7 +28,7 @@ import { usePageContext } from 'vike-react/usePageContext';
  */
 export default function Page() {
   const pageContext = usePageContext();
-  const is404 = (pageContext as any).is404;
+  const is404 = (pageContext as unknown as { is404?: boolean }).is404;
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 text-slate-700">
@@ -43,7 +43,10 @@ export default function Page() {
           <p className="mb-8">Something went wrong on our end.</p>
         </>
       )}
-      <a href="/" className="px-4 py-2 bg-teal-700 text-white rounded hover:bg-teal-800 transition-colors">
+      <a
+        href="/"
+        className="px-4 py-2 bg-teal-700 text-white rounded hover:bg-teal-800 transition-colors"
+      >
         Go Home
       </a>
     </div>

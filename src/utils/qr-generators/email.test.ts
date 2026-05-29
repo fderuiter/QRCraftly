@@ -6,7 +6,7 @@ describe('Email generator', () => {
     const data = {
       email: 'test@example.com',
       subject: 'Hello World',
-      body: 'How are you?'
+      body: 'How are you?',
     };
     const str = constructEmailString(data);
     const hydrated = hydrateEmailData(str);
@@ -14,11 +14,13 @@ describe('Email generator', () => {
   });
 
   it('hydrates MATMSG format', () => {
-    const hydrated = hydrateEmailData('MATMSG:TO:test@example.com;SUB:Hello World;BODY:How are you?;;');
+    const hydrated = hydrateEmailData(
+      'MATMSG:TO:test@example.com;SUB:Hello World;BODY:How are you?;;',
+    );
     expect(hydrated).toEqual({
       email: 'test@example.com',
       subject: 'Hello World',
-      body: 'How are you?'
+      body: 'How are you?',
     });
   });
 
@@ -27,12 +29,16 @@ describe('Email generator', () => {
     expect(hydrated).toEqual({
       email: '',
       subject: '',
-      body: ''
+      body: '',
     });
   });
 
   it('returns default for unknown format or invalid url', () => {
     expect(hydrateEmailData('random')).toEqual({ email: '', subject: '', body: '' });
-    expect(hydrateEmailData('mailto:http://%%invalid')).toEqual({ email: 'http://%%invalid', subject: '', body: '' });
+    expect(hydrateEmailData('mailto:http://%%invalid')).toEqual({
+      email: 'http://%%invalid',
+      subject: '',
+      body: '',
+    });
   });
 });

@@ -10,7 +10,10 @@ export interface HealthScore {
   warnings: string[];
 }
 
-export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | null>, config: QRConfig) {
+export function useScannability(
+  canvasRef: React.RefObject<HTMLCanvasElement | null>,
+  config: QRConfig,
+) {
   const [status, setStatus] = useState<ScannabilityStatus>('idle');
   const workerRef = useRef<Worker | null>(null);
   const { emitSignal } = useQRContext();
@@ -25,10 +28,10 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
 
     if (worstContrast < 3.0) {
       score -= 40;
-      warnings.push("Contrast ratio is critically low");
+      warnings.push('Contrast ratio is critically low');
     } else if (worstContrast < 4.5) {
       score -= 20;
-      warnings.push("Contrast ratio is low");
+      warnings.push('Contrast ratio is low');
     }
 
     const isComplex = ['grunge', 'circuit', 'starburst'].includes(config.style);
@@ -36,18 +39,18 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
       score -= 10;
       if (worstContrast < 7.0) {
         score -= 20;
-        warnings.push("Pattern complexity too high for current contrast");
+        warnings.push('Pattern complexity too high for current contrast');
       }
     }
 
     if (config.logoUrl) {
       if (config.logoSize > 0.3) {
         score -= 15;
-        warnings.push("Logo size might obscure too much data");
+        warnings.push('Logo size might obscure too much data');
       }
       if (config.errorCorrectionLevel === 'L') {
         score -= 15;
-        warnings.push("Low error correction with logo");
+        warnings.push('Low error correction with logo');
       }
     }
 
@@ -57,9 +60,11 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
   useEffect(() => {
     // Initialize worker
     if (typeof window !== 'undefined' && !workerRef.current) {
-      workerRef.current = new Worker(new URL('../utils/scannabilityWorker.ts', import.meta.url), { type: 'module' });
+      workerRef.current = new Worker(new URL('../utils/scannabilityWorker.ts', import.meta.url), {
+        type: 'module',
+      });
     }
-    
+
     const worker = workerRef.current;
     if (!worker) return;
 
@@ -69,10 +74,14 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
 
       if (!success && error) {
         emitSignal('scannability-fail', {
-          engine: navigator.userAgent.includes('Safari') && !navigator.userAgent.includes('Chrome') ? 'WebKit' : 
-                  navigator.userAgent.includes('Firefox') ? 'Firefox' : 'Chromium',
+          engine:
+            navigator.userAgent.includes('Safari') && !navigator.userAgent.includes('Chrome')
+              ? 'WebKit'
+              : navigator.userAgent.includes('Firefox')
+                ? 'Firefox'
+                : 'Chromium',
           styleId: config.style || 'default',
-          errorType: error
+          errorType: error,
         });
       }
     };
@@ -91,7 +100,7 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
     if (!canvas || !worker) return;
 
     setStatus('checking');
-    
+
     // Use requestIdleCallback or setTimeout to read canvas data without blocking
     const readAndSend = () => {
       try {
@@ -100,7 +109,7 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
           setStatus('fail');
           return;
         }
-        
+
         // Make sure canvas actually has dimensions
         if (canvas.width === 0 || canvas.height === 0) {
           setStatus('idle');
@@ -114,13 +123,15 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
           height: canvas.height,
         });
       } catch (err) {
-        console.error("Failed to read canvas data", err);
+        console.error('Failed to read canvas data', err);
         setStatus('fail');
       }
     };
 
     if ('requestIdleCallback' in window) {
-      (window as any).requestIdleCallback(readAndSend);
+      (window as unknown as { requestIdleCallback: (cb: () => void) => void }).requestIdleCallback(
+        readAndSend,
+      );
     } else {
       setTimeout(readAndSend, 100);
     }

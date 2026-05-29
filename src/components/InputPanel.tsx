@@ -46,17 +46,10 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
   return (
     <div className="space-y-6">
       {/* Type Selector */}
-      <TypeSelector
-        currentType={config.type}
-        onSelect={(type) => onChange({ type, value: '' })}
-      />
+      <TypeSelector currentType={config.type} onSelect={(type) => onChange({ type, value: '' })} />
 
       {/* Inputs */}
-      <div className="space-y-4">
-        {InputComponent && (
-          <InputComponent {...inputProps} />
-        )}
-      </div>
+      <div className="space-y-4">{InputComponent && <InputComponent {...inputProps} />}</div>
     </div>
   );
 };
@@ -72,8 +65,7 @@ function areInputPropsEqual(prev: InputPanelProps, next: InputPanelProps) {
 
   // We only care about config.type and config.value for the input panel.
   // Style changes (colors, etc.) should NOT trigger a re-render of inputs.
-  return prev.config.type === next.config.type &&
-         prev.config.value === next.config.value;
+  return prev.config.type === next.config.type && prev.config.value === next.config.value;
 }
 
 export default React.memo(InputPanel, areInputPropsEqual);

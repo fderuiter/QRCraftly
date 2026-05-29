@@ -33,18 +33,20 @@ export const ColorControls: React.FC<ColorControlsProps> = ({ config, onChange }
         )}
       </div>
 
-      <div
-        className="flex flex-wrap gap-3 mb-5"
-        role="group"
-        aria-label="Color Presets"
-      >
+      <div className="flex flex-wrap gap-3 mb-5" role="group" aria-label="Color Presets">
         {PRESET_COLORS.map((preset, idx) => (
           <Button
             key={idx}
             variant="ghost"
             size="none"
-            onClick={() => onChange({ fgColor: preset.fg, bgColor: preset.bg, eyeColor: preset.eye })}
-            aria-pressed={config.fgColor === preset.fg && config.bgColor === preset.bg && config.eyeColor === preset.eye}
+            onClick={() =>
+              onChange({ fgColor: preset.fg, bgColor: preset.bg, eyeColor: preset.eye })
+            }
+            aria-pressed={
+              config.fgColor === preset.fg &&
+              config.bgColor === preset.bg &&
+              config.eyeColor === preset.eye
+            }
             aria-label={`Select ${preset.label} theme`}
             className="group relative w-10 h-10 rounded-lg shadow-sm hover:scale-110 transition-transform duration-200 ring-1 ring-slate-200 dark:ring-slate-700 overflow-hidden"
             title={preset.label}
@@ -54,7 +56,16 @@ export const ColorControls: React.FC<ColorControlsProps> = ({ config, onChange }
               {/* Background */}
               <rect width="40" height="40" fill={preset.bg} />
               {/* Foreground Ring (Simulating Modules) */}
-              <rect x="6" y="6" width="28" height="28" rx="2" fill="none" stroke={preset.fg} strokeWidth="6" />
+              <rect
+                x="6"
+                y="6"
+                width="28"
+                height="28"
+                rx="2"
+                fill="none"
+                stroke={preset.fg}
+                strokeWidth="6"
+              />
               {/* Eye Center */}
               <rect x="11" y="11" width="18" height="18" rx="1" fill={preset.eye} />
             </svg>
@@ -86,7 +97,8 @@ export const ColorControls: React.FC<ColorControlsProps> = ({ config, onChange }
       </div>
       {isLowContrast && (
         <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 rounded-lg text-xs text-amber-800 dark:text-amber-400">
-          Warning: The contrast ratio is low ({worstContrast.toFixed(2)}). QR codes should have high contrast (aim for 4.5:1) to be scannable by all devices.
+          Warning: The contrast ratio is low ({worstContrast.toFixed(2)}). QR codes should have high
+          contrast (aim for 4.5:1) to be scannable by all devices.
         </div>
       )}
     </div>

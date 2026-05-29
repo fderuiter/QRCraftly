@@ -15,22 +15,26 @@ export const PatternControls: React.FC<PatternControlsProps> = ({ config, onChan
 
   return (
     <div>
-      <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">Pattern Style</h3>
-      
+      <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">
+        Pattern Style
+      </h3>
+
       {isLowReliability && (
-        <div role="alert" className="mb-4 flex items-start gap-3 p-3 bg-rose-50 dark:bg-rose-900/30 border border-rose-200 dark:border-rose-800 rounded-lg text-sm text-rose-800 dark:text-rose-300">
+        <div
+          role="alert"
+          className="mb-4 flex items-start gap-3 p-3 bg-rose-50 dark:bg-rose-900/30 border border-rose-200 dark:border-rose-800 rounded-lg text-sm text-rose-800 dark:text-rose-300"
+        >
           <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" />
           <p>
-            <strong>Scannability Warning:</strong> The selected pattern ("{PATTERNS.find(p => p.id === config.style)?.label}") is complex and may reduce scannability on older mobile devices or in poor lighting. Consider testing thoroughly before printing.
+            <strong>Scannability Warning:</strong> The selected pattern ("
+            {PATTERNS.find((p) => p.id === config.style)?.label}") is complex and may reduce
+            scannability on older mobile devices or in poor lighting. Consider testing thoroughly
+            before printing.
           </p>
         </div>
       )}
 
-      <div
-        className="grid grid-cols-4 gap-3"
-        role="group"
-        aria-label="Pattern Style"
-      >
+      <div className="grid grid-cols-4 gap-3" role="group" aria-label="Pattern Style">
         {PATTERNS.map((pattern) => (
           <Button
             key={pattern.id}

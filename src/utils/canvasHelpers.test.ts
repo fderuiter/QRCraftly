@@ -105,7 +105,7 @@ describe('canvasHelpers', () => {
       // loop runs `spikes` times. Inside loop: 2 lineTo calls.
       // Plus one final lineTo after loop.
       // Total lineTo = (spikes * 2) + 1
-      expect(ctx.lineTo).toHaveBeenCalledTimes((spikes * 2) + 1);
+      expect(ctx.lineTo).toHaveBeenCalledTimes(spikes * 2 + 1);
       expect(ctx.closePath).toHaveBeenCalled();
       expect(ctx.fill).toHaveBeenCalled();
     });

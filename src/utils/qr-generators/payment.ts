@@ -87,7 +87,7 @@ export const hydratePaymentData = (raw: string): PaymentData => {
     const networkPart = raw.substring(0, colonIndex) as CryptoNetwork;
     if (validNetworks.includes(networkPart)) {
       result.network = networkPart;
-      
+
       const rest = raw.substring(colonIndex + 1);
       const qIndex = rest.indexOf('?');
       if (qIndex !== -1) {
@@ -104,7 +104,7 @@ export const hydratePaymentData = (raw: string): PaymentData => {
   }
 
   // If it doesn't match a known crypto network, we assume it's either an invalid
-  // string (e.g. switching types) or a CUSTOM string. 
+  // string (e.g. switching types) or a CUSTOM string.
   // We'll return it as CUSTOM so it can be edited, but if it starts with http/https
   // we throw so it falls back to the default BITCOIN state.
   if (raw.startsWith('http://') || raw.startsWith('https://')) {

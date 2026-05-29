@@ -16,14 +16,14 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-
 /**
  * Page-specific configuration for the Home page.
  * Sets the SEO title and description.
  */
 export default {
-    title: 'QRCraftly - Free Custom QR Code Generator',
-    description: 'Generate beautiful, custom QR codes for free. No sign-up required. Secure, client-side generation.',
-    image: '/og-image.png',
-    imageAlt: 'Preview of the QRCraftly Free QR Code Generator'
-}
+  title: 'QRCraftly - Free Custom QR Code Generator',
+  description:
+    'Generate beautiful, custom QR codes for free. No sign-up required. Secure, client-side generation.',
+  image: '/og-image.png',
+  imageAlt: 'Preview of the QRCraftly Free QR Code Generator',
+};

@@ -99,73 +99,73 @@ describe('QRCanvas Batch Rendering', () => {
   });
 
   const setModulesPattern = () => {
-      // Set a few modules to true to trigger drawing
-      mockModules.get.mockImplementation((r: number, c: number) => {
-          // Activate a block of modules (6x6 = 36 modules)
-          // Avoid eyes (0-7, 0-7 etc)
-          if (r > 8 && r < 15 && c > 8 && c < 15) return true;
-          return false;
-      });
+    // Set a few modules to true to trigger drawing
+    mockModules.get.mockImplementation((r: number, c: number) => {
+      // Activate a block of modules (6x6 = 36 modules)
+      // Avoid eyes (0-7, 0-7 etc)
+      if (r > 8 && r < 15 && c > 8 && c < 15) return true;
+      return false;
+    });
   };
 
   it('batches HIVE style (drawPoly) calls', async () => {
-      setModulesPattern();
-      const config = { ...DEFAULT_CONFIG, style: QRStyle.HIVE };
-      render(<QRCanvas config={config} />);
+    setModulesPattern();
+    const config = { ...DEFAULT_CONFIG, style: QRStyle.HIVE };
+    render(<QRCanvas config={config} />);
 
-      // Wait for drawing to happen
-      await waitFor(() => {
-          expect(mockContext.fill).toHaveBeenCalled();
-      });
+    // Wait for drawing to happen
+    await waitFor(() => {
+      expect(mockContext.fill).toHaveBeenCalled();
+    });
 
-      const fillCallCount = mockContext.fill.mock.calls.length;
+    const fillCallCount = mockContext.fill.mock.calls.length;
 
-      // With optimization: fill should be called once for background + once for modules batch + 3 eyes = ~5
-      // Without optimization: fill called for every module (36) + eyes + background = >40
-      expect(fillCallCount).toBeLessThan(10);
+    // With optimization: fill should be called once for background + once for modules batch + 3 eyes = ~5
+    // Without optimization: fill called for every module (36) + eyes + background = >40
+    expect(fillCallCount).toBeLessThan(10);
   });
 
   it('batches STARBURST style (drawStar) calls', async () => {
-      setModulesPattern();
-      const config = { ...DEFAULT_CONFIG, style: QRStyle.STARBURST };
-      render(<QRCanvas config={config} />);
+    setModulesPattern();
+    const config = { ...DEFAULT_CONFIG, style: QRStyle.STARBURST };
+    render(<QRCanvas config={config} />);
 
-      await waitFor(() => {
-          expect(mockContext.fill).toHaveBeenCalled();
-      });
+    await waitFor(() => {
+      expect(mockContext.fill).toHaveBeenCalled();
+    });
 
-      const fillCallCount = mockContext.fill.mock.calls.length;
-      expect(fillCallCount).toBeLessThan(10);
+    const fillCallCount = mockContext.fill.mock.calls.length;
+    expect(fillCallCount).toBeLessThan(10);
   });
 
   it('batches GRUNGE style (drawRoughRect) calls', async () => {
-      setModulesPattern();
-      const config = { ...DEFAULT_CONFIG, style: QRStyle.GRUNGE };
-      render(<QRCanvas config={config} />);
+    setModulesPattern();
+    const config = { ...DEFAULT_CONFIG, style: QRStyle.GRUNGE };
+    render(<QRCanvas config={config} />);
 
-      await waitFor(() => {
-        // Wait for rendering to start.
-        // In unoptimized mode, fillRect is called.
-        // In optimized mode, fill is called.
-        // So we wait for clearRect which means render cycle started,
-        // but we need to wait for actual drawing commands.
-        // Let's wait for fillRect (background uses it)
-        expect(mockContext.fillRect).toHaveBeenCalled();
-      });
+    await waitFor(() => {
+      // Wait for rendering to start.
+      // In unoptimized mode, fillRect is called.
+      // In optimized mode, fill is called.
+      // So we wait for clearRect which means render cycle started,
+      // but we need to wait for actual drawing commands.
+      // Let's wait for fillRect (background uses it)
+      expect(mockContext.fillRect).toHaveBeenCalled();
+    });
 
-      // Allow some time for module loop to finish if it's async/heavy?
-      // No, it's synchronous inside useEffect.
+    // Allow some time for module loop to finish if it's async/heavy?
+    // No, it's synchronous inside useEffect.
 
-      const fillRectCount = mockContext.fillRect.mock.calls.length;
+    const fillRectCount = mockContext.fillRect.mock.calls.length;
 
-      // With optimization: fillRect only used for eyes (frames + holes) + background = ~4-10
-      // Modules use rect().
-      // Without optimization: fillRect called for every module (36) + eyes + background = >40
-      expect(fillRectCount).toBeLessThan(20);
+    // With optimization: fillRect only used for eyes (frames + holes) + background = ~4-10
+    // Modules use rect().
+    // Without optimization: fillRect called for every module (36) + eyes + background = >40
+    expect(fillRectCount).toBeLessThan(20);
 
-      // And we expect fill() to be called for the modules batch (if optimized)
-      // If unoptimized, fill() is NOT called for modules (only background if border enabled? No default border is disabled).
-      // Wait, background uses fillRect.
-      expect(mockContext.fill).toHaveBeenCalled();
+    // And we expect fill() to be called for the modules batch (if optimized)
+    // If unoptimized, fill() is NOT called for modules (only background if border enabled? No default border is disabled).
+    // Wait, background uses fillRect.
+    expect(mockContext.fill).toHaveBeenCalled();
   });
 });

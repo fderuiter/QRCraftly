@@ -47,10 +47,10 @@ export default {
   // https://vike.dev/meta
   meta: {
     image: {
-      env: { server: true, client: true }
+      env: { server: true, client: true },
     },
     imageAlt: {
-      env: { server: true, client: true }
-    }
-  }
+      env: { server: true, client: true },
+    },
+  },
 } satisfies Config;

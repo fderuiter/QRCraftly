@@ -26,5 +26,12 @@ import { toolMetadata } from '@/data/metadata';
 export default function Page() {
   const schemaData = toolMetadata['email-qr-code'];
 
-  return <QRTypePage type={QRType.EMAIL} title="Email QR Code" schemaData={schemaData}  toolId="email-qr-code" />;
+  return (
+    <QRTypePage
+      type={QRType.EMAIL}
+      title="Email QR Code"
+      schemaData={schemaData}
+      toolId="email-qr-code"
+    />
+  );
 }

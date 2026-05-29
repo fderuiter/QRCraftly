@@ -25,7 +25,7 @@ describe('LayoutDefault', () => {
     render(
       <LayoutDefault>
         <div data-testid="child-content">Child Content</div>
-      </LayoutDefault>
+      </LayoutDefault>,
     );
     expect(screen.getByTestId('child-content')).toBeInTheDocument();
   });
@@ -34,7 +34,7 @@ describe('LayoutDefault', () => {
     render(
       <LayoutDefault>
         <div>Content</div>
-      </LayoutDefault>
+      </LayoutDefault>,
     );
     // This expects to find an element with role="main"
     // Using queryByRole to avoid throwing immediately if I want to assert it's missing first,

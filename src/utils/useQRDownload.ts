@@ -18,6 +18,30 @@
 
 import { RefObject, useCallback } from 'react';
 import { QRConfig } from '../types';
+
+interface FileSystemWritableFileStream {
+  write(data: Blob | BufferSource | string): Promise<void>;
+  close(): Promise<void>;
+}
+
+interface FileSystemFileHandle {
+  createWritable(): Promise<FileSystemWritableFileStream>;
+}
+
+interface ShowSaveFilePickerOptions {
+  suggestedName?: string;
+  types?: Array<{
+    description?: string;
+    accept: Record<string, string[]>;
+  }>;
+}
+
+declare global {
+  interface Window {
+    showSaveFilePicker?: (options?: ShowSaveFilePickerOptions) => Promise<FileSystemFileHandle>;
+  }
+}
+
 import { generateQRSvg } from './svgExport';
 import { useToast } from '../components/ui/Toast';
 
@@ -42,7 +66,7 @@ interface UseQRDownloadReturn {
  */
 export function useQRDownload(
   qrRef: RefObject<HTMLDivElement | null>,
-  config: QRConfig
+  config: QRConfig,
 ): UseQRDownloadReturn {
   const { addToast } = useToast();
 
@@ -60,74 +84,90 @@ export function useQRDownload(
    * @param ext - The file extension.
    * @returns The generated filename string.
    */
-  const getFilename = useCallback((ext: string) => {
-    const type = config.type.toLowerCase();
-    const date = new Date().toISOString().split('T')[0];
-    return `${type}-qr-code-qrcraftly-${date}.${ext}`;
-  }, [config.type]);
+  const getFilename = useCallback(
+    (ext: string) => {
+      const type = config.type.toLowerCase();
+      const date = new Date().toISOString().split('T')[0];
+      return `${type}-qr-code-qrcraftly-${date}.${ext}`;
+    },
+    [config.type],
+  );
 
   /**
    * Downloads the current QR code canvas content to the user's device.
    * Used as a fallback or direct action for saving to photos.
    * @param format - The desired image format.
    */
-  const downloadToDevice = useCallback((format: 'png' | 'jpeg' | 'webp') => {
-    const canvas = qrRef.current?.querySelector('canvas');
-    if (canvas) {
-      const url = canvas.toDataURL(`image/${format}`);
-      const link = document.createElement('a');
-      const ext = getExtension(format);
-      link.download = getFilename(ext);
-      link.href = url;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
-  }, [qrRef, getFilename]);
+  const downloadToDevice = useCallback(
+    (format: 'png' | 'jpeg' | 'webp') => {
+      const canvas = qrRef.current?.querySelector('canvas');
+      if (canvas) {
+        const url = canvas.toDataURL(`image/${format}`);
+        const link = document.createElement('a');
+        const ext = getExtension(format);
+        link.download = getFilename(ext);
+        link.href = url;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+    },
+    [qrRef, getFilename],
+  );
 
   /**
    * Handles saving the QR code image, attempting to use the File System Access API
    * for a native "Save As" experience, falling back to direct download if unsupported.
    * @param format - The desired image format.
    */
-  const handleSaveAs = useCallback(async (format: 'png' | 'jpeg' | 'webp') => {
-    const canvas = qrRef.current?.querySelector('canvas');
-    if (!canvas) return;
+  const handleSaveAs = useCallback(
+    async (format: 'png' | 'jpeg' | 'webp') => {
+      const canvas = qrRef.current?.querySelector('canvas');
+      if (!canvas) return;
 
-    // Check if the browser supports the File System Access API (e.g., Chrome, Edge Desktop)
-    if ('showSaveFilePicker' in window) {
-      try {
-        const blob = await new Promise<Blob | null>((resolve) =>
-          canvas.toBlob(resolve, `image/${format}`)
-        );
+      // Check if the browser supports the File System Access API (e.g., Chrome, Edge Desktop)
+      if ('showSaveFilePicker' in window) {
+        try {
+          const blob = await new Promise<Blob | null>((resolve) =>
+            canvas.toBlob(resolve, `image/${format}`),
+          );
 
-        if (!blob) throw new Error('Failed to create image blob');
+          if (!blob) throw new Error('Failed to create image blob');
 
-        const ext = getExtension(format);
+          const ext = getExtension(format);
 
-        const handle = await (window as any).showSaveFilePicker({
-          suggestedName: getFilename(ext),
-          types: [{
-            description: 'QR Code Image',
-            accept: { [`image/${format}`]: [`.${ext}`] },
-          }],
-        });
+          const handle = await window.showSaveFilePicker?.({
+            suggestedName: getFilename(ext),
+            types: [
+              {
+                description: 'QR Code Image',
+                accept: { [`image/${format}`]: [`.${ext}`] },
+              },
+            ],
+          });
 
-        const writable = await handle.createWritable();
-        await writable.write(blob);
-        await writable.close();
-      } catch (err: any) {
-        // If user aborted the picker, do nothing.
-        if (err.name === 'AbortError') return;
+          if (!handle) throw new Error('File system access not supported');
 
-        console.warn('File System Access API failed, falling back to standard download:', err);
+          const writable = await handle.createWritable();
+          await writable.write(blob);
+          await writable.close();
+        } catch (err: unknown) {
+          const errObj = err as { name?: string };
+          const errorName = errObj?.name || (err instanceof Error ? err.name : '');
+          // If user aborted the picker, do nothing.
+          if (errorName === 'AbortError') return;
+
+          const error = err instanceof Error ? err : new Error(String(err));
+          console.warn('File System Access API failed, falling back to standard download:', error);
+          downloadToDevice(format);
+        }
+      } else {
+        // Fallback for browsers that don't support showSaveFilePicker (Safari, Firefox, Mobile)
         downloadToDevice(format);
       }
-    } else {
-      // Fallback for browsers that don't support showSaveFilePicker (Safari, Firefox, Mobile)
-      downloadToDevice(format);
-    }
-  }, [qrRef, getFilename, downloadToDevice]);
+    },
+    [qrRef, getFilename, downloadToDevice],
+  );
 
   /**
    * Uses the Web Share API to share the QR code image directly to other apps.
@@ -174,15 +214,23 @@ export function useQRDownload(
               text: 'Here is a QR code I created with QRCraftly!',
               files: [file],
             });
-          } catch (error) {
-            console.log('Error sharing:', error);
+          } catch (error: unknown) {
+            const err = error instanceof Error ? error : new Error(String(error));
+            if (err.name !== 'AbortError') {
+              addToast({
+                type: 'error',
+                message: `Failed to share: ${err.message}`,
+                duration: 5000,
+              });
+            }
           }
         } else {
           // Fallback for devices that don't support sharing files
           addToast({
             type: 'info',
-            message: "Sharing is not supported on this device/browser. The image will be downloaded instead.",
-            duration: 5000
+            message:
+              'Sharing is not supported on this device/browser. The image will be downloaded instead.',
+            duration: 5000,
           });
           downloadToDevice('png');
         }
@@ -206,14 +254,15 @@ export function useQRDownload(
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
-    } catch (err: any) {
-      console.warn('SVG export failed:', err);
+    } catch (err: unknown) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      console.warn('SVG export failed:', error);
       addToast({
         type: 'error',
-        message: err.message || 'SVG export failed due to an unsupported feature or error.',
-        duration: 5000
+        message: error.message || 'SVG export failed due to an unsupported feature or error.',
+        duration: 5000,
       });
-      throw err;
+      throw error;
     }
   }, [config, getFilename, addToast]);
 

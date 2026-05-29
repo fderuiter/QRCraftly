@@ -5,7 +5,7 @@ describe('Location generator', () => {
   it('constructs and hydrates successfully', () => {
     const data = {
       latitude: '37.7749',
-      longitude: '-122.4194'
+      longitude: '-122.4194',
     };
     const str = constructLocationString(data);
     const hydrated = hydrateLocationData(str);

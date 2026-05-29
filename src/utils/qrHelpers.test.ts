@@ -27,9 +27,19 @@ import {
   constructEventString,
   escapeWifiString,
   escapeVCardString,
-  escapeEventString
+  escapeEventString,
 } from './qrHelpers';
-import { WifiData, EmailData, VCardData, PhoneData, SmsData, PaymentData, EventData, WifiEncryption, CryptoNetwork } from '../types';
+import {
+  WifiData,
+  EmailData,
+  VCardData,
+  PhoneData,
+  SmsData,
+  PaymentData,
+  EventData,
+  WifiEncryption,
+  CryptoNetwork,
+} from '../types';
 
 describe('QR Helpers', () => {
   describe('constructWifiString', () => {
@@ -38,7 +48,7 @@ describe('QR Helpers', () => {
         ssid: 'MyNetwork',
         password: 'password123',
         encryption: WifiEncryption.WPA,
-        hidden: false
+        hidden: false,
       };
       expect(constructWifiString(data)).toBe('WIFI:T:WPA;S:MyNetwork;P:password123;;');
     });
@@ -49,9 +59,11 @@ describe('QR Helpers', () => {
         password: 'securepass',
         encryption: WifiEncryption.WPA2_EAP,
         hidden: false,
-        eapIdentity: 'user@domain.com'
+        eapIdentity: 'user@domain.com',
       };
-      expect(constructWifiString(data)).toBe('WIFI:T:WPA2-EAP;S:EnterpriseNet;I:user@domain.com;P:securepass;;');
+      expect(constructWifiString(data)).toBe(
+        'WIFI:T:WPA2-EAP;S:EnterpriseNet;I:user@domain.com;P:securepass;;',
+      );
     });
 
     it('constructs a nopass WiFi string (omits password)', () => {
@@ -59,7 +71,7 @@ describe('QR Helpers', () => {
         ssid: 'OpenNet',
         password: 'ignored',
         encryption: WifiEncryption.NOPASS,
-        hidden: false
+        hidden: false,
       };
       expect(constructWifiString(data)).toBe('WIFI:T:nopass;S:OpenNet;;');
     });
@@ -69,7 +81,7 @@ describe('QR Helpers', () => {
         ssid: 'Net;Work',
         password: 'pass:word\\',
         encryption: WifiEncryption.WPA,
-        hidden: false
+        hidden: false,
       };
       // Expect: Net\;Work and pass\:word\\
       expect(constructWifiString(data)).toBe('WIFI:T:WPA;S:Net\\;Work;P:pass\\:word\\\\;;');
@@ -80,7 +92,7 @@ describe('QR Helpers', () => {
         ssid: 'HiddenNet',
         password: 'pass',
         encryption: WifiEncryption.WPA,
-        hidden: true
+        hidden: true,
       };
       expect(constructWifiString(data)).toContain('H:true');
     });
@@ -91,17 +103,19 @@ describe('QR Helpers', () => {
       const data: EmailData = {
         email: 'test@example.com',
         subject: 'Hello World',
-        body: 'This is a test message.'
+        body: 'This is a test message.',
       };
       const result = constructEmailString(data);
-      expect(result).toBe('mailto:test@example.com?subject=Hello%20World&body=This%20is%20a%20test%20message.');
+      expect(result).toBe(
+        'mailto:test@example.com?subject=Hello%20World&body=This%20is%20a%20test%20message.',
+      );
     });
 
     it('handles special characters in subject and body', () => {
       const data: EmailData = {
         email: 'foo@bar.com',
         subject: 'Q&A',
-        body: '100% correct?'
+        body: '100% correct?',
       };
       const result = constructEmailString(data);
       expect(result).toContain('subject=Q%26A');
@@ -112,7 +126,7 @@ describe('QR Helpers', () => {
       const data: EmailData = {
         email: 'user@example.com?cc=attacker@example.com',
         subject: 'Test',
-        body: 'Body'
+        body: 'Body',
       };
       const result = constructEmailString(data);
       // Should strip anything after the ?
@@ -131,7 +145,7 @@ describe('QR Helpers', () => {
       website: 'https://example.com',
       street: '123 Main St',
       city: 'Metropolis',
-      country: 'USA'
+      country: 'USA',
     };
 
     it('constructs a valid VCard 3.0 string', () => {
@@ -155,7 +169,7 @@ describe('QR Helpers', () => {
         organization: 'Acme, Inc.',
         street: '123 Main St; Apt 4',
         // Note: Newlines in inputs might be tricky depending on how they are captured, but the util handles \n
-        title: 'Senior\\Principal'
+        title: 'Senior\\Principal',
       };
       const result = constructVCardString(trickyVCard);
 
@@ -170,7 +184,7 @@ describe('QR Helpers', () => {
     it('removes dangerous URLs from website field', () => {
       const dangerousVCard: VCardData = {
         ...baseVCard,
-        website: 'javascript:alert(1)'
+        website: 'javascript:alert(1)',
       };
       const result = constructVCardString(dangerousVCard);
       expect(result).toContain('URL:');
@@ -185,8 +199,8 @@ describe('QR Helpers', () => {
     });
 
     it('strips colons from phone number', () => {
-        const data: PhoneData = { number: '+1:234:567' };
-        expect(constructPhoneString(data)).toBe('tel:+1234567');
+      const data: PhoneData = { number: '+1:234:567' };
+      expect(constructPhoneString(data)).toBe('tel:+1234567');
     });
   });
 
@@ -194,7 +208,7 @@ describe('QR Helpers', () => {
     it('constructs an sms URI with number and encoded body', () => {
       const data: SmsData = {
         number: '+1 (555) 999-8888',
-        message: 'Hello there'
+        message: 'Hello there',
       };
       expect(constructSmsString(data)).toBe('sms:+1(555)999-8888?body=Hello%20there');
     });
@@ -202,7 +216,7 @@ describe('QR Helpers', () => {
     it('correctly encodes special characters in message body', () => {
       const data: SmsData = {
         number: '123',
-        message: 'Hello & Welcome? 100%'
+        message: 'Hello & Welcome? 100%',
       };
       // & -> %26, ? -> %3F, % -> %25
       expect(constructSmsString(data)).toBe('sms:123?body=Hello%20%26%20Welcome%3F%20100%25');
@@ -215,7 +229,7 @@ describe('QR Helpers', () => {
         network: CryptoNetwork.BITCOIN,
         address: '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa',
         amount: '',
-        label: ''
+        label: '',
       };
       expect(constructPaymentString(data)).toBe('bitcoin:1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa');
     });
@@ -225,7 +239,7 @@ describe('QR Helpers', () => {
         network: CryptoNetwork.ETHEREUM,
         address: '0x123...',
         amount: '1.5',
-        label: 'Payment for Services'
+        label: 'Payment for Services',
       };
       const result = constructPaymentString(data);
       expect(result).toContain('ethereum:0x123...');
@@ -238,7 +252,7 @@ describe('QR Helpers', () => {
         network: CryptoNetwork.BITCOIN,
         address: '1A1...?amount=1000',
         amount: '0.1',
-        label: ''
+        label: '',
       };
       // Should strip the ?amount=1000 from the address part
       const result = constructPaymentString(data);
@@ -247,26 +261,26 @@ describe('QR Helpers', () => {
     });
 
     it('encodes amount to prevent injection', () => {
-        const data: PaymentData = {
-            network: CryptoNetwork.BITCOIN,
-            address: '1A1...',
-            amount: '1&label=hacked',
-            label: ''
-        };
-        const result = constructPaymentString(data);
-        expect(result).toContain('amount=1%26label%3Dhacked');
-        expect(result).not.toContain('&label=hacked'); // Should not be interpreted as a raw param
+      const data: PaymentData = {
+        network: CryptoNetwork.BITCOIN,
+        address: '1A1...',
+        amount: '1&label=hacked',
+        label: '',
+      };
+      const result = constructPaymentString(data);
+      expect(result).toContain('amount=1%26label%3Dhacked');
+      expect(result).not.toContain('&label=hacked'); // Should not be interpreted as a raw param
     });
 
     it('returns raw address for custom network', () => {
-         const data: PaymentData = {
-            network: CryptoNetwork.CUSTOM,
-            address: 'myprotocol://addr',
-            amount: '10', // Should be ignored or handled by the user in the address field
-            label: 'label'
-        };
-        // For custom, it just returns the address field as is
-        expect(constructPaymentString(data)).toBe('myprotocol://addr');
+      const data: PaymentData = {
+        network: CryptoNetwork.CUSTOM,
+        address: 'myprotocol://addr',
+        amount: '10', // Should be ignored or handled by the user in the address field
+        label: 'label',
+      };
+      // For custom, it just returns the address field as is
+      expect(constructPaymentString(data)).toBe('myprotocol://addr');
     });
 
     it('returns empty string for dangerous custom network address', () => {
@@ -274,7 +288,7 @@ describe('QR Helpers', () => {
         network: CryptoNetwork.CUSTOM,
         address: 'javascript:alert(1)',
         amount: '10',
-        label: 'label'
+        label: 'label',
       };
       expect(constructPaymentString(data)).toBe('');
     });
@@ -286,7 +300,7 @@ describe('QR Helpers', () => {
       startDate: '2026-05-01T09:00',
       endDate: '2026-05-01T10:00',
       location: 'HQ Boardroom',
-      description: 'Quarterly planning sync'
+      description: 'Quarterly planning sync',
     };
 
     it('constructs a valid VCALENDAR string', () => {
@@ -308,7 +322,7 @@ describe('QR Helpers', () => {
         ...baseEvent,
         title: 'Launch, Party; 2026',
         location: 'Office\\Roof',
-        description: 'Line 1\nLine 2, details;'
+        description: 'Line 1\nLine 2, details;',
       });
 
       expect(result).toContain('SUMMARY:Launch\\, Party\\; 2026');

@@ -65,7 +65,7 @@ function drawNoneBackground(
   ctx: CanvasRenderingContext2D,
   config: QRConfig,
   width: number,
-  height: number
+  height: number,
 ): void {
   ctx.fillStyle = resolveTemplateBg(config);
   ctx.fillRect(0, 0, width, height);
@@ -80,7 +80,7 @@ function drawMinimalistBackground(
   ctx: CanvasRenderingContext2D,
   config: QRConfig,
   width: number,
-  height: number
+  height: number,
 ): void {
   const bg = resolveTemplateBg(config);
   const fg = resolveTemplateText(config);
@@ -93,12 +93,7 @@ function drawMinimalistBackground(
   const frameInset = width * 0.03;
   ctx.strokeStyle = fg;
   ctx.lineWidth = Math.max(1, width * 0.008);
-  ctx.strokeRect(
-    frameInset,
-    frameInset,
-    width - 2 * frameInset,
-    height - 2 * frameInset
-  );
+  ctx.strokeRect(frameInset, frameInset, width - 2 * frameInset, height - 2 * frameInset);
 }
 
 /**
@@ -110,7 +105,7 @@ function drawGradientBlurBackground(
   ctx: CanvasRenderingContext2D,
   config: QRConfig,
   width: number,
-  height: number
+  height: number,
 ): void {
   const bg = resolveTemplateBg(config);
   const fg = resolveTemplateText(config);
@@ -144,7 +139,7 @@ function drawSolidFrameBackground(
   ctx: CanvasRenderingContext2D,
   config: QRConfig,
   width: number,
-  height: number
+  height: number,
 ): void {
   const bg = resolveTemplateBg(config);
   const fg = resolveTemplateText(config);
@@ -169,7 +164,7 @@ function drawTemplateText(
   displayWidth: number,
   displayHeight: number,
   qrY: number,
-  qrSize: number
+  qrSize: number,
 ): void {
   const headline = config.templateHeadline?.trim() ?? '';
   const subtext = config.templateSubtext?.trim() ?? '';
@@ -184,14 +179,24 @@ function drawTemplateText(
     const headlineFontSize = Math.round(displayWidth * 0.055);
     ctx.font = `bold ${headlineFontSize}px sans-serif`;
     const headlineY = qrY - headlineFontSize * 1.5;
-    ctx.fillText(headline, displayWidth / 2, Math.max(headlineFontSize * 1.5, headlineY), displayWidth * 0.9);
+    ctx.fillText(
+      headline,
+      displayWidth / 2,
+      Math.max(headlineFontSize * 1.5, headlineY),
+      displayWidth * 0.9,
+    );
   }
 
   if (subtext) {
     const subtextFontSize = Math.round(displayWidth * 0.038);
     ctx.font = `${subtextFontSize}px sans-serif`;
     const subtextY = qrY + qrSize + subtextFontSize * 1.5;
-    ctx.fillText(subtext, displayWidth / 2, Math.min(displayHeight - subtextFontSize * 1.5, subtextY), displayWidth * 0.9);
+    ctx.fillText(
+      subtext,
+      displayWidth / 2,
+      Math.min(displayHeight - subtextFontSize * 1.5, subtextY),
+      displayWidth * 0.9,
+    );
   }
 }
 
@@ -202,7 +207,7 @@ type BackgroundPainter = (
   ctx: CanvasRenderingContext2D,
   config: QRConfig,
   width: number,
-  height: number
+  height: number,
 ) => void;
 
 const BACKGROUND_PAINTERS: Record<TemplateStyle, BackgroundPainter> = {
@@ -246,7 +251,7 @@ export function drawWithTemplate(
   borderLogoImg: HTMLImageElement | null,
   displayWidth: number,
   displayHeight: number,
-  moduleCount: number
+  moduleCount: number,
 ): void {
   ctx.clearRect(0, 0, displayWidth, displayHeight);
 
@@ -258,8 +263,7 @@ export function drawWithTemplate(
   // For NONE template on a square canvas the QR fills 100 % so it looks
   // identical to the previous rendering path.
   const isNoneSquare =
-    config.templateStyle === TemplateStyle.NONE &&
-    config.socialFormat === SocialFormat.SQUARE_1_1;
+    config.templateStyle === TemplateStyle.NONE && config.socialFormat === SocialFormat.SQUARE_1_1;
 
   // User-controlled scale multiplier (clamped to valid range).
   const userScale = Math.min(1.5, Math.max(0.5, config.templateQrScale ?? 1.0));
@@ -315,7 +319,7 @@ export function drawWithTemplate(
     logoImg,
     borderLogoImg,
     displayWidth,
-    moduleCount
+    moduleCount,
   );
 
   ctx.restore();
@@ -338,9 +342,8 @@ export function drawWithTemplate(
 function hexToRgba(hex: string, alpha: number): string {
   const clean = hex.replace('#', '');
   // Expand 3-char shorthand (#rgb → #rrggbb)
-  const full = clean.length === 3
-    ? clean[0] + clean[0] + clean[1] + clean[1] + clean[2] + clean[2]
-    : clean;
+  const full =
+    clean.length === 3 ? clean[0] + clean[0] + clean[1] + clean[1] + clean[2] + clean[2] : clean;
   const r = parseInt(full.substring(0, 2), 16);
   const g = parseInt(full.substring(2, 4), 16);
   const b = parseInt(full.substring(4, 6), 16);

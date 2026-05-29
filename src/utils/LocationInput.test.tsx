@@ -27,10 +27,7 @@ import { LocationData } from '../types';
 
 const defaultData: LocationData = { latitude: '', longitude: '' };
 
-const renderLocationInput = (
-  overrides: Partial<LocationData> = {},
-  onChange = vi.fn()
-) => {
+const renderLocationInput = (overrides: Partial<LocationData> = {}, onChange = vi.fn()) => {
   const data = { ...defaultData, ...overrides };
   render(<LocationInput data={data} onChange={onChange} />);
   return { onChange };
@@ -38,7 +35,13 @@ const renderLocationInput = (
 
 /** Create a minimal GeolocationPositionError-like object. */
 const geoError = (code: number): GeolocationPositionError =>
-  ({ code, message: '', PERMISSION_DENIED: 1, POSITION_UNAVAILABLE: 2, TIMEOUT: 3 } as GeolocationPositionError);
+  ({
+    code,
+    message: '',
+    PERMISSION_DENIED: 1,
+    POSITION_UNAVAILABLE: 2,
+    TIMEOUT: 3,
+  }) as GeolocationPositionError;
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -138,8 +141,8 @@ describe('LocationInput component', () => {
         coords: { latitude: 51.5074, longitude: -0.1278, accuracy: 10 },
       } as GeolocationPosition;
 
-      vi.spyOn(navigator.geolocation, 'getCurrentPosition').mockImplementation(
-        (successCb) => successCb(successPosition)
+      vi.spyOn(navigator.geolocation, 'getCurrentPosition').mockImplementation((successCb) =>
+        successCb(successPosition),
       );
 
       const { onChange } = renderLocationInput();
@@ -158,8 +161,8 @@ describe('LocationInput component', () => {
         coords: { latitude: 48.8566, longitude: 2.3522, accuracy: 5 },
       } as GeolocationPosition;
 
-      vi.spyOn(navigator.geolocation, 'getCurrentPosition').mockImplementation(
-        (successCb) => successCb(successPosition)
+      vi.spyOn(navigator.geolocation, 'getCurrentPosition').mockImplementation((successCb) =>
+        successCb(successPosition),
       );
 
       renderLocationInput();
@@ -175,29 +178,25 @@ describe('LocationInput component', () => {
     it('clears any previous error on a successful fetch', async () => {
       // First call fails
       vi.spyOn(navigator.geolocation, 'getCurrentPosition').mockImplementationOnce(
-        (_success, errorCb) => errorCb!(geoError(1))
+        (_success, errorCb) => errorCb!(geoError(1)),
       );
 
       renderLocationInput();
       fireEvent.click(screen.getByRole('button', { name: /use current location/i }));
 
-      await waitFor(() =>
-        expect(screen.getByRole('alert')).toBeInTheDocument()
-      );
+      await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
 
       // Second call succeeds
       const successPosition = {
         coords: { latitude: 10, longitude: 20, accuracy: 5 },
       } as GeolocationPosition;
-      vi.spyOn(navigator.geolocation, 'getCurrentPosition').mockImplementationOnce(
-        (successCb) => successCb(successPosition)
+      vi.spyOn(navigator.geolocation, 'getCurrentPosition').mockImplementationOnce((successCb) =>
+        successCb(successPosition),
       );
 
       fireEvent.click(screen.getByRole('button', { name: /use current location/i }));
 
-      await waitFor(() =>
-        expect(screen.queryByRole('alert')).not.toBeInTheDocument()
-      );
+      await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument());
     });
   });
 
@@ -216,37 +215,33 @@ describe('LocationInput component', () => {
 
     it('shows a permission-denied error message (code 1)', async () => {
       vi.spyOn(navigator.geolocation, 'getCurrentPosition').mockImplementation(
-        (_success, errorCb) => errorCb!(geoError(1))
+        (_success, errorCb) => errorCb!(geoError(1)),
       );
 
       renderLocationInput();
       fireEvent.click(screen.getByRole('button', { name: /use current location/i }));
 
       await waitFor(() => {
-        expect(screen.getByRole('alert')).toHaveTextContent(
-          /location access denied/i
-        );
+        expect(screen.getByRole('alert')).toHaveTextContent(/location access denied/i);
       });
     });
 
     it('shows a position-unavailable error message (code 2)', async () => {
       vi.spyOn(navigator.geolocation, 'getCurrentPosition').mockImplementation(
-        (_success, errorCb) => errorCb!(geoError(2))
+        (_success, errorCb) => errorCb!(geoError(2)),
       );
 
       renderLocationInput();
       fireEvent.click(screen.getByRole('button', { name: /use current location/i }));
 
       await waitFor(() => {
-        expect(screen.getByRole('alert')).toHaveTextContent(
-          /location unavailable/i
-        );
+        expect(screen.getByRole('alert')).toHaveTextContent(/location unavailable/i);
       });
     });
 
     it('shows a timeout error message (code 3)', async () => {
       vi.spyOn(navigator.geolocation, 'getCurrentPosition').mockImplementation(
-        (_success, errorCb) => errorCb!(geoError(3))
+        (_success, errorCb) => errorCb!(geoError(3)),
       );
 
       renderLocationInput();
@@ -259,7 +254,7 @@ describe('LocationInput component', () => {
 
     it('shows a generic error message for unknown error codes', async () => {
       vi.spyOn(navigator.geolocation, 'getCurrentPosition').mockImplementation(
-        (_success, errorCb) => errorCb!(geoError(99))
+        (_success, errorCb) => errorCb!(geoError(99)),
       );
 
       renderLocationInput();
@@ -272,7 +267,7 @@ describe('LocationInput component', () => {
 
     it('re-enables the button after an error', async () => {
       vi.spyOn(navigator.geolocation, 'getCurrentPosition').mockImplementation(
-        (_success, errorCb) => errorCb!(geoError(1))
+        (_success, errorCb) => errorCb!(geoError(1)),
       );
 
       renderLocationInput();
@@ -298,9 +293,7 @@ describe('LocationInput component', () => {
       fireEvent.click(screen.getByRole('button', { name: /use current location/i }));
 
       await waitFor(() => {
-        expect(screen.getByRole('alert')).toHaveTextContent(
-          /geolocation is not supported/i
-        );
+        expect(screen.getByRole('alert')).toHaveTextContent(/geolocation is not supported/i);
       });
     });
   });
@@ -309,8 +302,12 @@ describe('LocationInput component', () => {
 
   describe('integration via InputPanel', () => {
     it('populates lat/lng fields via the InputPanel when geolocation succeeds', async () => {
-      const { render: rRender, screen: rScreen, fireEvent: rFire, waitFor: rWait } =
-        await import('@testing-library/react');
+      const {
+        render: rRender,
+        screen: rScreen,
+        fireEvent: rFire,
+        waitFor: rWait,
+      } = await import('@testing-library/react');
       const { default: InputPanel } = await import('../components/InputPanel');
       const { DEFAULT_CONFIG } = await import('../constants');
       const { QRType } = await import('../types');
@@ -327,8 +324,8 @@ describe('LocationInput component', () => {
         coords: { latitude: 34.0522, longitude: -118.2437, accuracy: 20 },
       } as GeolocationPosition;
 
-      vi.spyOn(navigator.geolocation, 'getCurrentPosition').mockImplementation(
-        (successCb) => successCb(successPosition)
+      vi.spyOn(navigator.geolocation, 'getCurrentPosition').mockImplementation((successCb) =>
+        successCb(successPosition),
       );
 
       const mockOnChange = vi.fn();

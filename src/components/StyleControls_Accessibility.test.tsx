@@ -46,6 +46,8 @@ describe('StyleControls Accessibility', () => {
 
     // Verify content is inside the panel (e.g. Error Correction Level)
     expect(screen.getByText('Error Correction Level')).toBeInTheDocument();
-    expect(panel).toContainElement(screen.getByText('Error Correction Level').closest('div')?.parentElement || null);
+    expect(panel).toContainElement(
+      screen.getByText('Error Correction Level').closest('div')?.parentElement || null,
+    );
   });
 });

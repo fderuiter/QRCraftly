@@ -36,9 +36,7 @@ export default function LayoutDefault({ children }: { children: React.ReactNode 
   return (
     <ToastProvider>
       <main className="flex min-h-screen flex-col bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-200 antialiased font-sans">
-        <ErrorBoundary>
-          {children}
-        </ErrorBoundary>
+        <ErrorBoundary>{children}</ErrorBoundary>
       </main>
     </ToastProvider>
   );

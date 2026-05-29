@@ -24,11 +24,7 @@ export function AccordionItem({ title, children, defaultOpen = false }: Accordio
           <ChevronDown className="w-5 h-5 text-slate-500 dark:text-slate-400" />
         )}
       </button>
-      {isOpen && (
-        <div className="px-5 pb-4 text-slate-600 dark:text-slate-400">
-          {children}
-        </div>
-      )}
+      {isOpen && <div className="px-5 pb-4 text-slate-600 dark:text-slate-400">{children}</div>}
     </div>
   );
 }

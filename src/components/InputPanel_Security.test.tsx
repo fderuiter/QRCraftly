@@ -40,13 +40,17 @@ describe('InputPanel Security (Input Limits)', () => {
   });
 
   it('enforces maxLength on Text content', () => {
-    render(<InputPanel config={{ ...DEFAULT_CONFIG, type: QRType.TEXT }} onChange={mockOnChange} />);
+    render(
+      <InputPanel config={{ ...DEFAULT_CONFIG, type: QRType.TEXT }} onChange={mockOnChange} />,
+    );
     const input = screen.getByLabelText('Content');
     expect(input).toHaveAttribute('maxLength', '2500');
   });
 
   it('enforces maxLength on WiFi inputs', () => {
-    render(<InputPanel config={{ ...DEFAULT_CONFIG, type: QRType.WIFI }} onChange={mockOnChange} />);
+    render(
+      <InputPanel config={{ ...DEFAULT_CONFIG, type: QRType.WIFI }} onChange={mockOnChange} />,
+    );
 
     const ssid = screen.getByLabelText('Network Name (SSID)');
     expect(ssid).toHaveAttribute('maxLength', '32');
@@ -56,7 +60,9 @@ describe('InputPanel Security (Input Limits)', () => {
   });
 
   it('enforces maxLength on Email inputs', () => {
-    render(<InputPanel config={{ ...DEFAULT_CONFIG, type: QRType.EMAIL }} onChange={mockOnChange} />);
+    render(
+      <InputPanel config={{ ...DEFAULT_CONFIG, type: QRType.EMAIL }} onChange={mockOnChange} />,
+    );
 
     const email = screen.getByLabelText('Email Address');
     expect(email).toHaveAttribute('maxLength', '254'); // RFC 5321

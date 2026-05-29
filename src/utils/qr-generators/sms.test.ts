@@ -5,7 +5,7 @@ describe('Sms generator', () => {
   it('constructs and hydrates successfully', () => {
     const data = {
       number: '+1234567890',
-      message: 'Hello, this is a test!'
+      message: 'Hello, this is a test!',
     };
     const str = constructSmsString(data);
     const hydrated = hydrateSmsData(str);
@@ -15,7 +15,7 @@ describe('Sms generator', () => {
   it('constructs and hydrates without message', () => {
     const data = {
       number: '+1234567890',
-      message: ''
+      message: '',
     };
     const str = constructSmsString(data);
     const hydrated = hydrateSmsData(str);

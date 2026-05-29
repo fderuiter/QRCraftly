@@ -3,7 +3,10 @@ import { Button } from './Button';
 import { Eye, EyeOff } from 'lucide-react';
 import { CharCount } from '../CharCount';
 
-export interface TextFieldProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size' | 'id'> {
+export interface TextFieldProps extends Omit<
+  React.InputHTMLAttributes<HTMLInputElement>,
+  'size' | 'id'
+> {
   label?: string;
   error?: string;
   showPasswordToggle?: boolean;
@@ -13,15 +16,31 @@ export interface TextFieldProps extends Omit<React.InputHTMLAttributes<HTMLInput
 }
 
 export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(
-  ({ className = '', label, error, showPasswordToggle, showCharCount, type = 'text', id, fieldSize = 'xs', maxLength, value, ...props }, ref) => {
+  (
+    {
+      className = '',
+      label,
+      error,
+      showPasswordToggle,
+      showCharCount,
+      type = 'text',
+      id,
+      fieldSize = 'xs',
+      maxLength,
+      value,
+      ...props
+    },
+    ref,
+  ) => {
     const [showPassword, setShowPassword] = useState(false);
     const effectiveType = showPasswordToggle ? (showPassword ? 'text' : 'password') : type;
-    
+
     const inputId = id || `input-${Math.random().toString(36).substring(2, 9)}`;
 
-    const labelClass = fieldSize === 'xs' 
-      ? 'block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1' 
-      : 'block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1';
+    const labelClass =
+      fieldSize === 'xs'
+        ? 'block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1'
+        : 'block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1';
 
     return (
       <div className={className}>
@@ -59,13 +78,17 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(
           <CharCount current={String(value || '').length} max={maxLength} />
         )}
         {error && (
-          <p id={`${inputId}-error`} role="alert" className="mt-1 text-xs text-rose-600 dark:text-rose-400">
+          <p
+            id={`${inputId}-error`}
+            role="alert"
+            className="mt-1 text-xs text-rose-600 dark:text-rose-400"
+          >
             {error}
           </p>
         )}
       </div>
     );
-  }
+  },
 );
 
 TextField.displayName = 'TextField';

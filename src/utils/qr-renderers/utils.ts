@@ -37,7 +37,7 @@ const SAFE_AREA_RATIOS: Record<string, number> = {
   L: 0.22,
   M: 0.35,
   Q: 0.45,
-  H: 0.50,
+  H: 0.5,
 };
 
 /**
@@ -49,35 +49,39 @@ const SAFE_AREA_RATIOS: Record<string, number> = {
  * @param cellSize - The physical size (in pixels) of a single module.
  * @returns The calculated metrics for rendering the logo and its cutout.
  */
-export const getLogoMetrics = (config: QRConfig, moduleCount: number, cellSize: number): LogoMetrics => {
-    // Determine safe limit for logo size
-    const SAFE_AREA_RATIO = SAFE_AREA_RATIOS[config.errorCorrectionLevel] ?? 0.50;
+export const getLogoMetrics = (
+  config: QRConfig,
+  moduleCount: number,
+  cellSize: number,
+): LogoMetrics => {
+  // Determine safe limit for logo size
+  const SAFE_AREA_RATIO = SAFE_AREA_RATIOS[config.errorCorrectionLevel] ?? 0.5;
 
-    const requestedLogoSizeModules = config.logoSize * moduleCount;
-    const paddingModules = config.logoPaddingStyle === 'none' ? 0 : config.logoPadding;
-    const requestedCutoutModules = requestedLogoSizeModules + (paddingModules * 2);
+  const requestedLogoSizeModules = config.logoSize * moduleCount;
+  const paddingModules = config.logoPaddingStyle === 'none' ? 0 : config.logoPadding;
+  const requestedCutoutModules = requestedLogoSizeModules + paddingModules * 2;
 
-    let effectiveLogoSizeModules = requestedLogoSizeModules;
-    let effectivePaddingModules = paddingModules;
+  let effectiveLogoSizeModules = requestedLogoSizeModules;
+  let effectivePaddingModules = paddingModules;
 
-    if (requestedCutoutModules > moduleCount * SAFE_AREA_RATIO) {
-        const maxCutoutModules = moduleCount * SAFE_AREA_RATIO;
-        const scaleFactor = maxCutoutModules / requestedCutoutModules;
-        effectiveLogoSizeModules = requestedLogoSizeModules * scaleFactor;
-        effectivePaddingModules = paddingModules * scaleFactor;
-    }
+  if (requestedCutoutModules > moduleCount * SAFE_AREA_RATIO) {
+    const maxCutoutModules = moduleCount * SAFE_AREA_RATIO;
+    const scaleFactor = maxCutoutModules / requestedCutoutModules;
+    effectiveLogoSizeModules = requestedLogoSizeModules * scaleFactor;
+    effectivePaddingModules = paddingModules * scaleFactor;
+  }
 
-    const logoSizePx = effectiveLogoSizeModules * cellSize;
-    const logoPaddingPx = effectivePaddingModules * cellSize;
-    const cutoutModuleSize = effectiveLogoSizeModules + (effectivePaddingModules * 2);
+  const logoSizePx = effectiveLogoSizeModules * cellSize;
+  const logoPaddingPx = effectivePaddingModules * cellSize;
+  const cutoutModuleSize = effectiveLogoSizeModules + effectivePaddingModules * 2;
 
-    return {
-        logoSizePx,
-        logoPaddingPx,
-        cutoutModuleSize,
-        effectiveLogoSizeModules,
-        effectivePaddingModules
-    };
+  return {
+    logoSizePx,
+    logoPaddingPx,
+    cutoutModuleSize,
+    effectiveLogoSizeModules,
+    effectivePaddingModules,
+  };
 };
 
 /**
@@ -89,53 +93,57 @@ export const getLogoMetrics = (config: QRConfig, moduleCount: number, cellSize: 
  * @param logoMetrics - Pre-calculated logo metrics (from `getLogoMetrics`).
  * @returns A predicate function taking (row, col) and returning true if covered.
  */
-export const getIsCoveredByLogo = (config: QRConfig, moduleCount: number, logoMetrics: LogoMetrics) => {
-    const center = moduleCount / 2;
-    const { cutoutModuleSize } = logoMetrics;
+export const getIsCoveredByLogo = (
+  config: QRConfig,
+  moduleCount: number,
+  logoMetrics: LogoMetrics,
+) => {
+  const center = moduleCount / 2;
+  const { cutoutModuleSize } = logoMetrics;
 
-    if (!config.logoUrl) {
-      return () => false;
+  if (!config.logoUrl) {
+    return () => false;
+  }
+
+  // Optimization: Pre-calculate metrics to avoid re-computation in the render loop
+  const centerOffset = center - 0.5;
+
+  if (config.logoPaddingStyle === 'circle') {
+    const radius = cutoutModuleSize / 2;
+    const radiusSq = radius * radius;
+
+    const xsSq = new Float64Array(moduleCount);
+    for (let c = 0; c < moduleCount; c++) {
+      const x = c - centerOffset;
+      xsSq[c] = x * x;
     }
 
-    // Optimization: Pre-calculate metrics to avoid re-computation in the render loop
-    const centerOffset = center - 0.5;
-
-    if (config.logoPaddingStyle === 'circle') {
-      const radius = cutoutModuleSize / 2;
-      const radiusSq = radius * radius;
-
-      const xsSq = new Float64Array(moduleCount);
-      for (let c = 0; c < moduleCount; c++) {
-        const x = c - centerOffset;
-        xsSq[c] = x * x;
-      }
-
-      const ysSq = new Float64Array(moduleCount);
-      for (let r = 0; r < moduleCount; r++) {
-        const y = r - centerOffset;
-        ysSq[r] = y * y;
-      }
-
-      return (r: number, c: number) => {
-        return (xsSq[c] + ysSq[r]) < radiusSq;
-      };
-    } else {
-      const halfSize = cutoutModuleSize / 2;
-      const minBound = centerOffset - halfSize;
-      const maxBound = centerOffset + halfSize;
-
-      return (r: number, c: number) => {
-        return c > minBound && c < maxBound && r > minBound && r < maxBound;
-      };
+    const ysSq = new Float64Array(moduleCount);
+    for (let r = 0; r < moduleCount; r++) {
+      const y = r - centerOffset;
+      ysSq[r] = y * y;
     }
+
+    return (r: number, c: number) => {
+      return xsSq[c] + ysSq[r] < radiusSq;
+    };
+  } else {
+    const halfSize = cutoutModuleSize / 2;
+    const minBound = centerOffset - halfSize;
+    const maxBound = centerOffset + halfSize;
+
+    return (r: number, c: number) => {
+      return c > minBound && c < maxBound && r > minBound && r < maxBound;
+    };
+  }
 };
 
 export interface LayoutMetrics {
-    drawX: number;
-    drawY: number;
-    drawSize: number;
-    cellSize: number;
-    borderPx: number;
+  drawX: number;
+  drawY: number;
+  drawSize: number;
+  cellSize: number;
+  borderPx: number;
 }
 
 /**
@@ -146,20 +154,24 @@ export interface LayoutMetrics {
  * @param moduleCount - The total number of modules in the QR grid.
  * @returns The metrics needed to correctly position and scale the QR grid.
  */
-export const calculateLayout = (config: QRConfig, displaySize: number, moduleCount: number): LayoutMetrics => {
-    let drawX = 0;
-    let drawY = 0;
-    let drawSize = displaySize;
-    let borderPx = 0;
+export const calculateLayout = (
+  config: QRConfig,
+  displaySize: number,
+  moduleCount: number,
+): LayoutMetrics => {
+  let drawX = 0;
+  let drawY = 0;
+  let drawSize = displaySize;
+  let borderPx = 0;
 
-    if (config.isBorderEnabled && config.borderSize > 0) {
-        borderPx = displaySize * config.borderSize;
-        drawX = borderPx;
-        drawY = borderPx;
-        drawSize = displaySize - (borderPx * 2);
-    }
+  if (config.isBorderEnabled && config.borderSize > 0) {
+    borderPx = displaySize * config.borderSize;
+    drawX = borderPx;
+    drawY = borderPx;
+    drawSize = displaySize - borderPx * 2;
+  }
 
-    const cellSize = drawSize / moduleCount;
+  const cellSize = drawSize / moduleCount;
 
-    return { drawX, drawY, drawSize, cellSize, borderPx };
+  return { drawX, drawY, drawSize, cellSize, borderPx };
 };

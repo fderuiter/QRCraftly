@@ -2,7 +2,7 @@ import React from 'react';
 
 export type ComponentRegistryItem = {
   id: string;
-  component: React.ComponentType<any>;
+  component: React.ComponentType<Record<string, unknown>>;
   order?: number;
 };
 

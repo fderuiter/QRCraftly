@@ -25,7 +25,7 @@ describe('QR Helpers Email Security', () => {
     const data: EmailData = {
       email: 'user@example.com\ncc:attacker@example.com',
       subject: 'Test',
-      body: 'Body'
+      body: 'Body',
     };
     const result = constructEmailString(data);
     // The result should not contain \n or %0A (if encoded, but currently not encoded)
@@ -36,13 +36,13 @@ describe('QR Helpers Email Security', () => {
   });
 
   it('constructEmailString should strip control characters from email', () => {
-      const data: EmailData = {
-          email: 'user@example.com\x00',
-          subject: 'Test',
-          body: 'Body'
-      };
-      const result = constructEmailString(data);
-      expect(result).not.toContain('\x00');
-      expect(result).toBe('mailto:user@example.com?subject=Test&body=Body');
+    const data: EmailData = {
+      email: 'user@example.com\x00',
+      subject: 'Test',
+      body: 'Body',
+    };
+    const result = constructEmailString(data);
+    expect(result).not.toContain('\x00');
+    expect(result).toBe('mailto:user@example.com?subject=Test&body=Body');
   });
 });

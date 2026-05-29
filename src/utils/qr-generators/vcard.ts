@@ -54,26 +54,36 @@ export const hydrateVCardData = (raw: string): VCardData => {
 
   const lines = raw.split(/\r\n|\r|\n/);
 
-  lines.forEach(line => {
+  lines.forEach((line) => {
     const splitIndex = line.indexOf(':');
     if (splitIndex <= 0) return;
-    
+
     const fullKey = line.substring(0, splitIndex);
     const key = fullKey.split(';')[0].toUpperCase();
     const value = line.substring(splitIndex + 1);
 
-    switch(key) {
+    switch (key) {
       case 'N': {
         const nParts = value.split(/(?<!\\);/);
         result.lastName = unescapeVCardString(nParts[0] || '');
         result.firstName = unescapeVCardString(nParts[1] || '');
         break;
       }
-      case 'ORG': result.organization = unescapeVCardString(value); break;
-      case 'TITLE': result.title = unescapeVCardString(value); break;
-      case 'TEL': result.phone = unescapeVCardString(value); break;
-      case 'EMAIL': result.email = unescapeVCardString(value); break;
-      case 'URL': result.website = unescapeVCardString(value); break;
+      case 'ORG':
+        result.organization = unescapeVCardString(value);
+        break;
+      case 'TITLE':
+        result.title = unescapeVCardString(value);
+        break;
+      case 'TEL':
+        result.phone = unescapeVCardString(value);
+        break;
+      case 'EMAIL':
+        result.email = unescapeVCardString(value);
+        break;
+      case 'URL':
+        result.website = unescapeVCardString(value);
+        break;
       case 'ADR': {
         const adrParts = value.split(/(?<!\\);/);
         result.street = unescapeVCardString(adrParts[2] || '');

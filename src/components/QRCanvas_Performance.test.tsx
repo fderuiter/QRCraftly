@@ -1,4 +1,3 @@
-
 import { render, waitFor, act } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach, afterEach, Mock } from 'vitest';
 import QRCanvas from './QRCanvas';
@@ -81,7 +80,7 @@ describe('QRCanvas Performance Refactoring', () => {
       naturalHeight = 100;
 
       constructor() {
-          createdImages.push(this);
+        createdImages.push(this);
       }
     } as any;
   });
@@ -103,14 +102,14 @@ describe('QRCanvas Performance Refactoring', () => {
     render(<QRCanvas config={config} />);
 
     await waitFor(() => {
-       // Expect roundRect to be called.
-       // Note: QRCanvas uses drawRoundRect helper which might fallback to paths if roundRect is missing.
-       // JSDOM canvas context might not have roundRect.
-       // We mocked getContext, so mockContext DOES have roundRect spy.
-       // However, drawRoundRect checks `if (ctx.roundRect)`.
-       // Since our mockContext has it, it should be called.
-       expect(mockContext.roundRect).toHaveBeenCalled();
-       expect(mockContext.fill).toHaveBeenCalled();
+      // Expect roundRect to be called.
+      // Note: QRCanvas uses drawRoundRect helper which might fallback to paths if roundRect is missing.
+      // JSDOM canvas context might not have roundRect.
+      // We mocked getContext, so mockContext DOES have roundRect spy.
+      // However, drawRoundRect checks `if (ctx.roundRect)`.
+      // Since our mockContext has it, it should be called.
+      expect(mockContext.roundRect).toHaveBeenCalled();
+      expect(mockContext.fill).toHaveBeenCalled();
     });
   });
 
@@ -121,8 +120,8 @@ describe('QRCanvas Performance Refactoring', () => {
     render(<QRCanvas config={config} />);
 
     await waitFor(() => {
-       expect(mockContext.roundRect).toHaveBeenCalled();
-       expect(mockContext.rect).toHaveBeenCalled();
+      expect(mockContext.roundRect).toHaveBeenCalled();
+      expect(mockContext.rect).toHaveBeenCalled();
     });
   });
 
@@ -130,27 +129,27 @@ describe('QRCanvas Performance Refactoring', () => {
     setupModules(() => true);
 
     const config = {
-        ...DEFAULT_CONFIG,
-        logoUrl: 'https://example.com/logo.png',
-        logoSize: 0.2
+      ...DEFAULT_CONFIG,
+      logoUrl: 'https://example.com/logo.png',
+      logoSize: 0.2,
     };
 
     render(<QRCanvas config={config} />);
 
     await waitFor(() => {
-        expect(createdImages.length).toBeGreaterThan(0);
+      expect(createdImages.length).toBeGreaterThan(0);
     });
 
     act(() => {
-        const img = createdImages[0];
-        if (img && img.onload) {
-            img.complete = true;
-            img.onload();
-        }
+      const img = createdImages[0];
+      if (img && img.onload) {
+        img.complete = true;
+        img.onload();
+      }
     });
 
     await waitFor(() => {
-        expect(mockContext.drawImage).toHaveBeenCalled();
+      expect(mockContext.drawImage).toHaveBeenCalled();
     });
   });
 
@@ -161,7 +160,7 @@ describe('QRCanvas Performance Refactoring', () => {
     render(<QRCanvas config={config} />);
 
     await waitFor(() => {
-        expect(mockContext.rect).toHaveBeenCalled();
+      expect(mockContext.rect).toHaveBeenCalled();
     });
   });
 });

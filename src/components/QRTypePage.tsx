@@ -28,7 +28,7 @@ interface QRTypePageProps {
   /** The title to display in the QRTool header. */
   title: string;
   /** The structured data (JSON-LD) object to inject. */
-  schemaData: any;
+  schemaData: Record<string, unknown>;
   /** The tool ID for loading content. */
   toolId: string;
 }
@@ -45,9 +45,11 @@ export const QRTypePage: React.FC<QRTypePageProps> = ({ type, title, schemaData,
 
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(schemaData) }} />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(schemaData) }}
+      />
       <QRTool initialConfig={config} title={title} toolId={toolId} />
     </>
   );
 };
-

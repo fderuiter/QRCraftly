@@ -1,10 +1,12 @@
 import jsQR from 'jsqr';
 
-self.onmessage = (e: MessageEvent<{ imageData: ImageData; width: number; height: number; configId?: string }>) => {
+self.onmessage = (
+  e: MessageEvent<{ imageData: ImageData; width: number; height: number; configId?: string }>,
+) => {
   try {
     const { imageData, width, height, configId } = e.data;
     const code = jsQR(imageData.data, width, height, {
-      inversionAttempts: "dontInvert", // try faster first
+      inversionAttempts: 'dontInvert', // try faster first
     });
 
     if (code) {
@@ -12,7 +14,7 @@ self.onmessage = (e: MessageEvent<{ imageData: ImageData; width: number; height:
     } else {
       // Try again with invert
       const codeInvert = jsQR(imageData.data, width, height, {
-        inversionAttempts: "attemptBoth",
+        inversionAttempts: 'attemptBoth',
       });
       if (codeInvert) {
         self.postMessage({ success: true, configId });

@@ -46,7 +46,10 @@ export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange
         <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label htmlFor="border-style" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
+              <label
+                htmlFor="border-style"
+                className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1"
+              >
                 Style
               </label>
               <select
@@ -107,7 +110,9 @@ export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange
               <div className="flex gap-2">
                 <select
                   value={config.borderTextPosition || 'bottom-center'}
-                  onChange={(e) => onChange({ borderTextPosition: e.target.value as BorderTextPosition })}
+                  onChange={(e) =>
+                    onChange({ borderTextPosition: e.target.value as BorderTextPosition })
+                  }
                   className="flex-1 px-2 py-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs text-slate-700 dark:text-slate-200 focus:outline-none focus:border-teal-500"
                   aria-label="Border text position"
                 >
@@ -131,15 +136,26 @@ export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 {config.borderLogoUrl ? (
-                  <img src={config.borderLogoUrl} alt="Border Logo" width={32} height={32} className="w-8 h-8 object-contain bg-white rounded border border-slate-200" />
+                  <img
+                    src={config.borderLogoUrl}
+                    alt="Border Logo"
+                    width={32}
+                    height={32}
+                    className="w-8 h-8 object-contain bg-white rounded border border-slate-200"
+                  />
                 ) : (
-                  <span className="text-xs text-slate-500 dark:text-slate-400 italic">No secondary logo</span>
+                  <span className="text-xs text-slate-500 dark:text-slate-400 italic">
+                    No secondary logo
+                  </span>
                 )}
                 {config.borderLogoUrl && (
                   <Button
                     variant="error"
                     size="icon"
-                    onClick={() => { onChange({ borderLogoUrl: null }); setError(null); }}
+                    onClick={() => {
+                      onChange({ borderLogoUrl: null });
+                      setError(null);
+                    }}
                     className="p-1 rounded-full w-auto h-auto min-w-0"
                     aria-label="Remove border logo"
                   >
@@ -164,12 +180,18 @@ export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange
                 onChange={handleBorderLogoUpload}
               />
             </div>
-            {error && <div role="alert" className="mt-1 text-xs text-rose-600 dark:text-rose-400">{error}</div>}
+            {error && (
+              <div role="alert" className="mt-1 text-xs text-rose-600 dark:text-rose-400">
+                {error}
+              </div>
+            )}
             {config.borderLogoUrl && (
               <div className="mt-2">
                 <select
                   value={config.borderLogoPosition || 'bottom-center'}
-                  onChange={(e) => onChange({ borderLogoPosition: e.target.value as BorderLogoPosition })}
+                  onChange={(e) =>
+                    onChange({ borderLogoPosition: e.target.value as BorderLogoPosition })
+                  }
                   className="w-full px-2 py-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs text-slate-700 dark:text-slate-200 focus:outline-none focus:border-teal-500"
                   aria-label="Border logo position"
                 >

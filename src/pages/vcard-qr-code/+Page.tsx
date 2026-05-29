@@ -26,5 +26,12 @@ import { toolMetadata } from '@/data/metadata';
 export default function Page() {
   const schemaData = toolMetadata['vcard-qr-code'];
 
-  return <QRTypePage type={QRType.VCARD} title="VCard QR Code" schemaData={schemaData}  toolId="vcard-qr-code" />;
+  return (
+    <QRTypePage
+      type={QRType.VCARD}
+      title="VCard QR Code"
+      schemaData={schemaData}
+      toolId="vcard-qr-code"
+    />
+  );
 }

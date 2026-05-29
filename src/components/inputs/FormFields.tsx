@@ -1,11 +1,9 @@
-import React, { useState } from "react";
-import { Button } from "../ui/Button";
-import { Eye, EyeOff } from "lucide-react";
-import { INPUT_CLASSES, TEXT_AREA_CLASSES, SELECT_CLASSES } from "./styles";
-import { CharCount } from "../CharCount";
-export { TextField } from "../ui/TextField";
+import React from 'react';
+import { TEXT_AREA_CLASSES, SELECT_CLASSES } from './styles';
+import { CharCount } from '../CharCount';
+export { TextField } from '../ui/TextField';
 
-type FieldSize = "sm" | "xs";
+type FieldSize = 'sm' | 'xs';
 
 interface BaseFieldProps {
   label: string;
@@ -17,10 +15,10 @@ interface BaseFieldProps {
 
 const getLabelClass = (size: FieldSize, customClass?: string) => {
   if (customClass) return customClass;
-  if (size === "xs") {
-    return "block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1";
+  if (size === 'xs') {
+    return 'block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1';
   }
-  return "block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1";
+  return 'block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1';
 };
 
 // Omit 'size' to prevent conflict, and 'id' to ensure our required 'id' overrides the optional one cleanly (though TS usually handles required overriding optional, explicit omit is safer for strict configs)
@@ -34,7 +32,7 @@ interface FieldWrapperProps extends BaseFieldProps {
 const FieldWrapper: React.FC<FieldWrapperProps> = ({
   id,
   label,
-  fieldSize = "xs",
+  fieldSize = 'xs',
   className,
   labelClassName,
   showCharCount,
@@ -49,24 +47,21 @@ const FieldWrapper: React.FC<FieldWrapperProps> = ({
       </label>
       {children}
       {showCharCount && maxLength && (
-        <CharCount current={String(value || "").length} max={maxLength} />
+        <CharCount current={String(value || '').length} max={maxLength} />
       )}
     </div>
   );
 };
 
-
 interface TextAreaFieldProps
-  extends
-    Omit<React.TextareaHTMLAttributes<HTMLTextAreaElement>, "id">,
-    BaseFieldProps {
+  extends Omit<React.TextareaHTMLAttributes<HTMLTextAreaElement>, 'id'>, BaseFieldProps {
   showCharCount?: boolean;
 }
 
 export const TextAreaField: React.FC<TextAreaFieldProps> = ({
   label,
   id,
-  fieldSize = "xs",
+  fieldSize = 'xs',
   className,
   labelClassName,
   showCharCount,
@@ -98,14 +93,12 @@ export const TextAreaField: React.FC<TextAreaFieldProps> = ({
 
 // Select element also has a 'size' attribute (number of visible options), so we omit it here too.
 interface SelectFieldProps
-  extends
-    Omit<React.SelectHTMLAttributes<HTMLSelectElement>, "size" | "id">,
-    BaseFieldProps {}
+  extends Omit<React.SelectHTMLAttributes<HTMLSelectElement>, 'size' | 'id'>, BaseFieldProps {}
 
 export const SelectField: React.FC<SelectFieldProps> = ({
   label,
   id,
-  fieldSize = "xs",
+  fieldSize = 'xs',
   className,
   labelClassName,
   children,
@@ -127,14 +120,12 @@ export const SelectField: React.FC<SelectFieldProps> = ({
 };
 
 interface CheckboxFieldProps
-  extends
-    Omit<React.InputHTMLAttributes<HTMLInputElement>, "id" | "type">,
-    BaseFieldProps {}
+  extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'id' | 'type'>, BaseFieldProps {}
 
 export const CheckboxField: React.FC<CheckboxFieldProps> = ({
   label,
   id,
-  fieldSize = "xs",
+  fieldSize = 'xs',
   className,
   labelClassName,
   ...props

@@ -16,7 +16,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { renderHook, waitFor } from '@testing-library/react';
+import { renderHook, waitFor, act } from '@testing-library/react';
 import { ToastProvider } from '../components/ui/Toast';
 import { useQRDownload } from './useQRDownload';
 import { DEFAULT_CONFIG } from '../constants';
@@ -59,7 +59,9 @@ describe('useQRDownload', () => {
   });
 
   it('downloadToDevice creates a download link and clicks it', () => {
-    const { result } = renderHook(() => useQRDownload(mockQrRef, DEFAULT_CONFIG as QRConfig), { wrapper: ToastProvider });
+    const { result } = renderHook(() => useQRDownload(mockQrRef, DEFAULT_CONFIG as QRConfig), {
+      wrapper: ToastProvider,
+    });
 
     const appendSpy = vi.spyOn(document.body, 'appendChild');
     const removeSpy = vi.spyOn(document.body, 'removeChild');
@@ -86,7 +88,9 @@ describe('useQRDownload', () => {
     const showSaveFilePicker = vi.fn().mockResolvedValue(mockHandle);
     (global as any).showSaveFilePicker = showSaveFilePicker;
 
-    const { result } = renderHook(() => useQRDownload(mockQrRef, DEFAULT_CONFIG as QRConfig), { wrapper: ToastProvider });
+    const { result } = renderHook(() => useQRDownload(mockQrRef, DEFAULT_CONFIG as QRConfig), {
+      wrapper: ToastProvider,
+    });
 
     await result.current.handleSaveAs('png');
 
@@ -97,7 +101,9 @@ describe('useQRDownload', () => {
   it('handleSaveAs falls back to downloadToDevice if File System Access API fails', async () => {
     (global as any).showSaveFilePicker = vi.fn().mockRejectedValue(new Error('Failed'));
 
-    const { result } = renderHook(() => useQRDownload(mockQrRef, DEFAULT_CONFIG as QRConfig), { wrapper: ToastProvider });
+    const { result } = renderHook(() => useQRDownload(mockQrRef, DEFAULT_CONFIG as QRConfig), {
+      wrapper: ToastProvider,
+    });
     const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     // Spy on internal downloadToDevice call indirectly via document append
@@ -111,7 +117,9 @@ describe('useQRDownload', () => {
 
   it('handleSaveAs returns early if canvas is not found', async () => {
     const emptyRef = { current: { querySelector: vi.fn(() => null) } } as any;
-    const { result } = renderHook(() => useQRDownload(emptyRef, DEFAULT_CONFIG as QRConfig), { wrapper: ToastProvider });
+    const { result } = renderHook(() => useQRDownload(emptyRef, DEFAULT_CONFIG as QRConfig), {
+      wrapper: ToastProvider,
+    });
     const appendSpy = vi.spyOn(document.body, 'appendChild');
 
     await result.current.handleSaveAs('png');
@@ -123,7 +131,9 @@ describe('useQRDownload', () => {
     const tempOriginal = (global as any).showSaveFilePicker;
     delete (global as any).showSaveFilePicker;
 
-    const { result } = renderHook(() => useQRDownload(mockQrRef, DEFAULT_CONFIG as QRConfig), { wrapper: ToastProvider });
+    const { result } = renderHook(() => useQRDownload(mockQrRef, DEFAULT_CONFIG as QRConfig), {
+      wrapper: ToastProvider,
+    });
 
     const appendSpy = vi.spyOn(document.body, 'appendChild');
 
@@ -139,12 +149,17 @@ describe('useQRDownload', () => {
     const showSaveFilePicker = vi.fn();
     (global as any).showSaveFilePicker = showSaveFilePicker;
 
-    const { result } = renderHook(() => useQRDownload(mockQrRef, DEFAULT_CONFIG as QRConfig), { wrapper: ToastProvider });
+    const { result } = renderHook(() => useQRDownload(mockQrRef, DEFAULT_CONFIG as QRConfig), {
+      wrapper: ToastProvider,
+    });
     const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     await result.current.handleSaveAs('png');
 
-    expect(consoleWarnSpy).toHaveBeenCalledWith('File System Access API failed, falling back to standard download:', expect.any(Error));
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      'File System Access API failed, falling back to standard download:',
+      expect.any(Error),
+    );
   });
 
   it('handleSaveAs aborts silently if AbortError is thrown', async () => {
@@ -152,7 +167,9 @@ describe('useQRDownload', () => {
     abortError.name = 'AbortError';
     (global as any).showSaveFilePicker = vi.fn().mockRejectedValue(abortError);
 
-    const { result } = renderHook(() => useQRDownload(mockQrRef, DEFAULT_CONFIG as QRConfig), { wrapper: ToastProvider });
+    const { result } = renderHook(() => useQRDownload(mockQrRef, DEFAULT_CONFIG as QRConfig), {
+      wrapper: ToastProvider,
+    });
     const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const appendSpy = vi.spyOn(document.body, 'appendChild');
 
@@ -177,12 +194,14 @@ describe('useQRDownload', () => {
       configurable: true,
     });
 
-    const { result } = renderHook(() => useQRDownload(mockQrRef, DEFAULT_CONFIG as QRConfig), { wrapper: ToastProvider });
+    const { result } = renderHook(() => useQRDownload(mockQrRef, DEFAULT_CONFIG as QRConfig), {
+      wrapper: ToastProvider,
+    });
 
     await result.current.handleShare();
 
     await waitFor(() => {
-        expect(mockShare).toHaveBeenCalled();
+      expect(mockShare).toHaveBeenCalled();
     });
   });
 
@@ -202,14 +221,16 @@ describe('useQRDownload', () => {
       configurable: true,
     });
 
-    const { result } = renderHook(() => useQRDownload(mockQrRef, DEFAULT_CONFIG as QRConfig), { wrapper: ToastProvider });
-    const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const { result } = renderHook(() => useQRDownload(mockQrRef, DEFAULT_CONFIG as QRConfig), {
+      wrapper: ToastProvider,
+    });
 
-    await result.current.handleShare();
+    await act(async () => {
+      await result.current.handleShare();
+    });
 
     await waitFor(() => {
-        expect(mockShare).toHaveBeenCalled();
-        expect(consoleLogSpy).toHaveBeenCalledWith('Error sharing:', mockError);
+      expect(mockShare).toHaveBeenCalled();
     });
   });
 
@@ -228,7 +249,9 @@ describe('useQRDownload', () => {
       configurable: true,
     });
 
-    const { result } = renderHook(() => useQRDownload(mockQrRef, DEFAULT_CONFIG as QRConfig), { wrapper: ToastProvider });
+    const { result } = renderHook(() => useQRDownload(mockQrRef, DEFAULT_CONFIG as QRConfig), {
+      wrapper: ToastProvider,
+    });
 
     await result.current.handleShare();
 
@@ -242,10 +265,14 @@ describe('useQRDownload', () => {
       configurable: true,
     });
 
-    const { result } = renderHook(() => useQRDownload(mockQrRef, DEFAULT_CONFIG as QRConfig), { wrapper: ToastProvider });
+    const { result } = renderHook(() => useQRDownload(mockQrRef, DEFAULT_CONFIG as QRConfig), {
+      wrapper: ToastProvider,
+    });
     const appendSpy = vi.spyOn(document.body, 'appendChild');
 
-    await result.current.handleShare();
+    await act(async () => {
+      await result.current.handleShare();
+    });
 
     expect(appendSpy).toHaveBeenCalled();
   });
@@ -255,15 +282,19 @@ describe('useQRDownload', () => {
     const removeSpy = vi.spyOn(document.body, 'removeChild');
     const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click');
 
-    const { result } = renderHook(() => useQRDownload(mockQrRef, DEFAULT_CONFIG as QRConfig), { wrapper: ToastProvider });
+    const { result } = renderHook(() => useQRDownload(mockQrRef, DEFAULT_CONFIG as QRConfig), {
+      wrapper: ToastProvider,
+    });
 
-    await result.current.handleSaveSvg();
+    await act(async () => {
+      await result.current.handleSaveSvg();
+    });
 
     expect(global.URL.createObjectURL).toHaveBeenCalled();
 
     // Find the <a> element among all appended children
-    const appendedElements = appendSpy.mock.calls.map(call => call[0] as Element);
-    const link = appendedElements.find(el => el.tagName === 'A') as HTMLAnchorElement;
+    const appendedElements = appendSpy.mock.calls.map((call) => call[0] as Element);
+    const link = appendedElements.find((el) => el.tagName === 'A') as HTMLAnchorElement;
     expect(link).toBeDefined();
     expect((link as HTMLAnchorElement).download).toMatch(/url-qr-code-qrcraftly-.*\.svg/);
     expect(clickSpy).toHaveBeenCalled();
@@ -274,18 +305,24 @@ describe('useQRDownload', () => {
   it('handleSaveSvg catches and logs errors when Blob generation fails', async () => {
     // We mock the Blob constructor to throw an error to test the catch block.
     const originalBlob = global.Blob;
-    global.Blob = vi.fn().mockImplementation(function() {
+    global.Blob = vi.fn().mockImplementation(function () {
       throw new Error('Blob Error');
     });
 
-    const { result } = renderHook(() => useQRDownload(mockQrRef, DEFAULT_CONFIG as QRConfig), { wrapper: ToastProvider });
+    const { result } = renderHook(() => useQRDownload(mockQrRef, DEFAULT_CONFIG as QRConfig), {
+      wrapper: ToastProvider,
+    });
     const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-    await expect(result.current.handleSaveSvg()).rejects.toThrow('Blob Error');
+    try {
+      await act(async () => {
+        await expect(result.current.handleSaveSvg()).rejects.toThrow('Blob Error');
+      });
 
-    expect(consoleWarnSpy).toHaveBeenCalledWith('SVG export failed:', expect.any(Error));
-
-    global.Blob = originalBlob;
+      expect(consoleWarnSpy).toHaveBeenCalledWith('SVG export failed:', expect.any(Error));
+    } finally {
+      global.Blob = originalBlob;
+    }
   });
 
   describe('handleCopy', () => {
@@ -314,22 +351,30 @@ describe('useQRDownload', () => {
         configurable: true,
       });
 
-      const MockClipboardItem = vi.fn().mockImplementation(function(this: any, data) { this.data = data; });
+      const MockClipboardItem = vi.fn().mockImplementation(function (this: any, data) {
+        this.data = data;
+      });
       (global as any).ClipboardItem = MockClipboardItem;
 
-      const { result } = renderHook(() => useQRDownload(mockQrRef, DEFAULT_CONFIG as QRConfig), { wrapper: ToastProvider });
+      const { result } = renderHook(() => useQRDownload(mockQrRef, DEFAULT_CONFIG as QRConfig), {
+        wrapper: ToastProvider,
+      });
 
       const success = await result.current.handleCopy();
 
       expect(success).toBe(true);
       expect(mockCanvas.toBlob).toHaveBeenCalled();
-      expect(MockClipboardItem).toHaveBeenCalledWith(expect.objectContaining({ 'image/png': expect.any(Blob) }));
+      expect(MockClipboardItem).toHaveBeenCalledWith(
+        expect.objectContaining({ 'image/png': expect.any(Blob) }),
+      );
       expect(mockWrite).toHaveBeenCalled();
     });
 
     it('returns false if canvas is not found', async () => {
       const emptyRef = { current: { querySelector: vi.fn(() => null) } } as any;
-      const { result } = renderHook(() => useQRDownload(emptyRef, DEFAULT_CONFIG as QRConfig), { wrapper: ToastProvider });
+      const { result } = renderHook(() => useQRDownload(emptyRef, DEFAULT_CONFIG as QRConfig), {
+        wrapper: ToastProvider,
+      });
 
       const success = await result.current.handleCopy();
       expect(success).toBe(false);
@@ -337,7 +382,9 @@ describe('useQRDownload', () => {
 
     it('returns false if ClipboardItem is not supported', async () => {
       (global as any).ClipboardItem = undefined;
-      const { result } = renderHook(() => useQRDownload(mockQrRef, DEFAULT_CONFIG as QRConfig), { wrapper: ToastProvider });
+      const { result } = renderHook(() => useQRDownload(mockQrRef, DEFAULT_CONFIG as QRConfig), {
+        wrapper: ToastProvider,
+      });
 
       const success = await result.current.handleCopy();
       expect(success).toBe(false);
@@ -352,16 +399,22 @@ describe('useQRDownload', () => {
         configurable: true,
       });
 
-      const MockClipboardItem = vi.fn().mockImplementation(function(this: any, data) { this.data = data; });
+      const MockClipboardItem = vi.fn().mockImplementation(function (this: any, data) {
+        this.data = data;
+      });
       (global as any).ClipboardItem = MockClipboardItem;
 
-      const { result } = renderHook(() => useQRDownload(mockQrRef, DEFAULT_CONFIG as QRConfig), { wrapper: ToastProvider });
+      const { result } = renderHook(() => useQRDownload(mockQrRef, DEFAULT_CONFIG as QRConfig), {
+        wrapper: ToastProvider,
+      });
 
       const success = await result.current.handleCopy();
 
       expect(success).toBe(false);
-      expect(consoleWarnSpy).toHaveBeenCalledWith('Failed to copy to clipboard:', expect.any(Error));
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        'Failed to copy to clipboard:',
+        expect.any(Error),
+      );
     });
   });
-
 });

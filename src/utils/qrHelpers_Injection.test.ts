@@ -1,4 +1,3 @@
-
 import { describe, it, expect } from 'vitest';
 import { constructWifiString, constructPaymentString } from './qrHelpers';
 import { WifiEncryption, WifiData, PaymentData } from '../types';
@@ -11,7 +10,7 @@ describe('QR Helper Injection', () => {
         password: 'pass',
         encryption: WifiEncryption.WPA,
         // @ts-ignore - simulating runtime type mismatch or injection
-        hidden: 'true;S:EvilSSID'
+        hidden: 'true;S:EvilSSID',
       } as unknown as WifiData;
 
       const result = constructWifiString(maliciousData);
@@ -25,7 +24,7 @@ describe('QR Helper Injection', () => {
         password: 'pass',
         // @ts-ignore
         encryption: 'WPA;S:EvilSSID',
-        hidden: false
+        hidden: false,
       } as unknown as WifiData;
 
       const result = constructWifiString(maliciousData);
@@ -41,7 +40,7 @@ describe('QR Helper Injection', () => {
         network: 'javascript',
         address: 'alert(1)',
         amount: '',
-        label: ''
+        label: '',
       } as unknown as PaymentData;
 
       const result = constructPaymentString(maliciousData);

@@ -1,7 +1,7 @@
-import React from "react";
-import { UrlData } from "../../types";
-import { isDangerousUrl } from "../../utils/security";
-import { TextField } from "./FormFields";
+import React from 'react';
+import { UrlData } from '../../types';
+import { isDangerousUrl } from '../../utils/security';
+import { TextField } from './FormFields';
 
 interface UrlInputProps {
   data: UrlData;

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShieldCheck, Loader2, ShieldX, AlertTriangle } from 'lucide-react';
+import { ShieldCheck, Loader2, ShieldX } from 'lucide-react';
 import { ScannabilityStatus, HealthScore } from '../hooks/useScannability';
 
 interface Props {
@@ -34,13 +34,18 @@ export const ScannabilityIndicator: React.FC<Props> = ({ status, health }) => {
           </>
         )}
         {health && (
-          <span className={`ml-1 px-1.5 rounded-full text-[10px] ${health.score > 80 ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300' : health.score > 50 ? 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300' : 'bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-300'}`}>
+          <span
+            className={`ml-1 px-1.5 rounded-full text-[10px] ${health.score > 80 ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300' : health.score > 50 ? 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300' : 'bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-300'}`}
+          >
             Health: {health.score}
           </span>
         )}
       </div>
       {showHealth && health.warnings.length > 0 && (
-        <div role="alert" className="text-xs text-rose-600 dark:text-rose-400 max-w-xs text-right animate-in fade-in slide-in-from-top-1">
+        <div
+          role="alert"
+          className="text-xs text-rose-600 dark:text-rose-400 max-w-xs text-right animate-in fade-in slide-in-from-top-1"
+        >
           {health.warnings[0]}
         </div>
       )}

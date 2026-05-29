@@ -1,17 +1,20 @@
-
-import { ToastProvider } from "./ui/Toast";
+import { ToastProvider } from './ui/Toast';
 import { render, screen, within } from '@testing-library/react';
 import QRTool from './QRTool';
 import { describe, it, expect, vi } from 'vitest';
 
 // Mock QRCanvas as we don't need its functionality here
 vi.mock('./QRCanvas', () => ({
-  default: () => <div data-testid="qr-canvas-mock" />
+  default: () => <div data-testid="qr-canvas-mock" />,
 }));
 
 describe('QRTool Footer', () => {
   it('renders a semantic footer with navigation links', () => {
-    render(<ToastProvider><QRTool /></ToastProvider>);
+    render(
+      <ToastProvider>
+        <QRTool />
+      </ToastProvider>,
+    );
 
     // Check for footer role
     const footer = screen.getByRole('contentinfo');
@@ -34,7 +37,11 @@ describe('QRTool Footer', () => {
   });
 
   it('renders copyright information', () => {
-    render(<ToastProvider><QRTool /></ToastProvider>);
+    render(
+      <ToastProvider>
+        <QRTool />
+      </ToastProvider>,
+    );
     const footer = screen.getByRole('contentinfo');
     expect(footer).toHaveTextContent(/QRCraftly/i);
     expect(footer).toHaveTextContent(/Open Source/i);

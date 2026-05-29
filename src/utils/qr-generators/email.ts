@@ -41,7 +41,7 @@ export const hydrateEmailData = (raw: string): EmailData => {
   if (raw.startsWith('MATMSG:')) {
     const content = raw.substring(7).replace(/;+$/, '');
     const parts = content.split(';');
-    parts.forEach(part => {
+    parts.forEach((part) => {
       const splitIndex = part.indexOf(':');
       if (splitIndex <= 0) return;
       const key = part.substring(0, splitIndex);

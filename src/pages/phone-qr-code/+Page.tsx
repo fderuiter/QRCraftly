@@ -26,5 +26,12 @@ import { toolMetadata } from '@/data/metadata';
 export default function Page() {
   const schemaData = toolMetadata['phone-qr-code'];
 
-  return <QRTypePage type={QRType.PHONE} title="Phone QR Code" schemaData={schemaData}  toolId="phone-qr-code" />;
+  return (
+    <QRTypePage
+      type={QRType.PHONE}
+      title="Phone QR Code"
+      schemaData={schemaData}
+      toolId="phone-qr-code"
+    />
+  );
 }

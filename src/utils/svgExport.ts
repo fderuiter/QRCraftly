@@ -49,7 +49,7 @@ async function toDataUrl(url: string): Promise<string | null> {
   try {
     const response = await fetch(url, { mode: 'cors' });
     if (!response.ok) return null;
-    
+
     const blob = await response.blob();
     if (!blob.type.startsWith('image/')) return null;
 
@@ -103,13 +103,12 @@ export async function generateQRSvg(config: QRConfig, _legacySize?: number): Pro
   const moduleCount = modules.size;
 
   // Pre-resolve logo images to inline data-URLs
-  const logoImg = config.logoUrl
-    ? makeImgProxy(await toDataUrl(config.logoUrl))
-    : null;
+  const logoImg = config.logoUrl ? makeImgProxy(await toDataUrl(config.logoUrl)) : null;
 
-  const borderLogoImg = config.isBorderEnabled && config.borderLogoUrl
-    ? makeImgProxy(await toDataUrl(config.borderLogoUrl))
-    : null;
+  const borderLogoImg =
+    config.isBorderEnabled && config.borderLogoUrl
+      ? makeImgProxy(await toDataUrl(config.borderLogoUrl))
+      : null;
 
   // Determine output dimensions from the social format (canonical resolution)
   const { width: svgWidth, height: svgHeight } = SOCIAL_DIMENSIONS[config.socialFormat];
@@ -126,7 +125,7 @@ export async function generateQRSvg(config: QRConfig, _legacySize?: number): Pro
       borderLogoImg,
       svgWidth,
       svgHeight,
-      moduleCount
+      moduleCount,
     );
   } catch (err) {
     console.warn('SVG QR generation failed:', err);

@@ -43,7 +43,7 @@ export const hydrateSmsData = (raw: string): SmsData => {
   if (isSms || isSmsto) {
     const prefixLen = isSms ? 4 : 6;
     const content = raw.substring(prefixLen);
-    
+
     // Check for RFC 5724 format: sms:number?body=encodedBody
     const qMarkIndex = content.indexOf('?');
     if (qMarkIndex !== -1) {

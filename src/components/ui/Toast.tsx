@@ -50,7 +50,13 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
-const ToastItem = ({ toast, onRemove }: { toast: ToastMessage; onRemove: (id: string) => void }) => {
+const ToastItem = ({
+  toast,
+  onRemove,
+}: {
+  toast: ToastMessage;
+  onRemove: (id: string) => void;
+}) => {
   useEffect(() => {
     const timer = setTimeout(() => {
       onRemove(toast.id);
@@ -59,18 +65,21 @@ const ToastItem = ({ toast, onRemove }: { toast: ToastMessage; onRemove: (id: st
   }, [toast, onRemove]);
 
   const Icon = toast.type === 'success' ? CheckCircle : toast.type === 'error' ? AlertCircle : Info;
-  
+
   let colors = '';
   if (toast.type === 'success') {
-    colors = 'bg-teal-50 dark:bg-teal-900/30 border-teal-200 dark:border-teal-800 text-teal-800 dark:text-teal-200';
+    colors =
+      'bg-teal-50 dark:bg-teal-900/30 border-teal-200 dark:border-teal-800 text-teal-800 dark:text-teal-200';
   } else if (toast.type === 'error') {
-    colors = 'bg-rose-50 dark:bg-rose-900/30 border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200';
+    colors =
+      'bg-rose-50 dark:bg-rose-900/30 border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200';
   } else {
-    colors = 'bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-200';
+    colors =
+      'bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-200';
   }
 
   return (
-    <div 
+    <div
       role={toast.type === 'error' ? 'alert' : 'status'}
       className={`flex items-center gap-3 p-4 rounded-xl border shadow-lg pointer-events-auto max-w-md w-full transition-all duration-300 ease-in-out transform translate-y-0 opacity-100 ${colors}`}
     >
@@ -78,7 +87,7 @@ const ToastItem = ({ toast, onRemove }: { toast: ToastMessage; onRemove: (id: st
       <p className="text-sm font-medium flex-1">{toast.message}</p>
       <Button
         variant="ghost"
-        size="icon" 
+        size="icon"
         onClick={() => onRemove(toast.id)}
         className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/10"
         aria-label="Close notification"

@@ -9,7 +9,7 @@ describe('Wifi generator', () => {
       password: 'password123;',
       encryption: WifiEncryption.WPA,
       hidden: true,
-      eapIdentity: ''
+      eapIdentity: '',
     };
     const str = constructWifiString(data);
     const hydrated = hydrateWifiData(str);
@@ -22,7 +22,7 @@ describe('Wifi generator', () => {
 
     const result2 = hydrateWifiData('WIFI:INVALID;;');
     expect(result2.ssid).toBe('');
-    
+
     const result3 = hydrateWifiData('WIFI:T:UNKNOWN;;');
     expect(result3.encryption).toBe(WifiEncryption.WPA);
   });
@@ -33,15 +33,15 @@ describe('Wifi generator', () => {
   });
 });
 
-  it('hydrates WPA2-EAP identity', () => {
-    const data = {
-      ssid: 'My Enterprise',
-      password: 'password123;',
-      encryption: WifiEncryption.WPA2_EAP,
-      hidden: false,
-      eapIdentity: 'user123'
-    };
-    const str = constructWifiString(data);
-    const hydrated = hydrateWifiData(str);
-    expect(hydrated).toEqual(data);
-  });
+it('hydrates WPA2-EAP identity', () => {
+  const data = {
+    ssid: 'My Enterprise',
+    password: 'password123;',
+    encryption: WifiEncryption.WPA2_EAP,
+    hidden: false,
+    eapIdentity: 'user123',
+  };
+  const str = constructWifiString(data);
+  const hydrated = hydrateWifiData(str);
+  expect(hydrated).toEqual(data);
+});

@@ -1,6 +1,6 @@
-import React from "react";
-import { TextData } from "../../types";
-import { TextAreaField } from "./FormFields";
+import React from 'react';
+import { TextData } from '../../types';
+import { TextAreaField } from './FormFields';
 
 interface TextInputProps {
   data: TextData;

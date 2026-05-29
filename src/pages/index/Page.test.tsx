@@ -16,7 +16,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-
 import { render } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import Page from './+Page';
@@ -43,7 +42,7 @@ describe('Home Page', () => {
     expect(webApp).toBeDefined();
     expect(webApp.name).toBe('QRCraftly');
     expect(webApp.author).toEqual({
-      '@id': 'https://qrcraftly.com/#organization'
+      '@id': 'https://qrcraftly.com/#organization',
     });
 
     // Check for critical SEO properties
