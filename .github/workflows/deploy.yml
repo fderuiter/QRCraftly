@@ -19,6 +19,8 @@ on:
 permissions:
   contents: write
   deployments: write
+  id-token: write
+  attestations: write
 
 jobs:
   deploy:
@@ -86,6 +88,25 @@ jobs:
             }
           }
           MANIFEST
+
+      - name: Attest Web Build Outputs
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: 'dist/client/**/*'
+
+      - name: Attest Deployment Manifest
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: 'releases/manifest-${{ env.VERSION }}.json'
+
+      - name: Verify Attestations (Integrity Gate)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Verify the attestation of the deployment manifest
+          gh attestation verify releases/manifest-${{ env.VERSION }}.json --repo ${{ github.repository }}
+          # Verify attestation for a primary web build asset as a proxy for the whole directory
+          gh attestation verify dist/client/index.html --repo ${{ github.repository }}
 
       - name: Commit Release Manifest
         run: |
