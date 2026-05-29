@@ -44,7 +44,7 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
   const [copied, setCopied] = useState(false);
 
   // Scannability & Telemetry
-  const { status: scannabilityStatus, checkScannability } = useScannability(canvasRef, config);
+  const { status: scannabilityStatus, checkScannability, health } = useScannability(canvasRef, config);
   const { showTelemetryPrompt, handleOptIn } = useTelemetry(scannabilityStatus);
 
   // Close download menu when clicking outside
@@ -174,7 +174,7 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
                 <div className="flex justify-between items-center mb-6">
                     <h3 className="font-semibold text-slate-700 dark:text-slate-200">Live Preview</h3>
                     <div className="flex items-center gap-2">
-                       <ScannabilityIndicator status={scannabilityStatus} />
+                       <ScannabilityIndicator status={scannabilityStatus} health={health} />
                        <span className="px-2 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-xs font-bold rounded-full border border-emerald-200 dark:border-emerald-800">Active</span>
                     </div>
                 </div>

@@ -3,6 +3,7 @@ import { Button } from "../ui/Button";
 import { Eye, EyeOff } from "lucide-react";
 import { INPUT_CLASSES, TEXT_AREA_CLASSES, SELECT_CLASSES } from "./styles";
 import { CharCount } from "../CharCount";
+export { TextField } from "../ui/TextField";
 
 type FieldSize = "sm" | "xs";
 
@@ -54,76 +55,6 @@ const FieldWrapper: React.FC<FieldWrapperProps> = ({
   );
 };
 
-interface TextFieldProps
-  extends
-    Omit<React.InputHTMLAttributes<HTMLInputElement>, "size" | "id">,
-    BaseFieldProps {
-  showPasswordToggle?: boolean;
-  showCharCount?: boolean;
-}
-
-export const TextField: React.FC<TextFieldProps> = ({
-  label,
-  id,
-  fieldSize = "xs",
-  className,
-  labelClassName,
-  showPasswordToggle,
-  showCharCount,
-  type = "text",
-  maxLength,
-  value,
-  ...props
-}) => {
-  const [showPassword, setShowPassword] = useState(false);
-  // If toggle is enabled, effective type switches between text and password.
-  // Otherwise, use the provided type.
-  const effectiveType = showPasswordToggle
-    ? showPassword
-      ? "text"
-      : "password"
-    : type;
-
-  return (
-    <FieldWrapper
-      id={id}
-      label={label}
-      fieldSize={fieldSize}
-      className={className}
-      labelClassName={labelClassName}
-      showCharCount={showCharCount}
-      maxLength={maxLength}
-      value={value}
-    >
-      <div className={showPasswordToggle ? "relative" : ""}>
-        <input
-          id={id}
-          type={effectiveType}
-          maxLength={maxLength}
-          value={value}
-          className={`${INPUT_CLASSES} ${showPasswordToggle ? "pr-10" : ""}`}
-          {...props}
-        />
-        {showPasswordToggle && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full text-slate-400 min-w-0 min-h-0 w-6 h-6 flex items-center justify-center"
-            aria-label={showPassword ? "Hide password" : "Show password"}
-          >
-            {showPassword ? (
-              <EyeOff className="w-4 h-4" />
-            ) : (
-              <Eye className="w-4 h-4" />
-            )}
-          </Button>
-        )}
-      </div>
-    </FieldWrapper>
-  );
-};
 
 interface TextAreaFieldProps
   extends

@@ -1,13 +1,58 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { QRConfig } from '../types';
 import { useQRContext } from '@/context/QRContext';
+import { getContrastRatio } from '../utils/colorUtils';
 
 export type ScannabilityStatus = 'idle' | 'checking' | 'pass' | 'fail';
+
+export interface HealthScore {
+  score: number;
+  warnings: string[];
+}
 
 export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | null>, config: QRConfig) {
   const [status, setStatus] = useState<ScannabilityStatus>('idle');
   const workerRef = useRef<Worker | null>(null);
   const { emitSignal } = useQRContext();
+
+  const health = useMemo<HealthScore>(() => {
+    let score = 100;
+    const warnings: string[] = [];
+
+    const fgContrast = getContrastRatio(config.fgColor, config.bgColor);
+    const eyeContrast = getContrastRatio(config.eyeColor, config.bgColor);
+    const worstContrast = Math.min(fgContrast, eyeContrast);
+
+    if (worstContrast < 3.0) {
+      score -= 40;
+      warnings.push("Contrast ratio is critically low");
+    } else if (worstContrast < 4.5) {
+      score -= 20;
+      warnings.push("Contrast ratio is low");
+    }
+
+    const isComplex = ['grunge', 'circuit', 'starburst'].includes(config.style);
+    if (isComplex) {
+      score -= 10;
+      if (worstContrast < 7.0) {
+        score -= 20;
+        warnings.push("Pattern complexity too high for current contrast");
+      }
+    }
+
+    if (config.logoUrl) {
+      if (config.logoSize > 0.3) {
+        score -= 15;
+        warnings.push("Logo size might obscure too much data");
+      }
+      if (config.errorCorrectionLevel === 'L') {
+        score -= 15;
+        warnings.push("Low error correction with logo");
+      }
+    }
+
+    return { score: Math.max(0, Math.min(100, score)), warnings };
+  }, [config]);
 
   useEffect(() => {
     // Initialize worker
@@ -81,5 +126,5 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
     }
   };
 
-  return { status, checkScannability };
+  return { status, checkScannability, health };
 }
