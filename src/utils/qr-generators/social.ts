@@ -54,3 +54,38 @@ export const constructSocialString = (data: SocialData): string => {
   const constructUrl = SOCIAL_PLATFORM_URLS[data.platform];
   return constructUrl ? constructUrl(cleanHandle) : '';
 };
+
+/**
+ * Hydrates SocialData from a raw string.
+ */
+export const hydrateSocialData = (raw: string): SocialData => {
+  const result: SocialData = {
+    platform: SocialPlatform.INSTAGRAM,
+    handle: '',
+  };
+
+  try {
+    const url = new URL(raw);
+    const host = url.hostname.toLowerCase();
+    let pathname = url.pathname;
+
+    if (host.includes('instagram.com')) {
+      result.platform = SocialPlatform.INSTAGRAM;
+      result.handle = pathname.replace(/^\/+/, '').split('/')[0] || '';
+    } else if (host.includes('x.com') || host.includes('twitter.com')) {
+      result.platform = SocialPlatform.TWITTER;
+      result.handle = pathname.replace(/^\/+/, '').split('/')[0] || '';
+    } else if (host.includes('tiktok.com')) {
+      result.platform = SocialPlatform.TIKTOK;
+      let handlePart = pathname.replace(/^\/+/, '').split('/')[0] || '';
+      if (handlePart.startsWith('@')) {
+        handlePart = handlePart.substring(1);
+      }
+      result.handle = handlePart;
+    }
+  } catch (e) {
+    // If it's not a valid URL, it might just be the handle or malformed
+  }
+
+  return result;
+};

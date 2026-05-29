@@ -26,3 +26,12 @@ export const constructPhoneString = (data: PhoneData): string => {
   const cleanNumber = cleanPhoneNumber(data.number);
   return `tel:${cleanNumber}`;
 };
+
+/**
+ * Hydrates PhoneData from a raw string.
+ */
+export const hydratePhoneData = (raw: string): PhoneData => {
+  return {
+    number: raw.replace(/^tel:/i, ''),
+  };
+};

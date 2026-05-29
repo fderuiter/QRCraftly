@@ -27,3 +27,39 @@ export const constructEmailString = (data: EmailData): string => {
   const safeEmail = sanitizeInput(data.email);
   return `mailto:${safeEmail}?subject=${encodeURIComponent(data.subject)}&body=${encodeURIComponent(data.body)}`;
 };
+
+/**
+ * Hydrates EmailData from a raw string.
+ */
+export const hydrateEmailData = (raw: string): EmailData => {
+  const result: EmailData = {
+    email: '',
+    subject: '',
+    body: '',
+  };
+
+  if (raw.startsWith('MATMSG:')) {
+    const content = raw.substring(7).replace(/;+$/, '');
+    const parts = content.split(';');
+    parts.forEach(part => {
+      const splitIndex = part.indexOf(':');
+      if (splitIndex <= 0) return;
+      const key = part.substring(0, splitIndex);
+      const value = part.substring(splitIndex + 1);
+      if (key === 'TO') result.email = value;
+      if (key === 'SUB') result.subject = value;
+      if (key === 'BODY') result.body = value;
+    });
+    return result;
+  }
+
+  if (raw.toLowerCase().startsWith('mailto:')) {
+    const urlStr = raw.replace(/^mailto:/i, 'http://localhost/');
+    const url = new URL(urlStr);
+    result.email = url.pathname.replace(/^\//, '');
+    result.subject = url.searchParams.get('subject') || '';
+    result.body = url.searchParams.get('body') || '';
+  }
+
+  return result;
+};

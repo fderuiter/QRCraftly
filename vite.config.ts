@@ -48,6 +48,17 @@ export default defineConfig(({ mode }) => {
         environment: 'jsdom',
         setupFiles: './vitest.setup.ts',
         exclude: ['**/node_modules/**', '**/dist/**', 'e2e/**'],
+        coverage: {
+          reporter: ['text', 'json-summary', 'json'],
+          reportOnFailure: true,
+          thresholds: {
+            statements: 100,
+            branches: 100,
+            functions: 100,
+            lines: 100,
+          },
+          include: ['src/utils/qr-generators/*.ts'],
+        }
       },
       resolve: {
         alias: {

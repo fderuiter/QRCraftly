@@ -63,3 +63,55 @@ export const constructPaymentString = (data: PaymentData): string => {
   }
   return paymentString;
 };
+
+/**
+ * Hydrates PaymentData from a raw string.
+ */
+export const hydratePaymentData = (raw: string): PaymentData => {
+  const result: PaymentData = {
+    network: CryptoNetwork.BITCOIN,
+    address: '',
+    amount: '',
+    label: '',
+  };
+
+  const validNetworks = [
+    CryptoNetwork.BITCOIN,
+    CryptoNetwork.ETHEREUM,
+    CryptoNetwork.SOLANA,
+    CryptoNetwork.LITECOIN,
+  ];
+
+  const colonIndex = raw.indexOf(':');
+  if (colonIndex !== -1) {
+    const networkPart = raw.substring(0, colonIndex) as CryptoNetwork;
+    if (validNetworks.includes(networkPart)) {
+      result.network = networkPart;
+      
+      const rest = raw.substring(colonIndex + 1);
+      const qIndex = rest.indexOf('?');
+      if (qIndex !== -1) {
+        result.address = rest.substring(0, qIndex);
+        const query = rest.substring(qIndex + 1);
+        const params = new URLSearchParams(query);
+        result.amount = params.get('amount') || '';
+        result.label = params.get('label') || '';
+      } else {
+        result.address = rest;
+      }
+      return result;
+    }
+  }
+
+  // If it doesn't match a known crypto network, we assume it's either an invalid
+  // string (e.g. switching types) or a CUSTOM string. 
+  // We'll return it as CUSTOM so it can be edited, but if it starts with http/https
+  // we throw so it falls back to the default BITCOIN state.
+  if (raw.startsWith('http://') || raw.startsWith('https://')) {
+    throw new Error('Invalid payment string');
+  }
+
+  result.network = CryptoNetwork.CUSTOM;
+  result.address = raw;
+  return result;
+};

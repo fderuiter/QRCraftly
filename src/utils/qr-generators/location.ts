@@ -52,3 +52,24 @@ export const constructLocationString = (data: LocationData): string => {
 
   return `geo:${lat},${lng}`;
 };
+
+/**
+ * Hydrates LocationData from a raw string.
+ */
+export const hydrateLocationData = (raw: string): LocationData => {
+  const result: LocationData = {
+    latitude: '',
+    longitude: '',
+  };
+
+  if (raw.toLowerCase().startsWith('geo:')) {
+    // geo:LAT,LONG
+    const parts = raw.substring(4).split(',');
+    if (parts.length >= 2) {
+      result.latitude = parts[0];
+      result.longitude = parts[1];
+    }
+  }
+
+  return result;
+};

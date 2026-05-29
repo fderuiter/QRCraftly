@@ -33,3 +33,12 @@ export const constructMeetingString = (data: MeetingData): string => {
   if (isDangerousUrl(data.url)) return '';
   return data.url.trim();
 };
+
+/**
+ * Hydrates MeetingData from a raw string.
+ */
+export const hydrateMeetingData = (raw: string): MeetingData => {
+  return {
+    url: raw,
+  };
+};
