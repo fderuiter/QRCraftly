@@ -1,4 +1,3 @@
-import React from 'react';
 import { contentRegistry } from '@/data/contentRegistry';
 import { Accordion, AccordionItem } from './ui/Accordion';
 

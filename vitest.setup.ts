@@ -17,3 +17,62 @@
 */
 
 import '@testing-library/jest-dom';
+
+if (typeof globalThis.Worker === 'undefined') {
+  globalThis.Worker = class {
+    constructor() {}
+    postMessage() {}
+    terminate() {}
+    addEventListener() {}
+    removeEventListener() {}
+  } as any;
+}
+
+if (typeof window !== 'undefined' && !window.Worker) {
+  (window as any).Worker = globalThis.Worker;
+}
+
+if (!HTMLCanvasElement.prototype.getContext) {
+  HTMLCanvasElement.prototype.getContext = function () {
+    return {
+      fillRect: () => {},
+      clearRect: () => {},
+      getImageData: (_x: any, _y: any, w: any, h: any) => ({
+        data: new Uint8ClampedArray(w * h * 4)
+      }),
+      putImageData: () => {},
+      createImageData: () => ([]),
+      setTransform: () => {},
+      drawImage: () => {},
+      save: () => {},
+      fillText: () => {},
+      restore: () => {},
+      beginPath: () => {},
+      moveTo: () => {},
+      lineTo: () => {},
+      closePath: () => {},
+      stroke: () => {},
+      translate: () => {},
+      scale: () => {},
+      rotate: () => {},
+      arc: () => {},
+      fill: () => {},
+      measureText: () => ({ width: 0 }),
+      transform: () => {},
+      rect: () => {},
+      clip: () => {},
+    } as any;
+  };
+}
+
+if (!HTMLCanvasElement.prototype.toBlob) {
+  HTMLCanvasElement.prototype.toBlob = function (callback: BlobCallback, _type?: string, _quality?: any) {
+    setTimeout(() => callback(new Blob([])), 0);
+  };
+}
+
+if (!HTMLCanvasElement.prototype.toDataURL) {
+  HTMLCanvasElement.prototype.toDataURL = function () {
+    return 'data:image/png;base64,';
+  };
+}

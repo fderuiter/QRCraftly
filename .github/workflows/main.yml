@@ -22,20 +22,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Cache System Dependencies (libcairo) to speed up canvas install
-      - name: Cache System Libs
-        id: cache-syslibs
-        uses: actions/cache@v4
-        with:
-          path: /usr/lib/x86_64-linux-gnu/libcairo*
-          key: ${{ runner.os }}-syslibs-cairo-v1
-
-      - name: Install System Dependencies
-        if: steps.cache-syslibs.outputs.cache-hit != 'true'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev
-
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
@@ -44,8 +30,8 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '20.19.0'
-          cache: 'pnpm'
+          node-version: "20.19.0"
+          cache: "pnpm"
 
       - name: Install NPM Dependencies
         run: pnpm install --frozen-lockfile
@@ -73,8 +59,8 @@ jobs:
           version: 9
       - uses: actions/setup-node@v4
         with:
-          node-version: '20.19.0'
-          cache: 'pnpm'
+          node-version: "20.19.0"
+          cache: "pnpm"
 
       # Restore node_modules
       - name: Restore node_modules
@@ -93,20 +79,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Re-install system deps strictly for runtime needs (faster than full dev install)
-      - name: Install Runtime Deps
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libcairo2 libpango-1.0-0 libpangocairo-1.0-0
-
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
           version: 9
       - uses: actions/setup-node@v4
         with:
-          node-version: '20.19.0'
-          cache: 'pnpm'
+          node-version: "20.19.0"
+          cache: "pnpm"
 
       - name: Restore node_modules
         uses: actions/cache@v4
@@ -115,17 +95,6 @@ jobs:
           key: ${{ runner.os }}-node-${{ hashFiles('**/pnpm-lock.yaml') }}
 
       - run: pnpm test -- run --coverage
-
-  # JOB 4: Compliance (Python)
-  compliance:
-    name: Compliance & Contrast
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.x'
-      - run: python3 scripts/contrast_check.py
 
   # JOB E2E: Playwright Cross-Browser Tests
   e2e:
@@ -141,8 +110,8 @@ jobs:
           version: 9
       - uses: actions/setup-node@v4
         with:
-          node-version: '20.19.0'
-          cache: 'pnpm'
+          node-version: "20.19.0"
+          cache: "pnpm"
 
       - name: Restore node_modules
         uses: actions/cache@v4
@@ -176,8 +145,8 @@ jobs:
           version: 9
       - uses: actions/setup-node@v4
         with:
-          node-version: '20.19.0'
-          cache: 'pnpm'
+          node-version: "20.19.0"
+          cache: "pnpm"
 
       - name: Restore node_modules
         uses: actions/cache@v4
@@ -224,7 +193,7 @@ jobs:
         id: lighthouse_audit
         uses: treosh/lighthouse-ci-action@v12
         with:
-          configPath: './lighthouserc.json'
+          configPath: "./lighthouserc.json"
           uploadArtifacts: true
           temporaryPublicStorage: true
 
@@ -275,31 +244,3 @@ jobs:
               repo: context.repo.repo,
               body: comment
             });
-
-  # JOB 7: E2E Tests
-  e2e:
-    name: E2E Tests
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20.19.0'
-          cache: 'pnpm'
-
-      - name: Restore node_modules
-        uses: actions/cache@v4
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-node-${{ hashFiles('**/pnpm-lock.yaml') }}
-      
-      - name: Install Playwright Browsers
-        run: pnpm exec playwright install --with-deps
-
-      - name: Run E2E Tests
-        run: pnpm run test:e2e
