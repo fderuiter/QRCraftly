@@ -37,8 +37,6 @@ Ensure you have the following installed on your machine:
 
 - [Node.js](https://nodejs.org/) (version 20.19.0 or higher required)
 - [pnpm](https://pnpm.io/) (strictly mandated, do not use `npm` or `yarn`)
-- Python 3 (optional, for running `scripts/` utilities)
-  - To run optimization scripts, install dependencies: `pip install -r scripts/requirements.txt`
 
 **System Dependencies (Linux/WSL/macOS):**
 
@@ -127,7 +125,7 @@ pnpm lint
 
 **Accessibility & Contrast Check:**
 ```bash
-python3 scripts/contrast_check.py
+node scripts/contrast_check.js
 ```
 
 **Bundle Size Check:**
@@ -193,10 +191,20 @@ pnpm install --prod
         - `+config.ts`: Global Vike configuration.
     - `types.ts`: TypeScript definitions for application state and data structures.
     - `constants.ts`: Default configurations and preset data.
-- `scripts/`: Utility scripts (Python).
-    - `contrast_check.py`: Checks WCAG contrast compliance for UI elements.
-    - `optimize_assets.py`: Optimizes static image assets (requires `pip install -r scripts/requirements.txt`).
+- `scripts/`: Utility scripts.
+    - `contrast_check.js`: Checks WCAG contrast compliance for UI elements.
+    - `optimize_assets.js`: Optimizes static image assets.
 - `public/`: Static assets (favicon, etc.).
+
+## Contributor Guide for Dependencies
+
+To maintain security and reduce repository noise, QRCraftly uses **Dependabot** to manage third-party dependencies.
+
+- **Automated Scanning**: Dependabot checks for outdated packages daily and monitors for security vulnerabilities.
+- **Grouped Updates**: Non-security routine updates are consolidated into logical groups (e.g., `dev-dependencies`, `production-dependencies`) to minimize PR volume.
+- **Security Priority**: Critical security patches bypass routine grouping and are issued as isolated PRs for immediate visibility.
+- **Review Process**: All dependency update PRs require human review. Before merging, ensure the CI pipeline (`test`, `e2e`, `quality`, and bundle size checks) has passed successfully.
+- **Package Manager**: QRCraftly strictly mandates **pnpm**. Dependabot is configured to respect `pnpm-lock.yaml`. Never use `npm install` or `yarn` when manually updating dependencies.
 
 ## Technologies Used
 

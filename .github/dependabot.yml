@@ -7,3 +7,15 @@ updates:
       day: "sunday"
       time: "00:00"
       timezone: "UTC"
+  
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "daily"
+      time: "02:00"
+      timezone: "UTC"
+    groups:
+      dev-dependencies:
+        dependency-type: "development"
+      production-dependencies:
+        dependency-type: "production"
