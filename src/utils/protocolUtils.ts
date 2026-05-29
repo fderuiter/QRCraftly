@@ -6,6 +6,18 @@ import { QRType } from '../types';
  */
 export const ProtocolUtils = {
   /**
+   * Checks if a host is exactly a domain or a subdomain of it.
+   */
+  hostMatchesDomain(host: string, domain: string): boolean {
+    const normalizedHost = host.toLowerCase();
+    const normalizedDomain = domain.toLowerCase();
+    return (
+      normalizedHost === normalizedDomain ||
+      normalizedHost.endsWith(`.${normalizedDomain}`)
+    );
+  },
+
+  /**
    * Escapes a value for MECARD/WIFI format.
    * Strips all strict control characters, escapes \ ; , " :
    */
@@ -72,19 +84,19 @@ export const ProtocolUtils = {
 
       // Socials
       if (
-        host.includes('instagram.com') ||
-        host.includes('x.com') ||
-        host.includes('twitter.com') ||
-        host.includes('tiktok.com')
+        this.hostMatchesDomain(host, 'instagram.com') ||
+        this.hostMatchesDomain(host, 'x.com') ||
+        this.hostMatchesDomain(host, 'twitter.com') ||
+        this.hostMatchesDomain(host, 'tiktok.com')
       ) {
         return QRType.SOCIAL;
       }
 
       // Meetings
       if (
-        host.includes('zoom.us') ||
-        host.includes('teams.microsoft.com') ||
-        host.includes('meet.google.com')
+        this.hostMatchesDomain(host, 'zoom.us') ||
+        this.hostMatchesDomain(host, 'teams.microsoft.com') ||
+        this.hostMatchesDomain(host, 'meet.google.com')
       ) {
         return QRType.MEETING;
       }
