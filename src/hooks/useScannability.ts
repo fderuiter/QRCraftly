@@ -1,11 +1,13 @@
 import { useEffect, useState, useRef } from 'react';
 import { QRConfig } from '../types';
+import { useQRContext } from '@/context/QRContext';
 
 export type ScannabilityStatus = 'idle' | 'checking' | 'pass' | 'fail';
 
 export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | null>, config: QRConfig) {
   const [status, setStatus] = useState<ScannabilityStatus>('idle');
   const workerRef = useRef<Worker | null>(null);
+  const { emitSignal } = useQRContext();
 
   useEffect(() => {
     // Initialize worker
@@ -21,20 +23,12 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
       setStatus(success ? 'pass' : 'fail');
 
       if (!success && error) {
-        // Telemetry ping (privacy-safe, Requirement 5)
-        // Check if user opted-in? Requirements say: "Strictly opt-in via a user-facing prompt or setting."
-        // We'll dispatch a custom event or call a global function to handle the telemetry opt-in check.
-        // Or we can just log it for now and let the telemetry module handle opt-in.
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('qr-scannability-fail', {
-            detail: {
-              engine: navigator.userAgent.includes('Safari') && !navigator.userAgent.includes('Chrome') ? 'WebKit' : 
-                      navigator.userAgent.includes('Firefox') ? 'Firefox' : 'Chromium',
-              styleId: config.style || 'default',
-              errorType: error
-            }
-          }));
-        }
+        emitSignal('scannability-fail', {
+          engine: navigator.userAgent.includes('Safari') && !navigator.userAgent.includes('Chrome') ? 'WebKit' : 
+                  navigator.userAgent.includes('Firefox') ? 'Firefox' : 'Chromium',
+          styleId: config.style || 'default',
+          errorType: error
+        });
       }
     };
 
@@ -43,7 +37,7 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
     return () => {
       worker.removeEventListener('message', handleMessage);
     };
-  }, [config]);
+  }, [config, emitSignal]);
 
   // Expose a function to trigger check
   const checkScannability = () => {
