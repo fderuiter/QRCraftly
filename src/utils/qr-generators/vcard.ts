@@ -37,6 +37,68 @@ export const escapeVCardString = (str: string | undefined): string => {
     .replace(/([;,])/g, '\\$1');
 };
 
+export const unescapeVCardString = (str: string | undefined): string => {
+  if (!str) return '';
+  return str
+    .replace(/\\n/gi, '\n')
+    .replace(/\\([;,])/g, '$1')
+    .replace(/\\\\/g, '\\');
+};
+
+/**
+ * Hydrates VCardData from a raw string.
+ */
+export const hydrateVCardData = (raw: string): VCardData => {
+  const result: VCardData = {
+    firstName: '',
+    lastName: '',
+    organization: '',
+    title: '',
+    phone: '',
+    email: '',
+    website: '',
+    street: '',
+    city: '',
+    country: '',
+  };
+
+  if (!raw.includes('BEGIN:VCARD')) return result;
+
+  const lines = raw.split(/\r\n|\r|\n/);
+
+  lines.forEach(line => {
+    const splitIndex = line.indexOf(':');
+    if (splitIndex <= 0) return;
+    
+    const fullKey = line.substring(0, splitIndex);
+    const key = fullKey.split(';')[0].toUpperCase();
+    const value = line.substring(splitIndex + 1);
+
+    switch(key) {
+      case 'N': {
+        const nParts = value.split(/(?<!\\);/);
+        result.lastName = unescapeVCardString(nParts[0] || '');
+        result.firstName = unescapeVCardString(nParts[1] || '');
+        break;
+      }
+      case 'ORG': result.organization = unescapeVCardString(value); break;
+      case 'TITLE': result.title = unescapeVCardString(value); break;
+      case 'TEL': result.phone = unescapeVCardString(value); break;
+      case 'EMAIL': result.email = unescapeVCardString(value); break;
+      case 'URL': result.website = unescapeVCardString(value); break;
+      case 'ADR': {
+        const adrParts = value.split(/(?<!\\);/);
+        result.street = unescapeVCardString(adrParts[2] || '');
+        result.city = unescapeVCardString(adrParts[3] || '');
+        result.country = unescapeVCardString(adrParts[6] || '');
+        break;
+      }
+    }
+  });
+
+  return result;
+};
+
 /**
  * Constructs the vCard 3.0 string.
  */

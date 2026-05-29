@@ -35,7 +35,53 @@ export const escapeWifiString = (str: string | undefined): string => {
 /**
  * Constructs the WiFi QR code string from the given data.
  */
+export const unescapeWifiString = (str: string | undefined): string => {
+  if (!str) return '';
+  return str.replace(/\\([\\;,":])/g, '$1');
+};
+
+/**
+ * Hydrates WifiData from a raw string.
+ */
+export const hydrateWifiData = (raw: string): WifiData => {
+  const result: WifiData = {
+    ssid: '',
+    password: '',
+    encryption: WifiEncryption.WPA,
+    hidden: false,
+    eapIdentity: '',
+  };
+
+  if (!raw.startsWith('WIFI:')) return result;
+
+  const content = raw.substring(5).replace(/;+$/, '');
+  const parts = content.split(/(?<!\\);/);
+
+  parts.forEach(part => {
+    const splitIndex = part.indexOf(':');
+    if (splitIndex <= 0) return;
+    const key = part.substring(0, splitIndex);
+    const value = part.substring(splitIndex + 1);
+
+    switch(key) {
+      case 'S': result.ssid = unescapeWifiString(value); break;
+      case 'P': result.password = unescapeWifiString(value); break;
+      case 'T': 
+        const enc = unescapeWifiString(value);
+        if (Object.values(WifiEncryption).includes(enc as WifiEncryption)) {
+          result.encryption = enc as WifiEncryption;
+        }
+        break;
+      case 'H': result.hidden = value.toLowerCase() === 'true'; break;
+      case 'I': result.eapIdentity = unescapeWifiString(value); break;
+    }
+  });
+
+  return result;
+};
+
 export const constructWifiString = (data: WifiData): string => {
+
   // Validate encryption type to prevent injection
   const encryption = Object.values(WifiEncryption).includes(data.encryption)
     ? data.encryption

@@ -27,3 +27,41 @@ export const constructSmsString = (data: SmsData): string => {
   const encodedBody = encodeURIComponent(data.message);
   return `sms:${cleanNumber}?body=${encodedBody}`;
 };
+
+/**
+ * Hydrates SmsData from a raw string.
+ */
+export const hydrateSmsData = (raw: string): SmsData => {
+  const result: SmsData = {
+    number: '',
+    message: '',
+  };
+
+  const isSms = raw.toLowerCase().startsWith('sms:');
+  const isSmsto = raw.toLowerCase().startsWith('smsto:');
+
+  if (isSms || isSmsto) {
+    const prefixLen = isSms ? 4 : 6;
+    const content = raw.substring(prefixLen);
+    
+    // Check for RFC 5724 format: sms:number?body=encodedBody
+    const qMarkIndex = content.indexOf('?');
+    if (qMarkIndex !== -1) {
+      result.number = content.substring(0, qMarkIndex);
+      const query = content.substring(qMarkIndex + 1);
+      const params = new URLSearchParams(query);
+      result.message = params.get('body') || '';
+    } else {
+      // Check for older smsto format: smsto:number:message
+      const colonIndex = content.indexOf(':');
+      if (colonIndex !== -1) {
+        result.number = content.substring(0, colonIndex);
+        result.message = content.substring(colonIndex + 1);
+      } else {
+        result.number = content;
+      }
+    }
+  }
+
+  return result;
+};

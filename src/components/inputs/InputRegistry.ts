@@ -23,15 +23,25 @@ import {
   constructTextString,
   hydrateTextData,
   constructWifiString,
+  hydrateWifiData,
   constructEmailString,
+  hydrateEmailData,
   constructVCardString,
+  hydrateVCardData,
   constructPhoneString,
+  hydratePhoneData,
   constructSmsString,
+  hydrateSmsData,
   constructPaymentString,
+  hydratePaymentData,
   constructEventString,
+  hydrateEventData,
   constructLocationString,
+  hydrateLocationData,
   constructMeetingString,
+  hydrateMeetingData,
   constructSocialString,
+  hydrateSocialData,
 } from "../../utils/qrHelpers";
 
 import { UrlInput } from "./UrlInput";
@@ -69,7 +79,7 @@ export interface InputRegistryEntry<T> {
   }>;
   initialState: T;
   constructFn: (data: T) => string;
-  hydrateFn?: (raw: string) => T;
+  hydrateFn: (raw: string) => T;
 }
 
 export type Registry = {
@@ -103,6 +113,7 @@ export const INPUT_REGISTRY: Registry = {
       eapIdentity: "",
     } as WifiData,
     constructFn: constructWifiString,
+    hydrateFn: hydrateWifiData,
   },
   [QRType.EVENT]: {
     Component: EventInput,
@@ -114,6 +125,7 @@ export const INPUT_REGISTRY: Registry = {
       description: "",
     } as EventData,
     constructFn: constructEventString,
+    hydrateFn: hydrateEventData,
   },
   [QRType.EMAIL]: {
     Component: EmailInput,
@@ -123,6 +135,7 @@ export const INPUT_REGISTRY: Registry = {
       body: "",
     } as EmailData,
     constructFn: constructEmailString,
+    hydrateFn: hydrateEmailData,
   },
   [QRType.VCARD]: {
     Component: VCardInput,
@@ -139,6 +152,7 @@ export const INPUT_REGISTRY: Registry = {
       country: "",
     } as VCardData,
     constructFn: constructVCardString,
+    hydrateFn: hydrateVCardData,
   },
   [QRType.PHONE]: {
     Component: PhoneInput,
@@ -146,6 +160,7 @@ export const INPUT_REGISTRY: Registry = {
       number: "",
     } as PhoneData,
     constructFn: constructPhoneString,
+    hydrateFn: hydratePhoneData,
   },
   [QRType.SMS]: {
     Component: SmsInput,
@@ -154,6 +169,7 @@ export const INPUT_REGISTRY: Registry = {
       message: "",
     } as SmsData,
     constructFn: constructSmsString,
+    hydrateFn: hydrateSmsData,
   },
   [QRType.PAYMENT]: {
     Component: PaymentInput,
@@ -164,6 +180,7 @@ export const INPUT_REGISTRY: Registry = {
       label: "",
     } as PaymentData,
     constructFn: constructPaymentString,
+    hydrateFn: hydratePaymentData,
   },
   [QRType.LOCATION]: {
     Component: LocationInput,
@@ -172,6 +189,7 @@ export const INPUT_REGISTRY: Registry = {
       longitude: "",
     } as LocationData,
     constructFn: constructLocationString,
+    hydrateFn: hydrateLocationData,
   },
   [QRType.MEETING]: {
     Component: MeetingInput,
@@ -179,6 +197,7 @@ export const INPUT_REGISTRY: Registry = {
       url: "",
     } as MeetingData,
     constructFn: constructMeetingString,
+    hydrateFn: hydrateMeetingData,
   },
   [QRType.SOCIAL]: {
     Component: SocialInput,
@@ -187,5 +206,6 @@ export const INPUT_REGISTRY: Registry = {
       handle: "",
     } as SocialData,
     constructFn: constructSocialString,
+    hydrateFn: hydrateSocialData,
   },
 };

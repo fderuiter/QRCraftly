@@ -52,6 +52,59 @@ export const formatEventDateTime = (dateString: string | undefined): string => {
   return `${year}${month}${day}T${hours}${minutes}${seconds}`;
 };
 
+export const unescapeEventString = (str: string | undefined): string => {
+  if (!str) return '';
+  return str
+    .replace(/\\n/gi, '\n')
+    .replace(/\\([;,])/g, '$1')
+    .replace(/\\\\/g, '\\');
+};
+
+export const parseEventDateTime = (dateString: string | undefined): string => {
+  if (!dateString) return '';
+  // format: YYYYMMDDTHHMMSS
+  const match = dateString.match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})/);
+  if (match) {
+    return `${match[1]}-${match[2]}-${match[3]}T${match[4]}:${match[5]}`;
+  }
+  return dateString;
+};
+
+/**
+ * Hydrates EventData from a raw string.
+ */
+export const hydrateEventData = (raw: string): EventData => {
+  const result: EventData = {
+    title: '',
+    startDate: '',
+    endDate: '',
+    location: '',
+    description: '',
+  };
+
+  if (!raw.includes('BEGIN:VEVENT')) return result;
+
+  const lines = raw.split(/\r\n|\r|\n/);
+  lines.forEach(line => {
+    const splitIndex = line.indexOf(':');
+    if (splitIndex <= 0) return;
+    
+    const fullKey = line.substring(0, splitIndex);
+    const key = fullKey.split(';')[0].toUpperCase();
+    const value = line.substring(splitIndex + 1);
+
+    switch(key) {
+      case 'SUMMARY': result.title = unescapeEventString(value); break;
+      case 'DTSTART': result.startDate = parseEventDateTime(value); break;
+      case 'DTEND': result.endDate = parseEventDateTime(value); break;
+      case 'LOCATION': result.location = unescapeEventString(value); break;
+      case 'DESCRIPTION': result.description = unescapeEventString(value); break;
+    }
+  });
+
+  return result;
+};
+
 /**
  * Constructs an iCalendar VEVENT payload.
  */
