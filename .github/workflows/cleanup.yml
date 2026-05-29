@@ -1,0 +1,87 @@
+name: Artifact & Branch Cleanup
+
+on:
+  schedule:
+    - cron: '0 2 * * 0' # Weekly on Sunday at 2AM
+  pull_request:
+    types: [closed]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  cleanup_branches:
+    name: Clean up abandoned/merged branches
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
+    steps:
+      - name: Delete merged branches
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            // Get all branches
+            const { data: branches } = await github.rest.repos.listBranches({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              protected: false,
+              per_page: 100
+            });
+            
+            for (const branch of branches) {
+              if (branch.name === 'main' || branch.name === 'master') continue;
+              
+              try {
+                // Check if branch is merged by checking if its head commit is in main
+                const { data: compare } = await github.rest.repos.compareCommits({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  base: 'main',
+                  head: branch.name
+                });
+                
+                if (compare.status === 'identical' || compare.status === 'behind') {
+                  console.log(`Deleting merged branch: ${branch.name}`);
+                  await github.rest.git.deleteRef({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    ref: `heads/${branch.name}`
+                  });
+                }
+              } catch (e) {
+                console.log(`Error checking/deleting branch ${branch.name}: ${e.message}`);
+              }
+            }
+
+  cleanup_artifacts:
+    name: Clean up stale workflow artifacts
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Delete old artifacts
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const daysToKeep = 7;
+            const threshold = new Date(Date.now() - daysToKeep * 24 * 60 * 60 * 1000);
+            
+            const { data: artifacts } = await github.rest.actions.listArtifactsForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              per_page: 100
+            });
+            
+            for (const artifact of artifacts.artifacts) {
+              const createdAt = new Date(artifact.created_at);
+              if (createdAt < threshold) {
+                console.log(`Deleting artifact: ${artifact.name} (Created: ${createdAt})`);
+                await github.rest.actions.deleteArtifact({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  artifact_id: artifact.id
+                });
+              }
+            }

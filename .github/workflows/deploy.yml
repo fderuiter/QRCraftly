@@ -1,0 +1,103 @@
+name: Enterprise Deployment & Rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_bump:
+        description: 'Version bump type (patch, minor, major)'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  deployments: write
+
+jobs:
+  deploy:
+    name: Deploy to Production
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && startsWith(github.event.head_commit.message, 'Revert'))
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20.19.0"
+          cache: "pnpm"
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Fast Build for Rollback
+        if: github.event_name == 'push' && startsWith(github.event.head_commit.message, 'Revert')
+        run: |
+          echo "ROLLBACK=true" >> $GITHUB_ENV
+          pnpm run build
+
+      - name: Full Build & Version Bump for Release
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          npm version ${{ github.event.inputs.version_bump }} --no-git-tag-version
+          pnpm run build
+
+      - name: Determine Release Information
+        id: release_info
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          if [ "$ROLLBACK" = "true" ]; then
+            VERSION="${VERSION}-rollback-${{ github.sha }}"
+          fi
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+      - name: Generate Deployment Manifest
+        run: |
+          mkdir -p releases
+          DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          cat <<MANIFEST > releases/manifest-${{ env.VERSION }}.json
+          {
+            "version": "${{ env.VERSION }}",
+            "commit": "${{ github.sha }}",
+            "date": "$DATE",
+            "trigger": "${{ github.event_name }}",
+            "rollback": ${ROLLBACK:-false},
+            "infrastructure": {
+              "provider": "Cloudflare Pages",
+              "project": "qrcraftly",
+              "compatibility_date": "2024-09-23"
+            }
+          }
+          MANIFEST
+
+      - name: Commit Release Manifest
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add package.json releases/
+          git commit -m "chore(release): version ${{ env.VERSION }} [skip ci]" || echo "No changes to commit"
+          git push
+
+      - name: Deploy to Cloudflare Pages (IaC)
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy dist/client --project-name=qrcraftly --branch=main
