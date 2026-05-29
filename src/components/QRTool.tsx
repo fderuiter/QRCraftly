@@ -16,38 +16,26 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import React, { useState, useRef, useCallback, Suspense, useEffect } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { Button } from "./ui/Button";
 import { QRConfig } from '@/types';
-import { DEFAULT_CONFIG } from '@/constants';
-import InputPanel from '@/components/InputPanel';
 import QRCanvas from '@/components/QRCanvas';
 import { Download, Share2, QrCode, ChevronDown, Camera, Moon, Sun, Info, Copy, Check } from 'lucide-react';
 import { useDebounce, useOnClickOutside } from '@/utils/hooks';
 import { useQRDownload } from '@/utils/useQRDownload';
 import { useScannability } from '@/hooks/useScannability';
 import { ScannabilityIndicator } from '@/components/ScannabilityIndicator';
+import { QRProvider, useQRContext } from '@/context/QRContext';
+import { useTheme } from '@/hooks/useTheme';
+import { useTelemetry } from '@/hooks/useTelemetry';
+import { ComponentRegistry } from '@/utils/ComponentRegistry';
+import '@/registry'; // Ensure registry is loaded
 
-// Lazy load StyleControls to reduce initial bundle size and avoid SSR issues
-const StyleControls = React.lazy(() => import('@/components/StyleControls'));
-
-import { SidebarContent } from './SidebarContent';
-
-/**
- * The main Application component.
- * Manages the global state for the QR code configuration and coordinates
- * the input panel, style controls, and the preview canvas.
- * Handles downloading and sharing of the generated QR code.
- *
- * @param props - The component props.
- * @param props.initialConfig - Optional initial configuration for the QR code.
- * @returns The QRTool component.
- */
-export default function QRTool({ initialConfig, title, toolId = 'index' }: { initialConfig?: Partial<QRConfig>, title?: string, toolId?: string }) {
-  const [config, setConfig] = useState<QRConfig>({ ...DEFAULT_CONFIG, ...initialConfig });
+function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: string }) {
+  const { config } = useQRContext();
+  const { isDarkMode, toggleDarkMode } = useTheme();
+  
   const [showDownloadMenu, setShowDownloadMenu] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(false);
-  const [isMounted, setIsMounted] = useState(false);
   const qrRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const downloadMenuRef = useRef<HTMLDivElement>(null);
@@ -57,63 +45,13 @@ export default function QRTool({ initialConfig, title, toolId = 'index' }: { ini
 
   // Scannability & Telemetry
   const { status: scannabilityStatus, checkScannability } = useScannability(canvasRef, config);
-  const [showTelemetryPrompt, setShowTelemetryPrompt] = useState(false);
-
-  useEffect(() => {
-    setIsMounted(true);
-    const optedIn = localStorage.getItem('qr-telemetry-opt-in') === 'true';
-
-    const handleScannabilityFail = (e: Event) => {
-      const customEvent = e as CustomEvent;
-      if (optedIn) {
-        // Send anonymous ping
-        sendTelemetryPing(customEvent.detail);
-      } else {
-        // Show prompt if not already prompted and not opted out explicitly
-        if (localStorage.getItem('qr-telemetry-opt-in') === null) {
-          setShowTelemetryPrompt(true);
-        }
-      }
-    };
-
-    window.addEventListener('qr-scannability-fail', handleScannabilityFail);
-    return () => window.removeEventListener('qr-scannability-fail', handleScannabilityFail);
-  }, []);
-
-  const sendTelemetryPing = (detail: any) => {
-    // Fire and forget (No PII, just metadata: engine, style, error)
-    try {
-      fetch('/api/telemetry/scannability', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(detail),
-        // use keepalive to ensure it sends even if page unloads
-        keepalive: true
-      }).catch(() => { /* silent fail for telemetry */ });
-    } catch { /* silent fail */ }
-  };
-
-  const handleOptIn = (optIn: boolean) => {
-    localStorage.setItem('qr-telemetry-opt-in', optIn ? 'true' : 'false');
-    setShowTelemetryPrompt(false);
-    
-    // If they just opted in and status is fail, send the ping now.
-    if (optIn && scannabilityStatus === 'fail') {
-       sendTelemetryPing({
-         engine: navigator.userAgent.includes('Safari') && !navigator.userAgent.includes('Chrome') ? 'WebKit' : 
-                 navigator.userAgent.includes('Firefox') ? 'Firefox' : 'Chromium',
-         styleId: config.style || 'default',
-         errorType: 'NOT_FOUND'
-       });
-    }
-  };
+  const { showTelemetryPrompt, handleOptIn } = useTelemetry(scannabilityStatus);
 
   // Close download menu when clicking outside
   const closeDownloadMenu = useCallback(() => setShowDownloadMenu(false), []);
   useOnClickOutside(downloadMenuRef, closeDownloadMenu, showDownloadMenu);
 
   // Debounce the config for QRCanvas to prevent lag during rapid typing or style changes.
-  // 100ms is a good balance between responsiveness and performance.
   const debouncedConfig = useDebounce(config, 100);
 
   const onCopy = async () => {
@@ -122,21 +60,6 @@ export default function QRTool({ initialConfig, title, toolId = 'index' }: { ini
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
-  };
-
-  /**
-   * Updates the QR configuration state.
-   * @param updates - Partial configuration object to merge into the current state.
-   */
-  const handleConfigChange = useCallback((updates: Partial<QRConfig>) => {
-    setConfig((prev) => ({ ...prev, ...updates }));
-  }, []);
-
-  /**
-   * Toggles the application between light and dark mode.
-   */
-  const toggleDarkMode = () => {
-    setIsDarkMode(!isDarkMode);
   };
 
   const downloadToDevice = (format: 'png' | 'jpeg' | 'webp') => {
@@ -153,10 +76,10 @@ export default function QRTool({ initialConfig, title, toolId = 'index' }: { ini
     setShowDownloadMenu(false);
     try {
       await hookSaveSvg();
-    } catch (err) {
-      // Error is already logged and toasted in the hook
-    }
+    } catch (err) {}
   };
+
+  const sidebarControls = ComponentRegistry.getSidebarControls();
 
   return (
     <div className={`${isDarkMode ? 'dark' : ''} w-full`} id="top">
@@ -196,25 +119,14 @@ export default function QRTool({ initialConfig, title, toolId = 'index' }: { ini
           </div>
 
           <div className="p-6 space-y-8 pb-24">
-            <section>
-              <h2 className="text-xs uppercase tracking-wider text-slate-600 dark:text-slate-400 font-bold mb-4">Content</h2>
-              <InputPanel config={config} onChange={handleConfigChange} />
-            </section>
-
-            <div className="h-px bg-slate-100 dark:bg-slate-800" />
-
-            <section>
-              <h2 className="text-xs uppercase tracking-wider text-slate-600 dark:text-slate-400 font-bold mb-4">Appearance</h2>
-              {isMounted ? (
-                <Suspense fallback={<div className="h-64 bg-slate-100 dark:bg-slate-800 rounded-xl animate-pulse" />}>
-                  <StyleControls config={config} onChange={handleConfigChange} />
-                </Suspense>
-              ) : (
-                <div className="h-64 bg-slate-100 dark:bg-slate-800 rounded-xl animate-pulse" />
-              )}
-            </section>
-
-            <SidebarContent toolId={toolId} />
+            {sidebarControls.map((Control, index) => (
+              <React.Fragment key={Control.id}>
+                <Control.component toolId={toolId} />
+                {index < sidebarControls.length - 1 && (
+                  <div className="h-px bg-slate-100 dark:bg-slate-800" />
+                )}
+              </React.Fragment>
+            ))}
 
             <footer className="pt-8 mt-8 border-t border-slate-100 dark:border-slate-800">
               <nav aria-label="Site Map">
@@ -361,5 +273,13 @@ export default function QRTool({ initialConfig, title, toolId = 'index' }: { ini
         </section>
       </div>
     </div>
+  );
+}
+
+export default function QRTool({ initialConfig, title, toolId = 'index' }: { initialConfig?: Partial<QRConfig>, title?: string, toolId?: string }) {
+  return (
+    <QRProvider initialConfig={initialConfig}>
+      <QRToolInner title={title} toolId={toolId} />
+    </QRProvider>
   );
 }
