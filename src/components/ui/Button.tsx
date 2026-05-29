@@ -9,32 +9,32 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className = '', variant = 'secondary', size = 'md', fullWidth = false, ...props }, ref) => {
     
-    let baseStyles = 'inline-flex items-center justify-center font-medium transition-colors focus:outline-none focus-visible:ring-4 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 disabled:opacity-50 disabled:cursor-not-allowed';
+    let baseStyles = 'inline-flex items-center justify-center font-medium transition-colors focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed';
     
     let variantStyles = '';
     let sizeStyles = '';
 
     switch (variant) {
       case 'primary':
-        variantStyles = 'bg-teal-700 dark:bg-teal-700 text-white hover:bg-teal-800 dark:hover:bg-teal-600 shadow-lg shadow-teal-900/10 dark:shadow-teal-900/40 focus-visible:ring-teal-500';
+        variantStyles = 'bg-teal-700 dark:bg-teal-700 text-white hover:bg-teal-800 dark:hover:bg-teal-600 shadow-lg shadow-teal-900/10 dark:shadow-teal-900/40';
         break;
       case 'secondary':
-        variantStyles = 'bg-teal-50 dark:bg-slate-800 border border-teal-200 dark:border-slate-700 text-teal-700 dark:text-teal-400 hover:bg-teal-100 dark:hover:bg-slate-700 focus-visible:ring-teal-500';
+        variantStyles = 'bg-teal-50 dark:bg-slate-800 border border-teal-200 dark:border-slate-700 text-teal-700 dark:text-teal-400 hover:bg-teal-100 dark:hover:bg-slate-700';
         break;
       case 'error':
-        variantStyles = 'bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/40 focus-visible:ring-rose-500';
+        variantStyles = 'bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/40';
         break;
       case 'outline':
-        variantStyles = 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 focus-visible:ring-teal-500';
+        variantStyles = 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50';
         break;
       case 'ghost':
-        variantStyles = 'bg-transparent text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 focus-visible:ring-teal-500';
+        variantStyles = 'bg-transparent text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800';
         break;
       case 'menuitem':
-        variantStyles = 'bg-transparent hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200 focus-visible:ring-teal-500';
+        variantStyles = 'bg-transparent hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200';
         break;
       case 'icon':
-        variantStyles = 'bg-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 focus-visible:ring-teal-500';
+        variantStyles = 'bg-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800';
         break;
     }
 

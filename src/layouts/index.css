@@ -1,1 +1,7 @@
 @import "tailwindcss";
+
+@layer base {
+  :focus-visible {
+    @apply outline-none ring-2 ring-rose-500 ring-offset-2 dark:ring-offset-slate-900;
+  }
+}
