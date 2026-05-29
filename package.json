@@ -23,7 +23,7 @@
     "preview": "vite preview",
     "test": "vitest",
     "test:e2e": "playwright test",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit && node scripts/contrast_check.js"
   },
   "dependencies": {
     "cross-env": "^10.1.0",
@@ -37,7 +37,6 @@
   },
   "pnpm": {
     "approvedBuilds": [
-      "canvas",
       "esbuild",
       "sharp",
       "workerd"
@@ -57,9 +56,9 @@
     "@vitejs/plugin-react": "^5.0.0",
     "@vitest/coverage-v8": "^4.0.15",
     "autoprefixer": "^10.4.22",
-    "canvas": "^3.2.0",
     "jsdom": "^27.2.0",
     "postcss": "^8.5.6",
+    "sharp": "^0.34.5",
     "tailwindcss": "^4.1.17",
     "typescript": "~5.8.2",
     "vite": "^6.4.2",

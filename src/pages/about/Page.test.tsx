@@ -25,7 +25,7 @@ describe('About Page', () => {
     render(<Page />);
 
     // Check main heading
-    expect(screen.getByRole('heading', { name: /About QRCraftly/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: /About QRCraftly/i })).toBeInTheDocument();
 
     // Check existing content
     expect(screen.getByText(/Privacy-focused QR code generator/i)).toBeInTheDocument();

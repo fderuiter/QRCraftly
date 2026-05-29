@@ -274,14 +274,14 @@ describe('useQRDownload', () => {
   it('handleSaveSvg catches and logs errors when Blob generation fails', async () => {
     // We mock the Blob constructor to throw an error to test the catch block.
     const originalBlob = global.Blob;
-    global.Blob = vi.fn().mockImplementation(() => {
+    global.Blob = vi.fn().mockImplementation(function() {
       throw new Error('Blob Error');
     });
 
     const { result } = renderHook(() => useQRDownload(mockQrRef, DEFAULT_CONFIG as QRConfig), { wrapper: ToastProvider });
     const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-    await result.current.handleSaveSvg();
+    await expect(result.current.handleSaveSvg()).rejects.toThrow('Blob Error');
 
     expect(consoleWarnSpy).toHaveBeenCalledWith('SVG export failed:', expect.any(Error));
 
