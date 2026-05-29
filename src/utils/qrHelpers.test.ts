@@ -40,7 +40,7 @@ describe('QR Helpers', () => {
         encryption: WifiEncryption.WPA,
         hidden: false
       };
-      expect(constructWifiString(data)).toBe('WIFI:T:WPA;S:MyNetwork;P:password123;H:false;;');
+      expect(constructWifiString(data)).toBe('WIFI:T:WPA;S:MyNetwork;P:password123;;');
     });
 
     it('constructs a WPA2-EAP WiFi string', () => {
@@ -51,7 +51,7 @@ describe('QR Helpers', () => {
         hidden: false,
         eapIdentity: 'user@domain.com'
       };
-      expect(constructWifiString(data)).toBe('WIFI:T:WPA2-EAP;S:EnterpriseNet;I:user@domain.com;P:securepass;H:false;;');
+      expect(constructWifiString(data)).toBe('WIFI:T:WPA2-EAP;S:EnterpriseNet;I:user@domain.com;P:securepass;;');
     });
 
     it('constructs a nopass WiFi string (omits password)', () => {
@@ -61,7 +61,7 @@ describe('QR Helpers', () => {
         encryption: WifiEncryption.NOPASS,
         hidden: false
       };
-      expect(constructWifiString(data)).toBe('WIFI:T:nopass;S:OpenNet;H:false;;');
+      expect(constructWifiString(data)).toBe('WIFI:T:nopass;S:OpenNet;;');
     });
 
     it('escapes special characters in SSID and password', () => {
@@ -72,7 +72,7 @@ describe('QR Helpers', () => {
         hidden: false
       };
       // Expect: Net\;Work and pass\:word\\
-      expect(constructWifiString(data)).toBe('WIFI:T:WPA;S:Net\\;Work;P:pass\\:word\\\\;H:false;;');
+      expect(constructWifiString(data)).toBe('WIFI:T:WPA;S:Net\\;Work;P:pass\\:word\\\\;;');
     });
 
     it('handles hidden network flag', () => {

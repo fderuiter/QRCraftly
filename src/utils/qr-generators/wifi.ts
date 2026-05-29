@@ -17,27 +17,21 @@
 */
 
 import { WifiData, WifiEncryption } from '../../types';
-import { REGEX_STRICT_CONTROL_CHARS } from '../security';
+import { ProtocolUtils } from '../protocolUtils';
 
 /**
  * Escapes special characters for WiFi QR code string.
  * Characters to escape: \ ; , " :
  */
 export const escapeWifiString = (str: string | undefined): string => {
-  if (!str) return '';
-  // Strip control characters including newlines (0x00-0x1F, 0x7F-0x9F)
-  // because WiFi SSIDs and passwords generally shouldn't have them,
-  // and they can break the MECARD/WIFI format or cause parsing issues.
-  const cleaned = str.replace(REGEX_STRICT_CONTROL_CHARS, '');
-  return cleaned.replace(/([\\;,":])/g, '\\$1');
+  return ProtocolUtils.escapeWifi(str);
 };
 
 /**
  * Constructs the WiFi QR code string from the given data.
  */
 export const unescapeWifiString = (str: string | undefined): string => {
-  if (!str) return '';
-  return str.replace(/\\([\\;,":])/g, '$1');
+  return ProtocolUtils.unescapeWifi(str);
 };
 
 /**
@@ -54,7 +48,13 @@ export const hydrateWifiData = (raw: string): WifiData => {
 
   if (!raw.startsWith('WIFI:')) return result;
 
-  const content = raw.substring(5).replace(/;+$/, '');
+  let content = raw.substring(5);
+  if (content.endsWith(';;')) {
+    content = content.slice(0, -2);
+  } else if (content.endsWith(';')) {
+    content = content.slice(0, -1);
+  }
+  
   const parts = content.split(/(?<!\\);/);
 
   parts.forEach(part => {
@@ -100,8 +100,10 @@ export const constructWifiString = (data: WifiData): string => {
     parts.push(`P:${escapeWifiString(data.password)}`);
   }
 
-  // Explicitly cast hidden to boolean to prevent string injection
-  parts.push(`H:${!!data.hidden}`);
+  // Only include hidden flag if true, as some scanners fail on H:false
+  if (data.hidden) {
+    parts.push(`H:true`);
+  }
 
   return `WIFI:${parts.join(';')};;`;
 };

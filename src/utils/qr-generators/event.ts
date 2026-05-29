@@ -17,19 +17,14 @@
 */
 
 import { EventData } from '../../types';
-import { REGEX_PRESERVE_FORMAT_CONTROL_CHARS } from '../security';
+import { ProtocolUtils } from '../protocolUtils';
 
 /**
  * Escapes special characters for iCalendar text values.
  * Characters to escape: \ ; , and newlines.
  */
 export const escapeEventString = (str: string | undefined): string => {
-  if (!str) return '';
-  return str
-    .replace(REGEX_PRESERVE_FORMAT_CONTROL_CHARS, '')
-    .replace(/\\/g, '\\\\')
-    .replace(/\r\n|\r|\n/g, '\\n')
-    .replace(/([;,])/g, '\\$1');
+  return ProtocolUtils.escapeVCardEvent(str);
 };
 
 /**
@@ -53,11 +48,7 @@ export const formatEventDateTime = (dateString: string | undefined): string => {
 };
 
 export const unescapeEventString = (str: string | undefined): string => {
-  if (!str) return '';
-  return str
-    .replace(/\\n/gi, '\n')
-    .replace(/\\([;,])/g, '$1')
-    .replace(/\\\\/g, '\\');
+  return ProtocolUtils.unescapeVCardEvent(str);
 };
 
 export const parseEventDateTime = (dateString: string | undefined): string => {

@@ -40,7 +40,7 @@ export function useInputLogic(
       const entry = INPUT_REGISTRY[key];
       // If this is the current type and we have a value, try to hydrate
       // This ensures that initial config values (e.g. from URL or defaults) are reflected in the inputs
-      if (key === config.type && config.value && entry.hydrateFn) {
+      if (key === config.type && config.value && entry.hydrateFn && entry.canHydrateFn(config.value)) {
         try {
           states[key] = entry.hydrateFn(config.value) as never;
         } catch (e) {
