@@ -1,0 +1,54 @@
+rules:
+  - id: require-isdangerousurl
+    patterns:
+      - pattern-either:
+          - pattern: |
+              <a href={$X} ...> ... </a>
+          - pattern: |
+              window.location.href = $X
+      - pattern-not: |
+          <a href="..." ...> ... </a>
+      - pattern-not: |
+          window.location.href = "..."
+      - pattern-not-inside: |
+          if (!isDangerousUrl($X)) {
+            ...
+          }
+      - pattern-not-inside: |
+          if (isDangerousUrl($X)) {
+            ...
+          } else {
+            ...
+          }
+    message: "Variables passed to href or location must be verified with isDangerousUrl to prevent XSS/Open Redirect."
+    languages: [typescript, javascript, tsx, jsx]
+    severity: WARNING
+
+  - id: require-safejsonldstringify
+    patterns:
+      - pattern: |
+          JSON.stringify($X)
+      - pattern-inside: |
+          dangerouslySetInnerHTML={{ __html: ... }}
+      - pattern-not-inside: |
+          safeJsonLdStringify(...)
+    message: "Do not use JSON.stringify directly inside dangerouslySetInnerHTML. Use safeJsonLdStringify."
+    languages: [typescript, javascript, tsx, jsx]
+    severity: ERROR
+
+  - id: enforce-cleanphonenumber
+    patterns:
+      - pattern-either:
+          - pattern: |
+              `tel:${$X}`
+          - pattern: |
+              "tel:" + $X
+      - pattern-not-inside: |
+          cleanPhoneNumber(...)
+      - pattern-not: |
+          `tel:${cleanPhoneNumber($X)}`
+      - pattern-not: |
+          "tel:" + cleanPhoneNumber($X)
+    message: "Phone numbers must be sanitized with cleanPhoneNumber before constructing a tel: URI."
+    languages: [typescript, javascript, tsx, jsx]
+    severity: WARNING

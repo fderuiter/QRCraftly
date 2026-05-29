@@ -1,7 +1,5 @@
-import React, { useState } from "react";
-import { Button } from "../ui/Button";
-import { Eye, EyeOff } from "lucide-react";
-import { INPUT_CLASSES, TEXT_AREA_CLASSES, SELECT_CLASSES } from "./styles";
+import React, { } from "react";
+import { TEXT_AREA_CLASSES, SELECT_CLASSES } from "./styles";
 import { CharCount } from "../CharCount";
 export { TextField } from "../ui/TextField";
 

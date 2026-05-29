@@ -10,6 +10,7 @@ export function useTelemetry(status: ScannabilityStatus) {
       fetch('/api/telemetry/scannability', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        // eslint-disable-next-line no-restricted-syntax
         body: JSON.stringify(detail),
         keepalive: true
       }).catch(() => {});
