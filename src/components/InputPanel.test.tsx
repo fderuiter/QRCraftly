@@ -92,7 +92,7 @@ describe('InputPanel Component', () => {
     });
 
     // Default encryption is WPA
-    const expectedValue = `WIFI:T:WPA;S:MyWiFi;P:;H:false;;`;
+    const expectedValue = `WIFI:T:WPA;S:MyWiFi;P:;;`;
     expect(mockOnChange).toHaveBeenCalledWith({ value: expectedValue });
   });
 
@@ -139,7 +139,7 @@ describe('InputPanel Component', () => {
 
     // Let's verify the call for the last change (password)
     // At this point: SSID=EnterpriseWiFi, Encryption=WPA2-EAP, Identity=user123, Password=secretPass
-    const expectedValue = `WIFI:T:WPA2-EAP;S:EnterpriseWiFi;I:user123;P:secretPass;H:false;;`;
+    const expectedValue = `WIFI:T:WPA2-EAP;S:EnterpriseWiFi;I:user123;P:secretPass;;`;
     expect(mockOnChange).toHaveBeenLastCalledWith({ value: expectedValue });
   });
 
@@ -163,7 +163,7 @@ describe('InputPanel Component', () => {
       vi.advanceTimersByTime(100);
     });
 
-    const expectedValue = `WIFI:T:nopass;S:OpenWiFi;H:false;;`;
+    const expectedValue = `WIFI:T:nopass;S:OpenWiFi;;`;
     expect(mockOnChange).toHaveBeenLastCalledWith({ value: expectedValue });
   });
 
@@ -191,7 +191,8 @@ describe('InputPanel Component', () => {
       });
 
       const veryLastCall = mockOnChange.mock.calls[mockOnChange.mock.calls.length - 1][0];
-      expect(veryLastCall.value).toContain('H:false');
+      expect(veryLastCall.value).not.toContain('H:true');
+      expect(veryLastCall.value).not.toContain('H:false');
   });
 
   it('updates Text content', () => {

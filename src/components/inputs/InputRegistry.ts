@@ -17,6 +17,7 @@ import {
   MeetingData,
   SocialData,
 } from "../../types";
+import { ProtocolUtils } from "../../utils/protocolUtils";
 import {
   constructUrlString,
   hydrateUrlData,
@@ -80,6 +81,7 @@ export interface InputRegistryEntry<T> {
   initialState: T;
   constructFn: (data: T) => string;
   hydrateFn: (raw: string) => T;
+  canHydrateFn: (raw: string) => boolean;
 }
 
 export type Registry = {
@@ -94,6 +96,7 @@ export const INPUT_REGISTRY: Registry = {
     } as UrlData,
     constructFn: constructUrlString,
     hydrateFn: hydrateUrlData,
+    canHydrateFn: (raw: string) => ProtocolUtils.canHydrate(raw, QRType.URL),
   },
   [QRType.TEXT]: {
     Component: TextInput,
@@ -102,6 +105,7 @@ export const INPUT_REGISTRY: Registry = {
     } as TextData,
     constructFn: constructTextString,
     hydrateFn: hydrateTextData,
+    canHydrateFn: (raw: string) => ProtocolUtils.canHydrate(raw, QRType.TEXT),
   },
   [QRType.WIFI]: {
     Component: WifiInput,
@@ -114,6 +118,7 @@ export const INPUT_REGISTRY: Registry = {
     } as WifiData,
     constructFn: constructWifiString,
     hydrateFn: hydrateWifiData,
+    canHydrateFn: (raw: string) => ProtocolUtils.canHydrate(raw, QRType.WIFI),
   },
   [QRType.EVENT]: {
     Component: EventInput,
@@ -126,6 +131,7 @@ export const INPUT_REGISTRY: Registry = {
     } as EventData,
     constructFn: constructEventString,
     hydrateFn: hydrateEventData,
+    canHydrateFn: (raw: string) => ProtocolUtils.canHydrate(raw, QRType.EVENT),
   },
   [QRType.EMAIL]: {
     Component: EmailInput,
@@ -136,6 +142,7 @@ export const INPUT_REGISTRY: Registry = {
     } as EmailData,
     constructFn: constructEmailString,
     hydrateFn: hydrateEmailData,
+    canHydrateFn: (raw: string) => ProtocolUtils.canHydrate(raw, QRType.EMAIL),
   },
   [QRType.VCARD]: {
     Component: VCardInput,
@@ -153,6 +160,7 @@ export const INPUT_REGISTRY: Registry = {
     } as VCardData,
     constructFn: constructVCardString,
     hydrateFn: hydrateVCardData,
+    canHydrateFn: (raw: string) => ProtocolUtils.canHydrate(raw, QRType.VCARD),
   },
   [QRType.PHONE]: {
     Component: PhoneInput,
@@ -161,6 +169,7 @@ export const INPUT_REGISTRY: Registry = {
     } as PhoneData,
     constructFn: constructPhoneString,
     hydrateFn: hydratePhoneData,
+    canHydrateFn: (raw: string) => ProtocolUtils.canHydrate(raw, QRType.PHONE),
   },
   [QRType.SMS]: {
     Component: SmsInput,
@@ -170,6 +179,7 @@ export const INPUT_REGISTRY: Registry = {
     } as SmsData,
     constructFn: constructSmsString,
     hydrateFn: hydrateSmsData,
+    canHydrateFn: (raw: string) => ProtocolUtils.canHydrate(raw, QRType.SMS),
   },
   [QRType.PAYMENT]: {
     Component: PaymentInput,
@@ -181,6 +191,7 @@ export const INPUT_REGISTRY: Registry = {
     } as PaymentData,
     constructFn: constructPaymentString,
     hydrateFn: hydratePaymentData,
+    canHydrateFn: (raw: string) => ProtocolUtils.canHydrate(raw, QRType.PAYMENT),
   },
   [QRType.LOCATION]: {
     Component: LocationInput,
@@ -190,6 +201,7 @@ export const INPUT_REGISTRY: Registry = {
     } as LocationData,
     constructFn: constructLocationString,
     hydrateFn: hydrateLocationData,
+    canHydrateFn: (raw: string) => ProtocolUtils.canHydrate(raw, QRType.LOCATION),
   },
   [QRType.MEETING]: {
     Component: MeetingInput,
@@ -198,6 +210,7 @@ export const INPUT_REGISTRY: Registry = {
     } as MeetingData,
     constructFn: constructMeetingString,
     hydrateFn: hydrateMeetingData,
+    canHydrateFn: (raw: string) => ProtocolUtils.canHydrate(raw, QRType.MEETING),
   },
   [QRType.SOCIAL]: {
     Component: SocialInput,
@@ -207,5 +220,6 @@ export const INPUT_REGISTRY: Registry = {
     } as SocialData,
     constructFn: constructSocialString,
     hydrateFn: hydrateSocialData,
+    canHydrateFn: (raw: string) => ProtocolUtils.canHydrate(raw, QRType.SOCIAL),
   },
 };

@@ -17,32 +17,20 @@
 */
 
 import { VCardData } from '../../types';
-import { REGEX_PRESERVE_FORMAT_CONTROL_CHARS, isDangerousUrl } from '../security';
+import { isDangerousUrl } from '../security';
 import { normalizeUrl } from '../url';
+import { ProtocolUtils } from '../protocolUtils';
 
 /**
  * Escapes special characters for vCard property values.
  * Characters to escape: \ ; , and newlines.
  */
 export const escapeVCardString = (str: string | undefined): string => {
-  if (!str) return '';
-  // 1. Strip non-printable control characters (except newlines and tabs)
-  // 2. Escape backslashes first to avoid double escaping
-  // 3. Normalize and escape newlines (CRLF, CR, LF) as \n
-  // 4. Escape commas and semicolons
-  return str
-    .replace(REGEX_PRESERVE_FORMAT_CONTROL_CHARS, '')
-    .replace(/\\/g, '\\\\')
-    .replace(/\r\n|\r|\n/g, '\\n')
-    .replace(/([;,])/g, '\\$1');
+  return ProtocolUtils.escapeVCardEvent(str);
 };
 
 export const unescapeVCardString = (str: string | undefined): string => {
-  if (!str) return '';
-  return str
-    .replace(/\\n/gi, '\n')
-    .replace(/\\([;,])/g, '$1')
-    .replace(/\\\\/g, '\\');
+  return ProtocolUtils.unescapeVCardEvent(str);
 };
 
 /**
