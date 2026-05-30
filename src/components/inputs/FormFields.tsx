@@ -3,21 +3,16 @@ import { TEXT_AREA_CLASSES, SELECT_CLASSES } from "./styles";
 import { CharCount } from "../CharCount";
 export { TextField } from "../ui/TextField";
 
-type FieldSize = "sm" | "xs";
-
 interface BaseFieldProps {
   label: string;
+  contextualLabel?: string;
   id: string; // explicitly required
-  fieldSize?: FieldSize; // renamed from 'size' to avoid conflict with HTML input 'size'
   className?: string; // wrapper className
   labelClassName?: string; // optional override
 }
 
-const getLabelClass = (size: FieldSize, customClass?: string) => {
+const getLabelClass = (customClass?: string) => {
   if (customClass) return customClass;
-  if (size === "xs") {
-    return "block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1";
-  }
   return "block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1";
 };
 
@@ -32,7 +27,7 @@ interface FieldWrapperProps extends BaseFieldProps {
 const FieldWrapper: React.FC<FieldWrapperProps> = ({
   id,
   label,
-  fieldSize = "xs",
+  contextualLabel,
   className,
   labelClassName,
   showCharCount,
@@ -42,8 +37,13 @@ const FieldWrapper: React.FC<FieldWrapperProps> = ({
 }) => {
   return (
     <div className={className}>
-      <label htmlFor={id} className={getLabelClass(fieldSize, labelClassName)}>
+      <label htmlFor={id} className={getLabelClass(labelClassName)}>
         {label}
+        {contextualLabel && (
+          <span className="text-xs text-slate-500 dark:text-slate-400 font-normal ml-2">
+            ({contextualLabel})
+          </span>
+        )}
       </label>
       {children}
       {showCharCount && maxLength && (
@@ -63,8 +63,8 @@ interface TextAreaFieldProps
 
 export const TextAreaField: React.FC<TextAreaFieldProps> = ({
   label,
+  contextualLabel,
   id,
-  fieldSize = "xs",
   className,
   labelClassName,
   showCharCount,
@@ -76,7 +76,7 @@ export const TextAreaField: React.FC<TextAreaFieldProps> = ({
     <FieldWrapper
       id={id}
       label={label}
-      fieldSize={fieldSize}
+      contextualLabel={contextualLabel}
       className={className}
       labelClassName={labelClassName}
       showCharCount={showCharCount}
@@ -102,8 +102,8 @@ interface SelectFieldProps
 
 export const SelectField: React.FC<SelectFieldProps> = ({
   label,
+  contextualLabel,
   id,
-  fieldSize = "xs",
   className,
   labelClassName,
   children,
@@ -113,7 +113,7 @@ export const SelectField: React.FC<SelectFieldProps> = ({
     <FieldWrapper
       id={id}
       label={label}
-      fieldSize={fieldSize}
+      contextualLabel={contextualLabel}
       className={className}
       labelClassName={labelClassName}
     >
@@ -131,8 +131,8 @@ interface CheckboxFieldProps
 
 export const CheckboxField: React.FC<CheckboxFieldProps> = ({
   label,
+  contextualLabel,
   id,
-  fieldSize = "xs",
   className,
   labelClassName,
   ...props
@@ -141,7 +141,7 @@ export const CheckboxField: React.FC<CheckboxFieldProps> = ({
     <div className={className}>
       <label
         htmlFor={id}
-        className={`flex items-center gap-2 cursor-pointer ${getLabelClass(fieldSize, labelClassName).replace('mb-1', '')} ${fieldSize === 'xs' ? 'font-sans' : ''}`}
+        className={`flex items-center gap-2 cursor-pointer ${getLabelClass(labelClassName).replace('mb-1', '')}`}
       >
         <input
           id={id}
@@ -150,6 +150,11 @@ export const CheckboxField: React.FC<CheckboxFieldProps> = ({
           {...props}
         />
         <span>{label}</span>
+        {contextualLabel && (
+          <span className="text-xs text-slate-500 dark:text-slate-400 font-normal">
+            ({contextualLabel})
+          </span>
+        )}
       </label>
     </div>
   );

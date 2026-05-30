@@ -12,10 +12,10 @@ export const PaymentInput: React.FC<PaymentInputProps> = ({
   onChange,
 }) => {
   return (
-    <div className="space-y-3">
-      <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+    <fieldset className="space-y-4 min-w-0">
+      <legend className="text-sm font-semibold text-slate-700 dark:text-slate-200 w-full mb-3">
         Crypto Payment
-      </h3>
+      </legend>
 
       <SelectField
         id="payment-network"
@@ -44,7 +44,8 @@ export const PaymentInput: React.FC<PaymentInputProps> = ({
         <>
           <TextField
             id="payment-amount"
-            label="Amount (Optional)"
+            label="Amount"
+            contextualLabel="Optional"
             type="number"
             step="any"
             max="999999999"
@@ -54,7 +55,8 @@ export const PaymentInput: React.FC<PaymentInputProps> = ({
           />
           <TextField
             id="payment-label"
-            label="Label / Note (Optional)"
+            label="Label / Note"
+            contextualLabel="Optional"
             type="text"
             maxLength={200}
             placeholder="e.g. Donation"
@@ -63,6 +65,6 @@ export const PaymentInput: React.FC<PaymentInputProps> = ({
           />
         </>
       )}
-    </div>
+    </fieldset>
   );
 };

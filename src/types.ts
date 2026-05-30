@@ -207,6 +207,8 @@ export interface VCardData {
   street: string;
   /** The city of the contact. */
   city: string;
+  /** The postal or zip code of the contact. */
+  zip: string;
   /** The country of the contact. */
   country: string;
 }

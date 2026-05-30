@@ -5,29 +5,32 @@ import { CharCount } from '../CharCount';
 
 export interface TextFieldProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size' | 'id'> {
   label?: string;
+  contextualLabel?: string;
   error?: string;
   showPasswordToggle?: boolean;
   showCharCount?: boolean;
   id?: string;
-  fieldSize?: 'sm' | 'xs';
 }
 
 export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(
-  ({ className = '', label, error, showPasswordToggle, showCharCount, type = 'text', id, fieldSize = 'xs', maxLength, value, ...props }, ref) => {
+  ({ className = '', label, contextualLabel, error, showPasswordToggle, showCharCount, type = 'text', id, maxLength, value, ...props }, ref) => {
     const [showPassword, setShowPassword] = useState(false);
     const effectiveType = showPasswordToggle ? (showPassword ? 'text' : 'password') : type;
     
     const inputId = id || `input-${Math.random().toString(36).substring(2, 9)}`;
 
-    const labelClass = fieldSize === 'xs' 
-      ? 'block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1' 
-      : 'block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1';
+    const labelClass = 'block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1';
 
     return (
       <div className={className}>
         {label && (
           <label htmlFor={inputId} className={labelClass}>
             {label}
+            {contextualLabel && (
+              <span className="text-xs text-slate-500 dark:text-slate-400 font-normal ml-2">
+                ({contextualLabel})
+              </span>
+            )}
           </label>
         )}
         <div className="relative">

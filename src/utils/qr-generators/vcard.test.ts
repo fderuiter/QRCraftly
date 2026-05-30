@@ -13,6 +13,7 @@ describe('VCard generator', () => {
       website: 'https://example.com',
       street: '123 Main St',
       city: 'Anytown',
+      zip: '12345',
       country: 'USA'
     };
     const str = constructVCardString(data);
@@ -32,6 +33,7 @@ describe('VCard generator', () => {
       website: '',
       street: '',
       city: '',
+      zip: '',
       country: '',
     });
   });
@@ -54,5 +56,6 @@ describe('VCard generator', () => {
     expect(hydrated.firstName).toBe('');
     expect(hydrated.street).toBe('');
     expect(hydrated.city).toBe('');
+    expect(hydrated.zip).toBe('');
     expect(hydrated.country).toBe('');
   });
