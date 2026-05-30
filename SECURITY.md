@@ -15,7 +15,7 @@ If you discover a security vulnerability or a privacy leak, please report it imm
 
 ### How to Report
 
-Please email us at [security@example.com](mailto:security@example.com) (replace with actual contact) with the details. We will acknowledge your report within 48 hours.
+Please use the [GitHub Security Advisory](https://github.com/fderuiter/QRCraftly/security/advisories/new) to report vulnerabilities directly to the maintainers. We will acknowledge your report within 48 hours.
 
 ### Scope
 

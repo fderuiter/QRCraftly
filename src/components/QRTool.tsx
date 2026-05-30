@@ -148,6 +148,8 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
                     <h3 className="font-semibold text-xs uppercase tracking-wider text-slate-900 dark:text-slate-200 mb-3">Company</h3>
                     <ul className="space-y-2 text-sm text-slate-500 dark:text-slate-400">
                       <li><a href="/about" className="hover:text-teal-600 dark:hover:text-teal-400 transition-colors">About</a></li>
+                      <li><a href="/security#security-policy" className="hover:text-teal-600 dark:hover:text-teal-400 transition-colors">Security Policy</a></li>
+                      <li><a href="/security#privacy-architecture" className="hover:text-teal-600 dark:hover:text-teal-400 transition-colors">Privacy Architecture</a></li>
                       <li><a href="https://ko-fi.com/laser_loon" target="_blank" rel="noopener noreferrer" className="hover:text-teal-600 dark:hover:text-teal-400 transition-colors">Ko-fi</a></li>
                       <li><a href="https://github.com/fderuiter/QRCraftly" target="_blank" rel="noopener noreferrer" className="hover:text-teal-600 dark:hover:text-teal-400 transition-colors">GitHub</a></li>
                     </ul>
