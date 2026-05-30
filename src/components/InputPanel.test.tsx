@@ -331,13 +331,13 @@ describe('InputPanel Component', () => {
     expect(mockOnChange).toHaveBeenLastCalledWith({ value: 'bitcoin:1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa' });
 
     // Add amount
-    const amountInput = screen.getByLabelText('Amount (Optional)');
+    const amountInput = screen.getByLabelText(/Amount/i);
     fireEvent.change(amountInput, { target: { value: '0.005' } });
     act(() => { vi.advanceTimersByTime(100); });
     expect(mockOnChange).toHaveBeenLastCalledWith({ value: 'bitcoin:1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa?amount=0.005' });
 
     // Add label
-    const labelInput = screen.getByLabelText('Label / Note (Optional)');
+    const labelInput = screen.getByLabelText(/Label \/ Note/i);
     fireEvent.change(labelInput, { target: { value: 'Donation for Coffee' } });
     act(() => { vi.advanceTimersByTime(100); });
     expect(mockOnChange).toHaveBeenLastCalledWith({ value: 'bitcoin:1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa?amount=0.005&label=Donation%20for%20Coffee' });

@@ -9,10 +9,10 @@ interface SocialInputProps {
 
 export const SocialInput: React.FC<SocialInputProps> = ({ data, onChange }) => {
   return (
-    <div className="space-y-3">
-      <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+    <fieldset className="space-y-4 min-w-0">
+      <legend className="text-sm font-semibold text-slate-700 dark:text-slate-200 w-full mb-3">
         Social Media Profile
-      </h3>
+      </legend>
       <SelectField
         id="social-platform"
         label="Platform"
@@ -35,6 +35,6 @@ export const SocialInput: React.FC<SocialInputProps> = ({ data, onChange }) => {
         onChange={(e) => onChange({ handle: e.target.value })}
         showCharCount
       />
-    </div>
+    </fieldset>
   );
 };

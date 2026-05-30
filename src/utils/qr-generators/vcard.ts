@@ -47,6 +47,7 @@ export const hydrateVCardData = (raw: string): VCardData => {
     website: '',
     street: '',
     city: '',
+    zip: '',
     country: '',
   };
 
@@ -78,6 +79,7 @@ export const hydrateVCardData = (raw: string): VCardData => {
         const adrParts = value.split(/(?<!\\);/);
         result.street = unescapeVCardString(adrParts[2] || '');
         result.city = unescapeVCardString(adrParts[3] || '');
+        result.zip = unescapeVCardString(adrParts[5] || '');
         result.country = unescapeVCardString(adrParts[6] || '');
         break;
       }
@@ -107,7 +109,7 @@ export const constructVCardString = (data: VCardData): string => {
     `TEL:${escapeVCardString(data.phone)}`,
     `EMAIL:${escapeVCardString(data.email)}`,
     `URL:${website}`,
-    `ADR:;;${escapeVCardString(data.street)};${escapeVCardString(data.city)};;;${escapeVCardString(data.country)}`,
+    `ADR:;;${escapeVCardString(data.street)};${escapeVCardString(data.city)};;${escapeVCardString(data.zip)};${escapeVCardString(data.country)}`,
     'END:VCARD',
   ];
 

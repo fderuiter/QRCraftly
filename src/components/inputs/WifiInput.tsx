@@ -9,10 +9,10 @@ interface WifiInputProps {
 
 export const WifiInput: React.FC<WifiInputProps> = ({ data, onChange }) => {
   return (
-    <div className="space-y-3">
-      <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+    <fieldset className="space-y-4 min-w-0">
+      <legend className="text-sm font-semibold text-slate-700 dark:text-slate-200 w-full mb-3">
         Network Details
-      </h3>
+      </legend>
       <TextField
         id="wifi-ssid"
         label="Network Name (SSID)"
@@ -77,6 +77,6 @@ export const WifiInput: React.FC<WifiInputProps> = ({ data, onChange }) => {
         onChange={(e) => onChange({ hidden: e.target.checked })}
         className="pt-2"
       />
-    </div>
+    </fieldset>
   );
 };

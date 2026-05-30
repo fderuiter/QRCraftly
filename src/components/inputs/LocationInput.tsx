@@ -52,10 +52,10 @@ export const LocationInput: React.FC<LocationInputProps> = ({
   };
 
   return (
-    <div className="space-y-3">
-      <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+    <fieldset className="space-y-4 min-w-0">
+      <legend className="text-sm font-semibold text-slate-700 dark:text-slate-200 w-full mb-3">
         Geo-Location
-      </h3>
+      </legend>
       <TextField
         id="location-latitude"
         label="Latitude"
@@ -93,6 +93,6 @@ export const LocationInput: React.FC<LocationInputProps> = ({
           {geoError}
         </p>
       )}
-    </div>
+    </fieldset>
   );
 };

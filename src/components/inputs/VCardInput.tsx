@@ -9,11 +9,11 @@ interface VCardInputProps {
 
 export const VCardInput: React.FC<VCardInputProps> = ({ data, onChange }) => {
   return (
-    <fieldset className="space-y-3 min-w-0">
+    <fieldset className="space-y-4 min-w-0">
       <legend className="text-sm font-semibold text-slate-700 dark:text-slate-200 w-full mb-3">
         Contact Details (vCard)
       </legend>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-4">
         <TextField
           id="vcard-firstname"
           name="firstName"
@@ -36,7 +36,7 @@ export const VCardInput: React.FC<VCardInputProps> = ({ data, onChange }) => {
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-4">
         <TextField
           id="vcard-phone"
           name="phone"
@@ -96,10 +96,10 @@ export const VCardInput: React.FC<VCardInputProps> = ({ data, onChange }) => {
       />
 
       <fieldset className="pt-2 border-t border-slate-100 dark:border-slate-800 min-w-0">
-        <legend className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-2 w-full">
+        <legend className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-2 w-full">
           Address
         </legend>
-        <div className="space-y-3">
+        <div className="space-y-4">
           <TextField
             id="vcard-street"
             name="street"
@@ -110,7 +110,7 @@ export const VCardInput: React.FC<VCardInputProps> = ({ data, onChange }) => {
             value={data.street}
             onChange={(e) => onChange({ street: e.target.value })}
           />
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-4">
             <TextField
               id="vcard-city"
               name="city"
@@ -120,6 +120,16 @@ export const VCardInput: React.FC<VCardInputProps> = ({ data, onChange }) => {
               placeholder="City"
               value={data.city}
               onChange={(e) => onChange({ city: e.target.value })}
+            />
+            <TextField
+              id="vcard-zip"
+              name="zip"
+              label="ZIP / Postal Code"
+              autoComplete="postal-code"
+              maxLength={20}
+              placeholder="ZIP"
+              value={data.zip}
+              onChange={(e) => onChange({ zip: e.target.value })}
             />
             <TextField
               id="vcard-country"
