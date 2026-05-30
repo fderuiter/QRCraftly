@@ -98,7 +98,7 @@ const getModuleDrawer = (
             // instead of objects or nested arrays. This improves performance in the
             // hot rendering loop by avoiding object allocations and taking advantage
             // of continuous memory, without sacrificing readability.
-            const rHive = cellSize / 1.55;
+            const rHive = cellSize / 1.8;
             const sidesHive = 6;
 
             const offsets = new Float64Array(sidesHive * 2);

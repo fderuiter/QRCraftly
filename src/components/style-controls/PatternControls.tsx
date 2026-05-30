@@ -4,6 +4,7 @@ import { AlertTriangle } from 'lucide-react';
 import { QRConfig } from '../../types';
 import { PATTERNS } from '../../constants';
 import { PatternModule } from '../ui/PatternModule';
+import { useQRContext } from '../../context/QRContext';
 
 interface PatternControlsProps {
   config: QRConfig;
@@ -11,7 +12,8 @@ interface PatternControlsProps {
 }
 
 export const PatternControls: React.FC<PatternControlsProps> = ({ config, onChange }) => {
-  const isLowReliability = ['grunge', 'circuit', 'starburst'].includes(config.style);
+  const { scannabilityStatus } = useQRContext();
+  const isLowReliability = scannabilityStatus === 'fail';
 
   return (
     <div>
@@ -21,7 +23,7 @@ export const PatternControls: React.FC<PatternControlsProps> = ({ config, onChan
         <div role="alert" className="mb-4 flex items-start gap-3 p-3 bg-rose-50 dark:bg-rose-900/30 border border-rose-200 dark:border-rose-800 rounded-lg text-sm text-rose-800 dark:text-rose-300">
           <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" />
           <p>
-            <strong>Scannability Warning:</strong> The selected pattern ("{PATTERNS.find(p => p.id === config.style)?.label}") is complex and may reduce scannability on older mobile devices or in poor lighting. Consider testing thoroughly before printing.
+            <strong>Scannability Warning:</strong> The selected pattern ("{PATTERNS.find(p => p.id === config.style)?.label}") failed the scannability check. This may cause issues on older mobile devices or in poor lighting. Consider adjusting contrast or picking a different pattern.
           </p>
         </div>
       )}

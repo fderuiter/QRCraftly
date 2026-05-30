@@ -1,3 +1,4 @@
+import { QRProvider } from "../context/QRContext";
 /*
     QRCraftly
     Copyright (C) 2025 fderuiter
@@ -35,7 +36,7 @@ describe('StyleControls Contrast Check', () => {
       borderColor: '#303030', // Dark Grey (Low contrast)
     };
 
-    render(<StyleControls config={config} onChange={mockOnChange} />);
+    render(<QRProvider><StyleControls config={config} onChange={mockOnChange} /></QRProvider>);
 
     expect(screen.getByText(/Low Contrast \(/)).toBeInTheDocument();
   });
@@ -49,7 +50,7 @@ describe('StyleControls Contrast Check', () => {
       borderColor: '#000000', // Black
     };
 
-    render(<StyleControls config={config} onChange={mockOnChange} />);
+    render(<QRProvider><StyleControls config={config} onChange={mockOnChange} /></QRProvider>);
 
     expect(screen.queryByText(/Low Contrast \(/)).not.toBeInTheDocument();
   });
@@ -63,7 +64,7 @@ describe('StyleControls Contrast Check', () => {
       borderColor: '#303030',
     };
 
-    render(<StyleControls config={config} onChange={mockOnChange} />);
+    render(<QRProvider><StyleControls config={config} onChange={mockOnChange} /></QRProvider>);
 
     // Might match the other warning (main QR contrast), so we need to be specific or assume standard config has good contrast
     // DEFAULT_CONFIG has good contrast for main QR.

@@ -1,3 +1,4 @@
+import { QRProvider } from "../context/QRContext";
 /*
     QRCraftly
     Copyright (C) 2025 fderuiter
@@ -31,7 +32,7 @@ describe('StyleControls Component', () => {
   });
 
   it('renders pattern options', () => {
-    render(<StyleControls config={DEFAULT_CONFIG} onChange={mockOnChange} />);
+    render(<QRProvider><StyleControls config={DEFAULT_CONFIG} onChange={mockOnChange} /></QRProvider>);
     expect(screen.getByText(/Standard Industrial/)).toBeInTheDocument();
     expect(screen.getByText(/Modern Soft/)).toBeInTheDocument();
     expect(screen.getByText(/Swiss Dot/)).toBeInTheDocument();
@@ -39,7 +40,7 @@ describe('StyleControls Component', () => {
 
   it('changes pattern style', async () => {
     const user = userEvent.setup();
-    render(<StyleControls config={DEFAULT_CONFIG} onChange={mockOnChange} />);
+    render(<QRProvider><StyleControls config={DEFAULT_CONFIG} onChange={mockOnChange} /></QRProvider>);
 
     // Clicking the "Swiss Dot" pattern button
     const dotsButton = screen.getByText(/Swiss Dot/);
@@ -49,7 +50,7 @@ describe('StyleControls Component', () => {
   });
 
   it('renders pattern preview icons for all styles', () => {
-     const { container } = render(<StyleControls config={DEFAULT_CONFIG} onChange={mockOnChange} />);
+     const { container } = render(<QRProvider><StyleControls config={DEFAULT_CONFIG} onChange={mockOnChange} /></QRProvider>);
 
      // Starburst should have an SVG
      // eslint-disable-next-line testing-library/no-container, testing-library/no-node-access
@@ -63,7 +64,7 @@ describe('StyleControls Component', () => {
   });
 
   it('updates colors via inputs', () => {
-    render(<StyleControls config={DEFAULT_CONFIG} onChange={mockOnChange} />);
+    render(<QRProvider><StyleControls config={DEFAULT_CONFIG} onChange={mockOnChange} /></QRProvider>);
 
     const fgInput = screen.getByLabelText('Foreground');
     fireEvent.change(fgInput, { target: { value: '#ff0000' } });
@@ -79,7 +80,7 @@ describe('StyleControls Component', () => {
   });
 
   it('updates colors via hex text inputs', () => {
-    render(<StyleControls config={DEFAULT_CONFIG} onChange={mockOnChange} />);
+    render(<QRProvider><StyleControls config={DEFAULT_CONFIG} onChange={mockOnChange} /></QRProvider>);
 
     const fgHexInput = screen.getByLabelText('Foreground Hex Code');
     fireEvent.change(fgHexInput, { target: { value: '#123456' } });
@@ -97,7 +98,7 @@ describe('StyleControls Component', () => {
 
   it('updates colors via preset buttons', async () => {
     const user = userEvent.setup();
-    render(<StyleControls config={DEFAULT_CONFIG} onChange={mockOnChange} />);
+    render(<QRProvider><StyleControls config={DEFAULT_CONFIG} onChange={mockOnChange} /></QRProvider>);
 
     const presetButtons = screen.getAllByRole('button', { name: /Classic|Slate|Teal Brand|Royal Blue|Midnight|Forest|Rose|Purple|Cyber/i });
     if (presetButtons.length > 0) {
@@ -113,7 +114,7 @@ describe('StyleControls Component', () => {
   it('shows low contrast warning', () => {
     // Low contrast config: white text on white background
     const lowContrastConfig = { ...DEFAULT_CONFIG, fgColor: '#ffffff', bgColor: '#ffffff' };
-    render(<StyleControls config={lowContrastConfig} onChange={mockOnChange} />);
+    render(<QRProvider><StyleControls config={lowContrastConfig} onChange={mockOnChange} /></QRProvider>);
 
     expect(screen.getByText(/Low Contrast/)).toBeInTheDocument();
     expect(screen.getByText(/Warning: The contrast ratio is low/)).toBeInTheDocument();
@@ -121,19 +122,19 @@ describe('StyleControls Component', () => {
 
   it('hides low contrast warning when contrast is good', () => {
     const highContrastConfig = { ...DEFAULT_CONFIG, fgColor: '#000000', bgColor: '#ffffff' };
-    render(<StyleControls config={highContrastConfig} onChange={mockOnChange} />);
+    render(<QRProvider><StyleControls config={highContrastConfig} onChange={mockOnChange} /></QRProvider>);
 
     expect(screen.queryByText(/Low Contrast/)).not.toBeInTheDocument();
   });
 
   it('renders logo upload section', () => {
-      render(<StyleControls config={DEFAULT_CONFIG} onChange={mockOnChange} />);
+      render(<QRProvider><StyleControls config={DEFAULT_CONFIG} onChange={mockOnChange} /></QRProvider>);
       expect(screen.getByText('Upload Logo')).toBeInTheDocument();
   });
 
   it('handles logo upload', async () => {
       const user = userEvent.setup();
-      const { container } = render(<StyleControls config={DEFAULT_CONFIG} onChange={mockOnChange} />);
+      const { container } = render(<QRProvider><StyleControls config={DEFAULT_CONFIG} onChange={mockOnChange} /></QRProvider>);
 
       const file = new File(['(⌐□_□)'], 'chucknorris.png', { type: 'image/png' });
       // eslint-disable-next-line testing-library/no-container, testing-library/no-node-access
@@ -162,7 +163,7 @@ describe('StyleControls Component', () => {
   it('renders logo settings when logo is present', async () => {
     const user = userEvent.setup();
     const logoConfig = { ...DEFAULT_CONFIG, logoUrl: 'data:image/png;base64,fake' };
-    render(<StyleControls config={logoConfig} onChange={mockOnChange} />);
+    render(<QRProvider><StyleControls config={logoConfig} onChange={mockOnChange} /></QRProvider>);
 
     expect(screen.getByText('Custom Logo')).toBeInTheDocument();
 
@@ -174,7 +175,7 @@ describe('StyleControls Component', () => {
   it('changes logo padding style', async () => {
       const user = userEvent.setup();
       const logoConfig = { ...DEFAULT_CONFIG, logoUrl: 'data:image/png;base64,fake', logoPaddingStyle: 'square' as LogoPaddingStyle };
-      render(<StyleControls config={logoConfig} onChange={mockOnChange} />);
+      render(<QRProvider><StyleControls config={logoConfig} onChange={mockOnChange} /></QRProvider>);
 
       const circleBtn = screen.getByRole('button', { name: 'Set logo border style to Circle' });
       await user.click(circleBtn);
@@ -187,7 +188,7 @@ describe('StyleControls Component', () => {
 
   it('updates logo sliders and colors', () => {
       const logoConfig = { ...DEFAULT_CONFIG, logoUrl: 'data:image/png;base64,fake', logoPaddingStyle: 'square' as LogoPaddingStyle };
-      render(<StyleControls config={logoConfig} onChange={mockOnChange} />);
+      render(<QRProvider><StyleControls config={logoConfig} onChange={mockOnChange} /></QRProvider>);
 
       const paddingInput = screen.getByLabelText('Padding');
       fireEvent.change(paddingInput, { target: { value: '2' } });
@@ -204,7 +205,7 @@ describe('StyleControls Component', () => {
 
   it('hides padding and background color controls when logo padding style is none', () => {
       const logoConfig = { ...DEFAULT_CONFIG, logoUrl: 'data:image/png;base64,fake', logoPaddingStyle: 'none' as LogoPaddingStyle };
-      render(<StyleControls config={logoConfig} onChange={mockOnChange} />);
+      render(<QRProvider><StyleControls config={logoConfig} onChange={mockOnChange} /></QRProvider>);
 
       expect(screen.queryByLabelText('Padding')).not.toBeInTheDocument();
       expect(screen.queryByLabelText('Background Color')).not.toBeInTheDocument();
@@ -215,7 +216,7 @@ describe('StyleControls Component', () => {
 
   it('toggles advanced mode and changes error correction level', async () => {
       const user = userEvent.setup();
-      render(<StyleControls config={DEFAULT_CONFIG} onChange={mockOnChange} />);
+      render(<QRProvider><StyleControls config={DEFAULT_CONFIG} onChange={mockOnChange} /></QRProvider>);
 
       const advancedBtn = screen.getByText('Advanced Mode');
       await user.click(advancedBtn);
@@ -230,7 +231,7 @@ describe('StyleControls Component', () => {
 
   it('toggles border visibility', async () => {
       const user = userEvent.setup();
-      render(<StyleControls config={DEFAULT_CONFIG} onChange={mockOnChange} />);
+      render(<QRProvider><StyleControls config={DEFAULT_CONFIG} onChange={mockOnChange} /></QRProvider>);
 
       // Find the border checkbox. It's an input with type="checkbox" in the "Border" section.
       // We can find it by associating with the section or just find the first checkbox if it's the only one,
@@ -245,7 +246,7 @@ describe('StyleControls Component', () => {
 
   it('updates border style, width, and color', async () => {
      const borderConfig = { ...DEFAULT_CONFIG, isBorderEnabled: true };
-     render(<StyleControls config={borderConfig} onChange={mockOnChange} />);
+     render(<QRProvider><StyleControls config={borderConfig} onChange={mockOnChange} /></QRProvider>);
 
      const styleSelect = screen.getByLabelText('Style');
      fireEvent.change(styleSelect, { target: { value: 'dashed' } });
@@ -262,7 +263,7 @@ describe('StyleControls Component', () => {
 
   it('updates border text configuration', async () => {
       const borderConfig = { ...DEFAULT_CONFIG, isBorderEnabled: true };
-      render(<StyleControls config={borderConfig} onChange={mockOnChange} />);
+      render(<QRProvider><StyleControls config={borderConfig} onChange={mockOnChange} /></QRProvider>);
 
       const textInput = screen.getByPlaceholderText('Text on border...');
       fireEvent.change(textInput, { target: { value: 'Scan Me' } });
@@ -283,7 +284,7 @@ describe('StyleControls Component', () => {
   it('handles border logo upload and removal', async () => {
       const user = userEvent.setup();
       const borderConfig = { ...DEFAULT_CONFIG, isBorderEnabled: true };
-      const { container } = render(<StyleControls config={borderConfig} onChange={mockOnChange} />);
+      const { container } = render(<QRProvider><StyleControls config={borderConfig} onChange={mockOnChange} /></QRProvider>);
 
       // Mock FileReader
       const originalFileReader = global.FileReader;
@@ -344,7 +345,7 @@ describe('StyleControls Component', () => {
   it('updates border logo position and removes it', async () => {
       const user = userEvent.setup();
       const borderConfig = { ...DEFAULT_CONFIG, isBorderEnabled: true, borderLogoUrl: 'data:fake' };
-      render(<StyleControls config={borderConfig} onChange={mockOnChange} />);
+      render(<QRProvider><StyleControls config={borderConfig} onChange={mockOnChange} /></QRProvider>);
 
       // Should show 'No secondary logo' text if null, but here it is present
       // Find position select.

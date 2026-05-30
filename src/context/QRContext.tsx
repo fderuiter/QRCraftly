@@ -1,8 +1,9 @@
 import React, { createContext, useContext, useState, useCallback, useRef } from 'react';
 import { QRConfig } from '@/types';
 import { DEFAULT_CONFIG } from '@/constants';
+import { ScannabilityStatus, HealthScore } from '@/hooks/useScannability';
 
-type SignalName = 'scannability-fail' | 'render-complete';
+type SignalName = 'scannability-fail' | 'render-complete' | 'scannability-status-change';
 type SignalCallback = (detail: any) => void;
 
 interface QRContextType {
@@ -15,12 +16,15 @@ interface QRContextType {
     darkMode: boolean;
   };
   updatePreferences: (updates: Partial<{telemetryOptIn: boolean | null, darkMode: boolean}>) => void;
+  scannabilityStatus: ScannabilityStatus;
+  setScannabilityStatus: (status: ScannabilityStatus) => void;
 }
 
 const QRContext = createContext<QRContextType | undefined>(undefined);
 
 export const QRProvider = ({ children, initialConfig }: { children: React.ReactNode, initialConfig?: Partial<QRConfig> }) => {
   const [config, setConfig] = useState<QRConfig>({ ...DEFAULT_CONFIG, ...initialConfig });
+  const [scannabilityStatus, setScannabilityStatus] = useState<ScannabilityStatus>('idle');
   
   const [preferences, setPreferences] = useState(() => {
     let savedOptIn: string | null = null;
@@ -51,6 +55,7 @@ export const QRProvider = ({ children, initialConfig }: { children: React.ReactN
   const signalsRef = useRef<Record<SignalName, Set<SignalCallback>>>({
     'scannability-fail': new Set(),
     'render-complete': new Set(),
+    'scannability-status-change': new Set(),
   });
 
   const registerSignal = useCallback((name: SignalName, callback: SignalCallback) => {
@@ -66,7 +71,7 @@ export const QRProvider = ({ children, initialConfig }: { children: React.ReactN
   }, []);
 
   return (
-    <QRContext.Provider value={{ config, updateConfig, emitSignal, registerSignal, preferences, updatePreferences }}>
+    <QRContext.Provider value={{ config, updateConfig, emitSignal, registerSignal, preferences, updatePreferences, scannabilityStatus, setScannabilityStatus }}>
       {children}
     </QRContext.Provider>
   );

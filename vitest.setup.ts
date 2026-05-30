@@ -76,3 +76,23 @@ if (!HTMLCanvasElement.prototype.toDataURL) {
     return 'data:image/png;base64,';
   };
 }
+
+import { DEFAULT_CONFIG } from './src/constants';
+import { vi } from 'vitest';
+
+vi.mock('@/context/QRContext', async (importOriginal) => {
+  const actual = await importOriginal() as any;
+  return {
+    ...actual,
+    useQRContext: () => ({
+      config: DEFAULT_CONFIG,
+      updateConfig: vi.fn(),
+      emitSignal: vi.fn(),
+      registerSignal: vi.fn(),
+      preferences: { telemetryOptIn: null, darkMode: false },
+      updatePreferences: vi.fn(),
+      scannabilityStatus: 'pass',
+      setScannabilityStatus: vi.fn()
+    })
+  };
+});

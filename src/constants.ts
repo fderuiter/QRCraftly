@@ -18,6 +18,7 @@
 
 
 import { QRStyle, QRType, QRErrorCorrectionLevel, SocialFormat, TemplateStyle } from './types';
+import { PatternRegistry } from './registry/patternRegistry';
 
 /**
  * The default configuration settings for the QR code generator.
@@ -56,16 +57,7 @@ export const DEFAULT_CONFIG = {
  * List of available QR code pattern styles with display labels.
  * Used for the style selection UI.
  */
-export const PATTERNS = [
-  { id: QRStyle.STANDARD, label: 'Standard Industrial' },
-  { id: QRStyle.MODERN, label: 'Modern Soft' },
-  { id: QRStyle.SWISS, label: 'Swiss Dot' },
-  { id: QRStyle.FLUID, label: 'Fluid Ink' },
-  { id: QRStyle.CIRCUIT, label: 'Cyber Circuit' },
-  { id: QRStyle.HIVE, label: 'The Hive' },
-  { id: QRStyle.GRUNGE, label: 'Grunge' },
-  { id: QRStyle.STARBURST, label: 'Starburst' },
-];
+export const PATTERNS = PatternRegistry.getAll();
 
 /**
  * List of preset color themes.

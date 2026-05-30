@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useMemo } from 'react';
+import { useEffect, useRef, useMemo } from 'react';
 import { QRConfig } from '../types';
 import { useQRContext } from '@/context/QRContext';
 import { getContrastRatio } from '../utils/colorUtils';
@@ -11,9 +11,8 @@ export interface HealthScore {
 }
 
 export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | null>, config: QRConfig) {
-  const [status, setStatus] = useState<ScannabilityStatus>('idle');
+  const { emitSignal, scannabilityStatus: status, setScannabilityStatus: setStatus } = useQRContext();
   const workerRef = useRef<Worker | null>(null);
-  const { emitSignal } = useQRContext();
 
   const health = useMemo<HealthScore>(() => {
     let score = 100;
@@ -31,13 +30,9 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
       warnings.push("Contrast ratio is low");
     }
 
-    const isComplex = ['grunge', 'circuit', 'starburst'].includes(config.style);
-    if (isComplex) {
-      score -= 10;
-      if (worstContrast < 7.0) {
-        score -= 20;
-        warnings.push("Pattern complexity too high for current contrast");
-      }
+    if (status === 'fail') {
+      score -= 30;
+      warnings.push("Decoder failed to read QR code. Pattern may be too dense or lack contrast.");
     }
 
     if (config.logoUrl) {
@@ -52,7 +47,7 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
     }
 
     return { score: Math.max(0, Math.min(100, score)), warnings };
-  }, [config]);
+  }, [config, status]);
 
   useEffect(() => {
     // Initialize worker
@@ -65,7 +60,7 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
 
     const handleMessage = (e: MessageEvent) => {
       const { success, error } = e.data;
-      setStatus(success ? 'pass' : 'fail');
+      console.log("Worker success:", success); setStatus(success ? "pass" : "fail");
 
       if (!success && error) {
         emitSignal('scannability-fail', {
@@ -82,7 +77,7 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
     return () => {
       worker.removeEventListener('message', handleMessage);
     };
-  }, [config, emitSignal]);
+  }, [config, emitSignal, setStatus]);
 
   // Expose a function to trigger check
   const checkScannability = () => {

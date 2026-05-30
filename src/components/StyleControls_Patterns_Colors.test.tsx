@@ -3,12 +3,17 @@ import { PatternControls } from './style-controls/PatternControls';
 import { ColorControls } from './style-controls/ColorControls';
 import { DEFAULT_CONFIG } from '../constants';
 import { describe, it, expect, vi } from 'vitest';
+import { QRProvider } from '../context/QRContext';
 
 describe('StyleControls Accessibility', () => {
   describe('PatternControls', () => {
     it('renders with correct accessibility attributes', () => {
       const handleChange = vi.fn();
-      render(<PatternControls config={DEFAULT_CONFIG} onChange={handleChange} />);
+      render(
+        <QRProvider>
+          <PatternControls config={DEFAULT_CONFIG} onChange={handleChange} />
+        </QRProvider>
+      );
 
       // Check group role and label
       const group = screen.getByRole('group', { name: /pattern style/i });

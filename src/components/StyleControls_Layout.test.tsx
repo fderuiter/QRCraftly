@@ -1,3 +1,4 @@
+import { QRProvider } from "../context/QRContext";
 /*
     QRCraftly
     Copyright (C) 2025 fderuiter

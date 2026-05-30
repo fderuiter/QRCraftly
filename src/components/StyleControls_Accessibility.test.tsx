@@ -1,3 +1,4 @@
+import { QRProvider } from "../context/QRContext";
 /*
     QRCraftly
     Copyright (C) 2025 fderuiter
@@ -25,7 +26,7 @@ describe('StyleControls Accessibility', () => {
   const mockOnChange = vi.fn();
 
   it('Advanced Mode toggle should have correct aria attributes', () => {
-    render(<StyleControls config={DEFAULT_CONFIG} onChange={mockOnChange} />);
+    render(<QRProvider><StyleControls config={DEFAULT_CONFIG} onChange={mockOnChange} /></QRProvider>);
 
     // Find the Advanced Mode toggle button
     const advancedToggle = screen.getByRole('button', { name: /Advanced Mode/i });

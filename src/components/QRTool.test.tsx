@@ -1,3 +1,5 @@
+import { vi } from "vitest";
+vi.unmock("@/context/QRContext");
 /*
     QRCraftly
     Copyright (C) 2025 fderuiter
