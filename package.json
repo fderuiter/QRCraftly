@@ -26,9 +26,11 @@
     "lint": "tsc --noEmit && eslint . && node scripts/contrast_check.js"
   },
   "dependencies": {
+    "@types/marked": "^6.0.0",
     "cross-env": "^10.1.0",
     "jsqr": "^1.4.0",
     "lucide-react": "^0.556.0",
+    "marked": "^18.0.4",
     "qrcode": "^1.5.4",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
