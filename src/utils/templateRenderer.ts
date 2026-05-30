@@ -247,7 +247,7 @@ export function drawWithTemplate(
   displayWidth: number,
   displayHeight: number,
   moduleCount: number
-): void {
+): { x: number; y: number; width: number; height: number } {
   ctx.clearRect(0, 0, displayWidth, displayHeight);
 
   // ── 1. Background ──────────────────────────────────────────────────────────
@@ -324,6 +324,27 @@ export function drawWithTemplate(
   if (config.templateStyle !== TemplateStyle.NONE) {
     drawTemplateText(ctx, config, displayWidth, displayHeight, qrY, qrSize);
   }
+
+  let boxX = qrX;
+  let boxY = qrY;
+  let boxW = qrSize;
+  let boxH = qrSize;
+
+  if (!isNoneSquare) {
+    const safePad = qrSize * 0.05;
+    boxX = qrX - safePad;
+    boxY = qrY - safePad;
+    boxW = qrSize + safePad * 2;
+    boxH = qrSize + safePad * 2;
+  }
+
+  // Ensure coordinates don't go outside canvas
+  boxX = Math.max(0, boxX);
+  boxY = Math.max(0, boxY);
+  boxW = Math.min(displayWidth - boxX, boxW);
+  boxH = Math.min(displayHeight - boxY, boxH);
+
+  return { x: boxX, y: boxY, width: boxW, height: boxH };
 }
 
 // ---------------------------------------------------------------------------

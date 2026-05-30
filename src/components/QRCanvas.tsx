@@ -33,7 +33,7 @@ interface QRCanvasProps {
   /** Optional CSS class names to apply to the canvas element. */
   className?: string;
   /** Optional callback fired when rendering is complete. */
-  onRendered?: () => void;
+  onRendered?: (coords?: { x: number; y: number; width: number; height: number }) => void;
 }
 
 /**
@@ -116,6 +116,8 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({ config, s
       return;
     }
 
+    let coords: { x: number; y: number; width: number; height: number } | undefined;
+
     if (useTemplate) {
       // ── Template / social format rendering ─────────────────────────────────
       const { width: fw, height: fh } = SOCIAL_DIMENSIONS[config.socialFormat];
@@ -128,7 +130,7 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({ config, s
       ctx.save();
       ctx.scale(pixelRatio, pixelRatio);
 
-      drawWithTemplate(
+      const logicalCoords = drawWithTemplate(
         ctx as unknown as CanvasRenderingContext2D,
         qrData.modules,
         config,
@@ -139,14 +141,30 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({ config, s
         qrData.modules.size
       );
 
+      // Scale coordinates to backing store pixel space
+      coords = {
+        x: logicalCoords.x * pixelRatio,
+        y: logicalCoords.y * pixelRatio,
+        width: logicalCoords.width * pixelRatio,
+        height: logicalCoords.height * pixelRatio,
+      };
+
       ctx.restore();
     } else {
       // ── Original square rendering path (no change in behaviour) ────────────
       drawQR(ctx, qrData.modules, config, logoImg, borderLogoImg, size);
+      
+      // The QR code fills the whole canvas
+      coords = {
+        x: 0,
+        y: 0,
+        width: canvas.width,
+        height: canvas.height,
+      };
     }
 
     if (onRendered) {
-      onRendered();
+      onRendered(coords);
     }
 
   }, [config, size, qrData, logoImg, borderLogoImg, onRendered]);

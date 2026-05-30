@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useMemo } from 'react';
+import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { QRConfig } from '../types';
 import { useQRContext } from '@/context/QRContext';
 import { getContrastRatio } from '../utils/colorUtils';
@@ -13,6 +13,7 @@ export interface HealthScore {
 export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | null>, config: QRConfig) {
   const [status, setStatus] = useState<ScannabilityStatus>('idle');
   const workerRef = useRef<Worker | null>(null);
+  const timeoutRef = useRef<any>(null);
   const { emitSignal } = useQRContext();
 
   const health = useMemo<HealthScore>(() => {
@@ -54,41 +55,29 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
     return { score: Math.max(0, Math.min(100, score)), warnings };
   }, [config]);
 
+  // Cleanup on unmount
   useEffect(() => {
-    // Initialize worker
-    if (typeof window !== 'undefined' && !workerRef.current) {
-      workerRef.current = new Worker(new URL('../utils/scannabilityWorker.ts', import.meta.url), { type: 'module' });
-    }
-    
-    const worker = workerRef.current;
-    if (!worker) return;
-
-    const handleMessage = (e: MessageEvent) => {
-      const { success, error } = e.data;
-      setStatus(success ? 'pass' : 'fail');
-
-      if (!success && error) {
-        emitSignal('scannability-fail', {
-          engine: navigator.userAgent.includes('Safari') && !navigator.userAgent.includes('Chrome') ? 'WebKit' : 
-                  navigator.userAgent.includes('Firefox') ? 'Firefox' : 'Chromium',
-          styleId: config.style || 'default',
-          errorType: error
-        });
+    return () => {
+      if (workerRef.current) {
+        workerRef.current.terminate();
+        workerRef.current = null;
+      }
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
       }
     };
-
-    worker.addEventListener('message', handleMessage);
-
-    return () => {
-      worker.removeEventListener('message', handleMessage);
-    };
-  }, [config, emitSignal]);
+  }, []);
 
   // Expose a function to trigger check
-  const checkScannability = () => {
+  const checkScannability = useCallback((coords?: { x: number; y: number; width: number; height: number }) => {
     const canvas = canvasRef.current;
-    const worker = workerRef.current;
-    if (!canvas || !worker) return;
+    if (!canvas) return;
+
+    // Strict Lifecycle Management: Terminate active worker to prevent race conditions and CPU thrashing
+    if (workerRef.current) {
+      workerRef.current.terminate();
+      workerRef.current = null;
+    }
 
     setStatus('checking');
     
@@ -107,11 +96,57 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
           return;
         }
 
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        let scanX = 0;
+        let scanY = 0;
+        let scanW = canvas.width;
+        let scanH = canvas.height;
+
+        // Regional Image Extraction: use targeted coordinates if provided
+        if (coords) {
+          scanX = Math.floor(coords.x);
+          scanY = Math.floor(coords.y);
+          scanW = Math.floor(coords.width);
+          scanH = Math.floor(coords.height);
+          
+          scanX = Math.max(0, scanX);
+          scanY = Math.max(0, scanY);
+          scanW = Math.min(canvas.width - scanX, scanW);
+          scanH = Math.min(canvas.height - scanY, scanH);
+        }
+
+        if (scanW <= 0 || scanH <= 0) {
+          setStatus('fail');
+          return;
+        }
+
+        const worker = new Worker(new URL('../utils/scannabilityWorker.ts', import.meta.url), { type: 'module' });
+        workerRef.current = worker;
+
+        const handleMessage = (e: MessageEvent) => {
+          const { success, error } = e.data;
+          setStatus(success ? 'pass' : 'fail');
+
+          if (!success && error) {
+            emitSignal('scannability-fail', {
+              engine: navigator.userAgent.includes('Safari') && !navigator.userAgent.includes('Chrome') ? 'WebKit' : 
+                      navigator.userAgent.includes('Firefox') ? 'Firefox' : 'Chromium',
+              styleId: config.style || 'default',
+              errorType: error
+            });
+          }
+          
+          // Clean up worker after check completes to free memory
+          worker.terminate();
+          workerRef.current = null;
+        };
+
+        worker.addEventListener('message', handleMessage);
+
+        const imageData = ctx.getImageData(scanX, scanY, scanW, scanH);
         worker.postMessage({
           imageData,
-          width: canvas.width,
-          height: canvas.height,
+          width: scanW,
+          height: scanH,
         });
       } catch (err) {
         console.error("Failed to read canvas data", err);
@@ -122,9 +157,9 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
     if ('requestIdleCallback' in window) {
       (window as any).requestIdleCallback(readAndSend);
     } else {
-      setTimeout(readAndSend, 100);
+      timeoutRef.current = setTimeout(readAndSend, 100);
     }
-  };
+  }, [config.style, emitSignal]);
 
   return { status, checkScannability, health };
 }
