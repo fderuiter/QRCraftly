@@ -65,15 +65,22 @@ jobs:
           node-version: "20.19.0"
           cache: "pnpm"
 
-      - name: Install NPM Dependencies
-        run: pnpm install --frozen-lockfile
-
-      # Save node_modules to be used by other jobs
-      - name: Cache node_modules
+      - name: Cache Environment
+        id: env-cache
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
-          path: node_modules
-          key: ${{ runner.os }}-node-${{ hashFiles('**/pnpm-lock.yaml') }}
+          path: |
+            node_modules
+            ~/.cache/ms-playwright
+          key: ${{ runner.os }}-env-${{ hashFiles('**/pnpm-lock.yaml') }}
+
+      - name: Install NPM Dependencies
+        if: steps.env-cache.outputs.cache-hit != 'true'
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright Browsers
+        if: steps.env-cache.outputs.cache-hit != 'true'
+        run: pnpm exec playwright install --with-deps
 
       - name: Audit Dependencies
         run: pnpm audit --audit-level=high
@@ -104,12 +111,14 @@ jobs:
           node-version: "20.19.0"
           cache: "pnpm"
 
-      # Restore node_modules
-      - name: Restore node_modules
+      # Restore environment
+      - name: Restore Environment
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
-          path: node_modules
-          key: ${{ runner.os }}-node-${{ hashFiles('**/pnpm-lock.yaml') }}
+          path: |
+            node_modules
+            ~/.cache/ms-playwright
+          key: ${{ runner.os }}-env-${{ hashFiles('**/pnpm-lock.yaml') }}
 
       - run: pnpm run lint
 
@@ -138,11 +147,13 @@ jobs:
           node-version: "20.19.0"
           cache: "pnpm"
 
-      - name: Restore node_modules
+      - name: Restore Environment
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
-          path: node_modules
-          key: ${{ runner.os }}-node-${{ hashFiles('**/pnpm-lock.yaml') }}
+          path: |
+            node_modules
+            ~/.cache/ms-playwright
+          key: ${{ runner.os }}-env-${{ hashFiles('**/pnpm-lock.yaml') }}
 
       - run: pnpm test -- run --coverage
 
@@ -167,14 +178,16 @@ jobs:
           node-version: "20.19.0"
           cache: "pnpm"
 
-      - name: Restore node_modules
+      - name: Restore Environment
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
-          path: node_modules
-          key: ${{ runner.os }}-node-${{ hashFiles('**/pnpm-lock.yaml') }}
+          path: |
+            node_modules
+            ~/.cache/ms-playwright
+          key: ${{ runner.os }}-env-${{ hashFiles('**/pnpm-lock.yaml') }}
 
-      - name: Install Playwright Browsers
-        run: pnpm exec playwright install --with-deps
+      - name: Install System Dependencies for Playwright
+        run: pnpm exec playwright install-deps
 
       - name: Run Playwright tests
         run: pnpm run test:e2e
@@ -202,11 +215,13 @@ jobs:
           node-version: "20.19.0"
           cache: "pnpm"
 
-      - name: Restore node_modules
+      - name: Restore Environment
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
-          path: node_modules
-          key: ${{ runner.os }}-node-${{ hashFiles('**/pnpm-lock.yaml') }}
+          path: |
+            node_modules
+            ~/.cache/ms-playwright
+          key: ${{ runner.os }}-env-${{ hashFiles('**/pnpm-lock.yaml') }}
 
       - run: pnpm run build
 
