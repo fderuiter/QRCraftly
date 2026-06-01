@@ -7,6 +7,7 @@ import { ColorInput } from '../ui/ColorInput';
 import { RangeInput } from '../ui/RangeInput';
 import { useImageUpload } from '../../hooks/useImageUpload';
 import { ToggleSwitch } from '../inputs/ToggleSwitch';
+import { useQRContext } from '../../context/QRContext';
 
 interface BorderControlsProps {
   config: QRConfig;
@@ -14,6 +15,16 @@ interface BorderControlsProps {
 }
 
 export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange }) => {
+  let moduleCount = 0;
+  try { moduleCount = useQRContext().moduleCount; } catch (e) { /* ignore for tests */ }
+
+  const borderModules = useMemo(() => {
+    if (!moduleCount) return 0;
+    const minModules = 4;
+    const userModules = (config.borderSize * moduleCount) / (1 - 2 * config.borderSize);
+    return Math.max(minModules, Math.round(userModules * 10) / 10);
+  }, [moduleCount, config.borderSize]);
+
   const borderLogoInputRef = useRef<HTMLInputElement>(null);
   const { error, handleUpload, setError } = useImageUpload();
 
@@ -64,7 +75,7 @@ export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange
             <div>
               <RangeInput
                 id="border-size"
-                label="Width"
+                label={`Width (~${borderModules} mod)`}
                 min={0.01}
                 max={0.15}
                 step={0.005}

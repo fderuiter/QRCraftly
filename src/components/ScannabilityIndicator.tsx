@@ -21,10 +21,16 @@ export const ScannabilityIndicator: React.FC<Props> = ({ status, health }) => {
             <span className="text-slate-600 dark:text-slate-300">Checking...</span>
           </>
         )}
-        {status === 'pass' && (
+        {status === 'physical-pass' && (
           <>
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
-            <span className="text-emerald-700 dark:text-emerald-400">Scannable</span>
+            <span className="text-emerald-700 dark:text-emerald-400">Physical-Ready</span>
+          </>
+        )}
+        {status === 'digital-pass' && (
+          <>
+            <ShieldCheck className="w-3.5 h-3.5 text-amber-500" />
+            <span className="text-amber-700 dark:text-amber-400">Digital-Only Pass</span>
           </>
         )}
         {status === 'fail' && (

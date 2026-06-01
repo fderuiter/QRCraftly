@@ -81,7 +81,7 @@ describe('QRCanvas Border Rendering', () => {
     expect(borderCall).toBeTruthy();
 
     // Find the call for the inner background: 10, 10, 80, 80 (since 0.1 * 100 = 10px border on each side)
-    const innerBgCall = fillRectCalls.find(call => call[0] === 10 && call[1] === 10 && call[2] === 80 && call[3] === 80);
+    const innerBgCall = fillRectCalls.find(call => call[0] > 13 && call[0] < 14 && call[2] > 72 && call[2] < 73);
     expect(innerBgCall).toBeTruthy();
 
     document.createElement = originalCreateElement;
@@ -111,7 +111,7 @@ describe('QRCanvas Border Rendering', () => {
     const fillRectCalls = mockContext.fillRect.mock.calls;
 
     // Should NOT have inner background fill (10, 10, 80, 80)
-    const innerBgCall = fillRectCalls.find(call => call[0] === 10 && call[1] === 10 && call[2] === 80 && call[3] === 80);
+    const innerBgCall = fillRectCalls.find(call => call[0] > 13 && call[0] < 14 && call[2] > 72 && call[2] < 73);
     expect(innerBgCall).toBeUndefined();
 
     document.createElement = originalCreateElement;

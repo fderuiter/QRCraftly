@@ -33,7 +33,7 @@ interface QRCanvasProps {
   /** Optional CSS class names to apply to the canvas element. */
   className?: string;
   /** Optional callback fired when rendering is complete. */
-  onRendered?: () => void;
+  onRendered?: (info: { moduleCount: number }) => void;
 }
 
 /**
@@ -146,7 +146,7 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({ config, s
     }
 
     if (onRendered) {
-      onRendered();
+      onRendered({ moduleCount: qrData.modules.size });
     }
 
   }, [config, size, qrData, logoImg, borderLogoImg, onRendered]);

@@ -61,11 +61,11 @@ describe('QR Renderer Utils', () => {
       const config = { ...DEFAULT_CONFIG, isBorderEnabled: false };
       const result = calculateLayout(config, 100, 25);
       expect(result).toEqual({
-        drawX: 0,
-        drawY: 0,
-        drawSize: 100,
-        cellSize: 4,
-        borderPx: 0
+        drawX: 12.121212121212121,
+        drawY: 12.121212121212121,
+        drawSize: 75.75757575757575,
+        cellSize: 3.03030303030303,
+        borderPx: 12.121212121212121
       });
     });
 
@@ -76,11 +76,11 @@ describe('QR Renderer Utils', () => {
       // drawSize = 100 - (10*2) = 80
       // cellSize = 80 / 20 = 4
       expect(result).toEqual({
-        drawX: 10,
-        drawY: 10,
-        drawSize: 80,
-        cellSize: 4,
-        borderPx: 10
+        drawX: 14.285714285714286,
+        drawY: 14.285714285714286,
+        drawSize: 71.42857142857143,
+        cellSize: 3.5714285714285716,
+        borderPx: 14.285714285714286
       });
     });
   });

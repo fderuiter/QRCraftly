@@ -6,6 +6,7 @@ type SignalName = 'scannability-fail' | 'render-complete';
 type SignalCallback = (detail: any) => void;
 
 interface QRContextType {
+  moduleCount: number;
   config: QRConfig;
   updateConfig: (updates: Partial<QRConfig>) => void;
   emitSignal: (name: SignalName, detail?: any) => void;
@@ -21,6 +22,7 @@ const QRContext = createContext<QRContextType | undefined>(undefined);
 
 export const QRProvider = ({ children, initialConfig }: { children: React.ReactNode, initialConfig?: Partial<QRConfig> }) => {
   const [config, setConfig] = useState<QRConfig>({ ...DEFAULT_CONFIG, ...initialConfig });
+  const [moduleCount, setModuleCount] = useState<number>(0);
   
   const [preferences, setPreferences] = useState(() => {
     let savedOptIn: string | null = null;
@@ -65,8 +67,18 @@ export const QRProvider = ({ children, initialConfig }: { children: React.ReactN
     signalsRef.current[name].forEach(cb => cb(detail));
   }, []);
 
+  // Listen for render-complete to update moduleCount
+  React.useEffect(() => {
+    const unsub = registerSignal('render-complete', (detail) => {
+      if (detail && detail.moduleCount) {
+        setModuleCount(detail.moduleCount);
+      }
+    });
+    return unsub;
+  }, [registerSignal]);
+
   return (
-    <QRContext.Provider value={{ config, updateConfig, emitSignal, registerSignal, preferences, updatePreferences }}>
+    <QRContext.Provider value={{ config, updateConfig, emitSignal, registerSignal, preferences, updatePreferences, moduleCount }}>
       {children}
     </QRContext.Provider>
   );

@@ -251,7 +251,7 @@ describe('StyleControls Component', () => {
      fireEvent.change(styleSelect, { target: { value: 'dashed' } });
      expect(mockOnChange).toHaveBeenCalledWith({ borderStyle: 'dashed' });
 
-     const widthInput = screen.getByLabelText('Width');
+     const widthInput = screen.getByLabelText(/Width/);
      fireEvent.change(widthInput, { target: { value: '0.1' } });
      expect(mockOnChange).toHaveBeenCalledWith({ borderSize: 0.1 });
 

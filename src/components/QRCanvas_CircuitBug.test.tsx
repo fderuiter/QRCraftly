@@ -128,13 +128,14 @@ describe('QRCanvas Circuit Style Bug', () => {
      // Calculate expected coordinates
      const moduleCount = 21;
      const displaySize = size; // 100
-     const cellSize = displaySize / moduleCount; // 100 / 21 ~= 4.76
+     const minBorderPx = (4 * displaySize) / (moduleCount + 8);
+     const cellSize = (displaySize - 2 * minBorderPx) / moduleCount; // 100 / 21 ~= 4.76
 
      const r = 10;
      const c = 10;
 
-     const x = c * cellSize;
-     const y = r * cellSize;
+     const x = minBorderPx + c * cellSize;
+     const y = minBorderPx + r * cellSize;
      const cx = x + cellSize / 2;
      const cy = y + cellSize / 2;
      const thickness = cellSize * 0.4;
@@ -195,13 +196,14 @@ describe('QRCanvas Circuit Style Bug', () => {
 
      const moduleCount = 21;
      const displaySize = size;
-     const cellSize = displaySize / moduleCount;
+     const minBorderPx = (4 * displaySize) / (moduleCount + 8);
+     const cellSize = (displaySize - 2 * minBorderPx) / moduleCount;
 
      const r = 10;
      const c = 10;
 
-     const x = c * cellSize;
-     const y = r * cellSize;
+     const x = minBorderPx + c * cellSize;
+     const y = minBorderPx + r * cellSize;
      const cx = x + cellSize / 2;
      const cy = y + cellSize / 2;
      const thickness = cellSize * 0.4;
