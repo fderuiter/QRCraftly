@@ -147,18 +147,21 @@ export interface LayoutMetrics {
  * @returns The metrics needed to correctly position and scale the QR grid.
  */
 export const calculateLayout = (config: QRConfig, displaySize: number, moduleCount: number): LayoutMetrics => {
-    let drawX = 0;
-    let drawY = 0;
-    let drawSize = displaySize;
     let borderPx = 0;
 
     if (config.isBorderEnabled && config.borderSize > 0) {
         borderPx = displaySize * config.borderSize;
-        drawX = borderPx;
-        drawY = borderPx;
-        drawSize = displaySize - (borderPx * 2);
     }
 
+    // Enforce 4-module quiet zone floor
+    const minBorderPx = (4 * displaySize) / (moduleCount + 8);
+    if (borderPx < minBorderPx) {
+        borderPx = minBorderPx;
+    }
+
+    const drawX = borderPx;
+    const drawY = borderPx;
+    const drawSize = displaySize - (borderPx * 2);
     const cellSize = drawSize / moduleCount;
 
     return { drawX, drawY, drawSize, cellSize, borderPx };

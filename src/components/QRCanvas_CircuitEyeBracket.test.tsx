@@ -118,7 +118,8 @@ describe('QRCanvas Circuit Style Eye Bracket Bug', () => {
 
      const moduleCount = 21;
      const displaySize = size; // 100
-     const cellSize = displaySize / moduleCount;
+     const minBorderPx = (4 * displaySize) / (moduleCount + 8);
+     const cellSize = (displaySize - 2 * minBorderPx) / moduleCount;
 
      // The implementation draws the cuts using fillRect with bgColor
      // We are looking for the calls to fillRect that make the cuts

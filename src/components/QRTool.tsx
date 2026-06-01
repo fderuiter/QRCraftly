@@ -20,7 +20,8 @@ import React, { useState, useRef, useCallback } from 'react';
 import { Button } from "./ui/Button";
 import { QRConfig } from '@/types';
 import QRCanvas from '@/components/QRCanvas';
-import { Download, Share2, QrCode, ChevronDown, Camera, Moon, Sun, Info, Copy, Check } from 'lucide-react';
+import { Download, Share2, QrCode, ChevronDown, Camera, Moon, Sun, Info, Copy, Check, AlertTriangle } from 'lucide-react';
+import { Modal } from './ui/Modal';
 import { useDebounce, useOnClickOutside } from '@/utils/hooks';
 import { useQRDownload } from '@/utils/useQRDownload';
 import { useScannability } from '@/hooks/useScannability';
@@ -32,10 +33,12 @@ import { ComponentRegistry } from '@/utils/ComponentRegistry';
 import '@/registry'; // Ensure registry is loaded
 
 function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: string }) {
-  const { config } = useQRContext();
+  const { config, emitSignal } = useQRContext();
   const { isDarkMode, toggleDarkMode } = useTheme();
   
   const [showDownloadMenu, setShowDownloadMenu] = useState(false);
+  const [showSafetyGate, setShowSafetyGate] = useState(false);
+  const [gateAction, setGateAction] = useState<(() => void) | null>(null);
   const qrRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const downloadMenuRef = useRef<HTMLDivElement>(null);
@@ -45,6 +48,11 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
 
   // Scannability & Telemetry
   const { status: scannabilityStatus, checkScannability, health } = useScannability(canvasRef, config);
+  
+  const handleRendered = useCallback((info: { moduleCount: number } = { moduleCount: 0 }) => {
+    if (info.moduleCount) emitSignal('render-complete', info);
+    checkScannability();
+  }, [emitSignal, checkScannability]);
   const { showTelemetryPrompt, handleOptIn } = useTelemetry(scannabilityStatus);
 
   // Close download menu when clicking outside
@@ -62,9 +70,18 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
     }
   };
 
+  const executeWithSafetyGate = (action: () => void) => {
+    if (scannabilityStatus === 'fail' || scannabilityStatus === 'digital-pass') {
+      setGateAction(() => action);
+      setShowSafetyGate(true);
+    } else {
+      action();
+    }
+  };
+
   const downloadToDevice = (format: 'png' | 'jpeg' | 'webp') => {
     setShowDownloadMenu(false);
-    hookDownload(format);
+    executeWithSafetyGate(() => hookDownload(format));
   };
 
   const handleSaveAs = async (format: 'png' | 'jpeg' | 'webp') => {
@@ -83,6 +100,21 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
 
   return (
     <div className={`${isDarkMode ? 'dark' : ''} w-full`} id="top">
+      <Modal isOpen={showSafetyGate} onClose={() => setShowSafetyGate(false)} title="Scan Safety Warning">
+        <div className="flex flex-col items-center text-center gap-4">
+          <AlertTriangle className="w-12 h-12 text-amber-500" />
+          <p className="text-slate-700 dark:text-slate-300">
+            This QR code might fail to scan in real-world conditions. We recommend adjusting colors, pattern, or margin for better contrast.
+          </p>
+          <div className="flex gap-3 mt-4 w-full">
+             <Button variant="outline" fullWidth onClick={() => setShowSafetyGate(false)}>Go Back</Button>
+             <Button variant="primary" fullWidth onClick={() => {
+               setShowSafetyGate(false);
+               if (gateAction) gateAction();
+             }}>Export Anyway</Button>
+          </div>
+        </div>
+      </Modal>
       <h1 className="sr-only">{title ? `${title} Generator` : "Free Custom QR Code Generator"}</h1>
       <div className="min-h-screen md:h-[100dvh] md:overflow-hidden bg-slate-50 dark:bg-slate-950 flex flex-col-reverse md:flex-row transition-colors duration-300 relative">
         {/* Sidebar Controls */}
@@ -183,7 +215,7 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
                 
                 <div ref={qrRef} className="flex justify-center mb-8">
                    {/* Pass debounced config to QRCanvas to prevent heavy rendering on every keystroke */}
-                   <QRCanvas ref={canvasRef} onRendered={checkScannability} config={debouncedConfig} className="w-full max-h-[60vh] object-contain rounded-lg shadow-sm" />
+                   <QRCanvas ref={canvasRef} onRendered={handleRendered} config={debouncedConfig} className="w-full max-h-[60vh] object-contain rounded-lg shadow-sm" />
                 </div>
 
                 <div className="grid grid-cols-1 gap-3 w-full">
@@ -191,9 +223,9 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
                    <div className="flex gap-2">
                        <div className="relative flex-1" ref={downloadMenuRef}>
                           <Button 
-                              variant="primary"
+                              variant={scannabilityStatus === 'fail' || scannabilityStatus === 'digital-pass' ? 'error' : 'primary'}
                               fullWidth
-                              onClick={() => setShowDownloadMenu(!showDownloadMenu)}
+                              onClick={() => executeWithSafetyGate(() => setShowDownloadMenu(!showDownloadMenu))}
                               aria-expanded={showDownloadMenu}
                               aria-haspopup="true"
                           >

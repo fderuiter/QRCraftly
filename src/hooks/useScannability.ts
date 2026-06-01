@@ -3,7 +3,7 @@ import { QRConfig } from '../types';
 import { useQRContext } from '@/context/QRContext';
 import { getContrastRatio } from '../utils/colorUtils';
 
-export type ScannabilityStatus = 'idle' | 'checking' | 'pass' | 'fail';
+export type ScannabilityStatus = 'idle' | 'checking' | 'digital-pass' | 'physical-pass' | 'fail';
 
 export interface HealthScore {
   score: number;
@@ -64,8 +64,8 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
     if (!worker) return;
 
     const handleMessage = (e: MessageEvent) => {
-      const { success, error } = e.data;
-      setStatus(success ? 'pass' : 'fail');
+      const { success, physicalReady, error } = e.data;
+      setStatus(success ? (physicalReady ? 'physical-pass' : 'digital-pass') : 'fail');
 
       if (!success && error) {
         emitSignal('scannability-fail', {
