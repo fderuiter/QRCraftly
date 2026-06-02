@@ -14,6 +14,7 @@ describe('VCard URL Normalization', () => {
     website: '',
     street: '',
     city: '',
+    zip: '',
     country: ''
   };
 

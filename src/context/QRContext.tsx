@@ -20,15 +20,29 @@ interface QRContextType {
 
 const QRContext = createContext<QRContextType | undefined>(undefined);
 
+const getSafeLocalStorage = () => {
+  if (typeof window !== 'undefined' && window.localStorage && typeof window.localStorage.getItem === 'function') {
+    return window.localStorage;
+  }
+  const store = new Map<string, string>();
+  return {
+    getItem: (key: string) => store.get(key) ?? null,
+    setItem: (key: string, value: string) => { store.set(key, value); },
+    removeItem: (key: string) => { store.delete(key); },
+    clear: () => { store.clear(); },
+    key: (index: number) => Array.from(store.keys())[index] ?? null,
+    get length() { return store.size; }
+  };
+};
+
 export const QRProvider = ({ children, initialConfig }: { children: React.ReactNode, initialConfig?: Partial<QRConfig> }) => {
   const [config, setConfig] = useState<QRConfig>({ ...DEFAULT_CONFIG, ...initialConfig });
   const [moduleCount, setModuleCount] = useState<number>(0);
   
   const [preferences, setPreferences] = useState(() => {
     let savedOptIn: string | null = null;
-    if (typeof window !== 'undefined') {
-      savedOptIn = localStorage.getItem('qr-telemetry-opt-in');
-    }
+    const storage = getSafeLocalStorage();
+    savedOptIn = storage.getItem('qr-telemetry-opt-in');
     return {
       telemetryOptIn: savedOptIn === 'true' ? true : savedOptIn === 'false' ? false : null,
       darkMode: false,
@@ -42,8 +56,9 @@ export const QRProvider = ({ children, initialConfig }: { children: React.ReactN
   const updatePreferences = useCallback((updates: Partial<{telemetryOptIn: boolean | null, darkMode: boolean}>) => {
     setPreferences(prev => {
       const next = { ...prev, ...updates };
-      if (updates.telemetryOptIn !== undefined && updates.telemetryOptIn !== null && typeof window !== 'undefined') {
-        localStorage.setItem('qr-telemetry-opt-in', String(updates.telemetryOptIn));
+      if (updates.telemetryOptIn !== undefined && updates.telemetryOptIn !== null) {
+        const storage = getSafeLocalStorage();
+        storage.setItem('qr-telemetry-opt-in', String(updates.telemetryOptIn));
       }
       return next;
     });
@@ -88,4 +103,8 @@ export const useQRContext = () => {
   const ctx = useContext(QRContext);
   if (!ctx) throw new Error("useQRContext must be used within QRProvider");
   return ctx;
+};
+
+export const useOptionalQRContext = () => {
+  return useContext(QRContext);
 };

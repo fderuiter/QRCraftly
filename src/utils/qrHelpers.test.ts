@@ -131,6 +131,7 @@ describe('QR Helpers', () => {
       website: 'https://example.com',
       street: '123 Main St',
       city: 'Metropolis',
+      zip: '12345',
       country: 'USA'
     };
 
@@ -145,7 +146,7 @@ describe('QR Helpers', () => {
       expect(result).toContain('TEL:1234567890');
       expect(result).toContain('EMAIL:john@example.com');
       expect(result).toContain('URL:https://example.com');
-      expect(result).toContain('ADR:;;123 Main St;Metropolis;;;USA');
+      expect(result).toContain('ADR:;;123 Main St;Metropolis;;12345;USA');
       expect(result).toContain('END:VCARD');
     });
 
@@ -162,7 +163,7 @@ describe('QR Helpers', () => {
       // Comma escaped: Acme\, Inc.
       expect(result).toContain('ORG:Acme\\, Inc.');
       // Semicolon escaped: 123 Main St\; Apt 4
-      expect(result).toContain('ADR:;;123 Main St\\; Apt 4;Metropolis;;;USA');
+      expect(result).toContain('ADR:;;123 Main St\\; Apt 4;Metropolis;;12345;USA');
       // Backslash escaped: Senior\\Principal
       expect(result).toContain('TITLE:Senior\\\\Principal');
     });

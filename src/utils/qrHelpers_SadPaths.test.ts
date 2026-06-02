@@ -96,6 +96,7 @@ describe('QR Helpers Sad Paths', () => {
         website: '',
         street: '',
         city: '',
+        zip: '',
         country: ''
       };
       const result = constructVCardString(data);

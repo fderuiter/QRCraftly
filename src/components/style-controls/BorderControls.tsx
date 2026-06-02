@@ -7,7 +7,7 @@ import { ColorInput } from '../ui/ColorInput';
 import { RangeInput } from '../ui/RangeInput';
 import { useImageUpload } from '../../hooks/useImageUpload';
 import { ToggleSwitch } from '../inputs/ToggleSwitch';
-import { useQRContext } from '../../context/QRContext';
+import { useOptionalQRContext } from '../../context/QRContext';
 
 interface BorderControlsProps {
   config: QRConfig;
@@ -15,8 +15,8 @@ interface BorderControlsProps {
 }
 
 export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange }) => {
-  let moduleCount = 0;
-  try { moduleCount = useQRContext().moduleCount; } catch (e) { /* ignore for tests */ }
+  const context = useOptionalQRContext();
+  const moduleCount = context?.moduleCount ?? 0;
 
   const borderModules = useMemo(() => {
     if (!moduleCount) return 0;
