@@ -62,7 +62,8 @@ export const drawQRInternal = (
   logoImg: HTMLImageElement | null,
   borderLogoImg: HTMLImageElement | null,
   displaySize: number,
-  moduleCount: number
+  moduleCount: number,
+  isVirtual: boolean = false
 ) => {
   // 1. Calculate Layout
   const { drawX, drawY, drawSize, cellSize, borderPx } = calculateLayout(config, displaySize, moduleCount);
@@ -83,7 +84,7 @@ export const drawQRInternal = (
   }
 
   // 4. Render Modules
-  renderModules(ctx, modules, config, drawX, drawY, cellSize, moduleCount, logoMetrics);
+  renderModules(ctx, modules, config, drawX, drawY, cellSize, moduleCount, logoMetrics, isVirtual);
 
   // 5. Render Eyes
   renderEyes(ctx, config, drawX, drawY, cellSize, moduleCount);

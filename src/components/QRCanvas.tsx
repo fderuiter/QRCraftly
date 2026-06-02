@@ -18,7 +18,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { QRConfig, SocialFormat, TemplateStyle } from '../types';
-import { drawQR } from '../utils/qrRenderer';
+import { drawQR, drawQRInternal } from '../utils/qrRenderer';
 import { drawWithTemplate, SOCIAL_DIMENSIONS } from '../utils/templateRenderer';
 import { useImage } from '../utils/hooks';
 
@@ -33,7 +33,7 @@ interface QRCanvasProps {
   /** Optional CSS class names to apply to the canvas element. */
   className?: string;
   /** Optional callback fired when rendering is complete. */
-  onRendered?: (info: { moduleCount: number }) => void;
+  onRendered?: (info: { moduleCount: number; virtualImageData?: ImageData }) => void;
 }
 
 /**
@@ -147,6 +147,73 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({ config, s
 
     if (onRendered) {
       onRendered({ moduleCount: qrData.modules.size });
+
+      // Perform virtual offscreen rendering for deterministic validation
+      const runVirtualRender = () => {
+        try {
+          const virtualSize = 1024;
+          let vCanvas: HTMLCanvasElement | OffscreenCanvas;
+          
+          if (typeof OffscreenCanvas !== 'undefined') {
+            vCanvas = new OffscreenCanvas(virtualSize, virtualSize);
+          } else {
+            vCanvas = document.createElement('canvas');
+            vCanvas.width = virtualSize;
+            vCanvas.height = virtualSize;
+          }
+          
+          const vCtx = vCanvas.getContext('2d', { willReadFrequently: true }) as CanvasRenderingContext2D;
+          if (!vCtx) return;
+
+          let displayWidth = virtualSize;
+          let displayHeight = virtualSize;
+
+          if (useTemplate) {
+            const { width: fw, height: fh } = SOCIAL_DIMENSIONS[config.socialFormat];
+            displayHeight = Math.round(virtualSize * fh / fw);
+            if (typeof OffscreenCanvas !== 'undefined') {
+              vCanvas.height = displayHeight;
+            } else {
+              (vCanvas as HTMLCanvasElement).height = displayHeight;
+            }
+
+            drawWithTemplate(
+              vCtx as unknown as CanvasRenderingContext2D,
+              qrData.modules,
+              config,
+              logoImg,
+              borderLogoImg,
+              displayWidth,
+              displayHeight,
+              qrData.modules.size,
+              true
+            );
+          } else {
+            vCtx.clearRect(0, 0, displayWidth, displayHeight);
+            drawQRInternal(
+              vCtx as unknown as CanvasRenderingContext2D,
+              qrData.modules,
+              config,
+              logoImg,
+              borderLogoImg,
+              virtualSize,
+              qrData.modules.size,
+              true
+            );
+          }
+          
+          const imageData = vCtx.getImageData(0, 0, displayWidth, displayHeight);
+          onRendered({ moduleCount: qrData.modules.size, virtualImageData: imageData });
+        } catch (err) {
+          console.error("Virtual rendering failed:", err);
+        }
+      };
+
+      if ('requestIdleCallback' in window) {
+        (window as any).requestIdleCallback(runVirtualRender);
+      } else {
+        setTimeout(runVirtualRender, 50);
+      }
     }
 
   }, [config, size, qrData, logoImg, borderLogoImg, onRendered]);

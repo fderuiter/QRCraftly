@@ -10,7 +10,8 @@ const getModuleDrawer = (
     cellSize: number,
     modules: QRModules,
     moduleCount: number,
-    isCoveredByLogo: (r: number, c: number) => boolean
+    isCoveredByLogo: (r: number, c: number) => boolean,
+    isVirtual: boolean
 ): DrawModuleFn => {
     switch(style) {
         case QRStyle.MODERN: {
@@ -152,11 +153,21 @@ const getModuleDrawer = (
         }
         case QRStyle.STANDARD:
         default: {
-            // Optimization: Pre-calculate Math.ceil(cellSize) outside the inner rendering loop
-            // to avoid redundant math operations for every drawn module.
-            // Performance impact: Reduces execution time of STANDARD style rendering loop.
-            const ceilCellSize = Math.ceil(cellSize);
-            return (_r, _c, x, y, _cx, _cy) => ctx.rect(Math.floor(x), Math.floor(y), ceilCellSize, ceilCellSize);
+            if (isVirtual) {
+                return (_r, _c, x, y, _cx, _cy) => {
+                    const intX = Math.round(x);
+                    const intY = Math.round(y);
+                    const intW = Math.round(x + cellSize) - intX;
+                    const intH = Math.round(y + cellSize) - intY;
+                    ctx.rect(intX, intY, intW, intH);
+                };
+            } else {
+                // Optimization: Pre-calculate Math.ceil(cellSize) outside the inner rendering loop
+                // to avoid redundant math operations for every drawn module.
+                // Performance impact: Reduces execution time of STANDARD style rendering loop.
+                const ceilCellSize = Math.ceil(cellSize);
+                return (_r, _c, x, y, _cx, _cy) => ctx.rect(Math.floor(x), Math.floor(y), ceilCellSize, ceilCellSize);
+            }
         }
     }
 };
@@ -169,7 +180,8 @@ export const renderModules = (
   drawY: number,
   cellSize: number,
   moduleCount: number,
-  logoMetrics: LogoMetrics
+  logoMetrics: LogoMetrics,
+  isVirtual: boolean = false
 ) => {
     // Draw Modules
     ctx.fillStyle = config.fgColor;
@@ -179,7 +191,7 @@ export const renderModules = (
     // Batch drawing for performance
     ctx.beginPath();
 
-    const drawModuleFn = getModuleDrawer(config.style, ctx, cellSize, modules, moduleCount, isCoveredByLogo);
+    const drawModuleFn = getModuleDrawer(config.style, ctx, cellSize, modules, moduleCount, isCoveredByLogo, isVirtual);
 
     const cellSizeHalf = cellSize / 2;
 

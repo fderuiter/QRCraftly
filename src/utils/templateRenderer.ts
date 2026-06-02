@@ -246,7 +246,8 @@ export function drawWithTemplate(
   borderLogoImg: HTMLImageElement | null,
   displayWidth: number,
   displayHeight: number,
-  moduleCount: number
+  moduleCount: number,
+  isVirtual: boolean = false
 ): void {
   ctx.clearRect(0, 0, displayWidth, displayHeight);
 
@@ -315,7 +316,8 @@ export function drawWithTemplate(
     logoImg,
     borderLogoImg,
     displayWidth,
-    moduleCount
+    moduleCount,
+    isVirtual
   );
 
   ctx.restore();
