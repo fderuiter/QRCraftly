@@ -85,15 +85,29 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
   }, [config, emitSignal]);
 
   // Expose a function to trigger check
-  const checkScannability = () => {
-    const canvas = canvasRef.current;
+  const checkScannability = (overrideImageData?: ImageData) => {
     const worker = workerRef.current;
-    if (!canvas || !worker) return;
+    if (!worker) return;
 
     setStatus('checking');
     
-    // Use requestIdleCallback or setTimeout to read canvas data without blocking
+    // If virtual renderer provided deterministic image data, use it directly
+    if (overrideImageData) {
+      worker.postMessage({
+        imageData: overrideImageData,
+        width: overrideImageData.width,
+        height: overrideImageData.height,
+      });
+      return;
+    }
+
+    // Fallback: Use requestIdleCallback or setTimeout to read canvas data without blocking
     const readAndSend = () => {
+      const canvas = canvasRef.current;
+      if (!canvas) {
+        setStatus('idle');
+        return;
+      }
       try {
         const ctx = canvas.getContext('2d');
         if (!ctx) {

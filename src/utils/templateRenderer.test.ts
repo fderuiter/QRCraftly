@@ -235,7 +235,8 @@ describe('drawWithTemplate', () => {
       logoImg,
       borderLogoImg,
       expect.any(Number),
-      modules.size
+      modules.size,
+      false
     );
   });
 });

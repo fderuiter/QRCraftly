@@ -49,9 +49,13 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
   // Scannability & Telemetry
   const { status: scannabilityStatus, checkScannability, health } = useScannability(canvasRef, config);
   
-  const handleRendered = useCallback((info: { moduleCount: number } = { moduleCount: 0 }) => {
-    if (info.moduleCount) emitSignal('render-complete', info);
-    checkScannability();
+  const handleRendered = useCallback((info: { moduleCount: number, virtualImageData?: ImageData } = { moduleCount: 0 }) => {
+    if (info.moduleCount && !info.virtualImageData) emitSignal('render-complete', info);
+    if (info.virtualImageData) {
+      checkScannability(info.virtualImageData);
+    } else if (!info.virtualImageData && !info.moduleCount) {
+      checkScannability();
+    }
   }, [emitSignal, checkScannability]);
   const { showTelemetryPrompt, handleOptIn } = useTelemetry(scannabilityStatus);
 
