@@ -70,4 +70,12 @@ describe('Wifi generator', () => {
     expect(hydrated.password).toBe('secret');
     expect(hydrated.encryption).toBe(WifiEncryption.WPA);
   });
+
+  it('hydrates string not ending with a semicolon', () => {
+    const raw = 'WIFI:S:NoSemiNet;P:password123;T:WPA';
+    const hydrated = hydrateWifiData(raw);
+    expect(hydrated.ssid).toBe('NoSemiNet');
+    expect(hydrated.password).toBe('password123');
+    expect(hydrated.encryption).toBe(WifiEncryption.WPA);
+  });
 });
