@@ -1,9 +1,10 @@
 import { useEffect, useCallback } from 'react';
-import { useQRContext } from '@/context/QRContext';
+import { useQRStore, useQRStoreSelector } from '@/context/QRContext';
 import { ScannabilityStatus } from './useScannability';
 
 export function useTelemetry(status: ScannabilityStatus) {
-  const { preferences, updatePreferences, registerSignal, config } = useQRContext();
+  const store = useQRStore();
+  const telemetryOptIn = useQRStoreSelector(s => s.preferences.telemetryOptIn);
 
   const sendTelemetryPing = useCallback((detail: any) => {
     try {
@@ -18,27 +19,28 @@ export function useTelemetry(status: ScannabilityStatus) {
   }, []);
 
   useEffect(() => {
-    return registerSignal('scannability-fail', (detail) => {
-      if (preferences.telemetryOptIn === true) {
+    return store.registerSignal('scannability-fail', (detail) => {
+      if (telemetryOptIn === true) {
         sendTelemetryPing(detail);
       }
     });
-  }, [preferences.telemetryOptIn, sendTelemetryPing, registerSignal]);
+  }, [telemetryOptIn, sendTelemetryPing, store]);
 
   const handleOptIn = useCallback((optIn: boolean) => {
-    updatePreferences({ telemetryOptIn: optIn });
+    store.updatePreferences({ telemetryOptIn: optIn });
     if (optIn && status === 'fail') {
+      const currentConfig = store.getState().config;
       sendTelemetryPing({
         engine: navigator.userAgent.includes('Safari') && !navigator.userAgent.includes('Chrome') ? 'WebKit' : 
                 navigator.userAgent.includes('Firefox') ? 'Firefox' : 'Chromium',
-        styleId: config.style || 'default',
+        styleId: currentConfig.style || 'default',
         errorType: 'NOT_FOUND'
       });
     }
-  }, [updatePreferences, sendTelemetryPing, status, config.style]);
+  }, [store, sendTelemetryPing, status]);
 
   return { 
-    showTelemetryPrompt: preferences.telemetryOptIn === null,
+    showTelemetryPrompt: telemetryOptIn === null,
     handleOptIn 
   };
 }

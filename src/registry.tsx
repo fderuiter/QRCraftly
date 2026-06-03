@@ -2,22 +2,24 @@ import React, { Suspense } from 'react';
 import { ComponentRegistry } from '@/utils/ComponentRegistry';
 import InputPanel from '@/components/InputPanel';
 import { SidebarContent } from '@/components/SidebarContent';
-import { useQRContext } from '@/context/QRContext';
+import { useQRStore, useQRStoreSelector } from '@/context/QRContext';
 
 const StyleControls = React.lazy(() => import('@/components/StyleControls'));
 
 const ContentControl = () => {
-  const { config, updateConfig } = useQRContext();
+  const store = useQRStore();
+  const config = useQRStoreSelector(s => s.config);
   return (
     <section>
       <h2 className="text-xs uppercase tracking-wider text-slate-600 dark:text-slate-400 font-bold mb-4">Content</h2>
-      <InputPanel config={config} onChange={updateConfig} />
+      <InputPanel config={config} onChange={store.updateConfig} />
     </section>
   );
 };
 
 const AppearanceControl = () => {
-  const { config, updateConfig } = useQRContext();
+  const store = useQRStore();
+  const config = useQRStoreSelector(s => s.config);
   const [isMounted, setIsMounted] = React.useState(false);
   
   React.useEffect(() => {
@@ -29,7 +31,7 @@ const AppearanceControl = () => {
       <h2 className="text-xs uppercase tracking-wider text-slate-600 dark:text-slate-400 font-bold mb-4">Appearance</h2>
       {isMounted ? (
         <Suspense fallback={<div className="h-64 bg-slate-100 dark:bg-slate-800 rounded-xl animate-pulse" />}>
-          <StyleControls config={config} onChange={updateConfig} />
+          <StyleControls config={config} onChange={store.updateConfig} />
         </Suspense>
       ) : (
         <div className="h-64 bg-slate-100 dark:bg-slate-800 rounded-xl animate-pulse" />

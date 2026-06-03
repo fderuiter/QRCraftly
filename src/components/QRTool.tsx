@@ -22,18 +22,20 @@ import { QRConfig } from '@/types';
 import QRCanvas from '@/components/QRCanvas';
 import { Download, Share2, QrCode, ChevronDown, Camera, Moon, Sun, Info, Copy, Check, AlertTriangle } from 'lucide-react';
 import { Modal } from './ui/Modal';
-import { useDebounce, useOnClickOutside } from '@/utils/hooks';
+import { useOnClickOutside } from '@/utils/hooks';
 import { useQRDownload } from '@/utils/useQRDownload';
 import { useScannability } from '@/hooks/useScannability';
 import { ScannabilityIndicator } from '@/components/ScannabilityIndicator';
-import { QRProvider, useQRContext } from '@/context/QRContext';
+import { QRProvider, useQRStore, useQRStoreSelector } from '@/context/QRContext';
 import { useTheme } from '@/hooks/useTheme';
 import { useTelemetry } from '@/hooks/useTelemetry';
 import { ComponentRegistry } from '@/utils/ComponentRegistry';
 import '@/registry'; // Ensure registry is loaded
 
 function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: string }) {
-  const { config, emitSignal } = useQRContext();
+  const store = useQRStore();
+  const config = useQRStoreSelector(s => s.config);
+  const emitSignal = store.emitSignal;
   const { isDarkMode, toggleDarkMode } = useTheme();
   
   const [showDownloadMenu, setShowDownloadMenu] = useState(false);
@@ -64,7 +66,7 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
   useOnClickOutside(downloadMenuRef, closeDownloadMenu, showDownloadMenu);
 
   // Debounce the config for QRCanvas to prevent lag during rapid typing or style changes.
-  const debouncedConfig = useDebounce(config, 100);
+  
 
   const onCopy = async () => {
     const success = await handleCopy();
@@ -219,7 +221,7 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
                 
                 <div ref={qrRef} className="flex justify-center mb-8">
                    {/* Pass debounced config to QRCanvas to prevent heavy rendering on every keystroke */}
-                   <QRCanvas ref={canvasRef} onRendered={handleRendered} config={debouncedConfig} className="w-full max-h-[60vh] object-contain rounded-lg shadow-sm" />
+                   <QRCanvas ref={canvasRef} onRendered={handleRendered} config={config} className="w-full max-h-[60vh] object-contain rounded-lg shadow-sm" />
                 </div>
 
                 <div className="grid grid-cols-1 gap-3 w-full">

@@ -1,10 +1,10 @@
-import { useQRContext } from '@/context/QRContext';
+import { useQRStore, useQRStoreSelector } from '@/context/QRContext';
 
 export function useTheme() {
-  const { preferences, updatePreferences } = useQRContext();
-  const isDarkMode = preferences.darkMode;
+  const store = useQRStore();
+  const isDarkMode = useQRStoreSelector(s => s.preferences.darkMode);
   
-  const toggleDarkMode = () => updatePreferences({ darkMode: !isDarkMode });
+  const toggleDarkMode = () => store.updatePreferences({ darkMode: !isDarkMode });
 
   return { isDarkMode, toggleDarkMode };
 }
