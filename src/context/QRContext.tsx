@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useCallback, useRef, useSyncExternalStore, useEffect } from 'react';
+import React, { createContext, useContext, useCallback, useSyncExternalStore, useEffect } from 'react';
 import { QRConfig } from '@/types';
 import { DEFAULT_CONFIG } from '@/constants';
 
@@ -60,12 +60,8 @@ const asyncPersist = (() => {
 
   return (key: string, value: string) => {
     queue.push({ key, value, retries: 3 });
-    // Run outside of main thread cycle
-    if (typeof queueMicrotask !== 'undefined') {
-      queueMicrotask(processQueue);
-    } else {
-      setTimeout(processQueue, 0);
-    }
+    // Run as macrotask to defer after paint
+    setTimeout(processQueue, 0);
   };
 })();
 
@@ -78,15 +74,15 @@ class QRStore {
   };
 
   constructor(initialConfig?: Partial<QRConfig>) {
-    let savedOptIn: string | null = null;
     const storage = getSafeLocalStorage();
-    savedOptIn = storage.getItem('qr-telemetry-opt-in');
-    
+    const savedOptIn = storage.getItem('qr-telemetry-opt-in');
+    const savedDarkMode = storage.getItem('qr-dark-mode');
+
     this.state = {
       config: { ...DEFAULT_CONFIG, ...initialConfig },
       preferences: {
         telemetryOptIn: savedOptIn === 'true' ? true : savedOptIn === 'false' ? false : null,
-        darkMode: false,
+        darkMode: savedDarkMode === 'true',
       },
       moduleCount: 0,
     };
@@ -106,9 +102,12 @@ class QRStore {
   updatePreferences = (updates: Partial<QRPreferences>) => {
     const newPrefs = { ...this.state.preferences, ...updates };
     this.setState({ preferences: newPrefs });
-    
+
     if (updates.telemetryOptIn !== undefined && updates.telemetryOptIn !== null) {
       asyncPersist('qr-telemetry-opt-in', String(updates.telemetryOptIn));
+    }
+    if (updates.darkMode !== undefined) {
+      asyncPersist('qr-dark-mode', String(updates.darkMode));
     }
   }
 
@@ -168,14 +167,19 @@ export function useQRStoreSelector<R>(selector: (state: QRStoreState) => R): R {
   
   // To avoid issues where the selector function itself changes (e.g., inline arrow function),
   // we memoize the selected value manually.
-  const memoRef = React.useRef<{ state: QRStoreState, selected: R }>(null as any);
-  
+  const memoRef = React.useRef<{ state: QRStoreState, selected: R, selector: (state: QRStoreState) => R }>(null as any);
+
   const getMemoizedSnapshot = useCallback(() => {
     const nextState = store.getState();
     // Use the ref inside the callback, which is called by React outside of the render phase
     // or during it, but we can manage the cache safely here.
     if (!memoRef.current) {
-      memoRef.current = { state: nextState, selected: selector(nextState) };
+      memoRef.current = { state: nextState, selected: selector(nextState), selector };
+    } else if (selector !== memoRef.current.selector) {
+      // Selector function changed, recompute
+      memoRef.current.selector = selector;
+      memoRef.current.state = nextState;
+      memoRef.current.selected = selector(nextState);
     } else if (nextState !== memoRef.current.state) {
       memoRef.current.state = nextState;
       const nextSelected = selector(nextState);
@@ -208,15 +212,22 @@ export const useQRContext = () => {
 
 export const useOptionalQRContext = () => {
   const store = useContext(QRContext);
-  if (!store) return undefined;
-  // Fallback for optional use
+
+  const state = useSyncExternalStore(
+    store ? store.subscribe : () => () => {},
+    store ? store.getState : () => ({} as QRStoreState),
+    store ? store.getState : () => ({} as QRStoreState)
+  );
+
+  if (!store || !state.config) return undefined;
+
   return {
-    config: store.getState().config,
+    config: state.config,
     updateConfig: store.updateConfig,
     emitSignal: store.emitSignal,
     registerSignal: store.registerSignal,
-    preferences: store.getState().preferences,
+    preferences: state.preferences,
     updatePreferences: store.updatePreferences,
-    moduleCount: store.getState().moduleCount
+    moduleCount: state.moduleCount
   };
 };
