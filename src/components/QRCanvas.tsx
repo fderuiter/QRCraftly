@@ -225,6 +225,7 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({ config, s
     [SocialFormat.SQUARE_1_1]: 'aspect-square',
     [SocialFormat.PORTRAIT_4_5]: 'aspect-[4/5]',
     [SocialFormat.STORY_9_16]: 'aspect-[9/16]',
+    [SocialFormat.LANDSCAPE_16_9]: 'aspect-[16/9]',
   }[config.socialFormat];
 
   const containerClasses = className ? `${className} ${aspectRatioClass}` : aspectRatioClass;

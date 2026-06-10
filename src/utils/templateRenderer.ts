@@ -27,6 +27,7 @@ export const SOCIAL_DIMENSIONS: Record<SocialFormat, { width: number; height: nu
   [SocialFormat.SQUARE_1_1]: { width: 1080, height: 1080 },
   [SocialFormat.PORTRAIT_4_5]: { width: 1080, height: 1350 },
   [SocialFormat.STORY_9_16]: { width: 1080, height: 1920 },
+  [SocialFormat.LANDSCAPE_16_9]: { width: 1920, height: 1080 },
 };
 
 /**

@@ -340,6 +340,7 @@ export enum SocialFormat {
   SQUARE_1_1 = '1:1',
   PORTRAIT_4_5 = '4:5',
   STORY_9_16 = '9:16',
+  LANDSCAPE_16_9 = '16:9',
 }
 
 /**
