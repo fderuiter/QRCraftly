@@ -43,13 +43,11 @@ function renderTelemetry(status: Parameters<typeof useTelemetry>[0]) {
 // Tests
 // ---------------------------------------------------------------------------
 describe('useTelemetry', () => {
-  let fetchSpy: ReturnType<typeof vi.fn>;
+  let workerPostMessageSpy: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     window.localStorage.clear();
-    // Mock global fetch
-    fetchSpy = vi.fn().mockResolvedValue(new Response('', { status: 200 }));
-    global.fetch = fetchSpy;
+    workerPostMessageSpy = vi.spyOn(global.Worker.prototype, 'postMessage');
   });
 
   afterEach(() => {
@@ -107,16 +105,18 @@ describe('useTelemetry', () => {
     act(() => {
       result.current.telemetry.handleOptIn(true);
     });
-    expect(fetchSpy).toHaveBeenCalledWith(
-      '/api/telemetry/scannability',
+    expect(workerPostMessageSpy).toHaveBeenCalledWith(
       expect.objectContaining({
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        type: 'scannability-fail',
+        detail: expect.objectContaining({
+          engine: expect.any(String),
+          errorType: 'NOT_FOUND',
+        }),
       })
     );
     // Verify the body includes expected fields
-    const callArgs = fetchSpy.mock.calls[0];
-    const body = JSON.parse(callArgs[1].body);
+    const callArgs = workerPostMessageSpy.mock.calls[0];
+    const body = callArgs[0].detail;
     expect(body).toHaveProperty('engine');
     expect(body).toHaveProperty('errorType', 'NOT_FOUND');
   });
@@ -130,7 +130,7 @@ describe('useTelemetry', () => {
     act(() => {
       result.current.telemetry.handleOptIn(true);
     });
-    const body = JSON.parse(fetchSpy.mock.calls[0][1].body);
+    const body = workerPostMessageSpy.mock.calls[0][0].detail;
     expect(body.styleId).toBe('grunge');
   });
 
@@ -139,7 +139,7 @@ describe('useTelemetry', () => {
     act(() => {
       result.current.telemetry.handleOptIn(false);
     });
-    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(workerPostMessageSpy).not.toHaveBeenCalled();
   });
 
   it('handleOptIn(true) when status is not fail does NOT send immediate ping', () => {
@@ -147,7 +147,7 @@ describe('useTelemetry', () => {
     act(() => {
       result.current.telemetry.handleOptIn(true);
     });
-    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(workerPostMessageSpy).not.toHaveBeenCalled();
   });
 
   it('handleOptIn(true) when status=idle does NOT send immediate ping', () => {
@@ -155,7 +155,7 @@ describe('useTelemetry', () => {
     act(() => {
       result.current.telemetry.handleOptIn(true);
     });
-    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(workerPostMessageSpy).not.toHaveBeenCalled();
   });
 
   // -------------------------------------------------------------------------
@@ -179,7 +179,7 @@ describe('useTelemetry', () => {
         errorType: 'NOT_FOUND',
       });
     });
-    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(workerPostMessageSpy).toHaveBeenCalledTimes(1);
     void registerSpy; // used to avoid lint warnings
   });
 
@@ -196,8 +196,8 @@ describe('useTelemetry', () => {
         errorType: 'DECODE_FAIL',
       });
     });
-    expect(fetchSpy).toHaveBeenCalledTimes(1);
-    const body = JSON.parse(fetchSpy.mock.calls[0][1].body);
+    expect(workerPostMessageSpy).toHaveBeenCalledTimes(1);
+    const body = workerPostMessageSpy.mock.calls[0][0].detail;
     expect(body.engine).toBe('Firefox');
     expect(body.styleId).toBe('circuit');
   });
@@ -210,7 +210,12 @@ describe('useTelemetry', () => {
     act(() => {
       result.current.store.emitSignal('scannability-fail', { errorType: 'fail' });
     });
-    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(workerPostMessageSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'scannability-fail',
+        detail: expect.objectContaining({ telemetryOptIn: false })
+      })
+    );
   });
 
   it('does NOT send ping via scannability-fail signal when telemetryOptIn is null', () => {
@@ -219,7 +224,12 @@ describe('useTelemetry', () => {
     act(() => {
       result.current.store.emitSignal('scannability-fail', { errorType: 'fail' });
     });
-    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(workerPostMessageSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'scannability-fail',
+        detail: expect.objectContaining({ telemetryOptIn: null })
+      })
+    );
   });
 
   // -------------------------------------------------------------------------
@@ -242,7 +252,7 @@ describe('useTelemetry', () => {
     act(() => {
       result.current.telemetry.handleOptIn(true);
     });
-    const body = JSON.parse(fetchSpy.mock.calls[0][1].body);
+    const body = workerPostMessageSpy.mock.calls[0][0].detail;
     expect(body.styleId).toBe('default');
   });
 });
