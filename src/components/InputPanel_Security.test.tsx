@@ -36,36 +36,43 @@ describe('InputPanel Security (Input Limits)', () => {
   it('enforces maxLength on URL input', () => {
     render(<InputPanel config={{ ...DEFAULT_CONFIG, type: QRType.URL }} onChange={mockOnChange} />);
     const input = screen.getByLabelText('Website URL');
-    expect(input).toHaveAttribute('maxLength', '2048');
+    fireEvent.change(input, { target: { value: 'a'.repeat(2049) } });
+    expect(input).toHaveValue('a'.repeat(2048));
   });
 
   it('enforces maxLength on Text content', () => {
     render(<InputPanel config={{ ...DEFAULT_CONFIG, type: QRType.TEXT }} onChange={mockOnChange} />);
     const input = screen.getByLabelText('Content');
-    expect(input).toHaveAttribute('maxLength', '2500');
+    fireEvent.change(input, { target: { value: 'a'.repeat(2501) } });
+    expect(input).toHaveValue('a'.repeat(2500));
   });
 
   it('enforces maxLength on WiFi inputs', () => {
     render(<InputPanel config={{ ...DEFAULT_CONFIG, type: QRType.WIFI }} onChange={mockOnChange} />);
 
     const ssid = screen.getByLabelText('Network Name (SSID)');
-    expect(ssid).toHaveAttribute('maxLength', '32');
+    fireEvent.change(ssid, { target: { value: 'a'.repeat(33) } });
+    expect(ssid).toHaveValue('a'.repeat(32));
 
     const password = screen.getByLabelText('Password');
-    expect(password).toHaveAttribute('maxLength', '63');
+    fireEvent.change(password, { target: { value: 'a'.repeat(64) } });
+    expect(password).toHaveValue('a'.repeat(63));
   });
 
   it('enforces maxLength on Email inputs', () => {
     render(<InputPanel config={{ ...DEFAULT_CONFIG, type: QRType.EMAIL }} onChange={mockOnChange} />);
 
     const email = screen.getByLabelText('Email Address');
-    expect(email).toHaveAttribute('maxLength', '254'); // RFC 5321
+    fireEvent.change(email, { target: { value: 'a'.repeat(255) } });
+    expect(email).toHaveValue('a'.repeat(254)); // RFC 5321
 
     const subject = screen.getByLabelText('Subject');
-    expect(subject).toHaveAttribute('maxLength', '200');
+    fireEvent.change(subject, { target: { value: 'a'.repeat(201) } });
+    expect(subject).toHaveValue('a'.repeat(200));
 
     const body = screen.getByLabelText('Body');
-    expect(body).toHaveAttribute('maxLength', '2000');
+    fireEvent.change(body, { target: { value: 'a'.repeat(2001) } });
+    expect(body).toHaveValue('a'.repeat(2000));
   });
 
   it('rejects dangerous protocols in URL input', () => {

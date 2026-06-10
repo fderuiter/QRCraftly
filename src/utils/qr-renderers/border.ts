@@ -59,7 +59,8 @@ export const renderBorderDecoration = (
         } else if (config.borderTextPosition === 'top-center') {
             ty = borderPx / 2;
         }
-        ctx.fillText(config.borderText, tx, ty);
+        const maxWidth = displaySize * 0.9;
+        ctx.fillText(config.borderText, tx, ty, maxWidth);
     }
 
     if (config.borderLogoUrl && borderLogoImg) {

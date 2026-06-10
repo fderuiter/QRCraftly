@@ -2,6 +2,7 @@ import React, { useState, forwardRef } from 'react';
 import { Button } from './Button';
 import { Eye, EyeOff } from 'lucide-react';
 import { CharCount } from '../CharCount';
+import { VisualSanityService } from '../../utils/visualSanityService';
 
 export interface TextFieldProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size' | 'id'> {
   label?: string;
@@ -21,6 +22,15 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(
 
     const labelClass = 'block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1';
 
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (maxLength && VisualSanityService.countGraphemes(e.target.value) > maxLength) {
+        e.target.value = VisualSanityService.sliceByGraphemes(e.target.value, maxLength);
+      }
+      if (props.onChange) {
+        props.onChange(e);
+      }
+    };
+
     return (
       <div className={className}>
         {label && (
@@ -38,12 +48,12 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(
             id={inputId}
             ref={ref}
             type={effectiveType}
-            maxLength={maxLength}
             value={value}
             className={`w-full bg-white dark:bg-slate-900 border ${error ? 'border-rose-500' : 'border-slate-300 dark:border-slate-700'} rounded-lg outline-none transition-all text-slate-700 dark:text-slate-100 text-sm px-3 py-2 ${showPasswordToggle ? 'pr-10' : ''}`}
             aria-invalid={!!error}
             aria-describedby={error ? `${inputId}-error` : undefined}
             {...props}
+            onChange={handleChange}
           />
           {showPasswordToggle && (
             <Button
@@ -59,7 +69,7 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(
           )}
         </div>
         {showCharCount && maxLength && (
-          <CharCount current={String(value || '').length} max={maxLength} />
+          <CharCount current={VisualSanityService.countGraphemes(String(value || ''))} max={maxLength} />
         )}
         {error && (
           <p id={`${inputId}-error`} role="alert" className="mt-1 text-xs text-rose-600 dark:text-rose-400">

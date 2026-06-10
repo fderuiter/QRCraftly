@@ -328,13 +328,17 @@ export class SvgContext {
   }
 
   /** Renders text as an SVG <text> element. */
-  fillText(text: string, x: number, y: number): void {
+  fillText(text: string, x: number, y: number, maxWidth?: number): void {
     const fill = this._cssColor(this.fillStyle);
     const [tx, ty] = this._applyTransform(x, y);
     const anchor = this._svgTextAnchor(this.textAlign);
     const baseline = this._svgDominantBaseline(this.textBaseline);
+    let extraAttrs = '';
+    if (maxWidth !== undefined) {
+      extraAttrs = ` textLength="${this._n(maxWidth)}" lengthAdjust="spacingAndGlyphs"`;
+    }
     this._elements.push(
-      `<text x="${this._n(tx)}" y="${this._n(ty)}" fill="${fill}" font="${this._escapeAttr(this.font)}" text-anchor="${anchor}" dominant-baseline="${baseline}">${this._escapeText(text)}</text>`
+      `<text x="${this._n(tx)}" y="${this._n(ty)}" fill="${fill}" font="${this._escapeAttr(this.font)}" text-anchor="${anchor}" dominant-baseline="${baseline}"${extraAttrs}>${this._escapeText(text)}</text>`
     );
   }
 

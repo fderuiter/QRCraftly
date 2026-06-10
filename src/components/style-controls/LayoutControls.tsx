@@ -16,13 +16,15 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Button } from '../ui/Button';
-import { Square, Smartphone } from 'lucide-react';
+import { Square, Smartphone, AlertTriangle } from 'lucide-react';
 import { QRConfig, SocialFormat, TemplateStyle } from '../../types';
 import { ColorInput } from '../ui/ColorInput';
 import { RangeInput } from '../ui/RangeInput';
 import { CheckboxField } from '../inputs/FormFields';
+import { VisualSanityService } from '../../utils/visualSanityService';
+import { SOCIAL_DIMENSIONS } from '../../utils/templateRenderer';
 
 interface LayoutControlsProps {
   config: QRConfig;
@@ -72,6 +74,14 @@ export const LayoutControls: React.FC<LayoutControlsProps> = ({ config, onChange
   // Whether custom (decoupled) background / text colors are active
   const hasBgOverride = config.templateBgColor !== undefined;
   const hasTextOverride = config.templateTextColor !== undefined;
+
+  const { width: displayWidth } = SOCIAL_DIMENSIONS[config.socialFormat];
+  const headlineFontSize = Math.round(displayWidth * 0.055);
+  const subtextFontSize = Math.round(displayWidth * 0.038);
+  const maxWidth = displayWidth * 0.9;
+
+  const headlineHealth = useMemo(() => VisualSanityService.checkHealth(config.templateHeadline || '', { font: `bold ${headlineFontSize}px sans-serif`, maxWidth }), [config.templateHeadline, headlineFontSize, maxWidth]);
+  const subtextHealth = useMemo(() => VisualSanityService.checkHealth(config.templateSubtext || '', { font: `${subtextFontSize}px sans-serif`, maxWidth }), [config.templateSubtext, subtextFontSize, maxWidth]);
 
   return (
     <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
@@ -128,22 +138,38 @@ export const LayoutControls: React.FC<LayoutControlsProps> = ({ config, onChange
       {/* Text Inputs (visible only when a template is active) */}
       {showTextInputs && (
         <div className="mt-4 space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
-          <input
-            type="text"
-            placeholder="Headline (e.g. Scan Me!)"
-            value={config.templateHeadline ?? ''}
-            onChange={(e) => onChange({ templateHeadline: e.target.value })}
-            aria-label="Template headline"
-            className="w-full px-2 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs text-slate-700 dark:text-slate-200 focus:outline-none focus:border-teal-500"
-          />
-          <input
-            type="text"
-            placeholder="Subtext (e.g. @yourhandle)"
-            value={config.templateSubtext ?? ''}
-            onChange={(e) => onChange({ templateSubtext: e.target.value })}
-            aria-label="Template subtext"
-            className="w-full px-2 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs text-slate-700 dark:text-slate-200 focus:outline-none focus:border-teal-500"
-          />
+          <div>
+            <input
+              type="text"
+              placeholder="Headline (e.g. Scan Me!)"
+              value={config.templateHeadline ?? ''}
+              onChange={(e) => onChange({ templateHeadline: e.target.value })}
+              aria-label="Template headline"
+              className="w-full px-2 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs text-slate-700 dark:text-slate-200 focus:outline-none focus:border-teal-500"
+            />
+            {!headlineHealth.isHealthy && (
+              <div className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1 mt-1">
+                <AlertTriangle className="w-3 h-3" />
+                {headlineHealth.warnings[0]}
+              </div>
+            )}
+          </div>
+          <div>
+            <input
+              type="text"
+              placeholder="Subtext (e.g. @yourhandle)"
+              value={config.templateSubtext ?? ''}
+              onChange={(e) => onChange({ templateSubtext: e.target.value })}
+              aria-label="Template subtext"
+              className="w-full px-2 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs text-slate-700 dark:text-slate-200 focus:outline-none focus:border-teal-500"
+            />
+            {!subtextHealth.isHealthy && (
+              <div className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1 mt-1">
+                <AlertTriangle className="w-3 h-3" />
+                {subtextHealth.warnings[0]}
+              </div>
+            )}
+          </div>
         </div>
       )}
 

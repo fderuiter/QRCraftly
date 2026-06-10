@@ -1,6 +1,7 @@
 import React, { } from "react";
 import { TEXT_AREA_CLASSES, SELECT_CLASSES } from "./styles";
 import { CharCount } from "../CharCount";
+import { VisualSanityService } from "../../utils/visualSanityService";
 export { TextField } from "../ui/TextField";
 
 interface BaseFieldProps {
@@ -47,7 +48,7 @@ const FieldWrapper: React.FC<FieldWrapperProps> = ({
       </label>
       {children}
       {showCharCount && maxLength && (
-        <CharCount current={String(value || "").length} max={maxLength} />
+        <CharCount current={VisualSanityService.countGraphemes(String(value || ""))} max={maxLength} />
       )}
     </div>
   );
@@ -72,6 +73,15 @@ export const TextAreaField: React.FC<TextAreaFieldProps> = ({
   value,
   ...props
 }) => {
+  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    if (maxLength && VisualSanityService.countGraphemes(e.target.value) > maxLength) {
+      e.target.value = VisualSanityService.sliceByGraphemes(e.target.value, maxLength);
+    }
+    if (props.onChange) {
+      props.onChange(e);
+    }
+  };
+
   return (
     <FieldWrapper
       id={id}
@@ -85,10 +95,10 @@ export const TextAreaField: React.FC<TextAreaFieldProps> = ({
     >
       <textarea
         id={id}
-        maxLength={maxLength}
         className={TEXT_AREA_CLASSES}
         value={value}
         {...props}
+        onChange={handleChange}
       />
     </FieldWrapper>
   );

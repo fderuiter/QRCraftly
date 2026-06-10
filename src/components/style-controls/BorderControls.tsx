@@ -1,6 +1,6 @@
 import React, { useRef, useMemo } from 'react';
 import { Button } from '../ui/Button';
-import { QRConfig, BorderStyle, BorderTextPosition, BorderLogoPosition } from '../../types';
+import { QRConfig, BorderStyle, BorderTextPosition, BorderLogoPosition, TemplateStyle, SocialFormat } from '../../types';
 import { Upload, X, AlertTriangle } from 'lucide-react';
 import { getContrastRatio } from '../../utils/colorUtils';
 import { ColorInput } from '../ui/ColorInput';
@@ -8,6 +8,8 @@ import { RangeInput } from '../ui/RangeInput';
 import { useImageUpload } from '../../hooks/useImageUpload';
 import { ToggleSwitch } from '../inputs/ToggleSwitch';
 import { useOptionalQRContext } from '../../context/QRContext';
+import { VisualSanityService } from '../../utils/visualSanityService';
+import { SOCIAL_DIMENSIONS } from '../../utils/templateRenderer';
 
 interface BorderControlsProps {
   config: QRConfig;
@@ -39,6 +41,18 @@ export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange
   }, [config.isBorderEnabled, config.borderText, config.borderTextColor, config.borderColor]);
 
   const isLowBorderContrast = borderTextContrast < 4.5;
+  
+  const borderTextHealth = useMemo(() => {
+    const isNoneSquare = config.templateStyle === TemplateStyle.NONE && config.socialFormat === SocialFormat.SQUARE_1_1;
+    const userScale = Math.min(1.5, Math.max(0.5, config.templateQrScale ?? 1.0));
+    const baseQrFraction = isNoneSquare ? 1.0 : 0.5 * userScale;
+    const displayWidth = SOCIAL_DIMENSIONS[config.socialFormat]?.width || 1080;
+    const displaySize = displayWidth * baseQrFraction;
+    const borderPx = Math.max(1, Math.floor(displaySize * config.borderSize));
+    const fontSize = borderPx * 0.4;
+    const maxWidth = displaySize * 0.9;
+    return VisualSanityService.checkHealth(config.borderText || '', { font: `bold ${fontSize}px sans-serif`, maxWidth });
+  }, [config.borderText, config.templateStyle, config.socialFormat, config.templateQrScale, config.borderSize]);
 
   return (
     <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
@@ -115,6 +129,12 @@ export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange
                 className="w-full px-2 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs text-slate-700 dark:text-slate-200 focus:outline-none focus:border-teal-500"
                 aria-label="Border text"
               />
+              {!borderTextHealth.isHealthy && (
+                <div className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                  <AlertTriangle className="w-3 h-3" />
+                  {borderTextHealth.warnings[0]}
+                </div>
+              )}
               <div className="flex gap-2">
                 <select
                   value={config.borderTextPosition || 'bottom-center'}

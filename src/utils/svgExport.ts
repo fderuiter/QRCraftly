@@ -19,6 +19,7 @@
 import { QRConfig } from '../types';
 import { SvgContext } from './svgContext';
 import { drawWithTemplate, SOCIAL_DIMENSIONS } from './templateRenderer';
+import { VisualSanityService } from './visualSanityService';
 
 import { isDangerousUrl, REGEX_URL_UNSAFE_CHARS } from './security';
 
@@ -93,6 +94,13 @@ function makeImgProxy(src: string | null): HTMLImageElement | null {
  * @returns A promise that resolves to the SVG XML string.
  */
 export async function generateQRSvg(config: QRConfig, _legacySize?: number): Promise<string> {
+  if (VisualSanityService.checkComplexity(config.value) || 
+      (config.templateHeadline && VisualSanityService.checkComplexity(config.templateHeadline)) ||
+      (config.templateSubtext && VisualSanityService.checkComplexity(config.templateSubtext)) ||
+      (config.borderText && VisualSanityService.checkComplexity(config.borderText))) {
+    throw new Error('Text exceeds complexity threshold for SVG export');
+  }
+
   // Dynamically import qrcode to match the pattern used elsewhere in the project
   const QRCode = await import('qrcode');
   const qrData = QRCode.create(config.value, { errorCorrectionLevel: config.errorCorrectionLevel });

@@ -183,7 +183,7 @@ describe('QRCanvas Rendering Logic Extended', () => {
       render(<QRCanvas config={config} />);
 
       await waitFor(() => {
-          expect(mockContext.fillText).toHaveBeenCalledWith('TEST', expect.any(Number), expect.any(Number));
+          expect(mockContext.fillText).toHaveBeenCalledWith('TEST', expect.any(Number), expect.any(Number), expect.any(Number));
           // Verify Y position is small (near top)
           const call = mockContext.fillText.mock.calls[0];
           expect(call[2]).toBeLessThan(1024 / 2); // y < half height
