@@ -46,8 +46,8 @@ test.beforeEach(async ({ page }) => {
   });
   await page.goto('/');
   await page.waitForLoadState('networkidle');
-  // Wait until the Appearance section lazy-loads StyleControls (it uses React.lazy)
-  await page.getByText('Export Layout').waitFor({ state: 'visible' });
+  // Wait for a stable control in the Export Layout section to avoid text-only flakiness on CI.
+  await expect(page.getByRole('group', { name: 'Aspect Ratio' })).toBeVisible({ timeout: 60000 });
 });
 
 // ---------------------------------------------------------------------------
