@@ -1,5 +1,6 @@
 export const getPublicDomain = (): string => {
-  return import.meta.env.VITE_DOMAIN || 'https://qrcraftly.com';
+  const domain = import.meta.env.VITE_DOMAIN || 'https://qrcraftly.com';
+  return domain.replace(/\/+$/, '');
 };
 
 export const resolveDomainForPath = (path: string): string => {

@@ -18,13 +18,18 @@
 
 import { QRTypePage } from '@/components/QRTypePage';
 import { QRType } from '@/types';
-import { toolMetadata } from '@/data/metadata';
+import { contentRegistry } from '@/data/contentRegistry';
+import { generateSchema } from '@/utils/schemaGenerator';
+import { resolveDomainForPath } from '@/utils/metadataEngine';
+import { usePageContext } from 'vike-react/usePageContext';
 
 /**
  * Phone QR Code Page Component
  */
 export default function Page() {
-  const schemaData = toolMetadata['phone-qr-code'];
+  const pageContext = usePageContext();
+  const resolvedDomain = resolveDomainForPath(pageContext.urlPathname);
+  const schemaData = generateSchema(contentRegistry['phone-qr-code'], resolvedDomain);
 
   return <QRTypePage type={QRType.PHONE} title="Phone QR Code" schemaData={schemaData}  toolId="phone-qr-code" />;
 }

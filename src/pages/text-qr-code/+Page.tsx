@@ -18,13 +18,18 @@
 
 import { QRTypePage } from '@/components/QRTypePage';
 import { QRType } from '@/types';
-import { toolMetadata } from '@/data/metadata';
+import { contentRegistry } from '@/data/contentRegistry';
+import { generateSchema } from '@/utils/schemaGenerator';
+import { resolveDomainForPath } from '@/utils/metadataEngine';
+import { usePageContext } from 'vike-react/usePageContext';
 
 /**
  * Text QR Code Page Component
  */
 export default function Page() {
-  const schemaData = toolMetadata['text-qr-code'];
+  const pageContext = usePageContext();
+  const resolvedDomain = resolveDomainForPath(pageContext.urlPathname);
+  const schemaData = generateSchema(contentRegistry['text-qr-code'], resolvedDomain);
 
   return <QRTypePage type={QRType.TEXT} title="Text QR Code" schemaData={schemaData}  toolId="text-qr-code" />;
 }

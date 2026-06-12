@@ -18,7 +18,10 @@
 
 import QRTool from '@/components/QRTool';
 import { safeJsonLdStringify } from '@/utils/security';
-import { toolMetadata } from '@/data/metadata';
+import { contentRegistry } from '@/data/contentRegistry';
+import { generateSchema } from '@/utils/schemaGenerator';
+import { resolveDomainForPath } from '@/utils/metadataEngine';
+import { usePageContext } from 'vike-react/usePageContext';
 
 /**
  * Home Page Component
@@ -29,7 +32,9 @@ import { toolMetadata } from '@/data/metadata';
  * @returns {JSX.Element} The home page layout.
  */
 export default function Page() {
-  const schemaData = toolMetadata['index'];
+  const pageContext = usePageContext();
+  const resolvedDomain = resolveDomainForPath(pageContext.urlPathname);
+  const schemaData = generateSchema(contentRegistry['index'], resolvedDomain);
 
   return (
     <>
