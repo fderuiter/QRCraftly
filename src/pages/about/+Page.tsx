@@ -37,7 +37,7 @@ import { usePageContext } from 'vike-react/usePageContext';
 export default function Page() {
   const pageContext = usePageContext();
   const resolvedDomain = resolveDomainForPath(pageContext.urlPathname);
-  const schemaData = generateSchema(contentRegistry['about'], resolvedDomain);
+  const schemaData = generateSchema(contentRegistry['about'], resolvedDomain, pageContext.urlPathname);
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-12">

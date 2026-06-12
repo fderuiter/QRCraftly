@@ -29,7 +29,7 @@ import { usePageContext } from 'vike-react/usePageContext';
 export default function Page() {
   const pageContext = usePageContext();
   const resolvedDomain = resolveDomainForPath(pageContext.urlPathname);
-  const schemaData = generateSchema(contentRegistry['text-qr-code'], resolvedDomain);
+  const schemaData = generateSchema(contentRegistry['text-qr-code'], resolvedDomain, pageContext.urlPathname);
 
   return <QRTypePage type={QRType.TEXT} title="Text QR Code" schemaData={schemaData}  toolId="text-qr-code" />;
 }

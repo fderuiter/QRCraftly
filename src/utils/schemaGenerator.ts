@@ -1,8 +1,9 @@
 import { ToolContent } from '../data/contentRegistry';
-import { resolveDomainForPath } from './metadataEngine';
+import { resolveDomainForPath, resolvePublicUrl } from './metadataEngine';
 
-export function generateSchema(content: ToolContent, resolvedDomain?: string): any {
+export function generateSchema(content: ToolContent, resolvedDomain?: string, requestPath?: string): any {
   const domain = resolvedDomain || resolveDomainForPath(content.url);
+  const publicUrl = requestPath ? resolvePublicUrl(requestPath) : content.url;
   
   if (content.id === 'about') {
     return {
@@ -11,7 +12,7 @@ export function generateSchema(content: ToolContent, resolvedDomain?: string): a
         {
           "@type": "AboutPage",
           "name": content.name,
-          "url": content.url,
+          "url": publicUrl,
           "mainEntity": {
             "@type": "Organization",
             "@id": `${domain}/#organization`,
@@ -40,7 +41,7 @@ export function generateSchema(content: ToolContent, resolvedDomain?: string): a
     {
       "@type": "WebApplication",
       "name": content.name,
-      "url": content.url,
+      "url": publicUrl,
       "applicationCategory": "Utilities",
       "operatingSystem": "All",
       "softwareVersion": "0.1.0",

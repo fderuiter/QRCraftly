@@ -29,7 +29,7 @@ import { usePageContext } from 'vike-react/usePageContext';
 export default function Page() {
   const pageContext = usePageContext();
   const resolvedDomain = resolveDomainForPath(pageContext.urlPathname);
-  const schemaData = generateSchema(contentRegistry['vcard-qr-code'], resolvedDomain);
+  const schemaData = generateSchema(contentRegistry['vcard-qr-code'], resolvedDomain, pageContext.urlPathname);
 
   return <QRTypePage type={QRType.VCARD} title="VCard QR Code" schemaData={schemaData}  toolId="vcard-qr-code" />;
 }
