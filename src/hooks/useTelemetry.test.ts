@@ -48,8 +48,8 @@ describe('useTelemetry', () => {
   beforeEach(() => {
     window.localStorage.clear();
     // Mock global fetch
-    fetchSpy = vi.fn().mockResolvedValue(new Response('', { status: 200 }));
-    global.fetch = fetchSpy;
+    fetchSpy = vi.fn(async () => new Response('', { status: 200 }));
+    global.fetch = fetchSpy as typeof fetch;
   });
 
   afterEach(() => {

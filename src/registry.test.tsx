@@ -103,6 +103,7 @@ describe('registry.tsx - component registration and behavior', () => {
     const calls = (ComponentRegistry.registerSidebarControl as ReturnType<typeof vi.fn>).mock.calls;
     const contentCall = calls.find(([arg]: any[]) => arg?.id === 'content');
     expect(contentCall).toBeDefined();
+    if (!contentCall) throw new Error('Expected content registration to exist');
     expect(contentCall[0].order).toBe(10);
     expect(typeof contentCall[0].component).toBe('function');
   });
@@ -112,6 +113,7 @@ describe('registry.tsx - component registration and behavior', () => {
     const calls = (ComponentRegistry.registerSidebarControl as ReturnType<typeof vi.fn>).mock.calls;
     const appearanceCall = calls.find(([arg]: any[]) => arg?.id === 'appearance');
     expect(appearanceCall).toBeDefined();
+    if (!appearanceCall) throw new Error('Expected appearance registration to exist');
     expect(appearanceCall[0].order).toBe(20);
     expect(typeof appearanceCall[0].component).toBe('function');
   });
@@ -121,6 +123,7 @@ describe('registry.tsx - component registration and behavior', () => {
     const calls = (ComponentRegistry.registerSidebarControl as ReturnType<typeof vi.fn>).mock.calls;
     const sidebarCall = calls.find(([arg]: any[]) => arg?.id === 'sidebar-content');
     expect(sidebarCall).toBeDefined();
+    if (!sidebarCall) throw new Error('Expected sidebar-content registration to exist');
     expect(sidebarCall[0].order).toBe(30);
   });
 
