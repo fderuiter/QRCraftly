@@ -2,12 +2,14 @@ import React, { Suspense } from 'react';
 import { ComponentRegistry } from '@/utils/ComponentRegistry';
 import InputPanel from '@/components/InputPanel';
 import { SidebarContent } from '@/components/SidebarContent';
-import { useQRContext } from '@/context/QRContext';
+import { useQRStore, useQRStoreSelector } from '@/context/QRContext';
 
 const StyleControls = React.lazy(() => import('@/components/StyleControls'));
 
 const ContentControl = () => {
-  const { config, updateConfig } = useQRContext();
+  const store = useQRStore();
+  const config = useQRStoreSelector(state => state.config);
+  const { updateConfig } = store;
   return (
     <section>
       <h2 className="text-xs uppercase tracking-wider text-slate-600 dark:text-slate-400 font-bold mb-4">Content</h2>
@@ -17,7 +19,9 @@ const ContentControl = () => {
 };
 
 const AppearanceControl = () => {
-  const { config, updateConfig } = useQRContext();
+  const store = useQRStore();
+  const config = useQRStoreSelector(state => state.config);
+  const { updateConfig } = store;
   const [isMounted, setIsMounted] = React.useState(false);
   
   React.useEffect(() => {
