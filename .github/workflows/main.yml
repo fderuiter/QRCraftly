@@ -181,6 +181,10 @@ jobs:
     name: Build & Artifact
     needs: [quality, test, e2e] # Wait for quality checks before burning CPU on build
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - name: Setup pnpm
@@ -199,6 +203,20 @@ jobs:
           key: ${{ runner.os }}-node-${{ hashFiles('**/pnpm-lock.yaml') }}
 
       - run: pnpm run build
+
+      - name: Generate CycloneDX SBOM
+        run: pnpm dlx @cyclonedx/cyclonedx-npm --output-format JSON --output-file dist/client/bom.json
+
+      - name: Attest Build Provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: 'dist/**/*'
+
+      - name: Attest SBOM
+        uses: actions/attest-sbom@v2
+        with:
+          subject-path: 'dist/**/*'
+          sbom-path: dist/client/bom.json
 
       - name: Check Bundle Size
         run: |
@@ -251,6 +269,12 @@ jobs:
         with:
           name: dist
           path: dist
+
+      - name: Verify Build Attestation
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh attestation verify dist/client/index.html --repo ${{ github.repository }}
 
       - name: Run Lighthouse CI
         id: lighthouse_audit

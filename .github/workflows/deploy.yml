@@ -61,6 +61,9 @@ jobs:
           npm version ${{ github.event.inputs.version_bump }} --no-git-tag-version
           pnpm run build
 
+      - name: Generate CycloneDX SBOM
+        run: pnpm dlx @cyclonedx/cyclonedx-npm --output-format JSON --output-file dist/client/bom.json
+
       - name: Determine Release Information
         id: release_info
         run: |
@@ -99,6 +102,12 @@ jobs:
         with:
           subject-path: 'releases/manifest-${{ env.VERSION }}.json'
 
+      - name: Attest SBOM
+        uses: actions/attest-sbom@v2
+        with:
+          subject-path: 'dist/client/**/*'
+          sbom-path: dist/client/bom.json
+
       - name: Verify Attestations (Integrity Gate)
         env:
           GH_TOKEN: ${{ github.token }}
@@ -107,6 +116,8 @@ jobs:
           gh attestation verify releases/manifest-${{ env.VERSION }}.json --repo ${{ github.repository }}
           # Verify attestation for a primary web build asset as a proxy for the whole directory
           gh attestation verify dist/client/index.html --repo ${{ github.repository }}
+          # Verify SBOM attestation
+          gh attestation verify dist/client/bom.json --repo ${{ github.repository }}
 
       - name: Commit Release Manifest
         run: |
