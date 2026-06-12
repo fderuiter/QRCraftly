@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useMemo } from 'react';
 import { QRConfig } from '../types';
-import { useQRContext } from '@/context/QRContext';
+import { useQRStore } from '@/context/QRContext';
 import { getContrastRatio } from '../utils/colorUtils';
 
 export type ScannabilityStatus = 'idle' | 'checking' | 'digital-pass' | 'physical-pass' | 'fail';
@@ -13,7 +13,7 @@ export interface HealthScore {
 export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | null>, config: QRConfig) {
   const [status, setStatus] = useState<ScannabilityStatus>('idle');
   const workerRef = useRef<Worker | null>(null);
-  const { emitSignal } = useQRContext();
+  const store = useQRStore();
 
   const health = useMemo<HealthScore>(() => {
     let score = 100;
@@ -68,7 +68,7 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
       setStatus(success ? (physicalReady ? 'physical-pass' : 'digital-pass') : 'fail');
 
       if (!success && error) {
-        emitSignal('scannability-fail', {
+        store.emitSignal('scannability-fail', {
           engine: navigator.userAgent.includes('Safari') && !navigator.userAgent.includes('Chrome') ? 'WebKit' : 
                   navigator.userAgent.includes('Firefox') ? 'Firefox' : 'Chromium',
           styleId: config.style || 'default',
@@ -82,7 +82,7 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
     return () => {
       worker.removeEventListener('message', handleMessage);
     };
-  }, [config, emitSignal]);
+  }, [config, store]);
 
   // Expose a function to trigger check
   const checkScannability = (overrideImageData?: ImageData) => {
