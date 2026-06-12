@@ -227,4 +227,29 @@ describe('HeadDefault', () => {
     expect(ogImageAlt).toBeInTheDocument();
     expect(ogImageAlt?.getAttribute('content')).toBe('QRCraftly QR Code Example');
   });
+
+  it('correctly resolves subdomains from the _subdomain/ path prefix', () => {
+    mockUsePageContext.mockReturnValue({
+      urlPathname: '/_subdomain/tenant1/about',
+      config: {}
+    });
+
+    const { container } = render(<HeadDefault />, { container: document.head });
+
+    const canonical = container.querySelector('link[rel="canonical"]');
+    expect(canonical).toBeInTheDocument();
+    expect(canonical?.getAttribute('href')).toBe('https://tenant1.qrcraftly.com/about');
+
+    const ogUrl = container.querySelector('meta[property="og:url"]');
+    expect(ogUrl?.getAttribute('content')).toBe('https://tenant1.qrcraftly.com/about');
+
+    const scripts = document.head.querySelectorAll('script[type="application/ld+json"]');
+    const breadcrumbScript = Array.from(scripts).find(s => s.textContent?.includes('BreadcrumbList'));
+    const data = JSON.parse(breadcrumbScript!.textContent!);
+
+    expect(data.itemListElement).toHaveLength(2);
+    expect(data.itemListElement[0].item).toBe('https://tenant1.qrcraftly.com/');
+    expect(data.itemListElement[1].name).toBe('About');
+    expect(data.itemListElement[1].item).toBe('https://tenant1.qrcraftly.com/about');
+  });
 });

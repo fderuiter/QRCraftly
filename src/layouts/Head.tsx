@@ -18,6 +18,7 @@
 
 import { usePageContext } from 'vike-react/usePageContext';
 import { safeJsonLdStringify } from '@/utils/security';
+import { resolveDomainForPath, resolvePublicUrl, resolveImageUrl, getSanitizedPath } from '@/utils/metadataEngine';
 
 /**
  * HeadDefault Component
@@ -48,45 +49,25 @@ export default function HeadDefault() {
   const title = getString(config?.title ?? undefined, pageContext, "QRCraftly - Free Custom QR Code Generator");
   const description = getString(config?.description ?? undefined, pageContext, "Generate beautiful, custom QR codes for free. No sign-up required.");
 
-  // Define domain constant to ensure consistency
-  const DOMAIN = "https://qrcraftly.com";
+  const resolvedDomain = resolveDomainForPath(pageContext.urlPathname);
+  const canonicalUrl = resolvePublicUrl(pageContext.urlPathname);
 
   // Resolve Open Graph Image
   // Allows pages to override the default OG image via config.image
   const imageConfig = config?.image;
-  let imageUrl = `${DOMAIN}/og-image.png`; // Default
-
-  if (imageConfig) {
-      if (imageConfig.startsWith('http')) {
-          imageUrl = imageConfig;
-      } else if (imageConfig.startsWith('/')) {
-          imageUrl = `${DOMAIN}${imageConfig}`;
-      } else {
-          imageUrl = `${DOMAIN}/${imageConfig}`;
-      }
-  }
+  const imageUrl = resolveImageUrl(imageConfig, pageContext.urlPathname);
 
   const imageAlt = config?.imageAlt || "QRCraftly QR Code Example";
-
-  // Ensure we don't end up with double slashes if urlPathname is just '/'
-  let path = pageContext.urlPathname;
-  // Normalize path to remove trailing slash for canonical URL
-  if (path !== '/' && path.endsWith('/')) {
-    path = path.slice(0, -1);
-  }
-  const canonicalPath = path === '/' ? '' : path;
-
-  const canonicalUrl = `${DOMAIN}${canonicalPath}`;
 
   const schemaData = {
     "@context": "https://schema.org",
     "@graph": [
       {
         "@type": "Organization",
-        "@id": `${DOMAIN}/#organization`,
+        "@id": `${resolvedDomain}/#organization`,
         "name": "QRCraftly",
-        "url": DOMAIN,
-        "logo": `${DOMAIN}/favicon.png`,
+        "url": resolvedDomain,
+        "logo": `${resolvedDomain}/favicon.png`,
         "sameAs": [
           "https://github.com/fderuiter/QRCraftly"
         ]
@@ -94,10 +75,10 @@ export default function HeadDefault() {
       {
         "@type": "WebSite",
         "name": "QRCraftly",
-        "url": DOMAIN,
+        "url": resolvedDomain,
         "description": "Free, secure, and client-side QR code generator with zero-knowledge architecture.",
         "publisher": {
-          "@id": `${DOMAIN}/#organization`
+          "@id": `${resolvedDomain}/#organization`
         }
       }
     ]
@@ -128,12 +109,13 @@ export default function HeadDefault() {
       "@type": "ListItem",
       "position": 1,
       "name": "Home",
-      "item": `${DOMAIN}/`
+      "item": `${resolvedDomain}/`
     }
   ];
 
   // Dynamically generate breadcrumbs from path
-  const pathSegments = pageContext.urlPathname.split('/').filter(Boolean);
+  const sanitizedPath = getSanitizedPath(pageContext.urlPathname);
+  const pathSegments = sanitizedPath.split('/').filter(Boolean);
   let currentPath = '';
 
   pathSegments.forEach((segment: string, index: number) => {
@@ -142,7 +124,7 @@ export default function HeadDefault() {
       "@type": "ListItem",
       "position": index + 2, // 1 is Home, so start at 2
       "name": formatPathName(segment),
-      "item": `${DOMAIN}${currentPath}`
+      "item": `${resolvedDomain}${currentPath}`
     });
   });
 

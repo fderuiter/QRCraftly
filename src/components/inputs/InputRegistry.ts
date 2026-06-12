@@ -1,3 +1,4 @@
+import { getPublicDomain } from "../../utils/metadataEngine";
 import React from "react";
 import {
   QRType,
@@ -92,7 +93,7 @@ export const INPUT_REGISTRY: Registry = {
   [QRType.URL]: {
     Component: UrlInput,
     initialState: {
-      url: "https://qrcraftly.com",
+      url: getPublicDomain(),
     } as UrlData,
     constructFn: constructUrlString,
     hydrateFn: hydrateUrlData,

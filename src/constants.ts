@@ -1,3 +1,4 @@
+import { getPublicDomain } from "./utils/metadataEngine";
 /*
     QRCraftly
     Copyright (C) 2025 fderuiter
@@ -24,7 +25,7 @@ import { QRStyle, QRType, QRErrorCorrectionLevel, SocialFormat, TemplateStyle } 
  * Used to initialize the application state.
  */
 export const DEFAULT_CONFIG = {
-  value: 'https://qrcraftly.com',
+  value: getPublicDomain(),
   type: QRType.URL,
   fgColor: '#000000',
   bgColor: '#ffffff',

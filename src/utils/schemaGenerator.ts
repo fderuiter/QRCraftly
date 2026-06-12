@@ -1,6 +1,9 @@
 import { ToolContent } from '../data/contentRegistry';
+import { resolveDomainForPath } from './metadataEngine';
 
 export function generateSchema(content: ToolContent): any {
+  const domain = resolveDomainForPath(content.url);
+  
   if (content.id === 'about') {
     return {
       "@context": "https://schema.org",
@@ -11,7 +14,7 @@ export function generateSchema(content: ToolContent): any {
           "url": content.url,
           "mainEntity": {
             "@type": "Organization",
-            "@id": "https://qrcraftly.com/#organization",
+            "@id": `${domain}/#organization`,
             "name": "QRCraftly",
             "description": content.description,
             "slogan": "Free. Secure. Open Source.",
@@ -41,10 +44,10 @@ export function generateSchema(content: ToolContent): any {
       "applicationCategory": "Utilities",
       "operatingSystem": "All",
       "softwareVersion": "0.1.0",
-      "image": "https://qrcraftly.com/og-image.png",
+      "image": `${domain}/og-image.png`,
       "datePublished": "2025-01-01",
       "author": {
-        "@id": "https://qrcraftly.com/#organization"
+        "@id": `${domain}/#organization`
       },
       "browserRequirements": "Requires JavaScript. Works in all modern browsers.",
       "offers": {
