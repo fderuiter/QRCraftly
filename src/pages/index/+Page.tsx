@@ -34,7 +34,7 @@ import { usePageContext } from 'vike-react/usePageContext';
 export default function Page() {
   const pageContext = usePageContext();
   const resolvedDomain = resolveDomainForPath(pageContext.urlPathname);
-  const schemaData = generateSchema(contentRegistry['index'], resolvedDomain);
+  const schemaData = generateSchema(contentRegistry['index'], resolvedDomain, pageContext.urlPathname);
 
   return (
     <>

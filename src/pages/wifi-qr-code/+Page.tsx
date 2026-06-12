@@ -41,7 +41,7 @@ export default function Page() {
     type: QRType.WIFI,
   };
 
-  const schemaData = generateSchema(contentRegistry['wifi-qr-code'], resolvedDomain);
+  const schemaData = generateSchema(contentRegistry['wifi-qr-code'], resolvedDomain, pageContext.urlPathname);
 
   return (
     <>
