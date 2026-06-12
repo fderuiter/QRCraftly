@@ -19,7 +19,7 @@
 import React from 'react';
 import { render, screen, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeAll, afterAll, afterEach } from 'vitest';
-import { QRProvider, useQRStore } from '@/context/QRContext';
+import { QRProvider, useQRContext } from '@/context/QRContext';
 import { DEFAULT_CONFIG } from '@/constants';
 
 // ---------------------------------------------------------------------------
@@ -145,7 +145,7 @@ describe('registry.tsx - component registration and behavior', () => {
     expect(screen.getByText('Content')).toBeInTheDocument();
   });
 
-  it('ContentControl passes config from QRStore to InputPanel', () => {
+  it('ContentControl passes config from QRContext to InputPanel', () => {
     render(
       <QRProvider>
         <ContentControl />
@@ -165,9 +165,9 @@ describe('registry.tsx - component registration and behavior', () => {
     expect(inputPanel).toHaveAttribute('data-has-onchange', 'true');
   });
 
-  it('ContentControl onChange is store.updateConfig - calling it updates the store', () => {
+  it('ContentControl onChange is ctx.updateConfig - calling it updates the store', () => {
     let capturedOnChange: ((updates: any) => void) | undefined;
-    let storeRef: ReturnType<typeof useQRStore> | null = null;
+    let ctxRef: ReturnType<typeof useQRContext> | null = null;
 
     const InputPanelCapture = ({ onChange }: any) => {
       capturedOnChange = onChange;
@@ -177,7 +177,7 @@ describe('registry.tsx - component registration and behavior', () => {
     // We can't easily swap the module mock at this point, so we verify indirectly:
     // By rendering ContentControl and using a store accessor alongside it
     const StoreCapture = () => {
-      storeRef = useQRStore();
+      ctxRef = useQRContext();
       return null;
     };
 
@@ -189,12 +189,12 @@ describe('registry.tsx - component registration and behavior', () => {
     );
 
     // The InputPanel mock receives onChange; we verify by checking if the store
-    // updateConfig was called with expected args (directly via storeRef)
-    if (storeRef) {
+    // updateConfig was called with expected args (directly via ctxRef)
+    if (ctxRef) {
       act(() => {
-        (storeRef as any).updateConfig({ value: 'https://registry-test.com' });
+        (ctxRef as any).updateConfig({ value: 'https://registry-test.com' });
       });
-      expect((storeRef as any).getState().config.value).toBe('https://registry-test.com');
+      expect((ctxRef as any).config.value).toBe('https://registry-test.com');
     }
 
     // Ensure the component rendered
@@ -206,7 +206,7 @@ describe('registry.tsx - component registration and behavior', () => {
   it('ContentControl throws when used outside QRProvider', () => {
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     expect(() => render(<ContentControl />)).toThrow(
-      'useQRStore must be used within QRProvider'
+      'useQRContext must be used within QRProvider'
     );
     consoleSpy.mockRestore();
   });
@@ -244,7 +244,7 @@ describe('registry.tsx - component registration and behavior', () => {
     });
   });
 
-  it('AppearanceControl passes config from QRStore to StyleControls', async () => {
+  it('AppearanceControl passes config from QRContext to StyleControls', async () => {
     render(
       <QRProvider>
         <AppearanceControl />
@@ -286,7 +286,7 @@ describe('registry.tsx - component registration and behavior', () => {
   it('AppearanceControl throws when used outside QRProvider', () => {
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     expect(() => render(<AppearanceControl />)).toThrow(
-      'useQRStore must be used within QRProvider'
+      'useQRContext must be used within QRProvider'
     );
     consoleSpy.mockRestore();
   });

@@ -75,14 +75,14 @@ describe('useTheme', () => {
   it('throws when used outside QRProvider', () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
     expect(() => renderHook(() => useTheme())).toThrow(
-      'useQRStore must be used within QRProvider'
+      'useQRContext must be used within QRProvider'
     );
     spy.mockRestore();
   });
 
-  // Regression: useTheme now uses useQRStoreSelector (not useQRContext directly)
+  // Regression: useTheme now uses useQRContextSelector (not useQRContext directly)
   // Verify isDarkMode reactively reflects store changes
-  it('isDarkMode reflects store updates via useQRStoreSelector', () => {
+  it('isDarkMode reflects context updates via useQRContext', () => {
     const { result } = renderHook(
       () => {
         const theme = useTheme();

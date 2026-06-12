@@ -20,7 +20,7 @@ import React from 'react';
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { useTelemetry } from './useTelemetry';
-import { QRProvider, useQRStore } from '@/context/QRContext';
+import { QRProvider, useQRContext } from '@/context/QRContext';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -33,7 +33,7 @@ function renderTelemetry(status: Parameters<typeof useTelemetry>[0]) {
   return renderHook(
     () => ({
       telemetry: useTelemetry(status),
-      store: useQRStore(),
+      ctx: useQRContext(),
     }),
     { wrapper }
   );
@@ -84,22 +84,20 @@ describe('useTelemetry', () => {
   // -------------------------------------------------------------------------
   // handleOptIn
   // -------------------------------------------------------------------------
-  it('handleOptIn(true) calls store.updatePreferences with telemetryOptIn: true', () => {
+  it('handleOptIn(true) calls ctx.updatePreferences with telemetryOptIn: true', () => {
     const { result } = renderTelemetry('idle');
-    const updatePrefSpy = vi.spyOn(result.current.store, 'updatePreferences');
     act(() => {
       result.current.telemetry.handleOptIn(true);
     });
-    expect(updatePrefSpy).toHaveBeenCalledWith({ telemetryOptIn: true });
+    expect(result.current.ctx.preferences.telemetryOptIn).toBe(true);
   });
 
-  it('handleOptIn(false) calls store.updatePreferences with telemetryOptIn: false', () => {
+  it('handleOptIn(false) calls ctx.updatePreferences with telemetryOptIn: false', () => {
     const { result } = renderTelemetry('idle');
-    const updatePrefSpy = vi.spyOn(result.current.store, 'updatePreferences');
     act(() => {
       result.current.telemetry.handleOptIn(false);
     });
-    expect(updatePrefSpy).toHaveBeenCalledWith({ telemetryOptIn: false });
+    expect(result.current.ctx.preferences.telemetryOptIn).toBe(false);
   });
 
   it('handleOptIn(true) when status=fail sends telemetry ping immediately', () => {
@@ -121,11 +119,11 @@ describe('useTelemetry', () => {
     expect(body).toHaveProperty('errorType', 'NOT_FOUND');
   });
 
-  it('handleOptIn(true) when status=fail uses store.getState().config.style', () => {
+  it('handleOptIn(true) when status=fail uses ctx.config.style', () => {
     const { result } = renderTelemetry('fail');
     act(() => {
       // Update config style via store
-      result.current.store.updateConfig({ style: 'grunge' as any });
+      result.current.ctx.updateConfig({ style: 'grunge' as any });
     });
     act(() => {
       result.current.telemetry.handleOptIn(true);
@@ -161,19 +159,19 @@ describe('useTelemetry', () => {
   // -------------------------------------------------------------------------
   // Signal handling: 'scannability-fail'
   // -------------------------------------------------------------------------
-  it('registers scannability-fail signal handler in the store', () => {
+  it('registers scannability-fail signal handler in the context', () => {
     const { result } = renderTelemetry('idle');
-    const registerSpy = vi.spyOn(result.current.store, 'registerSignal');
+    const registerSpy = vi.spyOn(result.current.ctx, 'registerSignal');
     // Force a re-render to trigger useEffect
     act(() => {
-      result.current.store.updatePreferences({ telemetryOptIn: true });
+      result.current.ctx.updatePreferences({ telemetryOptIn: true });
     });
     // registerSignal is called during the useEffect for the signal registration
     // We verify the call happened (may be via the initial render effect)
     // Since the hook already mounted, just check the store has an active listener
     // by emitting and checking fetch was called
     act(() => {
-      result.current.store.emitSignal('scannability-fail', {
+      result.current.ctx.emitSignal('scannability-fail', {
         engine: 'Chromium',
         styleId: 'standard',
         errorType: 'NOT_FOUND',
@@ -187,10 +185,10 @@ describe('useTelemetry', () => {
     const { result } = renderTelemetry('idle');
     // Opt in first
     act(() => {
-      result.current.store.updatePreferences({ telemetryOptIn: true });
+      result.current.ctx.updatePreferences({ telemetryOptIn: true });
     });
     act(() => {
-      result.current.store.emitSignal('scannability-fail', {
+      result.current.ctx.emitSignal('scannability-fail', {
         engine: 'Firefox',
         styleId: 'circuit',
         errorType: 'DECODE_FAIL',
@@ -205,10 +203,10 @@ describe('useTelemetry', () => {
   it('does NOT send ping via scannability-fail signal when telemetryOptIn is false', () => {
     const { result } = renderTelemetry('idle');
     act(() => {
-      result.current.store.updatePreferences({ telemetryOptIn: false });
+      result.current.ctx.updatePreferences({ telemetryOptIn: false });
     });
     act(() => {
-      result.current.store.emitSignal('scannability-fail', { errorType: 'fail' });
+      result.current.ctx.emitSignal('scannability-fail', { errorType: 'fail' });
     });
     expect(fetchSpy).not.toHaveBeenCalled();
   });
@@ -217,7 +215,7 @@ describe('useTelemetry', () => {
     const { result } = renderTelemetry('idle');
     // Default is null, no opt-in/out
     act(() => {
-      result.current.store.emitSignal('scannability-fail', { errorType: 'fail' });
+      result.current.ctx.emitSignal('scannability-fail', { errorType: 'fail' });
     });
     expect(fetchSpy).not.toHaveBeenCalled();
   });
@@ -228,7 +226,7 @@ describe('useTelemetry', () => {
   it('throws when used outside QRProvider', () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
     expect(() => renderHook(() => useTelemetry('idle'))).toThrow(
-      'useQRStore must be used within QRProvider'
+      'useQRContext must be used within QRProvider'
     );
     spy.mockRestore();
   });
@@ -237,7 +235,7 @@ describe('useTelemetry', () => {
     const { result } = renderTelemetry('fail');
     // Override config with no style
     act(() => {
-      result.current.store.updateConfig({ style: '' as any });
+      result.current.ctx.updateConfig({ style: '' as any });
     });
     act(() => {
       result.current.telemetry.handleOptIn(true);

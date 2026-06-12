@@ -20,7 +20,7 @@ import React from 'react';
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { useScannability } from './useScannability';
-import { QRProvider, useQRStore } from '@/context/QRContext';
+import { QRProvider, useQRContext } from '@/context/QRContext';
 import { DEFAULT_CONFIG } from '@/constants';
 import { QRConfig } from '@/types';
 
@@ -77,7 +77,7 @@ function makeCanvasRef(): React.RefObject<HTMLCanvasElement | null> {
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
-describe('useScannability - changed behavior: uses useQRStore instead of useQRContext', () => {
+describe('useScannability', () => {
   const OriginalWorker = globalThis.Worker;
 
   beforeEach(() => {
@@ -94,12 +94,12 @@ describe('useScannability - changed behavior: uses useQRStore instead of useQRCo
     activeWorker = null;
   });
 
-  it('throws when used outside QRProvider (uses useQRStore)', () => {
+  it('throws when used outside QRProvider', () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const canvasRef = makeCanvasRef();
     expect(() =>
       renderHook(() => useScannability(canvasRef, defaultConfig))
-    ).toThrow('useQRStore must be used within QRProvider');
+    ).toThrow('useQRContext must be used within QRProvider');
     spy.mockRestore();
   });
 
@@ -115,14 +115,14 @@ describe('useScannability - changed behavior: uses useQRStore instead of useQRCo
     const { result } = renderHook(
       () => ({
         scan: useScannability(makeCanvasRef(), defaultConfig),
-        store: useQRStore(),
+        ctx: useQRContext(),
       }),
       { wrapper }
     );
 
     const signalCallback = vi.fn();
     act(() => {
-      result.current.store.registerSignal('scannability-fail', signalCallback);
+      result.current.ctx.registerSignal('scannability-fail', signalCallback);
     });
 
     // Simulate worker sending a failure
@@ -145,14 +145,14 @@ describe('useScannability - changed behavior: uses useQRStore instead of useQRCo
     const { result } = renderHook(
       () => ({
         scan: useScannability(makeCanvasRef(), defaultConfig),
-        store: useQRStore(),
+        ctx: useQRContext(),
       }),
       { wrapper }
     );
 
     const signalCallback = vi.fn();
     act(() => {
-      result.current.store.registerSignal('scannability-fail', signalCallback);
+      result.current.ctx.registerSignal('scannability-fail', signalCallback);
     });
 
     act(() => {
@@ -170,14 +170,14 @@ describe('useScannability - changed behavior: uses useQRStore instead of useQRCo
     const { result } = renderHook(
       () => ({
         scan: useScannability(makeCanvasRef(), defaultConfig),
-        store: useQRStore(),
+        ctx: useQRContext(),
       }),
       { wrapper }
     );
 
     const signalCallback = vi.fn();
     act(() => {
-      result.current.store.registerSignal('scannability-fail', signalCallback);
+      result.current.ctx.registerSignal('scannability-fail', signalCallback);
     });
 
     // success=false but error is falsy - should not emit
@@ -236,14 +236,14 @@ describe('useScannability - changed behavior: uses useQRStore instead of useQRCo
     const { result } = renderHook(
       () => ({
         scan: useScannability(makeCanvasRef(), configWithStyle),
-        store: useQRStore(),
+        ctx: useQRContext(),
       }),
       { wrapper }
     );
 
     const signalCallback = vi.fn();
     act(() => {
-      result.current.store.registerSignal('scannability-fail', signalCallback);
+      result.current.ctx.registerSignal('scannability-fail', signalCallback);
     });
 
     act(() => {
@@ -260,14 +260,14 @@ describe('useScannability - changed behavior: uses useQRStore instead of useQRCo
     const { result } = renderHook(
       () => ({
         scan: useScannability(makeCanvasRef(), configNoStyle),
-        store: useQRStore(),
+        ctx: useQRContext(),
       }),
       { wrapper }
     );
 
     const signalCallback = vi.fn();
     act(() => {
-      result.current.store.registerSignal('scannability-fail', signalCallback);
+      result.current.ctx.registerSignal('scannability-fail', signalCallback);
     });
 
     act(() => {
@@ -301,7 +301,7 @@ describe('useScannability - changed behavior: uses useQRStore instead of useQRCo
     const { result } = renderHook(
       () => ({
         scan: useScannability(makeCanvasRef(), defaultConfig),
-        store: useQRStore(),
+        ctx: useQRContext(),
       }),
       { wrapper }
     );
@@ -311,7 +311,7 @@ describe('useScannability - changed behavior: uses useQRStore instead of useQRCo
 
     // Update preferences (unrelated to config or store identity)
     act(() => {
-      result.current.store.updatePreferences({ darkMode: true });
+      result.current.ctx.updatePreferences({ darkMode: true });
     });
 
     // Store reference is stable (same QRStore instance), config did not change,
