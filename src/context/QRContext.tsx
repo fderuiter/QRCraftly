@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useRef, useSyncExternalStore } from 'react';
+import React, { createContext, useContext, useState, useSyncExternalStore } from 'react';
 import { QRConfig } from '@/types';
 import { DEFAULT_CONFIG } from '@/constants';
 
@@ -118,12 +118,8 @@ function createQRStore(initialConfig?: Partial<QRConfig>): QRStore {
 }
 
 export const QRProvider = ({ children, initialConfig }: { children: React.ReactNode, initialConfig?: Partial<QRConfig> }) => {
-  const storeRef = useRef<QRStore | null>(null);
-  if (!storeRef.current) {
-    storeRef.current = createQRStore(initialConfig);
-  }
+  const [store] = useState(() => createQRStore(initialConfig));
 
-  const store = storeRef.current;
   const state = useSyncExternalStore(store.subscribe, store.getState, store.getState);
 
   const contextValue: QRContextType = {

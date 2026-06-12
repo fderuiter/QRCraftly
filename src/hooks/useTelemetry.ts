@@ -5,7 +5,6 @@ import { ScannabilityStatus } from './useScannability';
 export function useTelemetry(status: ScannabilityStatus) {
   const store = useQRStore();
   const telemetryOptIn = useQRStoreSelector(state => state.preferences.telemetryOptIn);
-  const style = useQRStoreSelector(state => state.config.style);
 
   const sendTelemetryPing = useCallback((detail: any) => {
     try {

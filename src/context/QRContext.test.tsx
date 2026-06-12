@@ -412,7 +412,7 @@ describe('useQRStoreSelector', () => {
 
   it('re-renders when the selected value changes', () => {
     const renderCount = { count: 0 };
-    const { result } = renderHook(
+    renderHook(
       () => {
         renderCount.count++;
         return useQRStoreSelector(s => s.config.value);
