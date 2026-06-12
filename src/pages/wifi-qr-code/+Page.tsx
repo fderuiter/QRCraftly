@@ -19,8 +19,11 @@
 import QRTool from '@/components/QRTool';
 import { DEFAULT_CONFIG } from '@/constants';
 import { QRType } from '@/types';
-import { toolMetadata } from '@/data/metadata';
+import { contentRegistry } from '@/data/contentRegistry';
+import { generateSchema } from '@/utils/schemaGenerator';
+import { resolveDomainForPath } from '@/utils/metadataEngine';
 import { safeJsonLdStringify } from '@/utils/security';
+import { usePageContext } from 'vike-react/usePageContext';
 
 /**
  * WiFi QR Code Page Component
@@ -31,12 +34,14 @@ import { safeJsonLdStringify } from '@/utils/security';
  * @returns {JSX.Element} The WiFi QR code page layout.
  */
 export default function Page() {
+  const pageContext = usePageContext();
+  const resolvedDomain = resolveDomainForPath(pageContext.urlPathname);
   const wifiConfig = {
     ...DEFAULT_CONFIG,
     type: QRType.WIFI,
   };
 
-  const schemaData = toolMetadata['wifi-qr-code'];
+  const schemaData = generateSchema(contentRegistry['wifi-qr-code'], resolvedDomain);
 
   return (
     <>

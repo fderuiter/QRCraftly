@@ -18,13 +18,18 @@
 
 import { QRTypePage } from '@/components/QRTypePage';
 import { QRType } from '@/types';
-import { toolMetadata } from '@/data/metadata';
+import { contentRegistry } from '@/data/contentRegistry';
+import { generateSchema } from '@/utils/schemaGenerator';
+import { resolveDomainForPath } from '@/utils/metadataEngine';
+import { usePageContext } from 'vike-react/usePageContext';
 
 /**
  * SMS QR Code Page Component
  */
 export default function Page() {
-  const schemaData = toolMetadata['sms-qr-code'];
+  const pageContext = usePageContext();
+  const resolvedDomain = resolveDomainForPath(pageContext.urlPathname);
+  const schemaData = generateSchema(contentRegistry['sms-qr-code'], resolvedDomain);
 
   return <QRTypePage type={QRType.SMS} title="SMS QR Code" schemaData={schemaData}  toolId="sms-qr-code" />;
 }

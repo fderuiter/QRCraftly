@@ -19,8 +19,11 @@
 
 import { Github, Shield, Database, Code, ArrowLeft, Zap, Wifi, Coffee } from 'lucide-react';
 import { safeJsonLdStringify } from '@/utils/security';
-import { toolMetadata } from '@/data/metadata';
+import { contentRegistry } from '@/data/contentRegistry';
+import { generateSchema } from '@/utils/schemaGenerator';
+import { resolveDomainForPath } from '@/utils/metadataEngine';
 import { SidebarContent } from '@/components/SidebarContent';
+import { usePageContext } from 'vike-react/usePageContext';
 
 /**
  * About Page Component
@@ -32,7 +35,9 @@ import { SidebarContent } from '@/components/SidebarContent';
  * @returns {JSX.Element} The About page layout.
  */
 export default function Page() {
-  const schemaData = toolMetadata['about'];
+  const pageContext = usePageContext();
+  const resolvedDomain = resolveDomainForPath(pageContext.urlPathname);
+  const schemaData = generateSchema(contentRegistry['about'], resolvedDomain);
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-12">

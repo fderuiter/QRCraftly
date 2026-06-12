@@ -20,15 +20,27 @@ import { render, cleanup } from '@testing-library/react';
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import HeadDefault from './Head';
 
-// Hoist the mock function so it can be used inside vi.mock
-const { mockUsePageContext } = vi.hoisted(() => {
-  return { mockUsePageContext: vi.fn() };
+// Hoist the mock functions so they can be used inside vi.mock
+const { mockUsePageContext, mockGetPublicDomain } = vi.hoisted(() => {
+  return {
+    mockUsePageContext: vi.fn(),
+    mockGetPublicDomain: vi.fn(() => 'https://qrcraftly.com')
+  };
 });
 
 // Mock usePageContext
 vi.mock('vike-react/usePageContext', () => ({
   usePageContext: mockUsePageContext
 }));
+
+// Mock getPublicDomain
+vi.mock('@/utils/metadataEngine', async () => {
+  const actual = await vi.importActual('@/utils/metadataEngine');
+  return {
+    ...actual,
+    getPublicDomain: mockGetPublicDomain
+  };
+});
 
 describe('HeadDefault', () => {
   // Default mock implementation
@@ -82,10 +94,11 @@ describe('HeadDefault', () => {
     expect(breadcrumbScript).toBeDefined();
 
     const data = JSON.parse(breadcrumbScript!.textContent!);
+    const expectedDomain = mockGetPublicDomain();
     expect(data['@type']).toBe('BreadcrumbList');
     expect(data.itemListElement).toHaveLength(1);
     expect(data.itemListElement[0].name).toBe('Home');
-    expect(data.itemListElement[0].item).toBe('https://qrcraftly.com/');
+    expect(data.itemListElement[0].item).toBe(`${expectedDomain}/`);
   });
 
   it('generates correct breadcrumbs for About page', () => {
@@ -100,9 +113,10 @@ describe('HeadDefault', () => {
     const breadcrumbScript = Array.from(scripts).find(s => s.textContent?.includes('BreadcrumbList'));
 
     const data = JSON.parse(breadcrumbScript!.textContent!);
+    const expectedDomain = mockGetPublicDomain();
     expect(data.itemListElement).toHaveLength(2);
     expect(data.itemListElement[1].name).toBe('About');
-    expect(data.itemListElement[1].item).toBe('https://qrcraftly.com/about');
+    expect(data.itemListElement[1].item).toBe(`${expectedDomain}/about`);
   });
 
   it('generates correct breadcrumbs for WiFi QR Code page (with override)', () => {
@@ -117,9 +131,10 @@ describe('HeadDefault', () => {
     const breadcrumbScript = Array.from(scripts).find(s => s.textContent?.includes('BreadcrumbList'));
 
     const data = JSON.parse(breadcrumbScript!.textContent!);
+    const expectedDomain = mockGetPublicDomain();
     expect(data.itemListElement).toHaveLength(2);
     expect(data.itemListElement[1].name).toBe('WiFi QR Code'); // Verify override works
-    expect(data.itemListElement[1].item).toBe('https://qrcraftly.com/wifi-qr-code');
+    expect(data.itemListElement[1].item).toBe(`${expectedDomain}/wifi-qr-code`);
   });
 
   it('generates correct breadcrumbs for nested/unknown paths (dynamic formatting)', () => {
@@ -134,17 +149,18 @@ describe('HeadDefault', () => {
     const breadcrumbScript = Array.from(scripts).find(s => s.textContent?.includes('BreadcrumbList'));
 
     const data = JSON.parse(breadcrumbScript!.textContent!);
+    const expectedDomain = mockGetPublicDomain();
     expect(data.itemListElement).toHaveLength(3);
 
     // Level 1: Products
     expect(data.itemListElement[1].position).toBe(2);
     expect(data.itemListElement[1].name).toBe('Products');
-    expect(data.itemListElement[1].item).toBe('https://qrcraftly.com/products');
+    expect(data.itemListElement[1].item).toBe(`${expectedDomain}/products`);
 
     // Level 2: Special Offer
     expect(data.itemListElement[2].position).toBe(3);
     expect(data.itemListElement[2].name).toBe('Special Offer'); // Verify capitalization and dash replacement
-    expect(data.itemListElement[2].item).toBe('https://qrcraftly.com/products/special-offer');
+    expect(data.itemListElement[2].item).toBe(`${expectedDomain}/products/special-offer`);
   });
 
   it('handles 404 pages correctly (noindex, no canonical)', () => {
@@ -188,10 +204,11 @@ describe('HeadDefault', () => {
 
     const { container } = render(<HeadDefault />, { container: document.head });
 
+    const expectedDomain = mockGetPublicDomain();
     // Check og:image
     const ogImage = container.querySelector('meta[property="og:image"]');
     expect(ogImage).toBeInTheDocument();
-    expect(ogImage?.getAttribute('content')).toBe('https://qrcraftly.com/custom-og-image.png');
+    expect(ogImage?.getAttribute('content')).toBe(`${expectedDomain}/custom-og-image.png`);
 
     // Check og:image:alt
     const ogImageAlt = container.querySelector('meta[property="og:image:alt"]');
@@ -201,7 +218,7 @@ describe('HeadDefault', () => {
     // Check twitter:image
     const twitterImage = container.querySelector('meta[name="twitter:image"]');
     expect(twitterImage).toBeInTheDocument();
-    expect(twitterImage?.getAttribute('content')).toBe('https://qrcraftly.com/custom-og-image.png');
+    expect(twitterImage?.getAttribute('content')).toBe(`${expectedDomain}/custom-og-image.png`);
 
     // Check twitter:image:alt
     const twitterImageAlt = container.querySelector('meta[name="twitter:image:alt"]');
@@ -217,10 +234,11 @@ describe('HeadDefault', () => {
 
     const { container } = render(<HeadDefault />, { container: document.head });
 
+    const expectedDomain = mockGetPublicDomain();
     // Check og:image
     const ogImage = container.querySelector('meta[property="og:image"]');
     expect(ogImage).toBeInTheDocument();
-    expect(ogImage?.getAttribute('content')).toBe('https://qrcraftly.com/og-image.png');
+    expect(ogImage?.getAttribute('content')).toBe(`${expectedDomain}/og-image.png`);
 
     // Check og:image:alt
     const ogImageAlt = container.querySelector('meta[property="og:image:alt"]');
@@ -236,20 +254,23 @@ describe('HeadDefault', () => {
 
     const { container } = render(<HeadDefault />, { container: document.head });
 
+    const baseDomain = mockGetPublicDomain();
+    const expectedDomain = `https://tenant1.${new URL(baseDomain).hostname}`;
+
     const canonical = container.querySelector('link[rel="canonical"]');
     expect(canonical).toBeInTheDocument();
-    expect(canonical?.getAttribute('href')).toBe('https://tenant1.qrcraftly.com/about');
+    expect(canonical?.getAttribute('href')).toBe(`${expectedDomain}/about`);
 
     const ogUrl = container.querySelector('meta[property="og:url"]');
-    expect(ogUrl?.getAttribute('content')).toBe('https://tenant1.qrcraftly.com/about');
+    expect(ogUrl?.getAttribute('content')).toBe(`${expectedDomain}/about`);
 
     const scripts = document.head.querySelectorAll('script[type="application/ld+json"]');
     const breadcrumbScript = Array.from(scripts).find(s => s.textContent?.includes('BreadcrumbList'));
     const data = JSON.parse(breadcrumbScript!.textContent!);
 
     expect(data.itemListElement).toHaveLength(2);
-    expect(data.itemListElement[0].item).toBe('https://tenant1.qrcraftly.com/');
+    expect(data.itemListElement[0].item).toBe(`${expectedDomain}/`);
     expect(data.itemListElement[1].name).toBe('About');
-    expect(data.itemListElement[1].item).toBe('https://tenant1.qrcraftly.com/about');
+    expect(data.itemListElement[1].item).toBe(`${expectedDomain}/about`);
   });
 });

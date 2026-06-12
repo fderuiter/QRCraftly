@@ -18,13 +18,18 @@
 
 import { QRTypePage } from '@/components/QRTypePage';
 import { QRType } from '@/types';
-import { toolMetadata } from '@/data/metadata';
+import { contentRegistry } from '@/data/contentRegistry';
+import { generateSchema } from '@/utils/schemaGenerator';
+import { resolveDomainForPath } from '@/utils/metadataEngine';
+import { usePageContext } from 'vike-react/usePageContext';
 
 /**
  * Payment QR Code Page Component
  */
 export default function Page() {
-  const schemaData = toolMetadata['payment-qr-code'];
+  const pageContext = usePageContext();
+  const resolvedDomain = resolveDomainForPath(pageContext.urlPathname);
+  const schemaData = generateSchema(contentRegistry['payment-qr-code'], resolvedDomain);
 
   return <QRTypePage type={QRType.PAYMENT} title="Payment QR Code" schemaData={schemaData}  toolId="payment-qr-code" />;
 }

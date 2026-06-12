@@ -1,8 +1,8 @@
 import { ToolContent } from '../data/contentRegistry';
 import { resolveDomainForPath } from './metadataEngine';
 
-export function generateSchema(content: ToolContent): any {
-  const domain = resolveDomainForPath(content.url);
+export function generateSchema(content: ToolContent, resolvedDomain?: string): any {
+  const domain = resolvedDomain || resolveDomainForPath(content.url);
   
   if (content.id === 'about') {
     return {
