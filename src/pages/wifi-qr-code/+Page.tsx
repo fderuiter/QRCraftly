@@ -35,13 +35,14 @@ import { usePageContext } from 'vike-react/usePageContext';
  */
 export default function Page() {
   const pageContext = usePageContext();
-  const resolvedDomain = resolveDomainForPath(pageContext.urlPathname);
+  const urlPathname = pageContext?.urlPathname ?? '/wifi-qr-code';
+  const resolvedDomain = resolveDomainForPath(urlPathname);
   const wifiConfig = {
     ...DEFAULT_CONFIG,
     type: QRType.WIFI,
   };
 
-  const schemaData = generateSchema(contentRegistry['wifi-qr-code'], resolvedDomain, pageContext.urlPathname);
+  const schemaData = generateSchema(contentRegistry['wifi-qr-code'], resolvedDomain, urlPathname);
 
   return (
     <>
