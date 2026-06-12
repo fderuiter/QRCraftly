@@ -38,6 +38,7 @@ export default defineConfig(({ mode }) => {
         vike()
       ],
       build: {
+        target: "es2022",
         rollupOptions: {
           output: {
           }
