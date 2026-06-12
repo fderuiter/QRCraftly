@@ -93,17 +93,17 @@ jobs:
           MANIFEST
 
       - name: Attest Web Build Outputs
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@96b4a1ef7235a096b17240c259729fdd70c83d45 # v2
         with:
           subject-path: 'dist/client/**/*'
 
       - name: Attest Deployment Manifest
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@96b4a1ef7235a096b17240c259729fdd70c83d45 # v2
         with:
           subject-path: 'releases/manifest-${{ env.VERSION }}.json'
 
       - name: Attest SBOM
-        uses: actions/attest-sbom@v2
+        uses: actions/attest-sbom@10926c72720ffc3f7b666661c8e55b1344e2a365 # v2
         with:
           subject-path: 'dist/client/**/*'
           sbom-path: dist/client/bom.json
