@@ -2,6 +2,7 @@ import { getPublicDomain } from "../utils/metadataEngine";
 export interface ToolContent {
   id: string;
   name: string;
+  aliases?: string[];
   url: string;
   description: string;
   features: string[];
@@ -360,6 +361,38 @@ export const contentRegistry: Record<string, ToolContent> = {
       {
         "question": "Do QR codes expire?",
         "answer": "No, standard static QR codes do not expire."
+      }
+    ]
+  },
+  "sonar-remediation-agent": {
+    "id": "sonar-remediation-agent",
+    "name": "SonarQube Remediation Agent",
+    "aliases": ["Sonar Foundation Agent"],
+    "url": getPublicDomain() + "/sonar-remediation-agent",
+    "description": "Technical documentation for the SonarQube Remediation Agent.",
+    "features": [
+      "Automated Remediation",
+      "Code Analysis",
+      "Secure Client-Side"
+    ],
+    "howTo": {
+      "name": "How to setup the SonarQube Remediation Agent",
+      "description": "Setup guide for the agent.",
+      "steps": [
+        {
+          "name": "Install",
+          "text": "Install the agent on your infrastructure."
+        },
+        {
+          "name": "Configure",
+          "text": "Configure the agent with your SonarQube instance."
+        }
+      ]
+    },
+    "faqs": [
+      {
+        "question": "What is the SonarQube Remediation Agent?",
+        "answer": "It is a remediation agent that automatically fixes code issues."
       }
     ]
   }

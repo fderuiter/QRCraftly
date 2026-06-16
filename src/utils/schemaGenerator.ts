@@ -41,6 +41,7 @@ export function generateSchema(content: ToolContent, resolvedDomain?: string, re
     {
       "@type": "WebApplication",
       "name": content.name,
+      ...(content.aliases && content.aliases.length > 0 ? { "alternateName": content.aliases } : {}),
       "url": publicUrl,
       "applicationCategory": "Utilities",
       "operatingSystem": "All",
@@ -64,6 +65,7 @@ export function generateSchema(content: ToolContent, resolvedDomain?: string, re
     const howToObj: any = {
       "@type": "HowTo",
       "name": content.howTo.name,
+      ...(content.aliases && content.aliases.length > 0 ? { "alternateName": content.aliases } : {}),
       "description": content.howTo.description,
       "totalTime": "PT1M",
       "estimatedCost": {
@@ -97,6 +99,8 @@ export function generateSchema(content: ToolContent, resolvedDomain?: string, re
   if (content.faqs && content.faqs.length > 0) {
     graph.push({
       "@type": "FAQPage",
+      "name": `${content.name} FAQs`,
+      ...(content.aliases && content.aliases.length > 0 ? { "alternateName": content.aliases.map(alias => `${alias} FAQs`) } : {}),
       "mainEntity": content.faqs.map(faq => ({
         "@type": "Question",
         "name": faq.question,

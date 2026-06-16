@@ -19,6 +19,7 @@
 import { usePageContext } from 'vike-react/usePageContext';
 import { safeJsonLdStringify } from '@/utils/security';
 import { resolveDomainForPath, resolvePublicUrl, resolveImageUrl, getSanitizedPath } from '@/utils/metadataEngine';
+import { contentRegistry } from '@/data/contentRegistry';
 
 /**
  * HeadDefault Component
@@ -46,8 +47,18 @@ export default function HeadDefault() {
     return result || fallback;
   };
 
-  const title = getString(config?.title ?? undefined, pageContext, "QRCraftly - Free Custom QR Code Generator");
-  const description = getString(config?.description ?? undefined, pageContext, "Generate beautiful, custom QR codes for free. No sign-up required.");
+  const sanitizedPath = getSanitizedPath(pageContext.urlPathname);
+  const toolId = sanitizedPath.replace(/^\//, '') || 'index';
+  const registryEntry = contentRegistry[toolId];
+
+  let title = getString(config?.title ?? undefined, pageContext, "QRCraftly - Free Custom QR Code Generator");
+  let description = getString(config?.description ?? undefined, pageContext, "Generate beautiful, custom QR codes for free. No sign-up required.");
+
+  if (registryEntry) {
+    const names = [registryEntry.name, ...(registryEntry.aliases || [])].join(' / ');
+    title = `${names} | ${title}`;
+    description = `${names} - ${description}`;
+  }
 
   const resolvedDomain = resolveDomainForPath(pageContext.urlPathname);
   const canonicalUrl = resolvePublicUrl(pageContext.urlPathname);
@@ -114,7 +125,6 @@ export default function HeadDefault() {
   ];
 
   // Dynamically generate breadcrumbs from path
-  const sanitizedPath = getSanitizedPath(pageContext.urlPathname);
   const pathSegments = sanitizedPath.split('/').filter(Boolean);
   let currentPath = '';
 
