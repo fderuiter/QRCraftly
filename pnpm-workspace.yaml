@@ -33,6 +33,8 @@ minimumReleaseAgeExclude:
   - '@esbuild/win32-ia32@0.28.1'
   - '@esbuild/win32-x64@0.28.1'
   - esbuild@0.28.1
+  - miniflare@4.20260617.0
+  - wrangler@4.102.0
 
 overrides:
   esbuild: "0.28.1"
