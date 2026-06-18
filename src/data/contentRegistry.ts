@@ -18,7 +18,7 @@ export const contentRegistry: Record<string, ToolContent> = {
   "about": {
     "id": "about",
     "name": "About QRCraftly",
-    "url": getPublicDomain() + "/about",
+    "url": getPublicDomain() + "/about/",
     "description": "Privacy-focused, client-side QR code generator.",
     "features": [],
     "faqs": [
@@ -43,7 +43,7 @@ export const contentRegistry: Record<string, ToolContent> = {
   "email-qr-code": {
     "id": "email-qr-code",
     "name": "Email QR Code Generator",
-    "url": getPublicDomain() + "/email-qr-code",
+    "url": getPublicDomain() + "/email-qr-code/",
     "description": "",
     "features": [
       "Generate Pre-filled Emails",
@@ -82,7 +82,7 @@ export const contentRegistry: Record<string, ToolContent> = {
   "index": {
     "id": "index",
     "name": "QRCraftly",
-    "url": getPublicDomain(),
+    "url": getPublicDomain() + "/",
     "description": "",
     "features": [
       "Custom QR Codes",
@@ -123,7 +123,7 @@ export const contentRegistry: Record<string, ToolContent> = {
   "payment-qr-code": {
     "id": "payment-qr-code",
     "name": "Payment QR Code Generator",
-    "url": getPublicDomain() + "/payment-qr-code",
+    "url": getPublicDomain() + "/payment-qr-code/",
     "description": "",
     "features": [
       "Generate Crypto Payment QR",
@@ -162,7 +162,7 @@ export const contentRegistry: Record<string, ToolContent> = {
   "phone-qr-code": {
     "id": "phone-qr-code",
     "name": "Phone QR Code Generator",
-    "url": getPublicDomain() + "/phone-qr-code",
+    "url": getPublicDomain() + "/phone-qr-code/",
     "description": "",
     "features": [
       "Generate Click-to-Call QR",
@@ -201,7 +201,7 @@ export const contentRegistry: Record<string, ToolContent> = {
   "sms-qr-code": {
     "id": "sms-qr-code",
     "name": "SMS QR Code Generator",
-    "url": getPublicDomain() + "/sms-qr-code",
+    "url": getPublicDomain() + "/sms-qr-code/",
     "description": "",
     "features": [
       "Generate Pre-filled SMS",
@@ -240,7 +240,7 @@ export const contentRegistry: Record<string, ToolContent> = {
   "text-qr-code": {
     "id": "text-qr-code",
     "name": "Text QR Code Generator",
-    "url": getPublicDomain() + "/text-qr-code",
+    "url": getPublicDomain() + "/text-qr-code/",
     "description": "",
     "features": [
       "Convert Text to QR",
@@ -279,7 +279,7 @@ export const contentRegistry: Record<string, ToolContent> = {
   "vcard-qr-code": {
     "id": "vcard-qr-code",
     "name": "VCard QR Code Generator",
-    "url": getPublicDomain() + "/vcard-qr-code",
+    "url": getPublicDomain() + "/vcard-qr-code/",
     "description": "",
     "features": [
       "Generate VCard Contact QR",
@@ -318,7 +318,7 @@ export const contentRegistry: Record<string, ToolContent> = {
   "wifi-qr-code": {
     "id": "wifi-qr-code",
     "name": "WiFi QR Code Generator",
-    "url": getPublicDomain() + "/wifi-qr-code",
+    "url": getPublicDomain() + "/wifi-qr-code/",
     "description": "",
     "features": [
       "Generate WiFi Access QR Codes",

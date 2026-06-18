@@ -46,12 +46,12 @@ export const resolvePublicUrl = (path: string): string => {
   const resolvedDomain = resolveDomainForPath(path);
   let cleanPath = getSanitizedPath(path);
   
-  if (cleanPath !== '/' && cleanPath.endsWith('/')) {
-    cleanPath = cleanPath.slice(0, -1);
+  // Ensure the path has a trailing slash for consistency with routing
+  if (!cleanPath.endsWith('/')) {
+    cleanPath += '/';
   }
   
-  const finalPath = cleanPath === '/' ? '' : cleanPath;
-  return `${resolvedDomain}${finalPath}`;
+  return `${resolvedDomain}${cleanPath}`;
 };
 
 export const resolveImageUrl = (imageConfig: string | undefined, path: string): string => {

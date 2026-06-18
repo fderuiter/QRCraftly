@@ -38,6 +38,9 @@ export default {
   // https://vike.dev/extends
   extends: vikeReact,
 
+  // Enable trailing slash
+  trailingSlash: true,
+
   // https://vike.dev/prerender
   prerender: true,
 

@@ -259,10 +259,10 @@ describe('HeadDefault', () => {
 
     const canonical = container.querySelector('link[rel="canonical"]');
     expect(canonical).toBeInTheDocument();
-    expect(canonical?.getAttribute('href')).toBe(`${expectedDomain}/about`);
+    expect(canonical?.getAttribute('href')).toBe(`${expectedDomain}/about/`);
 
     const ogUrl = container.querySelector('meta[property="og:url"]');
-    expect(ogUrl?.getAttribute('content')).toBe(`${expectedDomain}/about`);
+    expect(ogUrl?.getAttribute('content')).toBe(`${expectedDomain}/about/`);
 
     const scripts = document.head.querySelectorAll('script[type="application/ld+json"]');
     const breadcrumbScript = Array.from(scripts).find(s => s.textContent?.includes('BreadcrumbList'));
