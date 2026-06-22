@@ -17,21 +17,21 @@
 */
 
 import { WifiData, WifiEncryption } from '../../types';
-import { ProtocolUtils } from '../protocolUtils';
+import { ValidationEngine } from '../../engine/ValidationEngine';
 
 /**
  * Escapes special characters for WiFi QR code string.
  * Characters to escape: \ ; , " :
  */
 export const escapeWifiString = (str: string | undefined): string => {
-  return ProtocolUtils.escapeWifi(str);
+  return ValidationEngine.escapeWifi(str);
 };
 
 /**
  * Constructs the WiFi QR code string from the given data.
  */
 export const unescapeWifiString = (str: string | undefined): string => {
-  return ProtocolUtils.unescapeWifi(str);
+  return ValidationEngine.unescapeWifi(str);
 };
 
 /**
@@ -55,7 +55,7 @@ export const hydrateWifiData = (raw: string): WifiData => {
     content = content.slice(0, -1);
   }
   
-  const parts = content.split(/(?<!\\);/);
+  const parts = content.split(ValidationEngine.REGEX_SPLIT_WIFI);
 
   parts.forEach(part => {
     const splitIndex = part.indexOf(':');

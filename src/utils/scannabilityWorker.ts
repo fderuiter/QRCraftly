@@ -1,4 +1,5 @@
 import jsQR from 'jsqr';
+import { ValidationEngine } from '../engine/ValidationEngine';
 
 function applyOpticalSimulation(imageData: ImageData, width: number, height: number): ImageData {
   const src = imageData.data;
@@ -65,12 +66,22 @@ self.onmessage = (e: MessageEvent<{ imageData: ImageData; width: number; height:
     
     // Check digital-only
     let digitalPass = false;
+    let decodedData = '';
     let code = jsQR(imageData.data, width, height, { inversionAttempts: "dontInvert" });
     if (code) {
       digitalPass = true;
+      decodedData = code.data;
     } else {
       code = jsQR(imageData.data, width, height, { inversionAttempts: "attemptBoth" });
-      if (code) digitalPass = true;
+      if (code) {
+        digitalPass = true;
+        decodedData = code.data;
+      }
+    }
+
+    if (digitalPass && ValidationEngine.isDangerousUrl(decodedData)) {
+      self.postMessage({ success: false, physicalReady: false, error: 'SECURITY_VIOLATION', configId });
+      return;
     }
 
     if (!digitalPass) {
