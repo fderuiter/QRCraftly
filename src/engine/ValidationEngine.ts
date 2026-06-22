@@ -45,11 +45,12 @@ export const ValidationEngine = {
       const url = new URL(raw);
       const host = url.hostname.toLowerCase();
       
-      if (host.includes('instagram.com') || host.includes('x.com') || host.includes('twitter.com') || host.includes('tiktok.com')) {
+      const isDomain = (d: string) => host === d || host.endsWith(`.${d}`);
+      if (isDomain('instagram.com') || isDomain('x.com') || isDomain('twitter.com') || isDomain('tiktok.com')) {
         return QRType.SOCIAL;
       }
       
-      if (host.includes('zoom.us') || host.includes('teams.microsoft.com') || host.includes('meet.google.com')) {
+      if (isDomain('zoom.us') || isDomain('teams.microsoft.com') || isDomain('meet.google.com')) {
         return QRType.MEETING;
       }
       
