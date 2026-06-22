@@ -4,6 +4,7 @@
   "private": true,
   "packageManager": "pnpm@11.1.3",
   "version": "0.0.0",
+  "packageManager": "pnpm@11.8.0",
   "license": "AGPL-3.0-or-later",
   "type": "module",
   "homepage": "https://qrcraftly.com",
