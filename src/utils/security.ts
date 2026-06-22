@@ -33,43 +33,18 @@ export const safeJsonLdStringify = (data: any): string => {
             .replace(/&/g, '\\u0026');
 };
 
-// Standard control chars (0x00-0x1F) and DEL (0x7F) + C1 control chars (0x80-0x9F)
-export const REGEX_STRICT_CONTROL_CHARS = /[\x00-\x1F\x7F-\x9F]+/g;
+import { ValidationEngine } from '../engine/ValidationEngine';
 
-// Standard control chars except Tab (0x09), Line Feed (0x0A), and Carriage Return (0x0D)
-export const REGEX_PRESERVE_FORMAT_CONTROL_CHARS = /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g;
+export const REGEX_STRICT_CONTROL_CHARS = ValidationEngine.REGEX_STRICT_CONTROL_CHARS;
+export const REGEX_PRESERVE_FORMAT_CONTROL_CHARS = ValidationEngine.REGEX_PRESERVE_FORMAT_CONTROL_CHARS;
+export const REGEX_URL_UNSAFE_CHARS = ValidationEngine.REGEX_URL_UNSAFE_CHARS;
 
-// Includes standard control chars, unicode control chars (0080-009F), whitespace,
-// and invisible chars like Zero Width Space (200B), ZWNJ (200C), ZWJ (200D), BOM (FEFF)
-export const REGEX_URL_UNSAFE_CHARS = /[\x00-\x1F\x7F-\x9F\s\u200B-\u200D\uFEFF]+/g;
-
-const DANGEROUS_PROTOCOLS = [
-  'javascript:',
-  'vbscript:',
-  'file:',
-  'data:',
-  'mk:',
-  'blob:',
-  'filesystem:',
-  'jscript:',
-  'wscript:',
-  'mocha:',
-  'about:',
-];
-
-/**
- * Checks if a URL string contains a dangerous protocol.
- * Dangerous protocols: javascript:, vbscript:, file:, data:, mk:, blob:, filesystem:, jscript:, wscript:, mocha:, about:
- *
- * @param url The URL string to check.
- * @returns True if the URL contains a dangerous protocol, false otherwise.
- */
 export const isDangerousUrl = (url: string | undefined): boolean => {
-  if (!url) return false;
-  // Remove control characters (00-1F, 7F-9F) and whitespace globally
-  const normalized = url.replace(REGEX_URL_UNSAFE_CHARS, '').toLowerCase();
+  return ValidationEngine.isDangerousUrl(url);
+};
 
-  return DANGEROUS_PROTOCOLS.some(p => normalized.startsWith(p));
+export const sanitizeInput = (str: string): string => {
+  return ValidationEngine.sanitizeInput(str);
 };
 
 /**
@@ -83,18 +58,7 @@ export const cleanPhoneNumber = (number: string): string => {
   return number.replace(/[^0-9+*#\-().]/g, '');
 };
 
-/**
- * Sanitizes input by stripping query parameters and control characters.
- * Useful for preventing parameter injection in constructed URIs and header injection.
- *
- * @param str The input string to sanitize.
- * @returns The sanitized string without control characters or query parameters.
- */
-export const sanitizeInput = (str: string): string => {
-  // Remove control characters (00-1F, 7F-9F) to prevent header injection
-  const noControl = str.replace(REGEX_STRICT_CONTROL_CHARS, '');
-  return noControl.split('?')[0];
-};
+
 
 /**
  * Validates an uploaded image file for size and type.

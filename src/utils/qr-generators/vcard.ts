@@ -17,20 +17,19 @@
 */
 
 import { VCardData } from '../../types';
-import { isDangerousUrl } from '../security';
 import { normalizeUrl } from '../url';
-import { ProtocolUtils } from '../protocolUtils';
+import { ValidationEngine } from '../../engine/ValidationEngine';
 
 /**
  * Escapes special characters for vCard property values.
  * Characters to escape: \ ; , and newlines.
  */
 export const escapeVCardString = (str: string | undefined): string => {
-  return ProtocolUtils.escapeVCardEvent(str);
+  return ValidationEngine.escapeVCardEvent(str);
 };
 
 export const unescapeVCardString = (str: string | undefined): string => {
-  return ProtocolUtils.unescapeVCardEvent(str);
+  return ValidationEngine.unescapeVCardEvent(str);
 };
 
 /**
@@ -65,7 +64,7 @@ export const hydrateVCardData = (raw: string): VCardData => {
 
     switch(key) {
       case 'N': {
-        const nParts = value.split(/(?<!\\);/);
+        const nParts = value.split(ValidationEngine.REGEX_SPLIT_VCARD);
         result.lastName = unescapeVCardString(nParts[0] || '');
         result.firstName = unescapeVCardString(nParts[1] || '');
         break;
@@ -76,7 +75,7 @@ export const hydrateVCardData = (raw: string): VCardData => {
       case 'EMAIL': result.email = unescapeVCardString(value); break;
       case 'URL': result.website = unescapeVCardString(value); break;
       case 'ADR': {
-        const adrParts = value.split(/(?<!\\);/);
+        const adrParts = value.split(ValidationEngine.REGEX_SPLIT_VCARD);
         result.street = unescapeVCardString(adrParts[2] || '');
         result.city = unescapeVCardString(adrParts[3] || '');
         result.zip = unescapeVCardString(adrParts[5] || '');
@@ -97,7 +96,7 @@ export const constructVCardString = (data: VCardData): string => {
   const firstName = escapeVCardString(data.firstName);
   // Normalize URL first to handle spaces/protocols, then check for dangerous protocols on the normalized string
   const normalizedWebsite = normalizeUrl(data.website);
-  const website = isDangerousUrl(normalizedWebsite) ? '' : escapeVCardString(normalizedWebsite);
+  const website = ValidationEngine.isDangerousUrl(normalizedWebsite) ? '' : escapeVCardString(normalizedWebsite);
 
   const parts = [
     'BEGIN:VCARD',
