@@ -21,7 +21,7 @@ rules:
             ...
           }
     message: "Variables passed to href or location must be verified with isDangerousUrl to prevent XSS/Open Redirect."
-    languages: [typescript, javascript, tsx, jsx]
+    languages: [typescript, javascript]
     severity: WARNING
 
   - id: require-safejsonldstringify
@@ -29,11 +29,11 @@ rules:
       - pattern: |
           JSON.stringify($X)
       - pattern-inside: |
-          dangerouslySetInnerHTML={{ __html: ... }}
+          <$TAG ... dangerouslySetInnerHTML={{ __html: ... }} ... />
       - pattern-not-inside: |
           safeJsonLdStringify(...)
     message: "Do not use JSON.stringify directly inside dangerouslySetInnerHTML. Use safeJsonLdStringify."
-    languages: [typescript, javascript, tsx, jsx]
+    languages: [typescript, javascript]
     severity: ERROR
 
   - id: enforce-cleanphonenumber
@@ -50,5 +50,5 @@ rules:
       - pattern-not: |
           "tel:" + cleanPhoneNumber($X)
     message: "Phone numbers must be sanitized with cleanPhoneNumber before constructing a tel: URI."
-    languages: [typescript, javascript, tsx, jsx]
+    languages: [typescript, javascript]
     severity: WARNING
