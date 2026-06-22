@@ -30,7 +30,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: "20" # Secure Active LTS target for modern Vite + React configurations
+          node-version: "22.14.0" # Required for pnpm v11
           cache: "pnpm"      # Instructs the runner to capture pnpm global content stores
 
       - name: Install Project Dependencies
