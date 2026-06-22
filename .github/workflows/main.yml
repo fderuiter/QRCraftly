@@ -62,7 +62,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: "20.19.0"
+          node-version: "22.14.0"
           cache: "pnpm"
 
       - name: Install NPM Dependencies
@@ -94,7 +94,7 @@ jobs:
           version: 11
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: "20.19.0"
+          node-version: "22.14.0"
           cache: "pnpm"
 
       # Restore node_modules
@@ -125,7 +125,7 @@ jobs:
           version: 11
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: "20.19.0"
+          node-version: "22.14.0"
           cache: "pnpm"
 
       - name: Restore node_modules
@@ -154,7 +154,7 @@ jobs:
           version: 11
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: "20.19.0"
+          node-version: "22.14.0"
           cache: "pnpm"
 
       - name: Restore node_modules
@@ -189,7 +189,7 @@ jobs:
           version: 11
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: "20.19.0"
+          node-version: "22.14.0"
           cache: "pnpm"
 
       - name: Restore node_modules
