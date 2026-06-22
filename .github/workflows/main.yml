@@ -141,7 +141,7 @@ jobs:
           path: node_modules
           key: ${{ runner.os }}-node-${{ hashFiles('**/pnpm-lock.yaml') }}
 
-      - run: pnpm test -- run --coverage
+      - run: pnpm exec vitest run --coverage
 
       - name: "Report Coverage"
         if: github.event_name == 'pull_request'
