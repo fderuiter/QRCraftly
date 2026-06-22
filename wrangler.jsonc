@@ -5,7 +5,7 @@
     "directory": "./dist/client"
   },
   "build": {
-    "command": "npx pnpm install && npx pnpm run build"
+    "command": "npm install -g pnpm && pnpm install && pnpm run build"
   },
   "observability": {
     "enabled": true,
