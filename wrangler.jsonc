@@ -4,6 +4,9 @@
   "assets": {
     "directory": "./dist/client"
   },
+  "build": {
+    "command": "pnpm run build"
+  },
   "observability": {
     "enabled": true,
     "head_sampling_rate": 1,
