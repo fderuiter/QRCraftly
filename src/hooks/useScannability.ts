@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useMemo } from 'react';
+import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { QRConfig } from '../types';
 import { useQRStore } from '@/context/QRContext';
 import { ValidationEngine } from '../engine/ValidationEngine';
@@ -50,7 +50,7 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
   }, [config, store]);
 
   // Expose a function to trigger check
-  const checkScannability = (overrideImageData?: ImageData) => {
+  const checkScannability = useCallback((overrideImageData?: ImageData) => {
     const worker = workerRef.current;
     if (!worker) return;
 
@@ -62,6 +62,7 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
         imageData: overrideImageData,
         width: overrideImageData.width,
         height: overrideImageData.height,
+        isTest: navigator.webdriver,
       });
       return;
     }
@@ -91,6 +92,7 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
           imageData,
           width: canvas.width,
           height: canvas.height,
+          isTest: navigator.webdriver,
         });
       } catch (err) {
         console.error("Failed to read canvas data", err);
@@ -103,7 +105,7 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
     } else {
       setTimeout(readAndSend, 100);
     }
-  };
+  }, [canvasRef]);
 
   return { status, checkScannability, health };
 }

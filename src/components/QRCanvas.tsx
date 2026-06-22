@@ -204,6 +204,12 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({ config, s
           
           const imageData = vCtx.getImageData(0, 0, displayWidth, displayHeight);
           onRendered({ moduleCount: qrData.modules.size, virtualImageData: imageData });
+          
+          // Free memory
+          if (vCanvas) {
+            vCanvas.width = 0;
+            vCanvas.height = 0;
+          }
         } catch (err) {
           console.error("Virtual rendering failed:", err);
         }

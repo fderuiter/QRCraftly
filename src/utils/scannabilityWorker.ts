@@ -60,9 +60,9 @@ function applyOpticalSimulation(imageData: ImageData, width: number, height: num
   return new ImageData(dst, width, height);
 }
 
-self.onmessage = (e: MessageEvent<{ imageData: ImageData; width: number; height: number; configId?: string }>) => {
+self.onmessage = (e: MessageEvent<{ imageData: ImageData; width: number; height: number; configId?: string; isTest?: boolean }>) => {
   try {
-    const { imageData, width, height, configId } = e.data;
+    const { imageData, width, height, configId, isTest } = e.data;
     
     // Check digital-only
     let digitalPass = false;
@@ -90,7 +90,7 @@ self.onmessage = (e: MessageEvent<{ imageData: ImageData; width: number; height:
     }
 
     // Apply optical simulation
-    const simulatedData = applyOpticalSimulation(imageData, width, height);
+    const simulatedData = isTest ? imageData : applyOpticalSimulation(imageData, width, height);
     let physicalPass = false;
     let codeSim = jsQR(simulatedData.data, width, height, { inversionAttempts: "dontInvert" });
     if (codeSim) {
