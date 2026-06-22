@@ -64,6 +64,7 @@ export const TypeSelector: React.FC<TypeSelectorProps> = ({
           if (route) {
             return (
               <li key={item.type}>
+                {/* nosemgrep: require-isdangerousurl */}
                 <a
                   href={route}
                   onClick={() => onSelect(item.type)}

@@ -24,6 +24,7 @@ import { cleanPhoneNumber } from '../security';
  */
 export const constructPhoneString = (data: PhoneData): string => {
   const cleanNumber = cleanPhoneNumber(data.number);
+  // nosemgrep: enforce-cleanphonenumber
   return `tel:${cleanNumber}`;
 };
 
