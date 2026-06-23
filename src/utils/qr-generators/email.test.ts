@@ -35,4 +35,8 @@ describe('Email generator', () => {
     expect(hydrateEmailData('random')).toEqual({ email: '', subject: '', body: '' });
     expect(hydrateEmailData('mailto:http://%%invalid')).toEqual({ email: 'http://%%invalid', subject: '', body: '' });
   });
+
+  it('returns default for non-email schemes', () => {
+    expect(hydrateEmailData('tel:1234567890')).toEqual({ email: '', subject: '', body: '' });
+  });
 });

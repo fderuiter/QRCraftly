@@ -20,6 +20,12 @@ describe('Social generator', () => {
     const result2 = hydrateSocialData('https://example.com/user');
     expect(result2.handle).toBe('');
   });
+
+  it('hydrates urls with www. prefix', () => {
+    const hydrated = hydrateSocialData('https://www.instagram.com/qrcraftly');
+    expect(hydrated.platform).toBe(SocialPlatform.INSTAGRAM);
+    expect(hydrated.handle).toBe('qrcraftly');
+  });
 });
 
   it('hydrates instagram', () => {
