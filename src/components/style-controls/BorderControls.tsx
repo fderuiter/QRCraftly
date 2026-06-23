@@ -64,7 +64,7 @@ export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange
                 id="border-style"
                 value={config.borderStyle || 'solid'}
                 onChange={(e) => onChange({ borderStyle: e.target.value as BorderStyle })}
-                className="w-full px-2 py-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs text-slate-700 dark:text-slate-200 focus:outline-none focus:border-teal-500"
+                className="w-full px-2 py-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs text-slate-700 dark:text-slate-200"
               >
                 <option value="solid">Solid</option>
                 <option value="dashed">Dashed</option>
@@ -112,14 +112,14 @@ export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange
                 placeholder="Text on border..."
                 value={config.borderText}
                 onChange={(e) => onChange({ borderText: e.target.value })}
-                className="w-full px-2 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs text-slate-700 dark:text-slate-200 focus:outline-none focus:border-teal-500"
+                className="w-full px-2 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs text-slate-700 dark:text-slate-200"
                 aria-label="Border text"
               />
               <div className="flex gap-2">
                 <select
                   value={config.borderTextPosition || 'bottom-center'}
                   onChange={(e) => onChange({ borderTextPosition: e.target.value as BorderTextPosition })}
-                  className="flex-1 px-2 py-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs text-slate-700 dark:text-slate-200 focus:outline-none focus:border-teal-500"
+                  className="flex-1 px-2 py-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs text-slate-700 dark:text-slate-200"
                   aria-label="Border text position"
                 >
                   <option value="top-center">Top Center</option>
@@ -130,7 +130,7 @@ export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange
                     type="color"
                     value={config.borderTextColor || '#ffffff'}
                     onChange={(e) => onChange({ borderTextColor: e.target.value })}
-                    className="w-6 h-6 rounded cursor-pointer border-0 p-0 bg-transparent focus-visible:ring-2 focus-visible:ring-teal-500 focus:outline-none focus-visible:ring-offset-1 dark:focus-visible:ring-offset-slate-800"
+                    className="w-6 h-6 rounded cursor-pointer border-0 p-0 bg-transparent"
                     title="Text Color"
                     aria-label="Border text color"
                   />
@@ -181,7 +181,7 @@ export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange
                 <select
                   value={config.borderLogoPosition || 'bottom-center'}
                   onChange={(e) => onChange({ borderLogoPosition: e.target.value as BorderLogoPosition })}
-                  className="w-full px-2 py-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs text-slate-700 dark:text-slate-200 focus:outline-none focus:border-teal-500"
+                  className="w-full px-2 py-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs text-slate-700 dark:text-slate-200"
                   aria-label="Border logo position"
                 >
                   <option value="bottom-center">Bottom Center</option>

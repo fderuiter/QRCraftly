@@ -146,7 +146,7 @@ export const CheckboxField: React.FC<CheckboxFieldProps> = ({
         <input
           id={id}
           type="checkbox"
-          className="rounded text-teal-700 dark:text-teal-600 focus:ring-teal-500 border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900"
+          className="rounded text-teal-700 dark:text-teal-600 border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900"
           {...props}
         />
         <span>{label}</span>

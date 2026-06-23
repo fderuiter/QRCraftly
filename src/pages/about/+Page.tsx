@@ -90,9 +90,9 @@ export default function Page() {
             <div className="w-12 h-12 bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400 rounded-xl flex items-center justify-center mx-auto mb-4">
               <Database className="w-6 h-6" />
             </div>
-            <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">Zero Knowledge</h3>
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">Privacy First</h3>
             <p className="text-slate-600 dark:text-slate-400">
-              We utilize a Zero Knowledge architecture. Your content is processed entirely in your browser and never transmitted to our servers.
+              We utilize a Privacy First architecture. Your content is processed entirely in your browser and not transmitted to our servers without your explicit opt-in for telemetry.
             </p>
           </div>
 

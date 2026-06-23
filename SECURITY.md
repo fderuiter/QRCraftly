@@ -9,6 +9,9 @@ To protect against supply-chain attacks, this project enforces immutable depende
 ## Privacy & Compliance
 This application is designed with a "Privacy First" architecture. Please refer to [COMPLIANCE.md](COMPLIANCE.md) for detailed information on how this application handles data and aligns with regulations like HIPAA.
 
+## Content Security Policy (CSP)
+Our application utilizes a meta-tag based Content Security Policy (CSP) to provide baseline protections. Please note that to support certain functional features (such as JSON-LD scripts and framework hydration), the policy currently allows `unsafe-inline` script execution. While we mitigate risks through our client-side architecture and React's built-in XSS protections, users and researchers should be aware of this permissive policy configuration when evaluating XSS protections.
+
 ## Reporting a Vulnerability
 
 If you discover a security vulnerability or a privacy leak, please report it immediately.

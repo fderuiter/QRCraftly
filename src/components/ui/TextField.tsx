@@ -40,7 +40,7 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(
             type={effectiveType}
             maxLength={maxLength}
             value={value}
-            className={`w-full bg-white dark:bg-slate-900 border ${error ? 'border-rose-500' : 'border-slate-300 dark:border-slate-700'} rounded-lg outline-none transition-all text-slate-700 dark:text-slate-100 text-sm px-3 py-2 ${showPasswordToggle ? 'pr-10' : ''}`}
+            className={`w-full bg-white dark:bg-slate-900 border ${error ? 'border-rose-500' : 'border-slate-300 dark:border-slate-700'} rounded-lg transition-all text-slate-700 dark:text-slate-100 text-sm px-3 py-2 ${showPasswordToggle ? 'pr-10' : ''}`}
             aria-invalid={!!error}
             aria-describedby={error ? `${inputId}-error` : undefined}
             {...props}
