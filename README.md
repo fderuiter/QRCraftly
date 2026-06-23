@@ -13,10 +13,13 @@
     - **Patterns**: Choose from Classic Squares, Modern Dots, Rounded, Diamond, Swiss Cross, Star, and Heart styles.
     - **Colors**: Customize foreground, background, and corner eye colors. Includes accessibility-checked preset themes.
     - **Logos**: Upload and embed custom logos with configurable padding, sizes, and border styles (Square, Circle, None).
-- **Privacy First**: Zero Knowledge architecture. All data processing happens in your browser; no user data is sent to a server.
+- **Privacy First**: Client-side architecture. All sensitive data processing happens in your browser; no user data is sent to a server without your explicit opt-in for telemetry.
+- **Advanced Architecture**:
+    - **Scannability Web Workers**: Real-time QR code scannability and contrast testing runs on a background Web Worker, ensuring the UI remains jank-free during rapid edits.
+    - **Client-Side SVG Export**: Features a custom `SvgContext` that mimics the Canvas 2D API to generate high-quality, resolution-independent vector graphics directly in the browser.
 - **Live Preview**: See your changes instantly as you edit.
 - **Download & Share**:
-    - Save as high-quality PNG, JPEG, or WebP.
+    - Save as high-quality PNG, JPEG, WebP, or vector SVG.
     - Native "Save As" support via File System Access API.
     - Web Share API integration for mobile sharing.
 - **Accessibility**:

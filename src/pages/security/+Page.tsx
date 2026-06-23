@@ -24,7 +24,7 @@ export default function Page() {
           Security & Privacy Transparency Hub
         </h1>
         <p className="text-lg text-slate-600 dark:text-slate-300 max-w-2xl mx-auto">
-          We believe in complete transparency. Our architecture ensures your data remains yours, with Zero-Knowledge processing.
+          We believe in complete transparency. Our architecture ensures your data remains yours, with privacy-first processing.
         </p>
       </div>
 

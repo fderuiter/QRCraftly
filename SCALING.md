@@ -26,6 +26,11 @@ Cloudflare Pages treats this application as static assets. The limits for the Fr
 | **Concurrent Users** | Unlimited | Client-side handled | **None** |
 | **Builds** | 500 / month | 1 per deploy | **Operational Constraint** |
 
+### 3. Client-Side Performance Optimizations
+To ensure high performance without server-side compute, QRCraftly relies on advanced browser APIs:
+- **Scannability Web Workers**: We utilize Web Workers (`scannabilityWorker.ts`) to perform real-time QR code scannability testing on a background thread. This ensures the main UI thread remains responsive and jank-free even during rapid configuration changes.
+- **Client-Side SVG Export**: We developed a custom `SvgContext` that mimics the Canvas 2D API to generate high-quality, resolution-independent vector graphics locally. The entire SVG file is generated in the browser without server-side rendering or image conversion APIs.
+
 ## Usage Calculations
 
 ### A. Network Payload & Bandwidth
