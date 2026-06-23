@@ -14,7 +14,7 @@ export function AccordionItem({ title, children, defaultOpen = false }: Accordio
     <div className="border border-slate-200 dark:border-slate-700 rounded-xl mb-4 bg-white dark:bg-slate-800 overflow-hidden transition-all duration-300">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full text-left px-5 py-4 flex justify-between items-center focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
+        className="w-full text-left px-5 py-4 flex justify-between items-center"
         aria-expanded={isOpen}
       >
         <span className="font-semibold text-slate-800 dark:text-slate-200">{title}</span>

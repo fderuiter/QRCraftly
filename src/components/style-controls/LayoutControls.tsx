@@ -134,7 +134,7 @@ export const LayoutControls: React.FC<LayoutControlsProps> = ({ config, onChange
             value={config.templateHeadline ?? ''}
             onChange={(e) => onChange({ templateHeadline: e.target.value })}
             aria-label="Template headline"
-            className="w-full px-2 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs text-slate-700 dark:text-slate-200 focus:outline-none focus:border-teal-500"
+            className="w-full px-2 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs text-slate-700 dark:text-slate-200"
           />
           <input
             type="text"
@@ -142,7 +142,7 @@ export const LayoutControls: React.FC<LayoutControlsProps> = ({ config, onChange
             value={config.templateSubtext ?? ''}
             onChange={(e) => onChange({ templateSubtext: e.target.value })}
             aria-label="Template subtext"
-            className="w-full px-2 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs text-slate-700 dark:text-slate-200 focus:outline-none focus:border-teal-500"
+            className="w-full px-2 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs text-slate-700 dark:text-slate-200"
           />
         </div>
       )}
