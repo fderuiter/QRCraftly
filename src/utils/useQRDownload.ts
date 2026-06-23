@@ -20,6 +20,7 @@ import { RefObject, useCallback } from 'react';
 import { QRConfig } from '../types';
 import { generateQRSvg } from './svgExport';
 import { useToast } from '../components/ui/Toast';
+import { useCapabilities } from '../hooks/useCapabilities';
 
 /**
  * Return type for the useQRDownload hook.
@@ -45,6 +46,7 @@ export function useQRDownload(
   config: QRConfig
 ): UseQRDownloadReturn {
   const { addToast } = useToast();
+  const { canSaveFilePicker, canShare } = useCapabilities();
 
   /**
    * Helper function to normalize file extensions.
@@ -95,7 +97,7 @@ export function useQRDownload(
     if (!canvas) return;
 
     // Check if the browser supports the File System Access API (e.g., Chrome, Edge Desktop)
-    if ('showSaveFilePicker' in window) {
+    if (canSaveFilePicker) {
       try {
         const blob = await new Promise<Blob | null>((resolve) =>
           canvas.toBlob(resolve, `image/${format}`)
@@ -127,7 +129,7 @@ export function useQRDownload(
       // Fallback for browsers that don't support showSaveFilePicker (Safari, Firefox, Mobile)
       downloadToDevice(format);
     }
-  }, [qrRef, getFilename, downloadToDevice]);
+  }, [qrRef, getFilename, downloadToDevice, canSaveFilePicker]);
 
   /**
    * Uses the Web Share API to share the QR code image directly to other apps.
@@ -167,7 +169,7 @@ export function useQRDownload(
 
         const file = new File([blob], 'qrcode.png', { type: 'image/png' });
 
-        if (navigator.share && navigator.canShare({ files: [file] })) {
+        if (canShare && navigator.canShare({ files: [file] })) {
           try {
             await navigator.share({
               title: 'QRCraftly Code',
@@ -188,7 +190,7 @@ export function useQRDownload(
         }
       }, 'image/png');
     }
-  }, [qrRef, downloadToDevice]);
+  }, [qrRef, downloadToDevice, canShare, addToast]);
 
   /**
    * Generates a vector SVG file from the current QR configuration and triggers
@@ -219,3 +221,4 @@ export function useQRDownload(
 
   return { downloadToDevice, handleSaveAs, handleSaveSvg, handleShare, handleCopy };
 }
+

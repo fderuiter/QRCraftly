@@ -1,10 +1,12 @@
 import { useEffect, useCallback } from 'react';
 import { useQRStore, useQRStoreSelector } from '@/context/QRContext';
 import { ScannabilityStatus } from './useScannability';
+import { useCapabilities } from './useCapabilities';
 
 export function useTelemetry(status: ScannabilityStatus) {
   const store = useQRStore();
   const telemetryOptIn = useQRStoreSelector(state => state.preferences.telemetryOptIn);
+  const { engine } = useCapabilities();
 
   const sendTelemetryPing = useCallback((detail: any) => {
     try {
@@ -30,13 +32,12 @@ export function useTelemetry(status: ScannabilityStatus) {
     store.updatePreferences({ telemetryOptIn: optIn });
     if (optIn && status === 'fail') {
       sendTelemetryPing({
-        engine: navigator.userAgent.includes('Safari') && !navigator.userAgent.includes('Chrome') ? 'WebKit' : 
-                navigator.userAgent.includes('Firefox') ? 'Firefox' : 'Chromium',
+        engine,
         styleId: store.getState().config.style || 'default',
         errorType: 'NOT_FOUND'
       });
     }
-  }, [store, sendTelemetryPing, status]);
+  }, [store, sendTelemetryPing, status, engine]);
 
   return { 
     showTelemetryPrompt: telemetryOptIn === null,

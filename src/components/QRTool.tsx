@@ -30,6 +30,7 @@ import { QRProvider, useQRContext } from '@/context/QRContext';
 import { useTheme } from '@/hooks/useTheme';
 import { useTelemetry } from '@/hooks/useTelemetry';
 import { ComponentRegistry } from '@/utils/ComponentRegistry';
+import { useCapabilities } from '@/hooks/useCapabilities';
 import '@/registry'; // Ensure registry is loaded
 
 function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: string }) {
@@ -45,9 +46,11 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
 
   const { downloadToDevice: hookDownload, handleSaveAs: hookSaveAs, handleSaveSvg: hookSaveSvg, handleShare, handleCopy } = useQRDownload(qrRef, config);
   const [copied, setCopied] = useState(false);
+  const { canShare } = useCapabilities();
 
   // Scannability & Telemetry
   const { status: scannabilityStatus, checkScannability, health } = useScannability(canvasRef, config);
+
   
   const handleRendered = useCallback((info: { moduleCount: number, virtualImageData?: ImageData } = { moduleCount: 0 }) => {
     if (info.moduleCount && !info.virtualImageData) emitSignal('render-complete', info);
@@ -267,15 +270,17 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
                           {copied ? <Check className="w-5 h-5 text-emerald-500" /> : <Copy className="w-5 h-5" />}
                        </Button>
 
-                       <Button 
-                          variant="secondary"
-                          onClick={handleShare}
-                          className="w-12 px-0"
-                          title="Share"
-                          aria-label="Share QR code"
-                       >
-                          <Share2 className="w-5 h-5" />
-                       </Button>
+                       {canShare && (
+                         <Button 
+                            variant="secondary"
+                            onClick={handleShare}
+                            className="w-12 px-0"
+                            title="Share"
+                            aria-label="Share QR code"
+                         >
+                            <Share2 className="w-5 h-5" />
+                         </Button>
+                       )}
                    </div>
 
                    {/* Row 2: Save to Camera Roll */}
