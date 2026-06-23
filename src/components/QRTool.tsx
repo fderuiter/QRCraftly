@@ -135,7 +135,7 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
             <div className="flex gap-2">
               <a
                 href="#content-section"
-                className="p-2 rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
+                className="p-2 rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                 title="About Us"
                 aria-label="About QRCraftly"
               >
