@@ -45,7 +45,7 @@ test.beforeEach(async ({ page }) => {
     delete (window as any).showSaveFilePicker;
   });
   await page.goto('/');
-  await page.waitForLoadState('networkidle');
+  await page.waitForSelector('main[data-hydrated="true"]');
   // Wait until the Appearance section lazy-loads StyleControls (it uses React.lazy)
   await page.getByText('Export Layout').waitFor({ state: 'visible' });
 });
