@@ -29,6 +29,7 @@ class Logger {
     
     if (typeof data === 'object' && data !== null) {
       try {
+        // eslint-disable-next-line no-restricted-syntax
         const sanitized = JSON.parse(JSON.stringify(data, (key, value) => {
           const sensitiveKeys = ['password', 'token', 'secret', 'file', 'content', 'dataurl'];
           if (sensitiveKeys.includes(key.toLowerCase())) return '[REDACTED]';

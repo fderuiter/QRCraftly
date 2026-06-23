@@ -20,7 +20,7 @@ export async function safeReadFileAsDataURL(file: File): Promise<string> {
         }
       };
 
-      reader.onerror = (errorEvent) => {
+      reader.onerror = () => {
         const error = reader.error || new Error('Unknown FileReader error');
         logger.error(`Failed to read file: ${file.name}`, error);
         
