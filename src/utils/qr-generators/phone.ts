@@ -18,6 +18,7 @@
 
 import { PhoneData } from '../../types';
 import { cleanPhoneNumber } from '../security';
+import { parseProtocol } from '../protocol';
 
 /**
  * Constructs the tel string for Phone QR code.
@@ -32,7 +33,9 @@ export const constructPhoneString = (data: PhoneData): string => {
  * Hydrates PhoneData from a raw string.
  */
 export const hydratePhoneData = (raw: string): PhoneData => {
-  return {
-    number: raw.replace(/^tel:/i, ''),
-  };
+  const parsed = parseProtocol(raw);
+  if (parsed && parsed.scheme === 'tel') {
+    return { number: parsed.path };
+  }
+  return { number: '' };
 };

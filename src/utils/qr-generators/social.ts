@@ -17,6 +17,7 @@
 */
 
 import { SocialData, SocialPlatform } from '../../types';
+import { SOCIAL_DOMAINS, parseProtocol } from '../protocol';
 
 /**
  * Sanitizes a social media handle by stripping characters that could be used
@@ -64,27 +65,25 @@ export const hydrateSocialData = (raw: string): SocialData => {
     handle: '',
   };
 
-  try {
-    const url = new URL(raw);
-    const host = url.hostname.toLowerCase();
-    let pathname = url.pathname;
+  const parsed = parseProtocol(raw);
+  if (parsed && (parsed.scheme === 'http' || parsed.scheme === 'https')) {
+    // Check if path starts with a known domain
+    const pathParts = parsed.path.split('/');
+    let domain = pathParts[0].toLowerCase();
+    
+    // Remove www. if present
+    if (domain.startsWith('www.')) {
+      domain = domain.substring(4);
+    }
 
-    if (host.includes('instagram.com')) {
-      result.platform = SocialPlatform.INSTAGRAM;
-      result.handle = pathname.replace(/^\/+/, '').split('/')[0] || '';
-    } else if (host.includes('x.com') || host.includes('twitter.com')) {
-      result.platform = SocialPlatform.TWITTER;
-      result.handle = pathname.replace(/^\/+/, '').split('/')[0] || '';
-    } else if (host.includes('tiktok.com')) {
-      result.platform = SocialPlatform.TIKTOK;
-      let handlePart = pathname.replace(/^\/+/, '').split('/')[0] || '';
+    if (SOCIAL_DOMAINS[domain]) {
+      result.platform = SOCIAL_DOMAINS[domain];
+      let handlePart = pathParts[1] || '';
       if (handlePart.startsWith('@')) {
         handlePart = handlePart.substring(1);
       }
       result.handle = handlePart;
     }
-  } catch (e) {
-    // If it's not a valid URL, it might just be the handle or malformed
   }
 
   return result;

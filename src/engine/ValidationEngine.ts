@@ -1,5 +1,6 @@
 import { QRConfig, QRType } from '../types';
 import { getContrastRatio } from '../utils/colorUtils';
+import { parseProtocol, PROTOCOL_PREFIXES, SOCIAL_DOMAINS } from '../utils/protocol';
 
 export const ValidationEngine = {
   // Shared regex patterns for data parsing and validation
@@ -34,31 +35,37 @@ export const ValidationEngine = {
     if (raw.startsWith('WIFI:')) return QRType.WIFI;
     if (raw.includes('BEGIN:VCARD')) return QRType.VCARD;
     if (raw.includes('BEGIN:VEVENT') || raw.includes('BEGIN:VCALENDAR')) return QRType.EVENT;
-    if (raw.toLowerCase().startsWith('mailto:') || raw.startsWith('MATMSG:')) return QRType.EMAIL;
-    if (raw.toLowerCase().startsWith('tel:')) return QRType.PHONE;
-    if (raw.toLowerCase().startsWith('sms:') || raw.toLowerCase().startsWith('smsto:')) return QRType.SMS;
-    if (raw.toLowerCase().startsWith('geo:')) return QRType.LOCATION;
-    
     if (/^(bitcoin|ethereum|litecoin|solana):/i.test(raw)) return QRType.PAYMENT;
 
-    try {
-      const url = new URL(raw);
-      const host = url.hostname.toLowerCase();
-      
-      const isDomain = (d: string) => host === d || host.endsWith(`.${d}`);
-      if (isDomain('instagram.com') || isDomain('x.com') || isDomain('twitter.com') || isDomain('tiktok.com')) {
-        return QRType.SOCIAL;
-      }
-      
-      if (isDomain('zoom.us') || isDomain('teams.microsoft.com') || isDomain('meet.google.com')) {
-        return QRType.MEETING;
-      }
-      
-      if (url.protocol === 'http:' || url.protocol === 'https:') {
+    const parsed = parseProtocol(raw);
+    
+    if (parsed) {
+      if (PROTOCOL_PREFIXES.MAIL.includes(parsed.scheme + ':')) return QRType.EMAIL;
+      if (parsed.scheme === 'matmsg') return QRType.EMAIL;
+      if (PROTOCOL_PREFIXES.TEL.includes(parsed.scheme + ':')) return QRType.PHONE;
+      if (PROTOCOL_PREFIXES.SMS.includes(parsed.scheme + ':')) return QRType.SMS;
+      if (parsed.scheme === 'geo') return QRType.LOCATION;
+
+      if (parsed.scheme === 'http' || parsed.scheme === 'https') {
+        const pathParts = parsed.path.split('/');
+        let domain = pathParts[0].toLowerCase();
+        if (domain.startsWith('www.')) {
+          domain = domain.substring(4);
+        }
+        
+        // Find if any known domain is a suffix of the current domain
+        const knownSocial = Object.keys(SOCIAL_DOMAINS).find(d => domain === d || domain.endsWith(`.${d}`));
+        if (knownSocial) {
+          return QRType.SOCIAL;
+        }
+
+        const isDomain = (d: string) => domain === d || domain.endsWith(`.${d}`);
+        if (isDomain('zoom.us') || isDomain('teams.microsoft.com') || isDomain('meet.google.com')) {
+          return QRType.MEETING;
+        }
+
         return QRType.URL;
       }
-    } catch (e) {
-      // Ignore URL parsing errors
     }
 
     return QRType.TEXT;
