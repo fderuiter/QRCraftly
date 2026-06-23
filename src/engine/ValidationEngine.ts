@@ -1,12 +1,13 @@
 import { QRConfig, QRType } from '../types';
 import { getContrastRatio } from '../utils/colorUtils';
 import { parseProtocol, PROTOCOL_PREFIXES, SOCIAL_DOMAINS } from '../utils/protocol';
+import { SafeUrlPipeline } from '../utils/url';
 
 export const ValidationEngine = {
   // Shared regex patterns for data parsing and validation
   REGEX_STRICT_CONTROL_CHARS: /[\x00-\x1F\x7F-\x9F]+/g,
   REGEX_PRESERVE_FORMAT_CONTROL_CHARS: /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g,
-  REGEX_URL_UNSAFE_CHARS: /[\x00-\x1F\x7F-\x9F\s\u200B-\u200D\uFEFF]+/g,
+  REGEX_URL_UNSAFE_CHARS: SafeUrlPipeline.REGEX_URL_UNSAFE_CHARS,
   REGEX_ESCAPE_WIFI: /([\\;,":])/g,
   REGEX_UNESCAPE_WIFI: /\\([\\;,":])/g,
   REGEX_SPLIT_WIFI: /(?<!\\);/,
@@ -14,19 +15,7 @@ export const ValidationEngine = {
   REGEX_UNESCAPE_VCARD: /\\([;,])/g,
   REGEX_SPLIT_VCARD: /(?<!\\);/,
 
-  DANGEROUS_PROTOCOLS: [
-    'javascript:',
-    'vbscript:',
-    'file:',
-    'data:',
-    'mk:',
-    'blob:',
-    'filesystem:',
-    'jscript:',
-    'wscript:',
-    'mocha:',
-    'about:',
-  ],
+  DANGEROUS_PROTOCOLS: SafeUrlPipeline.DANGEROUS_PROTOCOLS,
 
   // Protocol Identification
   identifyProtocol(raw: string): QRType | null {
@@ -80,9 +69,7 @@ export const ValidationEngine = {
 
   // Security sanitization
   isDangerousUrl(url: string | undefined): boolean {
-    if (!url) return false;
-    const normalized = url.replace(this.REGEX_URL_UNSAFE_CHARS, '').toLowerCase();
-    return this.DANGEROUS_PROTOCOLS.some(p => normalized.startsWith(p));
+    return SafeUrlPipeline.isDangerous(url);
   },
 
   sanitizeInput(str: string): string {
