@@ -2,6 +2,7 @@ import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { QRConfig } from '../types';
 import { useQRStore } from '@/context/QRContext';
 import { ValidationEngine } from '../engine/ValidationEngine';
+import { useCapabilities } from './useCapabilities';
 
 export type ScannabilityStatus = 'idle' | 'checking' | 'digital-pass' | 'physical-pass' | 'fail';
 
@@ -14,6 +15,7 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
   const [status, setStatus] = useState<ScannabilityStatus>('idle');
   const workerRef = useRef<Worker | null>(null);
   const store = useQRStore();
+  const { engine } = useCapabilities();
 
   const health = useMemo<HealthScore>(() => {
     return ValidationEngine.calculateScannability(config);
@@ -35,8 +37,7 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
 
       if (!success && error) {
         store.emitSignal('scannability-fail', {
-          engine: navigator.userAgent.includes('Safari') && !navigator.userAgent.includes('Chrome') ? 'WebKit' : 
-                  navigator.userAgent.includes('Firefox') ? 'Firefox' : 'Chromium',
+          engine,
           styleId: config.style || 'default',
           errorType: error
         });
@@ -52,7 +53,7 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
       // However, React 18 StrictMode double-invokes useEffect, which would kill our worker.
       // We will leave it alive or manage its lifecycle better.
     };
-  }, [config, store]);
+  }, [config, store, engine]);
 
   // Handle worker cleanup on full unmount
   useEffect(() => {

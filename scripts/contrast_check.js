@@ -32,34 +32,11 @@ function blendColor(fgRgb, bgRgb, alpha) {
     return fgRgb.map((fg, i) => Math.round(fg * alpha + bgRgb[i] * (1 - alpha)));
 }
 
-const colors = {
-    'white': '#ffffff',
-    'black': '#000000',
-    'slate-50': '#f8fafc',
-    'slate-100': '#f1f5f9',
-    'slate-200': '#e2e8f0',
-    'slate-300': '#cbd5e1',
-    'slate-400': '#94a3b8',
-    'slate-600': '#475569',
-    'slate-700': '#334155',
-    'slate-800': '#1e293b',
-    'slate-900': '#0f172a',
-    'teal-100': '#ccfbf1',
-    'teal-400': '#2dd4bf',
-    'teal-600': '#0d9488',
-    'teal-700': '#0f766e',
-    'teal-900': '#134e4a',
-    'rose-100': '#ffe4e6',
-    'rose-400': '#fb7185',
-    'rose-600': '#e11d48',
-    'rose-700': '#be123c',
-    'rose-900': '#881337',
-    'indigo-100': '#e0e7ff',
-    'indigo-400': '#818cf8',
-    'indigo-600': '#4f46e5',
-    'indigo-700': '#4338ca',
-    'indigo-900': '#312e81',
-};
+import fs from 'fs';
+
+const colorsJson = JSON.parse(fs.readFileSync(new URL('../src/colors.json', import.meta.url), 'utf-8'));
+const colors = colorsJson.ui;
+const presets = colorsJson.presets;
 
 const scenarios = [
     // Light Mode
@@ -135,6 +112,29 @@ function runCheck() {
 
         const bgName = Array.isArray(s.bg) ? `[${s.bg.join(', ')}]` : s.bg;
         console.log(`${s.mode.padEnd(6)} | ${s.text.padEnd(20)} | ${ratio.toFixed(2)}:1   | ${(passed ? 'YES' : 'NO').padEnd(6)} | ${level.padEnd(5)} | ${bgName} vs ${s.fg}`);
+    }
+
+    console.log("\nChecking Presets:");
+    console.log(`${'Preset'.padEnd(12)} | ${'Element'.padEnd(8)} | ${'Contrast'.padEnd(8)} | ${'Pass?'.padEnd(6)} | Details`);
+    console.log("-".repeat(60));
+
+    for (const p of presets) {
+        const bgRgb = hexToRgb(p.bg);
+        const fgRgb = hexToRgb(p.fg);
+        const eyeRgb = hexToRgb(p.eye);
+
+        const fgRatio = contrastRatio(fgRgb, bgRgb);
+        const eyeRatio = contrastRatio(eyeRgb, bgRgb);
+
+        const minRatio = 3.0; // Graphic elements generally require 3.0:1
+
+        const fgPassed = fgRatio >= minRatio;
+        const eyePassed = eyeRatio >= minRatio;
+
+        if (!fgPassed || !eyePassed) allPassed = false;
+
+        console.log(`${p.label.padEnd(12)} | ${'FG vs BG'.padEnd(8)} | ${fgRatio.toFixed(2)}:1   | ${(fgPassed ? 'YES' : 'NO').padEnd(6)} | ${p.bg} vs ${p.fg}`);
+        console.log(`${p.label.padEnd(12)} | ${'Eye vs BG'.padEnd(8)} | ${eyeRatio.toFixed(2)}:1   | ${(eyePassed ? 'YES' : 'NO').padEnd(6)} | ${p.bg} vs ${p.eye}`);
     }
     
     if (!allPassed) {
