@@ -257,7 +257,7 @@ describe('QRTool Component', () => {
       });
   });
 
-  it('falls back if Web Share API is not supported', async () => {
+  it('does not render share button if Web Share API is not supported', async () => {
     // Set share to undefined
     Object.defineProperty(global.navigator, 'share', {
         value: undefined,
@@ -265,16 +265,11 @@ describe('QRTool Component', () => {
         configurable: true
     });
 
-    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click');
-    vi.spyOn(document.body, 'appendChild');
-
     render(<ToastProvider><QRTool /></ToastProvider>);
-    const shareBtn = screen.getByTitle('Share');
-    fireEvent.click(shareBtn);
-
-    await waitFor(() => {
-        expect(clickSpy).toHaveBeenCalled();
-    });
+    
+    // the share button should not be found
+    const shareBtn = screen.queryByTitle('Share');
+    expect(shareBtn).toBeNull();
   });
 
   it('catches blob creation failure in handleSaveAs', async () => {
