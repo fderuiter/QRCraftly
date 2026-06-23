@@ -10,4 +10,14 @@ describe('Phone generator', () => {
     const hydrated = hydratePhoneData(str);
     expect(hydrated).toEqual(data);
   });
+
+  it('hydrates empty object when given non-tel string', () => {
+    const hydrated = hydratePhoneData('mailto:test@test.com');
+    expect(hydrated).toEqual({ number: '' });
+  });
+
+  it('hydrates empty object when given invalid string', () => {
+    const hydrated = hydratePhoneData('invalid-string');
+    expect(hydrated).toEqual({ number: '' });
+  });
 });
