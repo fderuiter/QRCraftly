@@ -354,7 +354,7 @@ describe('QRCanvas Component', () => {
       render(<QRCanvas config={DEFAULT_CONFIG} />);
 
       await waitFor(() => {
-          expect(consoleSpy).toHaveBeenCalledWith("QR generation failed:", expect.any(Error));
+          expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining("WARN: QR generation failed:"), expect.any(Object));
       });
 
       consoleSpy.mockRestore();

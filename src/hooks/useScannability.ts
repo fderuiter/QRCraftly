@@ -2,6 +2,8 @@ import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { QRConfig } from '../types';
 import { useQRStore } from '@/context/QRContext';
 import { ValidationEngine } from '../engine/ValidationEngine';
+import { logger } from '../infrastructure/logger';
+import { dispatchToast } from '../components/ui/Toast';
 
 export type ScannabilityStatus = 'idle' | 'checking' | 'digital-pass' | 'physical-pass' | 'fail';
 
@@ -110,7 +112,12 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
           isTest: navigator.webdriver,
         }, [imageData.data.buffer]);
       } catch (err) {
-        console.error("Failed to read canvas data", err);
+        logger.error("Failed to read canvas data", err);
+        dispatchToast({
+          type: 'error',
+          message: 'Failed to analyze QR code. Rendering data is unreadable.',
+          duration: 5000
+        });
         setStatus('fail');
       }
     };

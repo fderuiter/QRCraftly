@@ -21,6 +21,7 @@ import { QRConfig, SocialFormat, TemplateStyle } from '../types';
 import { drawQR, drawQRInternal } from '../utils/qrRenderer';
 import { drawWithTemplate, SOCIAL_DIMENSIONS } from '../utils/templateRenderer';
 import { useImage } from '../utils/hooks';
+import { logger } from '../infrastructure/logger';
 
 /**
  * Props for the QRCanvas component.
@@ -81,7 +82,7 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({ config, s
         const data = QRCode.create(config.value, { errorCorrectionLevel: config.errorCorrectionLevel });
         setQrData(data);
       } catch (e) {
-        console.warn("QR generation failed:", e);
+        logger.warn("QR generation failed:", e);
         setQrData(null);
       }
     });
@@ -211,7 +212,7 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({ config, s
             vCanvas.height = 0;
           }
         } catch (err) {
-          console.error("Virtual rendering failed:", err);
+          logger.error("Virtual rendering failed:", err);
         }
       };
 

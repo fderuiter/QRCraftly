@@ -18,6 +18,7 @@
 
 import { useState, useCallback } from 'react';
 import { validateImageUpload } from '../utils/security';
+import { safeReadFileAsDataURL } from '../infrastructure/fileReader';
 
 interface UseImageUploadReturn {
   error: string | null;
@@ -32,7 +33,7 @@ interface UseImageUploadReturn {
 export function useImageUpload(): UseImageUploadReturn {
   const [error, setError] = useState<string | null>(null);
 
-  const handleUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>, onSuccess: (dataUrl: string) => void) => {
+  const handleUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>, onSuccess: (dataUrl: string) => void) => {
     const file = e.target.files?.[0];
     setError(null);
     if (file) {
@@ -41,11 +42,13 @@ export function useImageUpload(): UseImageUploadReturn {
         setError(validationError);
         return;
       }
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        onSuccess(event.target?.result as string);
-      };
-      reader.readAsDataURL(file);
+      try {
+        const dataUrl = await safeReadFileAsDataURL(file);
+        onSuccess(dataUrl);
+      } catch (err) {
+        // Error is logged and toast is dispatched in the safe wrapper
+        setError('Failed to read file. Please try another image.');
+      }
     }
   }, []);
 

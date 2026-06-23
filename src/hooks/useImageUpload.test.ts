@@ -1,4 +1,4 @@
-import { renderHook, act } from '@testing-library/react';
+import { renderHook, act, waitFor } from '@testing-library/react';
 import { useImageUpload } from './useImageUpload';
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as security from '../utils/security';
@@ -12,7 +12,7 @@ describe('useImageUpload', () => {
     vi.restoreAllMocks();
   });
 
-  it('handles valid image upload', () => {
+  it('handles valid image upload', async () => {
     const { result } = renderHook(() => useImageUpload());
     const onSuccess = vi.fn();
 
@@ -47,13 +47,15 @@ describe('useImageUpload', () => {
     expect(security.validateImageUpload).toHaveBeenCalledWith(file);
     expect(mockReadAsDataURL).toHaveBeenCalledWith(file);
 
-    act(() => {
+    await act(async () => {
       if (mockFileReaderInstance.onload) {
           mockFileReaderInstance.onload({ target: { result: 'data:image/png;base64,dummy' } } as any);
       }
     });
 
-    expect(onSuccess).toHaveBeenCalledWith('data:image/png;base64,dummy');
+    await waitFor(() => {
+      expect(onSuccess).toHaveBeenCalledWith('data:image/png;base64,dummy');
+    });
     expect(result.current.error).toBeNull();
 
     // Restore

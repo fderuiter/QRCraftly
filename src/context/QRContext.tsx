@@ -37,24 +37,10 @@ export interface QRStore {
 const QRContext = createContext<QRContextType | undefined>(undefined);
 const QRStoreContext = createContext<QRStore | undefined>(undefined);
 
-const getSafeLocalStorage = () => {
-  if (typeof window !== 'undefined' && window.localStorage && typeof window.localStorage.getItem === 'function') {
-    return window.localStorage;
-  }
-  const store = new Map<string, string>();
-  return {
-    getItem: (key: string) => store.get(key) ?? null,
-    setItem: (key: string, value: string) => { store.set(key, value); },
-    removeItem: (key: string) => { store.delete(key); },
-    clear: () => { store.clear(); },
-    key: (index: number) => Array.from(store.keys())[index] ?? null,
-    get length() { return store.size; }
-  };
-};
+import { safeStorage } from '@/infrastructure/storage';
 
 function createQRStore(initialConfig?: Partial<QRConfig>): QRStore {
-  const storage = getSafeLocalStorage();
-  const savedOptIn = storage.getItem('qr-telemetry-opt-in');
+  const savedOptIn = safeStorage.getItem('qr-telemetry-opt-in');
   
   let state: QRState = {
     config: { ...DEFAULT_CONFIG, ...initialConfig },
@@ -86,7 +72,7 @@ function createQRStore(initialConfig?: Partial<QRConfig>): QRStore {
     updatePreferences: (updates) => {
       state = { ...state, preferences: { ...state.preferences, ...updates } };
       if (updates.telemetryOptIn !== undefined && updates.telemetryOptIn !== null) {
-        getSafeLocalStorage().setItem('qr-telemetry-opt-in', String(updates.telemetryOptIn));
+        safeStorage.setItem('qr-telemetry-opt-in', String(updates.telemetryOptIn));
       }
       listeners.forEach(l => l());
     },
