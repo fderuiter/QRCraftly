@@ -21,11 +21,12 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
 
   useEffect(() => {
     // Initialize worker
-    if (typeof window !== 'undefined' && !workerRef.current) {
-      workerRef.current = new Worker(new URL('../utils/scannabilityWorker.ts', import.meta.url), { type: 'module' });
+    let worker = workerRef.current;
+    if (typeof window !== 'undefined' && !worker) {
+      worker = new Worker(new URL('../utils/scannabilityWorker.ts', import.meta.url), { type: 'module' });
+      workerRef.current = worker;
     }
     
-    const worker = workerRef.current;
     if (!worker) return;
 
     const handleMessage = (e: MessageEvent) => {
@@ -46,8 +47,22 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
 
     return () => {
       worker.removeEventListener('message', handleMessage);
+      // We don't terminate the worker here because it's stored in a ref and reused across config changes,
+      // but if the component unmounts fully, we should ideally clean it up.
+      // However, React 18 StrictMode double-invokes useEffect, which would kill our worker.
+      // We will leave it alive or manage its lifecycle better.
     };
   }, [config, store]);
+
+  // Handle worker cleanup on full unmount
+  useEffect(() => {
+    return () => {
+      if (workerRef.current) {
+        workerRef.current.terminate();
+        workerRef.current = null;
+      }
+    };
+  }, []);
 
   // Expose a function to trigger check
   const checkScannability = useCallback((overrideImageData?: ImageData) => {
@@ -63,7 +78,7 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
         width: overrideImageData.width,
         height: overrideImageData.height,
         isTest: navigator.webdriver,
-      });
+      }, [overrideImageData.data.buffer]);
       return;
     }
 
@@ -93,7 +108,7 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
           width: canvas.width,
           height: canvas.height,
           isTest: navigator.webdriver,
-        });
+        }, [imageData.data.buffer]);
       } catch (err) {
         console.error("Failed to read canvas data", err);
         setStatus('fail');
