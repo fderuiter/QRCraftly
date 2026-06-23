@@ -35,7 +35,7 @@ export const SafeUrlPipeline = {
   ],
 
   decodeHtmlEntities(str: string): string {
-    return str.replace(/&#(?:[xX]([0-9a-fA-F]+)|([0-9]+));?/g, (match, hex, dec) => {
+    return str.replace(/&#(?:[xX]([0-9a-fA-F]+)|([0-9]+));?/g, (_match, hex, dec) => {
       return String.fromCharCode(hex ? parseInt(hex, 16) : parseInt(dec, 10));
     }).replace(/&([a-zA-Z]+);?/g, (match, name) => {
       const namedEntities: Record<string, string> = {
