@@ -20,7 +20,7 @@ import { QRConfig } from '../types';
 import { SvgContext } from './svgContext';
 import { drawWithTemplate, SOCIAL_DIMENSIONS } from './templateRenderer';
 
-import { isDangerousUrl, REGEX_URL_UNSAFE_CHARS } from './security';
+import { SafeUrlPipeline, normalizeUrl } from './url';
 
 /**
  * Converts an image URL to a base64 data-URL so it can be embedded inline in
@@ -33,7 +33,7 @@ import { isDangerousUrl, REGEX_URL_UNSAFE_CHARS } from './security';
 async function toDataUrl(url: string): Promise<string | null> {
   if (!url) return null;
 
-  const normalized = url.replace(REGEX_URL_UNSAFE_CHARS, '').toLowerCase();
+  const normalized = normalizeUrl(url).toLowerCase();
 
   if (normalized.startsWith('data:')) {
     if (normalized.startsWith('data:image/')) {
@@ -42,7 +42,7 @@ async function toDataUrl(url: string): Promise<string | null> {
     return null;
   }
 
-  if (isDangerousUrl(url)) {
+  if (SafeUrlPipeline.isDangerous(url)) {
     return null;
   }
 
