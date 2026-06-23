@@ -2,11 +2,11 @@
 
 ## HIPAA Compliance Alignment
 
-This application is designed to **support** HIPAA-compliant workflows through a **Zero Knowledge Client-Side Architecture**.
+This application is designed to **support** HIPAA-compliant workflows through a **Privacy First Client-Side Architecture**.
 
 ### 1. Data Privacy (The "Won't Use Your Data" Guarantee)
 *   **Local Processing:** All QR code generation happens locally within the user's browser using HTML5 Canvas and JavaScript.
-*   **No Data Transmission:** The data you enter to generate a QR code (which may include PHI) is **never sent to our servers**. It remains strictly in your device's memory.
+*   **Data Transmission:** The sensitive data you enter to generate a QR code (which may include PHI) remains strictly in your device's memory and is not sent to our servers.
 *   **Volatile Memory:** Data entered into the application is cleared when the browser tab is closed or refreshed.
 
 ### 2. Logging & Metrics Policy
@@ -17,6 +17,8 @@ To maintain security, performance, and legal accountability, we collect basic ac
     *   User Agent (browser/device type).
     *   Request Path (e.g., `/`, `/about` - which are static).
     *   Timestamp.
+*   **Opt-In Telemetry:**
+    *   If you encounter a scannability issue and opt-in to telemetry, we transmit limited diagnostic data to help us improve the application. This data consists only of: `engine` (browser engine), `styleId` (the QR pattern style used), and `errorType`.
 *   **What is NOT Logged:**
     *   **User Input:** Since the application runs client-side, the text, URLs, or WiFi passwords you type are never part of the HTTP request to the server.
     *   **Generated Images:** The QR codes created are generated in the browser and never uploaded.

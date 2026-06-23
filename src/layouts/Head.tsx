@@ -76,7 +76,7 @@ export default function HeadDefault() {
         "@type": "WebSite",
         "name": "QRCraftly",
         "url": resolvedDomain,
-        "description": "Free, secure, and client-side QR code generator with zero-knowledge architecture.",
+        "description": "Free, secure, and client-side QR code generator with privacy-first architecture.",
         "publisher": {
           "@id": `${resolvedDomain}/#organization`
         }

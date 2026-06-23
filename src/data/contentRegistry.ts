@@ -32,7 +32,7 @@ export const contentRegistry: Record<string, ToolContent> = {
       },
       {
         "question": "Is my data secure?",
-        "answer": "We utilize a Zero Knowledge architecture. Your content is processed entirely in your browser and never transmitted to our servers."
+        "answer": "We utilize a Privacy First architecture. Your content is processed entirely in your browser and not transmitted to our servers without your explicit opt-in for telemetry."
       },
       {
         "question": "Is QRCraftly open source?",
