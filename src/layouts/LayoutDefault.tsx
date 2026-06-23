@@ -16,7 +16,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import './index.css';
 import { ToastProvider } from '../components/ui/Toast';
 import { ErrorBoundary } from '../components/ErrorBoundary';
@@ -33,9 +33,14 @@ import { ErrorBoundary } from '../components/ErrorBoundary';
  * @returns {JSX.Element} The layout wrapper.
  */
 export default function LayoutDefault({ children }: { children: React.ReactNode }) {
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
+
   return (
     <ToastProvider>
-      <main className="flex min-h-screen flex-col bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-200 antialiased font-sans">
+      <main className="flex min-h-screen flex-col bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-200 antialiased font-sans" data-hydrated={hydrated}>
         <ErrorBoundary>
           {children}
         </ErrorBoundary>

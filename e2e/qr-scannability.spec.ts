@@ -1,30 +1,30 @@
 import { test, expect } from '@playwright/test';
+import fs from 'fs';
+import path from 'path';
 
 test.describe('QR Code Scannability via Headless Browser', () => {
   test('generates scannable QR codes for various styles', async ({ page }) => {
-    // We can evaluate code on the page, and we need jsqr to scan it.
-    // Fortunately jsqr is available in the window context or we can inject it.
-    // Let's inject jsqr from cdn.
-    await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    const jsQRContent = fs.readFileSync(path.resolve('node_modules/jsqr/dist/jsQR.js'), 'utf8');
 
-    await page.addScriptTag({ path: 'node_modules/jsqr/dist/jsQR.js' });
+    await page.goto('/');
+
+    // Wait for hydration to complete
+    await page.waitForSelector('main[data-hydrated="true"]');
+
+    // Wait for the URL input to be visible
+    const input = page.locator('#url-input');
+    await input.waitFor({ state: 'visible' });
 
     // Set a known value for the QR code
     const testUrl = 'https://qrcraftly.com/test-verification';
-    const input = page.locator('input[type="text"], input[type="url"]').first();
     await input.fill(testUrl);
-    await page.waitForTimeout(1000); // wait for debounce and render
+    await expect(input).toHaveValue(testUrl);
 
     // Wait for the QR code to be rendered
     await page.waitForSelector('canvas[role="img"]');
     
-    // We can interact with styles if there are buttons, but since we just want to verify 
-    // the output, we can iterate over the styles in the DOM or just change them via UI.
-    // Let's just check the default first.
-    
     const checkScannability = async () => {
-        return await page.evaluate(async (url) => {
+        return await page.evaluate(async ({ url, jsQRScript }) => {
             const canvas = document.querySelector('canvas[role="img"]') as HTMLCanvasElement;
             if (!canvas) return { error: 'No canvas' };
             const ctx = canvas.getContext('2d');
@@ -34,6 +34,14 @@ test.describe('QR Code Scannability via Headless Browser', () => {
             await new Promise(r => setTimeout(r, 100));
 
             const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            
+            // Inject jsQR if not present
+            if (typeof (window as any).jsQR === 'undefined') {
+                const script = document.createElement('script');
+                script.textContent = jsQRScript;
+                document.head.appendChild(script);
+            }
+
             // @ts-ignore
             if (typeof jsQR !== 'undefined') {
                 // @ts-ignore
@@ -43,21 +51,22 @@ test.describe('QR Code Scannability via Headless Browser', () => {
                 }
             }
             return { error: 'Not scannable' };
-        }, testUrl);
+        }, { url: testUrl, jsQRScript: jsQRContent });
     };
 
-    let result = await checkScannability();
-    expect(result.success).toBe(true);
-    expect(result.data).toBe(testUrl);
+    await expect.poll(async () => {
+        const result = await checkScannability();
+        return result.data;
+    }, { timeout: 15000 }).toBe(testUrl);
 
     // Now test a different style if we can click it.
-    // The "Dots" style:
     const dotsButton = page.getByRole('button', { name: 'Dots', exact: true });
     if (await dotsButton.isVisible()) {
         await dotsButton.click();
-        result = await checkScannability();
-        expect(result.success).toBe(true);
-        expect(result.data).toBe(testUrl);
+        await expect.poll(async () => {
+            const result = await checkScannability();
+            return result.data;
+        }, { timeout: 15000 }).toBe(testUrl);
     }
   });
 });

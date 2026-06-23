@@ -26,8 +26,8 @@ import { test, expect } from '@playwright/test';
 // Navigate to the homepage and activate the Location QR type before each test.
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
+  await page.waitForSelector('main[data-hydrated="true"]');
   // Wait for all network requests to settle so React has fully hydrated
-  await page.waitForLoadState('networkidle');
   await page.getByRole('button', { name: 'Location' }).click();
   // Wait for the form to be fully rendered
   await page.getByRole('button', { name: /use current location/i }).waitFor({ state: 'visible' });
@@ -79,7 +79,7 @@ test.describe('Location QR type', () => {
 
     // Reload so the init script takes effect
     await page.reload();
-    await page.waitForLoadState('networkidle');
+    await page.waitForSelector('main[data-hydrated="true"]');
     await page.getByRole('button', { name: 'Location' }).click();
     await page.getByRole('button', { name: /use current location/i }).waitFor({ state: 'visible' });
 
@@ -114,7 +114,7 @@ test.describe('Location QR type', () => {
     });
 
     await page.reload();
-    await page.waitForLoadState('networkidle');
+    await page.waitForSelector('main[data-hydrated="true"]');
     await page.getByRole('button', { name: 'Location' }).click();
     await page.getByRole('button', { name: /use current location/i }).waitFor({ state: 'visible' });
 
@@ -133,7 +133,7 @@ test.describe('Location QR type', () => {
     });
 
     await page.reload();
-    await page.waitForLoadState('networkidle');
+    await page.waitForSelector('main[data-hydrated="true"]');
     await page.getByRole('button', { name: 'Location' }).click();
     await page.getByRole('button', { name: /use current location/i }).waitFor({ state: 'visible' });
 
@@ -184,7 +184,7 @@ test.describe('Location QR type', () => {
     });
 
     await page.reload();
-    await page.waitForLoadState('networkidle');
+    await page.waitForSelector('main[data-hydrated="true"]');
     await page.getByRole('button', { name: 'Location' }).click();
     await page.getByRole('button', { name: /use current location/i }).waitFor({ state: 'visible' });
 
