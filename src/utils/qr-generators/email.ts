@@ -18,6 +18,7 @@
 
 import { EmailData } from '../../types';
 import { sanitizeInput } from '../security';
+import { parseProtocol } from '../protocol';
 
 /**
  * Constructs the mailto string for Email QR code.
@@ -38,27 +39,20 @@ export const hydrateEmailData = (raw: string): EmailData => {
     body: '',
   };
 
-  if (raw.startsWith('MATMSG:')) {
-    const content = raw.substring(7).replace(/;+$/, '');
-    const parts = content.split(';');
-    parts.forEach(part => {
-      const splitIndex = part.indexOf(':');
-      if (splitIndex <= 0) return;
-      const key = part.substring(0, splitIndex);
-      const value = part.substring(splitIndex + 1);
-      if (key === 'TO') result.email = value;
-      if (key === 'SUB') result.subject = value;
-      if (key === 'BODY') result.body = value;
-    });
+  const parsed = parseProtocol(raw);
+  if (!parsed) return result;
+
+  if (parsed.scheme === 'matmsg') {
+    result.email = parsed.path;
+    result.subject = parsed.params.get('SUB') || '';
+    result.body = parsed.params.get('BODY') || '';
     return result;
   }
 
-  if (raw.toLowerCase().startsWith('mailto:')) {
-    const urlStr = raw.replace(/^mailto:/i, 'http://localhost/');
-    const url = new URL(urlStr);
-    result.email = url.pathname.replace(/^\//, '');
-    result.subject = url.searchParams.get('subject') || '';
-    result.body = url.searchParams.get('body') || '';
+  if (parsed.scheme === 'mailto') {
+    result.email = parsed.path;
+    result.subject = parsed.params.get('subject') || '';
+    result.body = parsed.params.get('body') || '';
   }
 
   return result;
