@@ -110,7 +110,7 @@ interface UseQRDownloadReturn {
  * @returns Object containing download and share handlers.
  */
 export function useQRDownload(
-  qrRef: RefObject<HTMLDivElement | null>,
+  _qrRef: RefObject<HTMLDivElement | null>,
   config: QRConfig
 ): UseQRDownloadReturn {
   const { addToast } = useToast();

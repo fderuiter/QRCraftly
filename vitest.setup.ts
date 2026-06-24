@@ -65,7 +65,6 @@ HTMLCanvasElement.prototype.getContext = function () {
 };
 
 // Mock Image so that setting src instantly triggers onload, preventing test timeouts
-const OriginalImage = window.Image;
 window.Image = class MockImage {
   onload: (() => void) | null = null;
   onerror: (() => void) | null = null;

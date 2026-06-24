@@ -34,6 +34,7 @@ describe('useQRDownload', () => {
     vi.spyOn(HTMLCanvasElement.prototype, 'toBlob').mockImplementation(function(this: any, callback: any) { callback(new Blob(['mock']), 'image/png'); });
 
     // Setup mock ref
+    mockCanvas = document.createElement("canvas");
     mockQrRef = {
       current: {
         querySelector: vi.fn(() => mockCanvas),
