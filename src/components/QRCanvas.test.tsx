@@ -18,7 +18,7 @@
 
 
 import { render, screen, waitFor, act } from '@testing-library/react';
-import { vi, describe, it, expect, beforeEach, afterEach, Mock } from 'vitest';
+import { vi, describe, it, expect, beforeEach, Mock } from 'vitest';
 import QRCanvas from './QRCanvas';
 import { DEFAULT_CONFIG } from '../constants';
 import { QRStyle, LogoPaddingStyle, QRErrorCorrectionLevel, SocialFormat } from '../types';
@@ -26,8 +26,6 @@ import QRCode from 'qrcode';
 
 // Mock qrcode module
 
-// Mock Image
-const originalImage = window.Image;
 
 describe('QRCanvas Component', () => {
   let mockContext: any;
@@ -85,7 +83,6 @@ describe('QRCanvas Component', () => {
       modules: mockModules,
     });
 
-    // Mock Image
     createdImages = [];
     class MockImage {
       onload: (() => void) | null = null;

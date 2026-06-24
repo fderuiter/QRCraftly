@@ -16,14 +16,12 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, waitFor, act } from '@testing-library/react';
 import QRCanvas from './QRCanvas';
 import { DEFAULT_CONFIG } from '../constants';
 import { QRConfig } from '../types';
 
-// Save original Image constructor
-const originalImage = window.Image;
 
 describe('QRCanvas Border Extended Features', () => {
   let mockContext: any;
@@ -69,7 +67,6 @@ describe('QRCanvas Border Extended Features', () => {
       return null;
     });
 
-    // Mock Image to simulate loading
     class MockImage {
       onload: (() => void) | null = null;
       onerror: (() => void) | null = null;

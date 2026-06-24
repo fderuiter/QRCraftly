@@ -1,6 +1,6 @@
 
 import { render, waitFor, act } from '@testing-library/react';
-import { vi, describe, it, expect, beforeEach, afterEach, Mock } from 'vitest';
+import { vi, describe, it, expect, beforeEach, Mock } from 'vitest';
 import QRCanvas from './QRCanvas';
 import { DEFAULT_CONFIG } from '../constants';
 import { QRStyle } from '../types';
@@ -12,7 +12,6 @@ import QRCode from 'qrcode';
 describe('QRCanvas Performance Refactoring', () => {
   let mockContext: any;
   let mockModules: any;
-  let originalImage: any;
   let createdImages: any[] = [];
 
   beforeEach(() => {
@@ -61,8 +60,6 @@ describe('QRCanvas Performance Refactoring', () => {
       modules: mockModules,
     });
 
-    // Mock Image
-    originalImage = window.Image;
     window.Image = class {
       onload: (() => void) | null = null;
       onerror: (() => void) | null = null;

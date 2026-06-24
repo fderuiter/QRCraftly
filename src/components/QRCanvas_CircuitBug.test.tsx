@@ -18,7 +18,7 @@
 
 
 import { render, waitFor } from '@testing-library/react';
-import { vi, describe, it, expect, beforeEach, afterEach, Mock } from 'vitest';
+import { vi, describe, it, expect, beforeEach, Mock } from 'vitest';
 import QRCanvas from './QRCanvas';
 import { DEFAULT_CONFIG } from '../constants';
 import { QRStyle } from '../types';
@@ -26,8 +26,6 @@ import QRCode from 'qrcode';
 
 // Mock qrcode module
 
-// Mock Image
-const originalImage = window.Image;
 
 describe('QRCanvas Circuit Style Bug', () => {
   let mockContext: any;
@@ -83,7 +81,6 @@ describe('QRCanvas Circuit Style Bug', () => {
       modules: mockModules,
     });
 
-    // Mock Image
     window.Image = class {
       onload: (() => void) | null = null;
       onerror: (() => void) | null = null;
