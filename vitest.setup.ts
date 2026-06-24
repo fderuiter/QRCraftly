@@ -75,7 +75,7 @@ const createMockContext = () => ({
   lineWidth: 0,
 });
 
-HTMLCanvasElement.prototype.getContext = vi.fn().mockImplementation(function (contextId: string) {
+HTMLCanvasElement.prototype.getContext = vi.fn().mockImplementation(function (this: HTMLCanvasElement, contextId: string) {
   if (contextId === '2d') {
     if (!(this as any)._mockContext) {
       (this as any)._mockContext = createMockContext();
@@ -89,7 +89,7 @@ const originalCreateElement = document.createElement.bind(document);
 vi.spyOn(document, 'createElement').mockImplementation((tagName: string, options?: ElementCreationOptions) => {
   const el = originalCreateElement(tagName, options);
   if (tagName.toLowerCase() === 'canvas') {
-    el.getContext = HTMLCanvasElement.prototype.getContext;
+    (el as HTMLCanvasElement).getContext = HTMLCanvasElement.prototype.getContext;
   }
   return el;
 });
