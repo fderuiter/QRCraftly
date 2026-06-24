@@ -38,7 +38,7 @@ Follow these instructions to get a copy of the project up and running on your lo
 
 Ensure you have the following installed on your machine:
 
-- [Node.js](https://nodejs.org/) (version 20.19.0 or higher required)
+- [Node.js](https://nodejs.org/) (version 22.14.0 or higher required)
 - [pnpm](https://pnpm.io/) (strictly mandated, do not use `npm` or `yarn`)
 
 **System Dependencies (Linux/WSL/macOS):**
@@ -116,19 +116,12 @@ pnpm exec playwright install
 pnpm test:e2e
 ```
 
-### Quality Assurance
+### Local Verification
 
-This project enforces strict quality checks in CI. Run these locally to prevent build failures:
+This project enforces strict quality checks in CI. Run the complete quality suite locally to prevent build failures. This combined script performs linting, type-checking, and accessibility verification matching the CI pipeline logic:
 
-**Type Checking:**
-(Runs TypeScript compiler to catch type errors)
 ```bash
-pnpm lint
-```
-
-**Accessibility & Contrast Check:**
-```bash
-node scripts/contrast_check.js
+pnpm run lint
 ```
 
 **Bundle Size Check:**
