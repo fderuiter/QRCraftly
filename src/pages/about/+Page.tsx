@@ -16,14 +16,22 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-
-import { Github, Shield, Database, Code, ArrowLeft, Zap, Wifi, Coffee } from 'lucide-react';
-import { safeJsonLdStringify } from '@/utils/security';
-import { contentRegistry } from '@/data/contentRegistry';
-import { generateSchema } from '@/utils/schemaGenerator';
-import { resolveDomainForPath } from '@/utils/metadataEngine';
-import { SidebarContent } from '@/components/SidebarContent';
-import { usePageContext } from 'vike-react/usePageContext';
+import {
+  Github,
+  Shield,
+  Database,
+  Code,
+  ArrowLeft,
+  Zap,
+  Wifi,
+  Coffee,
+} from "lucide-react";
+import { safeJsonLdStringify } from "@/utils/security";
+import { contentRegistry } from "@/data/contentRegistry";
+import { generateSchema } from "@/utils/schemaGenerator";
+import { resolveDomainForPath } from "@/utils/metadataEngine";
+import { SidebarContent } from "@/components/SidebarContent";
+import { usePageContext } from "vike-react/usePageContext";
 
 /**
  * About Page Component
@@ -36,15 +44,21 @@ import { usePageContext } from 'vike-react/usePageContext';
  */
 export default function Page() {
   const pageContext = usePageContext();
-  const urlPathname = pageContext?.urlPathname ?? '/about';
+  const urlPathname = pageContext?.urlPathname ?? "/about";
   const resolvedDomain = resolveDomainForPath(urlPathname);
-  const schemaData = generateSchema(contentRegistry['about'], resolvedDomain, urlPathname);
+  const schemaData = generateSchema(
+    contentRegistry["about"],
+    resolvedDomain,
+    urlPathname,
+  );
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-12">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(schemaData) }} />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(schemaData) }}
+      />
       <div className="mb-8">
-
         <a
           href="/"
           className="inline-flex items-center gap-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
@@ -58,8 +72,8 @@ export default function Page() {
           About QRCraftly
         </h1>
         <p className="text-lg text-slate-600 dark:text-slate-300 max-w-2xl mx-auto">
-          A privacy-focused QR code generator built with modern web technologies.
-          Entirely free with no login required.
+          A privacy-focused QR code generator built with modern web
+          technologies. Entirely free with no login required.
         </p>
       </div>
 
@@ -70,9 +84,12 @@ export default function Page() {
             <div className="w-12 h-12 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-xl flex items-center justify-center mx-auto mb-4">
               <Zap className="w-6 h-6" />
             </div>
-            <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">Free & No Login</h3>
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+              Free & No Login
+            </h3>
             <p className="text-slate-600 dark:text-slate-400">
-              QRCraftly is completely free to use. No sign-up, no login, and no hidden fees. Just generate your QR codes instantly.
+              QRCraftly is completely free to use. No sign-up, no login, and no
+              hidden fees. Just generate your QR codes instantly.
             </p>
           </div>
 
@@ -80,9 +97,12 @@ export default function Page() {
             <div className="w-12 h-12 bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-400 rounded-xl flex items-center justify-center mx-auto mb-4">
               <Shield className="w-6 h-6" />
             </div>
-            <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">No Third-Party Tracking</h3>
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+              No Third-Party Tracking
+            </h3>
             <p className="text-slate-600 dark:text-slate-400">
-              We do not use tracking pixels, cookies, or third-party analytics. We only collect basic server logs for performance and reliability.
+              We do not use tracking pixels, cookies, or third-party analytics.
+              We only collect basic server logs for performance and reliability.
             </p>
           </div>
 
@@ -90,9 +110,13 @@ export default function Page() {
             <div className="w-12 h-12 bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400 rounded-xl flex items-center justify-center mx-auto mb-4">
               <Database className="w-6 h-6" />
             </div>
-            <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">Privacy First</h3>
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+              Privacy First
+            </h3>
             <p className="text-slate-600 dark:text-slate-400">
-              We utilize a Privacy First architecture. Your content is processed entirely in your browser and not transmitted to our servers without your explicit opt-in for telemetry.
+              We utilize a Privacy First architecture. Your content is processed
+              entirely in your browser and not transmitted to our servers
+              without your explicit opt-in for telemetry.
             </p>
           </div>
 
@@ -100,16 +124,21 @@ export default function Page() {
             <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 rounded-xl flex items-center justify-center mx-auto mb-4">
               <Code className="w-6 h-6" />
             </div>
-            <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">Open Source</h3>
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+              Open Source
+            </h3>
             <p className="text-slate-600 dark:text-slate-400">
-              Our code is open for inspection and contribution. We believe in transparency.
+              Our code is open for inspection and contribution. We believe in
+              transparency.
             </p>
           </div>
         </div>
       </section>
 
       <section className="mb-16 text-center">
-        <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-4">Specialized Generators</h2>
+        <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-4">
+          Specialized Generators
+        </h2>
         <p className="text-lg text-slate-600 dark:text-slate-300 max-w-2xl mx-auto mb-6">
           Looking for a specific use case? Try our dedicated tools.
         </p>
@@ -130,9 +159,13 @@ export default function Page() {
           <div className="w-16 h-16 bg-white dark:bg-slate-800 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-sm border border-rose-100 dark:border-rose-700/50 rotate-3 transition-transform hover:rotate-12 duration-300">
             <Coffee className="w-8 h-8 text-[#FF5E5B]" />
           </div>
-          <h2 className="text-3xl font-bold text-slate-900 dark:text-white mb-4">Support the Project</h2>
+          <h2 className="text-3xl font-bold text-slate-900 dark:text-white mb-4">
+            Support the Project
+          </h2>
           <p className="text-lg text-slate-600 dark:text-slate-300 max-w-2xl mx-auto mb-8 leading-relaxed">
-            QRCraftly is 100% free, open-source, and privacy-respecting. If you find this tool helpful, consider buying me a coffee! Your support helps cover hosting costs and fuels future development.
+            QRCraftly is 100% free, open-source, and privacy-respecting. If you
+            find this tool helpful, consider buying me a coffee! Your support
+            helps cover hosting costs and fuels future development.
           </p>
           <a
             href="https://ko-fi.com/laser_loon"
@@ -151,8 +184,10 @@ export default function Page() {
           Open Source License
         </h2>
         <p className="text-slate-600 dark:text-slate-300 mb-8 max-w-2xl mx-auto">
-          QRCraftly is released under the <strong>GNU Affero General Public License v3.0 (AGPL-3.0)</strong>.
-          This ensures that the software remains free and open source for everyone.
+          QRCraftly is released under the{" "}
+          <strong>GNU Affero General Public License v3.0 (AGPL-3.0)</strong>.
+          This ensures that the software remains free and open source for
+          everyone.
         </p>
         <a
           href="https://github.com/fderuiter/QRCraftly"

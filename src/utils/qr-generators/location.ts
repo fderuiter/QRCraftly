@@ -16,7 +16,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { LocationData } from '../../types';
+import { LocationData } from "../../types";
 
 /**
  * Validates and parses a coordinate string as a finite floating-point number.
@@ -24,7 +24,7 @@ import { LocationData } from '../../types';
  */
 const parseCoordinate = (value: string): number | null => {
   const trimmed = value.trim();
-  if (trimmed === '') return null;
+  if (trimmed === "") return null;
   const num = parseFloat(trimmed);
   return isFinite(num) ? num : null;
 };
@@ -46,9 +46,9 @@ export const constructLocationString = (data: LocationData): string => {
   const lat = parseCoordinate(data.latitude);
   const lng = parseCoordinate(data.longitude);
 
-  if (lat === null || lng === null) return '';
-  if (lat < -90 || lat > 90) return '';
-  if (lng < -180 || lng > 180) return '';
+  if (lat === null || lng === null) return "";
+  if (lat < -90 || lat > 90) return "";
+  if (lng < -180 || lng > 180) return "";
 
   return `geo:${lat},${lng}`;
 };
@@ -58,13 +58,13 @@ export const constructLocationString = (data: LocationData): string => {
  */
 export const hydrateLocationData = (raw: string): LocationData => {
   const result: LocationData = {
-    latitude: '',
-    longitude: '',
+    latitude: "",
+    longitude: "",
   };
 
-  if (raw.toLowerCase().startsWith('geo:')) {
+  if (raw.toLowerCase().startsWith("geo:")) {
     // geo:LAT,LONG
-    const parts = raw.substring(4).split(',');
+    const parts = raw.substring(4).split(",");
     if (parts.length >= 2) {
       result.latitude = parts[0];
       result.longitude = parts[1];

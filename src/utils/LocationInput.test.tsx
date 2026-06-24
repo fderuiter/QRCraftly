@@ -16,20 +16,20 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { LocationInput } from '../components/inputs';
-import { LocationData } from '../types';
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { LocationInput } from "../components/inputs";
+import { LocationData } from "../types";
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-const defaultData: LocationData = { latitude: '', longitude: '' };
+const defaultData: LocationData = { latitude: "", longitude: "" };
 
 const renderLocationInput = (
   overrides: Partial<LocationData> = {},
-  onChange = vi.fn()
+  onChange = vi.fn(),
 ) => {
   const data = { ...defaultData, ...overrides };
   render(<LocationInput data={data} onChange={onChange} />);
@@ -38,75 +38,83 @@ const renderLocationInput = (
 
 /** Create a minimal GeolocationPositionError-like object. */
 const geoError = (code: number): GeolocationPositionError =>
-  ({ code, message: '', PERMISSION_DENIED: 1, POSITION_UNAVAILABLE: 2, TIMEOUT: 3 } as GeolocationPositionError);
+  ({
+    code,
+    message: "",
+    PERMISSION_DENIED: 1,
+    POSITION_UNAVAILABLE: 2,
+    TIMEOUT: 3,
+  }) as GeolocationPositionError;
 
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
-describe('LocationInput component', () => {
+describe("LocationInput component", () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
   // ─── Rendering ────────────────────────────────────────────────────────────
 
-  describe('rendering', () => {
-    it('renders latitude and longitude text fields', () => {
+  describe("rendering", () => {
+    it("renders latitude and longitude text fields", () => {
       renderLocationInput();
-      expect(screen.getByLabelText('Latitude')).toBeInTheDocument();
-      expect(screen.getByLabelText('Longitude')).toBeInTheDocument();
+      expect(screen.getByLabelText("Latitude")).toBeInTheDocument();
+      expect(screen.getByLabelText("Longitude")).toBeInTheDocument();
     });
 
     it('renders the "Use Current Location" button', () => {
       renderLocationInput();
-      expect(screen.getByRole('button', { name: /use current location/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: /use current location/i }),
+      ).toBeInTheDocument();
     });
 
-    it('displays provided latitude and longitude values', () => {
-      renderLocationInput({ latitude: '51.5074', longitude: '-0.1278' });
-      expect(screen.getByLabelText('Latitude')).toHaveValue('51.5074');
-      expect(screen.getByLabelText('Longitude')).toHaveValue('-0.1278');
+    it("displays provided latitude and longitude values", () => {
+      renderLocationInput({ latitude: "51.5074", longitude: "-0.1278" });
+      expect(screen.getByLabelText("Latitude")).toHaveValue("51.5074");
+      expect(screen.getByLabelText("Longitude")).toHaveValue("-0.1278");
     });
 
-    it('does not render an error message initially', () => {
+    it("does not render an error message initially", () => {
       renderLocationInput();
-      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     });
 
-    it('button is enabled and not loading initially', () => {
+    it("button is enabled and not loading initially", () => {
       renderLocationInput();
-      const btn = screen.getByRole('button', { name: /use current location/i });
+      const btn = screen.getByRole("button", { name: /use current location/i });
       expect(btn).not.toBeDisabled();
-      expect(btn).not.toHaveAttribute('aria-busy', 'true');
+      expect(btn).not.toHaveAttribute("aria-busy", "true");
     });
   });
 
   // ─── Manual field editing ─────────────────────────────────────────────────
 
-  describe('manual field editing', () => {
-    it('calls onChange when latitude field changes', () => {
+  describe("manual field editing", () => {
+    it("calls onChange when latitude field changes", () => {
       const { onChange } = renderLocationInput();
-      fireEvent.change(screen.getByLabelText('Latitude'), {
-        target: { value: '40.7128' },
+      fireEvent.change(screen.getByLabelText("Latitude"), {
+        target: { value: "40.7128" },
       });
-      expect(onChange).toHaveBeenCalledWith({ latitude: '40.7128' });
+      expect(onChange).toHaveBeenCalledWith({ latitude: "40.7128" });
     });
 
-    it('calls onChange when longitude field changes', () => {
+    it("calls onChange when longitude field changes", () => {
       const { onChange } = renderLocationInput();
-      fireEvent.change(screen.getByLabelText('Longitude'), {
-        target: { value: '-74.0060' },
+      fireEvent.change(screen.getByLabelText("Longitude"), {
+        target: { value: "-74.0060" },
       });
-      expect(onChange).toHaveBeenCalledWith({ longitude: '-74.0060' });
+      expect(onChange).toHaveBeenCalledWith({ longitude: "-74.0060" });
     });
   });
 
   // ─── Geolocation – success ─────────────────────────────────────────────────
 
-  describe('Use Current Location button – success', () => {
+  describe("Use Current Location button – success", () => {
     beforeEach(() => {
-      Object.defineProperty(navigator, 'geolocation', {
+      Object.defineProperty(navigator, "geolocation", {
         value: {
           getCurrentPosition: vi.fn(),
         },
@@ -115,97 +123,115 @@ describe('LocationInput component', () => {
       });
     });
 
-    it('calls navigator.geolocation.getCurrentPosition when clicked', () => {
+    it("calls navigator.geolocation.getCurrentPosition when clicked", () => {
       renderLocationInput();
-      fireEvent.click(screen.getByRole('button', { name: /use current location/i }));
+      fireEvent.click(
+        screen.getByRole("button", { name: /use current location/i }),
+      );
       expect(navigator.geolocation.getCurrentPosition).toHaveBeenCalledTimes(1);
     });
 
     it('shows "Fetching location…" and disables the button while loading', () => {
       // getCurrentPosition never calls back, simulating an in-progress request
-      vi.spyOn(navigator.geolocation, 'getCurrentPosition').mockImplementation(() => {});
+      vi.spyOn(navigator.geolocation, "getCurrentPosition").mockImplementation(
+        () => {},
+      );
 
       renderLocationInput();
-      fireEvent.click(screen.getByRole('button', { name: /use current location/i }));
+      fireEvent.click(
+        screen.getByRole("button", { name: /use current location/i }),
+      );
 
-      const btn = screen.getByRole('button', { name: /fetching location/i });
+      const btn = screen.getByRole("button", { name: /fetching location/i });
       expect(btn).toBeDisabled();
-      expect(btn).toHaveAttribute('aria-busy', 'true');
+      expect(btn).toHaveAttribute("aria-busy", "true");
     });
 
-    it('calls onChange with latitude and longitude on success', async () => {
+    it("calls onChange with latitude and longitude on success", async () => {
       const successPosition = {
         coords: { latitude: 51.5074, longitude: -0.1278, accuracy: 10 },
       } as GeolocationPosition;
 
-      vi.spyOn(navigator.geolocation, 'getCurrentPosition').mockImplementation(
-        (successCb) => successCb(successPosition)
+      vi.spyOn(navigator.geolocation, "getCurrentPosition").mockImplementation(
+        (successCb) => successCb(successPosition),
       );
 
       const { onChange } = renderLocationInput();
-      fireEvent.click(screen.getByRole('button', { name: /use current location/i }));
+      fireEvent.click(
+        screen.getByRole("button", { name: /use current location/i }),
+      );
 
       await waitFor(() => {
         expect(onChange).toHaveBeenCalledWith({
-          latitude: '51.5074',
-          longitude: '-0.1278',
+          latitude: "51.5074",
+          longitude: "-0.1278",
         });
       });
     });
 
-    it('restores button text and re-enables it after a successful fetch', async () => {
+    it("restores button text and re-enables it after a successful fetch", async () => {
       const successPosition = {
         coords: { latitude: 48.8566, longitude: 2.3522, accuracy: 5 },
       } as GeolocationPosition;
 
-      vi.spyOn(navigator.geolocation, 'getCurrentPosition').mockImplementation(
-        (successCb) => successCb(successPosition)
+      vi.spyOn(navigator.geolocation, "getCurrentPosition").mockImplementation(
+        (successCb) => successCb(successPosition),
       );
 
       renderLocationInput();
-      fireEvent.click(screen.getByRole('button', { name: /use current location/i }));
+      fireEvent.click(
+        screen.getByRole("button", { name: /use current location/i }),
+      );
 
       await waitFor(() => {
-        const btn = screen.getByRole('button', { name: /use current location/i });
+        const btn = screen.getByRole("button", {
+          name: /use current location/i,
+        });
         expect(btn).not.toBeDisabled();
-        expect(btn).not.toHaveAttribute('aria-busy', 'true');
+        expect(btn).not.toHaveAttribute("aria-busy", "true");
       });
     });
 
-    it('clears any previous error on a successful fetch', async () => {
+    it("clears any previous error on a successful fetch", async () => {
       // First call fails
-      vi.spyOn(navigator.geolocation, 'getCurrentPosition').mockImplementationOnce(
-        (_success, errorCb) => errorCb!(geoError(1))
-      );
+      vi.spyOn(
+        navigator.geolocation,
+        "getCurrentPosition",
+      ).mockImplementationOnce((_success, errorCb) => errorCb!(geoError(1)));
 
       renderLocationInput();
-      fireEvent.click(screen.getByRole('button', { name: /use current location/i }));
+      fireEvent.click(
+        screen.getByRole("button", { name: /use current location/i }),
+      );
 
       await waitFor(() =>
-        expect(screen.getByRole('alert')).toBeInTheDocument()
+        expect(screen.getByRole("alert")).toBeInTheDocument(),
       );
 
       // Second call succeeds
       const successPosition = {
         coords: { latitude: 10, longitude: 20, accuracy: 5 },
       } as GeolocationPosition;
-      vi.spyOn(navigator.geolocation, 'getCurrentPosition').mockImplementationOnce(
-        (successCb) => successCb(successPosition)
+      vi.spyOn(
+        navigator.geolocation,
+        "getCurrentPosition",
+      ).mockImplementationOnce((successCb) => successCb(successPosition));
+
+      fireEvent.click(
+        screen.getByRole("button", { name: /use current location/i }),
       );
 
-      fireEvent.click(screen.getByRole('button', { name: /use current location/i }));
-
       await waitFor(() =>
-        expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+        expect(screen.queryByRole("alert")).not.toBeInTheDocument(),
       );
     });
   });
 
   // ─── Geolocation – errors ──────────────────────────────────────────────────
 
-  describe('Use Current Location button – errors', () => {
+  describe("Use Current Location button – errors", () => {
     beforeEach(() => {
-      Object.defineProperty(navigator, 'geolocation', {
+      Object.defineProperty(navigator, "geolocation", {
         value: {
           getCurrentPosition: vi.fn(),
         },
@@ -214,92 +240,106 @@ describe('LocationInput component', () => {
       });
     });
 
-    it('shows a permission-denied error message (code 1)', async () => {
-      vi.spyOn(navigator.geolocation, 'getCurrentPosition').mockImplementation(
-        (_success, errorCb) => errorCb!(geoError(1))
+    it("shows a permission-denied error message (code 1)", async () => {
+      vi.spyOn(navigator.geolocation, "getCurrentPosition").mockImplementation(
+        (_success, errorCb) => errorCb!(geoError(1)),
       );
 
       renderLocationInput();
-      fireEvent.click(screen.getByRole('button', { name: /use current location/i }));
+      fireEvent.click(
+        screen.getByRole("button", { name: /use current location/i }),
+      );
 
       await waitFor(() => {
-        expect(screen.getByRole('alert')).toHaveTextContent(
-          /location access denied/i
+        expect(screen.getByRole("alert")).toHaveTextContent(
+          /location access denied/i,
         );
       });
     });
 
-    it('shows a position-unavailable error message (code 2)', async () => {
-      vi.spyOn(navigator.geolocation, 'getCurrentPosition').mockImplementation(
-        (_success, errorCb) => errorCb!(geoError(2))
+    it("shows a position-unavailable error message (code 2)", async () => {
+      vi.spyOn(navigator.geolocation, "getCurrentPosition").mockImplementation(
+        (_success, errorCb) => errorCb!(geoError(2)),
       );
 
       renderLocationInput();
-      fireEvent.click(screen.getByRole('button', { name: /use current location/i }));
+      fireEvent.click(
+        screen.getByRole("button", { name: /use current location/i }),
+      );
 
       await waitFor(() => {
-        expect(screen.getByRole('alert')).toHaveTextContent(
-          /location unavailable/i
+        expect(screen.getByRole("alert")).toHaveTextContent(
+          /location unavailable/i,
         );
       });
     });
 
-    it('shows a timeout error message (code 3)', async () => {
-      vi.spyOn(navigator.geolocation, 'getCurrentPosition').mockImplementation(
-        (_success, errorCb) => errorCb!(geoError(3))
+    it("shows a timeout error message (code 3)", async () => {
+      vi.spyOn(navigator.geolocation, "getCurrentPosition").mockImplementation(
+        (_success, errorCb) => errorCb!(geoError(3)),
       );
 
       renderLocationInput();
-      fireEvent.click(screen.getByRole('button', { name: /use current location/i }));
+      fireEvent.click(
+        screen.getByRole("button", { name: /use current location/i }),
+      );
 
       await waitFor(() => {
-        expect(screen.getByRole('alert')).toHaveTextContent(/timed out/i);
+        expect(screen.getByRole("alert")).toHaveTextContent(/timed out/i);
       });
     });
 
-    it('shows a generic error message for unknown error codes', async () => {
-      vi.spyOn(navigator.geolocation, 'getCurrentPosition').mockImplementation(
-        (_success, errorCb) => errorCb!(geoError(99))
+    it("shows a generic error message for unknown error codes", async () => {
+      vi.spyOn(navigator.geolocation, "getCurrentPosition").mockImplementation(
+        (_success, errorCb) => errorCb!(geoError(99)),
       );
 
       renderLocationInput();
-      fireEvent.click(screen.getByRole('button', { name: /use current location/i }));
+      fireEvent.click(
+        screen.getByRole("button", { name: /use current location/i }),
+      );
 
       await waitFor(() => {
-        expect(screen.getByRole('alert')).toHaveTextContent(/unknown error/i);
+        expect(screen.getByRole("alert")).toHaveTextContent(/unknown error/i);
       });
     });
 
-    it('re-enables the button after an error', async () => {
-      vi.spyOn(navigator.geolocation, 'getCurrentPosition').mockImplementation(
-        (_success, errorCb) => errorCb!(geoError(1))
+    it("re-enables the button after an error", async () => {
+      vi.spyOn(navigator.geolocation, "getCurrentPosition").mockImplementation(
+        (_success, errorCb) => errorCb!(geoError(1)),
       );
 
       renderLocationInput();
-      fireEvent.click(screen.getByRole('button', { name: /use current location/i }));
+      fireEvent.click(
+        screen.getByRole("button", { name: /use current location/i }),
+      );
 
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: /use current location/i })).not.toBeDisabled();
+        expect(
+          screen.getByRole("button", { name: /use current location/i }),
+        ).not.toBeDisabled();
       });
     });
   });
 
   // ─── Geolocation – unavailable ────────────────────────────────────────────
 
-  describe('Use Current Location button – geolocation unavailable', () => {
-    it('shows an error when navigator.geolocation is undefined', async () => {
-      Object.defineProperty(navigator, 'geolocation', {
+  describe("Use Current Location button – geolocation unavailable", () => {
+    it("shows an error when navigator.geolocation is undefined", async () => {
+      Object.defineProperty(navigator, "geolocation", {
         value: undefined,
         configurable: true,
         writable: true,
       });
 
       renderLocationInput();
-      fireEvent.click(screen.getByRole('button', { name: /use current location/i }));
+      fireEvent.click(
+        screen.getByRole("button", { name: /use current location/i }),
+      );
 
       await waitFor(() => {
-        expect(screen.getByRole('alert')).toHaveTextContent(
-          /geolocation is not supported/i
+        expect(screen.getByRole("alert")).toHaveTextContent(
+          /geolocation is not supported/i,
         );
       });
     });
@@ -307,15 +347,19 @@ describe('LocationInput component', () => {
 
   // ─── Geolocation via InputPanel integration ────────────────────────────────
 
-  describe('integration via InputPanel', () => {
-    it('populates lat/lng fields via the InputPanel when geolocation succeeds', async () => {
-      const { render: rRender, screen: rScreen, fireEvent: rFire, waitFor: rWait } =
-        await import('@testing-library/react');
-      const { default: InputPanel } = await import('../components/InputPanel');
-      const { DEFAULT_CONFIG } = await import('../constants');
-      const { QRType } = await import('../types');
+  describe("integration via InputPanel", () => {
+    it("populates lat/lng fields via the InputPanel when geolocation succeeds", async () => {
+      const {
+        render: rRender,
+        screen: rScreen,
+        fireEvent: rFire,
+        waitFor: rWait,
+      } = await import("@testing-library/react");
+      const { default: InputPanel } = await import("../components/InputPanel");
+      const { DEFAULT_CONFIG } = await import("../constants");
+      const { QRType } = await import("../types");
 
-      Object.defineProperty(navigator, 'geolocation', {
+      Object.defineProperty(navigator, "geolocation", {
         value: {
           getCurrentPosition: vi.fn(),
         },
@@ -327,21 +371,23 @@ describe('LocationInput component', () => {
         coords: { latitude: 34.0522, longitude: -118.2437, accuracy: 20 },
       } as GeolocationPosition;
 
-      vi.spyOn(navigator.geolocation, 'getCurrentPosition').mockImplementation(
-        (successCb) => successCb(successPosition)
+      vi.spyOn(navigator.geolocation, "getCurrentPosition").mockImplementation(
+        (successCb) => successCb(successPosition),
       );
 
       const mockOnChange = vi.fn();
-      const config = { ...DEFAULT_CONFIG, type: QRType.LOCATION, value: '' };
+      const config = { ...DEFAULT_CONFIG, type: QRType.LOCATION, value: "" };
 
       rRender(<InputPanel config={config} onChange={mockOnChange} />);
-      rFire.click(rScreen.getByRole('button', { name: /use current location/i }));
+      rFire.click(
+        rScreen.getByRole("button", { name: /use current location/i }),
+      );
 
       await rWait(() => {
-        const latInput = rScreen.getByLabelText('Latitude');
-        expect(latInput).toHaveValue('34.0522');
-        const lngInput = rScreen.getByLabelText('Longitude');
-        expect(lngInput).toHaveValue('-118.2437');
+        const latInput = rScreen.getByLabelText("Latitude");
+        expect(latInput).toHaveValue("34.0522");
+        const lngInput = rScreen.getByLabelText("Longitude");
+        expect(lngInput).toHaveValue("-118.2437");
       });
     });
   });

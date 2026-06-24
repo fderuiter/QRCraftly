@@ -16,14 +16,13 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { describe, it, expect, vi } from "vitest";
+import { render, waitFor } from "@testing-library/react";
+import QRCanvas from "./QRCanvas";
+import { DEFAULT_CONFIG } from "../constants";
+import { QRConfig } from "../types";
 
-import { describe, it, expect, vi } from 'vitest';
-import { render, waitFor } from '@testing-library/react';
-import QRCanvas from './QRCanvas';
-import { DEFAULT_CONFIG } from '../constants';
-import { QRConfig } from '../types';
-
-describe('QRCanvas Border Rendering', () => {
+describe("QRCanvas Border Rendering", () => {
   const mockContext = {
     fillRect: vi.fn(),
     clearRect: vi.fn(),
@@ -46,72 +45,79 @@ describe('QRCanvas Border Rendering', () => {
 
   const setupCanvasMock = (originalCreateElement: any) => {
     // Use the original create element to make a real canvas, then mock getContext
-    const canvas = originalCreateElement.call(document, 'canvas');
+    const canvas = originalCreateElement.call(document, "canvas");
     const context = { ...mockContext, canvas };
     canvas.getContext = vi.fn().mockReturnValue(context);
     return canvas;
   };
 
-  it('renders border when enabled', async () => {
+  it("renders border when enabled", async () => {
     const originalCreateElement = document.createElement;
     document.createElement = vi.fn((tagName) => {
-        if (tagName === 'canvas') return setupCanvasMock(originalCreateElement);
-        return originalCreateElement.call(document, tagName);
+      if (tagName === "canvas") return setupCanvasMock(originalCreateElement);
+      return originalCreateElement.call(document, tagName);
     }) as any;
 
     const config: QRConfig = {
       ...DEFAULT_CONFIG,
       isBorderEnabled: true,
       borderSize: 0.1,
-      borderColor: '#ff0000',
-      bgColor: '#ffffff',
-      value: 'test',
+      borderColor: "#ff0000",
+      bgColor: "#ffffff",
+      value: "test",
     };
 
     render(<QRCanvas config={config} size={100} />);
 
     await waitFor(() => {
-        expect(mockContext.fillRect).toHaveBeenCalled();
+      expect(mockContext.fillRect).toHaveBeenCalled();
     });
 
     const fillRectCalls = mockContext.fillRect.mock.calls;
 
     // Find the call for the border: 0, 0, 100, 100
-    const borderCall = fillRectCalls.find(call => call[0] === 0 && call[1] === 0 && call[2] === 100 && call[3] === 100);
+    const borderCall = fillRectCalls.find(
+      (call) =>
+        call[0] === 0 && call[1] === 0 && call[2] === 100 && call[3] === 100,
+    );
     expect(borderCall).toBeTruthy();
 
     // Find the call for the inner background: 10, 10, 80, 80 (since 0.1 * 100 = 10px border on each side)
-    const innerBgCall = fillRectCalls.find(call => call[0] > 13 && call[0] < 14 && call[2] > 72 && call[2] < 73);
+    const innerBgCall = fillRectCalls.find(
+      (call) => call[0] > 13 && call[0] < 14 && call[2] > 72 && call[2] < 73,
+    );
     expect(innerBgCall).toBeTruthy();
 
     document.createElement = originalCreateElement;
   });
 
-  it('does not render border when disabled', async () => {
+  it("does not render border when disabled", async () => {
     const originalCreateElement = document.createElement;
     document.createElement = vi.fn((tagName) => {
-        if (tagName === 'canvas') return setupCanvasMock(originalCreateElement);
-        return originalCreateElement.call(document, tagName);
+      if (tagName === "canvas") return setupCanvasMock(originalCreateElement);
+      return originalCreateElement.call(document, tagName);
     }) as any;
 
     const config: QRConfig = {
       ...DEFAULT_CONFIG,
       isBorderEnabled: false,
       borderSize: 0.1,
-      borderColor: '#ff0000',
+      borderColor: "#ff0000",
     };
 
     mockContext.fillRect.mockClear();
     render(<QRCanvas config={config} size={100} />);
 
     await waitFor(() => {
-        expect(mockContext.fillRect).toHaveBeenCalled();
+      expect(mockContext.fillRect).toHaveBeenCalled();
     });
 
     const fillRectCalls = mockContext.fillRect.mock.calls;
 
     // Should NOT have inner background fill (10, 10, 80, 80)
-    const innerBgCall = fillRectCalls.find(call => call[0] > 13 && call[0] < 14 && call[2] > 72 && call[2] < 73);
+    const innerBgCall = fillRectCalls.find(
+      (call) => call[0] > 13 && call[0] < 14 && call[2] > 72 && call[2] < 73,
+    );
     expect(innerBgCall).toBeUndefined();
 
     document.createElement = originalCreateElement;

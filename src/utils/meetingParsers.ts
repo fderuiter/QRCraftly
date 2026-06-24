@@ -21,7 +21,7 @@
  */
 export interface ParsedMeeting {
   /** The type of meeting service detected. */
-  service: 'zoom' | 'teams' | 'meet' | 'unknown';
+  service: "zoom" | "teams" | "meet" | "unknown";
   /** The extracted meeting ID, if found. */
   meetingId?: string;
   /** The extracted passcode, if found. */
@@ -43,7 +43,7 @@ const parseZoomUrl = (url: string): ParsedMeeting | null => {
   const pwdMatch = url.match(/[?&]pwd=([a-zA-Z0-9_\-]+)/);
   const passcode = pwdMatch ? pwdMatch[1] : undefined;
 
-  return { service: 'zoom', meetingId, passcode };
+  return { service: "zoom", meetingId, passcode };
 };
 
 /**
@@ -73,7 +73,7 @@ const parseTeamsUrl = (url: string): ParsedMeeting | null => {
     meetingId = match[1].slice(0, 40);
   }
 
-  return { service: 'teams', meetingId };
+  return { service: "teams", meetingId };
 };
 
 /**
@@ -83,10 +83,12 @@ const parseTeamsUrl = (url: string): ParsedMeeting | null => {
  *   https://meet.google.com/abc-defg-hij
  */
 const parseMeetUrl = (url: string): ParsedMeeting | null => {
-  const match = url.match(/meet\.google\.com\/([a-zA-Z]{3}-[a-zA-Z]{4}-[a-zA-Z]{3})/);
+  const match = url.match(
+    /meet\.google\.com\/([a-zA-Z]{3}-[a-zA-Z]{4}-[a-zA-Z]{3})/,
+  );
   if (!match) return null;
 
-  return { service: 'meet', meetingId: match[1] };
+  return { service: "meet", meetingId: match[1] };
 };
 
 /**
@@ -100,29 +102,29 @@ const parseMeetUrl = (url: string): ParsedMeeting | null => {
  * @returns A `ParsedMeeting` object with detected service, meeting ID, and passcode.
  */
 export const parseMeetingUrl = (url: string): ParsedMeeting => {
-  if (!url) return { service: 'unknown' };
+  if (!url) return { service: "unknown" };
 
   let hostname: string;
   try {
     hostname = new URL(url).hostname.toLowerCase();
   } catch {
-    return { service: 'unknown' };
+    return { service: "unknown" };
   }
 
-  if (hostname === 'zoom.us' || hostname.endsWith('.zoom.us')) {
+  if (hostname === "zoom.us" || hostname.endsWith(".zoom.us")) {
     const result = parseZoomUrl(url);
     if (result) return result;
   }
 
-  if (hostname === 'teams.microsoft.com') {
+  if (hostname === "teams.microsoft.com") {
     const result = parseTeamsUrl(url);
     if (result) return result;
   }
 
-  if (hostname === 'meet.google.com') {
+  if (hostname === "meet.google.com") {
     const result = parseMeetUrl(url);
     if (result) return result;
   }
 
-  return { service: 'unknown' };
+  return { service: "unknown" };
 };

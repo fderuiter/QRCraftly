@@ -20,8 +20,9 @@
  * Page-specific configuration for the SMS QR Code page.
  */
 export default {
-    title: 'Free SMS QR Code Generator | Pre-filled Text Messages - QRCraftly',
-    description: 'Generate QR codes that open a pre-filled SMS message. Set recipient and message body. Perfect for opt-ins and support.',
-    image: '/og-image.png?type=sms',
-    imageAlt: 'Preview of the SMS QR Code Generator tool'
-}
+  title: "Free SMS QR Code Generator | Pre-filled Text Messages - QRCraftly",
+  description:
+    "Generate QR codes that open a pre-filled SMS message. Set recipient and message body. Perfect for opt-ins and support.",
+  image: "/og-image.png?type=sms",
+  imageAlt: "Preview of the SMS QR Code Generator tool",
+};

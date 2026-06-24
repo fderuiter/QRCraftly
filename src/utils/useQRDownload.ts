@@ -16,18 +16,18 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { RefObject, useCallback } from 'react';
-import { QRConfig } from '../types';
-import { generateQRSvg } from './svgExport';
-import { useToast } from '../components/ui/Toast';
-import { useCapabilities } from '../hooks/useCapabilities';
+import { RefObject, useCallback } from "react";
+import { QRConfig } from "../types";
+import { generateQRSvg } from "./svgExport";
+import { useToast } from "../components/ui/Toast";
+import { useCapabilities } from "../hooks/useCapabilities";
 
 /**
  * Return type for the useQRDownload hook.
  */
 interface UseQRDownloadReturn {
-  downloadToDevice: (format: 'png' | 'jpeg' | 'webp') => void;
-  handleSaveAs: (format: 'png' | 'jpeg' | 'webp') => Promise<void>;
+  downloadToDevice: (format: "png" | "jpeg" | "webp") => void;
+  handleSaveAs: (format: "png" | "jpeg" | "webp") => Promise<void>;
   handleSaveSvg: () => Promise<void>;
   handleShare: () => Promise<void>;
   handleCopy: () => Promise<boolean>;
@@ -43,7 +43,7 @@ interface UseQRDownloadReturn {
  */
 export function useQRDownload(
   qrRef: RefObject<HTMLDivElement | null>,
-  config: QRConfig
+  config: QRConfig,
 ): UseQRDownloadReturn {
   const { addToast } = useToast();
   const { canSaveFilePicker, canShare } = useCapabilities();
@@ -53,8 +53,8 @@ export function useQRDownload(
    * @param format - The image format ('png', 'jpeg', 'webp').
    * @returns The corresponding file extension (e.g., 'jpg' for 'jpeg').
    */
-  const getExtension = (format: 'png' | 'jpeg' | 'webp') => {
-    return format === 'jpeg' ? 'jpg' : format;
+  const getExtension = (format: "png" | "jpeg" | "webp") => {
+    return format === "jpeg" ? "jpg" : format;
   };
 
   /**
@@ -62,74 +62,88 @@ export function useQRDownload(
    * @param ext - The file extension.
    * @returns The generated filename string.
    */
-  const getFilename = useCallback((ext: string) => {
-    const type = config.type.toLowerCase();
-    const date = new Date().toISOString().split('T')[0];
-    return `${type}-qr-code-qrcraftly-${date}.${ext}`;
-  }, [config.type]);
+  const getFilename = useCallback(
+    (ext: string) => {
+      const type = config.type.toLowerCase();
+      const date = new Date().toISOString().split("T")[0];
+      return `${type}-qr-code-qrcraftly-${date}.${ext}`;
+    },
+    [config.type],
+  );
 
   /**
    * Downloads the current QR code canvas content to the user's device.
    * Used as a fallback or direct action for saving to photos.
    * @param format - The desired image format.
    */
-  const downloadToDevice = useCallback((format: 'png' | 'jpeg' | 'webp') => {
-    const canvas = qrRef.current?.querySelector('canvas');
-    if (canvas) {
-      const url = canvas.toDataURL(`image/${format}`);
-      const link = document.createElement('a');
-      const ext = getExtension(format);
-      link.download = getFilename(ext);
-      link.href = url;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
-  }, [qrRef, getFilename]);
+  const downloadToDevice = useCallback(
+    (format: "png" | "jpeg" | "webp") => {
+      const canvas = qrRef.current?.querySelector("canvas");
+      if (canvas) {
+        const url = canvas.toDataURL(`image/${format}`);
+        const link = document.createElement("a");
+        const ext = getExtension(format);
+        link.download = getFilename(ext);
+        link.href = url;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+    },
+    [qrRef, getFilename],
+  );
 
   /**
    * Handles saving the QR code image, attempting to use the File System Access API
    * for a native "Save As" experience, falling back to direct download if unsupported.
    * @param format - The desired image format.
    */
-  const handleSaveAs = useCallback(async (format: 'png' | 'jpeg' | 'webp') => {
-    const canvas = qrRef.current?.querySelector('canvas');
-    if (!canvas) return;
+  const handleSaveAs = useCallback(
+    async (format: "png" | "jpeg" | "webp") => {
+      const canvas = qrRef.current?.querySelector("canvas");
+      if (!canvas) return;
 
-    // Check if the browser supports the File System Access API (e.g., Chrome, Edge Desktop)
-    if (canSaveFilePicker) {
-      try {
-        const blob = await new Promise<Blob | null>((resolve) =>
-          canvas.toBlob(resolve, `image/${format}`)
-        );
+      // Check if the browser supports the File System Access API (e.g., Chrome, Edge Desktop)
+      if (canSaveFilePicker) {
+        try {
+          const blob = await new Promise<Blob | null>((resolve) =>
+            canvas.toBlob(resolve, `image/${format}`),
+          );
 
-        if (!blob) throw new Error('Failed to create image blob');
+          if (!blob) throw new Error("Failed to create image blob");
 
-        const ext = getExtension(format);
+          const ext = getExtension(format);
 
-        const handle = await (window as any).showSaveFilePicker({
-          suggestedName: getFilename(ext),
-          types: [{
-            description: 'QR Code Image',
-            accept: { [`image/${format}`]: [`.${ext}`] },
-          }],
-        });
+          const handle = await (window as any).showSaveFilePicker({
+            suggestedName: getFilename(ext),
+            types: [
+              {
+                description: "QR Code Image",
+                accept: { [`image/${format}`]: [`.${ext}`] },
+              },
+            ],
+          });
 
-        const writable = await handle.createWritable();
-        await writable.write(blob);
-        await writable.close();
-      } catch (err: any) {
-        // If user aborted the picker, do nothing.
-        if (err.name === 'AbortError') return;
+          const writable = await handle.createWritable();
+          await writable.write(blob);
+          await writable.close();
+        } catch (err: any) {
+          // If user aborted the picker, do nothing.
+          if (err.name === "AbortError") return;
 
-        console.warn('File System Access API failed, falling back to standard download:', err);
+          console.warn(
+            "File System Access API failed, falling back to standard download:",
+            err,
+          );
+          downloadToDevice(format);
+        }
+      } else {
+        // Fallback for browsers that don't support showSaveFilePicker (Safari, Firefox, Mobile)
         downloadToDevice(format);
       }
-    } else {
-      // Fallback for browsers that don't support showSaveFilePicker (Safari, Firefox, Mobile)
-      downloadToDevice(format);
-    }
-  }, [qrRef, getFilename, downloadToDevice, canSaveFilePicker]);
+    },
+    [qrRef, getFilename, downloadToDevice, canSaveFilePicker],
+  );
 
   /**
    * Uses the Web Share API to share the QR code image directly to other apps.
@@ -140,55 +154,58 @@ export function useQRDownload(
    * @returns A boolean indicating if the copy operation was successful.
    */
   const handleCopy = useCallback(async (): Promise<boolean> => {
-    const canvas = qrRef.current?.querySelector('canvas');
+    const canvas = qrRef.current?.querySelector("canvas");
     if (!canvas) return false;
 
     try {
-      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
+      const blob = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob(resolve, "image/png"),
+      );
       if (!blob) return false;
 
       // Note: ClipboardItem is not supported in all browsers, but works in modern ones
       // We check for ClipboardItem to avoid throwing errors on older devices
-      if (typeof ClipboardItem !== 'undefined') {
-        const item = new ClipboardItem({ 'image/png': blob });
+      if (typeof ClipboardItem !== "undefined") {
+        const item = new ClipboardItem({ "image/png": blob });
         await navigator.clipboard.write([item]);
         return true;
       }
       return false;
     } catch (err) {
-      console.warn('Failed to copy to clipboard:', err);
+      console.warn("Failed to copy to clipboard:", err);
       return false;
     }
   }, [qrRef]);
 
   const handleShare = useCallback(async () => {
-    const canvas = qrRef.current?.querySelector('canvas');
+    const canvas = qrRef.current?.querySelector("canvas");
     if (canvas) {
       canvas.toBlob(async (blob) => {
         if (!blob) return;
 
-        const file = new File([blob], 'qrcode.png', { type: 'image/png' });
+        const file = new File([blob], "qrcode.png", { type: "image/png" });
 
         if (canShare && navigator.canShare({ files: [file] })) {
           try {
             await navigator.share({
-              title: 'QRCraftly Code',
-              text: 'Here is a QR code I created with QRCraftly!',
+              title: "QRCraftly Code",
+              text: "Here is a QR code I created with QRCraftly!",
               files: [file],
             });
           } catch (error) {
-            console.log('Error sharing:', error);
+            console.log("Error sharing:", error);
           }
         } else {
           // Fallback for devices that don't support sharing files
           addToast({
-            type: 'info',
-            message: "Sharing is not supported on this device/browser. The image will be downloaded instead.",
-            duration: 5000
+            type: "info",
+            message:
+              "Sharing is not supported on this device/browser. The image will be downloaded instead.",
+            duration: 5000,
           });
-          downloadToDevice('png');
+          downloadToDevice("png");
         }
-      }, 'image/png');
+      }, "image/png");
     }
   }, [qrRef, downloadToDevice, canShare, addToast]);
 
@@ -199,26 +216,35 @@ export function useQRDownload(
   const handleSaveSvg = useCallback(async () => {
     try {
       const svgString = await generateQRSvg(config);
-      const blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+      const blob = new Blob([svgString], {
+        type: "image/svg+xml;charset=utf-8",
+      });
       const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.download = getFilename('svg');
+      const link = document.createElement("a");
+      link.download = getFilename("svg");
       link.href = url;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
     } catch (err: any) {
-      console.warn('SVG export failed:', err);
+      console.warn("SVG export failed:", err);
       addToast({
-        type: 'error',
-        message: err.message || 'SVG export failed due to an unsupported feature or error.',
-        duration: 5000
+        type: "error",
+        message:
+          err.message ||
+          "SVG export failed due to an unsupported feature or error.",
+        duration: 5000,
       });
       throw err;
     }
   }, [config, getFilename, addToast]);
 
-  return { downloadToDevice, handleSaveAs, handleSaveSvg, handleShare, handleCopy };
+  return {
+    downloadToDevice,
+    handleSaveAs,
+    handleSaveSvg,
+    handleShare,
+    handleCopy,
+  };
 }
-

@@ -16,10 +16,10 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import React, { useEffect, useState } from 'react';
-import './index.css';
-import { ToastProvider } from '../components/ui/Toast';
-import { ErrorBoundary } from '../components/ErrorBoundary';
+import React, { useEffect, useState } from "react";
+import "./index.css";
+import { ToastProvider } from "../components/ui/Toast";
+import { ErrorBoundary } from "../components/ErrorBoundary";
 
 /**
  * LayoutDefault Component
@@ -32,7 +32,11 @@ import { ErrorBoundary } from '../components/ErrorBoundary';
  * @param {React.ReactNode} props.children - The child components to render within the layout.
  * @returns {JSX.Element} The layout wrapper.
  */
-export default function LayoutDefault({ children }: { children: React.ReactNode }) {
+export default function LayoutDefault({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => {
     setHydrated(true);
@@ -40,10 +44,11 @@ export default function LayoutDefault({ children }: { children: React.ReactNode 
 
   return (
     <ToastProvider>
-      <main className="flex min-h-screen flex-col bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-200 antialiased font-sans" data-hydrated={hydrated}>
-        <ErrorBoundary>
-          {children}
-        </ErrorBoundary>
+      <main
+        className="flex min-h-screen flex-col bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-200 antialiased font-sans"
+        data-hydrated={hydrated}
+      >
+        <ErrorBoundary>{children}</ErrorBoundary>
       </main>
     </ToastProvider>
   );

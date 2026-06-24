@@ -16,7 +16,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { useState, useEffect, RefObject } from 'react';
+import { useState, useEffect, RefObject } from "react";
 
 /**
  * Hook to handle clicks outside of a specified element.
@@ -29,7 +29,7 @@ import { useState, useEffect, RefObject } from 'react';
 export function useOnClickOutside<T extends HTMLElement>(
   ref: RefObject<T | null>,
   handler: (event: MouseEvent | TouchEvent) => void,
-  isActive: boolean = true
+  isActive: boolean = true,
 ) {
   useEffect(() => {
     if (!isActive) return;
@@ -42,12 +42,12 @@ export function useOnClickOutside<T extends HTMLElement>(
       handler(event);
     };
 
-    document.addEventListener('mousedown', listener);
-    document.addEventListener('touchstart', listener);
+    document.addEventListener("mousedown", listener);
+    document.addEventListener("touchstart", listener);
 
     return () => {
-      document.removeEventListener('mousedown', listener);
-      document.removeEventListener('touchstart', listener);
+      document.removeEventListener("mousedown", listener);
+      document.removeEventListener("touchstart", listener);
     };
   }, [ref, handler, isActive]);
 }
@@ -93,13 +93,13 @@ export const useImage = (url: string | null) => {
     }
 
     const img = new Image();
-    img.crossOrigin = 'Anonymous';
+    img.crossOrigin = "Anonymous";
     img.src = url;
 
     // If image is already cached and loaded immediately
     if (img.complete && img.naturalHeight !== 0) {
-        setImage(img);
-        return;
+      setImage(img);
+      return;
     }
 
     img.onload = () => setImage(img);

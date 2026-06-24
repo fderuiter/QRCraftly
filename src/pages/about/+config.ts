@@ -16,14 +16,14 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-
 /**
  * Page-specific configuration for the About page.
  * Sets the SEO title and description.
  */
 export default {
-    title: 'About QRCraftly - Privacy & Open Source',
-    description: 'Learn about QRCraftly\'s mission to provide a free, secure, and open-source QR code generator with privacy-first architecture.',
-    image: '/og-image.png?type=about',
-    imageAlt: 'About QRCraftly - Privacy & Open Source'
-}
+  title: "About QRCraftly - Privacy & Open Source",
+  description:
+    "Learn about QRCraftly's mission to provide a free, secure, and open-source QR code generator with privacy-first architecture.",
+  image: "/og-image.png?type=about",
+  imageAlt: "About QRCraftly - Privacy & Open Source",
+};

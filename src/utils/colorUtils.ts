@@ -34,7 +34,7 @@
 export const getLuminance = (hex: string) => {
   let normalizedHex = hex;
   if (hex.length === 4) {
-    normalizedHex = '#' + hex[1] + hex[1] + hex[2] + hex[2] + hex[3] + hex[3];
+    normalizedHex = "#" + hex[1] + hex[1] + hex[2] + hex[2] + hex[3] + hex[3];
   }
 
   const rgb = parseInt(normalizedHex.slice(1), 16);
@@ -56,7 +56,11 @@ export const getLuminance = (hex: string) => {
  */
 export const getContrastRatio = (fg: string, bg: string) => {
   if (!fg || !bg) return 0;
-  if ((fg.length !== 7 && fg.length !== 4) || (bg.length !== 7 && bg.length !== 4)) return 0;
+  if (
+    (fg.length !== 7 && fg.length !== 4) ||
+    (bg.length !== 7 && bg.length !== 4)
+  )
+    return 0;
 
   const hexRegex = /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/;
   if (!hexRegex.test(fg) || !hexRegex.test(bg)) return 0;

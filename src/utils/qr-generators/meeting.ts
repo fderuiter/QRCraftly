@@ -16,8 +16,8 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { MeetingData } from '../../types';
-import { isDangerousUrl } from '../security';
+import { MeetingData } from "../../types";
+import { isDangerousUrl } from "../security";
 
 /**
  * Constructs the QR code string for a virtual meeting link.
@@ -29,8 +29,8 @@ import { isDangerousUrl } from '../security';
  * @returns The meeting URL string, or an empty string if the URL is empty or dangerous.
  */
 export const constructMeetingString = (data: MeetingData): string => {
-  if (!data.url) return '';
-  if (isDangerousUrl(data.url)) return '';
+  if (!data.url) return "";
+  if (isDangerousUrl(data.url)) return "";
   return data.url.trim();
 };
 

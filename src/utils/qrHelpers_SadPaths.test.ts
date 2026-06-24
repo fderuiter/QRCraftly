@@ -16,88 +16,95 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from "vitest";
 import {
   escapeVCardString,
   constructEmailString,
   constructVCardString,
   constructPaymentString,
   constructSmsString,
-  constructPhoneString
-} from './qrHelpers';
-import { EmailData, VCardData, PaymentData, CryptoNetwork, SmsData, PhoneData } from '../types';
+  constructPhoneString,
+} from "./qrHelpers";
+import {
+  EmailData,
+  VCardData,
+  PaymentData,
+  CryptoNetwork,
+  SmsData,
+  PhoneData,
+} from "../types";
 
-describe('QR Helpers Sad Paths', () => {
-  describe('escapeVCardString', () => {
-    it('should normalize CRLF to \\n', () => {
-      const input = 'Line 1\r\nLine 2';
+describe("QR Helpers Sad Paths", () => {
+  describe("escapeVCardString", () => {
+    it("should normalize CRLF to \\n", () => {
+      const input = "Line 1\r\nLine 2";
       const result = escapeVCardString(input);
-      expect(result).toBe('Line 1\\nLine 2');
+      expect(result).toBe("Line 1\\nLine 2");
     });
 
-    it('should normalize CR to \\n', () => {
-      const input = 'Line 1\rLine 2';
+    it("should normalize CR to \\n", () => {
+      const input = "Line 1\rLine 2";
       const result = escapeVCardString(input);
-      expect(result).toBe('Line 1\\nLine 2');
+      expect(result).toBe("Line 1\\nLine 2");
     });
 
-    it('should handle mixed newline types', () => {
-      const input = 'Win\r\nMac\rUnix\n';
+    it("should handle mixed newline types", () => {
+      const input = "Win\r\nMac\rUnix\n";
       const result = escapeVCardString(input);
-      expect(result).toBe('Win\\nMac\\nUnix\\n');
+      expect(result).toBe("Win\\nMac\\nUnix\\n");
     });
 
-    it('should strip non-printable control characters from vCard fields', () => {
+    it("should strip non-printable control characters from vCard fields", () => {
       // \x00 (NUL), \x07 (BEL), \x1B (ESC), \x7F (DEL)
-      const input = 'Clean\x00Text\x07With\x1BControl\x7FChars';
+      const input = "Clean\x00Text\x07With\x1BControl\x7FChars";
       const result = escapeVCardString(input);
-      expect(result).toBe('CleanTextWithControlChars');
+      expect(result).toBe("CleanTextWithControlChars");
     });
 
-    it('should preserve tabs but escape newlines', () => {
-      const input = 'Line\t1\nLine\t2';
+    it("should preserve tabs but escape newlines", () => {
+      const input = "Line\t1\nLine\t2";
       const result = escapeVCardString(input);
-      expect(result).toBe('Line\t1\\nLine\t2');
+      expect(result).toBe("Line\t1\\nLine\t2");
     });
   });
 
-  describe('constructEmailString', () => {
-    it('should handle empty string after sanitization', () => {
+  describe("constructEmailString", () => {
+    it("should handle empty string after sanitization", () => {
       const data: EmailData = {
-        email: '?subject=bad',
-        subject: 'Test',
-        body: 'Body'
+        email: "?subject=bad",
+        subject: "Test",
+        body: "Body",
       };
       // Current behavior: mailto:?subject=Test...
       // This is technically valid URI but likely not what was intended if email became empty.
       // However, it's safe.
-      expect(constructEmailString(data)).toBe('mailto:?subject=Test&body=Body');
+      expect(constructEmailString(data)).toBe("mailto:?subject=Test&body=Body");
     });
 
-    it('should handle completely empty data', () => {
+    it("should handle completely empty data", () => {
       const data: EmailData = {
-        email: '',
-        subject: '',
-        body: ''
+        email: "",
+        subject: "",
+        body: "",
       };
-      expect(constructEmailString(data)).toBe('mailto:?subject=&body=');
+      expect(constructEmailString(data)).toBe("mailto:?subject=&body=");
     });
   });
 
-  describe('constructVCardString', () => {
-    it('should handle fields consisting only of delimiters', () => {
+  describe("constructVCardString", () => {
+    it("should handle fields consisting only of delimiters", () => {
       const data: VCardData = {
-        firstName: ';;;',
-        lastName: '\\',
-        organization: ',',
-        title: '',
-        phone: '',
-        email: '',
-        website: '',
-        street: '',
-        city: '',
-        zip: '',
-        country: ''
+        firstName: ";;;",
+        lastName: "\\",
+        organization: ",",
+        title: "",
+        phone: "",
+        email: "",
+        website: "",
+        street: "",
+        city: "",
+        zip: "",
+        country: "",
       };
       const result = constructVCardString(data);
       // N:lastName;firstName;;;
@@ -109,30 +116,30 @@ describe('QR Helpers Sad Paths', () => {
       // lastName: \ -> escaped to \\
       // firstName: ;;; -> escaped to \;\; (Wait, if I have ';;;', it becomes '\;\;\\;')
 
-      expect(result).toContain('N:\\\\;\\;\\;\\;');
-      expect(result).toContain('ORG:\\,');
+      expect(result).toContain("N:\\\\;\\;\\;\\;");
+      expect(result).toContain("ORG:\\,");
     });
   });
 
-  describe('constructPaymentString', () => {
-    it('should handle parameter injection attempts in amount', () => {
+  describe("constructPaymentString", () => {
+    it("should handle parameter injection attempts in amount", () => {
       const data: PaymentData = {
         network: CryptoNetwork.BITCOIN,
-        address: '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa',
-        amount: '0.1&label=Hacked',
-        label: 'Donation'
+        address: "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
+        amount: "0.1&label=Hacked",
+        label: "Donation",
       };
       const result = constructPaymentString(data);
       // Should encode the ampersand
-      expect(result).toContain('amount=0.1%26label%3DHacked');
+      expect(result).toContain("amount=0.1%26label%3DHacked");
     });
   });
 
-  describe('constructSmsString', () => {
-    it('should prevent parameter injection in SMS number', () => {
+  describe("constructSmsString", () => {
+    it("should prevent parameter injection in SMS number", () => {
       const data: SmsData = {
-        number: '123?body=injected',
-        message: 'hello'
+        number: "123?body=injected",
+        message: "hello",
       };
       // If we don't sanitize the number, we get sms:123?body=injected?body=hello
       // We expect the number to be cleaned of URI control characters AND non-phone chars
@@ -140,25 +147,25 @@ describe('QR Helpers Sad Paths', () => {
       // It should NOT contain two 'body=' params or two '?'
       expect(result).not.toMatch(/\?.*\?/);
       // With strict whitelist, 'bodyinjected' is removed
-      expect(result).toBe('sms:123?body=hello');
+      expect(result).toBe("sms:123?body=hello");
     });
   });
 
-  describe('constructPhoneString', () => {
-    it('should strip malicious parameter injections', () => {
+  describe("constructPhoneString", () => {
+    it("should strip malicious parameter injections", () => {
       const data: PhoneData = {
-        number: '123?body=injected'
+        number: "123?body=injected",
       };
       const result = constructPhoneString(data);
-      expect(result).toBe('tel:123');
+      expect(result).toBe("tel:123");
     });
 
-    it('should handle empty input', () => {
+    it("should handle empty input", () => {
       const data: PhoneData = {
-        number: ''
+        number: "",
       };
       const result = constructPhoneString(data);
-      expect(result).toBe('tel:');
+      expect(result).toBe("tel:");
     });
   });
 });

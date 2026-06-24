@@ -2,7 +2,7 @@ name: Artifact & Branch Cleanup
 
 on:
   schedule:
-    - cron: '0 2 * * 0' # Weekly on Sunday at 2AM
+    - cron: "0 2 * * 0" # Weekly on Sunday at 2AM
   pull_request:
     types: [closed]
   workflow_dispatch:
@@ -29,7 +29,7 @@ jobs:
               protected: false,
               per_page: 100
             });
-            
+
             for (const branch of branches) {
               if (branch.name === 'main' || branch.name === 'master') continue;
               
@@ -67,13 +67,13 @@ jobs:
           script: |
             const daysToKeep = 7;
             const threshold = new Date(Date.now() - daysToKeep * 24 * 60 * 60 * 1000);
-            
+
             const { data: artifacts } = await github.rest.actions.listArtifactsForRepo({
               owner: context.repo.owner,
               repo: context.repo.repo,
               per_page: 100
             });
-            
+
             for (const artifact of artifacts.artifacts) {
               const createdAt = new Date(artifact.created_at);
               if (createdAt < threshold) {

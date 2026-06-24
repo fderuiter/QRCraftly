@@ -16,7 +16,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { TextData } from '../../types';
+import { TextData } from "../../types";
 
 /**
  * Constructs the plain text QR code string.

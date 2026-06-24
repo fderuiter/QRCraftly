@@ -1,0 +1,6 @@
+{
+  "*.{ts,tsx}": ["prettier --write", "eslint --fix", "tsc-files --noEmit"],
+  "*.{js,jsx}": ["prettier --write", "eslint --fix"],
+  "*.{json,md,css,html,yaml,yml}": ["prettier --write"],
+  "src/colors.json": ["node scripts/contrast_check.js"]
+}

@@ -16,10 +16,16 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { drawRoundRect, drawPoly, drawStar, drawRoughRect, drawScribble } from './canvasHelpers';
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import {
+  drawRoundRect,
+  drawPoly,
+  drawStar,
+  drawRoughRect,
+  drawScribble,
+} from "./canvasHelpers";
 
-describe('canvasHelpers', () => {
+describe("canvasHelpers", () => {
   let ctx: any;
 
   beforeEach(() => {
@@ -42,8 +48,8 @@ describe('canvasHelpers', () => {
     } as unknown as CanvasRenderingContext2D;
   });
 
-  describe('drawRoundRect', () => {
-    it('should use native roundRect if available', () => {
+  describe("drawRoundRect", () => {
+    it("should use native roundRect if available", () => {
       drawRoundRect(ctx, 10, 20, 100, 50, 5);
       expect(ctx.roundRect).toHaveBeenCalledWith(10, 20, 100, 50, 5);
       // Fallback methods should not be called
@@ -51,7 +57,7 @@ describe('canvasHelpers', () => {
       expect(ctx.quadraticCurveTo).not.toHaveBeenCalled();
     });
 
-    it('should fallback to path commands if roundRect is missing', () => {
+    it("should fallback to path commands if roundRect is missing", () => {
       // Simulate missing API support
       ctx.roundRect = undefined;
 
@@ -65,8 +71,8 @@ describe('canvasHelpers', () => {
     });
   });
 
-  describe('drawPoly', () => {
-    it('should draw a polygon with correct number of sides', () => {
+  describe("drawPoly", () => {
+    it("should draw a polygon with correct number of sides", () => {
       const sides = 6;
       drawPoly(ctx, 50, 50, 20, sides);
 
@@ -80,13 +86,13 @@ describe('canvasHelpers', () => {
       expect(ctx.stroke).not.toHaveBeenCalled();
     });
 
-    it('should stroke instead of fill when fill is false', () => {
+    it("should stroke instead of fill when fill is false", () => {
       drawPoly(ctx, 50, 50, 20, 3, 0, false);
       expect(ctx.fill).not.toHaveBeenCalled();
       expect(ctx.stroke).toHaveBeenCalled();
     });
 
-    it('should add to path without beginPath/fill if addToPath is true', () => {
+    it("should add to path without beginPath/fill if addToPath is true", () => {
       drawPoly(ctx, 50, 50, 20, 6, 0, true, true);
       expect(ctx.beginPath).not.toHaveBeenCalled();
       expect(ctx.fill).not.toHaveBeenCalled();
@@ -95,8 +101,8 @@ describe('canvasHelpers', () => {
     });
   });
 
-  describe('drawStar', () => {
-    it('should draw a star with correct spikes', () => {
+  describe("drawStar", () => {
+    it("should draw a star with correct spikes", () => {
       const spikes = 5;
       drawStar(ctx, 50, 50, 20, 10, spikes);
 
@@ -105,18 +111,18 @@ describe('canvasHelpers', () => {
       // loop runs `spikes` times. Inside loop: 2 lineTo calls.
       // Plus one final lineTo after loop.
       // Total lineTo = (spikes * 2) + 1
-      expect(ctx.lineTo).toHaveBeenCalledTimes((spikes * 2) + 1);
+      expect(ctx.lineTo).toHaveBeenCalledTimes(spikes * 2 + 1);
       expect(ctx.closePath).toHaveBeenCalled();
       expect(ctx.fill).toHaveBeenCalled();
     });
 
-    it('should stroke instead of fill when fill is false', () => {
+    it("should stroke instead of fill when fill is false", () => {
       drawStar(ctx, 50, 50, 20, 10, 5, false);
       expect(ctx.fill).not.toHaveBeenCalled();
       expect(ctx.stroke).toHaveBeenCalled();
     });
 
-    it('should add to path without beginPath/fill if addToPath is true', () => {
+    it("should add to path without beginPath/fill if addToPath is true", () => {
       drawStar(ctx, 50, 50, 20, 10, 5, true, true);
       expect(ctx.beginPath).not.toHaveBeenCalled();
       expect(ctx.fill).not.toHaveBeenCalled();
@@ -125,8 +131,8 @@ describe('canvasHelpers', () => {
     });
   });
 
-  describe('drawRoughRect', () => {
-    it('should apply rotation and fill rect', () => {
+  describe("drawRoughRect", () => {
+    it("should apply rotation and fill rect", () => {
       drawRoughRect(ctx, 10, 10, 100, 50);
 
       expect(ctx.save).toHaveBeenCalled();
@@ -136,7 +142,7 @@ describe('canvasHelpers', () => {
       expect(ctx.restore).toHaveBeenCalled();
     });
 
-    it('should use rect instead of fillRect if addToPath is true', () => {
+    it("should use rect instead of fillRect if addToPath is true", () => {
       drawRoughRect(ctx, 10, 10, 100, 50, true);
 
       expect(ctx.fillRect).not.toHaveBeenCalled();
@@ -144,11 +150,11 @@ describe('canvasHelpers', () => {
     });
   });
 
-  describe('drawScribble', () => {
+  describe("drawScribble", () => {
     beforeEach(() => {
       vi.useFakeTimers();
       // Mock random to be deterministic
-      vi.spyOn(Math, 'random').mockReturnValue(0.5);
+      vi.spyOn(Math, "random").mockReturnValue(0.5);
     });
 
     afterEach(() => {
@@ -156,7 +162,7 @@ describe('canvasHelpers', () => {
       vi.useRealTimers();
     });
 
-    it('should draw a scribble path deterministically', () => {
+    it("should draw a scribble path deterministically", () => {
       drawScribble(ctx, 10, 10, 100);
 
       expect(ctx.save).toHaveBeenCalled();

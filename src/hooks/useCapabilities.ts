@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 
-export type BrowserEngine = 'WebKit' | 'Chromium' | 'Firefox' | 'Unknown';
+export type BrowserEngine = "WebKit" | "Chromium" | "Firefox" | "Unknown";
 
 export interface Capabilities {
   engine: BrowserEngine;
@@ -10,28 +10,33 @@ export interface Capabilities {
 
 export function useCapabilities(): Capabilities {
   const [capabilities, setCapabilities] = useState<Capabilities>({
-    engine: 'Unknown',
+    engine: "Unknown",
     canSaveFilePicker: false,
     canShare: false,
   });
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === "undefined") return;
 
     const userAgent = navigator.userAgent;
-    let engine: BrowserEngine = 'Unknown';
-    if (userAgent.includes('Safari') && !userAgent.includes('Chrome')) {
-      engine = 'WebKit';
-    } else if (userAgent.includes('Firefox')) {
-      engine = 'Firefox';
-    } else if (userAgent.includes('Chrome')) {
-      engine = 'Chromium';
+    let engine: BrowserEngine = "Unknown";
+    if (userAgent.includes("Safari") && !userAgent.includes("Chrome")) {
+      engine = "WebKit";
+    } else if (userAgent.includes("Firefox")) {
+      engine = "Firefox";
+    } else if (userAgent.includes("Chrome")) {
+      engine = "Chromium";
     }
 
-    const canSaveFilePicker = 'showSaveFilePicker' in window && typeof (window as any).showSaveFilePicker === 'function';
-    
-    const canShare = 'share' in navigator && typeof navigator.share === 'function' && 
-                     'canShare' in navigator && typeof navigator.canShare === 'function';
+    const canSaveFilePicker =
+      "showSaveFilePicker" in window &&
+      typeof (window as any).showSaveFilePicker === "function";
+
+    const canShare =
+      "share" in navigator &&
+      typeof navigator.share === "function" &&
+      "canShare" in navigator &&
+      typeof navigator.canShare === "function";
 
     setCapabilities({
       engine,
@@ -42,4 +47,3 @@ export function useCapabilities(): Capabilities {
 
   return capabilities;
 }
-

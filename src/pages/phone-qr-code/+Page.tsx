@@ -16,12 +16,12 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { QRTypePage } from '@/components/QRTypePage';
-import { QRType } from '@/types';
-import { contentRegistry } from '@/data/contentRegistry';
-import { generateSchema } from '@/utils/schemaGenerator';
-import { resolveDomainForPath } from '@/utils/metadataEngine';
-import { usePageContext } from 'vike-react/usePageContext';
+import { QRTypePage } from "@/components/QRTypePage";
+import { QRType } from "@/types";
+import { contentRegistry } from "@/data/contentRegistry";
+import { generateSchema } from "@/utils/schemaGenerator";
+import { resolveDomainForPath } from "@/utils/metadataEngine";
+import { usePageContext } from "vike-react/usePageContext";
 
 /**
  * Phone QR Code Page Component
@@ -29,7 +29,18 @@ import { usePageContext } from 'vike-react/usePageContext';
 export default function Page() {
   const pageContext = usePageContext();
   const resolvedDomain = resolveDomainForPath(pageContext.urlPathname);
-  const schemaData = generateSchema(contentRegistry['phone-qr-code'], resolvedDomain, pageContext.urlPathname);
+  const schemaData = generateSchema(
+    contentRegistry["phone-qr-code"],
+    resolvedDomain,
+    pageContext.urlPathname,
+  );
 
-  return <QRTypePage type={QRType.PHONE} title="Phone QR Code" schemaData={schemaData}  toolId="phone-qr-code" />;
+  return (
+    <QRTypePage
+      type={QRType.PHONE}
+      title="Phone QR Code"
+      schemaData={schemaData}
+      toolId="phone-qr-code"
+    />
+  );
 }

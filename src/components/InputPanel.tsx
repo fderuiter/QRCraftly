@@ -16,10 +16,10 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import React, { useState, useEffect } from 'react';
-import { QRConfig } from '../types';
-import { TypeSelector, useInputLogic } from './inputs';
-import { useDynamicFocus } from '../hooks/useDynamicFocus';
+import React, { useState, useEffect } from "react";
+import { QRConfig } from "../types";
+import { TypeSelector, useInputLogic } from "./inputs";
+import { useDynamicFocus } from "../hooks/useDynamicFocus";
 
 /**
  * Props for the InputPanel component.
@@ -44,51 +44,45 @@ interface InputPanelProps {
 const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
   const { InputComponent, inputProps } = useInputLogic(config, onChange);
   const containerRef = useDynamicFocus<HTMLDivElement>([config.type]);
-  const [announcement, setAnnouncement] = useState('');
+  const [announcement, setAnnouncement] = useState("");
 
   // Update live region announcement when type changes
   useEffect(() => {
     // Only announce when type is explicitly changed, don't re-announce on simple re-renders
     const typeNames: Record<string, string> = {
-      URL: 'URL',
-      TEXT: 'Text',
-      WIFI: 'WiFi',
-      EVENT: 'Event',
-      EMAIL: 'Email',
-      VCARD: 'Contact',
-      PHONE: 'Phone',
-      SMS: 'SMS',
-      PAYMENT: 'Payment',
-      LOCATION: 'Location',
-      MEETING: 'Meeting',
-      SOCIAL: 'Social'
+      URL: "URL",
+      TEXT: "Text",
+      WIFI: "WiFi",
+      EVENT: "Event",
+      EMAIL: "Email",
+      VCARD: "Contact",
+      PHONE: "Phone",
+      SMS: "SMS",
+      PAYMENT: "Payment",
+      LOCATION: "Location",
+      MEETING: "Meeting",
+      SOCIAL: "Social",
     };
-    
+
     setAnnouncement(`${typeNames[config.type] || config.type} input loaded`);
   }, [config.type]);
 
   return (
     <div className="space-y-6">
       {/* Live Region for Screen Readers */}
-      <div 
-        aria-live="polite" 
-        className="sr-only"
-        role="status"
-      >
+      <div aria-live="polite" className="sr-only" role="status">
         {announcement}
       </div>
 
       {/* Type Selector */}
       <TypeSelector
         currentType={config.type}
-        onSelect={(type) => onChange({ type, value: '' })}
+        onSelect={(type) => onChange({ type, value: "" })}
       />
 
       {/* Inputs */}
       <div className="space-y-4" ref={containerRef}>
-        {InputComponent && (
-          <InputComponent {...inputProps} />
-        )}
+        {InputComponent && <InputComponent {...inputProps} />}
       </div>
     </div>
   );
@@ -105,8 +99,10 @@ function areInputPropsEqual(prev: InputPanelProps, next: InputPanelProps) {
 
   // We only care about config.type and config.value for the input panel.
   // Style changes (colors, etc.) should NOT trigger a re-render of inputs.
-  return prev.config.type === next.config.type &&
-         prev.config.value === next.config.value;
+  return (
+    prev.config.type === next.config.type &&
+    prev.config.value === next.config.value
+  );
 }
 
 export default React.memo(InputPanel, areInputPropsEqual);

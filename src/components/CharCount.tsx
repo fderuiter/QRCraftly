@@ -16,7 +16,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import React from 'react';
+import React from "react";
 
 interface CharCountProps {
   current: number;
@@ -30,7 +30,8 @@ export const CharCount: React.FC<CharCountProps> = ({ current, max }) => {
   // Circle configuration
   const radius = 8;
   const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference - (visualPercentage / 100) * circumference;
+  const strokeDashoffset =
+    circumference - (visualPercentage / 100) * circumference;
 
   let colorClass = "text-slate-500 dark:text-slate-400";
   if (percentage >= 100) {

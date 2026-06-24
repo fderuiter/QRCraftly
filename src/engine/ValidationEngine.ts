@@ -1,7 +1,11 @@
-import { QRConfig, QRType } from '../types';
-import { getContrastRatio } from '../utils/colorUtils';
-import { parseProtocol, PROTOCOL_PREFIXES, SOCIAL_DOMAINS } from '../utils/protocol';
-import { SafeUrlPipeline } from '../utils/url';
+import { QRConfig, QRType } from "../types";
+import { getContrastRatio } from "../utils/colorUtils";
+import {
+  parseProtocol,
+  PROTOCOL_PREFIXES,
+  SOCIAL_DOMAINS,
+} from "../utils/protocol";
+import { SafeUrlPipeline } from "../utils/url";
 
 export const ValidationEngine = {
   // Shared regex patterns for data parsing and validation
@@ -20,36 +24,48 @@ export const ValidationEngine = {
   // Protocol Identification
   identifyProtocol(raw: string): QRType | null {
     if (!raw) return null;
-    
-    if (raw.startsWith('WIFI:')) return QRType.WIFI;
-    if (raw.includes('BEGIN:VCARD')) return QRType.VCARD;
-    if (raw.includes('BEGIN:VEVENT') || raw.includes('BEGIN:VCALENDAR')) return QRType.EVENT;
-    if (/^(bitcoin|ethereum|litecoin|solana):/i.test(raw)) return QRType.PAYMENT;
+
+    if (raw.startsWith("WIFI:")) return QRType.WIFI;
+    if (raw.includes("BEGIN:VCARD")) return QRType.VCARD;
+    if (raw.includes("BEGIN:VEVENT") || raw.includes("BEGIN:VCALENDAR"))
+      return QRType.EVENT;
+    if (/^(bitcoin|ethereum|litecoin|solana):/i.test(raw))
+      return QRType.PAYMENT;
 
     const parsed = parseProtocol(raw);
-    
-    if (parsed) {
-      if (PROTOCOL_PREFIXES.MAIL.includes(parsed.scheme + ':')) return QRType.EMAIL;
-      if (parsed.scheme === 'matmsg') return QRType.EMAIL;
-      if (PROTOCOL_PREFIXES.TEL.includes(parsed.scheme + ':')) return QRType.PHONE;
-      if (PROTOCOL_PREFIXES.SMS.includes(parsed.scheme + ':')) return QRType.SMS;
-      if (parsed.scheme === 'geo') return QRType.LOCATION;
 
-      if (parsed.scheme === 'http' || parsed.scheme === 'https') {
-        const pathParts = parsed.path.split('/');
+    if (parsed) {
+      if (PROTOCOL_PREFIXES.MAIL.includes(parsed.scheme + ":"))
+        return QRType.EMAIL;
+      if (parsed.scheme === "matmsg") return QRType.EMAIL;
+      if (PROTOCOL_PREFIXES.TEL.includes(parsed.scheme + ":"))
+        return QRType.PHONE;
+      if (PROTOCOL_PREFIXES.SMS.includes(parsed.scheme + ":"))
+        return QRType.SMS;
+      if (parsed.scheme === "geo") return QRType.LOCATION;
+
+      if (parsed.scheme === "http" || parsed.scheme === "https") {
+        const pathParts = parsed.path.split("/");
         let domain = pathParts[0].toLowerCase();
-        if (domain.startsWith('www.')) {
+        if (domain.startsWith("www.")) {
           domain = domain.substring(4);
         }
-        
+
         // Find if any known domain is a suffix of the current domain
-        const knownSocial = Object.keys(SOCIAL_DOMAINS).find(d => domain === d || domain.endsWith(`.${d}`));
+        const knownSocial = Object.keys(SOCIAL_DOMAINS).find(
+          (d) => domain === d || domain.endsWith(`.${d}`),
+        );
         if (knownSocial) {
           return QRType.SOCIAL;
         }
 
-        const isDomain = (d: string) => domain === d || domain.endsWith(`.${d}`);
-        if (isDomain('zoom.us') || isDomain('teams.microsoft.com') || isDomain('meet.google.com')) {
+        const isDomain = (d: string) =>
+          domain === d || domain.endsWith(`.${d}`);
+        if (
+          isDomain("zoom.us") ||
+          isDomain("teams.microsoft.com") ||
+          isDomain("meet.google.com")
+        ) {
           return QRType.MEETING;
         }
 
@@ -73,42 +89,45 @@ export const ValidationEngine = {
   },
 
   sanitizeInput(str: string): string {
-    const noControl = str.replace(this.REGEX_STRICT_CONTROL_CHARS, '');
-    return noControl.split('?')[0];
+    const noControl = str.replace(this.REGEX_STRICT_CONTROL_CHARS, "");
+    return noControl.split("?")[0];
   },
 
   // Escaping logic
   escapeWifi(str: string | undefined): string {
-    if (!str) return '';
+    if (!str) return "";
     return str
-      .replace(this.REGEX_STRICT_CONTROL_CHARS, '')
-      .replace(this.REGEX_ESCAPE_WIFI, '\\$1');
+      .replace(this.REGEX_STRICT_CONTROL_CHARS, "")
+      .replace(this.REGEX_ESCAPE_WIFI, "\\$1");
   },
 
   unescapeWifi(str: string | undefined): string {
-    if (!str) return '';
-    return str.replace(this.REGEX_UNESCAPE_WIFI, '$1');
+    if (!str) return "";
+    return str.replace(this.REGEX_UNESCAPE_WIFI, "$1");
   },
 
   escapeVCardEvent(str: string | undefined): string {
-    if (!str) return '';
+    if (!str) return "";
     return str
-      .replace(this.REGEX_PRESERVE_FORMAT_CONTROL_CHARS, '')
-      .replace(/\\/g, '\\\\')
-      .replace(/\r\n|\r|\n/g, '\\n')
-      .replace(this.REGEX_ESCAPE_VCARD, '\\$1');
+      .replace(this.REGEX_PRESERVE_FORMAT_CONTROL_CHARS, "")
+      .replace(/\\/g, "\\\\")
+      .replace(/\r\n|\r|\n/g, "\\n")
+      .replace(this.REGEX_ESCAPE_VCARD, "\\$1");
   },
 
   unescapeVCardEvent(str: string | undefined): string {
-    if (!str) return '';
+    if (!str) return "";
     return str
-      .replace(/\\n/gi, '\n')
-      .replace(this.REGEX_UNESCAPE_VCARD, '$1')
-      .replace(/\\\\/g, '\\');
+      .replace(/\\n/gi, "\n")
+      .replace(this.REGEX_UNESCAPE_VCARD, "$1")
+      .replace(/\\\\/g, "\\");
   },
 
   // Scannability scoring heuristic
-  calculateScannability(config: QRConfig): { score: number; warnings: string[] } {
+  calculateScannability(config: QRConfig): {
+    score: number;
+    warnings: string[];
+  } {
     let score = 100;
     const warnings: string[] = [];
 
@@ -124,7 +143,7 @@ export const ValidationEngine = {
       warnings.push("Contrast ratio is low");
     }
 
-    const isComplex = ['grunge', 'circuit', 'starburst'].includes(config.style);
+    const isComplex = ["grunge", "circuit", "starburst"].includes(config.style);
     if (isComplex) {
       score -= 10;
       if (worstContrast < 7.0) {
@@ -138,12 +157,12 @@ export const ValidationEngine = {
         score -= 15;
         warnings.push("Logo size might obscure too much data");
       }
-      if (config.errorCorrectionLevel === 'L') {
+      if (config.errorCorrectionLevel === "L") {
         score -= 15;
         warnings.push("Low error correction with logo");
       }
     }
 
     return { score: Math.max(0, Math.min(100, score)), warnings };
-  }
+  },
 };

@@ -16,11 +16,11 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { QRConfig } from '../types';
-import { SvgContext } from './svgContext';
-import { drawWithTemplate, SOCIAL_DIMENSIONS } from './templateRenderer';
+import { QRConfig } from "../types";
+import { SvgContext } from "./svgContext";
+import { drawWithTemplate, SOCIAL_DIMENSIONS } from "./templateRenderer";
 
-import { SafeUrlPipeline, normalizeUrl } from './url';
+import { SafeUrlPipeline, normalizeUrl } from "./url";
 
 /**
  * Converts an image URL to a base64 data-URL so it can be embedded inline in
@@ -35,8 +35,8 @@ async function toDataUrl(url: string): Promise<string | null> {
 
   const normalized = normalizeUrl(url).toLowerCase();
 
-  if (normalized.startsWith('data:')) {
-    if (normalized.startsWith('data:image/')) {
+  if (normalized.startsWith("data:")) {
+    if (normalized.startsWith("data:image/")) {
       return url;
     }
     return null;
@@ -47,16 +47,16 @@ async function toDataUrl(url: string): Promise<string | null> {
   }
 
   try {
-    const response = await fetch(url, { mode: 'cors' });
+    const response = await fetch(url, { mode: "cors" });
     if (!response.ok) return null;
-    
+
     const blob = await response.blob();
-    if (!blob.type.startsWith('image/')) return null;
+    if (!blob.type.startsWith("image/")) return null;
 
     return await new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(reader.result as string);
-      reader.onerror = () => reject(new Error('FileReader error'));
+      reader.onerror = () => reject(new Error("FileReader error"));
       reader.readAsDataURL(blob);
     });
   } catch {
@@ -92,14 +92,19 @@ function makeImgProxy(src: string | null): HTMLImageElement | null {
  *   @deprecated Pass `config.socialFormat` to control output dimensions.
  * @returns A promise that resolves to the SVG XML string.
  */
-export async function generateQRSvg(config: QRConfig, _legacySize?: number): Promise<string> {
+export async function generateQRSvg(
+  config: QRConfig,
+  _legacySize?: number,
+): Promise<string> {
   // Dynamically import qrcode to match the pattern used elsewhere in the project
-  const QRCode = await import('qrcode');
-  const qrData = QRCode.create(config.value, { errorCorrectionLevel: config.errorCorrectionLevel });
+  const QRCode = await import("qrcode");
+  const qrData = QRCode.create(config.value, {
+    errorCorrectionLevel: config.errorCorrectionLevel,
+  });
   // The qrcode library's BitMatrix.get() returns a number (truthy for dark modules).
   // Our QRModules interface expects boolean, but all consumers treat it as truthy/falsy,
   // so the cast is safe.
-  const modules = qrData.modules as unknown as import('../types').QRModules;
+  const modules = qrData.modules as unknown as import("../types").QRModules;
   const moduleCount = modules.size;
 
   // Pre-resolve logo images to inline data-URLs
@@ -107,12 +112,14 @@ export async function generateQRSvg(config: QRConfig, _legacySize?: number): Pro
     ? makeImgProxy(await toDataUrl(config.logoUrl))
     : null;
 
-  const borderLogoImg = config.isBorderEnabled && config.borderLogoUrl
-    ? makeImgProxy(await toDataUrl(config.borderLogoUrl))
-    : null;
+  const borderLogoImg =
+    config.isBorderEnabled && config.borderLogoUrl
+      ? makeImgProxy(await toDataUrl(config.borderLogoUrl))
+      : null;
 
   // Determine output dimensions from the social format (canonical resolution)
-  const { width: svgWidth, height: svgHeight } = SOCIAL_DIMENSIONS[config.socialFormat];
+  const { width: svgWidth, height: svgHeight } =
+    SOCIAL_DIMENSIONS[config.socialFormat];
 
   // Create SVG context and render
   const ctx = new SvgContext(svgWidth, svgHeight);
@@ -126,10 +133,10 @@ export async function generateQRSvg(config: QRConfig, _legacySize?: number): Pro
       borderLogoImg,
       svgWidth,
       svgHeight,
-      moduleCount
+      moduleCount,
     );
   } catch (err) {
-    console.warn('SVG QR generation failed:', err);
+    console.warn("SVG QR generation failed:", err);
     throw err;
   }
 

@@ -21,41 +21,43 @@ export const SafeUrlPipeline = {
   REGEX_CONTROL_CHARS: /[\x00-\x1F\x7F-\x9F\u200B-\u200D\uFEFF]/g,
 
   DANGEROUS_PROTOCOLS: [
-    'javascript:',
-    'vbscript:',
-    'file:',
-    'data:',
-    'mk:',
-    'blob:',
-    'filesystem:',
-    'jscript:',
-    'wscript:',
-    'mocha:',
-    'about:',
+    "javascript:",
+    "vbscript:",
+    "file:",
+    "data:",
+    "mk:",
+    "blob:",
+    "filesystem:",
+    "jscript:",
+    "wscript:",
+    "mocha:",
+    "about:",
   ],
 
   decodeHtmlEntities(str: string): string {
-    return str.replace(/&#(?:[xX]([0-9a-fA-F]+)|([0-9]+));?/g, (_match, hex, dec) => {
-      return String.fromCharCode(hex ? parseInt(hex, 16) : parseInt(dec, 10));
-    }).replace(/&([a-zA-Z]+);?/g, (match, name) => {
-      const namedEntities: Record<string, string> = {
-          'colon': ':',
-          'tab': '\t',
-          'newline': '\n',
-          'quot': '"',
-          'amp': '&',
-          'lt': '<',
-          'gt': '>',
-      };
-      return namedEntities[name.toLowerCase()] || match;
-    });
+    return str
+      .replace(/&#(?:[xX]([0-9a-fA-F]+)|([0-9]+));?/g, (_match, hex, dec) => {
+        return String.fromCharCode(hex ? parseInt(hex, 16) : parseInt(dec, 10));
+      })
+      .replace(/&([a-zA-Z]+);?/g, (match, name) => {
+        const namedEntities: Record<string, string> = {
+          colon: ":",
+          tab: "\t",
+          newline: "\n",
+          quot: '"',
+          amp: "&",
+          lt: "<",
+          gt: ">",
+        };
+        return namedEntities[name.toLowerCase()] || match;
+      });
   },
 
   decodeObfuscation(url: string): string {
-    let prev = '';
+    let prev = "";
     let curr = url;
     let maxDepth = 10;
-    
+
     while (prev !== curr && maxDepth > 0) {
       prev = curr;
       try {
@@ -72,22 +74,22 @@ export const SafeUrlPipeline = {
   isDangerous(url: string | undefined): boolean {
     if (!url) return false;
     let decoded = this.decodeObfuscation(url);
-    decoded = decoded.replace(this.REGEX_URL_UNSAFE_CHARS, '').toLowerCase();
-    return this.DANGEROUS_PROTOCOLS.some(p => decoded.startsWith(p));
+    decoded = decoded.replace(this.REGEX_URL_UNSAFE_CHARS, "").toLowerCase();
+    return this.DANGEROUS_PROTOCOLS.some((p) => decoded.startsWith(p));
   },
 
   normalize(url: string | undefined): string {
-    if (!url) return '';
-    
+    if (!url) return "";
+
     // Replace control and invisible characters but leave spaces for encoding.
-    const noControl = url.replace(this.REGEX_CONTROL_CHARS, '');
-    
-    let parsed = '';
+    const noControl = url.replace(this.REGEX_CONTROL_CHARS, "");
+
+    let parsed = "";
     try {
       parsed = new URL(noControl).href;
     } catch {
       try {
-        if (!noControl.startsWith('/') && !noControl.startsWith('?')) {
+        if (!noControl.startsWith("/") && !noControl.startsWith("?")) {
           parsed = new URL(`http://${noControl}`).href;
         }
       } catch {}
@@ -96,16 +98,16 @@ export const SafeUrlPipeline = {
     if (parsed) {
       // after URL parsing, valid spaces were converted to %20.
       // Now we can strip all remaining spaces/whitespaces
-      return parsed.replace(/\s+/g, '');
+      return parsed.replace(/\s+/g, "");
     }
 
     // Fallback: encodeURI, then strip remaining whitespace
     try {
-      return encodeURI(noControl).replace(/\s+/g, '');
+      return encodeURI(noControl).replace(/\s+/g, "");
     } catch {
-      return noControl.replace(/\s+/g, '');
+      return noControl.replace(/\s+/g, "");
     }
-  }
+  },
 };
 
 /**

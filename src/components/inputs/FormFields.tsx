@@ -1,4 +1,4 @@
-import React, { } from "react";
+import React from "react";
 import { TEXT_AREA_CLASSES, SELECT_CLASSES } from "./styles";
 import { CharCount } from "../CharCount";
 export { TextField } from "../ui/TextField";
@@ -52,7 +52,6 @@ const FieldWrapper: React.FC<FieldWrapperProps> = ({
     </div>
   );
 };
-
 
 interface TextAreaFieldProps
   extends
@@ -141,7 +140,7 @@ export const CheckboxField: React.FC<CheckboxFieldProps> = ({
     <div className={className}>
       <label
         htmlFor={id}
-        className={`flex items-center gap-2 cursor-pointer ${getLabelClass(labelClassName).replace('mb-1', '')}`}
+        className={`flex items-center gap-2 cursor-pointer ${getLabelClass(labelClassName).replace("mb-1", "")}`}
       >
         <input
           id={id}

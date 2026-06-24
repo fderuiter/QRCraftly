@@ -6,16 +6,24 @@ import securityPlugin from "eslint-plugin-security";
 
 export default tseslint.config(
   {
-    ignores: ["dist/**", "node_modules/**", "coverage/**", "scripts/**", "e2e/**", "**/*.test.ts", "**/*.test.tsx"]
+    ignores: [
+      "dist/**",
+      "node_modules/**",
+      "coverage/**",
+      "scripts/**",
+      "e2e/**",
+      "**/*.test.ts",
+      "**/*.test.tsx",
+    ],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
     files: ["**/*.{ts,tsx}"],
     plugins: {
-      "react": reactPlugin,
+      react: reactPlugin,
       "react-hooks": reactHooksPlugin,
-      "security": securityPlugin,
+      security: securityPlugin,
     },
     languageOptions: {
       globals: {
@@ -26,7 +34,7 @@ export default tseslint.config(
         process: "readonly",
         setTimeout: "readonly",
         clearTimeout: "readonly",
-      }
+      },
     },
     rules: {
       ...reactPlugin.configs.recommended.rules,
@@ -56,23 +64,28 @@ export default tseslint.config(
       "no-restricted-syntax": [
         "error",
         {
-          "selector": "CallExpression[callee.object.name='JSON'][callee.property.name='stringify']",
-          "message": "Direct use of JSON.stringify is restricted for security reasons. Consider using safeJsonLdStringify for JSON-LD schemas or review carefully to prevent XSS."
+          selector:
+            "CallExpression[callee.object.name='JSON'][callee.property.name='stringify']",
+          message:
+            "Direct use of JSON.stringify is restricted for security reasons. Consider using safeJsonLdStringify for JSON-LD schemas or review carefully to prevent XSS.",
         },
         {
-          "selector": "JSXAttribute[name.name='dangerouslySetInnerHTML'] Property[key.name='__html'][value.type!='CallExpression']",
-          "message": "Data passed to dangerouslySetInnerHTML must be sanitized."
+          selector:
+            "JSXAttribute[name.name='dangerouslySetInnerHTML'] Property[key.name='__html'][value.type!='CallExpression']",
+          message: "Data passed to dangerouslySetInnerHTML must be sanitized.",
         },
         {
-          "selector": "JSXAttribute[name.name='dangerouslySetInnerHTML'] Property[key.name='__html'][value.type='CallExpression'][value.callee.name!='safeJsonLdStringify']",
-          "message": "Data passed to dangerouslySetInnerHTML must be sanitized using safeJsonLdStringify or another approved security utility to prevent XSS."
-        }
-      ]
+          selector:
+            "JSXAttribute[name.name='dangerouslySetInnerHTML'] Property[key.name='__html'][value.type='CallExpression'][value.callee.name!='safeJsonLdStringify']",
+          message:
+            "Data passed to dangerouslySetInnerHTML must be sanitized using safeJsonLdStringify or another approved security utility to prevent XSS.",
+        },
+      ],
     },
     settings: {
       react: {
-        version: "detect"
-      }
-    }
-  }
+        version: "detect",
+      },
+    },
+  },
 );

@@ -16,9 +16,9 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { EmailData } from '../../types';
-import { sanitizeInput } from '../security';
-import { parseProtocol } from '../protocol';
+import { EmailData } from "../../types";
+import { sanitizeInput } from "../security";
+import { parseProtocol } from "../protocol";
 
 /**
  * Constructs the mailto string for Email QR code.
@@ -34,25 +34,25 @@ export const constructEmailString = (data: EmailData): string => {
  */
 export const hydrateEmailData = (raw: string): EmailData => {
   const result: EmailData = {
-    email: '',
-    subject: '',
-    body: '',
+    email: "",
+    subject: "",
+    body: "",
   };
 
   const parsed = parseProtocol(raw);
   if (!parsed) return result;
 
-  if (parsed.scheme === 'matmsg') {
+  if (parsed.scheme === "matmsg") {
     result.email = parsed.path;
-    result.subject = parsed.params.get('SUB') || '';
-    result.body = parsed.params.get('BODY') || '';
+    result.subject = parsed.params.get("SUB") || "";
+    result.body = parsed.params.get("BODY") || "";
     return result;
   }
 
-  if (parsed.scheme === 'mailto') {
+  if (parsed.scheme === "mailto") {
     result.email = parsed.path;
-    result.subject = parsed.params.get('subject') || '';
-    result.body = parsed.params.get('body') || '';
+    result.subject = parsed.params.get("subject") || "";
+    result.body = parsed.params.get("body") || "";
   }
 
   return result;

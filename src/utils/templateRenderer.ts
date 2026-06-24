@@ -16,14 +16,17 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { QRConfig, QRModules, SocialFormat, TemplateStyle } from '../types';
-import { drawQRInternal } from './qrRenderer';
+import { QRConfig, QRModules, SocialFormat, TemplateStyle } from "../types";
+import { drawQRInternal } from "./qrRenderer";
 
 /**
  * Standard high-resolution dimensions for each social media format.
  * Width × Height in pixels (portrait-first for Story/Portrait).
  */
-export const SOCIAL_DIMENSIONS: Record<SocialFormat, { width: number; height: number }> = {
+export const SOCIAL_DIMENSIONS: Record<
+  SocialFormat,
+  { width: number; height: number }
+> = {
   [SocialFormat.SQUARE_1_1]: { width: 1080, height: 1080 },
   [SocialFormat.PORTRAIT_4_5]: { width: 1080, height: 1350 },
   [SocialFormat.STORY_9_16]: { width: 1080, height: 1920 },
@@ -65,7 +68,7 @@ function drawNoneBackground(
   ctx: CanvasRenderingContext2D,
   config: QRConfig,
   width: number,
-  height: number
+  height: number,
 ): void {
   ctx.fillStyle = resolveTemplateBg(config);
   ctx.fillRect(0, 0, width, height);
@@ -80,7 +83,7 @@ function drawMinimalistBackground(
   ctx: CanvasRenderingContext2D,
   config: QRConfig,
   width: number,
-  height: number
+  height: number,
 ): void {
   const bg = resolveTemplateBg(config);
   const fg = resolveTemplateText(config);
@@ -97,7 +100,7 @@ function drawMinimalistBackground(
     frameInset,
     frameInset,
     width - 2 * frameInset,
-    height - 2 * frameInset
+    height - 2 * frameInset,
   );
 }
 
@@ -110,7 +113,7 @@ function drawGradientBlurBackground(
   ctx: CanvasRenderingContext2D,
   config: QRConfig,
   width: number,
-  height: number
+  height: number,
 ): void {
   const bg = resolveTemplateBg(config);
   const fg = resolveTemplateText(config);
@@ -144,7 +147,7 @@ function drawSolidFrameBackground(
   ctx: CanvasRenderingContext2D,
   config: QRConfig,
   width: number,
-  height: number
+  height: number,
 ): void {
   const bg = resolveTemplateBg(config);
   const fg = resolveTemplateText(config);
@@ -169,29 +172,39 @@ function drawTemplateText(
   displayWidth: number,
   displayHeight: number,
   qrY: number,
-  qrSize: number
+  qrSize: number,
 ): void {
-  const headline = config.templateHeadline?.trim() ?? '';
-  const subtext = config.templateSubtext?.trim() ?? '';
+  const headline = config.templateHeadline?.trim() ?? "";
+  const subtext = config.templateSubtext?.trim() ?? "";
 
   if (!headline && !subtext) return;
 
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
   ctx.fillStyle = resolveTemplateText(config);
 
   if (headline) {
     const headlineFontSize = Math.round(displayWidth * 0.055);
     ctx.font = `bold ${headlineFontSize}px sans-serif`;
     const headlineY = qrY - headlineFontSize * 1.5;
-    ctx.fillText(headline, displayWidth / 2, Math.max(headlineFontSize * 1.5, headlineY), displayWidth * 0.9);
+    ctx.fillText(
+      headline,
+      displayWidth / 2,
+      Math.max(headlineFontSize * 1.5, headlineY),
+      displayWidth * 0.9,
+    );
   }
 
   if (subtext) {
     const subtextFontSize = Math.round(displayWidth * 0.038);
     ctx.font = `${subtextFontSize}px sans-serif`;
     const subtextY = qrY + qrSize + subtextFontSize * 1.5;
-    ctx.fillText(subtext, displayWidth / 2, Math.min(displayHeight - subtextFontSize * 1.5, subtextY), displayWidth * 0.9);
+    ctx.fillText(
+      subtext,
+      displayWidth / 2,
+      Math.min(displayHeight - subtextFontSize * 1.5, subtextY),
+      displayWidth * 0.9,
+    );
   }
 }
 
@@ -202,7 +215,7 @@ type BackgroundPainter = (
   ctx: CanvasRenderingContext2D,
   config: QRConfig,
   width: number,
-  height: number
+  height: number,
 ) => void;
 
 const BACKGROUND_PAINTERS: Record<TemplateStyle, BackgroundPainter> = {
@@ -247,12 +260,13 @@ export function drawWithTemplate(
   displayWidth: number,
   displayHeight: number,
   moduleCount: number,
-  isVirtual: boolean = false
+  isVirtual: boolean = false,
 ): void {
   ctx.clearRect(0, 0, displayWidth, displayHeight);
 
   // ── 1. Background ──────────────────────────────────────────────────────────
-  const drawBackground = BACKGROUND_PAINTERS[config.templateStyle] ?? drawNoneBackground;
+  const drawBackground =
+    BACKGROUND_PAINTERS[config.templateStyle] ?? drawNoneBackground;
   drawBackground(ctx, config, displayWidth, displayHeight);
 
   // ── 2. QR Bounding-Box ────────────────────────────────────────────────────
@@ -317,7 +331,7 @@ export function drawWithTemplate(
     borderLogoImg,
     displayWidth,
     moduleCount,
-    isVirtual
+    isVirtual,
   );
 
   ctx.restore();
@@ -338,11 +352,12 @@ export function drawWithTemplate(
  * Supports both 3-char (#rgb) and 6-char (#rrggbb) hex notation.
  */
 function hexToRgba(hex: string, alpha: number): string {
-  const clean = hex.replace('#', '');
+  const clean = hex.replace("#", "");
   // Expand 3-char shorthand (#rgb → #rrggbb)
-  const full = clean.length === 3
-    ? clean[0] + clean[0] + clean[1] + clean[1] + clean[2] + clean[2]
-    : clean;
+  const full =
+    clean.length === 3
+      ? clean[0] + clean[0] + clean[1] + clean[1] + clean[2] + clean[2]
+      : clean;
   const r = parseInt(full.substring(0, 2), 16);
   const g = parseInt(full.substring(2, 4), 16);
   const b = parseInt(full.substring(4, 6), 16);

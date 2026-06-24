@@ -106,7 +106,8 @@ export const INPUT_REGISTRY: Registry = {
     } as TextData,
     constructFn: constructTextString,
     hydrateFn: hydrateTextData,
-    canHydrateFn: (raw: string) => ValidationEngine.canHydrate(raw, QRType.TEXT),
+    canHydrateFn: (raw: string) =>
+      ValidationEngine.canHydrate(raw, QRType.TEXT),
   },
   [QRType.WIFI]: {
     Component: WifiInput,
@@ -119,7 +120,8 @@ export const INPUT_REGISTRY: Registry = {
     } as WifiData,
     constructFn: constructWifiString,
     hydrateFn: hydrateWifiData,
-    canHydrateFn: (raw: string) => ValidationEngine.canHydrate(raw, QRType.WIFI),
+    canHydrateFn: (raw: string) =>
+      ValidationEngine.canHydrate(raw, QRType.WIFI),
   },
   [QRType.EVENT]: {
     Component: EventInput,
@@ -132,7 +134,8 @@ export const INPUT_REGISTRY: Registry = {
     } as EventData,
     constructFn: constructEventString,
     hydrateFn: hydrateEventData,
-    canHydrateFn: (raw: string) => ValidationEngine.canHydrate(raw, QRType.EVENT),
+    canHydrateFn: (raw: string) =>
+      ValidationEngine.canHydrate(raw, QRType.EVENT),
   },
   [QRType.EMAIL]: {
     Component: EmailInput,
@@ -143,7 +146,8 @@ export const INPUT_REGISTRY: Registry = {
     } as EmailData,
     constructFn: constructEmailString,
     hydrateFn: hydrateEmailData,
-    canHydrateFn: (raw: string) => ValidationEngine.canHydrate(raw, QRType.EMAIL),
+    canHydrateFn: (raw: string) =>
+      ValidationEngine.canHydrate(raw, QRType.EMAIL),
   },
   [QRType.VCARD]: {
     Component: VCardInput,
@@ -161,7 +165,8 @@ export const INPUT_REGISTRY: Registry = {
     } as VCardData,
     constructFn: constructVCardString,
     hydrateFn: hydrateVCardData,
-    canHydrateFn: (raw: string) => ValidationEngine.canHydrate(raw, QRType.VCARD),
+    canHydrateFn: (raw: string) =>
+      ValidationEngine.canHydrate(raw, QRType.VCARD),
   },
   [QRType.PHONE]: {
     Component: PhoneInput,
@@ -170,7 +175,8 @@ export const INPUT_REGISTRY: Registry = {
     } as PhoneData,
     constructFn: constructPhoneString,
     hydrateFn: hydratePhoneData,
-    canHydrateFn: (raw: string) => ValidationEngine.canHydrate(raw, QRType.PHONE),
+    canHydrateFn: (raw: string) =>
+      ValidationEngine.canHydrate(raw, QRType.PHONE),
   },
   [QRType.SMS]: {
     Component: SmsInput,
@@ -192,7 +198,8 @@ export const INPUT_REGISTRY: Registry = {
     } as PaymentData,
     constructFn: constructPaymentString,
     hydrateFn: hydratePaymentData,
-    canHydrateFn: (raw: string) => ValidationEngine.canHydrate(raw, QRType.PAYMENT),
+    canHydrateFn: (raw: string) =>
+      ValidationEngine.canHydrate(raw, QRType.PAYMENT),
   },
   [QRType.LOCATION]: {
     Component: LocationInput,
@@ -202,7 +209,8 @@ export const INPUT_REGISTRY: Registry = {
     } as LocationData,
     constructFn: constructLocationString,
     hydrateFn: hydrateLocationData,
-    canHydrateFn: (raw: string) => ValidationEngine.canHydrate(raw, QRType.LOCATION),
+    canHydrateFn: (raw: string) =>
+      ValidationEngine.canHydrate(raw, QRType.LOCATION),
   },
   [QRType.MEETING]: {
     Component: MeetingInput,
@@ -211,7 +219,8 @@ export const INPUT_REGISTRY: Registry = {
     } as MeetingData,
     constructFn: constructMeetingString,
     hydrateFn: hydrateMeetingData,
-    canHydrateFn: (raw: string) => ValidationEngine.canHydrate(raw, QRType.MEETING),
+    canHydrateFn: (raw: string) =>
+      ValidationEngine.canHydrate(raw, QRType.MEETING),
   },
   [QRType.SOCIAL]: {
     Component: SocialInput,
@@ -221,6 +230,7 @@ export const INPUT_REGISTRY: Registry = {
     } as SocialData,
     constructFn: constructSocialString,
     hydrateFn: hydrateSocialData,
-    canHydrateFn: (raw: string) => ValidationEngine.canHydrate(raw, QRType.SOCIAL),
+    canHydrateFn: (raw: string) =>
+      ValidationEngine.canHydrate(raw, QRType.SOCIAL),
   },
 };

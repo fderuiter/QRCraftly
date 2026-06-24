@@ -16,45 +16,47 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { describe, it, expect } from 'vitest';
-import { constructTextString, hydrateTextData } from './text';
+import { describe, it, expect } from "vitest";
+import { constructTextString, hydrateTextData } from "./text";
 
-describe('Text generator', () => {
-  describe('constructTextString', () => {
-    it('returns the text property from the input data', () => {
-      const data = { text: 'Hello, World!' };
-      expect(constructTextString(data)).toBe('Hello, World!');
+describe("Text generator", () => {
+  describe("constructTextString", () => {
+    it("returns the text property from the input data", () => {
+      const data = { text: "Hello, World!" };
+      expect(constructTextString(data)).toBe("Hello, World!");
     });
 
-    it('handles empty string', () => {
-      const data = { text: '' };
-      expect(constructTextString(data)).toBe('');
+    it("handles empty string", () => {
+      const data = { text: "" };
+      expect(constructTextString(data)).toBe("");
     });
 
-    it('handles special characters', () => {
-      const data = { text: '!@#$%^&*()_+{}|:"<>?~`-=[]\\;\',./' };
-      expect(constructTextString(data)).toBe('!@#$%^&*()_+{}|:"<>?~`-=[]\\;\',./');
+    it("handles special characters", () => {
+      const data = { text: "!@#$%^&*()_+{}|:\"<>?~`-=[]\\;',./" };
+      expect(constructTextString(data)).toBe(
+        "!@#$%^&*()_+{}|:\"<>?~`-=[]\\;',./",
+      );
     });
 
-    it('handles multiline strings', () => {
-      const data = { text: 'Line 1\nLine 2\r\nLine 3' };
-      expect(constructTextString(data)).toBe('Line 1\nLine 2\r\nLine 3');
+    it("handles multiline strings", () => {
+      const data = { text: "Line 1\nLine 2\r\nLine 3" };
+      expect(constructTextString(data)).toBe("Line 1\nLine 2\r\nLine 3");
     });
 
-    it('handles unicode characters', () => {
-      const data = { text: '🔥 QR Craftly 🚀' };
-      expect(constructTextString(data)).toBe('🔥 QR Craftly 🚀');
+    it("handles unicode characters", () => {
+      const data = { text: "🔥 QR Craftly 🚀" };
+      expect(constructTextString(data)).toBe("🔥 QR Craftly 🚀");
     });
   });
 
-  describe('hydrateTextData', () => {
-    it('wraps a raw string into a TextData object', () => {
-      const raw = 'Simple text';
-      expect(hydrateTextData(raw)).toEqual({ text: 'Simple text' });
+  describe("hydrateTextData", () => {
+    it("wraps a raw string into a TextData object", () => {
+      const raw = "Simple text";
+      expect(hydrateTextData(raw)).toEqual({ text: "Simple text" });
     });
 
-    it('handles empty string hydration', () => {
-      expect(hydrateTextData('')).toEqual({ text: '' });
+    it("handles empty string hydration", () => {
+      expect(hydrateTextData("")).toEqual({ text: "" });
     });
   });
 });

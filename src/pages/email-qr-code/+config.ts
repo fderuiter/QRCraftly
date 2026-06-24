@@ -20,8 +20,9 @@
  * Page-specific configuration for the Email QR Code page.
  */
 export default {
-    title: 'Free Email QR Code Generator | Pre-filled Emails - QRCraftly',
-    description: 'Create QR codes that open a pre-filled email. Set recipient, subject, and body. Ideal for feedback, support, or contact.',
-    image: '/og-image.png?type=email',
-    imageAlt: 'Preview of the Email QR Code Generator tool'
-}
+  title: "Free Email QR Code Generator | Pre-filled Emails - QRCraftly",
+  description:
+    "Create QR codes that open a pre-filled email. Set recipient, subject, and body. Ideal for feedback, support, or contact.",
+  image: "/og-image.png?type=email",
+  imageAlt: "Preview of the Email QR Code Generator tool",
+};

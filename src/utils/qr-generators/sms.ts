@@ -16,9 +16,9 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { SmsData } from '../../types';
-import { cleanPhoneNumber } from '../security';
-import { parseProtocol } from '../protocol';
+import { SmsData } from "../../types";
+import { cleanPhoneNumber } from "../security";
+import { parseProtocol } from "../protocol";
 
 /**
  * Constructs the smsto string for SMS QR code.
@@ -34,14 +34,14 @@ export const constructSmsString = (data: SmsData): string => {
  */
 export const hydrateSmsData = (raw: string): SmsData => {
   const result: SmsData = {
-    number: '',
-    message: '',
+    number: "",
+    message: "",
   };
 
   const parsed = parseProtocol(raw);
-  if (parsed && (parsed.scheme === 'sms' || parsed.scheme === 'smsto')) {
+  if (parsed && (parsed.scheme === "sms" || parsed.scheme === "smsto")) {
     result.number = parsed.path;
-    result.message = parsed.params.get('body') || '';
+    result.message = parsed.params.get("body") || "";
   }
 
   return result;

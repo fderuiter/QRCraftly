@@ -1,17 +1,17 @@
-import { SocialPlatform } from '../types';
+import { SocialPlatform } from "../types";
 
 export const SOCIAL_DOMAINS: Record<string, SocialPlatform> = {
-  'instagram.com': SocialPlatform.INSTAGRAM,
-  'x.com': SocialPlatform.TWITTER,
-  'twitter.com': SocialPlatform.TWITTER,
-  'tiktok.com': SocialPlatform.TIKTOK,
+  "instagram.com": SocialPlatform.INSTAGRAM,
+  "x.com": SocialPlatform.TWITTER,
+  "twitter.com": SocialPlatform.TWITTER,
+  "tiktok.com": SocialPlatform.TIKTOK,
 };
 
 export const PROTOCOL_PREFIXES = {
-  WEB: ['http://', 'https://'],
-  MAIL: ['mailto:', 'matmsg:'],
-  SMS: ['sms:', 'smsto:'],
-  TEL: ['tel:'],
+  WEB: ["http://", "https://"],
+  MAIL: ["mailto:", "matmsg:"],
+  SMS: ["sms:", "smsto:"],
+  TEL: ["tel:"],
 };
 
 export interface ParsedProtocol {
@@ -31,58 +31,58 @@ export const parseProtocol = (raw: string): ParsedProtocol | null => {
     if (!trimmed) return null;
 
     // Special case for MATMSG which uses semicolons and a different format
-    if (trimmed.toUpperCase().startsWith('MATMSG:')) {
-      const content = trimmed.substring(7).replace(/;+$/, '');
-      const parts = content.split(';');
+    if (trimmed.toUpperCase().startsWith("MATMSG:")) {
+      const content = trimmed.substring(7).replace(/;+$/, "");
+      const parts = content.split(";");
       const params = new Map<string, string>();
-      let path = '';
-      
-      parts.forEach(part => {
-        const splitIndex = part.indexOf(':');
+      let path = "";
+
+      parts.forEach((part) => {
+        const splitIndex = part.indexOf(":");
         if (splitIndex <= 0) return;
         const key = part.substring(0, splitIndex).toUpperCase();
         const value = part.substring(splitIndex + 1);
-        
-        if (key === 'TO') {
+
+        if (key === "TO") {
           path = value;
         } else {
           params.set(key, value);
         }
       });
-      return { scheme: 'matmsg', path, params };
+      return { scheme: "matmsg", path, params };
     }
 
-    const colonIdx = trimmed.indexOf(':');
+    const colonIdx = trimmed.indexOf(":");
     if (colonIdx === -1) {
       return null;
     }
 
     const scheme = trimmed.substring(0, colonIdx).toLowerCase();
     const content = trimmed.substring(colonIdx + 1);
-    
+
     // For sms with older smsto format: smsto:number:message
-    if (scheme === 'smsto') {
-      const colonIndex = content.indexOf(':');
+    if (scheme === "smsto") {
+      const colonIndex = content.indexOf(":");
       if (colonIndex !== -1) {
         const path = content.substring(0, colonIndex);
         const message = content.substring(colonIndex + 1);
         const params = new Map<string, string>();
-        params.set('body', message);
+        params.set("body", message);
         return { scheme, path, params };
       }
     }
 
     let path = content;
-    let query = '';
-    
-    const qIdx = content.indexOf('?');
+    let query = "";
+
+    const qIdx = content.indexOf("?");
     if (qIdx !== -1) {
       path = content.substring(0, qIdx);
       query = content.substring(qIdx + 1);
     }
-    
+
     // Clean up path for standard urls (remove //)
-    if ((scheme === 'http' || scheme === 'https') && path.startsWith('//')) {
+    if ((scheme === "http" || scheme === "https") && path.startsWith("//")) {
       path = path.substring(2);
     }
 
@@ -101,7 +101,7 @@ export const parseProtocol = (raw: string): ParsedProtocol | null => {
     return {
       scheme,
       path,
-      params
+      params,
     };
   } catch (e) {
     // Proactive validation failure: catch all errors to prevent crashes

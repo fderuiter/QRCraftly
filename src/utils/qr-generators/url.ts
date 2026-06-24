@@ -16,8 +16,8 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { UrlData } from '../../types';
-import { isDangerousUrl } from '../security';
+import { UrlData } from "../../types";
+import { isDangerousUrl } from "../security";
 
 /**
  * Constructs the URL QR code string.
@@ -25,7 +25,7 @@ import { isDangerousUrl } from '../security';
  */
 export const constructUrlString = (data: UrlData): string => {
   if (isDangerousUrl(data.url)) {
-    return '';
+    return "";
   }
   return data.url;
 };

@@ -16,18 +16,26 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import React from 'react';
-import { render, screen, waitFor, act } from '@testing-library/react';
-import { describe, it, expect, vi, beforeAll, afterAll, afterEach } from 'vitest';
-import { QRProvider, useQRStore } from '@/context/QRContext';
-import { DEFAULT_CONFIG } from '@/constants';
+import React from "react";
+import { render, screen, waitFor, act } from "@testing-library/react";
+import {
+  describe,
+  it,
+  expect,
+  vi,
+  beforeAll,
+  afterAll,
+  afterEach,
+} from "vitest";
+import { QRProvider, useQRStore } from "@/context/QRContext";
+import { DEFAULT_CONFIG } from "@/constants";
 
 // ---------------------------------------------------------------------------
 // Mocks - must be set up before importing registry
 // ---------------------------------------------------------------------------
 
 // Mock ComponentRegistry to avoid side-effect registrations interfering with other tests
-vi.mock('@/utils/ComponentRegistry', () => ({
+vi.mock("@/utils/ComponentRegistry", () => ({
   ComponentRegistry: {
     registerSidebarControl: vi.fn(),
     getSidebarControls: vi.fn(() => []),
@@ -35,30 +43,30 @@ vi.mock('@/utils/ComponentRegistry', () => ({
 }));
 
 // Mock InputPanel - captures props for assertions
-vi.mock('@/components/InputPanel', () => ({
+vi.mock("@/components/InputPanel", () => ({
   default: ({ config, onChange }: any) => (
     <div
       data-testid="input-panel"
       data-config-value={config?.value}
-      data-has-onchange={typeof onChange === 'function' ? 'true' : 'false'}
+      data-has-onchange={typeof onChange === "function" ? "true" : "false"}
     />
   ),
 }));
 
 // Mock SidebarContent
-vi.mock('@/components/SidebarContent', () => ({
+vi.mock("@/components/SidebarContent", () => ({
   SidebarContent: ({ toolId }: any) => (
     <div data-testid="sidebar-content" data-tool-id={toolId} />
   ),
 }));
 
 // Mock StyleControls (lazy-loaded via React.lazy)
-vi.mock('@/components/StyleControls', () => ({
+vi.mock("@/components/StyleControls", () => ({
   default: ({ config, onChange }: any) => (
     <div
       data-testid="style-controls"
       data-config-value={config?.value}
-      data-has-onchange={typeof onChange === 'function' ? 'true' : 'false'}
+      data-has-onchange={typeof onChange === "function" ? "true" : "false"}
     />
   ),
 }));
@@ -72,14 +80,18 @@ let AppearanceControl: React.ComponentType;
 let AdditionalSidebarContent: React.ComponentType<{ toolId?: string }>;
 
 beforeAll(async () => {
-  const { ComponentRegistry } = await import('@/utils/ComponentRegistry');
+  const { ComponentRegistry } = await import("@/utils/ComponentRegistry");
   // Import registry to trigger its side-effect registrations
-  await import('./registry');
+  await import("./registry");
 
-  const calls = (ComponentRegistry.registerSidebarControl as ReturnType<typeof vi.fn>).mock.calls;
-  const contentCall = calls.find(([arg]: any[]) => arg?.id === 'content');
-  const appearanceCall = calls.find(([arg]: any[]) => arg?.id === 'appearance');
-  const sidebarContentCall = calls.find(([arg]: any[]) => arg?.id === 'sidebar-content');
+  const calls = (
+    ComponentRegistry.registerSidebarControl as ReturnType<typeof vi.fn>
+  ).mock.calls;
+  const contentCall = calls.find(([arg]: any[]) => arg?.id === "content");
+  const appearanceCall = calls.find(([arg]: any[]) => arg?.id === "appearance");
+  const sidebarContentCall = calls.find(
+    ([arg]: any[]) => arg?.id === "sidebar-content",
+  );
 
   ContentControl = contentCall?.[0]?.component;
   AppearanceControl = appearanceCall?.[0]?.component;
@@ -97,78 +109,93 @@ afterEach(() => {
 // ---------------------------------------------------------------------------
 // Tests: registration side effects
 // ---------------------------------------------------------------------------
-describe('registry.tsx - component registration and behavior', () => {
+describe("registry.tsx - component registration and behavior", () => {
   it('registers content control with id "content" and order 10', async () => {
-    const { ComponentRegistry } = await import('@/utils/ComponentRegistry');
-    const calls = (ComponentRegistry.registerSidebarControl as ReturnType<typeof vi.fn>).mock.calls;
-    const contentCall = calls.find(([arg]: any[]) => arg?.id === 'content');
+    const { ComponentRegistry } = await import("@/utils/ComponentRegistry");
+    const calls = (
+      ComponentRegistry.registerSidebarControl as ReturnType<typeof vi.fn>
+    ).mock.calls;
+    const contentCall = calls.find(([arg]: any[]) => arg?.id === "content");
     expect(contentCall).toBeDefined();
-    if (!contentCall) throw new Error('Expected content registration to exist');
+    if (!contentCall) throw new Error("Expected content registration to exist");
     expect(contentCall[0].order).toBe(10);
-    expect(typeof contentCall[0].component).toBe('function');
+    expect(typeof contentCall[0].component).toBe("function");
   });
 
   it('registers appearance control with id "appearance" and order 20', async () => {
-    const { ComponentRegistry } = await import('@/utils/ComponentRegistry');
-    const calls = (ComponentRegistry.registerSidebarControl as ReturnType<typeof vi.fn>).mock.calls;
-    const appearanceCall = calls.find(([arg]: any[]) => arg?.id === 'appearance');
+    const { ComponentRegistry } = await import("@/utils/ComponentRegistry");
+    const calls = (
+      ComponentRegistry.registerSidebarControl as ReturnType<typeof vi.fn>
+    ).mock.calls;
+    const appearanceCall = calls.find(
+      ([arg]: any[]) => arg?.id === "appearance",
+    );
     expect(appearanceCall).toBeDefined();
-    if (!appearanceCall) throw new Error('Expected appearance registration to exist');
+    if (!appearanceCall)
+      throw new Error("Expected appearance registration to exist");
     expect(appearanceCall[0].order).toBe(20);
-    expect(typeof appearanceCall[0].component).toBe('function');
+    expect(typeof appearanceCall[0].component).toBe("function");
   });
 
   it('registers sidebar-content control with id "sidebar-content" and order 30', async () => {
-    const { ComponentRegistry } = await import('@/utils/ComponentRegistry');
-    const calls = (ComponentRegistry.registerSidebarControl as ReturnType<typeof vi.fn>).mock.calls;
-    const sidebarCall = calls.find(([arg]: any[]) => arg?.id === 'sidebar-content');
+    const { ComponentRegistry } = await import("@/utils/ComponentRegistry");
+    const calls = (
+      ComponentRegistry.registerSidebarControl as ReturnType<typeof vi.fn>
+    ).mock.calls;
+    const sidebarCall = calls.find(
+      ([arg]: any[]) => arg?.id === "sidebar-content",
+    );
     expect(sidebarCall).toBeDefined();
-    if (!sidebarCall) throw new Error('Expected sidebar-content registration to exist');
+    if (!sidebarCall)
+      throw new Error("Expected sidebar-content registration to exist");
     expect(sidebarCall[0].order).toBe(30);
   });
 
   // -------------------------------------------------------------------------
   // ContentControl
   // -------------------------------------------------------------------------
-  it('ContentControl renders inside QRProvider without crashing', () => {
+  it("ContentControl renders inside QRProvider without crashing", () => {
     render(
       <QRProvider>
         <ContentControl />
-      </QRProvider>
+      </QRProvider>,
     );
-    expect(screen.getByTestId('input-panel')).toBeInTheDocument();
+    expect(screen.getByTestId("input-panel")).toBeInTheDocument();
   });
 
   it('ContentControl renders "Content" section heading', () => {
     render(
       <QRProvider>
         <ContentControl />
-      </QRProvider>
+      </QRProvider>,
     );
-    expect(screen.getByText('Content')).toBeInTheDocument();
+    expect(screen.getByText("Content")).toBeInTheDocument();
   });
 
-  it('ContentControl passes config from QRStore to InputPanel', () => {
+  it("ContentControl passes config from QRStore to InputPanel", () => {
     render(
       <QRProvider>
         <ContentControl />
-      </QRProvider>
+      </QRProvider>,
     );
-    const inputPanel = screen.getByTestId('input-panel');
-    expect(inputPanel).toHaveAttribute('data-config-value', DEFAULT_CONFIG.value);
+    const inputPanel = screen.getByTestId("input-panel");
+    expect(inputPanel).toHaveAttribute(
+      "data-config-value",
+      DEFAULT_CONFIG.value,
+    );
   });
 
-  it('ContentControl passes a function as onChange to InputPanel', () => {
+  it("ContentControl passes a function as onChange to InputPanel", () => {
     render(
       <QRProvider>
         <ContentControl />
-      </QRProvider>
+      </QRProvider>,
     );
-    const inputPanel = screen.getByTestId('input-panel');
-    expect(inputPanel).toHaveAttribute('data-has-onchange', 'true');
+    const inputPanel = screen.getByTestId("input-panel");
+    expect(inputPanel).toHaveAttribute("data-has-onchange", "true");
   });
 
-  it('ContentControl onChange is store.updateConfig - calling it updates the store', () => {
+  it("ContentControl onChange is store.updateConfig - calling it updates the store", () => {
     let capturedOnChange: ((updates: any) => void) | undefined;
     let storeRef: ReturnType<typeof useQRStore> | null = null;
 
@@ -188,28 +215,30 @@ describe('registry.tsx - component registration and behavior', () => {
       <QRProvider>
         <StoreCapture />
         <ContentControl />
-      </QRProvider>
+      </QRProvider>,
     );
 
     // The InputPanel mock receives onChange; we verify by checking if the store
     // updateConfig was called with expected args (directly via storeRef)
     if (storeRef) {
       act(() => {
-        (storeRef as any).updateConfig({ value: 'https://registry-test.com' });
+        (storeRef as any).updateConfig({ value: "https://registry-test.com" });
       });
-      expect((storeRef as any).getState().config.value).toBe('https://registry-test.com');
+      expect((storeRef as any).getState().config.value).toBe(
+        "https://registry-test.com",
+      );
     }
 
     // Ensure the component rendered
-    expect(screen.getByTestId('input-panel')).toBeInTheDocument();
+    expect(screen.getByTestId("input-panel")).toBeInTheDocument();
     void capturedOnChange; // silence unused variable warning
     void InputPanelCapture;
   });
 
-  it('ContentControl throws when used outside QRProvider', () => {
-    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+  it("ContentControl throws when used outside QRProvider", () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     expect(() => render(<ContentControl />)).toThrow(
-      'useQRStore must be used within QRProvider'
+      "useQRStore must be used within QRProvider",
     );
     consoleSpy.mockRestore();
   });
@@ -217,79 +246,82 @@ describe('registry.tsx - component registration and behavior', () => {
   // -------------------------------------------------------------------------
   // AppearanceControl
   // -------------------------------------------------------------------------
-  it('AppearanceControl renders inside QRProvider without crashing', () => {
+  it("AppearanceControl renders inside QRProvider without crashing", () => {
     render(
       <QRProvider>
         <AppearanceControl />
-      </QRProvider>
+      </QRProvider>,
     );
-    expect(screen.getByText('Appearance')).toBeInTheDocument();
+    expect(screen.getByText("Appearance")).toBeInTheDocument();
   });
 
   it('AppearanceControl renders "Appearance" section heading', () => {
     render(
       <QRProvider>
         <AppearanceControl />
-      </QRProvider>
+      </QRProvider>,
     );
-    expect(screen.getByText('Appearance')).toBeInTheDocument();
+    expect(screen.getByText("Appearance")).toBeInTheDocument();
   });
 
-  it('AppearanceControl renders StyleControls after mount (isMounted becomes true)', async () => {
+  it("AppearanceControl renders StyleControls after mount (isMounted becomes true)", async () => {
     render(
       <QRProvider>
         <AppearanceControl />
-      </QRProvider>
+      </QRProvider>,
     );
 
     await waitFor(() => {
-      expect(screen.getByTestId('style-controls')).toBeInTheDocument();
+      expect(screen.getByTestId("style-controls")).toBeInTheDocument();
     });
   });
 
-  it('AppearanceControl passes config from QRStore to StyleControls', async () => {
+  it("AppearanceControl passes config from QRStore to StyleControls", async () => {
     render(
       <QRProvider>
         <AppearanceControl />
-      </QRProvider>
+      </QRProvider>,
     );
 
     await waitFor(() => {
-      const styleControls = screen.getByTestId('style-controls');
-      expect(styleControls).toHaveAttribute('data-config-value', DEFAULT_CONFIG.value);
+      const styleControls = screen.getByTestId("style-controls");
+      expect(styleControls).toHaveAttribute(
+        "data-config-value",
+        DEFAULT_CONFIG.value,
+      );
     });
   });
 
-  it('AppearanceControl passes a function as onChange to StyleControls', async () => {
+  it("AppearanceControl passes a function as onChange to StyleControls", async () => {
     render(
       <QRProvider>
         <AppearanceControl />
-      </QRProvider>
+      </QRProvider>,
     );
 
     await waitFor(() => {
-      const styleControls = screen.getByTestId('style-controls');
-      expect(styleControls).toHaveAttribute('data-has-onchange', 'true');
+      const styleControls = screen.getByTestId("style-controls");
+      expect(styleControls).toHaveAttribute("data-has-onchange", "true");
     });
   });
 
-  it('AppearanceControl shows skeleton placeholder before mount', () => {
+  it("AppearanceControl shows skeleton placeholder before mount", () => {
     const { container } = render(
       <QRProvider>
         <AppearanceControl />
-      </QRProvider>
+      </QRProvider>,
     );
     // Before effects run OR after: either the skeleton or StyleControls is visible
-    const skeleton = container.querySelector('.animate-pulse');
-    const styleControls = screen.queryByTestId('style-controls');
+    const skeleton = container.querySelector(".animate-pulse");
+    const styleControls = screen.queryByTestId("style-controls");
     // At least one of them must be present
     expect(skeleton !== null || styleControls !== null).toBe(true);
   });
 
-  it('AppearanceControl throws when used outside QRProvider', () => {
-    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+  it("AppearanceControl throws when used outside QRProvider", () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     expect(() => render(<AppearanceControl />)).toThrow(
-      'useQRStore must be used within QRProvider'
+      "useQRStore must be used within QRProvider",
     );
     consoleSpy.mockRestore();
   });
@@ -299,11 +331,17 @@ describe('registry.tsx - component registration and behavior', () => {
   // -------------------------------------------------------------------------
   it('AdditionalSidebarContent renders with default toolId "index"', () => {
     render(<AdditionalSidebarContent />);
-    expect(screen.getByTestId('sidebar-content')).toHaveAttribute('data-tool-id', 'index');
+    expect(screen.getByTestId("sidebar-content")).toHaveAttribute(
+      "data-tool-id",
+      "index",
+    );
   });
 
-  it('AdditionalSidebarContent passes toolId prop to SidebarContent', () => {
+  it("AdditionalSidebarContent passes toolId prop to SidebarContent", () => {
     render(<AdditionalSidebarContent toolId="wifi-qr-code" />);
-    expect(screen.getByTestId('sidebar-content')).toHaveAttribute('data-tool-id', 'wifi-qr-code');
+    expect(screen.getByTestId("sidebar-content")).toHaveAttribute(
+      "data-tool-id",
+      "wifi-qr-code",
+    );
   });
 });

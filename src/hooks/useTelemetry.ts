@@ -1,46 +1,51 @@
-import { useEffect, useCallback } from 'react';
-import { useQRStore, useQRStoreSelector } from '@/context/QRContext';
-import { ScannabilityStatus } from './useScannability';
-import { useCapabilities } from './useCapabilities';
+import { useEffect, useCallback } from "react";
+import { useQRStore, useQRStoreSelector } from "@/context/QRContext";
+import { ScannabilityStatus } from "./useScannability";
+import { useCapabilities } from "./useCapabilities";
 
 export function useTelemetry(status: ScannabilityStatus) {
   const store = useQRStore();
-  const telemetryOptIn = useQRStoreSelector(state => state.preferences.telemetryOptIn);
+  const telemetryOptIn = useQRStoreSelector(
+    (state) => state.preferences.telemetryOptIn,
+  );
   const { engine } = useCapabilities();
 
   const sendTelemetryPing = useCallback((detail: any) => {
     try {
-      fetch('/api/telemetry/scannability', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      fetch("/api/telemetry/scannability", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         // eslint-disable-next-line no-restricted-syntax
         body: JSON.stringify(detail),
-        keepalive: true
+        keepalive: true,
       }).catch(() => {});
     } catch {}
   }, []);
 
   useEffect(() => {
-    return store.registerSignal('scannability-fail', (detail) => {
+    return store.registerSignal("scannability-fail", (detail) => {
       if (store.getState().preferences.telemetryOptIn === true) {
         sendTelemetryPing(detail);
       }
     });
   }, [store, sendTelemetryPing]);
 
-  const handleOptIn = useCallback((optIn: boolean) => {
-    store.updatePreferences({ telemetryOptIn: optIn });
-    if (optIn && status === 'fail') {
-      sendTelemetryPing({
-        engine,
-        styleId: store.getState().config.style || 'default',
-        errorType: 'NOT_FOUND'
-      });
-    }
-  }, [store, sendTelemetryPing, status, engine]);
+  const handleOptIn = useCallback(
+    (optIn: boolean) => {
+      store.updatePreferences({ telemetryOptIn: optIn });
+      if (optIn && status === "fail") {
+        sendTelemetryPing({
+          engine,
+          styleId: store.getState().config.style || "default",
+          errorType: "NOT_FOUND",
+        });
+      }
+    },
+    [store, sendTelemetryPing, status, engine],
+  );
 
-  return { 
+  return {
     showTelemetryPrompt: telemetryOptIn === null,
-    handleOptIn 
+    handleOptIn,
   };
 }

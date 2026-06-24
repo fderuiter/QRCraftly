@@ -1,8 +1,13 @@
-import React, { createContext, useContext, useState, useSyncExternalStore } from 'react';
-import { QRConfig } from '@/types';
-import { DEFAULT_CONFIG } from '@/constants';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useSyncExternalStore,
+} from "react";
+import { QRConfig } from "@/types";
+import { DEFAULT_CONFIG } from "@/constants";
 
-type SignalName = 'scannability-fail' | 'render-complete';
+type SignalName = "scannability-fail" | "render-complete";
 type SignalCallback = (detail: any) => void;
 
 interface QRContextType {
@@ -15,7 +20,9 @@ interface QRContextType {
     telemetryOptIn: boolean | null;
     darkMode: boolean;
   };
-  updatePreferences: (updates: Partial<{telemetryOptIn: boolean | null, darkMode: boolean}>) => void;
+  updatePreferences: (
+    updates: Partial<{ telemetryOptIn: boolean | null; darkMode: boolean }>,
+  ) => void;
 }
 
 export type QRState = {
@@ -29,7 +36,9 @@ export interface QRStore {
   subscribe: (listener: () => void) => () => void;
   updateConfig: (updates: Partial<QRConfig>) => void;
   setModuleCount: (count: number) => void;
-  updatePreferences: (updates: Partial<{telemetryOptIn: boolean | null, darkMode: boolean}>) => void;
+  updatePreferences: (
+    updates: Partial<{ telemetryOptIn: boolean | null; darkMode: boolean }>,
+  ) => void;
   emitSignal: (name: SignalName, detail?: any) => void;
   registerSignal: (name: SignalName, callback: SignalCallback) => () => void;
 }
@@ -38,37 +47,50 @@ const QRContext = createContext<QRContextType | undefined>(undefined);
 const QRStoreContext = createContext<QRStore | undefined>(undefined);
 
 const getSafeLocalStorage = () => {
-  if (typeof window !== 'undefined' && window.localStorage && typeof window.localStorage.getItem === 'function') {
+  if (
+    typeof window !== "undefined" &&
+    window.localStorage &&
+    typeof window.localStorage.getItem === "function"
+  ) {
     return window.localStorage;
   }
   const store = new Map<string, string>();
   return {
     getItem: (key: string) => store.get(key) ?? null,
-    setItem: (key: string, value: string) => { store.set(key, value); },
-    removeItem: (key: string) => { store.delete(key); },
-    clear: () => { store.clear(); },
+    setItem: (key: string, value: string) => {
+      store.set(key, value);
+    },
+    removeItem: (key: string) => {
+      store.delete(key);
+    },
+    clear: () => {
+      store.clear();
+    },
     key: (index: number) => Array.from(store.keys())[index] ?? null,
-    get length() { return store.size; }
+    get length() {
+      return store.size;
+    },
   };
 };
 
 function createQRStore(initialConfig?: Partial<QRConfig>): QRStore {
   const storage = getSafeLocalStorage();
-  const savedOptIn = storage.getItem('qr-telemetry-opt-in');
-  
+  const savedOptIn = storage.getItem("qr-telemetry-opt-in");
+
   let state: QRState = {
     config: { ...DEFAULT_CONFIG, ...initialConfig },
     moduleCount: 0,
     preferences: {
-      telemetryOptIn: savedOptIn === 'true' ? true : savedOptIn === 'false' ? false : null,
+      telemetryOptIn:
+        savedOptIn === "true" ? true : savedOptIn === "false" ? false : null,
       darkMode: false,
-    }
+    },
   };
 
   const listeners = new Set<() => void>();
   const signals: Record<SignalName, Set<SignalCallback>> = {
-    'scannability-fail': new Set(),
-    'render-complete': new Set(),
+    "scannability-fail": new Set(),
+    "render-complete": new Set(),
   };
 
   const store: QRStore = {
@@ -81,34 +103,40 @@ function createQRStore(initialConfig?: Partial<QRConfig>): QRStore {
     },
     updateConfig: (updates) => {
       state = { ...state, config: { ...state.config, ...updates } };
-      listeners.forEach(l => l());
+      listeners.forEach((l) => l());
     },
     updatePreferences: (updates) => {
       state = { ...state, preferences: { ...state.preferences, ...updates } };
-      if (updates.telemetryOptIn !== undefined && updates.telemetryOptIn !== null) {
-        getSafeLocalStorage().setItem('qr-telemetry-opt-in', String(updates.telemetryOptIn));
+      if (
+        updates.telemetryOptIn !== undefined &&
+        updates.telemetryOptIn !== null
+      ) {
+        getSafeLocalStorage().setItem(
+          "qr-telemetry-opt-in",
+          String(updates.telemetryOptIn),
+        );
       }
-      listeners.forEach(l => l());
+      listeners.forEach((l) => l());
     },
     setModuleCount: (count) => {
       if (state.moduleCount !== count) {
         state = { ...state, moduleCount: count };
-        listeners.forEach(l => l());
+        listeners.forEach((l) => l());
       }
     },
     emitSignal: (name, detail) => {
-      signals[name].forEach(cb => cb(detail));
+      signals[name].forEach((cb) => cb(detail));
     },
     registerSignal: (name, callback) => {
       signals[name].add(callback);
       return () => {
         signals[name].delete(callback);
       };
-    }
+    },
   };
 
   // Listen for render-complete to update moduleCount internally
-  store.registerSignal('render-complete', (detail) => {
+  store.registerSignal("render-complete", (detail) => {
     if (detail && detail.moduleCount !== undefined) {
       store.setModuleCount(detail.moduleCount);
     }
@@ -117,10 +145,20 @@ function createQRStore(initialConfig?: Partial<QRConfig>): QRStore {
   return store;
 }
 
-export const QRProvider = ({ children, initialConfig }: { children: React.ReactNode, initialConfig?: Partial<QRConfig> }) => {
+export const QRProvider = ({
+  children,
+  initialConfig,
+}: {
+  children: React.ReactNode;
+  initialConfig?: Partial<QRConfig>;
+}) => {
   const [store] = useState(() => createQRStore(initialConfig));
 
-  const state = useSyncExternalStore(store.subscribe, store.getState, store.getState);
+  const state = useSyncExternalStore(
+    store.subscribe,
+    store.getState,
+    store.getState,
+  );
 
   const contextValue: QRContextType = {
     config: state.config,
@@ -129,14 +167,12 @@ export const QRProvider = ({ children, initialConfig }: { children: React.ReactN
     registerSignal: store.registerSignal,
     preferences: state.preferences,
     updatePreferences: store.updatePreferences,
-    moduleCount: state.moduleCount
+    moduleCount: state.moduleCount,
   };
 
   return (
     <QRStoreContext.Provider value={store}>
-      <QRContext.Provider value={contextValue}>
-        {children}
-      </QRContext.Provider>
+      <QRContext.Provider value={contextValue}>{children}</QRContext.Provider>
     </QRStoreContext.Provider>
   );
 };
@@ -154,7 +190,7 @@ export const useOptionalQRContext = () => {
 export function useQRStore() {
   const store = useContext(QRStoreContext);
   if (!store) {
-    throw new Error('useQRStore must be used within QRProvider');
+    throw new Error("useQRStore must be used within QRProvider");
   }
   return store;
 }
@@ -164,6 +200,6 @@ export function useQRStoreSelector<T>(selector: (state: QRState) => T): T {
   return useSyncExternalStore(
     store.subscribe,
     () => selector(store.getState()),
-    () => selector(store.getState())
+    () => selector(store.getState()),
   );
 }

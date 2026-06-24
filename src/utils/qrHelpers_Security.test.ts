@@ -16,50 +16,50 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { describe, it, expect } from 'vitest';
-import { constructPaymentString, escapeWifiString } from './qrHelpers';
-import { CryptoNetwork } from '../types';
+import { describe, it, expect } from "vitest";
+import { constructPaymentString, escapeWifiString } from "./qrHelpers";
+import { CryptoNetwork } from "../types";
 
-describe('qrHelpers Security', () => {
-  describe('constructPaymentString', () => {
-    it('blocks dangerous schemes in custom network', () => {
-      const dangerousPayload = 'javascript:alert(1)';
+describe("qrHelpers Security", () => {
+  describe("constructPaymentString", () => {
+    it("blocks dangerous schemes in custom network", () => {
+      const dangerousPayload = "javascript:alert(1)";
       const result = constructPaymentString({
         network: CryptoNetwork.CUSTOM,
         address: dangerousPayload,
-        amount: '',
-        label: ''
+        amount: "",
+        label: "",
       });
-      expect(result).toBe('');
+      expect(result).toBe("");
     });
 
-    it('allows valid custom URIs', () => {
-      const validPayload = 'bitcoin:123?amount=10';
+    it("allows valid custom URIs", () => {
+      const validPayload = "bitcoin:123?amount=10";
       const result = constructPaymentString({
         network: CryptoNetwork.CUSTOM,
         address: validPayload,
-        amount: '',
-        label: ''
+        amount: "",
+        label: "",
       });
       expect(result).toBe(validPayload);
     });
 
-    it('constructPaymentString allows parameter injection in custom network if protocol is safe', () => {
+    it("constructPaymentString allows parameter injection in custom network if protocol is safe", () => {
       // This is expected behavior for "custom" network - user controls the full string
       // but we ensure it doesn't start with javascript:
-      const payload = 'bitcoin:123?amount=100&label=Hack';
+      const payload = "bitcoin:123?amount=100&label=Hack";
       const result = constructPaymentString({
         network: CryptoNetwork.CUSTOM,
         address: payload,
-        amount: '',
-        label: ''
+        amount: "",
+        label: "",
       });
       expect(result).toBe(payload);
     });
   });
 
-  describe('escapeWifiString', () => {
-    it('should strip control characters from WiFi SSID', () => {
+  describe("escapeWifiString", () => {
+    it("should strip control characters from WiFi SSID", () => {
       // \n is newline (0x0A), \0 is null (0x00), \t is tab (0x09)
       const ssid = "My\nNetwork\0\t";
       const result = escapeWifiString(ssid);
@@ -67,7 +67,7 @@ describe('qrHelpers Security', () => {
       expect(result).toBe("MyNetwork");
     });
 
-    it('should strip control characters from WiFi password', () => {
+    it("should strip control characters from WiFi password", () => {
       // \r is carriage return (0x0D)
       const password = "Pass\rWord\x1F";
       const result = escapeWifiString(password);
@@ -75,7 +75,7 @@ describe('qrHelpers Security', () => {
       expect(result).toBe("PassWord");
     });
 
-    it('should still escape special characters correctly after stripping control chars', () => {
+    it("should still escape special characters correctly after stripping control chars", () => {
       const ssid = "My;Net\nwork";
       const result = escapeWifiString(ssid);
       // Should strip \n -> My;Network -> escape ; -> My\;Network

@@ -1,18 +1,18 @@
-import { renderHook, act } from '@testing-library/react';
-import { useImageUpload } from './useImageUpload';
-import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
-import * as security from '../utils/security';
+import { renderHook, act } from "@testing-library/react";
+import { useImageUpload } from "./useImageUpload";
+import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
+import * as security from "../utils/security";
 
-describe('useImageUpload', () => {
+describe("useImageUpload", () => {
   beforeEach(() => {
-    vi.spyOn(security, 'validateImageUpload').mockReturnValue(null);
+    vi.spyOn(security, "validateImageUpload").mockReturnValue(null);
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  it('handles valid image upload', () => {
+  it("handles valid image upload", () => {
     const { result } = renderHook(() => useImageUpload());
     const onSuccess = vi.fn();
 
@@ -29,7 +29,7 @@ describe('useImageUpload', () => {
         mockReadAsDataURL(file);
         // Link the instance to our mock object so we can trigger it
         mockFileReaderInstance.onload = (e: any) => {
-            if (this.onload) this.onload(e);
+          if (this.onload) this.onload(e);
         };
       }
     }
@@ -37,8 +37,10 @@ describe('useImageUpload', () => {
     const originalFileReader = global.FileReader;
     global.FileReader = MockFileReader as any;
 
-    const file = new File(['dummy content'], 'test.png', { type: 'image/png' });
-    const event = { target: { files: [file] } } as unknown as React.ChangeEvent<HTMLInputElement>;
+    const file = new File(["dummy content"], "test.png", { type: "image/png" });
+    const event = {
+      target: { files: [file] },
+    } as unknown as React.ChangeEvent<HTMLInputElement>;
 
     act(() => {
       result.current.handleUpload(event, onSuccess);
@@ -49,30 +51,36 @@ describe('useImageUpload', () => {
 
     act(() => {
       if (mockFileReaderInstance.onload) {
-          mockFileReaderInstance.onload({ target: { result: 'data:image/png;base64,dummy' } } as any);
+        mockFileReaderInstance.onload({
+          target: { result: "data:image/png;base64,dummy" },
+        } as any);
       }
     });
 
-    expect(onSuccess).toHaveBeenCalledWith('data:image/png;base64,dummy');
+    expect(onSuccess).toHaveBeenCalledWith("data:image/png;base64,dummy");
     expect(result.current.error).toBeNull();
 
     // Restore
     global.FileReader = originalFileReader;
   });
 
-  it('sets error if validation fails', () => {
-    vi.spyOn(security, 'validateImageUpload').mockReturnValue('Validation failed');
+  it("sets error if validation fails", () => {
+    vi.spyOn(security, "validateImageUpload").mockReturnValue(
+      "Validation failed",
+    );
     const { result } = renderHook(() => useImageUpload());
     const onSuccess = vi.fn();
 
-    const file = new File(['dummy content'], 'test.png', { type: 'image/png' });
-    const event = { target: { files: [file] } } as unknown as React.ChangeEvent<HTMLInputElement>;
+    const file = new File(["dummy content"], "test.png", { type: "image/png" });
+    const event = {
+      target: { files: [file] },
+    } as unknown as React.ChangeEvent<HTMLInputElement>;
 
     act(() => {
       result.current.handleUpload(event, onSuccess);
     });
 
-    expect(result.current.error).toBe('Validation failed');
+    expect(result.current.error).toBe("Validation failed");
     expect(onSuccess).not.toHaveBeenCalled();
   });
 });

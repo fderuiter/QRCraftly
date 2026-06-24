@@ -16,8 +16,8 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { WifiData, WifiEncryption } from '../../types';
-import { ValidationEngine } from '../../engine/ValidationEngine';
+import { WifiData, WifiEncryption } from "../../types";
+import { ValidationEngine } from "../../engine/ValidationEngine";
 
 /**
  * Escapes special characters for WiFi QR code string.
@@ -39,41 +39,49 @@ export const unescapeWifiString = (str: string | undefined): string => {
  */
 export const hydrateWifiData = (raw: string): WifiData => {
   const result: WifiData = {
-    ssid: '',
-    password: '',
+    ssid: "",
+    password: "",
     encryption: WifiEncryption.WPA,
     hidden: false,
-    eapIdentity: '',
+    eapIdentity: "",
   };
 
-  if (!raw.startsWith('WIFI:')) return result;
+  if (!raw.startsWith("WIFI:")) return result;
 
   let content = raw.substring(5);
-  if (content.endsWith(';;')) {
+  if (content.endsWith(";;")) {
     content = content.slice(0, -2);
-  } else if (content.endsWith(';')) {
+  } else if (content.endsWith(";")) {
     content = content.slice(0, -1);
   }
-  
+
   const parts = content.split(ValidationEngine.REGEX_SPLIT_WIFI);
 
-  parts.forEach(part => {
-    const splitIndex = part.indexOf(':');
+  parts.forEach((part) => {
+    const splitIndex = part.indexOf(":");
     if (splitIndex <= 0) return;
     const key = part.substring(0, splitIndex);
     const value = part.substring(splitIndex + 1);
 
-    switch(key) {
-      case 'S': result.ssid = unescapeWifiString(value); break;
-      case 'P': result.password = unescapeWifiString(value); break;
-      case 'T': 
+    switch (key) {
+      case "S":
+        result.ssid = unescapeWifiString(value);
+        break;
+      case "P":
+        result.password = unescapeWifiString(value);
+        break;
+      case "T":
         const enc = unescapeWifiString(value);
         if (Object.values(WifiEncryption).includes(enc as WifiEncryption)) {
           result.encryption = enc as WifiEncryption;
         }
         break;
-      case 'H': result.hidden = value.toLowerCase() === 'true'; break;
-      case 'I': result.eapIdentity = unescapeWifiString(value); break;
+      case "H":
+        result.hidden = value.toLowerCase() === "true";
+        break;
+      case "I":
+        result.eapIdentity = unescapeWifiString(value);
+        break;
     }
   });
 
@@ -81,16 +89,12 @@ export const hydrateWifiData = (raw: string): WifiData => {
 };
 
 export const constructWifiString = (data: WifiData): string => {
-
   // Validate encryption type to prevent injection
   const encryption = Object.values(WifiEncryption).includes(data.encryption)
     ? data.encryption
     : WifiEncryption.WPA;
 
-  const parts = [
-    `T:${encryption}`,
-    `S:${escapeWifiString(data.ssid)}`,
-  ];
+  const parts = [`T:${encryption}`, `S:${escapeWifiString(data.ssid)}`];
 
   if (encryption === WifiEncryption.WPA2_EAP) {
     parts.push(`I:${escapeWifiString(data.eapIdentity)}`);
@@ -105,5 +109,5 @@ export const constructWifiString = (data: WifiData): string => {
     parts.push(`H:true`);
   }
 
-  return `WIFI:${parts.join(';')};;`;
+  return `WIFI:${parts.join(";")};;`;
 };

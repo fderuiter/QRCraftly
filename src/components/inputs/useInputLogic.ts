@@ -31,7 +31,15 @@ import { INPUT_REGISTRY, InputDataMap } from "./InputRegistry";
 export function useInputLogic(
   config: QRConfig,
   onChange: (updates: Partial<QRConfig>) => void,
-): { InputComponent: ElementType | null; inputProps: { data: InputDataMap[keyof InputDataMap]; onChange: (updates: Partial<InputDataMap[keyof InputDataMap]>) => void } | Record<string, never> } {
+): {
+  InputComponent: ElementType | null;
+  inputProps:
+    | {
+        data: InputDataMap[keyof InputDataMap];
+        onChange: (updates: Partial<InputDataMap[keyof InputDataMap]>) => void;
+      }
+    | Record<string, never>;
+} {
   // Initialize state for all types from registry
   const [inputStates, setInputStates] = useState<InputDataMap>(() => {
     const states = {} as Partial<InputDataMap>;
@@ -40,7 +48,12 @@ export function useInputLogic(
       const entry = INPUT_REGISTRY[key];
       // If this is the current type and we have a value, try to hydrate
       // This ensures that initial config values (e.g. from URL or defaults) are reflected in the inputs
-      if (key === config.type && config.value && entry.hydrateFn && entry.canHydrateFn(config.value)) {
+      if (
+        key === config.type &&
+        config.value &&
+        entry.hydrateFn &&
+        entry.canHydrateFn(config.value)
+      ) {
         try {
           states[key] = entry.hydrateFn(config.value) as never;
         } catch (e) {
@@ -100,7 +113,11 @@ export function useInputLogic(
       InputComponent: registryEntry.Component,
       inputProps: {
         data: inputStates[config.type] || registryEntry.initialState,
-        onChange: (updates: Partial<InputDataMap[keyof InputDataMap]>) => handleInputChange(config.type, updates as unknown as Partial<InputDataMap[QRType]>),
+        onChange: (updates: Partial<InputDataMap[keyof InputDataMap]>) =>
+          handleInputChange(
+            config.type,
+            updates as unknown as Partial<InputDataMap[QRType]>,
+          ),
       },
     };
   }

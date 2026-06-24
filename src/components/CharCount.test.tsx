@@ -16,54 +16,56 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { render, screen } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
-import { CharCount } from './CharCount';
+import { render, screen } from "@testing-library/react";
+import { describe, it, expect } from "vitest";
+import { CharCount } from "./CharCount";
 
-describe('CharCount Component', () => {
-  it('renders correct count', () => {
+describe("CharCount Component", () => {
+  it("renders correct count", () => {
     render(<CharCount current={50} max={100} />);
-    expect(screen.getByText('50 / 100')).toBeInTheDocument();
+    expect(screen.getByText("50 / 100")).toBeInTheDocument();
   });
 
-  it('renders default color for low usage', () => {
+  it("renders default color for low usage", () => {
     render(<CharCount current={10} max={100} />);
-    const counterText = screen.getByText('10 / 100');
+    const counterText = screen.getByText("10 / 100");
     // The text is inside a span, which is inside the div with the color class
-    const wrapper = counterText.closest('div');
-    expect(wrapper).toHaveClass('text-slate-500');
+    const wrapper = counterText.closest("div");
+    expect(wrapper).toHaveClass("text-slate-500");
   });
 
-  it('renders warning color for >= 90% usage', () => {
+  it("renders warning color for >= 90% usage", () => {
     render(<CharCount current={90} max={100} />);
-    const counterText = screen.getByText('90 / 100');
-    const wrapper = counterText.closest('div');
-    expect(wrapper).toHaveClass('text-amber-600');
+    const counterText = screen.getByText("90 / 100");
+    const wrapper = counterText.closest("div");
+    expect(wrapper).toHaveClass("text-amber-600");
   });
 
-  it('renders error color for 100% usage', () => {
+  it("renders error color for 100% usage", () => {
     render(<CharCount current={100} max={100} />);
-    const counterText = screen.getByText('100 / 100');
-    const wrapper = counterText.closest('div');
-    expect(wrapper).toHaveClass('text-rose-600');
+    const counterText = screen.getByText("100 / 100");
+    const wrapper = counterText.closest("div");
+    expect(wrapper).toHaveClass("text-rose-600");
   });
 
-  it('has accessibility attributes', () => {
+  it("has accessibility attributes", () => {
     render(<CharCount current={50} max={100} />);
-    const counterText = screen.getByText('50 / 100');
-    const wrapper = counterText.closest('div');
-    expect(wrapper).toHaveAttribute('aria-live', 'polite');
-    expect(wrapper).toHaveAttribute('aria-atomic', 'true');
+    const counterText = screen.getByText("50 / 100");
+    const wrapper = counterText.closest("div");
+    expect(wrapper).toHaveAttribute("aria-live", "polite");
+    expect(wrapper).toHaveAttribute("aria-atomic", "true");
     // Also check for screen reader text
-    expect(screen.getByText('50 of 100 characters used')).toHaveClass('sr-only');
+    expect(screen.getByText("50 of 100 characters used")).toHaveClass(
+      "sr-only",
+    );
   });
 
-  it('renders progress circle SVG', () => {
+  it("renders progress circle SVG", () => {
     const { container } = render(<CharCount current={50} max={100} />);
-    const svg = container.querySelector('svg');
+    const svg = container.querySelector("svg");
     expect(svg).toBeInTheDocument();
-    expect(svg).toHaveAttribute('aria-hidden', 'true');
-    const circles = svg?.querySelectorAll('circle');
+    expect(svg).toHaveAttribute("aria-hidden", "true");
+    const circles = svg?.querySelectorAll("circle");
     expect(circles).toHaveLength(2); // Track and progress
   });
 });

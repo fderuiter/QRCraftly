@@ -1,9 +1,9 @@
-import { QRConfig, QRModules } from '../types';
-import { calculateLayout, getLogoMetrics } from './qr-renderers/utils';
-import { renderBorder, renderBorderDecoration } from './qr-renderers/border';
-import { renderModules } from './qr-renderers/modules';
-import { renderEyes } from './qr-renderers/eyes';
-import { renderLogo } from './qr-renderers/logo';
+import { QRConfig, QRModules } from "../types";
+import { calculateLayout, getLogoMetrics } from "./qr-renderers/utils";
+import { renderBorder, renderBorderDecoration } from "./qr-renderers/border";
+import { renderModules } from "./qr-renderers/modules";
+import { renderEyes } from "./qr-renderers/eyes";
+import { renderLogo } from "./qr-renderers/logo";
 
 /**
  * Renders the QR code onto the canvas.
@@ -15,7 +15,7 @@ export const drawQR = (
   config: QRConfig,
   logoImg: HTMLImageElement | null,
   borderLogoImg: HTMLImageElement | null,
-  size: number
+  size: number,
 ) => {
   const canvas = ctx.canvas;
 
@@ -36,8 +36,15 @@ export const drawQR = (
 
     ctx.scale(pixelRatio, pixelRatio);
 
-    drawQRInternal(ctx as unknown as CanvasRenderingContext2D, modules, config, logoImg, borderLogoImg, displaySize, moduleCount);
-
+    drawQRInternal(
+      ctx as unknown as CanvasRenderingContext2D,
+      modules,
+      config,
+      logoImg,
+      borderLogoImg,
+      displaySize,
+      moduleCount,
+    );
   } catch (err) {
     console.warn("QR generation failed:", err);
   }
@@ -63,10 +70,14 @@ export const drawQRInternal = (
   borderLogoImg: HTMLImageElement | null,
   displaySize: number,
   moduleCount: number,
-  isVirtual: boolean = false
+  isVirtual: boolean = false,
 ) => {
   // 1. Calculate Layout
-  const { drawX, drawY, drawSize, cellSize, borderPx } = calculateLayout(config, displaySize, moduleCount);
+  const { drawX, drawY, drawSize, cellSize, borderPx } = calculateLayout(
+    config,
+    displaySize,
+    moduleCount,
+  );
 
   // 2. Calculate Logo Metrics
   const logoMetrics = getLogoMetrics(config, moduleCount, cellSize);
@@ -84,7 +95,17 @@ export const drawQRInternal = (
   }
 
   // 4. Render Modules
-  renderModules(ctx, modules, config, drawX, drawY, cellSize, moduleCount, logoMetrics, isVirtual);
+  renderModules(
+    ctx,
+    modules,
+    config,
+    drawX,
+    drawY,
+    cellSize,
+    moduleCount,
+    logoMetrics,
+    isVirtual,
+  );
 
   // 5. Render Eyes
   renderEyes(ctx, config, drawX, drawY, cellSize, moduleCount);

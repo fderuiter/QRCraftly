@@ -16,13 +16,13 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import React from 'react';
-import { renderHook, act } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { useScannability } from './useScannability';
-import { QRProvider, useQRStore } from '@/context/QRContext';
-import { DEFAULT_CONFIG } from '@/constants';
-import { QRConfig } from '@/types';
+import React from "react";
+import { renderHook, act } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { useScannability } from "./useScannability";
+import { QRProvider, useQRStore } from "@/context/QRContext";
+import { DEFAULT_CONFIG } from "@/constants";
+import { QRConfig } from "@/types";
 
 // ---------------------------------------------------------------------------
 // Worker mock that lets us control message dispatching
@@ -39,11 +39,13 @@ class MockWorkerInstance {
   addEventListener = vi.fn((_event: string, handler: WorkerMessageHandler) => {
     this.handlers.push(handler);
   });
-  removeEventListener = vi.fn((_event: string, handler: WorkerMessageHandler) => {
-    this.handlers = this.handlers.filter(h => h !== handler);
-  });
+  removeEventListener = vi.fn(
+    (_event: string, handler: WorkerMessageHandler) => {
+      this.handlers = this.handlers.filter((h) => h !== handler);
+    },
+  );
   dispatchMessage(data: any) {
-    this.handlers.forEach(h => h({ data } as MessageEvent));
+    this.handlers.forEach((h) => h({ data } as MessageEvent));
   }
 }
 
@@ -68,7 +70,7 @@ const wrapper = ({ children }: { children: React.ReactNode }) =>
 const defaultConfig: QRConfig = { ...DEFAULT_CONFIG } as QRConfig;
 
 function makeCanvasRef(): React.RefObject<HTMLCanvasElement | null> {
-  const canvas = document.createElement('canvas');
+  const canvas = document.createElement("canvas");
   canvas.width = 100;
   canvas.height = 100;
   return { current: canvas };
@@ -77,7 +79,7 @@ function makeCanvasRef(): React.RefObject<HTMLCanvasElement | null> {
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
-describe('useScannability - changed behavior: uses useQRStore instead of useQRContext', () => {
+describe("useScannability - changed behavior: uses useQRStore instead of useQRContext", () => {
   const OriginalWorker = globalThis.Worker;
 
   beforeEach(() => {
@@ -94,35 +96,35 @@ describe('useScannability - changed behavior: uses useQRStore instead of useQRCo
     activeWorker = null;
   });
 
-  it('throws when used outside QRProvider (uses useQRStore)', () => {
-    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+  it("throws when used outside QRProvider (uses useQRStore)", () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
     const canvasRef = makeCanvasRef();
     expect(() =>
-      renderHook(() => useScannability(canvasRef, defaultConfig))
-    ).toThrow('useQRStore must be used within QRProvider');
+      renderHook(() => useScannability(canvasRef, defaultConfig)),
+    ).toThrow("useQRStore must be used within QRProvider");
     spy.mockRestore();
   });
 
   it('returns initial status of "idle"', () => {
     const { result } = renderHook(
       () => useScannability(makeCanvasRef(), defaultConfig),
-      { wrapper }
+      { wrapper },
     );
-    expect(result.current.status).toBe('idle');
+    expect(result.current.status).toBe("idle");
   });
 
-  it('emits scannability-fail signal on worker failure message via store.emitSignal', () => {
+  it("emits scannability-fail signal on worker failure message via store.emitSignal", () => {
     const { result } = renderHook(
       () => ({
         scan: useScannability(makeCanvasRef(), defaultConfig),
         store: useQRStore(),
       }),
-      { wrapper }
+      { wrapper },
     );
 
     const signalCallback = vi.fn();
     act(() => {
-      result.current.store.registerSignal('scannability-fail', signalCallback);
+      result.current.store.registerSignal("scannability-fail", signalCallback);
     });
 
     // Simulate worker sending a failure
@@ -130,29 +132,29 @@ describe('useScannability - changed behavior: uses useQRStore instead of useQRCo
       activeWorker!.dispatchMessage({
         success: false,
         physicalReady: false,
-        error: 'NOT_FOUND',
+        error: "NOT_FOUND",
       });
     });
 
     expect(signalCallback).toHaveBeenCalledTimes(1);
     const detail = signalCallback.mock.calls[0][0];
-    expect(detail).toHaveProperty('engine');
-    expect(detail).toHaveProperty('styleId');
-    expect(detail).toHaveProperty('errorType', 'NOT_FOUND');
+    expect(detail).toHaveProperty("engine");
+    expect(detail).toHaveProperty("styleId");
+    expect(detail).toHaveProperty("errorType", "NOT_FOUND");
   });
 
-  it('does NOT emit scannability-fail signal when worker reports success', () => {
+  it("does NOT emit scannability-fail signal when worker reports success", () => {
     const { result } = renderHook(
       () => ({
         scan: useScannability(makeCanvasRef(), defaultConfig),
         store: useQRStore(),
       }),
-      { wrapper }
+      { wrapper },
     );
 
     const signalCallback = vi.fn();
     act(() => {
-      result.current.store.registerSignal('scannability-fail', signalCallback);
+      result.current.store.registerSignal("scannability-fail", signalCallback);
     });
 
     act(() => {
@@ -166,18 +168,18 @@ describe('useScannability - changed behavior: uses useQRStore instead of useQRCo
     expect(signalCallback).not.toHaveBeenCalled();
   });
 
-  it('does NOT emit scannability-fail signal when failure has no error field', () => {
+  it("does NOT emit scannability-fail signal when failure has no error field", () => {
     const { result } = renderHook(
       () => ({
         scan: useScannability(makeCanvasRef(), defaultConfig),
         store: useQRStore(),
       }),
-      { wrapper }
+      { wrapper },
     );
 
     const signalCallback = vi.fn();
     act(() => {
-      result.current.store.registerSignal('scannability-fail', signalCallback);
+      result.current.store.registerSignal("scannability-fail", signalCallback);
     });
 
     // success=false but error is falsy - should not emit
@@ -195,119 +197,146 @@ describe('useScannability - changed behavior: uses useQRStore instead of useQRCo
   it('status becomes "fail" when worker reports failure', () => {
     const { result } = renderHook(
       () => useScannability(makeCanvasRef(), defaultConfig),
-      { wrapper }
+      { wrapper },
     );
 
     act(() => {
-      activeWorker!.dispatchMessage({ success: false, physicalReady: false, error: 'NOT_FOUND' });
+      activeWorker!.dispatchMessage({
+        success: false,
+        physicalReady: false,
+        error: "NOT_FOUND",
+      });
     });
 
-    expect(result.current.status).toBe('fail');
+    expect(result.current.status).toBe("fail");
   });
 
   it('status becomes "digital-pass" when worker reports success without physical pass', () => {
     const { result } = renderHook(
       () => useScannability(makeCanvasRef(), defaultConfig),
-      { wrapper }
+      { wrapper },
     );
 
     act(() => {
-      activeWorker!.dispatchMessage({ success: true, physicalReady: false, error: null });
+      activeWorker!.dispatchMessage({
+        success: true,
+        physicalReady: false,
+        error: null,
+      });
     });
 
-    expect(result.current.status).toBe('digital-pass');
+    expect(result.current.status).toBe("digital-pass");
   });
 
   it('status becomes "physical-pass" when worker reports full success', () => {
     const { result } = renderHook(
       () => useScannability(makeCanvasRef(), defaultConfig),
-      { wrapper }
+      { wrapper },
     );
 
     act(() => {
-      activeWorker!.dispatchMessage({ success: true, physicalReady: true, error: null });
+      activeWorker!.dispatchMessage({
+        success: true,
+        physicalReady: true,
+        error: null,
+      });
     });
 
-    expect(result.current.status).toBe('physical-pass');
+    expect(result.current.status).toBe("physical-pass");
   });
 
-  it('emitted signal detail includes config.style as styleId', () => {
-    const configWithStyle: QRConfig = { ...defaultConfig, style: 'circuit' as any };
+  it("emitted signal detail includes config.style as styleId", () => {
+    const configWithStyle: QRConfig = {
+      ...defaultConfig,
+      style: "circuit" as any,
+    };
     const { result } = renderHook(
       () => ({
         scan: useScannability(makeCanvasRef(), configWithStyle),
         store: useQRStore(),
       }),
-      { wrapper }
+      { wrapper },
     );
 
     const signalCallback = vi.fn();
     act(() => {
-      result.current.store.registerSignal('scannability-fail', signalCallback);
+      result.current.store.registerSignal("scannability-fail", signalCallback);
     });
 
     act(() => {
-      activeWorker!.dispatchMessage({ success: false, physicalReady: false, error: 'DECODE_FAIL' });
+      activeWorker!.dispatchMessage({
+        success: false,
+        physicalReady: false,
+        error: "DECODE_FAIL",
+      });
     });
 
     const detail = signalCallback.mock.calls[0][0];
-    expect(detail.styleId).toBe('circuit');
-    expect(detail.errorType).toBe('DECODE_FAIL');
+    expect(detail.styleId).toBe("circuit");
+    expect(detail.errorType).toBe("DECODE_FAIL");
   });
 
   it('emitted signal detail styleId falls back to "default" when style is empty', () => {
-    const configNoStyle: QRConfig = { ...defaultConfig, style: '' as any };
+    const configNoStyle: QRConfig = { ...defaultConfig, style: "" as any };
     const { result } = renderHook(
       () => ({
         scan: useScannability(makeCanvasRef(), configNoStyle),
         store: useQRStore(),
       }),
-      { wrapper }
+      { wrapper },
     );
 
     const signalCallback = vi.fn();
     act(() => {
-      result.current.store.registerSignal('scannability-fail', signalCallback);
+      result.current.store.registerSignal("scannability-fail", signalCallback);
     });
 
     act(() => {
-      activeWorker!.dispatchMessage({ success: false, physicalReady: false, error: 'FAIL' });
+      activeWorker!.dispatchMessage({
+        success: false,
+        physicalReady: false,
+        error: "FAIL",
+      });
     });
 
     const detail = signalCallback.mock.calls[0][0];
-    expect(detail.styleId).toBe('default');
+    expect(detail.styleId).toBe("default");
   });
 
-  it('worker event listener is cleaned up when effect re-runs due to config change', () => {
+  it("worker event listener is cleaned up when effect re-runs due to config change", () => {
     const canvasRef = makeCanvasRef();
     const { rerender } = renderHook(
       ({ config }: { config: QRConfig }) => useScannability(canvasRef, config),
-      { wrapper, initialProps: { config: defaultConfig } }
+      { wrapper, initialProps: { config: defaultConfig } },
     );
 
     const workerAtMount = activeWorker!;
 
     // Rerender with different config triggers cleanup and re-registration
     act(() => {
-      rerender({ config: { ...defaultConfig, value: 'https://changed.com' } });
+      rerender({ config: { ...defaultConfig, value: "https://changed.com" } });
     });
 
-    expect(workerAtMount.removeEventListener).toHaveBeenCalledWith('message', expect.any(Function));
+    expect(workerAtMount.removeEventListener).toHaveBeenCalledWith(
+      "message",
+      expect.any(Function),
+    );
   });
 
   // Regression: previously used [config, emitSignal] as dep array,
   // now uses [config, store]. Verify store changes do not cause spurious re-registrations.
-  it('does not re-register worker listener when unrelated store state changes', () => {
+  it("does not re-register worker listener when unrelated store state changes", () => {
     const { result } = renderHook(
       () => ({
         scan: useScannability(makeCanvasRef(), defaultConfig),
         store: useQRStore(),
       }),
-      { wrapper }
+      { wrapper },
     );
 
     const workerAtMount = activeWorker!;
-    const initialAddListenerCallCount = workerAtMount.addEventListener.mock.calls.length;
+    const initialAddListenerCallCount =
+      workerAtMount.addEventListener.mock.calls.length;
 
     // Update preferences (unrelated to config or store identity)
     act(() => {
@@ -316,6 +345,8 @@ describe('useScannability - changed behavior: uses useQRStore instead of useQRCo
 
     // Store reference is stable (same QRStore instance), config did not change,
     // so useEffect should not re-run and addEventListener should not be called again.
-    expect(workerAtMount.addEventListener.mock.calls.length).toBe(initialAddListenerCallCount);
+    expect(workerAtMount.addEventListener.mock.calls.length).toBe(
+      initialAddListenerCallCount,
+    );
   });
 });

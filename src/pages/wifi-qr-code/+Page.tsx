@@ -16,14 +16,14 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import QRTool from '@/components/QRTool';
-import { DEFAULT_CONFIG } from '@/constants';
-import { QRType } from '@/types';
-import { contentRegistry } from '@/data/contentRegistry';
-import { generateSchema } from '@/utils/schemaGenerator';
-import { resolveDomainForPath } from '@/utils/metadataEngine';
-import { safeJsonLdStringify } from '@/utils/security';
-import { usePageContext } from 'vike-react/usePageContext';
+import QRTool from "@/components/QRTool";
+import { DEFAULT_CONFIG } from "@/constants";
+import { QRType } from "@/types";
+import { contentRegistry } from "@/data/contentRegistry";
+import { generateSchema } from "@/utils/schemaGenerator";
+import { resolveDomainForPath } from "@/utils/metadataEngine";
+import { safeJsonLdStringify } from "@/utils/security";
+import { usePageContext } from "vike-react/usePageContext";
 
 /**
  * WiFi QR Code Page Component
@@ -35,19 +35,30 @@ import { usePageContext } from 'vike-react/usePageContext';
  */
 export default function Page() {
   const pageContext = usePageContext();
-  const urlPathname = pageContext?.urlPathname ?? '/wifi-qr-code';
+  const urlPathname = pageContext?.urlPathname ?? "/wifi-qr-code";
   const resolvedDomain = resolveDomainForPath(urlPathname);
   const wifiConfig = {
     ...DEFAULT_CONFIG,
     type: QRType.WIFI,
   };
 
-  const schemaData = generateSchema(contentRegistry['wifi-qr-code'], resolvedDomain, urlPathname);
+  const schemaData = generateSchema(
+    contentRegistry["wifi-qr-code"],
+    resolvedDomain,
+    urlPathname,
+  );
 
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(schemaData) }} />
-      <QRTool initialConfig={wifiConfig} title="WiFi QR Code"  toolId="wifi-qr-code" />
-          </>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(schemaData) }}
+      />
+      <QRTool
+        initialConfig={wifiConfig}
+        title="WiFi QR Code"
+        toolId="wifi-qr-code"
+      />
+    </>
   );
 }

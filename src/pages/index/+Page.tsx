@@ -16,12 +16,12 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import QRTool from '@/components/QRTool';
-import { safeJsonLdStringify } from '@/utils/security';
-import { contentRegistry } from '@/data/contentRegistry';
-import { generateSchema } from '@/utils/schemaGenerator';
-import { resolveDomainForPath } from '@/utils/metadataEngine';
-import { usePageContext } from 'vike-react/usePageContext';
+import QRTool from "@/components/QRTool";
+import { safeJsonLdStringify } from "@/utils/security";
+import { contentRegistry } from "@/data/contentRegistry";
+import { generateSchema } from "@/utils/schemaGenerator";
+import { resolveDomainForPath } from "@/utils/metadataEngine";
+import { usePageContext } from "vike-react/usePageContext";
 
 /**
  * Home Page Component
@@ -33,14 +33,21 @@ import { usePageContext } from 'vike-react/usePageContext';
  */
 export default function Page() {
   const pageContext = usePageContext();
-  const urlPathname = pageContext?.urlPathname ?? '/';
+  const urlPathname = pageContext?.urlPathname ?? "/";
   const resolvedDomain = resolveDomainForPath(urlPathname);
-  const schemaData = generateSchema(contentRegistry['index'], resolvedDomain, urlPathname);
+  const schemaData = generateSchema(
+    contentRegistry["index"],
+    resolvedDomain,
+    urlPathname,
+  );
 
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(schemaData) }} />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(schemaData) }}
+      />
       <QRTool toolId="index" />
-          </>
+    </>
   );
 }

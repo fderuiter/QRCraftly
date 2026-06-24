@@ -15,352 +15,354 @@ export interface ToolContent {
 }
 
 export const contentRegistry: Record<string, ToolContent> = {
-  "about": {
-    "id": "about",
-    "name": "About QRCraftly",
-    "url": getPublicDomain() + "/about",
-    "description": "Privacy-focused, client-side QR code generator.",
-    "features": [],
-    "faqs": [
+  about: {
+    id: "about",
+    name: "About QRCraftly",
+    url: getPublicDomain() + "/about",
+    description: "Privacy-focused, client-side QR code generator.",
+    features: [],
+    faqs: [
       {
-        "question": "Is QRCraftly free?",
-        "answer": "QRCraftly is completely free to use. No sign-up, no login, and no hidden fees. Just generate your QR codes instantly."
+        question: "Is QRCraftly free?",
+        answer:
+          "QRCraftly is completely free to use. No sign-up, no login, and no hidden fees. Just generate your QR codes instantly.",
       },
       {
-        "question": "Does QRCraftly track users?",
-        "answer": "We do not use tracking pixels, cookies, or third-party analytics. We only collect basic server logs for performance and reliability."
+        question: "Does QRCraftly track users?",
+        answer:
+          "We do not use tracking pixels, cookies, or third-party analytics. We only collect basic server logs for performance and reliability.",
       },
       {
-        "question": "Is my data secure?",
-        "answer": "We utilize a Privacy First architecture. Your content is processed entirely in your browser and not transmitted to our servers without your explicit opt-in for telemetry."
+        question: "Is my data secure?",
+        answer:
+          "We utilize a Privacy First architecture. Your content is processed entirely in your browser and not transmitted to our servers without your explicit opt-in for telemetry.",
       },
       {
-        "question": "Is QRCraftly open source?",
-        "answer": "Our code is open for inspection and contribution. We believe in transparency."
-      }
-    ]
+        question: "Is QRCraftly open source?",
+        answer:
+          "Our code is open for inspection and contribution. We believe in transparency.",
+      },
+    ],
   },
   "email-qr-code": {
-    "id": "email-qr-code",
-    "name": "Email QR Code Generator",
-    "url": getPublicDomain() + "/email-qr-code",
-    "description": "",
-    "features": [
+    id: "email-qr-code",
+    name: "Email QR Code Generator",
+    url: getPublicDomain() + "/email-qr-code",
+    description: "",
+    features: [
       "Generate Pre-filled Emails",
       "Secure Client-Side",
-      "Custom Design"
+      "Custom Design",
     ],
-    "howTo": {
-      "name": "How to Create an Email QR Code",
-      "description": "Generate a QR code that opens a drafted email.",
-      "steps": [
+    howTo: {
+      name: "How to Create an Email QR Code",
+      description: "Generate a QR code that opens a drafted email.",
+      steps: [
         {
-          "name": "Enter Details",
-          "text": "Fill in the recipient, subject, and body of the email."
+          name: "Enter Details",
+          text: "Fill in the recipient, subject, and body of the email.",
         },
         {
-          "name": "Customize",
-          "text": "Choose a style and color for your QR code."
+          name: "Customize",
+          text: "Choose a style and color for your QR code.",
         },
         {
-          "name": "Download",
-          "text": "Save the QR code and print it on business cards or flyers."
-        }
-      ]
+          name: "Download",
+          text: "Save the QR code and print it on business cards or flyers.",
+        },
+      ],
     },
-    "faqs": [
+    faqs: [
       {
-        "question": "Is it free to generate?",
-        "answer": "Yes, our tool is 100% free with no hidden fees."
+        question: "Is it free to generate?",
+        answer: "Yes, our tool is 100% free with no hidden fees.",
       },
       {
-        "question": "Do QR codes expire?",
-        "answer": "No, standard static QR codes do not expire."
-      }
-    ]
+        question: "Do QR codes expire?",
+        answer: "No, standard static QR codes do not expire.",
+      },
+    ],
   },
-  "index": {
-    "id": "index",
-    "name": "QRCraftly",
-    "url": getPublicDomain(),
-    "description": "",
-    "features": [
+  index: {
+    id: "index",
+    name: "QRCraftly",
+    url: getPublicDomain(),
+    description: "",
+    features: [
       "Custom QR Codes",
       "WiFi QR Codes",
       "vCard",
       "Secure Client-Side Generation",
-      "Artistic Styles"
+      "Artistic Styles",
     ],
-    "howTo": {
-      "name": "How to Create a URL QR Code",
-      "description": "Convert any website URL into a scannable QR code instantly.",
-      "steps": [
+    howTo: {
+      name: "How to Create a URL QR Code",
+      description:
+        "Convert any website URL into a scannable QR code instantly.",
+      steps: [
         {
-          "name": "Enter URL",
-          "text": "Paste your website address (URL) into the input field."
+          name: "Enter URL",
+          text: "Paste your website address (URL) into the input field.",
         },
         {
-          "name": "Customize Design",
-          "text": "Adjust colors, add a logo, or change the pattern style."
+          name: "Customize Design",
+          text: "Adjust colors, add a logo, or change the pattern style.",
         },
         {
-          "name": "Download QR Code",
-          "text": "Save your custom QR code in PNG, JPEG, or WebP format."
-        }
-      ]
+          name: "Download QR Code",
+          text: "Save your custom QR code in PNG, JPEG, or WebP format.",
+        },
+      ],
     },
-    "faqs": [
+    faqs: [
       {
-        "question": "Is it free to generate?",
-        "answer": "Yes, our tool is 100% free with no hidden fees."
+        question: "Is it free to generate?",
+        answer: "Yes, our tool is 100% free with no hidden fees.",
       },
       {
-        "question": "Do QR codes expire?",
-        "answer": "No, standard static QR codes do not expire."
-      }
-    ]
+        question: "Do QR codes expire?",
+        answer: "No, standard static QR codes do not expire.",
+      },
+    ],
   },
   "payment-qr-code": {
-    "id": "payment-qr-code",
-    "name": "Payment QR Code Generator",
-    "url": getPublicDomain() + "/payment-qr-code",
-    "description": "",
-    "features": [
+    id: "payment-qr-code",
+    name: "Payment QR Code Generator",
+    url: getPublicDomain() + "/payment-qr-code",
+    description: "",
+    features: [
       "Generate Crypto Payment QR",
       "Bitcoin/Ethereum Support",
-      "Secure Client-Side"
+      "Secure Client-Side",
     ],
-    "howTo": {
-      "name": "How to Create a Payment QR Code",
-      "description": "Generate a QR code to receive cryptocurrency payments.",
-      "steps": [
+    howTo: {
+      name: "How to Create a Payment QR Code",
+      description: "Generate a QR code to receive cryptocurrency payments.",
+      steps: [
         {
-          "name": "Select Network",
-          "text": "Choose the cryptocurrency network (e.g., Bitcoin, Ethereum)."
+          name: "Select Network",
+          text: "Choose the cryptocurrency network (e.g., Bitcoin, Ethereum).",
         },
         {
-          "name": "Enter Address",
-          "text": "Paste your wallet address and optional amount."
+          name: "Enter Address",
+          text: "Paste your wallet address and optional amount.",
         },
         {
-          "name": "Customize & Download",
-          "text": "Style your QR code and save it."
-        }
-      ]
+          name: "Customize & Download",
+          text: "Style your QR code and save it.",
+        },
+      ],
     },
-    "faqs": [
+    faqs: [
       {
-        "question": "Is it free to generate?",
-        "answer": "Yes, our tool is 100% free with no hidden fees."
+        question: "Is it free to generate?",
+        answer: "Yes, our tool is 100% free with no hidden fees.",
       },
       {
-        "question": "Do QR codes expire?",
-        "answer": "No, standard static QR codes do not expire."
-      }
-    ]
+        question: "Do QR codes expire?",
+        answer: "No, standard static QR codes do not expire.",
+      },
+    ],
   },
   "phone-qr-code": {
-    "id": "phone-qr-code",
-    "name": "Phone QR Code Generator",
-    "url": getPublicDomain() + "/phone-qr-code",
-    "description": "",
-    "features": [
+    id: "phone-qr-code",
+    name: "Phone QR Code Generator",
+    url: getPublicDomain() + "/phone-qr-code",
+    description: "",
+    features: [
       "Generate Click-to-Call QR",
       "Secure Client-Side",
-      "Custom Design"
+      "Custom Design",
     ],
-    "howTo": {
-      "name": "How to Create a Phone QR Code",
-      "description": "Create a QR code that prompts the user to dial a number.",
-      "steps": [
+    howTo: {
+      name: "How to Create a Phone QR Code",
+      description: "Create a QR code that prompts the user to dial a number.",
+      steps: [
         {
-          "name": "Enter Number",
-          "text": "Input the phone number you want people to call."
+          name: "Enter Number",
+          text: "Input the phone number you want people to call.",
         },
         {
-          "name": "Customize",
-          "text": "Choose colors and styles for your QR code."
+          name: "Customize",
+          text: "Choose colors and styles for your QR code.",
         },
         {
-          "name": "Download",
-          "text": "Download the image for print or digital use."
-        }
-      ]
+          name: "Download",
+          text: "Download the image for print or digital use.",
+        },
+      ],
     },
-    "faqs": [
+    faqs: [
       {
-        "question": "Is it free to generate?",
-        "answer": "Yes, our tool is 100% free with no hidden fees."
+        question: "Is it free to generate?",
+        answer: "Yes, our tool is 100% free with no hidden fees.",
       },
       {
-        "question": "Do QR codes expire?",
-        "answer": "No, standard static QR codes do not expire."
-      }
-    ]
+        question: "Do QR codes expire?",
+        answer: "No, standard static QR codes do not expire.",
+      },
+    ],
   },
   "sms-qr-code": {
-    "id": "sms-qr-code",
-    "name": "SMS QR Code Generator",
-    "url": getPublicDomain() + "/sms-qr-code",
-    "description": "",
-    "features": [
+    id: "sms-qr-code",
+    name: "SMS QR Code Generator",
+    url: getPublicDomain() + "/sms-qr-code",
+    description: "",
+    features: [
       "Generate Pre-filled SMS",
       "Secure Client-Side",
-      "Custom Design"
+      "Custom Design",
     ],
-    "howTo": {
-      "name": "How to Create an SMS QR Code",
-      "description": "Generate a QR code that opens a drafted text message.",
-      "steps": [
+    howTo: {
+      name: "How to Create an SMS QR Code",
+      description: "Generate a QR code that opens a drafted text message.",
+      steps: [
         {
-          "name": "Enter Details",
-          "text": "Fill in the recipient number and the message text."
+          name: "Enter Details",
+          text: "Fill in the recipient number and the message text.",
         },
         {
-          "name": "Customize",
-          "text": "Select a pattern and color for your QR code."
+          name: "Customize",
+          text: "Select a pattern and color for your QR code.",
         },
         {
-          "name": "Download",
-          "text": "Download the image and share it."
-        }
-      ]
+          name: "Download",
+          text: "Download the image and share it.",
+        },
+      ],
     },
-    "faqs": [
+    faqs: [
       {
-        "question": "Is it free to generate?",
-        "answer": "Yes, our tool is 100% free with no hidden fees."
+        question: "Is it free to generate?",
+        answer: "Yes, our tool is 100% free with no hidden fees.",
       },
       {
-        "question": "Do QR codes expire?",
-        "answer": "No, standard static QR codes do not expire."
-      }
-    ]
+        question: "Do QR codes expire?",
+        answer: "No, standard static QR codes do not expire.",
+      },
+    ],
   },
   "text-qr-code": {
-    "id": "text-qr-code",
-    "name": "Text QR Code Generator",
-    "url": getPublicDomain() + "/text-qr-code",
-    "description": "",
-    "features": [
-      "Convert Text to QR",
-      "Secure Client-Side",
-      "Custom Design"
-    ],
-    "howTo": {
-      "name": "How to Create a Text QR Code",
-      "description": "Convert plain text into a scannable QR code.",
-      "steps": [
+    id: "text-qr-code",
+    name: "Text QR Code Generator",
+    url: getPublicDomain() + "/text-qr-code",
+    description: "",
+    features: ["Convert Text to QR", "Secure Client-Side", "Custom Design"],
+    howTo: {
+      name: "How to Create a Text QR Code",
+      description: "Convert plain text into a scannable QR code.",
+      steps: [
         {
-          "name": "Enter Text",
-          "text": "Type or paste your text content into the input field."
+          name: "Enter Text",
+          text: "Type or paste your text content into the input field.",
         },
         {
-          "name": "Customize",
-          "text": "Adjust colors, patterns, and add a logo if desired."
+          name: "Customize",
+          text: "Adjust colors, patterns, and add a logo if desired.",
         },
         {
-          "name": "Download",
-          "text": "Download your QR code in PNG, JPEG, or WebP format."
-        }
-      ]
+          name: "Download",
+          text: "Download your QR code in PNG, JPEG, or WebP format.",
+        },
+      ],
     },
-    "faqs": [
+    faqs: [
       {
-        "question": "Is it free to generate?",
-        "answer": "Yes, our tool is 100% free with no hidden fees."
+        question: "Is it free to generate?",
+        answer: "Yes, our tool is 100% free with no hidden fees.",
       },
       {
-        "question": "Do QR codes expire?",
-        "answer": "No, standard static QR codes do not expire."
-      }
-    ]
+        question: "Do QR codes expire?",
+        answer: "No, standard static QR codes do not expire.",
+      },
+    ],
   },
   "vcard-qr-code": {
-    "id": "vcard-qr-code",
-    "name": "VCard QR Code Generator",
-    "url": getPublicDomain() + "/vcard-qr-code",
-    "description": "",
-    "features": [
+    id: "vcard-qr-code",
+    name: "VCard QR Code Generator",
+    url: getPublicDomain() + "/vcard-qr-code",
+    description: "",
+    features: [
       "Generate VCard Contact QR",
       "Secure Client-Side",
-      "Custom Design"
+      "Custom Design",
     ],
-    "howTo": {
-      "name": "How to Create a VCard QR Code",
-      "description": "Create a digital business card that can be scanned to save contact info.",
-      "steps": [
+    howTo: {
+      name: "How to Create a VCard QR Code",
+      description:
+        "Create a digital business card that can be scanned to save contact info.",
+      steps: [
         {
-          "name": "Enter Contact Info",
-          "text": "Fill in your name, phone, email, and other contact details."
+          name: "Enter Contact Info",
+          text: "Fill in your name, phone, email, and other contact details.",
         },
         {
-          "name": "Customize",
-          "text": "Add your logo or choose colors to match your brand."
+          name: "Customize",
+          text: "Add your logo or choose colors to match your brand.",
         },
         {
-          "name": "Download",
-          "text": "Download the QR code for your business cards."
-        }
-      ]
+          name: "Download",
+          text: "Download the QR code for your business cards.",
+        },
+      ],
     },
-    "faqs": [
+    faqs: [
       {
-        "question": "Is it free to generate?",
-        "answer": "Yes, our tool is 100% free with no hidden fees."
+        question: "Is it free to generate?",
+        answer: "Yes, our tool is 100% free with no hidden fees.",
       },
       {
-        "question": "Do QR codes expire?",
-        "answer": "No, standard static QR codes do not expire."
-      }
-    ]
+        question: "Do QR codes expire?",
+        answer: "No, standard static QR codes do not expire.",
+      },
+    ],
   },
   "wifi-qr-code": {
-    "id": "wifi-qr-code",
-    "name": "WiFi QR Code Generator",
-    "url": getPublicDomain() + "/wifi-qr-code",
-    "description": "",
-    "features": [
+    id: "wifi-qr-code",
+    name: "WiFi QR Code Generator",
+    url: getPublicDomain() + "/wifi-qr-code",
+    description: "",
+    features: [
       "Generate WiFi Access QR Codes",
       "WPA/WPA2 Support",
-      "Hidden SSID Support"
+      "Hidden SSID Support",
     ],
-    "howTo": {
-      "name": "How to Create a WiFi QR Code",
-      "description": "Generate a QR code to share your WiFi network instantly.",
-      "supply": [
-        { "name": "WiFi Network Name (SSID)" },
-        { "name": "WiFi Password" },
-        { "name": "Encryption Type" }
+    howTo: {
+      name: "How to Create a WiFi QR Code",
+      description: "Generate a QR code to share your WiFi network instantly.",
+      supply: [
+        { name: "WiFi Network Name (SSID)" },
+        { name: "WiFi Password" },
+        { name: "Encryption Type" },
       ],
-      "steps": [
+      steps: [
         {
-          "name": "Enter Network Name",
-          "text": "Input your WiFi SSID (Network Name) into the designated field."
+          name: "Enter Network Name",
+          text: "Input your WiFi SSID (Network Name) into the designated field.",
         },
         {
-          "name": "Enter Password",
-          "text": "Enter your WiFi password. Your data remains local and secure."
+          name: "Enter Password",
+          text: "Enter your WiFi password. Your data remains local and secure.",
         },
         {
-          "name": "Select Encryption",
-          "text": "Choose your network encryption type (WPA/WPA2 is most common)."
+          name: "Select Encryption",
+          text: "Choose your network encryption type (WPA/WPA2 is most common).",
         },
         {
-          "name": "Download or Share",
-          "text": "Click 'Download' to save the QR code or scan it directly from the screen."
-        }
-      ]
+          name: "Download or Share",
+          text: "Click 'Download' to save the QR code or scan it directly from the screen.",
+        },
+      ],
     },
-    "faqs": [
+    faqs: [
       {
-        "question": "Is it free to generate?",
-        "answer": "Yes, our tool is 100% free with no hidden fees."
+        question: "Is it free to generate?",
+        answer: "Yes, our tool is 100% free with no hidden fees.",
       },
       {
-        "question": "Do QR codes expire?",
-        "answer": "No, standard static QR codes do not expire."
-      }
-    ]
-  }
+        question: "Do QR codes expire?",
+        answer: "No, standard static QR codes do not expire.",
+      },
+    ],
+  },
 };

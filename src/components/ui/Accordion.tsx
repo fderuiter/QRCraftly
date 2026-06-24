@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import React, { useState } from "react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 
 interface AccordionItemProps {
   title: string;
@@ -7,7 +7,11 @@ interface AccordionItemProps {
   defaultOpen?: boolean;
 }
 
-export function AccordionItem({ title, children, defaultOpen = false }: AccordionItemProps) {
+export function AccordionItem({
+  title,
+  children,
+  defaultOpen = false,
+}: AccordionItemProps) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (
@@ -17,7 +21,9 @@ export function AccordionItem({ title, children, defaultOpen = false }: Accordio
         className="w-full text-left px-5 py-4 flex justify-between items-center"
         aria-expanded={isOpen}
       >
-        <span className="font-semibold text-slate-800 dark:text-slate-200">{title}</span>
+        <span className="font-semibold text-slate-800 dark:text-slate-200">
+          {title}
+        </span>
         {isOpen ? (
           <ChevronUp className="w-5 h-5 text-slate-500 dark:text-slate-400" />
         ) : (

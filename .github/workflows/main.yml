@@ -4,39 +4,39 @@ on:
   push:
     branches: [main]
     paths:
-      - 'src/**'
-      - 'public/**'
-      - 'scripts/**'
-      - 'e2e/**'
-      - 'package.json'
-      - 'pnpm-lock.yaml'
-      - 'playwright.config.ts'
-      - 'vite.config.ts'
-      - 'vitest.setup.ts'
-      - 'tailwind.config.js'
-      - 'postcss.config.js'
-      - 'tsconfig.json'
-      - 'lighthouserc.json'
-      - 'wrangler.jsonc'
-      - '.github/workflows/**'
+      - "src/**"
+      - "public/**"
+      - "scripts/**"
+      - "e2e/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "playwright.config.ts"
+      - "vite.config.ts"
+      - "vitest.setup.ts"
+      - "tailwind.config.js"
+      - "postcss.config.js"
+      - "tsconfig.json"
+      - "lighthouserc.json"
+      - "wrangler.jsonc"
+      - ".github/workflows/**"
   pull_request:
     branches: [main]
     paths:
-      - 'src/**'
-      - 'public/**'
-      - 'scripts/**'
-      - 'e2e/**'
-      - 'package.json'
-      - 'pnpm-lock.yaml'
-      - 'playwright.config.ts'
-      - 'vite.config.ts'
-      - 'vitest.setup.ts'
-      - 'tailwind.config.js'
-      - 'postcss.config.js'
-      - 'tsconfig.json'
-      - 'lighthouserc.json'
-      - 'wrangler.jsonc'
-      - '.github/workflows/**'
+      - "src/**"
+      - "public/**"
+      - "scripts/**"
+      - "e2e/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "playwright.config.ts"
+      - "vite.config.ts"
+      - "vitest.setup.ts"
+      - "tailwind.config.js"
+      - "postcss.config.js"
+      - "tsconfig.json"
+      - "lighthouserc.json"
+      - "wrangler.jsonc"
+      - ".github/workflows/**"
 
 permissions:
   contents: read
@@ -318,5 +318,3 @@ jobs:
               repo: context.repo.repo,
               body: comment
             });
-
-

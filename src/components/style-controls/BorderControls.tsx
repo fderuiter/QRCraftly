@@ -1,27 +1,36 @@
-import React, { useRef, useMemo } from 'react';
-import { Button } from '../ui/Button';
-import { QRConfig, BorderStyle, BorderTextPosition, BorderLogoPosition } from '../../types';
-import { Upload, X, AlertTriangle } from 'lucide-react';
-import { getContrastRatio } from '../../utils/colorUtils';
-import { ColorInput } from '../ui/ColorInput';
-import { RangeInput } from '../ui/RangeInput';
-import { useImageUpload } from '../../hooks/useImageUpload';
-import { ToggleSwitch } from '../inputs/ToggleSwitch';
-import { useOptionalQRContext } from '../../context/QRContext';
+import React, { useRef, useMemo } from "react";
+import { Button } from "../ui/Button";
+import {
+  QRConfig,
+  BorderStyle,
+  BorderTextPosition,
+  BorderLogoPosition,
+} from "../../types";
+import { Upload, X, AlertTriangle } from "lucide-react";
+import { getContrastRatio } from "../../utils/colorUtils";
+import { ColorInput } from "../ui/ColorInput";
+import { RangeInput } from "../ui/RangeInput";
+import { useImageUpload } from "../../hooks/useImageUpload";
+import { ToggleSwitch } from "../inputs/ToggleSwitch";
+import { useOptionalQRContext } from "../../context/QRContext";
 
 interface BorderControlsProps {
   config: QRConfig;
   onChange: (updates: Partial<QRConfig>) => void;
 }
 
-export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange }) => {
+export const BorderControls: React.FC<BorderControlsProps> = ({
+  config,
+  onChange,
+}) => {
   const context = useOptionalQRContext();
   const moduleCount = context?.moduleCount ?? 0;
 
   const borderModules = useMemo(() => {
     if (!moduleCount) return 0;
     const minModules = 4;
-    const userModules = (config.borderSize * moduleCount) / (1 - 2 * config.borderSize);
+    const userModules =
+      (config.borderSize * moduleCount) / (1 - 2 * config.borderSize);
     return Math.max(minModules, Math.round(userModules * 10) / 10);
   }, [moduleCount, config.borderSize]);
 
@@ -36,14 +45,21 @@ export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange
     return config.isBorderEnabled && config.borderText
       ? getContrastRatio(config.borderTextColor, config.borderColor)
       : 21;
-  }, [config.isBorderEnabled, config.borderText, config.borderTextColor, config.borderColor]);
+  }, [
+    config.isBorderEnabled,
+    config.borderText,
+    config.borderTextColor,
+    config.borderColor,
+  ]);
 
   const isLowBorderContrast = borderTextContrast < 4.5;
 
   return (
     <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Border</h3>
+        <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+          Border
+        </h3>
         <ToggleSwitch
           id="enable-border"
           label="Enable Border"
@@ -57,13 +73,18 @@ export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange
         <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label htmlFor="border-style" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
+              <label
+                htmlFor="border-style"
+                className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1"
+              >
                 Style
               </label>
               <select
                 id="border-style"
-                value={config.borderStyle || 'solid'}
-                onChange={(e) => onChange({ borderStyle: e.target.value as BorderStyle })}
+                value={config.borderStyle || "solid"}
+                onChange={(e) =>
+                  onChange({ borderStyle: e.target.value as BorderStyle })
+                }
                 className="w-full px-2 py-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs text-slate-700 dark:text-slate-200"
               >
                 <option value="solid">Solid</option>
@@ -96,7 +117,9 @@ export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange
           {/* Border Content Section */}
           <div className="pt-2 border-t border-slate-200 dark:border-slate-700">
             <div className="flex justify-between items-baseline mb-2">
-              <p className="text-xs font-medium text-slate-700 dark:text-slate-300">Content</p>
+              <p className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                Content
+              </p>
               {isLowBorderContrast && (
                 <span className="flex items-center gap-1 text-[10px] text-amber-600 dark:text-amber-400 font-medium">
                   <AlertTriangle className="w-3 h-3" />
@@ -117,8 +140,12 @@ export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange
               />
               <div className="flex gap-2">
                 <select
-                  value={config.borderTextPosition || 'bottom-center'}
-                  onChange={(e) => onChange({ borderTextPosition: e.target.value as BorderTextPosition })}
+                  value={config.borderTextPosition || "bottom-center"}
+                  onChange={(e) =>
+                    onChange({
+                      borderTextPosition: e.target.value as BorderTextPosition,
+                    })
+                  }
                   className="flex-1 px-2 py-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs text-slate-700 dark:text-slate-200"
                   aria-label="Border text position"
                 >
@@ -128,8 +155,10 @@ export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange
                 <div className="flex items-center gap-1">
                   <input
                     type="color"
-                    value={config.borderTextColor || '#ffffff'}
-                    onChange={(e) => onChange({ borderTextColor: e.target.value })}
+                    value={config.borderTextColor || "#ffffff"}
+                    onChange={(e) =>
+                      onChange({ borderTextColor: e.target.value })
+                    }
                     className="w-6 h-6 rounded cursor-pointer border-0 p-0 bg-transparent"
                     title="Text Color"
                     aria-label="Border text color"
@@ -142,15 +171,26 @@ export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 {config.borderLogoUrl ? (
-                  <img src={config.borderLogoUrl} alt="Border Logo" width={32} height={32} className="w-8 h-8 object-contain bg-white rounded border border-slate-200" />
+                  <img
+                    src={config.borderLogoUrl}
+                    alt="Border Logo"
+                    width={32}
+                    height={32}
+                    className="w-8 h-8 object-contain bg-white rounded border border-slate-200"
+                  />
                 ) : (
-                  <span className="text-xs text-slate-500 dark:text-slate-400 italic">No secondary logo</span>
+                  <span className="text-xs text-slate-500 dark:text-slate-400 italic">
+                    No secondary logo
+                  </span>
                 )}
                 {config.borderLogoUrl && (
                   <Button
                     variant="error"
                     size="icon"
-                    onClick={() => { onChange({ borderLogoUrl: null }); setError(null); }}
+                    onClick={() => {
+                      onChange({ borderLogoUrl: null });
+                      setError(null);
+                    }}
                     className="p-1 rounded-full w-auto h-auto min-w-0"
                     aria-label="Remove border logo"
                   >
@@ -165,7 +205,7 @@ export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange
                 className="text-teal-600 dark:text-teal-400 hover:text-teal-700 hover:bg-teal-50"
               >
                 <Upload className="w-3 h-3 mr-1" />
-                {config.borderLogoUrl ? 'Change' : 'Add Logo'}
+                {config.borderLogoUrl ? "Change" : "Add Logo"}
               </Button>
               <input
                 ref={borderLogoInputRef}
@@ -175,12 +215,23 @@ export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange
                 onChange={handleBorderLogoUpload}
               />
             </div>
-            {error && <div role="alert" className="mt-1 text-xs text-rose-600 dark:text-rose-400">{error}</div>}
+            {error && (
+              <div
+                role="alert"
+                className="mt-1 text-xs text-rose-600 dark:text-rose-400"
+              >
+                {error}
+              </div>
+            )}
             {config.borderLogoUrl && (
               <div className="mt-2">
                 <select
-                  value={config.borderLogoPosition || 'bottom-center'}
-                  onChange={(e) => onChange({ borderLogoPosition: e.target.value as BorderLogoPosition })}
+                  value={config.borderLogoPosition || "bottom-center"}
+                  onChange={(e) =>
+                    onChange({
+                      borderLogoPosition: e.target.value as BorderLogoPosition,
+                    })
+                  }
                   className="w-full px-2 py-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs text-slate-700 dark:text-slate-200"
                   aria-label="Border logo position"
                 >

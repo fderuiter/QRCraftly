@@ -16,9 +16,14 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { usePageContext } from 'vike-react/usePageContext';
-import { safeJsonLdStringify } from '@/utils/security';
-import { resolveDomainForPath, resolvePublicUrl, resolveImageUrl, getSanitizedPath } from '@/utils/metadataEngine';
+import { usePageContext } from "vike-react/usePageContext";
+import { safeJsonLdStringify } from "@/utils/security";
+import {
+  resolveDomainForPath,
+  resolvePublicUrl,
+  resolveImageUrl,
+  getSanitizedPath,
+} from "@/utils/metadataEngine";
 
 /**
  * HeadDefault Component
@@ -32,7 +37,8 @@ import { resolveDomainForPath, resolvePublicUrl, resolveImageUrl, getSanitizedPa
  * @returns {JSX.Element} The fragment containing meta and link tags.
  */
 export default function HeadDefault() {
-  const fontUrl = "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap";
+  const fontUrl =
+    "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap";
 
   const pageContext = usePageContext();
   // Vike-react exposes the resolved config in pageContext.config
@@ -40,14 +46,30 @@ export default function HeadDefault() {
   const { config, is404 } = pageContext as any;
 
   // Helper to resolve potentially functional config values
-  const getString = (val: string | ((pageContext: any) => string | null | undefined) | undefined | null, context: any, fallback: string): string => {
+  const getString = (
+    val:
+      | string
+      | ((pageContext: any) => string | null | undefined)
+      | undefined
+      | null,
+    context: any,
+    fallback: string,
+  ): string => {
     if (!val) return fallback;
-    const result = typeof val === 'function' ? val(context) : val;
+    const result = typeof val === "function" ? val(context) : val;
     return result || fallback;
   };
 
-  const title = getString(config?.title ?? undefined, pageContext, "QRCraftly - Free Custom QR Code Generator");
-  const description = getString(config?.description ?? undefined, pageContext, "Generate beautiful, custom QR codes for free. No sign-up required.");
+  const title = getString(
+    config?.title ?? undefined,
+    pageContext,
+    "QRCraftly - Free Custom QR Code Generator",
+  );
+  const description = getString(
+    config?.description ?? undefined,
+    pageContext,
+    "Generate beautiful, custom QR codes for free. No sign-up required.",
+  );
 
   const resolvedDomain = resolveDomainForPath(pageContext.urlPathname);
   const canonicalUrl = resolvePublicUrl(pageContext.urlPathname);
@@ -65,23 +87,22 @@ export default function HeadDefault() {
       {
         "@type": "Organization",
         "@id": `${resolvedDomain}/#organization`,
-        "name": "QRCraftly",
-        "url": resolvedDomain,
-        "logo": `${resolvedDomain}/favicon.png`,
-        "sameAs": [
-          "https://github.com/fderuiter/QRCraftly"
-        ]
+        name: "QRCraftly",
+        url: resolvedDomain,
+        logo: `${resolvedDomain}/favicon.png`,
+        sameAs: ["https://github.com/fderuiter/QRCraftly"],
       },
       {
         "@type": "WebSite",
-        "name": "QRCraftly",
-        "url": resolvedDomain,
-        "description": "Free, secure, and client-side QR code generator with privacy-first architecture.",
-        "publisher": {
-          "@id": `${resolvedDomain}/#organization`
-        }
-      }
-    ]
+        name: "QRCraftly",
+        url: resolvedDomain,
+        description:
+          "Free, secure, and client-side QR code generator with privacy-first architecture.",
+        publisher: {
+          "@id": `${resolvedDomain}/#organization`,
+        },
+      },
+    ],
   };
 
   // Breadcrumb Schema Generation
@@ -89,8 +110,8 @@ export default function HeadDefault() {
   const formatPathName = (segment: string): string => {
     // Dictionary for specific overrides
     const overrides: Record<string, string> = {
-      'wifi-qr-code': 'WiFi QR Code',
-      'about': 'About',
+      "wifi-qr-code": "WiFi QR Code",
+      about: "About",
     };
 
     if (overrides[segment]) {
@@ -99,39 +120,39 @@ export default function HeadDefault() {
 
     // Default: Capitalize each word (replace dashes with spaces)
     return segment
-      .split('-')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
+      .split("-")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ");
   };
 
   const breadcrumbItems: any[] = [
     {
       "@type": "ListItem",
-      "position": 1,
-      "name": "Home",
-      "item": `${resolvedDomain}/`
-    }
+      position: 1,
+      name: "Home",
+      item: `${resolvedDomain}/`,
+    },
   ];
 
   // Dynamically generate breadcrumbs from path
   const sanitizedPath = getSanitizedPath(pageContext.urlPathname);
-  const pathSegments = sanitizedPath.split('/').filter(Boolean);
-  let currentPath = '';
+  const pathSegments = sanitizedPath.split("/").filter(Boolean);
+  let currentPath = "";
 
   pathSegments.forEach((segment: string, index: number) => {
     currentPath += `/${segment}`;
     breadcrumbItems.push({
       "@type": "ListItem",
-      "position": index + 2, // 1 is Home, so start at 2
-      "name": formatPathName(segment),
-      "item": `${resolvedDomain}${currentPath}`
+      position: index + 2, // 1 is Home, so start at 2
+      name: formatPathName(segment),
+      item: `${resolvedDomain}${currentPath}`,
     });
   });
 
   const breadcrumbSchema = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
-    "itemListElement": breadcrumbItems
+    itemListElement: breadcrumbItems,
   };
 
   return (
@@ -142,7 +163,10 @@ export default function HeadDefault() {
         - style-src: Removed 'unsafe-inline' by refactoring font loading and dynamic preview styles.
         - object-src 'none': Prevents Flash/Java applets.
       */}
-      <meta httpEquiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests;" />
+      <meta
+        httpEquiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests;"
+      />
 
       {/*
         Note: 'viewport' and 'description' are handled by Vike/Config to avoid duplicates.
@@ -152,8 +176,18 @@ export default function HeadDefault() {
       */}
 
       {/* Global Structured Data */}
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(schemaData) }} />
-      {!is404 && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(breadcrumbSchema) }} />}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(schemaData) }}
+      />
+      {!is404 && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: safeJsonLdStringify(breadcrumbSchema),
+          }}
+        />
+      )}
 
       {/* Canonical URL - Do not render for 404 pages to avoid indexing errors */}
       {!is404 && <link rel="canonical" href={canonicalUrl} />}
@@ -186,7 +220,11 @@ export default function HeadDefault() {
       <link rel="icon" type="image/png" href="/favicon.png" />
       <link rel="apple-touch-icon" href="/favicon.png" />
       <link rel="preconnect" href="https://fonts.googleapis.com" />
-      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+      <link
+        rel="preconnect"
+        href="https://fonts.gstatic.com"
+        crossOrigin="anonymous"
+      />
 
       {/*
          Load fonts synchronously to prevent Layout Shifts (CLS).

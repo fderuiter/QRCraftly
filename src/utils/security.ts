@@ -26,17 +26,20 @@
 export const safeJsonLdStringify = (data: any): string => {
   // eslint-disable-next-line no-restricted-syntax
   const str = JSON.stringify(data);
-  if (!str) return '{}';
+  if (!str) return "{}";
 
-  return str.replace(/</g, '\\u003c')
-            .replace(/>/g, '\\u003e')
-            .replace(/&/g, '\\u0026');
+  return str
+    .replace(/</g, "\\u003c")
+    .replace(/>/g, "\\u003e")
+    .replace(/&/g, "\\u0026");
 };
 
-import { ValidationEngine } from '../engine/ValidationEngine';
+import { ValidationEngine } from "../engine/ValidationEngine";
 
-export const REGEX_STRICT_CONTROL_CHARS = ValidationEngine.REGEX_STRICT_CONTROL_CHARS;
-export const REGEX_PRESERVE_FORMAT_CONTROL_CHARS = ValidationEngine.REGEX_PRESERVE_FORMAT_CONTROL_CHARS;
+export const REGEX_STRICT_CONTROL_CHARS =
+  ValidationEngine.REGEX_STRICT_CONTROL_CHARS;
+export const REGEX_PRESERVE_FORMAT_CONTROL_CHARS =
+  ValidationEngine.REGEX_PRESERVE_FORMAT_CONTROL_CHARS;
 export const REGEX_URL_UNSAFE_CHARS = ValidationEngine.REGEX_URL_UNSAFE_CHARS;
 
 export const isDangerousUrl = (url: string | undefined): boolean => {
@@ -55,10 +58,8 @@ export const sanitizeInput = (str: string): string => {
  * @returns The cleaned phone number string.
  */
 export const cleanPhoneNumber = (number: string): string => {
-  return number.replace(/[^0-9+*#\-().]/g, '');
+  return number.replace(/[^0-9+*#\-().]/g, "");
 };
-
-
 
 /**
  * Validates an uploaded image file for size and type.
@@ -69,12 +70,17 @@ export const cleanPhoneNumber = (number: string): string => {
 export const validateImageUpload = (file: File): string | null => {
   const MAX_SIZE = 2 * 1024 * 1024; // 2MB
   if (file.size > MAX_SIZE) {
-    return 'File size exceeds the 2MB limit.';
+    return "File size exceeds the 2MB limit.";
   }
 
-  const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'];
+  const allowedTypes = [
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "image/svg+xml",
+  ];
   if (!allowedTypes.includes(file.type)) {
-    return 'Invalid file type. Only JPEG, PNG, WebP, and SVG are allowed.';
+    return "Invalid file type. Only JPEG, PNG, WebP, and SVG are allowed.";
   }
 
   return null;

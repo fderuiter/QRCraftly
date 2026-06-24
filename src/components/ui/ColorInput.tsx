@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from "react";
 
 /**
  * Helper component for color inputs to reduce duplication.
@@ -18,7 +18,7 @@ export const ColorInput: React.FC<ColorInputProps> = ({
   value,
   onChange,
   displayValue,
-  sizeClass = "w-10 h-10"
+  sizeClass = "w-10 h-10",
 }) => {
   const [textValue, setTextValue] = useState(displayValue || value);
   const textValueRef = useRef(textValue);
@@ -35,9 +35,12 @@ export const ColorInput: React.FC<ColorInputProps> = ({
       if (!match) return null;
       let hex = match[1];
       if (hex.length === 3) {
-        hex = hex.split('').map(c => c + c).join('');
+        hex = hex
+          .split("")
+          .map((c) => c + c)
+          .join("");
       }
-      return '#' + hex.toLowerCase();
+      return "#" + hex.toLowerCase();
     };
 
     const currentText = textValueRef.current;
@@ -61,32 +64,38 @@ export const ColorInput: React.FC<ColorInputProps> = ({
     if (hexMatch) {
       let hex = hexMatch[1];
       if (hex.length === 3) {
-        hex = hex.split('').map(c => c + c).join('');
+        hex = hex
+          .split("")
+          .map((c) => c + c)
+          .join("");
       }
-      onChange('#' + hex);
+      onChange("#" + hex);
     }
   };
 
   return (
     <div>
-      <label htmlFor={id} className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
+      <label
+        htmlFor={id}
+        className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1"
+      >
         {label}
       </label>
       <div className="flex items-center gap-2">
-          <input
-            id={id}
-            type="color"
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            className={`${sizeClass} rounded cursor-pointer border-0 p-0 bg-transparent`}
-          />
-          <input
-            type="text"
-            value={textValue}
-            onChange={handleTextChange}
-            className="text-xs text-slate-600 dark:text-slate-300 font-mono bg-transparent border border-transparent hover:border-slate-300 rounded px-1 py-0.5 w-24 transition-colors"
-            aria-label={`${label} Hex Code`}
-          />
+        <input
+          id={id}
+          type="color"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className={`${sizeClass} rounded cursor-pointer border-0 p-0 bg-transparent`}
+        />
+        <input
+          type="text"
+          value={textValue}
+          onChange={handleTextChange}
+          className="text-xs text-slate-600 dark:text-slate-300 font-mono bg-transparent border border-transparent hover:border-slate-300 rounded px-1 py-0.5 w-24 transition-colors"
+          aria-label={`${label} Hex Code`}
+        />
       </div>
     </div>
   );

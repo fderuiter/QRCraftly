@@ -16,7 +16,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { usePageContext } from 'vike-react/usePageContext';
+import { usePageContext } from "vike-react/usePageContext";
 
 /**
  * Error Page Component
@@ -39,11 +39,16 @@ export default function Page() {
         </>
       ) : (
         <>
-          <h1 className="text-4xl font-bold mb-4">500 - Internal Server Error</h1>
+          <h1 className="text-4xl font-bold mb-4">
+            500 - Internal Server Error
+          </h1>
           <p className="mb-8">Something went wrong on our end.</p>
         </>
       )}
-      <a href="/" className="px-4 py-2 bg-teal-700 text-white rounded hover:bg-teal-800 transition-colors">
+      <a
+        href="/"
+        className="px-4 py-2 bg-teal-700 text-white rounded hover:bg-teal-800 transition-colors"
+      >
         Go Home
       </a>
     </div>

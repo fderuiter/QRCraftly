@@ -17,18 +17,18 @@
 */
 
 // Re-export specific generators
-export * from './qr-generators/wifi';
-export * from './qr-generators/email';
-export * from './qr-generators/vcard';
-export * from './qr-generators/phone';
-export * from './qr-generators/sms';
-export * from './qr-generators/payment';
-export * from './qr-generators/event';
-export * from './qr-generators/url';
-export * from './qr-generators/text';
-export * from './qr-generators/location';
-export * from './qr-generators/meeting';
-export * from './qr-generators/social';
+export * from "./qr-generators/wifi";
+export * from "./qr-generators/email";
+export * from "./qr-generators/vcard";
+export * from "./qr-generators/phone";
+export * from "./qr-generators/sms";
+export * from "./qr-generators/payment";
+export * from "./qr-generators/event";
+export * from "./qr-generators/url";
+export * from "./qr-generators/text";
+export * from "./qr-generators/location";
+export * from "./qr-generators/meeting";
+export * from "./qr-generators/social";
 
 // Re-export generic URL utility
-export * from './url';
+export * from "./url";

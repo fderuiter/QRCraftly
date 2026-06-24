@@ -16,21 +16,26 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { describe, it, expect } from 'vitest';
-import { isEye, calculateLayout, getLogoMetrics, getIsCoveredByLogo } from './utils';
-import { DEFAULT_CONFIG } from '../../constants';
-import { QRConfig, QRErrorCorrectionLevel } from '../../types';
+import { describe, it, expect } from "vitest";
+import {
+  isEye,
+  calculateLayout,
+  getLogoMetrics,
+  getIsCoveredByLogo,
+} from "./utils";
+import { DEFAULT_CONFIG } from "../../constants";
+import { QRConfig, QRErrorCorrectionLevel } from "../../types";
 
-describe('QR Renderer Utils', () => {
-  describe('isEye', () => {
-    it('identifies top-left eye', () => {
+describe("QR Renderer Utils", () => {
+  describe("isEye", () => {
+    it("identifies top-left eye", () => {
       expect(isEye(0, 0, 21)).toBe(true);
       expect(isEye(6, 6, 21)).toBe(true);
       expect(isEye(0, 6, 21)).toBe(true);
       expect(isEye(6, 0, 21)).toBe(true);
     });
 
-    it('identifies top-right eye', () => {
+    it("identifies top-right eye", () => {
       // moduleCount - 7 = 14
       expect(isEye(0, 14, 21)).toBe(true);
       expect(isEye(6, 20, 21)).toBe(true);
@@ -38,7 +43,7 @@ describe('QR Renderer Utils', () => {
       expect(isEye(6, 14, 21)).toBe(true);
     });
 
-    it('identifies bottom-left eye', () => {
+    it("identifies bottom-left eye", () => {
       // moduleCount - 7 = 14
       expect(isEye(14, 0, 21)).toBe(true);
       expect(isEye(20, 6, 21)).toBe(true);
@@ -46,18 +51,18 @@ describe('QR Renderer Utils', () => {
       expect(isEye(20, 0, 21)).toBe(true);
     });
 
-    it('does not identify bottom-right as eye (alignment pattern area)', () => {
+    it("does not identify bottom-right as eye (alignment pattern area)", () => {
       expect(isEye(14, 14, 21)).toBe(false);
       expect(isEye(20, 20, 21)).toBe(false);
     });
 
-    it('does not identify middle area as eye', () => {
+    it("does not identify middle area as eye", () => {
       expect(isEye(10, 10, 21)).toBe(false);
     });
   });
 
-  describe('calculateLayout', () => {
-    it('calculates layout without border', () => {
+  describe("calculateLayout", () => {
+    it("calculates layout without border", () => {
       const config = { ...DEFAULT_CONFIG, isBorderEnabled: false };
       const result = calculateLayout(config, 100, 25);
       expect(result).toEqual({
@@ -65,12 +70,16 @@ describe('QR Renderer Utils', () => {
         drawY: 12.121212121212121,
         drawSize: 75.75757575757575,
         cellSize: 3.03030303030303,
-        borderPx: 12.121212121212121
+        borderPx: 12.121212121212121,
       });
     });
 
-    it('calculates layout with border', () => {
-      const config = { ...DEFAULT_CONFIG, isBorderEnabled: true, borderSize: 0.1 };
+    it("calculates layout with border", () => {
+      const config = {
+        ...DEFAULT_CONFIG,
+        isBorderEnabled: true,
+        borderSize: 0.1,
+      };
       const result = calculateLayout(config, 100, 20);
       // Border is 10% of 100 = 10px
       // drawSize = 100 - (10*2) = 80
@@ -80,22 +89,22 @@ describe('QR Renderer Utils', () => {
         drawY: 14.285714285714286,
         drawSize: 71.42857142857143,
         cellSize: 3.5714285714285716,
-        borderPx: 14.285714285714286
+        borderPx: 14.285714285714286,
       });
     });
   });
 
-  describe('getLogoMetrics', () => {
+  describe("getLogoMetrics", () => {
     const cellSize = 10;
     const moduleCount = 21; // Standard V1 QR Code
 
-    it('calculates metrics for logo within safe limits', () => {
+    it("calculates metrics for logo within safe limits", () => {
       const config: QRConfig = {
         ...DEFAULT_CONFIG,
         logoSize: 0.2, // 20% of 21 = 4.2 modules
         logoPadding: 0,
-        logoPaddingStyle: 'none',
-        errorCorrectionLevel: QRErrorCorrectionLevel.H // Safe ratio 0.50
+        logoPaddingStyle: "none",
+        errorCorrectionLevel: QRErrorCorrectionLevel.H, // Safe ratio 0.50
       };
 
       const metrics = getLogoMetrics(config, moduleCount, cellSize);
@@ -108,13 +117,13 @@ describe('QR Renderer Utils', () => {
       expect(metrics.effectivePaddingModules).toBe(0);
     });
 
-    it('scales down logo if it exceeds safe limit for Low error correction', () => {
+    it("scales down logo if it exceeds safe limit for Low error correction", () => {
       const config: QRConfig = {
         ...DEFAULT_CONFIG,
         logoSize: 0.3, // 30% of 21 = 6.3 modules
         logoPadding: 0,
-        logoPaddingStyle: 'none',
-        errorCorrectionLevel: QRErrorCorrectionLevel.L // Safe ratio 0.22
+        logoPaddingStyle: "none",
+        errorCorrectionLevel: QRErrorCorrectionLevel.L, // Safe ratio 0.22
       };
 
       // Safe limit: 21 * 0.22 = 4.62 modules
@@ -126,47 +135,47 @@ describe('QR Renderer Utils', () => {
       expect(metrics.cutoutModuleSize).toBeCloseTo(4.62);
     });
 
-    it('scales down logo considering padding', () => {
-        // Safe limit for M is 0.35 * 21 = 7.35 modules
-        const config: QRConfig = {
-            ...DEFAULT_CONFIG,
-            logoSize: 0.3, // 6.3 modules
-            logoPadding: 1, // + 2 modules (1 each side) = 8.3 modules total requested
-            logoPaddingStyle: 'square',
-            errorCorrectionLevel: QRErrorCorrectionLevel.M
-        };
+    it("scales down logo considering padding", () => {
+      // Safe limit for M is 0.35 * 21 = 7.35 modules
+      const config: QRConfig = {
+        ...DEFAULT_CONFIG,
+        logoSize: 0.3, // 6.3 modules
+        logoPadding: 1, // + 2 modules (1 each side) = 8.3 modules total requested
+        logoPaddingStyle: "square",
+        errorCorrectionLevel: QRErrorCorrectionLevel.M,
+      };
 
-        // Requested total cutout: 8.3 modules
-        // Max allowed: 7.35 modules
-        // Scale factor: 7.35 / 8.3 ≈ 0.8855
+      // Requested total cutout: 8.3 modules
+      // Max allowed: 7.35 modules
+      // Scale factor: 7.35 / 8.3 ≈ 0.8855
 
-        const metrics = getLogoMetrics(config, moduleCount, cellSize);
-        expect(metrics.cutoutModuleSize).toBeCloseTo(7.35);
-        // Padding should also be scaled
-        expect(metrics.effectivePaddingModules).toBeLessThan(1);
+      const metrics = getLogoMetrics(config, moduleCount, cellSize);
+      expect(metrics.cutoutModuleSize).toBeCloseTo(7.35);
+      // Padding should also be scaled
+      expect(metrics.effectivePaddingModules).toBeLessThan(1);
     });
 
-    it('defaults to 0.50 safe area ratio for invalid error correction levels', () => {
-        const config: any = {
-            ...DEFAULT_CONFIG,
-            logoSize: 0.4, // 40% of 21 = 8.4 modules
-            logoPadding: 0,
-            logoPaddingStyle: 'none',
-            errorCorrectionLevel: 'INVALID' // Trigger the ?? 0.50 fallback
-        };
+    it("defaults to 0.50 safe area ratio for invalid error correction levels", () => {
+      const config: any = {
+        ...DEFAULT_CONFIG,
+        logoSize: 0.4, // 40% of 21 = 8.4 modules
+        logoPadding: 0,
+        logoPaddingStyle: "none",
+        errorCorrectionLevel: "INVALID", // Trigger the ?? 0.50 fallback
+      };
 
-        const metrics = getLogoMetrics(config, moduleCount, cellSize);
+      const metrics = getLogoMetrics(config, moduleCount, cellSize);
 
-        // Since default is 0.50, and 0.4 < 0.50, no scaling should occur
-        expect(metrics.effectiveLogoSizeModules).toBeCloseTo(8.4);
+      // Since default is 0.50, and 0.4 < 0.50, no scaling should occur
+      expect(metrics.effectiveLogoSizeModules).toBeCloseTo(8.4);
     });
   });
 
-  describe('getIsCoveredByLogo', () => {
+  describe("getIsCoveredByLogo", () => {
     const moduleCount = 21;
     const cellSize = 10;
 
-    it('returns false for everything if no logoUrl', () => {
+    it("returns false for everything if no logoUrl", () => {
       const config = { ...DEFAULT_CONFIG, logoUrl: null };
       const metrics = getLogoMetrics(config, moduleCount, cellSize);
       const isCovered = getIsCoveredByLogo(config, moduleCount, metrics);
@@ -175,13 +184,13 @@ describe('QR Renderer Utils', () => {
       expect(isCovered(10, 10)).toBe(false);
     });
 
-    it('covers square area correctly', () => {
+    it("covers square area correctly", () => {
       const config: QRConfig = {
-          ...DEFAULT_CONFIG,
-          logoUrl: 'test.png',
-          logoPaddingStyle: 'square',
-          logoSize: 0.2, // ~4.2 modules
-          logoPadding: 0
+        ...DEFAULT_CONFIG,
+        logoUrl: "test.png",
+        logoPaddingStyle: "square",
+        logoSize: 0.2, // ~4.2 modules
+        logoPadding: 0,
       };
       // Effective size ~4.2 modules.
       // Center is 10.5
@@ -214,13 +223,13 @@ describe('QR Renderer Utils', () => {
       expect(isCovered(10, 13)).toBe(false);
     });
 
-    it('covers circular area correctly', () => {
+    it("covers circular area correctly", () => {
       const config: QRConfig = {
-          ...DEFAULT_CONFIG,
-          logoUrl: 'test.png',
-          logoPaddingStyle: 'circle',
-          logoSize: 0.2, // ~4.2 modules
-          logoPadding: 0
+        ...DEFAULT_CONFIG,
+        logoUrl: "test.png",
+        logoPaddingStyle: "circle",
+        logoSize: 0.2, // ~4.2 modules
+        logoPadding: 0,
       };
 
       const metrics = getLogoMetrics(config, moduleCount, cellSize);

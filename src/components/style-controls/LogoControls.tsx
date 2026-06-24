@@ -1,17 +1,20 @@
-import React, { useRef } from 'react';
-import { Button } from '../ui/Button';
-import { QRConfig, LogoPaddingStyle } from '../../types';
-import { Upload, X, Square, Circle, Minus } from 'lucide-react';
-import { ColorInput } from '../ui/ColorInput';
-import { RangeInput } from '../ui/RangeInput';
-import { useImageUpload } from '../../hooks/useImageUpload';
+import React, { useRef } from "react";
+import { Button } from "../ui/Button";
+import { QRConfig, LogoPaddingStyle } from "../../types";
+import { Upload, X, Square, Circle, Minus } from "lucide-react";
+import { ColorInput } from "../ui/ColorInput";
+import { RangeInput } from "../ui/RangeInput";
+import { useImageUpload } from "../../hooks/useImageUpload";
 
 interface LogoControlsProps {
   config: QRConfig;
   onChange: (updates: Partial<QRConfig>) => void;
 }
 
-export const LogoControls: React.FC<LogoControlsProps> = ({ config, onChange }) => {
+export const LogoControls: React.FC<LogoControlsProps> = ({
+  config,
+  onChange,
+}) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { error, handleUpload, setError } = useImageUpload();
 
@@ -22,10 +25,20 @@ export const LogoControls: React.FC<LogoControlsProps> = ({ config, onChange }) 
   return (
     <div>
       <div className="flex justify-between items-center mb-3">
-        <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Logo</h3>
+        <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+          Logo
+        </h3>
         {config.logoUrl && (
-          <Button variant="error" size="sm" onClick={() => { onChange({ logoUrl: null }); setError(null); }} className="px-2 py-1 rounded">
-            <X className="w-3 h-3 mr-1"/> Remove
+          <Button
+            variant="error"
+            size="sm"
+            onClick={() => {
+              onChange({ logoUrl: null });
+              setError(null);
+            }}
+            className="px-2 py-1 rounded"
+          >
+            <X className="w-3 h-3 mr-1" /> Remove
           </Button>
         )}
       </div>
@@ -42,37 +55,65 @@ export const LogoControls: React.FC<LogoControlsProps> = ({ config, onChange }) 
             <Upload className="w-5 h-5" />
           </div>
           <span className="text-sm font-medium">Upload Logo</span>
-          <span className="text-xs text-slate-600 dark:text-slate-400 mt-1">PNG, JPG (Square recommended)</span>
-          {error && <span role="alert" className="text-xs text-rose-600 dark:text-rose-400 mt-2">{error}</span>}
+          <span className="text-xs text-slate-600 dark:text-slate-400 mt-1">
+            PNG, JPG (Square recommended)
+          </span>
+          {error && (
+            <span
+              role="alert"
+              className="text-xs text-rose-600 dark:text-rose-400 mt-2"
+            >
+              {error}
+            </span>
+          )}
         </Button>
       ) : (
         <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700 space-y-5">
           <div className="flex items-center gap-4">
-            <img src={config.logoUrl} alt="Logo" width={48} height={48} className="w-12 h-12 object-contain bg-white rounded-md border border-slate-200 shadow-sm" />
+            <img
+              src={config.logoUrl}
+              alt="Logo"
+              width={48}
+              height={48}
+              className="w-12 h-12 object-contain bg-white rounded-md border border-slate-200 shadow-sm"
+            />
             <div className="flex-1">
-              <p className="text-sm font-medium text-slate-700 dark:text-slate-200">Custom Logo</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Embedded in center</p>
+              <p className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                Custom Logo
+              </p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Embedded in center
+              </p>
             </div>
           </div>
 
           {/* Logo Border Styles */}
           <div>
-            <label id="logo-border-style-label" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-2">Border Style</label>
+            <label
+              id="logo-border-style-label"
+              className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-2"
+            >
+              Border Style
+            </label>
             <div
               className="flex bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-1"
               role="group"
               aria-labelledby="logo-border-style-label"
             >
               {[
-                { id: 'square', icon: Square, label: 'Square' },
-                { id: 'circle', icon: Circle, label: 'Circle' },
-                { id: 'none', icon: Minus, label: 'None' },
+                { id: "square", icon: Square, label: "Square" },
+                { id: "circle", icon: Circle, label: "Circle" },
+                { id: "none", icon: Minus, label: "None" },
               ].map((style) => (
                 <Button
                   key={style.id}
-                  variant={config.logoPaddingStyle === style.id ? 'secondary' : 'ghost'}
+                  variant={
+                    config.logoPaddingStyle === style.id ? "secondary" : "ghost"
+                  }
                   size="none"
-                  onClick={() => onChange({ logoPaddingStyle: style.id as LogoPaddingStyle })}
+                  onClick={() =>
+                    onChange({ logoPaddingStyle: style.id as LogoPaddingStyle })
+                  }
                   aria-pressed={config.logoPaddingStyle === style.id}
                   aria-label={`Set logo border style to ${style.label}`}
                   className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs"
@@ -86,7 +127,7 @@ export const LogoControls: React.FC<LogoControlsProps> = ({ config, onChange }) 
           </div>
 
           {/* Conditional Controls for Border */}
-          {config.logoPaddingStyle !== 'none' && (
+          {config.logoPaddingStyle !== "none" && (
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <RangeInput
@@ -104,7 +145,7 @@ export const LogoControls: React.FC<LogoControlsProps> = ({ config, onChange }) 
                 label="Background Color"
                 value={config.logoBackgroundColor || config.bgColor}
                 onChange={(val) => onChange({ logoBackgroundColor: val })}
-                displayValue={config.logoBackgroundColor || 'Auto'}
+                displayValue={config.logoBackgroundColor || "Auto"}
                 sizeClass="w-8 h-8"
               />
             </div>

@@ -16,17 +16,16 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-
-import React from 'react';
-import { QRConfig } from '../types';
+import React from "react";
+import { QRConfig } from "../types";
 import {
   BorderControls,
   PatternControls,
   ColorControls,
   LogoControls,
   AdvancedControls,
-  LayoutControls
-} from './style-controls';
+  LayoutControls,
+} from "./style-controls";
 
 /**
  * Props for the StyleControls component.
@@ -90,7 +89,7 @@ function arePropsEqual(prev: StyleControlsProps, next: StyleControlsProps) {
 
   for (const key of keys) {
     // Skip content-related properties
-    if (key === 'value' || key === 'type') continue;
+    if (key === "value" || key === "type") continue;
 
     // If any style property differs, re-render
     if (prev.config[key] !== next.config[key]) {

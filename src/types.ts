@@ -16,63 +16,62 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-
 /**
  * Defines the visual style of the QR code.
  * Each style dictates the data modules, eye frame, and eyeball appearance.
  */
 export enum QRStyle {
-  STANDARD = 'standard',
-  MODERN = 'modern',
-  SWISS = 'swiss',
-  FLUID = 'fluid',
-  CIRCUIT = 'circuit',
-  HIVE = 'hive',
-  GRUNGE = 'grunge',
-  STARBURST = 'starburst',
+  STANDARD = "standard",
+  MODERN = "modern",
+  SWISS = "swiss",
+  FLUID = "fluid",
+  CIRCUIT = "circuit",
+  HIVE = "hive",
+  GRUNGE = "grunge",
+  STARBURST = "starburst",
 }
 
 /**
  * Defines the type of data encoded in the QR code.
  */
 export enum QRType {
-  URL = 'URL',
-  TEXT = 'TEXT',
-  WIFI = 'WIFI',
-  EVENT = 'EVENT',
-  EMAIL = 'EMAIL',
-  VCARD = 'VCARD',
-  PHONE = 'PHONE',
-  SMS = 'SMS',
-  PAYMENT = 'PAYMENT',
-  LOCATION = 'LOCATION',
-  MEETING = 'MEETING',
-  SOCIAL = 'SOCIAL',
+  URL = "URL",
+  TEXT = "TEXT",
+  WIFI = "WIFI",
+  EVENT = "EVENT",
+  EMAIL = "EMAIL",
+  VCARD = "VCARD",
+  PHONE = "PHONE",
+  SMS = "SMS",
+  PAYMENT = "PAYMENT",
+  LOCATION = "LOCATION",
+  MEETING = "MEETING",
+  SOCIAL = "SOCIAL",
 }
 
 /**
  * Defines the encryption type for WiFi networks.
  */
 export enum WifiEncryption {
-  WPA = 'WPA',
-  WEP = 'WEP',
-  NOPASS = 'nopass',
-  WPA2_EAP = 'WPA2-EAP',
+  WPA = "WPA",
+  WEP = "WEP",
+  NOPASS = "nopass",
+  WPA2_EAP = "WPA2-EAP",
 }
 
 /**
  * Defines the shape of the padding area around an embedded logo.
  */
-export type LogoPaddingStyle = 'square' | 'circle' | 'none';
+export type LogoPaddingStyle = "square" | "circle" | "none";
 
 /**
  * Defines the error correction level for the QR code.
  */
 export enum QRErrorCorrectionLevel {
-  L = 'L',
-  M = 'M',
-  Q = 'Q',
-  H = 'H',
+  L = "L",
+  M = "M",
+  Q = "Q",
+  H = "H",
 }
 
 /**
@@ -145,17 +144,17 @@ export interface QRConfig {
 /**
  * Defines the style of the border around the QR code.
  */
-export type BorderStyle = 'solid' | 'dashed' | 'dotted' | 'double';
+export type BorderStyle = "solid" | "dashed" | "dotted" | "double";
 
 /**
  * Defines the position of the text on the border.
  */
-export type BorderTextPosition = 'top-center' | 'bottom-center';
+export type BorderTextPosition = "top-center" | "bottom-center";
 
 /**
  * Defines the position of the logo on the border.
  */
-export type BorderLogoPosition = 'bottom-center' | 'bottom-right';
+export type BorderLogoPosition = "bottom-center" | "bottom-right";
 
 /**
  * Data structure for WiFi network configuration.
@@ -251,11 +250,11 @@ export interface EventData {
  * Supported cryptocurrency networks for payment.
  */
 export enum CryptoNetwork {
-  BITCOIN = 'bitcoin',
-  ETHEREUM = 'ethereum',
-  SOLANA = 'solana',
-  LITECOIN = 'litecoin',
-  CUSTOM = 'custom',
+  BITCOIN = "bitcoin",
+  ETHEREUM = "ethereum",
+  SOLANA = "solana",
+  LITECOIN = "litecoin",
+  CUSTOM = "custom",
 }
 
 /**
@@ -310,9 +309,9 @@ export interface LocationData {
  * Supported social media platforms for deep links.
  */
 export enum SocialPlatform {
-  INSTAGRAM = 'instagram',
-  TWITTER = 'twitter',
-  TIKTOK = 'tiktok',
+  INSTAGRAM = "instagram",
+  TWITTER = "twitter",
+  TIKTOK = "tiktok",
 }
 
 /**
@@ -337,17 +336,17 @@ export interface MeetingData {
  * Defines the social media export aspect ratio / format.
  */
 export enum SocialFormat {
-  SQUARE_1_1 = '1:1',
-  PORTRAIT_4_5 = '4:5',
-  STORY_9_16 = '9:16',
+  SQUARE_1_1 = "1:1",
+  PORTRAIT_4_5 = "4:5",
+  STORY_9_16 = "9:16",
 }
 
 /**
  * Defines the visual template style applied to the social export canvas.
  */
 export enum TemplateStyle {
-  NONE = 'none',
-  MINIMALIST = 'minimalist',
-  GRADIENT_BLUR = 'gradient_blur',
-  SOLID_FRAME = 'solid_frame',
+  NONE = "none",
+  MINIMALIST = "minimalist",
+  GRADIENT_BLUR = "gradient_blur",
+  SOLID_FRAME = "solid_frame",
 }

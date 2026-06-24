@@ -16,10 +16,10 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import vikeReact from 'vike-react/config';
-import type { Config } from 'vike/types';
-import Head from '@/layouts/Head';
-import Layout from '@/layouts/LayoutDefault';
+import vikeReact from "vike-react/config";
+import type { Config } from "vike/types";
+import Head from "@/layouts/Head";
+import Layout from "@/layouts/LayoutDefault";
 
 // Default config (can be overridden by pages)
 /**
@@ -41,16 +41,16 @@ export default {
   // https://vike.dev/prerender
   prerender: true,
 
-  lang: 'en',
+  lang: "en",
 
   // Register custom config for Open Graph images
   // https://vike.dev/meta
   meta: {
     image: {
-      env: { server: true, client: true }
+      env: { server: true, client: true },
     },
     imageAlt: {
-      env: { server: true, client: true }
-    }
-  }
+      env: { server: true, client: true },
+    },
+  },
 } satisfies Config;

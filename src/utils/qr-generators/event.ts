@@ -16,8 +16,8 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { EventData } from '../../types';
-import { ValidationEngine } from '../../engine/ValidationEngine';
+import { EventData } from "../../types";
+import { ValidationEngine } from "../../engine/ValidationEngine";
 
 /**
  * Escapes special characters for iCalendar text values.
@@ -32,17 +32,17 @@ export const escapeEventString = (str: string | undefined): string => {
  * Output format: YYYYMMDDTHHMMSS
  */
 export const formatEventDateTime = (dateString: string | undefined): string => {
-  if (!dateString) return '';
+  if (!dateString) return "";
 
   const date = new Date(dateString);
-  if (Number.isNaN(date.getTime())) return '';
+  if (Number.isNaN(date.getTime())) return "";
 
   const year = String(date.getFullYear());
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-  const seconds = String(date.getSeconds()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  const seconds = String(date.getSeconds()).padStart(2, "0");
 
   return `${year}${month}${day}T${hours}${minutes}${seconds}`;
 };
@@ -52,9 +52,11 @@ export const unescapeEventString = (str: string | undefined): string => {
 };
 
 export const parseEventDateTime = (dateString: string | undefined): string => {
-  if (!dateString) return '';
+  if (!dateString) return "";
   // format: YYYYMMDDTHHMMSS
-  const match = dateString.match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})/);
+  const match = dateString.match(
+    /^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})/,
+  );
   if (match) {
     return `${match[1]}-${match[2]}-${match[3]}T${match[4]}:${match[5]}`;
   }
@@ -66,30 +68,40 @@ export const parseEventDateTime = (dateString: string | undefined): string => {
  */
 export const hydrateEventData = (raw: string): EventData => {
   const result: EventData = {
-    title: '',
-    startDate: '',
-    endDate: '',
-    location: '',
-    description: '',
+    title: "",
+    startDate: "",
+    endDate: "",
+    location: "",
+    description: "",
   };
 
-  if (!raw.includes('BEGIN:VEVENT')) return result;
+  if (!raw.includes("BEGIN:VEVENT")) return result;
 
   const lines = raw.split(/\r\n|\r|\n/);
-  lines.forEach(line => {
-    const splitIndex = line.indexOf(':');
+  lines.forEach((line) => {
+    const splitIndex = line.indexOf(":");
     if (splitIndex <= 0) return;
-    
+
     const fullKey = line.substring(0, splitIndex);
-    const key = fullKey.split(';')[0].toUpperCase();
+    const key = fullKey.split(";")[0].toUpperCase();
     const value = line.substring(splitIndex + 1);
 
-    switch(key) {
-      case 'SUMMARY': result.title = unescapeEventString(value); break;
-      case 'DTSTART': result.startDate = parseEventDateTime(value); break;
-      case 'DTEND': result.endDate = parseEventDateTime(value); break;
-      case 'LOCATION': result.location = unescapeEventString(value); break;
-      case 'DESCRIPTION': result.description = unescapeEventString(value); break;
+    switch (key) {
+      case "SUMMARY":
+        result.title = unescapeEventString(value);
+        break;
+      case "DTSTART":
+        result.startDate = parseEventDateTime(value);
+        break;
+      case "DTEND":
+        result.endDate = parseEventDateTime(value);
+        break;
+      case "LOCATION":
+        result.location = unescapeEventString(value);
+        break;
+      case "DESCRIPTION":
+        result.description = unescapeEventString(value);
+        break;
     }
   });
 
@@ -101,18 +113,18 @@ export const hydrateEventData = (raw: string): EventData => {
  */
 export const constructEventString = (data: EventData): string => {
   const parts = [
-    'BEGIN:VCALENDAR',
-    'VERSION:2.0',
-    'PRODID:-//QRCraftly//EN',
-    'BEGIN:VEVENT',
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//QRCraftly//EN",
+    "BEGIN:VEVENT",
     `SUMMARY:${escapeEventString(data.title)}`,
     `DTSTART:${formatEventDateTime(data.startDate)}`,
     `DTEND:${formatEventDateTime(data.endDate)}`,
     `LOCATION:${escapeEventString(data.location)}`,
     `DESCRIPTION:${escapeEventString(data.description)}`,
-    'END:VEVENT',
-    'END:VCALENDAR',
+    "END:VEVENT",
+    "END:VCALENDAR",
   ];
 
-  return parts.join('\n');
+  return parts.join("\n");
 };

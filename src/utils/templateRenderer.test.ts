@@ -16,33 +16,42 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   SOCIAL_DIMENSIONS,
   getAspectRatioCss,
   drawWithTemplate,
-} from './templateRenderer';
-import { DEFAULT_CONFIG } from '../constants';
-import { SocialFormat, TemplateStyle, QRConfig } from '../types';
-import * as qrRenderer from './qrRenderer';
+} from "./templateRenderer";
+import { DEFAULT_CONFIG } from "../constants";
+import { SocialFormat, TemplateStyle, QRConfig } from "../types";
+import * as qrRenderer from "./qrRenderer";
 
 // ---------------------------------------------------------------------------
 // SOCIAL_DIMENSIONS
 // ---------------------------------------------------------------------------
-describe('SOCIAL_DIMENSIONS', () => {
-  it('maps SQUARE_1_1 to 1080x1080', () => {
-    expect(SOCIAL_DIMENSIONS[SocialFormat.SQUARE_1_1]).toEqual({ width: 1080, height: 1080 });
+describe("SOCIAL_DIMENSIONS", () => {
+  it("maps SQUARE_1_1 to 1080x1080", () => {
+    expect(SOCIAL_DIMENSIONS[SocialFormat.SQUARE_1_1]).toEqual({
+      width: 1080,
+      height: 1080,
+    });
   });
 
-  it('maps PORTRAIT_4_5 to 1080x1350', () => {
-    expect(SOCIAL_DIMENSIONS[SocialFormat.PORTRAIT_4_5]).toEqual({ width: 1080, height: 1350 });
+  it("maps PORTRAIT_4_5 to 1080x1350", () => {
+    expect(SOCIAL_DIMENSIONS[SocialFormat.PORTRAIT_4_5]).toEqual({
+      width: 1080,
+      height: 1350,
+    });
   });
 
-  it('maps STORY_9_16 to 1080x1920', () => {
-    expect(SOCIAL_DIMENSIONS[SocialFormat.STORY_9_16]).toEqual({ width: 1080, height: 1920 });
+  it("maps STORY_9_16 to 1080x1920", () => {
+    expect(SOCIAL_DIMENSIONS[SocialFormat.STORY_9_16]).toEqual({
+      width: 1080,
+      height: 1920,
+    });
   });
 
-  it('has aspect ratios matching their names', () => {
+  it("has aspect ratios matching their names", () => {
     const square = SOCIAL_DIMENSIONS[SocialFormat.SQUARE_1_1];
     expect(square.width / square.height).toBeCloseTo(1);
 
@@ -57,17 +66,17 @@ describe('SOCIAL_DIMENSIONS', () => {
 // ---------------------------------------------------------------------------
 // getAspectRatioCss
 // ---------------------------------------------------------------------------
-describe('getAspectRatioCss', () => {
+describe("getAspectRatioCss", () => {
   it('returns "1080/1080" for SQUARE_1_1', () => {
-    expect(getAspectRatioCss(SocialFormat.SQUARE_1_1)).toBe('1080/1080');
+    expect(getAspectRatioCss(SocialFormat.SQUARE_1_1)).toBe("1080/1080");
   });
 
   it('returns "1080/1350" for PORTRAIT_4_5', () => {
-    expect(getAspectRatioCss(SocialFormat.PORTRAIT_4_5)).toBe('1080/1350');
+    expect(getAspectRatioCss(SocialFormat.PORTRAIT_4_5)).toBe("1080/1350");
   });
 
   it('returns "1080/1920" for STORY_9_16', () => {
-    expect(getAspectRatioCss(SocialFormat.STORY_9_16)).toBe('1080/1920');
+    expect(getAspectRatioCss(SocialFormat.STORY_9_16)).toBe("1080/1920");
   });
 });
 
@@ -84,23 +93,31 @@ function makeMockCtx() {
   const fillStyleHistory: string[] = [];
   const strokeStyleHistory: string[] = [];
 
-  let _fillStyle = '';
-  let _strokeStyle = '';
+  let _fillStyle = "";
+  let _strokeStyle = "";
 
   const ctx = {
     _calls: calls,
-    get _fillStyleHistory() { return fillStyleHistory; },
-    get _strokeStyleHistory() { return strokeStyleHistory; },
+    get _fillStyleHistory() {
+      return fillStyleHistory;
+    },
+    get _strokeStyleHistory() {
+      return strokeStyleHistory;
+    },
     clearRect: vi.fn(),
     fillRect: vi.fn(),
     strokeRect: vi.fn(),
     createRadialGradient: vi.fn().mockReturnValue({
       addColorStop: vi.fn(),
     }),
-    save: vi.fn(() => calls.push({ method: 'save', args: [] })),
-    restore: vi.fn(() => calls.push({ method: 'restore', args: [] })),
-    translate: vi.fn((x: number, y: number) => calls.push({ method: 'translate', args: [x, y] })),
-    scale: vi.fn((sx: number, sy: number) => calls.push({ method: 'scale', args: [sx, sy] })),
+    save: vi.fn(() => calls.push({ method: "save", args: [] })),
+    restore: vi.fn(() => calls.push({ method: "restore", args: [] })),
+    translate: vi.fn((x: number, y: number) =>
+      calls.push({ method: "translate", args: [x, y] }),
+    ),
+    scale: vi.fn((sx: number, sy: number) =>
+      calls.push({ method: "scale", args: [sx, sy] }),
+    ),
     fillText: vi.fn(),
     strokeText: vi.fn(),
     measureText: vi.fn().mockReturnValue({ width: 50 }),
@@ -111,14 +128,24 @@ function makeMockCtx() {
     quadraticCurveTo: vi.fn(),
     closePath: vi.fn(),
     fill: vi.fn(),
-    get fillStyle() { return _fillStyle; },
-    set fillStyle(v: string) { _fillStyle = v; fillStyleHistory.push(v); },
-    get strokeStyle() { return _strokeStyle; },
-    set strokeStyle(v: string) { _strokeStyle = v; strokeStyleHistory.push(v); },
+    get fillStyle() {
+      return _fillStyle;
+    },
+    set fillStyle(v: string) {
+      _fillStyle = v;
+      fillStyleHistory.push(v);
+    },
+    get strokeStyle() {
+      return _strokeStyle;
+    },
+    set strokeStyle(v: string) {
+      _strokeStyle = v;
+      strokeStyleHistory.push(v);
+    },
     lineWidth: 1,
-    font: '',
-    textAlign: '',
-    textBaseline: '',
+    font: "",
+    textAlign: "",
+    textBaseline: "",
   } as unknown as CanvasRenderingContext2D;
 
   return ctx;
@@ -132,7 +159,7 @@ function makeModules(size = 21) {
   };
 }
 
-describe('drawWithTemplate', () => {
+describe("drawWithTemplate", () => {
   let drawQRInternalSpy: ReturnType<typeof vi.spyOn>;
   const baseConfig: QRConfig = {
     ...(DEFAULT_CONFIG as QRConfig),
@@ -141,40 +168,75 @@ describe('drawWithTemplate', () => {
   };
 
   beforeEach(() => {
-    drawQRInternalSpy = vi.spyOn(qrRenderer, 'drawQRInternal').mockImplementation(vi.fn());
+    drawQRInternalSpy = vi
+      .spyOn(qrRenderer, "drawQRInternal")
+      .mockImplementation(vi.fn());
   });
 
-  it('calls drawQRInternal exactly once', () => {
+  it("calls drawQRInternal exactly once", () => {
     const ctx = makeMockCtx();
     const modules = makeModules();
-    drawWithTemplate(ctx, modules, baseConfig, null, null, 1080, 1080, modules.size);
+    drawWithTemplate(
+      ctx,
+      modules,
+      baseConfig,
+      null,
+      null,
+      1080,
+      1080,
+      modules.size,
+    );
     expect(drawQRInternalSpy).toHaveBeenCalledTimes(1);
   });
 
-  it('calls save() before and restore() after drawQRInternal', () => {
+  it("calls save() before and restore() after drawQRInternal", () => {
     const ctx = makeMockCtx();
     const modules = makeModules();
-    drawWithTemplate(ctx, modules, baseConfig, null, null, 1080, 1080, modules.size);
+    drawWithTemplate(
+      ctx,
+      modules,
+      baseConfig,
+      null,
+      null,
+      1080,
+      1080,
+      modules.size,
+    );
 
-    const saveIdx = (ctx as any)._calls.findIndex((c: any) => c.method === 'save');
-    const restoreIdx = (ctx as any)._calls.findIndex((c: any) => c.method === 'restore');
+    const saveIdx = (ctx as any)._calls.findIndex(
+      (c: any) => c.method === "save",
+    );
+    const restoreIdx = (ctx as any)._calls.findIndex(
+      (c: any) => c.method === "restore",
+    );
 
     expect(saveIdx).toBeGreaterThanOrEqual(0);
     expect(restoreIdx).toBeGreaterThan(saveIdx);
   });
 
-  it('translates to (0, 0) for NONE + SQUARE (fills entire canvas)', () => {
+  it("translates to (0, 0) for NONE + SQUARE (fills entire canvas)", () => {
     const ctx = makeMockCtx();
     const modules = makeModules();
-    drawWithTemplate(ctx, modules, baseConfig, null, null, 1080, 1080, modules.size);
+    drawWithTemplate(
+      ctx,
+      modules,
+      baseConfig,
+      null,
+      null,
+      1080,
+      1080,
+      modules.size,
+    );
 
-    const translateCall = (ctx as any)._calls.find((c: any) => c.method === 'translate');
+    const translateCall = (ctx as any)._calls.find(
+      (c: any) => c.method === "translate",
+    );
     expect(translateCall).toBeDefined();
     expect(translateCall.args[0]).toBeCloseTo(0);
     expect(translateCall.args[1]).toBeCloseTo(0);
   });
 
-  it('centres the QR bounding box for a non-square canvas (STORY_9_16, MINIMALIST)', () => {
+  it("centres the QR bounding box for a non-square canvas (STORY_9_16, MINIMALIST)", () => {
     const config: QRConfig = {
       ...baseConfig,
       socialFormat: SocialFormat.STORY_9_16,
@@ -185,20 +247,31 @@ describe('drawWithTemplate', () => {
 
     const displayWidth = 1080;
     const displayHeight = 1920;
-    drawWithTemplate(ctx, modules, config, null, null, displayWidth, displayHeight, modules.size);
+    drawWithTemplate(
+      ctx,
+      modules,
+      config,
+      null,
+      null,
+      displayWidth,
+      displayHeight,
+      modules.size,
+    );
 
     // Default scale=1.0 → qrSize = displayWidth * 0.5 * 1.0 = 540
     const qrSize = displayWidth * 0.5; // 540
     const expectedX = (displayWidth - qrSize) / 2; // 270
     const expectedY = (displayHeight - qrSize) / 2; // 690
 
-    const translateCall = (ctx as any)._calls.find((c: any) => c.method === 'translate');
+    const translateCall = (ctx as any)._calls.find(
+      (c: any) => c.method === "translate",
+    );
     expect(translateCall).toBeDefined();
     expect(translateCall.args[0]).toBeCloseTo(expectedX, 0);
     expect(translateCall.args[1]).toBeCloseTo(expectedY, 0);
   });
 
-  it('passes the correct scale factor to ctx.scale()', () => {
+  it("passes the correct scale factor to ctx.scale()", () => {
     const config: QRConfig = {
       ...baseConfig,
       socialFormat: SocialFormat.STORY_9_16,
@@ -209,24 +282,48 @@ describe('drawWithTemplate', () => {
 
     const displayWidth = 1080;
     const displayHeight = 1920;
-    drawWithTemplate(ctx, modules, config, null, null, displayWidth, displayHeight, modules.size);
+    drawWithTemplate(
+      ctx,
+      modules,
+      config,
+      null,
+      null,
+      displayWidth,
+      displayHeight,
+      modules.size,
+    );
 
     // Default scale=1.0 → ctxScale = (displayWidth * 0.5 * 1.0) / displayWidth = 0.5
     const expectedCtxScale = (displayWidth * 0.5) / displayWidth; // 0.5
 
-    const scaleCall = (ctx as any)._calls.find((c: any) => c.method === 'scale');
+    const scaleCall = (ctx as any)._calls.find(
+      (c: any) => c.method === "scale",
+    );
     expect(scaleCall).toBeDefined();
     expect(scaleCall.args[0]).toBeCloseTo(expectedCtxScale, 5);
     expect(scaleCall.args[1]).toBeCloseTo(expectedCtxScale, 5);
   });
 
-  it('passes logo images through to drawQRInternal', () => {
-    const logoImg = { src: 'data:image/png;base64,abc' } as unknown as HTMLImageElement;
-    const borderLogoImg = { src: 'data:image/png;base64,def' } as unknown as HTMLImageElement;
+  it("passes logo images through to drawQRInternal", () => {
+    const logoImg = {
+      src: "data:image/png;base64,abc",
+    } as unknown as HTMLImageElement;
+    const borderLogoImg = {
+      src: "data:image/png;base64,def",
+    } as unknown as HTMLImageElement;
     const ctx = makeMockCtx();
     const modules = makeModules();
 
-    drawWithTemplate(ctx, modules, baseConfig, logoImg, borderLogoImg, 1080, 1080, modules.size);
+    drawWithTemplate(
+      ctx,
+      modules,
+      baseConfig,
+      logoImg,
+      borderLogoImg,
+      1080,
+      1080,
+      modules.size,
+    );
 
     expect(drawQRInternalSpy).toHaveBeenCalledWith(
       expect.anything(),
@@ -236,7 +333,7 @@ describe('drawWithTemplate', () => {
       borderLogoImg,
       expect.any(Number),
       modules.size,
-      false
+      false,
     );
   });
 });
@@ -245,7 +342,7 @@ describe('drawWithTemplate', () => {
 // templateQrScale – bounding box scaling
 // ---------------------------------------------------------------------------
 
-describe('drawWithTemplate – templateQrScale', () => {
+describe("drawWithTemplate – templateQrScale", () => {
   const baseNonSquareConfig: QRConfig = {
     ...(DEFAULT_CONFIG as QRConfig),
     socialFormat: SocialFormat.STORY_9_16,
@@ -253,105 +350,188 @@ describe('drawWithTemplate – templateQrScale', () => {
   };
 
   beforeEach(() => {
-    vi.spyOn(qrRenderer, 'drawQRInternal').mockImplementation(vi.fn());
+    vi.spyOn(qrRenderer, "drawQRInternal").mockImplementation(vi.fn());
   });
 
-  it('templateQrScale=0.5 halves the QR bounding box width', () => {
+  it("templateQrScale=0.5 halves the QR bounding box width", () => {
     const config: QRConfig = { ...baseNonSquareConfig, templateQrScale: 0.5 };
     const ctx = makeMockCtx();
     const modules = makeModules();
 
     const displayWidth = 1080;
-    drawWithTemplate(ctx, modules, config, null, null, displayWidth, 1920, modules.size);
+    drawWithTemplate(
+      ctx,
+      modules,
+      config,
+      null,
+      null,
+      displayWidth,
+      1920,
+      modules.size,
+    );
 
     // Expected: qrSize = displayWidth * 0.5 * 0.5 = 270
     const expectedQrSize = displayWidth * 0.5 * 0.5;
     const expectedCtxScale = expectedQrSize / displayWidth;
 
-    const scaleCall = (ctx as any)._calls.find((c: any) => c.method === 'scale');
+    const scaleCall = (ctx as any)._calls.find(
+      (c: any) => c.method === "scale",
+    );
     expect(scaleCall).toBeDefined();
     expect(scaleCall.args[0]).toBeCloseTo(expectedCtxScale, 5);
     expect(scaleCall.args[1]).toBeCloseTo(expectedCtxScale, 5);
   });
 
-  it('templateQrScale=0.5 re-centres the QR code on a STORY_9_16 canvas', () => {
+  it("templateQrScale=0.5 re-centres the QR code on a STORY_9_16 canvas", () => {
     const config: QRConfig = { ...baseNonSquareConfig, templateQrScale: 0.5 };
     const ctx = makeMockCtx();
     const modules = makeModules();
 
     const displayWidth = 1080;
     const displayHeight = 1920;
-    drawWithTemplate(ctx, modules, config, null, null, displayWidth, displayHeight, modules.size);
+    drawWithTemplate(
+      ctx,
+      modules,
+      config,
+      null,
+      null,
+      displayWidth,
+      displayHeight,
+      modules.size,
+    );
 
     // qrSize = 1080 * 0.5 * 0.5 = 270
     const qrSize = displayWidth * 0.5 * 0.5;
     const expectedX = (displayWidth - qrSize) / 2;
     const expectedY = (displayHeight - qrSize) / 2;
 
-    const translateCall = (ctx as any)._calls.find((c: any) => c.method === 'translate');
+    const translateCall = (ctx as any)._calls.find(
+      (c: any) => c.method === "translate",
+    );
     expect(translateCall).toBeDefined();
     expect(translateCall.args[0]).toBeCloseTo(expectedX, 0);
     expect(translateCall.args[1]).toBeCloseTo(expectedY, 0);
   });
 
-  it('templateQrScale=1.5 enlarges the QR bounding box relative to default', () => {
-    const defaultConfig: QRConfig = { ...baseNonSquareConfig, templateQrScale: 1.0 };
-    const largeConfig: QRConfig = { ...baseNonSquareConfig, templateQrScale: 1.5 };
+  it("templateQrScale=1.5 enlarges the QR bounding box relative to default", () => {
+    const defaultConfig: QRConfig = {
+      ...baseNonSquareConfig,
+      templateQrScale: 1.0,
+    };
+    const largeConfig: QRConfig = {
+      ...baseNonSquareConfig,
+      templateQrScale: 1.5,
+    };
 
     const displayWidth = 1080;
     const ctxDefault = makeMockCtx();
     const ctxLarge = makeMockCtx();
     const modules = makeModules();
 
-    drawWithTemplate(ctxDefault, modules, defaultConfig, null, null, displayWidth, 1920, modules.size);
-    drawWithTemplate(ctxLarge, modules, largeConfig, null, null, displayWidth, 1920, modules.size);
+    drawWithTemplate(
+      ctxDefault,
+      modules,
+      defaultConfig,
+      null,
+      null,
+      displayWidth,
+      1920,
+      modules.size,
+    );
+    drawWithTemplate(
+      ctxLarge,
+      modules,
+      largeConfig,
+      null,
+      null,
+      displayWidth,
+      1920,
+      modules.size,
+    );
 
-    const scaleDefault = (ctxDefault as any)._calls.find((c: any) => c.method === 'scale');
-    const scaleLarge = (ctxLarge as any)._calls.find((c: any) => c.method === 'scale');
+    const scaleDefault = (ctxDefault as any)._calls.find(
+      (c: any) => c.method === "scale",
+    );
+    const scaleLarge = (ctxLarge as any)._calls.find(
+      (c: any) => c.method === "scale",
+    );
 
     expect(scaleLarge.args[0]).toBeGreaterThan(scaleDefault.args[0]);
   });
 
-  it('clamps templateQrScale below 0.5 to 0.5', () => {
+  it("clamps templateQrScale below 0.5 to 0.5", () => {
     const config: QRConfig = { ...baseNonSquareConfig, templateQrScale: 0.1 };
     const ctx = makeMockCtx();
     const modules = makeModules();
 
     const displayWidth = 1080;
-    drawWithTemplate(ctx, modules, config, null, null, displayWidth, 1920, modules.size);
+    drawWithTemplate(
+      ctx,
+      modules,
+      config,
+      null,
+      null,
+      displayWidth,
+      1920,
+      modules.size,
+    );
 
     // Clamped to 0.5 → qrSize = displayWidth * 0.5 * 0.5 = 270
     const expectedCtxScale = (displayWidth * 0.5 * 0.5) / displayWidth;
-    const scaleCall = (ctx as any)._calls.find((c: any) => c.method === 'scale');
+    const scaleCall = (ctx as any)._calls.find(
+      (c: any) => c.method === "scale",
+    );
     expect(scaleCall.args[0]).toBeCloseTo(expectedCtxScale, 5);
   });
 
-  it('clamps templateQrScale above 1.5 to 1.5', () => {
+  it("clamps templateQrScale above 1.5 to 1.5", () => {
     const config: QRConfig = { ...baseNonSquareConfig, templateQrScale: 3.0 };
     const ctx = makeMockCtx();
     const modules = makeModules();
 
     const displayWidth = 1080;
-    drawWithTemplate(ctx, modules, config, null, null, displayWidth, 1920, modules.size);
+    drawWithTemplate(
+      ctx,
+      modules,
+      config,
+      null,
+      null,
+      displayWidth,
+      1920,
+      modules.size,
+    );
 
     // Clamped to 1.5 → qrSize = displayWidth * 0.5 * 1.5 = 810
     const expectedCtxScale = (displayWidth * 0.5 * 1.5) / displayWidth;
-    const scaleCall = (ctx as any)._calls.find((c: any) => c.method === 'scale');
+    const scaleCall = (ctx as any)._calls.find(
+      (c: any) => c.method === "scale",
+    );
     expect(scaleCall.args[0]).toBeCloseTo(expectedCtxScale, 5);
   });
 
-  it('undefined templateQrScale defaults to 1.0 (no change in bounding box)', () => {
+  it("undefined templateQrScale defaults to 1.0 (no change in bounding box)", () => {
     const config: QRConfig = { ...baseNonSquareConfig };
     delete (config as Partial<QRConfig>).templateQrScale;
     const ctx = makeMockCtx();
     const modules = makeModules();
 
     const displayWidth = 1080;
-    drawWithTemplate(ctx, modules, config, null, null, displayWidth, 1920, modules.size);
+    drawWithTemplate(
+      ctx,
+      modules,
+      config,
+      null,
+      null,
+      displayWidth,
+      1920,
+      modules.size,
+    );
 
     // Default 1.0 → qrSize = displayWidth * 0.5 * 1.0 = 540
     const expectedCtxScale = (displayWidth * 0.5) / displayWidth; // 0.5
-    const scaleCall = (ctx as any)._calls.find((c: any) => c.method === 'scale');
+    const scaleCall = (ctx as any)._calls.find(
+      (c: any) => c.method === "scale",
+    );
     expect(scaleCall.args[0]).toBeCloseTo(expectedCtxScale, 5);
   });
 });
@@ -360,36 +540,45 @@ describe('drawWithTemplate – templateQrScale', () => {
 // Color resolution – templateBgColor / templateTextColor
 // ---------------------------------------------------------------------------
 
-describe('drawWithTemplate – color resolution', () => {
+describe("drawWithTemplate – color resolution", () => {
   beforeEach(() => {
-    vi.spyOn(qrRenderer, 'drawQRInternal').mockImplementation(vi.fn());
+    vi.spyOn(qrRenderer, "drawQRInternal").mockImplementation(vi.fn());
   });
 
-  it('uses templateBgColor as background when explicitly set', () => {
+  it("uses templateBgColor as background when explicitly set", () => {
     const config: QRConfig = {
       ...(DEFAULT_CONFIG as QRConfig),
       socialFormat: SocialFormat.STORY_9_16,
       templateStyle: TemplateStyle.MINIMALIST,
-      bgColor: '#ffffff',
-      templateBgColor: '#1a1a2e',
+      bgColor: "#ffffff",
+      templateBgColor: "#1a1a2e",
     };
     const ctx = makeMockCtx();
     const modules = makeModules();
 
-    drawWithTemplate(ctx, modules, config, null, null, 1080, 1920, modules.size);
+    drawWithTemplate(
+      ctx,
+      modules,
+      config,
+      null,
+      null,
+      1080,
+      1920,
+      modules.size,
+    );
 
     // templateBgColor should appear in the fillStyle history for the background fill
-    expect((ctx as any)._fillStyleHistory).toContain('#1a1a2e');
+    expect((ctx as any)._fillStyleHistory).toContain("#1a1a2e");
     // The QR's own bgColor is used for the safe-zone (not the template bg)
-    expect((ctx as any)._fillStyleHistory).toContain('#ffffff');
+    expect((ctx as any)._fillStyleHistory).toContain("#ffffff");
   });
 
-  it('falls back to bgColor when templateBgColor is undefined', () => {
+  it("falls back to bgColor when templateBgColor is undefined", () => {
     const config: QRConfig = {
       ...(DEFAULT_CONFIG as QRConfig),
       socialFormat: SocialFormat.STORY_9_16,
       templateStyle: TemplateStyle.MINIMALIST,
-      bgColor: '#f0f0f0',
+      bgColor: "#f0f0f0",
       templateBgColor: undefined,
     };
     const ctx = makeMockCtx();
@@ -397,41 +586,68 @@ describe('drawWithTemplate – color resolution', () => {
 
     // Should not throw and fillRect should be called
     expect(() =>
-      drawWithTemplate(ctx, modules, config, null, null, 1080, 1920, modules.size)
+      drawWithTemplate(
+        ctx,
+        modules,
+        config,
+        null,
+        null,
+        1080,
+        1920,
+        modules.size,
+      ),
     ).not.toThrow();
     expect(ctx.fillRect).toHaveBeenCalled();
   });
 
-  it('falls back to fgColor when templateTextColor is undefined', () => {
+  it("falls back to fgColor when templateTextColor is undefined", () => {
     const config: QRConfig = {
       ...(DEFAULT_CONFIG as QRConfig),
       socialFormat: SocialFormat.STORY_9_16,
       templateStyle: TemplateStyle.MINIMALIST,
-      fgColor: '#333333',
+      fgColor: "#333333",
       templateTextColor: undefined,
     };
     const ctx = makeMockCtx();
     const modules = makeModules();
 
     expect(() =>
-      drawWithTemplate(ctx, modules, config, null, null, 1080, 1920, modules.size)
+      drawWithTemplate(
+        ctx,
+        modules,
+        config,
+        null,
+        null,
+        1080,
+        1920,
+        modules.size,
+      ),
     ).not.toThrow();
   });
 
-  it('uses templateTextColor as stroke/text color when explicitly set', () => {
+  it("uses templateTextColor as stroke/text color when explicitly set", () => {
     const config: QRConfig = {
       ...(DEFAULT_CONFIG as QRConfig),
       socialFormat: SocialFormat.STORY_9_16,
       templateStyle: TemplateStyle.MINIMALIST,
-      fgColor: '#000000',
-      templateTextColor: '#ff6600',
+      fgColor: "#000000",
+      templateTextColor: "#ff6600",
     };
     const ctx = makeMockCtx();
     const modules = makeModules();
 
-    drawWithTemplate(ctx, modules, config, null, null, 1080, 1920, modules.size);
+    drawWithTemplate(
+      ctx,
+      modules,
+      config,
+      null,
+      null,
+      1080,
+      1920,
+      modules.size,
+    );
 
     // strokeStyle should have been set to templateTextColor at some point (Minimalist frame)
-    expect((ctx as any)._strokeStyleHistory).toContain('#ff6600');
+    expect((ctx as any)._strokeStyleHistory).toContain("#ff6600");
   });
 });

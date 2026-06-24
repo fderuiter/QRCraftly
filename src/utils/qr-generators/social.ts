@@ -16,8 +16,8 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { SocialData, SocialPlatform } from '../../types';
-import { SOCIAL_DOMAINS, parseProtocol } from '../protocol';
+import { SocialData, SocialPlatform } from "../../types";
+import { SOCIAL_DOMAINS, parseProtocol } from "../protocol";
 
 /**
  * Sanitizes a social media handle by stripping characters that could be used
@@ -28,16 +28,17 @@ import { SOCIAL_DOMAINS, parseProtocol } from '../protocol';
  */
 export const sanitizeSocialHandle = (handle: string): string => {
   // Strip leading '@' as it is a display convention, not part of the URL path
-  const withoutAt = handle.replace(/^@+/, '');
+  const withoutAt = handle.replace(/^@+/, "");
   // Allow only characters that are valid in a URL path segment for a username
-  return withoutAt.replace(/[^a-zA-Z0-9_.\-]/g, '');
+  return withoutAt.replace(/[^a-zA-Z0-9_.\-]/g, "");
 };
 
-const SOCIAL_PLATFORM_URLS: Record<SocialPlatform, (handle: string) => string> = {
-  [SocialPlatform.INSTAGRAM]: (handle) => `https://instagram.com/${handle}`,
-  [SocialPlatform.TWITTER]: (handle) => `https://x.com/${handle}`,
-  [SocialPlatform.TIKTOK]: (handle) => `https://tiktok.com/@${handle}`,
-};
+const SOCIAL_PLATFORM_URLS: Record<SocialPlatform, (handle: string) => string> =
+  {
+    [SocialPlatform.INSTAGRAM]: (handle) => `https://instagram.com/${handle}`,
+    [SocialPlatform.TWITTER]: (handle) => `https://x.com/${handle}`,
+    [SocialPlatform.TIKTOK]: (handle) => `https://tiktok.com/@${handle}`,
+  };
 
 /**
  * Constructs a standard HTTPS social media profile URL from the given data.
@@ -50,10 +51,10 @@ const SOCIAL_PLATFORM_URLS: Record<SocialPlatform, (handle: string) => string> =
  */
 export const constructSocialString = (data: SocialData): string => {
   const cleanHandle = sanitizeSocialHandle(data.handle);
-  if (!cleanHandle) return '';
+  if (!cleanHandle) return "";
 
   const constructUrl = SOCIAL_PLATFORM_URLS[data.platform];
-  return constructUrl ? constructUrl(cleanHandle) : '';
+  return constructUrl ? constructUrl(cleanHandle) : "";
 };
 
 /**
@@ -62,24 +63,24 @@ export const constructSocialString = (data: SocialData): string => {
 export const hydrateSocialData = (raw: string): SocialData => {
   const result: SocialData = {
     platform: SocialPlatform.INSTAGRAM,
-    handle: '',
+    handle: "",
   };
 
   const parsed = parseProtocol(raw);
-  if (parsed && (parsed.scheme === 'http' || parsed.scheme === 'https')) {
+  if (parsed && (parsed.scheme === "http" || parsed.scheme === "https")) {
     // Check if path starts with a known domain
-    const pathParts = parsed.path.split('/');
+    const pathParts = parsed.path.split("/");
     let domain = pathParts[0].toLowerCase();
-    
+
     // Remove www. if present
-    if (domain.startsWith('www.')) {
+    if (domain.startsWith("www.")) {
       domain = domain.substring(4);
     }
 
     if (SOCIAL_DOMAINS[domain]) {
       result.platform = SOCIAL_DOMAINS[domain];
-      let handlePart = pathParts[1] || '';
-      if (handlePart.startsWith('@')) {
+      let handlePart = pathParts[1] || "";
+      if (handlePart.startsWith("@")) {
         handlePart = handlePart.substring(1);
       }
       result.handle = handlePart;

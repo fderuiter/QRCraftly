@@ -16,9 +16,9 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { PhoneData } from '../../types';
-import { cleanPhoneNumber } from '../security';
-import { parseProtocol } from '../protocol';
+import { PhoneData } from "../../types";
+import { cleanPhoneNumber } from "../security";
+import { parseProtocol } from "../protocol";
 
 /**
  * Constructs the tel string for Phone QR code.
@@ -34,8 +34,8 @@ export const constructPhoneString = (data: PhoneData): string => {
  */
 export const hydratePhoneData = (raw: string): PhoneData => {
   const parsed = parseProtocol(raw);
-  if (parsed && parsed.scheme === 'tel') {
+  if (parsed && parsed.scheme === "tel") {
     return { number: parsed.path };
   }
-  return { number: '' };
+  return { number: "" };
 };

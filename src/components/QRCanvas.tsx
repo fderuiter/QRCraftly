@@ -16,11 +16,11 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import React, { useEffect, useRef, useState } from 'react';
-import { QRConfig, SocialFormat, TemplateStyle } from '../types';
-import { drawQR, drawQRInternal } from '../utils/qrRenderer';
-import { drawWithTemplate, SOCIAL_DIMENSIONS } from '../utils/templateRenderer';
-import { useImage } from '../utils/hooks';
+import React, { useEffect, useRef, useState } from "react";
+import { QRConfig, SocialFormat, TemplateStyle } from "../types";
+import { drawQR, drawQRInternal } from "../utils/qrRenderer";
+import { drawWithTemplate, SOCIAL_DIMENSIONS } from "../utils/templateRenderer";
+import { useImage } from "../utils/hooks";
 
 /**
  * Props for the QRCanvas component.
@@ -33,7 +33,10 @@ interface QRCanvasProps {
   /** Optional CSS class names to apply to the canvas element. */
   className?: string;
   /** Optional callback fired when rendering is complete. */
-  onRendered?: (info: { moduleCount: number; virtualImageData?: ImageData }) => void;
+  onRendered?: (info: {
+    moduleCount: number;
+    virtualImageData?: ImageData;
+  }) => void;
 }
 
 /**
@@ -48,203 +51,226 @@ interface QRCanvasProps {
  * @param props.onRendered - Callback when render finishes.
  * @returns The QRCanvas component.
  */
-const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({ config, size = 1024, className, onRendered }, ref) => {
-  const localCanvasRef = useRef<HTMLCanvasElement>(null);
-  
-  // Use either the forwarded ref or the local one
-  const handleRef = (node: HTMLCanvasElement | null) => {
-    localCanvasRef.current = node;
-    if (typeof ref === 'function') {
-      ref(node);
-    } else if (ref) {
-      ref.current = node;
-    }
-  };
+const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(
+  ({ config, size = 1024, className, onRendered }, ref) => {
+    const localCanvasRef = useRef<HTMLCanvasElement>(null);
 
-  // Pre-load images to avoid async rendering and flickering
-  const logoImg = useImage(config.logoUrl);
-  const borderLogoImg = useImage(config.isBorderEnabled ? config.borderLogoUrl : null);
+    // Use either the forwarded ref or the local one
+    const handleRef = (node: HTMLCanvasElement | null) => {
+      localCanvasRef.current = node;
+      if (typeof ref === "function") {
+        ref(node);
+      } else if (ref) {
+        ref.current = node;
+      }
+    };
 
-  const [qrData, setQrData] = useState<any>(null);
+    // Pre-load images to avoid async rendering and flickering
+    const logoImg = useImage(config.logoUrl);
+    const borderLogoImg = useImage(
+      config.isBorderEnabled ? config.borderLogoUrl : null,
+    );
 
-  // Dynamically load QRCode and generate data
-  useEffect(() => {
-    if (!config.value) {
-      setQrData(null);
-      return;
-    }
+    const [qrData, setQrData] = useState<any>(null);
 
-    let isMounted = true;
-    import('qrcode').then((QRCode) => {
-      if (!isMounted) return;
-      try {
-        const data = QRCode.create(config.value, { errorCorrectionLevel: config.errorCorrectionLevel });
-        setQrData(data);
-      } catch (e) {
-        console.warn("QR generation failed:", e);
+    // Dynamically load QRCode and generate data
+    useEffect(() => {
+      if (!config.value) {
         setQrData(null);
+        return;
       }
-    });
 
-    return () => { isMounted = false; };
-  }, [config.value, config.errorCorrectionLevel]);
-
-  useEffect(() => {
-    const canvas = localCanvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const pixelRatio = window.devicePixelRatio || 1;
-    const useTemplate =
-      config.templateStyle !== TemplateStyle.NONE ||
-      config.socialFormat !== SocialFormat.SQUARE_1_1;
-
-    if (!qrData) {
-      // Clear if no data
-      if (useTemplate) {
-        const { width: fw, height: fh } = SOCIAL_DIMENSIONS[config.socialFormat];
-        const displayHeight = Math.round(size * fh / fw);
-        canvas.width = size * pixelRatio;
-        canvas.height = displayHeight * pixelRatio;
-      } else {
-        canvas.width = size * pixelRatio;
-        canvas.height = size * pixelRatio;
-      }
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      return;
-    }
-
-    if (useTemplate) {
-      // ── Template / social format rendering ─────────────────────────────────
-      const { width: fw, height: fh } = SOCIAL_DIMENSIONS[config.socialFormat];
-      const displayWidth = size;
-      const displayHeight = Math.round(size * fh / fw);
-
-      canvas.width = displayWidth * pixelRatio;
-      canvas.height = displayHeight * pixelRatio;
-
-      ctx.save();
-      ctx.scale(pixelRatio, pixelRatio);
-
-      drawWithTemplate(
-        ctx as unknown as CanvasRenderingContext2D,
-        qrData.modules,
-        config,
-        logoImg,
-        borderLogoImg,
-        displayWidth,
-        displayHeight,
-        qrData.modules.size
-      );
-
-      ctx.restore();
-    } else {
-      // ── Original square rendering path (no change in behaviour) ────────────
-      drawQR(ctx, qrData.modules, config, logoImg, borderLogoImg, size);
-    }
-
-    if (onRendered) {
-      onRendered({ moduleCount: qrData.modules.size });
-
-      // Perform virtual offscreen rendering for deterministic validation
-      const runVirtualRender = () => {
+      let isMounted = true;
+      import("qrcode").then((QRCode) => {
+        if (!isMounted) return;
         try {
-          const virtualSize = 1024;
-          let vCanvas: HTMLCanvasElement | OffscreenCanvas;
-          
-          if (typeof OffscreenCanvas !== 'undefined') {
-            vCanvas = new OffscreenCanvas(virtualSize, virtualSize);
-          } else {
-            vCanvas = document.createElement('canvas');
-            vCanvas.width = virtualSize;
-            vCanvas.height = virtualSize;
-          }
-          
-          const vCtx = vCanvas.getContext('2d', { willReadFrequently: true }) as CanvasRenderingContext2D;
-          if (!vCtx) return;
+          const data = QRCode.create(config.value, {
+            errorCorrectionLevel: config.errorCorrectionLevel,
+          });
+          setQrData(data);
+        } catch (e) {
+          console.warn("QR generation failed:", e);
+          setQrData(null);
+        }
+      });
 
-          let displayWidth = virtualSize;
-          let displayHeight = virtualSize;
+      return () => {
+        isMounted = false;
+      };
+    }, [config.value, config.errorCorrectionLevel]);
 
-          if (useTemplate) {
-            const { width: fw, height: fh } = SOCIAL_DIMENSIONS[config.socialFormat];
-            displayHeight = Math.round(virtualSize * fh / fw);
-            if (typeof OffscreenCanvas !== 'undefined') {
-              vCanvas.height = displayHeight;
+    useEffect(() => {
+      const canvas = localCanvasRef.current;
+      if (!canvas) return;
+
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+
+      const pixelRatio = window.devicePixelRatio || 1;
+      const useTemplate =
+        config.templateStyle !== TemplateStyle.NONE ||
+        config.socialFormat !== SocialFormat.SQUARE_1_1;
+
+      if (!qrData) {
+        // Clear if no data
+        if (useTemplate) {
+          const { width: fw, height: fh } =
+            SOCIAL_DIMENSIONS[config.socialFormat];
+          const displayHeight = Math.round((size * fh) / fw);
+          canvas.width = size * pixelRatio;
+          canvas.height = displayHeight * pixelRatio;
+        } else {
+          canvas.width = size * pixelRatio;
+          canvas.height = size * pixelRatio;
+        }
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        return;
+      }
+
+      if (useTemplate) {
+        // ── Template / social format rendering ─────────────────────────────────
+        const { width: fw, height: fh } =
+          SOCIAL_DIMENSIONS[config.socialFormat];
+        const displayWidth = size;
+        const displayHeight = Math.round((size * fh) / fw);
+
+        canvas.width = displayWidth * pixelRatio;
+        canvas.height = displayHeight * pixelRatio;
+
+        ctx.save();
+        ctx.scale(pixelRatio, pixelRatio);
+
+        drawWithTemplate(
+          ctx as unknown as CanvasRenderingContext2D,
+          qrData.modules,
+          config,
+          logoImg,
+          borderLogoImg,
+          displayWidth,
+          displayHeight,
+          qrData.modules.size,
+        );
+
+        ctx.restore();
+      } else {
+        // ── Original square rendering path (no change in behaviour) ────────────
+        drawQR(ctx, qrData.modules, config, logoImg, borderLogoImg, size);
+      }
+
+      if (onRendered) {
+        onRendered({ moduleCount: qrData.modules.size });
+
+        // Perform virtual offscreen rendering for deterministic validation
+        const runVirtualRender = () => {
+          try {
+            const virtualSize = 1024;
+            let vCanvas: HTMLCanvasElement | OffscreenCanvas;
+
+            if (typeof OffscreenCanvas !== "undefined") {
+              vCanvas = new OffscreenCanvas(virtualSize, virtualSize);
             } else {
-              (vCanvas as HTMLCanvasElement).height = displayHeight;
+              vCanvas = document.createElement("canvas");
+              vCanvas.width = virtualSize;
+              vCanvas.height = virtualSize;
             }
 
-            drawWithTemplate(
-              vCtx as unknown as CanvasRenderingContext2D,
-              qrData.modules,
-              config,
-              logoImg,
-              borderLogoImg,
+            const vCtx = vCanvas.getContext("2d", {
+              willReadFrequently: true,
+            }) as CanvasRenderingContext2D;
+            if (!vCtx) return;
+
+            let displayWidth = virtualSize;
+            let displayHeight = virtualSize;
+
+            if (useTemplate) {
+              const { width: fw, height: fh } =
+                SOCIAL_DIMENSIONS[config.socialFormat];
+              displayHeight = Math.round((virtualSize * fh) / fw);
+              if (typeof OffscreenCanvas !== "undefined") {
+                vCanvas.height = displayHeight;
+              } else {
+                (vCanvas as HTMLCanvasElement).height = displayHeight;
+              }
+
+              drawWithTemplate(
+                vCtx as unknown as CanvasRenderingContext2D,
+                qrData.modules,
+                config,
+                logoImg,
+                borderLogoImg,
+                displayWidth,
+                displayHeight,
+                qrData.modules.size,
+                true,
+              );
+            } else {
+              vCtx.clearRect(0, 0, displayWidth, displayHeight);
+              drawQRInternal(
+                vCtx as unknown as CanvasRenderingContext2D,
+                qrData.modules,
+                config,
+                logoImg,
+                borderLogoImg,
+                virtualSize,
+                qrData.modules.size,
+                true,
+              );
+            }
+
+            const imageData = vCtx.getImageData(
+              0,
+              0,
               displayWidth,
               displayHeight,
-              qrData.modules.size,
-              true
             );
-          } else {
-            vCtx.clearRect(0, 0, displayWidth, displayHeight);
-            drawQRInternal(
-              vCtx as unknown as CanvasRenderingContext2D,
-              qrData.modules,
-              config,
-              logoImg,
-              borderLogoImg,
-              virtualSize,
-              qrData.modules.size,
-              true
-            );
+            onRendered({
+              moduleCount: qrData.modules.size,
+              virtualImageData: imageData,
+            });
+
+            // Free memory
+            if (vCanvas) {
+              vCanvas.width = 0;
+              vCanvas.height = 0;
+            }
+          } catch (err) {
+            console.error("Virtual rendering failed:", err);
           }
-          
-          const imageData = vCtx.getImageData(0, 0, displayWidth, displayHeight);
-          onRendered({ moduleCount: qrData.modules.size, virtualImageData: imageData });
-          
-          // Free memory
-          if (vCanvas) {
-            vCanvas.width = 0;
-            vCanvas.height = 0;
-          }
-        } catch (err) {
-          console.error("Virtual rendering failed:", err);
+        };
+
+        if ("requestIdleCallback" in window) {
+          (window as any).requestIdleCallback(runVirtualRender);
+        } else {
+          setTimeout(runVirtualRender, 50);
         }
-      };
-
-      if ('requestIdleCallback' in window) {
-        (window as any).requestIdleCallback(runVirtualRender);
-      } else {
-        setTimeout(runVirtualRender, 50);
       }
-    }
+    }, [config, size, qrData, logoImg, borderLogoImg, onRendered]);
 
-  }, [config, size, qrData, logoImg, borderLogoImg, onRendered]);
+    const typeLabel =
+      config.type.charAt(0).toUpperCase() + config.type.slice(1).toLowerCase();
+    const ariaLabel = `QR Code for ${typeLabel} - ${config.value ? "Scan to view content" : "Empty"}`;
 
-  const typeLabel = config.type.charAt(0).toUpperCase() + config.type.slice(1).toLowerCase();
-  const ariaLabel = `QR Code for ${typeLabel} - ${config.value ? 'Scan to view content' : 'Empty'}`;
+    const aspectRatioClass = {
+      [SocialFormat.SQUARE_1_1]: "aspect-square",
+      [SocialFormat.PORTRAIT_4_5]: "aspect-[4/5]",
+      [SocialFormat.STORY_9_16]: "aspect-[9/16]",
+    }[config.socialFormat];
 
-  const aspectRatioClass = {
-    [SocialFormat.SQUARE_1_1]: 'aspect-square',
-    [SocialFormat.PORTRAIT_4_5]: 'aspect-[4/5]',
-    [SocialFormat.STORY_9_16]: 'aspect-[9/16]',
-  }[config.socialFormat];
+    const containerClasses = className
+      ? `${className} ${aspectRatioClass}`
+      : aspectRatioClass;
 
-  const containerClasses = className ? `${className} ${aspectRatioClass}` : aspectRatioClass;
-
-  return (
-    <div className={containerClasses}>
-      <canvas
-        ref={handleRef}
-        className={`w-full h-auto block ${aspectRatioClass}`}
-        role="img"
-        aria-label={ariaLabel}
-      />
-    </div>
-  );
-});
+    return (
+      <div className={containerClasses}>
+        <canvas
+          ref={handleRef}
+          className={`w-full h-auto block ${aspectRatioClass}`}
+          role="img"
+          aria-label={ariaLabel}
+        />
+      </div>
+    );
+  },
+);
 
 export default React.memo(QRCanvas);

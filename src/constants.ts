@@ -17,8 +17,13 @@ import { getPublicDomain } from "./utils/metadataEngine";
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-
-import { QRStyle, QRType, QRErrorCorrectionLevel, SocialFormat, TemplateStyle } from './types';
+import {
+  QRStyle,
+  QRType,
+  QRErrorCorrectionLevel,
+  SocialFormat,
+  TemplateStyle,
+} from "./types";
 
 /**
  * The default configuration settings for the QR code generator.
@@ -27,29 +32,29 @@ import { QRStyle, QRType, QRErrorCorrectionLevel, SocialFormat, TemplateStyle } 
 export const DEFAULT_CONFIG = {
   value: getPublicDomain(),
   type: QRType.URL,
-  fgColor: '#000000',
-  bgColor: '#ffffff',
+  fgColor: "#000000",
+  bgColor: "#ffffff",
   style: QRStyle.STANDARD,
   logoUrl: null,
   logoSize: 0.2,
-  logoPaddingStyle: 'square' as const,
+  logoPaddingStyle: "square" as const,
   logoPadding: 1,
-  logoBackgroundColor: '#ffffff',
-  eyeColor: '#000000',
+  logoBackgroundColor: "#ffffff",
+  eyeColor: "#000000",
   errorCorrectionLevel: QRErrorCorrectionLevel.H,
   isBorderEnabled: false,
   borderSize: 0.05,
-  borderColor: '#000000',
-  borderStyle: 'solid' as const,
-  borderText: '',
-  borderTextPosition: 'bottom-center' as const,
-  borderTextColor: '#ffffff',
+  borderColor: "#000000",
+  borderStyle: "solid" as const,
+  borderText: "",
+  borderTextPosition: "bottom-center" as const,
+  borderTextColor: "#ffffff",
   borderLogoUrl: null,
-  borderLogoPosition: 'bottom-center' as const,
+  borderLogoPosition: "bottom-center" as const,
   socialFormat: SocialFormat.SQUARE_1_1,
   templateStyle: TemplateStyle.NONE,
-  templateHeadline: '',
-  templateSubtext: '',
+  templateHeadline: "",
+  templateSubtext: "",
   templateQrScale: 1.0,
 };
 
@@ -58,17 +63,17 @@ export const DEFAULT_CONFIG = {
  * Used for the style selection UI.
  */
 export const PATTERNS = [
-  { id: QRStyle.STANDARD, label: 'Standard Industrial' },
-  { id: QRStyle.MODERN, label: 'Modern Soft' },
-  { id: QRStyle.SWISS, label: 'Swiss Dot' },
-  { id: QRStyle.FLUID, label: 'Fluid Ink' },
-  { id: QRStyle.CIRCUIT, label: 'Cyber Circuit' },
-  { id: QRStyle.HIVE, label: 'The Hive' },
-  { id: QRStyle.GRUNGE, label: 'Grunge' },
-  { id: QRStyle.STARBURST, label: 'Starburst' },
+  { id: QRStyle.STANDARD, label: "Standard Industrial" },
+  { id: QRStyle.MODERN, label: "Modern Soft" },
+  { id: QRStyle.SWISS, label: "Swiss Dot" },
+  { id: QRStyle.FLUID, label: "Fluid Ink" },
+  { id: QRStyle.CIRCUIT, label: "Cyber Circuit" },
+  { id: QRStyle.HIVE, label: "The Hive" },
+  { id: QRStyle.GRUNGE, label: "Grunge" },
+  { id: QRStyle.STARBURST, label: "Starburst" },
 ];
 
-import colorsData from './colors.json';
+import colorsData from "./colors.json";
 
 /**
  * List of preset color themes.

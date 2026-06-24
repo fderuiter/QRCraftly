@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 
 /**
  * Helper component for range inputs to display current value.
@@ -26,7 +26,10 @@ export const RangeInput: React.FC<RangeInputProps> = ({
 }) => (
   <div>
     <div className="flex justify-between items-center mb-1">
-      <label htmlFor={id} className="block text-xs font-medium text-slate-500 dark:text-slate-400">
+      <label
+        htmlFor={id}
+        className="block text-xs font-medium text-slate-500 dark:text-slate-400"
+      >
         {label}
       </label>
       <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">

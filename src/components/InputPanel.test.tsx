@@ -16,13 +16,13 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { render, screen, fireEvent, act } from '@testing-library/react';
-import InputPanel from './InputPanel';
-import { DEFAULT_CONFIG } from '../constants';
-import { QRType, QRConfig, WifiEncryption } from '../types';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, fireEvent, act } from "@testing-library/react";
+import InputPanel from "./InputPanel";
+import { DEFAULT_CONFIG } from "../constants";
+import { QRType, QRConfig, WifiEncryption } from "../types";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-describe('InputPanel Component', () => {
+describe("InputPanel Component", () => {
   const mockOnChange = vi.fn();
 
   beforeEach(() => {
@@ -39,53 +39,55 @@ describe('InputPanel Component', () => {
     render(<InputPanel config={config} onChange={mockOnChange} />);
   };
 
-  it('renders URL input by default', () => {
+  it("renders URL input by default", () => {
     renderPanel();
 
-    expect(screen.getByLabelText('Website URL')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('https://example.com')).toBeInTheDocument();
+    expect(screen.getByLabelText("Website URL")).toBeInTheDocument();
+    expect(
+      screen.getByPlaceholderText("https://example.com"),
+    ).toBeInTheDocument();
   });
 
-  it('changes content type', () => {
+  it("changes content type", () => {
     renderPanel();
-    const wifiButton = screen.getByText('WiFi');
+    const wifiButton = screen.getByText("WiFi");
     fireEvent.click(wifiButton);
-    expect(mockOnChange).toHaveBeenCalledWith({ type: QRType.WIFI, value: '' });
+    expect(mockOnChange).toHaveBeenCalledWith({ type: QRType.WIFI, value: "" });
   });
 
-  it('renders WiFi inputs when WiFi type is selected', () => {
+  it("renders WiFi inputs when WiFi type is selected", () => {
     renderPanel({ type: QRType.WIFI });
-    expect(screen.getByLabelText('Network Name (SSID)')).toBeInTheDocument();
-    expect(screen.getByLabelText('Password')).toBeInTheDocument();
-    expect(screen.getByLabelText('Encryption')).toBeInTheDocument();
-    expect(screen.getByLabelText('Hidden Network')).toBeInTheDocument();
+    expect(screen.getByLabelText("Network Name (SSID)")).toBeInTheDocument();
+    expect(screen.getByLabelText("Password")).toBeInTheDocument();
+    expect(screen.getByLabelText("Encryption")).toBeInTheDocument();
+    expect(screen.getByLabelText("Hidden Network")).toBeInTheDocument();
   });
 
-  it('renders Event inputs when Event type is selected', () => {
+  it("renders Event inputs when Event type is selected", () => {
     renderPanel({ type: QRType.EVENT });
-    expect(screen.getByLabelText('Event Title')).toBeInTheDocument();
-    expect(screen.getByLabelText('Start Date & Time')).toBeInTheDocument();
-    expect(screen.getByLabelText('End Date & Time')).toBeInTheDocument();
-    expect(screen.getByLabelText('Location')).toBeInTheDocument();
-    expect(screen.getByLabelText('Description')).toBeInTheDocument();
+    expect(screen.getByLabelText("Event Title")).toBeInTheDocument();
+    expect(screen.getByLabelText("Start Date & Time")).toBeInTheDocument();
+    expect(screen.getByLabelText("End Date & Time")).toBeInTheDocument();
+    expect(screen.getByLabelText("Location")).toBeInTheDocument();
+    expect(screen.getByLabelText("Description")).toBeInTheDocument();
   });
 
-  it('updates URL value', () => {
+  it("updates URL value", () => {
     renderPanel();
-    const input = screen.getByLabelText('Website URL');
-    fireEvent.change(input, { target: { value: 'https://new-url.com' } });
+    const input = screen.getByLabelText("Website URL");
+    fireEvent.change(input, { target: { value: "https://new-url.com" } });
 
     act(() => {
       vi.advanceTimersByTime(100);
     });
 
-    expect(mockOnChange).toHaveBeenCalledWith({ value: 'https://new-url.com' });
+    expect(mockOnChange).toHaveBeenCalledWith({ value: "https://new-url.com" });
   });
 
-  it('updates WiFi SSID', () => {
+  it("updates WiFi SSID", () => {
     renderPanel({ type: QRType.WIFI });
-    const ssidInput = screen.getByLabelText('Network Name (SSID)');
-    fireEvent.change(ssidInput, { target: { value: 'MyWiFi' } });
+    const ssidInput = screen.getByLabelText("Network Name (SSID)");
+    fireEvent.change(ssidInput, { target: { value: "MyWiFi" } });
 
     act(() => {
       vi.advanceTimersByTime(100);
@@ -96,37 +98,39 @@ describe('InputPanel Component', () => {
     expect(mockOnChange).toHaveBeenCalledWith({ value: expectedValue });
   });
 
-  it('updates WiFi Encryption and formats correctly (WPA2-EAP)', () => {
+  it("updates WiFi Encryption and formats correctly (WPA2-EAP)", () => {
     renderPanel({ type: QRType.WIFI });
 
     // Change encryption to WPA2-EAP
-    const encryptionSelect = screen.getByLabelText('Encryption');
-    fireEvent.change(encryptionSelect, { target: { value: WifiEncryption.WPA2_EAP } });
+    const encryptionSelect = screen.getByLabelText("Encryption");
+    fireEvent.change(encryptionSelect, {
+      target: { value: WifiEncryption.WPA2_EAP },
+    });
 
     act(() => {
       vi.advanceTimersByTime(100);
     });
 
     // Should reveal Identity input
-    const identityInput = screen.getByLabelText('Identity / Username');
+    const identityInput = screen.getByLabelText("Identity / Username");
     expect(identityInput).toBeInTheDocument();
 
     // Fill details
-    const ssidInput = screen.getByLabelText('Network Name (SSID)');
-    fireEvent.change(ssidInput, { target: { value: 'EnterpriseWiFi' } });
+    const ssidInput = screen.getByLabelText("Network Name (SSID)");
+    fireEvent.change(ssidInput, { target: { value: "EnterpriseWiFi" } });
 
     act(() => {
       vi.advanceTimersByTime(100);
     });
 
-    fireEvent.change(identityInput, { target: { value: 'user123' } });
+    fireEvent.change(identityInput, { target: { value: "user123" } });
 
     act(() => {
       vi.advanceTimersByTime(100);
     });
 
-    const passwordInput = screen.getByLabelText('Password');
-    fireEvent.change(passwordInput, { target: { value: 'secretPass' } });
+    const passwordInput = screen.getByLabelText("Password");
+    fireEvent.change(passwordInput, { target: { value: "secretPass" } });
 
     act(() => {
       vi.advanceTimersByTime(100);
@@ -143,21 +147,23 @@ describe('InputPanel Component', () => {
     expect(mockOnChange).toHaveBeenLastCalledWith({ value: expectedValue });
   });
 
-  it('updates WiFi Encryption and formats correctly (nopass)', () => {
+  it("updates WiFi Encryption and formats correctly (nopass)", () => {
     renderPanel({ type: QRType.WIFI });
 
-    const encryptionSelect = screen.getByLabelText('Encryption');
-    fireEvent.change(encryptionSelect, { target: { value: WifiEncryption.NOPASS } });
+    const encryptionSelect = screen.getByLabelText("Encryption");
+    fireEvent.change(encryptionSelect, {
+      target: { value: WifiEncryption.NOPASS },
+    });
 
     act(() => {
       vi.advanceTimersByTime(100);
     });
 
     // Password field should disappear
-    expect(screen.queryByLabelText('Password')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Password")).not.toBeInTheDocument();
 
-    const ssidInput = screen.getByLabelText('Network Name (SSID)');
-    fireEvent.change(ssidInput, { target: { value: 'OpenWiFi' } });
+    const ssidInput = screen.getByLabelText("Network Name (SSID)");
+    fireEvent.change(ssidInput, { target: { value: "OpenWiFi" } });
 
     act(() => {
       vi.advanceTimersByTime(100);
@@ -167,232 +173,326 @@ describe('InputPanel Component', () => {
     expect(mockOnChange).toHaveBeenLastCalledWith({ value: expectedValue });
   });
 
-  it('updates WiFi Hidden Network toggle', () => {
-      renderPanel({ type: QRType.WIFI });
+  it("updates WiFi Hidden Network toggle", () => {
+    renderPanel({ type: QRType.WIFI });
 
-      const hiddenCheckbox = screen.getByLabelText('Hidden Network');
+    const hiddenCheckbox = screen.getByLabelText("Hidden Network");
 
-      // Toggle ON
-      fireEvent.click(hiddenCheckbox);
+    // Toggle ON
+    fireEvent.click(hiddenCheckbox);
 
-      act(() => {
-        vi.advanceTimersByTime(100);
-      });
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
 
-      // We expect the LAST call to have H:true
-      const lastCall = mockOnChange.mock.calls[mockOnChange.mock.calls.length - 1][0];
-      expect(lastCall.value).toContain('H:true');
+    // We expect the LAST call to have H:true
+    const lastCall =
+      mockOnChange.mock.calls[mockOnChange.mock.calls.length - 1][0];
+    expect(lastCall.value).toContain("H:true");
 
-      // Toggle OFF
-      fireEvent.click(hiddenCheckbox);
+    // Toggle OFF
+    fireEvent.click(hiddenCheckbox);
 
-      act(() => {
-        vi.advanceTimersByTime(100);
-      });
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
 
-      const veryLastCall = mockOnChange.mock.calls[mockOnChange.mock.calls.length - 1][0];
-      expect(veryLastCall.value).not.toContain('H:true');
-      expect(veryLastCall.value).not.toContain('H:false');
+    const veryLastCall =
+      mockOnChange.mock.calls[mockOnChange.mock.calls.length - 1][0];
+    expect(veryLastCall.value).not.toContain("H:true");
+    expect(veryLastCall.value).not.toContain("H:false");
   });
 
-  it('updates Text content', () => {
-      renderPanel({ type: QRType.TEXT });
+  it("updates Text content", () => {
+    renderPanel({ type: QRType.TEXT });
 
-      const textArea = screen.getByLabelText('Content');
-      fireEvent.change(textArea, { target: { value: 'Some text content' } });
+    const textArea = screen.getByLabelText("Content");
+    fireEvent.change(textArea, { target: { value: "Some text content" } });
 
-      act(() => {
-        vi.advanceTimersByTime(100);
-      });
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
 
-      expect(mockOnChange).toHaveBeenCalledWith({ value: 'Some text content' });
+    expect(mockOnChange).toHaveBeenCalledWith({ value: "Some text content" });
   });
 
-  it('clears password in WIFI string when encryption is changed to nopass after setting password', () => {
+  it("clears password in WIFI string when encryption is changed to nopass after setting password", () => {
     renderPanel({ type: QRType.WIFI });
 
     // 1. Enter a password with WPA (default)
-    const passwordInput = screen.getByLabelText('Password');
-    fireEvent.change(passwordInput, { target: { value: 'secret123' } });
+    const passwordInput = screen.getByLabelText("Password");
+    fireEvent.change(passwordInput, { target: { value: "secret123" } });
 
     act(() => {
       vi.advanceTimersByTime(100);
     });
 
     // 2. Change encryption to nopass
-    const encryptionSelect = screen.getByLabelText('Encryption');
-    fireEvent.change(encryptionSelect, { target: { value: WifiEncryption.NOPASS } });
+    const encryptionSelect = screen.getByLabelText("Encryption");
+    fireEvent.change(encryptionSelect, {
+      target: { value: WifiEncryption.NOPASS },
+    });
 
     act(() => {
       vi.advanceTimersByTime(100);
     });
 
     // 3. Verify the output string does NOT contain the password
-    const lastCall = mockOnChange.mock.calls[mockOnChange.mock.calls.length - 1][0];
-    expect(lastCall.value).not.toContain('P:secret123');
+    const lastCall =
+      mockOnChange.mock.calls[mockOnChange.mock.calls.length - 1][0];
+    expect(lastCall.value).not.toContain("P:secret123");
     // It should NOT have a password field at all
-    expect(lastCall.value).not.toContain('P:');
+    expect(lastCall.value).not.toContain("P:");
   });
 
-  it('formats Email correctly', () => {
-      renderPanel({ type: QRType.EMAIL });
+  it("formats Email correctly", () => {
+    renderPanel({ type: QRType.EMAIL });
 
-      const emailInput = screen.getByLabelText('Email Address');
-      const subjectInput = screen.getByLabelText('Subject');
-      const bodyInput = screen.getByLabelText('Body');
+    const emailInput = screen.getByLabelText("Email Address");
+    const subjectInput = screen.getByLabelText("Subject");
+    const bodyInput = screen.getByLabelText("Body");
 
-      fireEvent.change(emailInput, { target: { value: 'test@example.com' } });
-      act(() => { vi.advanceTimersByTime(100); });
+    fireEvent.change(emailInput, { target: { value: "test@example.com" } });
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
 
-      fireEvent.change(subjectInput, { target: { value: 'Hello World' } });
-      act(() => { vi.advanceTimersByTime(100); });
+    fireEvent.change(subjectInput, { target: { value: "Hello World" } });
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
 
-      fireEvent.change(bodyInput, { target: { value: 'This is a test.' } });
-      act(() => { vi.advanceTimersByTime(100); });
+    fireEvent.change(bodyInput, { target: { value: "This is a test." } });
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
 
-      const expectedValue = `mailto:test@example.com?subject=Hello%20World&body=This%20is%20a%20test.`;
-      expect(mockOnChange).toHaveBeenLastCalledWith({ value: expectedValue });
+    const expectedValue = `mailto:test@example.com?subject=Hello%20World&body=This%20is%20a%20test.`;
+    expect(mockOnChange).toHaveBeenLastCalledWith({ value: expectedValue });
   });
 
-  it('formats Phone correctly', () => {
-      renderPanel({ type: QRType.PHONE });
+  it("formats Phone correctly", () => {
+    renderPanel({ type: QRType.PHONE });
 
-      const phoneInput = screen.getByLabelText('Phone Number');
-      fireEvent.change(phoneInput, { target: { value: '+1234567890' } });
+    const phoneInput = screen.getByLabelText("Phone Number");
+    fireEvent.change(phoneInput, { target: { value: "+1234567890" } });
 
-      act(() => { vi.advanceTimersByTime(100); });
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
 
-      expect(mockOnChange).toHaveBeenCalledWith({ value: 'tel:+1234567890' });
+    expect(mockOnChange).toHaveBeenCalledWith({ value: "tel:+1234567890" });
   });
 
-  it('formats SMS correctly', () => {
-      renderPanel({ type: QRType.SMS });
+  it("formats SMS correctly", () => {
+    renderPanel({ type: QRType.SMS });
 
-      const phoneInput = screen.getByLabelText('Phone Number');
-      const msgInput = screen.getByLabelText('Pre-filled Message');
+    const phoneInput = screen.getByLabelText("Phone Number");
+    const msgInput = screen.getByLabelText("Pre-filled Message");
 
-      fireEvent.change(phoneInput, { target: { value: '+1234567890' } });
-      act(() => { vi.advanceTimersByTime(100); });
+    fireEvent.change(phoneInput, { target: { value: "+1234567890" } });
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
 
-      fireEvent.change(msgInput, { target: { value: 'Hello there' } });
-      act(() => { vi.advanceTimersByTime(100); });
+    fireEvent.change(msgInput, { target: { value: "Hello there" } });
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
 
-      expect(mockOnChange).toHaveBeenLastCalledWith({ value: 'sms:+1234567890?body=Hello%20there' });
+    expect(mockOnChange).toHaveBeenLastCalledWith({
+      value: "sms:+1234567890?body=Hello%20there",
+    });
   });
 
-  it('formats vCard correctly', () => {
-      renderPanel({ type: QRType.VCARD });
+  it("formats vCard correctly", () => {
+    renderPanel({ type: QRType.VCARD });
 
-      fireEvent.change(screen.getByLabelText('First Name'), { target: { value: 'John' } });
-      fireEvent.change(screen.getByLabelText('Last Name'), { target: { value: 'Doe' } });
-      fireEvent.change(screen.getByLabelText('Company / Organization'), { target: { value: 'Acme Corp' } });
-      fireEvent.change(screen.getByLabelText('Job Title'), { target: { value: 'Engineer' } });
-      fireEvent.change(screen.getByLabelText('Mobile Phone'), { target: { value: '555-0199' } });
-      fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'john@example.com' } });
-      fireEvent.change(screen.getByLabelText('Website'), { target: { value: 'https://example.com' } });
+    fireEvent.change(screen.getByLabelText("First Name"), {
+      target: { value: "John" },
+    });
+    fireEvent.change(screen.getByLabelText("Last Name"), {
+      target: { value: "Doe" },
+    });
+    fireEvent.change(screen.getByLabelText("Company / Organization"), {
+      target: { value: "Acme Corp" },
+    });
+    fireEvent.change(screen.getByLabelText("Job Title"), {
+      target: { value: "Engineer" },
+    });
+    fireEvent.change(screen.getByLabelText("Mobile Phone"), {
+      target: { value: "555-0199" },
+    });
+    fireEvent.change(screen.getByLabelText("Email"), {
+      target: { value: "john@example.com" },
+    });
+    fireEvent.change(screen.getByLabelText("Website"), {
+      target: { value: "https://example.com" },
+    });
 
-      // Address
-      fireEvent.change(screen.getByLabelText('Street'), { target: { value: '123 Main St' } });
-      fireEvent.change(screen.getByLabelText('City'), { target: { value: 'Metropolis' } });
-      fireEvent.change(screen.getByLabelText('Country'), { target: { value: 'USA' } });
+    // Address
+    fireEvent.change(screen.getByLabelText("Street"), {
+      target: { value: "123 Main St" },
+    });
+    fireEvent.change(screen.getByLabelText("City"), {
+      target: { value: "Metropolis" },
+    });
+    fireEvent.change(screen.getByLabelText("Country"), {
+      target: { value: "USA" },
+    });
 
-      act(() => { vi.advanceTimersByTime(1000); }); // Wait for all updates
+    act(() => {
+      vi.advanceTimersByTime(1000);
+    }); // Wait for all updates
 
-      const expectedVCard = `BEGIN:VCARD\nVERSION:3.0\nN:Doe;John;;;\nFN:John Doe\nORG:Acme Corp\nTITLE:Engineer\nTEL:555-0199\nEMAIL:john@example.com\nURL:https://example.com/\nADR:;;123 Main St;Metropolis;;;USA\nEND:VCARD`;
+    const expectedVCard = `BEGIN:VCARD\nVERSION:3.0\nN:Doe;John;;;\nFN:John Doe\nORG:Acme Corp\nTITLE:Engineer\nTEL:555-0199\nEMAIL:john@example.com\nURL:https://example.com/\nADR:;;123 Main St;Metropolis;;;USA\nEND:VCARD`;
 
-      expect(mockOnChange).toHaveBeenLastCalledWith({ value: expectedVCard });
+    expect(mockOnChange).toHaveBeenLastCalledWith({ value: expectedVCard });
   });
 
-  it('escapes special characters in vCard fields', () => {
-      renderPanel({ type: QRType.VCARD });
+  it("escapes special characters in vCard fields", () => {
+    renderPanel({ type: QRType.VCARD });
 
-      fireEvent.change(screen.getByLabelText('First Name'), { target: { value: 'John;Bad' } });
-      fireEvent.change(screen.getByLabelText('Last Name'), { target: { value: 'Doe,Jr' } });
-      fireEvent.change(screen.getByLabelText('Company / Organization'), { target: { value: 'Acme\\Corp' } });
+    fireEvent.change(screen.getByLabelText("First Name"), {
+      target: { value: "John;Bad" },
+    });
+    fireEvent.change(screen.getByLabelText("Last Name"), {
+      target: { value: "Doe,Jr" },
+    });
+    fireEvent.change(screen.getByLabelText("Company / Organization"), {
+      target: { value: "Acme\\Corp" },
+    });
 
-      act(() => { vi.advanceTimersByTime(1000); });
+    act(() => {
+      vi.advanceTimersByTime(1000);
+    });
 
-      const lastCall = mockOnChange.mock.calls[mockOnChange.mock.calls.length - 1][0];
-      const vcard = lastCall.value;
+    const lastCall =
+      mockOnChange.mock.calls[mockOnChange.mock.calls.length - 1][0];
+    const vcard = lastCall.value;
 
-      expect(vcard).toContain('John\\;Bad');
-      expect(vcard).toContain('Doe\\,Jr');
-      expect(vcard).toContain('Acme\\\\Corp');
+    expect(vcard).toContain("John\\;Bad");
+    expect(vcard).toContain("Doe\\,Jr");
+    expect(vcard).toContain("Acme\\\\Corp");
   });
 
-  it('formats Payment (Crypto) correctly', () => {
+  it("formats Payment (Crypto) correctly", () => {
     renderPanel({ type: QRType.PAYMENT });
 
-    const addressInput = screen.getByLabelText('Receiver Address');
-    fireEvent.change(addressInput, { target: { value: '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa' } });
-    act(() => { vi.advanceTimersByTime(100); });
+    const addressInput = screen.getByLabelText("Receiver Address");
+    fireEvent.change(addressInput, {
+      target: { value: "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa" },
+    });
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
 
     // Default is Bitcoin
-    expect(mockOnChange).toHaveBeenLastCalledWith({ value: 'bitcoin:1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa' });
+    expect(mockOnChange).toHaveBeenLastCalledWith({
+      value: "bitcoin:1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
+    });
 
     // Add amount
     const amountInput = screen.getByLabelText(/Amount/i);
-    fireEvent.change(amountInput, { target: { value: '0.005' } });
-    act(() => { vi.advanceTimersByTime(100); });
-    expect(mockOnChange).toHaveBeenLastCalledWith({ value: 'bitcoin:1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa?amount=0.005' });
+    fireEvent.change(amountInput, { target: { value: "0.005" } });
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
+    expect(mockOnChange).toHaveBeenLastCalledWith({
+      value: "bitcoin:1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa?amount=0.005",
+    });
 
     // Add label
     const labelInput = screen.getByLabelText(/Label \/ Note/i);
-    fireEvent.change(labelInput, { target: { value: 'Donation for Coffee' } });
-    act(() => { vi.advanceTimersByTime(100); });
-    expect(mockOnChange).toHaveBeenLastCalledWith({ value: 'bitcoin:1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa?amount=0.005&label=Donation%20for%20Coffee' });
+    fireEvent.change(labelInput, { target: { value: "Donation for Coffee" } });
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
+    expect(mockOnChange).toHaveBeenLastCalledWith({
+      value:
+        "bitcoin:1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa?amount=0.005&label=Donation%20for%20Coffee",
+    });
 
     // Change Network to Ethereum
-    const networkSelect = screen.getByLabelText('Currency / Network');
-    fireEvent.change(networkSelect, { target: { value: 'ethereum' } });
-    act(() => { vi.advanceTimersByTime(100); });
+    const networkSelect = screen.getByLabelText("Currency / Network");
+    fireEvent.change(networkSelect, { target: { value: "ethereum" } });
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
     // State persists, so params are re-applied to new network scheme
-    expect(mockOnChange).toHaveBeenLastCalledWith({ value: 'ethereum:1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa?amount=0.005&label=Donation%20for%20Coffee' });
+    expect(mockOnChange).toHaveBeenLastCalledWith({
+      value:
+        "ethereum:1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa?amount=0.005&label=Donation%20for%20Coffee",
+    });
 
     // Change to Custom
-    fireEvent.change(networkSelect, { target: { value: 'custom' } });
-    act(() => { vi.advanceTimersByTime(100); });
+    fireEvent.change(networkSelect, { target: { value: "custom" } });
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
     // Should output raw address/string
-    expect(mockOnChange).toHaveBeenLastCalledWith({ value: '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa' });
+    expect(mockOnChange).toHaveBeenLastCalledWith({
+      value: "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
+    });
   });
 
-  it('formats Event data as iCalendar', () => {
+  it("formats Event data as iCalendar", () => {
     renderPanel({ type: QRType.EVENT });
 
-    fireEvent.change(screen.getByLabelText('Event Title'), { target: { value: 'Launch Party' } });
-    act(() => { vi.advanceTimersByTime(100); });
+    fireEvent.change(screen.getByLabelText("Event Title"), {
+      target: { value: "Launch Party" },
+    });
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
 
-    fireEvent.change(screen.getByLabelText('Start Date & Time'), { target: { value: '2026-05-01T18:30' } });
-    act(() => { vi.advanceTimersByTime(100); });
+    fireEvent.change(screen.getByLabelText("Start Date & Time"), {
+      target: { value: "2026-05-01T18:30" },
+    });
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
 
-    fireEvent.change(screen.getByLabelText('End Date & Time'), { target: { value: '2026-05-01T21:00' } });
-    act(() => { vi.advanceTimersByTime(100); });
+    fireEvent.change(screen.getByLabelText("End Date & Time"), {
+      target: { value: "2026-05-01T21:00" },
+    });
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
 
-    fireEvent.change(screen.getByLabelText('Location'), { target: { value: 'Main Hall, HQ' } });
-    act(() => { vi.advanceTimersByTime(100); });
+    fireEvent.change(screen.getByLabelText("Location"), {
+      target: { value: "Main Hall, HQ" },
+    });
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
 
-    fireEvent.change(screen.getByLabelText('Description'), { target: { value: 'Line 1\nLine 2' } });
-    act(() => { vi.advanceTimersByTime(100); });
+    fireEvent.change(screen.getByLabelText("Description"), {
+      target: { value: "Line 1\nLine 2" },
+    });
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
 
     const expected = [
-      'BEGIN:VCALENDAR',
-      'VERSION:2.0',
-      'PRODID:-//QRCraftly//EN',
-      'BEGIN:VEVENT',
-      'SUMMARY:Launch Party',
-      'DTSTART:20260501T183000',
-      'DTEND:20260501T210000',
-      'LOCATION:Main Hall\\, HQ',
-      'DESCRIPTION:Line 1\\nLine 2',
-      'END:VEVENT',
-      'END:VCALENDAR'
-    ].join('\n');
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "PRODID:-//QRCraftly//EN",
+      "BEGIN:VEVENT",
+      "SUMMARY:Launch Party",
+      "DTSTART:20260501T183000",
+      "DTEND:20260501T210000",
+      "LOCATION:Main Hall\\, HQ",
+      "DESCRIPTION:Line 1\\nLine 2",
+      "END:VEVENT",
+      "END:VCALENDAR",
+    ].join("\n");
 
     expect(mockOnChange).toHaveBeenLastCalledWith({ value: expected });
   });
 
-  it('shows character count for TEXT input', () => {
-      renderPanel({ type: QRType.TEXT, value: 'Hello' });
-      expect(screen.getByText('5 / 2500')).toBeInTheDocument();
+  it("shows character count for TEXT input", () => {
+    renderPanel({ type: QRType.TEXT, value: "Hello" });
+    expect(screen.getByText("5 / 2500")).toBeInTheDocument();
   });
 });
