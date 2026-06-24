@@ -17,6 +17,7 @@
 */
 
 import { test, expect } from '@playwright/test';
+import { FIXTURES } from "../tests/fixtures/data";
 
 /**
  * End-to-end tests for the "Use Current Location" geolocation feature
@@ -41,8 +42,8 @@ test.describe('Location QR type', () => {
   });
 
   test('manually entering coordinates generates a QR code', async ({ page }) => {
-    await page.getByLabel('Latitude').fill('40.7128');
-    await page.getByLabel('Longitude').fill('-74.0060');
+    await page.getByLabel('Latitude').fill(FIXTURES.coordinates.newYork.latitude);
+    await page.getByLabel('Longitude').fill(FIXTURES.coordinates.newYork.longitude);
 
     // The QR canvas description should update once valid coordinates are provided
     await expect(page.getByRole('img', { name: /qr code for location/i })).toBeVisible();

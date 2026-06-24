@@ -6,15 +6,6 @@ import { DEFAULT_CONFIG } from '../constants';
 import { QRStyle } from '../types';
 
 // Mock qrcode module
-vi.mock('qrcode', () => {
-  const createMock = vi.fn();
-  return {
-    create: createMock,
-    default: {
-      create: createMock,
-    },
-  };
-});
 
 import QRCode from 'qrcode';
 
@@ -86,11 +77,7 @@ describe('QRCanvas Performance Refactoring', () => {
     } as any;
   });
 
-  afterEach(() => {
-    vi.restoreAllMocks();
-    window.Image = originalImage;
-  });
-
+  
   const setupModules = (patternFn: (r: number, c: number) => boolean) => {
     mockModules.get.mockImplementation(patternFn);
   };

@@ -25,15 +25,6 @@ import { QRStyle } from '../types';
 import QRCode from 'qrcode';
 
 // Mock qrcode module
-vi.mock('qrcode', () => {
-  const createMock = vi.fn();
-  return {
-    create: createMock,
-    default: {
-      create: createMock,
-    },
-  };
-});
 
 // Mock Image
 const originalImage = window.Image;
@@ -102,11 +93,7 @@ describe('QRCanvas Circuit Style Eye Bracket Bug', () => {
     } as any;
   });
 
-  afterEach(() => {
-    vi.restoreAllMocks();
-    window.Image = originalImage;
-  });
-
+  
   it('verifies that the bracket cuts in Circuit style are deep enough (fixed)', async () => {
      const config = { ...DEFAULT_CONFIG, style: QRStyle.CIRCUIT, value: 'test', eyeColor: '#000000', bgColor: '#ffffff' };
      const size = 100;

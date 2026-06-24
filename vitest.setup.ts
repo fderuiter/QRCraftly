@@ -17,6 +17,7 @@
 */
 
 import '@testing-library/jest-dom';
+import { vi, afterEach } from 'vitest';
 
 if (typeof globalThis.Worker === 'undefined') {
   globalThis.Worker = class {
@@ -32,38 +33,66 @@ if (typeof window !== 'undefined' && !window.Worker) {
   (window as any).Worker = globalThis.Worker;
 }
 
-if (!HTMLCanvasElement.prototype.getContext) {
-  HTMLCanvasElement.prototype.getContext = function () {
-    return {
-      fillRect: () => {},
-      clearRect: () => {},
-      getImageData: (_x: any, _y: any, w: any, h: any) => ({
-        data: new Uint8ClampedArray(w * h * 4)
-      }),
-      putImageData: () => {},
-      createImageData: () => ([]),
-      setTransform: () => {},
-      drawImage: () => {},
-      save: () => {},
-      fillText: () => {},
-      restore: () => {},
-      beginPath: () => {},
-      moveTo: () => {},
-      lineTo: () => {},
-      closePath: () => {},
-      stroke: () => {},
-      translate: () => {},
-      scale: () => {},
-      rotate: () => {},
-      arc: () => {},
-      fill: () => {},
-      measureText: () => ({ width: 0 }),
-      transform: () => {},
-      rect: () => {},
-      clip: () => {},
-    } as any;
-  };
-}
+// ---------------------------------------------------------------------------
+// Global mocks for Canvas Context, Fetch, URL
+// ---------------------------------------------------------------------------
+
+const createMockContext = () => ({
+  clearRect: vi.fn(),
+  fillRect: vi.fn(),
+  roundRect: vi.fn(),
+  beginPath: vi.fn(),
+  fill: vi.fn(),
+  arc: vi.fn(),
+  rect: vi.fn(),
+  save: vi.fn(),
+  translate: vi.fn(),
+  rotate: vi.fn(),
+  restore: vi.fn(),
+  scale: vi.fn(),
+  drawImage: vi.fn(),
+  moveTo: vi.fn(),
+  lineTo: vi.fn(),
+  closePath: vi.fn(),
+  bezierCurveTo: vi.fn(),
+  setLineDash: vi.fn(),
+  strokeRect: vi.fn(),
+  stroke: vi.fn(),
+  fillText: vi.fn(),
+  measureText: vi.fn().mockReturnValue({ width: 0 }),
+  getImageData: vi.fn().mockImplementation((_x: any, _y: any, w: any, h: any) => ({
+    data: new Uint8ClampedArray(w * h * 4)
+  })),
+  putImageData: vi.fn(),
+  createImageData: vi.fn().mockReturnValue([]),
+  setTransform: vi.fn(),
+  transform: vi.fn(),
+  clip: vi.fn(),
+  quadraticCurveTo: vi.fn(),
+  canvas: { width: 0, height: 0 },
+  fillStyle: '',
+  strokeStyle: '',
+  lineWidth: 0,
+});
+
+HTMLCanvasElement.prototype.getContext = vi.fn().mockImplementation(function (contextId: string) {
+  if (contextId === '2d') {
+    if (!(this as any)._mockContext) {
+      (this as any)._mockContext = createMockContext();
+    }
+    return (this as any)._mockContext;
+  }
+  return null;
+}) as any;
+
+const originalCreateElement = document.createElement.bind(document);
+vi.spyOn(document, 'createElement').mockImplementation((tagName: string, options?: ElementCreationOptions) => {
+  const el = originalCreateElement(tagName, options);
+  if (tagName.toLowerCase() === 'canvas') {
+    el.getContext = HTMLCanvasElement.prototype.getContext;
+  }
+  return el;
+});
 
 if (!HTMLCanvasElement.prototype.toBlob) {
   HTMLCanvasElement.prototype.toBlob = function (callback: BlobCallback, _type?: string, _quality?: any) {
@@ -73,6 +102,59 @@ if (!HTMLCanvasElement.prototype.toBlob) {
 
 if (!HTMLCanvasElement.prototype.toDataURL) {
   HTMLCanvasElement.prototype.toDataURL = function () {
-    return 'data:image/png;base64,';
+    return 'data:image/png;base64,mock';
   };
 }
+
+global.fetch = vi.fn().mockResolvedValue({
+  ok: true,
+  json: () => Promise.resolve({}),
+  blob: () => Promise.resolve(new Blob()),
+  text: () => Promise.resolve(''),
+});
+
+if (typeof URL.createObjectURL === 'undefined') {
+  URL.createObjectURL = vi.fn().mockReturnValue('blob:mock-url');
+} else {
+  vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock-url');
+}
+
+if (typeof URL.revokeObjectURL === 'undefined') {
+  URL.revokeObjectURL = vi.fn();
+} else {
+  vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
+}
+
+// ---------------------------------------------------------------------------
+// Global mocks for QRCode
+// ---------------------------------------------------------------------------
+
+vi.mock('qrcode', () => {
+  const createMock = vi.fn().mockImplementation((val) => {
+    if (!val) throw new Error('Value is required');
+    return {
+      modules: {
+        size: 21,
+        get: vi.fn().mockImplementation((r, c) => ((r === 0 && c === 0) || (r === 10 && c === 10))),
+      }
+    };
+  });
+
+  return {
+    create: createMock,
+    toCanvas: vi.fn().mockResolvedValue(undefined),
+    toDataURL: vi.fn().mockResolvedValue('data:image/png;base64,mock'),
+    default: {
+      create: createMock,
+      toCanvas: vi.fn().mockResolvedValue(undefined),
+      toDataURL: vi.fn().mockResolvedValue('data:image/png;base64,mock'),
+    }
+  };
+});
+
+const originalImage = window.Image;
+
+afterEach(() => {
+  // Restore specific global state used across canvas tests
+  window.Image = originalImage;
+});

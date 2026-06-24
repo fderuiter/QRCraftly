@@ -20,6 +20,7 @@ import { render, screen, fireEvent, act } from '@testing-library/react';
 import InputPanel from './InputPanel';
 import { DEFAULT_CONFIG } from '../constants';
 import { QRType, QRConfig, WifiEncryption } from '../types';
+import { FIXTURES } from "../../tests/fixtures/data";
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 describe('InputPanel Component', () => {
@@ -298,7 +299,7 @@ describe('InputPanel Component', () => {
 
       act(() => { vi.advanceTimersByTime(1000); }); // Wait for all updates
 
-      const expectedVCard = `BEGIN:VCARD\nVERSION:3.0\nN:Doe;John;;;\nFN:John Doe\nORG:Acme Corp\nTITLE:Engineer\nTEL:555-0199\nEMAIL:john@example.com\nURL:https://example.com/\nADR:;;123 Main St;Metropolis;;;USA\nEND:VCARD`;
+      const expectedVCard = FIXTURES.vCard.johnDoe;
 
       expect(mockOnChange).toHaveBeenLastCalledWith({ value: expectedVCard });
   });
