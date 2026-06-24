@@ -32,47 +32,62 @@ if (typeof window !== 'undefined' && !window.Worker) {
   (window as any).Worker = globalThis.Worker;
 }
 
-if (!HTMLCanvasElement.prototype.getContext) {
-  HTMLCanvasElement.prototype.getContext = function () {
-    return {
-      fillRect: () => {},
-      clearRect: () => {},
-      getImageData: (_x: any, _y: any, w: any, h: any) => ({
-        data: new Uint8ClampedArray(w * h * 4)
-      }),
-      putImageData: () => {},
-      createImageData: () => ([]),
-      setTransform: () => {},
-      drawImage: () => {},
-      save: () => {},
-      fillText: () => {},
-      restore: () => {},
-      beginPath: () => {},
-      moveTo: () => {},
-      lineTo: () => {},
-      closePath: () => {},
-      stroke: () => {},
-      translate: () => {},
-      scale: () => {},
-      rotate: () => {},
-      arc: () => {},
-      fill: () => {},
-      measureText: () => ({ width: 0 }),
-      transform: () => {},
-      rect: () => {},
-      clip: () => {},
-    } as any;
-  };
-}
+// Unconditionally override getContext to avoid jsdom errors when canvas package is missing
+HTMLCanvasElement.prototype.getContext = function () {
+  return {
+    fillRect: () => {},
+    clearRect: () => {},
+    getImageData: (_x: any, _y: any, w: any, h: any) => ({
+      data: new Uint8ClampedArray(w * h * 4)
+    }),
+    putImageData: () => {},
+    createImageData: () => ([]),
+    setTransform: () => {},
+    drawImage: () => {},
+    save: () => {},
+    fillText: () => {},
+    restore: () => {},
+    beginPath: () => {},
+    moveTo: () => {},
+    lineTo: () => {},
+    closePath: () => {},
+    stroke: () => {},
+    translate: () => {},
+    scale: () => {},
+    rotate: () => {},
+    arc: () => {},
+    fill: () => {},
+    measureText: () => ({ width: 0 }),
+    transform: () => {},
+    rect: () => {},
+    clip: () => {},
+  } as any;
+};
 
-if (!HTMLCanvasElement.prototype.toBlob) {
-  HTMLCanvasElement.prototype.toBlob = function (callback: BlobCallback, _type?: string, _quality?: any) {
-    setTimeout(() => callback(new Blob([])), 0);
-  };
-}
+// Mock Image so that setting src instantly triggers onload, preventing test timeouts
+const OriginalImage = window.Image;
+window.Image = class MockImage {
+  onload: (() => void) | null = null;
+  onerror: (() => void) | null = null;
+  crossOrigin: string | null = null;
+  _src: string = '';
 
-if (!HTMLCanvasElement.prototype.toDataURL) {
-  HTMLCanvasElement.prototype.toDataURL = function () {
-    return 'data:image/png;base64,';
-  };
-}
+  get src() {
+    return this._src;
+  }
+
+  set src(value: string) {
+    this._src = value;
+    setTimeout(() => {
+      if (this.onload) this.onload();
+    }, 0);
+  }
+} as any;
+
+HTMLCanvasElement.prototype.toBlob = function (callback: BlobCallback, _type?: string, _quality?: any) {
+  setTimeout(() => callback(new Blob([])), 0);
+};
+
+HTMLCanvasElement.prototype.toDataURL = function () {
+  return 'data:image/png;base64,';
+};

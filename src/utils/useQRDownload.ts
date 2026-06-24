@@ -17,16 +17,84 @@
 */
 
 import { RefObject, useCallback } from 'react';
-import { QRConfig } from '../types';
+import { QRConfig, SocialFormat, TemplateStyle } from '../types';
 import { generateQRSvg } from './svgExport';
 import { useToast } from '../components/ui/Toast';
 import { useCapabilities } from '../hooks/useCapabilities';
+import { drawQRInternal } from './qrRenderer';
+import { drawWithTemplate, SOCIAL_DIMENSIONS } from './templateRenderer';
+
+const loadImage = (url: string | null): Promise<HTMLImageElement | null> => {
+  if (!url) return Promise.resolve(null);
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => resolve(img);
+    img.onerror = () => {
+      console.warn('Failed to load image:', url);
+      resolve(null);
+    };
+    img.src = url;
+  });
+};
+
+const generateVirtualCanvas = async (config: QRConfig, size = 1024): Promise<HTMLCanvasElement> => {
+  const QRCode = await import('qrcode');
+  const qrData = QRCode.create(config.value, { errorCorrectionLevel: config.errorCorrectionLevel });
+  
+  const logoImg = await loadImage(config.logoUrl);
+  const borderLogoImg = config.isBorderEnabled ? await loadImage(config.borderLogoUrl) : null;
+  
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  if (!ctx) throw new Error('Failed to get 2d context');
+
+  const useTemplate =
+    config.templateStyle !== TemplateStyle.NONE ||
+    config.socialFormat !== SocialFormat.SQUARE_1_1;
+
+  if (useTemplate) {
+    const { width: fw, height: fh } = SOCIAL_DIMENSIONS[config.socialFormat];
+    const displayHeight = Math.round(size * fh / fw);
+    canvas.width = size;
+    canvas.height = displayHeight;
+
+    drawWithTemplate(
+      ctx as unknown as CanvasRenderingContext2D,
+      qrData.modules as any,
+      config,
+      logoImg,
+      borderLogoImg,
+      size,
+      displayHeight,
+      qrData.modules.size,
+      true // isVirtual
+    );
+  } else {
+    canvas.width = size;
+    canvas.height = size;
+    ctx.clearRect(0, 0, size, size);
+
+    drawQRInternal(
+      ctx as unknown as CanvasRenderingContext2D,
+      qrData.modules as any,
+      config,
+      logoImg,
+      borderLogoImg,
+      size,
+      qrData.modules.size,
+      true // isVirtual
+    );
+  }
+
+  return canvas;
+};
 
 /**
  * Return type for the useQRDownload hook.
  */
 interface UseQRDownloadReturn {
-  downloadToDevice: (format: 'png' | 'jpeg' | 'webp') => void;
+  downloadToDevice: (format: 'png' | 'jpeg' | 'webp') => Promise<void>;
   handleSaveAs: (format: 'png' | 'jpeg' | 'webp') => Promise<void>;
   handleSaveSvg: () => Promise<void>;
   handleShare: () => Promise<void>;
@@ -73,9 +141,9 @@ export function useQRDownload(
    * Used as a fallback or direct action for saving to photos.
    * @param format - The desired image format.
    */
-  const downloadToDevice = useCallback((format: 'png' | 'jpeg' | 'webp') => {
-    const canvas = qrRef.current?.querySelector('canvas');
-    if (canvas) {
+  const downloadToDevice = useCallback(async (format: 'png' | 'jpeg' | 'webp') => {
+    try {
+      const canvas = await generateVirtualCanvas(config);
       const url = canvas.toDataURL(`image/${format}`);
       const link = document.createElement('a');
       const ext = getExtension(format);
@@ -84,8 +152,10 @@ export function useQRDownload(
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+    } catch (err) {
+      console.warn('Failed to generate virtual canvas for download:', err);
     }
-  }, [qrRef, getFilename]);
+  }, [config, getFilename]);
 
   /**
    * Handles saving the QR code image, attempting to use the File System Access API
@@ -93,43 +163,46 @@ export function useQRDownload(
    * @param format - The desired image format.
    */
   const handleSaveAs = useCallback(async (format: 'png' | 'jpeg' | 'webp') => {
-    const canvas = qrRef.current?.querySelector('canvas');
-    if (!canvas) return;
+    try {
+      const canvas = await generateVirtualCanvas(config);
 
-    // Check if the browser supports the File System Access API (e.g., Chrome, Edge Desktop)
-    if (canSaveFilePicker) {
-      try {
-        const blob = await new Promise<Blob | null>((resolve) =>
-          canvas.toBlob(resolve, `image/${format}`)
-        );
+      // Check if the browser supports the File System Access API (e.g., Chrome, Edge Desktop)
+      if (canSaveFilePicker) {
+        try {
+          const blob = await new Promise<Blob | null>((resolve) =>
+            canvas.toBlob(resolve, `image/${format}`)
+          );
 
-        if (!blob) throw new Error('Failed to create image blob');
+          if (!blob) throw new Error('Failed to create image blob');
 
-        const ext = getExtension(format);
+          const ext = getExtension(format);
 
-        const handle = await (window as any).showSaveFilePicker({
-          suggestedName: getFilename(ext),
-          types: [{
-            description: 'QR Code Image',
-            accept: { [`image/${format}`]: [`.${ext}`] },
-          }],
-        });
+          const handle = await (window as any).showSaveFilePicker({
+            suggestedName: getFilename(ext),
+            types: [{
+              description: 'QR Code Image',
+              accept: { [`image/${format}`]: [`.${ext}`] },
+            }],
+          });
 
-        const writable = await handle.createWritable();
-        await writable.write(blob);
-        await writable.close();
-      } catch (err: any) {
-        // If user aborted the picker, do nothing.
-        if (err.name === 'AbortError') return;
+          const writable = await handle.createWritable();
+          await writable.write(blob);
+          await writable.close();
+        } catch (err: any) {
+          // If user aborted the picker, do nothing.
+          if (err.name === 'AbortError') return;
 
-        console.warn('File System Access API failed, falling back to standard download:', err);
-        downloadToDevice(format);
+          console.warn('File System Access API failed, falling back to standard download:', err);
+          await downloadToDevice(format);
+        }
+      } else {
+        // Fallback for browsers that don't support showSaveFilePicker (Safari, Firefox, Mobile)
+        await downloadToDevice(format);
       }
-    } else {
-      // Fallback for browsers that don't support showSaveFilePicker (Safari, Firefox, Mobile)
-      downloadToDevice(format);
+    } catch (err) {
+      console.warn('Failed to save QR code:', err);
     }
-  }, [qrRef, getFilename, downloadToDevice, canSaveFilePicker]);
+  }, [config, getFilename, downloadToDevice, canSaveFilePicker]);
 
   /**
    * Uses the Web Share API to share the QR code image directly to other apps.
@@ -140,10 +213,8 @@ export function useQRDownload(
    * @returns A boolean indicating if the copy operation was successful.
    */
   const handleCopy = useCallback(async (): Promise<boolean> => {
-    const canvas = qrRef.current?.querySelector('canvas');
-    if (!canvas) return false;
-
     try {
+      const canvas = await generateVirtualCanvas(config);
       const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
       if (!blob) return false;
 
@@ -159,11 +230,11 @@ export function useQRDownload(
       console.warn('Failed to copy to clipboard:', err);
       return false;
     }
-  }, [qrRef]);
+  }, [config]);
 
   const handleShare = useCallback(async () => {
-    const canvas = qrRef.current?.querySelector('canvas');
-    if (canvas) {
+    try {
+      const canvas = await generateVirtualCanvas(config);
       canvas.toBlob(async (blob) => {
         if (!blob) return;
 
@@ -186,11 +257,13 @@ export function useQRDownload(
             message: "Sharing is not supported on this device/browser. The image will be downloaded instead.",
             duration: 5000
           });
-          downloadToDevice('png');
+          await downloadToDevice('png');
         }
       }, 'image/png');
+    } catch (err) {
+      console.warn('Failed to generate virtual canvas for sharing:', err);
     }
-  }, [qrRef, downloadToDevice, canShare, addToast]);
+  }, [config, downloadToDevice, canShare, addToast]);
 
   /**
    * Generates a vector SVG file from the current QR configuration and triggers

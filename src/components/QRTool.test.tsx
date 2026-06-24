@@ -122,7 +122,7 @@ describe('QRTool Component', () => {
     expect(screen.getByText('WebP (Modern)')).toBeInTheDocument();
   });
 
-  it('handles save to photos (downloadToDevice) fallback', () => {
+  it('handles save to photos (downloadToDevice) fallback', async () => {
      render(<ToastProvider><QRTool /></ToastProvider>);
 
      // Spy on document.createElement but we can't easily mock return value without affecting internal React logic if it uses 'a' tags (it might)
@@ -139,13 +139,16 @@ describe('QRTool Component', () => {
 
      // To verify click, we can spy on HTMLAnchorElement.prototype.click
      const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click');
+     const toDataUrlSpy = vi.spyOn(HTMLCanvasElement.prototype, 'toDataURL').mockReturnValue('data:image/png;base64,mock');
 
      const saveBtns = screen.getAllByText('Save to Photos');
      fireEvent.click(saveBtns[0]);
 
-     expect(HTMLCanvasElement.prototype.toDataURL).toHaveBeenCalledWith('image/png');
+     await waitFor(() => {
+         expect(toDataUrlSpy).toHaveBeenCalledWith('image/png');
+         expect(appendSpy).toHaveBeenCalled();
+     });
 
-     expect(appendSpy).toHaveBeenCalled();
      const appendedElement = appendSpy.mock.calls[0][0] as HTMLAnchorElement;
      expect(appendedElement.tagName).toBe('A');
      expect(appendedElement.download).toContain('.png');
