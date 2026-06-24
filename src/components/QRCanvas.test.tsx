@@ -25,18 +25,6 @@ import { QRStyle, LogoPaddingStyle, QRErrorCorrectionLevel, SocialFormat } from 
 import QRCode from 'qrcode';
 
 // Mock qrcode module
-vi.mock('qrcode', () => {
-  const createMock = vi.fn();
-  return {
-    create: createMock,
-    // When import * as QRCode is used (common in tests/mocks mismatch), default might be needed.
-    // But since we switched to default import, we need to ensure compatibility.
-    // In our test we access QRCode.create directly now.
-    default: {
-      create: createMock,
-    },
-  };
-});
 
 // Mock Image
 const originalImage = window.Image;
@@ -112,11 +100,7 @@ describe('QRCanvas Component', () => {
     window.Image = MockImage as any;
   });
 
-  afterEach(() => {
-    vi.restoreAllMocks();
-    window.Image = originalImage;
-  });
-
+  
   it('renders correctly with default config', async () => {
     render(<QRCanvas config={DEFAULT_CONFIG} />);
 

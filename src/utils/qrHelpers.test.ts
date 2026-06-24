@@ -16,6 +16,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { FIXTURES } from '../../tests/fixtures/data';
 import { describe, it, expect } from 'vitest';
 import {
   constructWifiString,
@@ -121,19 +122,7 @@ describe('QR Helpers', () => {
   });
 
   describe('constructVCardString', () => {
-    const baseVCard: VCardData = {
-      firstName: 'John',
-      lastName: 'Doe',
-      organization: 'Acme Corp',
-      title: 'Engineer',
-      phone: '1234567890',
-      email: 'john@example.com',
-      website: 'https://example.com',
-      street: '123 Main St',
-      city: 'Metropolis',
-      zip: '12345',
-      country: 'USA'
-    };
+    const baseVCard: VCardData = FIXTURES.vCard.baseData;
 
     it('constructs a valid VCard 3.0 string', () => {
       const result = constructVCardString(baseVCard);

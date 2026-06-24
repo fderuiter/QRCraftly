@@ -17,6 +17,7 @@
 */
 
 import { describe, it, expect } from 'vitest';
+import { FIXTURES } from "../../tests/fixtures/data";
 import { constructLocationString } from './qr-generators/location';
 import { constructMeetingString } from './qr-generators/meeting';
 import { constructSocialString, sanitizeSocialHandle } from './qr-generators/social';
@@ -24,7 +25,7 @@ import { SocialPlatform } from '../types';
 
 describe('Location generator', () => {
   it('constructs a valid geo URI', () => {
-    expect(constructLocationString({ latitude: '40.7128', longitude: '-74.0060' }))
+    expect(constructLocationString(FIXTURES.coordinates.newYork))
       .toBe('geo:40.7128,-74.006');
   });
 
@@ -57,8 +58,8 @@ describe('Location generator', () => {
   });
 
   it('handles boundary values', () => {
-    expect(constructLocationString({ latitude: '90', longitude: '180' })).toBe('geo:90,180');
-    expect(constructLocationString({ latitude: '-90', longitude: '-180' })).toBe('geo:-90,-180');
+    expect(constructLocationString({ latitude: FIXTURES.coordinates.boundary.maxLat.latitude, longitude: FIXTURES.coordinates.boundary.maxLng.longitude })).toBe('geo:90,180');
+    expect(constructLocationString({ latitude: FIXTURES.coordinates.boundary.minLat.latitude, longitude: FIXTURES.coordinates.boundary.minLng.longitude })).toBe('geo:-90,-180');
   });
 });
 

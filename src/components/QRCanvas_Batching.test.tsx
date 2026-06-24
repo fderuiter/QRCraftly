@@ -24,15 +24,6 @@ import { QRStyle } from '../types';
 import QRCode from 'qrcode';
 
 // Mock qrcode module
-vi.mock('qrcode', () => {
-  const createMock = vi.fn();
-  return {
-    create: createMock,
-    default: {
-      create: createMock,
-    },
-  };
-});
 
 // Mock Image
 const originalImage = window.Image;
@@ -93,11 +84,7 @@ describe('QRCanvas Batch Rendering', () => {
     } as any;
   });
 
-  afterEach(() => {
-    vi.restoreAllMocks();
-    window.Image = originalImage;
-  });
-
+  
   const setModulesPattern = () => {
       // Set a few modules to true to trigger drawing
       mockModules.get.mockImplementation((r: number, c: number) => {

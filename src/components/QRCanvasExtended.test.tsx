@@ -84,11 +84,7 @@ describe('QRCanvas Border Extended Features', () => {
     window.Image = MockImage as any;
   });
 
-  afterEach(() => {
-    vi.restoreAllMocks();
-    window.Image = originalImage;
-  });
-
+  
   it('renders dashed border style', async () => {
     const config: QRConfig = {
       ...DEFAULT_CONFIG,

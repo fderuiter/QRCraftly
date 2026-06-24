@@ -25,15 +25,6 @@ import { QRStyle } from '../types';
 import QRCode from 'qrcode';
 
 // Mock qrcode module
-vi.mock('qrcode', () => {
-  const createMock = vi.fn();
-  return {
-    create: createMock,
-    default: {
-      create: createMock,
-    },
-  };
-});
 
 // Mock Image
 const originalImage = window.Image;
@@ -102,11 +93,7 @@ describe('QRCanvas Circuit Style Bug', () => {
     } as any;
   });
 
-  afterEach(() => {
-    vi.restoreAllMocks();
-    window.Image = originalImage;
-  });
-
+  
   it('draws traces centered on cell axes for CIRCUIT style', async () => {
      // Setup modules such that we have a connection
      // Let's test connection to the Right (col+1)
