@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { ValidationEngine } from './ValidationEngine';
-import { QRConfig, QRType, ErrorCorrectionLevel, SocialFormat, TemplateStyle } from '../types';
+import { QRConfig, QRType, QRErrorCorrectionLevel, SocialFormat, TemplateStyle, QRStyle } from '../types';
 
 const getBaseConfig = (): QRConfig => ({
   type: QRType.TEXT,
@@ -8,20 +8,24 @@ const getBaseConfig = (): QRConfig => ({
   fgColor: '#000000',
   bgColor: '#FFFFFF',
   eyeColor: '#000000',
-  errorCorrectionLevel: 'M',
+  errorCorrectionLevel: QRErrorCorrectionLevel.M,
   logoUrl: '',
   logoSize: 0.2,
   logoPadding: 0,
-  logoStyle: 'square',
-  style: 'standard',
+  logoPaddingStyle: 'square',
+  logoBackgroundColor: '#FFFFFF',
+  style: QRStyle.STANDARD,
   socialFormat: SocialFormat.SQUARE_1_1,
   templateStyle: TemplateStyle.NONE,
   isBorderEnabled: false,
+  borderSize: 0.05,
   borderStyle: 'solid',
   borderColor: '#000000',
+  borderText: '',
   borderTextColor: '#000000',
-  borderTextPosition: 'bottom',
-  borderLogoPosition: 'bottom',
+  borderLogoUrl: null,
+  borderTextPosition: 'bottom-center',
+  borderLogoPosition: 'bottom-center',
 });
 
 describe('ValidationEngine', () => {
