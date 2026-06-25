@@ -4,6 +4,15 @@ import { parseProtocol, PROTOCOL_PREFIXES, SOCIAL_DOMAINS } from '../utils/proto
 import { SafeUrlPipeline } from '../utils/url';
 
 export const ValidationEngine = {
+  // Formal Containment Profiles
+  CONTAINMENT_PROFILES: {
+    URL: /^(?:https?|ftp):\/\/[^\s\x00-\x1F\x7F-\x9F\u200B-\u200D\uFEFF]+$/i,
+    EMAIL: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
+    PLAIN_TEXT: /^[^\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F\u200B-\u200D\uFEFF]*$/,
+    // General check for zero-width and control characters in text fields
+    STRICT_NO_CONTROL: /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F\u200B-\u200D\uFEFF]/
+  },
+
   // Shared regex patterns for data parsing and validation
   REGEX_STRICT_CONTROL_CHARS: /[\x00-\x1F\x7F-\x9F]+/g,
   REGEX_PRESERVE_FORMAT_CONTROL_CHARS: /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g,
@@ -70,6 +79,51 @@ export const ValidationEngine = {
   // Security sanitization
   isDangerousUrl(url: string | undefined): boolean {
     return SafeUrlPipeline.isDangerous(url);
+  },
+
+  // Comprehensive Config Validation
+  validateConfig(config: QRConfig): string[] {
+    const violations: string[] = [];
+
+    // 1. Mandatory validation step for rendering sinks (borders, templates)
+    const checkTextSink = (str: string | undefined, field: string) => {
+      if (str && this.CONTAINMENT_PROFILES.STRICT_NO_CONTROL.test(str)) {
+        violations.push(`${field} contains invalid control or zero-width characters`);
+      }
+    };
+
+    checkTextSink(config.borderText, 'Border Text');
+    checkTextSink(config.templateHeadline, 'Template Headline');
+    checkTextSink(config.templateSubtext, 'Template Subtext');
+
+    // 2. Validate QR payload against containment profiles
+    if (config.value) {
+      if (this.CONTAINMENT_PROFILES.STRICT_NO_CONTROL.test(config.value)) {
+        violations.push('Payload contains invalid control or zero-width characters');
+      }
+
+      // Determine the effective type. Prefer explicit config.type, otherwise try to identify it.
+      const type = config.type || this.identifyProtocol(config.value);
+
+      if (type === QRType.URL) {
+        if (this.isDangerousUrl(config.value)) {
+          violations.push('URI_INJECTION_VIOLATION');
+        } else if (!this.CONTAINMENT_PROFILES.URL.test(config.value) && config.value.startsWith('http')) {
+          violations.push('URL_STRUCTURE_VIOLATION');
+        }
+      } else if (type === QRType.EMAIL) {
+        // If it starts with mailto:, extract and check the email part
+        let emailPart = config.value;
+        if (emailPart.toLowerCase().startsWith('mailto:')) {
+          emailPart = emailPart.substring(7).split('?')[0];
+        }
+        if (!this.CONTAINMENT_PROFILES.EMAIL.test(emailPart)) {
+          violations.push('EMAIL_STRUCTURE_VIOLATION');
+        }
+      }
+    }
+
+    return violations;
   },
 
   sanitizeInput(str: string): string {
