@@ -190,6 +190,9 @@ jobs:
     name: Build & Artifact
     needs: [quality, test, e2e] # Wait for quality checks before burning CPU on build
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write # Required for posting the resource quota comment
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - name: Setup Node (pre-pnpm)
