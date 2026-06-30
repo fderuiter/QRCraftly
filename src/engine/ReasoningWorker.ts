@@ -1,6 +1,5 @@
 import wasmUrl from './reasoning-engine.wasm?url';
 
-let wasmInstance: WebAssembly.Instance | null = null;
 let initialized = false;
 
 // Store local dirty buffers in volatile memory
@@ -15,8 +14,7 @@ async function initWasm() {
     if (buffer.byteLength > 50 * 1024 * 1024) {
       throw new Error('WASM module exceeds 50MB constraint');
     }
-    const module = await WebAssembly.instantiate(buffer, {});
-    wasmInstance = module.instance;
+    await WebAssembly.instantiate(buffer, {});
     initialized = true;
     self.postMessage({ type: 'init-success' });
   } catch (error) {
