@@ -73,6 +73,21 @@ function createQRStore(initialConfig?: Partial<QRConfig>): QRStore {
     'validation-violation': new Set(),
   };
 
+  let worker: Worker | null = null;
+  if (typeof window !== 'undefined') {
+    worker = new Worker(new URL('../engine/ReasoningWorker.ts', import.meta.url), { type: 'module' });
+    worker.postMessage({ type: 'init' });
+    worker.onmessage = (event) => {
+      const { type, payload } = event.data;
+      if (type === 'validation-result') {
+        const { violations } = payload;
+        if (violations && violations.length > 0) {
+          signals['validation-violation'].forEach(cb => cb(violations));
+        }
+      }
+    };
+  }
+
   const store: QRStore = {
     getState: () => state,
     subscribe: (listener) => {
@@ -88,6 +103,15 @@ function createQRStore(initialConfig?: Partial<QRConfig>): QRStore {
         store.emitSignal('validation-violation', violations);
         return; // reject insecure or invalid patch
       }
+      
+      // Local WASM validation on the dirty buffer (replaces remote Shadow VFS)
+      if (worker && updates.value !== undefined) {
+        worker.postMessage({
+          type: 'sync-buffer',
+          payload: { id: 'main-buffer', content: proposed.value }
+        });
+      }
+
       state = { ...state, config: proposed };
       listeners.forEach(l => l());
     },
