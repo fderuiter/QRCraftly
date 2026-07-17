@@ -130,6 +130,29 @@ export const getIsCoveredByLogo = (config: QRConfig, moduleCount: number, logoMe
     }
 };
 
+export const iterateMatrix = (moduleCount: number, callback: (r: number, c: number) => void) => {
+  // Top Section (Rows 0-6): Skip TL (0-6) and TR (size-7 to size-1)
+  for (let r = 0; r < 7; r++) {
+      for (let c = 7; c < moduleCount - 7; c++) {
+          callback(r, c);
+      }
+  }
+
+  // Middle Section (Rows 7 to size-8): No eyes
+  for (let r = 7; r < moduleCount - 7; r++) {
+      for (let c = 0; c < moduleCount; c++) {
+          callback(r, c);
+      }
+  }
+
+  // Bottom Section (Rows size-7 to size-1): Skip BL (0-6)
+  for (let r = moduleCount - 7; r < moduleCount; r++) {
+      for (let c = 7; c < moduleCount; c++) {
+          callback(r, c);
+      }
+  }
+};
+
 export interface LayoutMetrics {
     drawX: number;
     drawY: number;

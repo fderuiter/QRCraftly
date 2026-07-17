@@ -22,6 +22,7 @@ describe('QRCanvas Performance Refactoring', () => {
       clearRect: vi.fn(),
       fillRect: vi.fn(),
       roundRect: vi.fn(),
+      quadraticCurveTo: vi.fn(),
       beginPath: vi.fn(),
       fill: vi.fn(),
       arc: vi.fn(),
@@ -93,7 +94,7 @@ describe('QRCanvas Performance Refactoring', () => {
        // We mocked getContext, so mockContext DOES have roundRect spy.
        // However, drawRoundRect checks `if (ctx.roundRect)`.
        // Since our mockContext has it, it should be called.
-       expect(mockContext.roundRect).toHaveBeenCalled();
+       expect(mockContext.quadraticCurveTo).toHaveBeenCalled();
        expect(mockContext.fill).toHaveBeenCalled();
     });
   });
@@ -105,7 +106,7 @@ describe('QRCanvas Performance Refactoring', () => {
     render(<QRCanvas config={config} />);
 
     await waitFor(() => {
-       expect(mockContext.roundRect).toHaveBeenCalled();
+       expect(mockContext.quadraticCurveTo).toHaveBeenCalled();
        expect(mockContext.rect).toHaveBeenCalled();
     });
   });

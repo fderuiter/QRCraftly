@@ -14,6 +14,7 @@ describe('drawQR', () => {
       clearRect: vi.fn(),
       fillRect: vi.fn(),
       roundRect: vi.fn(),
+      quadraticCurveTo: vi.fn(),
       beginPath: vi.fn(),
       fill: vi.fn(),
       arc: vi.fn(),
@@ -67,7 +68,7 @@ describe('drawQR', () => {
     // Modern uses roundedRect (or shim which uses quadraticCurveTo)
     // Since we mock roundRect, it should be called if drawRoundRect uses it.
     // drawRoundRect checks `if (ctx.roundRect)`. Our mock has it.
-    expect(mockContext.roundRect).toHaveBeenCalled();
+    expect(mockContext.quadraticCurveTo).toHaveBeenCalled();
   });
 
   it('draws circles for SWISS style', () => {
