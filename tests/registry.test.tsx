@@ -74,7 +74,7 @@ let AdditionalSidebarContent: React.ComponentType<{ toolId?: string }>;
 beforeAll(async () => {
   const { ComponentRegistry } = await import('@/utils/ComponentRegistry');
   // Import registry to trigger its side-effect registrations
-  await import('./registry');
+  await import('@/registry');
 
   const calls = (ComponentRegistry.registerSidebarControl as ReturnType<typeof vi.fn>).mock.calls;
   const contentCall = calls.find(([arg]: any[]) => arg?.id === 'content');
