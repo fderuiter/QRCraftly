@@ -213,6 +213,19 @@ To maintain security and reduce repository noise, QRCraftly uses **Dependabot** 
 - **Lucide React**: Icon set.
 - **Vitest**: Testing framework.
 
+## Styling and Theme Configuration
+
+QRCraftly uses **Tailwind CSS v4**, which introduces a streamlined CSS-first configuration model. The legacy `tailwind.config.js` file is obsolete and has been removed to maintain a single source of truth for all styling.
+
+All custom styling, theme extensions, and Tailwind configurations are now managed directly in the main CSS entrypoint: `src/layouts/index.css`.
+
+### How to Manage Styles
+- **Theme Variables**: To add custom brand colors, breakpoints, fonts, or other theme extensions, define them inline in `src/layouts/index.css` using the `@theme` directive.
+- **Dark Mode**: The class-based dark mode is configured using a custom variant directly in the CSS (`@variant dark (&:where(.dark, .dark *));`), replacing the legacy JS configuration.
+- **Utility Classes**: Continue writing standard Tailwind utility classes in your React components. The PostCSS setup will automatically handle processing via the `@tailwindcss/postcss` plugin.
+
+For developers customizing the UI or extending the design system, `src/layouts/index.css` is the definitive file to modify.
+
 ## License
 
 [AGPL-3.0](LICENSE.md)
