@@ -59,22 +59,13 @@ export const renderEyes = (
                 ctx.fill();
                 break;
 
+            case QRStyle.FLUID: // Fluid
             case QRStyle.SWISS: // Swiss Dot
                 drawRoundedEyeFrame();
 
                 // Eyeball: Floating Dot (Circular)
                 ctx.beginPath();
                 // Standard Radius 1.5 (Diameter 3)
-                ctx.arc(cx, cy, 1.5 * cellSize, 0, Math.PI * 2);
-                ctx.fill();
-                break;
-
-            case QRStyle.FLUID: // Fluid
-                // COPY OF SWISS (Proven to pass)
-                drawRoundedEyeFrame();
-
-                // Eyeball: Circular (Same as Swiss)
-                ctx.beginPath();
                 ctx.arc(cx, cy, 1.5 * cellSize, 0, Math.PI * 2);
                 ctx.fill();
                 break;

@@ -40,6 +40,7 @@ describe('QRCanvas Component', () => {
       clearRect: vi.fn(),
       fillRect: vi.fn(),
       roundRect: vi.fn(),
+      quadraticCurveTo: vi.fn(),
       beginPath: vi.fn(),
       fill: vi.fn(),
       arc: vi.fn(),
@@ -144,7 +145,7 @@ describe('QRCanvas Component', () => {
      
      await waitFor(() => {
         // Modern uses roundedRect (or shim)
-        expect(mockContext.roundRect).toHaveBeenCalled();
+        expect(mockContext.quadraticCurveTo).toHaveBeenCalled();
      });
   });
 

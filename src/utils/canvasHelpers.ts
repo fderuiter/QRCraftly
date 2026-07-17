@@ -27,22 +27,17 @@
  * @param r The corner radius.
  */
 export const drawRoundRect = (ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) => {
-  // @ts-ignore - roundRect is part of newer Canvas API
-  if (ctx.roundRect) {
-    // @ts-ignore
-    ctx.roundRect(x, y, w, h, r);
-  } else {
-    ctx.moveTo(x + r, y);
-    ctx.lineTo(x + w - r, y);
-    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-    ctx.lineTo(x + w, y + h - r);
-    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-    ctx.lineTo(x + r, y + h);
-    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-    ctx.lineTo(x, y + r);
-    ctx.quadraticCurveTo(x, y, x + r, y);
-    ctx.closePath();
-  }
+  const safeR = Math.min(r, w / 2, h / 2);
+  ctx.moveTo(x + safeR, y);
+  ctx.lineTo(x + w - safeR, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + safeR);
+  ctx.lineTo(x + w, y + h - safeR);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - safeR, y + h);
+  ctx.lineTo(x + safeR, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - safeR);
+  ctx.lineTo(x, y + safeR);
+  ctx.quadraticCurveTo(x, y, x + safeR, y);
+  ctx.closePath();
 };
 
 /**

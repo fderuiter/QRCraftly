@@ -41,6 +41,7 @@ describe('QRCanvas Border Extended Features', () => {
       fill: vi.fn(),
       arc: vi.fn(),
       roundRect: vi.fn(),
+      quadraticCurveTo: vi.fn(),
       rect: vi.fn(),
       save: vi.fn(),
       restore: vi.fn(),

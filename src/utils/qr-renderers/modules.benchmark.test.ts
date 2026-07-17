@@ -37,7 +37,8 @@ describe('Performance Benchmark: renderModules', () => {
       stroke: () => {},
       rect: () => {},
       arc: () => {},
-      roundRect: () => {}
+      roundRect: () => {},
+      quadraticCurveTo: () => {}
     } as any;
 
     const start = performance.now();

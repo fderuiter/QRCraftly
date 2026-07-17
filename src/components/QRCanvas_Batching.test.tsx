@@ -37,6 +37,7 @@ describe('QRCanvas Batch Rendering', () => {
       clearRect: vi.fn(),
       fillRect: vi.fn(),
       roundRect: vi.fn(),
+      quadraticCurveTo: vi.fn(),
       beginPath: vi.fn(),
       fill: vi.fn(),
       arc: vi.fn(),

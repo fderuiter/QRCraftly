@@ -39,6 +39,7 @@ describe('QRCanvas Rendering Logic Extended', () => {
       clearRect: vi.fn(),
       fillRect: vi.fn(),
       roundRect: vi.fn(),
+      quadraticCurveTo: vi.fn(),
       beginPath: vi.fn(),
       fill: vi.fn(),
       arc: vi.fn(),
@@ -134,7 +135,7 @@ describe('QRCanvas Rendering Logic Extended', () => {
 
       await waitFor(() => {
           // Should use roundRect for the main body
-          expect(mockContext.roundRect).toHaveBeenCalled();
+          expect(mockContext.quadraticCurveTo).toHaveBeenCalled();
           expect(mockContext.fill).toHaveBeenCalled();
           // And potentially fillRect for connections (though none here)
       });
@@ -200,7 +201,7 @@ describe('QRCanvas Rendering Logic Extended', () => {
      render(<QRCanvas config={fluidConfig} />);
      await waitFor(() => {
          // Fluid eye uses drawRoundRect for frame and arc for pupil
-         expect(mockContext.roundRect).toHaveBeenCalled();
+         expect(mockContext.quadraticCurveTo).toHaveBeenCalled();
          expect(mockContext.arc).toHaveBeenCalled();
      });
 

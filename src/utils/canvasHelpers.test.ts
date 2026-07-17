@@ -26,6 +26,7 @@ describe('canvasHelpers', () => {
     // specific cast to allow optional methods like roundRect
     ctx = {
       roundRect: vi.fn(),
+      quadraticCurveTo: vi.fn(),
       moveTo: vi.fn(),
       lineTo: vi.fn(),
       quadraticCurveTo: vi.fn(),
@@ -43,25 +44,22 @@ describe('canvasHelpers', () => {
   });
 
   describe('drawRoundRect', () => {
-    it('should use native roundRect if available', () => {
+    it('should always use unified manual path commands (quadraticCurveTo) even if roundRect is available', () => {
       drawRoundRect(ctx, 10, 20, 100, 50, 5);
-      expect(ctx.roundRect).toHaveBeenCalledWith(10, 20, 100, 50, 5);
-      // Fallback methods should not be called
-      expect(ctx.moveTo).not.toHaveBeenCalled();
-      expect(ctx.quadraticCurveTo).not.toHaveBeenCalled();
-    });
-
-    it('should fallback to path commands if roundRect is missing', () => {
-      // Simulate missing API support
-      ctx.roundRect = undefined;
-
-      drawRoundRect(ctx, 10, 20, 100, 50, 5);
-
-      // Verify the manual path construction
+      expect(ctx.roundRect).not.toHaveBeenCalled();
+      
       expect(ctx.moveTo).toHaveBeenCalled(); // Starting point
       expect(ctx.lineTo).toHaveBeenCalled(); // Sides
       expect(ctx.quadraticCurveTo).toHaveBeenCalledTimes(4); // 4 corners
       expect(ctx.closePath).toHaveBeenCalled();
+    });
+
+    it('should clamp the radius if it exceeds half the width or height', () => {
+      drawRoundRect(ctx, 0, 0, 100, 50, 50); // r=50 is larger than h/2 (25)
+
+      // Expected safe radius = min(50, 50, 25) = 25
+      // Verify the first moveTo command starts at safeR
+      expect(ctx.moveTo).toHaveBeenCalledWith(25, 0);
     });
   });
 
