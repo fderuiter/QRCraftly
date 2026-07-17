@@ -292,7 +292,9 @@ export interface TextData {
  * Interface representing the modules of a QR code.
  */
 export interface QRModules {
+  /** The size of the QR code in modules. */
   size: number;
+  /** Gets the module value at the specified row and column. */
   get(row: number, col: number): boolean;
 }
 
