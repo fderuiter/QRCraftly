@@ -72,7 +72,7 @@ export const TypeSelector: React.FC<TypeSelectorProps> = ({
                   className={className}
                 >
                   <item.icon className="w-4 h-4" />
-                  <span className="truncate w-full text-center text-slate-700 dark:text-slate-200">
+                  <span className="whitespace-normal break-words w-full text-center text-slate-700 dark:text-slate-200">
                     {item.label}
                   </span>
                 </a>
@@ -90,7 +90,7 @@ export const TypeSelector: React.FC<TypeSelectorProps> = ({
                 className="flex-col w-full h-auto items-center justify-center gap-1 px-2 py-2 rounded-lg text-xs font-medium"
               >
                 <item.icon className="w-4 h-4" />
-                <span className="truncate w-full text-center text-slate-700 dark:text-slate-200">
+                <span className="whitespace-normal break-words w-full text-center text-slate-700 dark:text-slate-200">
                   {item.label}
                 </span>
               </Button>

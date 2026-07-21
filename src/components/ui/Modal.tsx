@@ -25,7 +25,7 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }
       <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl max-w-md w-full overflow-hidden flex flex-col max-h-[90vh]">
         <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
           <h2 id="modal-title" className="text-lg font-semibold text-slate-800 dark:text-slate-100">{title}</h2>
-          <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close modal">
+          <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close modal" className="shrink-0">
             <X className="w-5 h-5" />
           </Button>
         </div>
