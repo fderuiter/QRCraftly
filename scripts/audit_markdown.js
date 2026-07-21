@@ -12,10 +12,15 @@ const filesToAudit = ['COMPLIANCE.md', 'SECURITY.md'];
 let hasErrors = false;
 
 function slugify(text) {
+  let prev;
+  do {
+    prev = text;
+    text = text.replace(/<[^>]*>/g, '');
+  } while (text !== prev);
+
   return text
     .toLowerCase()
     .trim()
-    .replace(/<[^>]+>/g, '') // remove HTML tags
     .replace(/[^\w\s-]/g, '') // remove non-word characters except spaces and hyphens
     .replace(/\s+/g, '-');    // replace spaces with hyphens
 }
