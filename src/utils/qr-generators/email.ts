@@ -17,7 +17,7 @@
 */
 
 import { EmailData } from '../../types';
-import { sanitizeInput } from '../security';
+import { ValidationEngine } from '../../engine/ValidationEngine';
 import { parseProtocol } from '../protocol';
 
 /**
@@ -25,7 +25,7 @@ import { parseProtocol } from '../protocol';
  */
 export const constructEmailString = (data: EmailData): string => {
   // Sanitize email to prevent header injection (e.g. ?cc=attacker@example.com)
-  const safeEmail = sanitizeInput(data.email);
+  const safeEmail = ValidationEngine.sanitizeInput(data.email);
   return `mailto:${safeEmail}?subject=${encodeURIComponent(data.subject)}&body=${encodeURIComponent(data.body)}`;
 };
 

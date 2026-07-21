@@ -17,9 +17,11 @@
 */
 
 import React, { useState, useEffect } from 'react';
+
 import { QRConfig } from '../types';
-import { TypeSelector, useInputLogic } from './inputs';
 import { useDynamicFocus } from '../hooks/useDynamicFocus';
+
+import { TypeSelector, useInputLogic } from './inputs';
 
 /**
  * Props for the InputPanel component.

@@ -1,7 +1,9 @@
 import { useEffect, useCallback } from 'react';
-import { useQRStore, useQRStoreSelector } from '@/context/QRContext';
+
 import { ScannabilityStatus } from './useScannability';
 import { useCapabilities } from './useCapabilities';
+
+import { useQRStore, useQRStoreSelector } from '@/context/QRContext';
 
 export function useTelemetry(status: ScannabilityStatus) {
   const store = useQRStore();

@@ -1,5 +1,6 @@
 import React from 'react';
 import { ShieldCheck, Loader2, ShieldX } from 'lucide-react';
+
 import { ScannabilityStatus, HealthScore } from '../hooks/useScannability';
 
 interface Props {

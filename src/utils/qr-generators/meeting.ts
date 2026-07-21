@@ -17,7 +17,7 @@
 */
 
 import { MeetingData } from '../../types';
-import { isDangerousUrl } from '../security';
+import { ValidationEngine } from '../../engine/ValidationEngine';
 
 /**
  * Constructs the QR code string for a virtual meeting link.
@@ -30,7 +30,7 @@ import { isDangerousUrl } from '../security';
  */
 export const constructMeetingString = (data: MeetingData): string => {
   if (!data.url) return '';
-  if (isDangerousUrl(data.url)) return '';
+  if (ValidationEngine.isDangerousUrl(data.url)) return '';
   return data.url.trim();
 };
 

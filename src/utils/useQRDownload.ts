@@ -17,10 +17,12 @@
 */
 
 import { RefObject, useCallback } from 'react';
+
 import { QRConfig } from '../types';
-import { generateQRSvg } from './svgExport';
 import { useToast } from '../components/ui/Toast';
 import { useCapabilities } from '../hooks/useCapabilities';
+
+import { generateQRSvg } from './svgExport';
 
 /**
  * Return type for the useQRDownload hook.

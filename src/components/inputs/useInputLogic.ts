@@ -17,7 +17,9 @@
 */
 
 import { useState, useRef, useEffect, ElementType } from "react";
+
 import { QRConfig, QRType } from "../../types";
+
 import { INPUT_REGISTRY, InputDataMap } from "./InputRegistry";
 
 /**

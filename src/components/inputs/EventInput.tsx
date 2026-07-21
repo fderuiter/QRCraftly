@@ -1,5 +1,7 @@
 import React from "react";
+
 import { EventData } from "../../types";
+
 import { TextField, TextAreaField } from "./FormFields";
 
 interface EventInputProps {

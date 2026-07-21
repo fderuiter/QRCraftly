@@ -1,6 +1,7 @@
 import React from 'react';
-import { Button } from '../ui/Button';
 import { AlertTriangle } from 'lucide-react';
+
+import { Button } from '../ui/Button';
 import { QRConfig } from '../../types';
 import { PATTERNS } from '../../constants';
 import { PatternModule } from '../ui/PatternModule';

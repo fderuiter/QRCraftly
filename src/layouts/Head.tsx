@@ -17,6 +17,7 @@
 */
 
 import { usePageContext } from 'vike-react/usePageContext';
+
 import { safeJsonLdStringify } from '@/utils/security';
 import { resolveDomainForPath, resolvePublicUrl, resolveImageUrl, getSanitizedPath } from '@/utils/metadataEngine';
 

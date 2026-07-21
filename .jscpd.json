@@ -1,0 +1,13 @@
+{
+  "threshold": 0,
+  "ignore": [
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.spec.ts",
+    "tests/**",
+    "e2e/**",
+    ".github/**"
+  ],
+  "minTokens": 50,
+  "minLines": 15
+}

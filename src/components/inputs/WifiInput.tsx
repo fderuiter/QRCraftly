@@ -1,5 +1,7 @@
 import React from "react";
+
 import { WifiData, WifiEncryption } from "../../types";
+
 import { TextField, SelectField, CheckboxField } from "./FormFields";
 
 interface WifiInputProps {

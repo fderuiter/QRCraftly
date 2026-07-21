@@ -17,6 +17,7 @@
 */
 
 import React, { useEffect, useState } from 'react';
+
 import './index.css';
 import { ToastProvider } from '../components/ui/Toast';
 import { ErrorBoundary } from '../components/ErrorBoundary';

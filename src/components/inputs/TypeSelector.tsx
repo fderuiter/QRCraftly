@@ -1,6 +1,4 @@
 import React from "react";
-import { Button } from "../ui/Button";
-import { QRType } from "../../types";
 import {
   Wifi,
   Link,
@@ -15,6 +13,9 @@ import {
   Video,
   Share2,
 } from "lucide-react";
+
+import { Button } from "../ui/Button";
+import { QRType } from "../../types";
 
 interface TypeSelectorProps {
   currentType: QRType;

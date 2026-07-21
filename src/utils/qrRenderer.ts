@@ -1,4 +1,5 @@
 import { QRConfig, QRModules } from '../types';
+
 import { calculateLayout, getLogoMetrics } from './qr-renderers/utils';
 import { renderBorder, renderBorderDecoration } from './qr-renderers/border';
 import { renderModules } from './qr-renderers/modules';

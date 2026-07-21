@@ -1,8 +1,9 @@
 import React, { useMemo } from 'react';
+import { AlertTriangle } from 'lucide-react';
+
 import { Button } from '../ui/Button';
 import { QRConfig } from '../../types';
 import { PRESET_COLORS } from '../../constants';
-import { AlertTriangle } from 'lucide-react';
 import { getContrastRatio } from '../../utils/colorUtils';
 import { ColorInput } from '../ui/ColorInput';
 

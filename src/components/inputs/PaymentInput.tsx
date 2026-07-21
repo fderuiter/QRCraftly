@@ -1,5 +1,7 @@
 import React from "react";
+
 import { PaymentData, CryptoNetwork } from "../../types";
+
 import { TextField, SelectField } from "./FormFields";
 
 interface PaymentInputProps {

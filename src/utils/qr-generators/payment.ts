@@ -17,7 +17,7 @@
 */
 
 import { PaymentData, CryptoNetwork } from '../../types';
-import { sanitizeInput, isDangerousUrl } from '../security';
+import { ValidationEngine } from '../../engine/ValidationEngine';
 
 /**
  * Constructs the crypto payment URI string.
@@ -26,7 +26,7 @@ export const constructPaymentString = (data: PaymentData): string => {
   let paymentString = '';
 
   if (data.network === CryptoNetwork.CUSTOM) {
-    if (isDangerousUrl(data.address)) {
+    if (ValidationEngine.isDangerousUrl(data.address)) {
       return '';
     }
     paymentString = data.address;
@@ -44,7 +44,7 @@ export const constructPaymentString = (data: PaymentData): string => {
     }
 
     // Sanitize address to prevent parameter injection if user accidentally pastes a full URI or malicious string
-    const safeAddress = sanitizeInput(data.address);
+    const safeAddress = ValidationEngine.sanitizeInput(data.address);
     paymentString = `${data.network}:${safeAddress}`;
     const params: string[] = [];
 
@@ -84,7 +84,7 @@ export const hydratePaymentData = (raw: string): PaymentData => {
 
   const colonIndex = raw.indexOf(':');
   if (colonIndex !== -1) {
-    const networkPart = raw.substring(0, colonIndex) as CryptoNetwork;
+    const networkPart = raw.substring(0, colonIndex).toLowerCase() as CryptoNetwork;
     if (validNetworks.includes(networkPart)) {
       result.network = networkPart;
       

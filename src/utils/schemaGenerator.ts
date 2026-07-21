@@ -1,4 +1,5 @@
 import { ToolContent } from '../data/contentRegistry';
+
 import { resolveDomainForPath, resolvePublicUrl } from './metadataEngine';
 
 export function generateSchema(content: ToolContent, resolvedDomain?: string, requestPath?: string): any {

@@ -75,15 +75,7 @@ export const hydrateEventData = (raw: string): EventData => {
 
   if (!raw.includes('BEGIN:VEVENT')) return result;
 
-  const lines = raw.split(/\r\n|\r|\n/);
-  lines.forEach(line => {
-    const splitIndex = line.indexOf(':');
-    if (splitIndex <= 0) return;
-    
-    const fullKey = line.substring(0, splitIndex);
-    const key = fullKey.split(';')[0].toUpperCase();
-    const value = line.substring(splitIndex + 1);
-
+  ValidationEngine.parseKeyValueProtocol(raw, (key, value) => {
     switch(key) {
       case 'SUMMARY': result.title = unescapeEventString(value); break;
       case 'DTSTART': result.startDate = parseEventDateTime(value); break;

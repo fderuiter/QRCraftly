@@ -1,5 +1,6 @@
-import { getPublicDomain } from "../../utils/metadataEngine";
 import React from "react";
+
+import { getPublicDomain } from "../../utils/metadataEngine";
 import {
   QRType,
   WifiEncryption,

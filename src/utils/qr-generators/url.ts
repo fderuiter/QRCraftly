@@ -17,14 +17,14 @@
 */
 
 import { UrlData } from '../../types';
-import { isDangerousUrl } from '../security';
+import { ValidationEngine } from '../../engine/ValidationEngine';
 
 /**
  * Constructs the URL QR code string.
  * Currently just returns the raw URL as normalization happens in the input or renderer.
  */
 export const constructUrlString = (data: UrlData): string => {
-  if (isDangerousUrl(data.url)) {
+  if (ValidationEngine.isDangerousUrl(data.url)) {
     return '';
   }
   return data.url;

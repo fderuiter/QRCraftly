@@ -1,7 +1,8 @@
 import React, { useRef, useMemo } from 'react';
+import { Upload, X, AlertTriangle } from 'lucide-react';
+
 import { Button } from '../ui/Button';
 import { QRConfig, BorderStyle, BorderTextPosition, BorderLogoPosition } from '../../types';
-import { Upload, X, AlertTriangle } from 'lucide-react';
 import { getContrastRatio } from '../../utils/colorUtils';
 import { ColorInput } from '../ui/ColorInput';
 import { RangeInput } from '../ui/RangeInput';

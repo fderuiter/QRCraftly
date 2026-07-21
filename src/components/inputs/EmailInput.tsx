@@ -1,5 +1,7 @@
 import React from "react";
+
 import { EmailData } from "../../types";
+
 import { TextField, TextAreaField } from "./FormFields";
 
 interface EmailInputProps {

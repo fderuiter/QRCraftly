@@ -76,6 +76,21 @@ export const ValidationEngine = {
     return false;
   },
 
+  // Protocol parsing shared logic
+  parseKeyValueProtocol(raw: string, lineCallback: (key: string, value: string, fullKey: string) => void): void {
+    const lines = raw.split(/\r\n|\r|\n/);
+    lines.forEach(line => {
+      const splitIndex = line.indexOf(':');
+      if (splitIndex <= 0) return;
+      
+      const fullKey = line.substring(0, splitIndex);
+      const key = fullKey.split(';')[0].toUpperCase();
+      const value = line.substring(splitIndex + 1);
+      
+      lineCallback(key, value, fullKey);
+    });
+  },
+
   // Security sanitization
   isDangerousUrl(url: string | undefined): boolean {
     return SafeUrlPipeline.isDangerous(url);

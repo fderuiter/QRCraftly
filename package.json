@@ -24,7 +24,7 @@
     "preview": "vite preview",
     "test": "vitest",
     "test:e2e": "playwright test",
-    "lint": "tsc --noEmit && eslint . && node scripts/contrast_check.js && node scripts/audit_markdown.js"
+    "lint": "tsc --noEmit && eslint . && node scripts/contrast_check.js && node scripts/audit_markdown.js && jscpd"
   },
   "dependencies": {
     "jsqr": "^1.4.0",
@@ -53,10 +53,13 @@
     "autoprefixer": "^10.4.22",
     "axe-core": "^4.12.1",
     "eslint": "^9.39.4",
+    "eslint-plugin-import": "^2.32.0",
     "eslint-plugin-jsdoc": "^63.0.13",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-security": "^4.0.0",
+    "eslint-plugin-vitest": "^0.5.4",
+    "jscpd": "^5.0.12",
     "jsdom": "^27.2.0",
     "postcss": "^8.5.6",
     "sharp": "^0.34.5",

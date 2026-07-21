@@ -1,7 +1,8 @@
 import React, { useRef } from 'react';
+import { Upload, X, Square, Circle, Minus } from 'lucide-react';
+
 import { Button } from '../ui/Button';
 import { QRConfig, LogoPaddingStyle } from '../../types';
-import { Upload, X, Square, Circle, Minus } from 'lucide-react';
 import { ColorInput } from '../ui/ColorInput';
 import { RangeInput } from '../ui/RangeInput';
 import { useImageUpload } from '../../hooks/useImageUpload';

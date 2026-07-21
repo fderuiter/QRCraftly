@@ -39,14 +39,6 @@ export const REGEX_STRICT_CONTROL_CHARS = ValidationEngine.REGEX_STRICT_CONTROL_
 export const REGEX_PRESERVE_FORMAT_CONTROL_CHARS = ValidationEngine.REGEX_PRESERVE_FORMAT_CONTROL_CHARS;
 export const REGEX_URL_UNSAFE_CHARS = ValidationEngine.REGEX_URL_UNSAFE_CHARS;
 
-export const isDangerousUrl = (url: string | undefined): boolean => {
-  return ValidationEngine.isDangerousUrl(url);
-};
-
-export const sanitizeInput = (str: string): string => {
-  return ValidationEngine.sanitizeInput(str);
-};
-
 /**
  * Removes all characters that are not digits or valid phone symbols (+, *, #, -, ., (, )).
  * This prevents injection of arbitrary characters into tel: or sms: URIs.

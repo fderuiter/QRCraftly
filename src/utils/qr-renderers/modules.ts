@@ -1,5 +1,6 @@
 import { QRConfig, QRStyle, QRModules } from '../../types';
 import { drawRoundRect, drawRoughRect, drawPoly, drawStar } from '../canvasHelpers';
+
 import { getIsCoveredByLogo, LogoMetrics, iterateMatrix } from './utils';
 
 type DrawModuleFn = (r: number, c: number, x: number, y: number, cx: number, cy: number) => void;

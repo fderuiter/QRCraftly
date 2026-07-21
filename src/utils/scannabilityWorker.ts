@@ -1,4 +1,5 @@
 import jsQR from 'jsqr';
+
 import { ValidationEngine } from '../engine/ValidationEngine';
 
 /**

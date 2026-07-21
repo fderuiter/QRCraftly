@@ -17,8 +17,9 @@
 */
 
 import React from 'react';
-import { Button } from '../ui/Button';
 import { Square, Smartphone } from 'lucide-react';
+
+import { Button } from '../ui/Button';
 import { QRConfig, SocialFormat, TemplateStyle } from '../../types';
 import { ColorInput } from '../ui/ColorInput';
 import { RangeInput } from '../ui/RangeInput';

@@ -16,6 +16,8 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { usePageContext } from 'vike-react/usePageContext';
+
 import QRTool from '@/components/QRTool';
 import { DEFAULT_CONFIG } from '@/constants';
 import { QRType } from '@/types';
@@ -23,7 +25,6 @@ import { contentRegistry } from '@/data/contentRegistry';
 import { generateSchema } from '@/utils/schemaGenerator';
 import { resolveDomainForPath } from '@/utils/metadataEngine';
 import { safeJsonLdStringify } from '@/utils/security';
-import { usePageContext } from 'vike-react/usePageContext';
 
 /**
  * WiFi QR Code Page Component

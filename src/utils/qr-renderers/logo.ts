@@ -1,4 +1,5 @@
 import { QRConfig } from '../../types';
+
 import { LogoMetrics } from './utils';
 
 export const renderLogo = (

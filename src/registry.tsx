@@ -1,4 +1,5 @@
 import React, { Suspense } from 'react';
+
 import InputPanel from '@/components/InputPanel';
 import { SidebarContent } from '@/components/SidebarContent';
 import { useQRStore, useQRStoreSelector } from '@/context/QRContext';

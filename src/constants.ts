@@ -1,4 +1,7 @@
+import colorsData from './colors.json';
+import { QRStyle, QRType, QRErrorCorrectionLevel, SocialFormat, TemplateStyle } from './types';
 import { getPublicDomain } from "./utils/metadataEngine";
+
 /*
     QRCraftly
     Copyright (C) 2025 fderuiter
@@ -12,13 +15,9 @@ import { getPublicDomain } from "./utils/metadataEngine";
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU Affero General Public License for more details.
-
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
-
-
-import { QRStyle, QRType, QRErrorCorrectionLevel, SocialFormat, TemplateStyle } from './types';
 
 /**
  * The default configuration settings for the QR code generator.
@@ -67,8 +66,6 @@ export const PATTERNS = [
   { id: QRStyle.GRUNGE, label: 'Grunge' },
   { id: QRStyle.STARBURST, label: 'Starburst' },
 ];
-
-import colorsData from './colors.json';
 
 /**
  * List of preset color themes.

@@ -4,6 +4,8 @@ import reactPlugin from "eslint-plugin-react";
 import reactHooksPlugin from "eslint-plugin-react-hooks";
 import securityPlugin from "eslint-plugin-security";
 import jsdoc from "eslint-plugin-jsdoc";
+import importPlugin from "eslint-plugin-import";
+import vitestPlugin from "eslint-plugin-vitest";
 
 export default tseslint.config(
   {
@@ -17,6 +19,7 @@ export default tseslint.config(
       "react": reactPlugin,
       "react-hooks": reactHooksPlugin,
       "security": securityPlugin,
+      "import": importPlugin,
     },
     languageOptions: {
       globals: {
@@ -53,6 +56,22 @@ export default tseslint.config(
       "no-useless-assignment": "off",
       "no-control-regex": "off",
 
+      // Enforce standardized import groupings
+      "import/order": [
+        "error",
+        {
+          "groups": [
+            "builtin",
+            "external",
+            "internal",
+            "parent",
+            "sibling",
+            "index"
+          ],
+          "newlines-between": "always"
+        }
+      ],
+
       // Enforce manual security utilities
       "no-restricted-syntax": [
         "error",
@@ -74,6 +93,17 @@ export default tseslint.config(
       react: {
         version: "detect"
       }
+    }
+  },
+  {
+    files: ["**/*.test.ts", "**/*.test.tsx"],
+    plugins: {
+      vitest: vitestPlugin,
+    },
+    rules: {
+      ...vitestPlugin.configs.recommended.rules,
+      "vitest/require-top-level-describe": "error",
+      "vitest/no-standalone-expect": "error"
     }
   },
   {

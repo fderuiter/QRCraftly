@@ -52,16 +52,7 @@ export const hydrateVCardData = (raw: string): VCardData => {
 
   if (!raw.includes('BEGIN:VCARD')) return result;
 
-  const lines = raw.split(/\r\n|\r|\n/);
-
-  lines.forEach(line => {
-    const splitIndex = line.indexOf(':');
-    if (splitIndex <= 0) return;
-    
-    const fullKey = line.substring(0, splitIndex);
-    const key = fullKey.split(';')[0].toUpperCase();
-    const value = line.substring(splitIndex + 1);
-
+  ValidationEngine.parseKeyValueProtocol(raw, (key, value) => {
     switch(key) {
       case 'N': {
         const nParts = value.split(ValidationEngine.REGEX_SPLIT_VCARD);
@@ -71,7 +62,15 @@ export const hydrateVCardData = (raw: string): VCardData => {
       }
       case 'ORG': result.organization = unescapeVCardString(value); break;
       case 'TITLE': result.title = unescapeVCardString(value); break;
-      case 'TEL': result.phone = unescapeVCardString(value); break;
+      case 'TEL': {
+        const parsedPhone = unescapeVCardString(value);
+        if (result.phone) {
+          result.phone += `, ${parsedPhone}`;
+        } else {
+          result.phone = parsedPhone;
+        }
+        break;
+      }
       case 'EMAIL': result.email = unescapeVCardString(value); break;
       case 'URL': result.website = unescapeVCardString(value); break;
       case 'ADR': {
@@ -97,6 +96,10 @@ export const constructVCardString = (data: VCardData): string => {
   // Normalize URL first to handle spaces/protocols, then check for dangerous protocols on the normalized string
   const normalizedWebsite = normalizeUrl(data.website);
   const website = ValidationEngine.isDangerousUrl(normalizedWebsite) ? '' : escapeVCardString(normalizedWebsite);
+  
+  const phoneLines = data.phone 
+    ? data.phone.split(',').map(p => p.trim()).filter(Boolean).map(p => `TEL:${escapeVCardString(p)}`)
+    : ['TEL:'];
 
   const parts = [
     'BEGIN:VCARD',
@@ -105,7 +108,7 @@ export const constructVCardString = (data: VCardData): string => {
     `FN:${firstName} ${lastName}`,
     `ORG:${escapeVCardString(data.organization)}`,
     `TITLE:${escapeVCardString(data.title)}`,
-    `TEL:${escapeVCardString(data.phone)}`,
+    ...phoneLines,
     `EMAIL:${escapeVCardString(data.email)}`,
     `URL:${website}`,
     `ADR:;;${escapeVCardString(data.street)};${escapeVCardString(data.city)};;${escapeVCardString(data.zip)};${escapeVCardString(data.country)}`,

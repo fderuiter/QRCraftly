@@ -1,8 +1,11 @@
 import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
+
 import { QRConfig } from '../types';
-import { useQRStore } from '@/context/QRContext';
 import { ValidationEngine } from '../engine/ValidationEngine';
+
 import { useCapabilities } from './useCapabilities';
+
+import { useQRStore } from '@/context/QRContext';
 
 export type ScannabilityStatus = 'idle' | 'checking' | 'digital-pass' | 'physical-pass' | 'fail';
 

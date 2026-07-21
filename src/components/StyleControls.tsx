@@ -18,7 +18,9 @@
 
 
 import React from 'react';
+
 import { QRConfig } from '../types';
+
 import {
   BorderControls,
   PatternControls,

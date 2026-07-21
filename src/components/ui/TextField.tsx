@@ -1,8 +1,10 @@
 import React, { useState, forwardRef, useId } from 'react';
-import { Button } from './Button';
 import { Eye, EyeOff } from 'lucide-react';
+
 import { CharCount } from '../CharCount';
 import { combineIds } from '../../utils/a11y';
+
+import { Button } from './Button';
 
 export interface TextFieldProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size' | 'id'> {
   label?: string;

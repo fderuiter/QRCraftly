@@ -18,12 +18,13 @@
 
 
 import { Github, Shield, Database, Code, ArrowLeft, Zap, Wifi, Coffee } from 'lucide-react';
+import { usePageContext } from 'vike-react/usePageContext';
+
 import { safeJsonLdStringify } from '@/utils/security';
 import { contentRegistry } from '@/data/contentRegistry';
 import { generateSchema } from '@/utils/schemaGenerator';
 import { resolveDomainForPath } from '@/utils/metadataEngine';
 import { SidebarContent } from '@/components/SidebarContent';
-import { usePageContext } from 'vike-react/usePageContext';
 
 /**
  * About Page Component

@@ -17,11 +17,13 @@
 */
 
 import React, { useState, useRef, useCallback } from 'react';
+import { Download, Share2, QrCode, ChevronDown, Camera, Moon, Sun, Info, Copy, Check, AlertTriangle } from 'lucide-react';
+
 import { Button } from "./ui/Button";
+import { Modal } from './ui/Modal';
+
 import { QRConfig } from '@/types';
 import QRCanvas from '@/components/QRCanvas';
-import { Download, Share2, QrCode, ChevronDown, Camera, Moon, Sun, Info, Copy, Check, AlertTriangle } from 'lucide-react';
-import { Modal } from './ui/Modal';
 import { useDebounce, useOnClickOutside } from '@/utils/hooks';
 import { useQRDownload } from '@/utils/useQRDownload';
 import { useScannability } from '@/hooks/useScannability';

@@ -16,12 +16,13 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { usePageContext } from 'vike-react/usePageContext';
+
 import QRTool from '@/components/QRTool';
 import { safeJsonLdStringify } from '@/utils/security';
 import { contentRegistry } from '@/data/contentRegistry';
 import { generateSchema } from '@/utils/schemaGenerator';
 import { resolveDomainForPath } from '@/utils/metadataEngine';
-import { usePageContext } from 'vike-react/usePageContext';
 
 /**
  * Home Page Component

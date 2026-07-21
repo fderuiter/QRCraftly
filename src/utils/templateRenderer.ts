@@ -17,6 +17,7 @@
 */
 
 import { QRConfig, QRModules, SocialFormat, TemplateStyle } from '../types';
+
 import { drawQRInternal } from './qrRenderer';
 
 /**

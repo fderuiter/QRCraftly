@@ -17,9 +17,9 @@
 */
 
 import { QRConfig } from '../types';
+
 import { SvgContext } from './svgContext';
 import { drawWithTemplate, SOCIAL_DIMENSIONS } from './templateRenderer';
-
 import { SafeUrlPipeline, normalizeUrl } from './url';
 
 /**

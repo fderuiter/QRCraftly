@@ -1,7 +1,9 @@
 import React, { useId } from "react";
-import { TEXT_AREA_CLASSES, SELECT_CLASSES } from "./styles";
+
 import { CharCount } from "../CharCount";
 import { combineIds } from "../../utils/a11y";
+
+import { TEXT_AREA_CLASSES, SELECT_CLASSES } from "./styles";
 export { TextField } from "../ui/TextField";
 
 interface BaseFieldProps {

@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useSyncExternalStore } from 'react';
+
 import { QRConfig } from '@/types';
 import { DEFAULT_CONFIG } from '@/constants';
 import { ValidationEngine } from '@/engine/ValidationEngine';

@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
 import { X, CheckCircle, AlertCircle, Info } from 'lucide-react';
+
 import { Button } from './Button';
 
 export type ToastType = 'success' | 'error' | 'info';

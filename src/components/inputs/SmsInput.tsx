@@ -1,5 +1,7 @@
 import React from "react";
+
 import { SmsData } from "../../types";
+
 import { TextField, TextAreaField } from "./FormFields";
 
 interface SmsInputProps {

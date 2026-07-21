@@ -1,5 +1,6 @@
 import { ArrowLeft, ShieldCheck, Lock, ShieldAlert } from 'lucide-react';
 import { Marked } from 'marked';
+
 import complianceText from '../../../COMPLIANCE.md?raw';
 import securityText from '../../../SECURITY.md?raw';
 

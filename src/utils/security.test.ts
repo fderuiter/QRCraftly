@@ -17,72 +17,73 @@
 */
 
 import { describe, it, expect } from 'vitest';
-import { isDangerousUrl, safeJsonLdStringify, cleanPhoneNumber, sanitizeInput, validateImageUpload } from './security';
+import { safeJsonLdStringify, cleanPhoneNumber, validateImageUpload } from './security';
+import { ValidationEngine } from '../engine/ValidationEngine';
 
 describe('Security Utils', () => {
   describe('isDangerousUrl', () => {
     it('detects javascript: protocol', () => {
-      expect(isDangerousUrl('javascript:alert(1)')).toBe(true);
-      expect(isDangerousUrl('JAVASCRIPT:alert(1)')).toBe(true);
+      expect(ValidationEngine.isDangerousUrl('javascript:alert(1)')).toBe(true);
+      expect(ValidationEngine.isDangerousUrl('JAVASCRIPT:alert(1)')).toBe(true);
     });
 
     it('detects vbscript: protocol', () => {
-      expect(isDangerousUrl('vbscript:alert(1)')).toBe(true);
+      expect(ValidationEngine.isDangerousUrl('vbscript:alert(1)')).toBe(true);
     });
 
     it('detects data: protocol', () => {
-      expect(isDangerousUrl('data:text/html,base64...')).toBe(true);
+      expect(ValidationEngine.isDangerousUrl('data:text/html,base64...')).toBe(true);
     });
 
     it('detects file: protocol', () => {
-      expect(isDangerousUrl('file:///etc/passwd')).toBe(true);
+      expect(ValidationEngine.isDangerousUrl('file:///etc/passwd')).toBe(true);
     });
 
     it('detects blob: protocol', () => {
-      expect(isDangerousUrl('blob:https://example.com/uuid')).toBe(true);
+      expect(ValidationEngine.isDangerousUrl('blob:https://example.com/uuid')).toBe(true);
     });
 
     it('detects filesystem: protocol', () => {
-      expect(isDangerousUrl('filesystem:http://example.com/temporary/')).toBe(true);
+      expect(ValidationEngine.isDangerousUrl('filesystem:http://example.com/temporary/')).toBe(true);
     });
 
     it('detects legacy scripting protocols', () => {
-      expect(isDangerousUrl('jscript:alert(1)')).toBe(true);
-      expect(isDangerousUrl('wscript:alert(1)')).toBe(true);
-      expect(isDangerousUrl('mocha:alert(1)')).toBe(true);
+      expect(ValidationEngine.isDangerousUrl('jscript:alert(1)')).toBe(true);
+      expect(ValidationEngine.isDangerousUrl('wscript:alert(1)')).toBe(true);
+      expect(ValidationEngine.isDangerousUrl('mocha:alert(1)')).toBe(true);
     });
 
     it('detects about: protocol', () => {
-      expect(isDangerousUrl('about:blank')).toBe(true);
+      expect(ValidationEngine.isDangerousUrl('about:blank')).toBe(true);
     });
 
     it('detects protocols with leading whitespace or control characters', () => {
-      expect(isDangerousUrl('  javascript:alert(1)')).toBe(true);
-      expect(isDangerousUrl('\njavascript:alert(1)')).toBe(true);
+      expect(ValidationEngine.isDangerousUrl('  javascript:alert(1)')).toBe(true);
+      expect(ValidationEngine.isDangerousUrl('\njavascript:alert(1)')).toBe(true);
       // \x00 null byte
-      expect(isDangerousUrl('\x00javascript:alert(1)')).toBe(true);
+      expect(ValidationEngine.isDangerousUrl('\x00javascript:alert(1)')).toBe(true);
     });
 
     it('detects zero-width characters bypass attempts', () => {
       // Zero Width Space \u200B
-      expect(isDangerousUrl('java\u200Bscript:alert(1)')).toBe(true);
+      expect(ValidationEngine.isDangerousUrl('java\u200Bscript:alert(1)')).toBe(true);
       // Zero Width Non-Joiner \u200C
-      expect(isDangerousUrl('java\u200Cscript:alert(1)')).toBe(true);
+      expect(ValidationEngine.isDangerousUrl('java\u200Cscript:alert(1)')).toBe(true);
       // Zero Width Joiner \u200D
-      expect(isDangerousUrl('java\u200Dscript:alert(1)')).toBe(true);
+      expect(ValidationEngine.isDangerousUrl('java\u200Dscript:alert(1)')).toBe(true);
       // Zero Width No-Break Space \uFEFF
-      expect(isDangerousUrl('java\uFEFFscript:alert(1)')).toBe(true);
+      expect(ValidationEngine.isDangerousUrl('java\uFEFFscript:alert(1)')).toBe(true);
     });
 
     it('allows safe protocols', () => {
-      expect(isDangerousUrl('https://example.com')).toBe(false);
-      expect(isDangerousUrl('http://example.com')).toBe(false);
-      expect(isDangerousUrl('mailto:user@example.com')).toBe(false);
-      expect(isDangerousUrl('bitcoin:123')).toBe(false);
+      expect(ValidationEngine.isDangerousUrl('https://example.com')).toBe(false);
+      expect(ValidationEngine.isDangerousUrl('http://example.com')).toBe(false);
+      expect(ValidationEngine.isDangerousUrl('mailto:user@example.com')).toBe(false);
+      expect(ValidationEngine.isDangerousUrl('bitcoin:123')).toBe(false);
     });
 
     it('returns false for undefined url', () => {
-      expect(isDangerousUrl(undefined)).toBe(false);
+      expect(ValidationEngine.isDangerousUrl(undefined)).toBe(false);
     });
   });
 
@@ -130,19 +131,18 @@ describe('Security Utils', () => {
 
   describe('sanitizeInput', () => {
       it('strips query parameters', () => {
-          expect(sanitizeInput('test@example.com?foo=bar')).toBe('test@example.com');
-          expect(sanitizeInput('bitcoin:addr?amount=1')).toBe('bitcoin:addr');
+          expect(ValidationEngine.sanitizeInput('test@example.com?foo=bar')).toBe('test@example.com');
+          expect(ValidationEngine.sanitizeInput('bitcoin:addr?amount=1')).toBe('bitcoin:addr');
       });
 
       it('returns original string if no query parameters', () => {
-          expect(sanitizeInput('test@example.com')).toBe('test@example.com');
+          expect(ValidationEngine.sanitizeInput('test@example.com')).toBe('test@example.com');
       });
 
       it('returns empty string if input is empty', () => {
-          expect(sanitizeInput('')).toBe('');
+          expect(ValidationEngine.sanitizeInput('')).toBe('');
       });
   });
-});
 
   describe('validateImageUpload', () => {
       it('returns null for valid file types and sizes', () => {
@@ -179,3 +179,4 @@ describe('Security Utils', () => {
           expect(validateImageUpload(borderFile)).toBeNull();
       });
   });
+});
