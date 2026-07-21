@@ -93,7 +93,7 @@ export const parseProtocol = (raw: string): ParsedProtocol | null => {
         urlParams.forEach((value, key) => {
           params.set(key, value);
         });
-      } catch (e) {
+      } catch (_e) {
         // Ignore params if URLSearchParams crashes on malformed query
       }
     }
@@ -103,7 +103,7 @@ export const parseProtocol = (raw: string): ParsedProtocol | null => {
       path,
       params
     };
-  } catch (e) {
+  } catch (_e) {
     // Proactive validation failure: catch all errors to prevent crashes
     return null;
   }
