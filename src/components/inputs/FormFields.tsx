@@ -1,14 +1,16 @@
-import React, { } from "react";
+import React, { useId } from "react";
 import { TEXT_AREA_CLASSES, SELECT_CLASSES } from "./styles";
 import { CharCount } from "../CharCount";
+import { combineIds } from "../../utils/a11y";
 export { TextField } from "../ui/TextField";
 
 interface BaseFieldProps {
   label: string;
   contextualLabel?: string;
-  id: string; // explicitly required
+  id?: string;
   className?: string; // wrapper className
   labelClassName?: string; // optional override
+  error?: string;
 }
 
 const getLabelClass = (customClass?: string) => {
@@ -22,10 +24,13 @@ interface FieldWrapperProps extends BaseFieldProps {
   maxLength?: number;
   value?: string | number | readonly string[];
   children: React.ReactNode;
+  inputId: string;
+  errorId?: string;
+  charCountId?: string;
 }
 
 const FieldWrapper: React.FC<FieldWrapperProps> = ({
-  id,
+  inputId,
   label,
   contextualLabel,
   className,
@@ -34,10 +39,13 @@ const FieldWrapper: React.FC<FieldWrapperProps> = ({
   maxLength,
   value,
   children,
+  error,
+  errorId,
+  charCountId,
 }) => {
   return (
     <div className={className}>
-      <label htmlFor={id} className={getLabelClass(labelClassName)}>
+      <label htmlFor={inputId} className={getLabelClass(labelClassName)}>
         {label}
         {contextualLabel && (
           <span className="text-xs text-slate-500 dark:text-slate-400 font-normal ml-2">
@@ -47,7 +55,12 @@ const FieldWrapper: React.FC<FieldWrapperProps> = ({
       </label>
       {children}
       {showCharCount && maxLength && (
-        <CharCount current={String(value || "").length} max={maxLength} />
+        <CharCount id={charCountId} current={String(value || "").length} max={maxLength} />
+      )}
+      {error && (
+        <p id={errorId} role="alert" className="mt-1 text-xs text-rose-600 dark:text-rose-400">
+          {error}
+        </p>
       )}
     </div>
   );
@@ -70,11 +83,18 @@ export const TextAreaField: React.FC<TextAreaFieldProps> = ({
   showCharCount,
   maxLength,
   value,
+  error,
   ...props
 }) => {
+  const defaultId = useId();
+  const inputId = id || defaultId;
+  const errorId = error ? `${inputId}-error` : undefined;
+  const charCountId = showCharCount && maxLength ? `${inputId}-char-count` : undefined;
+  const describedBy = combineIds(errorId, charCountId);
+
   return (
     <FieldWrapper
-      id={id}
+      inputId={inputId}
       label={label}
       contextualLabel={contextualLabel}
       className={className}
@@ -82,12 +102,17 @@ export const TextAreaField: React.FC<TextAreaFieldProps> = ({
       showCharCount={showCharCount}
       maxLength={maxLength}
       value={value}
+      error={error}
+      errorId={errorId}
+      charCountId={charCountId}
     >
       <textarea
-        id={id}
+        id={inputId}
         maxLength={maxLength}
         className={TEXT_AREA_CLASSES}
         value={value}
+        aria-invalid={!!error}
+        aria-describedby={describedBy}
         {...props}
       />
     </FieldWrapper>
@@ -107,17 +132,31 @@ export const SelectField: React.FC<SelectFieldProps> = ({
   className,
   labelClassName,
   children,
+  error,
   ...props
 }) => {
+  const defaultId = useId();
+  const inputId = id || defaultId;
+  const errorId = error ? `${inputId}-error` : undefined;
+  const describedBy = combineIds(errorId);
+
   return (
     <FieldWrapper
-      id={id}
+      inputId={inputId}
       label={label}
       contextualLabel={contextualLabel}
       className={className}
       labelClassName={labelClassName}
+      error={error}
+      errorId={errorId}
     >
-      <select id={id} className={SELECT_CLASSES} {...props}>
+      <select 
+        id={inputId} 
+        className={SELECT_CLASSES} 
+        aria-invalid={!!error}
+        aria-describedby={describedBy}
+        {...props}
+      >
         {children}
       </select>
     </FieldWrapper>
@@ -135,18 +174,26 @@ export const CheckboxField: React.FC<CheckboxFieldProps> = ({
   id,
   className,
   labelClassName,
+  error,
   ...props
 }) => {
+  const defaultId = useId();
+  const inputId = id || defaultId;
+  const errorId = error ? `${inputId}-error` : undefined;
+  const describedBy = combineIds(errorId);
+
   return (
     <div className={className}>
       <label
-        htmlFor={id}
+        htmlFor={inputId}
         className={`flex items-center gap-2 cursor-pointer ${getLabelClass(labelClassName).replace('mb-1', '')}`}
       >
         <input
-          id={id}
+          id={inputId}
           type="checkbox"
           className="rounded text-teal-700 dark:text-teal-600 border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900"
+          aria-invalid={!!error}
+          aria-describedby={describedBy}
           {...props}
         />
         <span>{label}</span>
@@ -156,6 +203,11 @@ export const CheckboxField: React.FC<CheckboxFieldProps> = ({
           </span>
         )}
       </label>
+      {error && (
+        <p id={errorId} role="alert" className="mt-1 text-xs text-rose-600 dark:text-rose-400">
+          {error}
+        </p>
+      )}
     </div>
   );
 };
