@@ -17,45 +17,11 @@
 */
 
 import { describe, it, expect } from 'vitest';
-import { isEye, calculateLayout, getLogoMetrics, getIsCoveredByLogo } from './utils';
+import { calculateLayout, getLogoMetrics, getIsCoveredByLogo } from './utils';
 import { DEFAULT_CONFIG } from '../../constants';
 import { QRConfig, QRErrorCorrectionLevel } from '../../types';
 
 describe('QR Renderer Utils', () => {
-  describe('isEye', () => {
-    it('identifies top-left eye', () => {
-      expect(isEye(0, 0, 21)).toBe(true);
-      expect(isEye(6, 6, 21)).toBe(true);
-      expect(isEye(0, 6, 21)).toBe(true);
-      expect(isEye(6, 0, 21)).toBe(true);
-    });
-
-    it('identifies top-right eye', () => {
-      // moduleCount - 7 = 14
-      expect(isEye(0, 14, 21)).toBe(true);
-      expect(isEye(6, 20, 21)).toBe(true);
-      expect(isEye(0, 20, 21)).toBe(true);
-      expect(isEye(6, 14, 21)).toBe(true);
-    });
-
-    it('identifies bottom-left eye', () => {
-      // moduleCount - 7 = 14
-      expect(isEye(14, 0, 21)).toBe(true);
-      expect(isEye(20, 6, 21)).toBe(true);
-      expect(isEye(14, 6, 21)).toBe(true);
-      expect(isEye(20, 0, 21)).toBe(true);
-    });
-
-    it('does not identify bottom-right as eye (alignment pattern area)', () => {
-      expect(isEye(14, 14, 21)).toBe(false);
-      expect(isEye(20, 20, 21)).toBe(false);
-    });
-
-    it('does not identify middle area as eye', () => {
-      expect(isEye(10, 10, 21)).toBe(false);
-    });
-  });
-
   describe('calculateLayout', () => {
     it('calculates layout without border', () => {
       const config = { ...DEFAULT_CONFIG, isBorderEnabled: false };
