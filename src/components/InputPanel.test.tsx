@@ -17,11 +17,53 @@
 */
 
 import { render, screen, fireEvent, act } from '@testing-library/react';
+import { axe } from 'vitest-axe';
 import InputPanel from './InputPanel';
 import { DEFAULT_CONFIG } from '../constants';
 import { QRType, QRConfig, WifiEncryption } from '../types';
 import { FIXTURES } from "../../tests/fixtures/data";
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
+describe('InputPanel Component Accessibility', () => {
+  const mockOnChange = vi.fn();
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    mockOnChange.mockClear();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  const renderPanel = (configUpdates: Partial<QRConfig> = {}) => {
+    const config = { ...DEFAULT_CONFIG, ...configUpdates };
+    return render(<InputPanel config={config} onChange={mockOnChange} />);
+  };
+
+  const typesToTest = [
+    QRType.URL,
+    QRType.TEXT,
+    QRType.EMAIL,
+    QRType.PHONE,
+    QRType.SMS,
+    QRType.WIFI,
+    QRType.VCARD,
+    QRType.EVENT,
+    QRType.PAYMENT
+  ];
+
+  it.each(typesToTest)('should have zero accessibility violations for %s configuration', async (type) => {
+    const { container } = renderPanel({ type });
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+    vi.useRealTimers();
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
+    vi.useFakeTimers();
+  });
+});
 
 describe('InputPanel Component', () => {
   const mockOnChange = vi.fn();
