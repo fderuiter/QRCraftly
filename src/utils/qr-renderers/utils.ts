@@ -1,20 +1,5 @@
 import { QRConfig } from '../../types';
 
-/**
- * Determines if a given module at (row, column) is part of the three corner
- * positioning squares (eyes) of the QR code grid.
- * @param r - The row index of the module.
- * @param c - The column index of the module.
- * @param moduleCount - The total number of modules (rows/columns) in the QR grid.
- * @returns True if the module is part of a corner eye, false otherwise.
- */
-export const isEye = (r: number, c: number, moduleCount: number): boolean => {
-  if (r < 7 && c < 7) return true;
-  if (r < 7 && c >= moduleCount - 7) return true;
-  if (r >= moduleCount - 7 && c < 7) return true;
-  return false;
-};
-
 export interface LogoMetrics {
   logoSizePx: number;
   logoPaddingPx: number;
