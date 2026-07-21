@@ -6,19 +6,6 @@ import { ValidationEngine } from '@/engine/ValidationEngine';
 type SignalName = 'scannability-fail' | 'render-complete' | 'validation-violation';
 type SignalCallback = (detail: any) => void;
 
-interface QRContextType {
-  moduleCount: number;
-  config: QRConfig;
-  updateConfig: (updates: Partial<QRConfig>) => void;
-  emitSignal: (name: SignalName, detail?: any) => void;
-  registerSignal: (name: SignalName, callback: SignalCallback) => () => void;
-  preferences: {
-    telemetryOptIn: boolean | null;
-    darkMode: boolean;
-  };
-  updatePreferences: (updates: Partial<{telemetryOptIn: boolean | null, darkMode: boolean}>) => void;
-}
-
 export type QRState = {
   config: QRConfig;
   moduleCount: number;
@@ -35,21 +22,26 @@ export interface QRStore {
   registerSignal: (name: SignalName, callback: SignalCallback) => () => void;
 }
 
-const QRContext = createContext<QRContextType | undefined>(undefined);
 const QRStoreContext = createContext<QRStore | undefined>(undefined);
+
+const fallbackMemoryStore = new Map<string, string>();
 
 const getSafeLocalStorage = () => {
   if (typeof window !== 'undefined' && window.localStorage && typeof window.localStorage.getItem === 'function') {
-    return window.localStorage;
+    try {
+      window.localStorage.setItem('__test__', '1');
+      window.localStorage.removeItem('__test__');
+      return {
+        getItem: (key: string) => window.localStorage.getItem(key),
+        setItem: (key: string, value: string) => window.localStorage.setItem(key, value)
+      };
+    } catch (e) {
+      // Use fallback
+    }
   }
-  const store = new Map<string, string>();
   return {
-    getItem: (key: string) => store.get(key) ?? null,
-    setItem: (key: string, value: string) => { store.set(key, value); },
-    removeItem: (key: string) => { store.delete(key); },
-    clear: () => { store.clear(); },
-    key: (index: number) => Array.from(store.keys())[index] ?? null,
-    get length() { return store.size; }
+    getItem: (key: string) => fallbackMemoryStore.get(key) ?? null,
+    setItem: (key: string, value: string) => { fallbackMemoryStore.set(key, value); }
   };
 };
 
@@ -128,43 +120,21 @@ function createQRStore(initialConfig?: Partial<QRConfig>): QRStore {
 export const QRProvider = ({ children, initialConfig }: { children: React.ReactNode, initialConfig?: Partial<QRConfig> }) => {
   const [store] = useState(() => createQRStore(initialConfig));
 
-  const state = useSyncExternalStore(store.subscribe, store.getState, store.getState);
-
-  const contextValue: QRContextType = {
-    config: state.config,
-    updateConfig: store.updateConfig,
-    emitSignal: store.emitSignal,
-    registerSignal: store.registerSignal,
-    preferences: state.preferences,
-    updatePreferences: store.updatePreferences,
-    moduleCount: state.moduleCount
-  };
-
   return (
     <QRStoreContext.Provider value={store}>
-      <QRContext.Provider value={contextValue}>
-        {children}
-      </QRContext.Provider>
+      {children}
     </QRStoreContext.Provider>
   );
 };
 
-export const useQRContext = () => {
-  const ctx = useContext(QRContext);
-  if (!ctx) throw new Error("useQRContext must be used within QRProvider");
-  return ctx;
-};
-
-export const useOptionalQRContext = () => {
-  return useContext(QRContext);
-};
-
-export function useQRStore() {
+export function useOptionalQRStoreSelector<T>(selector: (state: QRState) => T): T | undefined {
   const store = useContext(QRStoreContext);
-  if (!store) {
-    throw new Error('useQRStore must be used within QRProvider');
-  }
-  return store;
+  if (!store) return undefined;
+  return useSyncExternalStore(
+    store.subscribe,
+    () => selector(store.getState()),
+    () => selector(store.getState())
+  );
 }
 
 export function useQRStoreSelector<T>(selector: (state: QRState) => T): T {
@@ -174,4 +144,12 @@ export function useQRStoreSelector<T>(selector: (state: QRState) => T): T {
     () => selector(store.getState()),
     () => selector(store.getState())
   );
+}
+
+export function useQRStore() {
+  const store = useContext(QRStoreContext);
+  if (!store) {
+    throw new Error('useQRStore must be used within QRProvider');
+  }
+  return store;
 }
