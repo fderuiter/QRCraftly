@@ -26,7 +26,7 @@ import { useDebounce, useOnClickOutside } from '@/utils/hooks';
 import { useQRDownload } from '@/utils/useQRDownload';
 import { useScannability } from '@/hooks/useScannability';
 import { ScannabilityIndicator } from '@/components/ScannabilityIndicator';
-import { QRProvider, useQRContext } from '@/context/QRContext';
+import { QRProvider, useQRStore, useQRStoreSelector } from '@/context/QRContext';
 import { useTheme } from '@/hooks/useTheme';
 import { useTelemetry } from '@/hooks/useTelemetry';
 import { ComponentRegistry } from '@/utils/ComponentRegistry';
@@ -34,7 +34,9 @@ import { useCapabilities } from '@/hooks/useCapabilities';
 import '@/registry'; // Ensure registry is loaded
 
 function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: string }) {
-  const { config, emitSignal } = useQRContext();
+  const config = useQRStoreSelector(s => s.config);
+  const store = useQRStore();
+  const emitSignal = store.emitSignal;
   const { isDarkMode, toggleDarkMode } = useTheme();
   
   const [showDownloadMenu, setShowDownloadMenu] = useState(false);

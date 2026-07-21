@@ -23,11 +23,9 @@ import {
   QRProvider,
   useQRStore,
   useQRStoreSelector,
-  useQRContext,
-  useOptionalQRContext,
+  useOptionalQRStoreSelector,
 } from './QRContext';
 import { DEFAULT_CONFIG } from '@/constants';
-import { QRStyle } from '@/types';
 
 // ---------------------------------------------------------------------------
 // Helper wrapper
@@ -474,92 +472,18 @@ describe('useQRStoreSelector', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Tests: useQRContext (backward compat)
-// ---------------------------------------------------------------------------
-describe('useQRContext', () => {
-  afterEach(() => clearLocalStorage());
-
-  it('returns config from state', () => {
-    const { result } = renderHook(() => useQRContext(), { wrapper });
-    expect(result.current.config).toEqual(
-      expect.objectContaining({ value: DEFAULT_CONFIG.value })
-    );
-  });
-
-  it('returns updateConfig function', () => {
-    const { result } = renderHook(() => useQRContext(), { wrapper });
-    expect(typeof result.current.updateConfig).toBe('function');
-  });
-
-  it('returns emitSignal function', () => {
-    const { result } = renderHook(() => useQRContext(), { wrapper });
-    expect(typeof result.current.emitSignal).toBe('function');
-  });
-
-  it('returns registerSignal function', () => {
-    const { result } = renderHook(() => useQRContext(), { wrapper });
-    expect(typeof result.current.registerSignal).toBe('function');
-  });
-
-  it('returns preferences with expected shape', () => {
-    const { result } = renderHook(() => useQRContext(), { wrapper });
-    expect(result.current.preferences).toHaveProperty('telemetryOptIn');
-    expect(result.current.preferences).toHaveProperty('darkMode');
-  });
-
-  it('returns updatePreferences function', () => {
-    const { result } = renderHook(() => useQRContext(), { wrapper });
-    expect(typeof result.current.updatePreferences).toBe('function');
-  });
-
-  it('returns moduleCount as number', () => {
-    const { result } = renderHook(() => useQRContext(), { wrapper });
-    expect(typeof result.current.moduleCount).toBe('number');
-  });
-
-  it('updateConfig via useQRContext reflects in subsequent reads', () => {
-    const { result } = renderHook(() => useQRContext(), { wrapper });
-    act(() => {
-      result.current.updateConfig({ style: QRStyle.MODERN });
-    });
-    expect(result.current.config.style).toBe(QRStyle.MODERN);
-  });
-
-  it('updatePreferences via useQRContext reflects in subsequent reads', () => {
-    const { result } = renderHook(() => useQRContext(), { wrapper });
-    act(() => {
-      result.current.updatePreferences({ darkMode: true });
-    });
-    expect(result.current.preferences.darkMode).toBe(true);
-  });
-});
 
 // ---------------------------------------------------------------------------
-// Tests: useOptionalQRContext
+// Tests: useOptionalQRStoreSelector
 // ---------------------------------------------------------------------------
-describe('useOptionalQRContext', () => {
-  afterEach(() => clearLocalStorage());
-
+describe('useOptionalQRStoreSelector', () => {
   it('returns undefined when outside QRProvider', () => {
-    const { result } = renderHook(() => useOptionalQRContext());
+    const { result } = renderHook(() => useOptionalQRStoreSelector(s => s.moduleCount));
     expect(result.current).toBeUndefined();
   });
 
-  it('returns context object when inside QRProvider', () => {
-    const { result } = renderHook(() => useOptionalQRContext(), { wrapper });
-    expect(result.current).not.toBeUndefined();
-    expect(result.current).toHaveProperty('config');
-    expect(result.current).toHaveProperty('updateConfig');
-    expect(result.current).toHaveProperty('emitSignal');
-    expect(result.current).toHaveProperty('registerSignal');
-    expect(result.current).toHaveProperty('preferences');
-    expect(result.current).toHaveProperty('updatePreferences');
-    expect(result.current).toHaveProperty('moduleCount');
-  });
-
-  it('config from useOptionalQRContext matches DEFAULT_CONFIG', () => {
-    const { result } = renderHook(() => useOptionalQRContext(), { wrapper });
-    expect(result.current!.config.value).toBe(DEFAULT_CONFIG.value);
+  it('returns selected state when inside QRProvider', () => {
+    const { result } = renderHook(() => useOptionalQRStoreSelector(s => s.moduleCount), { wrapper });
+    expect(result.current).toBe(0);
   });
 });
