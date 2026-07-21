@@ -32,6 +32,13 @@ import { useTelemetry } from '@/hooks/useTelemetry';
 import { useCapabilities } from '@/hooks/useCapabilities';
 import { sidebarControls } from '@/registry';
 
+/**
+ * Renders the QR code generator interface with configuration controls, preview, and export actions.
+ *
+ * @param title - Optional title used for the generator heading and branding.
+ * @param toolId - Identifier passed to the sidebar controls.
+ * @returns The QR code generator interface.
+ */
 function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: string }) {
   const config = useQRStoreSelector(s => s.config);
   const store = useQRStore();
