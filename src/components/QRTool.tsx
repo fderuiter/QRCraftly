@@ -29,9 +29,8 @@ import { ScannabilityIndicator } from '@/components/ScannabilityIndicator';
 import { QRProvider, useQRStore, useQRStoreSelector } from '@/context/QRContext';
 import { useTheme } from '@/hooks/useTheme';
 import { useTelemetry } from '@/hooks/useTelemetry';
-import { ComponentRegistry } from '@/utils/ComponentRegistry';
 import { useCapabilities } from '@/hooks/useCapabilities';
-import '@/registry'; // Ensure registry is loaded
+import { sidebarControls } from '@/registry';
 
 function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: string }) {
   const config = useQRStoreSelector(s => s.config);
@@ -104,8 +103,6 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
       await hookSaveSvg();
     } catch (err) {}
   };
-
-  const sidebarControls = ComponentRegistry.getSidebarControls();
 
   return (
     <div className={`${isDarkMode ? 'dark' : ''} w-full`} id="top">

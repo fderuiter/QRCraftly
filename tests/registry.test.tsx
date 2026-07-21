@@ -18,21 +18,14 @@
 
 import React from 'react';
 import { render, screen, waitFor, act } from '@testing-library/react';
-import { describe, it, expect, vi, beforeAll, afterAll, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterAll, afterEach } from 'vitest';
 import { QRProvider, useQRStore } from '@/context/QRContext';
 import { DEFAULT_CONFIG } from '@/constants';
+import { sidebarControls, ContentControl, AppearanceControl, AdditionalSidebarContent } from '@/registry';
 
 // ---------------------------------------------------------------------------
-// Mocks - must be set up before importing registry
+// Mocks
 // ---------------------------------------------------------------------------
-
-// Mock ComponentRegistry to avoid side-effect registrations interfering with other tests
-vi.mock('@/utils/ComponentRegistry', () => ({
-  ComponentRegistry: {
-    registerSidebarControl: vi.fn(),
-    getSidebarControls: vi.fn(() => []),
-  },
-}));
 
 // Mock InputPanel - captures props for assertions
 vi.mock('@/components/InputPanel', () => ({
@@ -63,29 +56,6 @@ vi.mock('@/components/StyleControls', () => ({
   ),
 }));
 
-// ---------------------------------------------------------------------------
-// Load registry once (module-level side-effects run on first import only)
-// Capture the registered components via the mock's call history.
-// ---------------------------------------------------------------------------
-let ContentControl: React.ComponentType;
-let AppearanceControl: React.ComponentType;
-let AdditionalSidebarContent: React.ComponentType<{ toolId?: string }>;
-
-beforeAll(async () => {
-  const { ComponentRegistry } = await import('@/utils/ComponentRegistry');
-  // Import registry to trigger its side-effect registrations
-  await import('@/registry');
-
-  const calls = (ComponentRegistry.registerSidebarControl as ReturnType<typeof vi.fn>).mock.calls;
-  const contentCall = calls.find(([arg]: any[]) => arg?.id === 'content');
-  const appearanceCall = calls.find(([arg]: any[]) => arg?.id === 'appearance');
-  const sidebarContentCall = calls.find(([arg]: any[]) => arg?.id === 'sidebar-content');
-
-  ContentControl = contentCall?.[0]?.component;
-  AppearanceControl = appearanceCall?.[0]?.component;
-  AdditionalSidebarContent = sidebarContentCall?.[0]?.component;
-});
-
 afterAll(() => {
   vi.restoreAllMocks();
 });
@@ -95,36 +65,22 @@ afterEach(() => {
 });
 
 // ---------------------------------------------------------------------------
-// Tests: registration side effects
+// Tests
 // ---------------------------------------------------------------------------
-describe('registry.tsx - component registration and behavior', () => {
-  it('registers content control with id "content" and order 10', async () => {
-    const { ComponentRegistry } = await import('@/utils/ComponentRegistry');
-    const calls = (ComponentRegistry.registerSidebarControl as ReturnType<typeof vi.fn>).mock.calls;
-    const contentCall = calls.find(([arg]: any[]) => arg?.id === 'content');
-    expect(contentCall).toBeDefined();
-    if (!contentCall) throw new Error('Expected content registration to exist');
-    expect(contentCall[0].order).toBe(10);
-    expect(typeof contentCall[0].component).toBe('function');
-  });
+describe('registry.tsx - static component configuration and behavior', () => {
+  it('exports sidebarControls as a static array in the correct order', () => {
+    expect(sidebarControls).toBeDefined();
+    expect(Array.isArray(sidebarControls)).toBe(true);
+    expect(sidebarControls.length).toBe(3);
 
-  it('registers appearance control with id "appearance" and order 20', async () => {
-    const { ComponentRegistry } = await import('@/utils/ComponentRegistry');
-    const calls = (ComponentRegistry.registerSidebarControl as ReturnType<typeof vi.fn>).mock.calls;
-    const appearanceCall = calls.find(([arg]: any[]) => arg?.id === 'appearance');
-    expect(appearanceCall).toBeDefined();
-    if (!appearanceCall) throw new Error('Expected appearance registration to exist');
-    expect(appearanceCall[0].order).toBe(20);
-    expect(typeof appearanceCall[0].component).toBe('function');
-  });
+    expect(sidebarControls[0].id).toBe('content');
+    expect(sidebarControls[0].component).toBe(ContentControl);
 
-  it('registers sidebar-content control with id "sidebar-content" and order 30', async () => {
-    const { ComponentRegistry } = await import('@/utils/ComponentRegistry');
-    const calls = (ComponentRegistry.registerSidebarControl as ReturnType<typeof vi.fn>).mock.calls;
-    const sidebarCall = calls.find(([arg]: any[]) => arg?.id === 'sidebar-content');
-    expect(sidebarCall).toBeDefined();
-    if (!sidebarCall) throw new Error('Expected sidebar-content registration to exist');
-    expect(sidebarCall[0].order).toBe(30);
+    expect(sidebarControls[1].id).toBe('appearance');
+    expect(sidebarControls[1].component).toBe(AppearanceControl);
+
+    expect(sidebarControls[2].id).toBe('sidebar-content');
+    expect(sidebarControls[2].component).toBe(AdditionalSidebarContent);
   });
 
   // -------------------------------------------------------------------------
@@ -177,7 +133,6 @@ describe('registry.tsx - component registration and behavior', () => {
       return <div data-testid="input-panel-capture" />;
     };
 
-    // We can't easily swap the module mock at this point, so we verify indirectly:
     // By rendering ContentControl and using a store accessor alongside it
     const StoreCapture = () => {
       storeRef = useQRStore();
@@ -191,8 +146,6 @@ describe('registry.tsx - component registration and behavior', () => {
       </QRProvider>
     );
 
-    // The InputPanel mock receives onChange; we verify by checking if the store
-    // updateConfig was called with expected args (directly via storeRef)
     if (storeRef) {
       act(() => {
         (storeRef as any).updateConfig({ value: 'https://registry-test.com' });

@@ -1,12 +1,11 @@
 import React, { Suspense } from 'react';
-import { ComponentRegistry } from '@/utils/ComponentRegistry';
 import InputPanel from '@/components/InputPanel';
 import { SidebarContent } from '@/components/SidebarContent';
 import { useQRStore, useQRStoreSelector } from '@/context/QRContext';
 
 const StyleControls = React.lazy(() => import('@/components/StyleControls'));
 
-const ContentControl = () => {
+export const ContentControl = () => {
   const store = useQRStore();
   const config = useQRStoreSelector(state => state.config);
   const { updateConfig } = store;
@@ -18,7 +17,7 @@ const ContentControl = () => {
   );
 };
 
-const AppearanceControl = () => {
+export const AppearanceControl = () => {
   const store = useQRStore();
   const config = useQRStoreSelector(state => state.config);
   const { updateConfig } = store;
@@ -42,24 +41,21 @@ const AppearanceControl = () => {
   );
 };
 
-const AdditionalSidebarContent = ({ toolId }: { toolId?: string }) => {
+export const AdditionalSidebarContent = ({ toolId }: { toolId?: string }) => {
   return <SidebarContent toolId={toolId || 'index'} />;
 };
 
-ComponentRegistry.registerSidebarControl({
-  id: 'content',
-  component: ContentControl,
-  order: 10
-});
-
-ComponentRegistry.registerSidebarControl({
-  id: 'appearance',
-  component: AppearanceControl,
-  order: 20
-});
-
-ComponentRegistry.registerSidebarControl({
-  id: 'sidebar-content',
-  component: AdditionalSidebarContent,
-  order: 30
-});
+export const sidebarControls = [
+  {
+    id: 'content',
+    component: ContentControl,
+  },
+  {
+    id: 'appearance',
+    component: AppearanceControl,
+  },
+  {
+    id: 'sidebar-content',
+    component: AdditionalSidebarContent,
+  },
+];
