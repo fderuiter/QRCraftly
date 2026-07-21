@@ -19,7 +19,7 @@ export const resolveDomainForPath = (path: string): string => {
       const url = new URL(domain);
       url.hostname = `${subdomain}.${url.hostname}`;
       return `${url.protocol}//${url.host}`;
-    } catch (e) {
+    } catch (_e) {
       // Fallback
     }
   }

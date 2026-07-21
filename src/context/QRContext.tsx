@@ -35,7 +35,7 @@ const getSafeLocalStorage = () => {
         getItem: (key: string) => window.localStorage.getItem(key),
         setItem: (key: string, value: string) => window.localStorage.setItem(key, value)
       };
-    } catch (e) {
+    } catch (_e) {
       // Use fallback
     }
   }

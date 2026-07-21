@@ -35,9 +35,6 @@ export const safeJsonLdStringify = (data: any): string => {
 
 import { ValidationEngine } from '../engine/ValidationEngine';
 
-export const REGEX_STRICT_CONTROL_CHARS = ValidationEngine.REGEX_STRICT_CONTROL_CHARS;
-export const REGEX_PRESERVE_FORMAT_CONTROL_CHARS = ValidationEngine.REGEX_PRESERVE_FORMAT_CONTROL_CHARS;
-export const REGEX_URL_UNSAFE_CHARS = ValidationEngine.REGEX_URL_UNSAFE_CHARS;
 
 export const isDangerousUrl = (url: string | undefined): boolean => {
   return ValidationEngine.isDangerousUrl(url);
