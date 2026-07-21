@@ -17,42 +17,9 @@
 */
 
 import { describe, it, expect } from 'vitest';
-import { getLuminance, getContrastRatio } from './colorUtils';
+import { getContrastRatio } from './colorUtils';
 
 describe('colorUtils', () => {
-  describe('getLuminance', () => {
-    it('calculates correct luminance for white', () => {
-      expect(getLuminance('#ffffff')).toBeCloseTo(1, 4);
-      expect(getLuminance('#FFFFFF')).toBeCloseTo(1, 4);
-    });
-
-    it('calculates correct luminance for black', () => {
-      expect(getLuminance('#000000')).toBe(0);
-    });
-
-    it('calculates correct luminance for 3-digit hex', () => {
-      expect(getLuminance('#fff')).toBeCloseTo(1, 4);
-      expect(getLuminance('#FFF')).toBeCloseTo(1, 4);
-      expect(getLuminance('#000')).toBe(0);
-      expect(getLuminance('#F00')).toBeCloseTo(0.2126, 4); // Red
-    });
-
-    it('calculates correct luminance for primary red', () => {
-      // sRGB Red relative luminance is approx 0.2126
-      expect(getLuminance('#FF0000')).toBeCloseTo(0.2126, 4);
-    });
-
-    it('calculates correct luminance for primary green', () => {
-      // sRGB Green relative luminance is approx 0.7152
-      expect(getLuminance('#00FF00')).toBeCloseTo(0.7152, 4);
-    });
-
-    it('calculates correct luminance for primary blue', () => {
-      // sRGB Blue relative luminance is approx 0.0722
-      expect(getLuminance('#0000FF')).toBeCloseTo(0.0722, 4);
-    });
-  });
-
   describe('getContrastRatio', () => {
     it('returns maximum contrast for black on white', () => {
       const contrast = getContrastRatio('#000000', '#ffffff');

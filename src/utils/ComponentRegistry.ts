@@ -8,24 +8,14 @@ export type ComponentRegistryItem = {
 
 class ComponentRegistryClass {
   private sidebarControls: ComponentRegistryItem[] = [];
-  private previewActions: ComponentRegistryItem[] = [];
 
   registerSidebarControl(item: ComponentRegistryItem) {
     this.sidebarControls.push(item);
     this.sidebarControls.sort((a, b) => (a.order || 0) - (b.order || 0));
   }
 
-  registerPreviewAction(item: ComponentRegistryItem) {
-    this.previewActions.push(item);
-    this.previewActions.sort((a, b) => (a.order || 0) - (b.order || 0));
-  }
-
   getSidebarControls() {
     return this.sidebarControls;
-  }
-
-  getPreviewActions() {
-    return this.previewActions;
   }
 }
 

@@ -87,12 +87,9 @@ function makeImgProxy(src: string | null): HTMLImageElement | null {
  * so the resulting `.svg` file works without an internet connection.
  *
  * @param config  The QR code configuration.
- * @param _legacySize  Ignored – dimensions are now derived from
- *   `config.socialFormat` via {@link SOCIAL_DIMENSIONS}.
- *   @deprecated Pass `config.socialFormat` to control output dimensions.
  * @returns A promise that resolves to the SVG XML string.
  */
-export async function generateQRSvg(config: QRConfig, _legacySize?: number): Promise<string> {
+export async function generateQRSvg(config: QRConfig): Promise<string> {
   // Dynamically import qrcode to match the pattern used elsewhere in the project
   const QRCode = await import('qrcode');
   const qrData = QRCode.create(config.value, { errorCorrectionLevel: config.errorCorrectionLevel });
