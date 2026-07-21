@@ -1,6 +1,30 @@
 import jsQR from 'jsqr';
 import { ValidationEngine } from '../engine/ValidationEngine';
 
+/**
+ * Configuration for the worker message.
+ */
+export interface WorkerMessageData {
+  /** The image data to process. */
+  imageData: ImageData;
+  /** The width of the image. */
+  width: number;
+  /** The height of the image. */
+  height: number;
+  /** Optional configuration ID. */
+  configId?: string;
+  /** Optional flag indicating test mode. */
+  isTest?: boolean;
+}
+
+
+/**
+ * Applies an optical simulation to the image data to mimic physical scanning conditions.
+ * @param imageData - The raw image data.
+ * @param width - The image width.
+ * @param height - The image height.
+ * @returns The transformed image data with blur and noise.
+ */
 function applyOpticalSimulation(imageData: ImageData, width: number, height: number): ImageData {
   const src = imageData.data;
   const dst = new Uint8ClampedArray(src.length);
@@ -60,7 +84,11 @@ function applyOpticalSimulation(imageData: ImageData, width: number, height: num
   return new ImageData(dst, width, height);
 }
 
-self.onmessage = (e: MessageEvent<{ imageData: ImageData; width: number; height: number; configId?: string; isTest?: boolean }>) => {
+/**
+ * Handles incoming messages to process QR code scannability.
+ * @param e - The message event containing worker data.
+ */
+self.onmessage = (e: MessageEvent<WorkerMessageData>) => {
   try {
     const { imageData, width, height, configId, isTest } = e.data;
     

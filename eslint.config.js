@@ -3,6 +3,7 @@ import tseslint from "typescript-eslint";
 import reactPlugin from "eslint-plugin-react";
 import reactHooksPlugin from "eslint-plugin-react-hooks";
 import securityPlugin from "eslint-plugin-security";
+import jsdoc from "eslint-plugin-jsdoc";
 
 export default tseslint.config(
   {
@@ -73,6 +74,29 @@ export default tseslint.config(
       react: {
         version: "detect"
       }
+    }
+  },
+  {
+    files: ["src/types.ts", "src/utils/scannabilityWorker.ts"],
+    plugins: { jsdoc },
+    rules: {
+      ...jsdoc.configs["flat/recommended-typescript-error"].rules,
+      "jsdoc/require-jsdoc": [
+        "error",
+        {
+          require: {
+            FunctionDeclaration: true,
+            ArrowFunctionExpression: true,
+            FunctionExpression: true
+          },
+          contexts: [
+            "TSPropertySignature",
+            "TSInterfaceDeclaration",
+            "TSTypeAliasDeclaration"
+          ]
+        }
+      ],
+      "jsdoc/require-description": "error"
     }
   }
 );

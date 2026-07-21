@@ -36,7 +36,6 @@ describe('QRCanvas Performance Refactoring', () => {
       moveTo: vi.fn(),
       lineTo: vi.fn(),
       closePath: vi.fn(),
-      quadraticCurveTo: vi.fn(),
       setLineDash: vi.fn(),
       strokeRect: vi.fn(),
       stroke: vi.fn(),

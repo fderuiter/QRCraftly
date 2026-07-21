@@ -53,7 +53,7 @@ describe('QRCanvas Rendering Logic Extended', () => {
       moveTo: vi.fn(),
       lineTo: vi.fn(),
       closePath: vi.fn(),
-      quadraticCurveTo: vi.fn(), // For manual roundRect
+
       setLineDash: vi.fn(),
       strokeRect: vi.fn(),
       stroke: vi.fn(),

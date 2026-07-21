@@ -36,7 +36,6 @@ describe('drawQR', () => {
       fillStyle: '',
       strokeStyle: '',
       lineWidth: 0,
-      quadraticCurveTo: vi.fn(), // Needed for fallback
     };
 
     mockModules = {
