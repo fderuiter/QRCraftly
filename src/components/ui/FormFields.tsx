@@ -1,8 +1,8 @@
 import React, { useId } from "react";
 import { TEXT_AREA_CLASSES, SELECT_CLASSES } from "./styles";
 import { combineIds } from "../../utils/a11y";
-import { FieldWrapper, BaseFieldProps } from "../ui/FieldWrapper";
-export { TextField } from "../ui/TextField";
+import { FieldWrapper, BaseFieldProps } from "./FieldWrapper";
+export { TextField } from "./TextField";
 
 interface TextAreaFieldProps
   extends

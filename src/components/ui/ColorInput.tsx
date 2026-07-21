@@ -6,11 +6,12 @@ import { normalizeHex } from '../../utils/colorUtils';
  */
 interface ColorInputProps {
   id: string;
-  label: string;
+  label?: string;
   value: string;
   onChange: (value: string) => void;
   displayValue?: string;
   sizeClass?: string;
+  title?: string;
 }
 
 export const ColorInput: React.FC<ColorInputProps> = ({
@@ -19,7 +20,8 @@ export const ColorInput: React.FC<ColorInputProps> = ({
   value,
   onChange,
   displayValue,
-  sizeClass = "w-10 h-10"
+  sizeClass = "w-10 h-10",
+  title
 }) => {
   const [textValue, setTextValue] = useState(displayValue || value);
   const textValueRef = useRef(textValue);
@@ -56,9 +58,11 @@ export const ColorInput: React.FC<ColorInputProps> = ({
 
   return (
     <div>
-      <label htmlFor={id} className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
-        {label}
-      </label>
+      {label && (
+        <label htmlFor={id} className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
+          {label}
+        </label>
+      )}
       <div className="flex items-center gap-2">
           <input
             id={id}
@@ -66,6 +70,7 @@ export const ColorInput: React.FC<ColorInputProps> = ({
             value={value}
             onChange={(e) => onChange(e.target.value)}
             className={`${sizeClass} rounded cursor-pointer border-0 p-0 bg-transparent`}
+            title={title}
           />
           <input
             type="text"

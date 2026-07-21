@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Button } from "../ui/Button";
 import { LocationData } from "../../types";
-import { TextField } from "./FormFields";
+import { TextField } from "../ui/FormFields";
 
 interface LocationInputProps {
   data: LocationData;

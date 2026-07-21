@@ -22,7 +22,7 @@ import { Square, Smartphone } from 'lucide-react';
 import { QRConfig, SocialFormat, TemplateStyle } from '../../types';
 import { ColorInput } from '../ui/ColorInput';
 import { RangeInput } from '../ui/RangeInput';
-import { CheckboxField } from '../inputs/FormFields';
+import { CheckboxField, TextField } from '../ui/FormFields';
 
 interface LayoutControlsProps {
   config: QRConfig;
@@ -128,21 +128,17 @@ export const LayoutControls: React.FC<LayoutControlsProps> = ({ config, onChange
       {/* Text Inputs (visible only when a template is active) */}
       {showTextInputs && (
         <div className="mt-4 space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
-          <input
-            type="text"
+          <TextField
             placeholder="Headline (e.g. Scan Me!)"
             value={config.templateHeadline ?? ''}
             onChange={(e) => onChange({ templateHeadline: e.target.value })}
             aria-label="Template headline"
-            className="w-full px-2 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs text-slate-700 dark:text-slate-200"
           />
-          <input
-            type="text"
+          <TextField
             placeholder="Subtext (e.g. @yourhandle)"
             value={config.templateSubtext ?? ''}
             onChange={(e) => onChange({ templateSubtext: e.target.value })}
             aria-label="Template subtext"
-            className="w-full px-2 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs text-slate-700 dark:text-slate-200"
           />
         </div>
       )}
