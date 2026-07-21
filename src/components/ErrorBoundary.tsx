@@ -30,7 +30,7 @@ export class ErrorBoundary extends Component<Props, State> {
       }
       return (
         <div className="flex flex-col items-center justify-center min-h-[50vh] p-8 text-center text-slate-700 dark:text-slate-200">
-          <h2 role="alert" className="text-3xl font-bold mb-4 text-rose-700">Application Error</h2>
+          <h2 role="alert" className="text-3xl font-bold mb-4 text-rose-700 dark:text-rose-400">Application Error</h2>
           <p className="mb-8 text-lg">We're sorry, but something went wrong while rendering this page.</p>
           <button
             onClick={() => window.location.reload()}

@@ -50,7 +50,10 @@ describe('InputPanel Component Accessibility', () => {
     QRType.WIFI,
     QRType.VCARD,
     QRType.EVENT,
-    QRType.PAYMENT
+    QRType.PAYMENT,
+    QRType.LOCATION,
+    QRType.MEETING,
+    QRType.SOCIAL
   ];
 
   it.each(typesToTest)('should have zero accessibility violations for %s configuration', async (type) => {

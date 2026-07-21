@@ -35,31 +35,23 @@ test.describe('Accessibility Suite', () => {
     
     // Create custom-colored layouts and trigger a warning
     const fgColorInput = page.locator('input#fg-color');
-    if (await fgColorInput.isVisible()) {
-      await fgColorInput.fill('#ffffff');
-    }
-    
+    await fgColorInput.fill('#ffffff');
+
     const bgColorInput = page.locator('input#bg-color');
-    if (await bgColorInput.isVisible()) {
-      await bgColorInput.fill('#ffffff');
-    }
+    await bgColorInput.fill('#ffffff');
 
     const eyeColorInput = page.locator('input#eye-color');
-    if (await eyeColorInput.isVisible()) {
-      await eyeColorInput.fill('#ff0000');
-    }
-    
+    await eyeColorInput.fill('#ff0000');
+
     // Wait for contrast warning text
-    await page.waitForSelector('text=Warning: The contrast ratio is low', { timeout: 5000 }).catch(() => {});
-    
+    await page.waitForSelector('text=Warning: The contrast ratio is low', { timeout: 5000 });
+
     // Trigger the warning modal
     const downloadButton = page.locator('button:has-text("Download")');
-    if (await downloadButton.isVisible()) {
-      await downloadButton.click();
-    }
-    
+    await downloadButton.click();
+
     // Wait for modal to appear
-    await page.waitForSelector('text=Scan Safety Warning', { timeout: 5000 }).catch(() => {});
+    await page.waitForSelector('text=Scan Safety Warning', { timeout: 5000 });
 
     // Run scan on warning state
     const warningScan = await runAccessibilityScan(page);
