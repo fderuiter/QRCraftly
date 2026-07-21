@@ -127,11 +127,14 @@ export const QRProvider = ({ children, initialConfig }: { children: React.ReactN
 
 export function useOptionalQRStoreSelector<T>(selector: (state: QRState) => T): T | undefined {
   const store = useContext(QRStoreContext);
-  if (!store) return undefined;
+  
+  const subscribe = store ? store.subscribe : () => () => {};
+  const getSnapshot = () => store ? selector(store.getState()) : undefined;
+  
   return useSyncExternalStore(
-    store.subscribe,
-    () => selector(store.getState()),
-    () => selector(store.getState())
+    subscribe,
+    getSnapshot,
+    getSnapshot
   );
 }
 

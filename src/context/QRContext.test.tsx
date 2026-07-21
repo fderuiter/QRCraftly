@@ -26,7 +26,6 @@ import {
   useOptionalQRStoreSelector,
 } from './QRContext';
 import { DEFAULT_CONFIG } from '@/constants';
-import { QRStyle } from '@/types';
 
 // ---------------------------------------------------------------------------
 // Helper wrapper
