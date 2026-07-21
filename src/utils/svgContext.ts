@@ -43,10 +43,54 @@ function multiplyMatrix(m1: Matrix, m2: Matrix): Matrix {
   };
 }
 
+export class SvgRadialGradient {
+  public id: string;
+  public x0: number;
+  public y0: number;
+  public r0: number;
+  public x1: number;
+  public y1: number;
+  public r1: number;
+  public transform: Matrix;
+  public stops: Array<{ offset: number; color: string }> = [];
+
+  constructor(id: string, x0: number, y0: number, r0: number, x1: number, y1: number, r1: number, transform: Matrix) {
+    this.id = id;
+    this.x0 = x0;
+    this.y0 = y0;
+    this.r0 = r0;
+    this.x1 = x1;
+    this.y1 = y1;
+    this.r1 = r1;
+    this.transform = transform;
+  }
+
+  addColorStop(offset: number, color: string): void {
+    this.stops.push({ offset, color });
+  }
+
+  toSvgString(): string {
+    const stopsXml = this.stops.map(stop => 
+      `      <stop offset="${stop.offset * 100}%" stop-color="${stop.color}" />`
+    ).join('\n');
+    
+    // Only apply gradientTransform if it's not the identity matrix
+    const t = this.transform;
+    const isIdentity = t.a === 1 && t.b === 0 && t.c === 0 && t.d === 1 && t.e === 0 && t.f === 0;
+    const transformAttr = isIdentity ? '' : ` gradientTransform="matrix(${t.a} ${t.b} ${t.c} ${t.d} ${t.e} ${t.f})"`;
+
+    return [
+      `    <radialGradient id="${this.id}" cx="${this.x1}" cy="${this.y1}" r="${this.r1}" fx="${this.x0}" fy="${this.y0}" gradientUnits="userSpaceOnUse"${transformAttr}>`,
+      stopsXml,
+      `    </radialGradient>`
+    ].join('\n');
+  }
+}
+
 interface ContextState {
   transform: Matrix;
-  fillStyle: string;
-  strokeStyle: string;
+  fillStyle: string | SvgRadialGradient;
+  strokeStyle: string | SvgRadialGradient;
   lineWidth: number;
   font: string;
   textAlign: string;
@@ -66,8 +110,8 @@ interface ContextState {
  */
 export class SvgContext {
   // Public style properties (mirrors CanvasRenderingContext2D)
-  fillStyle: string = '#000000';
-  strokeStyle: string = '#000000';
+  fillStyle: string | SvgRadialGradient = '#000000';
+  strokeStyle: string | SvgRadialGradient = '#000000';
   lineWidth: number = 1;
   font: string = '10px sans-serif';
   textAlign: string = 'start';
@@ -83,11 +127,21 @@ export class SvgContext {
   private _transform: Matrix = identityMatrix();
   private _stateStack: ContextState[] = [];
   private _dashArray: number[] = [];
+  private _gradients: SvgRadialGradient[] = [];
+  private _radialGradientCount = 0;
 
   constructor(width: number, height: number) {
     this._width = width;
     this._height = height;
     this.canvas = { width, height };
+  }
+
+  createRadialGradient(x0: number, y0: number, r0: number, x1: number, y1: number, r1: number): SvgRadialGradient {
+    this._radialGradientCount++;
+    const id = `radial-grad-${this._radialGradientCount}`;
+    const grad = new SvgRadialGradient(id, x0, y0, r0, x1, y1, r1, { ...this._transform });
+    this._gradients.push(grad);
+    return grad;
   }
 
   // ── Transform helpers ──────────────────────────────────────────────────────
@@ -367,11 +421,20 @@ export class SvgContext {
    * Returns the complete SVG document as a string.
    */
   serialize(): string {
+    const defs = this._gradients.length > 0
+      ? [
+          `  <defs>`,
+          ...this._gradients.map(g => g.toSvgString()),
+          `  </defs>`
+        ]
+      : [];
+
     return [
       `<?xml version="1.0" encoding="UTF-8"?>`,
       `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"`,
       `     width="${this._width}" height="${this._height}"`,
       `     viewBox="0 0 ${this._width} ${this._height}">`,
+      ...defs,
       ...this._elements,
       `</svg>`,
     ].join('\n');
@@ -379,7 +442,10 @@ export class SvgContext {
 
   // ── Private helpers ────────────────────────────────────────────────────────
 
-  private _cssColor(color: string): string {
+  private _cssColor(color: string | SvgRadialGradient): string {
+    if (color instanceof SvgRadialGradient) {
+      return `url(#${color.id})`;
+    }
     return color || 'none';
   }
 
