@@ -30,14 +30,6 @@ export const SOCIAL_DIMENSIONS: Record<SocialFormat, { width: number; height: nu
 };
 
 /**
- * Derives the CSS aspect-ratio string from a SocialFormat enum value.
- */
-export function getAspectRatioCss(format: SocialFormat): string {
-  const { width, height } = SOCIAL_DIMENSIONS[format];
-  return `${width}/${height}`;
-}
-
-/**
  * Resolves the effective template background color.
  * Returns `templateBgColor` if explicitly set, otherwise falls back to `bgColor`.
  */

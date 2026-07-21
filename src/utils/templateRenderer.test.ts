@@ -19,7 +19,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   SOCIAL_DIMENSIONS,
-  getAspectRatioCss,
   drawWithTemplate,
 } from './templateRenderer';
 import { DEFAULT_CONFIG } from '../constants';
@@ -51,23 +50,6 @@ describe('SOCIAL_DIMENSIONS', () => {
 
     const story = SOCIAL_DIMENSIONS[SocialFormat.STORY_9_16];
     expect(story.width / story.height).toBeCloseTo(9 / 16, 2);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// getAspectRatioCss
-// ---------------------------------------------------------------------------
-describe('getAspectRatioCss', () => {
-  it('returns "1080/1080" for SQUARE_1_1', () => {
-    expect(getAspectRatioCss(SocialFormat.SQUARE_1_1)).toBe('1080/1080');
-  });
-
-  it('returns "1080/1350" for PORTRAIT_4_5', () => {
-    expect(getAspectRatioCss(SocialFormat.PORTRAIT_4_5)).toBe('1080/1350');
-  });
-
-  it('returns "1080/1920" for STORY_9_16', () => {
-    expect(getAspectRatioCss(SocialFormat.STORY_9_16)).toBe('1080/1920');
   });
 });
 
