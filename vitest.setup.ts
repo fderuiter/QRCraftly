@@ -17,7 +17,10 @@
 */
 
 import '@testing-library/jest-dom';
-import { vi, afterEach } from 'vitest';
+import * as matchers from 'vitest-axe/matchers';
+import { vi, afterEach, expect } from 'vitest';
+
+expect.extend(matchers);
 
 if (typeof globalThis.Worker === 'undefined') {
   globalThis.Worker = class {
