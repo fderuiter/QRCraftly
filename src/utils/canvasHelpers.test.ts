@@ -29,7 +29,6 @@ describe('canvasHelpers', () => {
       quadraticCurveTo: vi.fn(),
       moveTo: vi.fn(),
       lineTo: vi.fn(),
-      quadraticCurveTo: vi.fn(),
       closePath: vi.fn(),
       beginPath: vi.fn(),
       fill: vi.fn(),
