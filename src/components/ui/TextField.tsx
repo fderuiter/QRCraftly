@@ -1,7 +1,8 @@
-import React, { useState, forwardRef } from 'react';
+import React, { useState, forwardRef, useId } from 'react';
 import { Button } from './Button';
 import { Eye, EyeOff } from 'lucide-react';
 import { CharCount } from '../CharCount';
+import { combineIds } from '../../utils/a11y';
 
 export interface TextFieldProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size' | 'id'> {
   label?: string;
@@ -17,7 +18,12 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(
     const [showPassword, setShowPassword] = useState(false);
     const effectiveType = showPasswordToggle ? (showPassword ? 'text' : 'password') : type;
     
-    const inputId = id || `input-${Math.random().toString(36).substring(2, 9)}`;
+    const defaultId = useId();
+    const inputId = id || defaultId;
+    
+    const errorId = error ? `${inputId}-error` : undefined;
+    const charCountId = showCharCount && maxLength ? `${inputId}-char-count` : undefined;
+    const describedBy = combineIds(errorId, charCountId);
 
     const labelClass = 'block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1';
 
@@ -42,7 +48,7 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(
             value={value}
             className={`w-full bg-white dark:bg-slate-900 border ${error ? 'border-rose-500' : 'border-slate-300 dark:border-slate-700'} rounded-lg transition-all text-slate-700 dark:text-slate-100 text-sm px-3 py-2 ${showPasswordToggle ? 'pr-10' : ''}`}
             aria-invalid={!!error}
-            aria-describedby={error ? `${inputId}-error` : undefined}
+            aria-describedby={describedBy}
             {...props}
           />
           {showPasswordToggle && (
@@ -59,10 +65,10 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(
           )}
         </div>
         {showCharCount && maxLength && (
-          <CharCount current={String(value || '').length} max={maxLength} />
+          <CharCount id={charCountId} current={String(value || '').length} max={maxLength} />
         )}
         {error && (
-          <p id={`${inputId}-error`} role="alert" className="mt-1 text-xs text-rose-600 dark:text-rose-400">
+          <p id={errorId} role="alert" className="mt-1 text-xs text-rose-600 dark:text-rose-400">
             {error}
           </p>
         )}

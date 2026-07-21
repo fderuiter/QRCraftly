@@ -21,9 +21,10 @@ import React from 'react';
 interface CharCountProps {
   current: number;
   max: number;
+  id?: string;
 }
 
-export const CharCount: React.FC<CharCountProps> = ({ current, max }) => {
+export const CharCount: React.FC<CharCountProps> = ({ current, max, id }) => {
   const percentage = (current / max) * 100;
   const visualPercentage = Math.min(percentage, 100);
 
@@ -41,6 +42,7 @@ export const CharCount: React.FC<CharCountProps> = ({ current, max }) => {
 
   return (
     <div
+      id={id}
       className={`flex items-center justify-end gap-2 text-xs mt-1 transition-colors duration-200 ${colorClass}`}
       aria-live="polite"
       aria-atomic="true"
