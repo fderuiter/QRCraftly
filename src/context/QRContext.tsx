@@ -3,7 +3,7 @@ import { QRConfig } from '@/types';
 import { DEFAULT_CONFIG } from '@/constants';
 import { ValidationEngine } from '@/engine/ValidationEngine';
 
-type SignalName = 'scannability-fail' | 'render-complete' | 'validation-violation';
+type SignalName = 'scannability-fail' | 'render-complete';
 type SignalCallback = (detail: any) => void;
 
 interface QRContextType {
@@ -70,7 +70,6 @@ function createQRStore(initialConfig?: Partial<QRConfig>): QRStore {
   const signals: Record<SignalName, Set<SignalCallback>> = {
     'scannability-fail': new Set(),
     'render-complete': new Set(),
-    'validation-violation': new Set(),
   };
 
   const store: QRStore = {
@@ -85,7 +84,6 @@ function createQRStore(initialConfig?: Partial<QRConfig>): QRStore {
       const proposed = { ...state.config, ...updates };
       const violations = ValidationEngine.validateConfig(proposed);
       if (violations.length > 0) {
-        store.emitSignal('validation-violation', violations);
         return; // reject insecure or invalid patch
       }
       state = { ...state, config: proposed };
