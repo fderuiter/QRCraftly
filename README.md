@@ -189,7 +189,6 @@ pnpm install --prod
     - `constants.ts`: Default configurations and preset data.
 - `scripts/`: Utility scripts.
     - `contrast_check.js`: Checks WCAG contrast compliance for UI elements.
-    - `optimize_assets.js`: Optimizes static image assets.
 - `public/`: Static assets (favicon, etc.).
 
 ## Contributor Guide for Dependencies
