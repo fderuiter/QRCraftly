@@ -1,46 +1,25 @@
-import React, { useState, forwardRef, useId } from 'react';
+import React, { useState, forwardRef } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 
-import { CharCount } from '../CharCount';
-import { combineIds } from '../../utils/a11y';
-
+import { FieldWrapper, BaseFieldProps, useFieldIds } from './FieldWrapper';
 import { Button } from './Button';
 
-export interface TextFieldProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size' | 'id'> {
-  label?: string;
-  contextualLabel?: string;
-  error?: string;
+export interface TextFieldProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size' | 'id'>, BaseFieldProps {
   showPasswordToggle?: boolean;
   showCharCount?: boolean;
-  id?: string;
 }
 
 export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(
-  ({ className = '', label, contextualLabel, error, showPasswordToggle, showCharCount, type = 'text', id, maxLength, value, ...props }, ref) => {
+  ({ className = '', label, contextualLabel, labelClassName, error, showPasswordToggle, showCharCount, type = 'text', id, maxLength, value, ...props }, ref) => {
     const [showPassword, setShowPassword] = useState(false);
     const effectiveType = showPasswordToggle ? (showPassword ? 'text' : 'password') : type;
     
-    const defaultId = useId();
-    const inputId = id || defaultId;
-    
-    const errorId = error ? `${inputId}-error` : undefined;
-    const charCountId = showCharCount && maxLength ? `${inputId}-char-count` : undefined;
-    const describedBy = combineIds(errorId, charCountId);
-
-    const labelClass = 'block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1';
+    const { inputId, errorId, charCountId, describedBy } = useFieldIds(id, error, showCharCount, maxLength);
 
     return (
-      <div className={className}>
-        {label && (
-          <label htmlFor={inputId} className={labelClass}>
-            {label}
-            {contextualLabel && (
-              <span className="text-xs text-slate-500 dark:text-slate-400 font-normal ml-2">
-                ({contextualLabel})
-              </span>
-            )}
-          </label>
-        )}
+      <FieldWrapper inputId={inputId} label={label} contextualLabel={contextualLabel} className={className} labelClassName={labelClassName} showCharCount={showCharCount} maxLength={maxLength} value={value} error={error} errorId={errorId}
+        charCountId={charCountId}
+      >
         <div className="relative">
           <input
             id={inputId}
@@ -66,15 +45,7 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(
             </Button>
           )}
         </div>
-        {showCharCount && maxLength && (
-          <CharCount id={charCountId} current={String(value || '').length} max={maxLength} />
-        )}
-        {error && (
-          <p id={errorId} role="alert" className="mt-1 text-xs text-rose-700 dark:text-rose-400">
-            {error}
-          </p>
-        )}
-      </div>
+      </FieldWrapper>
     );
   }
 );

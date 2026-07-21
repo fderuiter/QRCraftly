@@ -75,7 +75,7 @@ export type InputDataMap = {
   [QRType.SOCIAL]: SocialData;
 };
 
-export interface InputRegistryEntry<T> {
+interface InputRegistryEntry<T> {
   Component: React.ComponentType<{
     data: T;
     onChange: (updates: Partial<T>) => void;

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 
-export type BrowserEngine = 'WebKit' | 'Chromium' | 'Firefox' | 'Unknown';
+type BrowserEngine = 'WebKit' | 'Chromium' | 'Firefox' | 'Unknown';
 
 export interface Capabilities {
   engine: BrowserEngine;

@@ -131,7 +131,7 @@ self.onmessage = (e: MessageEvent<WorkerMessageData>) => {
 
     self.postMessage({ success: true, physicalReady: physicalPass, configId });
     
-  } catch (err) {
+  } catch (_err) {
     self.postMessage({ success: false, physicalReady: false, error: 'CRASH', configId: e.data.configId });
   }
 };

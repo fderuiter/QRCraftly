@@ -110,7 +110,7 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
     setShowDownloadMenu(false);
     try {
       await hookSaveSvg();
-    } catch (err) {}
+    } catch (_err) {}
   };
 
   return (

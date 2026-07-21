@@ -67,6 +67,7 @@ export const PATTERNS = [
   { id: QRStyle.STARBURST, label: 'Starburst' },
 ];
 
+export const LOW_RELIABILITY_PATTERNS = [QRStyle.GRUNGE, QRStyle.CIRCUIT, QRStyle.STARBURST];
 /**
  * List of preset color themes.
  * Each preset defines background, foreground, and eye colors.

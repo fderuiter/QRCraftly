@@ -6,6 +6,7 @@ import { QRConfig } from '../../types';
 import { PRESET_COLORS } from '../../constants';
 import { getContrastRatio } from '../../utils/colorUtils';
 import { ColorInput } from '../ui/ColorInput';
+import { Alert } from '../ui/Alert';
 
 interface ColorControlsProps {
   config: QRConfig;
@@ -28,7 +29,7 @@ export const ColorControls: React.FC<ColorControlsProps> = ({ config, onChange }
         <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Colors</h3>
         {isLowContrast && (
           <span className="flex items-center gap-1 text-xs text-amber-700 dark:text-amber-400 font-medium">
-            <AlertTriangle className="w-3 h-3" />
+            <AlertTriangle className="w-3 h-3" aria-hidden="true" />
             Low Contrast ({worstContrast.toFixed(1)})
           </span>
         )}
@@ -86,9 +87,9 @@ export const ColorControls: React.FC<ColorControlsProps> = ({ config, onChange }
         </div>
       </div>
       {isLowContrast && (
-        <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 rounded-lg text-xs text-amber-800 dark:text-amber-400">
+        <Alert variant="warning" className="mt-3">
           Warning: The contrast ratio is low ({worstContrast.toFixed(2)}). QR codes should have high contrast (aim for 4.5:1) to be scannable by all devices.
-        </div>
+        </Alert>
       )}
     </div>
   );
