@@ -1,4 +1,5 @@
 import { QRConfig, QRType } from '../types';
+import { LOW_RELIABILITY_PATTERNS } from '../constants';
 import { getContrastRatio } from '../utils/colorUtils';
 import { parseProtocol, PROTOCOL_PREFIXES, SOCIAL_DOMAINS } from '../utils/protocol';
 import { SafeUrlPipeline } from '../utils/url';
@@ -178,7 +179,7 @@ export const ValidationEngine = {
       warnings.push("Contrast ratio is low");
     }
 
-    const isComplex = ['grunge', 'circuit', 'starburst'].includes(config.style);
+    const isComplex = LOW_RELIABILITY_PATTERNS.includes(config.style as any);
     if (isComplex) {
       score -= 10;
       if (worstContrast < 7.0) {

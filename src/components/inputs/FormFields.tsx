@@ -1,71 +1,8 @@
 import React, { useId } from "react";
 import { TEXT_AREA_CLASSES, SELECT_CLASSES } from "./styles";
-import { CharCount } from "../CharCount";
 import { combineIds } from "../../utils/a11y";
+import { FieldWrapper, BaseFieldProps } from "../ui/FieldWrapper";
 export { TextField } from "../ui/TextField";
-
-interface BaseFieldProps {
-  label: string;
-  contextualLabel?: string;
-  id?: string;
-  className?: string; // wrapper className
-  labelClassName?: string; // optional override
-  error?: string;
-}
-
-const getLabelClass = (customClass?: string) => {
-  if (customClass) return customClass;
-  return "block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1";
-};
-
-// Omit 'size' to prevent conflict, and 'id' to ensure our required 'id' overrides the optional one cleanly (though TS usually handles required overriding optional, explicit omit is safer for strict configs)
-interface FieldWrapperProps extends BaseFieldProps {
-  showCharCount?: boolean;
-  maxLength?: number;
-  value?: string | number | readonly string[];
-  children: React.ReactNode;
-  inputId: string;
-  errorId?: string;
-  charCountId?: string;
-}
-
-const FieldWrapper: React.FC<FieldWrapperProps> = ({
-  inputId,
-  label,
-  contextualLabel,
-  className,
-  labelClassName,
-  showCharCount,
-  maxLength,
-  value,
-  children,
-  error,
-  errorId,
-  charCountId,
-}) => {
-  return (
-    <div className={className}>
-      <label htmlFor={inputId} className={getLabelClass(labelClassName)}>
-        {label}
-        {contextualLabel && (
-          <span className="text-xs text-slate-500 dark:text-slate-400 font-normal ml-2">
-            ({contextualLabel})
-          </span>
-        )}
-      </label>
-      {children}
-      {showCharCount && maxLength && (
-        <CharCount id={charCountId} current={String(value || "").length} max={maxLength} />
-      )}
-      {error && (
-        <p id={errorId} role="alert" className="mt-1 text-xs text-rose-700 dark:text-rose-400">
-          {error}
-        </p>
-      )}
-    </div>
-  );
-};
-
 
 interface TextAreaFieldProps
   extends
@@ -183,31 +120,24 @@ export const CheckboxField: React.FC<CheckboxFieldProps> = ({
   const describedBy = combineIds(errorId);
 
   return (
-    <div className={className}>
-      <label
-        htmlFor={inputId}
-        className={`flex items-center gap-2 cursor-pointer ${getLabelClass(labelClassName).replace('mb-1', '')}`}
-      >
-        <input
-          id={inputId}
-          type="checkbox"
-          className="rounded text-teal-700 dark:text-teal-600 border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900"
-          aria-invalid={!!error}
-          aria-describedby={describedBy}
-          {...props}
-        />
-        <span>{label}</span>
-        {contextualLabel && (
-          <span className="text-xs text-slate-500 dark:text-slate-400 font-normal">
-            ({contextualLabel})
-          </span>
-        )}
-      </label>
-      {error && (
-        <p id={errorId} role="alert" className="mt-1 text-xs text-rose-700 dark:text-rose-400">
-          {error}
-        </p>
-      )}
-    </div>
+    <FieldWrapper
+      inputId={inputId}
+      label={label}
+      contextualLabel={contextualLabel}
+      className={className}
+      labelClassName={labelClassName}
+      error={error}
+      errorId={errorId}
+      isCheckbox
+    >
+      <input
+        id={inputId}
+        type="checkbox"
+        className="rounded text-teal-700 dark:text-teal-600 border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900"
+        aria-invalid={!!error}
+        aria-describedby={describedBy}
+        {...props}
+      />
+    </FieldWrapper>
   );
 };

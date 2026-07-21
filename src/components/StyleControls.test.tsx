@@ -116,7 +116,11 @@ describe('StyleControls Component', () => {
     render(<StyleControls config={lowContrastConfig} onChange={mockOnChange} />);
 
     expect(screen.getByText(/Low Contrast/)).toBeInTheDocument();
-    expect(screen.getByText(/Warning: The contrast ratio is low/)).toBeInTheDocument();
+    
+    // Check that an alert exists and contains the warning text
+    const alertEl = screen.getByRole('alert');
+    expect(alertEl).toBeInTheDocument();
+    expect(alertEl).toHaveTextContent(/Warning: The contrast ratio is low/);
   });
 
   it('hides low contrast warning when contrast is good', () => {
