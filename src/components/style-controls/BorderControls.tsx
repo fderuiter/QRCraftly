@@ -6,7 +6,8 @@ import { getContrastRatio } from '../../utils/colorUtils';
 import { ColorInput } from '../ui/ColorInput';
 import { RangeInput } from '../ui/RangeInput';
 import { useImageUpload } from '../../hooks/useImageUpload';
-import { ToggleSwitch } from '../inputs/ToggleSwitch';
+import { ToggleSwitch } from '../ui/ToggleSwitch';
+import { SelectField, TextField } from '../ui/FormFields';
 import { useOptionalQRStoreSelector } from '../../context/QRContext';
 
 interface BorderControlsProps {
@@ -55,22 +56,17 @@ export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange
       {config.isBorderEnabled && (
         <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="border-style" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
-                Style
-              </label>
-              <select
-                id="border-style"
-                value={config.borderStyle || 'solid'}
-                onChange={(e) => onChange({ borderStyle: e.target.value as BorderStyle })}
-                className="w-full px-2 py-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs text-slate-700 dark:text-slate-200"
-              >
-                <option value="solid">Solid</option>
-                <option value="dashed">Dashed</option>
-                <option value="dotted">Dotted</option>
-                <option value="double">Double</option>
-              </select>
-            </div>
+            <SelectField
+              id="border-style"
+              label="Style"
+              value={config.borderStyle || 'solid'}
+              onChange={(e) => onChange({ borderStyle: e.target.value as BorderStyle })}
+            >
+              <option value="solid">Solid</option>
+              <option value="dashed">Dashed</option>
+              <option value="dotted">Dotted</option>
+              <option value="double">Double</option>
+            </SelectField>
             <div>
               <RangeInput
                 id="border-size"
@@ -106,32 +102,32 @@ export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange
 
             {/* Border Text */}
             <div className="space-y-2 mb-3">
-              <input
-                type="text"
+              <TextField
                 placeholder="Text on border..."
                 value={config.borderText}
                 onChange={(e) => onChange({ borderText: e.target.value })}
-                className="w-full px-2 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs text-slate-700 dark:text-slate-200"
                 aria-label="Border text"
               />
-              <div className="flex gap-2">
-                <select
-                  value={config.borderTextPosition || 'bottom-center'}
-                  onChange={(e) => onChange({ borderTextPosition: e.target.value as BorderTextPosition })}
-                  className="flex-1 px-2 py-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs text-slate-700 dark:text-slate-200"
-                  aria-label="Border text position"
-                >
-                  <option value="top-center">Top Center</option>
-                  <option value="bottom-center">Bottom Center</option>
-                </select>
-                <div className="flex items-center gap-1">
-                  <input
-                    type="color"
+              <div className="flex gap-2 items-start">
+                <div className="flex-1">
+                  <SelectField
+                    label="Position"
+                    labelClassName="sr-only"
+                    value={config.borderTextPosition || 'bottom-center'}
+                    onChange={(e) => onChange({ borderTextPosition: e.target.value as BorderTextPosition })}
+                    aria-label="Border text position"
+                  >
+                    <option value="top-center">Top Center</option>
+                    <option value="bottom-center">Bottom Center</option>
+                  </SelectField>
+                </div>
+                <div className="flex items-center mt-1">
+                  <ColorInput
+                    id="border-text-color"
                     value={config.borderTextColor || '#ffffff'}
-                    onChange={(e) => onChange({ borderTextColor: e.target.value })}
-                    className="w-6 h-6 rounded cursor-pointer border-0 p-0 bg-transparent"
+                    onChange={(val) => onChange({ borderTextColor: val })}
+                    sizeClass="w-9 h-9"
                     title="Text Color"
-                    aria-label="Border text color"
                   />
                 </div>
               </div>
@@ -177,15 +173,16 @@ export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange
             {error && <div role="alert" className="mt-1 text-xs text-rose-700 dark:text-rose-400">{error}</div>}
             {config.borderLogoUrl && (
               <div className="mt-2">
-                <select
+                <SelectField
+                  label="Logo Position"
+                  labelClassName="sr-only"
                   value={config.borderLogoPosition || 'bottom-center'}
                   onChange={(e) => onChange({ borderLogoPosition: e.target.value as BorderLogoPosition })}
-                  className="w-full px-2 py-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs text-slate-700 dark:text-slate-200"
                   aria-label="Border logo position"
                 >
                   <option value="bottom-center">Bottom Center</option>
                   <option value="bottom-right">Bottom Right</option>
-                </select>
+                </SelectField>
               </div>
             )}
           </div>
