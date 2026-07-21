@@ -89,7 +89,7 @@ export const LocationInput: React.FC<LocationInputProps> = ({
         {isLoading ? "Fetching location…" : "Use Current Location"}
       </Button>
       {geoError && (
-        <p role="alert" className="text-xs text-rose-600 dark:text-rose-400">
+        <p role="alert" className="text-xs text-rose-700 dark:text-rose-400">
           {geoError}
         </p>
       )}

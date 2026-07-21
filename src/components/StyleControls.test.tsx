@@ -363,7 +363,7 @@ describe('StyleControls Component', () => {
       // It's a button with an X icon next to the logo preview
       screen.getAllByRole('button');
       // Find the one that calls onChange({ borderLogoUrl: null })
-      // It has className text-rose-600
+      // It has className text-rose-700
       // We can just click the one inside the border section
       // The text is visually hidden maybe? No, it has an X icon.
       // Let's rely on class or structure if text is not available.

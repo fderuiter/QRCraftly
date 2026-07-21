@@ -26,7 +26,7 @@ export const ColorControls: React.FC<ColorControlsProps> = ({ config, onChange }
       <div className="flex justify-between items-baseline mb-3">
         <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Colors</h3>
         {isLowContrast && (
-          <span className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400 font-medium">
+          <span className="flex items-center gap-1 text-xs text-amber-700 dark:text-amber-400 font-medium">
             <AlertTriangle className="w-3 h-3" />
             Low Contrast ({worstContrast.toFixed(1)})
           </span>

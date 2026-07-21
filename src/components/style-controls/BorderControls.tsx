@@ -97,7 +97,7 @@ export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange
             <div className="flex justify-between items-baseline mb-2">
               <p className="text-xs font-medium text-slate-700 dark:text-slate-300">Content</p>
               {isLowBorderContrast && (
-                <span className="flex items-center gap-1 text-[10px] text-amber-600 dark:text-amber-400 font-medium">
+                <span className="flex items-center gap-1 text-[10px] text-amber-700 dark:text-amber-400 font-medium">
                   <AlertTriangle className="w-3 h-3" />
                   Low Contrast ({borderTextContrast.toFixed(1)})
                 </span>
@@ -174,7 +174,7 @@ export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange
                 onChange={handleBorderLogoUpload}
               />
             </div>
-            {error && <div role="alert" className="mt-1 text-xs text-rose-600 dark:text-rose-400">{error}</div>}
+            {error && <div role="alert" className="mt-1 text-xs text-rose-700 dark:text-rose-400">{error}</div>}
             {config.borderLogoUrl && (
               <div className="mt-2">
                 <select
