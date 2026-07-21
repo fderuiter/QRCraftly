@@ -275,7 +275,7 @@ jobs:
           temporaryPublicStorage: true
 
       - name: Post Lighthouse Comment
-        if: github.event_name == 'pull_request'
+        if: always() && github.event_name == 'pull_request'
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
         env:
           LINKS: ${{ steps.lighthouse_audit.outputs.links }}
