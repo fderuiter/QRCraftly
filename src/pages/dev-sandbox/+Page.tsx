@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { TextField, SelectField, CheckboxField } from '../../components/ui/FormFields';
 import { ColorInput } from '../../components/ui/ColorInput';
 
