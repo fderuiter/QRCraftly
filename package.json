@@ -24,7 +24,7 @@
     "preview": "vite preview",
     "test": "vitest",
     "test:e2e": "playwright test",
-    "lint": "tsc --noEmit && eslint . && node scripts/contrast_check.js"
+    "lint": "tsc --noEmit && eslint . && node scripts/contrast_check.js && node scripts/audit_markdown.js"
   },
   "dependencies": {
     "jsqr": "^1.4.0",
