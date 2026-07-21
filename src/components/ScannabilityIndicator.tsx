@@ -46,7 +46,7 @@ export const ScannabilityIndicator: React.FC<Props> = ({ status, health }) => {
         )}
       </div>
       {showHealth && health.warnings.length > 0 && (
-        <div role="alert" className="text-xs text-rose-600 dark:text-rose-400 max-w-xs text-right animate-in fade-in slide-in-from-top-1">
+        <div role="alert" className="text-xs text-rose-700 dark:text-rose-400 max-w-xs text-right animate-in fade-in slide-in-from-top-1">
           {health.warnings[0]}
         </div>
       )}

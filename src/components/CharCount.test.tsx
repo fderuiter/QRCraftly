@@ -38,14 +38,14 @@ describe('CharCount Component', () => {
     render(<CharCount current={90} max={100} />);
     const counterText = screen.getByText('90 / 100');
     const wrapper = counterText.closest('div');
-    expect(wrapper).toHaveClass('text-amber-600');
+    expect(wrapper).toHaveClass('text-amber-700');
   });
 
   it('renders error color for 100% usage', () => {
     render(<CharCount current={100} max={100} />);
     const counterText = screen.getByText('100 / 100');
     const wrapper = counterText.closest('div');
-    expect(wrapper).toHaveClass('text-rose-600');
+    expect(wrapper).toHaveClass('text-rose-700');
   });
 
   it('has accessibility attributes', () => {

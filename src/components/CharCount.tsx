@@ -35,9 +35,9 @@ export const CharCount: React.FC<CharCountProps> = ({ current, max, id }) => {
 
   let colorClass = "text-slate-500 dark:text-slate-400";
   if (percentage >= 100) {
-    colorClass = "text-rose-600 dark:text-rose-500 font-medium";
+    colorClass = "text-rose-700 dark:text-rose-500 font-medium";
   } else if (percentage >= 90) {
-    colorClass = "text-amber-600 dark:text-amber-500";
+    colorClass = "text-amber-700 dark:text-amber-500";
   }
 
   return (

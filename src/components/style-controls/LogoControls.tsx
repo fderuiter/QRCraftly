@@ -43,7 +43,7 @@ export const LogoControls: React.FC<LogoControlsProps> = ({ config, onChange }) 
           </div>
           <span className="text-sm font-medium">Upload Logo</span>
           <span className="text-xs text-slate-600 dark:text-slate-400 mt-1">PNG, JPG (Square recommended)</span>
-          {error && <span role="alert" className="text-xs text-rose-600 dark:text-rose-400 mt-2">{error}</span>}
+          {error && <span role="alert" className="text-xs text-rose-700 dark:text-rose-400 mt-2">{error}</span>}
         </Button>
       ) : (
         <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700 space-y-5">

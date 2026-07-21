@@ -58,7 +58,7 @@ const FieldWrapper: React.FC<FieldWrapperProps> = ({
         <CharCount id={charCountId} current={String(value || "").length} max={maxLength} />
       )}
       {error && (
-        <p id={errorId} role="alert" className="mt-1 text-xs text-rose-600 dark:text-rose-400">
+        <p id={errorId} role="alert" className="mt-1 text-xs text-rose-700 dark:text-rose-400">
           {error}
         </p>
       )}
@@ -204,7 +204,7 @@ export const CheckboxField: React.FC<CheckboxFieldProps> = ({
         )}
       </label>
       {error && (
-        <p id={errorId} role="alert" className="mt-1 text-xs text-rose-600 dark:text-rose-400">
+        <p id={errorId} role="alert" className="mt-1 text-xs text-rose-700 dark:text-rose-400">
           {error}
         </p>
       )}
