@@ -60,7 +60,7 @@ export const SafeUrlPipeline = {
       prev = curr;
       try {
         curr = decodeURIComponent(curr);
-      } catch (e) {
+      } catch (_e) {
         // Ignored malformed
       }
       curr = this.decodeHtmlEntities(curr);

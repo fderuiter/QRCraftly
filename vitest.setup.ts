@@ -22,7 +22,7 @@ import * as matchers from 'vitest-axe/matchers';
 import { vi, afterEach, expect } from 'vitest';
 
 declare module 'vitest' {
-  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type, @typescript-eslint/no-unused-vars
   export interface Assertion<T = any> extends matchers.AxeMatchers {}
   // eslint-disable-next-line @typescript-eslint/no-empty-object-type
   export interface AsymmetricMatchersContaining extends matchers.AxeMatchers {}
