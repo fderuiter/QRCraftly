@@ -1,11 +1,24 @@
 import { ArrowLeft, ShieldCheck, Lock, ShieldAlert } from 'lucide-react';
-import { marked } from 'marked';
+import { Marked } from 'marked';
 import complianceText from '../../../COMPLIANCE.md?raw';
 import securityText from '../../../SECURITY.md?raw';
 
+const customMarked = new Marked({
+  walkTokens(token) {
+    if (token.type === 'link') {
+      const href = token.href;
+      if (href === 'COMPLIANCE.md' || href.startsWith('COMPLIANCE.md#')) {
+        token.href = '#privacy-architecture';
+      } else if (href === 'SECURITY.md' || href.startsWith('SECURITY.md#')) {
+        token.href = '#security-policy';
+      }
+    }
+  }
+});
+
 export default function Page() {
-  const complianceHtml = marked.parse(complianceText);
-  const securityHtml = marked.parse(securityText);
+  const complianceHtml = customMarked.parse(complianceText) as string;
+  const securityHtml = customMarked.parse(securityText) as string;
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-12">
