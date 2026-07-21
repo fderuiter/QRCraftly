@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { normalizeHex } from '../../utils/colorUtils';
 
 /**
  * Helper component for color inputs to reduce duplication.
@@ -30,19 +31,9 @@ export const ColorInput: React.FC<ColorInputProps> = ({
 
   // Sync textValue when prop value changes, but avoid overwriting user input while typing
   useEffect(() => {
-    const normalize = (val: string) => {
-      const match = val.match(/^#?([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/);
-      if (!match) return null;
-      let hex = match[1];
-      if (hex.length === 3) {
-        hex = hex.split('').map(c => c + c).join('');
-      }
-      return '#' + hex.toLowerCase();
-    };
-
     const currentText = textValueRef.current;
-    const currentNormalized = normalize(currentText);
-    const propNormalized = normalize(displayValue || value);
+    const currentNormalized = normalizeHex(currentText);
+    const propNormalized = normalizeHex(displayValue || value);
 
     // Only update textValue if the prop value is different from what we currently have
     // (after normalization). This prevents overwriting shorthand inputs (e.g. "#123")
@@ -57,13 +48,9 @@ export const ColorInput: React.FC<ColorInputProps> = ({
     setTextValue(newVal);
 
     // Validate and trigger change if valid hex
-    const hexMatch = newVal.match(/^#?([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/);
-    if (hexMatch) {
-      let hex = hexMatch[1];
-      if (hex.length === 3) {
-        hex = hex.split('').map(c => c + c).join('');
-      }
-      onChange('#' + hex);
+    const normalized = normalizeHex(newVal);
+    if (normalized) {
+      onChange(normalized);
     }
   };
 

@@ -68,6 +68,8 @@ export const PATTERNS = [
   { id: QRStyle.STARBURST, label: 'Starburst' },
 ];
 
+export const LOW_RELIABILITY_PATTERNS = [QRStyle.GRUNGE, QRStyle.CIRCUIT, QRStyle.STARBURST];
+
 import colorsData from './colors.json';
 
 /**

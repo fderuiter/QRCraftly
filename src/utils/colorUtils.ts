@@ -17,6 +17,22 @@
 */
 
 /**
+ * Normalizes a hex color string, validating and formatting it consistently.
+ * Converts shorthand (#123) to full (#112233), ensures # prefix, and lowercases.
+ * @param val - The input hex string.
+ * @returns The normalized hex string, or null if invalid.
+ */
+export const normalizeHex = (val: string): string | null => {
+  const match = val.match(/^#?([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/);
+  if (!match) return null;
+  let hex = match[1];
+  if (hex.length === 3) {
+    hex = hex.split('').map(c => c + c).join('');
+  }
+  return '#' + hex.toLowerCase();
+};
+
+/**
  * Utility to calculate relative luminance of a color based on the WCAG 2.0 formula.
  * Used for contrast ratio calculation.
  *
