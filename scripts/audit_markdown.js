@@ -7,7 +7,16 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const repoRoot = path.join(__dirname, '..');
 
-const filesToAudit = ['COMPLIANCE.md', 'SECURITY.md', 'README.md', 'SCALING.md', 'src/components/inputs/README.md'];
+const docsPublicDir = path.join(repoRoot, 'docs', 'public');
+const docsPublicFiles = fs.readdirSync(docsPublicDir)
+  .filter(file => file.endsWith('.md'))
+  .map(file => path.join('docs', 'public', file));
+
+const filesToAudit = [
+  ...docsPublicFiles,
+  'README.md',
+  'src/components/inputs/README.md'
+];
 
 let hasErrors = false;
 

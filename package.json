@@ -19,12 +19,14 @@
     "customizable"
   ],
   "scripts": {
+    "predev": "node scripts/compile_docs_manifest.js",
     "dev": "vite",
+    "prebuild": "node scripts/compile_docs_manifest.js",
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest",
     "test:e2e": "playwright test",
-    "lint": "tsc --noEmit && eslint . && knip && node scripts/contrast_check.js && node scripts/audit_markdown.js"
+    "lint": "node scripts/compile_docs_manifest.js && tsc --noEmit && eslint . && knip && node scripts/contrast_check.js && node scripts/audit_markdown.js"
   },
   "dependencies": {
     "jsqr": "^1.4.0",
