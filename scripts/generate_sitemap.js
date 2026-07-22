@@ -1,0 +1,82 @@
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const DOMAIN = 'https://qrcraftly.com';
+const DIST_DIR = path.resolve(__dirname, '../dist/client');
+const OUTPUT_FILE = path.join(DIST_DIR, 'sitemap.xml');
+
+function findHtmlFiles(dir, fileList = []) {
+  if (!fs.existsSync(dir)) return fileList;
+  
+  const files = fs.readdirSync(dir);
+  for (const file of files) {
+    const filePath = path.join(dir, file);
+    const stat = fs.statSync(filePath);
+    if (stat.isDirectory()) {
+      findHtmlFiles(filePath, fileList);
+    } else if (filePath.endsWith('.html')) {
+      fileList.push(filePath);
+    }
+  }
+  return fileList;
+}
+
+function generateSitemap() {
+  if (!fs.existsSync(DIST_DIR)) {
+    console.warn(`[Sitemap] Directory ${DIST_DIR} does not exist. Skipping sitemap generation.`);
+    return;
+  }
+
+  const htmlFiles = findHtmlFiles(DIST_DIR);
+  const urls = [];
+
+  for (const file of htmlFiles) {
+    const relativePath = path.relative(DIST_DIR, file);
+    const posixPath = relativePath.split(path.sep).join('/');
+    
+    // Exclude certain files/routes
+    if (posixPath.endsWith('404.html')) continue;
+    if (posixPath.includes('draft') || posixPath.includes('test')) continue;
+
+    let route = `/${posixPath}`;
+    
+    // Clean up index.html from paths
+    if (route.endsWith('/index.html')) {
+      route = route.slice(0, -10); // remove '/index.html'
+    } else if (route.endsWith('index.html')) {
+      route = route.slice(0, -10); // just in case it's 'index.html' at root
+    } else if (route.endsWith('.html')) {
+      route = route.slice(0, -5); // remove '.html'
+    }
+    
+    // Ensure root is just /
+    if (route === '' || route === '/') {
+      route = '/';
+    } else if (route.endsWith('/')) {
+      route = route.slice(0, -1);
+    }
+
+    const fullUrl = `${DOMAIN}${route}`;
+    const priority = route === '/' ? '1.0' : '0.8';
+
+    urls.push(`  <url>
+    <loc>${fullUrl}</loc>
+    <changefreq>weekly</changefreq>
+    <priority>${priority}</priority>
+  </url>`);
+  }
+
+  const sitemapXml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${urls.join('\n')}
+</urlset>`;
+
+  fs.writeFileSync(OUTPUT_FILE, sitemapXml, 'utf8');
+  console.log(`[Sitemap] Generated ${OUTPUT_FILE} with ${urls.length} URLs.`);
+}
+
+generateSitemap();
