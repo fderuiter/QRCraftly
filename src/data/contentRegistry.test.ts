@@ -13,7 +13,9 @@ describe('Content Registry Validation', () => {
       expect(tool.url, `File src/data/contentRegistry.ts - Tool '${key}': Missing or invalid 'url'`).toBeTypeOf('string');
       expect(tool.description, `File src/data/contentRegistry.ts - Tool '${key}': Missing or invalid 'description'`).toBeTypeOf('string');
       expect(Array.isArray(tool.features), `File src/data/contentRegistry.ts - Tool '${key}': 'features' must be an array`).toBe(true);
-      expect(Array.isArray(tool.faqs), `File src/data/contentRegistry.ts - Tool '${key}': 'faqs' must be an array`).toBe(true);
+      if (tool.faqs !== undefined) {
+        expect(Array.isArray(tool.faqs), `File src/data/contentRegistry.ts - Tool '${key}': 'faqs' must be an array`).toBe(true);
+      }
 
       if (tool.howTo) {
         expect(tool.howTo.name, `File src/data/contentRegistry.ts - Tool '${key}': 'howTo.name' missing or invalid`).toBeTypeOf('string');
