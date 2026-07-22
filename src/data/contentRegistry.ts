@@ -11,7 +11,7 @@ export interface ToolContent {
     supply?: { name: string }[];
     steps: { name: string; text: string }[];
   };
-  faqs: { question: string; answer: string }[];
+  faqs?: { question: string; answer: string }[];
 }
 
 export const contentRegistry: Record<string, ToolContent> = {
@@ -67,17 +67,7 @@ export const contentRegistry: Record<string, ToolContent> = {
           "text": "Save the QR code and print it on business cards or flyers."
         }
       ]
-    },
-    "faqs": [
-      {
-        "question": "Is it free to generate?",
-        "answer": "Yes, our tool is 100% free with no hidden fees."
-      },
-      {
-        "question": "Do QR codes expire?",
-        "answer": "No, standard static QR codes do not expire."
-      }
-    ]
+    }
   },
   "index": {
     "id": "index",
@@ -147,17 +137,7 @@ export const contentRegistry: Record<string, ToolContent> = {
           "text": "Style your QR code and save it."
         }
       ]
-    },
-    "faqs": [
-      {
-        "question": "Is it free to generate?",
-        "answer": "Yes, our tool is 100% free with no hidden fees."
-      },
-      {
-        "question": "Do QR codes expire?",
-        "answer": "No, standard static QR codes do not expire."
-      }
-    ]
+    }
   },
   "phone-qr-code": {
     "id": "phone-qr-code",
@@ -186,17 +166,7 @@ export const contentRegistry: Record<string, ToolContent> = {
           "text": "Download the image for print or digital use."
         }
       ]
-    },
-    "faqs": [
-      {
-        "question": "Is it free to generate?",
-        "answer": "Yes, our tool is 100% free with no hidden fees."
-      },
-      {
-        "question": "Do QR codes expire?",
-        "answer": "No, standard static QR codes do not expire."
-      }
-    ]
+    }
   },
   "sms-qr-code": {
     "id": "sms-qr-code",
@@ -225,17 +195,7 @@ export const contentRegistry: Record<string, ToolContent> = {
           "text": "Download the image and share it."
         }
       ]
-    },
-    "faqs": [
-      {
-        "question": "Is it free to generate?",
-        "answer": "Yes, our tool is 100% free with no hidden fees."
-      },
-      {
-        "question": "Do QR codes expire?",
-        "answer": "No, standard static QR codes do not expire."
-      }
-    ]
+    }
   },
   "text-qr-code": {
     "id": "text-qr-code",
@@ -264,17 +224,7 @@ export const contentRegistry: Record<string, ToolContent> = {
           "text": "Download your QR code in PNG, JPEG, or WebP format."
         }
       ]
-    },
-    "faqs": [
-      {
-        "question": "Is it free to generate?",
-        "answer": "Yes, our tool is 100% free with no hidden fees."
-      },
-      {
-        "question": "Do QR codes expire?",
-        "answer": "No, standard static QR codes do not expire."
-      }
-    ]
+    }
   },
   "vcard-qr-code": {
     "id": "vcard-qr-code",
@@ -303,17 +253,7 @@ export const contentRegistry: Record<string, ToolContent> = {
           "text": "Download the QR code for your business cards."
         }
       ]
-    },
-    "faqs": [
-      {
-        "question": "Is it free to generate?",
-        "answer": "Yes, our tool is 100% free with no hidden fees."
-      },
-      {
-        "question": "Do QR codes expire?",
-        "answer": "No, standard static QR codes do not expire."
-      }
-    ]
+    }
   },
   "wifi-qr-code": {
     "id": "wifi-qr-code",
@@ -351,16 +291,6 @@ export const contentRegistry: Record<string, ToolContent> = {
           "text": "Click 'Download' to save the QR code or scan it directly from the screen."
         }
       ]
-    },
-    "faqs": [
-      {
-        "question": "Is it free to generate?",
-        "answer": "Yes, our tool is 100% free with no hidden fees."
-      },
-      {
-        "question": "Do QR codes expire?",
-        "answer": "No, standard static QR codes do not expire."
-      }
-    ]
+    }
   }
 };
