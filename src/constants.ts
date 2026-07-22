@@ -77,3 +77,14 @@ import colorsData from './colors.json';
  * Each preset defines background, foreground, and eye colors.
  */
 export const PRESET_COLORS = colorsData.presets;
+
+/**
+ * Centralized system limits to keep user interface, validation rules,
+ * and documentation perfectly synchronized.
+ */
+export const SYSTEM_LIMITS = {
+  MAX_LOGO_SIZE: 0.3,
+  MAX_FILE_UPLOAD_MB: 2,
+  MAX_BUNDLE_SIZE_MB: 3,
+  SUPPORTED_IMAGE_FORMATS: ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml']
+};

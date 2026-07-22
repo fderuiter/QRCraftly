@@ -34,7 +34,7 @@ export const safeJsonLdStringify = (data: any): string => {
 };
 
 import { ValidationEngine } from '../engine/ValidationEngine';
-
+import { SYSTEM_LIMITS } from '../constants';
 
 export const isDangerousUrl = (url: string | undefined): boolean => {
   return ValidationEngine.isDangerousUrl(url);
@@ -59,17 +59,17 @@ export const cleanPhoneNumber = (number: string): string => {
 
 /**
  * Validates an uploaded image file for size and type.
- * Enforces a 2MB size limit and allows jpeg, png, webp, and svg formats.
+ * Enforces a size limit and allows specific formats based on system limits.
  * @param file The file to validate.
  * @returns A string with an error message if invalid, or null if valid.
  */
 export const validateImageUpload = (file: File): string | null => {
-  const MAX_SIZE = 2 * 1024 * 1024; // 2MB
+  const MAX_SIZE = SYSTEM_LIMITS.MAX_FILE_UPLOAD_MB * 1024 * 1024;
   if (file.size > MAX_SIZE) {
-    return 'File size exceeds the 2MB limit.';
+    return `File size exceeds the ${SYSTEM_LIMITS.MAX_FILE_UPLOAD_MB}MB limit.`;
   }
 
-  const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'];
+  const allowedTypes = SYSTEM_LIMITS.SUPPORTED_IMAGE_FORMATS;
   if (!allowedTypes.includes(file.type)) {
     return 'Invalid file type. Only JPEG, PNG, WebP, and SVG are allowed.';
   }

@@ -1,5 +1,5 @@
 import { QRConfig, QRType } from '../types';
-import { LOW_RELIABILITY_PATTERNS } from '../constants';
+import { LOW_RELIABILITY_PATTERNS, SYSTEM_LIMITS } from '../constants';
 import { getContrastRatio } from '../utils/colorUtils';
 import { parseProtocol, PROTOCOL_PREFIXES, SOCIAL_DOMAINS } from '../utils/protocol';
 import { SafeUrlPipeline } from '../utils/url';
@@ -189,7 +189,7 @@ export const ValidationEngine = {
     }
 
     if (config.logoUrl) {
-      if (config.logoSize > 0.3) {
+      if (config.logoSize > SYSTEM_LIMITS.MAX_LOGO_SIZE) {
         score -= 15;
         warnings.push("Logo size might obscure too much data");
       }
