@@ -73,4 +73,32 @@ describe('Wifi generator', () => {
     expect(hydrated.password).toBe('password123');
     expect(hydrated.encryption).toBe(WifiEncryption.WPA);
   });
+
+  it('handles edge cases in escaping with undefined fields', () => {
+    const data = {
+      ssid: undefined as unknown as string,
+      password: undefined as unknown as string,
+      encryption: WifiEncryption.WPA2_EAP,
+      hidden: false,
+      eapIdentity: undefined as unknown as string,
+    };
+    const str = constructWifiString(data);
+    expect(str).toContain('S:;');
+    expect(str).toContain('P:;');
+    expect(str).toContain('I:;');
+  });
+
+  it('strips control characters and still escapes correctly', () => {
+    const data = {
+      ssid: "My\nNetwork\0\t",
+      password: "Pass\rWord\x1F",
+      encryption: WifiEncryption.WPA2_EAP,
+      hidden: false,
+      eapIdentity: "My;Net\nwork"
+    };
+    const str = constructWifiString(data);
+    expect(str).toContain('S:MyNetwork;');
+    expect(str).toContain('P:PassWord;');
+    expect(str).toContain('I:My\\;Network;');
+  });
 });
