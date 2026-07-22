@@ -24,7 +24,7 @@ export function generateSchema(content: ToolContent, resolvedDomain?: string, re
         },
         {
           "@type": "FAQPage",
-          "mainEntity": content.faqs.map(faq => ({
+          "mainEntity": (content.faqs || []).map(faq => ({
             "@type": "Question",
             "name": faq.question,
             "acceptedAnswer": {

@@ -57,12 +57,14 @@ describe('Content Registry Validation', () => {
         });
       }
 
-      tool.faqs.forEach((faq, index) => {
-        expect(faq.question, `File src/data/contentRegistry.ts - Tool '${key}': 'faqs[${index}].question' missing or invalid`).toBeTypeOf('string');
-        expect(faq.answer, `File src/data/contentRegistry.ts - Tool '${key}': 'faqs[${index}].answer' missing or invalid`).toBeTypeOf('string');
-        checkString(faq.question, `faqs[${index}].question`);
-        checkString(faq.answer, `faqs[${index}].answer`);
-      });
+      if (tool.faqs) {
+        tool.faqs.forEach((faq, index) => {
+          expect(faq.question, `File src/data/contentRegistry.ts - Tool '${key}': 'faqs[${index}].question' missing or invalid`).toBeTypeOf('string');
+          expect(faq.answer, `File src/data/contentRegistry.ts - Tool '${key}': 'faqs[${index}].answer' missing or invalid`).toBeTypeOf('string');
+          checkString(faq.question, `faqs[${index}].question`);
+          checkString(faq.answer, `faqs[${index}].answer`);
+        });
+      }
     });
   });
 });

@@ -10,6 +10,10 @@ export function SidebarContent({ toolId }: SidebarContentProps) {
 
   if (!content) return null;
 
+  const displayFaqs = (content.faqs && content.faqs.length > 0) 
+    ? content.faqs 
+    : contentRegistry['index'].faqs;
+
   return (
     <div id="content-section" className="mt-12 pt-8 border-t border-slate-100 dark:border-slate-800 text-slate-700 dark:text-slate-300">
       
@@ -53,11 +57,11 @@ export function SidebarContent({ toolId }: SidebarContentProps) {
         </section>
       )}
 
-      {content.faqs && content.faqs.length > 0 && (
+      {displayFaqs && displayFaqs.length > 0 && (
         <section className="mb-10">
           <h2 className="text-2xl font-bold mb-5 text-slate-800 dark:text-slate-100">Frequently Asked Questions</h2>
           <Accordion>
-            {content.faqs.map((q: any, idx: number) => (
+            {displayFaqs.map((q: any, idx: number) => (
               <AccordionItem key={idx} title={q.question}>
                 {q.answer}
               </AccordionItem>
