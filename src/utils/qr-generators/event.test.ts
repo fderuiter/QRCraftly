@@ -36,7 +36,6 @@ describe('Event generator', () => {
     const hydrated = hydrateEventData(raw);
     expect(hydrated.title).toBe('');
   });
-});
 
   it('handles empty parts in EVENT', () => {
     const raw = `BEGIN:VEVENT\nSUMMARY:\nDTSTART:\nDTEND:\nLOCATION:\nDESCRIPTION:\nEND:VEVENT`;
@@ -53,3 +52,26 @@ describe('Event generator', () => {
     const hydrated = hydrateEventData(raw);
     expect(hydrated.title).toBe('');
   });
+
+  it('handles invalid date formats in EVENT', () => {
+    const raw = `BEGIN:VEVENT\nDTSTART:invalid-date\nDTEND:not-a-date\nEND:VEVENT`;
+    const hydrated = hydrateEventData(raw);
+    expect(hydrated.startDate).toBe('invalid-date');
+    expect(hydrated.endDate).toBe('not-a-date');
+  });
+
+  it('handles invalid dates when constructing event string', () => {
+    const data = {
+      title: 'Meeting',
+      startDate: 'invalid-date',
+      endDate: 'not-a-date',
+      location: '',
+      description: ''
+    };
+    const str = constructEventString(data);
+    expect(str).toContain('DTSTART:');
+    expect(str).toContain('DTEND:');
+    expect(str).not.toContain('NaN');
+  });
+});
+
