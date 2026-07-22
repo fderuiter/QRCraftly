@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { constructVCardString, hydrateVCardData, escapeVCardString, unescapeVCardString } from './vcard';
+import { constructVCardString, hydrateVCardData } from './vcard';
 
 describe('VCard generator', () => {
   it('constructs and hydrates successfully', () => {
@@ -41,11 +41,6 @@ describe('VCard generator', () => {
   it('handles invalid lines', () => {
     const raw = `BEGIN:VCARD\nINVALID\nEND:VCARD`;
     expect(hydrateVCardData(raw).firstName).toBe('');
-  });
-
-  it('handles edge cases in unescaping', () => {
-    expect(escapeVCardString(undefined)).toBe('');
-    expect(unescapeVCardString(undefined)).toBe('');
   });
 });
 

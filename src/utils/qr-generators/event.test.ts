@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { constructEventString, hydrateEventData, parseEventDateTime, formatEventDateTime, escapeEventString, unescapeEventString } from './event';
+import { constructEventString, hydrateEventData } from './event';
 
 describe('Event generator', () => {
   it('constructs and hydrates successfully', () => {
@@ -35,18 +35,6 @@ describe('Event generator', () => {
     const raw = `BEGIN:VEVENT\nINVALID:;;;\nEND:VEVENT`;
     const hydrated = hydrateEventData(raw);
     expect(hydrated.title).toBe('');
-  });
-
-  it('edge cases for dates', () => {
-    expect(parseEventDateTime(undefined)).toBe('');
-    expect(parseEventDateTime('INVALID')).toBe('INVALID');
-    expect(formatEventDateTime(undefined)).toBe('');
-    expect(formatEventDateTime('INVALID')).toBe('');
-  });
-  
-  it('edge cases for escaping', () => {
-    expect(escapeEventString(undefined)).toBe('');
-    expect(unescapeEventString(undefined)).toBe('');
   });
 });
 

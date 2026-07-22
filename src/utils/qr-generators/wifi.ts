@@ -23,14 +23,14 @@ import { ValidationEngine } from '../../engine/ValidationEngine';
  * Escapes special characters for WiFi QR code string.
  * Characters to escape: \ ; , " :
  */
-export const escapeWifiString = (str: string | undefined): string => {
+const escapeWifiString = (str: string | undefined): string => {
   return ValidationEngine.escapeWifi(str);
 };
 
 /**
  * Constructs the WiFi QR code string from the given data.
  */
-export const unescapeWifiString = (str: string | undefined): string => {
+const unescapeWifiString = (str: string | undefined): string => {
   return ValidationEngine.unescapeWifi(str);
 };
 

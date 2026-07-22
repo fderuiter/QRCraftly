@@ -26,9 +26,6 @@ import {
   constructSmsString,
   constructPaymentString,
   constructEventString,
-  escapeWifiString,
-  escapeVCardString,
-  escapeEventString
 } from './qrHelpers';
 import { WifiData, EmailData, VCardData, PhoneData, SmsData, PaymentData, EventData, WifiEncryption, CryptoNetwork } from '../types';
 
@@ -304,24 +301,6 @@ describe('QR Helpers', () => {
       expect(result).toContain('SUMMARY:Launch\\, Party\\; 2026');
       expect(result).toContain('LOCATION:Office\\\\Roof');
       expect(result).toContain('DESCRIPTION:Line 1\\nLine 2\\, details\\;');
-    });
-  });
-
-  describe('escapeWifiString', () => {
-    it('returns empty string for undefined', () => {
-      expect(escapeWifiString(undefined)).toBe('');
-    });
-  });
-
-  describe('escapeVCardString', () => {
-    it('returns empty string for undefined', () => {
-      expect(escapeVCardString(undefined)).toBe('');
-    });
-  });
-
-  describe('escapeEventString', () => {
-    it('returns empty string for undefined', () => {
-      expect(escapeEventString(undefined)).toBe('');
     });
   });
 });

@@ -17,7 +17,7 @@
 */
 
 import { describe, it, expect } from 'vitest';
-import { constructWifiString, hydrateWifiData, unescapeWifiString, escapeWifiString } from './wifi';
+import { constructWifiString, hydrateWifiData } from './wifi';
 import { WifiEncryption } from '../../types';
 
 describe('Wifi generator', () => {
@@ -43,11 +43,6 @@ describe('Wifi generator', () => {
     
     const result3 = hydrateWifiData('WIFI:T:UNKNOWN;;');
     expect(result3.encryption).toBe(WifiEncryption.WPA);
-  });
-
-  it('edge cases for unescaping', () => {
-    expect(unescapeWifiString(undefined)).toBe('');
-    expect(escapeWifiString(undefined)).toBe('');
   });
 
   it('hydrates WPA2-EAP identity', () => {

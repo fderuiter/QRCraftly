@@ -24,11 +24,11 @@ import { ValidationEngine } from '../../engine/ValidationEngine';
  * Escapes special characters for vCard property values.
  * Characters to escape: \ ; , and newlines.
  */
-export const escapeVCardString = (str: string | undefined): string => {
+const escapeVCardString = (str: string | undefined): string => {
   return ValidationEngine.escapeVCardEvent(str);
 };
 
-export const unescapeVCardString = (str: string | undefined): string => {
+const unescapeVCardString = (str: string | undefined): string => {
   return ValidationEngine.unescapeVCardEvent(str);
 };
 
