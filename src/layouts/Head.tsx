@@ -104,12 +104,16 @@ export default function HeadDefault() {
       .join(' ');
   };
 
+  // Determine the base path to correctly resolve the home URL for domains and subdomains
+  const subdomainMatch = pageContext.urlPathname.match(/^\/_subdomain\/[^\/]+/);
+  const basePath = subdomainMatch ? subdomainMatch[0] : '/';
+
   const breadcrumbItems: any[] = [
     {
       "@type": "ListItem",
       "position": 1,
       "name": "Home",
-      "item": `${resolvedDomain}/`
+      "item": resolvePublicUrl(basePath)
     }
   ];
 

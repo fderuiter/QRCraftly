@@ -98,7 +98,7 @@ describe('HeadDefault', () => {
     expect(data['@type']).toBe('BreadcrumbList');
     expect(data.itemListElement).toHaveLength(1);
     expect(data.itemListElement[0].name).toBe('Home');
-    expect(data.itemListElement[0].item).toBe(`${expectedDomain}/`);
+    expect(data.itemListElement[0].item).toBe(expectedDomain);
   });
 
   it('generates correct breadcrumbs for About page', () => {
@@ -269,7 +269,7 @@ describe('HeadDefault', () => {
     const data = JSON.parse(breadcrumbScript!.textContent!);
 
     expect(data.itemListElement).toHaveLength(2);
-    expect(data.itemListElement[0].item).toBe(`${expectedDomain}/`);
+    expect(data.itemListElement[0].item).toBe(expectedDomain);
     expect(data.itemListElement[1].name).toBe('About');
     expect(data.itemListElement[1].item).toBe(`${expectedDomain}/about`);
   });
