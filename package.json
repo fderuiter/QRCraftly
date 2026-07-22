@@ -23,6 +23,7 @@
     "dev": "vite",
     "prebuild": "node scripts/compile_docs_manifest.js",
     "build": "vite build",
+    "postbuild": "node scripts/generate_sitemap.js",
     "preview": "vite preview",
     "test": "vitest",
     "test:e2e": "playwright test",
