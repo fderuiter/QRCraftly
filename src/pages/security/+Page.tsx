@@ -1,27 +1,24 @@
-import { ArrowLeft, ShieldCheck, Lock, ShieldAlert } from 'lucide-react';
+import { ArrowLeft, ShieldCheck, ShieldAlert, FileText } from 'lucide-react';
 import { Marked } from 'marked';
-import complianceText from '../../../COMPLIANCE.md?raw';
-import securityText from '../../../SECURITY.md?raw';
+import docsManifest from '../../data/docs_manifest.json';
 
 const customMarked = new Marked({
   walkTokens(token) {
     if (token.type === 'link') {
       const href = token.href;
-      if (href === 'COMPLIANCE.md' || href.startsWith('COMPLIANCE.md#')) {
-        token.href = '#privacy-architecture';
-      } else if (href === 'SECURITY.md' || href.startsWith('SECURITY.md#')) {
-        token.href = '#security-policy';
+      const parts = href.split('#');
+      const file = parts[0];
+      const doc = docsManifest.find(d => d.filename === file);
+      if (doc) {
+        token.href = `#${doc.id}`;
       }
     }
   }
 });
 
 export default function Page() {
-  const complianceHtml = customMarked.parse(complianceText) as string;
-  const securityHtml = customMarked.parse(securityText) as string;
-
   return (
-    <div className="max-w-5xl mx-auto px-4 py-12">
+    <div className="max-w-7xl mx-auto px-4 py-12">
       <div className="mb-8">
         <a
           href="/"
@@ -42,27 +39,23 @@ export default function Page() {
       </div>
 
       <div className="grid md:grid-cols-2 gap-12 mb-16">
-        <section id="privacy-architecture" className="bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 prose dark:prose-invert prose-slate max-w-none">
-          <div className="flex items-center gap-3 mb-6 not-prose">
-            <div className="w-12 h-12 bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-400 rounded-xl flex items-center justify-center">
-              <Lock className="w-6 h-6" />
-            </div>
-            <h2 className="text-2xl font-bold text-slate-900 dark:text-white m-0">Privacy Architecture</h2>
-          </div>
-          {/* eslint-disable-next-line no-restricted-syntax */}
-          <div dangerouslySetInnerHTML={{ __html: complianceHtml }} />
-        </section>
-
-        <section id="security-policy" className="bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 prose dark:prose-invert prose-slate max-w-none">
-          <div className="flex items-center gap-3 mb-6 not-prose">
-            <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 rounded-xl flex items-center justify-center">
-              <ShieldCheck className="w-6 h-6" />
-            </div>
-            <h2 className="text-2xl font-bold text-slate-900 dark:text-white m-0">Security Policy</h2>
-          </div>
-          {/* eslint-disable-next-line no-restricted-syntax */}
-          <div dangerouslySetInnerHTML={{ __html: securityHtml }} />
-        </section>
+        {docsManifest.map(doc => {
+          // Remove the first h1 to avoid duplicate titles if we display doc.title as h2
+          const contentWithoutH1 = doc.content.replace(/^#\s+.+$/m, '');
+          const html = customMarked.parse(contentWithoutH1) as string;
+          return (
+            <section key={doc.id} id={doc.id} className="bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 prose dark:prose-invert prose-slate max-w-none col-span-1">
+              <div className="flex items-center gap-3 mb-6 not-prose">
+                <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 rounded-xl flex items-center justify-center">
+                  <FileText className="w-6 h-6" />
+                </div>
+                <h2 className="text-2xl font-bold text-slate-900 dark:text-white m-0">{doc.title}</h2>
+              </div>
+              {/* eslint-disable-next-line no-restricted-syntax */}
+              <div dangerouslySetInnerHTML={{ __html: html }} />
+            </section>
+          );
+        })}
       </div>
 
       <section className="bg-gradient-to-br from-indigo-50 to-teal-50 dark:from-indigo-900/20 dark:to-teal-900/20 rounded-2xl p-8 md:p-12 border border-indigo-100 dark:border-indigo-800/30 text-center relative overflow-hidden">

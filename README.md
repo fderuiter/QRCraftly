@@ -26,7 +26,7 @@
     - WCAG contrast checks for generated codes.
     - Fully accessible UI with keyboard navigation and screen reader support.
 - **Compliance**:
-    - Privacy-first architecture aligned with [HIPAA Technical Safeguards](COMPLIANCE.md).
+    - Privacy-first architecture aligned with [HIPAA Technical Safeguards](docs/public/COMPLIANCE.md).
 - **Dark Mode**: Fully supported dark mode interface.
 - **Responsive Design**: Works seamlessly on desktop and mobile devices.
 
