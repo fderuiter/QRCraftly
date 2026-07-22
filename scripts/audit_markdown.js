@@ -36,7 +36,7 @@ function slugify(text) {
 
 const fileHeadings = {};
 
-// 1. Build a map of headings for each file
+// 1. Build a map of headings for each file and check for placeholders
 for (const file of filesToAudit) {
   const filePath = path.join(repoRoot, file);
   if (!fs.existsSync(filePath)) {
@@ -45,6 +45,14 @@ for (const file of filesToAudit) {
     continue;
   }
   const content = fs.readFileSync(filePath, 'utf-8');
+
+  const placeholderRegex = /(TODO|FIXME)/g;
+  let match;
+  while ((match = placeholderRegex.exec(content)) !== null) {
+    console.error(`Error in ${file}: Found placeholder string '${match[0]}'`);
+    hasErrors = true;
+  }
+
   const tokens = marked.lexer(content);
   
   const headings = new Set();
