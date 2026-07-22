@@ -12,7 +12,8 @@
 - **Visual Customization**:
     - **Patterns**: Choose from Classic Squares, Modern Dots, Rounded, Diamond, Swiss Cross, Star, and Heart styles.
     - **Colors**: Customize foreground, background, and corner eye colors. Includes accessibility-checked preset themes.
-    - **Logos**: Upload and embed custom logos with configurable padding, sizes, and border styles (Square, Circle, None).
+    - **Logos**: Upload and embed custom logos with configurable padding, sizes, and border styles (Square, Circle, None). Maximum logo size is 30% to maintain scannability.
+    - **Upload Limits**: Supported custom logo formats are image/jpeg, image/png, image/webp, image/svg+xml. Maximum file size is 2MB.
 - **Privacy First**: Client-side architecture. All sensitive data processing happens in your browser; no user data is sent to a server without your explicit opt-in for telemetry.
 - **Advanced Architecture**:
     - **Scannability Web Workers**: Real-time QR code scannability and contrast testing runs on a background Web Worker, ensuring the UI remains jank-free during rapid edits.

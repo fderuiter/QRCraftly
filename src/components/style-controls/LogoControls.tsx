@@ -5,6 +5,7 @@ import { Upload, X, Square, Circle, Minus } from 'lucide-react';
 import { ColorInput } from '../ui/ColorInput';
 import { RangeInput } from '../ui/RangeInput';
 import { useImageUpload } from '../../hooks/useImageUpload';
+import { SYSTEM_LIMITS } from '../../constants';
 
 interface LogoControlsProps {
   config: QRConfig;
@@ -42,7 +43,7 @@ export const LogoControls: React.FC<LogoControlsProps> = ({ config, onChange }) 
             <Upload className="w-5 h-5" />
           </div>
           <span className="text-sm font-medium">Upload Logo</span>
-          <span className="text-xs text-slate-600 dark:text-slate-400 mt-1">PNG, JPG (Square recommended)</span>
+          <span className="text-xs text-slate-600 dark:text-slate-400 mt-1">{SYSTEM_LIMITS.SUPPORTED_IMAGE_FORMATS.map(t => t.replace('image/', '').replace('+xml', '').toUpperCase()).join(', ')} (Square recommended)</span>
           {error && <span role="alert" className="text-xs text-rose-700 dark:text-rose-400 mt-2">{error}</span>}
         </Button>
       ) : (
@@ -115,7 +116,7 @@ export const LogoControls: React.FC<LogoControlsProps> = ({ config, onChange }) 
               id="logo-size"
               label="Logo Size"
               min={0.1}
-              max={0.35}
+              max={SYSTEM_LIMITS.MAX_LOGO_SIZE}
               step={0.01}
               value={config.logoSize}
               onChange={(val) => onChange({ logoSize: val })}
@@ -127,7 +128,7 @@ export const LogoControls: React.FC<LogoControlsProps> = ({ config, onChange }) 
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/*"
+        accept={SYSTEM_LIMITS.SUPPORTED_IMAGE_FORMATS.join(',')}
         className="hidden"
         onChange={handleLogoUpload}
       />
