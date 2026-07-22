@@ -96,7 +96,7 @@ export const LayoutControls: React.FC<LayoutControlsProps> = ({ config, onChange
             >
               {opt.icon}
               <span className="text-[10px] font-semibold leading-none mt-1">{opt.label}</span>
-              <span className="text-[10px] leading-none opacity-70">{opt.sublabel}</span>
+              <span className="text-[10px] leading-none">{opt.sublabel}</span>
             </Button>
           ))}
         </div>

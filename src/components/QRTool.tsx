@@ -86,7 +86,8 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
   };
 
   const executeWithSafetyGate = (action: () => void) => {
-    if (scannabilityStatus === 'fail' || scannabilityStatus === 'digital-pass') {
+    const isUnsafe = scannabilityStatus === 'fail' || scannabilityStatus === 'digital-pass' || (health && health.score < 80);
+    if (isUnsafe) {
       setGateAction(() => action);
       setShowSafetyGate(true);
     } else {
@@ -201,7 +202,7 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
                   </div>
                 </div>
               </nav>
-              <p className="mt-6 text-xs text-slate-400 dark:text-slate-500 border-t border-slate-100 dark:border-slate-800 pt-4">
+              <p className="mt-6 text-xs text-slate-500 dark:text-slate-400 border-t border-slate-100 dark:border-slate-800 pt-4">
                 &copy; {new Date().getFullYear()} QRCraftly. Open Source.
               </p>
             </footer>
@@ -236,7 +237,7 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
                    <div className="flex gap-2">
                        <div className="relative flex-1" ref={downloadMenuRef}>
                           <Button 
-                              variant={scannabilityStatus === 'fail' || scannabilityStatus === 'digital-pass' ? 'error' : 'primary'}
+                              variant={scannabilityStatus === 'fail' || scannabilityStatus === 'digital-pass' || (health && health.score < 80) ? 'error' : 'primary'}
                               fullWidth
                               onClick={() => executeWithSafetyGate(() => setShowDownloadMenu(!showDownloadMenu))}
                               aria-expanded={showDownloadMenu}
