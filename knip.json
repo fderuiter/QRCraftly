@@ -10,7 +10,6 @@
   ],
   "ignoreDependencies": [
     "axe-core",
-    "sharp",
     "wrangler",
     "tailwindcss"
   ]

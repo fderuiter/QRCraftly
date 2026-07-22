@@ -2,7 +2,7 @@ packages:
   - '.'
 allowBuilds:
   esbuild: true
-  sharp: true
+  sharp: set this to true or false
   workerd: true
 
 minimumReleaseAgeExclude:
@@ -42,4 +42,5 @@ overrides:
   "brace-expansion@<2": "^1.1.16"
   "brace-expansion@>=3 <5.0.7": "^5.0.7"
   "js-yaml": "^4.3.0"
-  sharp: "^0.35.0"
+
+strictDepBuilds: false
