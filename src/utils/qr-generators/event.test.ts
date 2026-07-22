@@ -73,5 +73,21 @@ describe('Event generator', () => {
     expect(str).toContain('DTEND:');
     expect(str).not.toContain('NaN');
   });
+
+  it('handles undefined fields during escaping', () => {
+    const data = {
+      title: undefined as unknown as string,
+      startDate: undefined as unknown as string,
+      endDate: undefined as unknown as string,
+      location: undefined as unknown as string,
+      description: undefined as unknown as string,
+    };
+    const str = constructEventString(data);
+    expect(str).toContain('SUMMARY:');
+    expect(str).toContain('DTSTART:');
+    expect(str).toContain('DTEND:');
+    expect(str).toContain('LOCATION:');
+    expect(str).toContain('DESCRIPTION:');
+  });
 });
 

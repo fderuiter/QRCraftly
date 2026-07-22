@@ -26,7 +26,6 @@ describe('Social generator', () => {
     expect(hydrated.platform).toBe(SocialPlatform.INSTAGRAM);
     expect(hydrated.handle).toBe('qrcraftly');
   });
-});
 
   it('hydrates instagram', () => {
     const hydrated = hydrateSocialData('https://instagram.com/qrcraftly');
@@ -57,3 +56,26 @@ describe('Social generator', () => {
     const str = constructSocialString(data);
     expect(str).toBe('');
   });
+
+  it('sanitizes handles correctly by stripping invalid characters', () => {
+    // strips leading @ sign
+    expect(constructSocialString({ platform: SocialPlatform.INSTAGRAM, handle: '@username' }))
+      .toBe('https://instagram.com/username');
+      
+    // strips path-injection characters (slashes)
+    expect(constructSocialString({ platform: SocialPlatform.INSTAGRAM, handle: 'user/../../etc' }))
+      .toBe('https://instagram.com/user....etc');
+      
+    // strips query string characters
+    expect(constructSocialString({ platform: SocialPlatform.INSTAGRAM, handle: 'user?x=1' }))
+      .toBe('https://instagram.com/userx1');
+      
+    // strips hash characters
+    expect(constructSocialString({ platform: SocialPlatform.INSTAGRAM, handle: 'user#fragment' }))
+      .toBe('https://instagram.com/userfragment');
+      
+    // allows underscores, hyphens, and periods
+    expect(constructSocialString({ platform: SocialPlatform.INSTAGRAM, handle: 'user_name.test-123' }))
+      .toBe('https://instagram.com/user_name.test-123');
+  });
+});

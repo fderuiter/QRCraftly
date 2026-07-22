@@ -42,7 +42,6 @@ describe('VCard generator', () => {
     const raw = `BEGIN:VCARD\nINVALID\nEND:VCARD`;
     expect(hydrateVCardData(raw).firstName).toBe('');
   });
-});
 
   it('handles empty parts in N and ADR', () => {
     const raw = `BEGIN:VCARD\nN:;\nADR:;;\nEND:VCARD`;
@@ -54,3 +53,43 @@ describe('VCard generator', () => {
     expect(hydrated.zip).toBe('');
     expect(hydrated.country).toBe('');
   });
+
+  it('handles undefined fields during escaping', () => {
+    const data = {
+      firstName: undefined as unknown as string,
+      lastName: undefined as unknown as string,
+      organization: '',
+      title: '',
+      phone: '',
+      email: '',
+      website: '',
+      street: '',
+      city: '',
+      zip: '',
+      country: '',
+    };
+    const str = constructVCardString(data);
+    expect(str).toContain('N:;;;;');
+  });
+
+  it('normalizes newlines, preserves tabs, and strips control characters', () => {
+    const data = {
+      firstName: 'Clean\x00Text\x07With\x1BControl\x7FChars',
+      lastName: 'Line 1\r\nLine 2',
+      organization: 'Line 1\rLine 2',
+      title: 'Win\r\nMac\rUnix\n',
+      phone: 'Line\t1\nLine\t2',
+      email: '',
+      website: '',
+      street: '',
+      city: '',
+      zip: '',
+      country: '',
+    };
+    const str = constructVCardString(data);
+    expect(str).toContain('CleanTextWithControlChars');
+    expect(str).toContain('Line 1\\nLine 2');
+    expect(str).toContain('Win\\nMac\\nUnix\\n');
+    expect(str).toContain('Line\t1\\nLine\t2');
+  });
+});
