@@ -7,7 +7,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const repoRoot = path.join(__dirname, '..');
 
-const filesToAudit = ['COMPLIANCE.md', 'SECURITY.md'];
+const filesToAudit = ['COMPLIANCE.md', 'SECURITY.md', 'README.md', 'SCALING.md', 'src/components/inputs/README.md'];
 
 let hasErrors = false;
 
@@ -72,7 +72,9 @@ for (const file of filesToAudit) {
         targetHash = href.slice(1);
       } else {
         const parts = href.split('#');
-        targetFile = parts[0];
+        const relativeTargetFile = parts[0];
+        const targetFilePathAbs = path.resolve(path.dirname(filePath), relativeTargetFile);
+        targetFile = path.relative(repoRoot, targetFilePathAbs);
         if (parts.length > 1) {
           targetHash = parts[1];
         }
