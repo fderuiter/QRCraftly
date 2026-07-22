@@ -3,8 +3,9 @@ name: CI/CD Pipeline
 on:
   push:
     branches: [main]
-    paths:
+    paths: &workflow_paths
       - 'src/**'
+      - 'src/layouts/index.css'
       - 'public/**'
       - 'scripts/**'
       - 'e2e/**'
@@ -13,7 +14,6 @@ on:
       - 'playwright.config.ts'
       - 'vite.config.ts'
       - 'vitest.setup.ts'
-      - 'tailwind.config.js'
       - 'postcss.config.js'
       - 'tsconfig.json'
       - 'lighthouserc.json'
@@ -21,22 +21,7 @@ on:
       - '.github/workflows/**'
   pull_request:
     branches: [main]
-    paths:
-      - 'src/**'
-      - 'public/**'
-      - 'scripts/**'
-      - 'e2e/**'
-      - 'package.json'
-      - 'pnpm-lock.yaml'
-      - 'playwright.config.ts'
-      - 'vite.config.ts'
-      - 'vitest.setup.ts'
-      - 'tailwind.config.js'
-      - 'postcss.config.js'
-      - 'tsconfig.json'
-      - 'lighthouserc.json'
-      - 'wrangler.jsonc'
-      - '.github/workflows/**'
+    paths: *workflow_paths
 
 permissions:
   contents: read
