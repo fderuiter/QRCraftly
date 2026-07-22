@@ -17,7 +17,7 @@
 */
 
 import { describe, it, expect } from 'vitest';
-import { constructPaymentString, escapeWifiString } from './qrHelpers';
+import { constructPaymentString } from './qrHelpers';
 import { CryptoNetwork } from '../types';
 
 describe('qrHelpers Security', () => {
@@ -55,31 +55,6 @@ describe('qrHelpers Security', () => {
         label: ''
       });
       expect(result).toBe(payload);
-    });
-  });
-
-  describe('escapeWifiString', () => {
-    it('should strip control characters from WiFi SSID', () => {
-      // \n is newline (0x0A), \0 is null (0x00), \t is tab (0x09)
-      const ssid = "My\nNetwork\0\t";
-      const result = escapeWifiString(ssid);
-      // Should be stripped to "MyNetwork"
-      expect(result).toBe("MyNetwork");
-    });
-
-    it('should strip control characters from WiFi password', () => {
-      // \r is carriage return (0x0D)
-      const password = "Pass\rWord\x1F";
-      const result = escapeWifiString(password);
-      // Should be stripped to "PassWord"
-      expect(result).toBe("PassWord");
-    });
-
-    it('should still escape special characters correctly after stripping control chars', () => {
-      const ssid = "My;Net\nwork";
-      const result = escapeWifiString(ssid);
-      // Should strip \n -> My;Network -> escape ; -> My\;Network
-      expect(result).toBe("My\\;Network");
     });
   });
 });

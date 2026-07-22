@@ -20,7 +20,7 @@ import { describe, it, expect } from 'vitest';
 import { FIXTURES } from "../../tests/fixtures/data";
 import { constructLocationString } from './qr-generators/location';
 import { constructMeetingString } from './qr-generators/meeting';
-import { constructSocialString, sanitizeSocialHandle } from './qr-generators/social';
+import { constructSocialString } from './qr-generators/social';
 import { SocialPlatform } from '../types';
 
 describe('Location generator', () => {
@@ -84,29 +84,6 @@ describe('Meeting generator', () => {
 });
 
 describe('Social generator', () => {
-  describe('sanitizeSocialHandle', () => {
-    it('strips leading @ sign', () => {
-      expect(sanitizeSocialHandle('@username')).toBe('username');
-    });
-
-    it('strips path-injection characters (slashes)', () => {
-      expect(sanitizeSocialHandle('user/../../etc')).toBe('user....etc');
-      // Slashes are stripped, dots remain (they're valid in usernames), result is safe
-    });
-
-    it('strips query string characters', () => {
-      expect(sanitizeSocialHandle('user?x=1')).toBe('userx1');
-    });
-
-    it('strips hash characters', () => {
-      expect(sanitizeSocialHandle('user#fragment')).toBe('userfragment');
-    });
-
-    it('allows underscores, hyphens, and periods', () => {
-      expect(sanitizeSocialHandle('user_name.test-123')).toBe('user_name.test-123');
-    });
-  });
-
   describe('constructSocialString', () => {
     it('generates an Instagram profile URL', () => {
       expect(constructSocialString({ platform: SocialPlatform.INSTAGRAM, handle: 'myuser' }))

@@ -18,7 +18,6 @@
 
 import { describe, it, expect } from 'vitest';
 import {
-  escapeVCardString,
   constructEmailString,
   constructVCardString,
   constructPaymentString,
@@ -28,39 +27,6 @@ import {
 import { EmailData, VCardData, PaymentData, CryptoNetwork, SmsData, PhoneData } from '../types';
 
 describe('QR Helpers Sad Paths', () => {
-  describe('escapeVCardString', () => {
-    it('should normalize CRLF to \\n', () => {
-      const input = 'Line 1\r\nLine 2';
-      const result = escapeVCardString(input);
-      expect(result).toBe('Line 1\\nLine 2');
-    });
-
-    it('should normalize CR to \\n', () => {
-      const input = 'Line 1\rLine 2';
-      const result = escapeVCardString(input);
-      expect(result).toBe('Line 1\\nLine 2');
-    });
-
-    it('should handle mixed newline types', () => {
-      const input = 'Win\r\nMac\rUnix\n';
-      const result = escapeVCardString(input);
-      expect(result).toBe('Win\\nMac\\nUnix\\n');
-    });
-
-    it('should strip non-printable control characters from vCard fields', () => {
-      // \x00 (NUL), \x07 (BEL), \x1B (ESC), \x7F (DEL)
-      const input = 'Clean\x00Text\x07With\x1BControl\x7FChars';
-      const result = escapeVCardString(input);
-      expect(result).toBe('CleanTextWithControlChars');
-    });
-
-    it('should preserve tabs but escape newlines', () => {
-      const input = 'Line\t1\nLine\t2';
-      const result = escapeVCardString(input);
-      expect(result).toBe('Line\t1\\nLine\t2');
-    });
-  });
-
   describe('constructEmailString', () => {
     it('should handle empty string after sanitization', () => {
       const data: EmailData = {

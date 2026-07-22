@@ -26,7 +26,7 @@ import { SOCIAL_DOMAINS, parseProtocol } from '../protocol';
  * Allows: alphanumeric characters, underscores, hyphens, and periods.
  * Strips: slashes, query/hash chars, control characters, and whitespace.
  */
-export const sanitizeSocialHandle = (handle: string): string => {
+const sanitizeSocialHandle = (handle: string): string => {
   // Strip leading '@' as it is a display convention, not part of the URL path
   const withoutAt = handle.replace(/^@+/, '');
   // Allow only characters that are valid in a URL path segment for a username

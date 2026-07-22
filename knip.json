@@ -1,7 +1,17 @@
 {
+  "entry": [
+    "src/pages/**/+config.ts",
+    "src/pages/**/+Page.tsx",
+    "src/layouts/**/*.tsx"
+  ],
+  "project": [
+    "src/**/*.ts",
+    "src/**/*.tsx"
+  ],
   "ignoreDependencies": [
     "axe-core",
     "sharp",
-    "wrangler"
+    "wrangler",
+    "tailwindcss"
   ]
 }

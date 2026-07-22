@@ -23,7 +23,7 @@ import { ValidationEngine } from '../../engine/ValidationEngine';
  * Escapes special characters for iCalendar text values.
  * Characters to escape: \ ; , and newlines.
  */
-export const escapeEventString = (str: string | undefined): string => {
+const escapeEventString = (str: string | undefined): string => {
   return ValidationEngine.escapeVCardEvent(str);
 };
 
@@ -31,7 +31,7 @@ export const escapeEventString = (str: string | undefined): string => {
  * Formats an ISO datetime string (from datetime-local) into iCalendar local datetime.
  * Output format: YYYYMMDDTHHMMSS
  */
-export const formatEventDateTime = (dateString: string | undefined): string => {
+const formatEventDateTime = (dateString: string | undefined): string => {
   if (!dateString) return '';
 
   const date = new Date(dateString);
@@ -47,11 +47,11 @@ export const formatEventDateTime = (dateString: string | undefined): string => {
   return `${year}${month}${day}T${hours}${minutes}${seconds}`;
 };
 
-export const unescapeEventString = (str: string | undefined): string => {
+const unescapeEventString = (str: string | undefined): string => {
   return ValidationEngine.unescapeVCardEvent(str);
 };
 
-export const parseEventDateTime = (dateString: string | undefined): string => {
+const parseEventDateTime = (dateString: string | undefined): string => {
   if (!dateString) return '';
   // format: YYYYMMDDTHHMMSS
   const match = dateString.match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})/);

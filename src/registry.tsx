@@ -5,7 +5,7 @@ import { useQRStore, useQRStoreSelector } from '@/context/QRContext';
 
 const StyleControls = React.lazy(() => import('@/components/StyleControls'));
 
-export const ContentControl = () => {
+const ContentControl = () => {
   const store = useQRStore();
   const config = useQRStoreSelector(state => state.config);
   const { updateConfig } = store;
@@ -17,7 +17,7 @@ export const ContentControl = () => {
   );
 };
 
-export const AppearanceControl = () => {
+const AppearanceControl = () => {
   const store = useQRStore();
   const config = useQRStoreSelector(state => state.config);
   const { updateConfig } = store;
@@ -41,7 +41,7 @@ export const AppearanceControl = () => {
   );
 };
 
-export const AdditionalSidebarContent = ({ toolId }: { toolId?: string }) => {
+const AdditionalSidebarContent = ({ toolId }: { toolId?: string }) => {
   return <SidebarContent toolId={toolId || 'index'} />;
 };
 

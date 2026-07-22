@@ -21,7 +21,11 @@ import { render, screen, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, afterAll, afterEach } from 'vitest';
 import { QRProvider, useQRStore } from '@/context/QRContext';
 import { DEFAULT_CONFIG } from '@/constants';
-import { sidebarControls, ContentControl, AppearanceControl, AdditionalSidebarContent } from '@/registry';
+import { sidebarControls } from '@/registry';
+
+const ContentControl = sidebarControls[0].component;
+const AppearanceControl = sidebarControls[1].component;
+const AdditionalSidebarContent = sidebarControls[2].component;
 
 // ---------------------------------------------------------------------------
 // Mocks
