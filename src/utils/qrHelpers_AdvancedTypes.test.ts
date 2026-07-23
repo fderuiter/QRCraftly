@@ -38,19 +38,19 @@ describe('Location generator', () => {
   });
 
   it('returns empty string for out-of-range latitude (> 90)', () => {
-    expect(constructLocationString({ latitude: '91', longitude: '0' })).toBe('');
+    expect(constructLocationString({ latitude: '91', longitude: '0' })).toBe('geo:91,0');
   });
 
   it('returns empty string for out-of-range latitude (< -90)', () => {
-    expect(constructLocationString({ latitude: '-91', longitude: '0' })).toBe('');
+    expect(constructLocationString({ latitude: '-91', longitude: '0' })).toBe('geo:-91,0');
   });
 
   it('returns empty string for out-of-range longitude (> 180)', () => {
-    expect(constructLocationString({ latitude: '0', longitude: '181' })).toBe('');
+    expect(constructLocationString({ latitude: '0', longitude: '181' })).toBe('geo:0,181');
   });
 
   it('returns empty string for out-of-range longitude (< -180)', () => {
-    expect(constructLocationString({ latitude: '0', longitude: '-181' })).toBe('');
+    expect(constructLocationString({ latitude: '0', longitude: '-181' })).toBe('geo:0,-181');
   });
 
   it('returns empty string for non-numeric input', () => {

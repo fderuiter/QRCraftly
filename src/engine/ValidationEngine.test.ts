@@ -74,5 +74,31 @@ describe('ValidationEngine', () => {
       const violations = ValidationEngine.validateConfig(config);
       expect(violations).toContain('EMAIL_STRUCTURE_VIOLATION');
     });
+
+    it('should reject out-of-range latitude in location configs', () => {
+      const config = getBaseConfig();
+      config.type = QRType.LOCATION;
+      config.value = 'geo:110,-74';
+      const violations = ValidationEngine.validateConfig(config);
+      expect(violations).toContain('LATITUDE_OUT_OF_BOUNDS_VIOLATION');
+      expect(violations).not.toContain('LONGITUDE_OUT_OF_BOUNDS_VIOLATION');
+    });
+
+    it('should reject out-of-range longitude in location configs', () => {
+      const config = getBaseConfig();
+      config.type = QRType.LOCATION;
+      config.value = 'geo:40,-195';
+      const violations = ValidationEngine.validateConfig(config);
+      expect(violations).toContain('LONGITUDE_OUT_OF_BOUNDS_VIOLATION');
+      expect(violations).not.toContain('LATITUDE_OUT_OF_BOUNDS_VIOLATION');
+    });
+
+    it('should pass valid latitude and longitude in location configs', () => {
+      const config = getBaseConfig();
+      config.type = QRType.LOCATION;
+      config.value = 'geo:40,-74';
+      const violations = ValidationEngine.validateConfig(config);
+      expect(violations).toHaveLength(0);
+    });
   });
 });
