@@ -16,8 +16,8 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { PaymentData, CryptoNetwork } from '../../types';
-import { sanitizeInput, isDangerousUrl } from '../security';
+import { PaymentData, CryptoNetwork, QRType, QRGeneratorContract } from '../../types';
+import { ValidationEngine } from '../../engine/ValidationEngine';
 
 /**
  * Constructs the crypto payment URI string.
@@ -26,7 +26,7 @@ export const constructPaymentString = (data: PaymentData): string => {
   let paymentString = '';
 
   if (data.network === CryptoNetwork.CUSTOM) {
-    if (isDangerousUrl(data.address)) {
+    if (ValidationEngine.isDangerousUrl(data.address)) {
       return '';
     }
     paymentString = data.address;
@@ -44,7 +44,7 @@ export const constructPaymentString = (data: PaymentData): string => {
     }
 
     // Sanitize address to prevent parameter injection if user accidentally pastes a full URI or malicious string
-    const safeAddress = sanitizeInput(data.address);
+    const safeAddress = ValidationEngine.sanitizeInput(data.address);
     paymentString = `${data.network}:${safeAddress}`;
     const params: string[] = [];
 
@@ -106,12 +106,24 @@ export const hydratePaymentData = (raw: string): PaymentData => {
   // If it doesn't match a known crypto network, we assume it's either an invalid
   // string (e.g. switching types) or a CUSTOM string. 
   // We'll return it as CUSTOM so it can be edited, but if it starts with http/https
-  // we throw so it falls back to the default BITCOIN state.
+  // we return default state so it falls back to the default BITCOIN state silently.
   if (raw.startsWith('http://') || raw.startsWith('https://')) {
-    throw new Error('Invalid payment string');
+    return {
+      network: CryptoNetwork.BITCOIN,
+      address: '',
+      amount: '',
+      label: '',
+    };
   }
 
   result.network = CryptoNetwork.CUSTOM;
   result.address = raw;
   return result;
+};
+
+export const PaymentContract: QRGeneratorContract<PaymentData> = {
+  type: QRType.PAYMENT,
+  construct: constructPaymentString,
+  hydrate: hydratePaymentData,
+  matches: (raw: string) => ValidationEngine.identifyProtocol(raw) === QRType.PAYMENT,
 };

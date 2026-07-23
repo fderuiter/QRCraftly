@@ -16,7 +16,8 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { LocationData } from '../../types';
+import { LocationData, QRType, QRGeneratorContract } from '../../types';
+import { ValidationEngine } from '../../engine/ValidationEngine';
 
 /**
  * Validates and parses a coordinate string as a finite floating-point number.
@@ -72,4 +73,11 @@ export const hydrateLocationData = (raw: string): LocationData => {
   }
 
   return result;
+};
+
+export const LocationContract: QRGeneratorContract<LocationData> = {
+  type: QRType.LOCATION,
+  construct: constructLocationString,
+  hydrate: hydrateLocationData,
+  matches: (raw: string) => ValidationEngine.identifyProtocol(raw) === QRType.LOCATION,
 };

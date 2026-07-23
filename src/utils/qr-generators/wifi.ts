@@ -16,23 +16,8 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { WifiData, WifiEncryption } from '../../types';
+import { WifiData, WifiEncryption, QRType, QRGeneratorContract } from '../../types';
 import { ValidationEngine } from '../../engine/ValidationEngine';
-
-/**
- * Escapes special characters for WiFi QR code string.
- * Characters to escape: \ ; , " :
- */
-const escapeWifiString = (str: string | undefined): string => {
-  return ValidationEngine.escapeWifi(str);
-};
-
-/**
- * Constructs the WiFi QR code string from the given data.
- */
-const unescapeWifiString = (str: string | undefined): string => {
-  return ValidationEngine.unescapeWifi(str);
-};
 
 /**
  * Hydrates WifiData from a raw string.
@@ -64,16 +49,16 @@ export const hydrateWifiData = (raw: string): WifiData => {
     const value = part.substring(splitIndex + 1);
 
     switch(key) {
-      case 'S': result.ssid = unescapeWifiString(value); break;
-      case 'P': result.password = unescapeWifiString(value); break;
+      case 'S': result.ssid = ValidationEngine.unescapeWifi(value); break;
+      case 'P': result.password = ValidationEngine.unescapeWifi(value); break;
       case 'T': 
-        const enc = unescapeWifiString(value);
+        const enc = ValidationEngine.unescapeWifi(value);
         if (Object.values(WifiEncryption).includes(enc as WifiEncryption)) {
           result.encryption = enc as WifiEncryption;
         }
         break;
       case 'H': result.hidden = value.toLowerCase() === 'true'; break;
-      case 'I': result.eapIdentity = unescapeWifiString(value); break;
+      case 'I': result.eapIdentity = ValidationEngine.unescapeWifi(value); break;
     }
   });
 
@@ -89,15 +74,15 @@ export const constructWifiString = (data: WifiData): string => {
 
   const parts = [
     `T:${encryption}`,
-    `S:${escapeWifiString(data.ssid)}`,
+    `S:${ValidationEngine.escapeWifi(data.ssid)}`,
   ];
 
   if (encryption === WifiEncryption.WPA2_EAP) {
-    parts.push(`I:${escapeWifiString(data.eapIdentity)}`);
+    parts.push(`I:${ValidationEngine.escapeWifi(data.eapIdentity)}`);
   }
 
   if (encryption !== WifiEncryption.NOPASS) {
-    parts.push(`P:${escapeWifiString(data.password)}`);
+    parts.push(`P:${ValidationEngine.escapeWifi(data.password)}`);
   }
 
   // Only include hidden flag if true, as some scanners fail on H:false
@@ -106,4 +91,11 @@ export const constructWifiString = (data: WifiData): string => {
   }
 
   return `WIFI:${parts.join(';')};;`;
+};
+
+export const WifiContract: QRGeneratorContract<WifiData> = {
+  type: QRType.WIFI,
+  construct: constructWifiString,
+  hydrate: hydrateWifiData,
+  matches: (raw: string) => ValidationEngine.identifyProtocol(raw) === QRType.WIFI,
 };

@@ -16,16 +16,8 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { EventData } from '../../types';
+import { EventData, QRType, QRGeneratorContract } from '../../types';
 import { ValidationEngine } from '../../engine/ValidationEngine';
-
-/**
- * Escapes special characters for iCalendar text values.
- * Characters to escape: \ ; , and newlines.
- */
-const escapeEventString = (str: string | undefined): string => {
-  return ValidationEngine.escapeVCardEvent(str);
-};
 
 /**
  * Formats an ISO datetime string (from datetime-local) into iCalendar local datetime.
@@ -45,10 +37,6 @@ const formatEventDateTime = (dateString: string | undefined): string => {
   const seconds = String(date.getSeconds()).padStart(2, '0');
 
   return `${year}${month}${day}T${hours}${minutes}${seconds}`;
-};
-
-const unescapeEventString = (str: string | undefined): string => {
-  return ValidationEngine.unescapeVCardEvent(str);
 };
 
 const parseEventDateTime = (dateString: string | undefined): string => {
@@ -85,11 +73,11 @@ export const hydrateEventData = (raw: string): EventData => {
     const value = line.substring(splitIndex + 1);
 
     switch(key) {
-      case 'SUMMARY': result.title = unescapeEventString(value); break;
+      case 'SUMMARY': result.title = ValidationEngine.unescapeVCardEvent(value); break;
       case 'DTSTART': result.startDate = parseEventDateTime(value); break;
       case 'DTEND': result.endDate = parseEventDateTime(value); break;
-      case 'LOCATION': result.location = unescapeEventString(value); break;
-      case 'DESCRIPTION': result.description = unescapeEventString(value); break;
+      case 'LOCATION': result.location = ValidationEngine.unescapeVCardEvent(value); break;
+      case 'DESCRIPTION': result.description = ValidationEngine.unescapeVCardEvent(value); break;
     }
   });
 
@@ -105,14 +93,21 @@ export const constructEventString = (data: EventData): string => {
     'VERSION:2.0',
     'PRODID:-//QRCraftly//EN',
     'BEGIN:VEVENT',
-    `SUMMARY:${escapeEventString(data.title)}`,
+    `SUMMARY:${ValidationEngine.escapeVCardEvent(data.title)}`,
     `DTSTART:${formatEventDateTime(data.startDate)}`,
     `DTEND:${formatEventDateTime(data.endDate)}`,
-    `LOCATION:${escapeEventString(data.location)}`,
-    `DESCRIPTION:${escapeEventString(data.description)}`,
+    `LOCATION:${ValidationEngine.escapeVCardEvent(data.location)}`,
+    `DESCRIPTION:${ValidationEngine.escapeVCardEvent(data.description)}`,
     'END:VEVENT',
     'END:VCALENDAR',
   ];
 
   return parts.join('\n');
+};
+
+export const EventContract: QRGeneratorContract<EventData> = {
+  type: QRType.EVENT,
+  construct: constructEventString,
+  hydrate: hydrateEventData,
+  matches: (raw: string) => ValidationEngine.identifyProtocol(raw) === QRType.EVENT,
 };

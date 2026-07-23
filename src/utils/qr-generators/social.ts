@@ -16,22 +16,9 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { SocialData, SocialPlatform } from '../../types';
+import { SocialData, SocialPlatform, QRType, QRGeneratorContract } from '../../types';
 import { SOCIAL_DOMAINS, parseProtocol } from '../protocol';
-
-/**
- * Sanitizes a social media handle by stripping characters that could be used
- * to inject path segments or query parameters into a constructed URL.
- *
- * Allows: alphanumeric characters, underscores, hyphens, and periods.
- * Strips: slashes, query/hash chars, control characters, and whitespace.
- */
-const sanitizeSocialHandle = (handle: string): string => {
-  // Strip leading '@' as it is a display convention, not part of the URL path
-  const withoutAt = handle.replace(/^@+/, '');
-  // Allow only characters that are valid in a URL path segment for a username
-  return withoutAt.replace(/[^a-zA-Z0-9_.\-]/g, '');
-};
+import { ValidationEngine } from '../../engine/ValidationEngine';
 
 const SOCIAL_PLATFORM_URLS: Record<SocialPlatform, (handle: string) => string> = {
   [SocialPlatform.INSTAGRAM]: (handle) => `https://instagram.com/${handle}`,
@@ -49,7 +36,7 @@ const SOCIAL_PLATFORM_URLS: Record<SocialPlatform, (handle: string) => string> =
  * @returns A full HTTPS profile URL, or an empty string if the handle is empty.
  */
 export const constructSocialString = (data: SocialData): string => {
-  const cleanHandle = sanitizeSocialHandle(data.handle);
+  const cleanHandle = ValidationEngine.sanitizeSocialHandle(data.handle);
   if (!cleanHandle) return '';
 
   const constructUrl = SOCIAL_PLATFORM_URLS[data.platform];
@@ -87,4 +74,11 @@ export const hydrateSocialData = (raw: string): SocialData => {
   }
 
   return result;
+};
+
+export const SocialContract: QRGeneratorContract<SocialData> = {
+  type: QRType.SOCIAL,
+  construct: constructSocialString,
+  hydrate: hydrateSocialData,
+  matches: (raw: string) => ValidationEngine.identifyProtocol(raw) === QRType.SOCIAL,
 };
