@@ -432,7 +432,7 @@ describe('drawWithTemplate - Standard SVG Export Precision', () => {
     const size = 21;
     const modules = {
       size,
-      get: (r: number, c: number) => true,
+      get: (_r: number, _c: number) => true,
     };
 
     const config: QRConfig = {
@@ -522,7 +522,7 @@ describe('drawWithTemplate - Standard SVG Export Precision', () => {
     const size = 21;
     const modules = {
       size,
-      get: (r: number, c: number) => true,
+      get: (_r: number, _c: number) => true,
     };
 
     const rectCalls: Array<{ x: number; y: number; w: number; h: number }> = [];
