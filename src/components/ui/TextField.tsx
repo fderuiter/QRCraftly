@@ -4,7 +4,7 @@ import { Eye, EyeOff } from 'lucide-react';
 import { combineIds } from '../../utils/a11y';
 import { FieldWrapper, BaseFieldProps } from './FieldWrapper';
 
-export interface TextFieldProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size' | 'id'>, BaseFieldProps {
+interface TextFieldProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size' | 'id'>, BaseFieldProps {
   showPasswordToggle?: boolean;
   showCharCount?: boolean;
 }
