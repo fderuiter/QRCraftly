@@ -3,6 +3,12 @@ import { Marked } from 'marked';
 import docsManifest from '../../data/docs_manifest.json';
 
 const customMarked = new Marked({
+  renderer: {
+    heading({ text, depth }) {
+      const newDepth = Math.min(depth + 1, 6);
+      return `<h${newDepth}>${text}</h${newDepth}>`;
+    }
+  },
   walkTokens(token) {
     if (token.type === 'link') {
       const href = token.href;

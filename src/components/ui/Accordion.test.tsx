@@ -27,6 +27,11 @@ describe('Accordion Component Accessibility', () => {
     );
     const results = await axe(container);
     expect(results).toHaveNoViolations();
+
+    const button = screen.getByRole('button', { name: 'Item 1' });
+    const panel = screen.getByRole('region', { name: 'Item 1' });
+    expect(button).toHaveAttribute('aria-controls', panel.id);
+    expect(panel).toHaveAttribute('aria-labelledby', button.id);
   });
 
   it('should have zero accessibility violations after toggling state', async () => {

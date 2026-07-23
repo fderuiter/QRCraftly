@@ -32,7 +32,7 @@ export const AdvancedControls: React.FC<AdvancedControlsProps> = ({ config, onCh
       {showAdvanced && (
         <div className="mt-4 space-y-4" id="advanced-settings-panel">
           <div>
-            <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-2">Error Correction Level</label>
+            <span className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-2">Error Correction Level</span>
             <div
               className="grid grid-cols-2 gap-2"
               role="group"

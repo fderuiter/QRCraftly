@@ -49,7 +49,7 @@ export const LogoControls: React.FC<LogoControlsProps> = ({ config, onChange }) 
       ) : (
         <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700 space-y-5">
           <div className="flex items-center gap-4">
-            <img src={config.logoUrl} alt="Logo" width={48} height={48} className="w-12 h-12 object-contain bg-white rounded-md border border-slate-200 shadow-sm" />
+            <img src={config.logoUrl} alt="Custom Brand Graphic" width={48} height={48} className="w-12 h-12 object-contain bg-white rounded-md border border-slate-200 shadow-sm" />
             <div className="flex-1">
               <p className="text-sm font-medium text-slate-700 dark:text-slate-200">Custom Logo</p>
               <p className="text-xs text-slate-500 dark:text-slate-400">Embedded in center</p>
@@ -58,7 +58,7 @@ export const LogoControls: React.FC<LogoControlsProps> = ({ config, onChange }) 
 
           {/* Logo Border Styles */}
           <div>
-            <label id="logo-border-style-label" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-2">Border Style</label>
+            <span id="logo-border-style-label" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-2">Border Style</span>
             <div
               className="flex bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-1"
               role="group"

@@ -4,6 +4,7 @@ import reactPlugin from "eslint-plugin-react";
 import reactHooksPlugin from "eslint-plugin-react-hooks";
 import securityPlugin from "eslint-plugin-security";
 import jsdoc from "eslint-plugin-jsdoc";
+import jsxA11y from "eslint-plugin-jsx-a11y";
 
 export default tseslint.config(
   {
@@ -17,6 +18,7 @@ export default tseslint.config(
       "react": reactPlugin,
       "react-hooks": reactHooksPlugin,
       "security": securityPlugin,
+      "jsx-a11y": jsxA11y,
     },
     languageOptions: {
       globals: {
@@ -33,6 +35,7 @@ export default tseslint.config(
       ...reactPlugin.configs.recommended.rules,
       ...reactHooksPlugin.configs.recommended.rules,
       ...securityPlugin.configs.recommended.rules,
+      ...jsxA11y.flatConfigs.recommended.rules,
       "react/react-in-jsx-scope": "off",
       "react/prop-types": "off",
       "react/display-name": "off",

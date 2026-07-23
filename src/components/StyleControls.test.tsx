@@ -376,8 +376,8 @@ describe('StyleControls Component', () => {
       // But there is another remove button for main logo which has "Remove" text.
       // The border one doesn't have text.
 
-      // We can find it by looking for the image alt "Border Logo" and finding the button sibling?
-      const borderLogoImg = screen.getByAltText('Border Logo');
+      // We can find it by looking for the image alt "Secondary Brand Graphic" and finding the button sibling?
+      const borderLogoImg = screen.getByAltText('Secondary Brand Graphic');
       // eslint-disable-next-line testing-library/no-node-access
       const removeBtn = borderLogoImg.nextElementSibling as HTMLElement;
       if (removeBtn) {
