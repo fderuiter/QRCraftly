@@ -1,5 +1,4 @@
 import React from 'react';
-import { Button } from '../ui/Button';
 import { QRConfig } from '../../types';
 import { PATTERNS, LOW_RELIABILITY_PATTERNS } from '../../constants';
 import { PatternModule } from '../ui/PatternModule';
@@ -25,26 +24,35 @@ export const PatternControls: React.FC<PatternControlsProps> = ({ config, onChan
 
       <div
         className="grid grid-cols-4 gap-3"
-        role="group"
+        role="radiogroup"
         aria-label="Pattern Style"
       >
         {PATTERNS.map((pattern) => (
-          <Button
+          <label
             key={pattern.id}
-            variant={config.style === pattern.id ? 'secondary' : 'outline'}
-            size="none"
-            onClick={() => onChange({ style: pattern.id })}
-            aria-pressed={config.style === pattern.id}
-            aria-label={`Select ${pattern.label} pattern`}
-            className={`flex-col p-3 rounded-xl border-2 h-auto ${config.style === pattern.id ? 'border-teal-500' : 'border-transparent'}`}
+            className={`inline-flex flex-col items-center justify-center font-medium transition-colors cursor-pointer p-3 rounded-xl border-2 h-auto focus-within:ring-2 focus-within:ring-teal-500 ${
+              config.style === pattern.id
+                ? 'bg-teal-50 dark:bg-slate-800 text-teal-700 dark:text-teal-400 hover:bg-teal-100 dark:hover:bg-slate-700 border-teal-500'
+                : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 border-transparent'
+            }`}
           >
-            <div className="w-8 h-8 mb-2 grid grid-cols-2 gap-0.5 p-1">
+            <input
+              type="radio"
+              name="pattern-style"
+              value={pattern.id}
+              checked={config.style === pattern.id}
+              onChange={() => onChange({ style: pattern.id })}
+              onClick={() => onChange({ style: pattern.id })}
+              className="sr-only"
+              aria-label={`Select ${pattern.label} pattern`}
+            />
+            <div className="w-8 h-8 mb-2 grid grid-cols-2 gap-0.5 p-1" aria-hidden="true">
               {[1, 2, 3, 4].map((i) => (
                 <PatternModule key={i} style={pattern.id} />
               ))}
             </div>
             <span className="text-xs font-medium text-center leading-tight">{pattern.label}</span>
-          </Button>
+          </label>
         ))}
       </div>
     </div>

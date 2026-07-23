@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { Button } from '../ui/Button';
 import { QRConfig, LogoPaddingStyle } from '../../types';
 import { Upload, X, Square, Circle, Minus } from 'lucide-react';
@@ -14,7 +14,18 @@ interface LogoControlsProps {
 
 export const LogoControls: React.FC<LogoControlsProps> = ({ config, onChange }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const uploadButtonRef = useRef<HTMLButtonElement>(null);
+  const prevLogoUrlRef = useRef<string | null>(config.logoUrl);
   const { error, handleUpload, setError } = useImageUpload();
+
+  useEffect(() => {
+    if (prevLogoUrlRef.current && !config.logoUrl) {
+      setTimeout(() => {
+        uploadButtonRef.current?.focus();
+      }, 50);
+    }
+    prevLogoUrlRef.current = config.logoUrl;
+  }, [config.logoUrl]);
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     handleUpload(e, (dataUrl) => onChange({ logoUrl: dataUrl }));
@@ -33,6 +44,7 @@ export const LogoControls: React.FC<LogoControlsProps> = ({ config, onChange }) 
 
       {!config.logoUrl ? (
         <Button
+          ref={uploadButtonRef}
           variant="outline"
           size="none"
           type="button"
@@ -61,7 +73,7 @@ export const LogoControls: React.FC<LogoControlsProps> = ({ config, onChange }) 
             <label id="logo-border-style-label" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-2">Border Style</label>
             <div
               className="flex bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-1"
-              role="group"
+              role="radiogroup"
               aria-labelledby="logo-border-style-label"
             >
               {[
@@ -69,19 +81,28 @@ export const LogoControls: React.FC<LogoControlsProps> = ({ config, onChange }) 
                 { id: 'circle', icon: Circle, label: 'Circle' },
                 { id: 'none', icon: Minus, label: 'None' },
               ].map((style) => (
-                <Button
+                <label
                   key={style.id}
-                  variant={config.logoPaddingStyle === style.id ? 'secondary' : 'ghost'}
-                  size="none"
-                  onClick={() => onChange({ logoPaddingStyle: style.id as LogoPaddingStyle })}
-                  aria-pressed={config.logoPaddingStyle === style.id}
-                  aria-label={`Set logo border style to ${style.label}`}
-                  className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs"
+                  className={`flex-1 inline-flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs cursor-pointer font-medium transition-colors focus-within:ring-2 focus-within:ring-teal-500 ${
+                    config.logoPaddingStyle === style.id
+                      ? 'bg-teal-50 dark:bg-slate-800 text-teal-700 dark:text-teal-400'
+                      : 'bg-transparent text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  }`}
                   title={style.label}
                 >
-                  <style.icon className="w-3.5 h-3.5" />
+                  <input
+                    type="radio"
+                    name="logo-border-style"
+                    value={style.id}
+                    checked={config.logoPaddingStyle === style.id}
+                    onChange={() => onChange({ logoPaddingStyle: style.id as LogoPaddingStyle })}
+                    onClick={() => onChange({ logoPaddingStyle: style.id as LogoPaddingStyle })}
+                    className="sr-only"
+                    aria-label={`Set logo border style to ${style.label}`}
+                  />
+                  <style.icon className="w-3.5 h-3.5" aria-hidden="true" />
                   {style.label}
-                </Button>
+                </label>
               ))}
             </div>
           </div>

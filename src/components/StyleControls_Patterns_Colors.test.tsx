@@ -11,19 +11,19 @@ describe('StyleControls Accessibility', () => {
       render(<PatternControls config={DEFAULT_CONFIG} onChange={handleChange} />);
 
       // Check group role and label
-      const group = screen.getByRole('group', { name: /pattern style/i });
+      const group = screen.getByRole('radiogroup', { name: /pattern style/i });
       expect(group).toBeInTheDocument();
 
-      // Check buttons have aria-labels
-      const buttons = screen.getAllByRole('button');
-      buttons.forEach(button => {
-        expect(button).toHaveAttribute('aria-label');
-        expect(button.getAttribute('aria-label')).toMatch(/select .* pattern/i);
+      // Check radios have aria-labels
+      const radios = screen.getAllByRole('radio');
+      radios.forEach(radio => {
+        expect(radio).toHaveAttribute('aria-label');
+        expect(radio.getAttribute('aria-label')).toMatch(/select .* pattern/i);
       });
 
-      // Check aria-pressed state
-      const standardButton = screen.getByLabelText(/select standard industrial pattern/i);
-      expect(standardButton).toHaveAttribute('aria-pressed', 'true');
+      // Check checked state
+      const standardRadio = screen.getByLabelText(/select standard industrial pattern/i);
+      expect(standardRadio).toBeChecked();
     });
   });
 
@@ -33,19 +33,19 @@ describe('StyleControls Accessibility', () => {
       render(<ColorControls config={DEFAULT_CONFIG} onChange={handleChange} />);
 
       // Check group role and label
-      const group = screen.getByRole('group', { name: /color presets/i });
+      const group = screen.getByRole('radiogroup', { name: /color presets/i });
       expect(group).toBeInTheDocument();
 
-      // Check preset buttons have aria-labels
+      // Check preset radios have aria-labels
       // Note: ColorControls renders other buttons/inputs too, so we filter by the preset group
       // Ideally we query within the group
-      const presetsGroup = screen.getByRole('group', { name: /color presets/i });
-      const presetButtons = presetsGroup.querySelectorAll('button');
+      const presetsGroup = screen.getByRole('radiogroup', { name: /color presets/i });
+      const presetRadios = presetsGroup.querySelectorAll('input[type="radio"]');
 
-      expect(presetButtons.length).toBeGreaterThan(0);
-      presetButtons.forEach(button => {
-        expect(button).toHaveAttribute('aria-label');
-        expect(button.getAttribute('aria-label')).toMatch(/select .* theme/i);
+      expect(presetRadios.length).toBeGreaterThan(0);
+      presetRadios.forEach(radio => {
+        expect(radio).toHaveAttribute('aria-label');
+        expect(radio.getAttribute('aria-label')).toMatch(/select .* theme/i);
       });
     });
   });
