@@ -42,4 +42,19 @@ describe('LayoutDefault', () => {
     const main = screen.getByRole('main');
     expect(main).toBeInTheDocument();
   });
+
+  it('contains a bypass skip link targeting the main landmark', () => {
+    render(
+      <LayoutDefault>
+        <div>Content</div>
+      </LayoutDefault>
+    );
+    const skipLink = screen.getByRole('link', { name: /skip to/i });
+    expect(skipLink).toBeInTheDocument();
+    expect(skipLink).toHaveAttribute('href', '#main-content');
+
+    const main = screen.getByRole('main');
+    expect(main).toHaveAttribute('id', 'main-content');
+    expect(main).toHaveAttribute('tabIndex', '-1');
+  });
 });
