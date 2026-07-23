@@ -21,7 +21,7 @@ import { render, screen, waitFor, act } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach, Mock } from 'vitest';
 import QRCanvas from './QRCanvas';
 import { DEFAULT_CONFIG } from '../constants';
-import { QRStyle, LogoPaddingStyle, QRErrorCorrectionLevel, SocialFormat } from '../types';
+import { QRStyle, LogoPaddingStyle, QRErrorCorrectionLevel, SocialFormat, QRType } from '../types';
 import QRCode from 'qrcode';
 
 // Mock qrcode module
@@ -104,7 +104,7 @@ describe('QRCanvas Component', () => {
 
     const canvas = screen.getByRole('img');
     expect(canvas).toBeInTheDocument();
-    expect(canvas).toHaveAttribute('aria-label', expect.stringContaining('QR Code for Url'));
+    expect(canvas).toHaveAttribute('aria-label', expect.stringContaining('QR Code for website link to'));
 
     await waitFor(() => {
         expect(QRCode.create).toHaveBeenCalledWith(DEFAULT_CONFIG.value, { errorCorrectionLevel: QRErrorCorrectionLevel.H });
@@ -418,6 +418,142 @@ describe('QRCanvas Component', () => {
         // This assertion ensures the fix is working
         // We want the relative width to be <= 0.50 (SAFE_AREA_RATIO) + buffer
         expect(relativeWidth).toBeLessThanOrEqual(0.51);
+    });
+  });
+
+  describe('Type-Specific Descriptive Summaries', () => {
+    it('WiFi QR Code includes SSID and encryption, omitting password', async () => {
+      const config = {
+        ...DEFAULT_CONFIG,
+        type: QRType.WIFI,
+        value: 'WIFI:S:Guest-Net;T:WPA;P:secret123;H:false;;',
+      };
+      render(<QRCanvas config={config} />);
+      const canvas = screen.getByRole('img');
+      expect(canvas).toHaveAttribute('aria-label', "QR Code for WiFi network 'Guest-Net' with WPA security");
+    });
+
+    it('WiFi QR Code with no security handles encryption as no security', async () => {
+      const config = {
+        ...DEFAULT_CONFIG,
+        type: QRType.WIFI,
+        value: 'WIFI:S:Open-Net;T:nopass;;',
+      };
+      render(<QRCanvas config={config} />);
+      const canvas = screen.getByRole('img');
+      expect(canvas).toHaveAttribute('aria-label', "QR Code for WiFi network 'Open-Net' with no security");
+    });
+
+    it('Google Meet QR Code includes platform name and meeting ID', async () => {
+      const config = {
+        ...DEFAULT_CONFIG,
+        type: QRType.MEETING,
+        value: 'https://meet.google.com/abc-defg-hij',
+      };
+      render(<QRCanvas config={config} />);
+      const canvas = screen.getByRole('img');
+      expect(canvas).toHaveAttribute('aria-label', 'QR Code for Google Meet conference, ID abc-defg-hij');
+    });
+
+    it('Zoom QR Code includes platform name and meeting ID, omitting passcode', async () => {
+      const config = {
+        ...DEFAULT_CONFIG,
+        type: QRType.MEETING,
+        value: 'https://zoom.us/j/123456789?pwd=secretPassword',
+      };
+      render(<QRCanvas config={config} />);
+      const canvas = screen.getByRole('img');
+      expect(canvas).toHaveAttribute('aria-label', 'QR Code for Zoom conference, ID 123456789');
+    });
+
+    it('Microsoft Teams QR Code includes platform name and meeting ID', async () => {
+      const config = {
+        ...DEFAULT_CONFIG,
+        type: QRType.MEETING,
+        value: 'https://teams.microsoft.com/l/meetup-join/19%3ameeting_YTMzZTlhNzYtMmUzMy00Y2U4LTg5YTMtZmJiOTJkMzI5YWVi%40thread.v2/0?context=%7b%22Tid%22%3a%2272f988bf-86f1-41af-91ab-2d7cd011db47%22%2c%22Oid%22%3a%2254318c4c-a111-4ebc-8d19-4a9497e2012d%22%7d',
+      };
+      render(<QRCanvas config={config} />);
+      const canvas = screen.getByRole('img');
+      expect(canvas).toHaveAttribute('aria-label', 'QR Code for Microsoft Teams conference, ID YTMzZTlhNzYtMmUzMy00Y2U4LTg5YTMtZmJiOTJkMzI5YWVi');
+    });
+
+    it('Email QR Code omits mailto: prefix and includes subject', async () => {
+      const config = {
+        ...DEFAULT_CONFIG,
+        type: QRType.EMAIL,
+        value: 'mailto:jules@example.com?subject=Hello%20World&body=hi',
+      };
+      render(<QRCanvas config={config} />);
+      const canvas = screen.getByRole('img');
+      expect(canvas).toHaveAttribute('aria-label', "QR Code for email to jules@example.com with subject 'Hello World'");
+    });
+
+    it('Phone QR Code omits tel: prefix', async () => {
+      const config = {
+        ...DEFAULT_CONFIG,
+        type: QRType.PHONE,
+        value: 'tel:+1234567890',
+      };
+      render(<QRCanvas config={config} />);
+      const canvas = screen.getByRole('img');
+      expect(canvas).toHaveAttribute('aria-label', 'QR Code for phone call to +1234567890');
+    });
+
+    it('SMS QR Code includes body message and phone number', async () => {
+      const config = {
+        ...DEFAULT_CONFIG,
+        type: QRType.SMS,
+        value: 'sms:+1234567890?body=Hello%20Friend',
+      };
+      render(<QRCanvas config={config} />);
+      const canvas = screen.getByRole('img');
+      expect(canvas).toHaveAttribute('aria-label', "QR Code for SMS message to +1234567890 with message 'Hello Friend'");
+    });
+
+    it('Social QR Code handles platforms and handles', async () => {
+      const config = {
+        ...DEFAULT_CONFIG,
+        type: QRType.SOCIAL,
+        value: 'https://instagram.com/myusername',
+      };
+      render(<QRCanvas config={config} />);
+      const canvas = screen.getByRole('img');
+      expect(canvas).toHaveAttribute('aria-label', "QR Code for Instagram profile for myusername");
+    });
+
+    it('Payment QR Code describes currency/network and amount, omitting address', async () => {
+      const config = {
+        ...DEFAULT_CONFIG,
+        type: QRType.PAYMENT,
+        value: 'ethereum:0x71C7656EC7ab88b098defB751B7401B5f6d8976F?amount=1.5&label=Invoice1',
+      };
+      render(<QRCanvas config={config} />);
+      const canvas = screen.getByRole('img');
+      expect(canvas).toHaveAttribute('aria-label', 'QR Code for Ethereum payment of 1.5 for Invoice1');
+    });
+
+    it('vCard QR Code summarizes names and organization', async () => {
+      const config = {
+        ...DEFAULT_CONFIG,
+        type: QRType.VCARD,
+        value: 'BEGIN:VCARD\nVERSION:3.0\nN:Smith;John\nORG:ACME Corp\nEND:VCARD',
+      };
+      render(<QRCanvas config={config} />);
+      const canvas = screen.getByRole('img');
+      expect(canvas).toHaveAttribute('aria-label', 'QR Code for contact card for John Smith from ACME Corp');
+    });
+
+    it('Truncates summary to ensure total length stays under 120 characters', async () => {
+      const config = {
+        ...DEFAULT_CONFIG,
+        type: QRType.TEXT,
+        value: 'This is an extremely long raw text content that will definitely exceed the maximum allowed screen-reader summary character constraint of one hundred and twenty total characters.',
+      };
+      render(<QRCanvas config={config} />);
+      const canvas = screen.getByRole('img');
+      const ariaLabel = canvas.getAttribute('aria-label') || '';
+      expect(ariaLabel.length).toBeLessThanOrEqual(120);
+      expect(ariaLabel).toBe('QR Code for text content \'This is an extremely long raw text content that will definitely exceed the maximum allowed ...');
     });
   });
 });

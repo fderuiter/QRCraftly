@@ -17,10 +17,12 @@
 */
 
 import React, { useEffect, useRef, useState } from 'react';
-import { QRConfig, SocialFormat, TemplateStyle } from '../types';
+import { QRConfig, SocialFormat, TemplateStyle, QRType, CryptoNetwork, SocialPlatform } from '../types';
 import { drawQR, drawQRInternal } from '../utils/qrRenderer';
 import { drawWithTemplate, SOCIAL_DIMENSIONS } from '../utils/templateRenderer';
 import { useImage } from '../utils/hooks';
+import { QR_GENERATORS } from '../utils/qrHelpers';
+import { parseMeetingUrl } from '../utils/meetingParsers';
 
 /**
  * Props for the QRCanvas component.
@@ -35,6 +37,117 @@ interface QRCanvasProps {
   /** Optional callback fired when rendering is complete. */
   onRendered?: (info: { moduleCount: number; virtualImageData?: ImageData }) => void;
 }
+
+/**
+ * Generates a friendly, conversational dynamic summary for screen readers.
+ * Keeps output under 120 characters total (including "QR Code for " prefix).
+ */
+const getDynamicSummary = (type: QRType, value: string): string => {
+  try {
+    // eslint-disable-next-line security/detect-object-injection
+    const generator = QR_GENERATORS[type];
+    if (!generator) {
+      const typeLabel = type.charAt(0).toUpperCase() + type.slice(1).toLowerCase();
+      return `${typeLabel} - Scan to view content`;
+    }
+    const data = generator.hydrate(value);
+    switch (type) {
+      case QRType.WIFI: {
+        const encryptionName = data.encryption === 'nopass' ? 'no' : data.encryption;
+        return `WiFi network '${data.ssid || ''}' with ${encryptionName} security`;
+      }
+      case QRType.MEETING: {
+        const parsed = parseMeetingUrl(data.url || '');
+        if (parsed.service === 'meet') {
+          return `Google Meet conference, ID ${parsed.meetingId || ''}`;
+        }
+        if (parsed.service === 'zoom') {
+          return `Zoom conference, ID ${parsed.meetingId || ''}`;
+        }
+        if (parsed.service === 'teams') {
+          return `Microsoft Teams conference, ID ${parsed.meetingId || ''}`;
+        }
+        return `meeting link: ${data.url || ''}`;
+      }
+      case QRType.EMAIL: {
+        let emailSummary = `email to ${data.email || ''}`;
+        if (data.subject) {
+          emailSummary += ` with subject '${data.subject}'`;
+        }
+        return emailSummary;
+      }
+      case QRType.PHONE: {
+        return `phone call to ${data.number || ''}`;
+      }
+      case QRType.SMS: {
+        let smsSummary = `SMS message to ${data.number || ''}`;
+        if (data.message) {
+          smsSummary += ` with message '${data.message}'`;
+        }
+        return smsSummary;
+      }
+      case QRType.SOCIAL: {
+        const platformNames: Record<SocialPlatform, string> = {
+          [SocialPlatform.INSTAGRAM]: 'Instagram',
+          [SocialPlatform.TWITTER]: 'Twitter/X',
+          [SocialPlatform.TIKTOK]: 'TikTok',
+        };
+        const platformName = platformNames[data.platform as SocialPlatform] || 'Social';
+        return `${platformName} profile for ${data.handle || ''}`;
+      }
+      case QRType.VCARD: {
+        const contactName = `${data.firstName || ''} ${data.lastName || ''}`.trim();
+        let vcardSummary = contactName ? `contact card for ${contactName}` : `contact card`;
+        if (data.organization) {
+          vcardSummary += ` from ${data.organization}`;
+        }
+        return vcardSummary;
+      }
+      case QRType.PAYMENT: {
+        const networkName = data.network === CryptoNetwork.CUSTOM 
+          ? 'custom' 
+          : (data.network as string).charAt(0).toUpperCase() + (data.network as string).slice(1).toLowerCase();
+        let paymentSummary = `${networkName} payment`;
+        if (data.amount) {
+          paymentSummary += ` of ${data.amount}`;
+        }
+        if (data.label) {
+          paymentSummary += ` for ${data.label}`;
+        }
+        return paymentSummary;
+      }
+      case QRType.LOCATION: {
+        return `location at latitude ${data.latitude || ''}, longitude ${data.longitude || ''}`;
+      }
+      case QRType.EVENT: {
+        let eventSummary = `event`;
+        if (data.title) {
+          eventSummary += ` '${data.title}'`;
+        }
+        if (data.location) {
+          eventSummary += ` at ${data.location}`;
+        }
+        return eventSummary;
+      }
+      case QRType.URL: {
+        return `website link to ${data.url || ''}`;
+      }
+      case QRType.TEXT: {
+        return `text content '${data.text || ''}'`;
+      }
+      default: {
+        const typeStr = type as string;
+        const typeLabel = typeStr.charAt(0).toUpperCase() + typeStr.slice(1).toLowerCase();
+        return `${typeLabel} - Scan to view content`;
+      }
+    }
+  } catch (err) {
+    console.error("Failed to generate dynamic summary:", err);
+    const typeStr = type as string;
+    const typeLabel = typeStr.charAt(0).toUpperCase() + typeStr.slice(1).toLowerCase();
+    return `${typeLabel} - Scan to view content`;
+  }
+};
 
 /**
  * A component that renders a QR code to a canvas element.
@@ -224,8 +337,15 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({ config, s
 
   }, [config, size, qrData, logoImg, borderLogoImg, onRendered]);
 
-  const typeLabel = config.type.charAt(0).toUpperCase() + config.type.slice(1).toLowerCase();
-  const ariaLabel = `QR Code for ${typeLabel} - ${config.value ? 'Scan to view content' : 'Empty'}`;
+  let ariaLabel = '';
+  if (!config.value) {
+    const typeLabel = config.type.charAt(0).toUpperCase() + config.type.slice(1).toLowerCase();
+    ariaLabel = `QR Code for ${typeLabel} - Empty`;
+  } else {
+    const dynamicSummary = getDynamicSummary(config.type, config.value);
+    const fullLabel = `QR Code for ${dynamicSummary}`;
+    ariaLabel = fullLabel.length <= 120 ? fullLabel : fullLabel.substring(0, 117) + '...';
+  }
 
   const aspectRatioClass = {
     [SocialFormat.SQUARE_1_1]: 'aspect-square',

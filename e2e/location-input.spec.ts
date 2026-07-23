@@ -61,7 +61,7 @@ test.describe('Location QR type', () => {
     await expect(page.getByLabel('Longitude')).toHaveValue('-0.1278');
 
     // A valid QR code should be rendered (img alt changes from "Empty" to content)
-    await expect(page.getByRole('img', { name: /qr code for location - scan to view content/i })).toBeVisible();
+    await expect(page.getByRole('img', { name: /qr code for location at latitude/i })).toBeVisible();
   });
 
   test('"Use Current Location" shows loading state while fetching', async ({ page, context }) => {
