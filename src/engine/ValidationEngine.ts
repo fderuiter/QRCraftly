@@ -3,9 +3,17 @@ import { LOW_RELIABILITY_PATTERNS, SYSTEM_LIMITS } from '../constants';
 import { getContrastRatio } from '../utils/colorUtils';
 import { parseProtocol, PROTOCOL_PREFIXES, SOCIAL_DOMAINS } from '../utils/protocol';
 import { SafeUrlPipeline } from '../utils/url';
+import { parseCoordinate, hydrateLocationData } from '../utils/qr-generators/location';
 
+/**
+ * Core validation and sanitization engine for QR code generation.
+ * Handles containment profiles, regex validation, protocol identification,
+ * payload sanitization, and scannability heuristics.
+ */
 export const ValidationEngine = {
-  // Formal Containment Profiles
+  /**
+   * Formal containment profiles for validating structured text and emails.
+   */
   CONTAINMENT_PROFILES: {
     URL: /^(?:https?|ftp):\/\/[^\s\x00-\x1F\x7F-\x9F\u200B-\u200D\uFEFF]+$/i,
     EMAIL: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
@@ -14,23 +22,57 @@ export const ValidationEngine = {
     STRICT_NO_CONTROL: /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F\u200B-\u200D\uFEFF]/
   },
 
-  // Shared regex patterns for data parsing and validation
+  /**
+   * Regular expression pattern to match strict control and zero-width characters.
+   */
   REGEX_STRICT_CONTROL_CHARS: /[\x00-\x1F\x7F-\x9F]+/g,
+  /**
+   * Regular expression pattern to match format-preserving control characters.
+   */
   REGEX_PRESERVE_FORMAT_CONTROL_CHARS: /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g,
+  /**
+   * Regular expression pattern to match characters unsafe in a URL structure.
+   */
   REGEX_URL_UNSAFE_CHARS: SafeUrlPipeline.REGEX_URL_UNSAFE_CHARS,
+  /**
+   * Regular expression pattern to match characters that need escaping in WIFI configurations.
+   */
   REGEX_ESCAPE_WIFI: /([\\;,":])/g,
+  /**
+   * Regular expression pattern to match escaped WIFI characters for unescaping.
+   */
   REGEX_UNESCAPE_WIFI: /\\([\\;,":])/g,
+  /**
+   * Regular expression pattern to split WIFI parameters avoiding escaped semicolons.
+   */
   REGEX_SPLIT_WIFI: /(?<!\\);/,
+  /**
+   * Regular expression pattern to match characters that need escaping in vCard entries.
+   */
   REGEX_ESCAPE_VCARD: /([;,])/g,
+  /**
+   * Regular expression pattern to match escaped vCard characters for unescaping.
+   */
   REGEX_UNESCAPE_VCARD: /\\([;,])/g,
+  /**
+   * Regular expression pattern to split vCard parameters avoiding escaped semicolons.
+   */
   REGEX_SPLIT_VCARD: /(?<!\\);/,
 
+  /**
+   * List of dangerous protocols that must be blocked for security.
+   */
   DANGEROUS_PROTOCOLS: SafeUrlPipeline.DANGEROUS_PROTOCOLS,
 
-  // Protocol Identification
+  /**
+   * Identifies the QR code type from the raw input payload string.
+   * @param raw - The raw input payload string to identify.
+   * @returns The identified QRType, or null if empty.
+   */
   identifyProtocol(raw: string): QRType | null {
     if (!raw) return null;
     
+    if (raw.toLowerCase().startsWith('geo:')) return QRType.LOCATION;
     if (raw.startsWith('WIFI:')) return QRType.WIFI;
     if (raw.includes('BEGIN:VCARD')) return QRType.VCARD;
     if (raw.includes('BEGIN:VEVENT') || raw.includes('BEGIN:VCALENDAR')) return QRType.EVENT;
@@ -70,6 +112,12 @@ export const ValidationEngine = {
     return QRType.TEXT;
   },
 
+  /**
+   * Verifies if a raw string can be successfully hydrated into the specified QR type.
+   * @param raw - The raw QR code payload string.
+   * @param type - The target QR code type.
+   * @returns True if the payload can be hydrated, false otherwise.
+   */
   canHydrate(raw: string, type: QRType): boolean {
     const identified = this.identifyProtocol(raw);
     if (identified === type) return true;
@@ -77,12 +125,20 @@ export const ValidationEngine = {
     return false;
   },
 
-  // Security sanitization
+  /**
+   * Checks whether the given URL contains dangerous schemes or matches suspicious patterns.
+   * @param url - The input URL to evaluate, which may be undefined.
+   * @returns True if the URL is dangerous and should be blocked, false otherwise.
+   */
   isDangerousUrl(url: string | undefined): boolean {
     return SafeUrlPipeline.isDangerous(url);
   },
 
-  // Comprehensive Config Validation
+  /**
+   * Performs full-scale validation on a complete QR configuration profile.
+   * @param config - The QR code generation configuration profile.
+   * @returns An array of security or structure violations.
+   */
   validateConfig(config: QRConfig): string[] {
     const violations: string[] = [];
 
@@ -134,12 +190,28 @@ export const ValidationEngine = {
         if (config.value && this.isDangerousUrl(config.value)) {
           violations.push('URI_INJECTION_VIOLATION');
         }
+      } else if (type === QRType.LOCATION) {
+        const { latitude, longitude } = hydrateLocationData(config.value);
+        const lat = parseCoordinate(latitude);
+        const lng = parseCoordinate(longitude);
+
+        if (lat !== null && (lat < -90 || lat > 90)) {
+          violations.push('LATITUDE_OUT_OF_BOUNDS_VIOLATION');
+        }
+        if (lng !== null && (lng < -180 || lng > 180)) {
+          violations.push('LONGITUDE_OUT_OF_BOUNDS_VIOLATION');
+        }
       }
     }
 
     return violations;
   },
 
+  /**
+   * Sanitizes all text-based fields inside a QR configuration by stripping control characters.
+   * @param config - The original QR configuration object.
+   * @returns A sanitized clone of the QR configuration.
+   */
   sanitizeConfig(config: QRConfig): QRConfig {
     const clean = { ...config };
     if (clean.borderText) {
@@ -162,31 +234,60 @@ export const ValidationEngine = {
     return clean;
   },
 
+  /**
+   * Sanitizes a plain input string by stripping control characters and cutting off query parameters.
+   * @param str - The raw user input string.
+   * @returns The sanitized input string.
+   */
   sanitizeInput(str: string): string {
     const noControl = str.replace(this.REGEX_STRICT_CONTROL_CHARS, '');
     return noControl.split('?')[0];
   },
 
+  /**
+   * Normalizes a social handle by stripping leading at signs and unsafe characters.
+   * @param handle - The raw social handle.
+   * @returns The sanitized and normalized social handle.
+   */
   sanitizeSocialHandle(handle: string): string {
     const withoutAt = handle.replace(/^@+/, '');
     return withoutAt.replace(/[^a-zA-Z0-9_.\-]/g, '');
   },
 
+  /**
+   * Cleans a phone number by stripping any characters that are not digits, symbols, or formatting markers.
+   * @param number - The raw phone number string.
+   * @returns The cleaned phone number string.
+   */
   cleanPhoneNumber(number: string): string {
     return number.replace(/[^0-9+*#\-().]/g, '');
   },
 
-  // Escaping logic
+  /**
+   * Escapes specific special characters in a WIFI SSID or password string.
+   * @param str - The raw SSID or password string, which can be undefined.
+   * @returns The escaped WIFI parameter string.
+   */
   escapeWifi(str: string | undefined): string {
     if (!str) return '';
     return str.replace(this.REGEX_ESCAPE_WIFI, '\\$1');
   },
 
+  /**
+   * Unescapes escaped special characters in a WIFI SSID or password string.
+   * @param str - The escaped WIFI string, which can be undefined.
+   * @returns The unescaped WIFI parameter string.
+   */
   unescapeWifi(str: string | undefined): string {
     if (!str) return '';
     return str.replace(this.REGEX_UNESCAPE_WIFI, '$1');
   },
 
+  /**
+   * Escapes special characters and formats newlines for vCard and VEvent properties.
+   * @param str - The raw field value string, which can be undefined.
+   * @returns The escaped vCard/VEvent property string.
+   */
   escapeVCardEvent(str: string | undefined): string {
     if (!str) return '';
     return str
@@ -195,6 +296,11 @@ export const ValidationEngine = {
       .replace(this.REGEX_ESCAPE_VCARD, '\\$1');
   },
 
+  /**
+   * Unescapes formatting and special characters in vCard or VEvent fields.
+   * @param str - The escaped vCard/VEvent property string, which can be undefined.
+   * @returns The restored raw field value string.
+   */
   unescapeVCardEvent(str: string | undefined): string {
     if (!str) return '';
     return str
@@ -203,7 +309,11 @@ export const ValidationEngine = {
       .replace(/\\\\/g, '\\');
   },
 
-  // Scannability scoring heuristic
+  /**
+   * Analyzes a QR configuration profile and returns a scannability score and recommendations.
+   * @param config - The QR code generation configuration.
+   * @returns An object containing the rating score and an array of scannability warning messages.
+   */
   calculateScannability(config: QRConfig): { score: number; warnings: string[] } {
     let score = 100;
     const warnings: string[] = [];
