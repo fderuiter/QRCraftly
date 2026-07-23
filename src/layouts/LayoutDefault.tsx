@@ -40,7 +40,18 @@ export default function LayoutDefault({ children }: { children: React.ReactNode 
 
   return (
     <ToastProvider>
-      <main className="flex min-h-screen flex-col bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-200 antialiased font-sans" data-hydrated={hydrated}>
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-white dark:focus:bg-slate-800 focus:text-teal-700 dark:focus:text-teal-400 focus:border-2 focus:border-teal-700 focus:rounded-lg focus:outline-none focus:shadow-lg transition-all"
+      >
+        Skip to main content
+      </a>
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="flex min-h-screen flex-col bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-200 antialiased font-sans focus:outline-none"
+        data-hydrated={hydrated}
+      >
         <ErrorBoundary>
           {children}
         </ErrorBoundary>
