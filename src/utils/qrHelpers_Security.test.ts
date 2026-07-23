@@ -17,7 +17,7 @@
 */
 
 import { describe, it, expect } from 'vitest';
-import { constructPaymentString } from './qrHelpers';
+import { constructPaymentString } from './qr-generators/payment';
 import { CryptoNetwork } from '../types';
 
 describe('qrHelpers Security', () => {

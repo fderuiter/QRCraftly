@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { constructUrlString } from './qrHelpers';
+import { constructUrlString } from './qr-generators/url';
 
 describe('qrHelpers Security - URL', () => {
   it('should block javascript: protocol', () => {

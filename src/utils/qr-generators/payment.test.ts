@@ -38,14 +38,20 @@ describe('Payment generator', () => {
     expect(result.address).toBe('1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa');
   });
 
-  it('throws for http urls', () => {
-    expect(() => hydratePaymentData('https://example.com')).toThrow('Invalid payment string');
-    expect(() => hydratePaymentData('http://example.com')).toThrow('Invalid payment string');
+  it('returns default state for http urls', () => {
+    const expected = {
+      network: CryptoNetwork.BITCOIN,
+      address: '',
+      amount: '',
+      label: ''
+    };
+    expect(hydratePaymentData('https://example.com')).toEqual(expected);
+    expect(hydratePaymentData('http://example.com')).toEqual(expected);
   });
-});
 
   it('handles query parameters without amount or label', () => {
     const result = hydratePaymentData('bitcoin:1A1z?other=123');
     expect(result.amount).toBe('');
     expect(result.label).toBe('');
   });
+});

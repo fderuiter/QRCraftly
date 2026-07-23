@@ -18,15 +18,13 @@
 
 import { FIXTURES } from '../../tests/fixtures/data';
 import { describe, it, expect } from 'vitest';
-import {
-  constructWifiString,
-  constructEmailString,
-  constructVCardString,
-  constructPhoneString,
-  constructSmsString,
-  constructPaymentString,
-  constructEventString,
-} from './qrHelpers';
+import { constructWifiString } from './qr-generators/wifi';
+import { constructEmailString } from './qr-generators/email';
+import { constructVCardString } from './qr-generators/vcard';
+import { constructPhoneString } from './qr-generators/phone';
+import { constructSmsString } from './qr-generators/sms';
+import { constructPaymentString } from './qr-generators/payment';
+import { constructEventString } from './qr-generators/event';
 import { WifiData, EmailData, VCardData, PhoneData, SmsData, PaymentData, EventData, WifiEncryption, CryptoNetwork } from '../types';
 
 describe('QR Helpers', () => {

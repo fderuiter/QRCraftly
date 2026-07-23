@@ -33,7 +33,7 @@ export const constructUrlString = (data: UrlData): string => {
 /**
  * Hydrates UrlData from a raw string.
  */
-export const hydrateUrlData = (raw: string): UrlData => {
+const hydrateUrlData = (raw: string): UrlData => {
   return { url: raw };
 };
 
