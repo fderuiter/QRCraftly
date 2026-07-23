@@ -18,11 +18,13 @@
 
 import React from 'react';
 import { Button } from '../ui/Button';
-import { Square, Smartphone } from 'lucide-react';
+import { Square, Smartphone, AlertTriangle } from 'lucide-react';
 import { QRConfig, SocialFormat, TemplateStyle } from '../../types';
 import { ColorInput } from '../ui/ColorInput';
 import { RangeInput } from '../ui/RangeInput';
 import { CheckboxField, TextField } from '../ui/FormFields';
+import { getContrastRatio } from '../../utils/colorUtils';
+import { Alert } from '../ui/Alert';
 
 interface LayoutControlsProps {
   config: QRConfig;
@@ -72,6 +74,12 @@ export const LayoutControls: React.FC<LayoutControlsProps> = ({ config, onChange
   // Whether custom (decoupled) background / text colors are active
   const hasBgOverride = config.templateBgColor !== undefined;
   const hasTextOverride = config.templateTextColor !== undefined;
+
+  // Resolved colors & contrast
+  const activeBg = config.templateBgColor ?? config.bgColor;
+  const activeText = config.templateTextColor ?? config.fgColor;
+  const contrastRatio = getContrastRatio(activeText, activeBg);
+  const isLowContrast = showAdvanced && contrastRatio < 4.5;
 
   return (
     <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
@@ -151,7 +159,15 @@ export const LayoutControls: React.FC<LayoutControlsProps> = ({ config, onChange
           {/* Template Background Color */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs text-slate-500 dark:text-slate-400">Template Background</span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-500 dark:text-slate-400">Template Background</span>
+                {isLowContrast && (
+                  <span className="flex items-center gap-1 text-xs text-amber-700 dark:text-amber-400 font-medium" data-testid="layout-bg-warning">
+                    <AlertTriangle className="w-3 h-3" aria-hidden="true" />
+                    Low Contrast ({contrastRatio.toFixed(1)})
+                  </span>
+                )}
+              </div>
               <CheckboxField
                 id="override-bg-color"
                 checked={hasBgOverride}
@@ -178,7 +194,15 @@ export const LayoutControls: React.FC<LayoutControlsProps> = ({ config, onChange
           {/* Template Text / Accent Color */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs text-slate-500 dark:text-slate-400">Template Text Color</span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-500 dark:text-slate-400">Template Text Color</span>
+                {isLowContrast && (
+                  <span className="flex items-center gap-1 text-xs text-amber-700 dark:text-amber-400 font-medium" data-testid="layout-text-warning">
+                    <AlertTriangle className="w-3 h-3" aria-hidden="true" />
+                    Low Contrast ({contrastRatio.toFixed(1)})
+                  </span>
+                )}
+              </div>
               <CheckboxField
                 id="override-text-color"
                 checked={hasTextOverride}
@@ -213,6 +237,13 @@ export const LayoutControls: React.FC<LayoutControlsProps> = ({ config, onChange
             step={0.05}
             formatValue={(val) => `${Math.round(val * 100)}%`}
           />
+
+          {/* Amber Alert Card detailing the legibility risk when template contrast is insufficient */}
+          {isLowContrast && (
+            <Alert variant="warning" className="mt-4">
+              The contrast ratio between the layout's text and background is low ({contrastRatio.toFixed(2)}). Ensure contrast is above 4.5:1 for ideal legibility on export.
+            </Alert>
+          )}
         </div>
       )}
     </div>
