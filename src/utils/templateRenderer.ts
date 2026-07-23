@@ -18,6 +18,7 @@
 
 import { QRConfig, QRModules, SocialFormat, TemplateStyle } from '../types';
 import { drawQRInternal } from './qrRenderer';
+import { drawRoundRect } from './canvasHelpers';
 
 /**
  * Standard high-resolution dimensions for each social media format.
@@ -277,16 +278,7 @@ export function drawWithTemplate(
     const rh = qrSize + safePad * 2;
 
     ctx.beginPath();
-    ctx.moveTo(rx + r, ry);
-    ctx.lineTo(rx + rw - r, ry);
-    ctx.quadraticCurveTo(rx + rw, ry, rx + rw, ry + r);
-    ctx.lineTo(rx + rw, ry + rh - r);
-    ctx.quadraticCurveTo(rx + rw, ry + rh, rx + rw - r, ry + rh);
-    ctx.lineTo(rx + r, ry + rh);
-    ctx.quadraticCurveTo(rx, ry + rh, rx, ry + rh - r);
-    ctx.lineTo(rx, ry + r);
-    ctx.quadraticCurveTo(rx, ry, rx + r, ry);
-    ctx.closePath();
+    drawRoundRect(ctx, rx, ry, rw, rh, r);
     ctx.fill();
     ctx.restore();
   }

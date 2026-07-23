@@ -417,3 +417,30 @@ describe('drawWithTemplate – color resolution', () => {
     expect((ctx as any)._strokeStyleHistory).toContain('#ff6600');
   });
 });
+
+describe('drawWithTemplate – safe-zone background refactoring', () => {
+  beforeEach(() => {
+    vi.spyOn(qrRenderer, 'drawQRInternal').mockImplementation(vi.fn());
+  });
+
+  it('draws safe-zone background with drawRoundRect utilizing the shared helper geometry', () => {
+    const config: QRConfig = {
+      ...(DEFAULT_CONFIG as QRConfig),
+      socialFormat: SocialFormat.STORY_9_16,
+      templateStyle: TemplateStyle.MINIMALIST,
+      bgColor: '#ffffff',
+    };
+    const ctx = makeMockCtx();
+    const modules = makeModules();
+
+    drawWithTemplate(ctx, modules, config, null, null, 1080, 1920, modules.size);
+
+    // Should call beginPath, moveTo, lineTo, quadraticCurveTo, closePath, and fill
+    expect(ctx.beginPath).toHaveBeenCalled();
+    expect(ctx.moveTo).toHaveBeenCalled();
+    expect(ctx.lineTo).toHaveBeenCalled();
+    expect(ctx.quadraticCurveTo).toHaveBeenCalledTimes(4);
+    expect(ctx.closePath).toHaveBeenCalled();
+    expect(ctx.fill).toHaveBeenCalled();
+  });
+});
