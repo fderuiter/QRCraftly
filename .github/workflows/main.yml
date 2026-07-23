@@ -21,7 +21,6 @@ on:
       - '.github/workflows/**'
   pull_request:
     branches: [main]
-    paths: *workflow_paths
 
 permissions:
   contents: read
@@ -263,7 +262,7 @@ jobs:
           temporaryPublicStorage: true
 
       - name: Post Lighthouse Comment
-        if: always() && github.event_name == 'pull_request'
+        if: always()
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
         env:
           LINKS: ${{ steps.lighthouse_audit.outputs.links }}
@@ -271,43 +270,71 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const links = process.env.LINKS ? JSON.parse(process.env.LINKS) : {};
-            const manifest = process.env.MANIFEST ? JSON.parse(process.env.MANIFEST) : [];
-
-            if (!manifest || manifest.length === 0) {
-               core.setFailed('Lighthouse MANIFEST is missing or empty. Please check the Lighthouse CI action logs.');
-               return;
+            let links = {};
+            let manifest = [];
+            try {
+              links = process.env.LINKS ? JSON.parse(process.env.LINKS) : {};
+            } catch (e) {
+              console.log('Error parsing process.env.LINKS:', e);
+            }
+            try {
+              manifest = process.env.MANIFEST ? JSON.parse(process.env.MANIFEST) : [];
+            } catch (e) {
+              console.log('Error parsing process.env.MANIFEST:', e);
             }
 
-            const formatScore = (score) => Math.round(score * 100);
-            const scoreIcon = (score) => score >= 0.9 ? '🟢' : score >= 0.5 ? '🟠' : '🔴';
-
-            let comment = '## ⚡️ Lighthouse Report\n\n';
-
-            manifest.forEach((result) => {
-              const summary = result.summary;
-              const reportUrl = links[result.url];
-
-              comment += `### URL: ${result.url}\n`;
-              if (reportUrl) comment += `[View Full Report](${reportUrl})\n\n`;
-
-              comment += '| Category | Score |\n';
-              comment += '| --- | --- |\n';
-
-              ['performance', 'accessibility', 'best-practices', 'seo', 'pwa'].forEach(key => {
-                if (summary[key] !== undefined) {
-                  const score = summary[key];
-                  comment += `| ${key} | ${scoreIcon(score)} ${formatScore(score)} |\n`;
+            // Always print the report links to the pull request/workflow check log
+            if (manifest && manifest.length > 0) {
+              console.log('\n======================================================================');
+              console.log('⚡️ LIGHTHOUSE AUDIT REPORT LINKS FOR THIS BUILD ⚡️');
+              manifest.forEach((result) => {
+                const reportUrl = links[result.url];
+                if (reportUrl) {
+                  console.log(`- URL: ${result.url}`);
+                  console.log(`  Report: ${reportUrl}`);
                 }
               });
-              comment += '\n';
-            });
+              console.log('======================================================================\n');
+            } else {
+              console.log('No Lighthouse manifest found or Lighthouse audit was not completed.');
+            }
 
-            await github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: comment
-            });
+            if (context.eventName === 'pull_request') {
+              if (!manifest || manifest.length === 0) {
+                 core.setFailed('Lighthouse MANIFEST is missing or empty. Please check the Lighthouse CI action logs.');
+                 return;
+              }
+
+              const formatScore = (score) => Math.round(score * 100);
+              const scoreIcon = (score) => score >= 0.9 ? '🟢' : score >= 0.5 ? '🟠' : '🔴';
+
+              let comment = '## ⚡️ Lighthouse Report\n\n';
+
+              manifest.forEach((result) => {
+                const summary = result.summary;
+                const reportUrl = links[result.url];
+
+                comment += `### URL: ${result.url}\n`;
+                if (reportUrl) comment += `[View Full Report](${reportUrl})\n\n`;
+
+                comment += '| Category | Score |\n';
+                comment += '| --- | --- |\n';
+
+                ['performance', 'accessibility', 'best-practices', 'seo', 'pwa'].forEach(key => {
+                  if (summary[key] !== undefined) {
+                    const score = summary[key];
+                    comment += `| ${key} | ${scoreIcon(score)} ${formatScore(score)} |\n`;
+                  }
+                });
+                comment += '\n';
+              });
+
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: comment
+              });
+            }
 
 
