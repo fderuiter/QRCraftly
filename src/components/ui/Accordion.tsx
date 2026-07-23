@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useId } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 
 interface AccordionItemProps {
@@ -9,13 +9,18 @@ interface AccordionItemProps {
 
 export function AccordionItem({ title, children, defaultOpen = false }: AccordionItemProps) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
+  const id = useId();
+  const buttonId = `accordion-button-${id}`;
+  const panelId = `accordion-panel-${id}`;
 
   return (
     <div className="border border-slate-200 dark:border-slate-700 rounded-xl mb-4 bg-white dark:bg-slate-800 overflow-hidden transition-all duration-300">
       <button
+        id={buttonId}
         onClick={() => setIsOpen(!isOpen)}
         className="w-full text-left px-5 py-4 flex justify-between items-center"
         aria-expanded={isOpen}
+        aria-controls={panelId}
       >
         <span className="font-semibold text-slate-800 dark:text-slate-200">{title}</span>
         {isOpen ? (
@@ -25,7 +30,12 @@ export function AccordionItem({ title, children, defaultOpen = false }: Accordio
         )}
       </button>
       {isOpen && (
-        <div className="px-5 pb-4 text-slate-600 dark:text-slate-400">
+        <div
+          id={panelId}
+          role="region"
+          aria-labelledby={buttonId}
+          className="px-5 pb-4 text-slate-600 dark:text-slate-400"
+        >
           {children}
         </div>
       )}

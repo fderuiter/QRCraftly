@@ -21,7 +21,7 @@
   "scripts": {
     "predev": "node scripts/compile_docs_manifest.js",
     "dev": "vite",
-    "prebuild": "node scripts/audit_markdown.js && node scripts/compile_docs_manifest.js",
+    "prebuild": "node scripts/audit_markdown.js && node scripts/compile_docs_manifest.js && eslint .",
     "build": "vite build",
     "postbuild": "node scripts/generate_sitemap.js",
     "preview": "vite preview",
@@ -57,6 +57,7 @@
     "axe-core": "^4.12.1",
     "eslint": "^9.39.4",
     "eslint-plugin-jsdoc": "^63.0.13",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-security": "^4.0.0",
