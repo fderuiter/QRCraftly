@@ -20,7 +20,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { QRConfig, SocialFormat, TemplateStyle } from '../types';
 import { drawQR, drawQRInternal } from '../utils/qrRenderer';
 import { drawWithTemplate, SOCIAL_DIMENSIONS } from '../utils/templateRenderer';
-import { useImage } from '../utils/hooks';
+import { useImage } from '@/hooks/useImage';
 
 /**
  * Props for the QRCanvas component.
