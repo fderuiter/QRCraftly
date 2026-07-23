@@ -17,7 +17,7 @@
 */
 
 import { describe, it, expect } from 'vitest';
-import { constructEmailString } from './qrHelpers';
+import { constructEmailString } from './qr-generators/email';
 import { EmailData } from '../types';
 
 describe('QR Helpers Email Security', () => {

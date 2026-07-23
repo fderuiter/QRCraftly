@@ -17,13 +17,11 @@
 */
 
 import { describe, it, expect } from 'vitest';
-import {
-  constructEmailString,
-  constructVCardString,
-  constructPaymentString,
-  constructSmsString,
-  constructPhoneString
-} from './qrHelpers';
+import { constructEmailString } from './qr-generators/email';
+import { constructVCardString } from './qr-generators/vcard';
+import { constructPaymentString } from './qr-generators/payment';
+import { constructSmsString } from './qr-generators/sms';
+import { constructPhoneString } from './qr-generators/phone';
 import { EmailData, VCardData, PaymentData, CryptoNetwork, SmsData, PhoneData } from '../types';
 
 describe('QR Helpers Sad Paths', () => {
