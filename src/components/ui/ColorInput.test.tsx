@@ -20,7 +20,7 @@ describe('ColorInput Component Accessibility', () => {
 
   it('should wrap elements in a focus-within container with rose-500 focus indicator', () => {
     const handleChange = vi.fn();
-    const { container } = render(
+    render(
       <ColorInput
         id="test-color"
         label="Test Color Label"
