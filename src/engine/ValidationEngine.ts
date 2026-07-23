@@ -106,7 +106,7 @@ export const ValidationEngine = {
       // Determine the effective type. Prefer explicit config.type, otherwise try to identify it.
       const type = config.type || this.identifyProtocol(config.value);
 
-      if (type === QRType.URL) {
+      if (type === QRType.URL || type === QRType.MEETING) {
         if (this.isDangerousUrl(config.value)) {
           violations.push('URI_INJECTION_VIOLATION');
         } else if (!this.CONTAINMENT_PROFILES.URL.test(config.value) && config.value.startsWith('http')) {
@@ -121,10 +121,45 @@ export const ValidationEngine = {
         if (!this.CONTAINMENT_PROFILES.EMAIL.test(emailPart)) {
           violations.push('EMAIL_STRUCTURE_VIOLATION');
         }
+      } else if (type === QRType.VCARD) {
+        // Extract website and check if dangerous
+        const urlMatch = config.value.match(/^URL(?:;[^:]*)?:([^\r\n]+)/mi);
+        if (urlMatch) {
+          const vcardUrl = urlMatch[1].trim();
+          if (this.isDangerousUrl(vcardUrl)) {
+            violations.push('URI_INJECTION_VIOLATION');
+          }
+        }
+      } else if (type === QRType.PAYMENT) {
+        if (config.value && this.isDangerousUrl(config.value)) {
+          violations.push('URI_INJECTION_VIOLATION');
+        }
       }
     }
 
     return violations;
+  },
+
+  sanitizeConfig(config: QRConfig): QRConfig {
+    const clean = { ...config };
+    if (clean.borderText) {
+      clean.borderText = clean.borderText.replace(this.REGEX_STRICT_CONTROL_CHARS, '');
+    }
+    if (clean.templateHeadline) {
+      clean.templateHeadline = clean.templateHeadline.replace(this.REGEX_STRICT_CONTROL_CHARS, '');
+    }
+    if (clean.templateSubtext) {
+      clean.templateSubtext = clean.templateSubtext.replace(this.REGEX_STRICT_CONTROL_CHARS, '');
+    }
+    if (clean.value) {
+      const type = clean.type || this.identifyProtocol(clean.value);
+      if (type === QRType.VCARD || type === QRType.EVENT) {
+        clean.value = clean.value.replace(this.REGEX_PRESERVE_FORMAT_CONTROL_CHARS, '');
+      } else {
+        clean.value = clean.value.replace(this.REGEX_STRICT_CONTROL_CHARS, '');
+      }
+    }
+    return clean;
   },
 
   sanitizeInput(str: string): string {
@@ -144,9 +179,7 @@ export const ValidationEngine = {
   // Escaping logic
   escapeWifi(str: string | undefined): string {
     if (!str) return '';
-    return str
-      .replace(this.REGEX_STRICT_CONTROL_CHARS, '')
-      .replace(this.REGEX_ESCAPE_WIFI, '\\$1');
+    return str.replace(this.REGEX_ESCAPE_WIFI, '\\$1');
   },
 
   unescapeWifi(str: string | undefined): string {
@@ -157,7 +190,6 @@ export const ValidationEngine = {
   escapeVCardEvent(str: string | undefined): string {
     if (!str) return '';
     return str
-      .replace(this.REGEX_PRESERVE_FORMAT_CONTROL_CHARS, '')
       .replace(/\\/g, '\\\\')
       .replace(/\r\n|\r|\n/g, '\\n')
       .replace(this.REGEX_ESCAPE_VCARD, '\\$1');

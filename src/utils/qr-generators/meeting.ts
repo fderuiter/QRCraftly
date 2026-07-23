@@ -30,7 +30,6 @@ import { ValidationEngine } from '../../engine/ValidationEngine';
  */
 export const constructMeetingString = (data: MeetingData): string => {
   if (!data.url) return '';
-  if (ValidationEngine.isDangerousUrl(data.url)) return '';
   return data.url.trim();
 };
 

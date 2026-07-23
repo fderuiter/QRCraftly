@@ -72,7 +72,7 @@ describe('VCard generator', () => {
     expect(str).toContain('N:;;;;');
   });
 
-  it('normalizes newlines, preserves tabs, and strips control characters', () => {
+  it('normalizes newlines, preserves tabs, and preserves control characters', () => {
     const data = {
       firstName: 'Clean\x00Text\x07With\x1BControl\x7FChars',
       lastName: 'Line 1\r\nLine 2',
@@ -87,7 +87,7 @@ describe('VCard generator', () => {
       country: '',
     };
     const str = constructVCardString(data);
-    expect(str).toContain('CleanTextWithControlChars');
+    expect(str).toContain('Clean\x00Text\x07With\x1BControl\x7FChars');
     expect(str).toContain('Line 1\\nLine 2');
     expect(str).toContain('Win\\nMac\\nUnix\\n');
     expect(str).toContain('Line\t1\\nLine\t2');

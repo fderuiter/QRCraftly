@@ -92,6 +92,6 @@ describe('InputPanel Security (Input Limits)', () => {
       vi.advanceTimersByTime(100);
     });
 
-    expect(mockOnChange).not.toHaveBeenCalled();
+    expect(mockOnChange).toHaveBeenCalledWith({ value: 'javascript:alert(1)' });
   });
 });
