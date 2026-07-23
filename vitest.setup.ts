@@ -117,12 +117,106 @@ if (!HTMLCanvasElement.prototype.toDataURL) {
   };
 }
 
-global.fetch = vi.fn().mockResolvedValue({
-  ok: true,
-  json: () => Promise.resolve({}),
-  blob: () => Promise.resolve(new Blob()),
-  text: () => Promise.resolve(''),
-});
+import http from 'node:http';
+import https from 'node:https';
+
+const originalHttpRequest = http.request;
+const originalHttpGet = http.get;
+const originalHttpsRequest = https.request;
+const originalHttpsGet = https.get;
+
+function isUrlAllowed(input: any): boolean {
+  if (!input) return true;
+  let urlStr = '';
+  if (typeof input === 'string') {
+    urlStr = input;
+  } else if (typeof input === 'object' && input !== null) {
+    if ('url' in input) {
+      urlStr = input.url;
+    } else if (typeof input.toString === 'function') {
+      urlStr = input.toString();
+    }
+  }
+
+  if (!urlStr.includes('://') && !urlStr.startsWith('//')) {
+    return true;
+  }
+
+  try {
+    const url = new URL(urlStr);
+    const hostname = url.hostname.toLowerCase();
+    return (
+      hostname === 'localhost' ||
+      hostname === '127.0.0.1' ||
+      hostname === '0.0.0.0' ||
+      hostname.endsWith('.localhost')
+    );
+  } catch {
+    return true;
+  }
+}
+
+function verifyNodeUrl(options: any) {
+  let host = '';
+  if (typeof options === 'string') {
+    try {
+      const u = new URL(options);
+      host = u.hostname;
+    } catch {
+      host = options;
+    }
+  } else if (options) {
+    host = options.hostname || options.host || '';
+    if (host.includes(':')) {
+      host = host.split(':')[0];
+    }
+  }
+
+  if (host) {
+    const lowerHost = host.toLowerCase();
+    if (
+      lowerHost !== 'localhost' &&
+      lowerHost !== '127.0.0.1' &&
+      lowerHost !== '0.0.0.0' &&
+      !lowerHost.endsWith('.localhost') &&
+      lowerHost !== ''
+    ) {
+      throw new Error(`Unmocked external network request to http://${host} is blocked in the sandboxed test environment.`);
+    }
+  }
+}
+
+http.request = function (this: any, options: any, ...args: any[]) {
+  verifyNodeUrl(options);
+  return (originalHttpRequest as any).apply(this, [options, ...args]);
+} as any;
+
+http.get = function (this: any, options: any, ...args: any[]) {
+  verifyNodeUrl(options);
+  return (originalHttpGet as any).apply(this, [options, ...args]);
+} as any;
+
+https.request = function (this: any, options: any, ...args: any[]) {
+  verifyNodeUrl(options);
+  return (originalHttpsRequest as any).apply(this, [options, ...args]);
+} as any;
+
+https.get = function (this: any, options: any, ...args: any[]) {
+  verifyNodeUrl(options);
+  return (originalHttpsGet as any).apply(this, [options, ...args]);
+} as any;
+
+global.fetch = vi.fn().mockImplementation((input: any) => {
+  if (!isUrlAllowed(input)) {
+    throw new Error(`Unmocked external network request to ${input} is blocked in the sandboxed test environment.`);
+  }
+  return Promise.resolve({
+    ok: true,
+    json: () => Promise.resolve({}),
+    blob: () => Promise.resolve(new Blob()),
+    text: () => Promise.resolve(''),
+  });
+}) as any;
 
 if (typeof URL.createObjectURL === 'undefined') {
   URL.createObjectURL = vi.fn().mockReturnValue('blob:mock-url');

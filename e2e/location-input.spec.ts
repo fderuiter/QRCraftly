@@ -16,7 +16,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 import { FIXTURES } from "../tests/fixtures/data";
 
 /**

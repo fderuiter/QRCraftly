@@ -3,6 +3,21 @@ import { useQRStore, useQRStoreSelector } from '@/context/QRContext';
 import { ScannabilityStatus } from './useScannability';
 import { useCapabilities } from './useCapabilities';
 
+const ALLOWED_TELEMETRY_KEYS = ['engine', 'styleId', 'errorType'];
+
+function sanitizeTelemetryPayload(payload: any): any {
+  if (!payload || typeof payload !== 'object') {
+    return {};
+  }
+  const sanitized: any = {};
+  for (const key of ALLOWED_TELEMETRY_KEYS) {
+    if (key in payload) {
+      sanitized[key] = payload[key];
+    }
+  }
+  return sanitized;
+}
+
 export function useTelemetry(status: ScannabilityStatus) {
   const store = useQRStore();
   const telemetryOptIn = useQRStoreSelector(state => state.preferences.telemetryOptIn);
@@ -10,11 +25,12 @@ export function useTelemetry(status: ScannabilityStatus) {
 
   const sendTelemetryPing = useCallback((detail: any) => {
     try {
+      const sanitized = sanitizeTelemetryPayload(detail);
       fetch('/api/telemetry/scannability', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         // eslint-disable-next-line no-restricted-syntax
-        body: JSON.stringify(detail),
+        body: JSON.stringify(sanitized),
         keepalive: true
       }).catch(() => {});
     } catch {}
