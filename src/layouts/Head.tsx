@@ -32,8 +32,6 @@ import { resolveDomainForPath, resolvePublicUrl, resolveImageUrl, getSanitizedPa
  * @returns {JSX.Element} The fragment containing meta and link tags.
  */
 export default function HeadDefault() {
-  const fontUrl = "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap";
-
   const pageContext = usePageContext();
   // Vike-react exposes the resolved config in pageContext.config
   // Cast to any to access is404 which might not be in the default type definition
@@ -143,10 +141,11 @@ export default function HeadDefault() {
       {/*
         Content Security Policy (CSP)
         - script-src 'unsafe-inline': Required for JSON-LD scripts and Vike hydration in SSG.
-        - style-src: Removed 'unsafe-inline' by refactoring font loading and dynamic preview styles.
+        - style-src: Restricted to 'self' following self-hosting of typographic assets.
+        - font-src: Restricted to 'self' following self-hosting of typographic assets.
         - object-src 'none': Prevents Flash/Java applets.
       */}
-      <meta httpEquiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';" />
+      <meta httpEquiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self'; font-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';" />
 
       {/*
         Note: 'viewport' and 'description' are handled by Vike/Config to avoid duplicates.
@@ -189,15 +188,6 @@ export default function HeadDefault() {
       <link rel="manifest" href="/manifest.json" />
       <link rel="icon" type="image/png" href="/favicon.png" />
       <link rel="apple-touch-icon" href="/favicon.png" />
-      <link rel="preconnect" href="https://fonts.googleapis.com" />
-      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-
-      {/*
-         Load fonts synchronously to prevent Layout Shifts (CLS).
-         Standard link tag is render-blocking which ensures fonts are ready
-         before first paint, avoiding layout shifts.
-      */}
-      <link rel="stylesheet" href={fontUrl} />
     </>
   );
 }
