@@ -19,6 +19,7 @@
 import { QRConfig } from '../types';
 import { SvgContext } from './svgContext';
 import { drawWithTemplate, SOCIAL_DIMENSIONS } from './templateRenderer';
+import { getQrTypeLabel, getQrTypeDescription } from './a11y';
 
 import { SafeUrlPipeline, normalizeUrl } from './url';
 
@@ -111,8 +112,12 @@ export async function generateQRSvg(config: QRConfig): Promise<string> {
   // Determine output dimensions from the social format (canonical resolution)
   const { width: svgWidth, height: svgHeight } = SOCIAL_DIMENSIONS[config.socialFormat];
 
-  // Create SVG context and render
-  const ctx = new SvgContext(svgWidth, svgHeight);
+  // Resolve metadata for accessibility
+  const title = `${getQrTypeLabel(config.type)} QR Code`;
+  const description = getQrTypeDescription(config.type, config.value);
+
+  // Create SVG context and render with title and description metadata
+  const ctx = new SvgContext(svgWidth, svgHeight, title, description);
 
   try {
     drawWithTemplate(

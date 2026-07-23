@@ -117,6 +117,9 @@ export class SvgContext {
   textAlign: string = 'start';
   textBaseline: string = 'alphabetic';
 
+  public title?: string;
+  public description?: string;
+
   // Mock canvas property for compatibility with drawQR signature
   readonly canvas: { width: number; height: number };
 
@@ -130,10 +133,12 @@ export class SvgContext {
   private _gradients: SvgRadialGradient[] = [];
   private _radialGradientCount = 0;
 
-  constructor(width: number, height: number) {
+  constructor(width: number, height: number, title?: string, description?: string) {
     this._width = width;
     this._height = height;
     this.canvas = { width, height };
+    this.title = title;
+    this.description = description;
   }
 
   createRadialGradient(x0: number, y0: number, r0: number, x1: number, y1: number, r1: number): SvgRadialGradient {
@@ -421,6 +426,9 @@ export class SvgContext {
    * Returns the complete SVG document as a string.
    */
   serialize(): string {
+    const titleTag = this.title ? `  <title>${this._escapeText(this.title)}</title>` : '';
+    const descTag = this.description ? `  <desc>${this._escapeText(this.description)}</desc>` : '';
+
     const defs = this._gradients.length > 0
       ? [
           `  <defs>`,
@@ -429,15 +437,25 @@ export class SvgContext {
         ]
       : [];
 
-    return [
+    const lines = [
       `<?xml version="1.0" encoding="UTF-8"?>`,
       `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"`,
       `     width="${this._width}" height="${this._height}"`,
       `     viewBox="0 0 ${this._width} ${this._height}">`,
-      ...defs,
-      ...this._elements,
-      `</svg>`,
-    ].join('\n');
+    ];
+
+    if (titleTag) {
+      lines.push(titleTag);
+    }
+    if (descTag) {
+      lines.push(descTag);
+    }
+
+    lines.push(...defs);
+    lines.push(...this._elements);
+    lines.push(`</svg>`);
+
+    return lines.join('\n');
   }
 
   // ── Private helpers ────────────────────────────────────────────────────────

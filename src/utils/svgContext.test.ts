@@ -239,4 +239,36 @@ describe('SvgContext', () => {
       expect(svg).not.toContain('stroke-dasharray');
     });
   });
+
+  describe('accessibility metadata', () => {
+    it('serializes title and desc elements directly underneath the opening svg tag', () => {
+      const ctx = new SvgContext(100, 100, 'Test Title', 'Test Description');
+      const svg = ctx.serialize();
+      expect(svg).toContain('<title>Test Title</title>');
+      expect(svg).toContain('<desc>Test Description</desc>');
+
+      // Verify they are positioned directly after the opening svg tag
+      const lines = svg.split('\n');
+      const svgOpenTagIndex = lines.findIndex(line => line.startsWith('<svg'));
+      expect(svgOpenTagIndex).toBeGreaterThanOrEqual(0);
+      expect(lines[svgOpenTagIndex + 3]).toBe('  <title>Test Title</title>');
+      expect(lines[svgOpenTagIndex + 4]).toBe('  <desc>Test Description</desc>');
+    });
+
+    it('cleanly omits title and desc tags if they are not provided', () => {
+      const ctx = new SvgContext(100, 100);
+      const svg = ctx.serialize();
+      expect(svg).not.toContain('<title>');
+      expect(svg).not.toContain('</title>');
+      expect(svg).not.toContain('<desc>');
+      expect(svg).not.toContain('</desc>');
+    });
+
+    it('escapes special characters inside title and description', () => {
+      const ctx = new SvgContext(100, 100, 'Custom <Title> & More', 'Special <Description> & Payload');
+      const svg = ctx.serialize();
+      expect(svg).toContain('<title>Custom &lt;Title&gt; &amp; More</title>');
+      expect(svg).toContain('<desc>Special &lt;Description&gt; &amp; Payload</desc>');
+    });
+  });
 });
