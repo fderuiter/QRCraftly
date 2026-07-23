@@ -58,7 +58,7 @@ export const TypeSelector: React.FC<TypeSelectorProps> = ({
           const className = `flex flex-col w-full items-center justify-center gap-1 px-2 py-2 rounded-lg text-xs font-medium transition-all ${
           isActive
             ? "bg-teal-50 dark:bg-slate-800 border border-teal-200 dark:border-slate-700 text-teal-700 dark:text-teal-400"
-            : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 bg-transparent border border-transparent"
+            : "text-slate-600 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 bg-transparent border border-transparent"
         }`;
 
           if (route) {

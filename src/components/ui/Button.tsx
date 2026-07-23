@@ -28,13 +28,13 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         variantStyles = 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50';
         break;
       case 'ghost':
-        variantStyles = 'bg-transparent text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800';
+        variantStyles = 'bg-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800';
         break;
       case 'menuitem':
         variantStyles = 'bg-transparent hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200';
         break;
       case 'icon':
-        variantStyles = 'bg-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800';
+        variantStyles = 'bg-transparent text-slate-600 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800';
         break;
     }
 
