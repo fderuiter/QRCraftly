@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { marked } from 'marked';
 import { fileURLToPath } from 'url';
+import ts from 'typescript';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -130,6 +131,96 @@ for (const file of filesToAudit) {
       }
     }
   });
+}
+
+// 3. Extract and verify TypeScript/TSX code blocks from markdown files
+const tempFiles = [];
+try {
+  for (const file of filesToAudit) {
+    const filePath = path.join(repoRoot, file);
+    if (!fs.existsSync(filePath)) continue;
+    const content = fs.readFileSync(filePath, 'utf-8');
+    const tokens = marked.lexer(content);
+    
+    marked.walkTokens(tokens, token => {
+      if (token.type === 'code') {
+        const lang = (token.lang || '').toLowerCase();
+        if (['ts', 'tsx', 'typescript', 'typescriptreact'].includes(lang)) {
+          const fileDir = path.dirname(filePath);
+          const tempFileName = `temp_snippet_${Math.random().toString(36).substring(2, 9)}.tsx`;
+          const tempFilePath = path.join(fileDir, tempFileName);
+          fs.writeFileSync(tempFilePath, token.text, 'utf-8');
+          tempFiles.push({
+            path: tempFilePath,
+            file: file,
+            lang: lang,
+            text: token.text
+          });
+        }
+      }
+    });
+  }
+
+  if (tempFiles.length > 0) {
+    const tsconfigPath = path.join(repoRoot, 'tsconfig.json');
+    const readResult = ts.readConfigFile(tsconfigPath, ts.sys.readFile);
+    if (readResult.error) {
+      console.error('Error reading tsconfig.json:', ts.flattenDiagnosticMessageText(readResult.error.messageText, '\n'));
+      hasErrors = true;
+    } else {
+      const parsedConfig = ts.parseJsonConfigFileContent(
+        readResult.config,
+        ts.sys,
+        repoRoot
+      );
+
+      const compilerOptions = {
+        ...parsedConfig.options,
+        noEmit: true,
+        skipLibCheck: true,
+      };
+
+      const fileNames = tempFiles.map(t => t.path);
+      const program = ts.createProgram(fileNames, compilerOptions);
+      const emitResult = program.emit();
+
+      const allDiagnostics = ts
+        .getPreEmitDiagnostics(program)
+        .concat(emitResult.diagnostics);
+
+      for (const diagnostic of allDiagnostics) {
+        if (diagnostic.category === ts.DiagnosticCategory.Error) {
+          hasErrors = true;
+          if (diagnostic.file) {
+            const { line, character } = ts.getLineAndCharacterOfPosition(diagnostic.file, diagnostic.start);
+            const message = ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n');
+            const fileName = path.resolve(diagnostic.file.fileName);
+            const tempFileInfo = tempFiles.find(t => path.resolve(t.path) === fileName);
+            if (tempFileInfo) {
+              console.error(`Error in ${tempFileInfo.file}: TS type check error in snippet on line ${line + 1}, col ${character + 1}: ${message}`);
+            } else {
+              console.error(`TS Error in ${diagnostic.file.fileName} (${line + 1},${character + 1}): ${message}`);
+            }
+          } else {
+            console.error(`TS Error: ${ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n')}`);
+          }
+        }
+      }
+    }
+  }
+} catch (err) {
+  console.error('Error during TS snippet extraction or compilation:', err);
+  hasErrors = true;
+} finally {
+  for (const temp of tempFiles) {
+    if (fs.existsSync(temp.path)) {
+      try {
+        fs.unlinkSync(temp.path);
+      } catch (err) {
+        console.error(`Failed to delete temp file ${temp.path}:`, err);
+      }
+    }
+  }
 }
 
 if (hasErrors) {
