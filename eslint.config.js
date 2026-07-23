@@ -101,5 +101,11 @@ export default tseslint.config(
       ],
       "jsdoc/require-description": "error"
     }
+  },
+  {
+    files: ["src/pages/dev-sandbox/**/*.{ts,tsx}"],
+    rules: {
+      "@typescript-eslint/no-unused-vars": "off"
+    }
   }
 );
