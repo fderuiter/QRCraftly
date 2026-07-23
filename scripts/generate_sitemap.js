@@ -40,7 +40,7 @@ function generateSitemap() {
     
     // Exclude certain files/routes
     if (posixPath.endsWith('404.html')) continue;
-    if (posixPath.includes('draft') || posixPath.includes('test')) continue;
+    if (posixPath.includes('draft') || posixPath.includes('test') || posixPath.includes('dev-sandbox')) continue;
 
     let route = `/${posixPath}`;
     
