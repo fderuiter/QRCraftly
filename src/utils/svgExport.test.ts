@@ -19,7 +19,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { generateQRSvg } from './svgExport';
 import { DEFAULT_CONFIG } from '../constants';
-import { QRStyle, QRConfig, SocialFormat, TemplateStyle } from '../types';
+import { QRStyle, QRConfig, SocialFormat, TemplateStyle, QRType } from '../types';
 
 describe('generateQRSvg', () => {
   it('returns a valid SVG string for a basic URL', async () => {
@@ -246,5 +246,51 @@ describe('generateQRSvg', () => {
       global.FileReader = originalFileReader;
       global.fetch = originalFetch;
     }
+  });
+
+  describe('Accessibility tags in exported SVG', () => {
+    it('generates correct title and description for a WiFi QR code', async () => {
+      const config: QRConfig = {
+        ...(DEFAULT_CONFIG as QRConfig),
+        type: QRType.WIFI,
+        value: 'WIFI:T:WPA;S:MyHomeWiFi;P:secretpassword;;',
+      };
+      const svg = await generateQRSvg(config);
+      expect(svg).toContain('<title>WiFi Network QR Code</title>');
+      expect(svg).toContain('<desc>MyHomeWiFi</desc>');
+    });
+
+    it('generates correct title and description for a URL QR code', async () => {
+      const config: QRConfig = {
+        ...(DEFAULT_CONFIG as QRConfig),
+        type: QRType.URL,
+        value: 'https://qrcraftly.com/some-page',
+      };
+      const svg = await generateQRSvg(config);
+      expect(svg).toContain('<title>URL QR Code</title>');
+      expect(svg).toContain('<desc>https://qrcraftly.com/some-page</desc>');
+    });
+
+    it('generates correct title and description for a Contact (vCard) QR code', async () => {
+      const config: QRConfig = {
+        ...(DEFAULT_CONFIG as QRConfig),
+        type: QRType.VCARD,
+        value: 'BEGIN:VCARD\nVERSION:3.0\nN:Smith;John\nFN:John Smith\nORG:A11y Corp\nEND:VCARD',
+      };
+      const svg = await generateQRSvg(config);
+      expect(svg).toContain('<title>Contact QR Code</title>');
+      expect(svg).toContain('<desc>John Smith</desc>');
+    });
+
+    it('generates correct title and description for an SMS QR code', async () => {
+      const config: QRConfig = {
+        ...(DEFAULT_CONFIG as QRConfig),
+        type: QRType.SMS,
+        value: 'SMSTO:+1234567890:Hello there',
+      };
+      const svg = await generateQRSvg(config);
+      expect(svg).toContain('<title>SMS QR Code</title>');
+      expect(svg).toContain('<desc>+1234567890</desc>');
+    });
   });
 });
