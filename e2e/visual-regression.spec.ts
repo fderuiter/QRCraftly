@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Visual Regression Layout Checks', () => {
   test('Standard Desktop Viewport (1280x720)', async ({ page }) => {
