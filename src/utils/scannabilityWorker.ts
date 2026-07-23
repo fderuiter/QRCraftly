@@ -1,22 +1,10 @@
 import jsQR from 'jsqr';
 import { ValidationEngine } from '../engine/ValidationEngine';
-
-/**
- * Configuration for the worker message.
- */
-export interface WorkerMessageData {
-  /** The image data to process. */
-  imageData: ImageData;
-  /** The width of the image. */
-  width: number;
-  /** The height of the image. */
-  height: number;
-  /** Optional configuration ID. */
-  configId?: string;
-  /** Optional flag indicating test mode. */
-  isTest?: boolean;
-}
-
+import {
+  assertWorkerRequest,
+  assertWorkerResponse,
+  isWorkerRequest,
+} from './sharedContract';
 
 /**
  * Applies an optical simulation to the image data to mimic physical scanning conditions.
@@ -88,9 +76,21 @@ function applyOpticalSimulation(imageData: ImageData, width: number, height: num
  * Handles incoming messages to process QR code scannability.
  * @param e - The message event containing worker data.
  */
-self.onmessage = (e: MessageEvent<WorkerMessageData>) => {
+self.onmessage = (e: MessageEvent<unknown>) => {
+  let configId: string | undefined;
   try {
-    const { imageData, width, height, configId, isTest } = e.data;
+    if (e.data && typeof e.data === 'object') {
+      configId = (e.data as any).configId;
+    }
+
+    // Utilize both isWorkerRequest type-guard and assertWorkerRequest assertion
+    if (!isWorkerRequest(e.data)) {
+      assertWorkerRequest(e.data);
+    } else {
+      assertWorkerRequest(e.data);
+    }
+
+    const { imageData, width, height, isTest } = e.data;
     
     // Check digital-only
     let digitalPass = false;
@@ -108,17 +108,21 @@ self.onmessage = (e: MessageEvent<WorkerMessageData>) => {
     }
 
     if (digitalPass && ValidationEngine.isDangerousUrl(decodedData)) {
-      self.postMessage({ success: false, physicalReady: false, error: 'SECURITY_VIOLATION', configId });
+      const response = { success: false, physicalReady: false, error: 'SECURITY_VIOLATION', configId };
+      assertWorkerResponse(response);
+      self.postMessage(response);
       return;
     }
 
     if (!digitalPass) {
-      self.postMessage({ success: false, physicalReady: false, error: 'NOT_FOUND', configId });
+      const response = { success: false, physicalReady: false, error: 'NOT_FOUND', configId };
+      assertWorkerResponse(response);
+      self.postMessage(response);
       return;
     }
 
     // Apply optical simulation
-    const simulatedData = isTest ? imageData : applyOpticalSimulation(imageData, width, height);
+    const simulatedData = isTest ? (imageData as ImageData) : applyOpticalSimulation(imageData as ImageData, width, height);
     let physicalPass = false;
     let codeSim = jsQR(simulatedData.data, width, height, { inversionAttempts: "dontInvert" });
     if (codeSim) {
@@ -128,9 +132,23 @@ self.onmessage = (e: MessageEvent<WorkerMessageData>) => {
       if (codeSim) physicalPass = true;
     }
 
-    self.postMessage({ success: true, physicalReady: physicalPass, configId });
+    const response = { success: true, physicalReady: physicalPass, configId };
+    assertWorkerResponse(response);
+    self.postMessage(response);
     
   } catch (_err) {
-    self.postMessage({ success: false, physicalReady: false, error: 'CRASH', configId: e.data.configId });
+    const isValidationError = _err instanceof Error && (_err.message.includes('Worker request') || _err.message.includes('Worker response'));
+    const response = {
+      success: false,
+      physicalReady: false,
+      error: isValidationError ? 'VALIDATION_ERROR' : 'CRASH',
+      configId
+    };
+    try {
+      assertWorkerResponse(response);
+      self.postMessage(response);
+    } catch {
+      self.postMessage({ success: false, physicalReady: false, error: 'CRASH', configId });
+    }
   }
 };
