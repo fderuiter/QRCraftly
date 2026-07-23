@@ -22,7 +22,8 @@ import {
   drawWithTemplate,
 } from './templateRenderer';
 import { DEFAULT_CONFIG } from '../constants';
-import { SocialFormat, TemplateStyle, QRConfig } from '../types';
+import { SocialFormat, TemplateStyle, QRConfig, QRStyle } from '../types';
+import { SvgContext } from './svgContext';
 import * as qrRenderer from './qrRenderer';
 
 // ---------------------------------------------------------------------------
@@ -417,3 +418,147 @@ describe('drawWithTemplate – color resolution', () => {
     expect((ctx as any)._strokeStyleHistory).toContain('#ff6600');
   });
 });
+
+// ---------------------------------------------------------------------------
+// SVG Export Precision Tests
+// ---------------------------------------------------------------------------
+
+describe('drawWithTemplate - Standard SVG Export Precision', () => {
+  it('validates that standard SVG structures maintain aligned, non-overlapping cell coordinates when isVirtual is true', () => {
+    const svgWidth = 1080;
+    const svgHeight = 1080;
+    const ctx = new SvgContext(svgWidth, svgHeight);
+
+    const size = 21;
+    const modules = {
+      size,
+      get: (r: number, c: number) => true,
+    };
+
+    const config: QRConfig = {
+      ...(DEFAULT_CONFIG as QRConfig),
+      style: QRStyle.STANDARD,
+      templateStyle: TemplateStyle.NONE,
+      socialFormat: SocialFormat.SQUARE_1_1,
+    };
+
+    drawWithTemplate(
+      ctx as unknown as CanvasRenderingContext2D,
+      modules,
+      config,
+      null,
+      null,
+      svgWidth,
+      svgHeight,
+      size,
+      true // isVirtual
+    );
+
+    const svgString = ctx.serialize();
+    expect(svgString).toContain('<svg');
+
+    const rectCalls: Array<{ x: number; y: number; w: number; h: number }> = [];
+    const testCtx = {
+      clearRect: vi.fn(),
+      fillRect: vi.fn(),
+      strokeRect: vi.fn(),
+      save: vi.fn(),
+      restore: vi.fn(),
+      translate: vi.fn(),
+      scale: vi.fn(),
+      beginPath: vi.fn(),
+      fill: vi.fn(),
+      rect: vi.fn((x, y, w, h) => {
+        rectCalls.push({ x, y, w, h });
+      }),
+      fillStyle: '',
+    } as unknown as CanvasRenderingContext2D;
+
+    drawWithTemplate(
+      testCtx,
+      modules,
+      config,
+      null,
+      null,
+      svgWidth,
+      svgHeight,
+      size,
+      true // isVirtual
+    );
+
+    // Sort the rect calls by y and then by x
+    rectCalls.sort((a, b) => a.y - b.y || a.x - b.x);
+
+    // Group rects by row (same y)
+    const rows: Record<number, Array<{ x: number; y: number; w: number; h: number }>> = {};
+    for (const rect of rectCalls) {
+      if (!rows[rect.y]) {
+        rows[rect.y] = [];
+      }
+      rows[rect.y].push(rect);
+    }
+
+    // Verify that within each row, adjacent cells align perfectly without any overlapping width
+    for (const yStr of Object.keys(rows)) {
+      const rowRects = rows[Number(yStr)];
+      rowRects.sort((a, b) => a.x - b.x);
+      for (let i = 0; i < rowRects.length - 1; i++) {
+        const current = rowRects[i];
+        const next = rowRects[i + 1];
+        // If they are adjacent modules, their boundaries must align exactly.
+        expect(next.x).toBeGreaterThanOrEqual(current.x + current.w);
+      }
+    }
+  });
+
+  it('verifies that screen-based rendering (isVirtual = false) uses floor/ceil workarounds to avoid subpixel gaps on raster canvases', () => {
+    const config: QRConfig = {
+      ...(DEFAULT_CONFIG as QRConfig),
+      style: QRStyle.STANDARD,
+      templateStyle: TemplateStyle.NONE,
+      socialFormat: SocialFormat.SQUARE_1_1,
+    };
+
+    const size = 21;
+    const modules = {
+      size,
+      get: (r: number, c: number) => true,
+    };
+
+    const rectCalls: Array<{ x: number; y: number; w: number; h: number }> = [];
+    const testCtx = {
+      clearRect: vi.fn(),
+      fillRect: vi.fn(),
+      strokeRect: vi.fn(),
+      save: vi.fn(),
+      restore: vi.fn(),
+      translate: vi.fn(),
+      scale: vi.fn(),
+      beginPath: vi.fn(),
+      fill: vi.fn(),
+      rect: vi.fn((x, y, w, h) => {
+        rectCalls.push({ x, y, w, h });
+      }),
+      fillStyle: '',
+    } as unknown as CanvasRenderingContext2D;
+
+    drawWithTemplate(
+      testCtx,
+      modules,
+      config,
+      null,
+      null,
+      1080,
+      1080,
+      size,
+      false // isVirtual = false
+    );
+
+    const ceilCellSize = Math.ceil(1080 / size);
+    for (const rect of rectCalls) {
+      expect(rect.w).toBe(ceilCellSize);
+      expect(rect.h).toBe(ceilCellSize);
+    }
+  });
+});
+

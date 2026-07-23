@@ -128,7 +128,8 @@ export async function generateQRSvg(config: QRConfig): Promise<string> {
       borderLogoImg,
       svgWidth,
       svgHeight,
-      moduleCount
+      moduleCount,
+      true
     );
   } catch (err) {
     console.warn('SVG QR generation failed:', err);
