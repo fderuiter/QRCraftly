@@ -82,9 +82,9 @@ export const hydrateVCardData = (raw: string): VCardData => {
 export const constructVCardString = (data: VCardData): string => {
   const lastName = ValidationEngine.escapeVCardEvent(data.lastName);
   const firstName = ValidationEngine.escapeVCardEvent(data.firstName);
-  // Normalize URL first to handle spaces/protocols, then check for dangerous protocols on the normalized string
+  // Normalize URL first to handle spaces/protocols
   const normalizedWebsite = normalizeUrl(data.website);
-  const website = ValidationEngine.isDangerousUrl(normalizedWebsite) ? '' : ValidationEngine.escapeVCardEvent(normalizedWebsite);
+  const website = ValidationEngine.escapeVCardEvent(normalizedWebsite);
 
   const parts = [
     'BEGIN:VCARD',

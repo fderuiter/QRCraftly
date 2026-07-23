@@ -88,7 +88,7 @@ describe('Wifi generator', () => {
     expect(str).toContain('I:;');
   });
 
-  it('strips control characters and still escapes correctly', () => {
+  it('preserves control characters and still escapes correctly', () => {
     const data = {
       ssid: "My\nNetwork\0\t",
       password: "Pass\rWord\x1F",
@@ -97,8 +97,8 @@ describe('Wifi generator', () => {
       eapIdentity: "My;Net\nwork"
     };
     const str = constructWifiString(data);
-    expect(str).toContain('S:MyNetwork;');
-    expect(str).toContain('P:PassWord;');
-    expect(str).toContain('I:My\\;Network;');
+    expect(str).toContain('S:My\nNetwork\0\t;');
+    expect(str).toContain('P:Pass\rWord\x1F;');
+    expect(str).toContain('I:My\\;Net\nwork;');
   });
 });

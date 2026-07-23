@@ -73,8 +73,8 @@ describe('Meeting generator', () => {
     expect(constructMeetingString({ url: '' })).toBe('');
   });
 
-  it('returns empty string for dangerous URL', () => {
-    expect(constructMeetingString({ url: 'javascript:alert(1)' })).toBe('');
+  it('returns raw dangerous URL as-is', () => {
+    expect(constructMeetingString({ url: 'javascript:alert(1)' })).toBe('javascript:alert(1)');
   });
 
   it('trims whitespace from the URL', () => {

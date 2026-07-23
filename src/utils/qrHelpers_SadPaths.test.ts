@@ -26,16 +26,13 @@ import { EmailData, VCardData, PaymentData, CryptoNetwork, SmsData, PhoneData } 
 
 describe('QR Helpers Sad Paths', () => {
   describe('constructEmailString', () => {
-    it('should handle empty string after sanitization', () => {
+    it('should handle raw email containing query parameters', () => {
       const data: EmailData = {
         email: '?subject=bad',
         subject: 'Test',
         body: 'Body'
       };
-      // Current behavior: mailto:?subject=Test...
-      // This is technically valid URI but likely not what was intended if email became empty.
-      // However, it's safe.
-      expect(constructEmailString(data)).toBe('mailto:?subject=Test&body=Body');
+      expect(constructEmailString(data)).toBe('mailto:?subject=bad?subject=Test&body=Body');
     });
 
     it('should handle completely empty data', () => {

@@ -21,6 +21,7 @@ import { QRConfig, SocialFormat, TemplateStyle } from '../types';
 import { drawQR, drawQRInternal } from '../utils/qrRenderer';
 import { drawWithTemplate, SOCIAL_DIMENSIONS } from '../utils/templateRenderer';
 import { useImage } from '../utils/hooks';
+import { ValidationEngine } from '../engine/ValidationEngine';
 
 /**
  * Props for the QRCanvas component.
@@ -234,6 +235,50 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({ config, s
   }[config.socialFormat];
 
   const containerClasses = className ? `${className} ${aspectRatioClass}` : aspectRatioClass;
+
+  const violations = ValidationEngine.validateConfig(config);
+  const hasViolations = violations.length > 0;
+
+  if (hasViolations) {
+    return (
+      <div className={containerClasses}>
+        <div className="flex flex-col items-center justify-center bg-rose-50 dark:bg-rose-950/25 border-2 border-dashed border-rose-300 dark:border-rose-800 rounded-3xl p-6 text-center gap-3 min-h-[300px]">
+          <div className="p-3 bg-rose-100 dark:bg-rose-900/50 rounded-full text-rose-600 dark:text-rose-400">
+            <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <h4 className="font-bold text-rose-800 dark:text-rose-300">Generation Blocked</h4>
+          <div className="space-y-1.5">
+            {violations.map((v, i) => {
+              let msg = v;
+              if (v === 'URI_INJECTION_VIOLATION') {
+                msg = 'Unsafe URL scheme or malicious protocol detected.';
+              } else if (v === 'URL_STRUCTURE_VIOLATION') {
+                msg = 'Malformed URL structure.';
+              } else if (v === 'EMAIL_STRUCTURE_VIOLATION') {
+                msg = 'Invalid email address structure.';
+              }
+              return (
+                <p key={i} className="text-sm text-rose-700 dark:text-rose-400 font-medium">
+                  {msg}
+                </p>
+              );
+            })}
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xs">
+            Please correct the input above to safely resume QR code generation.
+          </p>
+        </div>
+        <canvas
+          ref={handleRef}
+          style={{ display: 'none' }}
+          role="img"
+          aria-label={ariaLabel}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className={containerClasses}>

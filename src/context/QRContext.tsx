@@ -10,6 +10,7 @@ export type QRState = {
   config: QRConfig;
   moduleCount: number;
   preferences: { telemetryOptIn: boolean | null; darkMode: boolean };
+  violations: string[];
 };
 
 export interface QRStore {
@@ -55,7 +56,8 @@ function createQRStore(initialConfig?: Partial<QRConfig>): QRStore {
     preferences: {
       telemetryOptIn: savedOptIn === 'true' ? true : savedOptIn === 'false' ? false : null,
       darkMode: false,
-    }
+    },
+    violations: [],
   };
 
   const listeners = new Set<() => void>();
@@ -75,10 +77,8 @@ function createQRStore(initialConfig?: Partial<QRConfig>): QRStore {
     updateConfig: (updates) => {
       const proposed = { ...state.config, ...updates };
       const violations = ValidationEngine.validateConfig(proposed);
-      if (violations.length > 0) {
-        return; // reject insecure or invalid patch
-      }
-      state = { ...state, config: proposed };
+      const sanitized = ValidationEngine.sanitizeConfig(proposed);
+      state = { ...state, config: sanitized, violations };
       listeners.forEach(l => l());
     },
     updatePreferences: (updates) => {
