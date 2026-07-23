@@ -367,3 +367,37 @@ export enum TemplateStyle {
   GRADIENT_BLUR = 'gradient_blur',
   SOLID_FRAME = 'solid_frame',
 }
+
+/**
+ * Unified Telemetry Schema
+ * Defines the allowed non-sensitive diagnostic telemetry properties.
+ * Centralizing this schema prevents naming mismatches and ensures compliance.
+ */
+export const ALLOWED_TELEMETRY_KEYS = [
+  'engine',
+  'styleId',
+  'errorType',
+  'fgColor',
+  'bgColor',
+  'eyeColor',
+  'errorCorrectionLevel',
+  'isBorderEnabled',
+  'borderSize',
+  'borderColor',
+  'borderStyle',
+  'templateStyle',
+ ] as const;
+
+/**
+ * Representing an individual telemetry key allowed under compliance guidelines.
+ */
+export type TelemetryKey = typeof ALLOWED_TELEMETRY_KEYS[number];
+
+/**
+ * Type definition for the telemetry payload, mapping telemetry keys to safe values.
+ */
+export type TelemetryPayload = {
+  [K in TelemetryKey]?: string | number | boolean | null;
+};
+
+
