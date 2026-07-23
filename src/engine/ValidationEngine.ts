@@ -132,6 +132,15 @@ export const ValidationEngine = {
     return noControl.split('?')[0];
   },
 
+  sanitizeSocialHandle(handle: string): string {
+    const withoutAt = handle.replace(/^@+/, '');
+    return withoutAt.replace(/[^a-zA-Z0-9_.\-]/g, '');
+  },
+
+  cleanPhoneNumber(number: string): string {
+    return number.replace(/[^0-9+*#\-().]/g, '');
+  },
+
   // Escaping logic
   escapeWifi(str: string | undefined): string {
     if (!str) return '';

@@ -16,7 +16,8 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { TextData } from '../../types';
+import { TextData, QRType, QRGeneratorContract } from '../../types';
+import { ValidationEngine } from '../../engine/ValidationEngine';
 
 /**
  * Constructs the plain text QR code string.
@@ -30,4 +31,11 @@ export const constructTextString = (data: TextData): string => {
  */
 export const hydrateTextData = (raw: string): TextData => {
   return { text: raw };
+};
+
+export const TextContract: QRGeneratorContract<TextData> = {
+  type: QRType.TEXT,
+  construct: constructTextString,
+  hydrate: hydrateTextData,
+  matches: (raw: string) => ValidationEngine.identifyProtocol(raw) === QRType.TEXT,
 };

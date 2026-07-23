@@ -32,3 +32,32 @@ export * from './qr-generators/social';
 
 // Re-export generic URL utility
 export * from './url';
+
+import { QRType, QRGeneratorContract } from '../types';
+import { WifiContract } from './qr-generators/wifi';
+import { EmailContract } from './qr-generators/email';
+import { VCardContract } from './qr-generators/vcard';
+import { PhoneContract } from './qr-generators/phone';
+import { SmsContract } from './qr-generators/sms';
+import { PaymentContract } from './qr-generators/payment';
+import { EventContract } from './qr-generators/event';
+import { UrlContract } from './qr-generators/url';
+import { TextContract } from './qr-generators/text';
+import { LocationContract } from './qr-generators/location';
+import { MeetingContract } from './qr-generators/meeting';
+import { SocialContract } from './qr-generators/social';
+
+export const QR_GENERATORS: Record<QRType, QRGeneratorContract<any>> = {
+  [QRType.WIFI]: WifiContract,
+  [QRType.EMAIL]: EmailContract,
+  [QRType.VCARD]: VCardContract,
+  [QRType.PHONE]: PhoneContract,
+  [QRType.SMS]: SmsContract,
+  [QRType.PAYMENT]: PaymentContract,
+  [QRType.EVENT]: EventContract,
+  [QRType.URL]: UrlContract,
+  [QRType.TEXT]: TextContract,
+  [QRType.LOCATION]: LocationContract,
+  [QRType.MEETING]: MeetingContract,
+  [QRType.SOCIAL]: SocialContract,
+};

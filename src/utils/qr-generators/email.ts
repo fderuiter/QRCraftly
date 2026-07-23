@@ -16,8 +16,8 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { EmailData } from '../../types';
-import { sanitizeInput } from '../security';
+import { EmailData, QRType, QRGeneratorContract } from '../../types';
+import { ValidationEngine } from '../../engine/ValidationEngine';
 import { parseProtocol } from '../protocol';
 
 /**
@@ -25,7 +25,7 @@ import { parseProtocol } from '../protocol';
  */
 export const constructEmailString = (data: EmailData): string => {
   // Sanitize email to prevent header injection (e.g. ?cc=attacker@example.com)
-  const safeEmail = sanitizeInput(data.email);
+  const safeEmail = ValidationEngine.sanitizeInput(data.email);
   return `mailto:${safeEmail}?subject=${encodeURIComponent(data.subject)}&body=${encodeURIComponent(data.body)}`;
 };
 
@@ -56,4 +56,11 @@ export const hydrateEmailData = (raw: string): EmailData => {
   }
 
   return result;
+};
+
+export const EmailContract: QRGeneratorContract<EmailData> = {
+  type: QRType.EMAIL,
+  construct: constructEmailString,
+  hydrate: hydrateEmailData,
+  matches: (raw: string) => ValidationEngine.identifyProtocol(raw) === QRType.EMAIL,
 };

@@ -16,8 +16,8 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { MeetingData } from '../../types';
-import { isDangerousUrl } from '../security';
+import { MeetingData, QRType, QRGeneratorContract } from '../../types';
+import { ValidationEngine } from '../../engine/ValidationEngine';
 
 /**
  * Constructs the QR code string for a virtual meeting link.
@@ -30,7 +30,7 @@ import { isDangerousUrl } from '../security';
  */
 export const constructMeetingString = (data: MeetingData): string => {
   if (!data.url) return '';
-  if (isDangerousUrl(data.url)) return '';
+  if (ValidationEngine.isDangerousUrl(data.url)) return '';
   return data.url.trim();
 };
 
@@ -41,4 +41,11 @@ export const hydrateMeetingData = (raw: string): MeetingData => {
   return {
     url: raw,
   };
+};
+
+export const MeetingContract: QRGeneratorContract<MeetingData> = {
+  type: QRType.MEETING,
+  construct: constructMeetingString,
+  hydrate: hydrateMeetingData,
+  matches: (raw: string) => ValidationEngine.identifyProtocol(raw) === QRType.MEETING,
 };

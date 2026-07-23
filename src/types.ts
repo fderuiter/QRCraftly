@@ -51,6 +51,20 @@ export enum QRType {
 }
 
 /**
+ * The standard contract for QR payload generators and hydrators.
+ */
+export interface QRGeneratorContract<TData> {
+  /** The specific QR type this contract handles. */
+  type: QRType;
+  /** Constructs a string representation from the given data. */
+  construct(data: TData): string;
+  /** Parses a string to extract the payload data. */
+  hydrate(raw: string): TData;
+  /** Checks if the raw string matches this QR type. */
+  matches(raw: string): boolean;
+}
+
+/**
  * Defines the encryption type for WiFi networks.
  */
 export enum WifiEncryption {

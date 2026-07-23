@@ -16,15 +16,15 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { SmsData } from '../../types';
-import { cleanPhoneNumber } from '../security';
+import { SmsData, QRType, QRGeneratorContract } from '../../types';
 import { parseProtocol } from '../protocol';
+import { ValidationEngine } from '../../engine/ValidationEngine';
 
 /**
  * Constructs the smsto string for SMS QR code.
  */
 export const constructSmsString = (data: SmsData): string => {
-  const cleanNumber = cleanPhoneNumber(data.number);
+  const cleanNumber = ValidationEngine.cleanPhoneNumber(data.number);
   const encodedBody = encodeURIComponent(data.message);
   return `sms:${cleanNumber}?body=${encodedBody}`;
 };
@@ -45,4 +45,11 @@ export const hydrateSmsData = (raw: string): SmsData => {
   }
 
   return result;
+};
+
+export const SmsContract: QRGeneratorContract<SmsData> = {
+  type: QRType.SMS,
+  construct: constructSmsString,
+  hydrate: hydrateSmsData,
+  matches: (raw: string) => ValidationEngine.identifyProtocol(raw) === QRType.SMS,
 };

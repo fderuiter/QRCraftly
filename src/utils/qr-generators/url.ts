@@ -16,15 +16,15 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { UrlData } from '../../types';
-import { isDangerousUrl } from '../security';
+import { UrlData, QRType, QRGeneratorContract } from '../../types';
+import { ValidationEngine } from '../../engine/ValidationEngine';
 
 /**
  * Constructs the URL QR code string.
  * Currently just returns the raw URL as normalization happens in the input or renderer.
  */
 export const constructUrlString = (data: UrlData): string => {
-  if (isDangerousUrl(data.url)) {
+  if (ValidationEngine.isDangerousUrl(data.url)) {
     return '';
   }
   return data.url;
@@ -35,4 +35,11 @@ export const constructUrlString = (data: UrlData): string => {
  */
 export const hydrateUrlData = (raw: string): UrlData => {
   return { url: raw };
+};
+
+export const UrlContract: QRGeneratorContract<UrlData> = {
+  type: QRType.URL,
+  construct: constructUrlString,
+  hydrate: hydrateUrlData,
+  matches: (raw: string) => ValidationEngine.identifyProtocol(raw) === QRType.URL,
 };
