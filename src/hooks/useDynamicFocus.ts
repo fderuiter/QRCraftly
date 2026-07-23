@@ -1,41 +1,264 @@
 import { useEffect, useRef } from 'react';
 
 /**
+ * Helper to retrieve all form fields (inputs, selects, textareas) inside a container.
+ */
+function getFormFields(container: HTMLElement): HTMLElement[] {
+  return Array.from(
+    container.querySelectorAll<HTMLElement>(
+      'input:not([disabled]), select:not([disabled]), textarea:not([disabled])'
+    )
+  );
+}
+
+/**
+ * Check if two arrays of HTML elements have exactly the same elements.
+ */
+function areElementsEqual(arr1: HTMLElement[], arr2: HTMLElement[]): boolean {
+  if (arr1.length !== arr2.length) return false;
+  for (let i = 0; i < arr1.length; i++) {
+    if (arr1[i] !== arr2[i]) return false;
+  }
+  return true;
+}
+
+/**
+ * Get a clean name for a form element based on its label or attributes.
+ */
+function getElementName(element: HTMLElement): string {
+  const id = element.id;
+  if (id) {
+    const label = document.querySelector(`label[for="${id}"]`);
+    if (label) {
+      const text = label.textContent || '';
+      // Clean up whitespace and remove any trailing "(Optional)" or similar parenthesized text
+      const cleanText = text.replace(/\s+/g, ' ').replace(/\s*\([^)]*\)/g, '').trim();
+      if (cleanText) return cleanText;
+    }
+  }
+
+  const ariaLabel = element.getAttribute('aria-label');
+  if (ariaLabel) return ariaLabel.trim();
+
+  const placeholder = element.getAttribute('placeholder');
+  if (placeholder) return placeholder.trim();
+
+  const nameAttr = element.getAttribute('name');
+  if (nameAttr) return nameAttr.trim();
+
+  if (id) {
+    return id.replace(/[-_]/g, ' ');
+  }
+
+  return 'input field';
+}
+
+/**
+ * Announce a message politely to screen readers using a visually hidden live region.
+ */
+function announcePolitely(message: string) {
+  let liveRegion = document.getElementById('dynamic-focus-live-region');
+  if (!liveRegion) {
+    liveRegion = document.createElement('div');
+    liveRegion.id = 'dynamic-focus-live-region';
+    liveRegion.className = 'sr-only';
+    liveRegion.setAttribute('aria-live', 'polite');
+    liveRegion.setAttribute('role', 'status');
+    // Ensure it is visually hidden
+    liveRegion.style.position = 'absolute';
+    liveRegion.style.width = '1px';
+    liveRegion.style.height = '1px';
+    liveRegion.style.padding = '0';
+    liveRegion.style.margin = '-1px';
+    liveRegion.style.overflow = 'hidden';
+    liveRegion.style.clip = 'rect(0, 0, 0, 0)';
+    liveRegion.style.whiteSpace = 'nowrap';
+    liveRegion.style.borderWidth = '0';
+    document.body.appendChild(liveRegion);
+  }
+
+  // Clear content first to trigger some assistive tech reliably
+  liveRegion.textContent = '';
+  setTimeout(() => {
+    if (liveRegion) {
+      liveRegion.textContent = message;
+    }
+  }, 50);
+}
+
+/**
  * A standardized focus-management hook to eliminate manual re-navigation
  * and improve task completion speed for users with visual impairments.
  * Programmatically moves focus to the first interactive field of a newly rendered component.
  * 
- * @param dependencies Array of dependencies that trigger focus shifts when changed
+ * @param dependencies Array of dependencies (kept for backward compatibility, not used for re-binding)
  */
-export function useDynamicFocus<T extends HTMLElement = HTMLDivElement>(dependencies: any[]) {
+export function useDynamicFocus<T extends HTMLElement = HTMLDivElement>(_dependencies: any[]) {
   const containerRef = useRef<T>(null);
   
   // Track if we've focused once on mount. Focus shifts must only occur 
-  // during intentional user-triggered type changes.
+  // during intentional user-triggered transitions.
   const isInitialMount = useRef(true);
 
+  // Cache element names by element ID or unique signature so we can refer to them even after they unmount
+  const elementNamesRef = useRef<Record<string, string>>({});
+
+  // Track previous focusable elements across renders
+  const prevElementsRef = useRef<HTMLElement[]>([]);
+
+  // Track the last focused element inside the document to handle focus loss during unmount
+  const lastFocusedRef = useRef<HTMLElement | null>(null);
+
   useEffect(() => {
-    if (isInitialMount.current) {
+    // Set a timeout to clear the initial mount flag shortly after mounting
+    const timeout = setTimeout(() => {
       isInitialMount.current = false;
-      return; 
+    }, 150);
+
+    const handleFocusIn = (e: FocusEvent) => {
+      lastFocusedRef.current = e.target as HTMLElement;
+    };
+
+    document.addEventListener('focusin', handleFocusIn);
+
+    return () => {
+      clearTimeout(timeout);
+      document.removeEventListener('focusin', handleFocusIn);
+    };
+  }, []);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    // Track the initial list of focusable elements
+    const initialElements = getFormFields(container);
+    prevElementsRef.current = initialElements;
+
+    // Save initial element names
+    for (const el of initialElements) {
+      if (el.id) {
+        elementNamesRef.current[el.id] = getElementName(el);
+      }
     }
 
-    if (!containerRef.current) return;
+    const observer = new MutationObserver(() => {
+      const currentElements = getFormFields(container);
+      const prevElements = prevElementsRef.current;
 
-    // Small delay to ensure the DOM is fully updated and component rendered
-    const timeout = setTimeout(() => {
-      if (!containerRef.current) return;
-      const focusableElements = containerRef.current.querySelectorAll(
-        'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
-      );
-      
-      if (focusableElements.length > 0) {
-        (focusableElements[0] as HTMLElement).focus();
+      // If the list of focusable elements has not changed, do nothing
+      if (areElementsEqual(prevElements, currentElements)) {
+        return;
       }
-    }, 50);
 
-    return () => clearTimeout(timeout);
-  }, dependencies);
+      // Skip the initial form load to prevent unexpected focus hijacking
+      if (isInitialMount.current) {
+        prevElementsRef.current = currentElements;
+        return;
+      }
+
+      // Determine which elements were added or removed
+      const addedElements = currentElements.filter(
+        currEl => !prevElements.some(prevEl => prevEl === currEl || (currEl.id && prevEl.id === currEl.id))
+      );
+
+      const removedElements = prevElements.filter(
+        prevEl => !currentElements.some(currEl => currEl === prevEl || (prevEl.id && currEl.id === prevEl.id))
+      );
+
+      // Cache names of any newly seen elements
+      for (const el of currentElements) {
+        if (el.id && !elementNamesRef.current[el.id]) {
+          elementNamesRef.current[el.id] = getElementName(el);
+        }
+      }
+
+      // Handle removed elements
+      if (removedElements.length > 0) {
+        const names = removedElements
+          .map(el => elementNamesRef.current[el.id] || getElementName(el))
+          .filter(Boolean);
+
+        if (names.length > 0) {
+          const message = names.join(' and ') + ' removed';
+          announcePolitely(message);
+        }
+
+        // Shift focus if the focused element was removed
+        const wasFocusedRemoved = removedElements.some(
+          el => el === lastFocusedRef.current || (el.id && lastFocusedRef.current && el.id === lastFocusedRef.current.id)
+        );
+
+        if (wasFocusedRemoved) {
+          const firstRemovedEl = removedElements[0];
+          const prevIndex = prevElements.indexOf(firstRemovedEl);
+
+          let targetElement: HTMLElement | null = null;
+          if (prevIndex !== -1) {
+            // Find nearest remaining interactive field after the removed one
+            for (let i = prevIndex; i < currentElements.length; i++) {
+              if (currentElements[i]) {
+                targetElement = currentElements[i];
+                break;
+              }
+            }
+            // If none found after, find nearest remaining interactive field before
+            if (!targetElement) {
+              for (let i = prevIndex - 1; i >= 0; i--) {
+                if (currentElements[i]) {
+                  targetElement = currentElements[i];
+                  break;
+                }
+              }
+            }
+          }
+
+          if (targetElement) {
+            const elToFocus = targetElement;
+            setTimeout(() => {
+              elToFocus.focus();
+            }, 50);
+          }
+        }
+      }
+
+      // Handle added elements
+      if (addedElements.length > 0) {
+        const names = addedElements.map(el => getElementName(el)).filter(Boolean);
+        if (names.length > 0) {
+          const message = names.join(' and ') + ' field is now available';
+          announcePolitely(message);
+        }
+
+        // Programmatically move focus directly to the first newly mounted field,
+        // unless the user is actively typing in a remaining text input.
+        const activeElement = document.activeElement as HTMLElement;
+        const isUserTypingInTextInput = activeElement && 
+          (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA') &&
+          !['radio', 'checkbox', 'submit', 'button', 'image', 'reset', 'file'].includes((activeElement as HTMLInputElement).type || '');
+
+        if (!isUserTypingInTextInput) {
+          const firstNewElement = addedElements[0];
+          setTimeout(() => {
+            if (document.body.contains(firstNewElement)) {
+              firstNewElement.focus();
+            }
+          }, 50);
+        }
+      }
+
+      prevElementsRef.current = currentElements;
+    });
+
+    observer.observe(container, {
+      childList: true,
+      subtree: true,
+    });
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []); // Run on mount once
 
   return containerRef;
 }
