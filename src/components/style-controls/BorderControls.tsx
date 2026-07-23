@@ -1,4 +1,4 @@
-import React, { useRef, useMemo } from 'react';
+import React, { useRef, useMemo, useEffect } from 'react';
 import { Button } from '../ui/Button';
 import { QRConfig, BorderStyle, BorderTextPosition, BorderLogoPosition } from '../../types';
 import { Upload, X, AlertTriangle } from 'lucide-react';
@@ -26,7 +26,18 @@ export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange
   }, [moduleCount, config.borderSize]);
 
   const borderLogoInputRef = useRef<HTMLInputElement>(null);
+  const borderLogoUploadButtonRef = useRef<HTMLButtonElement>(null);
+  const prevBorderLogoUrlRef = useRef<string | null>(config.borderLogoUrl);
   const { error, handleUpload, setError } = useImageUpload();
+
+  useEffect(() => {
+    if (prevBorderLogoUrlRef.current && !config.borderLogoUrl) {
+      setTimeout(() => {
+        borderLogoUploadButtonRef.current?.focus();
+      }, 50);
+    }
+    prevBorderLogoUrlRef.current = config.borderLogoUrl;
+  }, [config.borderLogoUrl]);
 
   const handleBorderLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     handleUpload(e, (dataUrl) => onChange({ borderLogoUrl: dataUrl }));
@@ -92,12 +103,14 @@ export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange
           <div className="pt-2 border-t border-slate-200 dark:border-slate-700">
             <div className="flex justify-between items-baseline mb-2">
               <p className="text-xs font-medium text-slate-700 dark:text-slate-300">Content</p>
-              {isLowBorderContrast && (
-                <span className="flex items-center gap-1 text-[10px] text-amber-700 dark:text-amber-400 font-medium">
-                  <AlertTriangle className="w-3 h-3" />
-                  Low Contrast ({borderTextContrast.toFixed(1)})
-                </span>
-              )}
+              <div aria-live="polite" aria-atomic="true">
+                {isLowBorderContrast && (
+                  <span className="flex items-center gap-1 text-[10px] text-amber-700 dark:text-amber-400 font-medium">
+                    <AlertTriangle className="w-3 h-3" aria-hidden="true" />
+                    Low Contrast ({borderTextContrast.toFixed(1)})
+                  </span>
+                )}
+              </div>
             </div>
 
             {/* Border Text */}
@@ -154,6 +167,7 @@ export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange
                 )}
               </div>
               <Button
+                ref={borderLogoUploadButtonRef}
                 variant="ghost"
                 size="sm"
                 onClick={() => borderLogoInputRef.current?.click()}

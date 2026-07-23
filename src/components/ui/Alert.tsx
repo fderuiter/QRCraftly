@@ -6,9 +6,11 @@ interface AlertProps {
   title?: string;
   children: React.ReactNode;
   className?: string;
+  role?: string;
+  'aria-live'?: 'polite' | 'assertive' | 'off';
 }
 
-export const Alert: React.FC<AlertProps> = ({ variant = 'warning', title, children, className = '' }) => {
+export const Alert: React.FC<AlertProps> = ({ variant = 'warning', title, children, className = '', role, 'aria-live': ariaLive }) => {
   const isWarning = variant === 'warning';
   
   const baseClasses = "flex items-start gap-3 p-3 border rounded-lg text-sm";
@@ -19,7 +21,7 @@ export const Alert: React.FC<AlertProps> = ({ variant = 'warning', title, childr
   const Icon = isWarning ? AlertTriangle : AlertCircle;
 
   return (
-    <div role="alert" className={`${baseClasses} ${colorClasses} ${className}`}>
+    <div role={role || "alert"} aria-live={ariaLive} className={`${baseClasses} ${colorClasses} ${className}`}>
       <Icon className="w-5 h-5 flex-shrink-0 mt-0.5" aria-hidden="true" />
       <div>
         {title && <strong>{title}: </strong>}
