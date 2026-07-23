@@ -23,7 +23,7 @@ describe('RangeInput Component Accessibility', () => {
 
   it('should wrap range slider in a focus-within container with rose-500 focus indicator', () => {
     const handleChange = vi.fn();
-    const { container } = render(
+    render(
       <RangeInput
         id="test-range"
         label="Test Range Label"
