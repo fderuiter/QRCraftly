@@ -3,6 +3,7 @@ import { LOW_RELIABILITY_PATTERNS, SYSTEM_LIMITS } from '../constants';
 import { getContrastRatio } from '../utils/colorUtils';
 import { parseProtocol, PROTOCOL_PREFIXES, SOCIAL_DOMAINS } from '../utils/protocol';
 import { SafeUrlPipeline } from '../utils/url';
+import { parseCoordinate, hydrateLocationData } from '../utils/qr-generators/location';
 
 /**
  * Core validation and sanitization engine for QR code generation.
@@ -71,6 +72,7 @@ export const ValidationEngine = {
   identifyProtocol(raw: string): QRType | null {
     if (!raw) return null;
     
+    if (raw.toLowerCase().startsWith('geo:')) return QRType.LOCATION;
     if (raw.startsWith('WIFI:')) return QRType.WIFI;
     if (raw.includes('BEGIN:VCARD')) return QRType.VCARD;
     if (raw.includes('BEGIN:VEVENT') || raw.includes('BEGIN:VCALENDAR')) return QRType.EVENT;
@@ -187,6 +189,17 @@ export const ValidationEngine = {
       } else if (type === QRType.PAYMENT) {
         if (config.value && this.isDangerousUrl(config.value)) {
           violations.push('URI_INJECTION_VIOLATION');
+        }
+      } else if (type === QRType.LOCATION) {
+        const { latitude, longitude } = hydrateLocationData(config.value);
+        const lat = parseCoordinate(latitude);
+        const lng = parseCoordinate(longitude);
+
+        if (lat !== null && (lat < -90 || lat > 90)) {
+          violations.push('LATITUDE_OUT_OF_BOUNDS_VIOLATION');
+        }
+        if (lng !== null && (lng < -180 || lng > 180)) {
+          violations.push('LONGITUDE_OUT_OF_BOUNDS_VIOLATION');
         }
       }
     }
