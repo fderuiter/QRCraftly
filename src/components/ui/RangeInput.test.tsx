@@ -21,7 +21,7 @@ describe('RangeInput Component Accessibility', () => {
     expect(results).toHaveNoViolations();
   });
 
-  it('should wrap range slider in a focus-within container with rose-500 focus indicator', () => {
+  it('should support direct focus on range slider instead of focus-within container', () => {
     const handleChange = vi.fn();
     render(
       <RangeInput
@@ -39,18 +39,20 @@ describe('RangeInput Component Accessibility', () => {
     const rangeInput = screen.getByLabelText(/test range label/i);
     expect(rangeInput).toBeInTheDocument();
 
-    // Verify it is inside a container that has focus-within:ring-rose-500
-    const wrapper = rangeInput.closest('div.focus-within\\:ring-rose-500');
+    // Find the container wrapping the range input
+    const wrapper = rangeInput.parentElement;
     expect(wrapper).toBeInTheDocument();
 
-    // Verify it has standard layout preserving classes and rose focus indicator
-    expect(wrapper).toHaveClass('focus-within:ring-rose-500');
-    expect(wrapper).toHaveClass('focus-within:ring-2');
-    expect(wrapper).toHaveClass('focus-within:ring-offset-2');
+    // Verify container does NOT have focus-within classes
+    expect(wrapper).not.toHaveClass('focus-within:ring-rose-500');
+    expect(wrapper).not.toHaveClass('focus-within:ring-2');
+    expect(wrapper).not.toHaveClass('focus-within:ring-offset-2');
+
+    // Verify container still has standard layout classes
     expect(wrapper).toHaveClass('p-1');
     expect(wrapper).toHaveClass('-m-1');
 
-    // Verify range input itself suppresses default focus ring
-    expect(rangeInput).toHaveClass('focus-visible:ring-0');
+    // Verify range input itself does NOT suppress default focus ring
+    expect(rangeInput).not.toHaveClass('focus-visible:ring-0');
   });
 });

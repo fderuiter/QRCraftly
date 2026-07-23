@@ -258,6 +258,10 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({ config, s
                 msg = 'Malformed URL structure.';
               } else if (v === 'EMAIL_STRUCTURE_VIOLATION') {
                 msg = 'Invalid email address structure.';
+              } else if (v === 'LATITUDE_OUT_OF_BOUNDS_VIOLATION') {
+                msg = 'Latitude must remain between -90 and 90 degrees.';
+              } else if (v === 'LONGITUDE_OUT_OF_BOUNDS_VIOLATION') {
+                msg = 'Longitude must remain between -180 and 180 degrees.';
               }
               return (
                 <p key={i} className="text-sm text-rose-700 dark:text-rose-400 font-medium">

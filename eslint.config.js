@@ -6,6 +6,17 @@ import securityPlugin from "eslint-plugin-security";
 import jsdoc from "eslint-plugin-jsdoc";
 import jsxA11y from "eslint-plugin-jsx-a11y";
 
+const jsdocWarnRules = {};
+for (const [ruleName, ruleVal] of Object.entries(jsdoc.configs["flat/recommended-typescript-error"].rules)) {
+  if (ruleVal === "error") {
+    jsdocWarnRules[ruleName] = "warn";
+  } else if (Array.isArray(ruleVal) && ruleVal[0] === "error") {
+    jsdocWarnRules[ruleName] = ["warn", ...ruleVal.slice(1)];
+  } else {
+    jsdocWarnRules[ruleName] = ruleVal;
+  }
+}
+
 export default tseslint.config(
   {
     ignores: ["dist/**", "node_modules/**", "coverage/**", "scripts/**", "e2e/**", "**/*.test.ts", "**/*.test.tsx"]
@@ -80,7 +91,7 @@ export default tseslint.config(
     }
   },
   {
-    files: ["src/types.ts", "src/utils/scannabilityWorker.ts"],
+    files: ["src/types.ts", "src/utils/scannabilityWorker.ts", "src/engine/**/*.ts"],
     plugins: { jsdoc },
     rules: {
       ...jsdoc.configs["flat/recommended-typescript-error"].rules,
@@ -88,18 +99,76 @@ export default tseslint.config(
         "error",
         {
           require: {
-            FunctionDeclaration: true,
-            ArrowFunctionExpression: true,
-            FunctionExpression: true
+            FunctionDeclaration: false,
+            ArrowFunctionExpression: false,
+            FunctionExpression: false,
+            ClassDeclaration: false,
+            ClassExpression: false,
+            MethodDefinition: false
           },
           contexts: [
-            "TSPropertySignature",
+            "ExportNamedDeclaration > FunctionDeclaration",
+            "ExportDefaultDeclaration > FunctionDeclaration",
+            "ExportNamedDeclaration > VariableDeclaration > VariableDeclarator > ArrowFunctionExpression",
+            "ExportNamedDeclaration > VariableDeclaration > VariableDeclarator > FunctionExpression",
+            "ExportNamedDeclaration",
+            "MethodDefinition",
+            "ClassDeclaration",
+            "ExportNamedDeclaration > VariableDeclaration > VariableDeclarator > ObjectExpression > Property",
             "TSInterfaceDeclaration",
-            "TSTypeAliasDeclaration"
+            "TSTypeAliasDeclaration",
+            "TSInterfaceDeclaration TSPropertySignature",
+            "TSTypeAliasDeclaration TSPropertySignature"
           ]
         }
       ],
-      "jsdoc/require-description": "error"
+      "jsdoc/require-description": "error",
+      "jsdoc/require-param-description": "error",
+      "jsdoc/require-returns-description": "error"
+    }
+  },
+  {
+    files: [
+      "src/components/**/*.{ts,tsx}",
+      "src/context/**/*.{ts,tsx}",
+      "src/layouts/**/*.{ts,tsx}",
+      "src/pages/**/*.{ts,tsx}",
+      "src/hooks/**/*.{ts,tsx}",
+      "src/registry.tsx"
+    ],
+    plugins: { jsdoc },
+    rules: {
+      ...jsdocWarnRules,
+      "jsdoc/require-jsdoc": [
+        "warn",
+        {
+          require: {
+            FunctionDeclaration: false,
+            ArrowFunctionExpression: false,
+            FunctionExpression: false,
+            ClassDeclaration: false,
+            ClassExpression: false,
+            MethodDefinition: false
+          },
+          contexts: [
+            "ExportNamedDeclaration > FunctionDeclaration",
+            "ExportDefaultDeclaration > FunctionDeclaration",
+            "ExportNamedDeclaration > VariableDeclaration > VariableDeclarator > ArrowFunctionExpression",
+            "ExportNamedDeclaration > VariableDeclaration > VariableDeclarator > FunctionExpression",
+            "ExportNamedDeclaration",
+            "MethodDefinition",
+            "ClassDeclaration",
+            "ExportNamedDeclaration > VariableDeclaration > VariableDeclarator > ObjectExpression > Property",
+            "TSInterfaceDeclaration",
+            "TSTypeAliasDeclaration",
+            "TSInterfaceDeclaration TSPropertySignature",
+            "TSTypeAliasDeclaration TSPropertySignature"
+          ]
+        }
+      ],
+      "jsdoc/require-description": "warn",
+      "jsdoc/require-param-description": "warn",
+      "jsdoc/require-returns-description": "warn"
     }
   },
   {

@@ -13,7 +13,7 @@ overrides:
   brace-expansion@>=3 <5.0.7: ^5.0.7
   js-yaml: ^4.3.0
   sharp: ^0.35.0
-  postcss: ^8.5.12
+  postcss: ^8.5.22
 
 importers:
 
@@ -114,7 +114,7 @@ importers:
         specifier: ^6.27.0
         version: 6.27.0
       postcss:
-        specifier: ^8.5.12
+        specifier: ^8.5.22
         version: 8.5.22
       tailwindcss:
         specifier: ^4.1.17
@@ -1562,7 +1562,7 @@ packages:
     engines: {node: ^10 || ^12 || >=14}
     hasBin: true
     peerDependencies:
-      postcss: ^8.5.12
+      postcss: ^8.5.22
 
   available-typed-arrays@1.0.7:
     resolution: {integrity: sha512-wvUjBtSGN7+7SjNpq/9M2Tg350UZD3q62IFZLbRAR1bSMlCo1ZaeW+BJ+D090e4hIIZLBcTDWe4Mh4jvUDajzQ==}
