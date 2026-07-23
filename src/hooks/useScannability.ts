@@ -3,6 +3,11 @@ import { QRConfig } from '../types';
 import { useQRStore } from '@/context/QRContext';
 import { ValidationEngine } from '../engine/ValidationEngine';
 import { useCapabilities } from './useCapabilities';
+import {
+  assertWorkerRequest,
+  assertWorkerResponse,
+  isWorkerResponse,
+} from '../utils/sharedContract';
 
 export type ScannabilityStatus = 'idle' | 'checking' | 'digital-pass' | 'physical-pass' | 'fail';
 
@@ -32,14 +37,30 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
     if (!worker) return;
 
     const handleMessage = (e: MessageEvent) => {
-      const { success, physicalReady, error } = e.data;
-      setStatus(success ? (physicalReady ? 'physical-pass' : 'digital-pass') : 'fail');
+      try {
+        if (!isWorkerResponse(e.data)) {
+          assertWorkerResponse(e.data);
+        } else {
+          assertWorkerResponse(e.data);
+        }
 
-      if (!success && error) {
+        const { success, physicalReady, error } = e.data;
+        setStatus(success ? (physicalReady ? 'physical-pass' : 'digital-pass') : 'fail');
+
+        if (!success && error) {
+          store.emitSignal('scannability-fail', {
+            engine,
+            styleId: config.style || 'default',
+            errorType: error
+          });
+        }
+      } catch (err) {
+        console.error("Worker response validation failed:", err);
+        setStatus('fail');
         store.emitSignal('scannability-fail', {
           engine,
           styleId: config.style || 'default',
-          errorType: error
+          errorType: 'VALIDATION_ERROR'
         });
       }
     };
@@ -74,12 +95,19 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
     
     // If virtual renderer provided deterministic image data, use it directly
     if (overrideImageData) {
-      worker.postMessage({
+      const payload = {
         imageData: overrideImageData,
         width: overrideImageData.width,
         height: overrideImageData.height,
-        isTest: navigator.webdriver,
-      }, [overrideImageData.data.buffer]);
+        isTest: !!navigator.webdriver,
+      };
+      try {
+        assertWorkerRequest(payload);
+        worker.postMessage(payload, [payload.imageData.data.buffer]);
+      } catch (err) {
+        console.error("Outgoing worker request validation failed:", err);
+        setStatus('fail');
+      }
       return;
     }
 
@@ -104,14 +132,16 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
         }
 
         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        worker.postMessage({
+        const payload = {
           imageData,
           width: canvas.width,
           height: canvas.height,
-          isTest: navigator.webdriver,
-        }, [imageData.data.buffer]);
+          isTest: !!navigator.webdriver,
+        };
+        assertWorkerRequest(payload);
+        worker.postMessage(payload, [payload.imageData.data.buffer]);
       } catch (err) {
-        console.error("Failed to read canvas data", err);
+        console.error("Failed to read canvas data or validation failed", err);
         setStatus('fail');
       }
     };
