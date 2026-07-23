@@ -391,7 +391,7 @@ export const ALLOWED_TELEMETRY_KEYS = [
 /**
  * Representing an individual telemetry key allowed under compliance guidelines.
  */
-export type TelemetryKey = typeof ALLOWED_TELEMETRY_KEYS[number];
+type TelemetryKey = typeof ALLOWED_TELEMETRY_KEYS[number];
 
 /**
  * Type definition for the telemetry payload, mapping telemetry keys to safe values.
