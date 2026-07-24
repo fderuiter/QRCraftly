@@ -6,7 +6,7 @@ import { ValidationEngine } from '@/engine/ValidationEngine';
 type SignalName = 'scannability-fail' | 'render-complete';
 type SignalCallback = (detail: any) => void;
 
-export type QRState = {
+type QRState = {
   config: QRConfig;
   moduleCount: number;
   preferences: { telemetryOptIn: boolean | null; darkMode: boolean };

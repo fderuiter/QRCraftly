@@ -19,7 +19,7 @@
 /**
  * Parsed meeting information extracted from a meeting URL.
  */
-export interface ParsedMeeting {
+interface ParsedMeeting {
   /** The type of meeting service detected. */
   service: 'zoom' | 'teams' | 'meet' | 'unknown';
   /** The extracted meeting ID, if found. */

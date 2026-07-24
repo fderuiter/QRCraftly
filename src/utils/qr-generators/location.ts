@@ -17,13 +17,12 @@
 */
 
 import { LocationData, QRType, QRGeneratorContract } from '../../types';
-import { ValidationEngine } from '../../engine/ValidationEngine';
 
 /**
  * Validates and parses a coordinate string as a finite floating-point number.
  * Returns `null` if the value is not a valid finite number.
  */
-const parseCoordinate = (value: string): number | null => {
+export const parseCoordinate = (value: string): number | null => {
   const trimmed = value.trim();
   if (trimmed === '') return null;
   const num = parseFloat(trimmed);
@@ -35,8 +34,6 @@ const parseCoordinate = (value: string): number | null => {
  *
  * Validates that:
  * - Both coordinates are valid finite numbers.
- * - Latitude is in the range [-90, 90].
- * - Longitude is in the range [-180, 180].
  *
  * Returns an empty string if validation fails.
  *
@@ -48,8 +45,6 @@ export const constructLocationString = (data: LocationData): string => {
   const lng = parseCoordinate(data.longitude);
 
   if (lat === null || lng === null) return '';
-  if (lat < -90 || lat > 90) return '';
-  if (lng < -180 || lng > 180) return '';
 
   return `geo:${lat},${lng}`;
 };
@@ -79,5 +74,5 @@ export const LocationContract: QRGeneratorContract<LocationData> = {
   type: QRType.LOCATION,
   construct: constructLocationString,
   hydrate: hydrateLocationData,
-  matches: (raw: string) => ValidationEngine.identifyProtocol(raw) === QRType.LOCATION,
+  matches: (raw: string) => raw.trim().toLowerCase().startsWith('geo:'),
 };

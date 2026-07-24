@@ -2,14 +2,13 @@ import { useEffect, useCallback } from 'react';
 import { useQRStore, useQRStoreSelector } from '@/context/QRContext';
 import { ScannabilityStatus } from './useScannability';
 import { useCapabilities } from './useCapabilities';
+import { ALLOWED_TELEMETRY_KEYS, TelemetryPayload } from '../types';
 
-const ALLOWED_TELEMETRY_KEYS = ['engine', 'styleId', 'errorType'];
-
-function sanitizeTelemetryPayload(payload: any): any {
+function sanitizeTelemetryPayload(payload: any): TelemetryPayload {
   if (!payload || typeof payload !== 'object') {
     return {};
   }
-  const sanitized: any = {};
+  const sanitized: TelemetryPayload = {};
   for (const key of ALLOWED_TELEMETRY_KEYS) {
     if (key in payload) {
       sanitized[key] = payload[key];

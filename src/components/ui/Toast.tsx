@@ -4,7 +4,7 @@ import { Button } from './Button';
 
 type ToastType = 'success' | 'error' | 'info';
 
-export interface ToastMessage {
+interface ToastMessage {
   id: string;
   type: ToastType;
   message: string;

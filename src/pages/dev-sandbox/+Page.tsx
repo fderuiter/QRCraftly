@@ -3,6 +3,7 @@ import { TextField, SelectField, CheckboxField } from '../../components/ui/FormF
 import { ColorInput } from '../../components/ui/ColorInput';
 
 export default function DevSandbox() {
+  const unusedLocal = "some unused value";
   const [text, setText] = useState('');
   const [select, setSelect] = useState('');
   const [color, setColor] = useState('#3b82f6');
@@ -119,6 +120,74 @@ export default function DevSandbox() {
         </div>
       </section>
 
+    </div>
+  );
+}
+
+function DevSandboxDuplicate() {
+  const [text, setText] = useState('');
+  const [select, setSelect] = useState('');
+  const [color, setColor] = useState('#3b82f6');
+  const [checked, setChecked] = useState(false);
+
+  return (
+    <div className="p-8 max-w-4xl mx-auto space-y-12">
+      <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">UI Components Sandbox</h1>
+
+      <section className="space-y-6">
+        <h2 className="text-xl font-semibold border-b pb-2">TextField</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <TextField
+            label="Default"
+            placeholder="Enter text..."
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+          />
+          <TextField
+            label="Disabled"
+            placeholder="Enter text..."
+            value="Disabled value"
+            disabled
+          />
+          <TextField
+            label="Error"
+            placeholder="Enter text..."
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            error="This field is required."
+          />
+        </div>
+      </section>
+
+      <section className="space-y-6">
+        <h2 className="text-xl font-semibold border-b pb-2">SelectField</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <SelectField
+            label="Default"
+            value={select}
+            onChange={(e) => setSelect(e.target.value)}
+          >
+            <option value="">Select an option</option>
+            <option value="1">Option 1</option>
+            <option value="2">Option 2</option>
+          </SelectField>
+          <SelectField
+            label="Disabled"
+            disabled
+          >
+            <option>Disabled option</option>
+          </SelectField>
+          <SelectField
+            label="Error"
+            value={select}
+            onChange={(e) => setSelect(e.target.value)}
+            error="Please select an option."
+          >
+            <option value="">Select an option</option>
+            <option value="1">Option 1</option>
+          </SelectField>
+        </div>
+      </section>
     </div>
   );
 }

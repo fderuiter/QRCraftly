@@ -63,20 +63,20 @@ export const ColorInput: React.FC<ColorInputProps> = ({
           {label}
         </label>
       )}
-      <div className="flex items-center gap-2 rounded-lg transition-all focus-within:ring-2 focus-within:ring-rose-500 focus-within:ring-offset-2 dark:focus-within:ring-offset-slate-900 focus-within:outline-none p-1 -m-1">
+      <div className="flex items-center gap-2 rounded-lg p-1 -m-1">
           <input
             id={id}
             type="color"
             value={value}
             onChange={(e) => onChange(e.target.value)}
-            className={`${sizeClass} rounded cursor-pointer border-0 p-0 bg-transparent focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none`}
+            className={`${sizeClass} rounded cursor-pointer border-0 p-0 bg-transparent`}
             title={title}
           />
           <input
             type="text"
             value={textValue}
             onChange={handleTextChange}
-            className="text-xs text-slate-600 dark:text-slate-300 font-mono bg-transparent border border-transparent hover:border-slate-300 rounded px-1 py-0.5 w-24 transition-colors focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none"
+            className="text-xs text-slate-600 dark:text-slate-300 font-mono bg-transparent border border-transparent hover:border-slate-300 rounded px-1 py-0.5 w-24 transition-colors"
             aria-label={`${label} Hex Code`}
           />
       </div>

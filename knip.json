@@ -1,16 +1,38 @@
 {
   "entry": [
-    "src/pages/**/+config.ts",
-    "src/pages/**/+Page.tsx",
-    "src/layouts/**/*.tsx"
+    "src/pages/**/+*.ts",
+    "src/pages/**/+*.tsx",
+    "src/layouts/**/*.tsx",
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx",
+    "tests/**/*.test.ts",
+    "tests/**/*.test.tsx"
   ],
   "project": [
     "src/**/*.ts",
     "src/**/*.tsx"
   ],
+  "paths": {
+    "@/*": ["./src/*"]
+  },
   "ignoreDependencies": [
     "axe-core",
     "wrangler",
     "tailwindcss"
-  ]
+  ],
+  "rules": {
+    "files": "off",
+    "dependencies": "off",
+    "devDependencies": "off",
+    "optionalPeerDependencies": "off",
+    "unlisted": "off",
+    "binaries": "off",
+    "unresolved": "off",
+    "exports": "error",
+    "types": "error"
+  },
+  "vite": false,
+  "vike": false,
+  "vitest": false,
+  "eslint": false
 }
