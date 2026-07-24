@@ -15,7 +15,7 @@ const getLabelClass = (customClass?: string) => {
   return "block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1";
 };
 
-export interface FieldWrapperProps extends BaseFieldProps {
+interface FieldWrapperProps extends BaseFieldProps {
   showCharCount?: boolean;
   maxLength?: number;
   value?: string | number | readonly string[];

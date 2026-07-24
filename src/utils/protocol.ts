@@ -14,7 +14,7 @@ export const PROTOCOL_PREFIXES = {
   TEL: ['tel:'],
 };
 
-export interface ParsedProtocol {
+interface ParsedProtocol {
   scheme: string; // The protocol scheme without colon, e.g., 'mailto', 'sms', 'matmsg', 'http'
   path: string; // The target (email, phone, domain, etc.)
   params: Map<string, string>; // Query parameters or matmsg parts

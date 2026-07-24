@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 
 type BrowserEngine = 'WebKit' | 'Chromium' | 'Firefox' | 'Unknown';
 
-export interface Capabilities {
+interface Capabilities {
   engine: BrowserEngine;
   canSaveFilePicker: boolean;
   canShare: boolean;

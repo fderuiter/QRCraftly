@@ -43,7 +43,7 @@ function multiplyMatrix(m1: Matrix, m2: Matrix): Matrix {
   };
 }
 
-export class SvgRadialGradient {
+class SvgRadialGradient {
   public id: string;
   public x0: number;
   public y0: number;

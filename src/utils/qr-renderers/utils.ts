@@ -138,7 +138,7 @@ export const iterateMatrix = (moduleCount: number, callback: (r: number, c: numb
   }
 };
 
-export interface LayoutMetrics {
+interface LayoutMetrics {
     drawX: number;
     drawY: number;
     drawSize: number;

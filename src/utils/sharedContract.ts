@@ -26,7 +26,7 @@ export function isWorkerRequest(data: unknown): data is {
   return true;
 }
 
-export type WorkerRequest = GuardedType<typeof isWorkerRequest>;
+type WorkerRequest = GuardedType<typeof isWorkerRequest>;
 
 /**
  * Assertion function for Worker Request.
@@ -74,7 +74,7 @@ export function isWorkerResponse(data: unknown): data is {
   return true;
 }
 
-export type WorkerResponse = GuardedType<typeof isWorkerResponse>;
+type WorkerResponse = GuardedType<typeof isWorkerResponse>;
 
 /**
  * Assertion function for Worker Response.
