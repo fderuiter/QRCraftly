@@ -19,7 +19,7 @@ for (const [ruleName, ruleVal] of Object.entries(jsdoc.configs["flat/recommended
 
 export default tseslint.config(
   {
-    ignores: ["dist/**", "node_modules/**", "coverage/**", "scripts/**", "e2e/**", "**/*.test.ts", "**/*.test.tsx"]
+    ignores: ["dist/**", "node_modules/**", "coverage/**", "scripts/**", "e2e/**", "**/*.test.ts", "**/*.test.tsx", ".pnpmfile.cjs"]
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
