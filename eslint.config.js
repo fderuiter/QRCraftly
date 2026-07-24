@@ -170,5 +170,11 @@ export default tseslint.config(
       "jsdoc/require-param-description": "warn",
       "jsdoc/require-returns-description": "warn"
     }
+  },
+  {
+    files: ["src/pages/dev-sandbox/**/*.{ts,tsx}"],
+    rules: {
+      "@typescript-eslint/no-unused-vars": "off"
+    }
   }
 );
