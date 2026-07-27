@@ -21,6 +21,9 @@ on:
       - '.github/workflows/**'
   pull_request:
     branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
 
 permissions:
   contents: read

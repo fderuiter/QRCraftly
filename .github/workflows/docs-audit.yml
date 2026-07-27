@@ -1,0 +1,95 @@
+name: Documentation Audit
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**'
+      - '**/*.md'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'docs/**'
+      - '**/*.md'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    name: Docs Audit & Verification
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+
+      - name: Change Verification (Bypass Check)
+        id: check_files
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            CHANGED_FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }} || git diff --name-only origin/${{ github.base_ref }}...HEAD || true)
+          else
+            if [ "${{ github.event.before }}" = "0000000000000000000000000000000000000000" ] || [ -z "${{ github.event.before }}" ]; then
+              CHANGED_FILES=$(git diff-tree --no-commit-id --name-only -r HEAD || true)
+            else
+              CHANGED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.event.after }} || git diff-tree --no-commit-id --name-only -r HEAD || true)
+            fi
+          fi
+
+          echo "Detected changed files:"
+          echo "$CHANGED_FILES"
+
+          skip=false
+          for file in $CHANGED_FILES; do
+            if [ -z "$file" ]; then
+              continue
+            fi
+            if [[ ! "$file" =~ ^docs/ ]] && [[ ! "$file" =~ \.md$ ]]; then
+              echo "Non-documentation/code file detected: $file"
+              skip=true
+              break
+            fi
+          done
+
+          echo "skip=$skip"
+          echo "skip=$skip" >> $GITHUB_OUTPUT
+
+      - name: Setup Node (pre-pnpm)
+        if: steps.check_files.outputs.skip != 'true'
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "22.14.0"
+
+      - name: Setup pnpm
+        if: steps.check_files.outputs.skip != 'true'
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+
+      - name: Setup Node
+        if: steps.check_files.outputs.skip != 'true'
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "22.14.0"
+          cache: "pnpm"
+
+      - name: Restore node_modules Cache
+        if: steps.check_files.outputs.skip != 'true'
+        id: cache-node-modules
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('**/pnpm-lock.yaml') }}
+
+      - name: Install NPM Dependencies
+        if: steps.check_files.outputs.skip != 'true' && steps.cache-node-modules.outputs.cache-hit != 'true'
+        run: pnpm install --frozen-lockfile
+
+      - name: Run Markdown Audit Script
+        if: steps.check_files.outputs.skip != 'true'
+        run: node scripts/audit_markdown.js
