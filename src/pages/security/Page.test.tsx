@@ -25,4 +25,25 @@ describe('Security Page', () => {
       }
     });
   });
+
+  it('appends unique, document-prefixed ID attributes to heading elements and rewrites cross-file links', () => {
+    const { container } = render(<Page />);
+
+    // Check heading ID for HIPAA Compliance Alignment in compliance document
+    const complianceHeading = container.querySelector('#compliance-hipaa-compliance-alignment');
+    expect(complianceHeading).not.toBeNull();
+    expect(complianceHeading?.tagName).toBe('H3');
+    expect(complianceHeading?.textContent).toBe('HIPAA Compliance Alignment');
+
+    // Check heading ID for CI/CD Security Governance in security document
+    const securityHeading = container.querySelector('#security-cicd-security-governance');
+    expect(securityHeading).not.toBeNull();
+    expect(securityHeading?.tagName).toBe('H3');
+    expect(securityHeading?.textContent).toContain('CI/CD Security Governance');
+
+    // Check link in security section pointing to COMPLIANCE.md is rewritten to #compliance
+    const complianceLink = container.querySelector('a[href="#compliance"]');
+    expect(complianceLink).not.toBeNull();
+    expect(complianceLink?.textContent).toBe('COMPLIANCE.md');
+  });
 });
