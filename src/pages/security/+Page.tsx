@@ -2,26 +2,23 @@ import { ArrowLeft, ShieldCheck, ShieldAlert, FileText } from 'lucide-react';
 import { Marked } from 'marked';
 import docsManifest from '../../data/docs_manifest.json';
 
-const customMarked = new Marked({
-  renderer: {
-    heading({ text, depth }) {
-      const newDepth = Math.min(depth + 1, 6);
-      return `<h${newDepth}>${text}</h${newDepth}>`;
-    }
-  },
-  walkTokens(token) {
-    if (token.type === 'link') {
-      const href = token.href;
-      const parts = href.split('#');
-      const file = parts[0];
-      const doc = docsManifest.find(d => d.filename === file);
-      if (doc) {
-        token.href = `#${doc.id}`;
-      }
-    }
-  }
-});
+function slugify(text: string): string {
+  let prev;
+  do {
+    prev = text;
+    text = text.replace(/<[^>]*>/g, '');
+  } while (text !== prev);
 
+  return text
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, '') // remove non-word characters except spaces and hyphens
+    .replace(/\s+/g, '-');    // replace spaces with hyphens
+}
+
+/**
+ *
+ */
 export default function Page() {
   return (
     <div className="max-w-7xl mx-auto px-4 py-12">
@@ -48,7 +45,43 @@ export default function Page() {
         {docsManifest.map(doc => {
           // Remove the first h1 to avoid duplicate titles if we display doc.title as h2
           const contentWithoutH1 = doc.content.replace(/^#\s+.+$/m, '');
-          const html = customMarked.parse(contentWithoutH1) as string;
+
+          // Create a scoped, document-aware parser instance to avoid global state pollution
+          const scopedMarked = new Marked({
+            renderer: {
+              heading({ text, depth }) {
+                const newDepth = Math.min(depth + 1, 6);
+                const slug = slugify(text);
+                const id = `${doc.id}-${slug}`;
+                return `<h${newDepth} id="${id}">${text}</h${newDepth}>`;
+              }
+            },
+            walkTokens(token) {
+              if (token.type === 'link') {
+                const href = token.href;
+                if (href.startsWith('#')) {
+                  const fragment = href.slice(1);
+                  if (fragment) {
+                    token.href = `#${doc.id}-${fragment}`;
+                  }
+                } else {
+                  const parts = href.split('#');
+                  const file = parts[0];
+                  const hash = parts[1];
+                  const targetDoc = docsManifest.find(d => d.filename === file);
+                  if (targetDoc) {
+                    if (hash) {
+                      token.href = `#${targetDoc.id}-${hash}`;
+                    } else {
+                      token.href = `#${targetDoc.id}`;
+                    }
+                  }
+                }
+              }
+            }
+          });
+
+          const html = scopedMarked.parse(contentWithoutH1) as string;
           return (
             <section key={doc.id} id={doc.id} className="bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 prose dark:prose-invert prose-slate max-w-none col-span-1">
               <div className="flex items-center gap-3 mb-6 not-prose">
