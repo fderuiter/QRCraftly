@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { constructVCardString, hydrateVCardData } from './vcard';
+import { constructVCardString, hydrateVCardData, VCardContract } from './vcard';
+import { QRType } from '../../types';
 
 describe('VCard generator', () => {
   it('constructs and hydrates successfully', () => {
@@ -91,5 +92,20 @@ describe('VCard generator', () => {
     expect(str).toContain('Line 1\\nLine 2');
     expect(str).toContain('Win\\nMac\\nUnix\\n');
     expect(str).toContain('Line\t1\\nLine\t2');
+  });
+
+  it('implements VCardContract correctly and validates dangerous URLs', () => {
+    expect(VCardContract.type).toBe(QRType.VCARD);
+    expect(VCardContract.matches('BEGIN:VCARD')).toBe(true);
+    expect(VCardContract.matches('OTHER')).toBe(false);
+
+    // No URL, should be empty violations
+    expect(VCardContract.validate?.('BEGIN:VCARD\nEND:VCARD')).toEqual([]);
+
+    // Safe URL, should be empty violations
+    expect(VCardContract.validate?.('BEGIN:VCARD\nURL:https://example.com\nEND:VCARD')).toEqual([]);
+
+    // Dangerous URL, should have URI_INJECTION_VIOLATION
+    expect(VCardContract.validate?.('BEGIN:VCARD\nURL:javascript:alert(1)\nEND:VCARD')).toEqual(['URI_INJECTION_VIOLATION']);
   });
 });

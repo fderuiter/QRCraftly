@@ -17,8 +17,8 @@
 */
 
 import { describe, it, expect } from 'vitest';
-import { constructWifiString, hydrateWifiData } from './wifi';
-import { WifiEncryption } from '../../types';
+import { constructWifiString, hydrateWifiData, WifiContract } from './wifi';
+import { WifiEncryption, QRType } from '../../types';
 
 describe('Wifi generator', () => {
   it('constructs and hydrates successfully', () => {
@@ -100,5 +100,19 @@ describe('Wifi generator', () => {
     expect(str).toContain('S:My\nNetwork\0\t;');
     expect(str).toContain('P:Pass\rWord\x1F;');
     expect(str).toContain('I:My\\;Net\nwork;');
+  });
+
+  it('implements WifiContract correctly', () => {
+    expect(WifiContract.type).toBe(QRType.WIFI);
+    expect(WifiContract.matches('WIFI:S:test;;')).toBe(true);
+    expect(WifiContract.matches('OTHER:S:test;;')).toBe(false);
+    expect(WifiContract.validate?.('WIFI:S:test;;')).toEqual([]);
+  });
+
+  it('handles empty SSID or parameters', () => {
+    const raw = 'WIFI:S:;P:;T:WPA;';
+    const hydrated = hydrateWifiData(raw);
+    expect(hydrated.ssid).toBe('');
+    expect(hydrated.password).toBe('');
   });
 });

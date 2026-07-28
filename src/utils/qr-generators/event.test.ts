@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { constructEventString, hydrateEventData } from './event';
+import { constructEventString, hydrateEventData, EventContract } from './event';
+import { QRType } from '../../types';
 
 describe('Event generator', () => {
   it('constructs and hydrates successfully', () => {
@@ -88,6 +89,13 @@ describe('Event generator', () => {
     expect(str).toContain('DTEND:');
     expect(str).toContain('LOCATION:');
     expect(str).toContain('DESCRIPTION:');
+  });
+
+  it('implements EventContract correctly', () => {
+    expect(EventContract.type).toBe(QRType.EVENT);
+    expect(EventContract.matches('BEGIN:VEVENT')).toBe(true);
+    expect(EventContract.matches('OTHER')).toBe(false);
+    expect(EventContract.validate?.('BEGIN:VEVENT')).toEqual([]);
   });
 });
 

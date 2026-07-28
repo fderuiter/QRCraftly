@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { constructEmailString, hydrateEmailData } from './email';
+import { constructEmailString, hydrateEmailData, EmailContract } from './email';
+import { QRType } from '../../types';
 
 describe('Email generator', () => {
   it('constructs and hydrates successfully', () => {
@@ -38,5 +39,20 @@ describe('Email generator', () => {
 
   it('returns default for non-email schemes', () => {
     expect(hydrateEmailData('tel:1234567890')).toEqual({ email: '', subject: '', body: '' });
+  });
+
+  it('implements EmailContract correctly and validates emails', () => {
+    expect(EmailContract.type).toBe(QRType.EMAIL);
+    expect(EmailContract.matches('mailto:test@example.com')).toBe(true);
+    expect(EmailContract.matches('tel:12345')).toBe(false);
+
+    // Valid mailto starting
+    expect(EmailContract.validate?.('mailto:test@example.com')).toEqual([]);
+    
+    // Invalid mailto starting
+    expect(EmailContract.validate?.('mailto:invalid_email')).toEqual(['EMAIL_STRUCTURE_VIOLATION']);
+
+    // Non-mailto starting
+    expect(EmailContract.validate?.('invalid_email')).toEqual(['EMAIL_STRUCTURE_VIOLATION']);
   });
 });
