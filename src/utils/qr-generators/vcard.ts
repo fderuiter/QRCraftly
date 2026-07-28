@@ -20,6 +20,36 @@ import { VCardData, QRType, QRGeneratorContract } from '../../types';
 import { normalizeUrl } from '../url';
 import { ValidationEngine } from '../../engine/ValidationEngine';
 
+const REGEX_ESCAPE_VCARD = /([;,])/g;
+const REGEX_UNESCAPE_VCARD = /\\([;,])/g;
+const REGEX_SPLIT_VCARD = /(?<!\\);/;
+
+/**
+ * Escapes special characters and formats newlines for vCard and VEvent properties.
+ * @param str - The raw field value string, which can be undefined.
+ * @returns The escaped vCard/VEvent property string.
+ */
+export const escapeVCardEvent = (str: string | undefined): string => {
+  if (!str) return '';
+  return str
+    .replace(/\\/g, '\\\\')
+    .replace(/\r\n|\r|\n/g, '\\n')
+    .replace(REGEX_ESCAPE_VCARD, '\\$1');
+};
+
+/**
+ * Unescapes formatting and special characters in vCard or VEvent fields.
+ * @param str - The escaped vCard/VEvent property string, which can be undefined.
+ * @returns The restored raw field value string.
+ */
+export const unescapeVCardEvent = (str: string | undefined): string => {
+  if (!str) return '';
+  return str
+    .replace(/\\n/gi, '\n')
+    .replace(REGEX_UNESCAPE_VCARD, '$1')
+    .replace(/\\\\/g, '\\');
+};
+
 /**
  * Hydrates VCardData from a raw string.
  */
@@ -52,22 +82,22 @@ export const hydrateVCardData = (raw: string): VCardData => {
 
     switch(key) {
       case 'N': {
-        const nParts = value.split(ValidationEngine.REGEX_SPLIT_VCARD);
-        result.lastName = ValidationEngine.unescapeVCardEvent(nParts[0] || '');
-        result.firstName = ValidationEngine.unescapeVCardEvent(nParts[1] || '');
+        const nParts = value.split(REGEX_SPLIT_VCARD);
+        result.lastName = unescapeVCardEvent(nParts[0] || '');
+        result.firstName = unescapeVCardEvent(nParts[1] || '');
         break;
       }
-      case 'ORG': result.organization = ValidationEngine.unescapeVCardEvent(value); break;
-      case 'TITLE': result.title = ValidationEngine.unescapeVCardEvent(value); break;
-      case 'TEL': result.phone = ValidationEngine.unescapeVCardEvent(value); break;
-      case 'EMAIL': result.email = ValidationEngine.unescapeVCardEvent(value); break;
-      case 'URL': result.website = ValidationEngine.unescapeVCardEvent(value); break;
+      case 'ORG': result.organization = unescapeVCardEvent(value); break;
+      case 'TITLE': result.title = unescapeVCardEvent(value); break;
+      case 'TEL': result.phone = unescapeVCardEvent(value); break;
+      case 'EMAIL': result.email = unescapeVCardEvent(value); break;
+      case 'URL': result.website = unescapeVCardEvent(value); break;
       case 'ADR': {
-        const adrParts = value.split(ValidationEngine.REGEX_SPLIT_VCARD);
-        result.street = ValidationEngine.unescapeVCardEvent(adrParts[2] || '');
-        result.city = ValidationEngine.unescapeVCardEvent(adrParts[3] || '');
-        result.zip = ValidationEngine.unescapeVCardEvent(adrParts[5] || '');
-        result.country = ValidationEngine.unescapeVCardEvent(adrParts[6] || '');
+        const adrParts = value.split(REGEX_SPLIT_VCARD);
+        result.street = unescapeVCardEvent(adrParts[2] || '');
+        result.city = unescapeVCardEvent(adrParts[3] || '');
+        result.zip = unescapeVCardEvent(adrParts[5] || '');
+        result.country = unescapeVCardEvent(adrParts[6] || '');
         break;
       }
     }
@@ -80,23 +110,23 @@ export const hydrateVCardData = (raw: string): VCardData => {
  * Constructs the vCard 3.0 string.
  */
 export const constructVCardString = (data: VCardData): string => {
-  const lastName = ValidationEngine.escapeVCardEvent(data.lastName);
-  const firstName = ValidationEngine.escapeVCardEvent(data.firstName);
+  const lastName = escapeVCardEvent(data.lastName);
+  const firstName = escapeVCardEvent(data.firstName);
   // Normalize URL first to handle spaces/protocols
   const normalizedWebsite = normalizeUrl(data.website);
-  const website = ValidationEngine.escapeVCardEvent(normalizedWebsite);
+  const website = escapeVCardEvent(normalizedWebsite);
 
   const parts = [
     'BEGIN:VCARD',
     'VERSION:3.0',
     `N:${lastName};${firstName};;;`,
     `FN:${firstName} ${lastName}`,
-    `ORG:${ValidationEngine.escapeVCardEvent(data.organization)}`,
-    `TITLE:${ValidationEngine.escapeVCardEvent(data.title)}`,
-    `TEL:${ValidationEngine.escapeVCardEvent(data.phone)}`,
-    `EMAIL:${ValidationEngine.escapeVCardEvent(data.email)}`,
+    `ORG:${escapeVCardEvent(data.organization)}`,
+    `TITLE:${escapeVCardEvent(data.title)}`,
+    `TEL:${escapeVCardEvent(data.phone)}`,
+    `EMAIL:${escapeVCardEvent(data.email)}`,
     `URL:${website}`,
-    `ADR:;;${ValidationEngine.escapeVCardEvent(data.street)};${ValidationEngine.escapeVCardEvent(data.city)};;${ValidationEngine.escapeVCardEvent(data.zip)};${ValidationEngine.escapeVCardEvent(data.country)}`,
+    `ADR:;;${escapeVCardEvent(data.street)};${escapeVCardEvent(data.city)};;${escapeVCardEvent(data.zip)};${escapeVCardEvent(data.country)}`,
     'END:VCARD',
   ];
 
@@ -107,5 +137,16 @@ export const VCardContract: QRGeneratorContract<VCardData> = {
   type: QRType.VCARD,
   construct: constructVCardString,
   hydrate: hydrateVCardData,
-  matches: (raw: string) => ValidationEngine.identifyProtocol(raw) === QRType.VCARD,
+  matches: (raw: string) => raw.includes('BEGIN:VCARD'),
+  validate: (raw: string) => {
+    const violations: string[] = [];
+    const urlMatch = raw.match(/^URL(?:;[^:]*)?:([^\r\n]+)/mi);
+    if (urlMatch) {
+      const vcardUrl = urlMatch[1].trim();
+      if (ValidationEngine.isDangerousUrl(vcardUrl)) {
+        violations.push('URI_INJECTION_VIOLATION');
+      }
+    }
+    return violations;
+  },
 };

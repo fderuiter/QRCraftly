@@ -3,7 +3,6 @@ import { LOW_RELIABILITY_PATTERNS, SYSTEM_LIMITS } from '../constants';
 import { getContrastRatio } from '../utils/colorUtils';
 import { parseProtocol, PROTOCOL_PREFIXES, SOCIAL_DOMAINS } from '../utils/protocol';
 import { SafeUrlPipeline } from '../utils/url';
-import { parseCoordinate, hydrateLocationData } from '../utils/qr-generators/location';
 
 /**
  * Core validation and sanitization engine for QR code generation.
@@ -11,6 +10,20 @@ import { parseCoordinate, hydrateLocationData } from '../utils/qr-generators/loc
  * payload sanitization, and scannability heuristics.
  */
 export const ValidationEngine = {
+  /**
+   * Registry for type-specific validator functions to avoid tight coupling.
+   */
+  typeValidators: {} as Record<string, (value: string) => string[]>,
+
+  /**
+   * Registers a validator function for a specific QRType.
+   * @param type - The QR code type to register.
+   * @param validator - The validation function for the QRType.
+   */
+  registerValidator(type: QRType, validator: (value: string) => string[]) {
+    this.typeValidators[type] = validator;
+  },
+
   /**
    * Formal containment profiles for validating structured text and emails.
    */
@@ -34,30 +47,6 @@ export const ValidationEngine = {
    * Regular expression pattern to match characters unsafe in a URL structure.
    */
   REGEX_URL_UNSAFE_CHARS: SafeUrlPipeline.REGEX_URL_UNSAFE_CHARS,
-  /**
-   * Regular expression pattern to match characters that need escaping in WIFI configurations.
-   */
-  REGEX_ESCAPE_WIFI: /([\\;,":])/g,
-  /**
-   * Regular expression pattern to match escaped WIFI characters for unescaping.
-   */
-  REGEX_UNESCAPE_WIFI: /\\([\\;,":])/g,
-  /**
-   * Regular expression pattern to split WIFI parameters avoiding escaped semicolons.
-   */
-  REGEX_SPLIT_WIFI: /(?<!\\);/,
-  /**
-   * Regular expression pattern to match characters that need escaping in vCard entries.
-   */
-  REGEX_ESCAPE_VCARD: /([;,])/g,
-  /**
-   * Regular expression pattern to match escaped vCard characters for unescaping.
-   */
-  REGEX_UNESCAPE_VCARD: /\\([;,])/g,
-  /**
-   * Regular expression pattern to split vCard parameters avoiding escaped semicolons.
-   */
-  REGEX_SPLIT_VCARD: /(?<!\\);/,
 
   /**
    * List of dangerous protocols that must be blocked for security.
@@ -162,45 +151,9 @@ export const ValidationEngine = {
       // Determine the effective type. Prefer explicit config.type, otherwise try to identify it.
       const type = config.type || this.identifyProtocol(config.value);
 
-      if (type === QRType.URL || type === QRType.MEETING) {
-        if (this.isDangerousUrl(config.value)) {
-          violations.push('URI_INJECTION_VIOLATION');
-        } else if (!this.CONTAINMENT_PROFILES.URL.test(config.value) && config.value.startsWith('http')) {
-          violations.push('URL_STRUCTURE_VIOLATION');
-        }
-      } else if (type === QRType.EMAIL) {
-        // If it starts with mailto:, extract and check the email part
-        let emailPart = config.value;
-        if (emailPart.toLowerCase().startsWith('mailto:')) {
-          emailPart = emailPart.substring(7).split('?')[0];
-        }
-        if (!this.CONTAINMENT_PROFILES.EMAIL.test(emailPart)) {
-          violations.push('EMAIL_STRUCTURE_VIOLATION');
-        }
-      } else if (type === QRType.VCARD) {
-        // Extract website and check if dangerous
-        const urlMatch = config.value.match(/^URL(?:;[^:]*)?:([^\r\n]+)/mi);
-        if (urlMatch) {
-          const vcardUrl = urlMatch[1].trim();
-          if (this.isDangerousUrl(vcardUrl)) {
-            violations.push('URI_INJECTION_VIOLATION');
-          }
-        }
-      } else if (type === QRType.PAYMENT) {
-        if (config.value && this.isDangerousUrl(config.value)) {
-          violations.push('URI_INJECTION_VIOLATION');
-        }
-      } else if (type === QRType.LOCATION) {
-        const { latitude, longitude } = hydrateLocationData(config.value);
-        const lat = parseCoordinate(latitude);
-        const lng = parseCoordinate(longitude);
-
-        if (lat !== null && (lat < -90 || lat > 90)) {
-          violations.push('LATITUDE_OUT_OF_BOUNDS_VIOLATION');
-        }
-        if (lng !== null && (lng < -180 || lng > 180)) {
-          violations.push('LONGITUDE_OUT_OF_BOUNDS_VIOLATION');
-        }
+      const validator = this.typeValidators[type];
+      if (validator) {
+        violations.push(...validator(config.value));
       }
     }
 
@@ -261,52 +214,6 @@ export const ValidationEngine = {
    */
   cleanPhoneNumber(number: string): string {
     return number.replace(/[^0-9+*#\-().]/g, '');
-  },
-
-  /**
-   * Escapes specific special characters in a WIFI SSID or password string.
-   * @param str - The raw SSID or password string, which can be undefined.
-   * @returns The escaped WIFI parameter string.
-   */
-  escapeWifi(str: string | undefined): string {
-    if (!str) return '';
-    return str.replace(this.REGEX_ESCAPE_WIFI, '\\$1');
-  },
-
-  /**
-   * Unescapes escaped special characters in a WIFI SSID or password string.
-   * @param str - The escaped WIFI string, which can be undefined.
-   * @returns The unescaped WIFI parameter string.
-   */
-  unescapeWifi(str: string | undefined): string {
-    if (!str) return '';
-    return str.replace(this.REGEX_UNESCAPE_WIFI, '$1');
-  },
-
-  /**
-   * Escapes special characters and formats newlines for vCard and VEvent properties.
-   * @param str - The raw field value string, which can be undefined.
-   * @returns The escaped vCard/VEvent property string.
-   */
-  escapeVCardEvent(str: string | undefined): string {
-    if (!str) return '';
-    return str
-      .replace(/\\/g, '\\\\')
-      .replace(/\r\n|\r|\n/g, '\\n')
-      .replace(this.REGEX_ESCAPE_VCARD, '\\$1');
-  },
-
-  /**
-   * Unescapes formatting and special characters in vCard or VEvent fields.
-   * @param str - The escaped vCard/VEvent property string, which can be undefined.
-   * @returns The restored raw field value string.
-   */
-  unescapeVCardEvent(str: string | undefined): string {
-    if (!str) return '';
-    return str
-      .replace(/\\n/gi, '\n')
-      .replace(this.REGEX_UNESCAPE_VCARD, '$1')
-      .replace(/\\\\/g, '\\');
   },
 
   /**

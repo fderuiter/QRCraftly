@@ -61,4 +61,15 @@ export const EmailContract: QRGeneratorContract<EmailData> = {
   construct: constructEmailString,
   hydrate: hydrateEmailData,
   matches: (raw: string) => ValidationEngine.identifyProtocol(raw) === QRType.EMAIL,
+  validate: (raw: string) => {
+    const violations: string[] = [];
+    let emailPart = raw;
+    if (emailPart.toLowerCase().startsWith('mailto:')) {
+      emailPart = emailPart.substring(7).split('?')[0];
+    }
+    if (!ValidationEngine.CONTAINMENT_PROFILES.EMAIL.test(emailPart)) {
+      violations.push('EMAIL_STRUCTURE_VIOLATION');
+    }
+    return violations;
+  },
 };

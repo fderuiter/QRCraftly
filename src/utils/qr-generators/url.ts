@@ -39,4 +39,13 @@ export const UrlContract: QRGeneratorContract<UrlData> = {
   construct: constructUrlString,
   hydrate: hydrateUrlData,
   matches: (raw: string) => ValidationEngine.identifyProtocol(raw) === QRType.URL,
+  validate: (raw: string) => {
+    const violations: string[] = [];
+    if (ValidationEngine.isDangerousUrl(raw)) {
+      violations.push('URI_INJECTION_VIOLATION');
+    } else if (!ValidationEngine.CONTAINMENT_PROFILES.URL.test(raw) && raw.startsWith('http')) {
+      violations.push('URL_STRUCTURE_VIOLATION');
+    }
+    return violations;
+  },
 };
