@@ -16,23 +16,17 @@
     "@/*": ["./src/*"]
   },
   "ignoreDependencies": [
-    "axe-core",
-    "wrangler",
-    "tailwindcss"
+    "wrangler"
   ],
   "rules": {
-    "files": "off",
-    "dependencies": "off",
-    "devDependencies": "off",
-    "optionalPeerDependencies": "off",
-    "unlisted": "off",
-    "binaries": "off",
-    "unresolved": "off",
+    "files": "error",
+    "dependencies": "error",
+    "devDependencies": "error",
+    "optionalPeerDependencies": "error",
+    "unlisted": "error",
+    "binaries": "error",
+    "unresolved": "error",
     "exports": "error",
     "types": "error"
-  },
-  "vite": false,
-  "vike": false,
-  "vitest": false,
-  "eslint": false
+  }
 }
