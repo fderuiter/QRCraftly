@@ -27,7 +27,7 @@ const REGEX_SPLIT_WIFI = /(?<!\\);/;
  * @param str - The raw SSID or password string, which can be undefined.
  * @returns The escaped WIFI parameter string.
  */
-export const escapeWifi = (str: string | undefined): string => {
+const escapeWifi = (str: string | undefined): string => {
   if (!str) return '';
   return str.replace(REGEX_ESCAPE_WIFI, '\\$1');
 };
@@ -37,7 +37,7 @@ export const escapeWifi = (str: string | undefined): string => {
  * @param str - The escaped WIFI string, which can be undefined.
  * @returns The unescaped WIFI parameter string.
  */
-export const unescapeWifi = (str: string | undefined): string => {
+const unescapeWifi = (str: string | undefined): string => {
   if (!str) return '';
   return str.replace(REGEX_UNESCAPE_WIFI, '$1');
 };

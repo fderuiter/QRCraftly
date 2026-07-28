@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { constructPaymentString, hydratePaymentData } from './payment';
-import { CryptoNetwork } from '../../types';
+import { constructPaymentString, hydratePaymentData, PaymentContract } from './payment';
+import { CryptoNetwork, QRType } from '../../types';
 
 describe('Payment generator', () => {
   it('constructs and hydrates successfully', () => {
@@ -53,5 +53,20 @@ describe('Payment generator', () => {
     const result = hydratePaymentData('bitcoin:1A1z?other=123');
     expect(result.amount).toBe('');
     expect(result.label).toBe('');
+  });
+
+  it('implements PaymentContract correctly and validates raw strings', () => {
+    expect(PaymentContract.type).toBe(QRType.PAYMENT);
+    expect(PaymentContract.matches('bitcoin:1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa')).toBe(true);
+    expect(PaymentContract.matches('random')).toBe(false);
+
+    // Empty validation
+    expect(PaymentContract.validate?.('')).toEqual([]);
+
+    // Safe validation
+    expect(PaymentContract.validate?.('bitcoin:1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa')).toEqual([]);
+
+    // Dangerous validation
+    expect(PaymentContract.validate?.('javascript:alert(1)')).toEqual(['URI_INJECTION_VIOLATION']);
   });
 });

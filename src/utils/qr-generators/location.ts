@@ -22,7 +22,7 @@ import { LocationData, QRType, QRGeneratorContract } from '../../types';
  * Validates and parses a coordinate string as a finite floating-point number.
  * Returns `null` if the value is not a valid finite number.
  */
-export const parseCoordinate = (value: string): number | null => {
+const parseCoordinate = (value: string): number | null => {
   const trimmed = value.trim();
   if (trimmed === '') return null;
   const num = parseFloat(trimmed);
