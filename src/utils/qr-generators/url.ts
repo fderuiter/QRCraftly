@@ -34,6 +34,10 @@ const hydrateUrlData = (raw: string): UrlData => {
   return { url: raw };
 };
 
+/**
+ * Decentralized contract for URL payload serialization and validation.
+ * Keeps URL parsing decoupled from the centralized ValidationEngine.
+ */
 export const UrlContract: QRGeneratorContract<UrlData> = {
   type: QRType.URL,
   construct: constructUrlString,
