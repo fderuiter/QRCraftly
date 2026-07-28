@@ -16,7 +16,8 @@
     "@/*": ["./src/*"]
   },
   "ignoreDependencies": [
-    "wrangler"
+    "wrangler",
+    "tailwindcss"
   ],
   "rules": {
     "files": "error",
