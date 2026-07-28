@@ -47,3 +47,14 @@ export const QR_GENERATORS: Record<QRType, QRGeneratorContract<any>> = {
   [QRType.MEETING]: MeetingContract,
   [QRType.SOCIAL]: SocialContract,
 };
+
+import { ValidationEngine } from '../engine/ValidationEngine';
+
+// Register all validators onto ValidationEngine dynamically
+Object.keys(QR_GENERATORS).forEach((typeKey) => {
+  const type = typeKey as QRType;
+  const gen = QR_GENERATORS[type];
+  if (gen && typeof gen.validate === 'function') {
+    ValidationEngine.registerValidator(type, gen.validate.bind(gen));
+  }
+});

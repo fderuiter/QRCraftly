@@ -75,4 +75,18 @@ export const LocationContract: QRGeneratorContract<LocationData> = {
   construct: constructLocationString,
   hydrate: hydrateLocationData,
   matches: (raw: string) => raw.trim().toLowerCase().startsWith('geo:'),
+  validate: (raw: string) => {
+    const violations: string[] = [];
+    const { latitude, longitude } = hydrateLocationData(raw);
+    const lat = parseCoordinate(latitude);
+    const lng = parseCoordinate(longitude);
+
+    if (lat !== null && (lat < -90 || lat > 90)) {
+      violations.push('LATITUDE_OUT_OF_BOUNDS_VIOLATION');
+    }
+    if (lng !== null && (lng < -180 || lng > 180)) {
+      violations.push('LONGITUDE_OUT_OF_BOUNDS_VIOLATION');
+    }
+    return violations;
+  },
 };

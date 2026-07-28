@@ -62,6 +62,8 @@ export interface QRGeneratorContract<TData> {
   hydrate(raw: string): TData;
   /** Checks if the raw string matches this QR type. */
   matches(raw: string): boolean;
+  /** Validates the constructed value, returning an array of violation strings. */
+  validate?(raw: string): string[];
 }
 
 /**

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { ValidationEngine } from './ValidationEngine';
 import { QRConfig, QRType, QRErrorCorrectionLevel, SocialFormat, TemplateStyle, QRStyle } from '../types';
+import '../utils/qrHelpers';
 
 const getBaseConfig = (): QRConfig => ({
   type: QRType.TEXT,

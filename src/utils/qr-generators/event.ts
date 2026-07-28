@@ -17,7 +17,7 @@
 */
 
 import { EventData, QRType, QRGeneratorContract } from '../../types';
-import { ValidationEngine } from '../../engine/ValidationEngine';
+import { escapeVCardEvent, unescapeVCardEvent } from './vcard';
 
 /**
  * Formats an ISO datetime string (from datetime-local) into iCalendar local datetime.
@@ -73,11 +73,11 @@ export const hydrateEventData = (raw: string): EventData => {
     const value = line.substring(splitIndex + 1);
 
     switch(key) {
-      case 'SUMMARY': result.title = ValidationEngine.unescapeVCardEvent(value); break;
+      case 'SUMMARY': result.title = unescapeVCardEvent(value); break;
       case 'DTSTART': result.startDate = parseEventDateTime(value); break;
       case 'DTEND': result.endDate = parseEventDateTime(value); break;
-      case 'LOCATION': result.location = ValidationEngine.unescapeVCardEvent(value); break;
-      case 'DESCRIPTION': result.description = ValidationEngine.unescapeVCardEvent(value); break;
+      case 'LOCATION': result.location = unescapeVCardEvent(value); break;
+      case 'DESCRIPTION': result.description = unescapeVCardEvent(value); break;
     }
   });
 
@@ -93,11 +93,11 @@ export const constructEventString = (data: EventData): string => {
     'VERSION:2.0',
     'PRODID:-//QRCraftly//EN',
     'BEGIN:VEVENT',
-    `SUMMARY:${ValidationEngine.escapeVCardEvent(data.title)}`,
+    `SUMMARY:${escapeVCardEvent(data.title)}`,
     `DTSTART:${formatEventDateTime(data.startDate)}`,
     `DTEND:${formatEventDateTime(data.endDate)}`,
-    `LOCATION:${ValidationEngine.escapeVCardEvent(data.location)}`,
-    `DESCRIPTION:${ValidationEngine.escapeVCardEvent(data.description)}`,
+    `LOCATION:${escapeVCardEvent(data.location)}`,
+    `DESCRIPTION:${escapeVCardEvent(data.description)}`,
     'END:VEVENT',
     'END:VCALENDAR',
   ];
@@ -109,5 +109,6 @@ export const EventContract: QRGeneratorContract<EventData> = {
   type: QRType.EVENT,
   construct: constructEventString,
   hydrate: hydrateEventData,
-  matches: (raw: string) => ValidationEngine.identifyProtocol(raw) === QRType.EVENT,
+  matches: (raw: string) => raw.includes('BEGIN:VEVENT') || raw.includes('BEGIN:VCALENDAR'),
+  validate: () => [],
 };

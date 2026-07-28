@@ -17,7 +17,30 @@
 */
 
 import { WifiData, WifiEncryption, QRType, QRGeneratorContract } from '../../types';
-import { ValidationEngine } from '../../engine/ValidationEngine';
+
+const REGEX_ESCAPE_WIFI = /([\\;,":])/g;
+const REGEX_UNESCAPE_WIFI = /\\([\\;,":])/g;
+const REGEX_SPLIT_WIFI = /(?<!\\);/;
+
+/**
+ * Escapes specific special characters in a WIFI SSID or password string.
+ * @param str - The raw SSID or password string, which can be undefined.
+ * @returns The escaped WIFI parameter string.
+ */
+export const escapeWifi = (str: string | undefined): string => {
+  if (!str) return '';
+  return str.replace(REGEX_ESCAPE_WIFI, '\\$1');
+};
+
+/**
+ * Unescapes escaped special characters in a WIFI SSID or password string.
+ * @param str - The escaped WIFI string, which can be undefined.
+ * @returns The unescaped WIFI parameter string.
+ */
+export const unescapeWifi = (str: string | undefined): string => {
+  if (!str) return '';
+  return str.replace(REGEX_UNESCAPE_WIFI, '$1');
+};
 
 /**
  * Hydrates WifiData from a raw string.
@@ -40,7 +63,7 @@ export const hydrateWifiData = (raw: string): WifiData => {
     content = content.slice(0, -1);
   }
   
-  const parts = content.split(ValidationEngine.REGEX_SPLIT_WIFI);
+  const parts = content.split(REGEX_SPLIT_WIFI);
 
   parts.forEach(part => {
     const splitIndex = part.indexOf(':');
@@ -49,16 +72,16 @@ export const hydrateWifiData = (raw: string): WifiData => {
     const value = part.substring(splitIndex + 1);
 
     switch(key) {
-      case 'S': result.ssid = ValidationEngine.unescapeWifi(value); break;
-      case 'P': result.password = ValidationEngine.unescapeWifi(value); break;
+      case 'S': result.ssid = unescapeWifi(value); break;
+      case 'P': result.password = unescapeWifi(value); break;
       case 'T': 
-        const enc = ValidationEngine.unescapeWifi(value);
+        const enc = unescapeWifi(value);
         if (Object.values(WifiEncryption).includes(enc as WifiEncryption)) {
           result.encryption = enc as WifiEncryption;
         }
         break;
       case 'H': result.hidden = value.toLowerCase() === 'true'; break;
-      case 'I': result.eapIdentity = ValidationEngine.unescapeWifi(value); break;
+      case 'I': result.eapIdentity = unescapeWifi(value); break;
     }
   });
 
@@ -74,15 +97,15 @@ export const constructWifiString = (data: WifiData): string => {
 
   const parts = [
     `T:${encryption}`,
-    `S:${ValidationEngine.escapeWifi(data.ssid)}`,
+    `S:${escapeWifi(data.ssid)}`,
   ];
 
   if (encryption === WifiEncryption.WPA2_EAP) {
-    parts.push(`I:${ValidationEngine.escapeWifi(data.eapIdentity)}`);
+    parts.push(`I:${escapeWifi(data.eapIdentity)}`);
   }
 
   if (encryption !== WifiEncryption.NOPASS) {
-    parts.push(`P:${ValidationEngine.escapeWifi(data.password)}`);
+    parts.push(`P:${escapeWifi(data.password)}`);
   }
 
   // Only include hidden flag if true, as some scanners fail on H:false
@@ -97,5 +120,6 @@ export const WifiContract: QRGeneratorContract<WifiData> = {
   type: QRType.WIFI,
   construct: constructWifiString,
   hydrate: hydrateWifiData,
-  matches: (raw: string) => ValidationEngine.identifyProtocol(raw) === QRType.WIFI,
+  matches: (raw: string) => raw.startsWith('WIFI:'),
+  validate: () => [],
 };

@@ -126,4 +126,11 @@ export const PaymentContract: QRGeneratorContract<PaymentData> = {
   construct: constructPaymentString,
   hydrate: hydratePaymentData,
   matches: (raw: string) => ValidationEngine.identifyProtocol(raw) === QRType.PAYMENT,
+  validate: (raw: string) => {
+    const violations: string[] = [];
+    if (raw && ValidationEngine.isDangerousUrl(raw)) {
+      violations.push('URI_INJECTION_VIOLATION');
+    }
+    return violations;
+  },
 };

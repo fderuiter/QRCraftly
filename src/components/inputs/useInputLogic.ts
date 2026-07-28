@@ -23,7 +23,6 @@ import { INPUT_REGISTRY, InputDataMap } from "./InputRegistry";
 /**
  * Hook to encapsulate the state management and component selection logic for the InputPanel.
  * It maintains the state for each input type so that data is preserved when switching types.
- *
  * @param config - The current QR configuration.
  * @param onChange - Callback to update the configuration.
  * @returns An object containing the component to render and its props.
@@ -53,6 +52,34 @@ export function useInputLogic(
     });
     return states as InputDataMap;
   });
+
+  const latestInputStates = useRef(inputStates);
+  useEffect(() => {
+    latestInputStates.current = inputStates;
+  }, [inputStates]);
+
+  // Synchronize input states reactively when config changes externally (e.g., undo/redo or preset loaded)
+  useEffect(() => {
+    const entry = INPUT_REGISTRY[config.type];
+    if (!entry) return;
+
+    const currentLocalState = latestInputStates.current[config.type];
+    const currentConstructed = entry.constructFn ? entry.constructFn(currentLocalState as never) : '';
+
+    if (currentConstructed !== config.value) {
+      if (entry.hydrateFn && entry.canHydrateFn(config.value)) {
+        try {
+          const hydrated = entry.hydrateFn(config.value);
+          setInputStates((prev) => ({
+            ...prev,
+            [config.type]: hydrated,
+          }));
+        } catch (e) {
+          console.warn(`Failed to hydrate state for ${config.type} on external change`, e);
+        }
+      }
+    }
+  }, [config.type, config.value]);
 
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
