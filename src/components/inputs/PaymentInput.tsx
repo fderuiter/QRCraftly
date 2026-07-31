@@ -1,16 +1,36 @@
 import React from "react";
 import { PaymentData, CryptoNetwork } from "../../types";
 import { TextField, SelectField } from "../ui/FormFields";
+import { ValidationEngine } from "../../engine/ValidationEngine";
 
+/**
+ *
+ */
 interface PaymentInputProps {
+  /**
+   *
+   */
   data: PaymentData;
+  /**
+   *
+   */
   onChange: (updates: Partial<PaymentData>) => void;
 }
 
+/**
+ *
+ * @param root0
+ * @param root0.data
+ * @param root0.onChange
+ */
 export const PaymentInput: React.FC<PaymentInputProps> = ({
   data,
   onChange,
 }) => {
+  const addressError = data.address && ValidationEngine.isDangerousUrl(data.address)
+    ? "Unsafe URL scheme or malicious protocol detected."
+    : undefined;
+
   return (
     <fieldset className="space-y-4 min-w-0">
       <legend className="text-sm font-semibold text-slate-700 dark:text-slate-200 w-full mb-3">
@@ -38,6 +58,7 @@ export const PaymentInput: React.FC<PaymentInputProps> = ({
         placeholder="Wallet Address"
         value={data.address}
         onChange={(e) => onChange({ address: e.target.value })}
+        error={addressError}
       />
 
       {data.network !== CryptoNetwork.CUSTOM && (

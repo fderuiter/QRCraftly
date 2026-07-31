@@ -19,6 +19,30 @@
 import { useState, useRef, useEffect, ElementType } from "react";
 import { QRConfig, QRType } from "../../types";
 import { INPUT_REGISTRY, InputDataMap } from "./InputRegistry";
+import { ValidationEngine } from "../../engine/ValidationEngine";
+
+const isInputDataValid = (type: QRType, data: any): boolean => {
+  if (type === QRType.WIFI) {
+    if (data.ssid && ValidationEngine.CONTAINMENT_PROFILES.STRICT_NO_CONTROL.test(data.ssid)) {
+      return false;
+    }
+    if (data.password && ValidationEngine.CONTAINMENT_PROFILES.STRICT_NO_CONTROL.test(data.password)) {
+      return false;
+    }
+    if (data.eapIdentity && ValidationEngine.CONTAINMENT_PROFILES.STRICT_NO_CONTROL.test(data.eapIdentity)) {
+      return false;
+    }
+  } else if (type === QRType.VCARD) {
+    if (data.website && ValidationEngine.isDangerousUrl(data.website)) {
+      return false;
+    }
+  } else if (type === QRType.PAYMENT) {
+    if (data.address && ValidationEngine.isDangerousUrl(data.address)) {
+      return false;
+    }
+  }
+  return true;
+};
 
 /**
  * Hook to encapsulate the state management and component selection logic for the InputPanel.
@@ -112,10 +136,12 @@ export function useInputLogic(
     timeoutRef.current = setTimeout(() => {
       const entry = INPUT_REGISTRY[type];
       if (entry) {
-        // We know entry matches type K, so constructFn handles newData (InputDataMap[K])
-        // Using `never` as cast because TS struggles with correlating `entry` (Registry[K])
-        // and `newData` (InputDataMap[K]) inside this generic context without more verbose typing.
-        onChange({ value: entry.constructFn(newData as never) });
+        if (isInputDataValid(type, newData)) {
+          // We know entry matches type K, so constructFn handles newData (InputDataMap[K])
+          // Using `never` as cast because TS struggles with correlating `entry` (Registry[K])
+          // and `newData` (InputDataMap[K]) inside this generic context without more verbose typing.
+          onChange({ value: entry.constructFn(newData as never) });
+        }
       }
     }, 100);
   };
