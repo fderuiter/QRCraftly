@@ -3,8 +3,17 @@ import { Button } from "../ui/Button";
 import { LocationData } from "../../types";
 import { TextField } from "../ui/FormFields";
 
+/**
+ *
+ */
 interface LocationInputProps {
+  /**
+   *
+   */
   data: LocationData;
+  /**
+   *
+   */
   onChange: (updates: Partial<LocationData>) => void;
 }
 
@@ -15,6 +24,12 @@ const GEOLOCATION_ERROR_MESSAGES: Record<number, string> = {
   3: "Location request timed out. Please try again.",
 };
 
+/**
+ *
+ * @param root0
+ * @param root0.data
+ * @param root0.onChange
+ */
 export const LocationInput: React.FC<LocationInputProps> = ({
   data,
   onChange,
@@ -85,6 +100,7 @@ export const LocationInput: React.FC<LocationInputProps> = ({
         disabled={isLoading}
         aria-busy={isLoading}
         className="w-full text-xs"
+        data-testid="use-current-location"
       >
         {isLoading ? "Fetching location…" : "Use Current Location"}
       </Button>
