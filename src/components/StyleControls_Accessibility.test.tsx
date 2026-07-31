@@ -20,6 +20,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import StyleControls from './StyleControls';
 import { DEFAULT_CONFIG } from '../constants';
+import userEvent from '@testing-library/user-event';
 
 describe('StyleControls Accessibility', () => {
   const mockOnChange = vi.fn();
@@ -47,5 +48,43 @@ describe('StyleControls Accessibility', () => {
     // Verify content is inside the panel (e.g. Error Correction Level)
     expect(screen.getByText('Error Correction Level')).toBeInTheDocument();
     expect(panel).toContainElement(screen.getByText('Error Correction Level').closest('div')?.parentElement || null);
+  });
+
+  it('logo upload trigger has focus ring classes, aria-describedby, and handles accessibility correctly', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<StyleControls config={DEFAULT_CONFIG} onChange={mockOnChange} />);
+
+    // Check if the upload logo button exists and has the correct classes and attributes
+    const uploadButton = screen.getByRole('button', { name: /Upload Logo/i });
+    expect(uploadButton).toBeInTheDocument();
+
+    // Check focus-visible ring style classes
+    expect(uploadButton).toHaveClass('focus-visible:ring-2');
+    expect(uploadButton).toHaveClass('focus-visible:ring-teal-500');
+    expect(uploadButton).toHaveClass('focus-visible:outline-none');
+
+    // Initially aria-describedby points to the helper text ID
+    expect(uploadButton).toHaveAttribute('aria-describedby', 'logo-upload-help');
+
+    // Try to upload an invalid file type (e.g. .txt)
+    const file = new File(['hello world'], 'hello.txt', { type: 'text/plain' });
+    // eslint-disable-next-line testing-library/no-container, testing-library/no-node-access
+    const fileInput = container.querySelector('input[type="file"]');
+    expect(fileInput).toBeInTheDocument();
+
+    fireEvent.change(fileInput as HTMLElement, { target: { files: [file] } });
+
+    // Verify error is shown with correct ID and aria role="alert"
+    const errorMsg = await screen.findByText(/Only JPEG, PNG, WebP, and SVG are allowed/i);
+    expect(errorMsg).toBeInTheDocument();
+    expect(errorMsg).toHaveAttribute('id', 'logo-upload-error');
+    expect(errorMsg).toHaveAttribute('role', 'alert');
+
+    // aria-describedby should now link both help and error IDs
+    expect(uploadButton).toHaveAttribute('aria-describedby', 'logo-upload-help logo-upload-error');
+
+    // Ensure the upload button trigger does NOT register HTML5 drag/drop event handlers
+    expect(uploadButton.ondragover).toBeNull();
+    expect(uploadButton.ondrop).toBeNull();
   });
 });
