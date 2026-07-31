@@ -17,6 +17,10 @@ function sanitizeTelemetryPayload(payload: any): TelemetryPayload {
   return sanitized;
 }
 
+/**
+ *
+ * @param status
+ */
 export function useTelemetry(status: ScannabilityStatus) {
   const store = useQRStore();
   const telemetryOptIn = useQRStoreSelector(state => state.preferences.telemetryOptIn);
@@ -28,7 +32,6 @@ export function useTelemetry(status: ScannabilityStatus) {
       fetch('/api/telemetry/scannability', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        // eslint-disable-next-line no-restricted-syntax
         body: JSON.stringify(sanitized),
         keepalive: true
       }).catch(() => {});

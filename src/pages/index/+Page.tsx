@@ -17,7 +17,7 @@
 */
 
 import QRTool from '@/components/QRTool';
-import { safeJsonLdStringify } from '@/utils/security';
+import { JsonLdScript } from '@/components/ui/JsonLdScript';
 import { contentRegistry } from '@/data/contentRegistry';
 import { generateSchema } from '@/utils/schemaGenerator';
 import { resolveDomainForPath } from '@/utils/metadataEngine';
@@ -28,8 +28,7 @@ import { usePageContext } from 'vike-react/usePageContext';
  *
  * The main entry point for the application. It renders the `QRTool` component,
  * which provides the full QR code generation and customization interface.
- *
- * @returns {JSX.Element} The home page layout.
+ * @returns The home page layout.
  */
 export default function Page() {
   const pageContext = usePageContext();
@@ -39,7 +38,7 @@ export default function Page() {
 
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(schemaData) }} />
+      <JsonLdScript data={schemaData} />
       <QRTool toolId="index" />
           </>
   );

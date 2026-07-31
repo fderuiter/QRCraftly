@@ -24,7 +24,6 @@
  * @returns A safe, escaped JSON string representation of the data, or '{}' if undefined/invalid.
  */
 export const safeJsonLdStringify = (data: any): string => {
-  // eslint-disable-next-line no-restricted-syntax
   const str = JSON.stringify(data);
   if (!str) return '{}';
 
