@@ -23,7 +23,8 @@ import QRCanvas from '@/components/QRCanvas';
 import { Download, Share2, QrCode, ChevronDown, Camera, Moon, Sun, Info, Copy, Check, AlertTriangle } from 'lucide-react';
 import { Modal } from './ui/Modal';
 import { useDebounce, useOnClickOutside } from '@/utils/hooks';
-import { useQRDownload } from '@/utils/useQRDownload';
+import { useQRDownload, ExportStatus } from '@/utils/useQRDownload';
+import { useToast } from './ui/Toast';
 import { useScannability } from '@/hooks/useScannability';
 import { ScannabilityIndicator } from '@/components/ScannabilityIndicator';
 import { QRProvider, useQRStore, useQRStoreSelector } from '@/context/QRContext';
@@ -34,9 +35,10 @@ import { sidebarControls } from '@/registry';
 
 /**
  * Renders the QR code generator interface with configuration controls, preview, and export actions.
- *
  * @param title - Optional title used for the generator heading and branding.
+ * @param title.title
  * @param toolId - Identifier passed to the sidebar controls.
+ * @param title.toolId
  * @returns The QR code generator interface.
  */
 function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: string }) {
@@ -44,13 +46,20 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
   const store = useQRStore();
   const emitSignal = store.emitSignal;
   const { isDarkMode, toggleDarkMode } = useTheme();
+  const { addToast } = useToast();
   
   const [showDownloadMenu, setShowDownloadMenu] = useState(false);
   const [showSafetyGate, setShowSafetyGate] = useState(false);
-  const [gateAction, setGateAction] = useState<(() => void) | null>(null);
+  const [gateAction, setGateAction] = useState<(() => void | Promise<void>) | null>(null);
   const qrRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const downloadMenuRef = useRef<HTMLDivElement>(null);
+
+  // Focus preservation refs for originating buttons
+  const downloadButtonRef = useRef<HTMLButtonElement>(null);
+  const copyButtonRef = useRef<HTMLButtonElement>(null);
+  const shareButtonRef = useRef<HTMLButtonElement>(null);
+  const photosButtonRef = useRef<HTMLButtonElement>(null);
 
   const { downloadToDevice: hookDownload, handleSaveAs: hookSaveAs, handleSaveSvg: hookSaveSvg, handleShare, handleCopy } = useQRDownload(qrRef, config);
   const [copied, setCopied] = useState(false);
@@ -77,15 +86,74 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
   // Debounce the config for QRCanvas to prevent lag during rapid typing or style changes.
   const debouncedConfig = useDebounce(config, 100);
 
+  const handleExportResult = useCallback((result: ExportStatus, buttonRef?: React.RefObject<HTMLButtonElement | null>) => {
+    // 1. Focus Recovery: return focus to the originating button control
+    if (buttonRef && buttonRef.current) {
+      buttonRef.current.focus();
+    }
+
+    // 2. Dispatch polite success/error toast notifications
+    if (result.success) {
+      if (result.format === 'clipboard') {
+        addToast({
+          type: 'success',
+          message: 'QR code copied to clipboard!',
+          duration: 5000,
+        });
+      } else if (result.format === 'share') {
+        if (result.fallbackTriggered) {
+          addToast({
+            type: 'info',
+            message: 'Sharing is not supported on this device/browser. The image will be downloaded instead.',
+            duration: 5000,
+          });
+        } else {
+          addToast({
+            type: 'success',
+            message: 'QR code shared successfully!',
+            duration: 5000,
+          });
+        }
+      } else if (result.format === 'svg') {
+        addToast({
+          type: 'success',
+          message: 'QR code exported successfully as SVG!',
+          duration: 5000,
+        });
+      } else {
+        // png, jpeg, webp
+        const upperFormat = result.format ? result.format.toUpperCase() : 'image';
+        addToast({
+          type: 'success',
+          message: `QR code exported successfully as ${upperFormat}!`,
+          duration: 5000,
+        });
+      }
+    } else {
+      // Failed or aborted
+      // Check if it's user abort
+      if (result.error && result.error.name === 'AbortError') {
+        // User cancelled, usually no toast needed or just a gentle warning
+        return;
+      }
+      addToast({
+        type: 'error',
+        message: result.error?.message || `Failed to export QR code as ${result.format || 'image'}.`,
+        duration: 5000,
+      });
+    }
+  }, [addToast]);
+
   const onCopy = async () => {
-    const success = await handleCopy();
-    if (success) {
+    const result = await handleCopy();
+    if (result.success) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
+    handleExportResult(result, copyButtonRef);
   };
 
-  const executeWithSafetyGate = (action: () => void) => {
+  const executeWithSafetyGate = (action: () => void | Promise<void>) => {
     const isUnsafe = scannabilityStatus === 'fail' || scannabilityStatus === 'digital-pass' || (health && health.score < 80);
     if (isUnsafe) {
       setGateAction(() => action);
@@ -95,21 +163,36 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
     }
   };
 
-  const downloadToDevice = (format: 'png' | 'jpeg' | 'webp') => {
+  const handleSaveAsFlow = async (format: 'png' | 'jpeg' | 'webp') => {
     setShowDownloadMenu(false);
-    executeWithSafetyGate(() => hookDownload(format));
+    const action = async () => {
+      const result = await hookSaveAs(format);
+      handleExportResult(result, downloadButtonRef);
+    };
+    executeWithSafetyGate(action);
   };
 
-  const handleSaveAs = async (format: 'png' | 'jpeg' | 'webp') => {
+  const handleSaveSvgFlow = async () => {
     setShowDownloadMenu(false);
-    await hookSaveAs(format);
+    const action = async () => {
+      const result = await hookSaveSvg();
+      handleExportResult(result, downloadButtonRef);
+    };
+    executeWithSafetyGate(action);
   };
 
-  const handleSaveSvg = async () => {
+  const downloadToDeviceFlow = async (format: 'png' | 'jpeg' | 'webp', buttonRef: React.RefObject<HTMLButtonElement | null>) => {
     setShowDownloadMenu(false);
-    try {
-      await hookSaveSvg();
-    } catch (_err) {}
+    const action = async () => {
+      const result = await hookDownload(format);
+      handleExportResult(result, buttonRef);
+    };
+    executeWithSafetyGate(action);
+  };
+
+  const onShare = async () => {
+    const result = await handleShare();
+    handleExportResult(result, shareButtonRef);
   };
 
   return (
@@ -237,6 +320,7 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
                    <div className="flex gap-2">
                        <div className="relative flex-1" ref={downloadMenuRef}>
                           <Button 
+                              ref={downloadButtonRef}
                               variant={scannabilityStatus === 'fail' || scannabilityStatus === 'digital-pass' || (health && health.score < 80) ? 'error' : 'primary'}
                               fullWidth
                               onClick={() => executeWithSafetyGate(() => setShowDownloadMenu(!showDownloadMenu))}
@@ -250,17 +334,17 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
                           
                           {showDownloadMenu && (
                               <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-100 dark:border-slate-700 py-1 z-50 animate-in fade-in zoom-in-95 duration-100 overflow-hidden" role="menu">
-                                  <Button onClick={() => handleSaveAs('png')} role="menuitem" variant="menuitem">
+                                  <Button onClick={() => handleSaveAsFlow('png')} role="menuitem" variant="menuitem">
                                       <div className="w-1.5 h-1.5 rounded-full bg-teal-500"></div> PNG (High Quality)
                                   </Button>
-                                  <Button onClick={() => handleSaveAs('jpeg')} role="menuitem" variant="menuitem">
+                                  <Button onClick={() => handleSaveAsFlow('jpeg')} role="menuitem" variant="menuitem">
                                       <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div> JPEG (Compact)
                                   </Button>
-                                  <Button onClick={() => handleSaveAs('webp')} role="menuitem" variant="menuitem">
+                                  <Button onClick={() => handleSaveAsFlow('webp')} role="menuitem" variant="menuitem">
                                       <div className="w-1.5 h-1.5 rounded-full bg-purple-500"></div> WebP (Modern)
                                   </Button>
                                   <div className="h-px bg-slate-100 dark:bg-slate-700 my-1" role="separator" />
-                                  <Button onClick={handleSaveSvg} role="menuitem" variant="menuitem">
+                                  <Button onClick={handleSaveSvgFlow} role="menuitem" variant="menuitem">
                                       <div className="w-1.5 h-1.5 rounded-full bg-orange-500"></div> SVG (Vector)
                                   </Button>
                               </div>
@@ -268,6 +352,7 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
                        </div>
                        
                        <Button
+                          ref={copyButtonRef}
                           variant="secondary"
                           onClick={onCopy}
                           className="w-12 px-0"
@@ -279,8 +364,9 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
 
                        {canShare && (
                          <Button 
+                            ref={shareButtonRef}
                             variant="secondary"
-                            onClick={handleShare}
+                            onClick={onShare}
                             className="w-12 px-0"
                             title="Share"
                             aria-label="Share QR code"
@@ -292,9 +378,10 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
 
                    {/* Row 2: Save to Camera Roll */}
                    <Button 
+                      ref={photosButtonRef}
                       variant="outline"
                       fullWidth
-                      onClick={() => downloadToDevice('png')}
+                      onClick={() => downloadToDeviceFlow('png', photosButtonRef)}
                       aria-label="Save QR code to photos"
                    >
                       <Camera className="w-4 h-4" />
@@ -326,6 +413,13 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
   );
 }
 
+/**
+ *
+ * @param root0
+ * @param root0.initialConfig
+ * @param root0.title
+ * @param root0.toolId
+ */
 export default function QRTool({ initialConfig, title, toolId = 'index' }: { initialConfig?: Partial<QRConfig>, title?: string, toolId?: string }) {
   return (
     <QRProvider initialConfig={initialConfig}>
