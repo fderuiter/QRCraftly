@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 
 /**
  * Helper to retrieve all form fields (inputs, selects, textareas) inside a container.
+ * @param container
  */
 function getFormFields(container: HTMLElement): HTMLElement[] {
   return Array.from(
@@ -13,6 +14,8 @@ function getFormFields(container: HTMLElement): HTMLElement[] {
 
 /**
  * Check if two arrays of HTML elements have exactly the same elements.
+ * @param arr1
+ * @param arr2
  */
 function areElementsEqual(arr1: HTMLElement[], arr2: HTMLElement[]): boolean {
   if (arr1.length !== arr2.length) return false;
@@ -24,6 +27,7 @@ function areElementsEqual(arr1: HTMLElement[], arr2: HTMLElement[]): boolean {
 
 /**
  * Get a clean name for a form element based on its label or attributes.
+ * @param element
  */
 function getElementName(element: HTMLElement): string {
   const id = element.id;
@@ -55,6 +59,7 @@ function getElementName(element: HTMLElement): string {
 
 /**
  * Announce a message politely to screen readers using a visually hidden live region.
+ * @param message
  */
 function announcePolitely(message: string) {
   let liveRegion = document.getElementById('dynamic-focus-live-region');
@@ -90,8 +95,8 @@ function announcePolitely(message: string) {
  * A standardized focus-management hook to eliminate manual re-navigation
  * and improve task completion speed for users with visual impairments.
  * Programmatically moves focus to the first interactive field of a newly rendered component.
- * 
  * @param dependencies Array of dependencies (kept for backward compatibility, not used for re-binding)
+ * @param _dependencies
  */
 export function useDynamicFocus<T extends HTMLElement = HTMLDivElement>(_dependencies: any[]) {
   const containerRef = useRef<T>(null);
@@ -236,8 +241,12 @@ export function useDynamicFocus<T extends HTMLElement = HTMLDivElement>(_depende
         const isUserTypingInTextInput = activeElement && 
           (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA') &&
           !['radio', 'checkbox', 'submit', 'button', 'image', 'reset', 'file'].includes((activeElement as HTMLInputElement).type || '');
+        const isUserFocusingTab = activeElement && (
+          activeElement.getAttribute('role') === 'tab' || 
+          activeElement.closest('[role="tablist"]') !== null
+        );
 
-        if (!isUserTypingInTextInput) {
+        if (!isUserTypingInTextInput && !isUserFocusingTab) {
           const firstNewElement = addedElements[0];
           setTimeout(() => {
             if (document.body.contains(firstNewElement)) {

@@ -35,7 +35,6 @@ interface InputPanelProps {
  * A component that provides input fields for different QR code types.
  * Allows users to enter data for URL, Text, WiFi, Email, vCard, Phone, and SMS.
  * It updates the main configuration with the formatted string for the QR code.
- *
  * @param props - The component props.
  * @param props.config - The current QR code configuration state.
  * @param props.onChange - Callback function to update the configuration.
@@ -85,7 +84,13 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
       />
 
       {/* Inputs */}
-      <div className="space-y-4" ref={containerRef}>
+      <div 
+        id={`panel-${config.type}`}
+        role="tabpanel"
+        aria-labelledby={`tab-${config.type}`}
+        className="space-y-4" 
+        ref={containerRef}
+      >
         {InputComponent && (
           <InputComponent {...inputProps} />
         )}
@@ -98,6 +103,8 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
  * Comparison function for React.memo.
  * Returns true if the next props are equivalent to the previous props (skipping re-render).
  * It ignores changes to 'fgColor', 'bgColor', 'style', etc. as they don't affect the input panel.
+ * @param prev
+ * @param next
  */
 function areInputPropsEqual(prev: InputPanelProps, next: InputPanelProps) {
   // If the onChange handler changed, we must re-render

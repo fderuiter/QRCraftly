@@ -34,7 +34,7 @@ export const WifiInput: React.FC<WifiInputProps> = ({ data, onChange }) => {
 
 ## Available Components
 
-- `TypeSelector.tsx`: The grid of icons for selecting the QR type.
+- `TypeSelector.tsx`: The grid of icons for selecting the QR type. Employs standard WAI-ARIA tablist semantics, roving tabIndex focus cycle, and Arrow/Tab keydown navigation.
 - `UrlInput.tsx`: For `QRType.URL`. Handles URL validation and sanitization.
 - `TextInput.tsx`: For `QRType.TEXT`. Includes character counting.
 - `WifiInput.tsx`: For `QRType.WIFI`. Handles SSID, password, encryption type, and hidden network flags.
