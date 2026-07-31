@@ -41,4 +41,85 @@ describe('Local Git-Diff Lineage Auditor', () => {
     
     expect(missing).toHaveLength(0);
   });
+
+  describe('Multi-target validation specifications', () => {
+    it('should maintain the correct multi-target mappings', () => {
+      expect(MAPPING).toHaveProperty('src/types.ts');
+      expect(MAPPING['src/types.ts']).toEqual([
+        'docs/public/SECURITY.md',
+        'docs/public/COMPLIANCE.md',
+        'src/components/inputs/README.md'
+      ]);
+
+      expect(MAPPING).toHaveProperty('semgrep.yml');
+      expect(MAPPING['semgrep.yml']).toEqual([
+        'docs/public/SECURITY.md',
+        'docs/public/COMPLIANCE.md'
+      ]);
+
+      expect(MAPPING).toHaveProperty('src/colors.json');
+      expect(MAPPING['src/colors.json']).toEqual([
+        'docs/public/STYLE_GUIDE.md',
+        'docs/public/SECURITY.md',
+        'docs/public/COMPLIANCE.md'
+      ]);
+    });
+
+    it('should fail multi-target validation when some/all targets are missing for a core schema', () => {
+      const modifiedFiles = new Set([
+        'src/types.ts',
+        'docs/public/SECURITY.md'
+      ]);
+      const missing = checkLineage(modifiedFiles);
+      
+      expect(missing).toContainEqual({
+        codeFile: 'src/types.ts',
+        docFile: 'docs/public/COMPLIANCE.md'
+      });
+      expect(missing).toContainEqual({
+        codeFile: 'src/types.ts',
+        docFile: 'src/components/inputs/README.md'
+      });
+      expect(missing).not.toContainEqual({
+        codeFile: 'src/types.ts',
+        docFile: 'docs/public/SECURITY.md'
+      });
+    });
+
+    it('should pass multi-target validation when all targets are present for core schemas', () => {
+      const modifiedFiles = new Set([
+        'src/types.ts',
+        'docs/public/SECURITY.md',
+        'docs/public/COMPLIANCE.md',
+        'src/components/inputs/README.md'
+      ]);
+      const missing = checkLineage(modifiedFiles);
+      expect(missing).toHaveLength(0);
+    });
+
+    it('should fail multi-target validation when editing central color configurations without updating style guide', () => {
+      const modifiedFiles = new Set([
+        'src/colors.json',
+        'docs/public/SECURITY.md',
+        'docs/public/COMPLIANCE.md'
+      ]);
+      const missing = checkLineage(modifiedFiles);
+      
+      expect(missing).toContainEqual({
+        codeFile: 'src/colors.json',
+        docFile: 'docs/public/STYLE_GUIDE.md'
+      });
+    });
+
+    it('should pass multi-target validation when editing colors along with all of its mapped documentation targets', () => {
+      const modifiedFiles = new Set([
+        'src/colors.json',
+        'docs/public/STYLE_GUIDE.md',
+        'docs/public/SECURITY.md',
+        'docs/public/COMPLIANCE.md'
+      ]);
+      const missing = checkLineage(modifiedFiles);
+      expect(missing).toHaveLength(0);
+    });
+  });
 });
