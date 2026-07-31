@@ -87,27 +87,57 @@ export function parseGitStatus(stdout) {
   return modifiedFiles;
 }
 
+export function parseArgs(args) {
+  const files = [];
+  const positionalArgs = args.filter(arg => !arg.startsWith('-'));
+
+  for (const arg of positionalArgs) {
+    if (!arg || !arg.trim()) continue;
+    const parts = arg.split(/[\s,]+/);
+    for (const part of parts) {
+      const trimmed = part.trim();
+      if (trimmed) {
+        files.push(trimmed.replace(/\\/g, '/'));
+      }
+    }
+  }
+  return files;
+}
+
 function runAuditor() {
   try {
-    if (!fs.existsSync(path.join(repoRoot, '.git'))) {
-      console.log('[Lineage Auditor] Not a git repository or .git folder missing. Skipping check.');
-      return;
+    const args = process.argv.slice(2);
+    const explicitFiles = parseArgs(args);
+    let modifiedFiles;
+
+    if (explicitFiles.length > 0) {
+      console.log(`[Lineage Auditor] Running check on ${explicitFiles.length} explicit file(s):`);
+      explicitFiles.forEach(f => console.log(`  - ${f}`));
+      modifiedFiles = new Set(explicitFiles);
+    } else {
+      console.log('[Lineage Auditor] No explicit file list provided. Falling back to local git status check...');
+      if (!fs.existsSync(path.join(repoRoot, '.git'))) {
+        console.log('[Lineage Auditor] Not a git repository or .git folder missing. Skipping check.');
+        return;
+      }
+
+      let stdout;
+      try {
+        stdout = execSync('git status --porcelain', { encoding: 'utf8', cwd: repoRoot });
+      } catch (err) {
+        console.warn('[Lineage Auditor] Failed to query git status. Skipping check.', err.message);
+        return;
+      }
+
+      const trimmed = stdout.trim();
+      if (!trimmed) {
+        console.log('[Lineage Auditor] No uncommitted local changes detected. Skipping lineage check.');
+        return;
+      }
+
+      modifiedFiles = parseGitStatus(stdout);
     }
 
-    let stdout;
-    try {
-      stdout = execSync('git status --porcelain', { encoding: 'utf8', cwd: repoRoot });
-    } catch (err) {
-      console.warn('[Lineage Auditor] Failed to query git status. Skipping check.', err.message);
-      return;
-    }
-
-    const trimmed = stdout.trim();
-    if (!trimmed) {
-      return;
-    }
-
-    const modifiedFiles = parseGitStatus(stdout);
     const missing = checkLineage(modifiedFiles);
 
     if (missing.length > 0) {
@@ -118,6 +148,8 @@ function runAuditor() {
       }
       console.error('');
       process.exit(1);
+    } else {
+      console.log('[Lineage Auditor] Lineage check passed successfully.');
     }
   } catch (error) {
     console.error('[Lineage Auditor] Unexpected error during lineage check:', error);

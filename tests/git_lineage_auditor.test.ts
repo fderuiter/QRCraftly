@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { checkLineage, parseGitStatus, MAPPING } from '../scripts/git_lineage_auditor.js';
+import { checkLineage, parseGitStatus, MAPPING, parseArgs } from '../scripts/git_lineage_auditor.js';
 
 describe('Local Git-Diff Lineage Auditor', () => {
   it('should maintain the correct core mappings', () => {
@@ -120,6 +120,37 @@ describe('Local Git-Diff Lineage Auditor', () => {
       ]);
       const missing = checkLineage(modifiedFiles);
       expect(missing).toHaveLength(0);
+    });
+  });
+
+  describe('Command-Line Arguments Parsing', () => {
+    it('should extract positional file arguments and ignore flags', () => {
+      const args = ['--verbose', 'src/types.ts', '--config', 'docs/public/SECURITY.md'];
+      const parsed = parseArgs(args);
+      expect(parsed).toEqual(['src/types.ts', 'docs/public/SECURITY.md']);
+    });
+
+    it('should normalize backslashes to forward slashes', () => {
+      const args = ['src\\utils\\sharedContract.ts', 'docs\\public\\SCALING.md'];
+      const parsed = parseArgs(args);
+      expect(parsed).toEqual(['src/utils/sharedContract.ts', 'docs/public/SCALING.md']);
+    });
+
+    it('should handle space-separated or comma-separated files inside a single argument', () => {
+      const args = ['src/types.ts,docs/public/SECURITY.md', 'src/colors.json  docs/public/STYLE_GUIDE.md'];
+      const parsed = parseArgs(args);
+      expect(parsed).toEqual([
+        'src/types.ts',
+        'docs/public/SECURITY.md',
+        'src/colors.json',
+        'docs/public/STYLE_GUIDE.md'
+      ]);
+    });
+
+    it('should filter out empty or whitespace-only arguments', () => {
+      const args = ['', '   ', 'src/types.ts', ''];
+      const parsed = parseArgs(args);
+      expect(parsed).toEqual(['src/types.ts']);
     });
   });
 });
