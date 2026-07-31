@@ -95,7 +95,24 @@ describe('Event generator', () => {
     expect(EventContract.type).toBe(QRType.EVENT);
     expect(EventContract.matches('BEGIN:VEVENT')).toBe(true);
     expect(EventContract.matches('OTHER')).toBe(false);
-    expect(EventContract.validate?.('BEGIN:VEVENT')).toEqual([]);
+
+    // Valid payload should have no violations
+    const validRaw = 'BEGIN:VEVENT\nSUMMARY:Launch Party\nDTSTART:20260501T183000\nEND:VEVENT';
+    expect(EventContract.validate?.(validRaw)).toEqual([]);
+
+    // Missing summary and start date should trigger violations
+    expect(EventContract.validate?.('BEGIN:VEVENT')).toEqual([
+      'EVENT_MISSING_SUMMARY',
+      'EVENT_MISSING_START'
+    ]);
+
+    // Chronological violation (end before start)
+    const invalidChrono = 'BEGIN:VEVENT\nSUMMARY:Meeting\nDTSTART:20260501T183000\nDTEND:20260501T173000\nEND:VEVENT';
+    expect(EventContract.validate?.(invalidChrono)).toEqual(['EVENT_CHRONOLOGICAL_VIOLATION']);
+
+    // Dangerous URL injection in location or description
+    const dangerousUrlLoc = 'BEGIN:VEVENT\nSUMMARY:Meeting\nDTSTART:20260501T183000\nLOCATION:javascript:alert(1)\nEND:VEVENT';
+    expect(EventContract.validate?.(dangerousUrlLoc)).toEqual(['URI_INJECTION_VIOLATION']);
   });
 });
 
