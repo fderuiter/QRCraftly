@@ -148,7 +148,7 @@ export const FieldWrapper: React.FC<FieldWrapperProps> = ({
       )}
       {children}
       {showCharCount && maxLength && (
-        <CharCount id={charCountId} current={String(value || "").length} max={maxLength} />
+        <CharCount id={charCountId} current={String(value !== undefined && value !== null ? value : "").length} max={maxLength} />
       )}
       {error && (
         <p id={errorId} role="alert" className="dark:text-rose-400 mt-1 text-rose-700 text-xs">

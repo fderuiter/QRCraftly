@@ -33,6 +33,7 @@ interface TextAreaFieldProps
  * @param root0.maxLength
  * @param root0.value
  * @param root0.error
+ * @param root0."aria-describedby"
  */
 export const TextAreaField: React.FC<TextAreaFieldProps> = ({
   label,
@@ -45,13 +46,14 @@ export const TextAreaField: React.FC<TextAreaFieldProps> = ({
   maxLength,
   value,
   error,
+  "aria-describedby": ariaDescribedby,
   ...props
 }) => {
   const defaultId = useId();
   const inputId = id || defaultId;
   const errorId = error ? `${inputId}-error` : undefined;
   const charCountId = showCharCount && maxLength ? `${inputId}-char-count` : undefined;
-  const describedBy = combineIds(errorId, charCountId);
+  const describedBy = combineIds(errorId, charCountId, ariaDescribedby);
 
   return (
     <FieldWrapper
@@ -78,8 +80,8 @@ export const TextAreaField: React.FC<TextAreaFieldProps> = ({
         )}
         value={value}
         aria-invalid={!!error}
-        aria-describedby={describedBy}
         {...props}
+        aria-describedby={describedBy}
       />
     </FieldWrapper>
   );
@@ -105,6 +107,7 @@ interface SelectFieldProps
  * @param root0.labelClassName
  * @param root0.children
  * @param root0.error
+ * @param root0."aria-describedby"
  */
 export const SelectField: React.FC<SelectFieldProps> = ({
   label,
@@ -115,12 +118,13 @@ export const SelectField: React.FC<SelectFieldProps> = ({
   labelClassName,
   children,
   error,
+  "aria-describedby": ariaDescribedby,
   ...props
 }) => {
   const defaultId = useId();
   const inputId = id || defaultId;
   const errorId = error ? `${inputId}-error` : undefined;
-  const describedBy = combineIds(errorId);
+  const describedBy = combineIds(errorId, ariaDescribedby);
 
   return (
     <FieldWrapper
@@ -141,8 +145,8 @@ export const SelectField: React.FC<SelectFieldProps> = ({
           className
         )} 
         aria-invalid={!!error}
-        aria-describedby={describedBy}
         {...props}
+        aria-describedby={describedBy}
       >
         {children}
       </select>
@@ -167,6 +171,7 @@ interface CheckboxFieldProps
  * @param root0.className
  * @param root0.labelClassName
  * @param root0.error
+ * @param root0."aria-describedby"
  */
 export const CheckboxField: React.FC<CheckboxFieldProps> = ({
   label,
@@ -175,12 +180,13 @@ export const CheckboxField: React.FC<CheckboxFieldProps> = ({
   className,
   labelClassName,
   error,
+  "aria-describedby": ariaDescribedby,
   ...props
 }) => {
   const defaultId = useId();
   const inputId = id || defaultId;
   const errorId = error ? `${inputId}-error` : undefined;
-  const describedBy = combineIds(errorId);
+  const describedBy = combineIds(errorId, ariaDescribedby);
 
   return (
     <FieldWrapper
@@ -198,8 +204,8 @@ export const CheckboxField: React.FC<CheckboxFieldProps> = ({
         type="checkbox"
         className="bg-white border-slate-300 dark:bg-slate-900 dark:border-slate-600 dark:text-teal-700 rounded text-teal-700"
         aria-invalid={!!error}
-        aria-describedby={describedBy}
         {...props}
+        aria-describedby={describedBy}
       />
     </FieldWrapper>
   );
