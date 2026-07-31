@@ -1,13 +1,33 @@
 import React from "react";
 import { VCardData } from "../../types";
 import { TextField } from "../ui/FormFields";
+import { ValidationEngine } from "../../engine/ValidationEngine";
 
+/**
+ *
+ */
 interface VCardInputProps {
+  /**
+   *
+   */
   data: VCardData;
+  /**
+   *
+   */
   onChange: (updates: Partial<VCardData>) => void;
 }
 
+/**
+ *
+ * @param root0
+ * @param root0.data
+ * @param root0.onChange
+ */
 export const VCardInput: React.FC<VCardInputProps> = ({ data, onChange }) => {
+  const websiteError = data.website && ValidationEngine.isDangerousUrl(data.website)
+    ? "Unsafe URL scheme or malicious protocol detected."
+    : undefined;
+
   return (
     <fieldset className="space-y-4 min-w-0">
       <legend className="text-sm font-semibold text-slate-700 dark:text-slate-200 w-full mb-3">
@@ -93,6 +113,7 @@ export const VCardInput: React.FC<VCardInputProps> = ({ data, onChange }) => {
         placeholder="https://example.com"
         value={data.website}
         onChange={(e) => onChange({ website: e.target.value })}
+        error={websiteError}
       />
 
       <fieldset className="pt-2 border-t border-slate-100 dark:border-slate-800 min-w-0">

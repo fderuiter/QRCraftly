@@ -17,7 +17,7 @@
 */
 
 import { usePageContext } from 'vike-react/usePageContext';
-import { safeJsonLdStringify } from '@/utils/security';
+import { JsonLdScript } from '@/components/ui/JsonLdScript';
 import { resolveDomainForPath, resolvePublicUrl, resolveImageUrl, getSanitizedPath } from '@/utils/metadataEngine';
 
 /**
@@ -28,8 +28,7 @@ import { resolveDomainForPath, resolvePublicUrl, resolveImageUrl, getSanitizedPa
  * and global structured data (JSON-LD) for SEO.
  *
  * Optimized to load Google Fonts non-blockingly to improve First Contentful Paint.
- *
- * @returns {JSX.Element} The fragment containing meta and link tags.
+ * @returns The fragment containing meta and link tags.
  */
 export default function HeadDefault() {
   const fontUrl = "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap";
@@ -156,8 +155,8 @@ export default function HeadDefault() {
       */}
 
       {/* Global Structured Data */}
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(schemaData) }} />
-      {!is404 && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(breadcrumbSchema) }} />}
+      <JsonLdScript data={schemaData} />
+      {!is404 && <JsonLdScript data={breadcrumbSchema} />}
 
       {/* Canonical URL - Do not render for 404 pages to avoid indexing errors */}
       {!is404 && <link rel="canonical" href={canonicalUrl} />}

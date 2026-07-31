@@ -213,9 +213,9 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
         </div>
       </Modal>
       <h1 className="sr-only">{title ? `${title} Generator` : "Free Custom QR Code Generator"}</h1>
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col-reverse md:flex-row transition-colors duration-300 relative">
+      <div className="h-screen md:h-auto min-h-screen md:min-h-0 bg-slate-50 dark:bg-slate-950 flex flex-col-reverse md:flex-row transition-colors duration-300 relative overflow-hidden md:overflow-visible">
         {/* Sidebar Controls */}
-        <section aria-label="QR Code Settings" className="w-full md:w-[480px] bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col shadow-xl z-10 transition-colors duration-300 relative">
+        <section aria-label="QR Code Settings" className="w-full md:w-[480px] bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col shadow-xl z-10 transition-colors duration-300 relative max-h-[50vh] md:max-h-none overflow-y-auto">
           <div className="p-6 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 sticky top-0 z-20 flex justify-between items-center transition-colors duration-300">
             <div>
               <a href="/" aria-label="QRCraftly Home" className="flex items-center gap-2 text-teal-700 dark:text-teal-400 mb-1 hover:opacity-80 transition-opacity">
@@ -293,7 +293,7 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
         </section>
 
         {/* Preview Area */}
-        <section aria-label="QR Code Preview" className="flex-1 bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-4 md:p-8 relative overflow-x-hidden overflow-y-auto transition-colors duration-300 md:sticky md:top-0 md:h-[100dvh]">
+        <section aria-label="QR Code Preview" className="flex-1 bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-4 md:p-8 relative overflow-x-hidden max-h-[50vh] md:max-h-none overflow-y-auto transition-colors duration-300 md:sticky md:top-0 md:h-[100dvh]">
            {/* Background Decoration */}
            <div className="absolute inset-0 pointer-events-none opacity-40 dark:opacity-20">
                <div className="absolute top-0 left-0 w-96 h-96 bg-teal-200 dark:bg-teal-900 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2 transition-colors duration-300"></div>

@@ -2,18 +2,35 @@ import React from 'react';
 import { ShieldCheck, Loader2, ShieldX } from 'lucide-react';
 import { ScannabilityStatus, HealthScore } from '../hooks/useScannability';
 
+/**
+ *
+ */
 interface Props {
+  /**
+   *
+   */
   status: ScannabilityStatus;
+  /**
+   *
+   */
   health?: HealthScore;
 }
 
+/**
+ *
+ * @param root0
+ * @param root0.status
+ * @param root0.health
+ */
 export const ScannabilityIndicator: React.FC<Props> = ({ status, health }) => {
-  if (status === 'idle') return null;
+  if (status === 'idle') {
+    return <div className="h-[52px] w-auto inline-block" data-testid="scannability-indicator-placeholder" />;
+  }
 
   const showHealth = health && health.score < 100;
 
   return (
-    <div className="flex flex-col gap-2 items-end">
+    <div className="h-[52px] flex flex-col justify-start items-end select-none" data-testid="scannability-feedback-wrapper">
       <div className="flex items-center gap-1.5 px-2 py-1 rounded-full border text-xs font-medium bg-white dark:bg-slate-800 shadow-sm transition-all duration-300">
         {status === 'checking' && (
           <>
@@ -45,11 +62,13 @@ export const ScannabilityIndicator: React.FC<Props> = ({ status, health }) => {
           </span>
         )}
       </div>
-      {showHealth && health.warnings.length > 0 && (
-        <div role="alert" className="text-xs text-rose-700 dark:text-rose-400 max-w-xs text-right animate-in fade-in slide-in-from-top-1">
-          {health.warnings[0]}
-        </div>
-      )}
+      <div className="h-5 mt-1 flex items-center justify-end w-full">
+        {showHealth && health.warnings.length > 0 && (
+          <div role="alert" className="text-xs text-rose-700 dark:text-rose-400 max-w-xs text-right animate-in fade-in slide-in-from-top-1">
+            {health.warnings[0]}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

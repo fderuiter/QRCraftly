@@ -51,6 +51,7 @@ export default tseslint.config(
       "react/prop-types": "off",
       "react/display-name": "off",
       "react/no-unescaped-entities": "off",
+      "react/no-danger": "error",
 
       "@typescript-eslint/no-explicit-any": "off",
       "@typescript-eslint/no-unused-vars": ["error", { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_", "caughtErrorsIgnorePattern": "^_" }],
@@ -66,23 +67,6 @@ export default tseslint.config(
       "no-empty": "off",
       "no-useless-assignment": "off",
       "no-control-regex": "off",
-
-      // Enforce manual security utilities
-      "no-restricted-syntax": [
-        "error",
-        {
-          "selector": "CallExpression[callee.object.name='JSON'][callee.property.name='stringify']",
-          "message": "Direct use of JSON.stringify is restricted for security reasons. Consider using safeJsonLdStringify for JSON-LD schemas or review carefully to prevent XSS."
-        },
-        {
-          "selector": "JSXAttribute[name.name='dangerouslySetInnerHTML'] Property[key.name='__html'][value.type!='CallExpression']",
-          "message": "Data passed to dangerouslySetInnerHTML must be sanitized."
-        },
-        {
-          "selector": "JSXAttribute[name.name='dangerouslySetInnerHTML'] Property[key.name='__html'][value.type='CallExpression'][value.callee.name!='safeJsonLdStringify']",
-          "message": "Data passed to dangerouslySetInnerHTML must be sanitized using safeJsonLdStringify or another approved security utility to prevent XSS."
-        }
-      ]
     },
     settings: {
       react: {
