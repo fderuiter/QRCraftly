@@ -20,14 +20,17 @@ export function useFocusTrap(containerRef: RefObject<HTMLElement | null>, isActi
     const previouslyFocused = document.activeElement as HTMLElement;
 
     // Direct keyboard focus to the first interactive element inside the modal upon opening
-    const timeoutId = setTimeout(() => {
+    const focusFirst = () => {
       const currentContainer = containerRef.current;
       if (!currentContainer) return;
       const focusables = Array.from(currentContainer.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR));
       if (focusables.length > 0) {
         focusables[0].focus();
       }
-    }, 50);
+    };
+
+    focusFirst();
+    const rafId = requestAnimationFrame(focusFirst);
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key !== 'Tab') return;
@@ -42,26 +45,45 @@ export function useFocusTrap(containerRef: RefObject<HTMLElement | null>, isActi
       const lastEl = currentFocusables[currentFocusables.length - 1];
       const activeEl = document.activeElement as HTMLElement;
 
+      // Programmatic traversal to guarantee consistent multi-browser behavior
+      e.preventDefault();
+
+      const currentIndex = currentFocusables.indexOf(activeEl);
       if (e.shiftKey) {
-        if (activeEl === firstEl || !currentContainer.contains(activeEl)) {
-          lastEl.focus();
-          e.preventDefault();
-        }
+        const focusPrev = () => {
+          if (currentIndex <= 0 || !currentContainer.contains(activeEl)) {
+            lastEl.focus();
+          } else {
+            currentFocusables[currentIndex - 1].focus();
+          }
+        };
+        focusPrev();
+        requestAnimationFrame(focusPrev);
       } else {
-        if (activeEl === lastEl || !currentContainer.contains(activeEl)) {
-          firstEl.focus();
-          e.preventDefault();
-        }
+        const focusNext = () => {
+          if (currentIndex === -1 || currentIndex === currentFocusables.length - 1 || !currentContainer.contains(activeEl)) {
+            firstEl.focus();
+          } else {
+            currentFocusables[currentIndex + 1].focus();
+          }
+        };
+        focusNext();
+        requestAnimationFrame(focusNext);
       }
     };
 
     document.addEventListener('keydown', handleKeyDown);
 
     return () => {
-      clearTimeout(timeoutId);
+      cancelAnimationFrame(rafId);
       document.removeEventListener('keydown', handleKeyDown);
       if (previouslyFocused && typeof previouslyFocused.focus === 'function') {
         previouslyFocused.focus();
+        requestAnimationFrame(() => {
+          if (previouslyFocused && typeof previouslyFocused.focus === 'function') {
+            previouslyFocused.focus();
+          }
+        });
       }
     };
   }, [containerRef, isActive]);

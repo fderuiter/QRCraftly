@@ -136,6 +136,8 @@ export function useDynamicFocus<T extends HTMLElement = HTMLDivElement>(_depende
     const container = containerRef.current;
     if (!container) return;
 
+    let rafId: number | null = null;
+
     // Track the initial list of focusable elements
     const initialElements = getFormFields(container);
     prevElementsRef.current = initialElements;
@@ -220,9 +222,13 @@ export function useDynamicFocus<T extends HTMLElement = HTMLDivElement>(_depende
 
           if (targetElement) {
             const elToFocus = targetElement;
-            setTimeout(() => {
-              elToFocus.focus();
-            }, 50);
+            elToFocus.focus();
+            if (rafId) cancelAnimationFrame(rafId);
+            rafId = requestAnimationFrame(() => {
+              if (document.body.contains(elToFocus)) {
+                elToFocus.focus();
+              }
+            });
           }
         }
       }
@@ -248,11 +254,13 @@ export function useDynamicFocus<T extends HTMLElement = HTMLDivElement>(_depende
 
         if (!isUserTypingInTextInput && !isUserFocusingTab) {
           const firstNewElement = addedElements[0];
-          setTimeout(() => {
+          firstNewElement.focus();
+          if (rafId) cancelAnimationFrame(rafId);
+          rafId = requestAnimationFrame(() => {
             if (document.body.contains(firstNewElement)) {
               firstNewElement.focus();
             }
-          }, 50);
+          });
         }
       }
 
@@ -266,6 +274,7 @@ export function useDynamicFocus<T extends HTMLElement = HTMLDivElement>(_depende
 
     return () => {
       observer.disconnect();
+      if (rafId) cancelAnimationFrame(rafId);
     };
   }, []); // Run on mount once
 
