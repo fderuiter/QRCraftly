@@ -190,6 +190,18 @@ describe('generateQRSvg', () => {
     expect(svg).toContain('My Headline');
   });
 
+  it('applies horizontal scaling attributes to long template headlines in the exported SVG', async () => {
+    const config: QRConfig = {
+      ...(DEFAULT_CONFIG as QRConfig),
+      templateStyle: TemplateStyle.MINIMALIST,
+      templateHeadline: 'Extremely long headline that goes way beyond normal boundaries and should be compressed horizontally',
+    };
+    const svg = await generateQRSvg(config);
+    expect(svg).toContain('Extremely long headline that goes way beyond normal boundaries and should be compressed horizontally');
+    expect(svg).toContain('textLength=');
+    expect(svg).toContain('lengthAdjust="spacingAndGlyphs"');
+  });
+
   it('omits the image if a malicious protocol is used', async () => {
     const config: QRConfig = {
       ...(DEFAULT_CONFIG as QRConfig),

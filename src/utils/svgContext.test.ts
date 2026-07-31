@@ -198,6 +198,25 @@ describe('SvgContext', () => {
       const svg = ctx.serialize();
       expect(svg).toContain('&lt;scan&amp;me&gt;');
     });
+
+    it('appends textLength and lengthAdjust when maxWidth is exceeded', () => {
+      const ctx = new SvgContext(200, 200);
+      ctx.font = '20px sans-serif'; // Estimated char width = 20 * 0.55 = 11px per char
+      // Length of "Very Long Headline Text" is 23 characters. Estimated width = 23 * 11 = 253
+      ctx.fillText('Very Long Headline Text', 10, 10, 100);
+      const svg = ctx.serialize();
+      expect(svg).toContain('textLength="100"');
+      expect(svg).toContain('lengthAdjust="spacingAndGlyphs"');
+    });
+
+    it('does not append textLength when text length is within maxWidth', () => {
+      const ctx = new SvgContext(200, 200);
+      ctx.font = '10px sans-serif'; // Estimated width per char = 5.5px
+      ctx.fillText('Short', 10, 10, 100); // 5 chars * 5.5 = 27.5px < 100
+      const svg = ctx.serialize();
+      expect(svg).not.toContain('textLength');
+      expect(svg).not.toContain('lengthAdjust');
+    });
   });
 
   describe('drawImage', () => {
