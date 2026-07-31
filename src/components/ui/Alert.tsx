@@ -1,15 +1,46 @@
 import React from 'react';
 import { AlertTriangle, AlertCircle } from 'lucide-react';
 
+/**
+ *
+ */
 interface AlertProps {
+  /**
+   *
+   */
   variant?: 'warning' | 'error';
+  /**
+   *
+   */
   title?: string;
+  /**
+   *
+   */
   children: React.ReactNode;
+  /**
+   *
+   */
   className?: string;
+  /**
+   *
+   */
   role?: string;
+  /**
+   *
+   */
   'aria-live'?: 'polite' | 'assertive' | 'off';
 }
 
+/**
+ *
+ * @param root0
+ * @param root0.variant
+ * @param root0.title
+ * @param root0.children
+ * @param root0.className
+ * @param root0.role
+ * @param root0.'aria-live'
+ */
 export const Alert: React.FC<AlertProps> = ({ variant = 'warning', title, children, className = '', role, 'aria-live': ariaLive }) => {
   const isWarning = variant === 'warning';
   
@@ -21,8 +52,8 @@ export const Alert: React.FC<AlertProps> = ({ variant = 'warning', title, childr
   const Icon = isWarning ? AlertTriangle : AlertCircle;
 
   return (
-    <div role={role || "alert"} aria-live={ariaLive} className={`${baseClasses} ${colorClasses} ${className}`}>
-      <Icon className="w-5 h-5 flex-shrink-0 mt-0.5" aria-hidden="true" />
+    <div role={role || "alert"} aria-live={ariaLive} className={`${baseClasses}${colorClasses}${className}`}>
+      <Icon className="flex-shrink-0 h-5 mt-0.5 w-5" aria-hidden="true" />
       <div>
         {title && <strong>{title}: </strong>}
         {children}

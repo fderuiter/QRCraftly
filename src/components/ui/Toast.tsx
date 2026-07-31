@@ -2,22 +2,52 @@ import { createContext, useContext, useState, useCallback, ReactNode, useEffect 
 import { X, CheckCircle, AlertCircle, Info } from 'lucide-react';
 import { Button } from './Button';
 
+/**
+ *
+ */
 type ToastType = 'success' | 'error' | 'info';
 
+/**
+ *
+ */
 interface ToastMessage {
+  /**
+   *
+   */
   id: string;
+  /**
+   *
+   */
   type: ToastType;
+  /**
+   *
+   */
   message: string;
+  /**
+   *
+   */
   duration?: number;
 }
 
+/**
+ *
+ */
 interface ToastContextType {
+  /**
+   *
+   */
   addToast: (toast: Omit<ToastMessage, 'id'>) => void;
+  /**
+   *
+   */
   removeToast: (id: string) => void;
 }
 
 const ToastContext = createContext<ToastContextType | undefined>(undefined);
 
+/**
+ *
+ */
 export const useToast = () => {
   const context = useContext(ToastContext);
   if (!context) {
@@ -26,6 +56,11 @@ export const useToast = () => {
   return context;
 };
 
+/**
+ *
+ * @param root0
+ * @param root0.children
+ */
 export const ToastProvider = ({ children }: { children: ReactNode }) => {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
@@ -41,7 +76,7 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
   return (
     <ToastContext.Provider value={{ addToast, removeToast }}>
       {children}
-      <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 z-50 flex flex-col items-center md:items-end gap-2 pointer-events-none">
+      <div className="bottom-4 fixed flex flex-col gap-2 items-center left-4 md:items-end md:left-auto md:right-4 pointer-events-none right-4 z-50">
         {toasts.map((toast) => (
           <ToastItem key={toast.id} toast={toast} onRemove={removeToast} />
         ))}
@@ -72,18 +107,18 @@ const ToastItem = ({ toast, onRemove }: { toast: ToastMessage; onRemove: (id: st
   return (
     <div 
       role={toast.type === 'error' ? 'alert' : 'status'}
-      className={`flex items-center gap-3 p-4 rounded-xl border shadow-lg pointer-events-auto max-w-md w-full transition-all duration-300 ease-in-out transform translate-y-0 opacity-100 ${colors}`}
+      className={`border duration-300 ease-in-out flex gap-3 items-center max-w-md opacity-100 p-4 pointer-events-auto rounded-xl shadow-lg transform transition-all translate-y-0 w-full ${colors}`}
     >
-      <Icon className="w-5 h-5 flex-shrink-0" />
-      <p className="text-sm font-medium flex-1">{toast.message}</p>
+      <Icon className="flex-shrink-0 h-5 w-5" />
+      <p className="flex-1 font-medium text-sm">{toast.message}</p>
       <Button
         variant="ghost"
         size="icon" 
         onClick={() => onRemove(toast.id)}
-        className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/10"
+        className="dark:hover:bg-white/10 hover:bg-black/5 p-1 rounded-lg"
         aria-label="Close notification"
       >
-        <X className="w-4 h-4" />
+        <X className="h-4 w-4" />
       </Button>
     </div>
   );

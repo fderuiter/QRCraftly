@@ -23,6 +23,9 @@ try {
 
   console.log(`\n🔍 Running local quality guardrails on ${filesToLint.length} staged file(s)...`);
 
+  // 2.5 Run Tailwind class sorting/formatting first
+  spawnSync('node', ['scripts/sort_tailwind_classes.js'], { stdio: 'inherit' });
+
   // 3. Run ESLint with --fix using spawnSync to handle space/special characters in filenames safely
   const eslintResult = spawnSync(
     'pnpm',
@@ -32,6 +35,9 @@ try {
 
   // 4. Always re-stage any auto-fixes
   spawnSync('git', ['add', ...filesToLint]);
+  
+  // Also re-stage any modified files in the UI directory from the class sorting script
+  spawnSync('git', ['add', 'src/components/ui']);
 
   if (eslintResult.status !== 0) {
     console.error('\n❌ Local quality guardrails failed. Please fix the linting/styling errors above before committing.');
