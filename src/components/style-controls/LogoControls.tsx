@@ -6,12 +6,28 @@ import { ColorInput } from '../ui/ColorInput';
 import { RangeInput } from '../ui/RangeInput';
 import { useImageUpload } from '../../hooks/useImageUpload';
 import { SYSTEM_LIMITS } from '../../constants';
+import { combineIds } from '../../utils/a11y';
 
+/**
+ *
+ */
 interface LogoControlsProps {
+  /**
+   *
+   */
   config: QRConfig;
+  /**
+   *
+   */
   onChange: (updates: Partial<QRConfig>) => void;
 }
 
+/**
+ *
+ * @param root0
+ * @param root0.config
+ * @param root0.onChange
+ */
 export const LogoControls: React.FC<LogoControlsProps> = ({ config, onChange }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const uploadButtonRef = useRef<HTMLButtonElement>(null);
@@ -49,14 +65,15 @@ export const LogoControls: React.FC<LogoControlsProps> = ({ config, onChange }) 
           size="none"
           type="button"
           onClick={() => fileInputRef.current?.click()}
-          className="w-full border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer group hover:bg-teal-50 dark:hover:bg-teal-900/10 hover:border-teal-400 dark:hover:border-teal-600"
+          className="w-full border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer group hover:bg-teal-50 dark:hover:bg-teal-900/10 hover:border-teal-400 dark:hover:border-teal-600 focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:outline-none"
+          aria-describedby={combineIds('logo-upload-help', error && 'logo-upload-error')}
         >
           <div className="w-10 h-10 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-2 group-hover:bg-teal-100 dark:group-hover:bg-teal-900/30 transition-colors">
             <Upload className="w-5 h-5" />
           </div>
           <span className="text-sm font-medium">Upload Logo</span>
-          <span className="text-xs text-slate-600 dark:text-slate-400 mt-1">{SYSTEM_LIMITS.SUPPORTED_IMAGE_FORMATS.map(t => t.replace('image/', '').replace('+xml', '').toUpperCase()).join(', ')} (Square recommended)</span>
-          {error && <span role="alert" className="text-xs text-rose-700 dark:text-rose-400 mt-2">{error}</span>}
+          <span id="logo-upload-help" className="text-xs text-slate-600 dark:text-slate-400 mt-1">{SYSTEM_LIMITS.SUPPORTED_IMAGE_FORMATS.map(t => t.replace('image/', '').replace('+xml', '').toUpperCase()).join(', ')} (Square recommended)</span>
+          {error && <span id="logo-upload-error" role="alert" className="text-xs text-rose-700 dark:text-rose-400 mt-2">{error}</span>}
         </Button>
       ) : (
         <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700 space-y-5">
