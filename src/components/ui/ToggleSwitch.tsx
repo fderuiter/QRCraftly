@@ -1,13 +1,40 @@
 import React from 'react';
 
+/**
+ *
+ */
 interface ToggleSwitchProps {
+  /**
+   *
+   */
   id: string;
+  /**
+   *
+   */
   label: string;
+  /**
+   *
+   */
   checked: boolean;
+  /**
+   *
+   */
   onChange: (checked: boolean) => void;
+  /**
+   *
+   */
   srLabel?: boolean;
 }
 
+/**
+ *
+ * @param root0
+ * @param root0.id
+ * @param root0.label
+ * @param root0.checked
+ * @param root0.onChange
+ * @param root0.srLabel
+ */
 export const ToggleSwitch: React.FC<ToggleSwitchProps> = ({
   id,
   label,
@@ -17,17 +44,17 @@ export const ToggleSwitch: React.FC<ToggleSwitchProps> = ({
 }) => {
   return (
     <div className="flex items-center">
-      <label htmlFor={id} className="relative inline-flex items-center cursor-pointer">
+      <label htmlFor={id} className="cursor-pointer inline-flex items-center relative">
         {srLabel && <span className="sr-only">{label}</span>}
         <input
           id={id}
           type="checkbox"
-          className="sr-only peer"
+          className="peer sr-only"
           checked={checked}
           onChange={(e) => onChange(e.target.checked)}
         />
-        <div className="w-9 h-5 bg-slate-200 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-teal-600"></div>
-        {!srLabel && <span className="ml-3 text-sm font-medium text-slate-700 dark:text-slate-300">{label}</span>}
+        <div className="after:absolute after:bg-white after:border after:border-gray-300 after:content-[''] after:h-4 after:left-[2px] after:rounded-full after:top-[2px] after:transition-all after:w-4 bg-slate-200 dark:bg-slate-700 dark:border-gray-600 h-5 peer peer-checked:after:border-white peer-checked:after:translate-x-full peer-checked:bg-teal-700 rounded-full w-9"></div>
+        {!srLabel && <span className="dark:text-slate-300 font-medium ml-3 text-slate-700 text-sm">{label}</span>}
       </label>
     </div>
   );
