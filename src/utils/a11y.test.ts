@@ -139,14 +139,15 @@ describe('a11y - Accessibility Helpers', () => {
     });
 
     it('covers switch default fallback when type is not handled but generator exists', () => {
-      QR_GENERATORS['CUSTOM_TYPE' as any] = {
+      const generators = QR_GENERATORS as unknown as Record<string, any>;
+      generators['CUSTOM_TYPE'] = {
         generate: () => '',
         hydrate: () => ({ someProperty: 'hello' }),
-      } as any;
+      };
       try {
         expect(getQrTypeDescription('CUSTOM_TYPE' as any, 'some_val')).toBe('some_val');
       } finally {
-        delete QR_GENERATORS['CUSTOM_TYPE' as any];
+        delete generators['CUSTOM_TYPE'];
       }
     });
 
