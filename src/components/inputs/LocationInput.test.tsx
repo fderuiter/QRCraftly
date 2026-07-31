@@ -18,8 +18,8 @@
 
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { LocationInput } from '../components/inputs';
-import { LocationData } from '../types';
+import { LocationInput } from './LocationInput';
+import { LocationData } from '../../types';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -311,9 +311,9 @@ describe('LocationInput component', () => {
     it('populates lat/lng fields via the InputPanel when geolocation succeeds', async () => {
       const { render: rRender, screen: rScreen, fireEvent: rFire, waitFor: rWait } =
         await import('@testing-library/react');
-      const { default: InputPanel } = await import('../components/InputPanel');
-      const { DEFAULT_CONFIG } = await import('../constants');
-      const { QRType } = await import('../types');
+      const { default: InputPanel } = await import('../InputPanel');
+      const { DEFAULT_CONFIG } = await import('../../constants');
+      const { QRType } = await import('../../types');
 
       Object.defineProperty(navigator, 'geolocation', {
         value: {
