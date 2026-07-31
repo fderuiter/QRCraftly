@@ -87,10 +87,50 @@ class SvgRadialGradient {
   }
 }
 
+class SvgLinearGradient {
+  public id: string;
+  public x0: number;
+  public y0: number;
+  public x1: number;
+  public y1: number;
+  public transform: Matrix;
+  public stops: Array<{ offset: number; color: string }> = [];
+
+  constructor(id: string, x0: number, y0: number, x1: number, y1: number, transform: Matrix) {
+    this.id = id;
+    this.x0 = x0;
+    this.y0 = y0;
+    this.x1 = x1;
+    this.y1 = y1;
+    this.transform = transform;
+  }
+
+  addColorStop(offset: number, color: string): void {
+    this.stops.push({ offset, color });
+  }
+
+  toSvgString(): string {
+    const stopsXml = this.stops.map(stop => 
+      `      <stop offset="${stop.offset * 100}%" stop-color="${stop.color}" />`
+    ).join('\n');
+    
+    // Only apply gradientTransform if it's not the identity matrix
+    const t = this.transform;
+    const isIdentity = t.a === 1 && t.b === 0 && t.c === 0 && t.d === 1 && t.e === 0 && t.f === 0;
+    const transformAttr = isIdentity ? '' : ` gradientTransform="matrix(${t.a} ${t.b} ${t.c} ${t.d} ${t.e} ${t.f})"`;
+
+    return [
+      `    <linearGradient id="${this.id}" x1="${this.x0}" y1="${this.y0}" x2="${this.x1}" y2="${this.y1}" gradientUnits="userSpaceOnUse"${transformAttr}>`,
+      stopsXml,
+      `    </linearGradient>`
+    ].join('\n');
+  }
+}
+
 interface ContextState {
   transform: Matrix;
-  fillStyle: string | SvgRadialGradient;
-  strokeStyle: string | SvgRadialGradient;
+  fillStyle: string | SvgRadialGradient | SvgLinearGradient;
+  strokeStyle: string | SvgRadialGradient | SvgLinearGradient;
   lineWidth: number;
   font: string;
   textAlign: string;
@@ -134,8 +174,8 @@ function getMeasuringContext(): CanvasRenderingContext2D | OffscreenCanvasRender
  */
 export class SvgContext {
   // Public style properties (mirrors CanvasRenderingContext2D)
-  fillStyle: string | SvgRadialGradient = '#000000';
-  strokeStyle: string | SvgRadialGradient = '#000000';
+  fillStyle: string | SvgRadialGradient | SvgLinearGradient = '#000000';
+  strokeStyle: string | SvgRadialGradient | SvgLinearGradient = '#000000';
   lineWidth: number = 1;
   font: string = '10px sans-serif';
   textAlign: string = 'start';
@@ -154,8 +194,9 @@ export class SvgContext {
   private _transform: Matrix = identityMatrix();
   private _stateStack: ContextState[] = [];
   private _dashArray: number[] = [];
-  private _gradients: SvgRadialGradient[] = [];
+  private _gradients: Array<SvgRadialGradient | SvgLinearGradient> = [];
   private _radialGradientCount = 0;
+  private _linearGradientCount = 0;
 
   constructor(width: number, height: number, title?: string, description?: string) {
     this._width = width;
@@ -169,6 +210,14 @@ export class SvgContext {
     this._radialGradientCount++;
     const id = `radial-grad-${this._radialGradientCount}`;
     const grad = new SvgRadialGradient(id, x0, y0, r0, x1, y1, r1, { ...this._transform });
+    this._gradients.push(grad);
+    return grad;
+  }
+
+  createLinearGradient(x0: number, y0: number, x1: number, y1: number): SvgLinearGradient {
+    this._linearGradientCount++;
+    const id = `linear-grad-${this._linearGradientCount}`;
+    const grad = new SvgLinearGradient(id, x0, y0, x1, y1, { ...this._transform });
     this._gradients.push(grad);
     return grad;
   }
@@ -305,50 +354,70 @@ export class SvgContext {
 
   /**
    * Adds an arc/circle sub-path to the current path.
-   * Handles the common cases: full circles and partial arcs.
-   * Assumes the current transform contains only translation and uniform scaling
-   * (no shear), so the arc remains circular after transformation.
+   * Converts curved arcs into transformed cubic Bezier curves using the active
+   * transformation matrix to preserve rotation and non-uniform scaling.
    */
   arc(cx: number, cy: number, r: number, startAngle: number, endAngle: number, anticlockwise: boolean = false): void {
-    // Determine the scale factor from the transform (uniform scale assumed)
-    const m = this._transform;
-    const scaleX = Math.sqrt(m.a * m.a + m.b * m.b);
-    const scaledR = r * scaleX;
-
-    const [tcx, tcy] = this._applyTransform(cx, cy);
-
-    // Normalise angles to be increasing
-    let sa = startAngle;
-    let ea = endAngle;
+    // Standardize sweep angle calculation
+    let sweep = endAngle - startAngle;
     if (anticlockwise) {
-      [sa, ea] = [ea, sa];
+      if (sweep > 0) {
+        sweep = sweep - Math.PI * 2;
+      } else if (sweep === 0) {
+        return;
+      }
+    } else {
+      if (sweep < 0) {
+        sweep = sweep + Math.PI * 2;
+      } else if (sweep === 0) {
+        return;
+      }
     }
 
-    const TWO_PI = Math.PI * 2;
-    const delta = ((ea - sa) % TWO_PI + TWO_PI) % TWO_PI;
+    // If sweep is extremely large, cap it at 2 * PI
+    const totalSweep = Math.min(Math.PI * 2, Math.abs(sweep));
+    const signedSweep = anticlockwise ? -totalSweep : totalSweep;
 
-    if (delta === 0 || Math.abs(delta - TWO_PI) < 1e-10) {
-      // Full circle: draw as two half-arcs (SVG can't do a full circle in one A command)
-      const sx = tcx + scaledR;
-      const sy = tcy;
-      const mx = tcx - scaledR;
-      const my = tcy;
-      this._pathData += `M ${this._n(sx)} ${this._n(sy)} `;
-      this._pathData += `A ${this._n(scaledR)} ${this._n(scaledR)} 0 1 1 ${this._n(mx)} ${this._n(my)} `;
-      this._pathData += `A ${this._n(scaledR)} ${this._n(scaledR)} 0 1 1 ${this._n(sx)} ${this._n(sy)} Z `;
-      return;
+    const maxSegmentAngle = Math.PI / 2; // 90 degrees
+    const numSegments = Math.max(1, Math.ceil(totalSweep / maxSegmentAngle));
+    const segmentSweep = signedSweep / numSegments;
+
+    // Draw the segments
+    for (let i = 0; i < numSegments; i++) {
+      const a1 = startAngle + i * segmentSweep;
+      const a2 = a1 + segmentSweep;
+
+      const p0x = cx + r * Math.cos(a1);
+      const p0y = cy + r * Math.sin(a1);
+      const p3x = cx + r * Math.cos(a2);
+      const p3y = cy + r * Math.sin(a2);
+
+      const k = (4 / 3) * Math.tan((a2 - a1) / 4);
+
+      const p1x = p0x - k * r * Math.sin(a1);
+      const p1y = p0y + k * r * Math.cos(a1);
+      const p2x = p3x + k * r * Math.sin(a2);
+      const p2y = p3y - k * r * Math.cos(a2);
+
+      // Apply transformation to all control points
+      const [tp0x, tp0y] = this._applyTransform(p0x, p0y);
+      const [tp1x, tp1y] = this._applyTransform(p1x, p1y);
+      const [tp2x, tp2y] = this._applyTransform(p2x, p2y);
+      const [tp3x, tp3y] = this._applyTransform(p3x, p3y);
+
+      if (i === 0) {
+        // First segment start point
+        const isNewSubpath = !this._pathData.trim() || this._pathData.trim().endsWith('Z');
+        if (isNewSubpath) {
+          this._pathData += `M ${this._n(tp0x)} ${this._n(tp0y)} `;
+        } else {
+          this._pathData += `L ${this._n(tp0x)} ${this._n(tp0y)} `;
+        }
+      }
+
+      // Add the cubic Bezier curve to the path
+      this._pathData += `C ${this._n(tp1x)} ${this._n(tp1y)}, ${this._n(tp2x)} ${this._n(tp2y)}, ${this._n(tp3x)} ${this._n(tp3y)} `;
     }
-
-    // Partial arc
-    const startX = tcx + scaledR * Math.cos(sa);
-    const startY = tcy + scaledR * Math.sin(sa);
-    const endX = tcx + scaledR * Math.cos(ea);
-    const endY = tcy + scaledR * Math.sin(ea);
-    const largeArcFlag = delta > Math.PI ? 1 : 0;
-    const sweepFlag = anticlockwise ? 0 : 1;
-
-    this._pathData += `M ${this._n(startX)} ${this._n(startY)} `;
-    this._pathData += `A ${this._n(scaledR)} ${this._n(scaledR)} 0 ${largeArcFlag} ${sweepFlag} ${this._n(endX)} ${this._n(endY)} `;
   }
 
   // ── Immediate draw calls ───────────────────────────────────────────────────
@@ -357,7 +426,6 @@ export class SvgContext {
     if (!this._pathData.trim()) return;
     const fill = this._cssColor(this.fillStyle);
     this._elements.push(`<path d="${this._pathData.trim()}" fill="${fill}" fill-rule="evenodd"/>`);
-    this._pathData = '';
   }
 
   stroke(): void {
@@ -369,7 +437,6 @@ export class SvgContext {
     this._elements.push(
       `<path d="${this._pathData.trim()}" fill="none" stroke="${stroke}" stroke-width="${this._n(this.lineWidth)}"${dash}/>`
     );
-    this._pathData = '';
   }
 
   /** Fills a rectangle directly (without modifying the current path). */
@@ -450,23 +517,88 @@ export class SvgContext {
     );
   }
 
+  private _getTransformAttr(): string {
+    const t = this._transform;
+    const isIdentity = t.a === 1 && t.b === 0 && t.c === 0 && t.d === 1 && t.e === 0 && t.f === 0;
+    return isIdentity ? '' : ` transform="matrix(${this._n(t.a)} ${this._n(t.b)} ${this._n(t.c)} ${this._n(t.d)} ${this._n(t.e)} ${this._n(t.f)})"`;
+  }
+
   /**
    * Draws an image into the SVG as a base64-encoded <image> element.
-   * Accepts HTMLImageElement (uses .src) or a data URL string.
+   * Supports standard 3-parameter, 5-parameter, and 9-parameter image drawing operations
+   * and applies matrix transformations directly to preserve rotation, skew, and scaling.
    */
-  drawImage(image: HTMLImageElement | { src: string }, dx: number, dy: number, dw: number, dh: number): void {
-    const href = (image as HTMLImageElement).src ?? '';
+  drawImage(
+    image: HTMLImageElement | { src: string; width?: number; height?: number; naturalWidth?: number; naturalHeight?: number },
+    ...args: any[]
+  ): void {
+    const href = (image as any).src ?? '';
     if (!href) return;
-    const [tx, ty] = this._applyTransform(dx, dy);
-    // Approximate scaled dimensions (assumes uniform scale, no rotation)
-    const m = this._transform;
-    const scaleX = Math.sqrt(m.a * m.a + m.b * m.b);
-    const scaleY = Math.sqrt(m.c * m.c + m.d * m.d);
-    const tw = dw * scaleX;
-    const th = dh * scaleY;
-    this._elements.push(
-      `<image href="${this._escapeAttr(href)}" x="${this._n(tx)}" y="${this._n(ty)}" width="${this._n(tw)}" height="${this._n(th)}" preserveAspectRatio="xMidYMid meet"/>`
-    );
+
+    let dx = 0;
+    let dy = 0;
+    let dw = 0;
+    let dh = 0;
+
+    let sx = 0;
+    let sy = 0;
+    let sw = 0;
+    let sh = 0;
+    let isSubImage = false;
+
+    if (args.length === 2) {
+      // 3-parameter: drawImage(image, dx, dy)
+      dx = args[0];
+      dy = args[1];
+      dw = (image as any).naturalWidth || (image as any).width || 0;
+      dh = (image as any).naturalHeight || (image as any).height || 0;
+    } else if (args.length === 4) {
+      // 5-parameter: drawImage(image, dx, dy, dw, dh)
+      dx = args[0];
+      dy = args[1];
+      dw = args[2];
+      dh = args[3];
+    } else if (args.length === 8) {
+      // 9-parameter: drawImage(image, sx, sy, sw, sh, dx, dy, dw, dh)
+      sx = args[0];
+      sy = args[1];
+      sw = args[2];
+      sh = args[3];
+      dx = args[4];
+      dy = args[5];
+      dw = args[6];
+      dh = args[7];
+      isSubImage = true;
+    } else {
+      return;
+    }
+
+    const tAttr = this._getTransformAttr();
+
+    if (isSubImage) {
+      const imgWidth = (image as any).naturalWidth || (image as any).width || sw;
+      const imgHeight = (image as any).naturalHeight || (image as any).height || sh;
+
+      if (tAttr) {
+        this._elements.push(
+          `<g${tAttr}>`,
+          `  <svg x="${this._n(dx)}" y="${this._n(dy)}" width="${this._n(dw)}" height="${this._n(dh)}" viewBox="${this._n(sx)} ${this._n(sy)} ${this._n(sw)} ${this._n(sh)}" preserveAspectRatio="none">`,
+          `    <image href="${this._escapeAttr(href)}" x="0" y="0" width="${this._n(imgWidth)}" height="${this._n(imgHeight)}" preserveAspectRatio="none"/>`,
+          `  </svg>`,
+          `</g>`
+        );
+      } else {
+        this._elements.push(
+          `<svg x="${this._n(dx)}" y="${this._n(dy)}" width="${this._n(dw)}" height="${this._n(dh)}" viewBox="${this._n(sx)} ${this._n(sy)} ${this._n(sw)} ${this._n(sh)}" preserveAspectRatio="none">`,
+          `  <image href="${this._escapeAttr(href)}" x="0" y="0" width="${this._n(imgWidth)}" height="${this._n(imgHeight)}" preserveAspectRatio="none"/>`,
+          `</svg>`
+        );
+      }
+    } else {
+      this._elements.push(
+        `<image href="${this._escapeAttr(href)}" x="${this._n(dx)}" y="${this._n(dy)}" width="${this._n(dw)}" height="${this._n(dh)}" preserveAspectRatio="none"${tAttr}/>`
+      );
+    }
   }
 
   setLineDash(segments: number[]): void {
@@ -513,8 +645,8 @@ export class SvgContext {
 
   // ── Private helpers ────────────────────────────────────────────────────────
 
-  private _cssColor(color: string | SvgRadialGradient): string {
-    if (color instanceof SvgRadialGradient) {
+  private _cssColor(color: string | SvgRadialGradient | SvgLinearGradient): string {
+    if (color instanceof SvgRadialGradient || color instanceof SvgLinearGradient) {
       return `url(#${color.id})`;
     }
     return color || 'none';
