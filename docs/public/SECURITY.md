@@ -10,7 +10,7 @@ To protect against supply-chain attacks, this project enforces immutable depende
 This application is designed with a "Privacy First" architecture. Please refer to [COMPLIANCE.md](COMPLIANCE.md) for detailed information on how this application handles data and aligns with regulations like HIPAA.
 
 ## Content Security Policy (CSP)
-Our application utilizes a meta-tag based Content Security Policy (CSP) to provide baseline protections. Please note that to support certain functional features (such as JSON-LD scripts and framework hydration), the policy currently allows `unsafe-inline` script execution. While we mitigate risks through our client-side architecture and React's built-in XSS protections, users and researchers should be aware of this permissive policy configuration when evaluating XSS protections.
+Our application utilizes a multi-layered Content Security Policy (CSP) enforced via both meta tags and HTTP response headers. To protect production deployments from script-injection (XSS) attacks, our build pipeline automatically parses compiled static HTML assets and computes SHA-256 integrity hashes for all inline scripts (such as JSON-LD structured blocks and framework hydration elements). Consequently, the `unsafe-inline` directive is completely absent from production deployments. In local development environments, a permissive fallback policy is utilized to allow unimpeded feature iteration.
 
 ## Reporting a Vulnerability
 
