@@ -107,5 +107,14 @@ describe('VCard generator', () => {
 
     // Dangerous URL, should have URI_INJECTION_VIOLATION
     expect(VCardContract.validate?.('BEGIN:VCARD\nURL:javascript:alert(1)\nEND:VCARD')).toEqual(['URI_INJECTION_VIOLATION']);
+
+    // Dangerous URL with parameters, should have URI_INJECTION_VIOLATION
+    expect(VCardContract.validate?.('BEGIN:VCARD\nURL;TYPE=WORK:javascript:alert(1)\nEND:VCARD')).toEqual(['URI_INJECTION_VIOLATION']);
+
+    // Safe URL with parameters, should have no violations
+    expect(VCardContract.validate?.('BEGIN:VCARD\nURL;TYPE=WORK:https://example.com\nEND:VCARD')).toEqual([]);
+
+    // URL with parameter but no colon, should have no violations
+    expect(VCardContract.validate?.('BEGIN:VCARD\nURL;TYPE=WORK\nEND:VCARD')).toEqual([]);
   });
 });

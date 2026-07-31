@@ -113,6 +113,35 @@ describe('Event generator', () => {
     // Dangerous URL injection in location or description
     const dangerousUrlLoc = 'BEGIN:VEVENT\nSUMMARY:Meeting\nDTSTART:20260501T183000\nLOCATION:javascript:alert(1)\nEND:VEVENT';
     expect(EventContract.validate?.(dangerousUrlLoc)).toEqual(['URI_INJECTION_VIOLATION']);
+
+    // Safe URL in location or description (should not trigger any violation)
+    const safeUrlLoc = 'BEGIN:VEVENT\nSUMMARY:Meeting\nDTSTART:20260501T183000\nLOCATION:https://example.com\nDESCRIPTION:Check out https://google.com\nEND:VEVENT';
+    expect(EventContract.validate?.(safeUrlLoc)).toEqual([]);
+
+    // URL-like description (exactly a URL) to cover isUrlLike(data.description)
+    const urlDesc = 'BEGIN:VEVENT\nSUMMARY:Meeting\nDTSTART:20260501T183000\nDESCRIPTION:https://example.com\nEND:VEVENT';
+    expect(EventContract.validate?.(urlDesc)).toEqual([]);
+
+    // Valid event with both start and end dates (DTEND >= DTSTART)
+    const validChronoWithEnd = 'BEGIN:VEVENT\nSUMMARY:Meeting\nDTSTART:20260501T183000\nDTEND:20260501T193000\nEND:VEVENT';
+    expect(EventContract.validate?.(validChronoWithEnd)).toEqual([]);
+
+    // Invalid dates in DTSTART/DTEND (should not trigger chronological violation since they are not valid numbers)
+    const invalidChronoDates = 'BEGIN:VEVENT\nSUMMARY:Meeting\nDTSTART:invalid\nDTEND:invalid\nEND:VEVENT';
+    expect(EventContract.validate?.(invalidChronoDates)).toEqual([]);
+  });
+
+  it('constructs event with regional timezone parameters (TZID)', () => {
+    const dataWithTzid = {
+      title: 'Meeting',
+      startDate: '2025-01-01T12:30;TZID=America/New_York',
+      endDate: '2025-01-01T13:30;TZID=America/New_York',
+      location: 'Room 1',
+      description: 'Important meeting'
+    };
+    const str = constructEventString(dataWithTzid);
+    expect(str).toContain('DTSTART;TZID=America/New_York:20250101T123000');
+    expect(str).toContain('DTEND;TZID=America/New_York:20250101T133000');
   });
 });
 

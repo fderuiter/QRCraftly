@@ -5,6 +5,8 @@ import {
   splitCompoundField,
   formatEventDateTime,
   parseEventDateTime,
+  escapeVCardEvent,
+  unescapeVCardEvent,
 } from './rfcHelper';
 
 describe('RFC Helper utilities', () => {
@@ -105,6 +107,31 @@ describe('RFC Helper utilities', () => {
 
       const parsed = parseEventDateTime(formatted.value);
       expect(parsed).toBe('2025-01-01T17:30Z');
+    });
+
+    it('handles empty, invalid and other edge cases for date formatting and parsing', () => {
+      // Empty / undefined inputs
+      expect(foldString('')).toBe('');
+      expect(unfoldString('')).toBe('');
+      expect(formatEventDateTime(undefined)).toEqual({ value: '' });
+      expect(formatEventDateTime('')).toEqual({ value: '' });
+      expect(parseEventDateTime('')).toBe('');
+
+      // Invalid date formats
+      expect(formatEventDateTime('invalid-date')).toEqual({ value: 'invalid-date' });
+      expect(parseEventDateTime('not-matching-regex')).toBe('not-matching-regex');
+
+      // keyParams without TZID
+      expect(parseEventDateTime('20250101T123000', ';FOO=bar')).toBe('2025-01-01T12:30');
+
+      // escapeVCardEvent and unescapeVCardEvent edge cases
+      expect(escapeVCardEvent(undefined)).toBe('');
+      expect(escapeVCardEvent('')).toBe('');
+      expect(escapeVCardEvent('hello;world,testing\\backslashes\nand\rnewlines')).toBe('hello\\;world\\,testing\\\\backslashes\\nand\\nnewlines');
+
+      expect(unescapeVCardEvent(undefined)).toBe('');
+      expect(unescapeVCardEvent('')).toBe('');
+      expect(unescapeVCardEvent('hello\\;world\\,testing\\\\backslashes\\nand\\nnewlines')).toBe('hello;world,testing\\backslashes\nand\nnewlines');
     });
   });
 });

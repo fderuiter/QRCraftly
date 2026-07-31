@@ -27,7 +27,6 @@ import {
   splitCompoundField,
 } from './rfcHelper';
 
-export { escapeVCardEvent, unescapeVCardEvent };
 
 /**
  * Hydrates VCardData from a raw string.
