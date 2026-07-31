@@ -98,6 +98,30 @@ interface ContextState {
   dashArray: number[];
 }
 
+let cachedCtx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null = null;
+function getMeasuringContext(): CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null {
+  if (cachedCtx) return cachedCtx;
+  try {
+    if (typeof OffscreenCanvas !== 'undefined') {
+      const canvas = new OffscreenCanvas(1, 1);
+      cachedCtx = canvas.getContext('2d');
+      if (cachedCtx) return cachedCtx;
+    }
+  } catch (_e) {
+    // Ignore error
+  }
+  try {
+    if (typeof document !== 'undefined' && typeof document.createElement === 'function') {
+      const canvas = document.createElement('canvas');
+      cachedCtx = canvas.getContext('2d');
+      if (cachedCtx) return cachedCtx;
+    }
+  } catch (_e) {
+    // Ignore error
+  }
+  return null;
+}
+
 /**
  * A virtual 2D drawing context that captures canvas draw calls and produces
  * equivalent SVG XML. It implements the subset of CanvasRenderingContext2D
@@ -387,13 +411,42 @@ export class SvgContext {
   }
 
   /** Renders text as an SVG <text> element. */
-  fillText(text: string, x: number, y: number): void {
+  fillText(text: string, x: number, y: number, maxWidth?: number): void {
     const fill = this._cssColor(this.fillStyle);
     const [tx, ty] = this._applyTransform(x, y);
     const anchor = this._svgTextAnchor(this.textAlign);
     const baseline = this._svgDominantBaseline(this.textBaseline);
+
+    let textLengthAttr = '';
+    if (maxWidth !== undefined && maxWidth > 0) {
+      let actualWidth: number | null = null;
+      try {
+        const measuringCtx = getMeasuringContext();
+        if (measuringCtx && typeof measuringCtx.measureText === 'function') {
+          measuringCtx.font = this.font;
+          const metrics = measuringCtx.measureText(text);
+          if (metrics && typeof metrics.width === 'number') {
+            actualWidth = metrics.width;
+          }
+        }
+      } catch (_e) {
+        // Fallback on error
+      }
+
+      // Safe font-size extraction and scaling fallback
+      const match = this.font.match(/(\d+)px/);
+      const fontSize = match ? parseInt(match[1], 10) : 16;
+      const estimatedWidth = text.length * fontSize * 0.55;
+
+      const measuredWidth = (actualWidth !== null && actualWidth > 0) ? actualWidth : estimatedWidth;
+
+      if (measuredWidth > maxWidth) {
+        textLengthAttr = ` textLength="${this._n(maxWidth)}" lengthAdjust="spacingAndGlyphs"`;
+      }
+    }
+
     this._elements.push(
-      `<text x="${this._n(tx)}" y="${this._n(ty)}" fill="${fill}" font="${this._escapeAttr(this.font)}" text-anchor="${anchor}" dominant-baseline="${baseline}">${this._escapeText(text)}</text>`
+      `<text x="${this._n(tx)}" y="${this._n(ty)}" fill="${fill}" font="${this._escapeAttr(this.font)}" text-anchor="${anchor}" dominant-baseline="${baseline}"${textLengthAttr}>${this._escapeText(text)}</text>`
     );
   }
 
