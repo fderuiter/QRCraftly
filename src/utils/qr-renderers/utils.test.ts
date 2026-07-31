@@ -49,6 +49,23 @@ describe('QR Renderer Utils', () => {
         borderPx: 14.285714285714286
       });
     });
+
+    it('calculates layout with border when borderPx >= minBorderPx', () => {
+      const config = { ...DEFAULT_CONFIG, isBorderEnabled: true, borderSize: 0.3 };
+      const result = calculateLayout(config, 100, 20);
+      // borderPx = 30px
+      // minBorderPx = (4 * 100) / (20 + 8) = 14.2857
+      // borderPx >= minBorderPx is true, so borderPx remains 30
+      // drawSize = 100 - (30*2) = 40
+      // cellSize = 40 / 20 = 2
+      expect(result).toEqual({
+        drawX: 30,
+        drawY: 30,
+        drawSize: 40,
+        cellSize: 2,
+        borderPx: 30
+      });
+    });
   });
 
   describe('getLogoMetrics', () => {

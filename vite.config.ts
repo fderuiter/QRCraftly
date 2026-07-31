@@ -70,7 +70,7 @@ export default defineConfig(({ mode }) => {
             functions: 100,
             lines: 100,
           },
-          include: ['src/utils/qr-generators/*.ts'],
+          include: ['src/utils/qr-generators/*.ts', 'src/utils/qr-renderers/*.ts'],
         }
       },
       resolve: {
