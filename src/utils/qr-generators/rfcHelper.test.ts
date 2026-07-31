@@ -50,6 +50,10 @@ describe('RFC Helper utilities', () => {
       expect(parts).toEqual(['one', 'two', 'three']);
     });
 
+    it('handles empty string input', () => {
+      expect(splitCompoundField('')).toEqual(['']);
+    });
+
     it('ignores escaped semicolons', () => {
       const parts = splitCompoundField('one\\;stillOne;two');
       expect(parts).toEqual(['one\\;stillOne', 'two']);
