@@ -19,18 +19,27 @@
 import { RefObject, useCallback } from 'react';
 import { QRConfig } from '../types';
 import { generateQRSvg } from './svgExport';
-import { useToast } from '../components/ui/Toast';
 import { useCapabilities } from '../hooks/useCapabilities';
 
 /**
  * Return type for the useQRDownload hook.
  */
+export interface ExportStatus {
+  success: boolean;
+  format?: 'png' | 'jpeg' | 'webp' | 'svg' | 'clipboard' | 'share';
+  error?: any;
+  fallbackTriggered?: boolean;
+}
+
+/**
+ * Return type for the useQRDownload hook.
+ */
 interface UseQRDownloadReturn {
-  downloadToDevice: (format: 'png' | 'jpeg' | 'webp') => void;
-  handleSaveAs: (format: 'png' | 'jpeg' | 'webp') => Promise<void>;
-  handleSaveSvg: () => Promise<void>;
-  handleShare: () => Promise<void>;
-  handleCopy: () => Promise<boolean>;
+  downloadToDevice: (format: 'png' | 'jpeg' | 'webp') => Promise<ExportStatus>;
+  handleSaveAs: (format: 'png' | 'jpeg' | 'webp') => Promise<ExportStatus>;
+  handleSaveSvg: () => Promise<ExportStatus>;
+  handleShare: () => Promise<ExportStatus>;
+  handleCopy: () => Promise<ExportStatus>;
 }
 
 /**
@@ -45,7 +54,6 @@ export function useQRDownload(
   qrRef: RefObject<HTMLDivElement | null>,
   config: QRConfig
 ): UseQRDownloadReturn {
-  const { addToast } = useToast();
   const { canSaveFilePicker, canShare } = useCapabilities();
 
   /**
@@ -73,18 +81,24 @@ export function useQRDownload(
    * Used as a fallback or direct action for saving to photos.
    * @param format - The desired image format.
    */
-  const downloadToDevice = useCallback((format: 'png' | 'jpeg' | 'webp') => {
+  const downloadToDevice = useCallback(async (format: 'png' | 'jpeg' | 'webp'): Promise<ExportStatus> => {
     const canvas = qrRef.current?.querySelector('canvas');
     if (canvas) {
-      const url = canvas.toDataURL(`image/${format}`);
-      const link = document.createElement('a');
-      const ext = getExtension(format);
-      link.download = getFilename(ext);
-      link.href = url;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      try {
+        const url = canvas.toDataURL(`image/${format}`);
+        const link = document.createElement('a');
+        const ext = getExtension(format);
+        link.download = getFilename(ext);
+        link.href = url;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        return { success: true, format };
+      } catch (err: any) {
+        return { success: false, format, error: err };
+      }
     }
+    return { success: false, format, error: new Error('Canvas not found') };
   }, [qrRef, getFilename]);
 
   /**
@@ -92,9 +106,9 @@ export function useQRDownload(
    * for a native "Save As" experience, falling back to direct download if unsupported.
    * @param format - The desired image format.
    */
-  const handleSaveAs = useCallback(async (format: 'png' | 'jpeg' | 'webp') => {
+  const handleSaveAs = useCallback(async (format: 'png' | 'jpeg' | 'webp'): Promise<ExportStatus> => {
     const canvas = qrRef.current?.querySelector('canvas');
-    if (!canvas) return;
+    if (!canvas) return { success: false, format, error: new Error('Canvas not found') };
 
     // Check if the browser supports the File System Access API (e.g., Chrome, Edge Desktop)
     if (canSaveFilePicker) {
@@ -118,16 +132,19 @@ export function useQRDownload(
         const writable = await handle.createWritable();
         await writable.write(blob);
         await writable.close();
+        return { success: true, format };
       } catch (err: any) {
-        // If user aborted the picker, do nothing.
-        if (err.name === 'AbortError') return;
+        // If user aborted the picker, return failure but identify abort.
+        if (err.name === 'AbortError') {
+          return { success: false, format, error: err };
+        }
 
         console.warn('File System Access API failed, falling back to standard download:', err);
-        downloadToDevice(format);
+        return downloadToDevice(format);
       }
     } else {
       // Fallback for browsers that don't support showSaveFilePicker (Safari, Firefox, Mobile)
-      downloadToDevice(format);
+      return downloadToDevice(format);
     }
   }, [qrRef, getFilename, downloadToDevice, canSaveFilePicker]);
 
@@ -139,33 +156,38 @@ export function useQRDownload(
    * Copies the QR code image directly to the clipboard.
    * @returns A boolean indicating if the copy operation was successful.
    */
-  const handleCopy = useCallback(async (): Promise<boolean> => {
+  const handleCopy = useCallback(async (): Promise<ExportStatus> => {
     const canvas = qrRef.current?.querySelector('canvas');
-    if (!canvas) return false;
+    if (!canvas) return { success: false, format: 'clipboard', error: new Error('Canvas not found') };
 
     try {
       const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
-      if (!blob) return false;
+      if (!blob) return { success: false, format: 'clipboard', error: new Error('Blob creation failed') };
 
       // Note: ClipboardItem is not supported in all browsers, but works in modern ones
       // We check for ClipboardItem to avoid throwing errors on older devices
       if (typeof ClipboardItem !== 'undefined') {
         const item = new ClipboardItem({ 'image/png': blob });
         await navigator.clipboard.write([item]);
-        return true;
+        return { success: true, format: 'clipboard' };
       }
-      return false;
+      return { success: false, format: 'clipboard', error: new Error('ClipboardItem not supported') };
     } catch (err) {
       console.warn('Failed to copy to clipboard:', err);
-      return false;
+      return { success: false, format: 'clipboard', error: err };
     }
   }, [qrRef]);
 
-  const handleShare = useCallback(async () => {
+  const handleShare = useCallback(async (): Promise<ExportStatus> => {
     const canvas = qrRef.current?.querySelector('canvas');
-    if (canvas) {
+    if (!canvas) return { success: false, format: 'share', error: new Error('Canvas not found') };
+
+    return new Promise<ExportStatus>((resolve) => {
       canvas.toBlob(async (blob) => {
-        if (!blob) return;
+        if (!blob) {
+          resolve({ success: false, format: 'share', error: new Error('Blob creation failed') });
+          return;
+        }
 
         const file = new File([blob], 'qrcode.png', { type: 'image/png' });
 
@@ -176,27 +198,25 @@ export function useQRDownload(
               text: 'Here is a QR code I created with QRCraftly!',
               files: [file],
             });
+            resolve({ success: true, format: 'share' });
           } catch (error) {
             console.log('Error sharing:', error);
+            resolve({ success: false, format: 'share', error });
           }
         } else {
           // Fallback for devices that don't support sharing files
-          addToast({
-            type: 'info',
-            message: "Sharing is not supported on this device/browser. The image will be downloaded instead.",
-            duration: 5000
-          });
-          downloadToDevice('png');
+          await downloadToDevice('png');
+          resolve({ success: true, format: 'share', fallbackTriggered: true });
         }
       }, 'image/png');
-    }
-  }, [qrRef, downloadToDevice, canShare, addToast]);
+    });
+  }, [qrRef, downloadToDevice, canShare]);
 
   /**
    * Generates a vector SVG file from the current QR configuration and triggers
    * a download. The SVG embeds logos as inline base64 data-URLs for portability.
    */
-  const handleSaveSvg = useCallback(async () => {
+  const handleSaveSvg = useCallback(async (): Promise<ExportStatus> => {
     try {
       const svgString = await generateQRSvg(config);
       const blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
@@ -208,16 +228,12 @@ export function useQRDownload(
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
+      return { success: true, format: 'svg' };
     } catch (err: any) {
       console.warn('SVG export failed:', err);
-      addToast({
-        type: 'error',
-        message: err.message || 'SVG export failed due to an unsupported feature or error.',
-        duration: 5000
-      });
-      throw err;
+      return { success: false, format: 'svg', error: err };
     }
-  }, [config, getFilename, addToast]);
+  }, [config, getFilename]);
 
   return { downloadToDevice, handleSaveAs, handleSaveSvg, handleShare, handleCopy };
 }
