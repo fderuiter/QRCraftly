@@ -2,15 +2,55 @@ import React from 'react';
 import { ShieldCheck, Loader2, ShieldX } from 'lucide-react';
 import { ScannabilityStatus, HealthScore } from '../hooks/useScannability';
 
+/**
+ *
+ */
 interface Props {
+  /**
+   *
+   */
   status: ScannabilityStatus;
+  /**
+   *
+   */
   health?: HealthScore;
 }
 
+/**
+ *
+ * @param root0
+ * @param root0.status
+ * @param root0.health
+ */
 export const ScannabilityIndicator: React.FC<Props> = ({ status, health }) => {
-  if (status === 'idle') return null;
+  const [announcedText, setAnnouncedText] = React.useState('');
+  const lastAnnouncedWarning = React.useRef<string>('');
 
   const showHealth = health && health.score < 100;
+  const activeWarning = showHealth && health && health.warnings && health.warnings.length > 0
+    ? health.warnings[0]
+    : '';
+
+  React.useEffect(() => {
+    if (status === 'idle') {
+      setAnnouncedText('');
+      lastAnnouncedWarning.current = '';
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      if (activeWarning !== lastAnnouncedWarning.current) {
+        setAnnouncedText(activeWarning);
+        lastAnnouncedWarning.current = activeWarning;
+      }
+    }, 1500);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [status, health, activeWarning]);
+
+  if (status === 'idle') return null;
 
   return (
     <div className="flex flex-col gap-2 items-end">
@@ -46,10 +86,30 @@ export const ScannabilityIndicator: React.FC<Props> = ({ status, health }) => {
         )}
       </div>
       {showHealth && health.warnings.length > 0 && (
-        <div role="alert" className="text-xs text-rose-700 dark:text-rose-400 max-w-xs text-right animate-in fade-in slide-in-from-top-1">
+        <div className="text-xs text-rose-700 dark:text-rose-400 max-w-xs text-right animate-in fade-in slide-in-from-top-1">
           {health.warnings[0]}
         </div>
       )}
+
+      {/* Visually hidden polite ARIA live-region for screen readers */}
+      <div
+        aria-live="polite"
+        role="status"
+        className="sr-only"
+        style={{
+          position: 'absolute',
+          width: '1px',
+          height: '1px',
+          padding: '0',
+          margin: '-1px',
+          overflow: 'hidden',
+          clip: 'rect(0, 0, 0, 0)',
+          whiteSpace: 'nowrap',
+          borderWidth: '0',
+        }}
+      >
+        {announcedText}
+      </div>
     </div>
   );
 };
