@@ -21,8 +21,9 @@ import { render, screen, waitFor, act } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach, Mock } from 'vitest';
 import QRCanvas from './QRCanvas';
 import { DEFAULT_CONFIG } from '../constants';
-import { QRStyle, LogoPaddingStyle, QRErrorCorrectionLevel, SocialFormat } from '../types';
+import { QRStyle, LogoPaddingStyle, QRErrorCorrectionLevel, SocialFormat, QRType } from '../types';
 import QRCode from 'qrcode';
+import '../utils/qrHelpers';
 
 // Mock qrcode module
 
@@ -419,5 +420,34 @@ describe('QRCanvas Component', () => {
         // We want the relative width to be <= 0.50 (SAFE_AREA_RATIO) + buffer
         expect(relativeWidth).toBeLessThanOrEqual(0.51);
     });
+  });
+
+  it('displays the standard Alert component with polite live region when validation fails', async () => {
+    const invalidConfig = {
+      ...DEFAULT_CONFIG,
+      type: QRType.URL,
+      value: 'javascript:alert(1)',
+    };
+
+    render(<QRCanvas config={invalidConfig} />);
+
+    // Check that standard alert is used with status role and polite live region
+    const alertElement = screen.getByRole('status');
+    expect(alertElement).toBeInTheDocument();
+    expect(alertElement).toHaveAttribute('aria-live', 'polite');
+
+    // Check that warning message is rendered
+    expect(screen.getByText('Unsafe URL scheme or malicious protocol detected.')).toBeInTheDocument();
+    expect(screen.getByText('Generation Blocked:')).toBeInTheDocument();
+
+    // Check that decorative icon inside has aria-hidden="true"
+    const iconElement = alertElement.querySelector('svg');
+    expect(iconElement).toBeInTheDocument();
+    expect(iconElement).toHaveAttribute('aria-hidden', 'true');
+
+    // Check that underlying canvas remains mounted in the background (hidden)
+    const canvasElement = document.querySelector('canvas');
+    expect(canvasElement).toBeInTheDocument();
+    expect(canvasElement).toHaveStyle({ display: 'none' });
   });
 });
