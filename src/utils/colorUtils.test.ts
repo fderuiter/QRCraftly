@@ -17,7 +17,7 @@
 */
 
 import { describe, it, expect } from 'vitest';
-import { getContrastRatio } from './colorUtils';
+import { getContrastRatio, normalizeHex } from './colorUtils';
 
 describe('colorUtils', () => {
   describe('getContrastRatio', () => {
@@ -75,6 +75,32 @@ describe('colorUtils', () => {
       // L_blue ≈ 0.076, L_black = 0
       // (0.076 + 0.05) / (0 + 0.05) ≈ 0.126 / 0.05 = 2.52
       expect(getContrastRatio('#205081', '#000000')).toBeCloseTo(2.52, 1);
+    });
+
+    it('returns 0 if lengths are invalid', () => {
+      expect(getContrastRatio('#12345', '#ffffff')).toBe(0);
+      expect(getContrastRatio('#ffffff', '#12345')).toBe(0);
+      expect(getContrastRatio('#12345678', '#ffffff')).toBe(0);
+    });
+  });
+
+  describe('normalizeHex', () => {
+    it('normalizes 3-digit and 6-digit hex codes with and without #', () => {
+      expect(normalizeHex('#123')).toBe('#112233');
+      expect(normalizeHex('123')).toBe('#112233');
+      expect(normalizeHex('#123456')).toBe('#123456');
+      expect(normalizeHex('123456')).toBe('#123456');
+    });
+
+    it('converts letters to lowercase', () => {
+      expect(normalizeHex('#ABC')).toBe('#aabbcc');
+      expect(normalizeHex('DEF')).toBe('#ddeeff');
+    });
+
+    it('returns null for invalid hex length or characters', () => {
+      expect(normalizeHex('#12')).toBeNull();
+      expect(normalizeHex('12345')).toBeNull();
+      expect(normalizeHex('#GGGGGG')).toBeNull();
     });
   });
 });

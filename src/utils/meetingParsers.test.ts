@@ -68,6 +68,13 @@ describe('meetingParsers', () => {
         expect(result.meetingId).toBe('AbCdEfGhIjKlMn');
       });
 
+      it('falls back to undecoded slice on decodeURIComponent failure', () => {
+        const url = 'https://teams.microsoft.com/l/meetup-join/abc%/0';
+        const result = parseMeetingUrl(url);
+        expect(result.service).toBe('teams');
+        expect(result.meetingId).toBe('abc%');
+      });
+
       it('returns unknown when Teams URL has no meetup-join segment', () => {
         const result = parseMeetingUrl('https://teams.microsoft.com/go');
         expect(result.service).toBe('unknown');

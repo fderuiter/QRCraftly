@@ -119,6 +119,27 @@ describe('useQRDownload', () => {
     expect(appendSpy).not.toHaveBeenCalled();
   });
 
+  it('downloadToDevice returns failure when canvas is not found', async () => {
+    const emptyRef = { current: null } as any;
+    const { result } = renderHook(() => useQRDownload(emptyRef, DEFAULT_CONFIG as QRConfig), { wrapper: ToastProvider });
+    const res = await result.current.downloadToDevice('png');
+    expect(res.success).toBe(false);
+    expect(res.error).toBeDefined();
+  });
+
+  it('downloadToDevice catches toDataURL error', async () => {
+    const errorCanvas = {
+      toDataURL: vi.fn().mockImplementation(() => {
+        throw new Error('toDataURL throw');
+      }),
+    };
+    const errRef = { current: { querySelector: () => errorCanvas } } as any;
+    const { result } = renderHook(() => useQRDownload(errRef, DEFAULT_CONFIG as QRConfig), { wrapper: ToastProvider });
+    const res = await result.current.downloadToDevice('png');
+    expect(res.success).toBe(false);
+    expect(res.error).toBeDefined();
+  });
+
   it('handleSaveAs falls back to downloadToDevice if File System Access API is not available', async () => {
     const tempOriginal = (global as any).showSaveFilePicker;
     delete (global as any).showSaveFilePicker;
