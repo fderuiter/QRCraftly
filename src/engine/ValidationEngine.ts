@@ -2,6 +2,7 @@ import { QRConfig, QRType } from '../types';
 import { LOW_RELIABILITY_PATTERNS, SYSTEM_LIMITS } from '../constants';
 import { getContrastRatio } from '../utils/colorUtils';
 import { parseProtocol, PROTOCOL_PREFIXES, SOCIAL_DOMAINS } from '../utils/protocol';
+import { isDangerousUrl, sanitizeInput, cleanPhoneNumber } from '../utils/security';
 import { SafeUrlPipeline } from '../utils/url';
 
 /**
@@ -120,7 +121,7 @@ export const ValidationEngine = {
    * @returns True if the URL is dangerous and should be blocked, false otherwise.
    */
   isDangerousUrl(url: string | undefined): boolean {
-    return SafeUrlPipeline.isDangerous(url);
+    return isDangerousUrl(url);
   },
 
   /**
@@ -193,8 +194,7 @@ export const ValidationEngine = {
    * @returns The sanitized input string.
    */
   sanitizeInput(str: string): string {
-    const noControl = str.replace(this.REGEX_STRICT_CONTROL_CHARS, '');
-    return noControl.split('?')[0];
+    return sanitizeInput(str);
   },
 
   /**
@@ -213,7 +213,7 @@ export const ValidationEngine = {
    * @returns The cleaned phone number string.
    */
   cleanPhoneNumber(number: string): string {
-    return number.replace(/[^0-9+*#\-().]/g, '');
+    return cleanPhoneNumber(number);
   },
 
   /**

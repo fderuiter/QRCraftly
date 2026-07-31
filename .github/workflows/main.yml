@@ -67,7 +67,7 @@ jobs:
       - run: pnpm run lint
 
       - name: Check for Code Duplication
-        run: npx jscpd@3.5.9 src --ignore "**/*.test.ts,**/*.test.tsx,**/__tests__/**,**/fixtures/**,**/dev-sandbox/**" --threshold 5
+        run: npx jscpd@3.5.9 src --ignore "**/*.test.ts,**/*.test.tsx,**/__tests__/**,**/fixtures/**,**/dev-sandbox/**" --threshold 3
 
       - name: Run Semgrep
         run: pip install semgrep && semgrep ci --config=semgrep.yml

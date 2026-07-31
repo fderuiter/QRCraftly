@@ -1,6 +1,35 @@
 const BASE_INPUT_CLASSES = "bg-white border border-slate-300 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100 rounded-lg text-slate-700 text-sm transition-all w-full";
 
 /**
+ * Unified Layout Spacing & Structure Variables
+ */
+export const FIELDSET_CLASSES = "space-y-4 min-w-0";
+/**
+ *
+ */
+export const LEGEND_CLASSES = "text-sm font-semibold text-slate-700 dark:text-slate-200 w-full mb-3";
+/**
+ *
+ */
+export const CONTAINER_SPACING_CLASSES = "space-y-3";
+/**
+ *
+ */
+export const GRID_TWO_COLUMNS_CLASSES = "grid grid-cols-2 gap-4";
+/**
+ *
+ */
+export const SUB_FIELDSET_CLASSES = "pt-2 border-t border-slate-100 dark:border-slate-800 min-w-0";
+/**
+ *
+ */
+export const SUB_LEGEND_CLASSES = "block text-sm font-bold text-slate-600 dark:text-slate-400 mb-2 w-full";
+/**
+ *
+ */
+export const SUB_CONTAINER_SPACING_CLASSES = "space-y-4";
+
+/**
  *
  */
 export const TEXT_FIELD_CLASSES = `${BASE_INPUT_CLASSES} px-3 py-2`;
