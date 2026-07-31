@@ -3,14 +3,8 @@ name: Documentation Audit
 on:
   push:
     branches: [main]
-    paths:
-      - 'docs/**'
-      - '**/*.md'
   pull_request:
     branches: [main]
-    paths:
-      - 'docs/**'
-      - '**/*.md'
 
 permissions:
   contents: read
@@ -46,17 +40,24 @@ jobs:
           echo "Detected changed files:"
           echo "$CHANGED_FILES"
 
-          skip=false
+          has_docs=false
           for file in $CHANGED_FILES; do
             if [ -z "$file" ]; then
               continue
             fi
-            if [[ ! "$file" =~ ^docs/ ]] && [[ ! "$file" =~ \.md$ ]]; then
-              echo "Non-documentation/code file detected: $file"
-              skip=true
+            if [[ "$file" =~ ^docs/ ]] || [[ "$file" =~ \.md$ ]]; then
+              echo "Documentation/markdown file detected: $file"
+              has_docs=true
               break
             fi
           done
+
+          if [ "$has_docs" = "true" ]; then
+            skip=false
+          else
+            echo "No documentation or markdown files modified."
+            skip=true
+          fi
 
           echo "skip=$skip"
           echo "skip=$skip" >> $GITHUB_OUTPUT
