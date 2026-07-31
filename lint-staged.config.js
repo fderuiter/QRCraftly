@@ -1,5 +1,5 @@
 const eslintCommand = (filenames) => {
-  const quotedFiles = filenames.map(f => `"${f.replace(/"/g, '\\"')}"`).join(' ');
+  const quotedFiles = filenames.map(f => `"${f.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`).join(' ');
   return `eslint --fix --no-warn-ignored ${quotedFiles}`;
 };
 
