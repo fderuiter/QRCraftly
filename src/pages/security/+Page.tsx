@@ -1,5 +1,6 @@
 import { ArrowLeft, ShieldCheck, ShieldAlert, FileText } from 'lucide-react';
 import { Marked } from 'marked';
+import { SanitizedHtml } from '@/components/ui/SanitizedHtml';
 import docsManifest from '../../data/docs_manifest.json';
 
 function slugify(text: string): string {
@@ -90,8 +91,7 @@ export default function Page() {
                 </div>
                 <h2 className="text-2xl font-bold text-slate-900 dark:text-white m-0">{doc.title}</h2>
               </div>
-              {/* eslint-disable-next-line no-restricted-syntax */}
-              <div dangerouslySetInnerHTML={{ __html: html }} />
+              <SanitizedHtml html={html} />
             </section>
           );
         })}
