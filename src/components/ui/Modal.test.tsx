@@ -35,4 +35,71 @@ describe('Modal Component Accessibility and Behavior', () => {
     await userEvent.keyboard('{Escape}');
     expect(handleClose).toHaveBeenCalledTimes(1);
   });
+
+  it('should lock body scroll when open and restore when closed', () => {
+    const initialOverflow = document.body.style.overflow;
+
+    const { rerender } = render(
+      <Modal isOpen={true} onClose={() => {}} title="Test Modal">
+        <div>Modal Content</div>
+      </Modal>
+    );
+
+    expect(document.body.style.overflow).toBe('hidden');
+
+    rerender(
+      <Modal isOpen={false} onClose={() => {}} title="Test Modal">
+        <div>Modal Content</div>
+      </Modal>
+    );
+
+    expect(document.body.style.overflow).toBe(initialOverflow);
+  });
+
+  it('should trap focus and restore focus on open/close cycles', async () => {
+    const trigger = document.createElement('button');
+    trigger.id = 'trigger';
+    document.body.appendChild(trigger);
+    trigger.focus();
+    expect(document.activeElement).toBe(trigger);
+
+    const { rerender } = render(
+      <Modal isOpen={true} onClose={() => {}} title="Test Modal">
+        <button data-testid="button1">Button 1</button>
+        <button data-testid="button2">Button 2</button>
+      </Modal>
+    );
+
+    // Wait for auto-focus to trigger (it has a 50ms timeout)
+    await new Promise((resolve) => setTimeout(resolve, 60));
+
+    const closeBtn = document.querySelector('[aria-label="Close modal"]') as HTMLElement;
+    const btn1 = document.querySelector('[data-testid="button1"]') as HTMLElement;
+    const btn2 = document.querySelector('[data-testid="button2"]') as HTMLElement;
+
+    expect(document.activeElement).toBe(closeBtn);
+
+    await userEvent.tab();
+    expect(document.activeElement).toBe(btn1);
+
+    await userEvent.tab();
+    expect(document.activeElement).toBe(btn2);
+
+    await userEvent.tab();
+    expect(document.activeElement).toBe(closeBtn);
+
+    await userEvent.tab({ shift: true });
+    expect(document.activeElement).toBe(btn2);
+
+    rerender(
+      <Modal isOpen={false} onClose={() => {}} title="Test Modal">
+        <button data-testid="button1">Button 1</button>
+        <button data-testid="button2">Button 2</button>
+      </Modal>
+    );
+
+    expect(document.activeElement).toBe(trigger);
+
+    document.body.removeChild(trigger);
+  });
 });
