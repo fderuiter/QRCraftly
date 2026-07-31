@@ -1,19 +1,35 @@
 import React from "react";
 import { PaymentData, CryptoNetwork } from "../../types";
 import { TextField, SelectField } from "../ui/FormFields";
+import { FIELDSET_CLASSES, LEGEND_CLASSES } from "../ui/styles";
 
+/**
+ *
+ */
 interface PaymentInputProps {
+  /**
+   *
+   */
   data: PaymentData;
+  /**
+   *
+   */
   onChange: (updates: Partial<PaymentData>) => void;
 }
 
+/**
+ *
+ * @param root0
+ * @param root0.data
+ * @param root0.onChange
+ */
 export const PaymentInput: React.FC<PaymentInputProps> = ({
   data,
   onChange,
 }) => {
   return (
-    <fieldset className="space-y-4 min-w-0">
-      <legend className="text-sm font-semibold text-slate-700 dark:text-slate-200 w-full mb-3">
+    <fieldset className={FIELDSET_CLASSES}>
+      <legend className={LEGEND_CLASSES}>
         Crypto Payment
       </legend>
 

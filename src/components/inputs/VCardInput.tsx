@@ -1,19 +1,42 @@
 import React from "react";
 import { VCardData } from "../../types";
 import { TextField } from "../ui/FormFields";
+import {
+  FIELDSET_CLASSES,
+  LEGEND_CLASSES,
+  GRID_TWO_COLUMNS_CLASSES,
+  SUB_FIELDSET_CLASSES,
+  SUB_LEGEND_CLASSES,
+  SUB_CONTAINER_SPACING_CLASSES,
+} from "../ui/styles";
 
+/**
+ *
+ */
 interface VCardInputProps {
+  /**
+   *
+   */
   data: VCardData;
+  /**
+   *
+   */
   onChange: (updates: Partial<VCardData>) => void;
 }
 
+/**
+ *
+ * @param root0
+ * @param root0.data
+ * @param root0.onChange
+ */
 export const VCardInput: React.FC<VCardInputProps> = ({ data, onChange }) => {
   return (
-    <fieldset className="space-y-4 min-w-0">
-      <legend className="text-sm font-semibold text-slate-700 dark:text-slate-200 w-full mb-3">
+    <fieldset className={FIELDSET_CLASSES}>
+      <legend className={LEGEND_CLASSES}>
         Contact Details (vCard)
       </legend>
-      <div className="grid grid-cols-2 gap-4">
+      <div className={GRID_TWO_COLUMNS_CLASSES}>
         <TextField
           id="vcard-firstname"
           name="firstName"
@@ -36,7 +59,7 @@ export const VCardInput: React.FC<VCardInputProps> = ({ data, onChange }) => {
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className={GRID_TWO_COLUMNS_CLASSES}>
         <TextField
           id="vcard-phone"
           name="phone"
@@ -95,11 +118,11 @@ export const VCardInput: React.FC<VCardInputProps> = ({ data, onChange }) => {
         onChange={(e) => onChange({ website: e.target.value })}
       />
 
-      <fieldset className="pt-2 border-t border-slate-100 dark:border-slate-800 min-w-0">
-        <legend className="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-2 w-full">
+      <fieldset className={SUB_FIELDSET_CLASSES}>
+        <legend className={SUB_LEGEND_CLASSES}>
           Address
         </legend>
-        <div className="space-y-4">
+        <div className={SUB_CONTAINER_SPACING_CLASSES}>
           <TextField
             id="vcard-street"
             name="street"
@@ -110,7 +133,7 @@ export const VCardInput: React.FC<VCardInputProps> = ({ data, onChange }) => {
             value={data.street}
             onChange={(e) => onChange({ street: e.target.value })}
           />
-          <div className="grid grid-cols-2 gap-4">
+          <div className={GRID_TWO_COLUMNS_CLASSES}>
             <TextField
               id="vcard-city"
               name="city"
