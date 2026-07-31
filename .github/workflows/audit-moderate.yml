@@ -1,0 +1,60 @@
+name: Scheduled Dependency Audit
+
+on:
+  schedule:
+    - cron: '0 4 * * *' # Every day at 04:00 UTC
+  workflow_dispatch: {} # Allows manual execution for validation/testing
+
+permissions:
+  contents: read
+
+# Cancel previous runs if a new commit is pushed to the same branch/ref
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    name: Audit Moderate-Severity Vulnerabilities
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node (pre-pnpm)
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "22.14.0"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "22.14.0"
+          cache: "pnpm"
+
+      - name: Install NPM Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run Moderate Dependency Audit
+        run: pnpm audit --audit-level=moderate
+
+      - name: Send Email on Failure
+        if: failure()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: ${{ secrets.SMTP_SERVER || 'smtp.gmail.com' }}
+          server_port: ${{ secrets.SMTP_PORT || 465 }}
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          subject: "Security Alert: Moderate-severity or higher vulnerability detected in ${{ github.repository }}"
+          to: ${{ secrets.MAIL_TO }}
+          from: "Security Audit Bot <${{ secrets.SMTP_USERNAME }}>"
+          body: |
+            A moderate-severity or higher dependency vulnerability was detected in the main branch of ${{ github.repository }}.
+
+            Workflow Run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+            Please review the audit logs and update the affected dependencies as soon as possible.
