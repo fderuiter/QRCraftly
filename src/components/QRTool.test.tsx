@@ -315,4 +315,144 @@ describe('QRTool Component', () => {
 
      expect(urlInput).toHaveValue('https://propagate.com');
   });
+
+  describe('Accessibility - Focus Recovery and Toast Announcements', () => {
+    it('restores focus and triggers a polite success toast when copy QR code is triggered', async () => {
+      // Mock Clipboard API for this test
+      const mockWrite = vi.fn().mockResolvedValue(undefined);
+      const originalClipboard = global.navigator.clipboard;
+      Object.defineProperty(global.navigator, 'clipboard', {
+        value: { write: mockWrite },
+        writable: true,
+        configurable: true,
+      });
+
+      const originalClipboardItem = (global as any).ClipboardItem;
+      const MockClipboardItem = vi.fn().mockImplementation(function(this: any, data) { this.data = data; });
+      (global as any).ClipboardItem = MockClipboardItem;
+
+      try {
+        render(<ToastProvider><QRTool /></ToastProvider>);
+        const copyBtn = screen.getByTitle('Copy Image');
+
+        // Set focus to the copy button to simulate keyboard/user focus
+        copyBtn.focus();
+        expect(document.activeElement).toBe(copyBtn);
+
+        fireEvent.click(copyBtn);
+
+        // Verify success toast exists with role="status" and message
+        await waitFor(() => {
+          const statuses = screen.getAllByRole('status');
+          const hasText = statuses.some(s => s.textContent?.includes('QR code copied to clipboard!'));
+          expect(hasText).toBe(true);
+        });
+
+        // Verify focus is recovered/preserved on the copy button
+        expect(document.activeElement).toBe(copyBtn);
+      } finally {
+        (global as any).ClipboardItem = originalClipboardItem;
+        Object.defineProperty(global.navigator, 'clipboard', {
+          value: originalClipboard,
+          writable: true,
+          configurable: true,
+        });
+      }
+    });
+
+    it('restores focus and triggers a polite success toast when Save to Photos is triggered', async () => {
+      render(<ToastProvider><QRTool /></ToastProvider>);
+      const photosBtn = screen.getByLabelText('Save QR code to photos');
+
+      // Set focus to the save to photos button
+      photosBtn.focus();
+      expect(document.activeElement).toBe(photosBtn);
+
+      fireEvent.click(photosBtn);
+
+      // Verify success toast exists with role="status" and message
+      await waitFor(() => {
+        const statuses = screen.getAllByRole('status');
+        const hasText = statuses.some(s => s.textContent?.includes('QR code exported successfully as PNG!'));
+        expect(hasText).toBe(true);
+      });
+
+      // Verify focus is restored to the photos button
+      expect(document.activeElement).toBe(photosBtn);
+    });
+
+    it('restores focus and triggers a polite success toast when SVG download is triggered from the menu', async () => {
+      render(<ToastProvider><QRTool /></ToastProvider>);
+      const downloadBtn = screen.getAllByText('Download')[0];
+
+      // Set focus to the Download button
+      downloadBtn.focus();
+      expect(document.activeElement).toBe(downloadBtn);
+
+      // Open the dropdown menu
+      fireEvent.click(downloadBtn);
+
+      const svgOption = screen.getByText('SVG (Vector)');
+      fireEvent.click(svgOption);
+
+      // Verify success toast exists with role="status" and message
+      await waitFor(() => {
+        const statuses = screen.getAllByRole('status');
+        const hasText = statuses.some(s => s.textContent?.includes('QR code exported successfully as SVG!'));
+        expect(hasText).toBe(true);
+      });
+
+      // Verify focus is returned to the main Download trigger button
+      expect(document.activeElement).toBe(downloadBtn);
+    });
+
+    it('restores focus and triggers a success toast when Web Share API is triggered', async () => {
+      const mockShare = vi.fn().mockResolvedValue(undefined);
+      const mockCanShare = vi.fn().mockReturnValue(true);
+      const originalShare = global.navigator.share;
+      const originalCanShare = global.navigator.canShare;
+
+      Object.defineProperty(global.navigator, 'share', {
+          value: mockShare,
+          writable: true,
+          configurable: true
+      });
+      Object.defineProperty(global.navigator, 'canShare', {
+          value: mockCanShare,
+          writable: true,
+          configurable: true
+      });
+
+      try {
+        render(<ToastProvider><QRTool /></ToastProvider>);
+        const shareBtn = screen.getByTitle('Share');
+
+        // Focus the share button
+        shareBtn.focus();
+        expect(document.activeElement).toBe(shareBtn);
+
+        fireEvent.click(shareBtn);
+
+        await waitFor(() => {
+          const statuses = screen.getAllByRole('status');
+          const hasText = statuses.some(s => s.textContent?.includes('QR code shared successfully!'));
+          expect(hasText).toBe(true);
+        });
+
+        // Focus is returned/preserved on the share button
+        expect(document.activeElement).toBe(shareBtn);
+      } finally {
+        Object.defineProperty(global.navigator, 'share', {
+            value: originalShare,
+            writable: true,
+            configurable: true
+        });
+        Object.defineProperty(global.navigator, 'canShare', {
+            value: originalCanShare,
+            writable: true,
+            configurable: true
+        });
+      }
+    });
+  });
 });
