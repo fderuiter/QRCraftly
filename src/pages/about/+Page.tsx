@@ -18,7 +18,7 @@
 
 
 import { Github, Shield, Database, Code, ArrowLeft, Zap, Wifi, Coffee } from 'lucide-react';
-import { safeJsonLdStringify } from '@/utils/security';
+import { JsonLdScript } from '@/components/ui/JsonLdScript';
 import { contentRegistry } from '@/data/contentRegistry';
 import { generateSchema } from '@/utils/schemaGenerator';
 import { resolveDomainForPath } from '@/utils/metadataEngine';
@@ -31,8 +31,7 @@ import { usePageContext } from 'vike-react/usePageContext';
  * Displays information about the QRCraftly project, including its core values
  * (Privacy, No Database, Open Source, Free Use) and licensing information.
  * Includes a link to the GitHub repository.
- *
- * @returns {JSX.Element} The About page layout.
+ * @returns The About page layout.
  */
 export default function Page() {
   const pageContext = usePageContext();
@@ -42,7 +41,7 @@ export default function Page() {
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-12">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(schemaData) }} />
+      <JsonLdScript data={schemaData} />
       <div className="mb-8">
 
         <a

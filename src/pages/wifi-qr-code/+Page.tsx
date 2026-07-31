@@ -22,7 +22,7 @@ import { QRType } from '@/types';
 import { contentRegistry } from '@/data/contentRegistry';
 import { generateSchema } from '@/utils/schemaGenerator';
 import { resolveDomainForPath } from '@/utils/metadataEngine';
-import { safeJsonLdStringify } from '@/utils/security';
+import { JsonLdScript } from '@/components/ui/JsonLdScript';
 import { usePageContext } from 'vike-react/usePageContext';
 
 /**
@@ -30,8 +30,7 @@ import { usePageContext } from 'vike-react/usePageContext';
  *
  * A specialized landing page that pre-configures the `QRTool` for WiFi QR code generation.
  * This can be used for SEO landing pages or direct links to specific functionality.
- *
- * @returns {JSX.Element} The WiFi QR code page layout.
+ * @returns The WiFi QR code page layout.
  */
 export default function Page() {
   const pageContext = usePageContext();
@@ -46,7 +45,7 @@ export default function Page() {
 
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(schemaData) }} />
+      <JsonLdScript data={schemaData} />
       <QRTool initialConfig={wifiConfig} title="WiFi QR Code"  toolId="wifi-qr-code" />
           </>
   );

@@ -101,15 +101,15 @@ describe('SvgContext', () => {
       expect(svg).toContain('Z');
     });
 
-    it('arc draws a full circle as two half-arcs', () => {
+    it('arc draws a full circle as transformed cubic Bezier curves', () => {
       const ctx = new SvgContext(200, 200);
       ctx.beginPath();
       ctx.arc(50, 50, 20, 0, Math.PI * 2);
       ctx.fill();
       const svg = ctx.serialize();
-      // Full circle uses two A commands
-      const aCount = (svg.match(/ A /g) || []).length;
-      expect(aCount).toBe(2);
+      // Full circle uses four C commands
+      const cCount = (svg.match(/ C /g) || []).length;
+      expect(cCount).toBe(4);
     });
 
     it('roundRect produces a closed path with Q curve commands', () => {
@@ -288,6 +288,74 @@ describe('SvgContext', () => {
       const svg = ctx.serialize();
       expect(svg).toContain('<title>Custom &lt;Title&gt; &amp; More</title>');
       expect(svg).toContain('<desc>Special &lt;Description&gt; &amp; Payload</desc>');
+    });
+  });
+
+  describe('High-Fidelity Affine-Compliant features', () => {
+    it('supports linear gradient definitions and maps to linearGradient tags in defs', () => {
+      const ctx = new SvgContext(200, 200);
+      const grad = ctx.createLinearGradient(10, 20, 150, 160);
+      grad.addColorStop(0, '#ff0000');
+      grad.addColorStop(1, '#0000ff');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 200, 200);
+      
+      const svg = ctx.serialize();
+      expect(svg).toContain('<linearGradient id="linear-grad-1" x1="10" y1="20" x2="150" y2="160"');
+      expect(svg).toContain('<stop offset="0%" stop-color="#ff0000" />');
+      expect(svg).toContain('<stop offset="100%" stop-color="#0000ff" />');
+      expect(svg).toContain('fill="url(#linear-grad-1)"');
+    });
+
+    it('supports 3-parameter and 9-parameter image drawing operations', () => {
+      const ctx = new SvgContext(300, 300);
+      const img = { src: 'data:image/png;base64,foo', width: 100, height: 100 };
+      
+      // 3-parameter drawImage
+      ctx.drawImage(img, 10, 20);
+      
+      // 9-parameter drawImage
+      ctx.drawImage(img, 5, 5, 40, 40, 50, 60, 80, 80);
+      
+      const svg = ctx.serialize();
+      // Expect 3-parameter image output
+      expect(svg).toContain('x="10" y="20" width="100" height="100"');
+      // Expect 9-parameter image output (nested svg viewBox)
+      expect(svg).toContain('viewBox="5 5 40 40"');
+      expect(svg).toContain('x="50" y="60" width="80" height="80"');
+    });
+
+    it('retains path coordinate data after fill to allow subsequent stroke on same path', () => {
+      const ctx = new SvgContext(200, 200);
+      ctx.beginPath();
+      ctx.rect(10, 10, 50, 50);
+      ctx.fillStyle = '#ff0000';
+      ctx.strokeStyle = '#00ff00';
+      ctx.lineWidth = 4;
+      ctx.fill();
+      ctx.stroke();
+
+      const svg = ctx.serialize();
+      // Should have two paths with same coordinate data
+      const paths = svg.match(/<path d="M 10 10 L 60 10 L 60 60 L 10 60 Z"/g);
+      expect(paths).not.toBeNull();
+      expect(paths!.length).toBe(2);
+      expect(svg).toContain('fill="#ff0000"');
+      expect(svg).toContain('stroke="#00ff00"');
+    });
+
+    it('converts curved arcs into transformed cubic Bezier curves with rotation applied', () => {
+      const ctx = new SvgContext(200, 200);
+      ctx.rotate(0.5); // Apply non-identity matrix
+      ctx.beginPath();
+      ctx.arc(50, 50, 10, 0, Math.PI / 2); // 90 degree partial arc
+      ctx.fill();
+
+      const svg = ctx.serialize();
+      // Active transform should be reflected in the computed bezier control points.
+      // There shouldn't be any 'A' commands, only 'C' commands.
+      expect(svg).not.toContain(' A ');
+      expect(svg).toContain(' C ');
     });
   });
 });

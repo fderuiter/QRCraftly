@@ -60,15 +60,15 @@ describe('generateQRSvg', () => {
     const config = { ...DEFAULT_CONFIG, style: QRStyle.SWISS } as QRConfig;
     const svg = await generateQRSvg(config);
     expect(svg).toContain('<svg');
-    // SWISS uses arcs (A commands in SVG path)
-    expect(svg).toContain(' A ');
+    // SWISS uses arcs (converted to C commands in SVG path)
+    expect(svg).toContain(' C ');
   });
 
   it('produces SVG for FLUID style (circles)', async () => {
     const config = { ...DEFAULT_CONFIG, style: QRStyle.FLUID } as QRConfig;
     const svg = await generateQRSvg(config);
     expect(svg).toContain('<svg');
-    expect(svg).toContain(' A ');
+    expect(svg).toContain(' C ');
   });
 
   it('produces SVG for GRUNGE style', async () => {

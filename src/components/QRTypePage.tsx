@@ -20,8 +20,11 @@ import React from 'react';
 import QRTool from '@/components/QRTool';
 import { DEFAULT_CONFIG } from '@/constants';
 import { QRType } from '@/types';
-import { safeJsonLdStringify } from '@/utils/security';
+import { JsonLdScript } from '@/components/ui/JsonLdScript';
 
+/**
+ *
+ */
 interface QRTypePageProps {
   /** The QR code type to pre-select. */
   type: QRType;
@@ -36,6 +39,11 @@ interface QRTypePageProps {
 /**
  * A reusable page component for specific QR code type landing pages.
  * It sets up the QRTool with the correct type and injects the provided schema.org data.
+ * @param root0
+ * @param root0.type
+ * @param root0.title
+ * @param root0.schemaData
+ * @param root0.toolId
  */
 export const QRTypePage: React.FC<QRTypePageProps> = ({ type, title, schemaData, toolId }) => {
   const config = {
@@ -45,7 +53,7 @@ export const QRTypePage: React.FC<QRTypePageProps> = ({ type, title, schemaData,
 
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(schemaData) }} />
+      <JsonLdScript data={schemaData} />
       <QRTool initialConfig={config} title={title} toolId={toolId} />
     </>
   );
