@@ -93,6 +93,13 @@ jobs:
           path: node_modules
           key: ${{ runner.os }}-node-${{ hashFiles('**/pnpm-lock.yaml') }}
 
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v45
+
+      - name: Run Lineage Auditor on Changed Files
+        run: node scripts/git_lineage_auditor.js ${{ steps.changed-files.outputs.all_changed_files }}
+
       - run: pnpm run lint
 
       - name: Check for Code Duplication
