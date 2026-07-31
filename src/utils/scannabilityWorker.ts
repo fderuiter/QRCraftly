@@ -5,6 +5,7 @@ import {
   assertWorkerResponse,
   isWorkerRequest,
 } from './sharedContract';
+import { applyOpticalSimulationMath } from './opticalSimulation';
 
 /**
  * Applies an optical simulation to the image data to mimic physical scanning conditions.
@@ -14,61 +15,7 @@ import {
  * @returns The transformed image data with blur and noise.
  */
 function applyOpticalSimulation(imageData: ImageData, width: number, height: number): ImageData {
-  const src = imageData.data;
-  const dst = new Uint8ClampedArray(src.length);
-  const blurRadius = Math.max(1, Math.floor(width * 0.05)); // 5% blur
-  
-  // Fast box blur (horizontal then vertical)
-  const temp = new Uint8ClampedArray(src.length);
-  
-  // Horizontal pass
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      let r = 0, g = 0, b = 0, count = 0;
-      for (let k = -blurRadius; k <= blurRadius; k++) {
-        let px = x + k;
-        if (px >= 0 && px < width) {
-          const idx = (y * width + px) * 4;
-          r += src[idx];
-          g += src[idx + 1];
-          b += src[idx + 2];
-          count++;
-        }
-      }
-      const outIdx = (y * width + x) * 4;
-      temp[outIdx] = r / count;
-      temp[outIdx + 1] = g / count;
-      temp[outIdx + 2] = b / count;
-      temp[outIdx + 3] = src[outIdx + 3];
-    }
-  }
-  
-  // Vertical pass + Noise
-  const noiseLevel = 10; // Simple noise
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      let r = 0, g = 0, b = 0, count = 0;
-      for (let k = -blurRadius; k <= blurRadius; k++) {
-        let py = y + k;
-        if (py >= 0 && py < height) {
-          const idx = (py * width + x) * 4;
-          r += temp[idx];
-          g += temp[idx + 1];
-          b += temp[idx + 2];
-          count++;
-        }
-      }
-      
-      const outIdx = (y * width + x) * 4;
-      const noise = (Math.random() - 0.5) * noiseLevel;
-      
-      dst[outIdx] = Math.min(255, Math.max(0, (r / count) + noise));
-      dst[outIdx + 1] = Math.min(255, Math.max(0, (g / count) + noise));
-      dst[outIdx + 2] = Math.min(255, Math.max(0, (b / count) + noise));
-      dst[outIdx + 3] = src[outIdx + 3];
-    }
-  }
-  
+  const dst = applyOpticalSimulationMath(imageData.data, width, height);
   return new ImageData(dst, width, height);
 }
 
