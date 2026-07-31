@@ -71,6 +71,7 @@ describe('Accessible Inline Validation and Accessible Fields', () => {
       website: 'javascript:alert(1)',
       street: '',
       city: '',
+      zip: '',
       country: '',
     };
 
