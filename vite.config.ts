@@ -70,7 +70,17 @@ export default defineConfig(({ mode }) => {
             functions: 100,
             lines: 100,
           },
-          include: ['src/utils/qr-generators/*.ts', 'src/utils/qr-renderers/*.ts'],
+          include: [
+            'src/utils/*.ts',
+            'src/utils/qr-generators/*.ts',
+            'src/utils/qr-renderers/*.ts'
+          ],
+          exclude: [
+            'src/utils/svgContext.ts',
+            'src/utils/svgExport.ts',
+            'src/utils/templateRenderer.ts',
+            'src/utils/useQRDownload.ts',
+          ],
         }
       },
       resolve: {

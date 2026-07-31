@@ -108,4 +108,28 @@ describe('drawQR', () => {
       expect(mockContext.setLineDash).toHaveBeenCalled();
       expect(mockContext.strokeRect).toHaveBeenCalled();
   });
+
+  it('catches and warns on renderer exception', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    drawQR(mockContext, null as any, DEFAULT_CONFIG, null, null, 100);
+    expect(warnSpy).toHaveBeenCalled();
+    warnSpy.mockRestore();
+  });
+
+  it('uses window.devicePixelRatio or fallback to 1', () => {
+    const originalRatio = window.devicePixelRatio;
+
+    // Test truthy
+    Object.defineProperty(window, 'devicePixelRatio', { value: 2, configurable: true, writable: true });
+    drawQR(mockContext, mockModules, DEFAULT_CONFIG, null, null, 100);
+    expect(mockContext.scale).toHaveBeenCalledWith(2, 2);
+
+    // Test falsy
+    Object.defineProperty(window, 'devicePixelRatio', { value: undefined, configurable: true, writable: true });
+    drawQR(mockContext, mockModules, DEFAULT_CONFIG, null, null, 100);
+    expect(mockContext.scale).toHaveBeenCalledWith(1, 1);
+
+    // Restore
+    Object.defineProperty(window, 'devicePixelRatio', { value: originalRatio, configurable: true, writable: true });
+  });
 });
