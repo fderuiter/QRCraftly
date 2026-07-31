@@ -247,39 +247,41 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({ config, s
 
   if (hasViolations) {
     return (
-      <div className={containerClasses}>
-        <Alert
-          variant="error"
-          title="Generation Blocked"
-          role="status"
-          aria-live="polite"
-          className="flex-col items-center justify-center bg-rose-50 dark:bg-rose-950/25 border-2 border-dashed border-rose-300 dark:border-rose-800 rounded-3xl p-6 text-center gap-3 min-h-[300px] w-full"
-        >
-          <div className="space-y-1.5 mt-2">
-            {violations.map((v, i) => {
-              let msg = v;
-              if (v === 'URI_INJECTION_VIOLATION') {
-                msg = 'Unsafe URL scheme or malicious protocol detected.';
-              } else if (v === 'URL_STRUCTURE_VIOLATION') {
-                msg = 'Malformed URL structure.';
-              } else if (v === 'EMAIL_STRUCTURE_VIOLATION') {
-                msg = 'Invalid email address structure.';
-              } else if (v === 'LATITUDE_OUT_OF_BOUNDS_VIOLATION') {
-                msg = 'Latitude must remain between -90 and 90 degrees.';
-              } else if (v === 'LONGITUDE_OUT_OF_BOUNDS_VIOLATION') {
-                msg = 'Longitude must remain between -180 and 180 degrees.';
-              }
-              return (
-                <p key={i} className="text-sm text-rose-700 dark:text-rose-400 font-medium">
-                  {msg}
-                </p>
-              );
-            })}
-          </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xs mt-2">
-            Please correct the input above to safely resume QR code generation.
-          </p>
-        </Alert>
+      <div className={`relative ${containerClasses} w-full`}>
+        <div className="absolute inset-0">
+          <Alert
+            variant="error"
+            title="Generation Blocked"
+            role="status"
+            aria-live="polite"
+            className="flex flex-col items-center justify-center bg-rose-50 dark:bg-rose-950/25 border-2 border-dashed border-rose-300 dark:border-rose-800 rounded-3xl p-6 text-center gap-3 w-full h-full overflow-y-auto"
+          >
+            <div className="space-y-1.5 mt-2">
+              {violations.map((v, i) => {
+                let msg = v;
+                if (v === 'URI_INJECTION_VIOLATION') {
+                  msg = 'Unsafe URL scheme or malicious protocol detected.';
+                } else if (v === 'URL_STRUCTURE_VIOLATION') {
+                  msg = 'Malformed URL structure.';
+                } else if (v === 'EMAIL_STRUCTURE_VIOLATION') {
+                  msg = 'Invalid email address structure.';
+                } else if (v === 'LATITUDE_OUT_OF_BOUNDS_VIOLATION') {
+                  msg = 'Latitude must remain between -90 and 90 degrees.';
+                } else if (v === 'LONGITUDE_OUT_OF_BOUNDS_VIOLATION') {
+                  msg = 'Longitude must remain between -180 and 180 degrees.';
+                }
+                return (
+                  <p key={i} className="text-sm text-rose-700 dark:text-rose-400 font-medium">
+                    {msg}
+                  </p>
+                );
+              })}
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xs mt-2">
+              Please correct the input above to safely resume QR code generation.
+            </p>
+          </Alert>
+        </div>
         <canvas
           ref={handleRef}
           style={{ display: 'none' }}
@@ -291,7 +293,7 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({ config, s
   }
 
   return (
-    <div className={containerClasses}>
+    <div className={`relative ${containerClasses} w-full`}>
       <canvas
         ref={handleRef}
         className={`w-full h-auto block ${aspectRatioClass}`}
