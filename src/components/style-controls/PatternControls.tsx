@@ -4,11 +4,26 @@ import { PATTERNS, LOW_RELIABILITY_PATTERNS } from '../../constants';
 import { PatternModule } from '../ui/PatternModule';
 import { Alert } from '../ui/Alert';
 
+/**
+ *
+ */
 interface PatternControlsProps {
+  /**
+   *
+   */
   config: QRConfig;
+  /**
+   *
+   */
   onChange: (updates: Partial<QRConfig>) => void;
 }
 
+/**
+ *
+ * @param root0
+ * @param root0.config
+ * @param root0.onChange
+ */
 export const PatternControls: React.FC<PatternControlsProps> = ({ config, onChange }) => {
   const isLowReliability = LOW_RELIABILITY_PATTERNS.includes(config.style as any);
 
@@ -16,11 +31,13 @@ export const PatternControls: React.FC<PatternControlsProps> = ({ config, onChan
     <div>
       <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">Pattern Style</h3>
       
-      {isLowReliability && (
-        <Alert variant="error" title="Scannability Warning" className="mb-4">
-          The selected pattern ("{PATTERNS.find(p => p.id === config.style)?.label}") is complex and may reduce scannability on older mobile devices or in poor lighting. Consider testing thoroughly before printing.
-        </Alert>
-      )}
+      <div className="mb-4" data-testid="pattern-warning-slot">
+        <div className={isLowReliability ? 'visible' : 'invisible'} aria-hidden={!isLowReliability}>
+          <Alert variant="error" title="Scannability Warning" role={isLowReliability ? "alert" : undefined}>
+            The selected pattern ("{isLowReliability ? (PATTERNS.find(p => p.id === config.style)?.label || '') : 'pattern'}") is complex and may reduce scannability on older mobile devices or in poor lighting. Consider testing thoroughly before printing.
+          </Alert>
+        </div>
+      </div>
 
       <div
         className="grid grid-cols-4 gap-3"
