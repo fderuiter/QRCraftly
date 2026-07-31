@@ -1,11 +1,8 @@
 import { test, expect } from './fixtures';
-import fs from 'fs';
-import path from 'path';
+import jsQR from 'jsqr';
 
 test.describe('QR Code Scannability via Headless Browser', () => {
   test('generates scannable QR codes for various styles', async ({ page }) => {
-    const jsQRContent = fs.readFileSync(path.resolve('node_modules/jsqr/dist/jsQR.js'), 'utf8');
-
     await page.goto('/');
 
     // Wait for hydration to complete
@@ -24,49 +21,49 @@ test.describe('QR Code Scannability via Headless Browser', () => {
     await page.waitForSelector('canvas[role="img"]');
     
     const checkScannability = async () => {
-        return await page.evaluate(async ({ url, jsQRScript }) => {
+        const result = await page.evaluate(async () => {
             const canvas = document.querySelector('canvas[role="img"]') as HTMLCanvasElement;
-            if (!canvas) return { error: 'No canvas' };
+            if (!canvas) return null;
             const ctx = canvas.getContext('2d');
-            if (!ctx) return { error: 'No context' };
+            if (!ctx) return null;
             
             // Wait a small moment for drawing
             await new Promise(r => setTimeout(r, 100));
 
             const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            
-            // Inject jsQR if not present
-            if (typeof (window as any).jsQR === 'undefined') {
-                const script = document.createElement('script');
-                script.textContent = jsQRScript;
-                document.head.appendChild(script);
-            }
+            return {
+                width: imageData.width,
+                height: imageData.height,
+                data: new Uint8Array(imageData.data.buffer)
+            };
+        });
 
-            // @ts-ignore
-            if (typeof jsQR !== 'undefined') {
-                // @ts-ignore
-                const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "attemptBoth" });
-                if (code) {
-                    return { success: true, data: code.data };
-                }
-            }
-            return { error: 'Not scannable' };
-        }, { url: testUrl, jsQRScript: jsQRContent });
+        if (!result) {
+            return null;
+        }
+
+        const uint8Data = new Uint8ClampedArray(result.data.buffer);
+        const code = jsQR(uint8Data, result.width, result.height, { inversionAttempts: "attemptBoth" });
+        return code ? code.data : undefined;
     };
 
     await expect.poll(async () => {
-        const result = await checkScannability();
-        return result.data;
-    }, { timeout: 15000 }).toBe(testUrl);
+        return await checkScannability();
+    }, {
+        timeout: 15000,
+        intervals: [500]
+    }).toBe(testUrl);
 
     // Now test a different style if we can click it.
     const dotsButton = page.getByRole('button', { name: 'Dots', exact: true });
     if (await dotsButton.isVisible()) {
         await dotsButton.click();
         await expect.poll(async () => {
-            const result = await checkScannability();
-            return result.data;
-        }, { timeout: 15000 }).toBe(testUrl);
+            return await checkScannability();
+        }, {
+            timeout: 15000,
+            intervals: [500]
+        }).toBe(testUrl);
     }
   });
 });
