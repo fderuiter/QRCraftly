@@ -59,7 +59,7 @@ jobs:
 
       - name: Get changed files
         id: changed-files
-        uses: tj-actions/changed-files@v45
+        uses: tj-actions/changed-files@v47
 
       - name: Run Lineage Auditor on Changed Files
         run: node scripts/git_lineage_auditor.js ${{ steps.changed-files.outputs.all_changed_files }}
