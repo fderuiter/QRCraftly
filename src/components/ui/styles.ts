@@ -69,7 +69,9 @@ export function mergeClasses(...inputs: (string | undefined | null | false)[]): 
 
       let group: string | null = null;
 
-      if (baseClass.startsWith('px-')) {
+      if (baseClass === 'italic' || baseClass === 'not-italic' || baseClass === 'font-italic' || baseClass === 'font-not-italic') {
+        group = 'font-style';
+      } else if (baseClass.startsWith('px-')) {
         group = 'px';
       } else if (baseClass.startsWith('py-')) {
         group = 'py';
@@ -98,11 +100,50 @@ export function mergeClasses(...inputs: (string | undefined | null | false)[]): 
       } else if (baseClass.startsWith('m-')) {
         group = 'm';
       } else if (baseClass.startsWith('bg-')) {
-        group = 'bg';
+        if (baseClass.startsWith('bg-opacity-')) {
+          group = 'bg-opacity';
+        } else if (/^bg-(repeat|no-repeat|repeat-x|repeat-y|repeat-space|repeat-round)$/.test(baseClass)) {
+          group = 'bg-repeat';
+        } else if (/^bg-(auto|cover|contain)$/.test(baseClass)) {
+          group = 'bg-size';
+        } else if (/^bg-(top|bottom|center|left|right|left-top|left-bottom|right-top|right-bottom)$/.test(baseClass)) {
+          group = 'bg-position';
+        } else if (/^bg-(fixed|local|scroll)$/.test(baseClass)) {
+          group = 'bg-attachment';
+        } else if (baseClass.startsWith('bg-clip-')) {
+          group = 'bg-clip';
+        } else if (baseClass.startsWith('bg-origin-')) {
+          group = 'bg-origin';
+        } else if (baseClass.startsWith('bg-blend-')) {
+          group = 'bg-blend';
+        } else if (baseClass.startsWith('bg-gradient-')) {
+          group = 'bg-gradient';
+        } else {
+          group = 'bg-color';
+        }
       } else if (baseClass.startsWith('text-')) {
-        group = 'text';
+        if (/^text-(left|right|center|justify|start|end)$/.test(baseClass)) {
+          group = 'text-align';
+        } else if (baseClass.startsWith('text-opacity-')) {
+          group = 'text-opacity';
+        } else if (/^text-(ellipsis|clip)$/.test(baseClass)) {
+          group = 'text-overflow';
+        } else if (/^text-(xs|sm|base|lg|\d*xl)$/.test(baseClass) || (baseClass.startsWith('text-[') && /\b\d+(px|rem|em|%|vh|vw|pt|em|rem)\b/.test(baseClass))) {
+          group = 'text-size';
+        } else {
+          group = 'text-color';
+        }
       } else if (baseClass.startsWith('font-')) {
-        group = 'font';
+        const name = baseClass.slice(5);
+        if (/^(sans|serif|mono)$/.test(name)) {
+          group = 'font-family';
+        } else if (/^(thin|extralight|light|normal|medium|semibold|bold|extrabold|black|\d+)$/.test(name)) {
+          group = 'font-weight';
+        } else if (/\[\d+\]/.test(name) || /^\d+$/.test(name)) {
+          group = 'font-weight';
+        } else {
+          group = 'font-family';
+        }
       } else if (baseClass.startsWith('rounded-') || baseClass === 'rounded') {
         group = 'rounded';
       } else if (baseClass.startsWith('placeholder-')) {
@@ -114,16 +155,20 @@ export function mergeClasses(...inputs: (string | undefined | null | false)[]): 
       } else if (baseClass.startsWith('transition-') || baseClass === 'transition') {
         group = 'transition';
       } else if (baseClass.startsWith('border-') || baseClass === 'border') {
-        // Distinguish border-color vs border-width
-        const isColor = /^border-(slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|white|black|transparent|current|inherit)(-\d+)?(\/\d+)?$/.test(baseClass);
-        if (isColor) {
-          group = 'border-color';
+        if (/^border-(solid|dashed|dotted|double|none)$/.test(baseClass)) {
+          group = 'border-style';
         } else {
-          if (baseClass.startsWith('border-t')) group = 'border-t';
-          else if (baseClass.startsWith('border-b')) group = 'border-b';
-          else if (baseClass.startsWith('border-l')) group = 'border-l';
-          else if (baseClass.startsWith('border-r')) group = 'border-r';
-          else group = 'border-width';
+          // Distinguish border-color vs border-width
+          const isColor = /^border-(slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|white|black|transparent|current|inherit)(-\d+)?(\/\d+)?$/.test(baseClass);
+          if (isColor) {
+            group = 'border-color';
+          } else {
+            if (baseClass.startsWith('border-t')) group = 'border-t';
+            else if (baseClass.startsWith('border-b')) group = 'border-b';
+            else if (baseClass.startsWith('border-l')) group = 'border-l';
+            else if (baseClass.startsWith('border-r')) group = 'border-r';
+            else group = 'border-width';
+          }
         }
       }
 
