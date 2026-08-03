@@ -65,23 +65,100 @@ export function checkLineage(modifiedFiles) {
   return missingUpdates;
 }
 
+export function decodeGitPath(filePath) {
+  // Strip enclosing double quotes if present
+  if (filePath.startsWith('"') && filePath.endsWith('"')) {
+    filePath = filePath.slice(1, -1);
+  }
+
+  // Decode backslash-escaped octal sequences and other escape sequences
+  const bytes = [];
+  let i = 0;
+  while (i < filePath.length) {
+    if (filePath[i] === '\\') {
+      if (i + 1 < filePath.length) {
+        const nextChar = filePath[i + 1];
+        
+        // Check for octal sequence: \[0-7]{1,3}
+        if (/[0-7]/.test(nextChar)) {
+          let octalStr = '';
+          for (let j = 0; j < 3; j++) {
+            if (i + 1 + j < filePath.length && /[0-7]/.test(filePath[i + 1 + j])) {
+              octalStr += filePath[i + 1 + j];
+            } else {
+              break;
+            }
+          }
+          
+          const byteVal = parseInt(octalStr, 8);
+          if (byteVal > 255) {
+            // Bypass invalid octal sequence (leave as-is: push '\' and the digits)
+            bytes.push('\\'.charCodeAt(0));
+            for (let c = 0; c < octalStr.length; c++) {
+              bytes.push(octalStr.charCodeAt(c));
+            }
+          } else {
+            bytes.push(byteVal);
+          }
+          i += 1 + octalStr.length;
+        } else {
+          // Escaped control characters, quotes, or other characters
+          if (nextChar === 'n') bytes.push(10);
+          else if (nextChar === 't') bytes.push(9);
+          else if (nextChar === 'r') bytes.push(13);
+          else if (nextChar === 'b') bytes.push(8);
+          else if (nextChar === 'f') bytes.push(12);
+          else if (nextChar === 'v') bytes.push(11);
+          else if (nextChar === 'a') bytes.push(7);
+          else if (nextChar === '"' || nextChar === '\\' || nextChar === ' ' || nextChar === '/' || nextChar === '\'') {
+            bytes.push(nextChar.charCodeAt(0));
+          } else {
+            // Unrecognized escape: keep the backslash and the character
+            bytes.push('\\'.charCodeAt(0));
+            bytes.push(nextChar.charCodeAt(0));
+          }
+          i += 2;
+        }
+      } else {
+        // Trailing backslash
+        bytes.push('\\'.charCodeAt(0));
+        i += 1;
+      }
+    } else {
+      bytes.push(filePath.charCodeAt(i));
+      i += 1;
+    }
+  }
+
+  let decoded;
+  try {
+    const uint8Array = new Uint8Array(bytes);
+    decoded = new TextDecoder('utf-8', { fatal: true }).decode(uint8Array);
+  } catch (err) {
+    try {
+      const uint8Array = new Uint8Array(bytes);
+      decoded = new TextDecoder('utf-8', { fatal: false }).decode(uint8Array);
+    } catch (_) {
+      decoded = filePath;
+    }
+  }
+
+  return decoded;
+}
+
 export function parseGitStatus(stdout) {
   const modifiedFiles = new Set();
   const lines = stdout.split('\n');
   for (const line of lines) {
     if (line.length < 3) continue;
-    const rawPath = line.substring(3).trim();
-    let filePath = rawPath;
+    let rawPath = line.substring(3).trim();
 
-    if (filePath.startsWith('"') && filePath.endsWith('"')) {
-      filePath = filePath.slice(1, -1);
+    if (rawPath.includes(' -> ')) {
+      rawPath = rawPath.split(' -> ')[1].trim();
     }
 
-    if (filePath.includes(' -> ')) {
-      filePath = filePath.split(' -> ')[1].trim();
-    }
-
-    const normalized = filePath.replace(/\\/g, '/');
+    const decoded = decodeGitPath(rawPath);
+    const normalized = decoded.replace(/\\/g, '/');
     modifiedFiles.add(normalized);
   }
   return modifiedFiles;

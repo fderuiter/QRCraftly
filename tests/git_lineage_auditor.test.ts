@@ -17,6 +17,28 @@ describe('Local Git-Diff Lineage Auditor', () => {
     expect(parsed.has('old_file.ts')).toBe(false);
   });
 
+  it('should parse git status --porcelain correctly with octal escape sequences, quotes, and spaces', () => {
+    // 1. Octal escapes decoding (like \303\251 -> é)
+    const mockStdoutOctal = ` M "src/utils/sh\\303\\251.ts"`;
+    const parsedOctal = parseGitStatus(mockStdoutOctal);
+    expect(parsedOctal.has('src/utils/shé.ts')).toBe(true);
+
+    // 2. Spaces wrapped in quotes
+    const mockStdoutSpaces = `?? "src/components/my file.tsx"`;
+    const parsedSpaces = parseGitStatus(mockStdoutSpaces);
+    expect(parsedSpaces.has('src/components/my file.tsx')).toBe(true);
+
+    // 3. Renamed file with quotes and non-ASCII character and spaces
+    const mockStdoutRename = ` R  "old file.ts" -> "src/components/my file \\303\\251.tsx"`;
+    const parsedRename = parseGitStatus(mockStdoutRename);
+    expect(parsedRename.has('src/components/my file é.tsx')).toBe(true);
+
+    // 4. Invalid/out-of-range octal sequence should be bypassed gracefully without crashing
+    const mockStdoutInvalidOctal = ` M "src/utils/invalid_\\777_seq.ts"`;
+    const parsedInvalidOctal = parseGitStatus(mockStdoutInvalidOctal);
+    expect(parsedInvalidOctal.has('src/utils/invalid_/777_seq.ts')).toBe(true);
+  });
+
   it('should fail validation when a mapped contract is modified without its paired doc', () => {
     const modifiedFiles = new Set(['src/utils/sharedContract.ts', 'src/types.ts']);
     const missing = checkLineage(modifiedFiles);
