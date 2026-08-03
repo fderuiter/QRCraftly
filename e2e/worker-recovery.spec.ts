@@ -1,0 +1,170 @@
+/*
+    QRCraftly
+    Copyright (C) 2026 fderuiter
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
+import { test, expect } from './fixtures';
+
+/**
+ * Isolated Web Worker Recovery E2E Testing
+ * 
+ * Verifies that the background worker failures are safely intercepted and handled.
+ * Ensures the warning badge is shown, telemetry/diagnostics prompt can be answered,
+ * and the export bypass flow allows downloading anyway despite background thread errors.
+ */
+
+test.describe('Isolated Web Worker Recovery & Export Bypass', () => {
+  test.beforeEach(async ({ page }) => {
+    // Overwrite globalThis.Worker directly in the browser environment to intercept thread creation.
+    // This allows simulating background exceptions in an isolated test context.
+    await page.addInitScript(() => {
+      const OriginalWorker = globalThis.Worker;
+      class MockWorker extends OriginalWorker {
+        constructor(scriptURL: string | URL, options?: WorkerOptions) {
+          super(scriptURL, options);
+          // Expose the created worker instance on the window object
+          (window as any).activeWorker = this;
+        }
+
+        postMessage(message: any, transfer?: any) {
+          if ((window as any).simulateFailure !== false) {
+            // Simulate background worker crash/failure asynchronously
+            setTimeout(() => {
+              this.dispatchEvent(new MessageEvent('message', {
+                data: { success: false, physicalReady: false, error: 'NOT_FOUND' }
+              }));
+            }, 10);
+          } else {
+            if (transfer) {
+              super.postMessage(message, transfer);
+            } else {
+              super.postMessage(message);
+            }
+          }
+        }
+      }
+      globalThis.Worker = MockWorker as any;
+      // Initialize simulateFailure as true from the start of the session
+      (window as any).simulateFailure = true;
+    });
+
+    // Navigate to homepage
+    await page.goto('/');
+
+    // Wait for application hydration indicator to prevent race conditions
+    await page.waitForSelector('main[data-hydrated="true"]');
+
+    // Make sure url input is fully loaded and visible before simulating failure
+    const urlInput = page.locator('#url-input');
+    await urlInput.waitFor({ state: 'visible' });
+
+    // Wait for the active worker instance to be instantiated and captured
+    await expect.poll(async () => {
+      return await page.evaluate(() => !!(window as any).activeWorker);
+    }, {
+      timeout: 15000,
+      intervals: [250]
+    }).toBe(true);
+  });
+
+  test('Requirement 1 & 2: Mock Worker background thread exception and verify red scannability warning badge with alert role', async ({ page }) => {
+    // Dispatch simulated background process failure message event
+    await page.evaluate(() => {
+      (window as any).simulateFailure = true;
+      if ((window as any).activeWorker) {
+        (window as any).activeWorker.dispatchEvent(new MessageEvent('message', {
+          data: { success: false, physicalReady: false, error: 'NOT_FOUND' }
+        }));
+      }
+    });
+
+    // Assert that a red warning badge with an alert role displays on the page with 15-second polling threshold
+    const alertBadge = page.getByRole('alert');
+    await expect(alertBadge).toBeVisible({ timeout: 15000 });
+    await expect(alertBadge).toContainText('Low Scannability');
+  });
+
+  test('Requirement 3 & 4: Triggering download during background error displays warning modal and allows bypass', async ({ page }) => {
+    // Inject background failure
+    await page.evaluate(() => {
+      (window as any).simulateFailure = true;
+      if ((window as any).activeWorker) {
+        (window as any).activeWorker.dispatchEvent(new MessageEvent('message', {
+          data: { success: false, physicalReady: false, error: 'NOT_FOUND' }
+        }));
+      }
+    });
+
+    // Verify warning badge is visible
+    const alertBadge = page.getByRole('alert');
+    await expect(alertBadge).toBeVisible({ timeout: 15000 });
+    await expect(alertBadge).toContainText('Low Scannability');
+
+    // Click the download command to trigger export flow
+    const downloadButton = page.getByRole('button', { name: 'Download', exact: true });
+    await expect(downloadButton).toBeVisible();
+    // Wait for the button to transition to the error variant style (bg-rose-50 or text-rose-700)
+    await expect(downloadButton).toHaveClass(/bg-rose-50|text-rose-700/);
+    await downloadButton.click();
+
+    // Verify that the "Scan Safety Warning" warning dialog/modal is open
+    const warningModalTitle = page.getByRole('heading', { name: 'Scan Safety Warning' });
+    await expect(warningModalTitle).toBeVisible({ timeout: 15000 });
+
+    // Assert that the active bypass trigger button "Export Anyway" is present in the warning dialog
+    const exportAnywayButton = page.getByRole('button', { name: 'Export Anyway' });
+    await expect(exportAnywayButton).toBeVisible();
+
+    // Click the active bypass trigger to ignore error and proceed
+    await exportAnywayButton.click();
+
+    // Assert that the warning modal closes
+    await expect(warningModalTitle).not.toBeVisible({ timeout: 15000 });
+
+    // Assert that the bypass action successfully proceeded (dropdown menu opens or option is visible)
+    const pngOption = page.getByRole('menuitem', { name: 'PNG (High Quality)' });
+    await expect(pngOption).toBeVisible({ timeout: 15000 });
+  });
+
+  test('Requirement 5: Display diagnostic preferences options popup during failure state and dismiss on choice declaration', async ({ page }) => {
+    // Inject background failure
+    await page.evaluate(() => {
+      (window as any).simulateFailure = true;
+      if ((window as any).activeWorker) {
+        (window as any).activeWorker.dispatchEvent(new MessageEvent('message', {
+          data: { success: false, physicalReady: false, error: 'NOT_FOUND' }
+        }));
+      }
+    });
+
+    // Verify scannability alert/badge is active
+    const alertBadge = page.getByRole('alert');
+    await expect(alertBadge).toBeVisible({ timeout: 15000 });
+    await expect(alertBadge).toContainText('Low Scannability');
+
+    // Assert that the diagnostic options popup renders (help improve scannability card)
+    const telemetryTitle = page.getByText('Help Improve Scannability');
+    await expect(telemetryTitle).toBeVisible({ timeout: 15000 });
+
+    // Click 'No Thanks' option to save choice and dismiss popup
+    const noThanksButton = page.getByRole('button', { name: 'No Thanks' });
+    await expect(noThanksButton).toBeVisible();
+    await noThanksButton.click();
+
+    // Assert that the diagnostic preferences popup is successfully dismissed and no longer visible
+    await expect(telemetryTitle).not.toBeVisible({ timeout: 15000 });
+  });
+});
