@@ -20,7 +20,7 @@ import { WifiData, WifiEncryption, QRType, QRGeneratorContract } from '../../typ
 
 const REGEX_ESCAPE_WIFI = /([\\;,":])/g;
 const REGEX_UNESCAPE_WIFI = /\\([\\;,":])/g;
-const REGEX_SPLIT_WIFI = /(?<!\\);/;
+const REGEX_PROHIBITED_CHARS = /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F\u200B-\u200D\uFEFF]/;
 
 /**
  * Escapes specific special characters in a WIFI SSID or password string.
@@ -46,6 +46,10 @@ const unescapeWifi = (str: string | undefined): string => {
  * Hydrates WifiData from a raw string.
  */
 export const hydrateWifiData = (raw: string): WifiData => {
+  if (REGEX_PROHIBITED_CHARS.test(raw)) {
+    throw new Error('Payload contains prohibited control or zero-width characters');
+  }
+
   const result: WifiData = {
     ssid: '',
     password: '',
@@ -63,7 +67,26 @@ export const hydrateWifiData = (raw: string): WifiData => {
     content = content.slice(0, -1);
   }
   
-  const parts = content.split(REGEX_SPLIT_WIFI);
+  const parts: string[] = [];
+  let currentPart = '';
+  let escaped = false;
+
+  for (let i = 0; i < content.length; i++) {
+    const char = content[i];
+    if (escaped) {
+      currentPart += char;
+      escaped = false;
+    } else if (char === '\\') {
+      currentPart += char;
+      escaped = true;
+    } else if (char === ';') {
+      parts.push(currentPart);
+      currentPart = '';
+    } else {
+      currentPart += char;
+    }
+  }
+  parts.push(currentPart);
 
   parts.forEach(part => {
     const splitIndex = part.indexOf(':');

@@ -115,4 +115,68 @@ describe('Wifi generator', () => {
     expect(hydrated.ssid).toBe('');
     expect(hydrated.password).toBe('');
   });
+
+  it('correctly extracts passwords ending in an odd number of backslashes', () => {
+    const data = {
+      ssid: 'My Network',
+      password: 'my_password\\',
+      encryption: WifiEncryption.WPA,
+      hidden: false,
+      eapIdentity: ''
+    };
+    const str = constructWifiString(data);
+    expect(str).toContain('P:my_password\\\\;');
+    const hydrated = hydrateWifiData(str);
+    expect(hydrated.password).toBe('my_password\\');
+  });
+
+  it('correctly parses password ending in backslash from raw input', () => {
+    const raw = 'WIFI:S:MyNet;P:pwd\\\\;T:WPA;';
+    const hydrated = hydrateWifiData(raw);
+    expect(hydrated.password).toBe('pwd\\');
+  });
+
+  it('separates parameters accurately when values contain even numbers of backslashes followed by a semicolon', () => {
+    const data = {
+      ssid: 'MyNet',
+      password: 'pwd\\\\',
+      encryption: WifiEncryption.WPA,
+      hidden: true,
+      eapIdentity: ''
+    };
+    const str = constructWifiString(data);
+    expect(str).toContain('P:pwd\\\\\\\\;H:true');
+    const hydrated = hydrateWifiData(str);
+    expect(hydrated.password).toBe('pwd\\\\');
+    expect(hydrated.hidden).toBe(true);
+  });
+
+  it('separates parameters with even backslashes from raw input', () => {
+    const raw = 'WIFI:S:MyNet;P:pwd\\\\\\\\;H:true;';
+    const hydrated = hydrateWifiData(raw);
+    expect(hydrated.password).toBe('pwd\\\\');
+    expect(hydrated.hidden).toBe(true);
+  });
+
+  it('rejects prohibited control and zero-width characters during evaluation', () => {
+    expect(() => hydrateWifiData('WIFI:S:MyNet\x00;P:secret;')).toThrow(
+      'Payload contains prohibited control or zero-width characters'
+    );
+    expect(() => hydrateWifiData('WIFI:S:MyNet\u200B;P:secret;')).toThrow(
+      'Payload contains prohibited control or zero-width characters'
+    );
+    expect(() => hydrateWifiData('WIFI:S:MyNet\uFEFF;P:secret;')).toThrow(
+      'Payload contains prohibited control or zero-width characters'
+    );
+    expect(() => hydrateWifiData('WIFI:S:MyNet\x15;P:secret;')).toThrow(
+      'Payload contains prohibited control or zero-width characters'
+    );
+  });
+
+  it('does not reject allowed characters such as newline, carriage return, and tab', () => {
+    const raw = 'WIFI:S:My\nNet\t;P:sec\ret;T:WPA;';
+    const hydrated = hydrateWifiData(raw);
+    expect(hydrated.ssid).toBe('My\nNet\t');
+    expect(hydrated.password).toBe('sec\ret');
+  });
 });
