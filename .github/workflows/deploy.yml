@@ -52,7 +52,7 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          npm version ${{ inputs.version_bump }} --no-git-tag-version
+          pnpm version ${{ inputs.version_bump }} --no-git-tag-version
 
       - name: Determine Release Information
         id: release_info
