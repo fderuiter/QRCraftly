@@ -86,12 +86,20 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
 };
 
 const ToastItem = ({ toast, onRemove }: { toast: ToastMessage; onRemove: (id: string) => void }) => {
+  const [isHovered, setIsHovered] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
+
   useEffect(() => {
+    if (isHovered || isFocused) {
+      return;
+    }
+
     const timer = setTimeout(() => {
       onRemove(toast.id);
     }, toast.duration || 5000);
+
     return () => clearTimeout(timer);
-  }, [toast, onRemove]);
+  }, [toast, onRemove, isHovered, isFocused]);
 
   const Icon = toast.type === 'success' ? CheckCircle : toast.type === 'error' ? AlertCircle : Info;
   
@@ -107,6 +115,15 @@ const ToastItem = ({ toast, onRemove }: { toast: ToastMessage; onRemove: (id: st
   return (
     <div 
       role={toast.type === 'error' ? 'alert' : 'status'}
+      tabIndex={0}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      onFocus={() => setIsFocused(true)}
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+          setIsFocused(false);
+        }
+      }}
       className={`pointer-events-auto flex w-full max-w-md translate-y-0 transform items-center gap-3 rounded-xl border p-4 opacity-100 shadow-lg transition-all duration-300 ease-in-out ${colors}`}
     >
       <Icon className="size-5 flex-shrink-0" />

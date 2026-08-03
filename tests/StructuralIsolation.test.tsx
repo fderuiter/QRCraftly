@@ -16,14 +16,14 @@ describe('Structural Isolation and Reserved Space for QR Preview', () => {
       render(<ScannabilityIndicator status="idle" />);
       const placeholder = screen.getByTestId('scannability-indicator-placeholder');
       expect(placeholder).toBeInTheDocument();
-      expect(placeholder).toHaveClass('h-[52px]');
+      expect(placeholder).toHaveClass('h-13');
     });
 
     it('renders with a fixed-height wrapper of 52px when checking/active to prevent layout shift', () => {
       render(<ScannabilityIndicator status="checking" />);
       const wrapper = screen.getByTestId('scannability-feedback-wrapper');
       expect(wrapper).toBeInTheDocument();
-      expect(wrapper).toHaveClass('h-[52px]');
+      expect(wrapper).toHaveClass('h-13');
     });
 
     it('retains the same 52px height wrapper when transitioning to scannability warning text (score < 100)', () => {
@@ -35,7 +35,7 @@ describe('Structural Isolation and Reserved Space for QR Preview', () => {
       render(<ScannabilityIndicator status="fail" health={lowScannabilityHealth} />);
       const wrapper = screen.getByTestId('scannability-feedback-wrapper');
       expect(wrapper).toBeInTheDocument();
-      expect(wrapper).toHaveClass('h-[52px]');
+      expect(wrapper).toHaveClass('h-13');
       
       const alertMessage = screen.getByRole('alert');
       expect(alertMessage).toBeInTheDocument();

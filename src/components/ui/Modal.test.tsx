@@ -102,4 +102,89 @@ describe('Modal Component Accessibility and Behavior', () => {
 
     document.body.removeChild(trigger);
   });
+
+  describe('Backdrop and Decoupled Layout Behavior', () => {
+    it('should assign role="dialog" and other dialog attributes to the inner card and role="presentation" to the outer backdrop', () => {
+      const { container } = render(
+        <Modal isOpen={true} onClose={() => {}} title="Test Modal">
+          <div data-testid="inner-content">Modal Content</div>
+        </Modal>
+      );
+
+      // The outer container has the backdrop classes and presentation role
+      const outerContainer = container.firstChild as HTMLElement;
+      expect(outerContainer).toHaveClass('bg-black/50');
+      expect(outerContainer).toHaveAttribute('role', 'presentation');
+      expect(outerContainer).not.toHaveAttribute('role', 'dialog');
+
+      // The inner content card has role="dialog", aria-modal="true", and references the title
+      const dialogCard = container.querySelector('[role="dialog"]') as HTMLElement;
+      expect(dialogCard).toBeInTheDocument();
+      expect(dialogCard).toHaveAttribute('aria-modal', 'true');
+      expect(dialogCard).toHaveAttribute('aria-labelledby', 'modal-title');
+      expect(dialogCard.querySelector('#modal-title')).toHaveTextContent('Test Modal');
+    });
+
+    it('should NOT dismiss when clicking the backdrop if dismissOnBackdropClick is false (default)', async () => {
+      const handleClose = vi.fn();
+      const { container } = render(
+        <Modal isOpen={true} onClose={handleClose} title="Test Modal">
+          <div data-testid="inner-content">Modal Content</div>
+        </Modal>
+      );
+
+      const backdrop = container.firstChild as HTMLElement;
+      await userEvent.click(backdrop);
+      expect(handleClose).not.toHaveBeenCalled();
+    });
+
+    it('should dismiss when clicking the backdrop if dismissOnBackdropClick is true', async () => {
+      const handleClose = vi.fn();
+      const { container } = render(
+        <Modal isOpen={true} onClose={handleClose} title="Test Modal" dismissOnBackdropClick={true}>
+          <div data-testid="inner-content">Modal Content</div>
+        </Modal>
+      );
+
+      const backdrop = container.firstChild as HTMLElement;
+      await userEvent.click(backdrop);
+      expect(handleClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('should NOT dismiss when clicking inside the content card even if dismissOnBackdropClick is true', async () => {
+      const handleClose = vi.fn();
+      render(
+        <Modal isOpen={true} onClose={handleClose} title="Test Modal" dismissOnBackdropClick={true}>
+          <div data-testid="inner-content">Modal Content</div>
+        </Modal>
+      );
+
+      const innerContent = document.querySelector('[data-testid="inner-content"]') as HTMLElement;
+      await userEvent.click(innerContent);
+      expect(handleClose).not.toHaveBeenCalled();
+    });
+
+    it('should still dismiss via Escape key regardless of the dismissOnBackdropClick setting', async () => {
+      const handleClose = vi.fn();
+      const { rerender } = render(
+        <Modal isOpen={true} onClose={handleClose} title="Test Modal" dismissOnBackdropClick={false}>
+          <div data-testid="inner-content">Modal Content</div>
+        </Modal>
+      );
+
+      await userEvent.keyboard('{Escape}');
+      expect(handleClose).toHaveBeenCalledTimes(1);
+
+      handleClose.mockClear();
+
+      rerender(
+        <Modal isOpen={true} onClose={handleClose} title="Test Modal" dismissOnBackdropClick={true}>
+          <div data-testid="inner-content">Modal Content</div>
+        </Modal>
+      );
+
+      await userEvent.keyboard('{Escape}');
+      expect(handleClose).toHaveBeenCalledTimes(1);
+    });
+  });
 });

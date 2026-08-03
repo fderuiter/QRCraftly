@@ -58,9 +58,54 @@ export default defineConfig(({ mode }) => {
       },
       test: {
         globals: true,
-        environment: 'jsdom',
-        setupFiles: './vitest.setup.ts',
-        exclude: ['**/node_modules/**', '**/dist/**', 'e2e/**'],
+        projects: [
+          {
+            extends: true,
+            test: {
+              name: 'unit-logic',
+              environment: 'node',
+              setupFiles: [],
+              include: [
+                'src/**/*.test.{ts,tsx}',
+                'tests/**/*.test.{ts,tsx}',
+              ],
+              exclude: [
+                '**/*.test.tsx',
+                'src/hooks/**/*.test.ts',
+                'src/utils/useQRDownload.test.ts',
+                'src/utils/hooks.test.ts',
+                'src/utils/scannabilityWorker.test.ts',
+                'src/utils/qrRenderer.test.ts',
+                'tests/telemetry.test.ts',
+                '**/node_modules/**',
+                '**/dist/**',
+                'e2e/**',
+              ],
+            },
+          },
+          {
+            extends: true,
+            test: {
+              name: 'browser-ui',
+              environment: 'jsdom',
+              setupFiles: ['./vitest.setup.ts'],
+              include: [
+                '**/*.test.tsx',
+                'src/hooks/**/*.test.ts',
+                'src/utils/useQRDownload.test.ts',
+                'src/utils/hooks.test.ts',
+                'src/utils/scannabilityWorker.test.ts',
+                'src/utils/qrRenderer.test.ts',
+                'tests/telemetry.test.ts',
+              ],
+              exclude: [
+                '**/node_modules/**',
+                '**/dist/**',
+                'e2e/**',
+              ],
+            },
+          },
+        ],
         coverage: {
           reporter: ['text', 'json-summary', 'json'],
           reportOnFailure: true,
