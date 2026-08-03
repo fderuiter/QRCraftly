@@ -21,6 +21,17 @@ on:
       - '.github/workflows/**'
   pull_request:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      version_bump:
+        description: 'Version bump type (patch, minor, major)'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
 
 permissions:
   contents: read
@@ -28,7 +39,7 @@ permissions:
 # Cancel previous runs if a new commit is pushed to the same PR
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   # JOB 1: Install Deps & Cache
@@ -266,5 +277,18 @@ jobs:
                 body: comment
               });
             }
+
+  deploy:
+    name: Deploy
+    needs: [quality, test, e2e, build, lighthouse]
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && startsWith(github.event.head_commit.message, 'Revert'))
+    concurrency:
+      group: production-deployment
+      cancel-in-progress: false
+    uses: ./.github/workflows/deploy.yml
+    with:
+      version_bump: ${{ github.event.inputs.version_bump || '' }}
+      is_rollback: ${{ github.event_name == 'push' && startsWith(github.event.head_commit.message, 'Revert') }}
+    secrets: inherit
 
 
