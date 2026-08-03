@@ -1,6 +1,8 @@
 // Script to check WCAG contrast ratios for various UI elements in QRCraftly.
+import fs from 'fs';
+import { fileURLToPath } from 'url';
 
-function hexToRgb(hexColor) {
+export function hexToRgb(hexColor) {
     hexColor = hexColor.replace(/^#/, '');
     if (hexColor.length === 3) {
         hexColor = hexColor.split('').map(c => c + c).join('');
@@ -12,7 +14,7 @@ function hexToRgb(hexColor) {
     ];
 }
 
-function luminance(rgb) {
+export function luminance(rgb) {
     const a = rgb.map(x => {
         x /= 255;
         return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4);
@@ -20,7 +22,7 @@ function luminance(rgb) {
     return 0.2126 * a[0] + 0.7152 * a[1] + 0.0722 * a[2];
 }
 
-function contrastRatio(rgb1, rgb2) {
+export function contrastRatio(rgb1, rgb2) {
     const lum1 = luminance(rgb1);
     const lum2 = luminance(rgb2);
     const brightest = Math.max(lum1, lum2);
@@ -28,17 +30,16 @@ function contrastRatio(rgb1, rgb2) {
     return (brightest + 0.05) / (darkest + 0.05);
 }
 
-function blendColor(fgRgb, bgRgb, alpha) {
+export function blendColor(fgRgb, bgRgb, alpha) {
     return fgRgb.map((fg, i) => Math.round(fg * alpha + bgRgb[i] * (1 - alpha)));
 }
 
-import fs from 'fs';
+const colorsJsonUrl = new URL('../src/colors.json', import.meta.url);
+const colorsJson = JSON.parse(fs.readFileSync(colorsJsonUrl, 'utf-8'));
+export const colors = colorsJson.ui;
+export const presets = colorsJson.presets;
 
-const colorsJson = JSON.parse(fs.readFileSync(new URL('../src/colors.json', import.meta.url), 'utf-8'));
-const colors = colorsJson.ui;
-const presets = colorsJson.presets;
-
-const scenarios = [
+export const scenarios = [
     // Light Mode
     {mode: 'Light', element: 'Page Background', bg: 'slate-50', fg: 'slate-900', text: 'H1 (About QRCraftly)', size: 'large'},
     {mode: 'Light', element: 'Page Background', bg: 'slate-50', fg: 'slate-600', text: 'Intro Paragraph', size: 'normal'},
@@ -64,7 +65,7 @@ const scenarios = [
     {mode: 'Dark', element: 'Button', bg: 'white', fg: 'slate-900', text: 'Github Button', size: 'normal'},
 ];
 
-function runCheck() {
+export function runCheck() {
     console.log(`${'Mode'.padEnd(6)} | ${'Element'.padEnd(20)} | ${'Contrast'.padEnd(8)} | ${'Pass?'.padEnd(6)} | ${'Level'.padEnd(5)} | Details`);
     console.log("-".repeat(80));
 
@@ -142,4 +143,7 @@ function runCheck() {
     }
 }
 
-runCheck();
+// Only run automatically if executed directly
+if (process.argv[1] && (process.argv[1] === fileURLToPath(import.meta.url) || process.argv[1].endsWith('contrast_check.js'))) {
+    runCheck();
+}
