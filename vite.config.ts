@@ -17,7 +17,7 @@
 */
 
 import path from 'path';
-import { defineConfig, loadEnv } from 'vite';
+import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import vike from 'vike/plugin';
 
@@ -25,9 +25,7 @@ import vike from 'vike/plugin';
  * Vite configuration file.
  * Configures the development server, plugins, environment variables, and path aliases.
  */
-export default defineConfig(({ mode }) => {
-    // Load environment variables based on the current mode
-    loadEnv(mode, '.', '');
+export default defineConfig(() => {
     return {
       server: {
         port: 3000,
@@ -51,10 +49,7 @@ export default defineConfig(({ mode }) => {
       },
       build: {
         target: "es2022",
-        rollupOptions: {
-          output: {
-          }
-        }
+        rollupOptions: {}
       },
       test: {
         globals: true,
@@ -64,7 +59,6 @@ export default defineConfig(({ mode }) => {
             test: {
               name: 'unit-logic',
               environment: 'node',
-              setupFiles: [],
               include: [
                 'src/**/*.test.{ts,tsx}',
                 'tests/**/*.test.{ts,tsx}',
