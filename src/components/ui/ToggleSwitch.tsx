@@ -44,7 +44,7 @@ export const ToggleSwitch: React.FC<ToggleSwitchProps> = ({
 }) => {
   return (
     <div className="flex items-center">
-      <label htmlFor={id} className="cursor-pointer inline-flex items-center relative">
+      <label htmlFor={id} className="relative inline-flex cursor-pointer items-center">
         {srLabel && <span className="sr-only">{label}</span>}
         <input
           id={id}
@@ -53,8 +53,8 @@ export const ToggleSwitch: React.FC<ToggleSwitchProps> = ({
           checked={checked}
           onChange={(e) => onChange(e.target.checked)}
         />
-        <div className="after:absolute after:bg-white after:border after:border-gray-300 after:content-[''] after:h-4 after:left-[2px] after:rounded-full after:top-[2px] after:transition-all after:w-4 bg-slate-200 dark:bg-slate-700 dark:border-gray-600 h-5 peer peer-checked:after:border-white peer-checked:after:translate-x-full peer-checked:bg-teal-700 rounded-full w-9"></div>
-        {!srLabel && <span className="dark:text-slate-300 font-medium ml-3 text-slate-700 text-sm">{label}</span>}
+        <div className="peer h-5 w-9 rounded-full bg-slate-200 peer-checked:bg-teal-700 after:absolute after:top-[2px] after:left-[2px] after:size-4 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white dark:border-gray-600 dark:bg-slate-700"></div>
+        {!srLabel && <span className="ml-3 text-sm font-medium text-slate-700 dark:text-slate-300">{label}</span>}
       </label>
     </div>
   );

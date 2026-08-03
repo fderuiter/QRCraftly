@@ -115,18 +115,18 @@ export const FieldWrapper: React.FC<FieldWrapperProps> = ({
       <div className={className}>
         <label
           htmlFor={inputId}
-          className={`cursor-pointer flex gap-2 items-center ${getLabelClass(labelClassName).replace("mb-1", "")}`}
+          className={`flex cursor-pointer items-center gap-2 ${getLabelClass(labelClassName).replace("mb-1", "")}`}
         >
           {children}
           {label && <span>{label}</span>}
           {contextualLabel && (
-            <span className="dark:text-slate-400 font-normal text-slate-500 text-xs">
+            <span className="text-xs font-normal text-slate-500 dark:text-slate-400">
               ({contextualLabel})
             </span>
           )}
         </label>
         {error && (
-          <p id={errorId} role="alert" className="dark:text-rose-400 mt-1 text-rose-700 text-xs">
+          <p id={errorId} role="alert" className="mt-1 text-xs text-rose-700 dark:text-rose-400">
             {error}
           </p>
         )}
@@ -140,7 +140,7 @@ export const FieldWrapper: React.FC<FieldWrapperProps> = ({
         <label htmlFor={inputId} className={getLabelClass(labelClassName)}>
           {label}
           {contextualLabel && (
-            <span className="dark:text-slate-400 font-normal ml-2 text-slate-500 text-xs">
+            <span className="ml-2 text-xs font-normal text-slate-500 dark:text-slate-400">
               ({contextualLabel})
             </span>
           )}
@@ -151,7 +151,7 @@ export const FieldWrapper: React.FC<FieldWrapperProps> = ({
         <CharCount id={charCountId} current={String(value !== undefined && value !== null ? value : "").length} max={maxLength} />
       )}
       {error && (
-        <p id={errorId} role="alert" className="dark:text-rose-400 mt-1 text-rose-700 text-xs">
+        <p id={errorId} role="alert" className="mt-1 text-xs text-rose-700 dark:text-rose-400">
           {error}
         </p>
       )}

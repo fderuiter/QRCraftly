@@ -27,10 +27,9 @@ import { ErrorBoundary } from '../components/ErrorBoundary';
  * Provides the default layout structure for the application.
  * It sets up the main container with full height, background color, text color,
  * and font settings. It also handles scrolling behavior for mobile vs desktop.
- *
- * @param {Object} props - The component props.
- * @param {React.ReactNode} props.children - The child components to render within the layout.
- * @returns {JSX.Element} The layout wrapper.
+ * @param props - The component props.
+ * @param props.children - The child components to render within the layout.
+ * @returns The layout wrapper.
  */
 export default function LayoutDefault({ children }: { children: React.ReactNode }) {
   const [hydrated, setHydrated] = useState(false);
@@ -42,14 +41,14 @@ export default function LayoutDefault({ children }: { children: React.ReactNode 
     <ToastProvider>
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-white dark:focus:bg-slate-800 focus:text-teal-700 dark:focus:text-teal-400 focus:border-2 focus:border-teal-700 focus:rounded-lg focus:outline-none focus:shadow-lg transition-all"
+        className="sr-only transition-all focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:rounded-lg focus:border-2 focus:border-teal-700 focus:bg-white focus:px-4 focus:py-2 focus:text-teal-700 focus:shadow-lg focus:outline-none dark:focus:bg-slate-800 dark:focus:text-teal-400"
       >
         Skip to main content
       </a>
       <main
         id="main-content"
         tabIndex={-1}
-        className="flex min-h-screen flex-col bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-200 antialiased font-sans focus:outline-none"
+        className="flex min-h-screen flex-col bg-slate-50 font-sans text-slate-700 antialiased focus:outline-none dark:bg-slate-900 dark:text-slate-200"
         data-hydrated={hydrated}
       >
         <ErrorBoundary>

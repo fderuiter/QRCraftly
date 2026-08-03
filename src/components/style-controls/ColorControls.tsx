@@ -6,11 +6,26 @@ import { getContrastRatio } from '../../utils/colorUtils';
 import { ColorInput } from '../ui/ColorInput';
 import { Alert } from '../ui/Alert';
 
+/**
+ *
+ */
 interface ColorControlsProps {
+  /**
+   *
+   */
   config: QRConfig;
+  /**
+   *
+   */
   onChange: (updates: Partial<QRConfig>) => void;
 }
 
+/**
+ *
+ * @param root0
+ * @param root0.config
+ * @param root0.onChange
+ */
 export const ColorControls: React.FC<ColorControlsProps> = ({ config, onChange }) => {
   const contrastRatios = useMemo(() => {
     const fgContrast = getContrastRatio(config.fgColor, config.bgColor);
@@ -23,12 +38,12 @@ export const ColorControls: React.FC<ColorControlsProps> = ({ config, onChange }
 
   return (
     <div>
-      <div className="flex justify-between items-baseline mb-3">
+      <div className="mb-3 flex items-baseline justify-between">
         <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Colors</h3>
         <div aria-live="polite" aria-atomic="true">
           {isLowContrast && (
-            <span className="flex items-center gap-1 text-xs text-amber-700 dark:text-amber-400 font-medium">
-              <AlertTriangle className="w-3 h-3" aria-hidden="true" />
+            <span className="flex items-center gap-1 text-xs font-medium text-amber-700 dark:text-amber-400">
+              <AlertTriangle className="size-3" aria-hidden="true" />
               Low Contrast ({worstContrast.toFixed(1)})
             </span>
           )}
@@ -36,14 +51,14 @@ export const ColorControls: React.FC<ColorControlsProps> = ({ config, onChange }
       </div>
 
       <div
-        className="flex flex-wrap gap-3 mb-5"
+        className="mb-5 flex flex-wrap gap-3"
         role="radiogroup"
         aria-label="Color Presets"
       >
         {PRESET_COLORS.map((preset, idx) => (
           <label
             key={idx}
-            className={`inline-flex items-center justify-center font-medium transition-colors cursor-pointer group relative w-10 h-10 rounded-lg shadow-sm hover:scale-110 transition-transform duration-200 ring-1 focus-within:ring-2 focus-within:ring-teal-500 overflow-hidden ${
+            className={`group relative inline-flex size-10 cursor-pointer items-center justify-center overflow-hidden rounded-lg font-medium shadow-sm ring-1 transition duration-200 focus-within:ring-2 focus-within:ring-teal-500 hover:scale-110 ${
               config.fgColor === preset.fg && config.bgColor === preset.bg && config.eyeColor === preset.eye
                 ? 'ring-teal-500'
                 : 'ring-slate-200 dark:ring-slate-700'
@@ -61,7 +76,7 @@ export const ColorControls: React.FC<ColorControlsProps> = ({ config, onChange }
               aria-label={`Select ${preset.label} theme`}
             />
             {/* Use SVG presentation attributes instead of inline styles for CSP compliance */}
-            <svg viewBox="0 0 40 40" className="absolute inset-0 w-full h-full" aria-hidden="true">
+            <svg viewBox="0 0 40 40" className="absolute inset-0 size-full" aria-hidden="true">
               {/* Background */}
               <rect width="40" height="40" fill={preset.bg} />
               {/* Foreground Ring (Simulating Modules) */}

@@ -42,7 +42,6 @@ interface StyleControlsProps {
  * A component providing UI controls for styling the QR code.
  * Allows users to change patterns, colors, and upload logos.
  * Also checks and warns about low contrast ratios.
- *
  * @param props - The component props.
  * @param props.config - The current configuration.
  * @param props.onChange - Callback to update configuration.
@@ -76,6 +75,8 @@ const StyleControls: React.FC<StyleControlsProps> = ({ config, onChange }) => {
  * Comparison function for React.memo.
  * Returns true if the next props are equivalent to the previous props (skipping re-render).
  * It ignores changes to 'value' and 'type' as they don't affect visual style controls.
+ * @param prev
+ * @param next
  */
 function arePropsEqual(prev: StyleControlsProps, next: StyleControlsProps) {
   // If the onChange handler changed, we must re-render

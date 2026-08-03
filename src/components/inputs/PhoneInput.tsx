@@ -2,11 +2,26 @@ import React from "react";
 import { PhoneData } from "../../types";
 import { TextField } from "../ui/FormFields";
 
+/**
+ *
+ */
 interface PhoneInputProps {
+  /**
+   *
+   */
   data: PhoneData;
+  /**
+   *
+   */
   onChange: (updates: Partial<PhoneData>) => void;
 }
 
+/**
+ *
+ * @param root0
+ * @param root0.data
+ * @param root0.onChange
+ */
 export const PhoneInput: React.FC<PhoneInputProps> = ({ data, onChange }) => {
   return (
     <div>

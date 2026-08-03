@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Button } from "../ui/Button";
 import { LocationData } from "../../types";
 import { TextField } from "../ui/FormFields";
-import { FIELDSET_CLASSES, LEGEND_CLASSES } from "../ui/styles";
+import { FormBlock } from "../ui/FormBlock";
 
 /**
  *
@@ -68,10 +68,7 @@ export const LocationInput: React.FC<LocationInputProps> = ({
   };
 
   return (
-    <fieldset className={FIELDSET_CLASSES}>
-      <legend className={LEGEND_CLASSES}>
-        Geo-Location
-      </legend>
+    <FormBlock legend="Geo-Location">
       <TextField
         id="location-latitude"
         label="Latitude"
@@ -110,6 +107,6 @@ export const LocationInput: React.FC<LocationInputProps> = ({
           {geoError}
         </p>
       )}
-    </fieldset>
+    </FormBlock>
   );
 };

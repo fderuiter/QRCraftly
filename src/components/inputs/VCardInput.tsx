@@ -2,12 +2,9 @@ import React from "react";
 import { VCardData } from "../../types";
 import { TextField } from "../ui/FormFields";
 import { ValidationEngine } from "../../engine/ValidationEngine";
+import { FormBlock } from "../ui/FormBlock";
 import {
-  FIELDSET_CLASSES,
-  LEGEND_CLASSES,
   GRID_TWO_COLUMNS_CLASSES,
-  SUB_FIELDSET_CLASSES,
-  SUB_LEGEND_CLASSES,
   SUB_CONTAINER_SPACING_CLASSES,
 } from "../ui/styles";
 
@@ -37,10 +34,7 @@ export const VCardInput: React.FC<VCardInputProps> = ({ data, onChange }) => {
     : undefined;
 
   return (
-    <fieldset className={FIELDSET_CLASSES}>
-      <legend className={LEGEND_CLASSES}>
-        Contact Details (vCard)
-      </legend>
+    <FormBlock legend="Contact Details (vCard)">
       <div className={GRID_TWO_COLUMNS_CLASSES}>
         <TextField
           id="vcard-firstname"
@@ -124,10 +118,7 @@ export const VCardInput: React.FC<VCardInputProps> = ({ data, onChange }) => {
         error={websiteError}
       />
 
-      <fieldset className={SUB_FIELDSET_CLASSES}>
-        <legend className={SUB_LEGEND_CLASSES}>
-          Address
-        </legend>
+      <FormBlock legend="Address" isSubFieldset={true}>
         <div className={SUB_CONTAINER_SPACING_CLASSES}>
           <TextField
             id="vcard-street"
@@ -172,7 +163,7 @@ export const VCardInput: React.FC<VCardInputProps> = ({ data, onChange }) => {
             />
           </div>
         </div>
-      </fieldset>
-    </fieldset>
+      </FormBlock>
+    </FormBlock>
   );
 };

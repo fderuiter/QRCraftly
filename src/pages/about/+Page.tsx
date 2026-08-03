@@ -40,23 +40,23 @@ export default function Page() {
   const schemaData = generateSchema(contentRegistry['about'], resolvedDomain, urlPathname);
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-12">
+    <div className="mx-auto max-w-5xl px-4 py-12">
       <JsonLdScript data={schemaData} />
       <div className="mb-8">
 
         <a
           href="/"
-          className="inline-flex items-center gap-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+          className="inline-flex items-center gap-2 text-slate-600 transition-colors hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
         >
-          <ArrowLeft className="w-5 h-5" />
+          <ArrowLeft className="size-5" />
           Back to Home
         </a>
       </div>
-      <div className="text-center mb-16">
-        <h1 className="text-4xl font-bold text-slate-900 dark:text-white mb-4">
+      <div className="mb-16 text-center">
+        <h1 className="mb-4 text-4xl font-bold text-slate-900 dark:text-white">
           About QRCraftly
         </h1>
-        <p className="text-lg text-slate-600 dark:text-slate-300 max-w-2xl mx-auto">
+        <p className="mx-auto max-w-2xl text-lg text-slate-600 dark:text-slate-300">
           A privacy-focused QR code generator built with modern web technologies.
           Entirely free with no login required.
         </p>
@@ -64,42 +64,42 @@ export default function Page() {
 
       <section className="mb-16">
         <h2 className="sr-only">Why Choose QRCraftly?</h2>
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-          <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 text-center">
-            <div className="w-12 h-12 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-xl flex items-center justify-center mx-auto mb-4">
-              <Zap className="w-6 h-6" />
+        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
+          <div className="rounded-2xl border border-slate-100 bg-white p-6 text-center shadow-sm dark:border-slate-700 dark:bg-slate-800">
+            <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-xl bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+              <Zap className="size-6" />
             </div>
-            <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">Free & No Login</h3>
+            <h3 className="mb-2 text-lg font-semibold text-slate-900 dark:text-white">Free & No Login</h3>
             <p className="text-slate-600 dark:text-slate-400">
               QRCraftly is completely free to use. No sign-up, no login, and no hidden fees. Just generate your QR codes instantly.
             </p>
           </div>
 
-          <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 text-center">
-            <div className="w-12 h-12 bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-400 rounded-xl flex items-center justify-center mx-auto mb-4">
-              <Shield className="w-6 h-6" />
+          <div className="rounded-2xl border border-slate-100 bg-white p-6 text-center shadow-sm dark:border-slate-700 dark:bg-slate-800">
+            <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-xl bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400">
+              <Shield className="size-6" />
             </div>
-            <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">No Third-Party Tracking</h3>
+            <h3 className="mb-2 text-lg font-semibold text-slate-900 dark:text-white">No Third-Party Tracking</h3>
             <p className="text-slate-600 dark:text-slate-400">
               We do not use tracking pixels, cookies, or third-party analytics. We only collect basic server logs for performance and reliability.
             </p>
           </div>
 
-          <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 text-center">
-            <div className="w-12 h-12 bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400 rounded-xl flex items-center justify-center mx-auto mb-4">
-              <Database className="w-6 h-6" />
+          <div className="rounded-2xl border border-slate-100 bg-white p-6 text-center shadow-sm dark:border-slate-700 dark:bg-slate-800">
+            <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-xl bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400">
+              <Database className="size-6" />
             </div>
-            <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">Privacy First</h3>
+            <h3 className="mb-2 text-lg font-semibold text-slate-900 dark:text-white">Privacy First</h3>
             <p className="text-slate-600 dark:text-slate-400">
               We utilize a Privacy First architecture. Your content is processed entirely in your browser and not transmitted to our servers without your explicit opt-in for telemetry.
             </p>
           </div>
 
-          <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 text-center">
-            <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 rounded-xl flex items-center justify-center mx-auto mb-4">
-              <Code className="w-6 h-6" />
+          <div className="rounded-2xl border border-slate-100 bg-white p-6 text-center shadow-sm dark:border-slate-700 dark:bg-slate-800">
+            <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-xl bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400">
+              <Code className="size-6" />
             </div>
-            <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">Open Source</h3>
+            <h3 className="mb-2 text-lg font-semibold text-slate-900 dark:text-white">Open Source</h3>
             <p className="text-slate-600 dark:text-slate-400">
               Our code is open for inspection and contribution. We believe in transparency.
             </p>
@@ -108,48 +108,48 @@ export default function Page() {
       </section>
 
       <section className="mb-16 text-center">
-        <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-4">Specialized Generators</h2>
-        <p className="text-lg text-slate-600 dark:text-slate-300 max-w-2xl mx-auto mb-6">
+        <h2 className="mb-4 text-2xl font-bold text-slate-900 dark:text-white">Specialized Generators</h2>
+        <p className="mx-auto mb-6 max-w-2xl text-lg text-slate-600 dark:text-slate-300">
           Looking for a specific use case? Try our dedicated tools.
         </p>
         <a
           href="/wifi-qr-code"
-          className="inline-flex items-center gap-2 px-6 py-3 bg-teal-700 text-white rounded-xl font-medium hover:bg-teal-800 transition-colors shadow-lg shadow-teal-900/20"
+          className="inline-flex items-center gap-2 rounded-xl bg-teal-700 px-6 py-3 font-medium text-white shadow-lg shadow-teal-900/20 transition-colors hover:bg-teal-800"
         >
-          <Wifi className="w-5 h-5" />
+          <Wifi className="size-5" />
           Create WiFi QR Code
         </a>
       </section>
 
-      <section className="mb-16 bg-gradient-to-br from-rose-50 to-orange-50 dark:from-rose-900/20 dark:to-orange-900/20 rounded-2xl p-8 md:p-12 border border-rose-100 dark:border-rose-800/30 text-center relative overflow-hidden">
-        <div className="absolute top-0 right-0 -mt-16 -mr-16 w-64 h-64 bg-rose-300/20 dark:bg-rose-500/10 rounded-full blur-3xl pointer-events-none"></div>
-        <div className="absolute bottom-0 left-0 -mb-16 -ml-16 w-64 h-64 bg-orange-300/20 dark:bg-orange-500/10 rounded-full blur-3xl pointer-events-none"></div>
+      <section className="relative mb-16 overflow-hidden rounded-2xl border border-rose-100 bg-gradient-to-br from-rose-50 to-orange-50 p-8 text-center md:p-12 dark:border-rose-800/30 dark:from-rose-900/20 dark:to-orange-900/20">
+        <div className="pointer-events-none absolute top-0 right-0 -mt-16 -mr-16 size-64 rounded-full bg-rose-300/20 blur-3xl dark:bg-rose-500/10"></div>
+        <div className="pointer-events-none absolute bottom-0 left-0 -mb-16 -ml-16 size-64 rounded-full bg-orange-300/20 blur-3xl dark:bg-orange-500/10"></div>
 
         <div className="relative z-10">
-          <div className="w-16 h-16 bg-white dark:bg-slate-800 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-sm border border-rose-100 dark:border-rose-700/50 rotate-3 transition-transform hover:rotate-12 duration-300">
-            <Coffee className="w-8 h-8 text-[#FF5E5B]" />
+          <div className="mx-auto mb-6 flex size-16 rotate-3 items-center justify-center rounded-2xl border border-rose-100 bg-white shadow-sm transition-transform duration-300 hover:rotate-12 dark:border-rose-700/50 dark:bg-slate-800">
+            <Coffee className="size-8 text-[#FF5E5B]" />
           </div>
-          <h2 className="text-3xl font-bold text-slate-900 dark:text-white mb-4">Support the Project</h2>
-          <p className="text-lg text-slate-600 dark:text-slate-300 max-w-2xl mx-auto mb-8 leading-relaxed">
+          <h2 className="mb-4 text-3xl font-bold text-slate-900 dark:text-white">Support the Project</h2>
+          <p className="mx-auto mb-8 max-w-2xl text-lg leading-relaxed text-slate-600 dark:text-slate-300">
             QRCraftly is 100% free, open-source, and privacy-respecting. If you find this tool helpful, consider buying me a coffee! Your support helps cover hosting costs and fuels future development.
           </p>
           <a
             href="https://ko-fi.com/laser_loon"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-3 px-8 py-4 bg-[#FF5E5B] text-white rounded-xl font-bold text-lg hover:bg-[#FF4A47] transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-[#FF5E5B]/25 active:translate-y-0"
+            className="inline-flex items-center gap-3 rounded-xl bg-[#FF5E5B] px-8 py-4 text-lg font-bold text-white transition-all hover:-translate-y-1 hover:bg-[#FF4A47] hover:shadow-xl hover:shadow-[#FF5E5B]/25 active:translate-y-0"
           >
-            <Coffee className="w-6 h-6" />
+            <Coffee className="size-6" />
             Support me on Ko-fi
           </a>
         </div>
       </section>
 
-      <section className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-8 border border-slate-200 dark:border-slate-700 text-center mb-12">
-        <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-4">
+      <section className="mb-12 rounded-2xl border border-slate-200 bg-slate-50 p-8 text-center dark:border-slate-700 dark:bg-slate-800/50">
+        <h2 className="mb-4 text-2xl font-bold text-slate-900 dark:text-white">
           Open Source License
         </h2>
-        <p className="text-slate-600 dark:text-slate-300 mb-8 max-w-2xl mx-auto">
+        <p className="mx-auto mb-8 max-w-2xl text-slate-600 dark:text-slate-300">
           QRCraftly is released under the <strong>GNU Affero General Public License v3.0 (AGPL-3.0)</strong>.
           This ensures that the software remains free and open source for everyone.
         </p>
@@ -157,14 +157,14 @@ export default function Page() {
           href="https://github.com/fderuiter/QRCraftly"
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 px-6 py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-medium hover:bg-slate-800 dark:hover:bg-slate-100 transition-colors"
+          className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-6 py-3 font-medium text-white transition-colors hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100"
         >
-          <Github className="w-5 h-5" />
+          <Github className="size-5" />
           View on GitHub
         </a>
       </section>
 
-      <div className="max-w-3xl mx-auto">
+      <div className="mx-auto max-w-3xl">
         <SidebarContent toolId="about" />
       </div>
     </div>

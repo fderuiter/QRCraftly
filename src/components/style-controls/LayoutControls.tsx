@@ -26,8 +26,17 @@ import { CheckboxField, TextField } from '../ui/FormFields';
 import { getContrastRatio } from '../../utils/colorUtils';
 import { Alert } from '../ui/Alert';
 
+/**
+ *
+ */
 interface LayoutControlsProps {
+  /**
+   *
+   */
   config: QRConfig;
+  /**
+   *
+   */
   onChange: (updates: Partial<QRConfig>) => void;
 }
 
@@ -36,14 +45,14 @@ const FORMAT_OPTIONS: Array<{ id: SocialFormat; label: string; sublabel: string;
     id: SocialFormat.SQUARE_1_1,
     label: 'Square',
     sublabel: '1:1',
-    icon: <Square className="w-4 h-4" />,
+    icon: <Square className="size-4" />,
   },
   {
     id: SocialFormat.PORTRAIT_4_5,
     label: 'Portrait',
     sublabel: '4:5',
     icon: (
-      <svg viewBox="0 0 12 15" className="w-4 h-5" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <svg viewBox="0 0 12 15" className="h-5 w-4" fill="none" stroke="currentColor" strokeWidth="1.5">
         <rect x="1" y="1" width="10" height="13" rx="1" />
       </svg>
     ),
@@ -52,7 +61,7 @@ const FORMAT_OPTIONS: Array<{ id: SocialFormat; label: string; sublabel: string;
     id: SocialFormat.STORY_9_16,
     label: 'Story',
     sublabel: '9:16',
-    icon: <Smartphone className="w-4 h-5" />,
+    icon: <Smartphone className="h-5 w-4" />,
   },
 ];
 
@@ -66,6 +75,9 @@ const TEMPLATE_OPTIONS: Array<{ id: TemplateStyle; label: string }> = [
 /**
  * Controls for choosing the social-media export aspect ratio and template
  * style applied to the QR code canvas.
+ * @param root0
+ * @param root0.config
+ * @param root0.onChange
  */
 export const LayoutControls: React.FC<LayoutControlsProps> = ({ config, onChange }) => {
   const showTextInputs = config.templateStyle !== TemplateStyle.NONE;
@@ -82,12 +94,12 @@ export const LayoutControls: React.FC<LayoutControlsProps> = ({ config, onChange
   const isLowContrast = showAdvanced && contrastRatio < 4.5;
 
   return (
-    <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
-      <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-4">Export Layout</h3>
+    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/50">
+      <h3 className="mb-4 text-sm font-semibold text-slate-700 dark:text-slate-300">Export Layout</h3>
 
       {/* Aspect Ratio Selector */}
       <div className="mb-4">
-        <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-2">Aspect Ratio</p>
+        <p className="mb-2 text-xs font-medium text-slate-500 dark:text-slate-400">Aspect Ratio</p>
         <div
           className="grid grid-cols-3 gap-2"
           role="group"
@@ -100,10 +112,10 @@ export const LayoutControls: React.FC<LayoutControlsProps> = ({ config, onChange
               onClick={() => onChange({ socialFormat: opt.id })}
               aria-pressed={config.socialFormat === opt.id}
               aria-label={`Select ${opt.label} format (${opt.sublabel})`}
-              className={`flex-col py-2 px-1 rounded-lg border-2 h-auto ${config.socialFormat === opt.id ? 'border-teal-500' : 'border-transparent'}`}
+              className={`h-auto flex-col rounded-lg border-2 px-1 py-2 ${config.socialFormat === opt.id ? 'border-teal-500' : 'border-transparent'}`}
             >
               {opt.icon}
-              <span className="text-[10px] font-semibold leading-none mt-1">{opt.label}</span>
+              <span className="mt-1 text-[10px] leading-none font-semibold">{opt.label}</span>
               <span className="text-[10px] leading-none">{opt.sublabel}</span>
             </Button>
           ))}
@@ -112,7 +124,7 @@ export const LayoutControls: React.FC<LayoutControlsProps> = ({ config, onChange
 
       {/* Template Style Selector */}
       <div>
-        <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-2">Template</p>
+        <p className="mb-2 text-xs font-medium text-slate-500 dark:text-slate-400">Template</p>
         <div
           className="grid grid-cols-2 gap-2"
           role="group"
@@ -125,7 +137,7 @@ export const LayoutControls: React.FC<LayoutControlsProps> = ({ config, onChange
               onClick={() => onChange({ templateStyle: opt.id })}
               aria-pressed={config.templateStyle === opt.id}
               aria-label={`Select ${opt.label} template`}
-              className={`py-2 px-2 rounded-lg border-2 text-xs h-auto ${config.templateStyle === opt.id ? 'border-teal-500' : 'border-transparent'}`}
+              className={`h-auto rounded-lg border-2 p-2 text-xs ${config.templateStyle === opt.id ? 'border-teal-500' : 'border-transparent'}`}
             >
               {opt.label}
             </Button>
@@ -135,7 +147,7 @@ export const LayoutControls: React.FC<LayoutControlsProps> = ({ config, onChange
 
       {/* Text Inputs (visible only when a template is active) */}
       {showTextInputs && (
-        <div className="mt-4 space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="animate-in fade-in slide-in-from-top-2 mt-4 space-y-2 duration-200">
           <TextField
             placeholder="Headline (e.g. Scan Me!)"
             value={config.templateHeadline ?? ''}
@@ -153,17 +165,17 @@ export const LayoutControls: React.FC<LayoutControlsProps> = ({ config, onChange
 
       {/* Advanced Template Settings (visible only when a template is active) */}
       {showAdvanced && (
-        <div className="mt-4 border-t border-slate-200 dark:border-slate-700 pt-4 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="animate-in fade-in slide-in-from-top-2 mt-4 space-y-4 border-t border-slate-200 pt-4 duration-200 dark:border-slate-700">
           <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">Advanced Settings</p>
 
           {/* Template Background Color */}
           <div>
-            <div className="flex items-center justify-between mb-2">
+            <div className="mb-2 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="text-xs text-slate-500 dark:text-slate-400">Template Background</span>
                 {isLowContrast && (
-                  <span className="flex items-center gap-1 text-xs text-amber-700 dark:text-amber-400 font-medium" data-testid="layout-bg-warning">
-                    <AlertTriangle className="w-3 h-3" aria-hidden="true" />
+                  <span className="flex items-center gap-1 text-xs font-medium text-amber-700 dark:text-amber-400" data-testid="layout-bg-warning">
+                    <AlertTriangle className="size-3" aria-hidden="true" />
                     Low Contrast ({contrastRatio.toFixed(1)})
                   </span>
                 )}
@@ -193,12 +205,12 @@ export const LayoutControls: React.FC<LayoutControlsProps> = ({ config, onChange
 
           {/* Template Text / Accent Color */}
           <div>
-            <div className="flex items-center justify-between mb-2">
+            <div className="mb-2 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="text-xs text-slate-500 dark:text-slate-400">Template Text Color</span>
                 {isLowContrast && (
-                  <span className="flex items-center gap-1 text-xs text-amber-700 dark:text-amber-400 font-medium" data-testid="layout-text-warning">
-                    <AlertTriangle className="w-3 h-3" aria-hidden="true" />
+                  <span className="flex items-center gap-1 text-xs font-medium text-amber-700 dark:text-amber-400" data-testid="layout-text-warning">
+                    <AlertTriangle className="size-3" aria-hidden="true" />
                     Low Contrast ({contrastRatio.toFixed(1)})
                   </span>
                 )}

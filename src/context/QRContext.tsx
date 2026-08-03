@@ -3,23 +3,80 @@ import { QRConfig } from '@/types';
 import { DEFAULT_CONFIG } from '@/constants';
 import { ValidationEngine } from '@/engine/ValidationEngine';
 
+/**
+ *
+ */
 type SignalName = 'scannability-fail' | 'render-complete';
+/**
+ *
+ */
 type SignalCallback = (detail: any) => void;
 
+/**
+ *
+ */
 type QRState = {
+  /**
+   *
+   */
   config: QRConfig;
+  /**
+   *
+   */
   moduleCount: number;
-  preferences: { telemetryOptIn: boolean | null; darkMode: boolean };
+  /**
+   *
+   */
+  preferences: { /**
+                  *
+                  */
+  telemetryOptIn: boolean | null; /**
+                                   *
+                                   */
+  darkMode: boolean };
+  /**
+   *
+   */
   violations: string[];
 };
 
+/**
+ *
+ */
 export interface QRStore {
+  /**
+   *
+   */
   getState: () => QRState;
+  /**
+   *
+   */
   subscribe: (listener: () => void) => () => void;
+  /**
+   *
+   */
   updateConfig: (updates: Partial<QRConfig>) => void;
+  /**
+   *
+   */
   setModuleCount: (count: number) => void;
-  updatePreferences: (updates: Partial<{telemetryOptIn: boolean | null, darkMode: boolean}>) => void;
+  /**
+   *
+   */
+  updatePreferences: (updates: Partial<{/**
+                                         *
+                                         */
+  telemetryOptIn: boolean | null, /**
+                                   *
+                                   */
+  darkMode: boolean}>) => void;
+  /**
+   *
+   */
   emitSignal: (name: SignalName, detail?: any) => void;
+  /**
+   *
+   */
   registerSignal: (name: SignalName, callback: SignalCallback) => () => void;
 }
 
@@ -115,6 +172,12 @@ function createQRStore(initialConfig?: Partial<QRConfig>): QRStore {
   return store;
 }
 
+/**
+ *
+ * @param root0
+ * @param root0.children
+ * @param root0.initialConfig
+ */
 export const QRProvider = ({ children, initialConfig }: { children: React.ReactNode, initialConfig?: Partial<QRConfig> }) => {
   const [store] = useState(() => createQRStore(initialConfig));
 
@@ -125,6 +188,10 @@ export const QRProvider = ({ children, initialConfig }: { children: React.ReactN
   );
 };
 
+/**
+ *
+ * @param selector
+ */
 export function useOptionalQRStoreSelector<T>(selector: (state: QRState) => T): T | undefined {
   const store = useContext(QRStoreContext);
   
@@ -138,6 +205,10 @@ export function useOptionalQRStoreSelector<T>(selector: (state: QRState) => T): 
   );
 }
 
+/**
+ *
+ * @param selector
+ */
 export function useQRStoreSelector<T>(selector: (state: QRState) => T): T {
   const store = useQRStore();
   return useSyncExternalStore(
@@ -147,6 +218,9 @@ export function useQRStoreSelector<T>(selector: (state: QRState) => T): T {
   );
 }
 
+/**
+ *
+ */
 export function useQRStore() {
   const store = useContext(QRStoreContext);
   if (!store) {

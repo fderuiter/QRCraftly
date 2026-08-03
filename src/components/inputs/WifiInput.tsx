@@ -2,7 +2,7 @@ import React from "react";
 import { WifiData, WifiEncryption } from "../../types";
 import { TextField, SelectField, CheckboxField } from "../ui/FormFields";
 import { ValidationEngine } from "../../engine/ValidationEngine";
-import { FIELDSET_CLASSES, LEGEND_CLASSES } from "../ui/styles";
+import { FormBlock } from "../ui/FormBlock";
 
 /**
  *
@@ -38,10 +38,7 @@ export const WifiInput: React.FC<WifiInputProps> = ({ data, onChange }) => {
     : undefined;
 
   return (
-    <fieldset className={FIELDSET_CLASSES}>
-      <legend className={LEGEND_CLASSES}>
-        Network Details
-      </legend>
+    <FormBlock legend="Network Details">
       <TextField
         id="wifi-ssid"
         label="Network Name (SSID)"
@@ -109,6 +106,6 @@ export const WifiInput: React.FC<WifiInputProps> = ({ data, onChange }) => {
         onChange={(e) => onChange({ hidden: e.target.checked })}
         className="pt-2"
       />
-    </fieldset>
+    </FormBlock>
   );
 };
