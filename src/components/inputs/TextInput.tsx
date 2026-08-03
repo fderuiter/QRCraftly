@@ -2,11 +2,26 @@ import React from "react";
 import { TextData } from "../../types";
 import { TextAreaField } from "../ui/FormFields";
 
+/**
+ *
+ */
 interface TextInputProps {
+  /**
+   *
+   */
   data: TextData;
+  /**
+   *
+   */
   onChange: (updates: Partial<TextData>) => void;
 }
 
+/**
+ *
+ * @param root0
+ * @param root0.data
+ * @param root0.onChange
+ */
 export const TextInput: React.FC<TextInputProps> = ({ data, onChange }) => {
   return (
     <div>

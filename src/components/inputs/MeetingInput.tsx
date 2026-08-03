@@ -2,7 +2,7 @@ import React, { useMemo } from "react";
 import { MeetingData } from "../../types";
 import { TextField } from "../ui/FormFields";
 import { parseMeetingUrl } from "../../utils/meetingParsers";
-import { FIELDSET_CLASSES, LEGEND_CLASSES } from "../ui/styles";
+import { FormBlock } from "../ui/FormBlock";
 
 /**
  *
@@ -40,10 +40,7 @@ export const MeetingInput: React.FC<MeetingInputProps> = ({
     parsed.service !== "unknown" ? SERVICE_LABELS[parsed.service] : null;
 
   return (
-    <fieldset className={FIELDSET_CLASSES}>
-      <legend className={LEGEND_CLASSES}>
-        Meeting Link
-      </legend>
+    <FormBlock legend="Meeting Link">
       <TextField
         id="meeting-url"
         label="Paste Meeting Link"
@@ -54,7 +51,7 @@ export const MeetingInput: React.FC<MeetingInputProps> = ({
       />
 
       {data.url && parsed.service !== "unknown" && (
-        <div className="rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 p-3 space-y-1 text-xs">
+        <div className="space-y-1 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs dark:border-slate-700 dark:bg-slate-800/60">
           {serviceLabel && (
             <p className="font-semibold text-teal-700 dark:text-teal-400">
               {serviceLabel} link detected
@@ -73,6 +70,6 @@ export const MeetingInput: React.FC<MeetingInputProps> = ({
           )}
         </div>
       )}
-    </fieldset>
+    </FormBlock>
   );
 };

@@ -5,6 +5,7 @@ import reactHooksPlugin from "eslint-plugin-react-hooks";
 import securityPlugin from "eslint-plugin-security";
 import jsdoc from "eslint-plugin-jsdoc";
 import jsxA11y from "eslint-plugin-jsx-a11y";
+import tailwind from "eslint-plugin-tailwindcss";
 
 const jsdocWarnRules = {};
 for (const [ruleName, ruleVal] of Object.entries(jsdoc.configs["flat/recommended-typescript-error"].rules)) {
@@ -159,6 +160,22 @@ export default tseslint.config(
     files: ["src/pages/dev-sandbox/**/*.{ts,tsx}"],
     rules: {
       "@typescript-eslint/no-unused-vars": "off"
+    }
+  },
+  {
+    files: ["**/*.{ts,tsx,js,jsx}"],
+    plugins: {
+      tailwindcss: tailwind,
+    },
+    rules: {
+      ...tailwind.configs.recommended.rules,
+      "tailwindcss/no-custom-classname": "off"
+    },
+    settings: {
+      tailwindcss: {
+        callees: ["classnames", "clsx", "ctl", "mergeClasses"],
+        cssConfigPath: "src/layouts/index.css"
+      }
     }
   }
 );

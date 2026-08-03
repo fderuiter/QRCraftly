@@ -1,7 +1,7 @@
 import React from "react";
 import { SocialData, SocialPlatform } from "../../types";
 import { TextField, SelectField } from "../ui/FormFields";
-import { FIELDSET_CLASSES, LEGEND_CLASSES } from "../ui/styles";
+import { FormBlock } from "../ui/FormBlock";
 
 /**
  *
@@ -25,10 +25,7 @@ interface SocialInputProps {
  */
 export const SocialInput: React.FC<SocialInputProps> = ({ data, onChange }) => {
   return (
-    <fieldset className={FIELDSET_CLASSES}>
-      <legend className={LEGEND_CLASSES}>
-        Social Media Profile
-      </legend>
+    <FormBlock legend="Social Media Profile">
       <SelectField
         id="social-platform"
         label="Platform"
@@ -51,6 +48,6 @@ export const SocialInput: React.FC<SocialInputProps> = ({ data, onChange }) => {
         onChange={(e) => onChange({ handle: e.target.value })}
         showCharCount
       />
-    </fieldset>
+    </FormBlock>
   );
 };

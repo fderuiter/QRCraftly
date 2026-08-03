@@ -76,7 +76,7 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
   return (
     <ToastContext.Provider value={{ addToast, removeToast }}>
       {children}
-      <div className="bottom-4 fixed flex flex-col gap-2 items-center left-4 md:items-end md:left-auto md:right-4 pointer-events-none right-4 z-50">
+      <div className="pointer-events-none fixed inset-x-4 bottom-4 z-50 flex flex-col items-center gap-2 md:right-4 md:left-auto md:items-end">
         {toasts.map((toast) => (
           <ToastItem key={toast.id} toast={toast} onRemove={removeToast} />
         ))}
@@ -124,18 +124,18 @@ const ToastItem = ({ toast, onRemove }: { toast: ToastMessage; onRemove: (id: st
           setIsFocused(false);
         }
       }}
-      className={`border duration-300 ease-in-out flex gap-3 items-center max-w-md opacity-100 p-4 pointer-events-auto rounded-xl shadow-lg transform transition-all translate-y-0 w-full ${colors}`}
+      className={`pointer-events-auto flex w-full max-w-md translate-y-0 transform items-center gap-3 rounded-xl border p-4 opacity-100 shadow-lg transition-all duration-300 ease-in-out ${colors}`}
     >
-      <Icon className="flex-shrink-0 h-5 w-5" />
-      <p className="flex-1 font-medium text-sm">{toast.message}</p>
+      <Icon className="size-5 flex-shrink-0" />
+      <p className="flex-1 text-sm font-medium">{toast.message}</p>
       <Button
         variant="ghost"
         size="icon" 
         onClick={() => onRemove(toast.id)}
-        className="dark:hover:bg-white/10 hover:bg-black/5 p-1 rounded-lg"
+        className="rounded-lg p-1 hover:bg-black/5 dark:hover:bg-white/10"
         aria-label="Close notification"
       >
-        <X className="h-4 w-4" />
+        <X className="size-4" />
       </Button>
     </div>
   );

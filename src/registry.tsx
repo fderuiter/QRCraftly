@@ -11,7 +11,7 @@ const ContentControl = () => {
   const { updateConfig } = store;
   return (
     <section>
-      <h2 className="text-xs uppercase tracking-wider text-slate-600 dark:text-slate-400 font-bold mb-4">Content</h2>
+      <h2 className="mb-4 text-xs font-bold tracking-wider text-slate-600 uppercase dark:text-slate-400">Content</h2>
       <InputPanel config={config} onChange={updateConfig} />
     </section>
   );
@@ -29,13 +29,13 @@ const AppearanceControl = () => {
 
   return (
     <section>
-      <h2 className="text-xs uppercase tracking-wider text-slate-600 dark:text-slate-400 font-bold mb-4">Appearance</h2>
+      <h2 className="mb-4 text-xs font-bold tracking-wider text-slate-600 uppercase dark:text-slate-400">Appearance</h2>
       {isMounted ? (
-        <Suspense fallback={<div className="h-64 bg-slate-100 dark:bg-slate-800 rounded-xl animate-pulse" />}>
+        <Suspense fallback={<div className="h-64 animate-pulse rounded-xl bg-slate-100 dark:bg-slate-800" />}>
           <StyleControls config={config} onChange={updateConfig} />
         </Suspense>
       ) : (
-        <div className="h-64 bg-slate-100 dark:bg-slate-800 rounded-xl animate-pulse" />
+        <div className="h-64 animate-pulse rounded-xl bg-slate-100 dark:bg-slate-800" />
       )}
     </section>
   );
@@ -45,6 +45,9 @@ const AdditionalSidebarContent = ({ toolId }: { toolId?: string }) => {
   return <SidebarContent toolId={toolId || 'index'} />;
 };
 
+/**
+ *
+ */
 export const sidebarControls = [
   {
     id: 'content',

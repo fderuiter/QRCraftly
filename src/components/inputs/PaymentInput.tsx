@@ -2,7 +2,7 @@ import React from "react";
 import { PaymentData, CryptoNetwork } from "../../types";
 import { TextField, SelectField } from "../ui/FormFields";
 import { ValidationEngine } from "../../engine/ValidationEngine";
-import { FIELDSET_CLASSES, LEGEND_CLASSES } from "../ui/styles";
+import { FormBlock } from "../ui/FormBlock";
 
 /**
  *
@@ -33,10 +33,7 @@ export const PaymentInput: React.FC<PaymentInputProps> = ({
     : undefined;
 
   return (
-    <fieldset className={FIELDSET_CLASSES}>
-      <legend className={LEGEND_CLASSES}>
-        Crypto Payment
-      </legend>
+    <FormBlock legend="Crypto Payment">
 
       <SelectField
         id="payment-network"
@@ -87,6 +84,6 @@ export const PaymentInput: React.FC<PaymentInputProps> = ({
           />
         </>
       )}
-    </fieldset>
+    </FormBlock>
   );
 };

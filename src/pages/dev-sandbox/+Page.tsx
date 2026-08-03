@@ -2,6 +2,9 @@ import { useState } from 'react';
 import { TextField, SelectField, CheckboxField } from '../../components/ui/FormFields';
 import { ColorInput } from '../../components/ui/ColorInput';
 
+/**
+ *
+ */
 export default function DevSandbox() {
   const unusedLocal = "some unused value";
   const [text, setText] = useState('');
@@ -10,12 +13,12 @@ export default function DevSandbox() {
   const [checked, setChecked] = useState(false);
 
   return (
-    <div className="p-8 max-w-4xl mx-auto space-y-12">
+    <div className="mx-auto max-w-4xl space-y-12 p-8">
       <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">UI Components Sandbox</h1>
 
       <section className="space-y-6">
-        <h2 className="text-xl font-semibold border-b pb-2">TextField</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <h2 className="border-b pb-2 text-xl font-semibold">TextField</h2>
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
           <TextField
             label="Default"
             placeholder="Enter text..."
@@ -39,8 +42,8 @@ export default function DevSandbox() {
       </section>
 
       <section className="space-y-6">
-        <h2 className="text-xl font-semibold border-b pb-2">SelectField</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <h2 className="border-b pb-2 text-xl font-semibold">SelectField</h2>
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
           <SelectField
             label="Default"
             value={select}
@@ -69,8 +72,8 @@ export default function DevSandbox() {
       </section>
 
       <section className="space-y-6">
-        <h2 className="text-xl font-semibold border-b pb-2">CheckboxField</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <h2 className="border-b pb-2 text-xl font-semibold">CheckboxField</h2>
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
           <CheckboxField
             label="Default"
             checked={checked}
@@ -91,15 +94,15 @@ export default function DevSandbox() {
       </section>
 
       <section className="space-y-6">
-        <h2 className="text-xl font-semibold border-b pb-2">ColorInput</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <h2 className="border-b pb-2 text-xl font-semibold">ColorInput</h2>
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
           <ColorInput
             id="color-default"
             label="Default"
             value={color}
             onChange={setColor}
           />
-          <div className="opacity-50 pointer-events-none">
+          <div className="pointer-events-none opacity-50">
             <ColorInput
               id="color-disabled"
               label="Disabled (Simulated)"
@@ -108,7 +111,7 @@ export default function DevSandbox() {
             />
           </div>
           {/* Note: ColorInput doesn't have built-in error state, wrapping it to simulate if needed, or omit if unsupported */}
-          <div className="border border-rose-500 rounded p-2">
+          <div className="rounded border border-rose-500 p-2">
             <ColorInput
               id="color-error"
               label="Error (Simulated)"
@@ -131,12 +134,12 @@ function DevSandboxDuplicate() {
   const [checked, setChecked] = useState(false);
 
   return (
-    <div className="p-8 max-w-4xl mx-auto space-y-12">
+    <div className="mx-auto max-w-4xl space-y-12 p-8">
       <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">UI Components Sandbox</h1>
 
       <section className="space-y-6">
-        <h2 className="text-xl font-semibold border-b pb-2">TextField</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <h2 className="border-b pb-2 text-xl font-semibold">TextField</h2>
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
           <TextField
             label="Default"
             placeholder="Enter text..."
@@ -160,8 +163,8 @@ function DevSandboxDuplicate() {
       </section>
 
       <section className="space-y-6">
-        <h2 className="text-xl font-semibold border-b pb-2">SelectField</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <h2 className="border-b pb-2 text-xl font-semibold">SelectField</h2>
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
           <SelectField
             label="Default"
             value={select}

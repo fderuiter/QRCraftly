@@ -61,15 +61,15 @@ export const RangeInput: React.FC<RangeInputProps> = ({
   formatValue = (val) => val.toString(),
 }) => (
   <div>
-    <div className="flex items-center justify-between mb-1">
-      <label htmlFor={id} className="block dark:text-slate-400 font-medium text-slate-500 text-xs">
+    <div className="mb-1 flex items-center justify-between">
+      <label htmlFor={id} className="block text-xs font-medium text-slate-500 dark:text-slate-400">
         {label}
       </label>
-      <span className="dark:text-slate-400 font-mono text-slate-500 text-xs">
+      <span className="font-mono text-xs text-slate-500 dark:text-slate-400">
         {formatValue(value)}
       </span>
     </div>
-    <div className="-m-1 p-1 rounded-lg">
+    <div className="-m-1 rounded-lg p-1">
       <input
         id={id}
         type="range"
@@ -79,7 +79,7 @@ export const RangeInput: React.FC<RangeInputProps> = ({
         value={value}
         aria-valuetext={formatValue(value)}
         onChange={(e) => onChange(parseFloat(e.target.value))}
-        className="accent-teal-700 cursor-pointer dark:accent-teal-500 rounded-lg w-full"
+        className="w-full cursor-pointer rounded-lg accent-teal-700 dark:accent-teal-500"
       />
     </div>
   </div>

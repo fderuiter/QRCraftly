@@ -18,12 +18,31 @@
 
 import React from 'react';
 
+/**
+ *
+ */
 interface CharCountProps {
+  /**
+   *
+   */
   current: number;
+  /**
+   *
+   */
   max: number;
+  /**
+   *
+   */
   id?: string;
 }
 
+/**
+ *
+ * @param root0
+ * @param root0.current
+ * @param root0.max
+ * @param root0.id
+ */
 export const CharCount: React.FC<CharCountProps> = ({ current, max, id }) => {
   const percentage = (current / max) * 100;
   const visualPercentage = Math.min(percentage, 100);
@@ -43,7 +62,7 @@ export const CharCount: React.FC<CharCountProps> = ({ current, max, id }) => {
   return (
     <div
       id={id}
-      className={`flex items-center justify-end gap-2 text-xs mt-1 transition-colors duration-200 ${colorClass}`}
+      className={`mt-1 flex items-center justify-end gap-2 text-xs transition-colors duration-200 ${colorClass}`}
       aria-live="polite"
       aria-atomic="true"
     >
@@ -58,7 +77,7 @@ export const CharCount: React.FC<CharCountProps> = ({ current, max, id }) => {
         width="16"
         height="16"
         viewBox="0 0 24 24"
-        className="transform -rotate-90"
+        className="-rotate-90 transform"
         aria-hidden="true"
       >
         {/* Background track */}

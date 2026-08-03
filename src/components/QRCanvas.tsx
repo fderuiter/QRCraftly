@@ -254,9 +254,9 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({ config, s
             title="Generation Blocked"
             role="status"
             aria-live="polite"
-            className="flex flex-col items-center justify-center bg-rose-50 dark:bg-rose-950/25 border-2 border-dashed border-rose-300 dark:border-rose-800 rounded-3xl p-6 text-center gap-3 w-full h-full overflow-y-auto"
+            className="flex size-full flex-col items-center justify-center gap-3 overflow-y-auto rounded-3xl border-2 border-dashed border-rose-300 bg-rose-50 p-6 text-center dark:border-rose-800 dark:bg-rose-950/25"
           >
-            <div className="space-y-1.5 mt-2">
+            <div className="mt-2 space-y-1.5">
               {violations.map((v, i) => {
                 let msg = v;
                 if (v === 'URI_INJECTION_VIOLATION') {
@@ -277,13 +277,13 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({ config, s
                   msg = 'Event end date/time cannot be before start date/time.';
                 }
                 return (
-                  <p key={i} className="text-sm text-rose-700 dark:text-rose-400 font-medium">
+                  <p key={i} className="text-sm font-medium text-rose-700 dark:text-rose-400">
                     {msg}
                   </p>
                 );
               })}
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xs mt-2">
+            <p className="mt-2 max-w-xs text-xs text-slate-500 dark:text-slate-400">
               Please correct the input above to safely resume QR code generation.
             </p>
           </Alert>
@@ -302,7 +302,7 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({ config, s
     <div className={`relative ${containerClasses} w-full`}>
       <canvas
         ref={handleRef}
-        className={`w-full h-auto block ${aspectRatioClass}`}
+        className={`block h-auto w-full ${aspectRatioClass}`}
         role="img"
         aria-label={ariaLabel}
       />

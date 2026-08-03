@@ -9,13 +9,30 @@ import {
   isWorkerResponse,
 } from '../utils/sharedContract';
 
+/**
+ *
+ */
 export type ScannabilityStatus = 'idle' | 'checking' | 'digital-pass' | 'physical-pass' | 'fail';
 
+/**
+ *
+ */
 export interface HealthScore {
+  /**
+   *
+   */
   score: number;
+  /**
+   *
+   */
   warnings: string[];
 }
 
+/**
+ *
+ * @param canvasRef
+ * @param config
+ */
 export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | null>, config: QRConfig) {
   const [status, setStatus] = useState<ScannabilityStatus>('idle');
   const workerRef = useRef<Worker | null>(null);

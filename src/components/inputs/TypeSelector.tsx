@@ -140,7 +140,7 @@ export const TypeSelector: React.FC<TypeSelectorProps> = ({
         role="tablist"
         aria-label="QR Code Types"
         onKeyDown={handleKeyDown}
-        className="grid grid-cols-4 gap-2 p-2 bg-slate-100 dark:bg-slate-800 rounded-xl transition-colors duration-300"
+        className="grid grid-cols-4 gap-2 rounded-xl bg-slate-100 p-2 transition-colors duration-300 dark:bg-slate-800"
       >
         {ITEMS.map((item) => {
           const route = TYPE_ROUTES[item.type];
@@ -167,8 +167,8 @@ export const TypeSelector: React.FC<TypeSelectorProps> = ({
                   }}
                   className={className}
                 >
-                  <item.icon className="w-4 h-4" />
-                  <span className="whitespace-normal break-words w-full text-center text-slate-700 dark:text-slate-200">
+                  <item.icon className="size-4" />
+                  <span className="w-full text-center break-words whitespace-normal text-slate-700 dark:text-slate-200">
                     {item.label}
                   </span>
                 </a>
@@ -187,10 +187,10 @@ export const TypeSelector: React.FC<TypeSelectorProps> = ({
                 variant={isActive ? 'secondary' : 'ghost'}
                 size="none"
                 onClick={() => onSelect(item.type)}
-                className="flex-col w-full h-auto items-center justify-center gap-1 px-2 py-2 rounded-lg text-xs font-medium"
+                className="h-auto w-full flex-col items-center justify-center gap-1 rounded-lg p-2 text-xs font-medium"
               >
-                <item.icon className="w-4 h-4" />
-                <span className="whitespace-normal break-words w-full text-center text-slate-700 dark:text-slate-200">
+                <item.icon className="size-4" />
+                <span className="w-full text-center break-words whitespace-normal text-slate-700 dark:text-slate-200">
                   {item.label}
                 </span>
               </Button>

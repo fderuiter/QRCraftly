@@ -19,9 +19,21 @@
 import { useState, useCallback } from 'react';
 import { validateImageUpload } from '../utils/security';
 
+/**
+ *
+ */
 interface UseImageUploadReturn {
+  /**
+   *
+   */
   error: string | null;
+  /**
+   *
+   */
   handleUpload: (e: React.ChangeEvent<HTMLInputElement>, onSuccess: (dataUrl: string) => void) => void;
+  /**
+   *
+   */
   setError: (error: string | null) => void;
 }
 

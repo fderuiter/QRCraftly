@@ -33,19 +33,19 @@ export function AccordionItem({ title, children, defaultOpen = false }: Accordio
   const panelId = `accordion-panel-${id}`;
 
   return (
-    <div className="bg-white border border-slate-200 dark:bg-slate-800 dark:border-slate-700 duration-300 mb-4 overflow-hidden rounded-xl transition-all">
+    <div className="mb-4 overflow-hidden rounded-xl border border-slate-200 bg-white transition-all duration-300 dark:border-slate-700 dark:bg-slate-800">
       <button
         id={buttonId}
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center justify-between px-5 py-4 text-left w-full"
+        className="flex w-full items-center justify-between px-5 py-4 text-left"
         aria-expanded={isOpen}
         aria-controls={panelId}
       >
-        <span className="dark:text-slate-200 font-semibold text-slate-800">{title}</span>
+        <span className="font-semibold text-slate-800 dark:text-slate-200">{title}</span>
         {isOpen ? (
-          <ChevronUp className="dark:text-slate-400 h-5 text-slate-500 w-5" />
+          <ChevronUp className="size-5 text-slate-500 dark:text-slate-400" />
         ) : (
-          <ChevronDown className="dark:text-slate-400 h-5 text-slate-500 w-5" />
+          <ChevronDown className="size-5 text-slate-500 dark:text-slate-400" />
         )}
       </button>
       {isOpen && (
@@ -53,7 +53,7 @@ export function AccordionItem({ title, children, defaultOpen = false }: Accordio
           id={panelId}
           role="region"
           aria-labelledby={buttonId}
-          className="dark:text-slate-400 pb-4 px-5 text-slate-600"
+          className="px-5 pb-4 text-slate-600 dark:text-slate-400"
         >
           {children}
         </div>

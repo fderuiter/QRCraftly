@@ -23,27 +23,26 @@ import { usePageContext } from 'vike-react/usePageContext';
  *
  * Renders a user-friendly error message when a requested page is not found
  * or when an internal server error occurs.
- *
- * @returns {JSX.Element} The error page layout.
+ * @returns The error page layout.
  */
 export default function Page() {
   const pageContext = usePageContext();
   const is404 = (pageContext as any).is404;
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 text-slate-700">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-slate-50 text-slate-700">
       {is404 ? (
         <>
-          <h1 className="text-4xl font-bold mb-4">404 - Page Not Found</h1>
+          <h1 className="mb-4 text-4xl font-bold">404 - Page Not Found</h1>
           <p className="mb-8">The page you are looking for does not exist.</p>
         </>
       ) : (
         <>
-          <h1 className="text-4xl font-bold mb-4">500 - Internal Server Error</h1>
+          <h1 className="mb-4 text-4xl font-bold">500 - Internal Server Error</h1>
           <p className="mb-8">Something went wrong on our end.</p>
         </>
       )}
-      <a href="/" className="px-4 py-2 bg-teal-700 text-white rounded hover:bg-teal-800 transition-colors">
+      <a href="/" className="rounded bg-teal-700 px-4 py-2 text-white transition-colors hover:bg-teal-800">
         Go Home
       </a>
     </div>

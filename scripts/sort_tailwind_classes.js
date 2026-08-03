@@ -1,3 +1,4 @@
+import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -97,36 +98,30 @@ export function getFiles(dir) {
   return results;
 }
 
-export function runSorter() {
-  const checkOnly = process.argv.includes('--check');
-  let hasUnsorted = false;
-
-  const files = getFiles(UI_DIR);
-
-  for (const file of files) {
-    const content = fs.readFileSync(file, 'utf8');
-    const sortedContent = sortClassesInContent(content);
-
-    if (content !== sortedContent) {
-      if (checkOnly) {
-        console.error(`❌ File ${path.relative(process.cwd(), file)} has unsorted or duplicate Tailwind CSS classes.`);
-        hasUnsorted = true;
-      } else {
-        fs.writeFileSync(file, sortedContent, 'utf8');
-        console.log(`✅ Sorted and deduplicated classes in ${path.relative(process.cwd(), file)}`);
-      }
-    }
-  }
-
-  if (checkOnly && hasUnsorted) {
-    process.exit(1);
-  } else {
-    console.log('✨ All Tailwind CSS classes sorted successfully!');
-    process.exit(0);
-  }
-}
-
 // Only run automatically if executed directly
 if (process.argv[1] && (process.argv[1] === fileURLToPath(import.meta.url) || process.argv[1].endsWith('sort_tailwind_classes.js'))) {
-  runSorter();
+  const checkOnly = process.argv.includes('--check');
+
+  // Extract arguments, filtering out option flags
+  const files = process.argv.slice(2).filter(arg => arg !== '--check');
+
+  // If files are provided as arguments, format/check those files.
+  // Otherwise, default to "src" directory to cover all folders repository-wide.
+  const targets = files.length > 0 ? files.map(f => `"${f}"`).join(' ') : 'src';
+
+  try {
+    if (checkOnly) {
+      console.log(`🔍 AST-based Tailwind sorting check on: ${targets}`);
+      execSync(`npx eslint ${targets}`, { stdio: 'inherit' });
+      console.log('✨ All classes are properly sorted and aligned!');
+    } else {
+      console.log(`⚙️ Formatting Tailwind CSS classes for: ${targets}`);
+      execSync(`npx eslint --fix ${targets}`, { stdio: 'inherit' });
+      console.log('✅ Tailwind CSS classes sorted successfully!');
+    }
+    process.exit(0);
+  } catch (error) {
+    console.error('❌ Tailwind CSS class sorting check or format failed.');
+    process.exit(1);
+  }
 }

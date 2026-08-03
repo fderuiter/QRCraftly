@@ -91,24 +91,24 @@ export const ColorInput: React.FC<ColorInputProps> = ({
   return (
     <div>
       {label && (
-        <label htmlFor={id} className="block dark:text-slate-400 font-medium mb-1 text-slate-500 text-xs">
+        <label htmlFor={id} className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">
           {label}
         </label>
       )}
-      <div className="-m-1 flex gap-2 items-center p-1 rounded-lg">
+      <div className="-m-1 flex items-center gap-2 rounded-lg p-1">
           <input
             id={id}
             type="color"
             value={value}
             onChange={(e) => onChange(e.target.value)}
-            className={`${sizeClass} bg-transparent border-0 cursor-pointer p-0 rounded`}
+            className={`${sizeClass} cursor-pointer rounded border-0 bg-transparent p-0`}
             title={title}
           />
           <input
             type="text"
             value={textValue}
             onChange={handleTextChange}
-            className="bg-transparent border border-transparent dark:text-slate-300 font-mono hover:border-slate-300 px-1 py-0.5 rounded text-slate-600 text-xs transition-colors w-24"
+            className="w-24 rounded border border-transparent bg-transparent px-1 py-0.5 font-mono text-xs text-slate-600 transition-colors hover:border-slate-300 dark:text-slate-300"
             aria-label={`${label} Hex Code`}
           />
       </div>

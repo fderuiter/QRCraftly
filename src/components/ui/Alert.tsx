@@ -53,7 +53,7 @@ export const Alert: React.FC<AlertProps> = ({ variant = 'warning', title, childr
 
   return (
     <div role={role || "alert"} aria-live={ariaLive} className={`${baseClasses}${colorClasses}${className}`}>
-      <Icon className="flex-shrink-0 h-5 mt-0.5 w-5" aria-hidden="true" />
+      <Icon className="mt-0.5 size-5 flex-shrink-0" aria-hidden="true" />
       <div>
         {title && <strong>{title}: </strong>}
         {children}
