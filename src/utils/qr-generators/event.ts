@@ -18,6 +18,7 @@
 
 import { EventData, QRType, QRGeneratorContract } from '../../types';
 import { ValidationEngine } from '../../engine/ValidationEngine';
+import { SafeUrlPipeline } from '../url';
 import {
   escapeVCardEvent,
   unescapeVCardEvent,
@@ -101,16 +102,48 @@ export const EventContract: QRGeneratorContract<EventData> = {
     const data = hydrateEventData(raw);
 
     // 1. Check for URI Injection Violations using ValidationEngine.isDangerousUrl
-    const urlRegex = /(https?|ftp|javascript|data|file):[^\s]+/gi;
-    const urls: string[] = [];
-    
-    const descUrls = data.description.match(urlRegex) || [];
-    const locUrls = data.location.match(urlRegex) || [];
-    
-    const isUrlLike = (s: string) => /^(https?|ftp|javascript|data|file):/i.test(s.trim());
-    if (isUrlLike(data.description)) urls.push(data.description.trim());
-    if (isUrlLike(data.location)) urls.push(data.location.trim());
-    urls.push(...descUrls, ...locUrls);
+    // Decode characters up to ten levels deep first to ensure obfuscated protocols are caught.
+    const decodedDesc = SafeUrlPipeline.decodeObfuscation(data.description || '');
+    const decodedLoc = SafeUrlPipeline.decodeObfuscation(data.location || '');
+
+    // Strip control characters to align with SafeUrlPipeline's treatment of control chars inside URLs.
+    const cleanDesc = decodedDesc.replace(SafeUrlPipeline.REGEX_CONTROL_CHARS, '');
+    const cleanLoc = decodedLoc.replace(SafeUrlPipeline.REGEX_CONTROL_CHARS, '');
+
+    const extractUris = (text: string): string[] => {
+      const uris: string[] = [];
+      const tokens = text.split(/\s+/);
+      
+      for (const token of tokens) {
+        if (!token) continue;
+        
+        let searchIndex = 0;
+        while (true) {
+          const colonIndex = token.indexOf(':', searchIndex);
+          if (colonIndex === -1) break;
+          
+          let startOfScheme = colonIndex;
+          while (startOfScheme > searchIndex) {
+            const char = token[startOfScheme - 1];
+            if (/[a-zA-Z0-9+.-]/.test(char)) {
+              startOfScheme--;
+            } else {
+              break;
+            }
+          }
+          
+          if (startOfScheme < colonIndex && /[a-zA-Z]/.test(token[startOfScheme])) {
+            const uri = token.substring(startOfScheme);
+            uris.push(uri);
+          }
+          
+          searchIndex = colonIndex + 1;
+        }
+      }
+      return uris;
+    };
+
+    const urls = [...extractUris(cleanDesc), ...extractUris(cleanLoc)];
 
     for (const u of urls) {
       if (ValidationEngine.isDangerousUrl(u)) {

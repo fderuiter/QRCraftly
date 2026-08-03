@@ -131,6 +131,32 @@ describe('Event generator', () => {
     expect(EventContract.validate?.(invalidChronoDates)).toEqual([]);
   });
 
+  it('rejects various obfuscated and embedded malicious protocol payloads in location and description', () => {
+    // 1. Double-URL encoded javascript payload
+    const rawDoubleEncoded = 'BEGIN:VEVENT\nSUMMARY:Meeting\nDTSTART:20260501T183000\nLOCATION:%25%36%61%25%36%31%25%37%36%25%36%31%25%37%33%25%36%33%25%37%32%25%36%39%25%37%30%25%37%34%3Aalert(1)\nEND:VEVENT';
+    expect(EventContract.validate?.(rawDoubleEncoded)).toEqual(['URI_INJECTION_VIOLATION']);
+
+    // 2. JavaScript payload embedded inside markdown link
+    const rawMarkdown = 'BEGIN:VEVENT\nSUMMARY:Meeting\nDTSTART:20260501T183000\nDESCRIPTION:Join the meeting [here](javascript:alert(1))\nEND:VEVENT';
+    expect(EventContract.validate?.(rawMarkdown)).toEqual(['URI_INJECTION_VIOLATION']);
+
+    // 3. HTML tag with dangerous data scheme URL
+    const rawHtml = 'BEGIN:VEVENT\nSUMMARY:Meeting\nDTSTART:20260501T183000\nLOCATION:<a href="data:text/html,evil">Click</a>\nEND:VEVENT';
+    expect(EventContract.validate?.(rawHtml)).toEqual(['URI_INJECTION_VIOLATION']);
+
+    // 4. Multiple levels of HTML entities & URL encoding
+    const rawHtmlEntityEncoded = 'BEGIN:VEVENT\nSUMMARY:Meeting\nDTSTART:20260501T183000\nDESCRIPTION:&#x6a;&#x61;&#x76;&#x61;&#x73;&#x63;&#x72;&#x69;&#x70;&#x74;:alert(1)\nEND:VEVENT';
+    expect(EventContract.validate?.(rawHtmlEntityEncoded)).toEqual(['URI_INJECTION_VIOLATION']);
+
+    // 5. Control/Invisible character obfuscation within javascript protocol
+    const rawControlChar = 'BEGIN:VEVENT\nSUMMARY:Meeting\nDTSTART:20260501T183000\nLOCATION:java\u200Bscript:alert(1)\nEND:VEVENT';
+    expect(EventContract.validate?.(rawControlChar)).toEqual(['URI_INJECTION_VIOLATION']);
+
+    // 6. Safe text containing colons but no dangerous URLs should pass
+    const rawSafeColons = 'BEGIN:VEVENT\nSUMMARY:Meeting\nDTSTART:20260501T183000\nLOCATION:Room: 404, Building: B, Time: 2 PM\nDESCRIPTION:Visit us: http://example.com/map\nEND:VEVENT';
+    expect(EventContract.validate?.(rawSafeColons)).toEqual([]);
+  });
+
   it('constructs event with regional timezone parameters (TZID)', () => {
     const dataWithTzid = {
       title: 'Meeting',
