@@ -5,7 +5,7 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const UI_DIR = path.resolve(__dirname, '../src/components/ui');
+export const UI_DIR = path.resolve(__dirname, '../src/components/ui');
 
 /**
  * Sorts a class string and resolves/deduplicates classes.
@@ -13,7 +13,7 @@ const UI_DIR = path.resolve(__dirname, '../src/components/ui');
  * @param {string} classStr The input classes.
  * @returns {string} The sorted and deduplicated class string.
  */
-function sortClassString(classStr) {
+export function sortClassString(classStr) {
   const parts = classStr.split(/(\$\{[^}]+\})/g);
   
   const processedParts = parts.map(part => {
@@ -39,7 +39,7 @@ function sortClassString(classStr) {
  * @param {string} content The file content to modify.
  * @returns {string} The modified file content.
  */
-function sortClassesInContent(content) {
+export function sortClassesInContent(content) {
   let updated = content;
 
   updated = updated.replace(/className="([^"]+)"/g, (match, p1) => {
@@ -80,7 +80,7 @@ function sortClassesInContent(content) {
  * @param {string} dir Directory to scan.
  * @returns {string[]} Paths of all matching files.
  */
-function getFiles(dir) {
+export function getFiles(dir) {
   let results = [];
   const list = fs.readdirSync(dir);
   list.forEach(file => {
@@ -97,29 +97,36 @@ function getFiles(dir) {
   return results;
 }
 
-const checkOnly = process.argv.includes('--check');
-let hasUnsorted = false;
+export function runSorter() {
+  const checkOnly = process.argv.includes('--check');
+  let hasUnsorted = false;
 
-const files = getFiles(UI_DIR);
+  const files = getFiles(UI_DIR);
 
-for (const file of files) {
-  const content = fs.readFileSync(file, 'utf8');
-  const sortedContent = sortClassesInContent(content);
+  for (const file of files) {
+    const content = fs.readFileSync(file, 'utf8');
+    const sortedContent = sortClassesInContent(content);
 
-  if (content !== sortedContent) {
-    if (checkOnly) {
-      console.error(`❌ File ${path.relative(process.cwd(), file)} has unsorted or duplicate Tailwind CSS classes.`);
-      hasUnsorted = true;
-    } else {
-      fs.writeFileSync(file, sortedContent, 'utf8');
-      console.log(`✅ Sorted and deduplicated classes in ${path.relative(process.cwd(), file)}`);
+    if (content !== sortedContent) {
+      if (checkOnly) {
+        console.error(`❌ File ${path.relative(process.cwd(), file)} has unsorted or duplicate Tailwind CSS classes.`);
+        hasUnsorted = true;
+      } else {
+        fs.writeFileSync(file, sortedContent, 'utf8');
+        console.log(`✅ Sorted and deduplicated classes in ${path.relative(process.cwd(), file)}`);
+      }
     }
+  }
+
+  if (checkOnly && hasUnsorted) {
+    process.exit(1);
+  } else {
+    console.log('✨ All Tailwind CSS classes sorted successfully!');
+    process.exit(0);
   }
 }
 
-if (checkOnly && hasUnsorted) {
-  process.exit(1);
-} else {
-  console.log('✨ All Tailwind CSS classes sorted successfully!');
-  process.exit(0);
+// Only run automatically if executed directly
+if (process.argv[1] && (process.argv[1] === fileURLToPath(import.meta.url) || process.argv[1].endsWith('sort_tailwind_classes.js'))) {
+  runSorter();
 }
