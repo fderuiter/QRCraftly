@@ -31,7 +31,10 @@ export const ScannabilityIndicator: React.FC<Props> = ({ status, health }) => {
 
   return (
     <div className="h-[52px] flex flex-col justify-start items-end select-none" data-testid="scannability-feedback-wrapper">
-      <div className="flex items-center gap-1.5 px-2 py-1 rounded-full border text-xs font-medium bg-white dark:bg-slate-800 shadow-sm transition-all duration-300">
+      <div 
+        role={status === 'fail' && !(showHealth && health?.warnings && health.warnings.length > 0) ? 'alert' : undefined}
+        className="flex items-center gap-1.5 px-2 py-1 rounded-full border text-xs font-medium bg-white dark:bg-slate-800 shadow-sm transition-all duration-300"
+      >
         {status === 'checking' && (
           <>
             <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-500" />
