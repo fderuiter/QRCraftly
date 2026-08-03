@@ -1,15 +1,31 @@
 import React from "react";
 import { SmsData } from "../../types";
 import { TextField, TextAreaField } from "../ui/FormFields";
+import { CONTAINER_SPACING_CLASSES } from "../ui/styles";
 
+/**
+ *
+ */
 interface SmsInputProps {
+  /**
+   *
+   */
   data: SmsData;
+  /**
+   *
+   */
   onChange: (updates: Partial<SmsData>) => void;
 }
 
+/**
+ *
+ * @param root0
+ * @param root0.data
+ * @param root0.onChange
+ */
 export const SmsInput: React.FC<SmsInputProps> = ({ data, onChange }) => {
   return (
-    <div className="space-y-3">
+    <div className={CONTAINER_SPACING_CLASSES}>
       <TextField
         id="sms-number"
         name="phone"

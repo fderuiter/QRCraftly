@@ -16,6 +16,9 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { SYSTEM_LIMITS } from '../constants';
+import { SafeUrlPipeline } from './url';
+
 /**
  * Safely serializes data for use in a JSON-LD script tag.
  * Escapes <, >, and & to prevent XSS via </script> injection.
@@ -32,15 +35,27 @@ export const safeJsonLdStringify = (data: any): string => {
             .replace(/&/g, '\\u0026');
 };
 
-import { ValidationEngine } from '../engine/ValidationEngine';
-import { SYSTEM_LIMITS } from '../constants';
-
+/**
+ * Checks whether the given URL contains dangerous schemes or matches suspicious patterns.
+ * Directly calls the SafeUrlPipeline without any translation wrappers.
+ *
+ * @param url The input URL to evaluate.
+ * @returns True if the URL is dangerous and should be blocked, false otherwise.
+ */
 export const isDangerousUrl = (url: string | undefined): boolean => {
-  return ValidationEngine.isDangerousUrl(url);
+  return SafeUrlPipeline.isDangerous(url);
 };
 
+/**
+ * Sanitizes a plain input string by stripping control characters and cutting off query parameters.
+ * Direct single-function implementation.
+ *
+ * @param str The raw user input string.
+ * @returns The sanitized input string.
+ */
 export const sanitizeInput = (str: string): string => {
-  return ValidationEngine.sanitizeInput(str);
+  const noControl = str.replace(/[\x00-\x1F\x7F-\x9F]+/g, '');
+  return noControl.split('?')[0];
 };
 
 /**
@@ -53,8 +68,6 @@ export const sanitizeInput = (str: string): string => {
 export const cleanPhoneNumber = (number: string): string => {
   return number.replace(/[^0-9+*#\-().]/g, '');
 };
-
-
 
 /**
  * Validates an uploaded image file for size and type.

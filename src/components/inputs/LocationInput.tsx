@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Button } from "../ui/Button";
 import { LocationData } from "../../types";
 import { TextField } from "../ui/FormFields";
+import { FIELDSET_CLASSES, LEGEND_CLASSES } from "../ui/styles";
 
 /**
  *
@@ -67,8 +68,8 @@ export const LocationInput: React.FC<LocationInputProps> = ({
   };
 
   return (
-    <fieldset className="space-y-4 min-w-0">
-      <legend className="text-sm font-semibold text-slate-700 dark:text-slate-200 w-full mb-3">
+    <fieldset className={FIELDSET_CLASSES}>
+      <legend className={LEGEND_CLASSES}>
         Geo-Location
       </legend>
       <TextField

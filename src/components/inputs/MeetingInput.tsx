@@ -2,9 +2,19 @@ import React, { useMemo } from "react";
 import { MeetingData } from "../../types";
 import { TextField } from "../ui/FormFields";
 import { parseMeetingUrl } from "../../utils/meetingParsers";
+import { FIELDSET_CLASSES, LEGEND_CLASSES } from "../ui/styles";
 
+/**
+ *
+ */
 interface MeetingInputProps {
+  /**
+   *
+   */
   data: MeetingData;
+  /**
+   *
+   */
   onChange: (updates: Partial<MeetingData>) => void;
 }
 
@@ -14,6 +24,12 @@ const SERVICE_LABELS: Record<string, string> = {
   meet: "Google Meet",
 };
 
+/**
+ *
+ * @param root0
+ * @param root0.data
+ * @param root0.onChange
+ */
 export const MeetingInput: React.FC<MeetingInputProps> = ({
   data,
   onChange,
@@ -24,8 +40,8 @@ export const MeetingInput: React.FC<MeetingInputProps> = ({
     parsed.service !== "unknown" ? SERVICE_LABELS[parsed.service] : null;
 
   return (
-    <fieldset className="space-y-4 min-w-0">
-      <legend className="text-sm font-semibold text-slate-700 dark:text-slate-200 w-full mb-3">
+    <fieldset className={FIELDSET_CLASSES}>
+      <legend className={LEGEND_CLASSES}>
         Meeting Link
       </legend>
       <TextField

@@ -2,6 +2,7 @@ import React from "react";
 import { WifiData, WifiEncryption } from "../../types";
 import { TextField, SelectField, CheckboxField } from "../ui/FormFields";
 import { ValidationEngine } from "../../engine/ValidationEngine";
+import { FIELDSET_CLASSES, LEGEND_CLASSES } from "../ui/styles";
 
 /**
  *
@@ -37,8 +38,8 @@ export const WifiInput: React.FC<WifiInputProps> = ({ data, onChange }) => {
     : undefined;
 
   return (
-    <fieldset className="space-y-4 min-w-0">
-      <legend className="text-sm font-semibold text-slate-700 dark:text-slate-200 w-full mb-3">
+    <fieldset className={FIELDSET_CLASSES}>
+      <legend className={LEGEND_CLASSES}>
         Network Details
       </legend>
       <TextField

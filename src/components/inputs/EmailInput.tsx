@@ -1,15 +1,31 @@
 import React from "react";
 import { EmailData } from "../../types";
 import { TextField, TextAreaField } from "../ui/FormFields";
+import { CONTAINER_SPACING_CLASSES } from "../ui/styles";
 
+/**
+ *
+ */
 interface EmailInputProps {
+  /**
+   *
+   */
   data: EmailData;
+  /**
+   *
+   */
   onChange: (updates: Partial<EmailData>) => void;
 }
 
+/**
+ *
+ * @param root0
+ * @param root0.data
+ * @param root0.onChange
+ */
 export const EmailInput: React.FC<EmailInputProps> = ({ data, onChange }) => {
   return (
-    <div className="space-y-3">
+    <div className={CONTAINER_SPACING_CLASSES}>
       <TextField
         id="email-address"
         name="email"

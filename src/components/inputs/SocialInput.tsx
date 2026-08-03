@@ -1,16 +1,32 @@
 import React from "react";
 import { SocialData, SocialPlatform } from "../../types";
 import { TextField, SelectField } from "../ui/FormFields";
+import { FIELDSET_CLASSES, LEGEND_CLASSES } from "../ui/styles";
 
+/**
+ *
+ */
 interface SocialInputProps {
+  /**
+   *
+   */
   data: SocialData;
+  /**
+   *
+   */
   onChange: (updates: Partial<SocialData>) => void;
 }
 
+/**
+ *
+ * @param root0
+ * @param root0.data
+ * @param root0.onChange
+ */
 export const SocialInput: React.FC<SocialInputProps> = ({ data, onChange }) => {
   return (
-    <fieldset className="space-y-4 min-w-0">
-      <legend className="text-sm font-semibold text-slate-700 dark:text-slate-200 w-full mb-3">
+    <fieldset className={FIELDSET_CLASSES}>
+      <legend className={LEGEND_CLASSES}>
         Social Media Profile
       </legend>
       <SelectField
