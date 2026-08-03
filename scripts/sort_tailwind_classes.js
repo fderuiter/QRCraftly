@@ -112,11 +112,11 @@ if (process.argv[1] && (process.argv[1] === fileURLToPath(import.meta.url) || pr
   try {
     if (checkOnly) {
       console.log(`🔍 AST-based Tailwind sorting check on: ${targets}`);
-      execSync(`npx eslint ${targets}`, { stdio: 'inherit' });
+      execSync(`pnpm exec eslint ${targets}`, { stdio: 'inherit' });
       console.log('✨ All classes are properly sorted and aligned!');
     } else {
       console.log(`⚙️ Formatting Tailwind CSS classes for: ${targets}`);
-      execSync(`npx eslint --fix ${targets}`, { stdio: 'inherit' });
+      execSync(`pnpm exec eslint --fix ${targets}`, { stdio: 'inherit' });
       console.log('✅ Tailwind CSS classes sorted successfully!');
     }
     process.exit(0);
