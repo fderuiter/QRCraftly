@@ -269,6 +269,12 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({ config, s
                   msg = 'Latitude must remain between -90 and 90 degrees.';
                 } else if (v === 'LONGITUDE_OUT_OF_BOUNDS_VIOLATION') {
                   msg = 'Longitude must remain between -180 and 180 degrees.';
+                } else if (v === 'EVENT_MISSING_SUMMARY') {
+                  msg = 'Event title/summary is required.';
+                } else if (v === 'EVENT_MISSING_START') {
+                  msg = 'Event start date/time is required.';
+                } else if (v === 'EVENT_CHRONOLOGICAL_VIOLATION') {
+                  msg = 'Event end date/time cannot be before start date/time.';
                 }
                 return (
                   <p key={i} className="text-sm text-rose-700 dark:text-rose-400 font-medium">

@@ -17,37 +17,15 @@
 */
 
 import { EventData, QRType, QRGeneratorContract } from '../../types';
-import { escapeVCardEvent, unescapeVCardEvent } from './vcard';
-
-/**
- * Formats an ISO datetime string (from datetime-local) into iCalendar local datetime.
- * Output format: YYYYMMDDTHHMMSS
- */
-const formatEventDateTime = (dateString: string | undefined): string => {
-  if (!dateString) return '';
-
-  const date = new Date(dateString);
-  if (Number.isNaN(date.getTime())) return '';
-
-  const year = String(date.getFullYear());
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-  const seconds = String(date.getSeconds()).padStart(2, '0');
-
-  return `${year}${month}${day}T${hours}${minutes}${seconds}`;
-};
-
-const parseEventDateTime = (dateString: string | undefined): string => {
-  if (!dateString) return '';
-  // format: YYYYMMDDTHHMMSS
-  const match = dateString.match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})/);
-  if (match) {
-    return `${match[1]}-${match[2]}-${match[3]}T${match[4]}:${match[5]}`;
-  }
-  return dateString;
-};
+import { ValidationEngine } from '../../engine/ValidationEngine';
+import {
+  escapeVCardEvent,
+  unescapeVCardEvent,
+  foldString,
+  unfoldString,
+  formatEventDateTime,
+  parseEventDateTime,
+} from './rfcHelper';
 
 /**
  * Hydrates EventData from a raw string.
@@ -63,7 +41,8 @@ export const hydrateEventData = (raw: string): EventData => {
 
   if (!raw.includes('BEGIN:VEVENT')) return result;
 
-  const lines = raw.split(/\r\n|\r|\n/);
+  const unfolded = unfoldString(raw);
+  const lines = unfolded.split(/\r\n|\r|\n/);
   lines.forEach(line => {
     const splitIndex = line.indexOf(':');
     if (splitIndex <= 0) return;
@@ -71,11 +50,12 @@ export const hydrateEventData = (raw: string): EventData => {
     const fullKey = line.substring(0, splitIndex);
     const key = fullKey.split(';')[0].toUpperCase();
     const value = line.substring(splitIndex + 1);
+    const keyParams = fullKey.substring(key.length);
 
     switch(key) {
       case 'SUMMARY': result.title = unescapeVCardEvent(value); break;
-      case 'DTSTART': result.startDate = parseEventDateTime(value); break;
-      case 'DTEND': result.endDate = parseEventDateTime(value); break;
+      case 'DTSTART': result.startDate = parseEventDateTime(value, keyParams); break;
+      case 'DTEND': result.endDate = parseEventDateTime(value, keyParams); break;
       case 'LOCATION': result.location = unescapeVCardEvent(value); break;
       case 'DESCRIPTION': result.description = unescapeVCardEvent(value); break;
     }
@@ -88,21 +68,27 @@ export const hydrateEventData = (raw: string): EventData => {
  * Constructs an iCalendar VEVENT payload.
  */
 export const constructEventString = (data: EventData): string => {
+  const startFormatted = formatEventDateTime(data.startDate);
+  const endFormatted = formatEventDateTime(data.endDate);
+
+  const dtstartKey = startFormatted.tzid ? `DTSTART;TZID=${startFormatted.tzid}` : 'DTSTART';
+  const dtendKey = endFormatted.tzid ? `DTEND;TZID=${endFormatted.tzid}` : 'DTEND';
+
   const parts = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
     'PRODID:-//QRCraftly//EN',
     'BEGIN:VEVENT',
     `SUMMARY:${escapeVCardEvent(data.title)}`,
-    `DTSTART:${formatEventDateTime(data.startDate)}`,
-    `DTEND:${formatEventDateTime(data.endDate)}`,
+    `${dtstartKey}:${startFormatted.value}`,
+    `${dtendKey}:${endFormatted.value}`,
     `LOCATION:${escapeVCardEvent(data.location)}`,
     `DESCRIPTION:${escapeVCardEvent(data.description)}`,
     'END:VEVENT',
     'END:VCALENDAR',
   ];
 
-  return parts.join('\n');
+  return foldString(parts.join('\n'));
 };
 
 export const EventContract: QRGeneratorContract<EventData> = {
@@ -110,5 +96,50 @@ export const EventContract: QRGeneratorContract<EventData> = {
   construct: constructEventString,
   hydrate: hydrateEventData,
   matches: (raw: string) => raw.includes('BEGIN:VEVENT') || raw.includes('BEGIN:VCALENDAR'),
-  validate: () => [],
+  validate: (raw: string) => {
+    const violations: string[] = [];
+    const data = hydrateEventData(raw);
+
+    // 1. Check for URI Injection Violations using ValidationEngine.isDangerousUrl
+    const urlRegex = /(https?|ftp|javascript|data|file):[^\s]+/gi;
+    const urls: string[] = [];
+    
+    const descUrls = data.description.match(urlRegex) || [];
+    const locUrls = data.location.match(urlRegex) || [];
+    
+    const isUrlLike = (s: string) => /^(https?|ftp|javascript|data|file):/i.test(s.trim());
+    if (isUrlLike(data.description)) urls.push(data.description.trim());
+    if (isUrlLike(data.location)) urls.push(data.location.trim());
+    urls.push(...descUrls, ...locUrls);
+
+    for (const u of urls) {
+      if (ValidationEngine.isDangerousUrl(u)) {
+        violations.push('URI_INJECTION_VIOLATION');
+        break;
+      }
+    }
+
+    // 2. Check for Missing Fields (EVENT_MISSING_SUMMARY, EVENT_MISSING_START)
+    if (!data.title || !data.title.trim()) {
+      violations.push('EVENT_MISSING_SUMMARY');
+    }
+    if (!data.startDate || !data.startDate.trim()) {
+      violations.push('EVENT_MISSING_START');
+    }
+
+    // 3. Check for Chronological Consistency (EVENT_CHRONOLOGICAL_VIOLATION)
+    if (data.startDate && data.endDate) {
+      const cleanStart = data.startDate.replace(/;TZID=[^;:\s\n]+/i, '');
+      const cleanEnd = data.endDate.replace(/;TZID=[^;:\s\n]+/i, '');
+      const startSecs = new Date(cleanStart).getTime();
+      const endSecs = new Date(cleanEnd).getTime();
+      if (!Number.isNaN(startSecs) && !Number.isNaN(endSecs)) {
+        if (endSecs < startSecs) {
+          violations.push('EVENT_CHRONOLOGICAL_VIOLATION');
+        }
+      }
+    }
+
+    return violations;
+  },
 };

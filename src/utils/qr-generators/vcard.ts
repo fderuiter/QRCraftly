@@ -19,36 +19,14 @@
 import { VCardData, QRType, QRGeneratorContract } from '../../types';
 import { normalizeUrl } from '../url';
 import { ValidationEngine } from '../../engine/ValidationEngine';
+import {
+  escapeVCardEvent,
+  unescapeVCardEvent,
+  foldString,
+  unfoldString,
+  splitCompoundField,
+} from './rfcHelper';
 
-const REGEX_ESCAPE_VCARD = /([;,])/g;
-const REGEX_UNESCAPE_VCARD = /\\([;,])/g;
-const REGEX_SPLIT_VCARD = /(?<!\\);/;
-
-/**
- * Escapes special characters and formats newlines for vCard and VEvent properties.
- * @param str - The raw field value string, which can be undefined.
- * @returns The escaped vCard/VEvent property string.
- */
-export const escapeVCardEvent = (str: string | undefined): string => {
-  if (!str) return '';
-  return str
-    .replace(/\\/g, '\\\\')
-    .replace(/\r\n|\r|\n/g, '\\n')
-    .replace(REGEX_ESCAPE_VCARD, '\\$1');
-};
-
-/**
- * Unescapes formatting and special characters in vCard or VEvent fields.
- * @param str - The escaped vCard/VEvent property string, which can be undefined.
- * @returns The restored raw field value string.
- */
-export const unescapeVCardEvent = (str: string | undefined): string => {
-  if (!str) return '';
-  return str
-    .replace(/\\n/gi, '\n')
-    .replace(REGEX_UNESCAPE_VCARD, '$1')
-    .replace(/\\\\/g, '\\');
-};
 
 /**
  * Hydrates VCardData from a raw string.
@@ -70,7 +48,8 @@ export const hydrateVCardData = (raw: string): VCardData => {
 
   if (!raw.includes('BEGIN:VCARD')) return result;
 
-  const lines = raw.split(/\r\n|\r|\n/);
+  const unfolded = unfoldString(raw);
+  const lines = unfolded.split(/\r\n|\r|\n/);
 
   lines.forEach(line => {
     const splitIndex = line.indexOf(':');
@@ -82,7 +61,7 @@ export const hydrateVCardData = (raw: string): VCardData => {
 
     switch(key) {
       case 'N': {
-        const nParts = value.split(REGEX_SPLIT_VCARD);
+        const nParts = splitCompoundField(value, ';');
         result.lastName = unescapeVCardEvent(nParts[0] || '');
         result.firstName = unescapeVCardEvent(nParts[1] || '');
         break;
@@ -93,7 +72,7 @@ export const hydrateVCardData = (raw: string): VCardData => {
       case 'EMAIL': result.email = unescapeVCardEvent(value); break;
       case 'URL': result.website = unescapeVCardEvent(value); break;
       case 'ADR': {
-        const adrParts = value.split(REGEX_SPLIT_VCARD);
+        const adrParts = splitCompoundField(value, ';');
         result.street = unescapeVCardEvent(adrParts[2] || '');
         result.city = unescapeVCardEvent(adrParts[3] || '');
         result.zip = unescapeVCardEvent(adrParts[5] || '');
@@ -130,7 +109,7 @@ export const constructVCardString = (data: VCardData): string => {
     'END:VCARD',
   ];
 
-  return parts.join('\n');
+  return foldString(parts.join('\n'));
 };
 
 export const VCardContract: QRGeneratorContract<VCardData> = {
@@ -140,11 +119,24 @@ export const VCardContract: QRGeneratorContract<VCardData> = {
   matches: (raw: string) => raw.includes('BEGIN:VCARD'),
   validate: (raw: string) => {
     const violations: string[] = [];
-    const urlMatch = raw.match(/^URL(?:;[^:]*)?:([^\r\n]+)/mi);
-    if (urlMatch) {
-      const vcardUrl = urlMatch[1].trim();
-      if (ValidationEngine.isDangerousUrl(vcardUrl)) {
-        violations.push('URI_INJECTION_VIOLATION');
+    const unfolded = unfoldString(raw);
+    const lines = unfolded.split(/\r\n|\n|\r/);
+    for (const line of lines) {
+      if (line.toUpperCase().startsWith('URL:')) {
+        const vcardUrl = line.substring(4).trim();
+        if (ValidationEngine.isDangerousUrl(vcardUrl)) {
+          violations.push('URI_INJECTION_VIOLATION');
+          break;
+        }
+      } else if (line.toUpperCase().startsWith('URL;')) {
+        const splitIndex = line.indexOf(':');
+        if (splitIndex > 0) {
+          const vcardUrl = line.substring(splitIndex + 1).trim();
+          if (ValidationEngine.isDangerousUrl(vcardUrl)) {
+            violations.push('URI_INJECTION_VIOLATION');
+            break;
+          }
+        }
       }
     }
     return violations;
