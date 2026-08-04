@@ -1,10 +1,9 @@
 import React, { useMemo } from 'react';
 import { QRConfig } from '../../types';
-import { PRESET_COLORS } from '../../constants';
-import { AlertTriangle } from 'lucide-react';
+import { PRESET_COLORS, MIN_CONTRAST_THRESHOLD } from '../../constants';
 import { getContrastRatio } from '../../utils/colorUtils';
 import { ColorInput } from '../ui/ColorInput';
-import { Alert } from '../ui/Alert';
+import { ContrastBadge, ContrastBanner } from './ContrastWarning';
 
 /**
  *
@@ -33,22 +32,16 @@ export const ColorControls: React.FC<ColorControlsProps> = ({ config, onChange }
     return { fg: fgContrast, eye: eyeContrast };
   }, [config.fgColor, config.bgColor, config.eyeColor]);
 
-  const isLowContrast = contrastRatios.fg < 4.5 || contrastRatios.eye < 4.5;
+  const isLowContrast = contrastRatios.fg < MIN_CONTRAST_THRESHOLD || contrastRatios.eye < MIN_CONTRAST_THRESHOLD;
   const worstContrast = Math.min(contrastRatios.fg, contrastRatios.eye);
 
   return (
     <div>
       <div className="mb-3 flex items-baseline justify-between">
         <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Colors</h3>
-        <div aria-live="polite" aria-atomic="true">
-          {isLowContrast && (
-            <span className="flex items-center gap-1 text-xs font-medium text-amber-700 dark:text-amber-400">
-              <AlertTriangle className="size-3" aria-hidden="true" />
-              Low Contrast ({worstContrast.toFixed(1)})
-            </span>
-          )}
-        </div>
+        <ContrastBadge isVisible={isLowContrast} contrastRatio={worstContrast} decimalPrecision={1} />
       </div>
+
 
       <div
         className="mb-5 flex flex-wrap gap-3"
@@ -110,13 +103,14 @@ export const ColorControls: React.FC<ColorControlsProps> = ({ config, onChange }
           />
         </div>
       </div>
-      <div aria-live="polite" aria-atomic="true">
-        {isLowContrast && (
-          <Alert variant="warning" className="mt-3" role="status">
-            Warning: The contrast ratio is low ({worstContrast.toFixed(2)}). QR codes should have high contrast (aim for 4.5:1) to be scannable by all devices.
-          </Alert>
-        )}
-      </div>
+      <ContrastBanner
+        isVisible={isLowContrast}
+        contrastRatio={worstContrast}
+        messageType="color"
+        className="mt-3"
+        role="status"
+        decimalPrecision={2}
+      />
     </div>
   );
 };

@@ -1,7 +1,7 @@
 import React, { useRef, useMemo, useEffect } from 'react';
 import { Button } from '../ui/Button';
 import { QRConfig, BorderStyle, BorderTextPosition, BorderLogoPosition } from '../../types';
-import { Upload, X, AlertTriangle } from 'lucide-react';
+import { Upload, X } from 'lucide-react';
 import { getContrastRatio } from '../../utils/colorUtils';
 import { ColorInput } from '../ui/ColorInput';
 import { RangeInput } from '../ui/RangeInput';
@@ -9,6 +9,8 @@ import { useImageUpload } from '../../hooks/useImageUpload';
 import { ToggleSwitch } from '../ui/ToggleSwitch';
 import { SelectField, TextField } from '../ui/FormFields';
 import { useOptionalQRStoreSelector } from '../../context/QRContext';
+import { MIN_CONTRAST_THRESHOLD } from '../../constants';
+import { ContrastBadge } from './ContrastWarning';
 
 /**
  *
@@ -64,7 +66,7 @@ export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange
       : 21;
   }, [config.isBorderEnabled, config.borderText, config.borderTextColor, config.borderColor]);
 
-  const isLowBorderContrast = borderTextContrast < 4.5;
+  const isLowBorderContrast = borderTextContrast < MIN_CONTRAST_THRESHOLD;
 
   return (
     <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/50">
@@ -118,14 +120,7 @@ export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange
           <div className="border-t border-slate-200 pt-2 dark:border-slate-700">
             <div className="mb-2 flex items-baseline justify-between">
               <p className="text-xs font-medium text-slate-700 dark:text-slate-300">Content</p>
-              <div aria-live="polite" aria-atomic="true">
-                {isLowBorderContrast && (
-                  <span className="flex items-center gap-1 text-[10px] font-medium text-amber-700 dark:text-amber-400">
-                    <AlertTriangle className="size-3" aria-hidden="true" />
-                    Low Contrast ({borderTextContrast.toFixed(1)})
-                  </span>
-                )}
-              </div>
+              <ContrastBadge isVisible={isLowBorderContrast} contrastRatio={borderTextContrast} decimalPrecision={1} />
             </div>
 
             {/* Border Text */}
