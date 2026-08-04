@@ -125,12 +125,17 @@ describe('useScannability - changed behavior: uses useQRStore instead of useQRCo
       result.current.store.registerSignal('scannability-fail', signalCallback);
     });
 
+    act(() => {
+      result.current.scan.checkScannability();
+    });
+
     // Simulate worker sending a failure
     act(() => {
       activeWorker!.dispatchMessage({
         success: false,
         physicalReady: false,
         error: 'NOT_FOUND',
+        configId: '1',
       });
     });
 
@@ -156,10 +161,15 @@ describe('useScannability - changed behavior: uses useQRStore instead of useQRCo
     });
 
     act(() => {
+      result.current.scan.checkScannability();
+    });
+
+    act(() => {
       activeWorker!.dispatchMessage({
         success: true,
         physicalReady: true,
         error: null,
+        configId: '1',
       });
     });
 
@@ -180,12 +190,17 @@ describe('useScannability - changed behavior: uses useQRStore instead of useQRCo
       result.current.store.registerSignal('scannability-fail', signalCallback);
     });
 
+    act(() => {
+      result.current.scan.checkScannability();
+    });
+
     // success=false but error is falsy - should not emit
     act(() => {
       activeWorker!.dispatchMessage({
         success: false,
         physicalReady: false,
         error: null,
+        configId: '1',
       });
     });
 
@@ -199,7 +214,11 @@ describe('useScannability - changed behavior: uses useQRStore instead of useQRCo
     );
 
     act(() => {
-      activeWorker!.dispatchMessage({ success: false, physicalReady: false, error: 'NOT_FOUND' });
+      result.current.checkScannability();
+    });
+
+    act(() => {
+      activeWorker!.dispatchMessage({ success: false, physicalReady: false, error: 'NOT_FOUND', configId: '1' });
     });
 
     expect(result.current.status).toBe('fail');
@@ -212,7 +231,11 @@ describe('useScannability - changed behavior: uses useQRStore instead of useQRCo
     );
 
     act(() => {
-      activeWorker!.dispatchMessage({ success: true, physicalReady: false, error: null });
+      result.current.checkScannability();
+    });
+
+    act(() => {
+      activeWorker!.dispatchMessage({ success: true, physicalReady: false, error: null, configId: '1' });
     });
 
     expect(result.current.status).toBe('digital-pass');
@@ -225,7 +248,11 @@ describe('useScannability - changed behavior: uses useQRStore instead of useQRCo
     );
 
     act(() => {
-      activeWorker!.dispatchMessage({ success: true, physicalReady: true, error: null });
+      result.current.checkScannability();
+    });
+
+    act(() => {
+      activeWorker!.dispatchMessage({ success: true, physicalReady: true, error: null, configId: '1' });
     });
 
     expect(result.current.status).toBe('physical-pass');
@@ -247,7 +274,11 @@ describe('useScannability - changed behavior: uses useQRStore instead of useQRCo
     });
 
     act(() => {
-      activeWorker!.dispatchMessage({ success: false, physicalReady: false, error: 'DECODE_FAIL' });
+      result.current.scan.checkScannability();
+    });
+
+    act(() => {
+      activeWorker!.dispatchMessage({ success: false, physicalReady: false, error: 'DECODE_FAIL', configId: '1' });
     });
 
     const detail = signalCallback.mock.calls[0][0];
@@ -271,7 +302,11 @@ describe('useScannability - changed behavior: uses useQRStore instead of useQRCo
     });
 
     act(() => {
-      activeWorker!.dispatchMessage({ success: false, physicalReady: false, error: 'FAIL' });
+      result.current.scan.checkScannability();
+    });
+
+    act(() => {
+      activeWorker!.dispatchMessage({ success: false, physicalReady: false, error: 'FAIL', configId: '1' });
     });
 
     const detail = signalCallback.mock.calls[0][0];
@@ -317,5 +352,109 @@ describe('useScannability - changed behavior: uses useQRStore instead of useQRCo
     // Store reference is stable (same QRStore instance), config did not change,
     // so useEffect should not re-run and addEventListener should not be called again.
     expect(workerAtMount.addEventListener.mock.calls.length).toBe(initialAddListenerCallCount);
+  });
+
+  it('attaches an incremented ID to every analysis request sent to the worker', () => {
+    const { result } = renderHook(
+      () => useScannability(makeCanvasRef(), defaultConfig),
+      { wrapper }
+    );
+
+    const mockImageData = {
+      data: new Uint8ClampedArray(100),
+      width: 5,
+      height: 5,
+    } as any;
+
+    act(() => {
+      result.current.checkScannability(mockImageData);
+    });
+    expect(activeWorker!.postMessage).toHaveBeenLastCalledWith(
+      expect.objectContaining({ configId: '1' }),
+      expect.any(Array)
+    );
+
+    act(() => {
+      result.current.checkScannability(mockImageData);
+    });
+    expect(activeWorker!.postMessage).toHaveBeenLastCalledWith(
+      expect.objectContaining({ configId: '2' }),
+      expect.any(Array)
+    );
+  });
+
+  it('client-side listener drops worker messages that return a stale ID', () => {
+    const { result } = renderHook(
+      () => ({
+        scan: useScannability(makeCanvasRef(), defaultConfig),
+        store: useQRStore(),
+      }),
+      { wrapper }
+    );
+
+    const signalCallback = vi.fn();
+    act(() => {
+      result.current.store.registerSignal('scannability-fail', signalCallback);
+    });
+
+    // Send first request (gets ID '1')
+    act(() => {
+      result.current.scan.checkScannability();
+    });
+
+    // Send second request (gets ID '2')
+    act(() => {
+      result.current.scan.checkScannability();
+    });
+
+    // Simulate worker returning a message for ID '1' (stale)
+    act(() => {
+      activeWorker!.dispatchMessage({
+        success: false,
+        physicalReady: false,
+        error: 'NOT_FOUND',
+        configId: '1',
+      });
+    });
+
+    // The status should remain 'checking' (the current active state status), and NOT change to 'fail'
+    expect(result.current.scan.status).toBe('checking');
+    expect(signalCallback).not.toHaveBeenCalled();
+
+    // Now return ID '2' (active)
+    act(() => {
+      activeWorker!.dispatchMessage({
+        success: true,
+        physicalReady: true,
+        error: null,
+        configId: '2',
+      });
+    });
+
+    expect(result.current.scan.status).toBe('physical-pass');
+  });
+
+  it('client-side listener drops worker messages that have no ID', () => {
+    const { result } = renderHook(
+      () => ({
+        scan: useScannability(makeCanvasRef(), defaultConfig),
+        store: useQRStore(),
+      }),
+      { wrapper }
+    );
+
+    act(() => {
+      result.current.scan.checkScannability();
+    });
+
+    act(() => {
+      activeWorker!.dispatchMessage({
+        success: true,
+        physicalReady: true,
+        error: null,
+      });
+    });
+
+    expect(result.current.scan.status).toBe('checking'); // remains unchanged
   });
 });
