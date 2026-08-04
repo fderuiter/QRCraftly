@@ -30,19 +30,158 @@ declare module 'vitest' {
 
 expect.extend(matchers);
 
-if (typeof globalThis.Worker === 'undefined') {
-  globalThis.Worker = class {
-    constructor() {}
-    postMessage() {}
-    terminate() {}
-    addEventListener() {}
-    removeEventListener() {}
-  } as any;
+declare global {
+  var mockWorkerControl: {
+    setInterceptor: (fn: ((message: any, worker: any) => void) | null) => void;
+    setDelay: (ms: number) => void;
+    setResponseOverride: (response: any) => void;
+    getInstances: () => any[];
+    reset: () => void;
+    activeWorker: any;
+  };
 }
 
-if (typeof window !== 'undefined' && !window.Worker) {
-  (window as any).Worker = globalThis.Worker;
+interface WorkerMockConfig {
+  interceptor: ((message: any, worker: any) => void) | null;
+  delayMs: number;
+  responseOverride: any | null;
+  instances: any[];
+  activeWorker: any | null;
 }
+
+const mockConfig: WorkerMockConfig = {
+  interceptor: null,
+  delayMs: 0,
+  responseOverride: null,
+  instances: [],
+  activeWorker: null,
+};
+
+class MockWorker {
+  private listeners: Record<string, Set<(...args: any[]) => void>> = {};
+  public terminated = false;
+  private _onmessage: any = null;
+  private _onerror: any = null;
+
+  constructor(public url: string | URL, public options?: WorkerOptions) {
+    mockConfig.instances.push(this);
+    mockConfig.activeWorker = this;
+  }
+
+  addEventListener = vi.fn((type: string, listener: any) => {
+    if (!this.listeners[type]) {
+      this.listeners[type] = new Set();
+    }
+    this.listeners[type].add(listener);
+  });
+
+  removeEventListener = vi.fn((type: string, listener: any) => {
+    if (this.listeners[type]) {
+      this.listeners[type].delete(listener);
+    }
+  });
+
+  get onmessage() { return this._onmessage; }
+  set onmessage(val) { this._onmessage = val; }
+
+  get onerror() { return this._onerror; }
+  set onerror(val) { this._onerror = val; }
+
+  terminate = vi.fn(() => {
+    this.terminated = true;
+  });
+
+  dispatchMessage(data: any) {
+    if (this.terminated) return;
+    const event = { data } as MessageEvent;
+    
+    if (this.listeners['message']) {
+      this.listeners['message'].forEach(handler => {
+        try { handler(event); } catch (e) { console.error(e); }
+      });
+    }
+    if (typeof this._onmessage === 'function') {
+      try { this._onmessage(event); } catch (e) { console.error(e); }
+    }
+  }
+
+  dispatchError(error: any) {
+    if (this.terminated) return;
+    const event = { error } as any;
+    if (this.listeners['error']) {
+      this.listeners['error'].forEach(handler => {
+        try { handler(event); } catch (e) { console.error(e); }
+      });
+    }
+    if (typeof this._onerror === 'function') {
+      try { this._onerror(event); } catch (e) { console.error(e); }
+    }
+  }
+
+  postMessage = vi.fn((message: any, _transfer?: any) => {
+    if (this.terminated) return;
+
+    // Buffer Safety: Transfer list (_transfer) parameter accepted but safely ignored.
+    const delay = mockConfig.delayMs;
+    const execute = () => {
+      if (this.terminated) return;
+
+      if (mockConfig.interceptor) {
+        mockConfig.interceptor(message, this);
+        return;
+      }
+
+      if (mockConfig.responseOverride !== null) {
+        this.dispatchMessage(mockConfig.responseOverride);
+        return;
+      }
+
+      // Default behavior to prevent stuck UI:
+      this.dispatchMessage({
+        success: true,
+        physicalReady: true,
+        error: null,
+      });
+    };
+
+    if (delay > 0) {
+      setTimeout(execute, delay);
+    } else {
+      setTimeout(execute, 0);
+    }
+  });
+}
+
+globalThis.Worker = MockWorker as any;
+if (typeof window !== 'undefined') {
+  (window as any).Worker = MockWorker as any;
+}
+
+globalThis.mockWorkerControl = {
+  setInterceptor: (fn: ((message: any, worker: any) => void) | null) => {
+    mockConfig.interceptor = fn;
+  },
+  setDelay: (ms: number) => {
+    mockConfig.delayMs = ms;
+  },
+  setResponseOverride: (response: any) => {
+    mockConfig.responseOverride = response;
+  },
+  getInstances: () => mockConfig.instances,
+  get activeWorker() {
+    return mockConfig.activeWorker;
+  },
+  set activeWorker(val) {
+    mockConfig.activeWorker = val;
+  },
+  reset: () => {
+    mockConfig.interceptor = null;
+    mockConfig.delayMs = 0;
+    mockConfig.responseOverride = null;
+    mockConfig.instances = [];
+    mockConfig.activeWorker = null;
+  }
+};
 
 // ---------------------------------------------------------------------------
 // Global mocks for Canvas Context, Fetch, URL
@@ -262,4 +401,7 @@ const originalImage = window.Image;
 afterEach(() => {
   // Restore specific global state used across canvas tests
   window.Image = originalImage;
+  if (globalThis.mockWorkerControl) {
+    globalThis.mockWorkerControl.reset();
+  }
 });
