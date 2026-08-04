@@ -47,7 +47,7 @@ describe('renderEyes', () => {
 
     // Standard eye draws fillRect, clearShape (restores fillStyle)
     expect(ctx.fillRect).toHaveBeenCalled();
-    expect(ctx.clearRect).toHaveBeenCalled();
+    expect(ctx.clearRect).not.toHaveBeenCalled();
   });
 
   it('renders modern eyes', () => {
@@ -109,7 +109,7 @@ describe('renderEyes', () => {
     renderEyes(ctx, { ...baseConfig, style: 'INVALID_STYLE' as any }, 0, 0, 10, 21);
 
     // Falls back to standard style
-    expect(ctx.clearRect).toHaveBeenCalled();
+    expect(ctx.clearRect).not.toHaveBeenCalled();
     expect(ctx.fillRect).toHaveBeenCalled();
   });
 });
