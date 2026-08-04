@@ -22,7 +22,8 @@ import { Square, Smartphone } from 'lucide-react';
 import { QRConfig, SocialFormat, TemplateStyle } from '../../types';
 import { ColorInput } from '../ui/ColorInput';
 import { RangeInput } from '../ui/RangeInput';
-import { CheckboxField, TextField } from '../ui/FormFields';
+import { TextField } from '../ui/FormFields';
+import { ToggleSwitch } from '../ui/ToggleSwitch';
 import { getContrastRatio } from '../../utils/colorUtils';
 import { MIN_CONTRAST_THRESHOLD } from '../../constants';
 import { ContrastBadge, ContrastBanner } from './ContrastWarning';
@@ -176,12 +177,12 @@ export const LayoutControls: React.FC<LayoutControlsProps> = ({ config, onChange
                 <span className="text-xs text-slate-500 dark:text-slate-400">Template Background</span>
                 <ContrastBadge isVisible={isLowContrast} contrastRatio={contrastRatio} decimalPrecision={1} data-testid="layout-bg-warning" />
               </div>
-              <CheckboxField
+              <ToggleSwitch
                 id="override-bg-color"
                 checked={hasBgOverride}
-                onChange={(e) =>
+                onChange={(checked) =>
                   onChange({
-                    templateBgColor: e.target.checked ? config.bgColor : undefined,
+                    templateBgColor: checked ? config.bgColor : undefined,
                   })
                 }
                 aria-label="Override template background color"
@@ -206,12 +207,12 @@ export const LayoutControls: React.FC<LayoutControlsProps> = ({ config, onChange
                 <span className="text-xs text-slate-500 dark:text-slate-400">Template Text Color</span>
                 <ContrastBadge isVisible={isLowContrast} contrastRatio={contrastRatio} decimalPrecision={1} data-testid="layout-text-warning" />
               </div>
-              <CheckboxField
+              <ToggleSwitch
                 id="override-text-color"
                 checked={hasTextOverride}
-                onChange={(e) =>
+                onChange={(checked) =>
                   onChange({
-                    templateTextColor: e.target.checked ? config.fgColor : undefined,
+                    templateTextColor: checked ? config.fgColor : undefined,
                   })
                 }
                 aria-label="Override template text color"

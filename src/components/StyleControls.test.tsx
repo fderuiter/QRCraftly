@@ -236,12 +236,12 @@ describe('StyleControls Component', () => {
       const user = userEvent.setup();
       render(<StyleControls config={DEFAULT_CONFIG} onChange={mockOnChange} />);
 
-      // Find the border checkbox. It's an input with type="checkbox" in the "Border" section.
-      // We can find it by associating with the section or just find the first checkbox if it's the only one,
+      // Find the border switch. It's an input with role="switch" in the "Border" section.
+      // We can find it by associating with the section or just find the first switch if it's the only one,
       // but there might be others.
       // The label has className="sr-only peer".
 
-      const borderCheckbox = screen.getAllByRole('checkbox')[0]; // Assuming it's the first one, or refine selector
+      const borderCheckbox = screen.getAllByRole('switch')[0]; // Assuming it's the first one, or refine selector
       await user.click(borderCheckbox);
 
       expect(mockOnChange).toHaveBeenCalledWith({ isBorderEnabled: !DEFAULT_CONFIG.isBorderEnabled });
