@@ -14,23 +14,27 @@ export interface CardProps {
    */
   className?: string;
   /**
-   * Background classes. Defaults to "bg-white dark:bg-slate-900".
+   * Component variant. Defaults to "default".
+   */
+  variant?: 'default' | 'control';
+  /**
+   * Background classes. Fallback depends on variant.
    */
   bg?: string;
   /**
-   * Border classes. Defaults to "border border-slate-200 dark:border-slate-800".
+   * Border classes. Fallback depends on variant.
    */
   border?: string;
   /**
-   * Shadow classes. Defaults to "shadow-2xl".
+   * Shadow classes. Fallback depends on variant.
    */
   shadow?: string;
   /**
-   * Padding classes. Defaults to "p-8".
+   * Padding classes. Fallback depends on variant.
    */
   padding?: string;
   /**
-   * Rounded classes. Defaults to "rounded-3xl".
+   * Rounded classes. Fallback depends on variant.
    */
   rounded?: string;
 }
@@ -41,28 +45,36 @@ export interface CardProps {
  * @param root0 The properties object.
  * @param root0.children The content to render inside the card.
  * @param root0.className Additional className to apply to the card wrapper.
- * @param root0.bg Background classes. Defaults to "bg-white dark:bg-slate-900".
- * @param root0.border Border classes. Defaults to "border border-slate-200 dark:border-slate-800".
- * @param root0.shadow Shadow classes. Defaults to "shadow-2xl".
- * @param root0.padding Padding classes. Defaults to "p-8".
- * @param root0.rounded Rounded classes. Defaults to "rounded-3xl".
+ * @param root0.variant Component variant. Defaults to "default".
+ * @param root0.bg Background classes. Fallback depends on variant.
+ * @param root0.border Border classes. Fallback depends on variant.
+ * @param root0.shadow Shadow classes. Fallback depends on variant.
+ * @param root0.padding Padding classes. Fallback depends on variant.
+ * @param root0.rounded Rounded classes. Fallback depends on variant.
  * @returns The rendered Card component wrapper.
  */
 export const Card: React.FC<CardProps> = ({
   children,
   className = '',
-  bg = 'bg-white dark:bg-slate-900',
-  border = 'border border-slate-200 dark:border-slate-800',
-  shadow = 'shadow-2xl',
-  padding = 'p-8',
-  rounded = 'rounded-3xl',
+  variant = 'default',
+  bg,
+  border,
+  shadow,
+  padding,
+  rounded,
 }) => {
+  const resolvedBg = bg ?? (variant === 'control' ? 'bg-slate-50 dark:bg-slate-800/50' : 'bg-white dark:bg-slate-900');
+  const resolvedBorder = border ?? (variant === 'control' ? 'border border-slate-200 dark:border-slate-700' : 'border border-slate-200 dark:border-slate-800');
+  const resolvedShadow = shadow ?? (variant === 'control' ? 'shadow-none' : 'shadow-2xl');
+  const resolvedPadding = padding ?? (variant === 'control' ? 'p-4' : 'p-8');
+  const resolvedRounded = rounded ?? (variant === 'control' ? 'rounded-xl' : 'rounded-3xl');
+
   const cardClasses = mergeClasses(
-    bg,
-    border,
-    shadow,
-    padding,
-    rounded,
+    resolvedBg,
+    resolvedBorder,
+    resolvedShadow,
+    resolvedPadding,
+    resolvedRounded,
     className
   );
 
