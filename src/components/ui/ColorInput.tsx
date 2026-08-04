@@ -1,5 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { normalizeHex } from '../../utils/colorUtils';
+import { FieldWrapper } from './FieldWrapper';
+import { mergeClasses, ERROR_INPUT_CLASSES } from './styles';
 
 /**
  * Helper component for color inputs to reduce duplication.
@@ -33,6 +35,14 @@ interface ColorInputProps {
    *
    */
   title?: string;
+  /**
+   *
+   */
+  disabled?: boolean;
+  /**
+   *
+   */
+  error?: string;
 }
 
 /**
@@ -45,6 +55,8 @@ interface ColorInputProps {
  * @param root0.displayValue
  * @param root0.sizeClass
  * @param root0.title
+ * @param root0.disabled
+ * @param root0.error
  */
 export const ColorInput: React.FC<ColorInputProps> = ({
   id,
@@ -53,7 +65,9 @@ export const ColorInput: React.FC<ColorInputProps> = ({
   onChange,
   displayValue,
   sizeClass = "w-10 h-10",
-  title
+  title,
+  disabled = false,
+  error
 }) => {
   const [textValue, setTextValue] = useState(displayValue || value);
   const textValueRef = useRef(textValue);
@@ -88,30 +102,43 @@ export const ColorInput: React.FC<ColorInputProps> = ({
     }
   };
 
+  const errorId = error ? `${id}-error` : undefined;
+
   return (
-    <div>
-      {label && (
-        <label htmlFor={id} className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">
-          {label}
-        </label>
-      )}
+    <FieldWrapper
+      inputId={id}
+      label={label}
+      error={error}
+      errorId={errorId}
+    >
       <div className="-m-1 flex items-center gap-2 rounded-lg p-1">
-          <input
-            id={id}
-            type="color"
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            className={`${sizeClass} cursor-pointer rounded border-0 bg-transparent p-0`}
-            title={title}
-          />
-          <input
-            type="text"
-            value={textValue}
-            onChange={handleTextChange}
-            className="w-24 rounded border border-transparent bg-transparent px-1 py-0.5 font-mono text-xs text-slate-600 transition-colors hover:border-slate-300 dark:text-slate-300"
-            aria-label={`${label} Hex Code`}
-          />
+        <input
+          id={id}
+          type="color"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          disabled={disabled}
+          className={`${sizeClass} rounded border-0 bg-transparent p-0 disabled:opacity-50 ${
+            disabled ? 'cursor-not-allowed' : 'cursor-pointer'
+          }`}
+          title={title}
+          aria-invalid={!!error}
+          aria-describedby={error ? errorId : undefined}
+        />
+        <input
+          type="text"
+          value={textValue}
+          onChange={handleTextChange}
+          disabled={disabled}
+          className={mergeClasses(
+            "w-24 rounded border border-transparent bg-transparent px-1 py-0.5 font-mono text-xs text-slate-600 transition-colors hover:border-slate-300 dark:text-slate-300 disabled:opacity-50 disabled:cursor-not-allowed",
+            error ? ERROR_INPUT_CLASSES : undefined
+          )}
+          aria-label={label ? `${label} Hex Code` : "Hex Code"}
+          aria-invalid={!!error}
+          aria-describedby={error ? errorId : undefined}
+        />
       </div>
-    </div>
+    </FieldWrapper>
   );
 };

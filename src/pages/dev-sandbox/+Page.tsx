@@ -102,24 +102,20 @@ export default function DevSandbox() {
             value={color}
             onChange={setColor}
           />
-          <div className="pointer-events-none opacity-50">
-            <ColorInput
-              id="color-disabled"
-              label="Disabled (Simulated)"
-              value="#9ca3af"
-              onChange={() => {}}
-            />
-          </div>
-          {/* Note: ColorInput doesn't have built-in error state, wrapping it to simulate if needed, or omit if unsupported */}
-          <div className="rounded border border-rose-500 p-2">
-            <ColorInput
-              id="color-error"
-              label="Error (Simulated)"
-              value={color}
-              onChange={setColor}
-            />
-            <p className="mt-1 text-xs text-rose-700 dark:text-rose-400">Invalid color.</p>
-          </div>
+          <ColorInput
+            id="color-disabled"
+            label="Disabled"
+            value="#9ca3af"
+            onChange={() => {}}
+            disabled
+          />
+          <ColorInput
+            id="color-error"
+            label="Error"
+            value={color}
+            onChange={setColor}
+            error="Invalid color."
+          />
         </div>
       </section>
 
