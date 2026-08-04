@@ -147,6 +147,8 @@ export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange
                 <div className="mt-1 flex items-center">
                   <ColorInput
                     id="border-text-color"
+                    label="Border Text Color"
+                    hideLabel={true}
                     value={config.borderTextColor || '#ffffff'}
                     onChange={(val) => onChange({ borderTextColor: val })}
                     sizeClass="w-9 h-9"

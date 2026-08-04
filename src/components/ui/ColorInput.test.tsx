@@ -129,4 +129,53 @@ describe('ColorInput Component Accessibility', () => {
     // Should have ERROR_INPUT_CLASSES class (border-rose-500)
     expect(textInput).toHaveClass('border-rose-500');
   });
+
+  it('should support visually hiding the input label while keeping it programmatically accessible with sr-only', () => {
+    const handleChange = vi.fn();
+    render(
+      <ColorInput
+        id="test-hidden-label"
+        label="My Hidden Color Label"
+        value="#aabbcc"
+        onChange={handleChange}
+        hideLabel={true}
+      />
+    );
+
+    // Label should still exist in DOM and be programmatically accessible
+    const labelElement = screen.getByText('My Hidden Color Label');
+    expect(labelElement).toBeInTheDocument();
+    expect(labelElement.tagName.toLowerCase()).toBe('label');
+    expect(labelElement).toHaveClass('sr-only');
+
+    // The text input should have correct ARIA label
+    const textInput = screen.getByLabelText('My Hidden Color Label Hex Code');
+    expect(textInput).toBeInTheDocument();
+  });
+
+  it('should construct accessible names cleanly and fallback correctly for empty or whitespace labels', () => {
+    const handleChange = vi.fn();
+    const { rerender } = render(
+      <ColorInput
+        id="test-empty-label"
+        label=""
+        value="#aabbcc"
+        onChange={handleChange}
+      />
+    );
+
+    // Text field should construct accessible name as fallback "Hex Code" with no broken text
+    expect(screen.getByLabelText('Hex Code')).toBeInTheDocument();
+
+    // Rerender with whitespace label
+    rerender(
+      <ColorInput
+        id="test-empty-label"
+        label="   "
+        value="#aabbcc"
+        onChange={handleChange}
+      />
+    );
+    expect(screen.getByLabelText('Hex Code')).toBeInTheDocument();
+  });
 });

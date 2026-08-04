@@ -192,7 +192,8 @@ export const LayoutControls: React.FC<LayoutControlsProps> = ({ config, onChange
             {hasBgOverride && (
               <ColorInput
                 id="templateBgColor"
-                label=""
+                label="Template Background Color"
+                hideLabel={true}
                 value={config.templateBgColor!}
                 onChange={(val) => onChange({ templateBgColor: val })}
               />
@@ -222,7 +223,8 @@ export const LayoutControls: React.FC<LayoutControlsProps> = ({ config, onChange
             {hasTextOverride && (
               <ColorInput
                 id="templateTextColor"
-                label=""
+                label="Template Text Color"
+                hideLabel={true}
                 value={config.templateTextColor!}
                 onChange={(val) => onChange({ templateTextColor: val })}
               />
