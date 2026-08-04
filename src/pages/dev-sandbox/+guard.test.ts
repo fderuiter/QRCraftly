@@ -11,7 +11,7 @@ describe('Developer Sandbox Guard', () => {
   });
 
   it('blocks access in production mode by throwing a Vike 404 abort error', () => {
-    vi.stubEnv('PROD', 'true');
+    vi.stubEnv('PROD', true);
 
     let thrownError: any = null;
     try {
@@ -33,7 +33,7 @@ describe('Developer Sandbox Guard', () => {
 
   it('allows silent execution and normal routing in development mode', () => {
     // Setting PROD to empty string evaluates import.meta.env.PROD to false
-    vi.stubEnv('PROD', '');
+    vi.stubEnv('PROD', false);
 
     expect(() => guard()).not.toThrow();
   });
