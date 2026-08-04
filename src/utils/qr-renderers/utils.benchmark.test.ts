@@ -39,7 +39,7 @@ describe('Performance Benchmark: getIsCoveredByLogo', () => {
     console.log(`Average time per iteration: ${(duration / iterations).toFixed(4)}ms`);
     console.log(`Average time per call: ${(duration / (iterations * moduleCount * moduleCount)).toFixed(6)}ms\n`);
 
-    // Ensure it runs reasonably fast (this assertion is loose, just to ensure it runs)
-    expect(duration).toBeGreaterThan(0);
+    // Ensure it runs within the calibrated timing budget to prevent performance regressions
+    expect(duration).toBeLessThan(600);
   }, 10000);
 });
