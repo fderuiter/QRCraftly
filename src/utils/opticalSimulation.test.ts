@@ -121,5 +121,103 @@ describe('Optical Simulation Utility Math', () => {
         expect(blurred.length).toBe(size * size * 4);
       });
     });
+
+    it('contains a non-uniform gradient test case that fails if green and blue channels are transposed', () => {
+      // Create a 3x3 image with a non-uniform gradient.
+      // 3x3 has 9 pixels, which requires 36 elements in Uint8ClampedArray.
+      const width = 3;
+      const height = 3;
+      const pixels = new Uint8ClampedArray(width * height * 4);
+      
+      // Seed with distinct, non-uniform color gradients
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          const idx = (y * width + x) * 4;
+          pixels[idx]     = (x + 1) * 10 + (y + 1) * 5;    // Red
+          pixels[idx + 1] = (x + 1) * 20 + (y + 1) * 15;   // Green (distinct)
+          pixels[idx + 2] = (x + 1) * 5 + (y + 1) * 30;    // Blue (distinct)
+          pixels[idx + 3] = (x + 1) * 12 + (y + 1) * 18;   // Non-uniform Alpha (should be preserved)
+        }
+      }
+
+      // Compute horizontal blur manually for this non-uniform gradient
+      const temp = new Uint8ClampedArray(pixels.length);
+      const blurRadius = 1;
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          let r = 0, g = 0, b = 0, count = 0;
+          for (let k = -blurRadius; k <= blurRadius; k++) {
+            const px = x + k;
+            if (px >= 0 && px < width) {
+              const idx = (y * width + px) * 4;
+              r += pixels[idx];
+              g += pixels[idx + 1];
+              b += pixels[idx + 2];
+              count++;
+            }
+          }
+          const outIdx = (y * width + x) * 4;
+          temp[outIdx] = r / count;
+          temp[outIdx + 1] = g / count;
+          temp[outIdx + 2] = b / count;
+          temp[outIdx + 3] = pixels[outIdx + 3];
+        }
+      }
+
+      // Compute vertical blur manually
+      const expected = new Uint8ClampedArray(pixels.length);
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          let r = 0, g = 0, b = 0, count = 0;
+          for (let k = -blurRadius; k <= blurRadius; k++) {
+            const py = y + k;
+            if (py >= 0 && py < height) {
+              const idx = (py * width + x) * 4;
+              r += temp[idx];
+              g += temp[idx + 1];
+              b += temp[idx + 2];
+              count++;
+            }
+          }
+          const outIdx = (y * width + x) * 4;
+          expected[outIdx] = r / count;
+          expected[outIdx + 1] = g / count;
+          expected[outIdx + 2] = b / count;
+          expected[outIdx + 3] = pixels[outIdx + 3];
+        }
+      }
+
+      // Run applyOpticalSimulationMath with noiseLevel = 0
+      const actual = applyOpticalSimulationMath(pixels, width, height, 0);
+
+      // Verify actual matches expected for both green and blue channels
+      for (let i = 0; i < pixels.length; i += 4) {
+        expect(actual[i]).toBeCloseTo(expected[i], 1);
+        expect(actual[i + 1]).toBeCloseTo(expected[i + 1], 1);
+        expect(actual[i + 2]).toBeCloseTo(expected[i + 2], 1);
+        expect(actual[i + 3]).toBe(expected[i + 3]); // Alpha must be preserved
+      }
+
+      // Construct a transposed version of expected where green and blue channels are swapped in the vertical pass
+      // (i.e. destination green gets vertical pass of blue channel, and destination blue gets vertical pass of green channel)
+      const transposed = new Uint8ClampedArray(expected.length);
+      for (let i = 0; i < expected.length; i += 4) {
+        transposed[i] = expected[i];
+        transposed[i + 1] = expected[i + 2]; // Transposed: green gets blue's value
+        transposed[i + 2] = expected[i + 1]; // Transposed: blue gets green's value
+        transposed[i + 3] = expected[i + 3];
+      }
+
+      // Verify that actual does NOT match transposed.
+      // This ensures that if the green and blue channels were transposed, this test would fail.
+      let isDifferent = false;
+      for (let i = 0; i < actual.length; i += 4) {
+        if (Math.abs(actual[i + 1] - transposed[i + 1]) > 1) {
+          isDifferent = true;
+          break;
+        }
+      }
+      expect(isDifferent).toBe(true);
+    });
   });
 });
