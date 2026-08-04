@@ -88,3 +88,8 @@ export const SYSTEM_LIMITS = {
   MAX_BUNDLE_SIZE_MB: 3,
   SUPPORTED_IMAGE_FORMATS: ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml']
 };
+
+/**
+ * The minimum WCAG AA color contrast threshold for readability and accessibility.
+ */
+export const MIN_CONTRAST_THRESHOLD = 4.5;
