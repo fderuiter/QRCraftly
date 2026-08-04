@@ -145,6 +145,62 @@ describe('Local Git-Diff Lineage Auditor', () => {
     });
   });
 
+  describe('Targeted Static Mapping and Lineage Validation', () => {
+    it('should maintain the correct new mappings', () => {
+      expect(MAPPING).toHaveProperty('src/utils/scannabilityWorker.ts', 'docs/public/SCALING.md');
+      expect(MAPPING).toHaveProperty('src/hooks/useTelemetry.ts', 'docs/public/COMPLIANCE.md');
+      expect(MAPPING).toHaveProperty('src/utils/security.ts', 'docs/public/SECURITY.md');
+    });
+
+    it('should fail validation when scannability worker is modified without scaling doc', () => {
+      const modifiedFiles = new Set(['src/utils/scannabilityWorker.ts']);
+      const missing = checkLineage(modifiedFiles);
+      expect(missing).toContainEqual({
+        codeFile: 'src/utils/scannabilityWorker.ts',
+        docFile: 'docs/public/SCALING.md'
+      });
+    });
+
+    it('should pass validation when scannability worker is modified with scaling doc', () => {
+      const modifiedFiles = new Set(['src/utils/scannabilityWorker.ts', 'docs/public/SCALING.md']);
+      const missing = checkLineage(modifiedFiles);
+      const hasScannabilityMissing = missing.some(m => m.codeFile === 'src/utils/scannabilityWorker.ts');
+      expect(hasScannabilityMissing).toBe(false);
+    });
+
+    it('should fail validation when telemetry hook is modified without compliance doc', () => {
+      const modifiedFiles = new Set(['src/hooks/useTelemetry.ts']);
+      const missing = checkLineage(modifiedFiles);
+      expect(missing).toContainEqual({
+        codeFile: 'src/hooks/useTelemetry.ts',
+        docFile: 'docs/public/COMPLIANCE.md'
+      });
+    });
+
+    it('should pass validation when telemetry hook is modified with compliance doc', () => {
+      const modifiedFiles = new Set(['src/hooks/useTelemetry.ts', 'docs/public/COMPLIANCE.md']);
+      const missing = checkLineage(modifiedFiles);
+      const hasTelemetryMissing = missing.some(m => m.codeFile === 'src/hooks/useTelemetry.ts');
+      expect(hasTelemetryMissing).toBe(false);
+    });
+
+    it('should fail validation when security utilities are modified without security doc', () => {
+      const modifiedFiles = new Set(['src/utils/security.ts']);
+      const missing = checkLineage(modifiedFiles);
+      expect(missing).toContainEqual({
+        codeFile: 'src/utils/security.ts',
+        docFile: 'docs/public/SECURITY.md'
+      });
+    });
+
+    it('should pass validation when security utilities are modified with security doc', () => {
+      const modifiedFiles = new Set(['src/utils/security.ts', 'docs/public/SECURITY.md']);
+      const missing = checkLineage(modifiedFiles);
+      const hasSecurityMissing = missing.some(m => m.codeFile === 'src/utils/security.ts');
+      expect(hasSecurityMissing).toBe(false);
+    });
+  });
+
   describe('Command-Line Arguments Parsing', () => {
     it('should extract positional file arguments and ignore flags', () => {
       const args = ['--verbose', 'src/types.ts', '--config', 'docs/public/SECURITY.md'];
