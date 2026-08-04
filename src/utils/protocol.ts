@@ -32,23 +32,82 @@ export const parseProtocol = (raw: string): ParsedProtocol | null => {
 
     // Special case for MATMSG which uses semicolons and a different format
     if (trimmed.toUpperCase().startsWith('MATMSG:')) {
-      const content = trimmed.substring(7).replace(/;+$/, '');
-      const parts = content.split(';');
+      const content = trimmed.substring(7);
+      
+      // Helper to split by unescaped semicolons (avoiding splitting on \;)
+      const splitByUnescapedSemicolons = (str: string): string[] => {
+        const result: string[] = [];
+        let current = '';
+        for (let i = 0; i < str.length; i++) {
+          const char = str[i];
+          if (char === ';') {
+            let backslashCount = 0;
+            let j = i - 1;
+            while (j >= 0 && str[j] === '\\') {
+              backslashCount++;
+              j--;
+            }
+            if (backslashCount % 2 === 0) {
+              result.push(current);
+              current = '';
+            } else {
+              current += ';';
+            }
+          } else {
+            current += char;
+          }
+        }
+        result.push(current);
+        return result;
+      };
+
+      const segments = splitByUnescapedSemicolons(content);
+      
+      // Pop empty/whitespace-only segments from the end
+      while (segments.length > 0 && segments[segments.length - 1].trim() === '') {
+        segments.pop();
+      }
+
+      const KNOWN_MATMSG_KEYS = new Set(['TO', 'SUB', 'BODY']);
       const params = new Map<string, string>();
       let path = '';
-      
-      parts.forEach(part => {
-        const splitIndex = part.indexOf(':');
-        if (splitIndex <= 0) return;
-        const key = part.substring(0, splitIndex).toUpperCase();
-        const value = part.substring(splitIndex + 1);
-        
-        if (key === 'TO') {
-          path = value;
-        } else {
-          params.set(key, value);
+
+      let activeKey: string | null = null;
+      let activeValue = '';
+
+      const flushActive = () => {
+        if (activeKey !== null) {
+          const unescapedValue = activeValue.replace(/\\;/g, ';');
+          if (activeKey === 'TO') {
+            path = unescapedValue;
+          } else {
+            params.set(activeKey, unescapedValue);
+          }
         }
-      });
+      };
+
+      for (const segment of segments) {
+        const colonIndex = segment.indexOf(':');
+        let parsedKeyVal: { key: string; value: string } | null = null;
+        if (colonIndex > 0) {
+          const potentialKey = segment.substring(0, colonIndex).toUpperCase();
+          if (KNOWN_MATMSG_KEYS.has(potentialKey)) {
+            parsedKeyVal = { key: potentialKey, value: segment.substring(colonIndex + 1) };
+          }
+        }
+
+        if (parsedKeyVal !== null) {
+          flushActive();
+          activeKey = parsedKeyVal.key;
+          activeValue = parsedKeyVal.value;
+        } else {
+          if (activeKey !== null && activeKey !== 'TO') {
+            activeValue += ';' + segment;
+          }
+        }
+      }
+      flushActive();
+
       return { scheme: 'matmsg', path, params };
     }
 
