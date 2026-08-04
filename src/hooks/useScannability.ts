@@ -36,6 +36,7 @@ export interface HealthScore {
 export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | null>, config: QRConfig) {
   const [status, setStatus] = useState<ScannabilityStatus>('idle');
   const workerRef = useRef<Worker | null>(null);
+  const sequenceRef = useRef<number>(0);
   const store = useQRStore();
   const { engine } = useCapabilities();
 
@@ -61,7 +62,13 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
           assertWorkerResponse(e.data);
         }
 
-        const { success, physicalReady, error } = e.data;
+        const { success, physicalReady, error, configId } = e.data;
+
+        // Sequence ID check: discard if configId does not match current sequence ID
+        if (configId !== String(sequenceRef.current)) {
+          return;
+        }
+
         setStatus(success ? (physicalReady ? 'physical-pass' : 'digital-pass') : 'fail');
 
         if (!success && error) {
@@ -109,6 +116,8 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
     if (!worker) return;
 
     setStatus('checking');
+    sequenceRef.current += 1;
+    const currentSequence = String(sequenceRef.current);
     
     // If virtual renderer provided deterministic image data, use it directly
     if (overrideImageData) {
@@ -117,6 +126,7 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
         width: overrideImageData.width,
         height: overrideImageData.height,
         isTest: !!navigator.webdriver,
+        configId: currentSequence,
       };
       try {
         assertWorkerRequest(payload);
@@ -154,6 +164,7 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
           width: canvas.width,
           height: canvas.height,
           isTest: !!navigator.webdriver,
+          configId: currentSequence,
         };
         assertWorkerRequest(payload);
         worker.postMessage(payload, [payload.imageData.data.buffer]);
