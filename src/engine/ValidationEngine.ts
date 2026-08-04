@@ -210,10 +210,11 @@ export const ValidationEngine = {
   /**
    * Cleans a phone number by stripping any characters that are not digits, symbols, or formatting markers.
    * @param number - The raw phone number string.
+   * @param preserveSemicolonComma - Whether to preserve semicolons and commas (for isolated configurations).
    * @returns The cleaned phone number string.
    */
-  cleanPhoneNumber(number: string): string {
-    return cleanPhoneNumber(number);
+  cleanPhoneNumber(number: string, preserveSemicolonComma: boolean = false): string {
+    return cleanPhoneNumber(number, preserveSemicolonComma);
   },
 
   /**

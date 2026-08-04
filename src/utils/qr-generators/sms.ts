@@ -24,7 +24,7 @@ import { ValidationEngine } from '../../engine/ValidationEngine';
  * Constructs the smsto string for SMS QR code.
  */
 export const constructSmsString = (data: SmsData): string => {
-  const cleanNumber = ValidationEngine.cleanPhoneNumber(data.number);
+  const cleanNumber = ValidationEngine.cleanPhoneNumber(data.number, true);
   const encodedBody = encodeURIComponent(data.message);
   return `sms:${cleanNumber}?body=${encodedBody}`;
 };
@@ -52,4 +52,15 @@ export const SmsContract: QRGeneratorContract<SmsData> = {
   construct: constructSmsString,
   hydrate: hydrateSmsData,
   matches: (raw: string) => ValidationEngine.identifyProtocol(raw) === QRType.SMS,
+  validate: (raw: string) => {
+    const violations: string[] = [];
+    const parsed = parseProtocol(raw);
+    if (parsed && (parsed.scheme === 'sms' || parsed.scheme === 'smsto')) {
+      const numberPart = parsed.path;
+      if (/[a-zA-Z]/.test(numberPart) || /[^0-9+*#\-().;,\s]/.test(numberPart) || /[\r\n]/.test(numberPart)) {
+        violations.push('SMS_PHONE_STRUCTURE_VIOLATION');
+      }
+    }
+    return violations;
+  },
 };

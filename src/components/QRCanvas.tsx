@@ -275,6 +275,8 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({ config, s
                   msg = 'Event start date/time is required.';
                 } else if (v === 'EVENT_CHRONOLOGICAL_VIOLATION') {
                   msg = 'Event end date/time cannot be before start date/time.';
+                } else if (v === 'SMS_PHONE_STRUCTURE_VIOLATION') {
+                  msg = 'SMS phone number contains invalid characters, letters, or line-breaks.';
                 }
                 return (
                   <p key={i} className="text-sm font-medium text-rose-700 dark:text-rose-400">
