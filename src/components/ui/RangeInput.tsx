@@ -65,7 +65,7 @@ export const RangeInput: React.FC<RangeInputProps> = ({
       <label htmlFor={id} className="block text-xs font-medium text-slate-500 dark:text-slate-400">
         {label}
       </label>
-      <span className="font-mono text-xs text-slate-500 dark:text-slate-400">
+      <span className="font-mono text-xs text-slate-500 dark:text-slate-400" aria-hidden="true">
         {formatValue(value)}
       </span>
     </div>

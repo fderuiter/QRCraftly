@@ -55,4 +55,30 @@ describe('RangeInput Component Accessibility', () => {
     // Verify range input itself does NOT suppress default focus ring
     expect(rangeInput).not.toHaveClass('focus-visible:ring-0');
   });
+
+  it('should hide the visual numeric value from assistive technologies while keeping the slider accessible', () => {
+    const handleChange = vi.fn();
+    render(
+      <RangeInput
+        id="test-range"
+        label="Test Range Label"
+        value={45}
+        min={0}
+        max={100}
+        step={1}
+        onChange={handleChange}
+        formatValue={(val) => `${val} units`}
+      />
+    );
+
+    // Find the visual numeric text element
+    const visualText = screen.getByText('45 units');
+    expect(visualText).toBeInTheDocument();
+    expect(visualText).toHaveAttribute('aria-hidden', 'true');
+
+    // Find the slider input
+    const sliderInput = screen.getByRole('slider', { name: /test range label/i });
+    expect(sliderInput).toBeInTheDocument();
+    expect(sliderInput).toHaveAttribute('aria-valuetext', '45 units');
+  });
 });
