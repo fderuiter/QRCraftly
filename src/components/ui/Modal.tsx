@@ -1,4 +1,5 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { Button } from './Button';
 import { useScrollLock } from '../../hooks/useScrollLock';
@@ -48,9 +49,14 @@ export const Modal: React.FC<ModalProps> = ({
   dismissOnBackdropClick = false
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useScrollLock(isOpen);
-  useFocusTrap(containerRef, isOpen);
+  useFocusTrap(containerRef, isOpen && mounted);
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -60,7 +66,37 @@ export const Modal: React.FC<ModalProps> = ({
     return () => document.removeEventListener('keydown', handleEscape);
   }, [isOpen, onClose]);
 
+  // Sibling elements of the active modal must dynamically receive aria-hidden="true" when open
+  useEffect(() => {
+    if (!isOpen || !mounted) return;
+
+    const modalElement = containerRef.current;
+    if (!modalElement) return;
+
+    const originalStates = new Map<Element, string | null>();
+    const siblings = Array.from(document.body.children).filter(
+      (child) => child !== modalElement && !['SCRIPT', 'STYLE', 'LINK'].includes(child.tagName)
+    );
+
+    siblings.forEach((sibling) => {
+      originalStates.set(sibling, sibling.getAttribute('aria-hidden'));
+      sibling.setAttribute('aria-hidden', 'true');
+    });
+
+    return () => {
+      siblings.forEach((sibling) => {
+        const originalVal = originalStates.get(sibling);
+        if (originalVal === null || originalVal === undefined) {
+          sibling.removeAttribute('aria-hidden');
+        } else {
+          sibling.setAttribute('aria-hidden', originalVal);
+        }
+      });
+    };
+  }, [isOpen, mounted]);
+
   if (!isOpen) return null;
+  if (!mounted) return null;
 
   const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (dismissOnBackdropClick && e.target === e.currentTarget) {
@@ -68,7 +104,7 @@ export const Modal: React.FC<ModalProps> = ({
     }
   };
 
-  return (
+  return createPortal(
     <div 
       ref={containerRef}
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 transition-opacity" 
@@ -91,6 +127,7 @@ export const Modal: React.FC<ModalProps> = ({
           {children}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

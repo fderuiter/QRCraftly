@@ -6,22 +6,23 @@ import { Modal } from './Modal';
 
 describe('Modal Component Accessibility and Behavior', () => {
   it('should have zero accessibility violations when open', async () => {
-    const { container } = render(
+    render(
       <Modal isOpen={true} onClose={() => {}} title="Test Modal">
         <div>Modal Content</div>
       </Modal>
     );
-    const results = await axe(container);
+    const results = await axe(document.body);
     expect(results).toHaveNoViolations();
   });
 
   it('should not render anything when closed', () => {
-    const { container } = render(
+    render(
       <Modal isOpen={false} onClose={() => {}} title="Test Modal">
         <div>Modal Content</div>
       </Modal>
     );
-    expect(container).toBeEmptyDOMElement();
+    const backdrop = document.body.querySelector('[role="presentation"]');
+    expect(backdrop).toBeNull();
   });
 
   it('should close when Escape key is pressed', async () => {
@@ -103,22 +104,63 @@ describe('Modal Component Accessibility and Behavior', () => {
     document.body.removeChild(trigger);
   });
 
+  it('should dynamically set aria-hidden="true" on sibling elements when open and restore them on close', () => {
+    // Create a sibling element in document.body
+    const sibling1 = document.createElement('div');
+    sibling1.id = 'sibling1';
+    document.body.appendChild(sibling1);
+
+    const sibling2 = document.createElement('div');
+    sibling2.id = 'sibling2';
+    sibling2.setAttribute('aria-hidden', 'false');
+    document.body.appendChild(sibling2);
+
+    const { rerender } = render(
+      <Modal isOpen={true} onClose={() => {}} title="Test Modal">
+        <div>Modal Content</div>
+      </Modal>
+    );
+
+    // Verify modal itself (the presentation backdrop) does NOT have aria-hidden set on it by the sibling logic
+    const modalBackdrop = document.body.querySelector('[role="presentation"]') as HTMLElement;
+    expect(modalBackdrop).not.toHaveAttribute('aria-hidden');
+
+    // Sibling elements must have aria-hidden="true"
+    expect(sibling1).toHaveAttribute('aria-hidden', 'true');
+    expect(sibling2).toHaveAttribute('aria-hidden', 'true');
+
+    // Close the modal
+    rerender(
+      <Modal isOpen={false} onClose={() => {}} title="Test Modal">
+        <div>Modal Content</div>
+      </Modal>
+    );
+
+    // Sibling elements must be restored to their prior state
+    expect(sibling1).not.toHaveAttribute('aria-hidden');
+    expect(sibling2).toHaveAttribute('aria-hidden', 'false');
+
+    // Clean up
+    document.body.removeChild(sibling1);
+    document.body.removeChild(sibling2);
+  });
+
   describe('Backdrop and Decoupled Layout Behavior', () => {
     it('should assign role="dialog" and other dialog attributes to the inner card and role="presentation" to the outer backdrop', () => {
-      const { container } = render(
+      render(
         <Modal isOpen={true} onClose={() => {}} title="Test Modal">
           <div data-testid="inner-content">Modal Content</div>
         </Modal>
       );
 
       // The outer container has the backdrop classes and presentation role
-      const outerContainer = container.firstChild as HTMLElement;
+      const outerContainer = document.body.querySelector('[role="presentation"]') as HTMLElement;
       expect(outerContainer).toHaveClass('bg-black/50');
       expect(outerContainer).toHaveAttribute('role', 'presentation');
       expect(outerContainer).not.toHaveAttribute('role', 'dialog');
 
       // The inner content card has role="dialog", aria-modal="true", and references the title
-      const dialogCard = container.querySelector('[role="dialog"]') as HTMLElement;
+      const dialogCard = document.body.querySelector('[role="dialog"]') as HTMLElement;
       expect(dialogCard).toBeInTheDocument();
       expect(dialogCard).toHaveAttribute('aria-modal', 'true');
       expect(dialogCard).toHaveAttribute('aria-labelledby', 'modal-title');
@@ -127,26 +169,26 @@ describe('Modal Component Accessibility and Behavior', () => {
 
     it('should NOT dismiss when clicking the backdrop if dismissOnBackdropClick is false (default)', async () => {
       const handleClose = vi.fn();
-      const { container } = render(
+      render(
         <Modal isOpen={true} onClose={handleClose} title="Test Modal">
           <div data-testid="inner-content">Modal Content</div>
         </Modal>
       );
 
-      const backdrop = container.firstChild as HTMLElement;
+      const backdrop = document.body.querySelector('[role="presentation"]') as HTMLElement;
       await userEvent.click(backdrop);
       expect(handleClose).not.toHaveBeenCalled();
     });
 
     it('should dismiss when clicking the backdrop if dismissOnBackdropClick is true', async () => {
       const handleClose = vi.fn();
-      const { container } = render(
+      render(
         <Modal isOpen={true} onClose={handleClose} title="Test Modal" dismissOnBackdropClick={true}>
           <div data-testid="inner-content">Modal Content</div>
         </Modal>
       );
 
-      const backdrop = container.firstChild as HTMLElement;
+      const backdrop = document.body.querySelector('[role="presentation"]') as HTMLElement;
       await userEvent.click(backdrop);
       expect(handleClose).toHaveBeenCalledTimes(1);
     });
