@@ -25,6 +25,59 @@ describe('protocol parser', () => {
     expect(parsed!.params.get('BODY')).toBe('Hello');
   });
 
+  describe('MATMSG compliant escaped parser with generic tag lookahead', () => {
+    it('un-escapes escaped semicolons (\\;) inside field values', () => {
+      const rawMatmsg = 'MATMSG:TO:test@example.com;SUB:Hello \\; World;BODY:Keep \\; escaping;;';
+      const parsed = parseProtocol(rawMatmsg);
+      expect(parsed).not.toBeNull();
+      expect(parsed!.path).toBe('test@example.com');
+      expect(parsed!.params.get('SUB')).toBe('Hello ; World');
+      expect(parsed!.params.get('BODY')).toBe('Keep ; escaping');
+    });
+
+    it('handles unescaped semicolons followed by non-protocol text in active fields (recombination)', () => {
+      const rawMatmsg = 'MATMSG:TO:test@example.com;BODY:Hello; World; This is still the body;';
+      const parsed = parseProtocol(rawMatmsg);
+      expect(parsed).not.toBeNull();
+      expect(parsed!.path).toBe('test@example.com');
+      expect(parsed!.params.get('BODY')).toBe('Hello; World; This is still the body');
+    });
+
+    it('correctly parses legacy inputs with standard delimiters', () => {
+      const rawMatmsg = 'MATMSG:TO:test@example.com;SUB:Hello;';
+      const parsed = parseProtocol(rawMatmsg);
+      expect(parsed).not.toBeNull();
+      expect(parsed!.path).toBe('test@example.com');
+      expect(parsed!.params.get('SUB')).toBe('Hello');
+      expect(parsed!.params.get('BODY')).toBeUndefined();
+    });
+
+    it('handles case-insensitivity of protocol keys', () => {
+      const rawMatmsg = 'matmsg:to:test@example.com;sub:Hello;body:Test;';
+      const parsed = parseProtocol(rawMatmsg);
+      expect(parsed).not.toBeNull();
+      expect(parsed!.path).toBe('test@example.com');
+      expect(parsed!.params.get('SUB')).toBe('Hello');
+      expect(parsed!.params.get('BODY')).toBe('Test');
+    });
+
+    it('handles trailing escaped semicolons correctly', () => {
+      const rawMatmsg = 'MATMSG:TO:test@example.com;BODY:Hello \\;;';
+      const parsed = parseProtocol(rawMatmsg);
+      expect(parsed).not.toBeNull();
+      expect(parsed!.path).toBe('test@example.com');
+      expect(parsed!.params.get('BODY')).toBe('Hello ;');
+    });
+
+    it('does not crash or get corrupted on empty or malformed inputs', () => {
+      const rawMatmsg = 'MATMSG:';
+      const parsed = parseProtocol(rawMatmsg);
+      expect(parsed).not.toBeNull();
+      expect(parsed!.path).toBe('');
+      expect(parsed!.params.size).toBe(0);
+    });
+  });
+
   it('returns null when there is no colon in input', () => {
     expect(parseProtocol('http_no_colon_slash_slash_google.com')).toBeNull();
   });

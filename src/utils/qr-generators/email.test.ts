@@ -23,6 +23,15 @@ describe('Email generator', () => {
     });
   });
 
+  it('hydrates MATMSG format with escaped semicolons and lookahead recombination', () => {
+    const hydrated = hydrateEmailData('MATMSG:TO:test@example.com;SUB:Subject with \\; escaped semicolon;BODY:Hello; World; This is a trailing \\; escaped;');
+    expect(hydrated).toEqual({
+      email: 'test@example.com',
+      subject: 'Subject with ; escaped semicolon',
+      body: 'Hello; World; This is a trailing ; escaped'
+    });
+  });
+
   it('hydrates MATMSG format with invalid part', () => {
     const hydrated = hydrateEmailData('MATMSG:INVALID;;');
     expect(hydrated).toEqual({
