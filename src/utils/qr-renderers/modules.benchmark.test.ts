@@ -48,7 +48,8 @@ describe('Performance Benchmark: renderModules', () => {
     const end = performance.now();
 
     console.log(`${name} Total duration for ${iterations} iterations: ${(end - start).toFixed(2)}ms`);
-    expect(end - start).toBeGreaterThan(0);
+    // Ensure the execution time does not exceed the calibrated timing limit of 250ms
+    expect(end - start).toBeLessThan(250);
   };
 
   test('Benchmark HIVE execution time', () => runBenchmark(QRStyle.HIVE, 'HIVE'), 10000);

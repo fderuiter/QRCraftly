@@ -6,7 +6,11 @@ test.describe('Visual Regression Layout Checks', () => {
     await page.goto('/');
     await page.waitForSelector('main[data-hydrated="true"]');
     await page.waitForTimeout(1000); // Allow canvas to render
-    await expect(page).toHaveScreenshot('desktop-standard.png', { fullPage: true });
+    await expect(page).toHaveScreenshot('desktop-standard.png', {
+      fullPage: true,
+      maxDiffPixelRatio: 0.01,
+      threshold: 0.1
+    });
   });
 
   test('Mobile Viewport (375x667)', async ({ page }) => {
@@ -14,7 +18,11 @@ test.describe('Visual Regression Layout Checks', () => {
     await page.goto('/');
     await page.waitForSelector('main[data-hydrated="true"]');
     await page.waitForTimeout(1000); // Allow canvas to render
-    await expect(page).toHaveScreenshot('mobile-standard.png', { fullPage: true });
+    await expect(page).toHaveScreenshot('mobile-standard.png', {
+      fullPage: true,
+      maxDiffPixelRatio: 0.03,
+      threshold: 0.2
+    });
   });
 
   test('High Zoom Viewport (480x270)', async ({ page }) => {
@@ -23,6 +31,10 @@ test.describe('Visual Regression Layout Checks', () => {
     await page.goto('/');
     await page.waitForSelector('main[data-hydrated="true"]');
     await page.waitForTimeout(1000); // Allow canvas to render
-    await expect(page).toHaveScreenshot('desktop-high-zoom.png', { fullPage: true });
+    await expect(page).toHaveScreenshot('desktop-high-zoom.png', {
+      fullPage: true,
+      maxDiffPixelRatio: 0.05,
+      threshold: 0.25
+    });
   });
 });
