@@ -13,6 +13,10 @@ on:
         required: false
         type: boolean
         default: false
+    outputs:
+      deployment_url:
+        description: 'The URL of the deployed Cloudflare Pages site'
+        value: ${{ jobs.deploy.outputs.deployment_url }}
 
 permissions:
   contents: write
@@ -24,6 +28,8 @@ jobs:
   deploy:
     name: Deploy to Production
     runs-on: ubuntu-latest
+    outputs:
+      deployment_url: ${{ steps.cloudflare_deploy.outputs.deployment-url }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -164,8 +170,16 @@ jobs:
           fi
 
       - name: Deploy to Cloudflare Pages (IaC)
+        id: cloudflare_deploy
         uses: cloudflare/wrangler-action@9acf94ace14e7dc412b076f2c5c20b8ce93c79cd # v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: pages deploy dist/client --project-name=qrcraftly --branch=main
+
+      - name: Run Playwright Smoke Tests
+        env:
+          PLAYWRIGHT_TEST_BASE_URL: ${{ steps.cloudflare_deploy.outputs.deployment-url }}
+        run: |
+          pnpm exec playwright install --with-deps chromium
+          pnpm exec playwright test e2e/smoke.spec.ts --project=chromium
