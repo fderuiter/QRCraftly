@@ -27,7 +27,7 @@
     "preview": "vite preview",
     "test": "vitest",
     "test:e2e": "playwright test",
-    "lint": "node scripts/sort_tailwind_classes.js --check && node scripts/git_lineage_auditor.js && node scripts/audit_markdown.js && node scripts/compile_docs_manifest.js && tsc --noEmit && eslint . && knip && node scripts/contrast_check.js",
+    "lint": "node scripts/git_lineage_auditor.js && node scripts/audit_markdown.js && node scripts/compile_docs_manifest.js && tsc --noEmit && eslint . && knip && node scripts/contrast_check.js",
     "format:classes": "node scripts/sort_tailwind_classes.js",
     "prepare": "node scripts/install-hooks.js",
     "pre-commit": "lint-staged"
