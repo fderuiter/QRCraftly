@@ -20,7 +20,7 @@ export const drawQR = (
   const canvas = ctx.canvas;
 
   // Setup scaling
-  const pixelRatio = window.devicePixelRatio || 1;
+  const pixelRatio = typeof window !== 'undefined' ? (window.devicePixelRatio || 1) : 1;
   const displaySize = size;
   const rawSize = displaySize * pixelRatio;
 

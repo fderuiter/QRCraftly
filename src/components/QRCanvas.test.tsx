@@ -450,4 +450,25 @@ describe('QRCanvas Component', () => {
     expect(canvasElement).toBeInTheDocument();
     expect(canvasElement).toHaveStyle({ display: 'none' });
   });
+
+  it('handles window.devicePixelRatio and requestIdleCallback being undefined safely', async () => {
+    const originalRatio = window.devicePixelRatio;
+    const originalIdleCallback = (window as any).requestIdleCallback;
+
+    try {
+      // Temporarily set them to undefined
+      Object.defineProperty(window, 'devicePixelRatio', { value: undefined, configurable: true, writable: true });
+      delete (window as any).requestIdleCallback;
+
+      const { container } = render(<QRCanvas config={DEFAULT_CONFIG} size={100} />);
+      const canvasElement = container.querySelector('canvas');
+      expect(canvasElement).toBeInTheDocument();
+    } finally {
+      // Restore
+      Object.defineProperty(window, 'devicePixelRatio', { value: originalRatio, configurable: true, writable: true });
+      if (originalIdleCallback) {
+        (window as any).requestIdleCallback = originalIdleCallback;
+      }
+    }
+  });
 });
