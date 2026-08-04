@@ -132,4 +132,19 @@ describe('drawQR', () => {
     // Restore
     Object.defineProperty(window, 'devicePixelRatio', { value: originalRatio, configurable: true, writable: true });
   });
+
+  it('does not throw when window is completely undefined', () => {
+    const originalWindow = (globalThis as any).window;
+    try {
+      // Temporarily remove window from globalThis
+      (globalThis as any).window = undefined;
+
+      // Now call drawQR, it should not throw and should default scale to 1
+      drawQR(mockContext, mockModules, DEFAULT_CONFIG, null, null, 100);
+      expect(mockContext.scale).toHaveBeenCalledWith(1, 1);
+    } finally {
+      // Restore window
+      (globalThis as any).window = originalWindow;
+    }
+  });
 });
