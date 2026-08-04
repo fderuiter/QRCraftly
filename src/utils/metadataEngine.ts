@@ -54,8 +54,8 @@ export const resolvePublicUrl = (path: string): string => {
   return `${resolvedDomain}${finalPath}`;
 };
 
-export const resolveImageUrl = (imageConfig: string | undefined, path: string): string => {
-  const domain = resolveDomainForPath(path);
+export const resolveImageUrl = (imageConfig: string | undefined, _path: string): string => {
+  const domain = getPublicDomain();
   let imageUrl = `${domain}/og-image.png`;
 
   if (imageConfig) {
