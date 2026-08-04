@@ -65,7 +65,43 @@ export const scenarios = [
     {mode: 'Dark', element: 'Button', bg: 'white', fg: 'slate-900', text: 'Github Button', size: 'normal'},
 ];
 
+export function validateKeys(scenariosList, colorsDict) {
+    const missingKeys = new Set();
+    const safeScenarios = scenariosList || [];
+    const safeColors = colorsDict || {};
+
+    for (const s of safeScenarios) {
+        if (s.fg && !(s.fg in safeColors)) {
+            missingKeys.add(s.fg);
+        }
+        if (s.bg) {
+            if (Array.isArray(s.bg)) {
+                const overlayKey = s.bg[0];
+                const baseKey = s.bg[2];
+                if (overlayKey && !(overlayKey in safeColors)) {
+                    missingKeys.add(overlayKey);
+                }
+                if (baseKey && !(baseKey in safeColors)) {
+                    missingKeys.add(baseKey);
+                }
+            } else if (typeof s.bg === 'string') {
+                if (!(s.bg in safeColors)) {
+                    missingKeys.add(s.bg);
+                }
+            }
+        }
+    }
+    return Array.from(missingKeys);
+}
+
 export function runCheck() {
+    const missingKeys = validateKeys(scenarios, colors);
+    if (missingKeys.length > 0) {
+        console.error("Error: The following color keys referenced in contrast scenarios are missing from the colors dictionary:");
+        missingKeys.forEach(key => console.error(` - ${key}`));
+        process.exit(1);
+    }
+
     console.log(`${'Mode'.padEnd(6)} | ${'Element'.padEnd(20)} | ${'Contrast'.padEnd(8)} | ${'Pass?'.padEnd(6)} | ${'Level'.padEnd(5)} | Details`);
     console.log("-".repeat(80));
 
