@@ -169,25 +169,25 @@ describe('Advanced Template Settings (via StyleControls)', () => {
     expect(mockOnChange).toHaveBeenCalledWith({ templateQrScale: 0.75 });
   });
 
-  it('shows the Override template background color checkbox', () => {
+  it('shows the Override template background color switch', () => {
     const config: QRConfig = {
       ...(DEFAULT_CONFIG as QRConfig),
       templateStyle: TemplateStyle.SOLID_FRAME,
     };
     render(<StyleControls config={config} onChange={mockOnChange} />);
     expect(
-      screen.getByRole('checkbox', { name: /Override template background color/i })
+      screen.getByRole('switch', { name: /Override template background color/i })
     ).toBeInTheDocument();
   });
 
-  it('shows the Override template text color checkbox', () => {
+  it('shows the Override template text color switch', () => {
     const config: QRConfig = {
       ...(DEFAULT_CONFIG as QRConfig),
       templateStyle: TemplateStyle.SOLID_FRAME,
     };
     render(<StyleControls config={config} onChange={mockOnChange} />);
     expect(
-      screen.getByRole('checkbox', { name: /Override template text color/i })
+      screen.getByRole('switch', { name: /Override template text color/i })
     ).toBeInTheDocument();
   });
 
@@ -199,7 +199,7 @@ describe('Advanced Template Settings (via StyleControls)', () => {
       bgColor: '#aabbcc',
     };
     render(<StyleControls config={config} onChange={mockOnChange} />);
-    const checkbox = screen.getByRole('checkbox', { name: /Override template background color/i });
+    const checkbox = screen.getByRole('switch', { name: /Override template background color/i });
     await user.click(checkbox);
     expect(mockOnChange).toHaveBeenCalledWith({ templateBgColor: '#aabbcc' });
   });
@@ -212,8 +212,8 @@ describe('Advanced Template Settings (via StyleControls)', () => {
       templateBgColor: '#1a1a2e',
     };
     render(<StyleControls config={config} onChange={mockOnChange} />);
-    const checkbox = screen.getByRole('checkbox', { name: /Override template background color/i });
-    // Checkbox should be checked (override active)
+    const checkbox = screen.getByRole('switch', { name: /Override template background color/i });
+    // Switch should be checked (override active)
     expect(checkbox).toBeChecked();
     await user.click(checkbox);
     expect(mockOnChange).toHaveBeenCalledWith({ templateBgColor: undefined });
