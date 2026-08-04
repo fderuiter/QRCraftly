@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { hexToRgb, luminance, contrastRatio, blendColor } from '../scripts/contrast_check.js';
+import { hexToRgb, luminance, contrastRatio, blendColor, validateKeys } from '../scripts/contrast_check.js';
 
 describe('contrast_check', () => {
   describe('hexToRgb', () => {
@@ -57,6 +57,89 @@ describe('contrast_check', () => {
       expect(blendColor([0, 0, 255], [255, 0, 0], 0.0)).toEqual([255, 0, 0]);
       // Blue on Red at 100% opacity -> Blue
       expect(blendColor([0, 0, 255], [255, 0, 0], 1.0)).toEqual([0, 0, 255]);
+    });
+  });
+
+  describe('validateKeys', () => {
+    const mockColors = {
+      'white': '#ffffff',
+      'black': '#000000',
+      'slate-50': '#f8fafc',
+      'slate-900': '#0f172a',
+      'teal-100': '#ccfbf1',
+      'teal-700': '#0f766e',
+      'teal-900': '#134e4a',
+      'slate-800': '#1e293b'
+    };
+
+    it('should return empty array when all scenario colors exist in the colors dictionary', () => {
+      const mockScenarios = [
+        { mode: 'Light', element: 'Page Background', bg: 'slate-50', fg: 'slate-900', text: 'H1', size: 'large' },
+        { mode: 'Dark', element: 'Icon Teal', bg: ['teal-900', 0.3, 'slate-800'], fg: 'teal-100', text: 'Shield Icon', size: 'large' }
+      ];
+
+      const result = validateKeys(mockScenarios, mockColors);
+      expect(result).toEqual([]);
+    });
+
+    it('should identify a missing foreground color key', () => {
+      const mockScenarios = [
+        { mode: 'Light', element: 'Page Background', bg: 'slate-50', fg: 'missing-fg-key', text: 'H1', size: 'large' }
+      ];
+
+      const result = validateKeys(mockScenarios, mockColors);
+      expect(result).toEqual(['missing-fg-key']);
+    });
+
+    it('should identify a missing string background color key', () => {
+      const mockScenarios = [
+        { mode: 'Light', element: 'Page Background', bg: 'missing-bg-key', fg: 'slate-900', text: 'H1', size: 'large' }
+      ];
+
+      const result = validateKeys(mockScenarios, mockColors);
+      expect(result).toEqual(['missing-bg-key']);
+    });
+
+    it('should identify missing keys inside an array background configuration', () => {
+      const mockScenarios = [
+        { mode: 'Dark', element: 'Icon Teal', bg: ['missing-overlay', 0.3, 'slate-800'], fg: 'teal-100', text: 'Shield Icon', size: 'large' },
+        { mode: 'Dark', element: 'Icon Teal', bg: ['teal-900', 0.3, 'missing-base'], fg: 'teal-100', text: 'Shield Icon', size: 'large' }
+      ];
+
+      const result = validateKeys(mockScenarios, mockColors);
+      expect(result).toContain('missing-overlay');
+      expect(result).toContain('missing-base');
+      expect(result.length).toBe(2);
+    });
+
+    it('should compile all unique missing keys simultaneously', () => {
+      const mockScenarios = [
+        { mode: 'Light', element: 'Page Background', bg: 'missing-bg-1', fg: 'missing-fg-1', text: 'H1', size: 'large' },
+        { mode: 'Dark', element: 'Icon Teal', bg: ['missing-bg-2', 0.3, 'missing-bg-3'], fg: 'teal-100', text: 'Shield Icon', size: 'large' },
+        { mode: 'Light', element: 'Card', bg: 'missing-bg-1', fg: 'slate-900', text: 'Card H3', size: 'normal' } // Duplicate missing key
+      ];
+
+      const result = validateKeys(mockScenarios, mockColors);
+      expect(result).toContain('missing-bg-1');
+      expect(result).toContain('missing-fg-1');
+      expect(result).toContain('missing-bg-2');
+      expect(result).toContain('missing-bg-3');
+      expect(result.length).toBe(4);
+    });
+
+    it('should handle empty or missing scenarios list gracefully', () => {
+      expect(validateKeys(null, mockColors)).toEqual([]);
+      expect(validateKeys(undefined, mockColors)).toEqual([]);
+      expect(validateKeys([], mockColors)).toEqual([]);
+    });
+
+    it('should handle empty or missing colors dictionary gracefully by treating everything as missing', () => {
+      const mockScenarios = [
+        { mode: 'Light', element: 'Page Background', bg: 'slate-50', fg: 'slate-900', text: 'H1', size: 'large' }
+      ];
+      expect(validateKeys(mockScenarios, null)).toEqual(['slate-900', 'slate-50']);
+      expect(validateKeys(mockScenarios, undefined)).toEqual(['slate-900', 'slate-50']);
+      expect(validateKeys(mockScenarios, {})).toEqual(['slate-900', 'slate-50']);
     });
   });
 });
