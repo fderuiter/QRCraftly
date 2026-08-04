@@ -1,5 +1,6 @@
 import React, { useRef, useMemo, useEffect } from 'react';
 import { Button } from '../ui/Button';
+import { Card } from '../ui/Card';
 import { QRConfig, BorderStyle, BorderTextPosition, BorderLogoPosition } from '../../types';
 import { Upload, X } from 'lucide-react';
 import { getContrastRatio } from '../../utils/colorUtils';
@@ -69,7 +70,7 @@ export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange
   const isLowBorderContrast = borderTextContrast < MIN_CONTRAST_THRESHOLD;
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/50">
+    <Card variant="control">
       <div className="mb-4 flex items-center justify-between">
         <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Border</h3>
         <ToggleSwitch
@@ -214,6 +215,6 @@ export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange
           </div>
         </div>
       )}
-    </div>
+    </Card>
   );
 };

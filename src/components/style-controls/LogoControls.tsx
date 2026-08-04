@@ -1,5 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { Button } from '../ui/Button';
+import { Card } from '../ui/Card';
 import { QRConfig, LogoPaddingStyle } from '../../types';
 import { Upload, X, Square, Circle, Minus } from 'lucide-react';
 import { ColorInput } from '../ui/ColorInput';
@@ -76,7 +77,7 @@ export const LogoControls: React.FC<LogoControlsProps> = ({ config, onChange }) 
           {error && <span id="logo-upload-error" role="alert" className="mt-2 text-xs text-rose-700 dark:text-rose-400">{error}</span>}
         </Button>
       ) : (
-        <div className="space-y-5 rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/50">
+        <Card variant="control" className="space-y-5">
           <div className="flex items-center gap-4">
             <img src={config.logoUrl} alt="Custom Brand Graphic" width={48} height={48} className="size-12 rounded-md border border-slate-200 bg-white object-contain shadow-sm" />
             <div className="flex-1">
@@ -161,7 +162,7 @@ export const LogoControls: React.FC<LogoControlsProps> = ({ config, onChange }) 
               formatValue={(val) => `${(val * 100).toFixed(0)}%`}
             />
           </div>
-        </div>
+        </Card>
       )}
       <input
         ref={fileInputRef}
