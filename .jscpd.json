@@ -1,0 +1,13 @@
+{
+  "threshold": 1.0,
+  "minLines": 5,
+  "minTokens": 45,
+  "ignore": [
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/__tests__/**",
+    "**/mocks/**",
+    "**/sandbox/**",
+    "src/pages/**/*"
+  ]
+}

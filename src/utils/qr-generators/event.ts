@@ -23,9 +23,9 @@ import {
   escapeVCardEvent,
   unescapeVCardEvent,
   foldString,
-  unfoldString,
   formatEventDateTime,
   parseEventDateTime,
+  parseRFCProperties,
 } from './rfcHelper';
 
 /**
@@ -42,21 +42,12 @@ export const hydrateEventData = (raw: string): EventData => {
 
   if (!raw.includes('BEGIN:VEVENT')) return result;
 
-  const unfolded = unfoldString(raw);
-  const lines = unfolded.split(/\r\n|\r|\n/);
-  lines.forEach(line => {
-    const splitIndex = line.indexOf(':');
-    if (splitIndex <= 0) return;
-    
-    const fullKey = line.substring(0, splitIndex);
-    const key = fullKey.split(';')[0].toUpperCase();
-    const value = line.substring(splitIndex + 1);
-    const keyParams = fullKey.substring(key.length);
-
+  const properties = parseRFCProperties(raw);
+  properties.forEach(({ key, value, params }) => {
     switch(key) {
       case 'SUMMARY': result.title = unescapeVCardEvent(value); break;
-      case 'DTSTART': result.startDate = parseEventDateTime(value, keyParams); break;
-      case 'DTEND': result.endDate = parseEventDateTime(value, keyParams); break;
+      case 'DTSTART': result.startDate = parseEventDateTime(value, params); break;
+      case 'DTEND': result.endDate = parseEventDateTime(value, params); break;
       case 'LOCATION': result.location = unescapeVCardEvent(value); break;
       case 'DESCRIPTION': result.description = unescapeVCardEvent(value); break;
     }
