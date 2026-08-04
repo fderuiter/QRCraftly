@@ -66,8 +66,6 @@ export default defineConfig(() => {
               exclude: [
                 '**/*.test.tsx',
                 'src/hooks/**/*.test.ts',
-                'src/utils/useQRDownload.test.ts',
-                'src/utils/hooks.test.ts',
                 'src/utils/scannabilityWorker.test.ts',
                 'src/utils/qrRenderer.test.ts',
                 'tests/telemetry.test.ts',
@@ -86,8 +84,6 @@ export default defineConfig(() => {
               include: [
                 '**/*.test.tsx',
                 'src/hooks/**/*.test.ts',
-                'src/utils/useQRDownload.test.ts',
-                'src/utils/hooks.test.ts',
                 'src/utils/scannabilityWorker.test.ts',
                 'src/utils/qrRenderer.test.ts',
                 'tests/telemetry.test.ts',
@@ -118,7 +114,6 @@ export default defineConfig(() => {
             'src/utils/svgContext.ts',
             'src/utils/svgExport.ts',
             'src/utils/templateRenderer.ts',
-            'src/utils/useQRDownload.ts',
           ],
         }
       },

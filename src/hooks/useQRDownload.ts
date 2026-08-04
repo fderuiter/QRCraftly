@@ -18,16 +18,28 @@
 
 import { RefObject, useCallback } from 'react';
 import { QRConfig } from '../types';
-import { generateQRSvg } from './svgExport';
-import { useCapabilities } from '../hooks/useCapabilities';
+import { generateQRSvg } from '../utils/svgExport';
+import { useCapabilities } from './useCapabilities';
 
 /**
  * Return type for the useQRDownload hook.
  */
 export interface ExportStatus {
+  /**
+   *
+   */
   success: boolean;
+  /**
+   *
+   */
   format?: 'png' | 'jpeg' | 'webp' | 'svg' | 'clipboard' | 'share';
+  /**
+   *
+   */
   error?: any;
+  /**
+   *
+   */
   fallbackTriggered?: boolean;
 }
 
@@ -35,17 +47,31 @@ export interface ExportStatus {
  * Return type for the useQRDownload hook.
  */
 interface UseQRDownloadReturn {
+  /**
+   *
+   */
   downloadToDevice: (format: 'png' | 'jpeg' | 'webp') => Promise<ExportStatus>;
+  /**
+   *
+   */
   handleSaveAs: (format: 'png' | 'jpeg' | 'webp') => Promise<ExportStatus>;
+  /**
+   *
+   */
   handleSaveSvg: () => Promise<ExportStatus>;
+  /**
+   *
+   */
   handleShare: () => Promise<ExportStatus>;
+  /**
+   *
+   */
   handleCopy: () => Promise<ExportStatus>;
 }
 
 /**
  * Hook to handle downloading, sharing, and copying of the QR code.
  * Extracts this logic from the main component to reduce cognitive load.
- *
  * @param qrRef Reference to the container element containing the canvas.
  * @param config Current QR configuration (used for filename generation).
  * @returns Object containing download and share handlers.

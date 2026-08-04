@@ -16,12 +16,11 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { useState, useEffect, RefObject } from 'react';
+import { useEffect, RefObject } from 'react';
 
 /**
  * Hook to handle clicks outside of a specified element.
  * Useful for closing dropdowns, modals, and menus.
- *
  * @param ref The ref of the element to detect outside clicks for.
  * @param handler Callback fired when an outside click occurs.
  * @param isActive Boolean indicating if the listener should be attached. Defaults to true.
@@ -51,65 +50,3 @@ export function useOnClickOutside<T extends HTMLElement>(
     };
   }, [ref, handler, isActive]);
 }
-
-/**
- * A hook that returns a debounced value.
- * The value will only update after the specified delay has passed without the value changing.
- *
- * @param value The value to debounce.
- * @param delay The delay in milliseconds.
- * @returns The debounced value.
- */
-export function useDebounce<T>(value: T, delay: number): T {
-  const [debouncedValue, setDebouncedValue] = useState<T>(value);
-
-  useEffect(() => {
-    // Set a timeout to update the debounced value after the delay
-    const handler = setTimeout(() => {
-      setDebouncedValue(value);
-    }, delay);
-
-    // Clear the timeout if the value changes (or the component unmounts)
-    // This effectively resets the timer
-    return () => {
-      clearTimeout(handler);
-    };
-  }, [value, delay]);
-
-  return debouncedValue;
-}
-
-/**
- * Hook to load an image asynchronously.
- * Returns the HTMLImageElement once loaded, or null.
- */
-export const useImage = (url: string | null) => {
-  const [image, setImage] = useState<HTMLImageElement | null>(null);
-
-  useEffect(() => {
-    if (!url) {
-      setImage(null);
-      return;
-    }
-
-    const img = new Image();
-    img.crossOrigin = 'Anonymous';
-    img.src = url;
-
-    // If image is already cached and loaded immediately
-    if (img.complete && img.naturalHeight !== 0) {
-        setImage(img);
-        return;
-    }
-
-    img.onload = () => setImage(img);
-    img.onerror = () => setImage(null);
-
-    return () => {
-      img.onload = null;
-      img.onerror = null;
-    };
-  }, [url]);
-
-  return image;
-};
