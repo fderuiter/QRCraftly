@@ -43,6 +43,10 @@ interface ColorInputProps {
    *
    */
   error?: string;
+  /**
+   *
+   */
+  hideLabel?: boolean;
 }
 
 /**
@@ -57,6 +61,7 @@ interface ColorInputProps {
  * @param root0.title
  * @param root0.disabled
  * @param root0.error
+ * @param root0.hideLabel
  */
 export const ColorInput: React.FC<ColorInputProps> = ({
   id,
@@ -67,7 +72,8 @@ export const ColorInput: React.FC<ColorInputProps> = ({
   sizeClass = "w-10 h-10",
   title,
   disabled = false,
-  error
+  error,
+  hideLabel = false,
 }) => {
   const [textValue, setTextValue] = useState(displayValue || value);
   const textValueRef = useRef(textValue);
@@ -103,6 +109,7 @@ export const ColorInput: React.FC<ColorInputProps> = ({
   };
 
   const errorId = error ? `${id}-error` : undefined;
+  const cleanLabel = label?.trim();
 
   return (
     <FieldWrapper
@@ -110,6 +117,7 @@ export const ColorInput: React.FC<ColorInputProps> = ({
       label={label}
       error={error}
       errorId={errorId}
+      labelClassName={hideLabel ? "sr-only" : undefined}
     >
       <div className="-m-1 flex items-center gap-2 rounded-lg p-1">
         <input
@@ -134,7 +142,7 @@ export const ColorInput: React.FC<ColorInputProps> = ({
             "w-24 rounded border border-transparent bg-transparent px-1 py-0.5 font-mono text-xs text-slate-600 transition-colors hover:border-slate-300 dark:text-slate-300 disabled:opacity-50 disabled:cursor-not-allowed",
             error ? ERROR_INPUT_CLASSES : undefined
           )}
-          aria-label={label ? `${label} Hex Code` : "Hex Code"}
+          aria-label={cleanLabel ? `${cleanLabel} Hex Code` : "Hex Code"}
           aria-invalid={!!error}
           aria-describedby={error ? errorId : undefined}
         />
