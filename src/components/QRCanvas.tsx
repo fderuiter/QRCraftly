@@ -103,7 +103,7 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({ config, s
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const pixelRatio = window.devicePixelRatio || 1;
+    const pixelRatio = typeof window !== 'undefined' ? (window.devicePixelRatio || 1) : 1;
     const useTemplate =
       config.templateStyle !== TemplateStyle.NONE ||
       config.socialFormat !== SocialFormat.SQUARE_1_1;
@@ -222,7 +222,7 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({ config, s
         }
       };
 
-      if ('requestIdleCallback' in window) {
+      if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
         (window as any).requestIdleCallback(runVirtualRender);
       } else {
         setTimeout(runVirtualRender, 50);

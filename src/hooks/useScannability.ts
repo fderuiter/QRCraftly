@@ -163,7 +163,7 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
       }
     };
 
-    if ('requestIdleCallback' in window) {
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
       (window as any).requestIdleCallback(readAndSend);
     } else {
       setTimeout(readAndSend, 100);
