@@ -120,5 +120,17 @@ describe('metadataEngine', () => {
       vi.stubEnv('VITE_DOMAIN', 'https://qrcraftly.com');
       expect(resolveImageUrl('custom-og.png', '/about')).toBe('https://qrcraftly.com/custom-og.png');
     });
+
+    it('forces subdomain page path metadata to resolve static Open Graph assets from the root public domain', () => {
+      vi.stubEnv('VITE_DOMAIN', 'https://qrcraftly.com');
+      expect(resolveImageUrl(undefined, '/_subdomain/tenant1/about')).toBe('https://qrcraftly.com/og-image.png');
+      expect(resolveImageUrl('/custom-og.png', '/_subdomain/tenant1/about')).toBe('https://qrcraftly.com/custom-og.png');
+      expect(resolveImageUrl('custom-og.png', '/_subdomain/tenant1/about')).toBe('https://qrcraftly.com/custom-og.png');
+    });
+
+    it('keeps absolute imageUrl untouched on subdomain page path', () => {
+      vi.stubEnv('VITE_DOMAIN', 'https://qrcraftly.com');
+      expect(resolveImageUrl('https://externalsite.com/img.png', '/_subdomain/tenant1/about')).toBe('https://externalsite.com/img.png');
+    });
   });
 });
