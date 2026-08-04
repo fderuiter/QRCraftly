@@ -16,37 +16,25 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import QRTool from '@/components/QRTool';
-import { DEFAULT_CONFIG } from '@/constants';
+import { QRTypePage } from '@/components/QRTypePage';
 import { QRType } from '@/types';
 import { contentRegistry } from '@/data/contentRegistry';
 import { generateSchema } from '@/utils/schemaGenerator';
 import { resolveDomainForPath } from '@/utils/metadataEngine';
-import { JsonLdScript } from '@/components/ui/JsonLdScript';
 import { usePageContext } from 'vike-react/usePageContext';
 
 /**
  * WiFi QR Code Page Component
  *
  * A specialized landing page that pre-configures the `QRTool` for WiFi QR code generation.
- * This can be used for SEO landing pages or direct links to specific functionality.
+ * This delegates page rendering and script injection to QRTypePage.
  * @returns The WiFi QR code page layout.
  */
 export default function Page() {
   const pageContext = usePageContext();
   const urlPathname = pageContext?.urlPathname ?? '/wifi-qr-code';
   const resolvedDomain = resolveDomainForPath(urlPathname);
-  const wifiConfig = {
-    ...DEFAULT_CONFIG,
-    type: QRType.WIFI,
-  };
-
   const schemaData = generateSchema(contentRegistry['wifi-qr-code'], resolvedDomain, urlPathname);
 
-  return (
-    <>
-      <JsonLdScript data={schemaData} />
-      <QRTool initialConfig={wifiConfig} title="WiFi QR Code"  toolId="wifi-qr-code" />
-          </>
-  );
+  return <QRTypePage type={QRType.WIFI} title="WiFi QR Code" schemaData={schemaData} toolId="wifi-qr-code" />;
 }

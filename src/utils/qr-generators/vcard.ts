@@ -23,8 +23,8 @@ import {
   escapeVCardEvent,
   unescapeVCardEvent,
   foldString,
-  unfoldString,
   splitCompoundField,
+  parseRFCProperties,
 } from './rfcHelper';
 
 
@@ -48,17 +48,9 @@ export const hydrateVCardData = (raw: string): VCardData => {
 
   if (!raw.includes('BEGIN:VCARD')) return result;
 
-  const unfolded = unfoldString(raw);
-  const lines = unfolded.split(/\r\n|\r|\n/);
+  const properties = parseRFCProperties(raw);
 
-  lines.forEach(line => {
-    const splitIndex = line.indexOf(':');
-    if (splitIndex <= 0) return;
-    
-    const fullKey = line.substring(0, splitIndex);
-    const key = fullKey.split(';')[0].toUpperCase();
-    const value = line.substring(splitIndex + 1);
-
+  properties.forEach(({ key, value }) => {
     switch(key) {
       case 'N': {
         const nParts = splitCompoundField(value, ';');
@@ -119,23 +111,13 @@ export const VCardContract: QRGeneratorContract<VCardData> = {
   matches: (raw: string) => raw.includes('BEGIN:VCARD'),
   validate: (raw: string) => {
     const violations: string[] = [];
-    const unfolded = unfoldString(raw);
-    const lines = unfolded.split(/\r\n|\n|\r/);
-    for (const line of lines) {
-      if (line.toUpperCase().startsWith('URL:')) {
-        const vcardUrl = line.substring(4).trim();
+    const properties = parseRFCProperties(raw);
+    for (const { key, value } of properties) {
+      if (key === 'URL') {
+        const vcardUrl = value.trim();
         if (ValidationEngine.isDangerousUrl(vcardUrl)) {
           violations.push('URI_INJECTION_VIOLATION');
           break;
-        }
-      } else if (line.toUpperCase().startsWith('URL;')) {
-        const splitIndex = line.indexOf(':');
-        if (splitIndex > 0) {
-          const vcardUrl = line.substring(splitIndex + 1).trim();
-          if (ValidationEngine.isDangerousUrl(vcardUrl)) {
-            violations.push('URI_INJECTION_VIOLATION');
-            break;
-          }
         }
       }
     }

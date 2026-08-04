@@ -18,6 +18,7 @@
 
 import React from 'react';
 import { Button } from '../ui/Button';
+import { Card } from '../ui/Card';
 import { Square, Smartphone } from 'lucide-react';
 import { QRConfig, SocialFormat, TemplateStyle } from '../../types';
 import { ColorInput } from '../ui/ColorInput';
@@ -96,7 +97,7 @@ export const LayoutControls: React.FC<LayoutControlsProps> = ({ config, onChange
   const isLowContrast = showAdvanced && contrastRatio < MIN_CONTRAST_THRESHOLD;
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/50">
+    <Card variant="control">
       <h3 className="mb-4 text-sm font-semibold text-slate-700 dark:text-slate-300">Export Layout</h3>
 
       {/* Aspect Ratio Selector */}
@@ -254,6 +255,6 @@ export const LayoutControls: React.FC<LayoutControlsProps> = ({ config, onChange
           />
         </div>
       )}
-    </div>
+    </Card>
   );
 };

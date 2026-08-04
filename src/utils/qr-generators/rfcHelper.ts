@@ -201,3 +201,30 @@ export const parseEventDateTime = (value: string, keyParams?: string): string =>
   }
   return value;
 };
+
+export interface RFCProperty {
+  key: string;
+  value: string;
+  params: string;
+}
+
+export function parseRFCProperties(raw: string): RFCProperty[] {
+  const unfolded = unfoldString(raw);
+  const lines = unfolded.split(/\r\n|\n|\r/);
+  const properties: RFCProperty[] = [];
+
+  for (const line of lines) {
+    const splitIndex = line.indexOf(':');
+    if (splitIndex <= 0) continue;
+
+    const fullKey = line.substring(0, splitIndex);
+    const key = fullKey.split(';')[0].toUpperCase();
+    const value = line.substring(splitIndex + 1);
+    const params = fullKey.substring(key.length);
+
+    properties.push({ key, value, params });
+  }
+
+  return properties;
+}
+

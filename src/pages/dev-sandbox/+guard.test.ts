@@ -32,7 +32,7 @@ describe('Developer Sandbox Guard', () => {
   });
 
   it('allows silent execution and normal routing in development mode', () => {
-    // Setting PROD to empty string evaluates import.meta.env.PROD to false
+    // Setting PROD to false evaluates import.meta.env.PROD to false
     vi.stubEnv('PROD', false);
 
     expect(() => guard()).not.toThrow();
