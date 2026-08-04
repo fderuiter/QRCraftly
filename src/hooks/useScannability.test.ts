@@ -25,41 +25,6 @@ import { DEFAULT_CONFIG } from '@/constants';
 import { QRConfig } from '@/types';
 
 // ---------------------------------------------------------------------------
-// Worker mock that lets us control message dispatching
-// ---------------------------------------------------------------------------
-type WorkerMessageHandler = (e: MessageEvent) => void;
-
-// Keep a reference to the most-recently created worker instance
-let activeWorker: MockWorkerInstance | null = null;
-
-class MockWorkerInstance {
-  private handlers: WorkerMessageHandler[] = [];
-  postMessage = vi.fn();
-  terminate = vi.fn();
-  addEventListener = vi.fn((_event: string, handler: WorkerMessageHandler) => {
-    this.handlers.push(handler);
-  });
-  removeEventListener = vi.fn((_event: string, handler: WorkerMessageHandler) => {
-    this.handlers = this.handlers.filter(h => h !== handler);
-  });
-  dispatchMessage(data: any) {
-    this.handlers.forEach(h => h({ data } as MessageEvent));
-  }
-}
-
-// A proper constructor function that records the created instance
-function MockWorkerConstructor(this: MockWorkerInstance) {
-  const inst = new MockWorkerInstance();
-  activeWorker = inst;
-  Object.assign(this, inst);
-  // Copy prototype methods
-  (this as any).dispatchMessage = inst.dispatchMessage.bind(inst);
-  (this as any).addEventListener = inst.addEventListener.bind(inst);
-  (this as any).removeEventListener = inst.removeEventListener.bind(inst);
-  (this as any).postMessage = inst.postMessage.bind(inst);
-}
-
-// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 const wrapper = ({ children }: { children: React.ReactNode }) =>
@@ -74,24 +39,21 @@ function makeCanvasRef(): React.RefObject<HTMLCanvasElement | null> {
   return { current: canvas };
 }
 
+// Active worker reference helper from our global mock worker control
+const getActiveWorker = () => globalThis.mockWorkerControl.activeWorker;
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 describe('useScannability - changed behavior: uses useQRStore instead of useQRContext', () => {
-  const OriginalWorker = globalThis.Worker;
 
   beforeEach(() => {
     window.localStorage.clear();
-    activeWorker = null;
-    // Replace the global Worker with our controllable constructor
-    globalThis.Worker = MockWorkerConstructor as any;
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
-    globalThis.Worker = OriginalWorker;
     window.localStorage.clear();
-    activeWorker = null;
   });
 
   it('throws when used outside QRProvider (uses useQRStore)', () => {
@@ -131,7 +93,7 @@ describe('useScannability - changed behavior: uses useQRStore instead of useQRCo
 
     // Simulate worker sending a failure
     act(() => {
-      activeWorker!.dispatchMessage({
+      getActiveWorker()!.dispatchMessage({
         success: false,
         physicalReady: false,
         error: 'NOT_FOUND',
@@ -165,7 +127,7 @@ describe('useScannability - changed behavior: uses useQRStore instead of useQRCo
     });
 
     act(() => {
-      activeWorker!.dispatchMessage({
+      getActiveWorker()!.dispatchMessage({
         success: true,
         physicalReady: true,
         error: null,
@@ -196,7 +158,7 @@ describe('useScannability - changed behavior: uses useQRStore instead of useQRCo
 
     // success=false but error is falsy - should not emit
     act(() => {
-      activeWorker!.dispatchMessage({
+      getActiveWorker()!.dispatchMessage({
         success: false,
         physicalReady: false,
         error: null,
@@ -218,7 +180,7 @@ describe('useScannability - changed behavior: uses useQRStore instead of useQRCo
     });
 
     act(() => {
-      activeWorker!.dispatchMessage({ success: false, physicalReady: false, error: 'NOT_FOUND', configId: '1' });
+      getActiveWorker()!.dispatchMessage({ success: false, physicalReady: false, error: 'NOT_FOUND', configId: '1' });
     });
 
     expect(result.current.status).toBe('fail');
@@ -235,7 +197,7 @@ describe('useScannability - changed behavior: uses useQRStore instead of useQRCo
     });
 
     act(() => {
-      activeWorker!.dispatchMessage({ success: true, physicalReady: false, error: null, configId: '1' });
+      getActiveWorker()!.dispatchMessage({ success: true, physicalReady: false, error: null, configId: '1' });
     });
 
     expect(result.current.status).toBe('digital-pass');
@@ -252,7 +214,7 @@ describe('useScannability - changed behavior: uses useQRStore instead of useQRCo
     });
 
     act(() => {
-      activeWorker!.dispatchMessage({ success: true, physicalReady: true, error: null, configId: '1' });
+      getActiveWorker()!.dispatchMessage({ success: true, physicalReady: true, error: null, configId: '1' });
     });
 
     expect(result.current.status).toBe('physical-pass');
@@ -278,7 +240,7 @@ describe('useScannability - changed behavior: uses useQRStore instead of useQRCo
     });
 
     act(() => {
-      activeWorker!.dispatchMessage({ success: false, physicalReady: false, error: 'DECODE_FAIL', configId: '1' });
+      getActiveWorker()!.dispatchMessage({ success: false, physicalReady: false, error: 'DECODE_FAIL', configId: '1' });
     });
 
     const detail = signalCallback.mock.calls[0][0];
@@ -306,7 +268,7 @@ describe('useScannability - changed behavior: uses useQRStore instead of useQRCo
     });
 
     act(() => {
-      activeWorker!.dispatchMessage({ success: false, physicalReady: false, error: 'FAIL', configId: '1' });
+      getActiveWorker()!.dispatchMessage({ success: false, physicalReady: false, error: 'FAIL', configId: '1' });
     });
 
     const detail = signalCallback.mock.calls[0][0];
@@ -320,7 +282,7 @@ describe('useScannability - changed behavior: uses useQRStore instead of useQRCo
       { wrapper, initialProps: { config: defaultConfig } }
     );
 
-    const workerAtMount = activeWorker!;
+    const workerAtMount = getActiveWorker()!;
 
     // Rerender with different config triggers cleanup and re-registration
     act(() => {
@@ -341,7 +303,7 @@ describe('useScannability - changed behavior: uses useQRStore instead of useQRCo
       { wrapper }
     );
 
-    const workerAtMount = activeWorker!;
+    const workerAtMount = getActiveWorker()!;
     const initialAddListenerCallCount = workerAtMount.addEventListener.mock.calls.length;
 
     // Update preferences (unrelated to config or store identity)
@@ -369,7 +331,7 @@ describe('useScannability - changed behavior: uses useQRStore instead of useQRCo
     act(() => {
       result.current.checkScannability(mockImageData);
     });
-    expect(activeWorker!.postMessage).toHaveBeenLastCalledWith(
+    expect(getActiveWorker()!.postMessage).toHaveBeenLastCalledWith(
       expect.objectContaining({ configId: '1' }),
       expect.any(Array)
     );
@@ -377,7 +339,7 @@ describe('useScannability - changed behavior: uses useQRStore instead of useQRCo
     act(() => {
       result.current.checkScannability(mockImageData);
     });
-    expect(activeWorker!.postMessage).toHaveBeenLastCalledWith(
+    expect(getActiveWorker()!.postMessage).toHaveBeenLastCalledWith(
       expect.objectContaining({ configId: '2' }),
       expect.any(Array)
     );
@@ -409,7 +371,7 @@ describe('useScannability - changed behavior: uses useQRStore instead of useQRCo
 
     // Simulate worker returning a message for ID '1' (stale)
     act(() => {
-      activeWorker!.dispatchMessage({
+      getActiveWorker()!.dispatchMessage({
         success: false,
         physicalReady: false,
         error: 'NOT_FOUND',
@@ -423,7 +385,7 @@ describe('useScannability - changed behavior: uses useQRStore instead of useQRCo
 
     // Now return ID '2' (active)
     act(() => {
-      activeWorker!.dispatchMessage({
+      getActiveWorker()!.dispatchMessage({
         success: true,
         physicalReady: true,
         error: null,
@@ -448,7 +410,7 @@ describe('useScannability - changed behavior: uses useQRStore instead of useQRCo
     });
 
     act(() => {
-      activeWorker!.dispatchMessage({
+      getActiveWorker()!.dispatchMessage({
         success: true,
         physicalReady: true,
         error: null,
