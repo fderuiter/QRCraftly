@@ -63,9 +63,13 @@ export const sanitizeInput = (str: string): string => {
  * This prevents injection of arbitrary characters into tel: or sms: URIs.
  *
  * @param number The phone number string to clean.
+ * @param preserveSemicolonComma Whether to preserve semicolons and commas (for isolated configurations).
  * @returns The cleaned phone number string.
  */
-export const cleanPhoneNumber = (number: string): string => {
+export const cleanPhoneNumber = (number: string, preserveSemicolonComma: boolean = false): string => {
+  if (preserveSemicolonComma) {
+    return number.replace(/[^0-9+*#\-().;,]/g, '');
+  }
   return number.replace(/[^0-9+*#\-().]/g, '');
 };
 

@@ -32,7 +32,7 @@ export const SmsInput: React.FC<SmsInputProps> = ({ data, onChange }) => {
         label="Phone Number"
         autoComplete="tel"
         type="tel"
-        maxLength={20}
+        maxLength={500}
         placeholder="+1 555 000 0000"
         value={data.number}
         onChange={(e) => onChange({ number: e.target.value })}

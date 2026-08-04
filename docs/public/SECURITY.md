@@ -29,3 +29,9 @@ Please use the [GitHub Security Advisory](https://github.com/fderuiter/QRCraftly
 *   **Out of Scope:**
     *   Physical security of the user's device.
     *   Browser-level vulnerabilities.
+
+## Phone Sanitization & Validation
+
+To prevent injection of arbitrary characters or command payloads into telephone or SMS QR codes, the application runs strict sanitization routines entirely on the client side:
+- **General Phone Validation**: By default, general telephone input values are cleaned to remove all non-numeric and non-standard telephone symbols. Characters like semicolons and commas are stripped.
+- **SMS Multi-Recipient Isolation**: To support advanced client-side SMS campaign configurations, the SMS generator uses an isolated sanitization option that preserves semicolons and commas, while rejecting letters, other symbols, and line-break control characters.
