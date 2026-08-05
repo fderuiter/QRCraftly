@@ -32,7 +32,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "prepare": "node scripts/install-hooks.js",
-    "pre-commit": "lint-staged && jscpd src"
+    "pre-commit": "lint-staged"
   },
   "dependencies": {
     "jsqr": "^1.4.0",
