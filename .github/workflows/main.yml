@@ -136,10 +136,26 @@ jobs:
           path: playwright-report/
           retention-days: 14
 
+  # JOB 4: Layout & Format Checks (Parallel)
+  layout:
+    name: Layout & Format Checks
+    needs: setup
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Environment
+        uses: ./.github/actions/setup
+
+      - name: Verify Layout Format
+        run: pnpm run format:check
+
   # JOB 5: Build Application
   build:
     name: Build & Artifact
-    needs: [quality, test, e2e] # Wait for quality checks before burning CPU on build
+    needs: [quality, test, e2e, layout] # Wait for quality checks before burning CPU on build
     runs-on: ubuntu-latest
     permissions:
       contents: read
