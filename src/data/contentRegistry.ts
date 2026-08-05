@@ -69,6 +69,35 @@ export const contentRegistry: Record<string, ToolContent> = {
       ]
     }
   },
+  "event-qr-code": {
+    "id": "event-qr-code",
+    "name": "Event QR Code Generator",
+    "url": getPublicDomain() + "/event-qr-code",
+    "description": "Create QR codes that save calendar events. Set title, date, location, and description. Ideal for invitations, RSVP, and scheduling.",
+    "features": [
+      "Generate Calendar Event QR",
+      "Secure Client-Side",
+      "Custom Design"
+    ],
+    "howTo": {
+      "name": "How to Create an Event QR Code",
+      "description": "Generate a QR code that prompts users to add an event to their calendar.",
+      "steps": [
+        {
+          "name": "Enter Event Details",
+          "text": "Fill in the event title, start and end date, location, and description."
+        },
+        {
+          "name": "Customize",
+          "text": "Choose a style and color for your QR code."
+        },
+        {
+          "name": "Download",
+          "text": "Download the image and share or print it."
+        }
+      ]
+    }
+  },
   "index": {
     "id": "index",
     "name": "QRCraftly",
@@ -109,6 +138,64 @@ export const contentRegistry: Record<string, ToolContent> = {
         "answer": "No, standard static QR codes do not expire."
       }
     ]
+  },
+  "location-qr-code": {
+    "id": "location-qr-code",
+    "name": "Location QR Code Generator",
+    "url": getPublicDomain() + "/location-qr-code",
+    "description": "Create QR codes that open maps and geographical locations. Set latitude and longitude. Ideal for navigation and sharing venue coordinates.",
+    "features": [
+      "Generate Location QR",
+      "Secure Client-Side",
+      "Custom Design"
+    ],
+    "howTo": {
+      "name": "How to Create a Location QR Code",
+      "description": "Generate a QR code that opens a location in maps.",
+      "steps": [
+        {
+          "name": "Enter Coordinates",
+          "text": "Input the latitude and longitude of the location."
+        },
+        {
+          "name": "Customize",
+          "text": "Adjust colors, patterns, and style to fit your design."
+        },
+        {
+          "name": "Download",
+          "text": "Save the QR code and use it on invites or signage."
+        }
+      ]
+    }
+  },
+  "meeting-qr-code": {
+    "id": "meeting-qr-code",
+    "name": "Meeting QR Code Generator",
+    "url": getPublicDomain() + "/meeting-qr-code",
+    "description": "Create QR codes that open virtual meeting invitations. Set the direct join URL. Compatible with Zoom, Teams, and Google Meet.",
+    "features": [
+      "Generate Virtual Meeting QR",
+      "Zoom/Teams/Meet Support",
+      "Secure Client-Side"
+    ],
+    "howTo": {
+      "name": "How to Create a Meeting QR Code",
+      "description": "Generate a QR code that directs users to a virtual meeting.",
+      "steps": [
+        {
+          "name": "Paste Meeting Link",
+          "text": "Copy and paste your virtual meeting invite URL."
+        },
+        {
+          "name": "Customize",
+          "text": "Choose patterns, colors, and add a center logo."
+        },
+        {
+          "name": "Download",
+          "text": "Save and distribute the QR code to your meeting attendees."
+        }
+      ]
+    }
   },
   "payment-qr-code": {
     "id": "payment-qr-code",
@@ -193,6 +280,35 @@ export const contentRegistry: Record<string, ToolContent> = {
         {
           "name": "Download",
           "text": "Download the image and share it."
+        }
+      ]
+    }
+  },
+  "social-qr-code": {
+    "id": "social-qr-code",
+    "name": "Social QR Code Generator",
+    "url": getPublicDomain() + "/social-qr-code",
+    "description": "Create QR codes that link directly to social media profiles. Set your platform and handle. Ideal for Instagram, Twitter, and TikTok.",
+    "features": [
+      "Generate Social Profile QR",
+      "Instagram/Twitter/TikTok Links",
+      "Secure Client-Side"
+    ],
+    "howTo": {
+      "name": "How to Create a Social QR Code",
+      "description": "Generate a QR code that links directly to your social profile.",
+      "steps": [
+        {
+          "name": "Select Platform & Handle",
+          "text": "Choose the social platform and enter your username or handle."
+        },
+        {
+          "name": "Customize",
+          "text": "Design your QR code with unique styles and colors."
+        },
+        {
+          "name": "Download & Share",
+          "text": "Save the QR code and place it on your social graphics or packaging."
         }
       ]
     }

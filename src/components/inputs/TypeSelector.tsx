@@ -39,6 +39,10 @@ const TYPE_ROUTES: Partial<Record<QRType, string>> = {
   [QRType.PHONE]: "/phone-qr-code",
   [QRType.SMS]: "/sms-qr-code",
   [QRType.PAYMENT]: "/payment-qr-code",
+  [QRType.EVENT]: "/event-qr-code",
+  [QRType.LOCATION]: "/location-qr-code",
+  [QRType.MEETING]: "/meeting-qr-code",
+  [QRType.SOCIAL]: "/social-qr-code",
 };
 
 const ITEMS = [
