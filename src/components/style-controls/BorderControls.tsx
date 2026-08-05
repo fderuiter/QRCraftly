@@ -135,11 +135,11 @@ export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange
               <div className="flex items-start gap-2">
                 <div className="flex-1">
                   <SelectField
-                    label="Position"
+                    id="border-text-position"
+                    label="Border text position"
                     labelClassName="sr-only"
                     value={config.borderTextPosition || 'bottom-center'}
                     onChange={(e) => onChange({ borderTextPosition: e.target.value as BorderTextPosition })}
-                    aria-label="Border text position"
                   >
                     <option value="top-center">Top Center</option>
                     <option value="bottom-center">Bottom Center</option>
@@ -201,11 +201,11 @@ export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange
             {config.borderLogoUrl && (
               <div className="mt-2">
                 <SelectField
-                  label="Logo Position"
+                  id="border-logo-position"
+                  label="Border logo position"
                   labelClassName="sr-only"
                   value={config.borderLogoPosition || 'bottom-center'}
                   onChange={(e) => onChange({ borderLogoPosition: e.target.value as BorderLogoPosition })}
-                  aria-label="Border logo position"
                 >
                   <option value="bottom-center">Bottom Center</option>
                   <option value="bottom-right">Bottom Right</option>

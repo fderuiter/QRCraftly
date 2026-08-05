@@ -155,4 +155,45 @@ describe('LayoutControls - Contrast Warnings', () => {
     fireEvent.change(headlineInput, { target: { value: 'New Scan' } });
     expect(mockOnChange).toHaveBeenCalledWith({ templateHeadline: 'New Scan' });
   });
+
+  it('has toggle switch programmatic names dynamically matching the visual state text ("Custom" or "Inherit")', () => {
+    const configInherit: QRConfig = {
+      ...(DEFAULT_CONFIG as QRConfig),
+      templateStyle: TemplateStyle.MINIMALIST,
+      templateBgColor: undefined,
+      templateTextColor: undefined,
+    };
+
+    const { rerender } = render(<LayoutControls config={configInherit} onChange={mockOnChange} />);
+
+    // Programmatic names should match "Inherit" when override is disabled
+    const bgSwitchInherit = screen.getByRole('switch', { name: /Override template background color - Inherit/i });
+    expect(bgSwitchInherit).toBeInTheDocument();
+    expect(bgSwitchInherit).toHaveAttribute('aria-label', 'Override template background color - Inherit');
+
+    const textSwitchInherit = screen.getByRole('switch', { name: /Override template text color - Inherit/i });
+    expect(textSwitchInherit).toBeInTheDocument();
+    expect(textSwitchInherit).toHaveAttribute('aria-label', 'Override template text color - Inherit');
+
+    // Render with overrides active
+    const configCustom: QRConfig = {
+      ...configInherit,
+      templateBgColor: '#ff0000',
+      templateTextColor: '#000000',
+    };
+
+    rerender(<LayoutControls config={configCustom} onChange={mockOnChange} />);
+
+    // Programmatic names should match "Custom" when override is active
+    const bgSwitchCustom = screen.getByRole('switch', { name: /Override template background color - Custom/i });
+    expect(bgSwitchCustom).toBeInTheDocument();
+    expect(bgSwitchCustom).toHaveAttribute('aria-label', 'Override template background color - Custom');
+
+    // Also assert on specific regex match for "Custom" to ensure voice speech matching works
+    expect(screen.getAllByRole('switch', { name: /Custom/i })).toHaveLength(2);
+
+    const textSwitchCustom = screen.getByRole('switch', { name: /Override template text color - Custom/i });
+    expect(textSwitchCustom).toBeInTheDocument();
+    expect(textSwitchCustom).toHaveAttribute('aria-label', 'Override template text color - Custom');
+  });
 });
