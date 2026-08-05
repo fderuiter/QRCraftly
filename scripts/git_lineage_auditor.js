@@ -173,6 +173,20 @@ export function parseArgs(args) {
 
   for (const arg of positionalArgs) {
     if (!arg || !arg.trim()) continue;
+
+    const hasSpaceOrComma = /[\s,]/.test(arg);
+
+    if (hasSpaceOrComma) {
+      const normalized = arg.replace(/\\/g, '/');
+      const isKey = Object.prototype.hasOwnProperty.call(MAPPING, normalized);
+      const existsOnDisk = fs.existsSync(normalized) || fs.existsSync(path.join(repoRoot, normalized));
+
+      if (isKey || existsOnDisk) {
+        files.push(normalized);
+        continue;
+      }
+    }
+
     const parts = arg.split(/[\s,]+/);
     for (const part of parts) {
       const trimmed = part.trim();

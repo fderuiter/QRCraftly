@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest';
+import fs from 'fs';
+import path from 'path';
 import { checkLineage, parseGitStatus, MAPPING, parseArgs } from '../scripts/git_lineage_auditor.js';
 
 describe('Local Git-Diff Lineage Auditor', () => {
@@ -229,6 +231,62 @@ describe('Local Git-Diff Lineage Auditor', () => {
       const args = ['', '   ', 'src/types.ts', ''];
       const parsed = parseArgs(args);
       expect(parsed).toEqual(['src/types.ts']);
+    });
+
+    it('should successfully parse a file path containing spaces without splitting if it exists on disk', () => {
+      const tempFilePath = path.join(__dirname, '..', 'src/components/temp test file.tsx');
+      fs.mkdirSync(path.dirname(tempFilePath), { recursive: true });
+      fs.writeFileSync(tempFilePath, 'temp content');
+
+      try {
+        const args = ['src/components/temp test file.tsx'];
+        const parsed = parseArgs(args);
+        expect(parsed).toEqual(['src/components/temp test file.tsx']);
+      } finally {
+        if (fs.existsSync(tempFilePath)) {
+          fs.unlinkSync(tempFilePath);
+        }
+      }
+    });
+
+    it('should successfully parse a mapping key containing spaces without splitting', () => {
+      const mockKey = 'src/components/my mapped file with spaces.tsx';
+      MAPPING[mockKey] = 'docs/public/SECURITY.md';
+
+      try {
+        const args = [mockKey];
+        const parsed = parseArgs(args);
+        expect(parsed).toEqual([mockKey]);
+      } finally {
+        delete MAPPING[mockKey];
+      }
+    });
+
+    it('should fall back to splitting spaces and commas if file does not exist on disk and is not in MAPPING', () => {
+      const args = ['src/components/nonexistent file with spaces.tsx'];
+      const parsed = parseArgs(args);
+      expect(parsed).toEqual([
+        'src/components/nonexistent',
+        'file',
+        'with',
+        'spaces.tsx'
+      ]);
+    });
+
+    it('should normalize backslashes and check file existence on disk', () => {
+      const tempFilePath = path.join(__dirname, '..', 'src/components/temp backslash file.tsx');
+      fs.mkdirSync(path.dirname(tempFilePath), { recursive: true });
+      fs.writeFileSync(tempFilePath, 'temp content');
+
+      try {
+        const args = ['src\\components\\temp backslash file.tsx'];
+        const parsed = parseArgs(args);
+        expect(parsed).toEqual(['src/components/temp backslash file.tsx']);
+      } finally {
+        if (fs.existsSync(tempFilePath)) {
+          fs.unlinkSync(tempFilePath);
+        }
+      }
     });
   });
 });
