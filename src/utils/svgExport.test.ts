@@ -260,6 +260,16 @@ describe('generateQRSvg', () => {
     }
   });
 
+  it('omits fr attribute for radial gradients in GRADIENT_BLUR visual template background export', async () => {
+    const config: QRConfig = {
+      ...(DEFAULT_CONFIG as QRConfig),
+      templateStyle: TemplateStyle.GRADIENT_BLUR,
+    };
+    const svg = await generateQRSvg(config);
+    expect(svg).toContain('<radialGradient');
+    expect(svg).not.toContain('fr=');
+  });
+
   describe('Accessibility tags in exported SVG', () => {
     it('generates correct title and description for a WiFi QR code', async () => {
       const config: QRConfig = {

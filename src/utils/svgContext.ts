@@ -81,8 +81,10 @@ class SvgRadialGradient {
     const isIdentity = t.a === 1 && t.b === 0 && t.c === 0 && t.d === 1 && t.e === 0 && t.f === 0;
     const transformAttr = isIdentity ? '' : ` gradientTransform="matrix(${t.a} ${t.b} ${t.c} ${t.d} ${t.e} ${t.f})"`;
 
+    const frAttr = this.r0 > 0 ? ` fr="${this.r0}"` : '';
+
     return [
-      `    <radialGradient id="${this.id}" cx="${this.x1}" cy="${this.y1}" r="${this.r1}" fx="${this.x0}" fy="${this.y0}" gradientUnits="userSpaceOnUse"${transformAttr}>`,
+      `    <radialGradient id="${this.id}" cx="${this.x1}" cy="${this.y1}" r="${this.r1}" fx="${this.x0}" fy="${this.y0}"${frAttr} gradientUnits="userSpaceOnUse"${transformAttr}>`,
       stopsXml,
       `    </radialGradient>`
     ].join('\n');
