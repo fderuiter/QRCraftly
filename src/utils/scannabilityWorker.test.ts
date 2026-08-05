@@ -54,7 +54,7 @@ describe('scannabilityWorker', () => {
     };
   };
 
-  it('sets self.onmessage and processes safe digital pass and physical pass request', () => {
+  it('sets self.onmessage and processes safe digital pass and physical pass request', async () => {
     const postMessageSpy = vi.fn();
     globalThis.postMessage = postMessageSpy;
 
@@ -65,7 +65,7 @@ describe('scannabilityWorker', () => {
     expect(workerHandler).toBeDefined();
 
     // Trigger handler
-    workerHandler({ data: createDummyRequest() } as MessageEvent);
+    await workerHandler({ data: createDummyRequest() } as MessageEvent);
 
     expect(postMessageSpy).toHaveBeenCalledWith({
       success: true,
@@ -74,7 +74,7 @@ describe('scannabilityWorker', () => {
     });
   });
 
-  it('handles safe digital pass but physical scan failure', () => {
+  it('handles safe digital pass but physical scan failure', async () => {
     const postMessageSpy = vi.fn();
     globalThis.postMessage = postMessageSpy;
 
@@ -82,7 +82,7 @@ describe('scannabilityWorker', () => {
                   .mockReturnValueOnce(null); // physical fails (dontInvert)
     vi.mocked(jsQR).mockReturnValueOnce(null); // physical fails (attemptBoth)
 
-    workerHandler({ data: createDummyRequest() } as MessageEvent);
+    await workerHandler({ data: createDummyRequest() } as MessageEvent);
 
     expect(postMessageSpy).toHaveBeenCalledWith({
       success: true,
@@ -91,13 +91,13 @@ describe('scannabilityWorker', () => {
     });
   });
 
-  it('handles dangerous URLs via ValidationEngine as security violation', () => {
+  it('handles dangerous URLs via ValidationEngine as security violation', async () => {
     const postMessageSpy = vi.fn();
     globalThis.postMessage = postMessageSpy;
 
     vi.mocked(jsQR).mockReturnValueOnce({ data: 'javascript:alert(1)' } as any);
 
-    workerHandler({ data: createDummyRequest() } as MessageEvent);
+    await workerHandler({ data: createDummyRequest() } as MessageEvent);
 
     expect(postMessageSpy).toHaveBeenCalledWith({
       success: false,
@@ -107,7 +107,7 @@ describe('scannabilityWorker', () => {
     });
   });
 
-  it('handles case where first digital scan fails but second (attemptBoth) passes', () => {
+  it('handles case where first digital scan fails but second (attemptBoth) passes', async () => {
     const postMessageSpy = vi.fn();
     globalThis.postMessage = postMessageSpy;
 
@@ -115,7 +115,7 @@ describe('scannabilityWorker', () => {
                   .mockReturnValueOnce({ data: 'https://safe.com' } as any) // digital 2 passes
                   .mockReturnValueOnce({ data: 'https://safe.com' } as any); // physical passes
 
-    workerHandler({ data: createDummyRequest() } as MessageEvent);
+    await workerHandler({ data: createDummyRequest() } as MessageEvent);
 
     expect(postMessageSpy).toHaveBeenCalledWith({
       success: true,
@@ -124,14 +124,14 @@ describe('scannabilityWorker', () => {
     });
   });
 
-  it('handles case where both digital scans fail', () => {
+  it('handles case where both digital scans fail', async () => {
     const postMessageSpy = vi.fn();
     globalThis.postMessage = postMessageSpy;
 
     vi.mocked(jsQR).mockReturnValueOnce(null) // digital 1 fails
                   .mockReturnValueOnce(null); // digital 2 fails
 
-    workerHandler({ data: createDummyRequest() } as MessageEvent);
+    await workerHandler({ data: createDummyRequest() } as MessageEvent);
 
     expect(postMessageSpy).toHaveBeenCalledWith({
       success: false,
@@ -141,14 +141,14 @@ describe('scannabilityWorker', () => {
     });
   });
 
-  it('applies optical simulation math when isTest is false', () => {
+  it('applies optical simulation math when isTest is false', async () => {
     const postMessageSpy = vi.fn();
     globalThis.postMessage = postMessageSpy;
 
     vi.mocked(jsQR).mockReturnValueOnce({ data: 'https://safe.com' } as any) // digital
                   .mockReturnValueOnce({ data: 'https://safe.com' } as any); // physical
 
-    workerHandler({ data: createDummyRequest('123', false) } as MessageEvent);
+    await workerHandler({ data: createDummyRequest('123', false) } as MessageEvent);
 
     expect(postMessageSpy).toHaveBeenCalledWith({
       success: true,
@@ -157,12 +157,12 @@ describe('scannabilityWorker', () => {
     });
   });
 
-  it('catches validation error if the payload is invalid', () => {
+  it('catches validation error if the payload is invalid', async () => {
     const postMessageSpy = vi.fn();
     globalThis.postMessage = postMessageSpy;
 
     // Send invalid payload to trigger isWorkerRequest/assertWorkerRequest validation error
-    workerHandler({ data: { invalidPayload: true } } as MessageEvent);
+    await workerHandler({ data: { invalidPayload: true } } as MessageEvent);
 
     expect(postMessageSpy).toHaveBeenCalledWith({
       success: false,
@@ -172,7 +172,7 @@ describe('scannabilityWorker', () => {
     });
   });
 
-  it('catches crash error if global processing fails internally', () => {
+  it('catches crash error if global processing fails internally', async () => {
     const postMessageSpy = vi.fn();
     globalThis.postMessage = postMessageSpy;
 
@@ -180,7 +180,7 @@ describe('scannabilityWorker', () => {
       throw new Error('Simulation crash');
     });
 
-    workerHandler({ data: createDummyRequest() } as MessageEvent);
+    await workerHandler({ data: createDummyRequest() } as MessageEvent);
 
     expect(postMessageSpy).toHaveBeenCalledWith({
       success: false,
@@ -190,24 +190,24 @@ describe('scannabilityWorker', () => {
     });
   });
 
-  it('handles postMessage crash fallback when postMessage throws', () => {
+  it('handles postMessage crash fallback when postMessage throws', async () => {
     // Make postMessage throw first time to trigger catch fallback
     globalThis.postMessage = vi.fn().mockImplementationOnce(() => {
       throw new Error('postMessage crash');
     });
 
-    workerHandler({ data: { invalidPayload: true } } as MessageEvent);
+    await workerHandler({ data: { invalidPayload: true } } as MessageEvent);
 
     // Should fall back to posting basic crash payload
     expect(globalThis.postMessage).toHaveBeenCalledTimes(2);
   });
 
-  it('handles falsy e.data or non-object e.data gracefully', () => {
+  it('handles falsy e.data or non-object e.data gracefully', async () => {
     const postMessageSpy = vi.fn();
     globalThis.postMessage = postMessageSpy;
 
     // Send null data
-    workerHandler({ data: null } as MessageEvent);
+    await workerHandler({ data: null } as MessageEvent);
 
     expect(postMessageSpy).toHaveBeenCalledWith({
       success: false,
@@ -217,7 +217,7 @@ describe('scannabilityWorker', () => {
     });
   });
 
-  it('handles case where first physical scan fails but second physical scan passes', () => {
+  it('handles case where first physical scan fails but second physical scan passes', async () => {
     const postMessageSpy = vi.fn();
     globalThis.postMessage = postMessageSpy;
 
@@ -225,12 +225,34 @@ describe('scannabilityWorker', () => {
                   .mockReturnValueOnce(null) // physical 1 fails
                   .mockReturnValueOnce({ data: 'https://safe.com' } as any); // physical 2 passes
 
-    workerHandler({ data: createDummyRequest() } as MessageEvent);
+    await workerHandler({ data: createDummyRequest() } as MessageEvent);
 
     expect(postMessageSpy).toHaveBeenCalledWith({
       success: true,
       physicalReady: true,
       configId: '123',
+    });
+  });
+
+  it('cooperatively cancels older execution sequence when a newer configId is dispatched', async () => {
+    const postMessageSpy = vi.fn();
+    globalThis.postMessage = postMessageSpy;
+
+    // Mock responses
+    vi.mocked(jsQR).mockReturnValue({ data: 'https://safe.com' } as any);
+
+    // Dispatch two requests: '101' and then '102'
+    const firstPromise = workerHandler({ data: createDummyRequest('101') } as MessageEvent);
+    const secondPromise = workerHandler({ data: createDummyRequest('102') } as MessageEvent);
+
+    await Promise.all([firstPromise, secondPromise]);
+
+    // Only '102' should have successfully called postMessage; '101' should have cooperatively aborted without posting.
+    expect(postMessageSpy).toHaveBeenCalledTimes(1);
+    expect(postMessageSpy).toHaveBeenCalledWith({
+      success: true,
+      physicalReady: true,
+      configId: '102',
     });
   });
 });
