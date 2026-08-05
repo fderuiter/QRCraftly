@@ -1,0 +1,20 @@
+# Gitleaks configuration file matching standard guardrail rules
+title = "gitleaks config"
+
+[[rules]]
+    id = "cloudflare-api-token"
+    description = "Cloudflare API Token or Key"
+    regex = '''(?i)(cloudflare|cf)[_-]?(api)?[_-]?(token|key|secret)\s*[:=]\s*['"]?([a-zA-Z0-9_-]{16,})['"]?'''
+    secretGroup = 4
+
+[[rules]]
+    id = "smtp-password"
+    description = "SMTP password or credential assignment"
+    regex = '''(?i)(smtp)[_-]?(password|pass|secret|key|token)\s*[:=]\s*['"]?([a-zA-Z0-9_.-]{4,})['"]?'''
+    secretGroup = 3
+
+[[rules]]
+    id = "smtp-uri"
+    description = "SMTP Connection URI"
+    regex = '''(?i)smtps?://[^:]+:([^@\s]+)@[^\s/]+'''
+    secretGroup = 1
