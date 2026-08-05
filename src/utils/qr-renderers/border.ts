@@ -74,6 +74,23 @@ export const renderBorderDecoration = (
             blx = displaySize - borderPx - blSize;
             bly = displaySize - borderPx + (borderPx - blSize) / 2;
         }
-        ctx.drawImage(borderLogoImg, blx, bly, blSize, blSize);
+
+        let dw = blSize;
+        let dh = blSize;
+        const imgWidth = borderLogoImg.naturalWidth || borderLogoImg.width || 0;
+        const imgHeight = borderLogoImg.naturalHeight || borderLogoImg.height || 0;
+        if (imgWidth > 0 && imgHeight > 0) {
+            const aspectRatio = imgWidth / imgHeight;
+            if (imgWidth >= imgHeight) {
+                dh = blSize / aspectRatio;
+            } else {
+                dw = blSize * aspectRatio;
+            }
+        }
+
+        const centeredBlx = blx + (blSize - dw) / 2;
+        const centeredBly = bly + (blSize - dh) / 2;
+
+        ctx.drawImage(borderLogoImg, centeredBlx, centeredBly, dw, dh);
     }
 };

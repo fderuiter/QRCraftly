@@ -11,8 +11,23 @@ export const renderLogo = (
 ) => {
     if (config.logoUrl && logoImg) {
         const { logoSizePx, logoPaddingPx } = logoMetrics;
-        const lx = (displaySize - logoSizePx) / 2;
-        const ly = (displaySize - logoSizePx) / 2;
+
+        let dw = logoSizePx;
+        let dh = logoSizePx;
+
+        const imgWidth = logoImg.naturalWidth || logoImg.width || 0;
+        const imgHeight = logoImg.naturalHeight || logoImg.height || 0;
+        if (imgWidth > 0 && imgHeight > 0) {
+            const aspectRatio = imgWidth / imgHeight;
+            if (imgWidth >= imgHeight) {
+                dh = logoSizePx / aspectRatio;
+            } else {
+                dw = logoSizePx * aspectRatio;
+            }
+        }
+
+        const lx = (displaySize - dw) / 2;
+        const ly = (displaySize - dh) / 2;
 
         if (config.logoPaddingStyle !== 'none') {
             const bgColor = config.logoBackgroundColor || config.bgColor;
@@ -26,6 +41,6 @@ export const renderLogo = (
             );
         }
 
-        ctx.drawImage(logoImg, lx, ly, logoSizePx, logoSizePx);
+        ctx.drawImage(logoImg, lx, ly, dw, dh);
     }
 };

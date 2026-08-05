@@ -17,7 +17,7 @@
 */
 
 import { describe, it, expect, vi } from 'vitest';
-import { generateQRSvg } from './svgExport';
+import { generateQRSvg, parseImageDimensions, loadImgWithDimensions } from './svgExport';
 import { DEFAULT_CONFIG } from '../constants';
 import { QRStyle, QRConfig, SocialFormat, TemplateStyle, QRType } from '../types';
 
@@ -382,6 +382,87 @@ describe('generateQRSvg', () => {
       await generateQRSvg(config, { onLogoOmitted });
 
       expect(onLogoOmitted).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Asynchronous Real-Dimension Loader', () => {
+    it('parses PNG dimensions from base64 data URLs correctly', () => {
+      // 50x30 PNG
+      const png50x30 = 'data:image/png;base64,iVBORw0KGgoAAAAnSUhEUgAAADIAAAAe';
+      const size1 = parseImageDimensions(png50x30);
+      expect(size1).toEqual({ width: 50, height: 30 });
+
+      // 40x80 PNG
+      const png40x80 = 'data:image/png;base64,iVBORw0KGgoAAAAnSUhEUgAAACgAAABQ';
+      const size2 = parseImageDimensions(png40x80);
+      expect(size2).toEqual({ width: 40, height: 80 });
+    });
+
+    it('parses SVG dimensions from base64 and utf8 data URLs correctly', () => {
+      // 60x40 SVG base64
+      const svg60x40 = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2MCIgaGVpZ2h0PSI0MCI+PC9zdmc+';
+      const size1 = parseImageDimensions(svg60x40);
+      expect(size1).toEqual({ width: 60, height: 40 });
+
+      // SVG with viewBox and no width/height
+      const svgViewbox = 'data:image/svg+xml;utf8,<svg viewBox="0 0 120 80"></svg>';
+      const size2 = parseImageDimensions(svgViewbox);
+      expect(size2).toEqual({ width: 120, height: 80 });
+    });
+
+    it('loads image with real dimensions asynchronously without blocking', async () => {
+      const png50x30 = 'data:image/png;base64,iVBORw0KGgoAAAAnSUhEUgAAADIAAAAe';
+      const img = await loadImgWithDimensions(png50x30);
+      expect(img).toBeDefined();
+      expect(img.naturalWidth).toBe(50);
+      expect(img.naturalHeight).toBe(30);
+    });
+
+    it('exports SVG with non-zero dimensions that perfectly match the real logo aspect ratio', async () => {
+      const config: QRConfig = {
+        ...(DEFAULT_CONFIG as QRConfig),
+        logoUrl: 'data:image/png;base64,iVBORw0KGgoAAAAnSUhEUgAAADIAAAAe', // 50x30 logo
+        logoSize: 0.2,
+      };
+
+      const svg = await generateQRSvg(config);
+      expect(svg).toContain('<image');
+      
+      // Let's find the width and height of the image in the SVG
+      const match = svg.match(/<image[^>]*width="([\d.]+)"[^>]*height="([\d.]+)"/i);
+      expect(match).not.toBeNull();
+      if (match) {
+        const width = parseFloat(match[1]);
+        const height = parseFloat(match[2]);
+        expect(width).toBeGreaterThan(0);
+        expect(height).toBeGreaterThan(0);
+        
+        // Aspect ratio must be exactly 50/30 = 1.6667
+        expect(width / height).toBeCloseTo(1.6667, 3);
+      }
+    });
+
+    it('exports SVG preserving portrait aspect ratio for tall logos', async () => {
+      const config: QRConfig = {
+        ...(DEFAULT_CONFIG as QRConfig),
+        logoUrl: 'data:image/png;base64,iVBORw0KGgoAAAAnSUhEUgAAACgAAABQ', // 40x80 logo
+        logoSize: 0.2,
+      };
+
+      const svg = await generateQRSvg(config);
+      expect(svg).toContain('<image');
+      
+      const match = svg.match(/<image[^>]*width="([\d.]+)"[^>]*height="([\d.]+)"/i);
+      expect(match).not.toBeNull();
+      if (match) {
+        const width = parseFloat(match[1]);
+        const height = parseFloat(match[2]);
+        expect(width).toBeGreaterThan(0);
+        expect(height).toBeGreaterThan(0);
+        
+        // Aspect ratio must be exactly 40/80 = 0.5
+        expect(width / height).toBeCloseTo(0.5, 3);
+      }
     });
   });
 });
