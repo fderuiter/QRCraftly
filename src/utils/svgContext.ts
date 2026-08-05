@@ -16,6 +16,8 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { clampCornerRadius } from './canvasHelpers';
+
 /**
  * A 2D affine transformation matrix in column-major form:
  *   | a  c  e |
@@ -334,7 +336,7 @@ export class SvgContext {
    */
   roundRect(x: number, y: number, w: number, h: number, r: number): void {
     // Clamp radius so it doesn't exceed half the shorter side and is not negative
-    const safeR = Math.max(0, Math.min(r, w / 2, h / 2));
+    const safeR = clampCornerRadius(r, w, h);
 
     const pt = (px: number, py: number) => {
       const [tx, ty] = this._applyTransform(px, py);

@@ -18,6 +18,19 @@
 
 
 /**
+ * Clamps the corner radius so it doesn't exceed half of the width or height,
+ * and is never negative.
+ *
+ * @param r The corner radius.
+ * @param w The width.
+ * @param h The height.
+ * @returns The safely clamped corner radius.
+ */
+export const clampCornerRadius = (r: number, w: number, h: number): number => {
+  return Math.max(0, Math.min(r, w / 2, h / 2));
+};
+
+/**
  * Draws a rounded rectangle.
  * @param ctx The canvas context.
  * @param x The top-left x coordinate.
@@ -27,7 +40,7 @@
  * @param r The corner radius.
  */
 export const drawRoundRect = (ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) => {
-  const safeR = Math.max(0, Math.min(r, w / 2, h / 2));
+  const safeR = clampCornerRadius(r, w, h);
   ctx.moveTo(x + safeR, y);
   ctx.lineTo(x + w - safeR, y);
   ctx.quadraticCurveTo(x + w, y, x + w, y + safeR);

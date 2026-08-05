@@ -1,7 +1,7 @@
 import React from "react";
 import { PaymentData, CryptoNetwork } from "../../types";
 import { TextField, SelectField } from "../ui/FormFields";
-import { ValidationEngine } from "../../engine/ValidationEngine";
+import { isDangerousUrl } from "../../utils/security";
 import { FormBlock } from "../ui/FormBlock";
 
 /**
@@ -28,7 +28,7 @@ export const PaymentInput: React.FC<PaymentInputProps> = ({
   data,
   onChange,
 }) => {
-  const addressError = data.address && ValidationEngine.isDangerousUrl(data.address)
+  const addressError = data.address && isDangerousUrl(data.address)
     ? "Unsafe URL scheme or malicious protocol detected."
     : undefined;
 

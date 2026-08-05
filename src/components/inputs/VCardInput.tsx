@@ -1,7 +1,7 @@
 import React from "react";
 import { VCardData } from "../../types";
 import { TextField } from "../ui/FormFields";
-import { ValidationEngine } from "../../engine/ValidationEngine";
+import { isDangerousUrl } from "../../utils/security";
 import { FormBlock } from "../ui/FormBlock";
 import {
   GRID_TWO_COLUMNS_CLASSES,
@@ -29,7 +29,7 @@ interface VCardInputProps {
  * @param root0.onChange
  */
 export const VCardInput: React.FC<VCardInputProps> = ({ data, onChange }) => {
-  const websiteError = data.website && ValidationEngine.isDangerousUrl(data.website)
+  const websiteError = data.website && isDangerousUrl(data.website)
     ? "Unsafe URL scheme or malicious protocol detected."
     : undefined;
 

@@ -19,6 +19,7 @@
 import { useState, useRef, useEffect, ElementType } from "react";
 import { QRConfig, QRType } from "../../types";
 import { INPUT_REGISTRY, InputDataMap } from "./InputRegistry";
+import { isDangerousUrl } from "../../utils/security";
 import { ValidationEngine } from "../../engine/ValidationEngine";
 
 const isInputDataValid = (type: QRType, data: any): boolean => {
@@ -33,11 +34,11 @@ const isInputDataValid = (type: QRType, data: any): boolean => {
       return false;
     }
   } else if (type === QRType.VCARD) {
-    if (data.website && ValidationEngine.isDangerousUrl(data.website)) {
+    if (data.website && isDangerousUrl(data.website)) {
       return false;
     }
   } else if (type === QRType.PAYMENT) {
-    if (data.address && ValidationEngine.isDangerousUrl(data.address)) {
+    if (data.address && isDangerousUrl(data.address)) {
       return false;
     }
   }

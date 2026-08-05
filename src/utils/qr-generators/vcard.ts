@@ -18,7 +18,7 @@
 
 import { VCardData, QRType, QRGeneratorContract } from '../../types';
 import { normalizeUrl } from '../url';
-import { ValidationEngine } from '../../engine/ValidationEngine';
+import { isDangerousUrl } from '../security';
 import {
   escapeVCardEvent,
   unescapeVCardEvent,
@@ -115,7 +115,7 @@ export const VCardContract: QRGeneratorContract<VCardData> = {
     for (const { key, value } of properties) {
       if (key === 'URL') {
         const vcardUrl = value.trim();
-        if (ValidationEngine.isDangerousUrl(vcardUrl)) {
+        if (isDangerousUrl(vcardUrl)) {
           violations.push('URI_INJECTION_VIOLATION');
           break;
         }

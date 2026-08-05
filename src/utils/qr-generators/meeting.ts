@@ -17,6 +17,7 @@
 */
 
 import { MeetingData, QRType, QRGeneratorContract } from '../../types';
+import { validateUrlAndInject } from '../security';
 import { ValidationEngine } from '../../engine/ValidationEngine';
 
 /**
@@ -48,12 +49,6 @@ export const MeetingContract: QRGeneratorContract<MeetingData> = {
   hydrate: hydrateMeetingData,
   matches: (raw: string) => ValidationEngine.identifyProtocol(raw) === QRType.MEETING,
   validate: (raw: string) => {
-    const violations: string[] = [];
-    if (ValidationEngine.isDangerousUrl(raw)) {
-      violations.push('URI_INJECTION_VIOLATION');
-    } else if (!ValidationEngine.CONTAINMENT_PROFILES.URL.test(raw) && raw.startsWith('http')) {
-      violations.push('URL_STRUCTURE_VIOLATION');
-    }
-    return violations;
+    return validateUrlAndInject(raw, ValidationEngine.CONTAINMENT_PROFILES.URL);
   },
 };

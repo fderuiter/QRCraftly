@@ -18,13 +18,14 @@
 
 import { PhoneData, QRType, QRGeneratorContract } from '../../types';
 import { parseProtocol } from '../protocol';
+import { cleanPhoneNumber } from '../security';
 import { ValidationEngine } from '../../engine/ValidationEngine';
 
 /**
  * Constructs the tel string for Phone QR code.
  */
 export const constructPhoneString = (data: PhoneData): string => {
-  const cleanNumber = ValidationEngine.cleanPhoneNumber(data.number);
+  const cleanNumber = cleanPhoneNumber(data.number);
   // nosemgrep: enforce-cleanphonenumber
   return `tel:${cleanNumber}`;
 };

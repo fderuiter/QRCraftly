@@ -18,6 +18,7 @@
 
 import { SocialData, SocialPlatform, QRType, QRGeneratorContract } from '../../types';
 import { SOCIAL_DOMAINS, parseProtocol } from '../protocol';
+import { sanitizeSocialHandle } from '../security';
 import { ValidationEngine } from '../../engine/ValidationEngine';
 
 const SOCIAL_PLATFORM_URLS: Record<SocialPlatform, (handle: string) => string> = {
@@ -36,7 +37,7 @@ const SOCIAL_PLATFORM_URLS: Record<SocialPlatform, (handle: string) => string> =
  * @returns A full HTTPS profile URL, or an empty string if the handle is empty.
  */
 export const constructSocialString = (data: SocialData): string => {
-  const cleanHandle = ValidationEngine.sanitizeSocialHandle(data.handle);
+  const cleanHandle = sanitizeSocialHandle(data.handle);
   if (!cleanHandle) return '';
 
   const constructUrl = SOCIAL_PLATFORM_URLS[data.platform];
