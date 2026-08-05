@@ -1,4 +1,7 @@
-const BASE_INPUT_CLASSES = "bg-white border border-slate-300 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100 rounded-lg text-slate-700 text-sm transition-all w-full";
+/**
+ *
+ */
+export const BASE_INPUT_CLASSES = "bg-white border border-slate-300 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100 rounded-lg text-slate-700 text-sm transition-all w-full placeholder-slate-600 dark:placeholder-slate-400";
 
 /**
  * Unified Layout Spacing & Structure Variables
@@ -36,7 +39,7 @@ export const TEXT_FIELD_CLASSES = `${BASE_INPUT_CLASSES} px-3 py-2`;
 /**
  *
  */
-export const TEXT_AREA_CLASSES = `${BASE_INPUT_CLASSES} font-sans placeholder-slate-400 px-4 py-2`;
+export const TEXT_AREA_CLASSES = `${BASE_INPUT_CLASSES} font-sans px-4 py-2`;
 /**
  *
  */
