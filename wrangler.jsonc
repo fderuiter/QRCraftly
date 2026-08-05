@@ -5,7 +5,7 @@
     "directory": "./dist/client",
   },
   "build": {
-    "command": "node scripts/cloudflare-build.cjs",
+    "command": "pnpm install && pnpm run build",
   },
   "observability": {
     "enabled": true,
