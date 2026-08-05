@@ -23,7 +23,7 @@ function slugify(text: string): string {
 export default function Page() {
   return (
     <div className="mx-auto max-w-7xl px-4 py-12">
-      <div className="mb-8">
+      <nav className="mb-8">
         <a
           href="/"
           className="inline-flex items-center gap-2 text-slate-600 transition-colors hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
@@ -31,16 +31,16 @@ export default function Page() {
           <ArrowLeft className="size-5" />
           Back to Home
         </a>
-      </div>
+      </nav>
       
-      <div className="mb-16 text-center">
+      <header className="mb-16 text-center">
         <h1 className="mb-4 text-4xl font-bold text-slate-900 dark:text-white">
           Security & Privacy Transparency Hub
         </h1>
         <p className="mx-auto max-w-2xl text-lg text-slate-600 dark:text-slate-300">
           We believe in complete transparency. Our architecture ensures your data remains yours, with privacy-first processing.
         </p>
-      </div>
+      </header>
 
       <div className="mb-16 grid gap-12 md:grid-cols-2">
         {docsManifest.map(doc => {

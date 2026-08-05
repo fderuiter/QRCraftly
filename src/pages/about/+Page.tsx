@@ -42,7 +42,7 @@ export default function Page() {
   return (
     <div className="mx-auto max-w-5xl px-4 py-12">
       <JsonLdScript data={schemaData} />
-      <div className="mb-8">
+      <nav className="mb-8">
 
         <a
           href="/"
@@ -51,8 +51,8 @@ export default function Page() {
           <ArrowLeft className="size-5" />
           Back to Home
         </a>
-      </div>
-      <div className="mb-16 text-center">
+      </nav>
+      <header className="mb-16 text-center">
         <h1 className="mb-4 text-4xl font-bold text-slate-900 dark:text-white">
           About QRCraftly
         </h1>
@@ -60,7 +60,7 @@ export default function Page() {
           A privacy-focused QR code generator built with modern web technologies.
           Entirely free with no login required.
         </p>
-      </div>
+      </header>
 
       <section className="mb-16">
         <h2 className="sr-only">Why Choose QRCraftly?</h2>
