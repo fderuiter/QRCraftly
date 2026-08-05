@@ -106,4 +106,54 @@ describe('schemaGenerator', () => {
     const howTo = schema['@graph'].find((g: any) => g['@type'] === 'HowTo');
     expect(howTo).toBeUndefined();
   });
+
+  it('generates specialized schemas for event, location, meeting, and social tool IDs', () => {
+    const eventContent: ToolContent = {
+      id: 'event-qr-code',
+      name: 'Event QR',
+      description: 'Generate Event QR',
+      url: 'https://qrcraftly.com/event-qr-code',
+      features: []
+    };
+    const eventSchema = generateSchema(eventContent);
+    const eventObj = eventSchema['@graph'].find((g: any) => g['@type'] === 'Event');
+    expect(eventObj).toBeDefined();
+    expect(eventObj.eventAttendanceMode).toBe('https://schema.org/OfflineEventAttendanceMode');
+
+    const locationContent: ToolContent = {
+      id: 'location-qr-code',
+      name: 'Location QR',
+      description: 'Generate Location QR',
+      url: 'https://qrcraftly.com/location-qr-code',
+      features: []
+    };
+    const locationSchema = generateSchema(locationContent);
+    const locationObj = locationSchema['@graph'].find((g: any) => g['@type'] === 'Place');
+    expect(locationObj).toBeDefined();
+    expect(locationObj.geo.latitude).toBe('37.7749');
+
+    const meetingContent: ToolContent = {
+      id: 'meeting-qr-code',
+      name: 'Meeting QR',
+      description: 'Generate Meeting QR',
+      url: 'https://qrcraftly.com/meeting-qr-code',
+      features: []
+    };
+    const meetingSchema = generateSchema(meetingContent);
+    const meetingObj = meetingSchema['@graph'].find((g: any) => g['@type'] === 'Event');
+    expect(meetingObj).toBeDefined();
+    expect(meetingObj.eventAttendanceMode).toBe('https://schema.org/OnlineEventAttendanceMode');
+
+    const socialContent: ToolContent = {
+      id: 'social-qr-code',
+      name: 'Social QR',
+      description: 'Generate Social QR',
+      url: 'https://qrcraftly.com/social-qr-code',
+      features: []
+    };
+    const socialSchema = generateSchema(socialContent);
+    const socialObj = socialSchema['@graph'].find((g: any) => g['@type'] === 'ProfilePage');
+    expect(socialObj).toBeDefined();
+    expect(socialObj.mainEntity.sameAs).toContain('https://instagram.com');
+  });
 });

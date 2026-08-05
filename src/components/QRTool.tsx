@@ -280,6 +280,10 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
                       <li><a href="/phone-qr-code" className="transition-colors hover:text-teal-600 dark:hover:text-teal-400">Phone QR Code</a></li>
                       <li><a href="/sms-qr-code" className="transition-colors hover:text-teal-600 dark:hover:text-teal-400">SMS QR Code</a></li>
                       <li><a href="/payment-qr-code" className="transition-colors hover:text-teal-600 dark:hover:text-teal-400">Payment QR Code</a></li>
+                      <li><a href="/event-qr-code" className="transition-colors hover:text-teal-600 dark:hover:text-teal-400">Event QR Code</a></li>
+                      <li><a href="/location-qr-code" className="transition-colors hover:text-teal-600 dark:hover:text-teal-400">Location QR Code</a></li>
+                      <li><a href="/meeting-qr-code" className="transition-colors hover:text-teal-600 dark:hover:text-teal-400">Meeting QR Code</a></li>
+                      <li><a href="/social-qr-code" className="transition-colors hover:text-teal-600 dark:hover:text-teal-400">Social QR Code</a></li>
                     </ul>
                   </div>
                   <div>
