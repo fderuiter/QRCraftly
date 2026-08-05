@@ -214,7 +214,6 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
           </div>
         </div>
       </Modal>
-      <h1 className="sr-only">{title ? `${title} Generator` : "Free Custom QR Code Generator"}</h1>
       <div className="relative flex h-screen min-h-screen flex-col-reverse overflow-hidden bg-slate-50 transition-colors duration-300 md:h-auto md:min-h-0 md:flex-row md:overflow-visible dark:bg-slate-950">
         {/* Sidebar Controls */}
         <section aria-label="QR Code Settings" className="relative z-10 flex max-h-[50vh] w-full flex-col overflow-y-auto border-r border-slate-200 bg-white shadow-xl transition-colors duration-300 md:max-h-none md:w-120 dark:border-slate-800 dark:bg-slate-900">
@@ -222,7 +221,7 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
             <div>
               <a href="/" aria-label="QRCraftly Home" className="mb-1 flex items-center gap-2 text-teal-700 transition-opacity hover:opacity-80 dark:text-teal-400">
                 <QrCode className="size-6" />
-                <span className="text-xl font-bold tracking-tight text-slate-700 dark:text-slate-100">{title || "QRCraftly"}</span>
+                <h1 className="text-xl font-bold tracking-tight text-slate-700 dark:text-slate-100">{title || "QRCraftly"}</h1>
               </a>
               <p className="text-sm text-slate-600 dark:text-slate-400">Design beautiful QR codes in seconds.</p>
             </div>
@@ -263,7 +262,7 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
               <nav aria-label="Site Map">
                 <div className="mb-4 grid grid-cols-2 gap-4">
                   <div>
-                    <h3 className="mb-3 text-xs font-semibold tracking-wider text-slate-900 uppercase dark:text-slate-200">Generators</h3>
+                    <h2 className="mb-3 text-xs font-semibold tracking-wider text-slate-900 uppercase dark:text-slate-200">Generators</h2>
                     <ul className="space-y-2 text-sm text-slate-500 dark:text-slate-400">
                       <li><a href="/" className="transition-colors hover:text-teal-600 dark:hover:text-teal-400">URL QR Code</a></li>
                       <li><a href="/text-qr-code" className="transition-colors hover:text-teal-600 dark:hover:text-teal-400">Text QR Code</a></li>
@@ -276,7 +275,7 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
                     </ul>
                   </div>
                   <div>
-                    <h3 className="mb-3 text-xs font-semibold tracking-wider text-slate-900 uppercase dark:text-slate-200">Company</h3>
+                    <h2 className="mb-3 text-xs font-semibold tracking-wider text-slate-900 uppercase dark:text-slate-200">Company</h2>
                     <ul className="space-y-2 text-sm text-slate-500 dark:text-slate-400">
                       <li><a href="/about" className="transition-colors hover:text-teal-600 dark:hover:text-teal-400">About</a></li>
                       <li><a href="/security#security-policy" className="transition-colors hover:text-teal-600 dark:hover:text-teal-400">Security Policy</a></li>
@@ -305,7 +304,7 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
           <div className="relative z-10 w-full max-w-md">
              <Card className="hover:scale-1.01 transform transition-all duration-300">
                 <div className="mb-6 flex items-center justify-between">
-                    <h3 className="font-semibold text-slate-700 dark:text-slate-200">Live Preview</h3>
+                    <h2 className="font-semibold text-slate-700 dark:text-slate-200">Live Preview</h2>
                     <div className="flex items-center gap-2">
                        <ScannabilityIndicator status={scannabilityStatus} health={health} />
                        <span className="rounded-full border border-emerald-200 bg-emerald-100 px-2 py-1 text-xs font-bold text-emerald-700 dark:border-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400">Active</span>
@@ -392,9 +391,9 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
 
                    {showTelemetryPrompt && (
                       <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm dark:border-slate-700 dark:bg-slate-800">
-                         <h4 className="mb-2 flex items-center gap-2 font-semibold text-slate-800 dark:text-slate-200">
+                         <h3 className="mb-2 flex items-center gap-2 font-semibold text-slate-800 dark:text-slate-200">
                            <Info className="size-4 text-blue-500" /> Help Improve Scannability
-                         </h4>
+                         </h3>
                          <p className="mb-3 text-xs leading-relaxed text-slate-600 dark:text-slate-400">
                            We noticed your QR code might be hard to scan. Would you like to send an anonymous telemetry ping to help us fix bugs?
                            <br/><br/>
