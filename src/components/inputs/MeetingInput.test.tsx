@@ -2,6 +2,15 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MeetingInput } from './MeetingInput';
 import { MeetingData } from '../../types';
+import { announcePolitely } from '../../utils/a11y';
+
+vi.mock('../../utils/a11y', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../utils/a11y')>();
+  return {
+    ...actual,
+    announcePolitely: vi.fn(),
+  };
+});
 
 describe('MeetingInput', () => {
   const mockOnChange = vi.fn();
@@ -81,5 +90,42 @@ describe('MeetingInput', () => {
 
     expect(screen.queryByText(/link detected/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Meeting ID:/i)).not.toBeInTheDocument();
+  });
+
+  it('announces Google Meet when a matching service URL is supplied', () => {
+    const data: MeetingData = { url: 'https://meet.google.com/abc-defg-hij' };
+    render(<MeetingInput data={data} onChange={mockOnChange} />);
+
+    expect(announcePolitely).toHaveBeenCalledTimes(1);
+    expect(announcePolitely).toHaveBeenCalledWith('Google Meet detected');
+  });
+
+  it('announces Zoom when a matching service URL is supplied', () => {
+    const data: MeetingData = { url: 'https://zoom.us/j/987654321?pwd=MyPasscode' };
+    render(<MeetingInput data={data} onChange={mockOnChange} />);
+
+    expect(announcePolitely).toHaveBeenCalledTimes(1);
+    expect(announcePolitely).toHaveBeenCalledWith('Zoom detected');
+  });
+
+  it('announces Microsoft Teams when a matching service URL is supplied', () => {
+    const data: MeetingData = { url: 'https://teams.microsoft.com/l/meetup-join/19%3Ameeting_MDIxYm...%40thread.v2/0' };
+    render(<MeetingInput data={data} onChange={mockOnChange} />);
+
+    expect(announcePolitely).toHaveBeenCalledTimes(1);
+    expect(announcePolitely).toHaveBeenCalledWith('Microsoft Teams detected');
+  });
+
+  it('does not trigger repeated announcements for subsequent keystrokes on the same service', () => {
+    const { rerender } = render(<MeetingInput data={{ url: 'https://zoom.us/j/987' }} onChange={mockOnChange} />);
+    expect(announcePolitely).toHaveBeenCalledTimes(1);
+    expect(announcePolitely).toHaveBeenCalledWith('Zoom detected');
+
+    // Simulate subsequent keystrokes
+    rerender(<MeetingInput data={{ url: 'https://zoom.us/j/9876' }} onChange={mockOnChange} />);
+    rerender(<MeetingInput data={{ url: 'https://zoom.us/j/98765' }} onChange={mockOnChange} />);
+
+    // Total calls should still be 1 because service has not changed from zoom
+    expect(announcePolitely).toHaveBeenCalledTimes(1);
   });
 });

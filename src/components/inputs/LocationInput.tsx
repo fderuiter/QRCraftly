@@ -3,6 +3,7 @@ import { Button } from "../ui/Button";
 import { LocationData } from "../../types";
 import { TextField } from "../ui/FormFields";
 import { FormBlock } from "../ui/FormBlock";
+import { announcePolitely } from "../../utils/a11y";
 
 /**
  *
@@ -55,6 +56,7 @@ export const LocationInput: React.FC<LocationInputProps> = ({
           latitude: String(position.coords.latitude),
           longitude: String(position.coords.longitude),
         });
+        announcePolitely("Location coordinates populated");
       },
       (err) => {
         setIsLoading(false);
