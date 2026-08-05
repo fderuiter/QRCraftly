@@ -186,7 +186,7 @@ export const LayoutControls: React.FC<LayoutControlsProps> = ({ config, onChange
                     templateBgColor: checked ? config.bgColor : undefined,
                   })
                 }
-                aria-label="Override template background color"
+                aria-label={hasBgOverride ? 'Override template background color - Custom' : 'Override template background color - Inherit'}
                 label={hasBgOverride ? 'Custom' : 'Inherit'}
                 labelClassName="text-[10px] text-slate-500 dark:text-slate-400"
               />
@@ -217,7 +217,7 @@ export const LayoutControls: React.FC<LayoutControlsProps> = ({ config, onChange
                     templateTextColor: checked ? config.fgColor : undefined,
                   })
                 }
-                aria-label="Override template text color"
+                aria-label={hasTextOverride ? 'Override template text color - Custom' : 'Override template text color - Inherit'}
                 label={hasTextOverride ? 'Custom' : 'Inherit'}
                 labelClassName="text-[10px] text-slate-500 dark:text-slate-400"
               />
