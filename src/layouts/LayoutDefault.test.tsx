@@ -16,9 +16,23 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import React, { useEffect } from 'react';
 import { render, screen } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import LayoutDefault from './LayoutDefault';
+import { useToast } from '../components/ui/Toast';
+
+const ProblematicComponent = () => {
+  throw new Error('Simulated fatal rendering error');
+};
+
+const NotificationTrigger = () => {
+  const { addToast } = useToast();
+  useEffect(() => {
+    addToast({ type: 'success', message: 'Test Layout Notification' });
+  }, [addToast]);
+  return <div data-testid="notification-trigger">Trigger Mounted</div>;
+};
 
 describe('LayoutDefault', () => {
   it('renders children correctly', () => {
@@ -56,5 +70,89 @@ describe('LayoutDefault', () => {
     const main = screen.getByRole('main');
     expect(main).toHaveAttribute('id', 'main-content');
     expect(main).toHaveAttribute('tabIndex', '-1');
+  });
+
+  it('simulates fatal rendering errors and ensures the safety boundary intercepts them (Requirement 1 & 2)', () => {
+    // Prevent React and Vitest from polluting the console logs with the expected crash error
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    render(
+      <LayoutDefault>
+        <ProblematicComponent />
+      </LayoutDefault>
+    );
+
+    // Verify recovery UI displays the correct alert
+    const alertHeader = screen.getByRole('alert');
+    expect(alertHeader).toBeInTheDocument();
+    expect(alertHeader).toHaveTextContent('Application Error');
+    expect(screen.getByText("We're sorry, but something went wrong while rendering this page.")).toBeInTheDocument();
+
+    consoleSpy.mockRestore();
+  });
+
+  it('confirms the recovery interface page reload triggers exactly one browser refresh attempt (Requirement 3)', () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    render(
+      <LayoutDefault>
+        <ProblematicComponent />
+      </LayoutDefault>
+    );
+
+    // Mock window.location in JSDOM cleanly
+    const originalLocation = window.location;
+    const reloadSpy = vi.fn();
+    const locationMock = {
+      ...originalLocation,
+      reload: reloadSpy,
+    };
+    Object.defineProperty(window, 'location', {
+      writable: true,
+      configurable: true,
+      value: locationMock,
+    });
+
+    const reloadButton = screen.getByRole('button', { name: /reload page/i });
+    expect(reloadButton).toBeInTheDocument();
+    reloadButton.click();
+
+    expect(reloadSpy).toHaveBeenCalledTimes(1);
+
+    // Restore original window.location cleanly
+    Object.defineProperty(window, 'location', {
+      writable: true,
+      configurable: true,
+      value: originalLocation,
+    });
+    consoleSpy.mockRestore();
+  });
+
+  it('verifies all standard application content is wrapped inside the default safety layout (Requirement 4)', () => {
+    render(
+      <LayoutDefault>
+        <div data-testid="target-app-content">Standard Content</div>
+      </LayoutDefault>
+    );
+
+    const target = screen.getByTestId('target-app-content');
+    expect(target).toBeInTheDocument();
+
+    // Verify layout enclosing standard content
+    const main = screen.getByRole('main');
+    expect(main).toContainElement(target);
+  });
+
+  it('asserts that secondary elements like layout notifications continue to mount under normal operation (Requirement 5)', async () => {
+    render(
+      <LayoutDefault>
+        <NotificationTrigger />
+      </LayoutDefault>
+    );
+
+    // Layout notifications (Toasts) should mount and render
+    const statusToast = await screen.findByRole('status');
+    expect(statusToast).toBeInTheDocument();
+    expect(statusToast).toHaveTextContent('Test Layout Notification');
   });
 });
