@@ -164,6 +164,23 @@ export default tseslint.config(
   },
   {
     files: ["**/*.{ts,tsx,js,jsx}"],
+    ignores: ["src/pages/dev-sandbox/**/*"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["**/dev-sandbox", "**/dev-sandbox/**"],
+              message: "Developer sandbox assets cannot be imported into production modules."
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    files: ["**/*.{ts,tsx,js,jsx}"],
     plugins: {
       tailwindcss: tailwind,
     },
