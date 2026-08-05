@@ -1,2 +1,23 @@
-# Global Code Owner
-* @fderuiter
+# Central Infrastructure & Configuration
+/.github/ @fderuiter
+/scripts/ @fderuiter
+/*.js @fderuiter
+/*.json @fderuiter
+/*.ts @fderuiter
+/*.yaml @fderuiter
+/*.jsonc @fderuiter
+
+# Core Utilities and Shared Components
+/src/components/ @fderuiter
+/src/utils/ @fderuiter
+/src/hooks/ @fderuiter
+/src/engine/ @fderuiter
+/src/context/ @fderuiter
+/src/types.ts @fderuiter
+
+# Application Pages & Layouts
+/src/layouts/ @fderuiter
+/src/pages/ @fderuiter
+
+# Sandbox Paths - self-service (no owners)
+/src/pages/dev-sandbox/
