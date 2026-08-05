@@ -10,9 +10,10 @@
 **/*.yml
 **/*.yaml
 
-# Ignore lockfiles and directories
+# Ignore lockfiles, config, and directories
 pnpm-lock.yaml
 pnpm-workspace.yaml
+wrangler.jsonc
 node_modules/
 dist/
 .git/

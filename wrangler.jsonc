@@ -5,7 +5,7 @@
     "directory": "./dist/client"
   },
   "build": {
-    "command": "corepack enable && pnpm install && pnpm run build"
+    "command": "npx --yes pnpm@11 install && npx --yes pnpm@11 run build"
   },
   "observability": {
     "enabled": true,
