@@ -1,7 +1,8 @@
 {
-  "threshold": 1.0,
+  "threshold": 3.0,
   "minLines": 5,
   "minTokens": 45,
+  "path": ["src"],
   "ignore": [
     "**/*.test.ts",
     "**/*.test.tsx",

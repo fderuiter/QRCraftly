@@ -1,59 +1,60 @@
 import React from 'react';
-import { AlertTriangle, AlertCircle } from 'lucide-react';
+import { getNotificationColors, getNotificationIcon } from '../../utils/notificationStyles';
+import { mergeClasses } from './styles';
 
 /**
- *
+ * Properties for the Alert component.
  */
 interface AlertProps {
   /**
-   *
+   * The style variant of the alert (warning or error).
    */
   variant?: 'warning' | 'error';
   /**
-   *
+   * Optional bold title text.
    */
   title?: string;
   /**
-   *
+   * Inner content to render.
    */
   children: React.ReactNode;
   /**
-   *
+   * Optional custom CSS class name.
    */
   className?: string;
   /**
-   *
+   * Optional ARIA role attribute.
    */
   role?: string;
   /**
-   *
+   * Optional aria-live attribute for screen readers.
    */
   'aria-live'?: 'polite' | 'assertive' | 'off';
 }
 
 /**
- *
- * @param root0
- * @param root0.variant
- * @param root0.title
- * @param root0.children
- * @param root0.className
- * @param root0.role
- * @param root0.'aria-live'
+ * An accessible Alert component that displays warning or error status messages.
+ * @param props Component properties.
+ * @returns React functional component rendering an alert box.
  */
-export const Alert: React.FC<AlertProps> = ({ variant = 'warning', title, children, className = '', role, 'aria-live': ariaLive }) => {
-  const isWarning = variant === 'warning';
-  
+export const Alert: React.FC<AlertProps> = (props) => {
+  const {
+    variant = 'warning',
+    title,
+    children,
+    className = '',
+    role,
+    'aria-live': ariaLive,
+  } = props;
   const baseClasses = "flex items-start gap-3 p-3 border rounded-lg text-sm";
-  const colorClasses = isWarning 
-    ? "bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-900 text-amber-800 dark:text-amber-400"
-    : "bg-rose-50 dark:bg-rose-900/30 border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-300";
-    
-  const Icon = isWarning ? AlertTriangle : AlertCircle;
+  const colorClasses = getNotificationColors(variant, true);
 
   return (
-    <div role={role || "alert"} aria-live={ariaLive} className={`${baseClasses}${colorClasses}${className}`}>
-      <Icon className="mt-0.5 size-5 flex-shrink-0" aria-hidden="true" />
+    <div role={role || "alert"} aria-live={ariaLive} className={mergeClasses(baseClasses, colorClasses, className)}>
+      {React.createElement(getNotificationIcon(variant), {
+        className: "mt-0.5 size-5 flex-shrink-0",
+        "aria-hidden": "true",
+      })}
       <div>
         {title && <strong>{title}: </strong>}
         {children}

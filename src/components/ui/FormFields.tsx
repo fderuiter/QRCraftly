@@ -1,6 +1,6 @@
-import React, { useId } from "react";
+import React from "react";
 import { TEXT_AREA_CLASSES, SELECT_CLASSES, ERROR_INPUT_CLASSES, mergeClasses } from "./styles";
-import { combineIds } from "../../utils/a11y";
+import { useFieldIds } from "../../hooks/useFieldIds";
 import { FieldWrapper, BaseFieldProps } from "./FieldWrapper";
 /**
  *
@@ -49,11 +49,13 @@ export const TextAreaField: React.FC<TextAreaFieldProps> = ({
   "aria-describedby": ariaDescribedby,
   ...props
 }) => {
-  const defaultId = useId();
-  const inputId = id || defaultId;
-  const errorId = error ? `${inputId}-error` : undefined;
-  const charCountId = showCharCount && maxLength ? `${inputId}-char-count` : undefined;
-  const describedBy = combineIds(errorId, charCountId, ariaDescribedby);
+  const { inputId, errorId, charCountId, describedBy } = useFieldIds({
+    id,
+    error,
+    showCharCount,
+    maxLength,
+    ariaDescribedby,
+  });
 
   return (
     <FieldWrapper
@@ -121,10 +123,11 @@ export const SelectField: React.FC<SelectFieldProps> = ({
   "aria-describedby": ariaDescribedby,
   ...props
 }) => {
-  const defaultId = useId();
-  const inputId = id || defaultId;
-  const errorId = error ? `${inputId}-error` : undefined;
-  const describedBy = combineIds(errorId, ariaDescribedby);
+  const { inputId, errorId, describedBy } = useFieldIds({
+    id,
+    error,
+    ariaDescribedby,
+  });
 
   return (
     <FieldWrapper
@@ -183,10 +186,11 @@ export const CheckboxField: React.FC<CheckboxFieldProps> = ({
   "aria-describedby": ariaDescribedby,
   ...props
 }) => {
-  const defaultId = useId();
-  const inputId = id || defaultId;
-  const errorId = error ? `${inputId}-error` : undefined;
-  const describedBy = combineIds(errorId, ariaDescribedby);
+  const { inputId, errorId, describedBy } = useFieldIds({
+    id,
+    error,
+    ariaDescribedby,
+  });
 
   return (
     <FieldWrapper
