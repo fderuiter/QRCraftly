@@ -357,5 +357,36 @@ describe('SvgContext', () => {
       expect(svg).not.toContain(' A ');
       expect(svg).toContain(' C ');
     });
+
+    it('supports radial gradient with a zero inner radius and completely omits the fr parameter', () => {
+      const ctx = new SvgContext(200, 200);
+      const grad = ctx.createRadialGradient(100, 100, 0, 100, 100, 50);
+      grad.addColorStop(0, '#ff0000');
+      grad.addColorStop(1, '#0000ff');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 200, 200);
+
+      const svg = ctx.serialize();
+      expect(svg).toContain('<radialGradient id="radial-grad-1" cx="100" cy="100" r="50" fx="100" fy="100"');
+      expect(svg).not.toContain('fr=');
+      expect(svg).toContain('<stop offset="0%" stop-color="#ff0000" />');
+      expect(svg).toContain('<stop offset="100%" stop-color="#0000ff" />');
+      expect(svg).toContain('fill="url(#radial-grad-1)"');
+    });
+
+    it('supports radial gradient with a non-zero inner radius and outputs the fr parameter', () => {
+      const ctx = new SvgContext(200, 200);
+      const grad = ctx.createRadialGradient(100, 100, 15, 100, 100, 50);
+      grad.addColorStop(0, '#ff0000');
+      grad.addColorStop(1, '#0000ff');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 200, 200);
+
+      const svg = ctx.serialize();
+      expect(svg).toContain('<radialGradient id="radial-grad-1" cx="100" cy="100" r="50" fx="100" fy="100" fr="15"');
+      expect(svg).toContain('<stop offset="0%" stop-color="#ff0000" />');
+      expect(svg).toContain('<stop offset="100%" stop-color="#0000ff" />');
+      expect(svg).toContain('fill="url(#radial-grad-1)"');
+    });
   });
 });
