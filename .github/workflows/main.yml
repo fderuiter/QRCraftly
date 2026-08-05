@@ -80,8 +80,18 @@ jobs:
       - name: Check for Code Duplication
         run: pnpm dlx jscpd@3.5.9 src --config .jscpd.json
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: 'requirements.txt'
+
+      - name: Install Semgrep
+        run: pip install -r requirements.txt
+
       - name: Run Semgrep
-        run: pip install semgrep && semgrep ci --config=semgrep.yml
+        run: semgrep ci --config=semgrep.yml --metrics=off --disable-version-check
         env:
           SEMGREP_APP_TOKEN: "" # Local run only
 
@@ -126,10 +136,26 @@ jobs:
           path: playwright-report/
           retention-days: 14
 
+  # JOB 4: Layout & Format Checks (Parallel)
+  layout:
+    name: Layout & Format Checks
+    needs: setup
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Environment
+        uses: ./.github/actions/setup
+
+      - name: Verify Layout Format
+        run: pnpm run format:check
+
   # JOB 5: Build Application
   build:
     name: Build & Artifact
-    needs: [quality, test, e2e] # Wait for quality checks before burning CPU on build
+    needs: [quality, test, e2e, layout] # Wait for quality checks before burning CPU on build
     runs-on: ubuntu-latest
     permissions:
       contents: read
