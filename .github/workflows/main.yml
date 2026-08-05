@@ -75,6 +75,9 @@ jobs:
       - name: Run Lineage Auditor on Changed Files
         run: node scripts/git_lineage_auditor.js ${{ steps.changed-files.outputs.all_changed_files }}
 
+      - name: Run Secret Scanning Guardrail
+        run: node scripts/secret-scanner.js
+
       - run: pnpm run lint
 
       - name: Check for Code Duplication
