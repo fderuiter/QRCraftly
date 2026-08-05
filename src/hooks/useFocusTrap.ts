@@ -1,4 +1,5 @@
-import { useEffect, RefObject } from 'react';
+import { useEffect, RefObject, useId } from 'react';
+import { useKeyboardPriority } from './useKeyboardPriority';
 
 const FOCUSABLE_SELECTOR = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
@@ -9,8 +10,15 @@ const FOCUSABLE_SELECTOR = 'a[href], button:not([disabled]), input:not([disabled
  * restoring focus to the initiating element upon dismissal.
  * @param containerRef Ref pointing to the modal container element.
  * @param isActive Boolean indicating if the focus trap is active.
+ * @param priority Number indicating priority of the focus trap keyboard handler. Defaults to 100.
  */
-export function useFocusTrap(containerRef: RefObject<HTMLElement | null>, isActive: boolean) {
+export function useFocusTrap(
+  containerRef: RefObject<HTMLElement | null>,
+  isActive: boolean,
+  priority: number = 100
+) {
+  const trapId = useId();
+
   useEffect(() => {
     if (!isActive) return;
 
@@ -32,14 +40,31 @@ export function useFocusTrap(containerRef: RefObject<HTMLElement | null>, isActi
     focusFirst();
     const rafId = requestAnimationFrame(focusFirst);
 
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== 'Tab') return;
+    return () => {
+      cancelAnimationFrame(rafId);
+      if (previouslyFocused && typeof previouslyFocused.focus === 'function') {
+        previouslyFocused.focus();
+        requestAnimationFrame(() => {
+          if (previouslyFocused && typeof previouslyFocused.focus === 'function') {
+            previouslyFocused.focus();
+          }
+        });
+      }
+    };
+  }, [containerRef, isActive]);
+
+  // Handle Tab navigation trapping through prioritized keyboard registry
+  useKeyboardPriority(
+    `focus-trap-${trapId}`,
+    priority,
+    (e: KeyboardEvent) => {
+      if (e.key !== 'Tab') return true; // Explicitly permit other keydown handlers
 
       const currentContainer = containerRef.current;
-      if (!currentContainer) return;
+      if (!currentContainer) return true;
 
       const currentFocusables = Array.from(currentContainer.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR));
-      if (currentFocusables.length === 0) return;
+      if (currentFocusables.length === 0) return true;
 
       const firstEl = currentFocusables[0];
       const lastEl = currentFocusables[currentFocusables.length - 1];
@@ -70,21 +95,9 @@ export function useFocusTrap(containerRef: RefObject<HTMLElement | null>, isActi
         focusNext();
         requestAnimationFrame(focusNext);
       }
-    };
 
-    document.addEventListener('keydown', handleKeyDown);
-
-    return () => {
-      cancelAnimationFrame(rafId);
-      document.removeEventListener('keydown', handleKeyDown);
-      if (previouslyFocused && typeof previouslyFocused.focus === 'function') {
-        previouslyFocused.focus();
-        requestAnimationFrame(() => {
-          if (previouslyFocused && typeof previouslyFocused.focus === 'function') {
-            previouslyFocused.focus();
-          }
-        });
-      }
-    };
-  }, [containerRef, isActive]);
+      return false; // Intercepted: stop further propagation to lower priority handlers
+    },
+    isActive
+  );
 }

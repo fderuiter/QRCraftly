@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { useGlobalEvent } from './useGlobalEvent';
 
 /**
  * Helper to retrieve all form fields (inputs, selects, textareas) inside a container.
@@ -120,17 +121,14 @@ export function useDynamicFocus<T extends HTMLElement = HTMLDivElement>(_depende
       isInitialMount.current = false;
     }, 150);
 
-    const handleFocusIn = (e: FocusEvent) => {
-      lastFocusedRef.current = e.target as HTMLElement;
-    };
-
-    document.addEventListener('focusin', handleFocusIn);
-
     return () => {
       clearTimeout(timeout);
-      document.removeEventListener('focusin', handleFocusIn);
     };
   }, []);
+
+  useGlobalEvent('focusin', (e: FocusEvent) => {
+    lastFocusedRef.current = e.target as HTMLElement;
+  });
 
   useEffect(() => {
     const container = containerRef.current;

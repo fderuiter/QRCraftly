@@ -16,7 +16,8 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { useEffect, RefObject } from 'react';
+import { RefObject, useCallback } from 'react';
+import { useGlobalEvent } from './useGlobalEvent';
 
 /**
  * Hook to handle clicks outside of a specified element.
@@ -30,23 +31,15 @@ export function useOnClickOutside<T extends HTMLElement>(
   handler: (event: MouseEvent | TouchEvent) => void,
   isActive: boolean = true
 ) {
-  useEffect(() => {
+  const listener = useCallback((event: MouseEvent | TouchEvent) => {
     if (!isActive) return;
-
-    const listener = (event: MouseEvent | TouchEvent) => {
-      // Do nothing if clicking ref's element or descendent elements
-      if (!ref.current || ref.current.contains(event.target as Node)) {
-        return;
-      }
-      handler(event);
-    };
-
-    document.addEventListener('mousedown', listener);
-    document.addEventListener('touchstart', listener);
-
-    return () => {
-      document.removeEventListener('mousedown', listener);
-      document.removeEventListener('touchstart', listener);
-    };
+    // Do nothing if clicking ref's element or descendent elements
+    if (!ref.current || ref.current.contains(event.target as Node)) {
+      return;
+    }
+    handler(event);
   }, [ref, handler, isActive]);
+
+  useGlobalEvent('mousedown', listener as (e: MouseEvent) => void);
+  useGlobalEvent('touchstart', listener as (e: TouchEvent) => void);
 }

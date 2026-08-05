@@ -1,9 +1,10 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useId } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { Button } from './Button';
 import { useScrollLock } from '../../hooks/useScrollLock';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { useKeyboardPriority } from '../../hooks/useKeyboardPriority';
 
 /**
  *
@@ -58,13 +59,19 @@ export const Modal: React.FC<ModalProps> = ({
   useScrollLock(isOpen);
   useFocusTrap(containerRef, isOpen && mounted);
 
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    if (isOpen) document.addEventListener('keydown', handleEscape);
-    return () => document.removeEventListener('keydown', handleEscape);
-  }, [isOpen, onClose]);
+  const modalId = useId();
+  useKeyboardPriority(
+    `modal-escape-${modalId}`,
+    100,
+    (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+        return false; // Intercepted: stop further propagation to lower priority handlers
+      }
+      return true; // Explicitly permit other keydown handlers
+    },
+    isOpen && mounted
+  );
 
   // Sibling elements of the active modal must dynamically receive aria-hidden="true" when open
   useEffect(() => {
