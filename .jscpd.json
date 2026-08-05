@@ -9,6 +9,6 @@
     "**/__tests__/**",
     "**/mocks/**",
     "**/sandbox/**",
-    "src/pages/**/*"
+    "src/pages/dev-sandbox/**/*"
   ]
 }
