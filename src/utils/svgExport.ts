@@ -90,7 +90,10 @@ function makeImgProxy(src: string | null): HTMLImageElement | null {
  * @param config  The QR code configuration.
  * @returns A promise that resolves to the SVG XML string.
  */
-export async function generateQRSvg(config: QRConfig): Promise<string> {
+export async function generateQRSvg(
+  config: QRConfig,
+  options?: { onLogoOmitted?: () => void }
+): Promise<string> {
   // Dynamically import qrcode to match the pattern used elsewhere in the project
   const QRCode = await import('qrcode');
   const qrData = QRCode.create(config.value, { errorCorrectionLevel: config.errorCorrectionLevel });
@@ -101,13 +104,22 @@ export async function generateQRSvg(config: QRConfig): Promise<string> {
   const moduleCount = modules.size;
 
   // Pre-resolve logo images to inline data-URLs
-  const logoImg = config.logoUrl
-    ? makeImgProxy(await toDataUrl(config.logoUrl))
-    : null;
+  const isRemoteLogo = (url?: string | null) => !!url && !url.toLowerCase().startsWith('data:');
+  const hasRemoteLogo = isRemoteLogo(config.logoUrl);
+  const hasRemoteBorderLogo = config.isBorderEnabled && isRemoteLogo(config.borderLogoUrl);
 
-  const borderLogoImg = config.isBorderEnabled && config.borderLogoUrl
-    ? makeImgProxy(await toDataUrl(config.borderLogoUrl))
+  const logoDataUrl = config.logoUrl ? await toDataUrl(config.logoUrl) : null;
+  const logoImg = logoDataUrl ? makeImgProxy(logoDataUrl) : null;
+
+  const borderLogoDataUrl = config.isBorderEnabled && config.borderLogoUrl
+    ? await toDataUrl(config.borderLogoUrl)
     : null;
+  const borderLogoImg = borderLogoDataUrl ? makeImgProxy(borderLogoDataUrl) : null;
+
+  const logoOmitted = (hasRemoteLogo && !logoDataUrl) || (hasRemoteBorderLogo && !borderLogoDataUrl);
+  if (logoOmitted && options?.onLogoOmitted) {
+    options.onLogoOmitted();
+  }
 
   // Determine output dimensions from the social format (canonical resolution)
   const { width: svgWidth, height: svgHeight } = SOCIAL_DIMENSIONS[config.socialFormat];

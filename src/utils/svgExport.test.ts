@@ -305,4 +305,73 @@ describe('generateQRSvg', () => {
       expect(svg).toContain('<desc>+1234567890</desc>');
     });
   });
+
+  describe('Post-Export Remote Logo Omission Capturing', () => {
+    it('triggers onLogoOmitted callback if a remote logo fetch fails (returns null)', async () => {
+      const originalFetch = global.fetch;
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: false,
+      } as any);
+
+      try {
+        const config: QRConfig = {
+          ...(DEFAULT_CONFIG as QRConfig),
+          logoUrl: 'https://example.com/missing-logo.png',
+        };
+
+        const onLogoOmitted = vi.fn();
+        await generateQRSvg(config, { onLogoOmitted });
+
+        expect(onLogoOmitted).toHaveBeenCalledTimes(1);
+      } finally {
+        global.fetch = originalFetch;
+      }
+    });
+
+    it('does NOT trigger onLogoOmitted callback if a remote logo fetch succeeds', async () => {
+      const originalFetch = global.fetch;
+      const originalFileReader = global.FileReader;
+
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        blob: () => Promise.resolve(new Blob(['fake image data'], { type: 'image/png' })),
+      } as any);
+
+      class MockFileReader {
+        onload: () => void = () => {};
+        result = 'data:image/png;base64,ZmFrZSBpbWFnZSBkYXRh';
+        readAsDataURL() {
+          this.onload();
+        }
+      }
+      global.FileReader = MockFileReader as any;
+
+      try {
+        const config: QRConfig = {
+          ...(DEFAULT_CONFIG as QRConfig),
+          logoUrl: 'https://example.com/success-logo.png',
+        };
+
+        const onLogoOmitted = vi.fn();
+        await generateQRSvg(config, { onLogoOmitted });
+
+        expect(onLogoOmitted).not.toHaveBeenCalled();
+      } finally {
+        global.FileReader = originalFileReader;
+        global.fetch = originalFetch;
+      }
+    });
+
+    it('does NOT trigger onLogoOmitted callback if no remote logo is configured', async () => {
+      const config: QRConfig = {
+        ...(DEFAULT_CONFIG as QRConfig),
+        logoUrl: '',
+      };
+
+      const onLogoOmitted = vi.fn();
+      await generateQRSvg(config, { onLogoOmitted });
+
+      expect(onLogoOmitted).not.toHaveBeenCalled();
+    });
+  });
 });

@@ -41,6 +41,10 @@ export interface ExportStatus {
    *
    */
   fallbackTriggered?: boolean;
+  /**
+   *
+   */
+  logoOmitted?: boolean;
 }
 
 /**
@@ -244,7 +248,12 @@ export function useQRDownload(
    */
   const handleSaveSvg = useCallback(async (): Promise<ExportStatus> => {
     try {
-      const svgString = await generateQRSvg(config);
+      let logoOmitted = false;
+      const svgString = await generateQRSvg(config, {
+        onLogoOmitted: () => {
+          logoOmitted = true;
+        },
+      });
       const blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -254,7 +263,7 @@ export function useQRDownload(
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
-      return { success: true, format: 'svg' };
+      return { success: true, format: 'svg', logoOmitted };
     } catch (err: any) {
       console.warn('SVG export failed:', err);
       return { success: false, format: 'svg', error: err };

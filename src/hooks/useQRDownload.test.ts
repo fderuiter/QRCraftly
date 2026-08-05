@@ -312,6 +312,28 @@ describe('useQRDownload', () => {
     }
   });
 
+  it('handleSaveSvg returns logoOmitted: true if remote logo fetch fails', async () => {
+    const originalFetch = global.fetch;
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+    } as any);
+
+    try {
+      const configWithLogo: QRConfig = {
+        ...(DEFAULT_CONFIG as QRConfig),
+        logoUrl: 'https://example.com/error-logo.png',
+      };
+
+      const { result } = renderHook(() => useQRDownload(mockQrRef, configWithLogo), { wrapper: ToastProvider });
+      const status = await result.current.handleSaveSvg();
+
+      expect(status.success).toBe(true);
+      expect(status.logoOmitted).toBe(true);
+    } finally {
+      global.fetch = originalFetch;
+    }
+  });
+
   describe('handleCopy', () => {
     let originalClipboardItem: any;
     let originalClipboard: any;
