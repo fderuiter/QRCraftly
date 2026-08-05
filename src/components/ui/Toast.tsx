@@ -1,44 +1,46 @@
-import { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
-import { X, CheckCircle, AlertCircle, Info } from 'lucide-react';
+import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
+import { X } from 'lucide-react';
 import { Button } from './Button';
+import { getNotificationColors, getNotificationIcon } from '../../utils/notificationStyles';
+import { mergeClasses } from './styles';
 
 /**
- *
+ * Type of the toast notification message.
  */
 type ToastType = 'success' | 'error' | 'info';
 
 /**
- *
+ * A message structure inside the toast state.
  */
 interface ToastMessage {
   /**
-   *
+   * Unique message identifier.
    */
   id: string;
   /**
-   *
+   * Style and icon state variant.
    */
   type: ToastType;
   /**
-   *
+   * The text message to display.
    */
   message: string;
   /**
-   *
+   * Time in ms before automatically closing.
    */
   duration?: number;
 }
 
 /**
- *
+ * Properties offered by the Toast context.
  */
 interface ToastContextType {
   /**
-   *
+   * Adds a new toast message.
    */
   addToast: (toast: Omit<ToastMessage, 'id'>) => void;
   /**
-   *
+   * Removes an existing toast message.
    */
   removeToast: (id: string) => void;
 }
@@ -46,7 +48,8 @@ interface ToastContextType {
 const ToastContext = createContext<ToastContextType | undefined>(undefined);
 
 /**
- *
+ * Context hook for components to trigger toast alerts.
+ * @returns Toast context interface.
  */
 export const useToast = () => {
   const context = useContext(ToastContext);
@@ -57,9 +60,10 @@ export const useToast = () => {
 };
 
 /**
- *
- * @param root0
- * @param root0.children
+ * Context Provider wrapping the app to offer accessible status toasts.
+ * @param root0 The provider properties.
+ * @param root0.children Child elements.
+ * @returns React Context Provider element.
  */
 export const ToastProvider = ({ children }: { children: ReactNode }) => {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
@@ -85,7 +89,15 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
-const ToastItem = ({ toast, onRemove }: { toast: ToastMessage; onRemove: (id: string) => void }) => {
+/**
+ * Single accessible notification banner.
+ * @param props Component properties.
+ * @param props.toast The toast message object to render.
+ * @param props.onRemove Callback to dismiss the toast.
+ * @returns React functional component rendering a single toast.
+ */
+const ToastItem = (props: { toast: ToastMessage; onRemove: (id: string) => void }) => {
+  const { toast, onRemove } = props;
   const [isHovered, setIsHovered] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
 
@@ -101,16 +113,7 @@ const ToastItem = ({ toast, onRemove }: { toast: ToastMessage; onRemove: (id: st
     return () => clearTimeout(timer);
   }, [toast, onRemove, isHovered, isFocused]);
 
-  const Icon = toast.type === 'success' ? CheckCircle : toast.type === 'error' ? AlertCircle : Info;
-  
-  let colors = '';
-  if (toast.type === 'success') {
-    colors = 'bg-teal-50 dark:bg-teal-900/30 border-teal-200 dark:border-teal-800 text-teal-800 dark:text-teal-200';
-  } else if (toast.type === 'error') {
-    colors = 'bg-rose-50 dark:bg-rose-900/30 border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200';
-  } else {
-    colors = 'bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-200';
-  }
+  const colors = getNotificationColors(toast.type, false);
 
   return (
     <div 
@@ -124,9 +127,9 @@ const ToastItem = ({ toast, onRemove }: { toast: ToastMessage; onRemove: (id: st
           setIsFocused(false);
         }
       }}
-      className={`pointer-events-auto flex w-full max-w-md translate-y-0 transform items-center gap-3 rounded-xl border p-4 opacity-100 shadow-lg transition-all duration-300 ease-in-out ${colors}`}
+      className={mergeClasses("pointer-events-auto flex w-full max-w-md translate-y-0 transform items-center gap-3 rounded-xl border p-4 opacity-100 shadow-lg transition-all duration-300 ease-in-out", colors)}
     >
-      <Icon className="size-5 flex-shrink-0" />
+      {React.createElement(getNotificationIcon(toast.type), { className: "size-5 flex-shrink-0" })}
       <p className="flex-1 text-sm font-medium">{toast.message}</p>
       <Button
         variant="ghost"

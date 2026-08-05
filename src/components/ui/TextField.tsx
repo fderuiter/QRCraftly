@@ -1,7 +1,7 @@
-import React, { useState, forwardRef, useId } from 'react';
+import React, { useState, forwardRef } from 'react';
 import { Button } from './Button';
 import { Eye, EyeOff } from 'lucide-react';
-import { combineIds } from '../../utils/a11y';
+import { useFieldIds } from '../../hooks/useFieldIds';
 import { FieldWrapper, BaseFieldProps } from './FieldWrapper';
 import { TEXT_FIELD_CLASSES, ERROR_INPUT_CLASSES, mergeClasses } from './styles';
 
@@ -27,12 +27,13 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(
     const [showPassword, setShowPassword] = useState(false);
     const effectiveType = showPasswordToggle ? (showPassword ? 'text' : 'password') : type;
     
-    const defaultId = useId();
-    const inputId = id || defaultId;
-    
-    const errorId = error ? `${inputId}-error` : undefined;
-    const charCountId = showCharCount && maxLength ? `${inputId}-char-count` : undefined;
-    const describedBy = combineIds(errorId, charCountId, ariaDescribedby);
+    const { inputId, errorId, charCountId, describedBy } = useFieldIds({
+      id,
+      error,
+      showCharCount,
+      maxLength,
+      ariaDescribedby,
+    });
 
     return (
       <FieldWrapper
