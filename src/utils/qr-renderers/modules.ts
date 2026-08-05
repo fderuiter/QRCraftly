@@ -1,4 +1,4 @@
-import { QRConfig, QRStyle, QRModules } from '../../types';
+import { QRConfig, QRStyle, QRModules, QRDrawingContext } from '../../types';
 import { drawRoundRect, drawRoughRect, drawPoly, drawStar } from '../canvasHelpers';
 import { getIsCoveredByLogo, LogoMetrics, iterateMatrix } from './utils';
 
@@ -6,7 +6,7 @@ type DrawModuleFn = (r: number, c: number, x: number, y: number, cx: number, cy:
 
 const getModuleDrawer = (
     style: QRStyle,
-    ctx: CanvasRenderingContext2D,
+    ctx: QRDrawingContext,
     cellSize: number,
     modules: QRModules,
     moduleCount: number,
@@ -91,7 +91,7 @@ const getModuleDrawer = (
 };
 
 export const renderModules = (
-  ctx: CanvasRenderingContext2D,
+  ctx: QRDrawingContext,
   modules: QRModules,
   config: QRConfig,
   drawX: number,

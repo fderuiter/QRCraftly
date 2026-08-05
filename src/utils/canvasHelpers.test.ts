@@ -18,9 +18,10 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { drawRoundRect, drawPoly, drawStar, drawRoughRect, drawScribble } from './canvasHelpers';
+import { QRDrawingContext } from '../types';
 
 describe('canvasHelpers', () => {
-  let ctx: any;
+  let ctx: QRDrawingContext;
 
   beforeEach(() => {
     // specific cast to allow optional methods like roundRect
@@ -39,7 +40,7 @@ describe('canvasHelpers', () => {
       rotate: vi.fn(),
       fillRect: vi.fn(),
       rect: vi.fn(),
-    } as unknown as CanvasRenderingContext2D;
+    } as unknown as QRDrawingContext;
   });
 
   describe('drawRoundRect', () => {

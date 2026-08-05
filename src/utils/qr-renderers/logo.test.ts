@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { renderLogo } from './logo';
 import { DEFAULT_CONFIG } from '../../constants';
-import { QRConfig } from '../../types';
+import { QRConfig, QRDrawingContext } from '../../types';
 import { LogoMetrics } from './utils';
 
 describe('renderLogo', () => {
@@ -12,7 +12,7 @@ describe('renderLogo', () => {
     fillRect: vi.fn(),
     drawImage: vi.fn(),
     fillStyle: '',
-  } as unknown as CanvasRenderingContext2D);
+  } as unknown as QRDrawingContext);
 
   const mockMetrics: LogoMetrics = {
     logoSizePx: 40,

@@ -1,8 +1,8 @@
-import { QRConfig, QRStyle } from '../../types';
+import { QRConfig, QRStyle, QRDrawingContext } from '../../types';
 import { drawRoundRect, drawPoly, drawStar, drawRoughRect, drawScribble } from '../canvasHelpers';
 
 export const renderEyes = (
-    ctx: CanvasRenderingContext2D,
+    ctx: QRDrawingContext,
     config: QRConfig,
     drawX: number,
     drawY: number,

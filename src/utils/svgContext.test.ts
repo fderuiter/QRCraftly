@@ -358,4 +358,13 @@ describe('SvgContext', () => {
       expect(svg).toContain(' C ');
     });
   });
+
+  describe('QRDrawingContext conformance', () => {
+    it('proves that SvgContext conforms to the QRDrawingContext contract', () => {
+      const context: import('../types').QRDrawingContext = new SvgContext(100, 100);
+      expect(context).toBeDefined();
+      expect(context.canvas.width).toBe(100);
+      expect(context.canvas.height).toBe(100);
+    });
+  });
 });

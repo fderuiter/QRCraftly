@@ -121,7 +121,7 @@ export async function generateQRSvg(config: QRConfig): Promise<string> {
 
   try {
     drawWithTemplate(
-      ctx as unknown as CanvasRenderingContext2D,
+      ctx,
       modules,
       config,
       logoImg,

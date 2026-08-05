@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { renderEyes } from './eyes';
-import { QRStyle } from '../../types';
+import { QRStyle, QRDrawingContext } from '../../types';
 
 describe('renderEyes', () => {
   const createMockCtx = () => {
@@ -27,7 +27,7 @@ describe('renderEyes', () => {
       lineWidth: 1,
       lineCap: 'butt',
       lineJoin: 'miter',
-    } as unknown as CanvasRenderingContext2D;
+    } as unknown as QRDrawingContext;
   };
 
   const baseConfig = {

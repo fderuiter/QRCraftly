@@ -136,7 +136,7 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({ config, s
       ctx.scale(pixelRatio, pixelRatio);
 
       drawWithTemplate(
-        ctx as unknown as CanvasRenderingContext2D,
+        ctx,
         qrData.modules,
         config,
         logoImg,
@@ -185,7 +185,7 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({ config, s
             }
 
             drawWithTemplate(
-              vCtx as unknown as CanvasRenderingContext2D,
+              vCtx,
               qrData.modules,
               config,
               logoImg,
@@ -198,7 +198,7 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({ config, s
           } else {
             vCtx.clearRect(0, 0, displayWidth, displayHeight);
             drawQRInternal(
-              vCtx as unknown as CanvasRenderingContext2D,
+              vCtx,
               qrData.modules,
               config,
               logoImg,

@@ -1,8 +1,8 @@
-import { QRConfig } from '../../types';
+import { QRConfig, QRDrawingContext } from '../../types';
 import { LogoMetrics } from './utils';
 
 export const renderLogo = (
-  ctx: CanvasRenderingContext2D,
+  ctx: QRDrawingContext,
   config: QRConfig,
   logoImg: HTMLImageElement | null,
   displaySize: number,

@@ -1,4 +1,4 @@
-import { QRConfig } from '../../types';
+import { QRConfig, QRDrawingContext } from '../../types';
 
 /**
  * Draws the background and pattern (such as dashed or dotted) of the outer border.
@@ -9,7 +9,7 @@ import { QRConfig } from '../../types';
  * @param borderPx - The thickness of the border in pixels.
  */
 export const renderBorder = (
-  ctx: CanvasRenderingContext2D,
+  ctx: QRDrawingContext,
   config: QRConfig,
   displaySize: number,
   borderPx: number
@@ -38,7 +38,7 @@ export const renderBorder = (
 };
 
 export const renderBorderDecoration = (
-    ctx: CanvasRenderingContext2D,
+    ctx: QRDrawingContext,
     config: QRConfig,
     displaySize: number,
     borderPx: number,

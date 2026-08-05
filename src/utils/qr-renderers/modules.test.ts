@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { renderModules } from './modules';
-import { QRStyle } from '../../types';
+import { QRStyle, QRDrawingContext } from '../../types';
 
 describe('renderModules', () => {
   const createMockCtx = () => {
@@ -23,7 +23,7 @@ describe('renderModules', () => {
       stroke: vi.fn(),
       fillStyle: '',
       strokeStyle: '',
-    } as unknown as CanvasRenderingContext2D;
+    } as unknown as QRDrawingContext;
   };
 
   const createMockModules = (moduleCount: number, activeCoords: [number, number][]) => {

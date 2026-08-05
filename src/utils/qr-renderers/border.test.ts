@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { renderBorder, renderBorderDecoration } from './border';
 import { DEFAULT_CONFIG } from '../../constants';
-import { QRConfig } from '../../types';
+import { QRConfig, QRDrawingContext } from '../../types';
 
 describe('renderBorder', () => {
   const createMockContext = () => ({
@@ -16,7 +16,7 @@ describe('renderBorder', () => {
     font: '',
     textAlign: '',
     textBaseline: '',
-  } as unknown as CanvasRenderingContext2D);
+  } as unknown as QRDrawingContext);
 
   it('renders solid border', () => {
     const ctx = createMockContext();
@@ -81,7 +81,7 @@ describe('renderBorderDecoration', () => {
     font: '',
     textAlign: '',
     textBaseline: '',
-  } as unknown as CanvasRenderingContext2D);
+  } as unknown as QRDrawingContext);
 
   it('does nothing if no decoration config', () => {
     const ctx = createMockContext();

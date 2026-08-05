@@ -402,4 +402,76 @@ export type TelemetryPayload = {
   [K in TelemetryKey]?: string | number | boolean | null;
 };
 
+/**
+ * Lightweight gradient interface supported by both native canvas and SVG exports.
+ */
+export interface QRGradient {
+  addColorStop(offset: number, color: string): void;
+}
+
+/**
+ * Lightweight, type-safe drawing interface representing only the used canvas
+ * operations in the QR rendering and export pipeline.
+ */
+export interface QRDrawingContext {
+  /**
+   *
+   */
+  fillStyle: string | any;
+  /**
+   *
+   */
+  strokeStyle: string | any;
+  /**
+   *
+   */
+  lineWidth: number;
+  /**
+   *
+   */
+  font: string;
+  /**
+   *
+   */
+  textAlign: string | any;
+  /**
+   *
+   */
+  textBaseline: string | any;
+  /**
+   *
+   */
+  readonly canvas: { /**
+                      *
+                      */
+  width: number; /**
+                  *
+                  */
+  height: number };
+
+  beginPath(): void;
+  closePath(): void;
+  moveTo(x: number, y: number): void;
+  lineTo(x: number, y: number): void;
+  quadraticCurveTo(cpx: number, cpy: number, x: number, y: number): void;
+  rect(x: number, y: number, w: number, h: number): void;
+  roundRect?(x: number, y: number, w: number, h: number, r: number): void;
+  arc(cx: number, cy: number, r: number, startAngle: number, endAngle: number, anticlockwise?: boolean): void;
+  fill(): void;
+  stroke(): void;
+  fillRect(x: number, y: number, w: number, h: number): void;
+  strokeRect(x: number, y: number, w: number, h: number): void;
+  clearRect(x: number, y: number, w: number, h: number): void;
+  fillText(text: string, x: number, y: number, maxWidth?: number): void;
+  drawImage(image: any, ...args: any[]): void;
+  setLineDash(segments: number[]): void;
+  save(): void;
+  restore(): void;
+  scale(sx: number, sy: number): void;
+  translate(tx: number, ty: number): void;
+  rotate(angle: number): void;
+  createRadialGradient(x0: number, y0: number, r0: number, x1: number, y1: number, r1: number): QRGradient;
+  createLinearGradient?(x0: number, y0: number, x1: number, y1: number): QRGradient;
+}
+
 

@@ -22,7 +22,7 @@ import {
   drawWithTemplate,
 } from './templateRenderer';
 import { DEFAULT_CONFIG } from '../constants';
-import { SocialFormat, TemplateStyle, QRConfig, QRStyle } from '../types';
+import { SocialFormat, TemplateStyle, QRConfig, QRStyle, QRDrawingContext } from '../types';
 import { SvgContext } from './svgContext';
 import * as qrRenderer from './qrRenderer';
 
@@ -102,7 +102,7 @@ function makeMockCtx() {
     font: '',
     textAlign: '',
     textBaseline: '',
-  } as unknown as CanvasRenderingContext2D;
+  } as unknown as QRDrawingContext;
 
   return ctx;
 }
@@ -443,7 +443,7 @@ describe('drawWithTemplate - Standard SVG Export Precision', () => {
     };
 
     drawWithTemplate(
-      ctx as unknown as CanvasRenderingContext2D,
+      ctx,
       modules,
       config,
       null,
@@ -472,7 +472,7 @@ describe('drawWithTemplate - Standard SVG Export Precision', () => {
         rectCalls.push({ x, y, w, h });
       }),
       fillStyle: '',
-    } as unknown as CanvasRenderingContext2D;
+    } as unknown as QRDrawingContext;
 
     drawWithTemplate(
       testCtx,
@@ -540,7 +540,7 @@ describe('drawWithTemplate - Standard SVG Export Precision', () => {
         rectCalls.push({ x, y, w, h });
       }),
       fillStyle: '',
-    } as unknown as CanvasRenderingContext2D;
+    } as unknown as QRDrawingContext;
 
     drawWithTemplate(
       testCtx,

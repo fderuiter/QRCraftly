@@ -16,6 +16,8 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { QRDrawingContext } from '../types';
+
 
 /**
  * Draws a rounded rectangle.
@@ -26,7 +28,7 @@
  * @param h The height of the rectangle.
  * @param r The corner radius.
  */
-export const drawRoundRect = (ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) => {
+export const drawRoundRect = (ctx: QRDrawingContext, x: number, y: number, w: number, h: number, r: number) => {
   const safeR = Math.max(0, Math.min(r, w / 2, h / 2));
   ctx.moveTo(x + safeR, y);
   ctx.lineTo(x + w - safeR, y);
@@ -51,7 +53,7 @@ export const drawRoundRect = (ctx: CanvasRenderingContext2D, x: number, y: numbe
  * @param fill Whether to fill the polygon (default: true).
  * @param addToPath Whether to add to the current path without starting a new one or filling (default: false).
  */
-export const drawPoly = (ctx: CanvasRenderingContext2D, x: number, y: number, r: number, sides: number, rotate: number = 0, fill: boolean = true, addToPath: boolean = false) => {
+export const drawPoly = (ctx: QRDrawingContext, x: number, y: number, r: number, sides: number, rotate: number = 0, fill: boolean = true, addToPath: boolean = false) => {
   if (!addToPath) ctx.beginPath();
   for (let i = 0; i < sides; i++) {
     const theta = rotate + (i * 2 * Math.PI / sides);
@@ -77,7 +79,7 @@ export const drawPoly = (ctx: CanvasRenderingContext2D, x: number, y: number, r:
  * @param fill Whether to fill the star (default: true).
  * @param addToPath Whether to add to the current path without starting a new one or filling (default: false).
  */
-export const drawStar = (ctx: CanvasRenderingContext2D, cx: number, cy: number, outerR: number, innerR: number, spikes: number, fill: boolean = true, addToPath: boolean = false) => {
+export const drawStar = (ctx: QRDrawingContext, cx: number, cy: number, outerR: number, innerR: number, spikes: number, fill: boolean = true, addToPath: boolean = false) => {
   let rot = Math.PI / 2 * 3;
   let x = cx;
   let y = cy;
@@ -112,7 +114,7 @@ export const drawStar = (ctx: CanvasRenderingContext2D, cx: number, cy: number, 
  * @param h The height.
  * @param addToPath Whether to add to the current path instead of filling immediately (default: false).
  */
-export const drawRoughRect = (ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, addToPath: boolean = false) => {
+export const drawRoughRect = (ctx: QRDrawingContext, x: number, y: number, w: number, h: number, addToPath: boolean = false) => {
   ctx.save();
   // Just a slight rotation for style
   ctx.translate(x + w / 2, y + h / 2);
@@ -132,7 +134,7 @@ export const drawRoughRect = (ctx: CanvasRenderingContext2D, x: number, y: numbe
  * @param y The top-left y coordinate.
  * @param s The size of the bounding box.
  */
-export const drawScribble = (ctx: CanvasRenderingContext2D, x: number, y: number, s: number) => {
+export const drawScribble = (ctx: QRDrawingContext, x: number, y: number, s: number) => {
   ctx.save();
   ctx.translate(x + s / 2, y + s / 2);
   ctx.rotate(0.1);

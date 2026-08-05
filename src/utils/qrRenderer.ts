@@ -1,4 +1,4 @@
-import { QRConfig, QRModules } from '../types';
+import { QRConfig, QRModules, QRDrawingContext } from '../types';
 import { calculateLayout, getLogoMetrics } from './qr-renderers/utils';
 import { renderBorder, renderBorderDecoration } from './qr-renderers/border';
 import { renderModules } from './qr-renderers/modules';
@@ -36,7 +36,7 @@ export const drawQR = (
 
     ctx.scale(pixelRatio, pixelRatio);
 
-    drawQRInternal(ctx as unknown as CanvasRenderingContext2D, modules, config, logoImg, borderLogoImg, displaySize, moduleCount);
+    drawQRInternal(ctx, modules, config, logoImg, borderLogoImg, displaySize, moduleCount);
 
   } catch (err) {
     console.warn("QR generation failed:", err);
@@ -56,7 +56,7 @@ export const drawQR = (
  * @param moduleCount  Number of modules (rows/cols) in the QR grid.
  */
 export const drawQRInternal = (
-  ctx: CanvasRenderingContext2D,
+  ctx: QRDrawingContext,
   modules: QRModules,
   config: QRConfig,
   logoImg: HTMLImageElement | null,

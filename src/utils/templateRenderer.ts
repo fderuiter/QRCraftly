@@ -16,7 +16,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { QRConfig, QRModules, SocialFormat, TemplateStyle } from '../types';
+import { QRConfig, QRModules, SocialFormat, TemplateStyle, QRDrawingContext } from '../types';
 import { drawQRInternal } from './qrRenderer';
 import { drawRoundRect } from './canvasHelpers';
 
@@ -55,7 +55,7 @@ function resolveTemplateText(config: QRConfig): string {
  * Used for TemplateStyle.NONE – no decorative chrome, just a solid colour.
  */
 function drawNoneBackground(
-  ctx: CanvasRenderingContext2D,
+  ctx: QRDrawingContext,
   config: QRConfig,
   width: number,
   height: number
@@ -70,7 +70,7 @@ function drawNoneBackground(
  * subtext below the QR zone.
  */
 function drawMinimalistBackground(
-  ctx: CanvasRenderingContext2D,
+  ctx: QRDrawingContext,
   config: QRConfig,
   width: number,
   height: number
@@ -100,7 +100,7 @@ function drawMinimalistBackground(
  * improves contrast for the QR code zone.
  */
 function drawGradientBlurBackground(
-  ctx: CanvasRenderingContext2D,
+  ctx: QRDrawingContext,
   config: QRConfig,
   width: number,
   height: number
@@ -134,7 +134,7 @@ function drawGradientBlurBackground(
  * as the inner background.
  */
 function drawSolidFrameBackground(
-  ctx: CanvasRenderingContext2D,
+  ctx: QRDrawingContext,
   config: QRConfig,
   width: number,
   height: number
@@ -157,7 +157,7 @@ function drawSolidFrameBackground(
 // ---------------------------------------------------------------------------
 
 function drawTemplateText(
-  ctx: CanvasRenderingContext2D,
+  ctx: QRDrawingContext,
   config: QRConfig,
   displayWidth: number,
   displayHeight: number,
@@ -192,7 +192,7 @@ function drawTemplateText(
  * Strategy map for template background rendering.
  */
 type BackgroundPainter = (
-  ctx: CanvasRenderingContext2D,
+  ctx: QRDrawingContext,
   config: QRConfig,
   width: number,
   height: number
@@ -232,7 +232,7 @@ const BACKGROUND_PAINTERS: Record<TemplateStyle, BackgroundPainter> = {
  * @param moduleCount   Number of QR modules per row/column.
  */
 export function drawWithTemplate(
-  ctx: CanvasRenderingContext2D,
+  ctx: QRDrawingContext,
   modules: QRModules,
   config: QRConfig,
   logoImg: HTMLImageElement | null,
@@ -294,7 +294,7 @@ export function drawWithTemplate(
   // coordinate space; we pass displayWidth as both width and height because
   // the QR is always square.
   drawQRInternal(
-    ctx as unknown as CanvasRenderingContext2D,
+    ctx,
     modules,
     config,
     logoImg,

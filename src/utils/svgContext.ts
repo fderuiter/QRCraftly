@@ -16,6 +16,8 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { QRDrawingContext } from '../types';
+
 /**
  * A 2D affine transformation matrix in column-major form:
  *   | a  c  e |
@@ -169,10 +171,10 @@ function getMeasuringContext(): CanvasRenderingContext2D | OffscreenCanvasRender
  *
  * Usage:
  *   const ctx = new SvgContext(1024, 1024);
- *   drawQRInternal(ctx as unknown as CanvasRenderingContext2D, ...);
+ *   drawQRInternal(ctx, ...);
  *   const svgString = ctx.serialize();
  */
-export class SvgContext {
+export class SvgContext implements QRDrawingContext {
   // Public style properties (mirrors CanvasRenderingContext2D)
   fillStyle: string | SvgRadialGradient | SvgLinearGradient = '#000000';
   strokeStyle: string | SvgRadialGradient | SvgLinearGradient = '#000000';
