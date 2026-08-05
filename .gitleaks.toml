@@ -18,3 +18,27 @@ title = "gitleaks config"
     description = "SMTP Connection URI"
     regex = '''(?i)smtps?://[^:]+:([^@\s]+)@[^\s/]+'''
     secretGroup = 1
+
+[[rules]]
+    id = "aws-access-key"
+    description = "AWS Access Key ID"
+    regex = '''(?i)\b((?:AKIA|ASCA|AGPA|AIDA|AROA|AIPA|ANPA|ANVA|ASIA)[A-Z0-9]{16})\b'''
+    secretGroup = 1
+
+[[rules]]
+    id = "stripe-api-key"
+    description = "Stripe API Key"
+    regex = '''(?i)\b((?:sk|rk)_(?:live|test)_[a-zA-Z0-9]{24,})\b'''
+    secretGroup = 1
+
+[[rules]]
+    id = "github-pat"
+    description = "GitHub Personal Access Token"
+    regex = '''(?i)\b(gh[pousr]_[a-zA-Z0-9]{36}|github_pat_[a-zA-Z0-9_]{82})\b'''
+    secretGroup = 1
+
+[[rules]]
+    id = "gcp-api-key"
+    description = "Google Cloud or Firebase API Key"
+    regex = '''(?i)\b(AIzaSy[a-zA-Z0-9_-]{33})\b'''
+    secretGroup = 1

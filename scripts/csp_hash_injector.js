@@ -32,15 +32,29 @@ export function getHtmlFiles(dir) {
 /**
  * Extract all inline script contents from HTML string.
  * @param {string} html - HTML file content.
+ * @param {boolean} [excludeJson=false] - If true, exclude non-executable script tags (like type="application/json" or "application/ld+json").
  * @returns {string[]} List of inline script contents.
  */
-export function extractInlineScripts(html) {
+export function extractInlineScripts(html, excludeJson = false) {
   // Regex to match script tags that do not have a src attribute
   const scriptRegex = /<script(?![^>]*\bsrc\b)([^>]*)>([\s\S]*?)<\/script>/gi;
   const scripts = [];
   let match;
   while ((match = scriptRegex.exec(html)) !== null) {
-    scripts.push(match[2]);
+    const attributes = match[1];
+    const content = match[2];
+    
+    if (excludeJson) {
+      const typeMatch = /type=["']([^"']*)["']/i.exec(attributes);
+      if (typeMatch) {
+        const typeValue = typeMatch[1].toLowerCase().trim();
+        if (typeValue === 'application/json' || typeValue === 'application/ld+json' || typeValue === 'importmap') {
+          continue;
+        }
+      }
+    }
+    
+    scripts.push(content);
   }
   return scripts;
 }
@@ -116,7 +130,7 @@ export function run() {
   for (const filePath of htmlFiles) {
     const relativePath = path.relative(DIST_CLIENT_DIR, filePath);
     const html = fs.readFileSync(filePath, 'utf8');
-    const inlineScripts = extractInlineScripts(html);
+    const inlineScripts = extractInlineScripts(html, true);
     
     const fileHashes = inlineScripts.map(script => {
       const hash = computeCspHash(script);

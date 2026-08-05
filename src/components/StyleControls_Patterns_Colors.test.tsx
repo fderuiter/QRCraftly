@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { PatternControls } from './style-controls/PatternControls';
 import { ColorControls } from './style-controls/ColorControls';
 import { DEFAULT_CONFIG } from '../constants';
+import { QRStyle } from '../types';
 import { describe, it, expect, vi } from 'vitest';
 
 describe('StyleControls Accessibility', () => {
@@ -24,6 +25,40 @@ describe('StyleControls Accessibility', () => {
       // Check checked state
       const standardRadio = screen.getByLabelText(/select standard industrial pattern/i);
       expect(standardRadio).toBeChecked();
+    });
+
+    it('renders persistent visually-hidden polite live region for scannability warnings', () => {
+      const handleChange = vi.fn();
+      // Test standard pattern (no warning expected in live region)
+      const { rerender } = render(<PatternControls config={DEFAULT_CONFIG} onChange={handleChange} />);
+
+      const liveRegion = screen.getByText((content, element) => {
+        return element?.className === 'sr-only' && element?.getAttribute('aria-live') === 'polite';
+      });
+      expect(liveRegion).toBeInTheDocument();
+      expect(liveRegion).toHaveAttribute('aria-atomic', 'true');
+      expect(liveRegion).toBeEmptyDOMElement();
+
+      // Test low-reliability pattern (warning expected in live region)
+      const lowReliabilityConfig = {
+        ...DEFAULT_CONFIG,
+        style: QRStyle.GRUNGE,
+      };
+      rerender(<PatternControls config={lowReliabilityConfig} onChange={handleChange} />);
+      expect(liveRegion).not.toBeEmptyDOMElement();
+      expect(liveRegion).toHaveTextContent(/Scannability Warning: The selected pattern \("Grunge"\) is complex and may reduce scannability/);
+
+      // Test another low-reliability pattern
+      const circuitConfig = {
+        ...DEFAULT_CONFIG,
+        style: QRStyle.CIRCUIT,
+      };
+      rerender(<PatternControls config={circuitConfig} onChange={handleChange} />);
+      expect(liveRegion).toHaveTextContent(/Scannability Warning: The selected pattern \("Cyber Circuit"\) is complex and may reduce scannability/);
+
+      // Test switching back to high-reliability pattern (warning cleared from live region)
+      rerender(<PatternControls config={DEFAULT_CONFIG} onChange={handleChange} />);
+      expect(liveRegion).toBeEmptyDOMElement();
     });
   });
 
