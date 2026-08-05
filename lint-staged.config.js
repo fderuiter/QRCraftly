@@ -13,7 +13,8 @@ export default {
     const quotedFiles = filenames.map(f => `"${f.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`).join(' ');
     return [
       `node scripts/secret-scanner.js ${quotedFiles}`,
-      `node scripts/validate_ui_catalog.js ${quotedFiles}`
+      `node scripts/validate_ui_catalog.js ${quotedFiles}`,
+      `node scripts/static-path-tracker.js ${quotedFiles}`
     ];
   },
   '**/*.{js,jsx,ts,tsx,mjs,cjs}': (filenames) => {

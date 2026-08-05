@@ -75,4 +75,53 @@ describe('useImageUpload', () => {
     expect(result.current.error).toBe('Validation failed');
     expect(onSuccess).not.toHaveBeenCalled();
   });
+
+  it('handles SVG upload with sanitization', () => {
+    const { result } = renderHook(() => useImageUpload());
+    const onSuccess = vi.fn();
+
+    const mockReadAsText = vi.fn();
+    const mockFileReaderInstance = {
+      readAsText: mockReadAsText,
+      onload: null as any,
+    };
+
+    class MockFileReader {
+      onload: any = null;
+      readAsText(file: File) {
+        mockReadAsText(file);
+        mockFileReaderInstance.onload = (e: any) => {
+          if (this.onload) this.onload(e);
+        };
+      }
+    }
+
+    const originalFileReader = global.FileReader;
+    global.FileReader = MockFileReader as any;
+
+    const spySanitize = vi.spyOn(security, 'sanitizeSvg').mockReturnValue('<svg xmlns="http://www.w3.org/2000/svg" />');
+
+    const file = new File(['<svg><script>alert(1)</script></svg>'], 'test.svg', { type: 'image/svg+xml' });
+    const event = { target: { files: [file] } } as unknown as React.ChangeEvent<HTMLInputElement>;
+
+    act(() => {
+      result.current.handleUpload(event, onSuccess);
+    });
+
+    expect(security.validateImageUpload).toHaveBeenCalledWith(file);
+    expect(mockReadAsText).toHaveBeenCalledWith(file);
+
+    act(() => {
+      if (mockFileReaderInstance.onload) {
+        mockFileReaderInstance.onload({ target: { result: '<svg><script>alert(1)</script></svg>' } } as any);
+      }
+    });
+
+    expect(spySanitize).toHaveBeenCalledWith('<svg><script>alert(1)</script></svg>');
+    const expectedBase64 = btoa(unescape(encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" />')));
+    expect(onSuccess).toHaveBeenCalledWith(`data:image/svg+xml;base64,${expectedBase64}`);
+    expect(result.current.error).toBeNull();
+
+    global.FileReader = originalFileReader;
+  });
 });

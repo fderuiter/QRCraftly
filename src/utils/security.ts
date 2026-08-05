@@ -40,9 +40,9 @@ export const safeJsonLdStringify = (data: any): string => {
  */
 export const REGEX_STRICT_CONTROL_CHARS = /[\x00-\x1F\x7F-\x9F]+/g;
 export const REGEX_PRESERVE_FORMAT_CONTROL_CHARS = /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g;
-export const REGEX_PHONE_STRIP = /[^0-9+*#\-().]/g;
-export const REGEX_PHONE_STRIP_PRESERVE = /[^0-9+*#\-().;,]/g;
-export const REGEX_SOCIAL_HANDLE_STRIP = /[^a-zA-Z0-9_.\-]/g;
+const REGEX_PHONE_STRIP = /[^0-9+*#\-().]/g;
+const REGEX_PHONE_STRIP_PRESERVE = /[^0-9+*#\-().;,]/g;
+const REGEX_SOCIAL_HANDLE_STRIP = /[^a-zA-Z0-9_.\-]/g;
 
 /**
  * Checks whether the given URL contains dangerous schemes or matches suspicious patterns.
@@ -129,3 +129,94 @@ export const validateUrlAndInject = (raw: string, urlContainmentProfile: RegExp)
   }
   return violations;
 };
+
+/**
+ * Sanitizes an SVG string to prevent DOM-XSS and structural XML injection.
+ * Removes all script elements, script events, and external resource requests.
+ * Standard presentation attributes, clip paths, linear gradients, and responsive viewBox configurations are allowed.
+ *
+ * @param svgText The raw, potentially unsafe SVG string.
+ * @returns The sanitized, safe SVG string.
+ */
+export const sanitizeSvg = (svgText: string): string => {
+  if (!svgText) return '';
+
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(svgText, 'image/svg+xml');
+
+    // Traverse the document and sanitize
+    const cleanNode = (node: Node) => {
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        const element = node as Element;
+        const tagName = element.tagName.toLowerCase();
+
+        // 1. Remove script blocks/elements
+        if (tagName === 'script') {
+          element.parentNode?.removeChild(element);
+          return; // Node is removed, no need to process children or attributes
+        }
+
+        // 2. Remove script events (attributes starting with "on")
+        const attrs = Array.from(element.attributes);
+        for (const attr of attrs) {
+          const attrName = attr.name.toLowerCase();
+          if (attrName.startsWith('on')) {
+            element.removeAttribute(attr.name);
+          }
+          // 3. Remove/neutralize external resource requests in href / xlink:href
+          else if (attrName === 'href' || attrName === 'xlink:href') {
+            const val = attr.value.trim();
+            // Allow data URIs and local fragment links
+            const isSafe = val.startsWith('data:') || val.startsWith('#') || val === '';
+            if (!isSafe) {
+              element.removeAttribute(attr.name);
+            }
+          }
+          // 4. Sanitize inline style attribute for external resource requests (like url(http://...), @import)
+          else if (attrName === 'style') {
+            const styleVal = attr.value;
+            let cleanStyle = styleVal.replace(/@import\s+[^;]+;/gi, '');
+            cleanStyle = cleanStyle.replace(/url\s*\(\s*['"]?([^'")]*)['"]?\s*\)/gi, (match, urlContent) => {
+              const trimmedUrl = urlContent.trim();
+              if (trimmedUrl.startsWith('data:') || trimmedUrl.startsWith('#') || trimmedUrl === '') {
+                return match;
+              }
+              return 'url(#)';
+            });
+            element.setAttribute(attr.name, cleanStyle);
+          }
+        }
+
+        // 5. Sanitize <style> elements
+        if (tagName === 'style') {
+          const styleContent = element.textContent || '';
+          let cleanContent = styleContent.replace(/@import\s+[^;]+;/gi, '');
+          cleanContent = cleanContent.replace(/url\s*\(\s*['"]?([^'")]*)['"]?\s*\)/gi, (match, urlContent) => {
+            const trimmedUrl = urlContent.trim();
+            if (trimmedUrl.startsWith('data:') || trimmedUrl.startsWith('#') || trimmedUrl === '') {
+              return match;
+            }
+            return 'url(#)';
+          });
+          element.textContent = cleanContent;
+        }
+      }
+
+      // Recursively sanitize child nodes
+      const children = Array.from(node.childNodes);
+      for (const child of children) {
+        cleanNode(child);
+      }
+    };
+
+    cleanNode(doc.documentElement);
+
+    const serializer = new XMLSerializer();
+    return serializer.serializeToString(doc);
+  } catch (error) {
+    console.error('SVG sanitization failed:', error);
+    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"></svg>';
+  }
+};
+

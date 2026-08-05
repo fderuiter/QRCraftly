@@ -23,6 +23,7 @@ import { getQrTypeLabel, getQrTypeDescription } from './a11y';
 
 import { SafeUrlPipeline, normalizeUrl } from './url';
 import { getCachedAsset } from './assetCache';
+import { sanitizeSvg } from './security';
 
 /**
  * Converts an image URL to a base64 data-URL so it can be embedded inline in
@@ -45,6 +46,26 @@ async function toDataUrl(url: string): Promise<string | null> {
 
   if (normalized.startsWith('data:')) {
     if (normalized.startsWith('data:image/')) {
+      if (normalized.startsWith('data:image/svg+xml')) {
+        try {
+          const isBase64 = normalized.includes('base64');
+          const commaIndex = url.indexOf(',');
+          if (commaIndex !== -1) {
+            const rawContent = url.substring(commaIndex + 1);
+            let decoded = '';
+            if (isBase64) {
+              decoded = decodeURIComponent(escape(atob(rawContent)));
+            } else {
+              decoded = decodeURIComponent(rawContent);
+            }
+            const sanitized = sanitizeSvg(decoded);
+            const base64 = btoa(unescape(encodeURIComponent(sanitized)));
+            return `data:image/svg+xml;base64,${base64}`;
+          }
+        } catch {
+          return null; // Omit if malformed
+        }
+      }
       return url;
     }
     return null;
@@ -60,6 +81,15 @@ async function toDataUrl(url: string): Promise<string | null> {
     
     const blob = await response.blob();
     if (!blob.type.startsWith('image/')) return null;
+
+    const isSvg = blob.type === 'image/svg+xml' || url.toLowerCase().split('?')[0].endsWith('.svg');
+
+    if (isSvg) {
+      const text = await blob.text();
+      const sanitized = sanitizeSvg(text);
+      const base64 = btoa(unescape(encodeURIComponent(sanitized)));
+      return `data:image/svg+xml;base64,${base64}`;
+    }
 
     return await new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
@@ -155,5 +185,5 @@ export async function generateQRSvg(
     throw err;
   }
 
-  return ctx.serialize();
+  return sanitizeSvg(ctx.serialize());
 }

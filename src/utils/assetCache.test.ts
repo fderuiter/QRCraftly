@@ -17,6 +17,16 @@
 */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+// @ts-expect-error - jsdom type declarations might not be installed
+import { JSDOM } from 'jsdom';
+
+if (typeof globalThis.DOMParser === 'undefined') {
+  const dom = new JSDOM();
+  globalThis.DOMParser = dom.window.DOMParser;
+  globalThis.XMLSerializer = dom.window.XMLSerializer;
+  globalThis.Node = dom.window.Node;
+}
+
 import { getCachedAsset, setCachedAsset, clearAssetCache, convertImageToBase64 } from './assetCache';
 import { generateQRSvg } from './svgExport';
 import { DEFAULT_CONFIG } from '../constants';
