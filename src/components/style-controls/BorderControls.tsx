@@ -11,7 +11,7 @@ import { ToggleSwitch } from '../ui/ToggleSwitch';
 import { SelectField, TextField } from '../ui/FormFields';
 import { useOptionalQRStoreSelector } from '../../context/QRContext';
 import { MIN_CONTRAST_THRESHOLD } from '../../constants';
-import { ContrastBadge } from './ContrastWarning';
+import { ContrastBadge, ContrastBanner } from './ContrastWarning';
 
 /**
  *
@@ -108,14 +108,15 @@ export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange
                 formatValue={(val) => `${(val * 100).toFixed(1)}%`}
               />
             </div>
+            <div className="col-span-2">
+              <ColorInput
+                id="border-color"
+                label="Border Color"
+                value={config.borderColor}
+                onChange={(val) => onChange({ borderColor: val })}
+              />
+            </div>
           </div>
-
-          <ColorInput
-            id="border-color"
-            label="Border Color"
-            value={config.borderColor}
-            onChange={(val) => onChange({ borderColor: val })}
-          />
 
           {/* Border Content Section */}
           <div className="border-t border-slate-200 pt-2 dark:border-slate-700">
@@ -125,42 +126,51 @@ export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange
             </div>
 
             {/* Border Text */}
-            <div className="mb-3 space-y-2">
-              <TextField
-                placeholder="Text on border..."
-                value={config.borderText}
-                onChange={(e) => onChange({ borderText: e.target.value })}
-                aria-label="Border text"
-              />
-              <div className="flex items-start gap-2">
-                <div className="flex-1">
+            <div className="mb-3">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2">
+                  <TextField
+                    id="border-text"
+                    label="Border Text"
+                    placeholder="Text on border..."
+                    value={config.borderText}
+                    onChange={(e) => onChange({ borderText: e.target.value })}
+                  />
+                </div>
+                <div>
                   <SelectField
+                    id="border-text-position"
                     label="Position"
-                    labelClassName="sr-only"
                     value={config.borderTextPosition || 'bottom-center'}
                     onChange={(e) => onChange({ borderTextPosition: e.target.value as BorderTextPosition })}
-                    aria-label="Border text position"
                   >
                     <option value="top-center">Top Center</option>
                     <option value="bottom-center">Bottom Center</option>
                   </SelectField>
                 </div>
-                <div className="mt-1 flex items-center">
+                <div>
                   <ColorInput
                     id="border-text-color"
-                    label="Border Text Color"
-                    hideLabel={true}
+                    label="Text Color"
                     value={config.borderTextColor || '#ffffff'}
                     onChange={(val) => onChange({ borderTextColor: val })}
-                    sizeClass="w-9 h-9"
                     title="Text Color"
                   />
                 </div>
               </div>
             </div>
 
+            <ContrastBanner
+              isVisible={isLowBorderContrast}
+              contrastRatio={borderTextContrast}
+              messageType="layout"
+              className="mt-3"
+              role="status"
+              decimalPrecision={2}
+            />
+
             {/* Border Logo */}
-            <div className="flex items-center justify-between">
+            <div className="mt-4 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 {config.borderLogoUrl ? (
                   <img src={config.borderLogoUrl} alt="Secondary Brand Graphic" width={32} height={32} className="size-8 rounded border border-slate-200 bg-white object-contain" />
@@ -201,11 +211,10 @@ export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange
             {config.borderLogoUrl && (
               <div className="mt-2">
                 <SelectField
+                  id="border-logo-position"
                   label="Logo Position"
-                  labelClassName="sr-only"
                   value={config.borderLogoPosition || 'bottom-center'}
                   onChange={(e) => onChange({ borderLogoPosition: e.target.value as BorderLogoPosition })}
-                  aria-label="Border logo position"
                 >
                   <option value="bottom-center">Bottom Center</option>
                   <option value="bottom-right">Bottom Right</option>

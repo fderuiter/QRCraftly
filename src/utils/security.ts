@@ -40,9 +40,9 @@ export const safeJsonLdStringify = (data: any): string => {
  */
 export const REGEX_STRICT_CONTROL_CHARS = /[\x00-\x1F\x7F-\x9F]+/g;
 export const REGEX_PRESERVE_FORMAT_CONTROL_CHARS = /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g;
-export const REGEX_PHONE_STRIP = /[^0-9+*#\-().]/g;
-export const REGEX_PHONE_STRIP_PRESERVE = /[^0-9+*#\-().;,]/g;
-export const REGEX_SOCIAL_HANDLE_STRIP = /[^a-zA-Z0-9_.\-]/g;
+const REGEX_PHONE_STRIP = /[^0-9+*#\-().]/g;
+const REGEX_PHONE_STRIP_PRESERVE = /[^0-9+*#\-().;,]/g;
+const REGEX_SOCIAL_HANDLE_STRIP = /[^a-zA-Z0-9_.\-]/g;
 
 /**
  * Checks whether the given URL contains dangerous schemes or matches suspicious patterns.
