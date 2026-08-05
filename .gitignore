@@ -36,3 +36,4 @@ verification/
 
 jules/*
 .jules/*
+.pnpm-bin/
