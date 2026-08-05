@@ -1,8 +1,9 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useEffect, useRef } from "react";
 import { MeetingData } from "../../types";
 import { TextField } from "../ui/FormFields";
 import { parseMeetingUrl } from "../../utils/meetingParsers";
 import { FormBlock } from "../ui/FormBlock";
+import { announcePolitely } from "../../utils/a11y";
 
 /**
  *
@@ -35,6 +36,22 @@ export const MeetingInput: React.FC<MeetingInputProps> = ({
   onChange,
 }) => {
   const parsed = useMemo(() => parseMeetingUrl(data.url), [data.url]);
+  const lastAnnouncedServiceRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!data.url || parsed.service === 'unknown') {
+      lastAnnouncedServiceRef.current = null;
+      return;
+    }
+
+    if (parsed.service !== lastAnnouncedServiceRef.current) {
+      const serviceLabel = SERVICE_LABELS[parsed.service];
+      if (serviceLabel) {
+        announcePolitely(`${serviceLabel} detected`);
+        lastAnnouncedServiceRef.current = parsed.service;
+      }
+    }
+  }, [parsed.service, data.url]);
 
   const serviceLabel =
     parsed.service !== "unknown" ? SERVICE_LABELS[parsed.service] : null;

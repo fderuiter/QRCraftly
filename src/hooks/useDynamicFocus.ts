@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { announcePolitely } from '../utils/a11y';
 
 /**
  * Helper to retrieve all form fields (inputs, selects, textareas) inside a container.
@@ -57,39 +58,7 @@ function getElementName(element: HTMLElement): string {
   return 'input field';
 }
 
-/**
- * Announce a message politely to screen readers using a visually hidden live region.
- * @param message
- */
-function announcePolitely(message: string) {
-  let liveRegion = document.getElementById('dynamic-focus-live-region');
-  if (!liveRegion) {
-    liveRegion = document.createElement('div');
-    liveRegion.id = 'dynamic-focus-live-region';
-    liveRegion.className = 'sr-only';
-    liveRegion.setAttribute('aria-live', 'polite');
-    liveRegion.setAttribute('role', 'status');
-    // Ensure it is visually hidden
-    liveRegion.style.position = 'absolute';
-    liveRegion.style.width = '1px';
-    liveRegion.style.height = '1px';
-    liveRegion.style.padding = '0';
-    liveRegion.style.margin = '-1px';
-    liveRegion.style.overflow = 'hidden';
-    liveRegion.style.clip = 'rect(0, 0, 0, 0)';
-    liveRegion.style.whiteSpace = 'nowrap';
-    liveRegion.style.borderWidth = '0';
-    document.body.appendChild(liveRegion);
-  }
 
-  // Clear content first to trigger some assistive tech reliably
-  liveRegion.textContent = '';
-  setTimeout(() => {
-    if (liveRegion) {
-      liveRegion.textContent = message;
-    }
-  }, 50);
-}
 
 /**
  * A standardized focus-management hook to eliminate manual re-navigation

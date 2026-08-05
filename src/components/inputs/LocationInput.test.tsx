@@ -20,6 +20,15 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { LocationInput } from './LocationInput';
 import { LocationData } from '../../types';
+import { announcePolitely } from '../../utils/a11y';
+
+vi.mock('../../utils/a11y', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../utils/a11y')>();
+  return {
+    ...actual,
+    announcePolitely: vi.fn(),
+  };
+});
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -46,6 +55,7 @@ const geoError = (code: number): GeolocationPositionError =>
 
 describe('LocationInput component', () => {
   afterEach(() => {
+    vi.clearAllMocks();
     vi.restoreAllMocks();
   });
 
@@ -150,6 +160,24 @@ describe('LocationInput component', () => {
           latitude: '51.5074',
           longitude: '-0.1278',
         });
+      });
+    });
+
+    it('triggers polite announcement on successful fetch', async () => {
+      const successPosition = {
+        coords: { latitude: 51.5074, longitude: -0.1278, accuracy: 10 },
+      } as GeolocationPosition;
+
+      vi.spyOn(navigator.geolocation, 'getCurrentPosition').mockImplementation(
+        (successCb) => successCb(successPosition)
+      );
+
+      renderLocationInput();
+      fireEvent.click(screen.getByRole('button', { name: /use current location/i }));
+
+      await waitFor(() => {
+        expect(announcePolitely).toHaveBeenCalledTimes(1);
+        expect(announcePolitely).toHaveBeenCalledWith('Location coordinates populated');
       });
     });
 
@@ -267,6 +295,20 @@ describe('LocationInput component', () => {
 
       await waitFor(() => {
         expect(screen.getByRole('alert')).toHaveTextContent(/unknown error/i);
+      });
+    });
+
+    it('does not route high-priority geolocation errors through the polite announcer', async () => {
+      vi.spyOn(navigator.geolocation, 'getCurrentPosition').mockImplementation(
+        (_success, errorCb) => errorCb!(geoError(1))
+      );
+
+      renderLocationInput();
+      fireEvent.click(screen.getByRole('button', { name: /use current location/i }));
+
+      await waitFor(() => {
+        expect(screen.getByRole('alert')).toHaveTextContent(/location access denied/i);
+        expect(announcePolitely).not.toHaveBeenCalled();
       });
     });
 
