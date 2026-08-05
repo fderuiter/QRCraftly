@@ -150,6 +150,29 @@ describe('Local Git-Diff Lineage Auditor', () => {
       expect(MAPPING).toHaveProperty('src/utils/scannabilityWorker.ts', 'docs/public/SCALING.md');
       expect(MAPPING).toHaveProperty('src/hooks/useTelemetry.ts', 'docs/public/COMPLIANCE.md');
       expect(MAPPING).toHaveProperty('src/utils/security.ts', 'docs/public/SECURITY.md');
+      expect(MAPPING).toHaveProperty('.github/rulesets/main.json', '.github/rulesets/README.md');
+    });
+
+    it('should fail validation when branch protection main.json is modified without its paired doc', () => {
+      const modifiedFiles = new Set(['.github/rulesets/main.json']);
+      const missing = checkLineage(modifiedFiles);
+      expect(missing).toContainEqual({
+        codeFile: '.github/rulesets/main.json',
+        docFile: '.github/rulesets/README.md'
+      });
+    });
+
+    it('should pass validation when branch protection main.json is modified with its paired doc', () => {
+      const modifiedFiles = new Set(['.github/rulesets/main.json', '.github/rulesets/README.md']);
+      const missing = checkLineage(modifiedFiles);
+      const hasRulesetMissing = missing.some(m => m.codeFile === '.github/rulesets/main.json');
+      expect(hasRulesetMissing).toBe(false);
+    });
+
+    it('should pass validation when only branch protection doc is modified (unidirectional constraint)', () => {
+      const modifiedFiles = new Set(['.github/rulesets/README.md']);
+      const missing = checkLineage(modifiedFiles);
+      expect(missing).toHaveLength(0);
     });
 
     it('should fail validation when scannability worker is modified without scaling doc', () => {

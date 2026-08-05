@@ -15,7 +15,8 @@ export const MAPPING = {
   'src/colors.json': ['docs/public/STYLE_GUIDE.md', 'docs/public/SECURITY.md', 'docs/public/COMPLIANCE.md'],
   'src/utils/scannabilityWorker.ts': 'docs/public/SCALING.md',
   'src/hooks/useTelemetry.ts': 'docs/public/COMPLIANCE.md',
-  'src/utils/security.ts': 'docs/public/SECURITY.md'
+  'src/utils/security.ts': 'docs/public/SECURITY.md',
+  '.github/rulesets/main.json': '.github/rulesets/README.md'
 };
 
 /**
