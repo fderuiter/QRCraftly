@@ -217,8 +217,8 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
       <h1 className="sr-only">{title ? `${title} Generator` : "Free Custom QR Code Generator"}</h1>
       <div className="relative flex h-screen min-h-screen flex-col-reverse overflow-hidden bg-slate-50 transition-colors duration-300 md:h-auto md:min-h-0 md:flex-row md:overflow-visible dark:bg-slate-950">
         {/* Sidebar Controls */}
-        <section aria-label="QR Code Settings" className="relative z-10 flex max-h-[50vh] w-full flex-col overflow-y-auto border-r border-slate-200 bg-white shadow-xl transition-colors duration-300 md:max-h-none md:w-120 dark:border-slate-800 dark:bg-slate-900">
-          <div className="sticky top-0 z-20 flex items-center justify-between border-b border-slate-100 bg-white p-6 transition-colors duration-300 dark:border-slate-800 dark:bg-slate-900">
+        <aside aria-label="QR Code Settings" className="relative z-10 flex max-h-[50vh] w-full flex-col overflow-y-auto border-r border-slate-200 bg-white shadow-xl transition-colors duration-300 md:max-h-none md:w-120 dark:border-slate-800 dark:bg-slate-900">
+          <header className="sticky top-0 z-20 flex items-center justify-between border-b border-slate-100 bg-white p-6 transition-colors duration-300 dark:border-slate-800 dark:bg-slate-900">
             <div>
               <a href="/" aria-label="QRCraftly Home" className="mb-1 flex items-center gap-2 text-teal-700 transition-opacity hover:opacity-80 dark:text-teal-400">
                 <QrCode className="size-6" />
@@ -247,7 +247,7 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
                 {isDarkMode ? <Sun className="size-5" /> : <Moon className="size-5" />}
               </Button>
             </div>
-          </div>
+          </header>
 
           <div className="space-y-8 p-6 pb-24">
             {sidebarControls.map((Control, index) => (
@@ -292,7 +292,7 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
               </p>
             </footer>
           </div>
-        </section>
+        </aside>
 
         {/* Preview Area */}
         <section aria-label="QR Code Preview" className="relative flex max-h-[50vh] flex-1 flex-col items-center justify-center overflow-x-hidden overflow-y-auto bg-slate-50 p-4 transition-colors duration-300 md:sticky md:top-0 md:h-[100dvh] md:max-h-none md:p-8 dark:bg-slate-950">
