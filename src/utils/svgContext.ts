@@ -333,8 +333,8 @@ export class SvgContext {
    * Note: The `radii` parameter is treated as a uniform radius (single number).
    */
   roundRect(x: number, y: number, w: number, h: number, r: number): void {
-    // Clamp radius so it doesn't exceed half the shorter side
-    const safeR = Math.min(r, w / 2, h / 2);
+    // Clamp radius so it doesn't exceed half the shorter side and is not negative
+    const safeR = Math.max(0, Math.min(r, w / 2, h / 2));
 
     const pt = (px: number, py: number) => {
       const [tx, ty] = this._applyTransform(px, py);

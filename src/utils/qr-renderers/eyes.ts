@@ -123,11 +123,7 @@ export const renderEyes = (
             case QRStyle.STANDARD:
             default:
                 // Standard
-                ctx.fillRect(x, y, size, size);
-                clearShape(() => {
-                     ctx.clearRect(x + cellSize, y + cellSize, size - 2*cellSize, size - 2*cellSize);
-                     ctx.fillRect(x + cellSize, y + cellSize, size - 2*cellSize, size - 2*cellSize);
-                });
+                drawSquareEyeFrame();
                 ctx.fillRect(x + 2*cellSize, y + 2*cellSize, 3*cellSize, 3*cellSize);
                 break;
         }

@@ -27,7 +27,7 @@
  * @param r The corner radius.
  */
 export const drawRoundRect = (ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) => {
-  const safeR = Math.min(r, w / 2, h / 2);
+  const safeR = Math.max(0, Math.min(r, w / 2, h / 2));
   ctx.moveTo(x + safeR, y);
   ctx.lineTo(x + w - safeR, y);
   ctx.quadraticCurveTo(x + w, y, x + w, y + safeR);
