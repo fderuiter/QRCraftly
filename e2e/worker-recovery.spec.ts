@@ -41,10 +41,11 @@ test.describe('Isolated Web Worker Recovery & Export Bypass', () => {
 
         postMessage(message: any, transfer?: any) {
           if ((window as any).simulateFailure !== false) {
+            const configId = message?.configId;
             // Simulate background worker crash/failure asynchronously
             setTimeout(() => {
               this.dispatchEvent(new MessageEvent('message', {
-                data: { success: false, physicalReady: false, error: 'NOT_FOUND' }
+                data: { success: false, physicalReady: false, error: 'NOT_FOUND', configId }
               }));
             }, 10);
           } else {

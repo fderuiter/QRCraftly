@@ -41,6 +41,10 @@ export const clampCornerRadius = (r: number, w: number, h: number): number => {
  */
 export const drawRoundRect = (ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) => {
   const safeR = clampCornerRadius(r, w, h);
+  if (typeof ctx.roundRect === 'function') {
+    ctx.roundRect(x, y, w, h, safeR);
+    return;
+  }
   ctx.moveTo(x + safeR, y);
   ctx.lineTo(x + w - safeR, y);
   ctx.quadraticCurveTo(x + w, y, x + w, y + safeR);
@@ -126,16 +130,48 @@ export const drawStar = (ctx: CanvasRenderingContext2D, cx: number, cy: number, 
  * @param addToPath Whether to add to the current path instead of filling immediately (default: false).
  */
 export const drawRoughRect = (ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, addToPath: boolean = false) => {
-  ctx.save();
-  // Just a slight rotation for style
-  ctx.translate(x + w / 2, y + h / 2);
-  ctx.rotate(0.02);
-  if (addToPath) {
-    ctx.rect(-w / 2, -h / 2, w, h);
-  } else {
+  if (!addToPath) {
+    ctx.save();
+    // Just a slight rotation for style
+    ctx.translate(x + w / 2, y + h / 2);
+    ctx.rotate(0.02);
     ctx.fillRect(-w / 2, -h / 2, w, h);
+    ctx.restore();
+    return;
   }
-  ctx.restore();
+
+  // Optimize path drawing using direct coordinate calculations
+  // Avoids translate, rotate, save, restore overhead
+  const hw = w / 2;
+  const hh = h / 2;
+  const cx = x + hw;
+  const cy = y + hh;
+
+  // cos(0.02) and sin(0.02)
+  const cos = 0.9998;
+  const sin = 0.02;
+
+  // Rotated points relative to center:
+  // rX = pX * cos - pY * sin
+  // rY = pX * sin + pY * cos
+  const r0x = -hw * cos - (-hh) * sin;
+  const r0y = -hw * sin + (-hh) * cos;
+
+  const r1x = hw * cos - (-hh) * sin;
+  const r1y = hw * sin + (-hh) * cos;
+
+  const r2x = hw * cos - hh * sin;
+  const r2y = hw * sin + hh * cos;
+
+  const r3x = -hw * cos - hh * sin;
+  const r3y = -hw * sin + hh * cos;
+
+  // Draw rotated rectangle path
+  ctx.moveTo(cx + r0x, cy + r0y);
+  ctx.lineTo(cx + r1x, cy + r1y);
+  ctx.lineTo(cx + r2x, cy + r2y);
+  ctx.lineTo(cx + r3x, cy + r3y);
+  ctx.closePath();
 };
 
 /**
@@ -210,17 +246,25 @@ export const drawCircuitModule = (
   hasLeft: boolean,
   hasRight: boolean
 ) => {
-  const rCircuit = cellSize * 0.1;
   const thickness = cellSize * 0.4;
   const thicknessHalf = thickness / 2;
   const linkLen = cellSize / 2 + 1;
 
-  drawRoundRect(ctx, x, y, cellSize, cellSize, rCircuit);
+  ctx.rect(x, y, cellSize, cellSize);
 
-  if (hasRight) ctx.rect(cx, cy - thicknessHalf, linkLen, thickness);
-  if (hasBottom) ctx.rect(cx - thicknessHalf, cy, thickness, linkLen);
-  if (hasLeft) ctx.rect(x, cy - thicknessHalf, linkLen, thickness);
-  if (hasTop) ctx.rect(cx - thicknessHalf, y, thickness, linkLen);
+  if (hasLeft && hasRight) {
+    ctx.rect(x, cy - thicknessHalf, cellSize, thickness);
+  } else {
+    if (hasLeft) ctx.rect(x, cy - thicknessHalf, linkLen, thickness);
+    if (hasRight) ctx.rect(cx, cy - thicknessHalf, linkLen, thickness);
+  }
+
+  if (hasTop && hasBottom) {
+    ctx.rect(cx - thicknessHalf, y, thickness, cellSize);
+  } else {
+    if (hasTop) ctx.rect(cx - thicknessHalf, y, thickness, linkLen);
+    if (hasBottom) ctx.rect(cx - thicknessHalf, cy, thickness, linkLen);
+  }
 };
 
 /**
