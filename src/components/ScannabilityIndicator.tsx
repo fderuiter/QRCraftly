@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ShieldCheck, Loader2, ShieldX } from 'lucide-react';
 import { ScannabilityStatus, HealthScore } from '../hooks/useScannability';
 
@@ -17,22 +17,120 @@ interface Props {
 }
 
 /**
- *
- * @param root0
- * @param root0.status
- * @param root0.health
+ * Helper to build descriptive, polite screen reader announcement messages.
+ * @param status - The current scannability status.
+ * @param health - The optional health score with warnings.
+ * @returns The built announcement text.
+ */
+const getAnnouncementText = (status: ScannabilityStatus, health?: HealthScore): string => {
+  if (status === 'checking') {
+    return 'Checking scannability...';
+  }
+  if (status === 'physical-pass') {
+    const scorePart = health ? ` Health score: ${health.score}.` : '';
+    return `Scannability status: Physical-Ready.${scorePart}`;
+  }
+  if (status === 'digital-pass') {
+    const scorePart = health ? ` Health score: ${health.score}.` : '';
+    return `Scannability status: Digital-Only Pass.${scorePart}`;
+  }
+  if (status === 'fail') {
+    const scorePart = health ? ` Health score: ${health.score}.` : '';
+    const warningPart = health && health.warnings && health.warnings.length > 0
+      ? ` Warning: ${health.warnings[0]}.`
+      : '';
+    return `Scannability status: Low Scannability.${scorePart}${warningPart}`;
+  }
+  return '';
+};
+
+/**
+ * Renders the scannability indicators and supports debounced live region announcements
+ * and keyboard shortcuts for immediate visual focus accessibility.
+ * @param root0 - The props object.
+ * @param root0.status - The current scannability status.
+ * @param root0.health - The optional health score with warnings.
+ * @returns The scannability feedback element.
  */
 export const ScannabilityIndicator: React.FC<Props> = ({ status, health }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [announcement, setAnnouncement] = useState('');
+
+  // 1. Debounce screen reader announcements by 1000ms
+  useEffect(() => {
+    const text = getAnnouncementText(status, health);
+
+    // Clear active announcement immediately during inputs to prevent ongoing alerts
+    setAnnouncement('');
+
+    if (!text) return;
+
+    const timer = setTimeout(() => {
+      setAnnouncement(text);
+    }, 1000);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [status, health]);
+
+  // 2. Global keyboard shortcut (Alt + S / Alt + s) to focus the scannability card
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Check for Alt + S keydown (global keybind)
+      if (e.altKey && !e.ctrlKey && !e.metaKey && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        containerRef.current?.focus();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
+
   if (status === 'idle') {
     return <div className="inline-block h-13 w-auto" data-testid="scannability-indicator-placeholder" />;
   }
 
   const showHealth = health && health.score < 100;
 
+  /* eslint-disable jsx-a11y/no-noninteractive-tabindex */
   return (
-    <div className="flex h-13 flex-col items-end justify-start select-none" data-testid="scannability-feedback-wrapper">
-      <div 
+    <div
+      ref={containerRef}
+      tabIndex={0}
+      aria-label="Scannability feedback"
+      className="flex h-13 flex-col items-end justify-start rounded-lg transition-all duration-300 select-none focus:ring-2 focus:ring-teal-600 focus:ring-offset-2 focus:outline-none dark:focus:ring-teal-400 dark:focus:ring-offset-slate-900"
+      data-testid="scannability-feedback-wrapper"
+    >
+      {/* 
+        Visually hidden polite live-region element. 
+        Uses aria-live="polite" and role="status" to ensure compatibility.
+      */}
+      <div
+        className="sr-only"
+        aria-live="polite"
+        role="status"
+        style={{
+          position: 'absolute',
+          width: '1px',
+          height: '1px',
+          padding: '0',
+          margin: '-1px',
+          overflow: 'hidden',
+          clip: 'rect(0, 0, 0, 0)',
+          whiteSpace: 'nowrap',
+          borderWidth: '0',
+        }}
+      >
+        {announcement}
+      </div>
+
+      <div
         role={status === 'fail' && !(showHealth && health?.warnings && health.warnings.length > 0) ? 'alert' : undefined}
+        aria-live="off"
         className="flex items-center gap-1.5 rounded-full border bg-white px-2 py-1 text-xs font-medium shadow-sm transition-all duration-300 dark:bg-slate-800"
       >
         {status === 'checking' && (
@@ -67,11 +165,16 @@ export const ScannabilityIndicator: React.FC<Props> = ({ status, health }) => {
       </div>
       <div className="mt-1 flex h-5 w-full items-center justify-end">
         {showHealth && health.warnings.length > 0 && (
-          <div role="alert" className="animate-in fade-in slide-in-from-top-1 max-w-xs text-right text-xs text-rose-700 dark:text-rose-400">
+          <div
+            role="alert"
+            aria-live="off"
+            className="animate-in fade-in slide-in-from-top-1 max-w-xs text-right text-xs text-rose-700 dark:text-rose-400"
+          >
             {health.warnings[0]}
           </div>
         )}
       </div>
     </div>
   );
+  /* eslint-enable jsx-a11y/no-noninteractive-tabindex */
 };
