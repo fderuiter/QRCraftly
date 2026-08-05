@@ -1,0 +1,20 @@
+# Ignore JS/TS and other script files to let existing linters handle them
+**/*.js
+**/*.jsx
+**/*.ts
+**/*.tsx
+**/*.mjs
+**/*.cjs
+
+# Ignore YAML files
+**/*.yml
+**/*.yaml
+
+# Ignore lockfiles and directories
+pnpm-lock.yaml
+pnpm-workspace.yaml
+node_modules/
+dist/
+.git/
+.github/
+playwright-report/

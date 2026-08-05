@@ -1,9 +1,11 @@
 # Design System Visual Style Guide
 
 ## Overview
+
 This visual style guide documents the central design tokens, color configurations, and visual guidelines for the QRCraftly application. Developers and designers should refer to this document to maintain visual consistency across all components and themes.
 
 ## Color Design Tokens
+
 The application relies on color tokens defined in `src/colors.json`. These include slate, teal, rose, and indigo scales to provide cohesive UI themes:
 
 - **White**: `#ffffff`
@@ -28,6 +30,7 @@ The application relies on color tokens defined in `src/colors.json`. These inclu
   - `indigo-900`: `#312e81`
 
 ## Color Presets
+
 We support multiple pre-configured color palettes to ensure high-contrast and aesthetically pleasing output for users:
 
 1. **Classic**: Background `#ffffff`, Foreground `#000000`, Eye `#000000`
@@ -41,6 +44,7 @@ We support multiple pre-configured color palettes to ensure high-contrast and ae
 9. **Cyber**: Background `#27272a`, Foreground `#e4e4e7`, Eye `#facc15`
 
 ## Visual Styling Guidelines
+
 1. **Contrast Compliance**: Ensure a minimum contrast ratio of 4.5:1 for standard text and 3:1 for large text against backgrounds.
 2. **Focus Indicators**: Always use explicit visual styles (e.g., ring outline using `indigo-600` or `teal-600`) for interactive elements.
 3. **Responsive Scaling**: Elements must adapt smoothly across a range of device viewports without losing functional clarity or text readability.

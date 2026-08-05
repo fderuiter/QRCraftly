@@ -10,34 +10,39 @@ QRCraftly is architected as a **Static Site (SSG)** with **Client-Side Processin
 ## Architecture & Resource Usage
 
 ### 1. Architecture: Static Site Generation (SSG)
+
 - **Framework:** Vike (Vite + React)
 - **Rendering:** Pre-rendered to static HTML/CSS/JS at build time (`prerender: true`).
 - **Logic:** 100% Client-Side. The `qrcode` generation and Canvas rendering happen in the user's browser.
 - **Server Load:** 0%. There is no Node.js server, database, or API running at runtime.
 
 ### 2. Hosting: Cloudflare Pages (Free Tier)
+
 Cloudflare Pages treats this application as static assets. The limits for the Free Tier are applied as follows:
 
-| Resource | Free Tier Limit | QRCraftly Usage | Impact |
-| :--- | :--- | :--- | :--- |
-| **Static Requests** | Unlimited | ~10-15 per session | **None** |
-| **Bandwidth** | Unlimited | ~500KB per session | **None** |
-| **Server Functions** | 100,000 / day | 0 (None used) | **None** |
-| **Concurrent Users** | Unlimited | Client-side handled | **None** |
-| **Builds** | 500 / month | 1 per deploy | **Operational Constraint** |
+| Resource             | Free Tier Limit | QRCraftly Usage     | Impact                     |
+| :------------------- | :-------------- | :------------------ | :------------------------- |
+| **Static Requests**  | Unlimited       | ~10-15 per session  | **None**                   |
+| **Bandwidth**        | Unlimited       | ~500KB per session  | **None**                   |
+| **Server Functions** | 100,000 / day   | 0 (None used)       | **None**                   |
+| **Concurrent Users** | Unlimited       | Client-side handled | **None**                   |
+| **Builds**           | 500 / month     | 1 per deploy        | **Operational Constraint** |
 
 ### 3. Client-Side Performance Optimizations
+
 To ensure high performance without server-side compute, QRCraftly relies on advanced browser APIs:
+
 - **Scannability Web Workers**: We utilize Web Workers (`scannabilityWorker.ts`) to perform real-time QR code scannability testing on a background thread. This ensures the main UI thread remains responsive and jank-free even during rapid configuration changes.
 - **Client-Side SVG Export**: We developed a custom `SvgContext` that mimics the Canvas 2D API to generate high-quality, resolution-independent vector graphics locally. The entire SVG file is generated in the browser without server-side rendering or image conversion APIs.
 
 ## Usage Calculations
 
 ### A. Network Payload & Bandwidth
+
 The project enforces a strict **3MB** total payload limit via CI checks, though typical localized bundles are significantly smaller.
 
-*   **Average Bundle Size (Estimated):** ~500 KB (gzipped)
-*   **Worst Case Bundle Size:** 3 MB
+- **Average Bundle Size (Estimated):** ~500 KB (gzipped)
+- **Worst Case Bundle Size:** 3 MB
 
 **Scenario: 10,000 Daily Users**
 $$ 10,000 \text{ users} \times 0.5 \text{ MB} = 5,000 \text{ MB} = 5 \text{ GB / day} $$
@@ -45,24 +50,26 @@ $$ 10,000 \text{ users} \times 0.5 \text{ MB} = 5,000 \text{ MB} = 5 \text{ GB /
 **Scenario: 1,000,000 Daily Users**
 $$ 1,000,000 \text{ users} \times 0.5 \text{ MB} = 500,000 \text{ MB} = 500 \text{ GB / day} $$
 
-*Status:* Cloudflare absorbs this bandwidth cost completely on the Free Tier.
+_Status:_ Cloudflare absorbs this bandwidth cost completely on the Free Tier.
 
 ### B. Compute Power (QR Generation)
+
 Because the "heavy lifting" (generating the QR matrix and rendering the canvas) happens on the client:
 
-*   **1 User:** Uses ~50ms of their own CPU.
-*   **1 Million Users:** Uses ~50ms of *their own* CPU each.
-*   **Server CPU Load:** 0ms total.
+- **1 User:** Uses ~50ms of their own CPU.
+- **1 Million Users:** Uses ~50ms of _their own_ CPU each.
+- **Server CPU Load:** 0ms total.
 
 ### C. Operational Constraints (Builds)
+
 The primary limit is the number of times you can deploy updates.
 
-*   **Limit:** 500 Builds / Month
-*   **Daily Average:** ~16 Builds / Day
+- **Limit:** 500 Builds / Month
+- **Daily Average:** ~16 Builds / Day
 
 $$ \frac{500 \text{ builds}}{30 \text{ days}} \approx 16.6 \text{ builds/day} $$
 
-*Mitigation:* This affects developer velocity, not end-user capacity. If you exceed this, you cannot deploy new code until the next month, but the site remains online and fully functional for users.
+_Mitigation:_ This affects developer velocity, not end-user capacity. If you exceed this, you cannot deploy new code until the next month, but the site remains online and fully functional for users.
 
 ## Conclusion
 
