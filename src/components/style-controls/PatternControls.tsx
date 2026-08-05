@@ -59,7 +59,6 @@ export const PatternControls: React.FC<PatternControlsProps> = ({ config, onChan
               value={pattern.id}
               checked={config.style === pattern.id}
               onChange={() => onChange({ style: pattern.id })}
-              onClick={() => onChange({ style: pattern.id })}
               className="sr-only"
               aria-label={`Select ${pattern.label} pattern`}
             />
