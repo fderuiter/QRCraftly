@@ -69,11 +69,13 @@ export const TypeSelector: React.FC<TypeSelectorProps> = ({
   const handleKeyDown = (e: React.KeyboardEvent<HTMLUListElement>) => {
     const isArrowLeft = e.key === "ArrowLeft";
     const isArrowRight = e.key === "ArrowRight";
+    const isHome = e.key === "Home";
+    const isEnd = e.key === "End";
     const isSpace = e.key === " " || e.key === "Spacebar";
     const isEnter = e.key === "Enter";
     const isTab = e.key === "Tab";
 
-    if (!isArrowLeft && !isArrowRight && !isSpace && !isEnter && !isTab) {
+    if (!isArrowLeft && !isArrowRight && !isHome && !isEnd && !isSpace && !isEnter && !isTab) {
       return;
     }
 
@@ -82,12 +84,16 @@ export const TypeSelector: React.FC<TypeSelectorProps> = ({
     );
     const currentIndex = tabs.findIndex(tab => tab === document.activeElement);
 
-    if (isArrowLeft || isArrowRight) {
+    if (isArrowLeft || isArrowRight || isHome || isEnd) {
       e.preventDefault();
       if (currentIndex === -1) return;
 
       let nextIndex = currentIndex;
-      if (isArrowRight) {
+      if (isHome) {
+        nextIndex = 0;
+      } else if (isEnd) {
+        nextIndex = tabs.length - 1;
+      } else if (isArrowRight) {
         nextIndex = (currentIndex + 1) % tabs.length;
       } else {
         nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
