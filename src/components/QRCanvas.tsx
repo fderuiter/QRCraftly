@@ -55,7 +55,7 @@ interface QRCanvasProps {
  * @param props.onRendered - Callback when render finishes.
  * @returns The QRCanvas component.
  */
-const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({ config, size = 512, className, onRendered }, ref) => {
+const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({ config, size = 1024, className, onRendered }, ref) => {
   const localCanvasRef = useRef<HTMLCanvasElement>(null);
   
   // Use either the forwarded ref or the local one

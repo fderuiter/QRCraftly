@@ -15,7 +15,7 @@
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
-
+import { QRStyle } from '../types';
 
 /**
  * Clamps the corner radius so it doesn't exceed half of the width or height,
@@ -41,10 +41,6 @@ export const clampCornerRadius = (r: number, w: number, h: number): number => {
  */
 export const drawRoundRect = (ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) => {
   const safeR = clampCornerRadius(r, w, h);
-  if (typeof ctx.roundRect === 'function') {
-    ctx.roundRect(x, y, w, h, safeR);
-    return;
-  }
   ctx.moveTo(x + safeR, y);
   ctx.lineTo(x + w - safeR, y);
   ctx.quadraticCurveTo(x + w, y, x + w, y + safeR);
@@ -140,38 +136,11 @@ export const drawRoughRect = (ctx: CanvasRenderingContext2D, x: number, y: numbe
     return;
   }
 
-  // Optimize path drawing using direct coordinate calculations
-  // Avoids translate, rotate, save, restore overhead
-  const hw = w / 2;
-  const hh = h / 2;
-  const cx = x + hw;
-  const cy = y + hh;
-
-  // cos(0.02) and sin(0.02)
-  const cos = 0.9998;
-  const sin = 0.02;
-
-  // Rotated points relative to center:
-  // rX = pX * cos - pY * sin
-  // rY = pX * sin + pY * cos
-  const r0x = -hw * cos - (-hh) * sin;
-  const r0y = -hw * sin + (-hh) * cos;
-
-  const r1x = hw * cos - (-hh) * sin;
-  const r1y = hw * sin + (-hh) * cos;
-
-  const r2x = hw * cos - hh * sin;
-  const r2y = hw * sin + hh * cos;
-
-  const r3x = -hw * cos - hh * sin;
-  const r3y = -hw * sin + hh * cos;
-
-  // Draw rotated rectangle path
-  ctx.moveTo(cx + r0x, cy + r0y);
-  ctx.lineTo(cx + r1x, cy + r1y);
-  ctx.lineTo(cx + r2x, cy + r2y);
-  ctx.lineTo(cx + r3x, cy + r3y);
-  ctx.closePath();
+  ctx.save();
+  ctx.translate(x + w / 2, y + h / 2);
+  ctx.rotate(0.02);
+  ctx.rect(-w / 2, -h / 2, w, h);
+  ctx.restore();
 };
 
 /**
@@ -250,7 +219,7 @@ export const drawCircuitModule = (
   const thicknessHalf = thickness / 2;
   const linkLen = cellSize / 2 + 1;
 
-  ctx.rect(x, y, cellSize, cellSize);
+  drawRoundRect(ctx, x, y, cellSize, cellSize, cellSize * 0.3);
 
   if (hasLeft && hasRight) {
     ctx.rect(x, cy - thicknessHalf, cellSize, thickness);
@@ -291,6 +260,185 @@ export const drawStandardModule = (
   } else {
     const ceilCellSize = Math.ceil(cellSize);
     ctx.rect(Math.floor(x), Math.floor(y), ceilCellSize, ceilCellSize);
+  }
+};
+
+/**
+ * Draws a locator eye frame.
+ * @param ctx The canvas context.
+ * @param x Top-left x coordinate of the eye.
+ * @param y Top-left y coordinate of the eye.
+ * @param size The size of the eye (7 * cellSize).
+ * @param cellSize Sizing properties.
+ * @param style Style theme.
+ * @param eyeColor Eye color.
+ * @param bgColor Background color to clear/punch holes.
+ */
+export const drawEyeFrame = (
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  size: number,
+  cellSize: number,
+  style: QRStyle,
+  eyeColor: string,
+  bgColor: string
+) => {
+  ctx.fillStyle = eyeColor;
+
+  const cx = x + size / 2;
+  const cy = y + size / 2;
+
+  const drawRoundedEyeFrame = () => {
+    ctx.beginPath();
+    drawRoundRect(ctx, x, y, size, size, cellSize * 1.5);
+    ctx.fill();
+
+    ctx.fillStyle = bgColor;
+    ctx.beginPath();
+    drawRoundRect(ctx, x + cellSize, y + cellSize, size - 2 * cellSize, size - 2 * cellSize, cellSize * 0.8);
+    ctx.fill();
+    ctx.fillStyle = eyeColor;
+  };
+
+  const drawSquareEyeFrame = () => {
+    ctx.fillRect(x, y, size, size);
+
+    ctx.fillStyle = bgColor;
+    ctx.fillRect(x + cellSize, y + cellSize, size - 2 * cellSize, size - 2 * cellSize);
+    ctx.fillStyle = eyeColor;
+  };
+
+  switch (style) {
+    case QRStyle.MODERN:
+    case QRStyle.FLUID:
+    case QRStyle.SWISS:
+      drawRoundedEyeFrame();
+      break;
+
+    case QRStyle.CIRCUIT:
+      drawSquareEyeFrame();
+      ctx.fillStyle = bgColor;
+      const gap = cellSize * 0.5;
+      ctx.fillRect(cx - gap / 2, y, gap, cellSize * 1.1); // Top cut
+      ctx.fillRect(cx - gap / 2, y + size - cellSize * 1.1, gap, cellSize * 1.1); // Bottom cut
+      ctx.fillRect(x, cy - gap / 2, cellSize * 1.1, gap); // Left cut
+      ctx.fillRect(x + size - cellSize * 1.1, cy - gap / 2, cellSize * 1.1, gap); // Right cut
+      ctx.fillStyle = eyeColor;
+      break;
+
+    case QRStyle.GRUNGE:
+      drawRoughRect(ctx, x, y, size, size);
+      ctx.fillStyle = bgColor;
+      ctx.fillRect(x + cellSize, y + cellSize, size - 2 * cellSize, size - 2 * cellSize);
+      ctx.fillStyle = eyeColor;
+      break;
+
+    case QRStyle.HIVE:
+    case QRStyle.STARBURST:
+    case QRStyle.STANDARD:
+    default:
+      drawSquareEyeFrame();
+      break;
+  }
+};
+
+/**
+ * Draws a locator eyeball.
+ * @param ctx The canvas context.
+ * @param x Top-left x coordinate of the eye.
+ * @param y Top-left y coordinate of the eye.
+ * @param size The size of the eye (7 * cellSize).
+ * @param cellSize Sizing properties.
+ * @param style Style theme.
+ * @param eyeColor Eye color.
+ * @param bgColor Background color to clear/punch holes.
+ */
+export const drawEyeball = (
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  size: number,
+  cellSize: number,
+  style: QRStyle,
+  eyeColor: string,
+  bgColor: string
+) => {
+  ctx.fillStyle = eyeColor;
+
+  const cx = x + size / 2;
+  const cy = y + size / 2;
+
+  switch (style) {
+    case QRStyle.MODERN:
+      ctx.beginPath();
+      drawRoundRect(ctx, x + 2 * cellSize, y + 2 * cellSize, 3 * cellSize, 3 * cellSize, cellSize * 0.5);
+      ctx.fill();
+      break;
+
+    case QRStyle.FLUID:
+    case QRStyle.SWISS:
+      ctx.beginPath();
+      ctx.arc(cx, cy, 1.5 * cellSize, 0, Math.PI * 2);
+      ctx.fill();
+      break;
+
+    case QRStyle.CIRCUIT:
+      ctx.beginPath();
+      ctx.rect(x + 2 * cellSize, y + 2 * cellSize, 3 * cellSize, 3 * cellSize);
+      ctx.fill();
+
+      ctx.fillStyle = bgColor;
+      ctx.fillRect(x + 4.6 * cellSize, y + 4.6 * cellSize, 0.4 * cellSize, 0.4 * cellSize);
+      ctx.fillStyle = eyeColor;
+      break;
+
+    case QRStyle.HIVE:
+      drawPoly(ctx, cx, cy, 1.8 * cellSize, 6, 0, true);
+      break;
+
+    case QRStyle.GRUNGE:
+      drawScribble(ctx, x + 2 * cellSize, y + 2 * cellSize, 3 * cellSize);
+      break;
+
+    case QRStyle.STARBURST:
+      drawStar(ctx, cx, cy, 1.9 * cellSize, 1.2 * cellSize, 5, true);
+      break;
+
+    case QRStyle.STANDARD:
+    default:
+      ctx.fillRect(x + 2 * cellSize, y + 2 * cellSize, 3 * cellSize, 3 * cellSize);
+      break;
+  }
+};
+
+/**
+ * Draws a circular or rectangular logo background padding mask.
+ * @param ctx The canvas context.
+ * @param displaySize The full display size of the canvas.
+ * @param logoSizePx The width/height of the logo.
+ * @param logoPaddingPx The size of the padding around the logo.
+ * @param paddingStyle The style of padding ('circle' or 'square').
+ * @param backgroundColor The fill color.
+ */
+export const drawLogoBackground = (
+  ctx: CanvasRenderingContext2D,
+  displaySize: number,
+  logoSizePx: number,
+  logoPaddingPx: number,
+  paddingStyle: 'circle' | 'square' | string,
+  backgroundColor: string
+) => {
+  ctx.fillStyle = backgroundColor;
+  if (paddingStyle === 'circle') {
+    ctx.beginPath();
+    const radius = (logoSizePx / 2) + logoPaddingPx;
+    ctx.arc(displaySize / 2, displaySize / 2, radius, 0, Math.PI * 2);
+    ctx.fill();
+  } else {
+    const lx = (displaySize - logoSizePx) / 2;
+    const ly = (displaySize - logoSizePx) / 2;
+    ctx.fillRect(lx - logoPaddingPx, ly - logoPaddingPx, logoSizePx + (logoPaddingPx * 2), logoSizePx + (logoPaddingPx * 2));
   }
 };
 
