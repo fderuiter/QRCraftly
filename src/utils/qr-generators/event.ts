@@ -17,7 +17,7 @@
 */
 
 import { EventData, QRType, QRGeneratorContract } from '../../types';
-import { ValidationEngine } from '../../engine/ValidationEngine';
+import { isDangerousUrl } from '../security';
 import { SafeUrlPipeline } from '../url';
 import {
   escapeVCardEvent,
@@ -92,7 +92,7 @@ export const EventContract: QRGeneratorContract<EventData> = {
     const violations: string[] = [];
     const data = hydrateEventData(raw);
 
-    // 1. Check for URI Injection Violations using ValidationEngine.isDangerousUrl
+    // 1. Check for URI Injection Violations using isDangerousUrl
     // Decode characters up to ten levels deep first to ensure obfuscated protocols are caught.
     const decodedDesc = SafeUrlPipeline.decodeObfuscation(data.description || '');
     const decodedLoc = SafeUrlPipeline.decodeObfuscation(data.location || '');
@@ -137,7 +137,7 @@ export const EventContract: QRGeneratorContract<EventData> = {
     const urls = [...extractUris(cleanDesc), ...extractUris(cleanLoc)];
 
     for (const u of urls) {
-      if (ValidationEngine.isDangerousUrl(u)) {
+      if (isDangerousUrl(u)) {
         violations.push('URI_INJECTION_VIOLATION');
         break;
       }

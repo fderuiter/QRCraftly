@@ -1,5 +1,5 @@
 import jsQR from 'jsqr';
-import { ValidationEngine } from '../engine/ValidationEngine';
+import { isDangerousUrl } from './security';
 import {
   assertWorkerRequest,
   assertWorkerResponse,
@@ -54,7 +54,7 @@ self.onmessage = (e: MessageEvent<unknown>) => {
       }
     }
 
-    if (digitalPass && ValidationEngine.isDangerousUrl(decodedData)) {
+    if (digitalPass && isDangerousUrl(decodedData)) {
       const response = { success: false, physicalReady: false, error: 'SECURITY_VIOLATION', configId };
       assertWorkerResponse(response);
       self.postMessage(response);

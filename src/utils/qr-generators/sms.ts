@@ -18,13 +18,14 @@
 
 import { SmsData, QRType, QRGeneratorContract } from '../../types';
 import { parseProtocol } from '../protocol';
+import { cleanPhoneNumber } from '../security';
 import { ValidationEngine } from '../../engine/ValidationEngine';
 
 /**
  * Constructs the smsto string for SMS QR code.
  */
 export const constructSmsString = (data: SmsData): string => {
-  const cleanNumber = ValidationEngine.cleanPhoneNumber(data.number, true);
+  const cleanNumber = cleanPhoneNumber(data.number, true);
   const encodedBody = encodeURIComponent(data.message);
   return `sms:${cleanNumber}?body=${encodedBody}`;
 };

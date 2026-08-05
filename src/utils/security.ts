@@ -36,6 +36,15 @@ export const safeJsonLdStringify = (data: any): string => {
 };
 
 /**
+ * Shared regular expressions for security and formatting
+ */
+export const REGEX_STRICT_CONTROL_CHARS = /[\x00-\x1F\x7F-\x9F]+/g;
+export const REGEX_PRESERVE_FORMAT_CONTROL_CHARS = /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g;
+export const REGEX_PHONE_STRIP = /[^0-9+*#\-().]/g;
+export const REGEX_PHONE_STRIP_PRESERVE = /[^0-9+*#\-().;,]/g;
+export const REGEX_SOCIAL_HANDLE_STRIP = /[^a-zA-Z0-9_.\-]/g;
+
+/**
  * Checks whether the given URL contains dangerous schemes or matches suspicious patterns.
  * Directly calls the SafeUrlPipeline without any translation wrappers.
  *
@@ -54,7 +63,7 @@ export const isDangerousUrl = (url: string | undefined): boolean => {
  * @returns The sanitized input string.
  */
 export const sanitizeInput = (str: string): string => {
-  const noControl = str.replace(/[\x00-\x1F\x7F-\x9F]+/g, '');
+  const noControl = str.replace(REGEX_STRICT_CONTROL_CHARS, '');
   return noControl.split('?')[0];
 };
 
@@ -68,9 +77,20 @@ export const sanitizeInput = (str: string): string => {
  */
 export const cleanPhoneNumber = (number: string, preserveSemicolonComma: boolean = false): string => {
   if (preserveSemicolonComma) {
-    return number.replace(/[^0-9+*#\-().;,]/g, '');
+    return number.replace(REGEX_PHONE_STRIP_PRESERVE, '');
   }
-  return number.replace(/[^0-9+*#\-().]/g, '');
+  return number.replace(REGEX_PHONE_STRIP, '');
+};
+
+/**
+ * Normalizes a social handle by stripping leading at signs and unsafe characters.
+ *
+ * @param handle The raw social handle.
+ * @returns The sanitized and normalized social handle.
+ */
+export const sanitizeSocialHandle = (handle: string): string => {
+  const withoutAt = handle.replace(/^@+/, '');
+  return withoutAt.replace(REGEX_SOCIAL_HANDLE_STRIP, '');
 };
 
 /**
@@ -91,4 +111,21 @@ export const validateImageUpload = (file: File): string | null => {
   }
 
   return null;
+};
+
+/**
+ * Common URL validation logic for both meeting and URL generators.
+ *
+ * @param raw The raw URL string.
+ * @param urlContainmentProfile The regex to test.
+ * @returns An array of security or structure violations.
+ */
+export const validateUrlAndInject = (raw: string, urlContainmentProfile: RegExp): string[] => {
+  const violations: string[] = [];
+  if (isDangerousUrl(raw)) {
+    violations.push('URI_INJECTION_VIOLATION');
+  } else if (!urlContainmentProfile.test(raw) && raw.startsWith('http')) {
+    violations.push('URL_STRUCTURE_VIOLATION');
+  }
+  return violations;
 };

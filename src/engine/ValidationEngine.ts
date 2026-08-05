@@ -2,7 +2,7 @@ import { QRConfig, QRType } from '../types';
 import { LOW_RELIABILITY_PATTERNS, SYSTEM_LIMITS } from '../constants';
 import { getContrastRatio } from '../utils/colorUtils';
 import { parseProtocol, PROTOCOL_PREFIXES, SOCIAL_DOMAINS } from '../utils/protocol';
-import { isDangerousUrl, sanitizeInput, cleanPhoneNumber } from '../utils/security';
+import { REGEX_STRICT_CONTROL_CHARS, REGEX_PRESERVE_FORMAT_CONTROL_CHARS } from '../utils/security';
 import { SafeUrlPipeline } from '../utils/url';
 
 /**
@@ -39,11 +39,11 @@ export const ValidationEngine = {
   /**
    * Regular expression pattern to match strict control and zero-width characters.
    */
-  REGEX_STRICT_CONTROL_CHARS: /[\x00-\x1F\x7F-\x9F]+/g,
+  REGEX_STRICT_CONTROL_CHARS: REGEX_STRICT_CONTROL_CHARS,
   /**
    * Regular expression pattern to match format-preserving control characters.
    */
-  REGEX_PRESERVE_FORMAT_CONTROL_CHARS: /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g,
+  REGEX_PRESERVE_FORMAT_CONTROL_CHARS: REGEX_PRESERVE_FORMAT_CONTROL_CHARS,
   /**
    * Regular expression pattern to match characters unsafe in a URL structure.
    */
@@ -116,15 +116,6 @@ export const ValidationEngine = {
   },
 
   /**
-   * Checks whether the given URL contains dangerous schemes or matches suspicious patterns.
-   * @param url - The input URL to evaluate, which may be undefined.
-   * @returns True if the URL is dangerous and should be blocked, false otherwise.
-   */
-  isDangerousUrl(url: string | undefined): boolean {
-    return isDangerousUrl(url);
-  },
-
-  /**
    * Performs full-scale validation on a complete QR configuration profile.
    * @param config - The QR code generation configuration profile.
    * @returns An array of security or structure violations.
@@ -186,35 +177,6 @@ export const ValidationEngine = {
       }
     }
     return clean;
-  },
-
-  /**
-   * Sanitizes a plain input string by stripping control characters and cutting off query parameters.
-   * @param str - The raw user input string.
-   * @returns The sanitized input string.
-   */
-  sanitizeInput(str: string): string {
-    return sanitizeInput(str);
-  },
-
-  /**
-   * Normalizes a social handle by stripping leading at signs and unsafe characters.
-   * @param handle - The raw social handle.
-   * @returns The sanitized and normalized social handle.
-   */
-  sanitizeSocialHandle(handle: string): string {
-    const withoutAt = handle.replace(/^@+/, '');
-    return withoutAt.replace(/[^a-zA-Z0-9_.\-]/g, '');
-  },
-
-  /**
-   * Cleans a phone number by stripping any characters that are not digits, symbols, or formatting markers.
-   * @param number - The raw phone number string.
-   * @param preserveSemicolonComma - Whether to preserve semicolons and commas (for isolated configurations).
-   * @returns The cleaned phone number string.
-   */
-  cleanPhoneNumber(number: string, preserveSemicolonComma: boolean = false): string {
-    return cleanPhoneNumber(number, preserveSemicolonComma);
   },
 
   /**

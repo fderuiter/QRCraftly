@@ -17,6 +17,7 @@
 */
 
 import { PaymentData, CryptoNetwork, QRType, QRGeneratorContract } from '../../types';
+import { isDangerousUrl, sanitizeInput } from '../security';
 import { ValidationEngine } from '../../engine/ValidationEngine';
 
 /**
@@ -26,7 +27,7 @@ export const constructPaymentString = (data: PaymentData): string => {
   let paymentString = '';
 
   if (data.network === CryptoNetwork.CUSTOM) {
-    if (ValidationEngine.isDangerousUrl(data.address)) {
+    if (isDangerousUrl(data.address)) {
       return '';
     }
     paymentString = data.address;
@@ -44,7 +45,7 @@ export const constructPaymentString = (data: PaymentData): string => {
     }
 
     // Sanitize address to prevent parameter injection if user accidentally pastes a full URI or malicious string
-    const safeAddress = ValidationEngine.sanitizeInput(data.address);
+    const safeAddress = sanitizeInput(data.address);
     paymentString = `${data.network}:${safeAddress}`;
     const params: string[] = [];
 
@@ -128,7 +129,7 @@ export const PaymentContract: QRGeneratorContract<PaymentData> = {
   matches: (raw: string) => ValidationEngine.identifyProtocol(raw) === QRType.PAYMENT,
   validate: (raw: string) => {
     const violations: string[] = [];
-    if (raw && ValidationEngine.isDangerousUrl(raw)) {
+    if (raw && isDangerousUrl(raw)) {
       violations.push('URI_INJECTION_VIOLATION');
     }
     return violations;
