@@ -406,6 +406,39 @@ describe('QRTool Component', () => {
       expect(document.activeElement).toBe(downloadBtn);
     });
 
+    it('triggers a warning toast when SVG download is triggered and remote logo fetch fails', async () => {
+      const originalFetch = global.fetch;
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: false,
+      } as any);
+
+      try {
+        const initialConfig = {
+          logoUrl: 'https://example.com/blocked-by-cors-logo.png',
+        };
+        render(<ToastProvider><QRTool initialConfig={initialConfig} /></ToastProvider>);
+        const downloadBtn = screen.getAllByText('Download')[0];
+
+        // Open the dropdown menu
+        fireEvent.click(downloadBtn);
+
+        const svgOption = screen.getByText('SVG (Vector)');
+        fireEvent.click(svgOption);
+
+        // Verify warning toast exists with role="alert" and the expected warning message
+        await waitFor(() => {
+          const alerts = screen.getAllByRole('alert');
+          const hasText = alerts.some(a => a.textContent?.includes('The remote logo was omitted from the SVG export due to connection or security limits. Try uploading a local image file instead.'));
+          expect(hasText).toBe(true);
+        });
+
+        // Verify focus is returned to the main Download trigger button
+        expect(document.activeElement).toBe(downloadBtn);
+      } finally {
+        global.fetch = originalFetch;
+      }
+    });
+
     it('restores focus and triggers a success toast when Web Share API is triggered', async () => {
       const mockShare = vi.fn().mockResolvedValue(undefined);
       const mockCanShare = vi.fn().mockReturnValue(true);

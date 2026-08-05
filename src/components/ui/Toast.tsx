@@ -7,7 +7,7 @@ import { mergeClasses } from './styles';
 /**
  * Type of the toast notification message.
  */
-type ToastType = 'success' | 'error' | 'info';
+type ToastType = 'success' | 'error' | 'info' | 'warning';
 
 /**
  * A message structure inside the toast state.
@@ -117,7 +117,7 @@ const ToastItem = (props: { toast: ToastMessage; onRemove: (id: string) => void 
 
   return (
     <div 
-      role={toast.type === 'error' ? 'alert' : 'status'}
+      role={toast.type === 'error' || toast.type === 'warning' ? 'alert' : 'status'}
       tabIndex={0}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}

@@ -117,11 +117,19 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
           });
         }
       } else if (result.format === 'svg') {
-        addToast({
-          type: 'success',
-          message: 'QR code exported successfully as SVG!',
-          duration: 5000,
-        });
+        if (result.logoOmitted) {
+          addToast({
+            type: 'warning',
+            message: 'The remote logo was omitted from the SVG export due to connection or security limits. Try uploading a local image file instead.',
+            duration: 7000,
+          });
+        } else {
+          addToast({
+            type: 'success',
+            message: 'QR code exported successfully as SVG!',
+            duration: 5000,
+          });
+        }
       } else {
         // png, jpeg, webp
         const upperFormat = result.format ? result.format.toUpperCase() : 'image';
