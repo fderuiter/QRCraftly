@@ -13,7 +13,7 @@ To eliminate logical UI redundancy, prevent design drift, and maintain robust WC
 These low-level, primitive UI elements are designed to be extremely customizable, fully accessible, and unified in appearance.
 
 - **Accordion** (`Accordion.tsx` / `Accordion.test.tsx`): A collapsible vertical disclosure component ideal for FAQs or grouped menus.
-- **Alert** (`Alert.tsx`): Displays warning, error, or informational banners to the user with standard status states.
+- **Alert** (`Alert.tsx` / `Alert.test.tsx`): Displays warning, error, or informational banners to the user with standard status states.
 - **Button** (`Button.tsx`): High-reusability button supporting multiple visual variants (primary, secondary, outline, danger, ghost), sizes, and loading states.
 - **Card** (`Card.tsx` / `Card.test.tsx`): Container box styled consistently with modern borders, background transitions, and padding rules.
 - **ColorInput** (`ColorInput.tsx` / `ColorInput.test.tsx`): A specialized, keyboard-accessible text and visual picker element for hex colors.
