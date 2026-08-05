@@ -16,9 +16,11 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { REGEX_STRICT_CONTROL_CHARS_STRIP } from './securityConstants';
+
 export const SafeUrlPipeline = {
   REGEX_URL_UNSAFE_CHARS: /[\x00-\x1F\x7F-\x9F\s\u200B-\u200D\uFEFF]+/g,
-  REGEX_CONTROL_CHARS: /[\x00-\x1F\x7F-\x9F\u200B-\u200D\uFEFF]/g,
+  REGEX_CONTROL_CHARS: REGEX_STRICT_CONTROL_CHARS_STRIP,
 
   DANGEROUS_PROTOCOLS: [
     'javascript:',

@@ -35,3 +35,10 @@ Please use the [GitHub Security Advisory](https://github.com/fderuiter/QRCraftly
 To prevent injection of arbitrary characters or command payloads into telephone or SMS QR codes, the application runs strict sanitization routines entirely on the client side:
 - **General Phone Validation**: By default, general telephone input values are cleaned to remove all non-numeric and non-standard telephone symbols. Characters like semicolons and commas are stripped.
 - **SMS Multi-Recipient Isolation**: To support advanced client-side SMS campaign configurations, the SMS generator uses an isolated sanitization option that preserves semicolons and commas, while rejecting letters, other symbols, and line-break control characters.
+
+## Control-Character and Zero-Width Sanitization Parity
+
+To prevent validation-sanitization parity drift which blocks QR code generation for legitimate user inputs:
+- **Centralized Security Library**: All core control-character and zero-width regular expressions are defined in `src/utils/securityConstants.ts` as the single source of truth.
+- **Mirror Sanitization**: Plain-text input and general payload sanitization strip zero-width spaces (e.g., zero-width space `\u200B`, zero-width non-joiner `\u200C`, zero-width joiner `\u200D`), Byte Order Marks (`\uFEFF`), and strict control characters (ASCII/Latin-1 control characters in ranges `\x00-\x1F` and `\x7F-\x9F`).
+- **Formatting Preservation**: Structured payloads like vCards and Events preserve multi-line formatting (newlines, carriage returns, and tabs) during validation and sanitization while cleanly stripping other non-printable, control, or zero-width characters.

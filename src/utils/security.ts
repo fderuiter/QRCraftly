@@ -18,6 +18,7 @@
 
 import { SYSTEM_LIMITS } from '../constants';
 import { SafeUrlPipeline } from './url';
+import { REGEX_STRICT_CONTROL_CHARS_STRIP } from './securityConstants';
 
 /**
  * Safely serializes data for use in a JSON-LD script tag.
@@ -54,7 +55,7 @@ export const isDangerousUrl = (url: string | undefined): boolean => {
  * @returns The sanitized input string.
  */
 export const sanitizeInput = (str: string): string => {
-  const noControl = str.replace(/[\x00-\x1F\x7F-\x9F]+/g, '');
+  const noControl = str.replace(REGEX_STRICT_CONTROL_CHARS_STRIP, '');
   return noControl.split('?')[0];
 };
 

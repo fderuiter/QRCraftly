@@ -4,6 +4,12 @@ import { getContrastRatio } from '../utils/colorUtils';
 import { parseProtocol, PROTOCOL_PREFIXES, SOCIAL_DOMAINS } from '../utils/protocol';
 import { isDangerousUrl, sanitizeInput, cleanPhoneNumber } from '../utils/security';
 import { SafeUrlPipeline } from '../utils/url';
+import {
+  REGEX_STRICT_NO_CONTROL_TEST,
+  REGEX_STRICT_CONTROL_CHARS_STRIP,
+  REGEX_PRESERVE_FORMAT_NO_CONTROL_TEST,
+  REGEX_PRESERVE_FORMAT_CONTROL_CHARS_STRIP
+} from '../utils/securityConstants';
 
 /**
  * Core validation and sanitization engine for QR code generation.
@@ -33,17 +39,18 @@ export const ValidationEngine = {
     EMAIL: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
     PLAIN_TEXT: /^[^\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F\u200B-\u200D\uFEFF]*$/,
     // General check for zero-width and control characters in text fields
-    STRICT_NO_CONTROL: /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F\u200B-\u200D\uFEFF]/
+    STRICT_NO_CONTROL: REGEX_STRICT_NO_CONTROL_TEST,
+    PRESERVE_FORMAT_NO_CONTROL: REGEX_PRESERVE_FORMAT_NO_CONTROL_TEST
   },
 
   /**
    * Regular expression pattern to match strict control and zero-width characters.
    */
-  REGEX_STRICT_CONTROL_CHARS: /[\x00-\x1F\x7F-\x9F]+/g,
+  REGEX_STRICT_CONTROL_CHARS: REGEX_STRICT_CONTROL_CHARS_STRIP,
   /**
    * Regular expression pattern to match format-preserving control characters.
    */
-  REGEX_PRESERVE_FORMAT_CONTROL_CHARS: /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g,
+  REGEX_PRESERVE_FORMAT_CONTROL_CHARS: REGEX_PRESERVE_FORMAT_CONTROL_CHARS_STRIP,
   /**
    * Regular expression pattern to match characters unsafe in a URL structure.
    */
@@ -145,12 +152,18 @@ export const ValidationEngine = {
 
     // 2. Validate QR payload against containment profiles
     if (config.value) {
-      if (this.CONTAINMENT_PROFILES.STRICT_NO_CONTROL.test(config.value)) {
-        violations.push('Payload contains invalid control or zero-width characters');
-      }
-
       // Determine the effective type. Prefer explicit config.type, otherwise try to identify it.
       const type = config.type || this.identifyProtocol(config.value);
+
+      if (type === QRType.VCARD || type === QRType.EVENT) {
+        if (this.CONTAINMENT_PROFILES.PRESERVE_FORMAT_NO_CONTROL.test(config.value)) {
+          violations.push('Payload contains invalid control or zero-width characters');
+        }
+      } else {
+        if (this.CONTAINMENT_PROFILES.STRICT_NO_CONTROL.test(config.value)) {
+          violations.push('Payload contains invalid control or zero-width characters');
+        }
+      }
 
       const validator = this.typeValidators[type];
       if (validator) {
