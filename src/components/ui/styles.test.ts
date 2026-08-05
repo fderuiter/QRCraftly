@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { mergeClasses, TEXT_FIELD_CLASSES, ERROR_INPUT_CLASSES } from './styles';
+import { mergeClasses, BASE_INPUT_CLASSES, TEXT_FIELD_CLASSES, TEXT_AREA_CLASSES, ERROR_INPUT_CLASSES } from './styles';
 
 describe('mergeClasses utility', () => {
   it('should return empty string when no arguments are provided', () => {
@@ -40,5 +40,45 @@ describe('mergeClasses utility', () => {
     expect(result).toContain('dark:border-rose-500');
     expect(result).not.toContain('border-slate-300');
     expect(result).not.toContain('dark:border-slate-700');
+  });
+});
+
+describe('placeholder styling and accessibility alignment', () => {
+  it('should verify default high-contrast placeholder classes are present in base styles', () => {
+    // BASE_INPUT_CLASSES must contain the high-contrast placeholder styles
+    expect(BASE_INPUT_CLASSES).toContain('placeholder-slate-600');
+    expect(BASE_INPUT_CLASSES).toContain('dark:placeholder-slate-400');
+
+    // TEXT_FIELD_CLASSES must inherit them
+    expect(TEXT_FIELD_CLASSES).toContain('placeholder-slate-600');
+    expect(TEXT_FIELD_CLASSES).toContain('dark:placeholder-slate-400');
+
+    // TEXT_AREA_CLASSES must inherit them and NOT have the old placeholder-slate-400
+    expect(TEXT_AREA_CLASSES).toContain('placeholder-slate-600');
+    expect(TEXT_AREA_CLASSES).toContain('dark:placeholder-slate-400');
+    expect(TEXT_AREA_CLASSES.split(' ')).not.toContain('placeholder-slate-400');
+  });
+
+  it('should override default placeholders correctly during merging', () => {
+    // Merge standard override
+    const resultStandard = mergeClasses(TEXT_FIELD_CLASSES, 'placeholder-red-500');
+    expect(resultStandard).toContain('placeholder-red-500');
+    expect(resultStandard).not.toContain('placeholder-slate-600');
+    // Dark mode placeholder should be untouched
+    expect(resultStandard).toContain('dark:placeholder-slate-400');
+
+    // Merge dark override
+    const resultDark = mergeClasses(TEXT_FIELD_CLASSES, 'dark:placeholder-red-400');
+    expect(resultDark).toContain('dark:placeholder-red-400');
+    expect(resultDark).not.toContain('dark:placeholder-slate-400');
+    // Light mode placeholder should be untouched
+    expect(resultDark).toContain('placeholder-slate-600');
+
+    // Merge both overrides
+    const resultBoth = mergeClasses(TEXT_FIELD_CLASSES, 'placeholder-red-500 dark:placeholder-red-400');
+    expect(resultBoth).toContain('placeholder-red-500');
+    expect(resultBoth).toContain('dark:placeholder-red-400');
+    expect(resultBoth).not.toContain('placeholder-slate-600');
+    expect(resultBoth).not.toContain('dark:placeholder-slate-400');
   });
 });
