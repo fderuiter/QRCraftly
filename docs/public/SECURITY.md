@@ -40,3 +40,13 @@ To prevent injection of arbitrary characters or command payloads into telephone 
 
 - **General Phone Validation**: By default, general telephone input values are cleaned to remove all non-numeric and non-standard telephone symbols. Characters like semicolons and commas are stripped.
 - **SMS Multi-Recipient Isolation**: To support advanced client-side SMS campaign configurations, the SMS generator uses an isolated sanitization option that preserves semicolons and commas, while rejecting letters, other symbols, and line-break control characters.
+
+## SVG Sanitization & Path Tracking
+
+To prevent custom SVG logo uploads and native vector exports from exposing users to DOM-XSS and structural XML injection, QRCraftly incorporates two security controls:
+
+- **Static Path Tracking**: The build pipeline and pre-commit checks automatically trace data flows across files. They detect and block any unvalidated path where raw/external SVG code might reach rendering/storage sinks without passing through `sanitizeSvg()`.
+- **Runtime SVG Sanitization**: Uploaded logos and border images are processed entirely within the client browser to maintain offline privacy. The runtime parser:
+  - Destroys all `<script>` elements.
+  - Strips all inline event handlers (attributes starting with `on`).
+  - Neutralizes any remote or dangerous resource requests inside style blocks, style attributes, or `href`/`xlink:href` references while preserving standard layout paths, responsive viewBox attributes, linear gradients, and clip paths.

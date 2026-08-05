@@ -17,7 +17,7 @@
 */
 
 import { useState, useCallback } from 'react';
-import { validateImageUpload } from '../utils/security';
+import { validateImageUpload, sanitizeSvg } from '../utils/security';
 
 /**
  *
@@ -53,11 +53,23 @@ export function useImageUpload(): UseImageUploadReturn {
         setError(validationError);
         return;
       }
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        onSuccess(event.target?.result as string);
-      };
-      reader.readAsDataURL(file);
+      if (file.type === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg')) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const rawSvg = event.target?.result as string;
+          const sanitizedSvg = sanitizeSvg(rawSvg);
+          const base64 = btoa(unescape(encodeURIComponent(sanitizedSvg)));
+          const dataUrl = `data:image/svg+xml;base64,${base64}`;
+          onSuccess(dataUrl);
+        };
+        reader.readAsText(file);
+      } else {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          onSuccess(event.target?.result as string);
+        };
+        reader.readAsDataURL(file);
+      }
     }
   }, []);
 
