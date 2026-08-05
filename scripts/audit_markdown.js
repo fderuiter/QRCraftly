@@ -20,7 +20,8 @@ export function getFilesToAudit() {
   return [
     ...docsPublicFiles,
     'README.md',
-    'src/components/inputs/README.md'
+    'src/components/inputs/README.md',
+    '.github/rulesets/README.md'
   ];
 }
 
