@@ -17,6 +17,7 @@
 */
 
 import { useState, useEffect } from 'react';
+import { setCachedAsset, convertImageToBase64 } from '../utils/assetCache';
 
 /**
  * Hook to load an image asynchronously.
@@ -36,13 +37,28 @@ export const useImage = (url: string | null) => {
     img.crossOrigin = 'Anonymous';
     img.src = url;
 
+    const tryCache = (loadedImg: HTMLImageElement) => {
+      if (url.startsWith('data:')) {
+        setCachedAsset(url, url);
+      } else {
+        const base64 = convertImageToBase64(loadedImg);
+        if (base64) {
+          setCachedAsset(url, base64);
+        }
+      }
+    };
+
     // If image is already cached and loaded immediately
     if (img.complete && img.naturalHeight !== 0) {
         setImage(img);
+        tryCache(img);
         return;
     }
 
-    img.onload = () => setImage(img);
+    img.onload = () => {
+      setImage(img);
+      tryCache(img);
+    };
     img.onerror = () => setImage(null);
 
     return () => {

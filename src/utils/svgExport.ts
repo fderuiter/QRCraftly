@@ -22,6 +22,7 @@ import { drawWithTemplate, SOCIAL_DIMENSIONS } from './templateRenderer';
 import { getQrTypeLabel, getQrTypeDescription } from './a11y';
 
 import { SafeUrlPipeline, normalizeUrl } from './url';
+import { getCachedAsset } from './assetCache';
 
 /**
  * Converts an image URL to a base64 data-URL so it can be embedded inline in
@@ -33,6 +34,12 @@ import { SafeUrlPipeline, normalizeUrl } from './url';
  */
 async function toDataUrl(url: string): Promise<string | null> {
   if (!url) return null;
+
+  // Synchronously retrieve from transparent in-memory cache if available
+  const cached = getCachedAsset(url);
+  if (cached) {
+    return cached;
+  }
 
   const normalized = normalizeUrl(url).toLowerCase();
 
