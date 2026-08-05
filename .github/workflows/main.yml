@@ -81,7 +81,7 @@ jobs:
       - run: pnpm run lint
 
       - name: Check for Code Duplication
-        run: pnpm dlx jscpd@3.5.9 src --config .jscpd.json
+        run: pnpm run validate:duplication
 
       - name: Set up Python
         uses: actions/setup-python@v5
