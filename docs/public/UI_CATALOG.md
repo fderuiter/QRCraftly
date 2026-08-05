@@ -1,0 +1,80 @@
+# Shared UI Component Registry and Utility Catalog
+
+## Overview
+This catalog serves as the central directory index for all reusable UI components, styling controls, input modules, and color utilities within the QRCraftly repository. 
+
+To eliminate logical UI redundancy, prevent design drift, and maintain robust WCAG accessibility compliance, **all developers must consult this catalog before implementing any new visual elements, slider inputs, or color-related algorithms.** Peer reviewers will actively audit every pull request against this catalog to ensure maximum reuse of pre-existing codebase assets.
+
+---
+
+## 1. Core Shared UI Elements (`src/components/ui/`)
+These low-level, primitive UI elements are designed to be extremely customizable, fully accessible, and unified in appearance.
+
+*   **Accordion** (`Accordion.tsx` / `Accordion.test.tsx`): A collapsible vertical disclosure component ideal for FAQs or grouped menus.
+*   **Alert** (`Alert.tsx`): Displays warning, error, or informational banners to the user with standard status states.
+*   **Button** (`Button.tsx`): High-reusability button supporting multiple visual variants (primary, secondary, outline, danger, ghost), sizes, and loading states.
+*   **Card** (`Card.tsx` / `Card.test.tsx`): Container box styled consistently with modern borders, background transitions, and padding rules.
+*   **ColorInput** (`ColorInput.tsx` / `ColorInput.test.tsx`): A specialized, keyboard-accessible text and visual picker element for hex colors.
+*   **FieldWrapper** (`FieldWrapper.tsx`): Form layout primitive that automatically renders labels, assistive descriptions, character counts, and error states.
+*   **FormBlock** (`FormBlock.tsx` / `FormBlock.test.tsx`): Structural wrapper to organize form fields, titles, and action grids neatly.
+*   **FormFields** (`FormFields.tsx`): Standard field grouping configurations.
+*   **JsonLdScript** (`JsonLdScript.tsx`): Secure utility component that safely injects structural SEO schema metadata.
+*   **Modal** (`Modal.tsx` / `Modal.test.tsx`): Accessibility-compliant dialog component complete with focus traps, exit listeners, and smooth animations.
+*   **PatternModule** (`PatternModule.tsx`): Visual sub-module used to configure and showcase QR pattern variants.
+*   **RangeInput** (`RangeInput.tsx` / `RangeInput.test.tsx`): **Mandatory slider control component** supporting minimum, maximum, step-size configuration, and granular visual previews.
+*   **SanitizedHtml** (`SanitizedHtml.tsx`): Safe, sanitized HTML injection system to avoid cross-site scripting (XSS) issues in dynamically parsed rich content.
+*   **TextField** (`TextField.tsx`): Standard form text input primitive with full validation styles and focus rings.
+*   **Toast** (`Toast.tsx` / `Toast.test.tsx`): Auto-dismissing alerts that slide into view to acknowledge user actions without interrupting their workflow.
+*   **ToggleSwitch** (`ToggleSwitch.tsx` / `ToggleSwitch.test.tsx`): Accessible sliding checkbox switch used for toggle-only options (e.g., advanced modes or themes).
+
+---
+
+## 2. QR Input Form Panel Components (`src/components/inputs/`)
+These components capture specialized data structures required to construct distinct QR code types. They rely entirely on primitive UI inputs.
+
+*   **TextInput** (`TextInput.tsx`): Minimalist form component capturing standard unformatted text.
+*   **UrlInput** (`UrlInput.tsx`): Text input with automatic verification and correction of URL protocol schemes.
+*   **EmailInput** (`EmailInput.tsx`): Standard email layout supporting recipient, subject, and body message fields.
+*   **PhoneInput** (`PhoneInput.tsx`): Clean, accessible phone dial code layout.
+*   **SmsInput** (`SmsInput.tsx`): SMS composer form holding receiver number and predefined message.
+*   **WifiInput** (`WifiInput.tsx`): Wireless network panel specifying SSID, passwords, and security type.
+*   **VCardInput** (`VCardInput.tsx`): Extensive contact form detailing names, organization, email, phone, and address.
+*   **EventInput** (`EventInput.tsx`): Calendar appointment configuration form specifying title, times, description, and venue.
+*   **PaymentInput** (`PaymentInput.tsx`): Cryptocurrency checkout fields validating address formats and value sizes.
+*   **LocationInput** (`LocationInput.tsx` / `LocationInput.test.tsx`): High-accuracy coordinate form requiring proper latitude and longitude decimals.
+*   **MeetingInput** (`MeetingInput.tsx` / `MeetingInput.test.tsx`): Specialized input fields to enter URL links and meeting passwords.
+*   **SocialInput** (`SocialInput.tsx` / `SocialInput.test.tsx`): Selectors for major platforms alongside handler name parsing.
+*   **TypeSelector** (`TypeSelector.tsx` / `TypeSelector.test.tsx`): Tabbed layout facilitating quick, clean switching between active QR configurations.
+
+---
+
+## 3. Styling & Customization Controls (`src/components/style-controls/`)
+Unified appearance control modules that manage and present customization options in a modular side navigation menu.
+
+*   **PatternControls** (`PatternControls.tsx`): Layout and visual selectors allowing users to toggle through classic, rounded, or custom pattern templates.
+*   **ColorControls** (`ColorControls.tsx`): Consolidates pickers and preset buttons for foreground, background, and corner eye accents.
+*   **LogoControls** (`LogoControls.tsx`): Coordinates uploading custom logos, configuring scaling boundaries, and adjusting background-mask thresholds.
+*   **BorderControls** (`BorderControls.tsx`): Controls options for border thickness, padding, and corner radius around outputs.
+*   **LayoutControls** (`LayoutControls.tsx` / `LayoutControls.test.tsx`): Controls size, padding, margin, and output format.
+*   **AdvancedControls** (`AdvancedControls.tsx`): Advanced visual overrides such as grid density and scannability modifiers.
+*   **ContrastWarning** (`ContrastWarning.tsx`): Dynamic accessibility banner that displays contrast warnings if combinations fall below WCAG parameters.
+
+---
+
+## 4. Color & Contrast Utilities (`src/utils/colorUtils.ts` & `src/utils/a11y.ts`)
+These utility functions handle hex conversion, relative luminance, contrast checks, and general formatting. **Do not write custom math or hex formatting logic under any circumstances.**
+
+*   `normalizeHex(val: string): string | null`
+    *   **Description:** Normalizes custom hex inputs (supports shorthand `#abc`, converts to `#aabbcc`, formats casing, and appends a `#` prefix if absent).
+*   `getContrastRatio(fg: string, bg: string): number`
+    *   **Description:** Computes the contrast ratio between foreground and background sRGB colors based on WCAG 2.0 relative luminance formulas.
+
+---
+
+## 5. Development Guardrails: Guidelines for Reuse
+To avoid duplicate controls and logical divergence:
+
+1.  **Do Not Create Custom Sliders:** All range selectors must be configured via the existing `RangeInput` component.
+2.  **Do Not Duplicate Pickers:** All color pickers must rely on `ColorInput` and its internal validators.
+3.  **Do Not Code Custom Color Math:** Do not write custom contrast checks, relative luminance weights, or hex parsers. Import `normalizeHex` or `getContrastRatio` directly from `src/utils/colorUtils.ts`.
+4.  **Audit Before Submitting:** If you are building a new feature, compare the required controls against this index. If a component matches, import and wrap it instead of replicating it.
