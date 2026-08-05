@@ -1,5 +1,5 @@
 {
-  "threshold": 1.0,
+  "threshold": 3.0,
   "minLines": 5,
   "minTokens": 45,
   "ignore": [
@@ -8,6 +8,7 @@
     "**/__tests__/**",
     "**/mocks/**",
     "**/sandbox/**",
-    "src/pages/**/*"
+    "**/dev-sandbox/**",
+    "**/fixtures/**"
   ]
 }

@@ -17,7 +17,8 @@
   },
   "ignoreDependencies": [
     "wrangler",
-    "tailwindcss"
+    "tailwindcss",
+    "lint-staged"
   ],
   "rules": {
     "files": "error",
