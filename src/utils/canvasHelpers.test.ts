@@ -17,7 +17,7 @@
 */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { drawRoundRect, drawPoly, drawStar, drawRoughRect, drawScribble } from './canvasHelpers';
+import { drawRoundRect, drawPoly, drawStar, drawRoughRect, drawScribble, drawCircularModule, drawCircuitModule, drawStandardModule } from './canvasHelpers';
 
 describe('canvasHelpers', () => {
   let ctx: any;
@@ -39,6 +39,7 @@ describe('canvasHelpers', () => {
       rotate: vi.fn(),
       fillRect: vi.fn(),
       rect: vi.fn(),
+      arc: vi.fn(),
     } as unknown as CanvasRenderingContext2D;
   });
 
@@ -168,6 +169,36 @@ describe('canvasHelpers', () => {
       expect(ctx.closePath).toHaveBeenCalled();
       expect(ctx.fill).toHaveBeenCalled();
       expect(ctx.restore).toHaveBeenCalled();
+    });
+  });
+
+  describe('drawCircularModule', () => {
+    it('should call moveTo and arc with the scaled radius', () => {
+      drawCircularModule(ctx, 50, 50, 10, 1.05);
+      const expectedR = 5 * 1.05;
+      expect(ctx.moveTo).toHaveBeenCalledWith(50 + expectedR, 50);
+      expect(ctx.arc).toHaveBeenCalledWith(50, 50, expectedR, 0, Math.PI * 2);
+    });
+  });
+
+  describe('drawCircuitModule', () => {
+    it('should draw a round rect and correct links to neighbors', () => {
+      drawCircuitModule(ctx, 10, 10, 15, 15, 10, true, false, true, false);
+      expect(ctx.moveTo).toHaveBeenCalled();
+      expect(ctx.rect).toHaveBeenCalledWith(10, 13, 6, 4);
+      expect(ctx.rect).toHaveBeenCalledWith(13, 10, 4, 6);
+    });
+  });
+
+  describe('drawStandardModule', () => {
+    it('should use floor and Math.ceil for non-virtual rendering', () => {
+      drawStandardModule(ctx, 10.2, 10.8, 10, false);
+      expect(ctx.rect).toHaveBeenCalledWith(10, 10, 10, 10);
+    });
+
+    it('should use Math.round for virtual rendering', () => {
+      drawStandardModule(ctx, 10.2, 10.8, 10.1, true);
+      expect(ctx.rect).toHaveBeenCalledWith(10, 11, 10, 10);
     });
   });
 });
