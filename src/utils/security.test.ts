@@ -17,7 +17,17 @@
 */
 
 import { describe, it, expect } from 'vitest';
-import { isDangerousUrl, safeJsonLdStringify, cleanPhoneNumber, sanitizeInput, validateImageUpload } from './security';
+// @ts-expect-error - jsdom type declarations might not be installed
+import { JSDOM } from 'jsdom';
+
+if (typeof globalThis.DOMParser === 'undefined') {
+  const dom = new JSDOM();
+  globalThis.DOMParser = dom.window.DOMParser;
+  globalThis.XMLSerializer = dom.window.XMLSerializer;
+  globalThis.Node = dom.window.Node;
+}
+
+import { isDangerousUrl, safeJsonLdStringify, cleanPhoneNumber, sanitizeInput, validateImageUpload, sanitizeSvg } from './security';
 
 describe('Security Utils', () => {
   describe('isDangerousUrl', () => {
@@ -179,3 +189,51 @@ describe('Security Utils', () => {
           expect(validateImageUpload(borderFile)).toBeNull();
       });
   });
+
+  describe('sanitizeSvg', () => {
+      it('removes script blocks completely', () => {
+          const raw = `<svg xmlns="http://www.w3.org/2000/svg"><script>alert("XSS")</script><rect width="100" height="100" /></svg>`;
+          const cleaned = sanitizeSvg(raw);
+          expect(cleaned).not.toContain('<script>');
+          expect(cleaned).not.toContain('alert');
+          expect(cleaned).toContain('rect');
+      });
+
+      it('removes inline script events', () => {
+          const raw = `<svg xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" onload="alert(1)" onclick="something()" /></svg>`;
+          const cleaned = sanitizeSvg(raw);
+          expect(cleaned).not.toContain('onload');
+          expect(cleaned).not.toContain('onclick');
+          expect(cleaned).toContain('rect');
+      });
+
+      it('removes external resource requests from href and xlink:href', () => {
+          const raw = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><image href="https://example.com/malicious.png" xlink:href="http://attacker.com/evil.png" /><image href="data:image/png;base64,abc" xlink:href="#local-ref" /></svg>`;
+          const cleaned = sanitizeSvg(raw);
+          expect(cleaned).not.toContain('https://example.com/malicious.png');
+          expect(cleaned).not.toContain('http://attacker.com/evil.png');
+          expect(cleaned).toContain('data:image/png;base64,abc');
+          expect(cleaned).toContain('#local-ref');
+      });
+
+      it('sanitizes inline styles and style elements for external resource requests', () => {
+          const raw = `<svg xmlns="http://www.w3.org/2000/svg"><style>@import "https://attacker.com/style.css"; rect { fill: url(http://malicious.com/image.png); filter: url(#safe-filter); }</style><rect style="background: url('https://evil.com'); filter: url(#another-safe);" /></svg>`;
+          const cleaned = sanitizeSvg(raw);
+          expect(cleaned).not.toContain('https://attacker.com/style.css');
+          expect(cleaned).not.toContain('http://malicious.com/image.png');
+          expect(cleaned).not.toContain('https://evil.com');
+          expect(cleaned).toContain('url(#safe-filter)');
+          expect(cleaned).toContain('url(#another-safe)');
+      });
+
+      it('preserves presentation attributes, clip paths, linear gradients, and viewBox', () => {
+          const raw = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="red" stroke="blue"><defs><linearGradient id="g1"><stop offset="0%" stop-color="red" /></linearGradient><clipPath id="c1"><circle cx="50" cy="50" r="40" /></clipPath></defs></svg>`;
+          const cleaned = sanitizeSvg(raw);
+          expect(cleaned).toContain('viewBox="0 0 100 100"');
+          expect(cleaned).toContain('fill="red"');
+          expect(cleaned).toContain('stroke="blue"');
+          expect(cleaned).toContain('linearGradient');
+          expect(cleaned).toContain('clipPath');
+      });
+  });
+

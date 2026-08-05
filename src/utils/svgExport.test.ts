@@ -17,6 +17,16 @@
 */
 
 import { describe, it, expect, vi } from 'vitest';
+// @ts-expect-error - jsdom type declarations might not be installed
+import { JSDOM } from 'jsdom';
+
+if (typeof globalThis.DOMParser === 'undefined') {
+  const dom = new JSDOM();
+  globalThis.DOMParser = dom.window.DOMParser;
+  globalThis.XMLSerializer = dom.window.XMLSerializer;
+  globalThis.Node = dom.window.Node;
+}
+
 import { generateQRSvg } from './svgExport';
 import { DEFAULT_CONFIG } from '../constants';
 import { QRStyle, QRConfig, SocialFormat, TemplateStyle, QRType } from '../types';
@@ -382,6 +392,17 @@ describe('generateQRSvg', () => {
       await generateQRSvg(config, { onLogoOmitted });
 
       expect(onLogoOmitted).not.toHaveBeenCalled();
+    });
+
+    it('sanitizes the final generated SVG output of all malicious scripts and external resources', async () => {
+      const config: QRConfig = {
+        ...(DEFAULT_CONFIG as QRConfig),
+        logoUrl: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxzY3JpcHQ+YWxlcnQoMSk8L3NjcmlwdD48L3N2Zz4=',
+      };
+
+      const svg = await generateQRSvg(config);
+      expect(svg).not.toContain('<script>');
+      expect(svg).not.toContain('alert(1)');
     });
   });
 });
