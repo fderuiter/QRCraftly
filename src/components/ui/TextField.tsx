@@ -23,7 +23,7 @@ interface TextFieldProps extends Omit<React.InputHTMLAttributes<HTMLInputElement
  *
  */
 export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(
-  ({ className = '', inputClassName = '', label, contextualLabel, labelClassName, error, showPasswordToggle, showCharCount, type = 'text', id, maxLength, value, 'aria-describedby': ariaDescribedby, ...props }, ref) => {
+  ({ className = '', inputClassName = '', label, contextualLabel, labelClassName, error, description, showPasswordToggle, showCharCount, type = 'text', id, maxLength, value, 'aria-describedby': ariaDescribedby, ...props }, ref) => {
     const [showPassword, setShowPassword] = useState(false);
     const effectiveType = showPasswordToggle ? (showPassword ? 'text' : 'password') : type;
     
@@ -32,7 +32,8 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(
     
     const errorId = error ? `${inputId}-error` : undefined;
     const charCountId = showCharCount && maxLength ? `${inputId}-char-count` : undefined;
-    const describedBy = combineIds(errorId, charCountId, ariaDescribedby);
+    const descriptionId = description ? `${inputId}-description` : undefined;
+    const describedBy = combineIds(descriptionId, errorId, charCountId, ariaDescribedby);
 
     return (
       <FieldWrapper
@@ -47,6 +48,8 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(
         error={error}
         errorId={errorId}
         charCountId={charCountId}
+        description={description}
+        descriptionId={descriptionId}
       >
         <div className="relative">
           <input

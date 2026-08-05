@@ -74,7 +74,8 @@ export const LocationInput: React.FC<LocationInputProps> = ({
         label="Latitude"
         type="text"
         inputMode="decimal"
-        placeholder="-90 to 90 (e.g. 40.7128)"
+        description="-90 to 90 (e.g. 40.7128)"
+        placeholder="e.g. 40.7128"
         maxLength={20}
         value={data.latitude}
         onChange={(e) => onChange({ latitude: e.target.value })}
@@ -84,7 +85,8 @@ export const LocationInput: React.FC<LocationInputProps> = ({
         label="Longitude"
         type="text"
         inputMode="decimal"
-        placeholder="-180 to 180 (e.g. -74.0060)"
+        description="-180 to 180 (e.g. -74.0060)"
+        placeholder="e.g. -74.0060"
         maxLength={21}
         // Longitude has one extra character vs latitude because it has 3 integer digits
         // (-180) versus latitude's 2 (-90), requiring one more character for the sign+digits.

@@ -33,6 +33,10 @@ export interface BaseFieldProps {
    *
    */
   error?: string;
+  /**
+   *
+   */
+  description?: string;
 }
 
 const getLabelClass = (customClass?: string) => {
@@ -76,6 +80,10 @@ interface FieldWrapperProps extends BaseFieldProps {
    *
    */
   isCheckbox?: boolean;
+  /**
+   *
+   */
+  descriptionId?: string;
 }
 
 /**
@@ -94,6 +102,8 @@ interface FieldWrapperProps extends BaseFieldProps {
  * @param root0.errorId
  * @param root0.charCountId
  * @param root0.isCheckbox
+ * @param root0.description
+ * @param root0.descriptionId
  */
 export const FieldWrapper: React.FC<FieldWrapperProps> = ({
   inputId,
@@ -109,6 +119,8 @@ export const FieldWrapper: React.FC<FieldWrapperProps> = ({
   errorId,
   charCountId,
   isCheckbox,
+  description,
+  descriptionId,
 }) => {
   if (isCheckbox) {
     return (
@@ -125,6 +137,11 @@ export const FieldWrapper: React.FC<FieldWrapperProps> = ({
             </span>
           )}
         </label>
+        {description && (
+          <p id={descriptionId} className="mt-1 text-xs text-slate-600 dark:text-slate-400">
+            {description}
+          </p>
+        )}
         {error && (
           <p id={errorId} role="alert" className="mt-1 text-xs text-rose-700 dark:text-rose-400">
             {error}
@@ -147,6 +164,11 @@ export const FieldWrapper: React.FC<FieldWrapperProps> = ({
         </label>
       )}
       {children}
+      {description && (
+        <p id={descriptionId} className="mt-1 text-xs text-slate-600 dark:text-slate-400">
+          {description}
+        </p>
+      )}
       {showCharCount && maxLength && (
         <CharCount id={charCountId} current={String(value !== undefined && value !== null ? value : "").length} max={maxLength} />
       )}
