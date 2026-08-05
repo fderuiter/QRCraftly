@@ -20,6 +20,8 @@ import '@testing-library/jest-dom';
 import 'vitest-axe/extend-expect';
 import * as matchers from 'vitest-axe/matchers';
 import { vi, afterEach, expect } from 'vitest';
+import { isDangerousUrl } from './src/utils/security';
+import { applyOpticalSimulationMath } from './src/utils/opticalSimulation';
 
 declare module 'vitest' {
   // eslint-disable-next-line @typescript-eslint/no-empty-object-type, @typescript-eslint/no-unused-vars
@@ -35,6 +37,7 @@ declare global {
     setInterceptor: (fn: ((message: any, worker: any) => void) | null) => void;
     setDelay: (ms: number) => void;
     setResponseOverride: (response: any) => void;
+    setConcurrencyLimit: (limit: number) => void;
     getInstances: () => any[];
     reset: () => void;
     activeWorker: any;
@@ -45,6 +48,7 @@ interface WorkerMockConfig {
   interceptor: ((message: any, worker: any) => void) | null;
   delayMs: number;
   responseOverride: any | null;
+  concurrencyLimit: number;
   instances: any[];
   activeWorker: any | null;
 }
@@ -53,9 +57,61 @@ const mockConfig: WorkerMockConfig = {
   interceptor: null,
   delayMs: 0,
   responseOverride: null,
+  concurrencyLimit: Infinity,
   instances: [],
   activeWorker: null,
 };
+
+let runningTasksCount = 0;
+const pendingTasks: Array<() => Promise<void>> = [];
+
+function checkSerializable(val: any, path: any[] = []) {
+  if (val === null || val === undefined) return;
+  
+  if (typeof val === 'function') {
+    throw new DOMException('Functions cannot be cloned', 'DataCloneError');
+  }
+  if (typeof val === 'symbol') {
+    throw new DOMException('Symbols cannot be cloned', 'DataCloneError');
+  }
+  if (val && (val instanceof Element || val.nodeType !== undefined || (val.ownerDocument && val.ownerDocument.defaultView))) {
+    throw new DOMException('DOM elements cannot be cloned', 'DataCloneError');
+  }
+
+  if (path.includes(val)) {
+    return;
+  }
+
+  if (typeof val === 'object') {
+    if (Array.isArray(val)) {
+      for (const item of val) {
+        checkSerializable(item, [...path, val]);
+      }
+    } else if (Object.prototype.toString.call(val) === '[object Object]') {
+      for (const key of Object.keys(val)) {
+        checkSerializable(val[key], [...path, val]);
+      }
+    }
+  }
+}
+
+function runNextTasks() {
+  while (pendingTasks.length > 0 && runningTasksCount < mockConfig.concurrencyLimit) {
+    const nextTask = pendingTasks.shift();
+    if (nextTask) {
+      runningTasksCount++;
+      nextTask().finally(() => {
+        runningTasksCount--;
+        runNextTasks();
+      });
+    }
+  }
+}
+
+function enqueueTask(task: () => Promise<void>) {
+  pendingTasks.push(task);
+  runNextTasks();
+}
 
 class MockWorker {
   private listeners: Record<string, Set<(...args: any[]) => void>> = {};
@@ -121,34 +177,106 @@ class MockWorker {
   postMessage = vi.fn((message: any, _transfer?: any) => {
     if (this.terminated) return;
 
-    // Buffer Safety: Transfer list (_transfer) parameter accepted but safely ignored.
+    // Reject non-serializable objects under strict structured cloning rules (Requirement 1)
+    checkSerializable(message);
+    structuredClone(message);
+
     const delay = mockConfig.delayMs;
-    const execute = () => {
+    const task = async () => {
       if (this.terminated) return;
 
-      if (mockConfig.interceptor) {
-        mockConfig.interceptor(message, this);
-        return;
-      }
+      const executeTask = async () => {
+        if (this.terminated) return;
 
-      if (mockConfig.responseOverride !== null) {
-        this.dispatchMessage(mockConfig.responseOverride);
-        return;
-      }
+        if (mockConfig.interceptor) {
+          mockConfig.interceptor(message, this);
+          return;
+        }
 
-      // Default behavior to prevent stuck UI:
-      this.dispatchMessage({
-        success: true,
-        physicalReady: true,
-        error: null,
-      });
+        if (mockConfig.responseOverride !== null) {
+          this.dispatchMessage(mockConfig.responseOverride);
+          return;
+        }
+
+        // Run the actual verification engine logic (Requirement 2)
+        try {
+          if (message && typeof message === 'object') {
+            const { imageData, width, height, isTest, configId } = message;
+            if (imageData && typeof width === 'number' && typeof height === 'number') {
+              const { default: jsQR } = await import('jsqr');
+
+              // 1. Digital pass check
+              let digitalPass = false;
+              let decodedData = '';
+              let code = jsQR(imageData.data, width, height, { inversionAttempts: "dontInvert" });
+              if (code) {
+                digitalPass = true;
+                decodedData = code.data;
+              } else {
+                code = jsQR(imageData.data, width, height, { inversionAttempts: "attemptBoth" });
+                if (code) {
+                  digitalPass = true;
+                  decodedData = code.data;
+                }
+              }
+
+              // 2. Security Check (Dangerous URL check)
+              if (digitalPass && isDangerousUrl(decodedData)) {
+                const response = { success: false, physicalReady: false, error: 'SECURITY_VIOLATION', configId };
+                this.dispatchMessage(response);
+                return;
+              }
+
+              if (!digitalPass) {
+                const response = { success: false, physicalReady: false, error: 'NOT_FOUND', configId };
+                this.dispatchMessage(response);
+                return;
+              }
+
+              // 3. Physical check (Optical Simulation math)
+              let physicalPass = false;
+              const simulatedData = isTest ? imageData : new ImageData(applyOpticalSimulationMath(imageData.data, width, height), width, height);
+              let codeSim = jsQR(simulatedData.data, width, height, { inversionAttempts: "dontInvert" });
+              if (codeSim) {
+                physicalPass = true;
+              } else {
+                codeSim = jsQR(simulatedData.data, width, height, { inversionAttempts: "attemptBoth" });
+                if (codeSim) physicalPass = true;
+              }
+
+              const response = { success: true, physicalReady: physicalPass, configId };
+              this.dispatchMessage(response);
+              return;
+            }
+          }
+        } catch (err: any) {
+          console.error("Failed to run actual worker logic in MockWorker:", err);
+        }
+
+        // Default behavior fallback to prevent stuck UI:
+        this.dispatchMessage({
+          success: true,
+          physicalReady: true,
+          error: null,
+        });
+      };
+
+      if (delay > 0) {
+        await new Promise<void>(resolve => {
+          setTimeout(() => {
+            executeTask().then(resolve);
+          }, delay);
+        });
+      } else {
+        await new Promise<void>(resolve => {
+          setTimeout(() => {
+            executeTask().then(resolve);
+          }, 0);
+        });
+      }
     };
 
-    if (delay > 0) {
-      setTimeout(execute, delay);
-    } else {
-      setTimeout(execute, 0);
-    }
+    enqueueTask(task);
   });
 }
 
@@ -167,6 +295,9 @@ globalThis.mockWorkerControl = {
   setResponseOverride: (response: any) => {
     mockConfig.responseOverride = response;
   },
+  setConcurrencyLimit: (limit: number) => {
+    mockConfig.concurrencyLimit = limit;
+  },
   getInstances: () => mockConfig.instances,
   get activeWorker() {
     return mockConfig.activeWorker;
@@ -178,6 +309,9 @@ globalThis.mockWorkerControl = {
     mockConfig.interceptor = null;
     mockConfig.delayMs = 0;
     mockConfig.responseOverride = null;
+    mockConfig.concurrencyLimit = Infinity;
+    runningTasksCount = 0;
+    pendingTasks.length = 0;
     mockConfig.instances = [];
     mockConfig.activeWorker = null;
   }
