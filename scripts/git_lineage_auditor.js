@@ -199,38 +199,107 @@ export function parseArgs(args) {
   return files;
 }
 
-function runAuditor() {
+export function parseGitDiff(stdout) {
+  const modifiedFiles = new Set();
+  if (!stdout) return modifiedFiles;
+  const lines = stdout.split('\n');
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    const decoded = decodeGitPath(trimmed);
+    const normalized = decoded.replace(/\\/g, '/');
+    modifiedFiles.add(normalized);
+  }
+  return modifiedFiles;
+}
+
+export function runAuditor(options = {}) {
+  const env = options.env || process.env;
+  const argv = options.argv || process.argv;
+  const customExecSync = options.execSync || execSync;
+  const customExistsSync = options.existsSync || fs.existsSync;
+  const exit = options.exit || process.exit;
+
   try {
-    const args = process.argv.slice(2);
-    const explicitFiles = parseArgs(args);
-    let modifiedFiles;
+    const isCI = !!env.CI;
+    let modifiedFiles = new Set();
 
-    if (explicitFiles.length > 0) {
-      console.log(`[Lineage Auditor] Running check on ${explicitFiles.length} explicit file(s):`);
-      explicitFiles.forEach(f => console.log(`  - ${f}`));
-      modifiedFiles = new Set(explicitFiles);
-    } else {
-      console.log('[Lineage Auditor] No explicit file list provided. Falling back to local git status check...');
-      if (!fs.existsSync(path.join(repoRoot, '.git'))) {
-        console.log('[Lineage Auditor] Not a git repository or .git folder missing. Skipping check.');
+    if (isCI) {
+      console.log('[Lineage Auditor] CI environment detected. Resolving modified files via Git history...');
+      
+      const gitDir = path.join(repoRoot, '.git');
+      if (!customExistsSync(gitDir)) {
+        console.error('❌ [Lineage Auditor] Missing Git directory! Failed closed in CI environment.');
+        exit(1);
         return;
       }
 
-      let stdout;
+      let diffStdout = null;
+      let targetBranch = 'origin/main';
+      if (env.GITHUB_BASE_REF) {
+        targetBranch = `origin/${env.GITHUB_BASE_REF}`;
+      }
+
+      console.log(`[Lineage Auditor] Attempting target branch comparison against: ${targetBranch}`);
       try {
-        stdout = execSync('git status --porcelain', { encoding: 'utf8', cwd: repoRoot });
+        diffStdout = customExecSync(`git diff --name-only ${targetBranch}...HEAD`, { encoding: 'utf8', cwd: repoRoot });
+        console.log(`[Lineage Auditor] Successfully resolved files via target branch diff.`);
       } catch (err) {
-        console.warn('[Lineage Auditor] Failed to query git status. Skipping check.', err.message);
-        return;
+        console.warn(`⚠️ [Lineage Auditor] Target branch comparison failed: ${err.message}`);
+        console.log('[Lineage Auditor] Falling back to single-commit comparison...');
+        
+        try {
+          diffStdout = customExecSync('git diff-tree --no-commit-id --name-only -r HEAD', { encoding: 'utf8', cwd: repoRoot });
+          console.log(`[Lineage Auditor] Successfully resolved files via single-commit diff-tree.`);
+        } catch (fallbackErr1) {
+          console.warn(`⚠️ [Lineage Auditor] Single-commit diff-tree failed: ${fallbackErr1.message}`);
+          try {
+            diffStdout = customExecSync('git diff --name-only HEAD~1 HEAD', { encoding: 'utf8', cwd: repoRoot });
+            console.log(`[Lineage Auditor] Successfully resolved files via HEAD~1 HEAD diff.`);
+          } catch (fallbackErr2) {
+            console.error('❌ [Lineage Auditor] Both target branch comparison and single-commit fallback failed.');
+            console.error('Diagnostic info:', fallbackErr2.message);
+            exit(1);
+            return;
+          }
+        }
       }
 
-      const trimmed = stdout.trim();
-      if (!trimmed) {
-        console.log('[Lineage Auditor] No uncommitted local changes detected. Skipping lineage check.');
-        return;
-      }
+      modifiedFiles = parseGitDiff(diffStdout);
+    } else {
+      // Local execution
+      const args = argv.slice(2);
+      const explicitFiles = parseArgs(args);
 
-      modifiedFiles = parseGitStatus(stdout);
+      if (explicitFiles.length > 0) {
+        console.log(`[Lineage Auditor] Running check on ${explicitFiles.length} explicit file(s):`);
+        explicitFiles.forEach(f => console.log(`  - ${f}`));
+        modifiedFiles = new Set(explicitFiles);
+      } else {
+        console.log('[Lineage Auditor] No explicit file list provided. Falling back to local git status check...');
+        if (!customExistsSync(path.join(repoRoot, '.git'))) {
+          console.error('❌ [Lineage Auditor] Not a git repository or .git folder missing. Failed closed.');
+          exit(1);
+          return;
+        }
+
+        let stdout;
+        try {
+          stdout = customExecSync('git status --porcelain', { encoding: 'utf8', cwd: repoRoot });
+        } catch (err) {
+          console.error('❌ [Lineage Auditor] Failed to query git status. Failed closed.', err.message);
+          exit(1);
+          return;
+        }
+
+        const trimmed = stdout.trim();
+        if (!trimmed) {
+          console.log('[Lineage Auditor] No uncommitted local changes detected. Skipping lineage check.');
+          return;
+        }
+
+        modifiedFiles = parseGitStatus(stdout);
+      }
     }
 
     const missing = checkLineage(modifiedFiles);
@@ -242,13 +311,15 @@ function runAuditor() {
         console.error(`To resolve this block, please update: ${docFile}`);
       }
       console.error('');
-      process.exit(1);
+      exit(1);
+      return;
     } else {
       console.log('[Lineage Auditor] Lineage check passed successfully.');
     }
   } catch (error) {
-    console.error('[Lineage Auditor] Unexpected error during lineage check:', error);
-    process.exit(1);
+    console.error('❌ [Lineage Auditor] Unexpected error during lineage check:', error.message || error);
+    exit(1);
+    return;
   }
 }
 
