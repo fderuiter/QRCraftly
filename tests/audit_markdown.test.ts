@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import fs from 'fs';
-import { slugify, checkPlaceholders, buildFileHeadings, verifyLinks, validateTelemetryCompliance, resetErrors } from '../scripts/audit_markdown.js';
+import { slugify, checkPlaceholders, buildFileHeadings, verifyLinks, validateTelemetryCompliance, resetErrors, checkCodeSnippets } from '../scripts/audit_markdown.js';
 
 describe('audit_markdown', () => {
   beforeEach(() => {
@@ -141,6 +141,38 @@ No private info.
 `;
       const hasErrors = validateTelemetryCompliance(complianceContent, typesContent);
       expect(hasErrors).toBe(true);
+    });
+  });
+
+  describe('checkCodeSnippets', () => {
+    const tempFile = 'temp_test_snippets.md';
+
+    afterEach(() => {
+      if (fs.existsSync(tempFile)) {
+        fs.unlinkSync(tempFile);
+      }
+    });
+
+    it('should pass when code snippets compile successfully', () => {
+      fs.writeFileSync(
+        tempFile,
+        '```ts\nconst val: number = 42;\nconsole.log(val);\n```',
+        'utf-8'
+      );
+      const hasErrors = checkCodeSnippets([tempFile]);
+      expect(hasErrors).toBe(false);
+    });
+
+    it('should fail when code snippets contain compilation errors', () => {
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      fs.writeFileSync(
+        tempFile,
+        '```ts\nconst val: number = "not a number";\n```',
+        'utf-8'
+      );
+      const hasErrors = checkCodeSnippets([tempFile]);
+      expect(hasErrors).toBe(true);
+      consoleSpy.mockRestore();
     });
   });
 });
