@@ -69,6 +69,26 @@ describe('protocol parser', () => {
       expect(parsed!.params.get('BODY')).toBe('Hello ;');
     });
 
+    it('handles advanced backslash sequences correctly and does not incorrectly strip backslashes that do not escape other backslashes or semicolons', () => {
+      // Semicolons preceded by an even number of backslashes (treated as unescaped, split, and then recombined)
+      const rawMatmsg = 'MATMSG:TO:test@example.com;BODY:Hello \\\\; World;';
+      const parsed = parseProtocol(rawMatmsg);
+      expect(parsed).not.toBeNull();
+      expect(parsed!.params.get('BODY')).toBe('Hello \\; World');
+
+      // Semicolons preceded by an odd number of backslashes (treated as escaped, no split)
+      const rawMatmsgOdd = 'MATMSG:TO:test@example.com;BODY:Hello \\\\\\; World;';
+      const parsedOdd = parseProtocol(rawMatmsgOdd);
+      expect(parsedOdd).not.toBeNull();
+      expect(parsedOdd!.params.get('BODY')).toBe('Hello \\; World');
+
+      // Non-escaping backslashes like path separators
+      const rawMatmsgPath = 'MATMSG:TO:test@example.com;BODY:C:\\\\path\\\\to\\\\file;';
+      const parsedPath = parseProtocol(rawMatmsgPath);
+      expect(parsedPath).not.toBeNull();
+      expect(parsedPath!.params.get('BODY')).toBe('C:\\path\\to\\file');
+    });
+
     it('does not crash or get corrupted on empty or malformed inputs', () => {
       const rawMatmsg = 'MATMSG:';
       const parsed = parseProtocol(rawMatmsg);
