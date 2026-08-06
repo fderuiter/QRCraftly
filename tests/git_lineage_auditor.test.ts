@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import fs from 'fs';
 import path from 'path';
-import { checkLineage, parseGitStatus, MAPPING, parseArgs } from '../scripts/git_lineage_auditor.js';
+import { checkLineage, parseGitStatus, MAPPING, parseArgs, runAuditor, parseGitDiff } from '../scripts/git_lineage_auditor.js';
 
 describe('Local Git-Diff Lineage Auditor', () => {
   it('should maintain the correct core mappings', () => {
@@ -310,6 +310,179 @@ describe('Local Git-Diff Lineage Auditor', () => {
           fs.unlinkSync(tempFilePath);
         }
       }
+    });
+  });
+
+  describe('Resilient Lineage Auditing (CI & Fail-closed)', () => {
+    it('should parse git diff --name-only output correctly', () => {
+      const mockStdout = `src/types.ts\n"docs/public/SECURITY.md"\nsrc/utils/sh\\303\\251.ts`;
+      const parsed = parseGitDiff(mockStdout);
+      expect(parsed.has('src/types.ts')).toBe(true);
+      expect(parsed.has('docs/public/SECURITY.md')).toBe(true);
+      expect(parsed.has('src/utils/shé.ts')).toBe(true);
+    });
+
+    it('should run in CI and use target branch comparison', () => {
+      let exitCode = null;
+      const mockOptions = {
+        env: { CI: 'true', GITHUB_BASE_REF: 'feature-branch' },
+        argv: ['node', 'scripts/git_lineage_auditor.js'],
+        execSync: (cmd) => {
+          if (cmd.includes('git diff --name-only origin/feature-branch...HEAD')) {
+            return 'src/utils/sharedContract.ts\ndocs/public/SCALING.md';
+          }
+          throw new Error('Unexpected command');
+        },
+        existsSync: () => true,
+        exit: (code) => { exitCode = code; }
+      };
+
+      runAuditor(mockOptions);
+      expect(exitCode).toBeNull(); // passes!
+    });
+
+    it('should run in CI and fallback to single-commit comparison if target branch fails', () => {
+      let exitCode = null;
+      let usedFallback = false;
+      const mockOptions = {
+        env: { CI: 'true' },
+        argv: ['node', 'scripts/git_lineage_auditor.js'],
+        execSync: (cmd) => {
+          if (cmd.includes('origin/main...HEAD')) {
+            throw new Error('Ref not found / shallow clone');
+          }
+          if (cmd.includes('git diff-tree --no-commit-id --name-only -r HEAD')) {
+            usedFallback = true;
+            return 'src/utils/sharedContract.ts\ndocs/public/SCALING.md';
+          }
+          throw new Error('Unexpected command');
+        },
+        existsSync: () => true,
+        exit: (code) => { exitCode = code; }
+      };
+
+      runAuditor(mockOptions);
+      expect(usedFallback).toBe(true);
+      expect(exitCode).toBeNull();
+    });
+
+    it('should run in CI and fallback to HEAD~1 comparison if diff-tree fails', () => {
+      let exitCode = null;
+      let usedFallback = false;
+      const mockOptions = {
+        env: { CI: 'true' },
+        argv: ['node', 'scripts/git_lineage_auditor.js'],
+        execSync: (cmd) => {
+          if (cmd.includes('origin/main...HEAD')) {
+            throw new Error('Ref not found / shallow clone');
+          }
+          if (cmd.includes('git diff-tree')) {
+            throw new Error('diff-tree fails');
+          }
+          if (cmd.includes('git diff --name-only HEAD~1 HEAD')) {
+            usedFallback = true;
+            return 'src/utils/sharedContract.ts\ndocs/public/SCALING.md';
+          }
+          throw new Error('Unexpected command');
+        },
+        existsSync: () => true,
+        exit: (code) => { exitCode = code; }
+      };
+
+      runAuditor(mockOptions);
+      expect(usedFallback).toBe(true);
+      expect(exitCode).toBeNull();
+    });
+
+    it('should fail closed in CI if target branch comparison and single-commit fallback both fail', () => {
+      let exitCode = null;
+      const mockOptions = {
+        env: { CI: 'true' },
+        argv: ['node', 'scripts/git_lineage_auditor.js'],
+        execSync: () => {
+          throw new Error('Git command completely failed');
+        },
+        existsSync: () => true,
+        exit: (code) => { exitCode = code; }
+      };
+
+      runAuditor(mockOptions);
+      expect(exitCode).toBe(1);
+    });
+
+    it('should fail closed in CI if .git directory is missing', () => {
+      let exitCode = null;
+      const mockOptions = {
+        env: { CI: 'true' },
+        argv: ['node', 'scripts/git_lineage_auditor.js'],
+        execSync: () => 'src/types.ts',
+        existsSync: (p) => !p.endsWith('.git'), // simulate missing .git
+        exit: (code) => { exitCode = code; }
+      };
+
+      runAuditor(mockOptions);
+      expect(exitCode).toBe(1);
+    });
+
+    it('should fail closed locally if .git directory is missing during uncommitted scan', () => {
+      let exitCode = null;
+      const mockOptions = {
+        env: { CI: '' },
+        argv: ['node', 'scripts/git_lineage_auditor.js'],
+        execSync: () => '',
+        existsSync: (p) => !p.endsWith('.git'), // simulate missing .git
+        exit: (code) => { exitCode = code; }
+      };
+
+      runAuditor(mockOptions);
+      expect(exitCode).toBe(1);
+    });
+
+    it('should fail closed locally if git status command fails during uncommitted scan', () => {
+      let exitCode = null;
+      const mockOptions = {
+        env: { CI: '' },
+        argv: ['node', 'scripts/git_lineage_auditor.js'],
+        execSync: () => { throw new Error('git status failed'); },
+        existsSync: () => true,
+        exit: (code) => { exitCode = code; }
+      };
+
+      runAuditor(mockOptions);
+      expect(exitCode).toBe(1);
+    });
+
+    it('should pass validation locally when no changes exist', () => {
+      let exitCode = null;
+      const mockOptions = {
+        env: { CI: '' },
+        argv: ['node', 'scripts/git_lineage_auditor.js'],
+        execSync: () => '', // empty changes
+        existsSync: () => true,
+        exit: (code) => { exitCode = code; }
+      };
+
+      runAuditor(mockOptions);
+      expect(exitCode).toBeNull();
+    });
+
+    it('should exit with 1 when documentation updates are missing', () => {
+      let exitCode = null;
+      const mockOptions = {
+        env: { CI: 'true' },
+        argv: ['node', 'scripts/git_lineage_auditor.js'],
+        execSync: (cmd) => {
+          if (cmd.includes('origin/main...HEAD')) {
+            return 'src/utils/sharedContract.ts'; // sharedContract.ts is modified, but docs/public/SCALING.md is not!
+          }
+          throw new Error('Unexpected command');
+        },
+        existsSync: () => true,
+        exit: (code) => { exitCode = code; }
+      };
+
+      runAuditor(mockOptions);
+      expect(exitCode).toBe(1);
     });
   });
 });

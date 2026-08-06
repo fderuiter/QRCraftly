@@ -73,7 +73,7 @@ jobs:
         uses: tj-actions/changed-files@v47
 
       - name: Run Lineage Auditor on Changed Files
-        run: node scripts/git_lineage_auditor.js ${{ steps.changed-files.outputs.all_changed_files }}
+        run: node scripts/git_lineage_auditor.js
 
       - name: Run Secret Scanning Guardrail
         run: node scripts/secret-scanner.js
