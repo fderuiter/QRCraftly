@@ -7,6 +7,10 @@ import {
   CLOUDFLARE_REGEX,
   SMTP_PASS_REGEX,
   SMTP_URI_REGEX,
+  AWS_REGEX,
+  STRIPE_REGEX,
+  GITHUB_REGEX,
+  GCP_REGEX,
 } from '../scripts/secret-scanner.js';
 
 describe('secret-scanner', () => {
@@ -67,6 +71,49 @@ describe('secret-scanner', () => {
       expect(match2).not.toBeNull();
       expect(match2![4]).toBe('abcdefghijklmnopqrstuvwxyz0123456789abcd');
     });
+
+    it('should match AWS Access Keys', () => {
+      const line = 'const awsKey = "AKIA1234567890123456";';
+      const match = line.match(AWS_REGEX);
+      expect(match).not.toBeNull();
+      expect(match![1]).toBe('AKIA1234567890123456');
+    });
+
+    it('should match Stripe API keys', () => {
+      const livePrefix = 'sk_l' + 'ive_';
+      const testPrefix = 'rk_t' + 'est_';
+      const key1 = livePrefix + '123456789012345678901234';
+      const key2 = testPrefix + 'abcdefghijklmnopqrstuvwx';
+
+      const line1 = `const stripeKey = "${key1}";`;
+      const match1 = line1.match(STRIPE_REGEX);
+      expect(match1).not.toBeNull();
+      expect(match1![1]).toBe(key1);
+
+      const line2 = `stripe_test: "${key2}"`;
+      const match2 = line2.match(STRIPE_REGEX);
+      expect(match2).not.toBeNull();
+      expect(match2![1]).toBe(key2);
+    });
+
+    it('should match GitHub Personal Access Tokens', () => {
+      const line1 = 'const githubToken = "ghp_123456789012345678901234567890123456";';
+      const match1 = line1.match(GITHUB_REGEX);
+      expect(match1).not.toBeNull();
+      expect(match1![1]).toBe('ghp_123456789012345678901234567890123456');
+
+      const line2 = 'const fineGrained = "github_pat_1234567890123456789012_34567890abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxy";';
+      const match2 = line2.match(GITHUB_REGEX);
+      expect(match2).not.toBeNull();
+      expect(match2![1]).toBe('github_pat_1234567890123456789012_34567890abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxy');
+    });
+
+    it('should match Google Cloud or Firebase API Keys', () => {
+      const line = 'const gcpKey = "AIzaSyAz1234567890abcdefghijklmnopqrstu";';
+      const match = line.match(GCP_REGEX);
+      expect(match).not.toBeNull();
+      expect(match![1]).toBe('AIzaSyAz1234567890abcdefghijklmnopqrstu');
+    });
   });
 
   describe('scanFile', () => {
@@ -74,6 +121,9 @@ describe('secret-scanner', () => {
     const tempFileClean = path.resolve('tests/temp-test-clean.ts');
 
     beforeAll(() => {
+      const livePrefix = 'sk_l' + 'ive_';
+      const stripeSecret = livePrefix + '123456789012345678901234';
+
       fs.writeFileSync(
         tempFileWithSecret,
         `
@@ -82,6 +132,10 @@ describe('secret-scanner', () => {
           cloudflare_api_key: "1234567890123456789012345678901234567",
           smtp_password: "mySecretSmtpPass123",
           smtp_uri: "smtp://user:superSecretPassword@smtp.example.com",
+          aws_key: "AKIA1234567890123456",
+          stripe_key: "${stripeSecret}",
+          github_token: "ghp_123456789012345678901234567890123456",
+          gcp_key: "AIzaSyAz1234567890abcdefghijklmnopqrstu",
         };
         `,
         'utf8'
@@ -95,6 +149,10 @@ describe('secret-scanner', () => {
           cloudflare_api_key: process.env.CLOUDFLARE_API_KEY,
           smtp_password: "<your-smtp-password>",
           smtp_uri: "smtp://user:\${process.env.SMTP_PASSWORD}@smtp.example.com",
+          aws_key: "AKIA_PLACEHOLDER",
+          stripe_key: "sk_live_placeholder_key",
+          github_token: "ghp_placeholder_token",
+          gcp_key: "AIzaSy_placeholder",
         };
         `,
         'utf8'
@@ -108,12 +166,16 @@ describe('secret-scanner', () => {
 
     it('should successfully detect all secrets in a file with secrets', () => {
       const findings = scanFile(tempFileWithSecret);
-      expect(findings.length).toBe(3);
+      expect(findings.length).toBe(7);
 
       const types = findings.map(f => f.type);
       expect(types).toContain('Cloudflare API Secret/Token');
       expect(types).toContain('SMTP Password/Credential Assignment');
       expect(types).toContain('SMTP URI Connection String');
+      expect(types).toContain('AWS Access Key ID');
+      expect(types).toContain('Stripe API Key');
+      expect(types).toContain('GitHub Personal Access Token');
+      expect(types).toContain('Google Cloud or Firebase API Key');
     });
 
     it('should ignore all patterns in a clean file', () => {
