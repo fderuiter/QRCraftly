@@ -19,6 +19,8 @@
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 import Page from './+Page';
+import { coreValues } from '@/data/coreValues';
+import { contentRegistry } from '@/data/contentRegistry';
 
 describe('About Page', () => {
   it('renders the About page content', () => {
@@ -30,6 +32,32 @@ describe('About Page', () => {
     // Check existing content
     expect(screen.getByText(/Privacy-focused QR code generator/i)).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /Free & No Login/i })).toBeInTheDocument();
+  });
+
+  it('renders exactly four value cards driven entirely by the core values registry', () => {
+    render(<Page />);
+
+    // Assert there are exactly 4 core value cards from the registry
+    expect(coreValues.length).toBe(4);
+
+    coreValues.forEach((value) => {
+      // Each value card title should render as an h3 heading
+      expect(screen.getByRole('heading', { level: 3, name: value.title })).toBeInTheDocument();
+      // Description should be in the document
+      expect(screen.getByText(value.description)).toBeInTheDocument();
+    });
+  });
+
+  it('populates the "about" tool entry FAQ from the core values dataset', () => {
+    const aboutTool = contentRegistry['about'];
+    expect(aboutTool.faqs).toBeDefined();
+    expect(aboutTool.faqs?.length).toBe(coreValues.length);
+
+    coreValues.forEach((value, index) => {
+      const faq = aboutTool.faqs?.[index];
+      expect(faq?.question).toBe(value.faqQuestion);
+      expect(faq?.answer).toBe(value.description);
+    });
   });
 
   it('contains a link to the WiFi QR Code generator for better SEO discovery', () => {

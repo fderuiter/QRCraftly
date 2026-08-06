@@ -20,10 +20,18 @@
 import { Github, Shield, Database, Code, ArrowLeft, Zap, Wifi, Coffee } from 'lucide-react';
 import { JsonLdScript } from '@/components/ui/JsonLdScript';
 import { contentRegistry } from '@/data/contentRegistry';
+import { coreValues } from '@/data/coreValues';
 import { generateSchema } from '@/utils/schemaGenerator';
 import { resolveDomainForPath } from '@/utils/metadataEngine';
 import { SidebarContent } from '@/components/SidebarContent';
 import { usePageContext } from 'vike-react/usePageContext';
+
+const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+  Zap,
+  Shield,
+  Database,
+  Code
+};
 
 /**
  * About Page Component
@@ -65,45 +73,20 @@ export default function Page() {
       <section className="mb-16">
         <h2 className="sr-only">Why Choose QRCraftly?</h2>
         <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-2xl border border-slate-100 bg-white p-6 text-center shadow-sm dark:border-slate-700 dark:bg-slate-800">
-            <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-xl bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
-              <Zap className="size-6" />
-            </div>
-            <h3 className="mb-2 text-lg font-semibold text-slate-900 dark:text-white">Free & No Login</h3>
-            <p className="text-slate-600 dark:text-slate-400">
-              QRCraftly is completely free to use. No sign-up, no login, and no hidden fees. Just generate your QR codes instantly.
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-slate-100 bg-white p-6 text-center shadow-sm dark:border-slate-700 dark:bg-slate-800">
-            <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-xl bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400">
-              <Shield className="size-6" />
-            </div>
-            <h3 className="mb-2 text-lg font-semibold text-slate-900 dark:text-white">No Third-Party Tracking</h3>
-            <p className="text-slate-600 dark:text-slate-400">
-              We do not use tracking pixels, cookies, or third-party analytics. We only collect basic server logs for performance and reliability.
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-slate-100 bg-white p-6 text-center shadow-sm dark:border-slate-700 dark:bg-slate-800">
-            <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-xl bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400">
-              <Database className="size-6" />
-            </div>
-            <h3 className="mb-2 text-lg font-semibold text-slate-900 dark:text-white">Privacy First</h3>
-            <p className="text-slate-600 dark:text-slate-400">
-              We utilize a Privacy First architecture. Your content is processed entirely in your browser and not transmitted to our servers without your explicit opt-in for telemetry.
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-slate-100 bg-white p-6 text-center shadow-sm dark:border-slate-700 dark:bg-slate-800">
-            <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-xl bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400">
-              <Code className="size-6" />
-            </div>
-            <h3 className="mb-2 text-lg font-semibold text-slate-900 dark:text-white">Open Source</h3>
-            <p className="text-slate-600 dark:text-slate-400">
-              Our code is open for inspection and contribution. We believe in transparency.
-            </p>
-          </div>
+          {coreValues.map((value) => {
+            const IconComponent = iconMap[value.icon];
+            return (
+              <div key={value.key} className="rounded-2xl border border-slate-100 bg-white p-6 text-center shadow-sm dark:border-slate-700 dark:bg-slate-800">
+                <div className={`mx-auto mb-4 flex size-12 items-center justify-center rounded-xl ${value.theme.iconBgClass} ${value.theme.iconTextClass}`}>
+                  {IconComponent && <IconComponent className="size-6" />}
+                </div>
+                <h3 className="mb-2 text-lg font-semibold text-slate-900 dark:text-white">{value.title}</h3>
+                <p className="text-slate-600 dark:text-slate-400">
+                  {value.description}
+                </p>
+              </div>
+            );
+          })}
         </div>
       </section>
 

@@ -1,4 +1,5 @@
 import { getPublicDomain } from "../utils/metadataEngine";
+import { coreValues } from "./coreValues";
 export interface ToolContent {
   id: string;
   name: string;
@@ -21,24 +22,10 @@ export const contentRegistry: Record<string, ToolContent> = {
     "url": getPublicDomain() + "/about",
     "description": "Privacy-focused, client-side QR code generator.",
     "features": [],
-    "faqs": [
-      {
-        "question": "Is QRCraftly free?",
-        "answer": "QRCraftly is completely free to use. No sign-up, no login, and no hidden fees. Just generate your QR codes instantly."
-      },
-      {
-        "question": "Does QRCraftly track users?",
-        "answer": "We do not use tracking pixels, cookies, or third-party analytics. We only collect basic server logs for performance and reliability."
-      },
-      {
-        "question": "Is my data secure?",
-        "answer": "We utilize a Privacy First architecture. Your content is processed entirely in your browser and not transmitted to our servers without your explicit opt-in for telemetry."
-      },
-      {
-        "question": "Is QRCraftly open source?",
-        "answer": "Our code is open for inspection and contribution. We believe in transparency."
-      }
-    ]
+    "faqs": coreValues.map(value => ({
+      question: value.faqQuestion,
+      answer: value.description
+    }))
   },
   "email-qr-code": {
     "id": "email-qr-code",

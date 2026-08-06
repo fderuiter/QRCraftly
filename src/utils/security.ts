@@ -144,7 +144,7 @@ const SAFE_ELEMENTS = new Set([
 /**
  * Validates data URIs to ensure they use safe image MIME-types and contain no active payloads.
  */
-export const isSafeDataUri = (uri: string): boolean => {
+const isSafeDataUri = (uri: string): boolean => {
   const trimmed = uri.trim();
   if (!trimmed.toLowerCase().startsWith('data:')) {
     return true;

@@ -1,7 +1,7 @@
 import { renderHook, act } from "@testing-library/react";
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import { useInputLogic } from "./useInputLogic";
-import { QRConfig, QRType, QRStyle, QRErrorCorrectionLevel } from "../../types";
+import { QRConfig, QRType, QRStyle, QRErrorCorrectionLevel, SocialFormat, TemplateStyle } from "../../types";
 
 const createMockConfig = (type: QRType, value: string): QRConfig => ({
   value,
@@ -25,6 +25,8 @@ const createMockConfig = (type: QRType, value: string): QRConfig => ({
   borderTextColor: "#000000",
   borderLogoUrl: null,
   borderLogoPosition: "bottom-right" as any,
+  socialFormat: SocialFormat.SQUARE_1_1,
+  templateStyle: TemplateStyle.NONE,
 });
 
 describe("useInputLogic", () => {
