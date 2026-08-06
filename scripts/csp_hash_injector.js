@@ -184,8 +184,109 @@ export function run() {
     fs.writeFileSync(headersPath, newHeadersContent, 'utf8');
     console.log('[CSP Hash Injector] Created _headers file with Content-Security-Policy');
   }
-  
+
+  // --- VALIDATION GATE ---
+  console.log('[CSP Hash Injector] Validating headers against Cloudflare limits...');
+  if (fs.existsSync(headersPath)) {
+    const finalHeadersContent = fs.readFileSync(headersPath, 'utf8');
+    try {
+      const results = validateHeaders(globalCsp, finalHeadersContent);
+      console.log(`[CSP Hash Injector] Generated CSP length: ${results.cspLength} characters.`);
+      console.log(`[CSP Hash Injector] Total _headers file size: ${results.totalHeadersSize} bytes.`);
+      for (const route of Object.keys(results.routeHeaders)) {
+        const routeSize = results.routeHeaders[route].reduce((sum, h) => sum + h.size, 0);
+        console.log(`[CSP Hash Injector] Route "${route}" total headers size: ${routeSize} bytes.`);
+      }
+    } catch (error) {
+      console.error(`[CSP Hash Injector] BUILD FAILURE: ${error.message}`);
+      process.exit(1);
+    }
+  }
+
   console.log('[CSP Hash Injector] Completed successfully.');
+}
+
+/**
+ * Validate that headers meet Cloudflare Pages limits.
+ * @param {string} csp - The Content-Security-Policy header value.
+ * @param {string} headersContent - The raw content of the _headers file.
+ * @returns {object} results detailing the parsed and validated headers.
+ * @throws {Error} if any limit is breached.
+ */
+export function validateHeaders(csp, headersContent) {
+  // 1. Validate CSP individual header length
+  const cspLength = csp.length;
+  if (cspLength > 2000) {
+    throw new Error(`Content-Security-Policy header value size (${cspLength} chars) exceeds Cloudflare's individual header limit of 2,000 characters!`);
+  }
+
+  // 2. Validate route/page sizes
+  const totalHeadersSize = Buffer.byteLength(headersContent, 'utf8');
+  if (totalHeadersSize > 8192) {
+    throw new Error(`Total _headers file size (${totalHeadersSize} bytes) exceeds Cloudflare's limit of 8,192 bytes (8KB)!`);
+  }
+
+  // Parse routes and validate each route's headers
+  const lines = headersContent.split(/\r?\n/);
+  let currentRoute = null;
+  let currentRouteHeadersSize = 0;
+  const routeHeaders = {};
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue; // skip comments and empty lines
+    
+    // If it starts with a space/tab, it is a header for the current route
+    if (line.startsWith(' ') || line.startsWith('\t')) {
+      if (!currentRoute) {
+        throw new Error(`Syntax error in _headers: header "${trimmed}" specified without a route.`);
+      }
+      
+      // Parse name and value
+      const colonIndex = trimmed.indexOf(':');
+      if (colonIndex === -1) {
+        throw new Error(`Syntax error in _headers: header "${trimmed}" lacks a colon.`);
+      }
+      const name = trimmed.substring(0, colonIndex).trim();
+      const value = trimmed.substring(colonIndex + 1).trim();
+      
+      // Validate individual value size limit
+      if (value.length > 2000) {
+        throw new Error(`Header "${name}" value in route "${currentRoute}" exceeds 2,000 characters (length: ${value.length})!`);
+      }
+      
+      // Calculate size: name + ": " + value
+      const headerSize = Buffer.byteLength(`${name}: ${value}`, 'utf8');
+      currentRouteHeadersSize += headerSize;
+      if (!routeHeaders[currentRoute]) {
+        routeHeaders[currentRoute] = [];
+      }
+      routeHeaders[currentRoute].push({ name, value, size: headerSize });
+    } else {
+      // It's a route definition
+      if (currentRoute) {
+        if (currentRouteHeadersSize > 8192) {
+          throw new Error(`Route "${currentRoute}" total headers size (${currentRouteHeadersSize} bytes) exceeds Cloudflare limit of 8,192 bytes!`);
+        }
+      }
+      currentRoute = trimmed;
+      currentRouteHeadersSize = 0;
+      routeHeaders[currentRoute] = [];
+    }
+  }
+  
+  // Check the last route
+  if (currentRoute) {
+    if (currentRouteHeadersSize > 8192) {
+      throw new Error(`Route "${currentRoute}" total headers size (${currentRouteHeadersSize} bytes) exceeds Cloudflare limit of 8,192 bytes!`);
+    }
+  }
+
+  return {
+    cspLength,
+    totalHeadersSize,
+    routeHeaders
+  };
 }
 
 // Only run automatically if executed directly
