@@ -78,6 +78,9 @@ jobs:
       - name: Run Secret Scanning Guardrail
         run: node scripts/secret-scanner.js
 
+      - name: Run Markdown & Compliance Audit
+        run: node scripts/audit_markdown.js
+
       - run: pnpm run lint
 
       - name: Check for Code Duplication
