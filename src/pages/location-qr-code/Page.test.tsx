@@ -37,7 +37,7 @@ describe('Location QR Code Page', () => {
     expect(qrTool).toHaveTextContent('QRTool with type: LOCATION');
   });
 
-  it('renders structured data schema with Place details', () => {
+  it('does NOT render structured data schema with Place details but renders WebApplication', () => {
     const { container } = render(<Page />);
     const script = container.querySelector('script[type="application/ld+json"]');
     expect(script).toBeInTheDocument();
@@ -45,7 +45,9 @@ describe('Location QR Code Page', () => {
     expect(json['@context']).toBe('https://schema.org');
     
     const placeObj = json['@graph'].find((item: any) => item['@type'] === 'Place');
-    expect(placeObj).toBeDefined();
-    expect(placeObj.geo.latitude).toBe('37.7749');
+    expect(placeObj).toBeUndefined();
+
+    const appObj = json['@graph'].find((item: any) => item['@type'] === 'WebApplication');
+    expect(appObj).toBeDefined();
   });
 });

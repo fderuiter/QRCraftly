@@ -75,9 +75,31 @@ export const parseProtocol = (raw: string): ParsedProtocol | null => {
       let activeKey: string | null = null;
       let activeValue = '';
 
+      const unescapeValue = (str: string): string => {
+        let result = '';
+        for (let i = 0; i < str.length; i++) {
+          if (str[i] === '\\') {
+            if (i + 1 < str.length) {
+              const nextChar = str[i + 1];
+              if (nextChar === ';' || nextChar === '\\') {
+                result += nextChar;
+                i++;
+              } else {
+                result += '\\';
+              }
+            } else {
+              result += '\\';
+            }
+          } else {
+            result += str[i];
+          }
+        }
+        return result;
+      };
+
       const flushActive = () => {
         if (activeKey !== null) {
-          const unescapedValue = activeValue.replace(/\\;/g, ';');
+          const unescapedValue = unescapeValue(activeValue);
           if (activeKey === 'TO') {
             path = unescapedValue;
           } else {

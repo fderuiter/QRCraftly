@@ -107,7 +107,7 @@ describe('schemaGenerator', () => {
     expect(howTo).toBeUndefined();
   });
 
-  it('generates specialized schemas for event, location, meeting, and social tool IDs', () => {
+  it('does NOT generate specialized schemas for event, location, meeting, and social tool IDs but retains WebApplication', () => {
     const eventContent: ToolContent = {
       id: 'event-qr-code',
       name: 'Event QR',
@@ -117,8 +117,11 @@ describe('schemaGenerator', () => {
     };
     const eventSchema = generateSchema(eventContent);
     const eventObj = eventSchema['@graph'].find((g: any) => g['@type'] === 'Event');
-    expect(eventObj).toBeDefined();
-    expect(eventObj.eventAttendanceMode).toBe('https://schema.org/OfflineEventAttendanceMode');
+    const placeObjInEvent = eventSchema['@graph'].find((g: any) => g['@type'] === 'Place');
+    expect(eventObj).toBeUndefined();
+    expect(placeObjInEvent).toBeUndefined();
+    const eventApp = eventSchema['@graph'].find((g: any) => g['@type'] === 'WebApplication');
+    expect(eventApp).toBeDefined();
 
     const locationContent: ToolContent = {
       id: 'location-qr-code',
@@ -129,8 +132,9 @@ describe('schemaGenerator', () => {
     };
     const locationSchema = generateSchema(locationContent);
     const locationObj = locationSchema['@graph'].find((g: any) => g['@type'] === 'Place');
-    expect(locationObj).toBeDefined();
-    expect(locationObj.geo.latitude).toBe('37.7749');
+    expect(locationObj).toBeUndefined();
+    const locationApp = locationSchema['@graph'].find((g: any) => g['@type'] === 'WebApplication');
+    expect(locationApp).toBeDefined();
 
     const meetingContent: ToolContent = {
       id: 'meeting-qr-code',
@@ -141,8 +145,9 @@ describe('schemaGenerator', () => {
     };
     const meetingSchema = generateSchema(meetingContent);
     const meetingObj = meetingSchema['@graph'].find((g: any) => g['@type'] === 'Event');
-    expect(meetingObj).toBeDefined();
-    expect(meetingObj.eventAttendanceMode).toBe('https://schema.org/OnlineEventAttendanceMode');
+    expect(meetingObj).toBeUndefined();
+    const meetingApp = meetingSchema['@graph'].find((g: any) => g['@type'] === 'WebApplication');
+    expect(meetingApp).toBeDefined();
 
     const socialContent: ToolContent = {
       id: 'social-qr-code',
@@ -153,7 +158,8 @@ describe('schemaGenerator', () => {
     };
     const socialSchema = generateSchema(socialContent);
     const socialObj = socialSchema['@graph'].find((g: any) => g['@type'] === 'ProfilePage');
-    expect(socialObj).toBeDefined();
-    expect(socialObj.mainEntity.sameAs).toContain('https://instagram.com');
+    expect(socialObj).toBeUndefined();
+    const socialApp = socialSchema['@graph'].find((g: any) => g['@type'] === 'WebApplication');
+    expect(socialApp).toBeDefined();
   });
 });

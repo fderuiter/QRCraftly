@@ -37,7 +37,7 @@ describe('Meeting QR Code Page', () => {
     expect(qrTool).toHaveTextContent('QRTool with type: MEETING');
   });
 
-  it('renders structured data schema with Virtual Meeting details', () => {
+  it('does NOT render structured data schema with Virtual Meeting details but renders WebApplication', () => {
     const { container } = render(<Page />);
     const script = container.querySelector('script[type="application/ld+json"]');
     expect(script).toBeInTheDocument();
@@ -45,7 +45,9 @@ describe('Meeting QR Code Page', () => {
     expect(json['@context']).toBe('https://schema.org');
     
     const eventObj = json['@graph'].find((item: any) => item['@type'] === 'Event');
-    expect(eventObj).toBeDefined();
-    expect(eventObj.eventAttendanceMode).toBe('https://schema.org/OnlineEventAttendanceMode');
+    expect(eventObj).toBeUndefined();
+
+    const appObj = json['@graph'].find((item: any) => item['@type'] === 'WebApplication');
+    expect(appObj).toBeDefined();
   });
 });
