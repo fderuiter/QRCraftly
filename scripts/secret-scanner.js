@@ -36,6 +36,18 @@ export const SMTP_PASS_REGEX = /(smtp)[_-]?(password|pass|secret|key|token)\s*[:
 // 3. Cloudflare API Key or Token assignment
 export const CLOUDFLARE_REGEX = /(cloudflare|cf)[_-]?(api)?[_-]?(token|key|secret)\s*[:=]\s*['"]?([a-zA-Z0-9_-]{16,})['"]?/i;
 
+// 4. AWS Access Key ID
+export const AWS_REGEX = /\b((?:AKIA|ASCA|AGPA|AIDA|AROA|AIPA|ANPA|ANVA|ASIA)[A-Z0-9]{16})\b/i;
+
+// 5. Stripe API Key
+export const STRIPE_REGEX = /\b((?:sk|rk)_(?:live|test)_[a-zA-Z0-9]{24,})\b/i;
+
+// 6. GitHub Personal Access Token
+export const GITHUB_REGEX = /\b(gh[pousr]_[a-zA-Z0-9]{36}|github_pat_[a-zA-Z0-9_]{82})\b/i;
+
+// 7. Google Cloud or Firebase API Key
+export const GCP_REGEX = /\b(AIzaSy[a-zA-Z0-9_-]{33})\b/i;
+
 // Helper to check if a value is a false positive
 export function isFalsePositive(secret, varName = '') {
   if (!secret) return true;
@@ -153,6 +165,66 @@ export function scanFile(filePath) {
           line: lineNumber,
           type: 'Cloudflare API Secret/Token',
           match: cfMatch[0],
+          secret: secret,
+        });
+      }
+    }
+
+    // Check AWS Keys
+    const awsMatch = line.match(AWS_REGEX);
+    if (awsMatch) {
+      const secret = awsMatch[1];
+      if (!isFalsePositive(secret)) {
+        findings.push({
+          file: relativePath,
+          line: lineNumber,
+          type: 'AWS Access Key ID',
+          match: awsMatch[0],
+          secret: secret,
+        });
+      }
+    }
+
+    // Check Stripe Keys
+    const stripeMatch = line.match(STRIPE_REGEX);
+    if (stripeMatch) {
+      const secret = stripeMatch[1];
+      if (!isFalsePositive(secret)) {
+        findings.push({
+          file: relativePath,
+          line: lineNumber,
+          type: 'Stripe API Key',
+          match: stripeMatch[0],
+          secret: secret,
+        });
+      }
+    }
+
+    // Check GitHub Tokens
+    const githubMatch = line.match(GITHUB_REGEX);
+    if (githubMatch) {
+      const secret = githubMatch[1];
+      if (!isFalsePositive(secret)) {
+        findings.push({
+          file: relativePath,
+          line: lineNumber,
+          type: 'GitHub Personal Access Token',
+          match: githubMatch[0],
+          secret: secret,
+        });
+      }
+    }
+
+    // Check GCP API Keys
+    const gcpMatch = line.match(GCP_REGEX);
+    if (gcpMatch) {
+      const secret = gcpMatch[1];
+      if (!isFalsePositive(secret)) {
+        findings.push({
+          file: relativePath,
+          line: lineNumber,
+          type: 'Google Cloud or Firebase API Key',
+          match: gcpMatch[0],
           secret: secret,
         });
       }
