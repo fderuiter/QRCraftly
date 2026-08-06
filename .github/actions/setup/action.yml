@@ -23,9 +23,12 @@ runs:
         node-version: ${{ inputs.node-version }}
 
     - name: Install pnpm
-      uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
-      with:
-        version: 11.1.3
+      run: |
+        mkdir -p ~/.pnpm-global
+        npm install -g pnpm@11.1.3 --prefix ~/.pnpm-global
+        echo "PNPM_HOME=$HOME/.pnpm-global" >> $GITHUB_ENV
+        echo "$HOME/.pnpm-global/bin" >> $GITHUB_PATH
+      shell: bash
 
     - name: Cache pnpm store
       uses: actions/cache@v4
