@@ -17,12 +17,17 @@ outputs:
 runs:
   using: "composite"
   steps:
-    - name: Setup pnpm and Node.js
-      uses: pnpm/setup@v2
+    - name: Install pnpm
+      uses: pnpm/action-setup@v4
       with:
         version: 11.1.3
-        runtime: node@${{ inputs.node-version }}
-        install: false
+        run_install: false
+
+    - name: Set up Node.js
+      uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: "pnpm"
 
     - name: Restore node_modules Cache
       if: ${{ inputs.install == 'true' }}
