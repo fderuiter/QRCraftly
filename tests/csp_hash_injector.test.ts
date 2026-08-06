@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { extractInlineScripts, computeCspHash, replaceMetaCSP, updateCsp } from '../scripts/csp_hash_injector.js';
+import { extractInlineScripts, computeCspHash, replaceMetaCSP, updateCsp, validateHeaders } from '../scripts/csp_hash_injector.js';
 
 describe('CSP Hash Injector Unit Tests', () => {
   describe('extractInlineScripts', () => {
@@ -58,6 +58,43 @@ describe('CSP Hash Injector Unit Tests', () => {
       expect(updated).toContain("script-src 'self' 'sha256-abc' 'sha256-def';");
       expect(updated).not.toContain("'unsafe-inline'");
       expect(updated).toContain("style-src 'self';");
+    });
+  });
+
+  describe('validateHeaders', () => {
+    it('should pass valid headers configuration', () => {
+      const csp = "default-src 'self';";
+      const content = `/*\n  Content-Security-Policy: ${csp}\n  X-Frame-Options: DENY\n`;
+      const results = validateHeaders(csp, content);
+      expect(results.cspLength).toBe(19);
+      expect(results.totalHeadersSize).toBeGreaterThan(0);
+      expect(results.routeHeaders['/*']).toHaveLength(2);
+    });
+
+    it('should throw error when CSP is too long', () => {
+      const csp = "a".repeat(2001);
+      const content = `/*\n  Content-Security-Policy: ${csp}\n`;
+      expect(() => validateHeaders(csp, content)).toThrowError(/exceeds Cloudflare's individual header limit/);
+    });
+
+    it('should throw error when _headers file is too large', () => {
+      const csp = "default-src 'self';";
+      const content = "a".repeat(8193);
+      expect(() => validateHeaders(csp, content)).toThrowError(/exceeds Cloudflare's limit of 8,192 bytes/);
+    });
+
+    it('should throw error if any header exceeds 2000 characters', () => {
+      const csp = "default-src 'self';";
+      const tooLongHeader = "b".repeat(2001);
+      const content = `/*\n  Custom-Header: ${tooLongHeader}\n`;
+      expect(() => validateHeaders(csp, content)).toThrowError(/exceeds 2,000 characters/);
+    });
+
+    it('should throw error if total headers exceed 8192 bytes', () => {
+      const csp = "default-src 'self';";
+      const largeHeader = "b".repeat(1500);
+      const content = `/*\n` + Array(6).fill(`  X-Custom-Header: ${largeHeader}\n`).join("");
+      expect(() => validateHeaders(csp, content)).toThrowError(/exceeds Cloudflare's limit of 8,192 bytes/);
     });
   });
 });

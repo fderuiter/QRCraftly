@@ -1,0 +1,150 @@
+name: PR Preview Deployments & Smoke Tests
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, closed]
+
+permissions:
+  contents: read
+  pull-requests: write
+  statuses: write
+
+# Cancel in-progress runs on new commits to the same pull request
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  deploy-preview:
+    name: Build & Deploy Preview
+    if: github.event.action != 'closed' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Setup Environment
+        uses: ./.github/actions/setup
+
+      - name: Verify Package Manager and Toolchain Pins
+        run: |
+          # Verify pnpm version matches package.json's packageManager field
+          PNPM_VERSION=$(pnpm --version)
+          EXPECTED_PNPM="11.1.3"
+          echo "Current pnpm version: $PNPM_VERSION"
+          if [ "$PNPM_VERSION" != "$EXPECTED_PNPM" ]; then
+            echo "Error: pnpm version $PNPM_VERSION does not match pinned version $EXPECTED_PNPM"
+            exit 1
+          fi
+
+          # Verify Node.js version matches pinned setup configuration
+          NODE_VERSION=$(node --version)
+          EXPECTED_NODE="v22.14.0"
+          echo "Current Node.js version: $NODE_VERSION"
+          if [[ "$NODE_VERSION" != "$EXPECTED_NODE"* ]]; then
+            echo "Error: Node.js version $NODE_VERSION does not match pinned version $EXPECTED_NODE"
+            exit 1
+          fi
+
+      - name: Build Application
+        run: pnpm run build
+
+      - name: Deploy Preview to Cloudflare Pages
+        id: cloudflare_deploy
+        uses: cloudflare/wrangler-action@9acf94ace14e7dc412b076f2c5c20b8ce93c79cd # v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy dist/client --project-name=qrcraftly --branch=pr-${{ github.event.pull_request.number }}
+
+      - name: Install Playwright Browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run Playwright Smoke Tests
+        id: smoke_tests
+        env:
+          PLAYWRIGHT_TEST_BASE_URL: ${{ steps.cloudflare_deploy.outputs.deployment-url }}
+        run: |
+          pnpm exec playwright test e2e/smoke.spec.ts --project=chromium
+
+      - name: Post PR Status Comment
+        if: always()
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const prNumber = context.payload.pull_request.number;
+            const { owner, repo } = context.repo;
+            
+            const deployOutcome = "${{ steps.cloudflare_deploy.outcome }}";
+            const smokeOutcome = "${{ steps.smoke_tests.outcome }}";
+            
+            const deployStatus = deployOutcome === 'success' ? '✅ Success' : (deployOutcome === 'skipped' ? '⏭️ Skipped' : '❌ Failed');
+            const smokeStatus = smokeOutcome === 'success' ? '✅ Passed' : (smokeOutcome === 'skipped' ? '⏭️ Skipped' : '❌ Failed');
+            const deploymentUrl = "${{ steps.cloudflare_deploy.outputs.deployment-url }}";
+
+            // List existing comments to find previous bot comments
+            const { data: comments } = await github.rest.issues.listComments({
+              owner,
+              repo,
+              issue_number: prNumber,
+            });
+
+            const botComment = comments.find(c => c.body && c.body.includes('🚀 Cloudflare Pages Preview Deployment'));
+
+            let body = `### 🚀 Cloudflare Pages Preview Deployment\n\n`;
+            if (deployOutcome === 'success') {
+              body += `- **Staging URL**: [${deploymentUrl}](${deploymentUrl})\n`;
+            } else {
+              body += `- **Staging URL**: *Unavailable*\n`;
+            }
+            body += `- **Deployment Status**: ${deployStatus}\n`;
+            body += `- **Smoke Tests**: ${smokeStatus}\n`;
+            body += `- **Triggered By**: @${context.actor}\n`;
+            body += `- **Last Updated**: ${new Date().toISOString()}`;
+
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner,
+                repo,
+                comment_id: botComment.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: prNumber,
+                body,
+              });
+            }
+
+  decommission-preview:
+    name: Decommission Preview Staging
+    if: github.event.action == 'closed' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Decommission Preview Environment on Cloudflare Pages
+        run: |
+          echo "Decommissioning Cloudflare Pages preview branch pr-${{ github.event.pull_request.number }}..."
+          curl -X DELETE "https://api.cloudflare.com/client/v4/accounts/${{ secrets.CLOUDFLARE_ACCOUNT_ID }}/pages/projects/qrcraftly/branches/pr-${{ github.event.pull_request.number }}" \
+            -H "Authorization: Bearer ${{ secrets.CLOUDFLARE_API_TOKEN }}" \
+            -H "Content-Type: application/json"
+
+      - name: Comment on Closed PR
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const prNumber = context.payload.pull_request.number;
+            const { owner, repo } = context.repo;
+            
+            await github.rest.issues.createComment({
+              owner,
+              repo,
+              issue_number: prNumber,
+              body: `🧹 **Preview Environment Decommissioned**\nThe dynamic staging environment for this pull request has been automatically torn down on Cloudflare Pages.`
+            });
