@@ -26,6 +26,10 @@ runs:
       run: npm install -g pnpm@11.1.3
       shell: bash
 
+    - name: Configure pnpm store directory
+      run: pnpm config set store-dir ~/.pnpm-store
+      shell: bash
+
     - name: Get pnpm store directory
       id: pnpm-cache
       run: |
