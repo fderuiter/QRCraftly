@@ -217,7 +217,9 @@ describe('Security Utils', () => {
       });
 
       it('sanitizes inline styles and style elements for external resource requests', () => {
-          const raw = `<svg xmlns="http://www.w3.org/2000/svg"><style>@import "https://attacker.com/style.css"; rect { fill: url(http://malicious.com/image.png); filter: url(#safe-filter); }</style><rect style="background: url('https://evil.com'); filter: url(#another-safe);" /></svg>`;
+          // One style containing @import should be entirely discarded
+          // One style NOT containing @import should have its url(...) cleaned but local ref preserved
+          const raw = `<svg xmlns="http://www.w3.org/2000/svg"><style>@import "https://attacker.com/style.css"; rect { fill: url(http://malicious.com/image.png); filter: url(#safe-filter); }</style><style>rect { fill: url(http://malicious.com/image.png); filter: url(#safe-filter); }</style><rect style="background: url('https://evil.com'); filter: url(#another-safe);" /></svg>`;
           const cleaned = sanitizeSvg(raw);
           expect(cleaned).not.toContain('https://attacker.com/style.css');
           expect(cleaned).not.toContain('http://malicious.com/image.png');
@@ -234,6 +236,51 @@ describe('Security Utils', () => {
           expect(cleaned).toContain('stroke="blue"');
           expect(cleaned).toContain('linearGradient');
           expect(cleaned).toContain('clipPath');
+      });
+
+      it('removes elements not in strict safe-element allowlist', () => {
+          const raw = `<svg xmlns="http://www.w3.org/2000/svg"><g><foreignObject width="100" height="100"><iframe src="javascript:alert(1)"></iframe></foreignObject><embed src="evil.swf" /><object data="evil.svg" /><rect width="50" height="50" /></g></svg>`;
+          const cleaned = sanitizeSvg(raw);
+          expect(cleaned).not.toContain('foreignObject');
+          expect(cleaned).not.toContain('iframe');
+          expect(cleaned).not.toContain('embed');
+          expect(cleaned).not.toContain('object');
+          expect(cleaned).toContain('rect');
+      });
+
+      it('discards style blocks containing @import entirely', () => {
+          const raw = `<svg xmlns="http://www.w3.org/2000/svg"><style>@IMPORT "evil.css";</style><rect /></svg>`;
+          const cleaned = sanitizeSvg(raw);
+          expect(cleaned).not.toContain('<style>');
+          expect(cleaned).toContain('rect');
+      });
+
+      it('discards style attributes containing @import entirely', () => {
+          const raw = `<svg xmlns="http://www.w3.org/2000/svg"><rect style="color: red; @import \'evil.css\';" /></svg>`;
+          const cleaned = sanitizeSvg(raw);
+          expect(cleaned).not.toContain('style=');
+          expect(cleaned).toContain('rect');
+      });
+
+      it('rejects data URIs with non-image MIME types', () => {
+          const raw = `<svg xmlns="http://www.w3.org/2000/svg"><image href="data:text/html;base64,PHNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg==" /></svg>`;
+          const cleaned = sanitizeSvg(raw);
+          expect(cleaned).not.toContain('href=');
+      });
+
+      it('rejects data URIs containing active payload or scripts', () => {
+          const maliciousPayload = `<svg><script>alert(1)</script></svg>`;
+          const encoded = btoa(maliciousPayload);
+          const raw = `<svg xmlns="http://www.w3.org/2000/svg"><image href="data:image/svg+xml;base64,${encoded}" /></svg>`;
+          const cleaned = sanitizeSvg(raw);
+          expect(cleaned).not.toContain('href=');
+      });
+
+      it('preserves valid, safe nested image data URIs', () => {
+          const safePng = `data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=`;
+          const raw = `<svg xmlns="http://www.w3.org/2000/svg"><image href="${safePng}" /></svg>`;
+          const cleaned = sanitizeSvg(raw);
+          expect(cleaned).toContain(safePng);
       });
   });
 

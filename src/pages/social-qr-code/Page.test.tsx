@@ -37,7 +37,7 @@ describe('Social QR Code Page', () => {
     expect(qrTool).toHaveTextContent('QRTool with type: SOCIAL');
   });
 
-  it('renders structured data schema with ProfilePage details', () => {
+  it('does NOT render structured data schema with ProfilePage details but renders WebApplication', () => {
     const { container } = render(<Page />);
     const script = container.querySelector('script[type="application/ld+json"]');
     expect(script).toBeInTheDocument();
@@ -45,7 +45,9 @@ describe('Social QR Code Page', () => {
     expect(json['@context']).toBe('https://schema.org');
     
     const profileObj = json['@graph'].find((item: any) => item['@type'] === 'ProfilePage');
-    expect(profileObj).toBeDefined();
-    expect(profileObj.mainEntity.sameAs).toContain('https://instagram.com');
+    expect(profileObj).toBeUndefined();
+
+    const appObj = json['@graph'].find((item: any) => item['@type'] === 'WebApplication');
+    expect(appObj).toBeDefined();
   });
 });

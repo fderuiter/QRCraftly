@@ -83,6 +83,8 @@ export function useInputLogic(
     latestInputStates.current = inputStates;
   }, [inputStates]);
 
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Synchronize input states reactively when config changes externally (e.g., undo/redo or preset loaded)
   useEffect(() => {
     const entry = INPUT_REGISTRY[config.type];
@@ -92,6 +94,11 @@ export function useInputLogic(
     const currentConstructed = entry.constructFn ? entry.constructFn(currentLocalState as never) : '';
 
     if (currentConstructed !== config.value) {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+
       if (entry.hydrateFn && entry.canHydrateFn(config.value)) {
         try {
           const hydrated = entry.hydrateFn(config.value);
@@ -101,12 +108,19 @@ export function useInputLogic(
           }));
         } catch (e) {
           console.warn(`Failed to hydrate state for ${config.type} on external change`, e);
+          setInputStates((prev) => ({
+            ...prev,
+            [config.type]: entry.initialState,
+          }));
         }
+      } else {
+        setInputStates((prev) => ({
+          ...prev,
+          [config.type]: entry.initialState,
+        }));
       }
     }
   }, [config.type, config.value]);
-
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Clear timeout if type changes to prevent race conditions (simulating unmount of previous input)
   useEffect(() => {

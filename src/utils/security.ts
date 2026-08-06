@@ -131,6 +131,102 @@ export const validateUrlAndInject = (raw: string, urlContainmentProfile: RegExp)
 };
 
 /**
+ * Strict Safe-Element Allowlist
+ */
+const SAFE_ELEMENTS = new Set([
+  'svg', 'g', 'defs', 'style', 'rect', 'circle', 'ellipse',
+  'line', 'polyline', 'polygon', 'path', 'lineargradient',
+  'radialgradient', 'stop', 'pattern', 'image', 'text', 'tspan',
+  'clippath', 'mask', 'use', 'symbol', 'marker', 'title',
+  'desc', 'metadata'
+]);
+
+/**
+ * Validates data URIs to ensure they use safe image MIME-types and contain no active payloads.
+ */
+export const isSafeDataUri = (uri: string): boolean => {
+  const trimmed = uri.trim();
+  if (!trimmed.toLowerCase().startsWith('data:')) {
+    return true;
+  }
+
+  const commaIndex = trimmed.indexOf(',');
+  if (commaIndex === -1) {
+    return false;
+  }
+
+  const header = trimmed.slice(0, commaIndex);
+  const payload = trimmed.slice(commaIndex + 1);
+
+  const headerParts = header.slice(5).split(';');
+  const mimeType = headerParts[0].trim().toLowerCase() || 'text/plain';
+
+  const ALLOWED_MIME_TYPES = new Set([
+    'image/png',
+    'image/jpeg',
+    'image/jpg',
+    'image/gif',
+    'image/webp',
+    'image/svg+xml'
+  ]);
+
+  if (!ALLOWED_MIME_TYPES.has(mimeType)) {
+    return false;
+  }
+
+  const isBase64 = headerParts.some(part => part.trim().toLowerCase() === 'base64');
+  let decodedPayload = '';
+
+  if (isBase64) {
+    try {
+      decodedPayload = atob(payload.replace(/\s/g, ''));
+    } catch {
+      try {
+        const uriDecoded = decodeURIComponent(payload.trim());
+        decodedPayload = atob(uriDecoded.replace(/\s/g, ''));
+      } catch {
+        decodedPayload = payload;
+      }
+    }
+  } else {
+    try {
+      decodedPayload = decodeURIComponent(payload);
+    } catch {
+      decodedPayload = payload;
+    }
+  }
+
+  let uriDecodedRaw = '';
+  try {
+    uriDecodedRaw = decodeURIComponent(payload);
+  } catch {
+    uriDecodedRaw = payload;
+  }
+
+  const DANGEROUS_PATTERNS = [
+    '<script',
+    'javascript:',
+    'onload',
+    'onerror',
+    '<html',
+    '<body',
+    'xml-stylesheet'
+  ];
+
+  const checks = [payload, decodedPayload, uriDecodedRaw];
+  for (const content of checks) {
+    const lowerContent = content.toLowerCase();
+    for (const pattern of DANGEROUS_PATTERNS) {
+      if (lowerContent.includes(pattern)) {
+        return false;
+      }
+    }
+  }
+
+  return true;
+};
+
+/**
  * Sanitizes an SVG string to prevent DOM-XSS and structural XML injection.
  * Removes all script elements, script events, and external resource requests.
  * Standard presentation attributes, clip paths, linear gradients, and responsive viewBox configurations are allowed.
@@ -151,50 +247,83 @@ export const sanitizeSvg = (svgText: string): string => {
         const element = node as Element;
         const tagName = element.tagName.toLowerCase();
 
-        // 1. Remove script blocks/elements
-        if (tagName === 'script') {
-          element.parentNode?.removeChild(element);
-          return; // Node is removed, no need to process children or attributes
+        // 1. Enforce strict safe-element allowlist
+        if (!SAFE_ELEMENTS.has(tagName)) {
+          if (element.parentNode) {
+            element.parentNode.removeChild(element);
+          } else {
+            element.remove?.();
+          }
+          return; // Node is discarded completely
         }
 
-        // 2. Remove script events (attributes starting with "on")
+        // 2. Zero-tolerance style block discard
+        if (tagName === 'style') {
+          const styleContent = element.textContent || '';
+          if (styleContent.toLowerCase().includes('@import')) {
+            if (element.parentNode) {
+              element.parentNode.removeChild(element);
+            } else {
+              element.remove?.();
+            }
+            return; // Node is discarded completely
+          }
+        }
+
         const attrs = Array.from(element.attributes);
         for (const attr of attrs) {
           const attrName = attr.name.toLowerCase();
+
+          // 3. Remove script events (attributes starting with "on")
           if (attrName.startsWith('on')) {
             element.removeAttribute(attr.name);
           }
-          // 3. Remove/neutralize external resource requests in href / xlink:href
+          // 4. Zero-tolerance style attribute discard
+          else if (attrName === 'style') {
+            const styleVal = attr.value;
+            if (styleVal.toLowerCase().includes('@import')) {
+              element.removeAttribute(attr.name);
+            } else {
+              // Otherwise, sanitize allowed urls (like url(#...)) and nested data URIs
+              const cleanStyle = styleVal.replace(/url\s*\(\s*['"]?([^'")]*)['"]?\s*\)/gi, (match, urlContent) => {
+                const trimmedUrl = urlContent.trim();
+                if (trimmedUrl.startsWith('data:')) {
+                  if (isSafeDataUri(trimmedUrl)) {
+                    return match;
+                  }
+                  return 'url(#)';
+                }
+                if (trimmedUrl.startsWith('#') || trimmedUrl === '') {
+                  return match;
+                }
+                return 'url(#)';
+              });
+              element.setAttribute(attr.name, cleanStyle);
+            }
+          }
+          // 5. Remove/neutralize external resource requests in href / xlink:href
           else if (attrName === 'href' || attrName === 'xlink:href') {
             const val = attr.value.trim();
-            // Allow data URIs and local fragment links
-            const isSafe = val.startsWith('data:') || val.startsWith('#') || val === '';
-            if (!isSafe) {
+            const isLocalOrEmpty = val.startsWith('#') || val === '';
+            const isSafeData = val.toLowerCase().startsWith('data:') && isSafeDataUri(val);
+            if (!isLocalOrEmpty && !isSafeData) {
               element.removeAttribute(attr.name);
             }
           }
-          // 4. Sanitize inline style attribute for external resource requests (like url(http://...), @import)
-          else if (attrName === 'style') {
-            const styleVal = attr.value;
-            let cleanStyle = styleVal.replace(/@import\s+[^;]+;/gi, '');
-            cleanStyle = cleanStyle.replace(/url\s*\(\s*['"]?([^'")]*)['"]?\s*\)/gi, (match, urlContent) => {
-              const trimmedUrl = urlContent.trim();
-              if (trimmedUrl.startsWith('data:') || trimmedUrl.startsWith('#') || trimmedUrl === '') {
+        }
+
+        // 6. Sanitize style blocks that do not contain @import
+        if (tagName === 'style') {
+          const styleContent = element.textContent || '';
+          const cleanContent = styleContent.replace(/url\s*\(\s*['"]?([^'")]*)['"]?\s*\)/gi, (match, urlContent) => {
+            const trimmedUrl = urlContent.trim();
+            if (trimmedUrl.startsWith('data:')) {
+              if (isSafeDataUri(trimmedUrl)) {
                 return match;
               }
               return 'url(#)';
-            });
-            element.setAttribute(attr.name, cleanStyle);
-          }
-        }
-
-        // 5. Sanitize <style> elements
-        if (tagName === 'style') {
-          const styleContent = element.textContent || '';
-          let cleanContent = styleContent.replace(/@import\s+[^;]+;/gi, '');
-          cleanContent = cleanContent.replace(/url\s*\(\s*['"]?([^'")]*)['"]?\s*\)/gi, (match, urlContent) => {
-            const trimmedUrl = urlContent.trim();
-            if (trimmedUrl.startsWith('data:') || trimmedUrl.startsWith('#') || trimmedUrl === '') {
+            }
+            if (trimmedUrl.startsWith('#') || trimmedUrl === '') {
               return match;
             }
             return 'url(#)';
