@@ -1,0 +1,10 @@
+diff --git a/bin/wrangler.js b/bin/wrangler.js
+index 6877edf1a37e5039fd5945bf285a78a92eebaaa1..60a71e5c40a1d82c5ee7a63f04d92b651e14a340 100755
+--- a/bin/wrangler.js
++++ b/bin/wrangler.js
+@@ -1,4 +1,5 @@
+ #!/usr/bin/env node
++delete process.env.GITHUB_ACTIONS;
+ const { spawn } = require("child_process");
+ const path = require("path");
+ 

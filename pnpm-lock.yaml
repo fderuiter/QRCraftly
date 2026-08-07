@@ -15,6 +15,9 @@ overrides:
   '@eslint/config-array': 0.23.5
   sharp: '>=0.35.0'
 
+patchedDependencies:
+  wrangler: 4194c2486768649bdef7f147e731e0d2a72c5f948584ce6e88febcde24fa2ae0
+
 importers:
 
   .:
@@ -142,7 +145,7 @@ importers:
         version: 0.1.0(vitest@4.1.9)
       wrangler:
         specifier: ^4.103.0
-        version: 4.103.0(@types/node@22.19.15)
+        version: 4.103.0(patch_hash=4194c2486768649bdef7f147e731e0d2a72c5f948584ce6e88febcde24fa2ae0)(@types/node@22.19.15)
 
 packages:
 
@@ -7061,7 +7064,7 @@ snapshots:
       '@cloudflare/workerd-linux-arm64': 1.20260617.1
       '@cloudflare/workerd-windows-64': 1.20260617.1
 
-  wrangler@4.103.0(@types/node@22.19.15):
+  wrangler@4.103.0(patch_hash=4194c2486768649bdef7f147e731e0d2a72c5f948584ce6e88febcde24fa2ae0)(@types/node@22.19.15):
     dependencies:
       '@cloudflare/kv-asset-handler': 0.5.0
       '@cloudflare/unenv-preset': 2.16.1(unenv@2.0.0-rc.24)(workerd@1.20260617.1)
