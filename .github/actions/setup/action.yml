@@ -1,5 +1,5 @@
 name: "Setup Environment"
-description: "Centralized Node and pnpm setup using Corepack shim wrappers and robust store/binary caching."
+description: "Centralized Node and pnpm setup using actions/setup-node and standalone pnpm action with direct store caching."
 inputs:
   node-version:
     description: "Node.js version to set up"
@@ -22,58 +22,25 @@ runs:
       with:
         node-version: ${{ inputs.node-version }}
 
-    - name: Configure Corepack Environment Variables
-      run: |
-        echo "COREPACK_ENABLE_DOWNLOAD_PROMPT=0" >> $GITHUB_ENV
-        echo "COREPACK_HOME=$HOME/.corepack" >> $GITHUB_ENV
-      shell: bash
-
-    - name: Cache Corepack Archive
-      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+    - name: Install pnpm
+      uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
       with:
-        path: ~/.corepack
-        key: ${{ runner.os }}-corepack-v13-${{ hashFiles('**/pnpm-lock.yaml') }}
-        restore-keys: |
-          ${{ runner.os }}-corepack-v13-
-
-    - name: Create pnpm & pnpx shims
-      run: |
-        mkdir -p ~/.local/bin
-        
-        # Create pnpm wrapper script
-        cat << 'EOF' > ~/.local/bin/pnpm
-        #!/bin/bash
-        corepack pnpm "$@"
-        EOF
-        chmod +x ~/.local/bin/pnpm
-
-        # Create pnpx wrapper script
-        cat << 'EOF' > ~/.local/bin/pnpx
-        #!/bin/bash
-        corepack pnpx "$@"
-        EOF
-        chmod +x ~/.local/bin/pnpx
-
-        echo "$HOME/.local/bin" >> $GITHUB_PATH
-      shell: bash
+        version: 11.1.3
+        run_install: false
 
     - name: Configure pnpm Store
-      run: |
-        export PATH="$HOME/.local/bin:$PATH"
-        pnpm config set store-dir ~/.pnpm-store
+      run: pnpm config set store-dir ~/.pnpm-store
       shell: bash
 
     - name: Cache pnpm store
       uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
       with:
         path: ~/.pnpm-store
-        key: ${{ runner.os }}-pnpm-store-v13-${{ hashFiles('**/pnpm-lock.yaml') }}
+        key: ${{ runner.os }}-pnpm-store-v14-${{ hashFiles('**/pnpm-lock.yaml') }}
         restore-keys: |
-          ${{ runner.os }}-pnpm-store-v13-
+          ${{ runner.os }}-pnpm-store-v14-
 
     - name: Install Dependencies
       if: ${{ inputs.install == 'true' }}
-      run: |
-        export PATH="$HOME/.local/bin:$PATH"
-        pnpm install --frozen-lockfile
+      run: pnpm install --frozen-lockfile
       shell: bash
