@@ -124,4 +124,40 @@ describe('useDynamicFocus hook', () => {
     expect(lr).not.toBeNull();
     expect(lr?.textContent).toContain('Identity / Username removed');
   });
+
+  it('should ignore focus reset to body when active element is disconnected', async () => {
+    const { rerender } = render(<TestForm initialFields={['ssid', 'password']} showConditional={true} />);
+    
+    await act(async () => {
+      await Promise.resolve();
+    });
+    act(() => {
+      vi.advanceTimersByTime(200);
+    });
+
+    const identityInput = document.getElementById('wifi-identity') as HTMLElement;
+    identityInput.focus();
+    expect(document.activeElement).toBe(identityInput);
+
+    // Simulate focus resetting to document.body because of unmount
+    Object.defineProperty(identityInput, 'isConnected', { value: false, configurable: true });
+    
+    const event = new FocusEvent('focusin', { bubbles: true });
+    Object.defineProperty(event, 'target', { value: document.body, configurable: true });
+    document.dispatchEvent(event);
+
+    // Unmount identity input
+    rerender(<TestForm initialFields={['ssid', 'password']} showConditional={false} />);
+
+    // Flush MutationObserver microtask
+    await act(async () => {
+      await Promise.resolve();
+    });
+    act(() => {
+      vi.advanceTimersByTime(200);
+    });
+
+    const passwordInput = document.getElementById('wifi-password');
+    expect(document.activeElement).toBe(passwordInput);
+  });
 });
