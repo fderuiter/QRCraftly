@@ -67,10 +67,6 @@ if (!hasCloudflareSecrets) {
     console.log('=== [Wrangler Wrapper] Local preview fallback ready! ===');
     
     deployOutput = 'Take a look at: http://localhost:3000\\n[Wrangler Wrapper] Local fallback active because Cloudflare secrets were missing.\\n';
-    try {
-      fs.writeFileSync(outputPath, deployOutput, 'utf8');
-    } catch (e) {}
-    
     exitStatus = 0;
   } catch (err) {
     console.error('[Wrangler Wrapper] Failed to start local preview server fallback:', err);
