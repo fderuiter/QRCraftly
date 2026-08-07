@@ -3,10 +3,33 @@ import path from 'path';
 import { marked } from 'marked';
 import { fileURLToPath } from 'url';
 import ts from 'typescript';
+import { parseFrontmatter } from './compile_docs_manifest.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const repoRoot = path.join(__dirname, '..');
+
+export const parsedFilesCache = new Map();
+
+export function getParsedFile(file) {
+  const filePath = path.isAbsolute(file) ? file : path.join(repoRoot, file);
+  const normalizedPath = path.resolve(filePath);
+  if (parsedFilesCache.has(normalizedPath)) {
+    return parsedFilesCache.get(normalizedPath);
+  }
+  let content = '';
+  try {
+    if (fs.existsSync(normalizedPath)) {
+      content = fs.readFileSync(normalizedPath, 'utf-8');
+    }
+  } catch (err) {
+    console.warn(`Warning: Could not read file at ${normalizedPath}`, err);
+  }
+  const { frontmatter, body } = parseFrontmatter(content);
+  const result = { content, frontmatter, body };
+  parsedFilesCache.set(normalizedPath, result);
+  return result;
+}
 
 export const docsPublicDir = path.join(repoRoot, 'docs', 'public');
 
@@ -29,6 +52,7 @@ export let hasErrors = false;
 
 export function resetErrors() {
   hasErrors = false;
+  parsedFilesCache.clear();
 }
 
 export function setErrors(val) {
@@ -50,10 +74,14 @@ export function slugify(text) {
 }
 
 export function checkPlaceholders(file, content) {
+  const { frontmatter, body } = parseFrontmatter(content);
+  if (frontmatter.draft === true) {
+    return false;
+  }
   let localHasErrors = false;
   const placeholderRegex = /(TODO|FIXME)/g;
   let match;
-  while ((match = placeholderRegex.exec(content)) !== null) {
+  while ((match = placeholderRegex.exec(body)) !== null) {
     console.error(`Error in ${file}: Found placeholder string '${match[0]}'`);
     localHasErrors = true;
     hasErrors = true;
@@ -62,7 +90,8 @@ export function checkPlaceholders(file, content) {
 }
 
 export function buildFileHeadings(file, content) {
-  const tokens = marked.lexer(content);
+  const { body } = parseFrontmatter(content);
+  const tokens = marked.lexer(body);
   const headings = new Set();
   
   marked.walkTokens(tokens, token => {
@@ -75,9 +104,10 @@ export function buildFileHeadings(file, content) {
 }
 
 export function verifyLinks(file, content, fileHeadings) {
+  const { body } = parseFrontmatter(content);
   let localHasErrors = false;
   const filePath = path.join(repoRoot, file);
-  const tokens = marked.lexer(content);
+  const tokens = marked.lexer(body);
   
   marked.walkTokens(tokens, token => {
     if (token.type === 'link') {
@@ -119,14 +149,15 @@ export function verifyLinks(file, content, fileHeadings) {
           
           if (!headingsToSearch) {
             // Target file is valid but wasn't audited yet (e.g. README.md)
-            const otherContent = fs.readFileSync(targetFilePath, 'utf-8');
-            const otherTokens = marked.lexer(otherContent);
+            const { body: otherBody } = getParsedFile(targetFile);
+            const otherTokens = marked.lexer(otherBody);
             headingsToSearch = new Set();
             marked.walkTokens(otherTokens, t => {
               if (t.type === 'heading') {
                 headingsToSearch.add(slugify(t.text));
               }
             });
+            fileHeadings[targetFile] = headingsToSearch;
           }
           
           if (!headingsToSearch.has(targetHash)) {
@@ -148,8 +179,11 @@ export function checkCodeSnippets(filesList) {
     for (const file of filesList) {
       const filePath = path.join(repoRoot, file);
       if (!fs.existsSync(filePath)) continue;
-      const content = fs.readFileSync(filePath, 'utf-8');
-      const tokens = marked.lexer(content);
+      const { frontmatter, body } = getParsedFile(file);
+      if (frontmatter.draft === true) {
+        continue;
+      }
+      const tokens = marked.lexer(body);
       
       marked.walkTokens(tokens, token => {
         if (token.type === 'code') {
@@ -341,7 +375,7 @@ export function runAudit() {
       hasErrors = true;
       continue;
     }
-    const content = fs.readFileSync(filePath, 'utf-8');
+    const { content } = getParsedFile(file);
     checkPlaceholders(file, content);
     fileHeadings[file] = buildFileHeadings(file, content);
   }
@@ -350,7 +384,7 @@ export function runAudit() {
   for (const file of files) {
     const filePath = path.join(repoRoot, file);
     if (!fs.existsSync(filePath)) continue;
-    const content = fs.readFileSync(filePath, 'utf-8');
+    const { content } = getParsedFile(file);
     verifyLinks(file, content, fileHeadings);
   }
   

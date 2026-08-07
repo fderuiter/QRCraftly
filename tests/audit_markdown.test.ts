@@ -175,4 +175,39 @@ No private info.
       consoleSpy.mockRestore();
     });
   });
+
+  describe('Draft-Aware Documentation Auditing', () => {
+    it('should ignore TODO/FIXME in draft documents but flag them in non-draft documents', () => {
+      const draftContent = `---\ndraft: true\n---\n# Draft Doc\nTODO: write this guide. FIXME later.`;
+      const nonDraftContent = `---\ndraft: false\n---\n# Production Doc\nTODO: write this guide.`;
+      const noFrontmatterContent = `# Production Doc\nFIXME: bug here.`;
+
+      expect(checkPlaceholders('draft.md', draftContent)).toBe(false);
+      expect(checkPlaceholders('nondraft.md', nonDraftContent)).toBe(true);
+      expect(checkPlaceholders('nofromtmatter.md', noFrontmatterContent)).toBe(true);
+    });
+
+    it('should bypass syntax and compiler checks for code blocks in draft documents', () => {
+      const draftFile = 'temp_draft_snippet.md';
+      fs.writeFileSync(
+        draftFile,
+        `---\ndraft: true\n---\n\`\`\`ts\nconst badVal: number = "this is not a number";\n\`\`\``,
+        'utf-8'
+      );
+      try {
+        const hasErrors = checkCodeSnippets([draftFile]);
+        expect(hasErrors).toBe(false);
+      } finally {
+        if (fs.existsSync(draftFile)) {
+          fs.unlinkSync(draftFile);
+        }
+      }
+    });
+
+    it('should still validate and flag broken link targets inside draft documents', () => {
+      const draftContent = `---\ndraft: true\n---\n# Draft Doc\n[Broken Target](../missing.md)`;
+      const hasLinkErrors = verifyLinks('draft.md', draftContent, {});
+      expect(hasLinkErrors).toBe(true);
+    });
+  });
 });
