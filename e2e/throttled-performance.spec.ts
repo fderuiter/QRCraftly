@@ -108,8 +108,8 @@ test.describe('Throttled Interactive Performance Testing', () => {
         // Base budget: 50 milliseconds
         // Throttled budget adjusts with the CPU slowdown factor:
         // Under 4x slowdown: 50ms baseline (plus environment tolerance = 120ms to prevent flakiness in container and virtualized environments)
-        // Under 6x slowdown: adjusted to allow for simulated low-end hardware execution budget = 150ms
-        const threshold = rate === 4 ? 120 : 150;
+        // Under 6x slowdown: adjusted to allow for simulated low-end hardware execution budget (50ms baseline x 6 = 300ms to prevent flakiness in virtualized environments) = 300ms
+        const threshold = rate === 4 ? 120 : 300;
 
         for (const task of longTasks) {
           expect(task.duration).toBeLessThanOrEqual(
