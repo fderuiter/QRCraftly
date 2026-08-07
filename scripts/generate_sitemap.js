@@ -1,11 +1,21 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { loadEnv } from 'vite';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const DOMAIN = 'https://qrcraftly.com';
+let env = {};
+try {
+  const mode = process.env.NODE_ENV || 'production';
+  env = loadEnv(mode, process.cwd(), '');
+} catch (error) {
+  console.warn('[Sitemap] Failed to load env via Vite loadEnv:', error);
+}
+
+const resolvedDomain = env.VITE_DOMAIN || process.env.VITE_DOMAIN || 'https://qrcraftly.com';
+const DOMAIN = resolvedDomain.replace(/\/+$/, '');
 const DIST_DIR = path.resolve(__dirname, '../dist/client');
 const OUTPUT_FILE = path.join(DIST_DIR, 'sitemap.xml');
 
