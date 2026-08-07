@@ -1,5 +1,5 @@
 name: "Setup Environment"
-description: "Centralized Node and pnpm setup with robust pnpm store caching and automatic lockfile-enforced fallback installation."
+description: "Centralized Node and pnpm setup with Corepack, user-bin path isolation, and robust caching."
 inputs:
   node-version:
     description: "Node.js version to set up"
@@ -22,16 +22,36 @@ runs:
       with:
         node-version: ${{ inputs.node-version }}
 
-    - name: Install pnpm
-      uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+    - name: Configure Environment
+      run: |
+        echo "COREPACK_HOME=$HOME/.corepack" >> $GITHUB_ENV
+        echo "COREPACK_ENABLE_DOWNLOAD_PROMPT=0" >> $GITHUB_ENV
+      shell: bash
+
+    - name: Cache Corepack
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
       with:
-        version: 11.1.3
-        run_install: false
+        path: ~/.corepack
+        key: ${{ runner.os }}-corepack-v11-${{ hashFiles('**/pnpm-lock.yaml') }}
+        restore-keys: |
+          ${{ runner.os }}-corepack-v11-
+
+    - name: Enable Corepack & Install pnpm
+      run: |
+        mkdir -p ~/.local/bin
+        corepack enable --install-directory ~/.local/bin pnpm
+        echo "$HOME/.local/bin" >> $GITHUB_PATH
+        corepack prepare pnpm@11.1.3 --activate
+      shell: bash
+
+    - name: Configure pnpm Store
+      run: pnpm config set store-dir ~/.pnpm-store
+      shell: bash
 
     - name: Cache pnpm store
       uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
       with:
-        path: ~/.local/share/pnpm/store
+        path: ~/.pnpm-store
         key: ${{ runner.os }}-pnpm-store-v11-${{ hashFiles('**/pnpm-lock.yaml') }}
         restore-keys: |
           ${{ runner.os }}-pnpm-store-v11-
