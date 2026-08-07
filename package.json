@@ -23,7 +23,7 @@
     "dev": "vite",
     "prebuild": "node scripts/git_lineage_auditor.js && node scripts/validate_ui_catalog.js && node scripts/audit_markdown.js && node scripts/static-path-tracker.js && node scripts/compile_docs_manifest.js && eslint .",
     "build": "pnpm run prebuild && vite build && pnpm run postbuild",
-    "postbuild": "node scripts/generate_sitemap.js && node scripts/csp_hash_injector.js && node scripts/generate_lhci_manifest.js",
+    "postbuild": "node scripts/generate_sitemap.js && node scripts/csp_hash_injector.js && node scripts/generate_lhci_manifest.js && { [ -z \"$CI\" ] || git reset --hard HEAD; }",
     "preview": "vite preview",
     "test": "vitest",
     "test:e2e": "playwright test",
