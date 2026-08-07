@@ -87,7 +87,7 @@ export function compileManifest(inputDir = docsPublicDir, outputPath = outputMan
     fs.mkdirSync(outputDir, { recursive: true });
   }
 
-  fs.writeFileSync(outputPath, JSON.stringify(manifest, null, 2), 'utf-8');
+  fs.writeFileSync(outputPath, JSON.stringify(manifest, null, 2) + '\n', 'utf-8');
   console.log(`Docs manifest successfully compiled to ${outputPath}`);
 }
 
