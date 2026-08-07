@@ -125,6 +125,26 @@ jobs:
           echo "Extracted Deployment URL: $DEPLOYMENT_URL"
           echo "deployment-url=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
 
+      - name: Post Deploy Log on Failure
+        if: failure() && steps.cloudflare_deploy.outcome == 'failure'
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            let log = 'No deploy_output.txt found';
+            if (fs.existsSync('deploy_output.txt')) {
+              log = fs.readFileSync('deploy_output.txt', 'utf8');
+            }
+            const prNumber = context.payload.pull_request.number;
+            const { owner, repo } = context.repo;
+            await github.rest.issues.createComment({
+              owner,
+              repo,
+              issue_number: prNumber,
+              body: `### ❌ Wrangler Deploy Failed Log\n\`\`\`\n${log}\n\`\`\``
+            });
+
       - name: Install Playwright Browsers
         run: pnpm exec playwright install --with-deps chromium
 
