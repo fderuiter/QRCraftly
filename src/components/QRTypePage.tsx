@@ -18,7 +18,6 @@
 
 import React from 'react';
 import QRTool from '@/components/QRTool';
-import { DEFAULT_CONFIG } from '@/constants';
 import { QRType } from '@/types';
 import { JsonLdScript } from '@/components/ui/JsonLdScript';
 
@@ -47,7 +46,6 @@ interface QRTypePageProps {
  */
 export const QRTypePage: React.FC<QRTypePageProps> = ({ type, title, schemaData, toolId }) => {
   const config = {
-    ...DEFAULT_CONFIG,
     type,
   };
 

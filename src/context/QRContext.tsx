@@ -103,12 +103,23 @@ const getSafeLocalStorage = () => {
   };
 };
 
+// Persistent in-memory cache for QR code visual style configuration across client-side page transitions.
+// This preserves visual configurations without persisting any user input/content fields,
+// and ensures localStorage and sessionStorage remain completely empty of user data.
+let inMemoryStyleCache: Partial<QRConfig> | null = null;
+
 function createQRStore(initialConfig?: Partial<QRConfig>): QRStore {
   const storage = getSafeLocalStorage();
   const savedOptIn = storage.getItem('qr-telemetry-opt-in');
   
+  const effectiveConfig = {
+    ...DEFAULT_CONFIG,
+    ...inMemoryStyleCache,
+    ...initialConfig,
+  };
+
   let state: QRState = {
-    config: { ...DEFAULT_CONFIG, ...initialConfig },
+    config: effectiveConfig,
     moduleCount: 0,
     preferences: {
       telemetryOptIn: savedOptIn === 'true' ? true : savedOptIn === 'false' ? false : null,
@@ -136,6 +147,11 @@ function createQRStore(initialConfig?: Partial<QRConfig>): QRStore {
       const violations = ValidationEngine.validateConfig(proposed);
       const sanitized = ValidationEngine.sanitizeConfig(proposed);
       state = { ...state, config: sanitized, violations };
+
+      // Cache only visual style customization preferences (exclude content payload 'value' and content 'type')
+      const { type: _type, value: _value, ...stylePreferences } = sanitized;
+      inMemoryStyleCache = stylePreferences;
+
       listeners.forEach(l => l());
     },
     updatePreferences: (updates) => {
