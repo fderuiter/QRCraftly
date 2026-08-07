@@ -3,20 +3,20 @@
     "collect": {
       "staticDistDir": "./dist/client",
       "url": [
-        "http://localhost/about",
-        "http://localhost/email-qr-code",
-        "http://localhost/event-qr-code",
+        "http://localhost/about/",
+        "http://localhost/email-qr-code/",
+        "http://localhost/event-qr-code/",
         "http://localhost/",
-        "http://localhost/location-qr-code",
-        "http://localhost/meeting-qr-code",
-        "http://localhost/payment-qr-code",
-        "http://localhost/phone-qr-code",
-        "http://localhost/security",
-        "http://localhost/sms-qr-code",
-        "http://localhost/social-qr-code",
-        "http://localhost/text-qr-code",
-        "http://localhost/vcard-qr-code",
-        "http://localhost/wifi-qr-code"
+        "http://localhost/location-qr-code/",
+        "http://localhost/meeting-qr-code/",
+        "http://localhost/payment-qr-code/",
+        "http://localhost/phone-qr-code/",
+        "http://localhost/security/",
+        "http://localhost/sms-qr-code/",
+        "http://localhost/social-qr-code/",
+        "http://localhost/text-qr-code/",
+        "http://localhost/vcard-qr-code/",
+        "http://localhost/wifi-qr-code/"
       ]
     },
     "upload": {

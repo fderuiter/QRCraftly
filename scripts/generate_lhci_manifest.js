@@ -53,7 +53,7 @@ function generateLhciManifest() {
     
     // Clean up index.html from paths
     if (route.endsWith('/index.html')) {
-      route = route.slice(0, -10); // remove '/index.html'
+      route = route.slice(0, -10); // remove 'index.html', leaving the trailing slash '/'
     } else if (route.endsWith('index.html')) {
       route = route.slice(0, -10); // just in case it's 'index.html' at root
     } else if (route.endsWith('.html')) {
@@ -63,8 +63,6 @@ function generateLhciManifest() {
     // Ensure root is just /
     if (route === '' || route === '/') {
       route = '/';
-    } else if (route.endsWith('/')) {
-      route = route.slice(0, -1);
     }
 
     // Prefix with http://localhost/ as per convention
