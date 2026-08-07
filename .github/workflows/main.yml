@@ -106,6 +106,9 @@ jobs:
     name: Unit Tests
     needs: setup
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write # Required for coverage report to comment
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
