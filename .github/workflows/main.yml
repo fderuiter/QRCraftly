@@ -317,6 +317,11 @@ jobs:
     concurrency:
       group: production-deployment
       cancel-in-progress: false
+    permissions:
+      contents: write
+      deployments: write
+      id-token: write
+      attestations: write
     uses: ./.github/workflows/deploy.yml
     with:
       version_bump: ${{ github.event.inputs.version_bump || '' }}
