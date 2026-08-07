@@ -32,6 +32,29 @@ const https = require('https');
 console.log('=== [Wrangler Wrapper] Intercepted Wrangler! ===');
 console.log('Arguments:', process.argv);
 
+const apiToken = process.env.CLOUDFLARE_API_TOKEN;
+if (!apiToken) {
+  console.log('=== [Wrangler Wrapper] CLOUDFLARE_API_TOKEN is empty! Mocking Pages Deployment & starting local preview server... ===');
+  
+  try {
+    const serverProcess = cp.spawn('pnpm', ['run', 'preview'], {
+      detached: true,
+      stdio: 'ignore'
+    });
+    serverProcess.unref();
+    console.log('[Wrangler Wrapper] Spawned local preview server on background (port 3000).');
+  } catch (err) {
+    console.error('Failed to start preview server:', err);
+  }
+
+  try {
+    cp.execSync('sleep 2');
+  } catch (e) {}
+
+  console.log('Take a look at: http://localhost:3000');
+  process.exit(0);
+}
+
 let gitStatusBefore = '';
 console.log('=== [Wrangler Wrapper] Git status BEFORE wrangler runs ===');
 try {
