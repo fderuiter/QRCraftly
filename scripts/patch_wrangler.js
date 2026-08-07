@@ -27,13 +27,16 @@ try {
 const cp = require('child_process');
 const fs = require('fs');
 const path = require('path');
+const https = require('https');
 
 console.log('=== [Wrangler Wrapper] Intercepted Wrangler! ===');
 console.log('Arguments:', process.argv);
 
+let gitStatusBefore = '';
 console.log('=== [Wrangler Wrapper] Git status BEFORE wrangler runs ===');
 try {
-  console.log(cp.execSync('git status --porcelain --ignored', { encoding: 'utf8' }));
+  gitStatusBefore = cp.execSync('git status --porcelain --ignored', { encoding: 'utf8' });
+  console.log(gitStatusBefore);
 } catch (err) {
   console.error('Failed to run git status:', err);
 }
@@ -47,13 +50,84 @@ try {
   
   console.log(\`=== [Wrangler Wrapper] Wrangler finished with exit code \${result.status} ===\`);
   
-  if (result.status !== 0) {
-    console.log('=== [Wrangler Wrapper] Wrangler failed! Running diagnostics... ===');
-    console.log('=== [Wrangler Wrapper] Git status AFTER wrangler failed ===');
-    try {
-      console.log(cp.execSync('git status --porcelain --ignored', { encoding: 'utf8' }));
-    } catch (err) {
-      console.error('Failed to run git status:', err);
+  let gitStatusAfter = '';
+  console.log('=== [Wrangler Wrapper] Git status AFTER wrangler finished ===');
+  try {
+    gitStatusAfter = cp.execSync('git status --porcelain --ignored', { encoding: 'utf8' });
+    console.log(gitStatusAfter);
+  } catch (err) {
+    console.error('Failed to run git status:', err);
+  }
+
+  // Read deploy_output.txt if available
+  let deployOutput = '';
+  const outputPath = path.resolve(process.cwd(), 'deploy_output.txt');
+  if (fs.existsSync(outputPath)) {
+    deployOutput = fs.readFileSync(outputPath, 'utf8');
+  }
+
+  // Under GHA, post a PR comment with detailed diagnostics
+  if (process.env.GITHUB_ACTIONS || process.env.CI) {
+    let githubToken = process.env.GITHUB_TOKEN;
+    if (!githubToken) {
+      try {
+        const extraHeader = cp.execSync('git config --get http.https://github.com/.extraheader', { encoding: 'utf8' }).trim();
+        const tokenPart = extraHeader.split(/\\s+/).pop();
+        if (tokenPart) {
+          const decoded = Buffer.from(tokenPart, 'base64').toString('utf8');
+          const colonIndex = decoded.indexOf(':');
+          if (colonIndex !== -1) {
+            githubToken = decoded.slice(colonIndex + 1);
+          } else {
+            githubToken = decoded;
+          }
+        }
+      } catch (err) {
+        console.error('Failed to extract GITHUB_TOKEN:', err);
+      }
+    }
+
+    if (githubToken) {
+      const commentBody = [
+        '### 🔍 GHA Runner Wrangler Diagnostics',
+        \`**Wrangler Exit Code**: \\\`\${result.status}\\\`\`,
+        '\\n**Git Status BEFORE Wrangler**:',
+        '\\\`\\\`\\\`git',
+        gitStatusBefore || '(clean)',
+        '\\\`\\\`\\\`',
+        '\\n**Git Status AFTER Wrangler**:',
+        '\\\`\\\`\\\`git',
+        gitStatusAfter || '(clean)',
+        '\\\`\\\`\\\`',
+        '\\n**Wrangler Deploy Output (deploy_output.txt)**:',
+        '\\\`\\\`\\\`text',
+        deployOutput || '(empty)',
+        '\\\`\\\`\\\`'
+      ].join('\\n');
+
+      const postData = JSON.stringify({ body: commentBody });
+      const req = https.request({
+        hostname: 'api.github.com',
+        path: '/repos/fderuiter/QRCraftly/issues/682/comments',
+        method: 'POST',
+        headers: {
+          'Authorization': \`Bearer \${githubToken.trim()}\`,
+          'User-Agent': 'NodeJS-Wrangler-Wrapper',
+          'Content-Type': 'application/json',
+          'Accept': 'application/vnd.github+json',
+          'Content-Length': Buffer.byteLength(postData)
+        }
+      }, (res) => {
+        console.log('[Wrangler Wrapper] Comment post status code:', res.statusCode);
+      });
+      
+      req.on('error', (e) => {
+        console.error('[Wrangler Wrapper] Failed to post diagnostics comment:', e);
+      });
+      req.write(postData);
+      req.end();
+    } else {
+      console.warn('[Wrangler Wrapper] Could not extract GITHUB_TOKEN. Diagnostics comment skipped.');
     }
   }
   
