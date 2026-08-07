@@ -11,6 +11,7 @@
   :focus:not(:focus-visible),
   :focus:not(:focus-visible) + .peer,
   :focus:not(:focus-visible) ~ .peer {
+    outline: none !important;
     @apply outline-none;
   }
 
@@ -18,6 +19,8 @@
   :focus-visible,
   :focus-visible + .peer,
   :focus-visible ~ .peer {
-    @apply outline-none ring-2 ring-indigo-600 ring-offset-2 dark:ring-indigo-500 dark:ring-offset-slate-900;
+    outline: 2px solid transparent !important;
+    outline-offset: 2px !important;
+    @apply ring-2 ring-indigo-600 ring-offset-2 dark:ring-indigo-500 dark:ring-offset-slate-900;
   }
 }
