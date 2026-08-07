@@ -21,7 +21,10 @@ function getFormFields(container: HTMLElement): HTMLElement[] {
 function areElementsEqual(arr1: HTMLElement[], arr2: HTMLElement[]): boolean {
   if (arr1.length !== arr2.length) return false;
   for (let i = 0; i < arr1.length; i++) {
-    if (arr1[i] !== arr2[i]) return false;
+    const el1 = arr1[i];
+    const el2 = arr2[i];
+    const matches = el1 === el2 || (el1.id && el2.id && el1.id === el2.id);
+    if (!matches) return false;
   }
   return true;
 }
@@ -90,7 +93,14 @@ export function useDynamicFocus<T extends HTMLElement = HTMLDivElement>(_depende
     }, 150);
 
     const handleFocusIn = (e: FocusEvent) => {
-      lastFocusedRef.current = e.target as HTMLElement;
+      const target = e.target as HTMLElement;
+      if (target === document.body) {
+        if (lastFocusedRef.current && (!lastFocusedRef.current.isConnected || !document.body.contains(lastFocusedRef.current))) {
+          // Ignore this browser-default focus reset to preserve the unmounted element's reference
+          return;
+        }
+      }
+      lastFocusedRef.current = target;
     };
 
     document.addEventListener('focusin', handleFocusIn);
@@ -167,7 +177,10 @@ export function useDynamicFocus<T extends HTMLElement = HTMLDivElement>(_depende
 
         if (wasFocusedRemoved) {
           const firstRemovedEl = removedElements[0];
-          const prevIndex = prevElements.indexOf(firstRemovedEl);
+          let prevIndex = prevElements.indexOf(firstRemovedEl);
+          if (prevIndex === -1 && firstRemovedEl.id) {
+            prevIndex = prevElements.findIndex(el => el.id === firstRemovedEl.id);
+          }
 
           let targetElement: HTMLElement | null = null;
           if (prevIndex !== -1) {
