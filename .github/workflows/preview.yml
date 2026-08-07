@@ -117,12 +117,12 @@ jobs:
         run: |
           if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
             echo "CLOUDFLARE_API_TOKEN is empty. Starting local preview server for smoke tests instead of deploying to Cloudflare Pages."
-            pnpm run preview --port 4173 &
+            pnpm run preview &
             echo "SERVER_PID=$!" >> $GITHUB_ENV
-            echo "deployment-url=http://localhost:4173" >> $GITHUB_OUTPUT
+            echo "deployment-url=http://localhost:3000" >> $GITHUB_OUTPUT
             # Wait for local server to be ready
             for i in {1..30}; do
-              if curl -s http://localhost:4173 > /dev/null; then
+              if curl -s http://localhost:3000 > /dev/null; then
                 echo "Local preview server is ready!"
                 break
               fi
