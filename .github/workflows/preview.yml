@@ -115,6 +115,21 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "CLOUDFLARE_API_TOKEN is empty. Starting local preview server for smoke tests instead of deploying to Cloudflare Pages."
+            pnpm run preview --port 4173 &
+            echo "SERVER_PID=$!" >> $GITHUB_ENV
+            echo "deployment-url=http://localhost:4173" >> $GITHUB_OUTPUT
+            # Wait for local server to be ready
+            for i in {1..30}; do
+              if curl -s http://localhost:4173 > /dev/null; then
+                echo "Local preview server is ready!"
+                break
+              fi
+              sleep 1
+            done
+            exit 0
+          fi
           echo "Deploying preview to Cloudflare Pages..."
           pnpm exec wrangler pages deploy dist/client --project-name=qrcraftly --branch=pr-${{ github.event.pull_request.number }} > deploy_output.txt 2>&1 || { cat deploy_output.txt && exit 1; }
           cat deploy_output.txt
@@ -182,7 +197,11 @@ jobs:
 
             let body = `### 🚀 Cloudflare Pages Preview Deployment\n\n`;
             if (deployOutcome === 'success') {
-              body += `- **Staging URL**: [${deploymentUrl}](${deploymentUrl})\n`;
+              if (deploymentUrl.includes('localhost')) {
+                body += `- **Staging URL**: *Localhost Preview* (Wrangler deploy bypassed; running smoke tests locally)\n`;
+              } else {
+                body += `- **Staging URL**: [${deploymentUrl}](${deploymentUrl})\n`;
+              }
             } else {
               body += `- **Staging URL**: *Unavailable*\n`;
             }
@@ -206,6 +225,14 @@ jobs:
                 body,
               });
             }
+
+      - name: Stop Local Server
+        if: always()
+        run: |
+          if [ -n "$SERVER_PID" ]; then
+            echo "Stopping local preview server (PID: $SERVER_PID)..."
+            kill $SERVER_PID || true
+          fi
 
   decommission-preview:
     name: Decommission Preview Staging
