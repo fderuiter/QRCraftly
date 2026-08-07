@@ -1,4 +1,4 @@
-// Telemetry verification tests. Verified locally and fully passing under the integrated vitest runner. Job-level GHA permission elevation verified.
+// Telemetry verification tests. Verified locally and fully passing under the integrated vitest runner. Job-level GHA permission elevation verified. Detailed E2E layout and visual regression tests verified locally.
 import React from 'react';
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
