@@ -63,13 +63,109 @@ export const EmailContract: QRGeneratorContract<EmailData> = {
   matches: (raw: string) => ValidationEngine.identifyProtocol(raw) === QRType.EMAIL,
   validate: (raw: string) => {
     const violations: string[] = [];
-    let emailPart = raw;
-    if (emailPart.toLowerCase().startsWith('mailto:')) {
-      emailPart = emailPart.substring(7).split('?')[0];
+    const trimmed = raw.trim();
+    if (!trimmed) {
+      violations.push('EMAIL_STRUCTURE_VIOLATION');
+      return violations;
     }
-    if (!ValidationEngine.CONTAINMENT_PROFILES.EMAIL.test(emailPart)) {
+
+    const parsed = parseProtocol(trimmed);
+    if (!parsed) {
+      // Fallback for raw email addresses
+      if (!ValidationEngine.CONTAINMENT_PROFILES.EMAIL.test(trimmed)) {
+        violations.push('EMAIL_STRUCTURE_VIOLATION');
+      }
+      return violations;
+    }
+
+    // Check scheme validity
+    if (parsed.scheme !== 'mailto' && parsed.scheme !== 'matmsg') {
+      violations.push('EMAIL_STRUCTURE_VIOLATION');
+      return violations;
+    }
+
+    // Validate email address
+    if (!parsed.path || !ValidationEngine.CONTAINMENT_PROFILES.EMAIL.test(parsed.path)) {
       violations.push('EMAIL_STRUCTURE_VIOLATION');
     }
-    return violations;
+
+    // Deep metadata delimiter validation
+    if (parsed.scheme === 'matmsg') {
+      const content = trimmed.substring(7);
+
+      // Helper to split by unescaped semicolons
+      const splitByUnescapedSemicolons = (str: string): string[] => {
+        const result: string[] = [];
+        let current = '';
+        for (let i = 0; i < str.length; i++) {
+          const char = str[i];
+          if (char === ';') {
+            let backslashCount = 0;
+            let j = i - 1;
+            while (j >= 0 && str[j] === '\\') {
+              backslashCount++;
+              j--;
+            }
+            if (backslashCount % 2 === 0) {
+              result.push(current);
+              current = '';
+            } else {
+              current += ';';
+            }
+          } else {
+            current += char;
+          }
+        }
+        result.push(current);
+        return result;
+      };
+
+      const segments = splitByUnescapedSemicolons(content);
+      while (segments.length > 0 && segments[segments.length - 1].trim() === '') {
+        segments.pop();
+      }
+
+      const KNOWN_KEYS = new Set(['TO', 'SUB', 'BODY']);
+      for (const segment of segments) {
+        const colonIndex = segment.indexOf(':');
+        if (colonIndex <= 0) {
+          violations.push('DELIMITER_VIOLATION');
+          break;
+        }
+        const key = segment.substring(0, colonIndex).toUpperCase();
+        if (!KNOWN_KEYS.has(key)) {
+          violations.push('DELIMITER_VIOLATION');
+          break;
+        }
+      }
+    } else if (parsed.scheme === 'mailto') {
+      const queryIdx = trimmed.indexOf('?');
+      if (queryIdx !== -1) {
+        const query = trimmed.substring(queryIdx + 1);
+        // Second '?' in query indicates unescaped delimiter
+        if (query.includes('?')) {
+          violations.push('DELIMITER_VIOLATION');
+        } else {
+          // If query parameters have keys other than subject or body, or empty keys, it indicates unescaped '&' or malformed parameters
+          try {
+            const urlParams = new URLSearchParams(query);
+            urlParams.forEach((_, key) => {
+              const lowerKey = key.toLowerCase();
+              if (lowerKey !== 'subject' && lowerKey !== 'body') {
+                violations.push('DELIMITER_VIOLATION');
+              }
+            });
+            if (query.startsWith('&') || query.endsWith('&') || query.includes('&&')) {
+              violations.push('DELIMITER_VIOLATION');
+            }
+          } catch (_e) {
+            violations.push('DELIMITER_VIOLATION');
+          }
+        }
+      }
+    }
+
+    // Deduplicate violations
+    return Array.from(new Set(violations));
   },
 };

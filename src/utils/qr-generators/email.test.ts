@@ -64,4 +64,42 @@ describe('Email generator', () => {
     // Non-mailto starting
     expect(EmailContract.validate?.('invalid_email')).toEqual(['EMAIL_STRUCTURE_VIOLATION']);
   });
+
+  it('deeply validates standard mailto protocols and metadata', () => {
+    // Valid standard mailto
+    expect(EmailContract.validate?.('mailto:test@example.com?subject=Hello&body=World')).toEqual([]);
+    
+    // Valid mailto with no query parameters
+    expect(EmailContract.validate?.('mailto:test@example.com')).toEqual([]);
+
+    // Mailto with invalid query parameter key (unsupported/malicious parameter injection)
+    expect(EmailContract.validate?.('mailto:test@example.com?subject=Hello&unsupported=value')).toEqual(['DELIMITER_VIOLATION']);
+
+    // Mailto with double ? (unescaped delimiter)
+    expect(EmailContract.validate?.('mailto:test@example.com?subject=Hello?world')).toEqual(['DELIMITER_VIOLATION']);
+
+    // Mailto with unescaped & parameter issues (e.g. trailing & or empty parameter)
+    expect(EmailContract.validate?.('mailto:test@example.com?subject=Hello&')).toEqual(['DELIMITER_VIOLATION']);
+    expect(EmailContract.validate?.('mailto:test@example.com?subject=Hello&&body=World')).toEqual(['DELIMITER_VIOLATION']);
+  });
+
+  it('deeply validates MATMSG protocols and metadata', () => {
+    // Compliant MATMSG payload passes validation
+    expect(EmailContract.validate?.('MATMSG:TO:test@example.com;SUB:Hello World;BODY:How are you?;;')).toEqual([]);
+    
+    // Compliant MATMSG payload with escaped semicolons passes validation
+    expect(EmailContract.validate?.('MATMSG:TO:test@example.com;SUB:Subject with \\; escaped semicolon;BODY:Hello\\; World;;')).toEqual([]);
+
+    // Invalid email address embedded in MATMSG triggers EMAIL_STRUCTURE_VIOLATION
+    expect(EmailContract.validate?.('MATMSG:TO:invalid_email;SUB:Hello;BODY:World;;')).toEqual(['EMAIL_STRUCTURE_VIOLATION']);
+
+    // Missing email in MATMSG triggers EMAIL_STRUCTURE_VIOLATION
+    expect(EmailContract.validate?.('MATMSG:SUB:Hello;BODY:World;;')).toEqual(['EMAIL_STRUCTURE_VIOLATION']);
+
+    // Unescaped semicolon delimiter in MATMSG triggers DELIMITER_VIOLATION (because it splits into a segment that doesn't start with TO, SUB, or BODY)
+    expect(EmailContract.validate?.('MATMSG:TO:test@example.com;SUB:Hello;World;BODY:How are you?;;')).toEqual(['DELIMITER_VIOLATION']);
+
+    // Invalid/malicious key in MATMSG block triggers DELIMITER_VIOLATION
+    expect(EmailContract.validate?.('MATMSG:TO:test@example.com;INJECTED:value;SUB:Hello;;')).toEqual(['DELIMITER_VIOLATION']);
+  });
 });
