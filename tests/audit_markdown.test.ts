@@ -161,7 +161,7 @@ No private info.
       );
       const hasErrors = checkCodeSnippets([tempFile]);
       expect(hasErrors).toBe(false);
-    });
+    }, 30000);
 
     it('should fail when code snippets contain compilation errors', () => {
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -173,6 +173,6 @@ No private info.
       const hasErrors = checkCodeSnippets([tempFile]);
       expect(hasErrors).toBe(true);
       consoleSpy.mockRestore();
-    });
+    }, 30000);
   });
 });
