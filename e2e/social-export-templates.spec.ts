@@ -387,6 +387,7 @@ test.describe('SVG download', () => {
 
   test('SVG download in Story format still produces a download', async ({ page }) => {
     await page.getByRole('button', { name: /Select Story format/i }).click();
+    await page.waitForTimeout(500);
 
     const [download] = await Promise.all([
       page.waitForEvent('download'),
@@ -443,6 +444,7 @@ test.describe('PNG download', () => {
 
   test('PNG download in Portrait format triggers a download', async ({ page }) => {
     await page.getByRole('button', { name: /Select Portrait format/i }).click();
+    await page.waitForTimeout(500);
 
     const [download] = await Promise.all([
       page.waitForEvent('download'),
