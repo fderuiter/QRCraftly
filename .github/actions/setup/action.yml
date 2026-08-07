@@ -25,24 +25,19 @@ runs:
     - name: Configure pnpm and Environment Variables
       run: |
         echo "pnpm_config_store_dir=$HOME/.pnpm-store" >> $GITHUB_ENV
-        echo "PNPM_HOME=$HOME/.pnpm-global" >> $GITHUB_ENV
       shell: bash
 
-    - name: Cache Pnpm Store & Global Binaries
+    - name: Cache Pnpm Store
       uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
       with:
-        path: |
-          ~/.pnpm-store
-          ~/.pnpm-global
-        key: ${{ runner.os }}-pnpm-store-global-v19-${{ hashFiles('**/pnpm-lock.yaml') }}
+        path: ~/.pnpm-store
+        key: ${{ runner.os }}-pnpm-store-v20-${{ hashFiles('**/pnpm-lock.yaml') }}
         restore-keys: |
-          ${{ runner.os }}-pnpm-store-global-v19-
+          ${{ runner.os }}-pnpm-store-v20-
 
-    - name: Install pnpm globally via prefix-isolated npm
+    - name: Install pnpm globally
       run: |
-        mkdir -p ~/.pnpm-global
-        npm install -g pnpm@11.1.3 --prefix ~/.pnpm-global
-        echo "$HOME/.pnpm-global/bin" >> $GITHUB_PATH
+        npm install -g pnpm@11.1.3
       shell: bash
 
     - name: Install Dependencies
