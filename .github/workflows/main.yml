@@ -165,7 +165,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: write # Required for posting the resource quota comment
+      pull-requests: write # Required for posting comments
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -199,32 +199,6 @@ jobs:
               repo: context.repo.repo,
               body: report
             });
-
-      # UPLOAD ARTIFACT for Lighthouse and Deployment
-      - name: Upload Build Artifact
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: dist
-          path: dist
-          retention-days: 1
-
-  # JOB 6: Lighthouse (Consumes Build Artifact)
-  lighthouse:
-    name: Lighthouse CI
-    needs: build
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: write # Required for Lighthouse to comment
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      # DOWNLOAD ARTIFACT
-      - name: Download Build Artifact
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
-          name: dist
-          path: dist
 
       - name: Run Lighthouse CI
         id: lighthouse_audit
@@ -310,9 +284,17 @@ jobs:
               });
             }
 
+      # UPLOAD ARTIFACT for Deployment
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: dist
+          path: dist
+          retention-days: 1
+
   deploy:
     name: Deploy
-    needs: [quality, test, e2e, build, lighthouse]
+    needs: [quality, test, e2e, build]
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && startsWith(github.event.head_commit.message, 'Revert'))
     concurrency:
       group: production-deployment
