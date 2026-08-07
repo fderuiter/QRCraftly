@@ -9,6 +9,7 @@ permissions:
   contents: read
   pull-requests: write
   statuses: write
+  deployments: write
 
 # Cancel in-progress runs on new commits to the same pull request
 concurrency:
