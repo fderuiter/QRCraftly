@@ -22,21 +22,16 @@ runs:
       with:
         node-version: ${{ inputs.node-version }}
 
-    - name: Install pnpm via npm with local prefix
-      run: |
-        npm install -g pnpm@11.1.3 --prefix=$HOME/.local
-        echo "$HOME/.local/bin" >> $GITHUB_PATH
-      shell: bash
-
-    - name: Configure pnpm store path
-      run: |
-        pnpm config set store-dir ~/.pnpm-store
-      shell: bash
+    - name: Install pnpm
+      uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+      with:
+        version: 11.1.3
+        run_install: false
 
     - name: Cache pnpm store
       uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
       with:
-        path: ~/.pnpm-store
+        path: ~/.local/share/pnpm/store
         key: ${{ runner.os }}-pnpm-store-v11-${{ hashFiles('**/pnpm-lock.yaml') }}
         restore-keys: |
           ${{ runner.os }}-pnpm-store-v11-
