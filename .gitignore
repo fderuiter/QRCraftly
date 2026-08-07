@@ -7,6 +7,8 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 deploy_output.txt
+.wrangler
+worker-configuration.d.ts
 
 
 node_modules
