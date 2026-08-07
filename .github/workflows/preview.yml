@@ -59,6 +59,7 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: pages deploy dist/client --project-name=qrcraftly --branch=pr-${{ github.event.pull_request.number }}
+          packageManager: npm
 
       - name: Install Playwright Browsers
         run: pnpm exec playwright install --with-deps chromium
