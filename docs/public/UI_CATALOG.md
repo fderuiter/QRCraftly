@@ -58,7 +58,7 @@ Unified appearance control modules that manage and present customization options
 - **PatternControls** (`PatternControls.tsx`): Layout and visual selectors allowing users to toggle through classic, rounded, or custom pattern templates.
 - **ColorControls** (`ColorControls.tsx`): Consolidates pickers and preset buttons for foreground, background, and corner eye accents.
 - **LogoControls** (`LogoControls.tsx`): Coordinates uploading custom logos, configuring scaling boundaries, and adjusting background-mask thresholds.
-- **BorderControls** (`BorderControls.tsx`): Controls options for border thickness, padding, and corner radius around outputs.
+- **BorderControls** (`BorderControls.tsx` / `BorderControls.test.tsx`): Controls options for border thickness, padding, and corner radius around outputs.
 - **LayoutControls** (`LayoutControls.tsx` / `LayoutControls.test.tsx`): Controls size, padding, margin, and output format.
 - **AdvancedControls** (`AdvancedControls.tsx`): Advanced visual overrides such as grid density and scannability modifiers.
 - **ContrastWarning** (`ContrastWarning.tsx`): Dynamic accessibility banner that displays contrast warnings if combinations fall below WCAG parameters.
