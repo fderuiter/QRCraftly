@@ -1,4 +1,4 @@
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -55,7 +55,7 @@ describe('Sitemap Environment-Level Variable Resolution', () => {
 
   it('should use fallback domain when no VITE_DOMAIN environment variable or .env file is configured', () => {
     // Run the sitemap script with empty environment for VITE_DOMAIN
-    execSync(`node ${sitemapScriptPath}`, {
+    execFileSync('node', [sitemapScriptPath], {
       env: {
         ...process.env,
         VITE_DOMAIN: '',
@@ -71,7 +71,7 @@ describe('Sitemap Environment-Level Variable Resolution', () => {
 
   it('should resolve and apply a custom staging domain via process.env', () => {
     // Run the sitemap script with VITE_DOMAIN set in env
-    execSync(`node ${sitemapScriptPath}`, {
+    execFileSync('node', [sitemapScriptPath], {
       env: {
         ...process.env,
         VITE_DOMAIN: 'https://staging.qrcraftly.net',
@@ -88,7 +88,7 @@ describe('Sitemap Environment-Level Variable Resolution', () => {
 
   it('should sanitize and strip any trailing slashes from the resolved VITE_DOMAIN', () => {
     // Run with trailing slashes in VITE_DOMAIN
-    execSync(`node ${sitemapScriptPath}`, {
+    execFileSync('node', [sitemapScriptPath], {
       env: {
         ...process.env,
         VITE_DOMAIN: 'https://staging-trailing.qrcraftly.net////',
@@ -119,7 +119,7 @@ describe('Sitemap Environment-Level Variable Resolution', () => {
       const cleanedEnv = { ...process.env };
       delete cleanedEnv.VITE_DOMAIN;
 
-      execSync(`node ${sitemapScriptPath}`, {
+      execFileSync('node', [sitemapScriptPath], {
         env: {
           ...cleanedEnv,
           NODE_ENV: 'production'
