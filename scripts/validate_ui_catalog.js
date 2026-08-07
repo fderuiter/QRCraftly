@@ -10,59 +10,77 @@ const repoRoot = path.join(__dirname, '..');
 const DEFAULT_UI_DIR = path.join(repoRoot, 'src/components/ui');
 const DEFAULT_CATALOG_PATH = path.join(repoRoot, 'docs/public/UI_CATALOG.md');
 
+const TRACKED_DIRS = [
+  'src/components/ui',
+  'src/components/inputs',
+  'src/components/style-controls'
+];
+
 /**
- * Validates that all user-facing UI components (.tsx files in src/components/ui/)
+ * Validates that all user-facing UI components (.tsx files in src/components/ui/, src/components/inputs/, and src/components/style-controls/)
  * are documented in docs/public/UI_CATALOG.md with correct file references and descriptions.
  * 
- * @param {string} uiDir Absolute path to the UI directory
+ * @param {string|string[]} uiDir Absolute path(s) to the UI directory
  * @param {string} catalogPath Absolute path to the UI_CATALOG.md file
  * @returns {string[]} List of validation error messages
  */
 export function validateCatalog(uiDir = DEFAULT_UI_DIR, catalogPath = DEFAULT_CATALOG_PATH) {
   const errors = [];
 
-  if (!fs.existsSync(uiDir)) {
-    errors.push(`UI directory does not exist: ${uiDir}`);
-    return errors;
-  }
   if (!fs.existsSync(catalogPath)) {
     errors.push(`Catalog file does not exist: ${catalogPath}`);
     return errors;
   }
 
-  // 1. Discover all UI components (.tsx files) and exclude test files (.test.tsx)
-  const files = fs.readdirSync(uiDir);
-  const componentFiles = files.filter(file => file.endsWith('.tsx') && !file.endsWith('.test.tsx'));
+  let directories = [];
+  if (uiDir === DEFAULT_UI_DIR) {
+    directories = TRACKED_DIRS.map(dir => path.join(repoRoot, dir));
+  } else if (Array.isArray(uiDir)) {
+    directories = uiDir;
+  } else {
+    directories = [uiDir];
+  }
 
-  // 2. Read the catalog file
+  // Read the catalog file
   const catalogContent = fs.readFileSync(catalogPath, 'utf8');
   const catalogLines = catalogContent.split('\n');
 
-  // 3. Verify each discovered component
-  for (const componentFile of componentFiles) {
-    const componentLine = catalogLines.find(line => line.includes(`\`${componentFile}\``));
-
-    if (!componentLine) {
-      errors.push(`UI component '${componentFile}' is missing from the catalog (${path.basename(catalogPath)}).`);
+  for (const dir of directories) {
+    if (!fs.existsSync(dir)) {
+      errors.push(`UI directory does not exist: ${dir}`);
       continue;
     }
 
-    // Verify correct companion test reference if the test file exists on disk
-    const testFile = componentFile.replace('.tsx', '.test.tsx');
-    const testFileExists = fs.existsSync(path.join(uiDir, testFile));
+    // 1. Discover all UI components (.tsx files) and exclude test files (.test.tsx)
+    const files = fs.readdirSync(dir);
+    const componentFiles = files.filter(file => file.endsWith('.tsx') && !file.endsWith('.test.tsx'));
 
-    if (testFileExists && !componentLine.includes(`\`${testFile}\``)) {
-      errors.push(`UI component '${componentFile}' has a companion test file '${testFile}' on disk, but it is not referenced in the catalog entry.`);
-    }
+    // 2. Verify each discovered component
+    for (const componentFile of componentFiles) {
+      const componentLine = catalogLines.find(line => line.includes(`\`${componentFile}\``));
 
-    // Verify functional description exists
-    const colonIndex = componentLine.indexOf('):');
-    if (colonIndex === -1) {
-      errors.push(`UI component '${componentFile}' catalog entry is missing or incorrectly formatted (expected '):' before description).`);
-    } else {
-      const description = componentLine.slice(colonIndex + 2).trim();
-      if (description.length < 10) {
-        errors.push(`UI component '${componentFile}' has an insufficient or missing functional description (must be at least 10 characters).`);
+      if (!componentLine) {
+        errors.push(`UI component '${componentFile}' is missing from the catalog (${path.basename(catalogPath)}).`);
+        continue;
+      }
+
+      // Verify correct companion test reference if the test file exists on disk
+      const testFile = componentFile.replace('.tsx', '.test.tsx');
+      const testFileExists = fs.existsSync(path.join(dir, testFile));
+
+      if (testFileExists && !componentLine.includes(`\`${testFile}\``)) {
+        errors.push(`UI component '${componentFile}' has a companion test file '${testFile}' on disk, but it is not referenced in the catalog entry.`);
+      }
+
+      // Verify functional description exists
+      const colonIndex = componentLine.indexOf('):');
+      if (colonIndex === -1) {
+        errors.push(`UI component '${componentFile}' catalog entry is missing or incorrectly formatted (expected '):' before description).`);
+      } else {
+        const description = componentLine.slice(colonIndex + 2).trim();
+        if (description.length < 10) {
+          errors.push(`UI component '${componentFile}' has an insufficient or missing functional description (must be at least 10 characters).`);
+        }
       }
     }
   }
@@ -72,7 +90,7 @@ export function validateCatalog(uiDir = DEFAULT_UI_DIR, catalogPath = DEFAULT_CA
 
 /**
  * Checks for missing catalog updates in the current changed/staged files.
- * If any UI component files under src/components/ui/ are modified,
+ * If any UI component files under tracked directories are modified,
  * the UI_CATALOG.md file must be modified/updated in the same change set.
  * 
  * @param {Set<string>} modifiedFiles Set of relative or normalized modified file paths
@@ -81,10 +99,11 @@ export function validateCatalog(uiDir = DEFAULT_UI_DIR, catalogPath = DEFAULT_CA
 export function checkLineage(modifiedFiles) {
   const missingUpdates = [];
   
-  // Find modified UI components (.tsx or .test.tsx in src/components/ui/)
+  // Find modified UI components (.tsx or .test.tsx in tracked directories)
   const changedUiFiles = Array.from(modifiedFiles).filter(file => {
     const normalized = file.replace(/\\/g, '/');
-    return normalized.startsWith('src/components/ui/') && (normalized.endsWith('.tsx') || normalized.endsWith('.test.tsx'));
+    const isInTrackedDir = TRACKED_DIRS.some(dir => normalized.startsWith(dir + '/'));
+    return isInTrackedDir && (normalized.endsWith('.tsx') || normalized.endsWith('.test.tsx'));
   });
 
   if (changedUiFiles.length > 0) {

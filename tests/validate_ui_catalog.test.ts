@@ -86,6 +86,32 @@ describe('UI Catalog Validator and Lineage Sync Checks', () => {
       const errors = validateCatalog(mockUiDir, mockCatalogPath);
       expect(errors).toContain("UI component 'TestButton.tsx' catalog entry is missing or incorrectly formatted (expected '):' before description).");
     });
+
+    it('should support validating multiple tracked directories', () => {
+      const mockUiDir2 = path.join(tempTestDir, 'ui_test');
+      const mockInputsDir = path.join(tempTestDir, 'inputs_test');
+      fs.mkdirSync(mockUiDir2, { recursive: true });
+      fs.mkdirSync(mockInputsDir, { recursive: true });
+
+      fs.writeFileSync(path.join(mockUiDir2, 'TestButton.tsx'), 'export const TestButton = () => <button />;');
+      fs.writeFileSync(path.join(mockInputsDir, 'TestInput.tsx'), 'export const TestInput = () => <input />;');
+
+      const mockCatalogContent = `
+# UI Catalog
+- **TestButton** (\`TestButton.tsx\`): A button description.
+- **TestInput** (\`TestInput.tsx\`): An input description.
+`;
+      const customCatalogPath = path.join(tempTestDir, 'CUSTOM_CATALOG.md');
+      fs.writeFileSync(customCatalogPath, mockCatalogContent);
+
+      const errors = validateCatalog([mockUiDir2, mockInputsDir], customCatalogPath);
+      expect(errors).toHaveLength(0);
+
+      // Clean up
+      fs.rmSync(mockUiDir2, { recursive: true, force: true });
+      fs.rmSync(mockInputsDir, { recursive: true, force: true });
+      fs.unlinkSync(customCatalogPath);
+    });
   });
 
   describe('checkLineage() Git History Checks', () => {
@@ -111,6 +137,28 @@ describe('UI Catalog Validator and Lineage Sync Checks', () => {
       });
     });
 
+    it('should fail validation when an inputs component file is modified without the catalog file', () => {
+      const modified = new Set(['src/components/inputs/TextInput.tsx']);
+      const missing = checkLineage(modified);
+
+      expect(missing).toHaveLength(1);
+      expect(missing[0]).toEqual({
+        codeFile: 'src/components/inputs/TextInput.tsx',
+        catalogFile: 'docs/public/UI_CATALOG.md'
+      });
+    });
+
+    it('should fail validation when a style-controls component file is modified without the catalog file', () => {
+      const modified = new Set(['src/components/style-controls/BorderControls.tsx']);
+      const missing = checkLineage(modified);
+
+      expect(missing).toHaveLength(1);
+      expect(missing[0]).toEqual({
+        codeFile: 'src/components/style-controls/BorderControls.tsx',
+        catalogFile: 'docs/public/UI_CATALOG.md'
+      });
+    });
+
     it('should pass validation when both a UI component file and the catalog file are modified together', () => {
       const modified = new Set(['src/components/ui/Accordion.tsx', 'docs/public/UI_CATALOG.md']);
       const missing = checkLineage(modified);
@@ -119,7 +167,7 @@ describe('UI Catalog Validator and Lineage Sync Checks', () => {
     });
 
     it('should pass validation when no UI component files are modified', () => {
-      const modified = new Set(['src/utils/colorUtils.ts', 'src/components/inputs/TextInput.tsx']);
+      const modified = new Set(['src/utils/colorUtils.ts', 'src/components/inputs/README.md']);
       const missing = checkLineage(modified);
 
       expect(missing).toHaveLength(0);
