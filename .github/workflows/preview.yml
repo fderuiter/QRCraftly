@@ -1,7 +1,7 @@
 name: PR Preview Deployments & Smoke Tests
 
 on:
-  pull_request:
+  pull_request_target:
     branches: [main]
     types: [opened, synchronize, reopened, closed]
 
@@ -24,10 +24,27 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
 
       - name: Setup Environment
         uses: ./.github/actions/setup
+
+      - name: Debug Cloudflare Credentials Presence
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "CLOUDFLARE_API_TOKEN is empty"
+          else
+            echo "CLOUDFLARE_API_TOKEN is present (length: ${#CLOUDFLARE_API_TOKEN})"
+          fi
+          if [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "CLOUDFLARE_ACCOUNT_ID is empty"
+          else
+            echo "CLOUDFLARE_ACCOUNT_ID is present (length: ${#CLOUDFLARE_ACCOUNT_ID})"
+          fi
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
       - name: Verify Package Manager and Toolchain Pins
         run: |
