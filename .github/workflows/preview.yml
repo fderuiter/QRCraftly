@@ -29,8 +29,46 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
 
-      - name: Setup Environment
-        uses: ./.github/actions/setup
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "22.14.0"
+
+      - name: Configure pnpm and Environment Variables
+        run: |
+          echo "pnpm_config_store_dir=$HOME/.pnpm-store" >> $GITHUB_ENV
+
+      - name: Cache Pnpm Store
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ~/.pnpm-store
+          key: ${{ runner.os }}-pnpm-store-v20-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-v20-
+
+      - name: Install pnpm globally
+        run: |
+          npm install -g pnpm@11.1.3
+
+      - name: Workspace Diagnostic & File List
+        run: |
+          echo "=== Node & NPM Version ==="
+          node -v
+          npm -v
+          echo "=== Workspace Directory ==="
+          pwd
+          ls -la
+          echo "=== Check lockfile exists ==="
+          if [ -f "pnpm-lock.yaml" ]; then
+            echo "pnpm-lock.yaml exists"
+          else
+            echo "pnpm-lock.yaml DOES NOT EXIST"
+          fi
+
+      - name: Install Dependencies
+        run: |
+          echo "Running pnpm install --frozen-lockfile..."
+          pnpm install --frozen-lockfile
 
       - name: Debug Cloudflare Credentials Presence
         run: |
