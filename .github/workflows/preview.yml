@@ -10,6 +10,7 @@ permissions:
   pull-requests: write
   statuses: write
   deployments: write
+  actions: write
 
 # Cancel in-progress runs on new commits to the same pull request
 concurrency:
@@ -25,8 +26,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          repository: ${{ github.event.pull_request.head.repo.full_name }}
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: refs/pull/${{ github.event.pull_request.number }}/head
           fetch-depth: 0
 
       - name: Set up Node.js
