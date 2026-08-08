@@ -47,7 +47,7 @@ describe('Social QR Code Page', () => {
     const profileObj = json['@graph'].find((item: any) => item['@type'] === 'ProfilePage');
     expect(profileObj).toBeUndefined();
 
-    const appObj = json['@graph'].find((item: any) => item['@type'] === 'WebApplication');
+    const appObj = json['@graph'].find((item: any) => Array.isArray(item['@type']) && item['@type'].includes('SoftwareApplication') && item['@type'].includes('WebApplication'));
     expect(appObj).toBeDefined();
   });
 });

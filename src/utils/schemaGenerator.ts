@@ -32,12 +32,15 @@ export function generateSchema(content: ToolContent, resolvedDomain?: string, re
     };
   }
 
+  const typeValue = content.schemaType !== undefined ? content.schemaType : ["SoftwareApplication", "WebApplication"];
+  const categoryValue = content.schemaCategory !== undefined ? content.schemaCategory : "UtilitiesApplication";
+
   const graph: any[] = [
     {
-      "@type": "WebApplication",
+      "@type": typeValue,
       "name": content.name,
       "url": publicUrl,
-      "applicationCategory": "Utilities",
+      "applicationCategory": categoryValue,
       "operatingSystem": "All",
       "softwareVersion": "0.1.0",
       "image": `${domain}/og-image.png`,

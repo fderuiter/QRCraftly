@@ -47,7 +47,7 @@ describe('Location QR Code Page', () => {
     const placeObj = json['@graph'].find((item: any) => item['@type'] === 'Place');
     expect(placeObj).toBeUndefined();
 
-    const appObj = json['@graph'].find((item: any) => item['@type'] === 'WebApplication');
+    const appObj = json['@graph'].find((item: any) => Array.isArray(item['@type']) && item['@type'].includes('SoftwareApplication') && item['@type'].includes('WebApplication'));
     expect(appObj).toBeDefined();
   });
 });

@@ -39,7 +39,7 @@ describe('Home Page', () => {
     const graph = json['@graph'];
     expect(Array.isArray(graph)).toBe(true);
 
-    const webApp = graph.find((item: any) => item['@type'] === 'WebApplication');
+    const webApp = graph.find((item: any) => Array.isArray(item['@type']) && item['@type'].includes('SoftwareApplication') && item['@type'].includes('WebApplication'));
     expect(webApp).toBeDefined();
     expect(webApp.name).toBe('QRCraftly');
     expect(webApp.author).toEqual({

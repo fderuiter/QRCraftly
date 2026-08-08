@@ -48,7 +48,7 @@ describe('WiFi QR Code Page', () => {
     expect(json['@graph']).toBeDefined();
     expect(json['@graph']).toHaveLength(2); // WebApplication and HowTo
 
-    const webApp = json['@graph'].find((item: any) => item['@type'] === 'WebApplication');
+    const webApp = json['@graph'].find((item: any) => Array.isArray(item['@type']) && item['@type'].includes('SoftwareApplication') && item['@type'].includes('WebApplication'));
     expect(webApp).toBeDefined();
 
     // Check for critical SEO properties

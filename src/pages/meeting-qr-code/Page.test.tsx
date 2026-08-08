@@ -47,7 +47,7 @@ describe('Meeting QR Code Page', () => {
     const eventObj = json['@graph'].find((item: any) => item['@type'] === 'Event');
     expect(eventObj).toBeUndefined();
 
-    const appObj = json['@graph'].find((item: any) => item['@type'] === 'WebApplication');
+    const appObj = json['@graph'].find((item: any) => Array.isArray(item['@type']) && item['@type'].includes('SoftwareApplication') && item['@type'].includes('WebApplication'));
     expect(appObj).toBeDefined();
   });
 });

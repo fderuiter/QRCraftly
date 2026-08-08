@@ -47,15 +47,16 @@ describe('schemaGenerator', () => {
     expect(schema['@graph'][1]['@type']).toBe('FAQPage');
   });
 
-  it('generates standard WebApplication schema for tool content', () => {
+  it('generates standard dual-type schema for tool content', () => {
     const schema = generateSchema(dummyContent);
     expect(schema).toBeDefined();
     expect(schema['@context']).toBe('https://schema.org');
     
-    // Check WebApplication
-    const app = schema['@graph'].find((g: any) => g['@type'] === 'WebApplication');
+    // Check dual-type app
+    const app = schema['@graph'].find((g: any) => Array.isArray(g['@type']) && g['@type'].includes('SoftwareApplication') && g['@type'].includes('WebApplication'));
     expect(app).toBeDefined();
     expect(app.name).toBe(dummyContent.name);
+    expect(app.applicationCategory).toBe('UtilitiesApplication');
     
     // Check HowTo
     const howTo = schema['@graph'].find((g: any) => g['@type'] === 'HowTo');
@@ -70,7 +71,7 @@ describe('schemaGenerator', () => {
 
   it('handles optional parameters resolvedDomain and requestPath', () => {
     const schema = generateSchema(dummyContent, 'https://test.domain.com', '/request-path');
-    const app = schema['@graph'].find((g: any) => g['@type'] === 'WebApplication');
+    const app = schema['@graph'].find((g: any) => Array.isArray(g['@type']) && g['@type'].includes('WebApplication'));
     expect(app.url).toContain('/request-path');
     expect(app.image).toBe('https://test.domain.com/og-image.png');
   });
@@ -124,7 +125,7 @@ describe('schemaGenerator', () => {
     const placeObjInEvent = eventSchema['@graph'].find((g: any) => g['@type'] === 'Place');
     expect(eventObj).toBeUndefined();
     expect(placeObjInEvent).toBeUndefined();
-    const eventApp = eventSchema['@graph'].find((g: any) => g['@type'] === 'WebApplication');
+    const eventApp = eventSchema['@graph'].find((g: any) => Array.isArray(g['@type']) && g['@type'].includes('WebApplication'));
     expect(eventApp).toBeDefined();
 
     const locationContent: ToolContent = {
@@ -137,7 +138,7 @@ describe('schemaGenerator', () => {
     const locationSchema = generateSchema(locationContent);
     const locationObj = locationSchema['@graph'].find((g: any) => g['@type'] === 'Place');
     expect(locationObj).toBeUndefined();
-    const locationApp = locationSchema['@graph'].find((g: any) => g['@type'] === 'WebApplication');
+    const locationApp = locationSchema['@graph'].find((g: any) => Array.isArray(g['@type']) && g['@type'].includes('WebApplication'));
     expect(locationApp).toBeDefined();
 
     const meetingContent: ToolContent = {
@@ -150,7 +151,7 @@ describe('schemaGenerator', () => {
     const meetingSchema = generateSchema(meetingContent);
     const meetingObj = meetingSchema['@graph'].find((g: any) => g['@type'] === 'Event');
     expect(meetingObj).toBeUndefined();
-    const meetingApp = meetingSchema['@graph'].find((g: any) => g['@type'] === 'WebApplication');
+    const meetingApp = meetingSchema['@graph'].find((g: any) => Array.isArray(g['@type']) && g['@type'].includes('WebApplication'));
     expect(meetingApp).toBeDefined();
 
     const socialContent: ToolContent = {
@@ -163,7 +164,31 @@ describe('schemaGenerator', () => {
     const socialSchema = generateSchema(socialContent);
     const socialObj = socialSchema['@graph'].find((g: any) => g['@type'] === 'ProfilePage');
     expect(socialObj).toBeUndefined();
-    const socialApp = socialSchema['@graph'].find((g: any) => g['@type'] === 'WebApplication');
+    const socialApp = socialSchema['@graph'].find((g: any) => Array.isArray(g['@type']) && g['@type'].includes('WebApplication'));
     expect(socialApp).toBeDefined();
+  });
+
+  it('supports schemaType and schemaCategory overrides directly from registry', () => {
+    // 1. Single string schemaType override
+    const overrideTypeString: ToolContent = {
+      ...dummyContent,
+      schemaType: 'SpecialApp',
+      schemaCategory: 'SpecialCategory'
+    };
+    const schema1 = generateSchema(overrideTypeString);
+    const app1 = schema1['@graph'].find((g: any) => g['@type'] === 'SpecialApp');
+    expect(app1).toBeDefined();
+    expect(app1.applicationCategory).toBe('SpecialCategory');
+
+    // 2. Array schemaType override
+    const overrideTypeArray: ToolContent = {
+      ...dummyContent,
+      schemaType: ['FirstType', 'SecondType'],
+      schemaCategory: 'AnotherCategory'
+    };
+    const schema2 = generateSchema(overrideTypeArray);
+    const app2 = schema2['@graph'].find((g: any) => Array.isArray(g['@type']) && g['@type'].includes('FirstType') && g['@type'].includes('SecondType'));
+    expect(app2).toBeDefined();
+    expect(app2.applicationCategory).toBe('AnotherCategory');
   });
 });
