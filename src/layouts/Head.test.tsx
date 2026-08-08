@@ -72,6 +72,25 @@ describe('HeadDefault', () => {
     expect(content).toContain("default-src 'self'");
   });
 
+  it('includes complete global organization schema metadata', () => {
+    render(<HeadDefault />, { container: document.head });
+
+    const scripts = document.head.querySelectorAll('script[type="application/ld+json"]');
+    const orgScript = Array.from(scripts).find(s => s.textContent?.includes('Organization'));
+    expect(orgScript).toBeDefined();
+
+    const data = JSON.parse(orgScript!.textContent!);
+    expect(data['@context']).toBe('https://schema.org');
+    
+    const org = data['@graph'].find((item: any) => item['@type'] === 'Organization');
+    expect(org).toBeDefined();
+    expect(org['@id']).toBe('https://qrcraftly.com/#organization');
+    expect(org.name).toBe('QRCraftly');
+    expect(org.description).toBe('Privacy-focused, client-side QR code generator.');
+    expect(org.slogan).toBe('Free. Secure. Open Source.');
+    expect(org.foundingDate).toBe('2025');
+  });
+
   it('includes Open Graph image dimensions', () => {
     const { container } = render(<HeadDefault />, { container: document.head });
 

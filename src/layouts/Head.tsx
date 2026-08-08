@@ -67,6 +67,9 @@ export default function HeadDefault() {
         "name": "QRCraftly",
         "url": resolvedDomain,
         "logo": `${resolvedDomain}/favicon.png`,
+        "description": "Privacy-focused, client-side QR code generator.",
+        "slogan": "Free. Secure. Open Source.",
+        "foundingDate": "2025",
         "sameAs": [
           "https://github.com/fderuiter/QRCraftly"
         ]
