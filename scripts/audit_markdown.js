@@ -128,7 +128,17 @@ export function verifyLinks(file, content, fileHeadings) {
         const parts = href.split('#');
         const relativeTargetFile = parts[0];
         const targetFilePathAbs = path.resolve(path.dirname(filePath), relativeTargetFile);
-        targetFile = path.relative(repoRoot, targetFilePathAbs);
+        
+        // Block path traversal and any link outside repository root
+        const relativeFromRoot = path.relative(repoRoot, targetFilePathAbs);
+        if (relativeFromRoot.startsWith('..') || path.isAbsolute(relativeFromRoot)) {
+          console.error(`Error in ${file}: Relative link '${href}' resolves to a path outside the repository root.`);
+          localHasErrors = true;
+          hasErrors = true;
+          return;
+        }
+
+        targetFile = relativeFromRoot;
         if (parts.length > 1) {
           targetHash = parts[1];
         }
@@ -175,8 +185,9 @@ export function verifyLinks(file, content, fileHeadings) {
 
 export function checkCodeSnippets(filesList) {
   let localHasErrors = false;
-  const tempFiles = [];
+  const virtualFiles = new Map();
   try {
+    let snippetIndex = 0;
     for (const file of filesList) {
       const filePath = path.join(repoRoot, file);
       if (!fs.existsSync(filePath)) continue;
@@ -191,11 +202,9 @@ export function checkCodeSnippets(filesList) {
           const lang = (token.lang || '').toLowerCase();
           if (['ts', 'tsx', 'typescript', 'typescriptreact'].includes(lang)) {
             const fileDir = path.dirname(filePath);
-            const tempFileName = `temp_snippet_${Math.random().toString(36).substring(2, 9)}.tsx`;
-            const tempFilePath = path.join(fileDir, tempFileName);
-            fs.writeFileSync(tempFilePath, token.text, 'utf-8');
-            tempFiles.push({
-              path: tempFilePath,
+            const tempFileName = `virtual_snippet_${snippetIndex++}.tsx`;
+            const tempFilePath = path.resolve(fileDir, tempFileName);
+            virtualFiles.set(tempFilePath, {
               file: file,
               lang: lang,
               text: token.text
@@ -205,7 +214,8 @@ export function checkCodeSnippets(filesList) {
       });
     }
 
-    if (tempFiles.length > 0) {
+    const fileNames = Array.from(virtualFiles.keys());
+    if (fileNames.length > 0) {
       const tsconfigPath = path.join(repoRoot, 'tsconfig.json');
       const readResult = ts.readConfigFile(tsconfigPath, ts.sys.readFile);
       if (readResult.error) {
@@ -225,8 +235,61 @@ export function checkCodeSnippets(filesList) {
           skipLibCheck: true,
         };
 
-        const fileNames = tempFiles.map(t => t.path);
-        const program = ts.createProgram(fileNames, compilerOptions);
+        const defaultHost = ts.createCompilerHost(compilerOptions);
+
+        const customHost = {
+          ...defaultHost,
+          fileExists(fileName) {
+            const normalizedPath = path.resolve(fileName);
+            if (virtualFiles.has(normalizedPath)) {
+              return true;
+            }
+            return defaultHost.fileExists(fileName);
+          },
+          readFile(fileName) {
+            const normalizedPath = path.resolve(fileName);
+            if (virtualFiles.has(normalizedPath)) {
+              return virtualFiles.get(normalizedPath).text;
+            }
+            return defaultHost.readFile(fileName);
+          },
+          getSourceFile(fileName, languageVersionOrOptions, onError, shouldCreateNewSourceFile) {
+            const normalizedPath = path.resolve(fileName);
+            if (virtualFiles.has(normalizedPath)) {
+              const virtualFileInfo = virtualFiles.get(normalizedPath);
+              if (!virtualFileInfo.sourceFile) {
+                const languageVersion = typeof languageVersionOrOptions === 'object'
+                  ? languageVersionOrOptions.target
+                  : languageVersionOrOptions;
+                virtualFileInfo.sourceFile = ts.createSourceFile(
+                  normalizedPath,
+                  virtualFileInfo.text,
+                  languageVersion || ts.ScriptTarget.Latest,
+                  true
+                );
+              }
+              return virtualFileInfo.sourceFile;
+            }
+            return defaultHost.getSourceFile(fileName, languageVersionOrOptions, onError, shouldCreateNewSourceFile);
+          },
+          writeFile(fileName, data, writeByteOrderMark, onError, sourceFiles) {
+            // No physical output files generated
+          },
+          directoryExists(directoryName) {
+            const normalizedDir = path.resolve(directoryName);
+            for (const virtualPath of virtualFiles.keys()) {
+              if (virtualPath.startsWith(normalizedDir)) {
+                return true;
+              }
+            }
+            if (defaultHost.directoryExists) {
+              return defaultHost.directoryExists(directoryName);
+            }
+            return false;
+          }
+        };
+
+        const program = ts.createProgram(fileNames, compilerOptions, customHost);
         const emitResult = program.emit();
 
         const allDiagnostics = ts
@@ -241,7 +304,7 @@ export function checkCodeSnippets(filesList) {
               const { line, character } = ts.getLineAndCharacterOfPosition(diagnostic.file, diagnostic.start);
               const message = ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n');
               const fileName = path.resolve(diagnostic.file.fileName);
-              const tempFileInfo = tempFiles.find(t => path.resolve(t.path) === fileName);
+              const tempFileInfo = virtualFiles.get(fileName);
               if (tempFileInfo) {
                 console.error(`Error in ${tempFileInfo.file}: TS type check error in snippet on line ${line + 1}, col ${character + 1}: ${message}`);
               } else {
@@ -258,16 +321,6 @@ export function checkCodeSnippets(filesList) {
     console.error('Error during TS snippet extraction or compilation:', err);
     localHasErrors = true;
     hasErrors = true;
-  } finally {
-    for (const temp of tempFiles) {
-      if (fs.existsSync(temp.path)) {
-        try {
-          fs.unlinkSync(temp.path);
-        } catch (err) {
-          console.error(`Failed to delete temp file ${temp.path}:`, err);
-        }
-      }
-    }
   }
   return localHasErrors;
 }
