@@ -46,6 +46,27 @@ describe('Metadata-Driven Frontmatter Filtering', () => {
       `---\ndraft: "true"\n---\n# Quoted Draft Document\n\nThis should also be excluded.`,
       'utf-8'
     );
+
+    // 5. Draft document with draft: yes
+    fs.writeFileSync(
+      path.join(tempDir, 'draft-yes-doc.md'),
+      `---\ndraft: yes\n---\n# Draft Yes Document\n\nThis should be excluded.`,
+      'utf-8'
+    );
+
+    // 6. Draft document with draft: true # review pending
+    fs.writeFileSync(
+      path.join(tempDir, 'draft-comment-doc.md'),
+      `---\ndraft: true # review pending\n---\n# Draft Comment Document\n\nThis should be excluded.`,
+      'utf-8'
+    );
+
+    // 7. Public document with draft: no
+    fs.writeFileSync(
+      path.join(tempDir, 'draft-no-doc.md'),
+      `---\ndraft: no\ntitle: "Draft No"\n---\n# Draft No Document\n\nThis should be included.`,
+      'utf-8'
+    );
   });
 
   afterAll(() => {
@@ -77,6 +98,42 @@ describe('Metadata-Driven Frontmatter Filtering', () => {
       expect(frontmatter.single).toBe('single-quoted');
       expect(frontmatter.double).toBe('double-quoted');
     });
+
+    it('should strip trailing inline comments correctly', () => {
+      const input = `---\ndraft: true # check this later\ntitle: "My Title #1" # inline comment\nauthor: 'Bob #2' # author comment\ntags: doc #\n---\nContent`;
+      const { frontmatter } = parseFrontmatter(input);
+      expect(frontmatter.draft).toBe(true);
+      expect(frontmatter.title).toBe('My Title #1');
+      expect(frontmatter.author).toBe('Bob #2');
+      expect(frontmatter.tags).toBe('doc');
+    });
+
+    it('should map YAML truthy representations to boolean true for draft key', () => {
+      const truthyVals = ['yes', 'YES', 'Yes', 'on', 'ON', 'On', '1', 'true', 'TRUE', 'True'];
+      for (const val of truthyVals) {
+        const input = `---\ndraft: ${val}\n---`;
+        const { frontmatter } = parseFrontmatter(input);
+        expect(frontmatter.draft).toBe(true);
+      }
+    });
+
+    it('should map YAML falsy representations to boolean false for draft key', () => {
+      const falsyVals = ['no', 'NO', 'No', 'off', 'OFF', 'Off', '0', 'false', 'FALSE', 'False'];
+      for (const val of falsyVals) {
+        const input = `---\ndraft: ${val}\n---`;
+        const { frontmatter } = parseFrontmatter(input);
+        expect(frontmatter.draft).toBe(false);
+      }
+    });
+
+    it('should preserve non-draft metadata keys without altering their types', () => {
+      const input = `---\ntitle: yes\nstatus: ON\nversion: 1\ntags: false\n---\nContent`;
+      const { frontmatter } = parseFrontmatter(input);
+      expect(frontmatter.title).toBe('yes');
+      expect(frontmatter.status).toBe('ON');
+      expect(frontmatter.version).toBe('1');
+      expect(frontmatter.tags).toBe(false);
+    });
   });
 
   describe('extractTitle Unit tests', () => {
@@ -102,14 +159,18 @@ describe('Metadata-Driven Frontmatter Filtering', () => {
 
       const compiledData = JSON.parse(fs.readFileSync(tempManifestPath, 'utf-8'));
       
-      // We expect only 2 documents to compile: public-doc and explicit-public-doc
-      expect(compiledData).toHaveLength(2);
+      // We expect 3 documents to compile: public-doc, explicit-public-doc, draft-no-doc
+      expect(compiledData).toHaveLength(3);
 
       const ids = compiledData.map((doc: { id: string }) => doc.id);
       expect(ids).toContain('public-doc');
       expect(ids).toContain('explicit-public-doc');
+      expect(ids).toContain('draft-no-doc');
+      
       expect(ids).not.toContain('draft-doc');
       expect(ids).not.toContain('quoted-draft-doc');
+      expect(ids).not.toContain('draft-yes-doc');
+      expect(ids).not.toContain('draft-comment-doc');
 
       // Verify content has frontmatter stripped for explicit-public-doc
       const explicitPub = compiledData.find((doc: { id: string }) => doc.id === 'explicit-public-doc');
