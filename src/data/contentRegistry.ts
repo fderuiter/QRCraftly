@@ -12,6 +12,8 @@ export interface ToolContent {
     steps: { name: string; text: string }[];
   };
   faqs?: { question: string; answer: string }[];
+  schemaType?: string | string[];
+  schemaCategory?: string;
 }
 
 export const contentRegistry: Record<string, ToolContent> = {
