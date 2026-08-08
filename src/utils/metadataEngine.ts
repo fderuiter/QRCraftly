@@ -26,7 +26,7 @@ export const resolveDomainForPath = (path: string): string => {
   return domain;
 };
 
-export const normalizeTrailingSlashes = (path: string): string => {
+const normalizeTrailingSlashes = (path: string): string => {
   if (!path) return '/';
   
   const qMarkIndex = path.indexOf('?');
