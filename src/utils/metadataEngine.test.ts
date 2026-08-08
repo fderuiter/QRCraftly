@@ -98,6 +98,33 @@ describe('metadataEngine', () => {
       vi.stubEnv('VITE_DOMAIN', 'https://qrcraftly.com');
       expect(resolvePublicUrl('/_subdomain/tenant/dashboard/')).toBe('https://tenant.qrcraftly.com/dashboard');
     });
+
+    it('normalizes multiple consecutive trailing slashes down to a single clean path', () => {
+      vi.stubEnv('VITE_DOMAIN', 'https://qrcraftly.com');
+      expect(resolvePublicUrl('/about//')).toBe('https://qrcraftly.com/about');
+      expect(resolvePublicUrl('/about///')).toBe('https://qrcraftly.com/about');
+      expect(resolvePublicUrl('/nested/path//')).toBe('https://qrcraftly.com/nested/path');
+    });
+
+    it('keeps root path intact and does not strip to empty string', () => {
+      vi.stubEnv('VITE_DOMAIN', 'https://qrcraftly.com');
+      expect(getSanitizedPath('//')).toBe('/');
+      expect(getSanitizedPath('///')).toBe('/');
+      expect(resolvePublicUrl('//')).toBe('https://qrcraftly.com');
+      expect(resolvePublicUrl('///')).toBe('https://qrcraftly.com');
+    });
+
+    it('works cleanly across different tenant subdomains with consecutive slashes', () => {
+      vi.stubEnv('VITE_DOMAIN', 'https://qrcraftly.com');
+      expect(resolvePublicUrl('/_subdomain/tenant/dashboard//')).toBe('https://tenant.qrcraftly.com/dashboard');
+    });
+
+    it('guarantees that path sanitization never alters query parameters, query keys, or URL hash fragments', () => {
+      vi.stubEnv('VITE_DOMAIN', 'https://qrcraftly.com');
+      expect(resolvePublicUrl('/about//?ref=sh')).toBe('https://qrcraftly.com/about?ref=sh');
+      expect(resolvePublicUrl('/about//#hash-fragment')).toBe('https://qrcraftly.com/about#hash-fragment');
+      expect(resolvePublicUrl('/about//?ref=sh#hash-fragment')).toBe('https://qrcraftly.com/about?ref=sh#hash-fragment');
+    });
   });
 
   describe('resolveImageUrl', () => {
