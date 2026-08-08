@@ -90,12 +90,20 @@ describe('audit_markdown', () => {
       const content = '[About](../about.md)';
       const fileHeadings = {};
 
-      const hasLinkErrors = verifyLinks('test.md', content, fileHeadings);
+      const hasLinkErrors = verifyLinks('docs/test.md', content, fileHeadings);
       expect(hasLinkErrors).toBe(false);
     });
 
     it('should flag relative file links when file does not exist', () => {
       const content = '[About](../missing.md)';
+      const fileHeadings = {};
+
+      const hasLinkErrors = verifyLinks('docs/test.md', content, fileHeadings);
+      expect(hasLinkErrors).toBe(true);
+    });
+
+    it('should block and flag any relative markdown link that resolves to a path outside the repository root', () => {
+      const content = '[Malicious Link](../../../../etc/passwd)';
       const fileHeadings = {};
 
       const hasLinkErrors = verifyLinks('test.md', content, fileHeadings);
@@ -206,7 +214,7 @@ No private info.
 
     it('should still validate and flag broken link targets inside draft documents', () => {
       const draftContent = `---\ndraft: true\n---\n# Draft Doc\n[Broken Target](../missing.md)`;
-      const hasLinkErrors = verifyLinks('draft.md', draftContent, {});
+      const hasLinkErrors = verifyLinks('docs/draft.md', draftContent, {});
       expect(hasLinkErrors).toBe(true);
     });
   });
