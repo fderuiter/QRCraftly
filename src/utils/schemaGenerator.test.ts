@@ -39,7 +39,11 @@ describe('schemaGenerator', () => {
     const schema = generateSchema(aboutContent);
     expect(schema).toBeDefined();
     expect(schema['@context']).toBe('https://schema.org');
-    expect(schema['@graph'][0]['@type']).toBe('AboutPage');
+    const aboutPage = schema['@graph'][0];
+    expect(aboutPage['@type']).toBe('AboutPage');
+    expect(aboutPage['mainEntity']).toEqual({
+      "@id": "https://qrcraftly.com/#organization"
+    });
     expect(schema['@graph'][1]['@type']).toBe('FAQPage');
   });
 

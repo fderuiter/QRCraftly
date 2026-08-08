@@ -14,12 +14,7 @@ export function generateSchema(content: ToolContent, resolvedDomain?: string, re
           "name": content.name,
           "url": publicUrl,
           "mainEntity": {
-            "@type": "Organization",
-            "@id": `${domain}/#organization`,
-            "name": "QRCraftly",
-            "description": content.description,
-            "slogan": "Free. Secure. Open Source.",
-            "foundingDate": "2025"
+            "@id": `${domain}/#organization`
           }
         },
         {
