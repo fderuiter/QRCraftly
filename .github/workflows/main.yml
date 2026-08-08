@@ -55,9 +55,57 @@ jobs:
       - name: Audit Dependencies
         run: pnpm audit --audit-level=high
 
-  # JOB 2: Quality Checks (Parallel)
-  quality:
-    name: Quality Checks
+  # JOB 2a: Syntax Linting (Parallel)
+  eslint:
+    name: Syntax Linting (ESLint)
+    needs: setup
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Environment
+        uses: ./.github/actions/setup
+
+      - name: Run ESLint
+        run: pnpm exec eslint .
+
+  # JOB 2b: Type-Safety Checks (Parallel)
+  tsc:
+    name: Type-Safety Checks (TypeScript)
+    needs: setup
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Environment
+        uses: ./.github/actions/setup
+
+      - name: Run TypeScript Compiler Check
+        run: pnpm exec tsc --noEmit
+
+  # JOB 2c: Dead-Code Scanning (Parallel)
+  knip:
+    name: Dead-Code Scanning (Knip)
+    needs: setup
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Environment
+        uses: ./.github/actions/setup
+
+      - name: Run Knip Check
+        run: pnpm exec knip
+
+  # JOB 2d: Compliance & Security (Parallel)
+  compliance:
+    name: Compliance & Security
     needs: setup
     runs-on: ubuntu-latest
     permissions:
@@ -84,7 +132,17 @@ jobs:
       - name: Run Dependency & Network Boundary Compliance Guardrail
         run: node scripts/dependency_compliance.js
 
-      - run: pnpm run lint
+      - name: Run UI Catalog Validation
+        run: node scripts/validate_ui_catalog.js
+
+      - name: Run Static Path Tracker
+        run: node scripts/static-path-tracker.js
+
+      - name: Compile Docs Manifest
+        run: node scripts/compile_docs_manifest.js
+
+      - name: Run Contrast Check
+        run: node scripts/contrast_check.js
 
       - name: Check for Code Duplication
         run: pnpm run validate:duplication
@@ -164,7 +222,7 @@ jobs:
   # JOB 5: Build Application
   build:
     name: Build & Artifact
-    needs: [quality, test, e2e, layout] # Wait for quality checks before burning CPU on build
+    needs: [eslint, tsc, knip, compliance, test, e2e, layout] # Wait for quality checks before burning CPU on build
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -178,11 +236,7 @@ jobs:
       - run: pnpm run build
 
       - name: Check Bundle Size
-        run: |
-          SIZE=$(du -sk dist/client | cut -f1)
-          if [ $SIZE -gt 3072 ]; then
-            echo "Bundle size ($SIZE KB) exceeds limit." && exit 1
-          fi
+        run: node scripts/check-bundle-size.js
 
       - name: Generate Resource Quota Report
         if: github.event_name == 'pull_request'
@@ -272,8 +326,8 @@ jobs:
 
                 ['performance', 'accessibility', 'best-practices', 'seo', 'pwa'].forEach(key => {
                   if (summary[key] !== undefined) {
-                    const score = summary[key];
-                    comment += `| ${key} | ${scoreIcon(score)} ${formatScore(score)} |\n`;
+                     const score = summary[key];
+                     comment += `| ${key} | ${scoreIcon(score)} ${formatScore(score)} |\n`;
                   }
                 });
                 comment += '\n';
@@ -297,7 +351,7 @@ jobs:
 
   deploy:
     name: Deploy
-    needs: [quality, test, e2e, build]
+    needs: [eslint, tsc, knip, compliance, test, e2e, build]
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && startsWith(github.event.head_commit.message, 'Revert'))
     concurrency:
       group: production-deployment

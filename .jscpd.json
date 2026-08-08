@@ -9,6 +9,8 @@
     "**/__tests__/**",
     "**/mocks/**",
     "**/sandbox/**",
-    "src/pages/dev-sandbox/**/*"
+    "src/pages/dev-sandbox/**/*",
+    "scripts/**/*",
+    "scripts/*"
   ]
 }
