@@ -33,15 +33,63 @@ export function parseFrontmatter(content) {
     if (colonIndex !== -1) {
       const key = trimmed.slice(0, colonIndex).trim();
       let value = trimmed.slice(colonIndex + 1).trim();
+
+      // Identify and strip trailing inline comment (indicated by '#')
+      let commentIndex = -1;
+      if (value.startsWith('"')) {
+        const lastQuoteIndex = value.lastIndexOf('"');
+        if (lastQuoteIndex > 0) {
+          const hashIndex = value.indexOf('#', lastQuoteIndex + 1);
+          if (hashIndex !== -1) {
+            commentIndex = hashIndex;
+          }
+        }
+      } else if (value.startsWith("'")) {
+        const lastQuoteIndex = value.lastIndexOf("'");
+        if (lastQuoteIndex > 0) {
+          const hashIndex = value.indexOf('#', lastQuoteIndex + 1);
+          if (hashIndex !== -1) {
+            commentIndex = hashIndex;
+          }
+        }
+      } else {
+        commentIndex = value.indexOf('#');
+      }
+
+      if (commentIndex !== -1) {
+        value = value.slice(0, commentIndex).trim();
+      }
+
+      // Strip surrounding quotes if present
       if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
         value = value.slice(1, -1);
       }
-      if (value.toLowerCase() === 'true') {
-        frontmatter[key] = true;
-      } else if (value.toLowerCase() === 'false') {
-        frontmatter[key] = false;
+
+      const lowerKey = key.toLowerCase();
+      const lowerValue = value.toLowerCase();
+
+      if (lowerKey === 'draft') {
+        if (['true', 'yes', 'on', '1'].includes(lowerValue)) {
+          frontmatter[key] = true;
+          if (key !== 'draft') {
+            frontmatter['draft'] = true;
+          }
+        } else if (['false', 'no', 'off', '0'].includes(lowerValue)) {
+          frontmatter[key] = false;
+          if (key !== 'draft') {
+            frontmatter['draft'] = false;
+          }
+        } else {
+          frontmatter[key] = value;
+        }
       } else {
-        frontmatter[key] = value;
+        if (lowerValue === 'true') {
+          frontmatter[key] = true;
+        } else if (lowerValue === 'false') {
+          frontmatter[key] = false;
+        } else {
+          frontmatter[key] = value;
+        }
       }
     }
   }
