@@ -27,13 +27,13 @@
     "preview": "vite preview",
     "test": "vitest",
     "test:e2e": "playwright test",
-    "lint": "node scripts/git_lineage_auditor.js && node scripts/validate_ui_catalog.js && node scripts/audit_markdown.js && node scripts/static-path-tracker.js && node scripts/compile_docs_manifest.js && tsc --noEmit && eslint . && knip && node scripts/contrast_check.js",
+    "lint": "node scripts/git_lineage_auditor.js && node scripts/validate_ui_catalog.js && node scripts/audit_markdown.js && node scripts/static-path-tracker.js && node scripts/compile_docs_manifest.js && tsc --noEmit && eslint . && knip && node scripts/contrast_check.js && prettier --check . && node scripts/check-duplication.js",
     "validate:ui-catalog": "node scripts/validate_ui_catalog.js",
     "validate:duplication": "node scripts/check-duplication.js",
     "format:classes": "node scripts/sort_tailwind_classes.js",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "prepare": "node scripts/install-hooks.js",
+    "prepare": "simple-git-hooks",
     "pre-commit": "lint-staged && pnpm run validate:duplication"
   },
   "dependencies": {
@@ -73,6 +73,7 @@
     "lint-staged": "^17.2.0",
     "postcss": "^8.5.22",
     "prettier": "^3.9.6",
+    "simple-git-hooks": "^2.13.1",
     "tailwindcss": "^4.1.17",
     "typescript": "~5.8.2",
     "typescript-eslint": "^8.60.0",
@@ -80,5 +81,13 @@
     "vitest": "^4.1.9",
     "vitest-axe": "^0.1.0",
     "wrangler": "^4.103.0"
+  },
+  "simple-git-hooks": {
+    "pre-commit": "pnpm run pre-commit"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "simple-git-hooks"
+    ]
   }
 }
