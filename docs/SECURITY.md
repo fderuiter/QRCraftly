@@ -10,7 +10,7 @@ To protect against supply-chain attacks, this project enforces immutable depende
 
 ## Privacy & Compliance
 
-This application is designed with a "Privacy First" architecture. Please refer to [COMPLIANCE.md](COMPLIANCE.md) for detailed information on how this application handles data and aligns with regulations like HIPAA.
+This application is designed with a "Privacy First" architecture. Please refer to [COMPLIANCE.md](public/COMPLIANCE.md) for detailed information on how this application handles data and aligns with regulations like HIPAA.
 
 ## Content Security Policy (CSP)
 

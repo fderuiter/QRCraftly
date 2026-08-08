@@ -70,21 +70,21 @@ describe('Local Git-Diff Lineage Auditor', () => {
     it('should maintain the correct multi-target mappings', () => {
       expect(MAPPING).toHaveProperty('src/types.ts');
       expect(MAPPING['src/types.ts']).toEqual([
-        'docs/public/SECURITY.md',
+        'docs/SECURITY.md',
         'docs/public/COMPLIANCE.md',
         'src/components/inputs/README.md'
       ]);
 
       expect(MAPPING).toHaveProperty('semgrep.yml');
       expect(MAPPING['semgrep.yml']).toEqual([
-        'docs/public/SECURITY.md',
+        'docs/SECURITY.md',
         'docs/public/COMPLIANCE.md'
       ]);
 
       expect(MAPPING).toHaveProperty('src/colors.json');
       expect(MAPPING['src/colors.json']).toEqual([
         'docs/public/STYLE_GUIDE.md',
-        'docs/public/SECURITY.md',
+        'docs/SECURITY.md',
         'docs/public/COMPLIANCE.md'
       ]);
     });
@@ -92,7 +92,7 @@ describe('Local Git-Diff Lineage Auditor', () => {
     it('should fail multi-target validation when some/all targets are missing for a core schema', () => {
       const modifiedFiles = new Set([
         'src/types.ts',
-        'docs/public/SECURITY.md'
+        'docs/SECURITY.md'
       ]);
       const missing = checkLineage(modifiedFiles);
       
@@ -106,14 +106,14 @@ describe('Local Git-Diff Lineage Auditor', () => {
       });
       expect(missing).not.toContainEqual({
         codeFile: 'src/types.ts',
-        docFile: 'docs/public/SECURITY.md'
+        docFile: 'docs/SECURITY.md'
       });
     });
 
     it('should pass multi-target validation when all targets are present for core schemas', () => {
       const modifiedFiles = new Set([
         'src/types.ts',
-        'docs/public/SECURITY.md',
+        'docs/SECURITY.md',
         'docs/public/COMPLIANCE.md',
         'src/components/inputs/README.md'
       ]);
@@ -124,7 +124,7 @@ describe('Local Git-Diff Lineage Auditor', () => {
     it('should fail multi-target validation when editing central color configurations without updating style guide', () => {
       const modifiedFiles = new Set([
         'src/colors.json',
-        'docs/public/SECURITY.md',
+        'docs/SECURITY.md',
         'docs/public/COMPLIANCE.md'
       ]);
       const missing = checkLineage(modifiedFiles);
@@ -139,7 +139,7 @@ describe('Local Git-Diff Lineage Auditor', () => {
       const modifiedFiles = new Set([
         'src/colors.json',
         'docs/public/STYLE_GUIDE.md',
-        'docs/public/SECURITY.md',
+        'docs/SECURITY.md',
         'docs/public/COMPLIANCE.md'
       ]);
       const missing = checkLineage(modifiedFiles);
@@ -151,7 +151,7 @@ describe('Local Git-Diff Lineage Auditor', () => {
     it('should maintain the correct new mappings', () => {
       expect(MAPPING).toHaveProperty('src/utils/scannabilityWorker.ts', 'docs/public/SCALING.md');
       expect(MAPPING).toHaveProperty('src/hooks/useTelemetry.ts', 'docs/public/COMPLIANCE.md');
-      expect(MAPPING).toHaveProperty('src/utils/security.ts', 'docs/public/SECURITY.md');
+      expect(MAPPING).toHaveProperty('src/utils/security.ts', 'docs/SECURITY.md');
       expect(MAPPING).toHaveProperty('.github/rulesets/main.json', '.github/rulesets/README.md');
     });
 
@@ -214,12 +214,12 @@ describe('Local Git-Diff Lineage Auditor', () => {
       const missing = checkLineage(modifiedFiles);
       expect(missing).toContainEqual({
         codeFile: 'src/utils/security.ts',
-        docFile: 'docs/public/SECURITY.md'
+        docFile: 'docs/SECURITY.md'
       });
     });
 
     it('should pass validation when security utilities are modified with security doc', () => {
-      const modifiedFiles = new Set(['src/utils/security.ts', 'docs/public/SECURITY.md']);
+      const modifiedFiles = new Set(['src/utils/security.ts', 'docs/SECURITY.md']);
       const missing = checkLineage(modifiedFiles);
       const hasSecurityMissing = missing.some(m => m.codeFile === 'src/utils/security.ts');
       expect(hasSecurityMissing).toBe(false);
@@ -228,9 +228,9 @@ describe('Local Git-Diff Lineage Auditor', () => {
 
   describe('Command-Line Arguments Parsing', () => {
     it('should extract positional file arguments and ignore flags', () => {
-      const args = ['--verbose', 'src/types.ts', '--config', 'docs/public/SECURITY.md'];
+      const args = ['--verbose', 'src/types.ts', '--config', 'docs/SECURITY.md'];
       const parsed = parseArgs(args);
-      expect(parsed).toEqual(['src/types.ts', 'docs/public/SECURITY.md']);
+      expect(parsed).toEqual(['src/types.ts', 'docs/SECURITY.md']);
     });
 
     it('should normalize backslashes to forward slashes', () => {
@@ -240,11 +240,11 @@ describe('Local Git-Diff Lineage Auditor', () => {
     });
 
     it('should handle space-separated or comma-separated files inside a single argument', () => {
-      const args = ['src/types.ts,docs/public/SECURITY.md', 'src/colors.json  docs/public/STYLE_GUIDE.md'];
+      const args = ['src/types.ts,docs/SECURITY.md', 'src/colors.json  docs/public/STYLE_GUIDE.md'];
       const parsed = parseArgs(args);
       expect(parsed).toEqual([
         'src/types.ts',
-        'docs/public/SECURITY.md',
+        'docs/SECURITY.md',
         'src/colors.json',
         'docs/public/STYLE_GUIDE.md'
       ]);
@@ -274,7 +274,7 @@ describe('Local Git-Diff Lineage Auditor', () => {
 
     it('should successfully parse a mapping key containing spaces without splitting', () => {
       const mockKey = 'src/components/my mapped file with spaces.tsx';
-      MAPPING[mockKey] = 'docs/public/SECURITY.md';
+      MAPPING[mockKey] = 'docs/SECURITY.md';
 
       try {
         const args = [mockKey];
@@ -315,10 +315,10 @@ describe('Local Git-Diff Lineage Auditor', () => {
 
   describe('Resilient Lineage Auditing (CI & Fail-closed)', () => {
     it('should parse git diff --name-only output correctly', () => {
-      const mockStdout = `src/types.ts\n"docs/public/SECURITY.md"\nsrc/utils/sh\\303\\251.ts`;
+      const mockStdout = `src/types.ts\n"docs/SECURITY.md"\nsrc/utils/sh\\303\\251.ts`;
       const parsed = parseGitDiff(mockStdout);
       expect(parsed.has('src/types.ts')).toBe(true);
-      expect(parsed.has('docs/public/SECURITY.md')).toBe(true);
+      expect(parsed.has('docs/SECURITY.md')).toBe(true);
       expect(parsed.has('src/utils/shé.ts')).toBe(true);
     });
 

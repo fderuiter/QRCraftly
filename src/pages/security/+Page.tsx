@@ -69,7 +69,8 @@ export default function Page() {
                   const parts = href.split('#');
                   const file = parts[0];
                   const hash = parts[1];
-                  const targetDoc = docsManifest.find(d => d.filename === file);
+                  const baseName = file.split('/').pop() || file;
+                  const targetDoc = docsManifest.find(d => d.filename === baseName);
                   if (targetDoc) {
                     if (hash) {
                       token.href = `#${targetDoc.id}-${hash}`;

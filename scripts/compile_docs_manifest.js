@@ -87,6 +87,24 @@ export function compileManifest(inputDir = docsPublicDir, outputPath = outputMan
     fs.mkdirSync(outputDir, { recursive: true });
   }
 
+  // If we are compiling the standard docs folder, explicitly include docs/SECURITY.md
+  if (inputDir === docsPublicDir) {
+    const securityPath = path.join(repoRoot, 'docs', 'SECURITY.md');
+    if (fs.existsSync(securityPath)) {
+      const content = fs.readFileSync(securityPath, 'utf-8');
+      const { frontmatter, body } = parseFrontmatter(content);
+      if (frontmatter.draft !== true) {
+        const title = extractTitle(body);
+        manifest.push({
+          id: 'security',
+          filename: 'SECURITY.md',
+          title,
+          content: body
+        });
+      }
+    }
+  }
+
   fs.writeFileSync(outputPath, JSON.stringify(manifest, null, 2) + '\n', 'utf-8');
   console.log(`Docs manifest successfully compiled to ${outputPath}`);
 }
