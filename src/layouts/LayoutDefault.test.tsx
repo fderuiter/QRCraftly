@@ -155,4 +155,60 @@ describe('LayoutDefault', () => {
     expect(statusToast).toBeInTheDocument();
     expect(statusToast).toHaveTextContent('Test Layout Notification');
   });
+
+  it('triggers a simulated rendering crash via query parameters and successfully restores layout on reload', () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    
+    // Inject test flags
+    (window as any).__VITEST__ = true;
+
+    // Mock window.location cleanly
+    const originalLocation = window.location;
+    const reloadSpy = vi.fn();
+    const replaceStateSpy = vi.spyOn(window.history, 'replaceState').mockImplementation(() => {});
+    const locationMock = {
+      ...originalLocation,
+      href: 'http://localhost/?simulate-crash=true',
+      search: '?simulate-crash=true',
+      reload: reloadSpy,
+    };
+    Object.defineProperty(window, 'location', {
+      writable: true,
+      configurable: true,
+      value: locationMock,
+    });
+
+    render(
+      <LayoutDefault>
+        <div data-testid="target-app-content">Standard Content</div>
+      </LayoutDefault>
+    );
+
+    // Verify error recovery UI displays after simulated crash
+    const alertHeader = screen.getByRole('alert');
+    expect(alertHeader).toBeInTheDocument();
+    expect(alertHeader).toHaveTextContent('Application Error');
+    expect(screen.getByText("We're sorry, but something went wrong while rendering this page.")).toBeInTheDocument();
+    expect(screen.queryByTestId('target-app-content')).not.toBeInTheDocument();
+
+    // Click Reload Page and assert it clears search parameters and calls reload
+    const reloadButton = screen.getByRole('button', { name: /reload page/i });
+    reloadButton.click();
+
+    expect(replaceStateSpy).toHaveBeenCalled();
+    // Verify the URL constructed in replaceState did not contain simulate-crash or crash
+    const calledUrl = replaceStateSpy.mock.calls[0][2] as string;
+    expect(calledUrl).not.toContain('simulate-crash');
+    expect(reloadSpy).toHaveBeenCalledTimes(1);
+
+    // Clean up
+    delete (window as any).__VITEST__;
+    replaceStateSpy.mockRestore();
+    Object.defineProperty(window, 'location', {
+      writable: true,
+      configurable: true,
+      value: originalLocation,
+    });
+    consoleSpy.mockRestore();
+  });
 });
