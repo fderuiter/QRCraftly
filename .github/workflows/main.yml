@@ -81,6 +81,9 @@ jobs:
       - name: Run Markdown & Compliance Audit
         run: node scripts/audit_markdown.js
 
+      - name: Run Dependency & Network Boundary Compliance Guardrail
+        run: node scripts/dependency_compliance.js
+
       - run: pnpm run lint
 
       - name: Check for Code Duplication
