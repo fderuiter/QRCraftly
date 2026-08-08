@@ -14,7 +14,8 @@ export default {
     return [
       `node scripts/secret-scanner.js ${quotedFiles}`,
       `node scripts/validate_ui_catalog.js ${quotedFiles}`,
-      `node scripts/static-path-tracker.js ${quotedFiles}`
+      `node scripts/static-path-tracker.js ${quotedFiles}`,
+      `node scripts/git_lineage_auditor.js ${quotedFiles}`
     ];
   },
   '**/*.{js,jsx,ts,tsx,mjs,cjs}': (filenames) => {
