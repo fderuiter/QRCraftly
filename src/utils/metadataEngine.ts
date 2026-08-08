@@ -26,6 +26,40 @@ export const resolveDomainForPath = (path: string): string => {
   return domain;
 };
 
+export const normalizeTrailingSlashes = (path: string): string => {
+  if (!path) return '/';
+  
+  const qMarkIndex = path.indexOf('?');
+  const hashIndex = path.indexOf('#');
+  
+  let endOfPathIndex = path.length;
+  if (qMarkIndex !== -1 && hashIndex !== -1) {
+    endOfPathIndex = Math.min(qMarkIndex, hashIndex);
+  } else if (qMarkIndex !== -1) {
+    endOfPathIndex = qMarkIndex;
+  } else if (hashIndex !== -1) {
+    endOfPathIndex = hashIndex;
+  }
+  
+  let pathPart = path.slice(0, endOfPathIndex);
+  const remainder = path.slice(endOfPathIndex);
+
+  // Replace consecutive trailing slashes with a single slash
+  pathPart = pathPart.replace(/\/+$/, '/');
+
+  // Strip trailing slash only if it is not the root path "/"
+  if (pathPart !== '/' && pathPart.endsWith('/')) {
+    pathPart = pathPart.slice(0, -1);
+  }
+
+  // Ensure root path remains as "/" and is not stripped to empty string
+  if (pathPart === '') {
+    pathPart = '/';
+  }
+
+  return `${pathPart}${remainder}`;
+};
+
 export const getSanitizedPath = (path: string): string => {
   let cleanPath = path || '/';
   if (!cleanPath.startsWith('/')) {
@@ -39,7 +73,7 @@ export const getSanitizedPath = (path: string): string => {
     cleanPath = '/';
   }
   
-  return cleanPath;
+  return normalizeTrailingSlashes(cleanPath);
 };
 
 export const resolvePublicUrl = (path: string): string => {
