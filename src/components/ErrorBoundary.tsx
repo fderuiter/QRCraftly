@@ -66,7 +66,21 @@ export class ErrorBoundary extends Component<Props, State> {
           <h2 role="alert" className="mb-4 text-3xl font-bold text-rose-700 dark:text-rose-400">Application Error</h2>
           <p className="mb-8 text-lg">We're sorry, but something went wrong while rendering this page.</p>
           <button
-            onClick={() => window.location.reload()}
+            onClick={() => {
+              if (typeof window !== 'undefined') {
+                try {
+                  const url = new URL(window.location.href);
+                  if (url.searchParams.has('simulate-crash') || url.searchParams.has('crash')) {
+                    url.searchParams.delete('simulate-crash');
+                    url.searchParams.delete('crash');
+                    window.history.replaceState({}, '', url.toString());
+                  }
+                } catch (e) {
+                  console.error('Failed to parse URL in ErrorBoundary:', e);
+                }
+                window.location.reload();
+              }
+            }}
             className="rounded-lg bg-teal-600 px-6 py-3 font-medium text-white shadow-sm transition-colors hover:bg-teal-700"
           >
             Reload Page

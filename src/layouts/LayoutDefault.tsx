@@ -22,6 +22,56 @@ import { ToastProvider } from '../components/ui/Toast';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 
 /**
+ * Helper to check if the application is currently running inside an E2E or unit/integration test environment.
+ * To prevent accidental activation in production, it requires specific window test flags
+ * that are only injected during test runs.
+ */
+function isTestExecution(): boolean {
+  if (typeof window !== 'undefined') {
+    const isE2E = !!(window as any).__E2E_TEST__;
+    const isVitest = !!(window as any).__VITEST__ || typeof (window as any).vi !== 'undefined';
+    const isLocalOrTestRunner = 
+      window.location.hostname === 'localhost' ||
+      window.location.hostname === '127.0.0.1' ||
+      window.location.hostname === '0.0.0.0' ||
+      navigator.userAgent.includes('Headless');
+
+    return (isE2E || isVitest) && isLocalOrTestRunner;
+  }
+  return typeof process !== 'undefined' && (process.env.NODE_ENV === 'test' || process.env.VITEST === 'true');
+}
+
+/**
+ * CrashTrigger Component
+ *
+ * Safely simulates a rendering crash ONLY during E2E or Vitest test execution
+ * when the simulate-crash or crash query parameter is set to true.
+ * Uses client-side state and useEffect to execute post-hydration, avoiding SSR mismatch.
+ */
+function CrashTrigger() {
+  const [shouldCrash, setShouldCrash] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && isTestExecution()) {
+      try {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('simulate-crash') === 'true' || urlParams.get('crash') === 'true') {
+          setShouldCrash(true);
+        }
+      } catch (e) {
+        console.error('Failed to parse query parameters for CrashTrigger:', e);
+      }
+    }
+  }, []);
+
+  if (shouldCrash) {
+    throw new Error('Simulated client-side rendering crash');
+  }
+
+  return null;
+}
+
+/**
  * LayoutDefault Component
  *
  * Provides the default layout structure for the application.
@@ -52,6 +102,7 @@ export default function LayoutDefault({ children }: { children: React.ReactNode 
         data-hydrated={hydrated}
       >
         <ErrorBoundary>
+          <CrashTrigger />
           {children}
         </ErrorBoundary>
       </main>
