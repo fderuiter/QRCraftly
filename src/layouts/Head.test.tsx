@@ -163,7 +163,7 @@ describe('HeadDefault', () => {
     expect(data.itemListElement[2].item).toBe(`${expectedDomain}/products/special-offer`);
   });
 
-  it('handles 404 pages correctly (noindex, no canonical)', () => {
+  it('handles 404 pages correctly (noindex, no canonical, no og:url)', () => {
     mockUsePageContext.mockReturnValue({
       urlPathname: '/some-garbage-url',
       is404: true,
@@ -181,6 +181,19 @@ describe('HeadDefault', () => {
     const canonical = container.querySelector('link[rel="canonical"]');
     expect(canonical).not.toBeInTheDocument();
 
+    // Check that og:url is NOT present
+    const ogUrl = container.querySelector('meta[property="og:url"]');
+    expect(ogUrl).not.toBeInTheDocument();
+
+    // Check that basic Open Graph brand metadata tags are still present
+    const ogSiteName = container.querySelector('meta[property="og:site_name"]');
+    expect(ogSiteName).toBeInTheDocument();
+    expect(ogSiteName?.getAttribute('content')).toBe('QRCraftly');
+
+    const ogType = container.querySelector('meta[property="og:type"]');
+    expect(ogType).toBeInTheDocument();
+    expect(ogType?.getAttribute('content')).toBe('website');
+
     // Check that breadcrumb schema is NOT generated for the garbage path
     const scripts = document.head.querySelectorAll('script[type="application/ld+json"]');
     const breadcrumbScript = Array.from(scripts).find(s => s.textContent?.includes('BreadcrumbList'));
@@ -191,6 +204,20 @@ describe('HeadDefault', () => {
       const garbageItem = data.itemListElement.find((item: any) => item.item?.includes('garbage'));
       expect(garbageItem).toBeUndefined();
     }
+  });
+
+  it('renders og:url on normal pages with the fully resolved public URL', () => {
+    mockUsePageContext.mockReturnValue({
+      urlPathname: '/normal-page-path',
+      config: {}
+    });
+
+    const { container } = render(<HeadDefault />, { container: document.head });
+
+    const expectedDomain = mockGetPublicDomain();
+    const ogUrl = container.querySelector('meta[property="og:url"]');
+    expect(ogUrl).toBeInTheDocument();
+    expect(ogUrl?.getAttribute('content')).toBe(`${expectedDomain}/normal-page-path`);
   });
 
   it('uses custom Open Graph image from config', () => {
