@@ -167,7 +167,7 @@ export default function HeadDefault() {
       {/* Social Signals (Open Graph) */}
       <meta property="og:site_name" content="QRCraftly" />
       <meta property="og:type" content="website" />
-      <meta property="og:url" content={canonicalUrl} />
+      {!is404 && <meta property="og:url" content={canonicalUrl} />}
       <meta property="og:title" content={title} />
       <meta property="og:description" content={description} />
       <meta property="og:image" content={imageUrl} />
