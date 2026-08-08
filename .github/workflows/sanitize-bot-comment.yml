@@ -10,6 +10,7 @@ jobs:
     # 2. Ensure the comment body contains "[CI/CD Fix Attempt "
     if: ${{ github.event.issue.pull_request && contains(github.event.comment.body, '[CI/CD Fix Attempt ') }}
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       issues: write # Required to edit comments on PRs
       pull-requests: write

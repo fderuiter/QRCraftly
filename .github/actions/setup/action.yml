@@ -37,10 +37,10 @@ runs:
 
     - name: Install pnpm globally
       run: |
-        npm install -g pnpm@11.1.3
+        timeout 180 npm install -g pnpm@11.1.3
       shell: bash
 
     - name: Install Dependencies
       if: ${{ inputs.install == 'true' }}
-      run: pnpm install --frozen-lockfile
+      run: timeout 600 pnpm install --frozen-lockfile
       shell: bash

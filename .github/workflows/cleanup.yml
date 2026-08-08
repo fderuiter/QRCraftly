@@ -15,6 +15,7 @@ jobs:
   cleanup_branches:
     name: Clean up abandoned/merged branches
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
     steps:
       - name: Delete merged branches
@@ -58,6 +59,7 @@ jobs:
   cleanup_artifacts:
     name: Clean up stale workflow artifacts
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     steps:
       - name: Delete old artifacts
