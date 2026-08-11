@@ -419,4 +419,122 @@ describe('useScannability - changed behavior: uses useQRStore instead of useQRCo
 
     expect(result.current.scan.status).toBe('checking'); // remains unchanged
   });
+
+  describe('try-catch guard and main-thread fallback', () => {
+    let originalWorker: any;
+
+    beforeEach(() => {
+      originalWorker = globalThis.Worker;
+    });
+
+    afterEach(() => {
+      globalThis.Worker = originalWorker;
+      vi.restoreAllMocks();
+    });
+
+    it('silently catches Worker initialization error', () => {
+      globalThis.Worker = class {
+        constructor() {
+          throw new Error('Worker not supported or blocked');
+        }
+      } as any;
+
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      // Component should render without crashing
+      const { result } = renderHook(
+        () => useScannability(makeCanvasRef(), defaultConfig),
+        { wrapper }
+      );
+
+      expect(result.current.status).toBe('idle');
+      expect(consoleErrorSpy).toHaveBeenCalled();
+    });
+
+    it('falls back to main-thread processing when Worker is unavailable', async () => {
+      globalThis.Worker = class {
+        constructor() {
+          throw new Error('Worker not supported');
+        }
+      } as any;
+
+      // Spy on console.error so we don't pollute the logs
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      const { result } = renderHook(
+        () => useScannability(makeCanvasRef(), defaultConfig),
+        { wrapper }
+      );
+
+      // Spy on performScannabilityCheck
+      const scannabilityCheckerModule = await import('../utils/scannabilityChecker');
+      const spyCheck = vi.spyOn(scannabilityCheckerModule, 'performScannabilityCheck').mockReturnValue({
+        success: true,
+        physicalReady: true,
+      });
+
+      const mockImageData = {
+        data: new Uint8ClampedArray(400),
+        width: 10,
+        height: 10,
+      } as any;
+
+      await act(async () => {
+        result.current.checkScannability(mockImageData);
+        // Wait for requestIdleCallback/setTimeout to execute
+        await new Promise((resolve) => setTimeout(resolve, 150));
+      });
+
+      expect(spyCheck).toHaveBeenCalledWith(mockImageData, 10, 10, !!navigator.webdriver);
+      expect(result.current.status).toBe('physical-pass');
+    });
+
+    it('emits scannability-fail signal on fallback failure', async () => {
+      globalThis.Worker = class {
+        constructor() {
+          throw new Error('Worker not supported');
+        }
+      } as any;
+
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      const { result } = renderHook(
+        () => ({
+          scan: useScannability(makeCanvasRef(), defaultConfig),
+          store: useQRStore(),
+        }),
+        { wrapper }
+      );
+
+      const signalCallback = vi.fn();
+      act(() => {
+        result.current.store.registerSignal('scannability-fail', signalCallback);
+      });
+
+      // Spy on performScannabilityCheck to return a failure
+      const scannabilityCheckerModule = await import('../utils/scannabilityChecker');
+      vi.spyOn(scannabilityCheckerModule, 'performScannabilityCheck').mockReturnValue({
+        success: false,
+        physicalReady: false,
+        error: 'SECURITY_VIOLATION',
+      });
+
+      const mockImageData = {
+        data: new Uint8ClampedArray(400),
+        width: 10,
+        height: 10,
+      } as any;
+
+      await act(async () => {
+        result.current.scan.checkScannability(mockImageData);
+        await new Promise((resolve) => setTimeout(resolve, 150));
+      });
+
+      expect(result.current.scan.status).toBe('fail');
+      expect(signalCallback).toHaveBeenCalledTimes(1);
+      const detail = signalCallback.mock.calls[0][0];
+      expect(detail).toHaveProperty('errorType', 'SECURITY_VIOLATION');
+    });
+  });
 });
+
