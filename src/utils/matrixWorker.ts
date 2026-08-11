@@ -1,0 +1,78 @@
+import QRCode from 'qrcode';
+import { ValidationEngine } from '../engine/ValidationEngine';
+import { QRConfig } from '../types';
+
+let latestSequenceId = -1;
+
+const yieldToEventLoop = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+self.onmessage = async (e: MessageEvent<{ config: QRConfig; sequenceId: number }>) => {
+  const { config, sequenceId } = e.data;
+
+  // Track latest sequence ID globally in the worker
+  if (typeof sequenceId === 'number' && sequenceId > latestSequenceId) {
+    latestSequenceId = sequenceId;
+  }
+
+  // Yield to event loop to allow incoming messages to override this one if they are newer
+  await yieldToEventLoop();
+
+  // If a newer request has already overridden this one, discard immediately
+  if (sequenceId < latestSequenceId) {
+    return;
+  }
+
+  try {
+    // 1. Validate the configuration profile
+    const violations = ValidationEngine.validateConfig(config);
+    if (violations.length > 0) {
+      if (sequenceId === latestSequenceId) {
+        self.postMessage({
+          status: 'validationFailed',
+          sequenceId,
+          violations,
+        });
+      }
+      return;
+    }
+
+    // 2. Perform QR calculations (Reed-Solomon & module layout)
+    const data = QRCode.create(config.value, {
+      errorCorrectionLevel: config.errorCorrectionLevel,
+    });
+
+    const size = data.modules.size;
+    const matrix = new Uint8Array(size * size);
+
+    // Yield cooperatively during the serialization of heavy iterations
+    for (let r = 0; r < size; r++) {
+      if (r % 10 === 0) {
+        await yieldToEventLoop();
+        // Check again after yielding if we were preempted by a newer request
+        if (sequenceId < latestSequenceId) {
+          return;
+        }
+      }
+      for (let c = 0; c < size; c++) {
+        matrix[r * size + c] = data.modules.get(r, c) ? 1 : 0;
+      }
+    }
+
+    if (sequenceId === latestSequenceId) {
+      self.postMessage({
+        status: 'success',
+        sequenceId,
+        size,
+        matrix,
+      });
+    }
+  } catch (error: any) {
+    if (sequenceId === latestSequenceId) {
+      self.postMessage({
+        status: 'error',
+        sequenceId,
+        error: error?.message || 'MATRIX_GENERATION_FAILED',
+      });
+    }
+  }
+};
