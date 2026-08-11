@@ -19,6 +19,7 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { Button } from "./ui/Button";
 import { Card } from "./ui/Card";
+import { Alert } from "./ui/Alert";
 import { QRConfig } from '@/types';
 import QRCanvas from '@/components/QRCanvas';
 import { Download, Share2, QrCode, ChevronDown, Camera, Moon, Sun, Info, Copy, Check, AlertTriangle } from 'lucide-react';
@@ -68,7 +69,7 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
   const { canShare } = useCapabilities();
 
   // Scannability & Telemetry
-  const { status: scannabilityStatus, checkScannability, health } = useScannability(canvasRef, config);
+  const { status: scannabilityStatus, checkScannability, health, workerRecoveryActive } = useScannability(canvasRef, config);
 
   
   const handleRendered = useCallback((info: { moduleCount: number, virtualImageData?: ImageData } = { moduleCount: 0 }) => {
@@ -322,6 +323,14 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
                        <span className="rounded-full border border-emerald-200 bg-emerald-100 px-2 py-1 text-xs font-bold text-emerald-700 dark:border-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400">Active</span>
                     </div>
                 </div>
+                
+                {workerRecoveryActive && (
+                   <div className="mb-4">
+                      <Alert variant="warning" title="System Warning">
+                         A temporary background system error occurred. The validator has recovered and subsequent retries are active.
+                      </Alert>
+                   </div>
+                )}
                 
                 <div ref={qrRef} className="mb-8 flex justify-center">
                    {/* Pass debounced config to QRCanvas to prevent heavy rendering on every keystroke */}

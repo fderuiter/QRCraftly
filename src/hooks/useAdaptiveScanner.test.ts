@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import React from 'react';
 import { useAdaptiveScanner } from './useAdaptiveScanner';
+import { isValidScannerRequest, isValidScannerResponse } from '../utils/scannerContract';
 
 function makeVideoRef() {
   const video = {
@@ -16,7 +17,7 @@ function makeVideoRef() {
 
 const getActiveWorker = () => globalThis.mockWorkerControl.activeWorker;
 
-describe('useAdaptiveScanner Hook', () => {
+describe('useAdaptiveScanner Hook with Bidirectional Buffer Recycling', () => {
   beforeEach(() => {
     vi.useFakeTimers();
 
@@ -91,6 +92,18 @@ describe('useAdaptiveScanner Hook', () => {
       })
     );
 
+    // Intercept message and reply with a valid payload to avoid mock fallback warnings
+    globalThis.mockWorkerControl.setInterceptor((msg, worker) => {
+      setTimeout(() => {
+        worker.dispatchMessage({
+          status: 'pass',
+          sequenceId: msg.sequenceId,
+          decodedData: 'https://craftly.qr',
+          buffer: msg.buffer,
+        });
+      }, 0);
+    });
+
     act(() => {
       result.current.startScanning();
     });
@@ -105,10 +118,14 @@ describe('useAdaptiveScanner Hook', () => {
     expect(activeWorker!.postMessage).toHaveBeenCalled();
 
     const [payload, transfer] = activeWorker!.postMessage.mock.calls[0];
-    expect(payload).toHaveProperty('imageData');
+    expect(payload).toHaveProperty('buffer');
+    expect(payload.buffer).toBeInstanceOf(ArrayBuffer);
     expect(payload).toHaveProperty('sequenceId', 1);
     expect(transfer).toBeDefined();
-    expect(transfer[0]).toBe(payload.imageData.data.buffer);
+    expect(transfer[0]).toBe(payload.buffer);
+    
+    // Validate request contract
+    expect(isValidScannerRequest(payload)).toBe(true);
   });
 
   it('should block new frame dispatches while a worker task is in-flight (back-pressure)', () => {
@@ -165,6 +182,7 @@ describe('useAdaptiveScanner Hook', () => {
 
     expect(postMessageCalls).toHaveLength(1);
     const seqId = postMessageCalls[0].sequenceId;
+    const arrayBuf = postMessageCalls[0].buffer;
 
     // Send response back from worker
     act(() => {
@@ -172,6 +190,7 @@ describe('useAdaptiveScanner Hook', () => {
         status: 'pass',
         sequenceId: seqId,
         decodedData: 'https://craftly.qr',
+        buffer: arrayBuf,
       });
     });
 
@@ -206,6 +225,7 @@ describe('useAdaptiveScanner Hook', () => {
           status: 'pass',
           sequenceId: msg.sequenceId,
           decodedData: 'https://slow.qr',
+          buffer: msg.buffer,
         });
       }, 150);
     });
@@ -251,6 +271,7 @@ describe('useAdaptiveScanner Hook', () => {
           status: 'pass',
           sequenceId: msg.sequenceId,
           decodedData: 'https://fast.qr',
+          buffer: msg.buffer,
         });
       }, 10);
     });
@@ -302,6 +323,7 @@ describe('useAdaptiveScanner Hook', () => {
         status: 'pass',
         sequenceId: 1,
         decodedData: 'https://first.qr',
+        buffer: postMessageCalls[0].buffer,
       });
     });
     expect(successCallback).toHaveBeenCalledWith('https://first.qr');
@@ -320,6 +342,7 @@ describe('useAdaptiveScanner Hook', () => {
         status: 'pass',
         sequenceId: 2,
         decodedData: 'https://newest.qr',
+        buffer: postMessageCalls[1].buffer,
       });
     });
     expect(successCallback).toHaveBeenCalledWith('https://newest.qr');
@@ -331,10 +354,166 @@ describe('useAdaptiveScanner Hook', () => {
         status: 'pass',
         sequenceId: 1,
         decodedData: 'https://stale.qr',
+        buffer: postMessageCalls[0].buffer,
       });
     });
 
     // Success callback should NOT have been called because sequenceId 1 <= completedSequenceRef (2)
     expect(successCallback).not.toHaveBeenCalled();
+  });
+
+  it('should strictly limit the pool size to exactly two buffers and recycle them', () => {
+    const videoRef = makeVideoRef();
+    const { result } = renderHook(() =>
+      useAdaptiveScanner({
+        videoRef,
+      })
+    );
+
+    let activeWorker: any = null;
+    let postMessageCalls: any[] = [];
+    globalThis.mockWorkerControl.setInterceptor((msg, worker) => {
+      activeWorker = worker;
+      postMessageCalls.push(msg);
+    });
+
+    act(() => {
+      result.current.startScanning();
+    });
+
+    // Capture Frame 1 (uses 1st buffer, leaving 1 in pool)
+    act(() => {
+      vi.advanceTimersByTime(50);
+    });
+    expect(postMessageCalls).toHaveLength(1);
+    const buf1 = postMessageCalls[0].buffer;
+
+    // Return the buffer (recycles it, pool should have 2 again)
+    act(() => {
+      activeWorker.dispatchMessage({
+        status: 'fail',
+        sequenceId: 1,
+        buffer: buf1,
+      });
+    });
+
+    // Capture Frame 2 (uses recycled buffer)
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
+    expect(postMessageCalls).toHaveLength(2);
+    const buf2 = postMessageCalls[1].buffer;
+    expect(buf2).toBe(buf1); // Reused!
+  });
+
+  it('should recycle returned buffers even if the response sequence is stale', () => {
+    const videoRef = makeVideoRef();
+    const { result } = renderHook(() =>
+      useAdaptiveScanner({
+        videoRef,
+      })
+    );
+
+    let activeWorker: any = null;
+    let postMessageCalls: any[] = [];
+    globalThis.mockWorkerControl.setInterceptor((msg, worker) => {
+      activeWorker = worker;
+      postMessageCalls.push(msg);
+    });
+
+    act(() => {
+      result.current.startScanning();
+    });
+
+    // 1. Capture Frame 1 (uses 1st buffer from pool)
+    act(() => {
+      vi.advanceTimersByTime(50);
+    });
+    expect(postMessageCalls).toHaveLength(1);
+    const buf1 = postMessageCalls[0].buffer;
+
+    // 2. Complete Frame 1 (recycles buf1, completedSequenceRef becomes 1, pool has 2 again)
+    act(() => {
+      activeWorker.dispatchMessage({
+        status: 'fail',
+        sequenceId: 1,
+        buffer: buf1,
+      });
+    });
+
+    // 3. Capture Frame 2 (uses recycled buf1 again)
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
+    expect(postMessageCalls).toHaveLength(2);
+    const buf2 = postMessageCalls[1].buffer;
+    expect(buf2).toBe(buf1);
+
+    // 4. Send a late stale response for Frame 1 with buf1.
+    // Since completedSequenceRef is 1, sequenceId 1 is stale, but we still recycle buf1.
+    act(() => {
+      activeWorker.dispatchMessage({
+        status: 'fail',
+        sequenceId: 1,
+        buffer: buf1,
+      });
+    });
+
+    // 5. Complete Frame 2 (recycles buf2 / buf1 again)
+    act(() => {
+      activeWorker.dispatchMessage({
+        status: 'fail',
+        sequenceId: 2,
+        buffer: buf2,
+      });
+    });
+
+    // 6. Capture Frame 3
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
+    expect(postMessageCalls).toHaveLength(3);
+    const buf3 = postMessageCalls[2].buffer;
+    expect(buf3).toBe(buf1);
+  });
+
+  it('should run strict runtime schema validation on worker responses', () => {
+    const videoRef = makeVideoRef();
+    const { result } = renderHook(() =>
+      useAdaptiveScanner({
+        videoRef,
+      })
+    );
+
+    let activeWorker: any = null;
+    let postMessageCalls: any[] = [];
+    globalThis.mockWorkerControl.setInterceptor((msg, worker) => {
+      activeWorker = worker;
+      postMessageCalls.push(msg);
+    });
+
+    act(() => {
+      result.current.startScanning();
+    });
+
+    act(() => {
+      vi.advanceTimersByTime(50);
+    });
+
+    // Send an INVALID response (missing buffer)
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    act(() => {
+      activeWorker.dispatchMessage({
+        status: 'pass',
+        sequenceId: 1,
+        decodedData: 'https://broken.qr',
+        // missing buffer completely!
+      });
+    });
+
+    // Should have logged an error and ignored the state updates
+    expect(consoleErrorSpy).toHaveBeenCalled();
+    expect(result.current.status).toBe('checking'); // remains checking, wasn't updated to pass!
+    consoleErrorSpy.mockRestore();
   });
 });
