@@ -143,12 +143,51 @@ export const ValidationEngine = {
       // Determine the effective type. Prefer explicit config.type, otherwise try to identify it.
       const type = config.type || this.identifyProtocol(config.value);
 
-      if (type && Object.values(QRType).includes(type as QRType)) {
-        if (Object.prototype.hasOwnProperty.call(this.typeValidators, type)) {
-          const validator = this.typeValidators[type];
-          if (typeof validator === 'function') {
-            violations.push(...validator(config.value));
-          }
+      if (type) {
+        let validator: ((value: string) => string[]) | undefined = undefined;
+        switch (type) {
+          case QRType.URL:
+            validator = this.typeValidators[QRType.URL];
+            break;
+          case QRType.TEXT:
+            validator = this.typeValidators[QRType.TEXT];
+            break;
+          case QRType.WIFI:
+            validator = this.typeValidators[QRType.WIFI];
+            break;
+          case QRType.EVENT:
+            validator = this.typeValidators[QRType.EVENT];
+            break;
+          case QRType.EMAIL:
+            validator = this.typeValidators[QRType.EMAIL];
+            break;
+          case QRType.VCARD:
+            validator = this.typeValidators[QRType.VCARD];
+            break;
+          case QRType.PHONE:
+            validator = this.typeValidators[QRType.PHONE];
+            break;
+          case QRType.SMS:
+            validator = this.typeValidators[QRType.SMS];
+            break;
+          case QRType.PAYMENT:
+            validator = this.typeValidators[QRType.PAYMENT];
+            break;
+          case QRType.LOCATION:
+            validator = this.typeValidators[QRType.LOCATION];
+            break;
+          case QRType.MEETING:
+            validator = this.typeValidators[QRType.MEETING];
+            break;
+          case QRType.SOCIAL:
+            validator = this.typeValidators[QRType.SOCIAL];
+            break;
+          default:
+            break;
+        }
+
+        if (validator && typeof validator === 'function') {
+          violations.push(...validator(config.value));
         }
       }
     }
