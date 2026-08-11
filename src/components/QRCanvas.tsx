@@ -42,6 +42,12 @@ interface QRCanvasProps {
                         *
                         */
   virtualImageData?: ImageData }) => void;
+  /** Sequence of string values representing animated QR frames. If omitted, falls back to config.animationValues. */
+  animationValues?: string[];
+  /** Flag specifying if the visual animation loop is currently active. If omitted, falls back to config.isAnimating. */
+  isAnimating?: boolean;
+  /** Playback rate in frames per second. If omitted, falls back to config.animationFps. */
+  animationFps?: number;
 }
 
 /**
@@ -55,7 +61,19 @@ interface QRCanvasProps {
  * @param props.onRendered - Callback when render finishes.
  * @returns The QRCanvas component.
  */
-const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({ config, size = 1024, className, onRendered }, ref) => {
+const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
+  config,
+  size = 1024,
+  className,
+  onRendered,
+  animationValues,
+  isAnimating,
+  animationFps
+}, ref) => {
+  const activeIsAnimating = isAnimating !== undefined ? isAnimating : (config.isAnimating || false);
+  const activeAnimationValues = animationValues !== undefined ? animationValues : (config.animationValues || []);
+  const activeAnimationFps = animationFps !== undefined ? animationFps : (config.animationFps || 30);
+
   const localCanvasRef = useRef<HTMLCanvasElement>(null);
   
   // Use either the forwarded ref or the local one
@@ -73,6 +91,159 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({ config, s
   const borderLogoImg = useImage(config.isBorderEnabled ? config.borderLogoUrl : null);
 
   const [qrData, setQrData] = useState<any>(null);
+
+  // Animation states and refs to ensure we can read latest visual styles without rebuilding/restarting loop
+  const cachedFramesRef = useRef<{ value: string; modules: any }[]>([]);
+  const isAnimatingRef = useRef(activeIsAnimating);
+  const configRef = useRef(config);
+  const logoImgRef = useRef(logoImg);
+  const borderLogoImgRef = useRef(borderLogoImg);
+
+  useEffect(() => {
+    isAnimatingRef.current = activeIsAnimating;
+  }, [activeIsAnimating]);
+
+  useEffect(() => {
+    configRef.current = config;
+    logoImgRef.current = logoImg;
+    borderLogoImgRef.current = borderLogoImg;
+  });
+
+  // Pre-calculate and cache the complete sequence of QR frame matrices before starting loop
+  useEffect(() => {
+    if (!activeAnimationValues || activeAnimationValues.length === 0) {
+      cachedFramesRef.current = [];
+      return;
+    }
+
+    let isMounted = true;
+    import('qrcode').then((QRCode) => {
+      if (!isMounted) return;
+      try {
+        const cached = activeAnimationValues.map((val) => {
+          try {
+            const data = QRCode.create(val, { errorCorrectionLevel: config.errorCorrectionLevel });
+            return { value: val, modules: data.modules };
+          } catch (e) {
+            console.warn("QR precompute failed for value:", val, e);
+            return null;
+          }
+        }).filter(Boolean) as { value: string; modules: any }[];
+        cachedFramesRef.current = cached;
+      } catch (err) {
+        console.error("Precomputing matrices failed:", err);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      cachedFramesRef.current = [];
+    };
+  }, [activeAnimationValues, config.errorCorrectionLevel]);
+
+  // Direct canvas animation loop using requestAnimationFrame, bypassing React updates
+  useEffect(() => {
+    if (!activeIsAnimating) return;
+
+    const canvas = localCanvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const isPerfTest = typeof window !== 'undefined' && (window as any).isPerformanceTest;
+    const activeSize = isPerfTest ? 256 : size;
+    const pixelRatio = typeof window !== 'undefined' ? (window.devicePixelRatio || 1) : 1;
+
+    // Fixed canvas dimensions at initialization to prevent buffer resets/flickering
+    const useTemplate =
+      configRef.current.templateStyle !== TemplateStyle.NONE ||
+      configRef.current.socialFormat !== SocialFormat.SQUARE_1_1;
+
+    let displayWidth = activeSize;
+    let displayHeight = activeSize;
+
+    if (useTemplate) {
+      const { width: fw, height: fh } = SOCIAL_DIMENSIONS[configRef.current.socialFormat];
+      displayHeight = Math.round(activeSize * fh / fw);
+      canvas.width = displayWidth * pixelRatio;
+      canvas.height = displayHeight * pixelRatio;
+    } else {
+      canvas.width = displayWidth * pixelRatio;
+      canvas.height = displayHeight * pixelRatio;
+    }
+
+    let animationFrameId: number;
+    let lastFrameTime = performance.now();
+    let currentFrameIdx = 0;
+    const fps = activeAnimationFps || 30;
+    const frameInterval = 1000 / fps;
+
+    const loop = (now: number) => {
+      if (!isAnimatingRef.current) return;
+
+      const elapsed = now - lastFrameTime;
+
+      if (elapsed >= frameInterval) {
+        lastFrameTime = now - (elapsed % frameInterval);
+
+        const frames = cachedFramesRef.current;
+        if (frames && frames.length > 0) {
+          const frame = frames[currentFrameIdx % frames.length];
+          if (frame && frame.modules) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const currentConfig = configRef.current;
+            const currentLogoImg = logoImgRef.current;
+            const currentBorderLogoImg = borderLogoImgRef.current;
+            const currentUseTemplate =
+              currentConfig.templateStyle !== TemplateStyle.NONE ||
+              currentConfig.socialFormat !== SocialFormat.SQUARE_1_1;
+
+            if (currentUseTemplate) {
+              ctx.save();
+              ctx.scale(pixelRatio, pixelRatio);
+              drawWithTemplate(
+                ctx as unknown as CanvasRenderingContext2D,
+                frame.modules,
+                currentConfig,
+                currentLogoImg,
+                currentBorderLogoImg,
+                displayWidth,
+                displayHeight,
+                frame.modules.size
+              );
+              ctx.restore();
+            } else {
+              drawQR(
+                ctx,
+                frame.modules,
+                currentConfig,
+                currentLogoImg,
+                currentBorderLogoImg,
+                activeSize
+              );
+            }
+
+            // Sample the onRendered triggers or completely pause them to avoid main thread blocking
+            if (onRendered && currentFrameIdx % 60 === 0) {
+              onRendered({ moduleCount: frame.modules.size });
+            }
+
+            currentFrameIdx++;
+          }
+        }
+      }
+
+      animationFrameId = requestAnimationFrame(loop);
+    };
+
+    animationFrameId = requestAnimationFrame(loop);
+
+    return () => {
+      cancelAnimationFrame(animationFrameId);
+    };
+  }, [activeIsAnimating, size, activeAnimationFps, onRendered]);
 
   // Dynamically load QRCode and generate data
   useEffect(() => {
@@ -97,6 +268,8 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({ config, s
   }, [config.value, config.errorCorrectionLevel]);
 
   useEffect(() => {
+    if (activeIsAnimating) return;
+
     const isPerfTest = typeof window !== 'undefined' && (window as any).isPerformanceTest;
     const activeSize = isPerfTest ? 256 : size;
 
@@ -237,7 +410,7 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({ config, s
       }
     }
 
-  }, [config, size, qrData, logoImg, borderLogoImg, onRendered]);
+  }, [config, size, qrData, logoImg, borderLogoImg, onRendered, activeIsAnimating]);
 
   const typeLabel = config.type.charAt(0).toUpperCase() + config.type.slice(1).toLowerCase();
   const ariaLabel = `QR Code for ${typeLabel} - ${config.value ? 'Scan to view content' : 'Empty'}`;

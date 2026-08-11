@@ -55,3 +55,7 @@ export const WifiInput: React.FC<WifiInputProps> = ({ data, onChange }) => {
 3.  Create a new component file in this directory (e.g., `NewTypeInput.tsx`).
 4.  Register the component, its initial state, and helpers in `src/components/inputs/InputRegistry.ts`.
 5.  Add the new type to the `TypeSelector` options.
+
+## QR Animation Configurations
+
+The centralized config structure in `src/types.ts` has optional fields for `animationValues`, `isAnimating`, and `animationFps` to drive high-performance frame playbacks in the canvas.

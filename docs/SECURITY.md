@@ -52,3 +52,7 @@ To prevent custom SVG logo uploads and native vector exports from exposing users
   - Limits nested data URIs to safe image MIME-types and strips any with active payload markers or script references. This is validated by an optimized, localized helper function within the security utility to ensure clean code and prevent unused export overhead.
   - Strips all inline event handlers (attributes starting with `on`).
   - Neutralizes any remote or dangerous resource requests inside style blocks, style attributes, or `href`/`xlink:href` references while preserving standard layout paths, responsive viewBox attributes, linear gradients, and clip paths.
+
+## QR Animation Loops
+
+Animation configuration structures in `types.ts` are strictly statically typed to prevent any runtime execution or script-injection pathways during high-frequency loop playbacks.
