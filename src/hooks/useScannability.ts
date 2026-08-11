@@ -8,6 +8,8 @@ import {
   assertWorkerResponse,
   isWorkerResponse,
 } from '../utils/sharedContract';
+import { performScannabilityCheck } from '../utils/scannabilityChecker';
+
 
 /**
  *
@@ -39,19 +41,43 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
   const sequenceRef = useRef<number>(0);
   const store = useQRStore();
   const { engine } = useCapabilities();
+  const workerFailedRef = useRef(false);
 
   const health = useMemo<HealthScore>(() => {
     return ValidationEngine.calculateScannability(config);
   }, [config]);
 
-  useEffect(() => {
-    // Initialize worker
-    let worker = workerRef.current;
-    if (typeof window !== 'undefined' && !worker) {
-      worker = new Worker(new URL('../utils/scannabilityWorker.ts', import.meta.url), { type: 'module' });
+  const getOrInitWorker = useCallback(() => {
+    if (workerFailedRef.current) return null;
+    if (workerRef.current) return workerRef.current;
+    if (typeof window === 'undefined') return null;
+
+    try {
+      const worker = new Worker(new URL('../utils/scannabilityWorker.ts', import.meta.url), { type: 'module' });
       workerRef.current = worker;
+
+      worker.addEventListener('error', (err) => {
+        console.error("Worker error, falling back to main-thread processing:", err);
+        workerFailedRef.current = true;
+        if (workerRef.current) {
+          try {
+            workerRef.current.terminate();
+          } catch {}
+          workerRef.current = null;
+        }
+      });
+
+      return worker;
+    } catch (err) {
+      console.error("Failed to initialize Worker, falling back to main-thread processing:", err);
+      workerFailedRef.current = true;
+      workerRef.current = null;
+      return null;
     }
-    
+  }, []);
+
+  useEffect(() => {
+    const worker = getOrInitWorker();
     if (!worker) return;
 
     const handleMessage = (e: MessageEvent) => {
@@ -93,12 +119,8 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
 
     return () => {
       worker.removeEventListener('message', handleMessage);
-      // We don't terminate the worker here because it's stored in a ref and reused across config changes,
-      // but if the component unmounts fully, we should ideally clean it up.
-      // However, React 18 StrictMode double-invokes useEffect, which would kill our worker.
-      // We will leave it alive or manage its lifecycle better.
     };
-  }, [config, store, engine]);
+  }, [config, store, engine, getOrInitWorker]);
 
   // Handle worker cleanup on full unmount
   useEffect(() => {
@@ -112,13 +134,79 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
 
   // Expose a function to trigger check
   const checkScannability = useCallback((overrideImageData?: ImageData) => {
-    const worker = workerRef.current;
-    if (!worker) return;
+    const worker = getOrInitWorker();
 
     setStatus('checking');
     sequenceRef.current += 1;
     const currentSequence = String(sequenceRef.current);
-    
+
+    if (!worker) {
+      // Worker failed or isn't supported, run on the main thread!
+      const runMainThreadCheck = () => {
+        const performValidation = (imgData: ImageData) => {
+          try {
+            const isTest = !!navigator.webdriver;
+            const result = performScannabilityCheck(imgData, imgData.width, imgData.height, isTest);
+            if (currentSequence !== String(sequenceRef.current)) return;
+            setStatus(result.success ? (result.physicalReady ? 'physical-pass' : 'digital-pass') : 'fail');
+            if (!result.success && result.error) {
+              store.emitSignal('scannability-fail', {
+                engine,
+                styleId: config.style || 'default',
+                errorType: result.error
+              });
+            }
+          } catch (err) {
+            console.error("Main-thread fallback processing failed:", err);
+            if (currentSequence !== String(sequenceRef.current)) return;
+            setStatus('fail');
+            store.emitSignal('scannability-fail', {
+              engine,
+              styleId: config.style || 'default',
+              errorType: 'VALIDATION_ERROR'
+            });
+          }
+        };
+
+        if (overrideImageData) {
+          performValidation(overrideImageData);
+          return;
+        }
+
+        const canvas = canvasRef.current;
+        if (!canvas) {
+          setStatus('idle');
+          return;
+        }
+
+        // Make sure canvas actually has dimensions
+        if (canvas.width === 0 || canvas.height === 0) {
+          setStatus('idle');
+          return;
+        }
+
+        try {
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            setStatus('fail');
+            return;
+          }
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          performValidation(imageData);
+        } catch (err) {
+          console.error("Failed to read canvas data for fallback validation", err);
+          setStatus('fail');
+        }
+      };
+
+      if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+        (window as any).requestIdleCallback(runMainThreadCheck);
+      } else {
+        setTimeout(runMainThreadCheck, 100);
+      }
+      return;
+    }
+
     // If virtual renderer provided deterministic image data, use it directly
     if (overrideImageData) {
       const payload = {
@@ -179,7 +267,7 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
     } else {
       setTimeout(readAndSend, 100);
     }
-  }, [canvasRef]);
+  }, [canvasRef, getOrInitWorker, config, store, engine]);
 
   return { status, checkScannability, health };
 }

@@ -1,23 +1,9 @@
-import jsQR from 'jsqr';
-import { isDangerousUrl } from './security';
 import {
   assertWorkerRequest,
   assertWorkerResponse,
   isWorkerRequest,
 } from './sharedContract';
-import { applyOpticalSimulationMath } from './opticalSimulation';
-
-/**
- * Applies an optical simulation to the image data to mimic physical scanning conditions.
- * @param imageData - The raw image data.
- * @param width - The image width.
- * @param height - The image height.
- * @returns The transformed image data with blur and noise.
- */
-function applyOpticalSimulation(imageData: ImageData, width: number, height: number): ImageData {
-  const dst = applyOpticalSimulationMath(imageData.data, width, height);
-  return new ImageData(dst, width, height);
-}
+import { performScannabilityCheck } from './scannabilityChecker';
 
 let latestConfigId: string | undefined | null = undefined;
 
@@ -53,75 +39,19 @@ self.onmessage = async (e: MessageEvent<unknown>) => {
     }
 
     const { imageData, width, height, isTest } = e.data;
-    
-    // Check digital-only
-    let digitalPass = false;
-    let decodedData = '';
-    let code = jsQR(imageData.data, width, height, { inversionAttempts: "dontInvert" });
-    if (code) {
-      digitalPass = true;
-      decodedData = code.data;
-    } else {
-      code = jsQR(imageData.data, width, height, { inversionAttempts: "attemptBoth" });
-      if (code) {
-        digitalPass = true;
-        decodedData = code.data;
-      }
-    }
 
-    if (digitalPass && isDangerousUrl(decodedData)) {
-      // Check cancellation before returning security violation
-      if (configId !== undefined && latestConfigId !== configId) {
-        return;
-      }
-      const response = { success: false, physicalReady: false, error: 'SECURITY_VIOLATION', configId };
-      assertWorkerResponse(response);
-      self.postMessage(response);
-      return;
-    }
+    const result = performScannabilityCheck(imageData as ImageData, width, height, !!isTest);
 
-    if (!digitalPass) {
-      // Check cancellation before returning not found
-      if (configId !== undefined && latestConfigId !== configId) {
-        return;
-      }
-      const response = { success: false, physicalReady: false, error: 'NOT_FOUND', configId };
-      assertWorkerResponse(response);
-      self.postMessage(response);
-      return;
-    }
-
-    // Yield before applying optical simulation (CPU-intensive)
-    await yieldToEventLoop();
     if (configId !== undefined && latestConfigId !== configId) {
       return;
     }
 
-    // Apply optical simulation
-    const simulatedData = isTest ? (imageData as ImageData) : applyOpticalSimulation(imageData as ImageData, width, height);
-
-    // Yield before running physical scan (CPU-intensive)
-    await yieldToEventLoop();
-    if (configId !== undefined && latestConfigId !== configId) {
-      return;
-    }
-
-    let physicalPass = false;
-    let codeSim = jsQR(simulatedData.data, width, height, { inversionAttempts: "dontInvert" });
-    if (codeSim) {
-      physicalPass = true;
-    } else {
-      codeSim = jsQR(simulatedData.data, width, height, { inversionAttempts: "attemptBoth" });
-      if (codeSim) physicalPass = true;
-    }
-
-    // Yield before sending the successful response
-    await yieldToEventLoop();
-    if (configId !== undefined && latestConfigId !== configId) {
-      return;
-    }
-
-    const response = { success: true, physicalReady: physicalPass, configId };
+    const response = {
+      success: result.success,
+      physicalReady: result.physicalReady,
+      error: result.error,
+      configId
+    };
     assertWorkerResponse(response);
     self.postMessage(response);
     
@@ -144,3 +74,4 @@ self.onmessage = async (e: MessageEvent<unknown>) => {
     }
   }
 };
+
