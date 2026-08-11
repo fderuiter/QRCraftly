@@ -14,7 +14,7 @@ export const ValidationEngine = {
   /**
    * Registry for type-specific validator functions to avoid tight coupling.
    */
-  typeValidators: {} as Record<string, (value: string) => string[]>,
+  typeValidators: Object.create(null) as Record<string, (value: string) => string[]>,
 
   /**
    * Registers a validator function for a specific QRType.
@@ -143,9 +143,13 @@ export const ValidationEngine = {
       // Determine the effective type. Prefer explicit config.type, otherwise try to identify it.
       const type = config.type || this.identifyProtocol(config.value);
 
-      const validator = this.typeValidators[type];
-      if (validator) {
-        violations.push(...validator(config.value));
+      if (type && Object.values(QRType).includes(type as QRType)) {
+        if (Object.prototype.hasOwnProperty.call(this.typeValidators, type)) {
+          const validator = this.typeValidators[type];
+          if (typeof validator === 'function') {
+            violations.push(...validator(config.value));
+          }
+        }
       }
     }
 

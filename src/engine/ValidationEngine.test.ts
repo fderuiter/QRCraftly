@@ -101,5 +101,14 @@ describe('ValidationEngine', () => {
       const violations = ValidationEngine.validateConfig(config);
       expect(violations).toHaveLength(0);
     });
+
+    it('should safely handle malicious or invalid QRType without throwing or invoking prototype methods', () => {
+      const config = getBaseConfig();
+      config.type = 'toString' as QRType;
+      expect(() => {
+        const violations = ValidationEngine.validateConfig(config);
+        expect(violations).toBeDefined();
+      }).not.toThrow();
+    });
   });
 });
