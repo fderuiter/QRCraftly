@@ -17,9 +17,14 @@
 */
 
 import React, { useState, useEffect } from 'react';
-import { QRConfig } from '../types';
+import { QRConfig, QRType } from '../types';
 import { TypeSelector, useInputLogic } from './inputs';
 import { useDynamicFocus } from '../hooks/useDynamicFocus';
+import { Button } from './ui/Button';
+import { Camera } from 'lucide-react';
+import { QRScanner } from './QRScanner';
+import { useToast } from './ui/Toast';
+import { INPUT_REGISTRY } from './inputs/InputRegistry';
 
 /**
  * Props for the InputPanel component.
@@ -44,6 +49,8 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
   const { InputComponent, inputProps } = useInputLogic(config, onChange);
   const containerRef = useDynamicFocus<HTMLDivElement>([config.type]);
   const [announcement, setAnnouncement] = useState('');
+  const [scannerActive, setScannerActive] = useState(false);
+  const { addToast } = useToast();
 
   // Update live region announcement when type changes
   useEffect(() => {
@@ -66,6 +73,32 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
     setAnnouncement(`${typeNames[config.type] || config.type} input loaded`);
   }, [config.type]);
 
+  const handleScanSuccess = (decodedData: string) => {
+    setScannerActive(false);
+
+    // Auto-detect the correct QRType based on registry hydrate matchers
+    let detectedType = QRType.TEXT;
+    for (const key of Object.keys(INPUT_REGISTRY) as QRType[]) {
+      // eslint-disable-next-line security/detect-object-injection
+      const entry = INPUT_REGISTRY[key];
+      if (entry && entry.canHydrateFn && entry.canHydrateFn(decodedData)) {
+        detectedType = key;
+        break;
+      }
+    }
+
+    onChange({
+      type: detectedType,
+      value: decodedData,
+    });
+
+    addToast({
+      type: 'success',
+      message: `Successfully scanned QR code! Type detected: ${detectedType}`,
+      duration: 5000,
+    });
+  };
+
   return (
     <div className="space-y-6">
       {/* Live Region for Screen Readers */}
@@ -80,10 +113,28 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
       {/* Type Selector */}
       <TypeSelector
         currentType={config.type}
-        onSelect={(type) => onChange({ type, value: '' })}
+        onSelect={(type) => {
+          setScannerActive(false);
+          onChange({ type, value: '' });
+        }}
       />
 
-      {/* Inputs */}
+      {/* Scanner Control Button */}
+      {!scannerActive && (
+        <div className="flex justify-end">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setScannerActive(true)}
+            className="flex items-center gap-2"
+          >
+            <Camera className="size-4" />
+            Scan QR Code
+          </Button>
+        </div>
+      )}
+
+      {/* Inputs or Scanner Container */}
       <div 
         id={`panel-${config.type}`}
         role="tabpanel"
@@ -91,8 +142,15 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
         className="space-y-4" 
         ref={containerRef}
       >
-        {InputComponent && (
-          <InputComponent {...inputProps} />
+        {scannerActive ? (
+          <QRScanner
+            onScanSuccess={handleScanSuccess}
+            onClose={() => setScannerActive(false)}
+          />
+        ) : (
+          InputComponent && (
+            <InputComponent {...inputProps} />
+          )
         )}
       </div>
     </div>
@@ -103,8 +161,9 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
  * Comparison function for React.memo.
  * Returns true if the next props are equivalent to the previous props (skipping re-render).
  * It ignores changes to 'fgColor', 'bgColor', 'style', etc. as they don't affect the input panel.
- * @param prev
- * @param next
+ * @param prev - Previous props of the input panel.
+ * @param next - Next props of the input panel.
+ * @returns True if previous and next props are equivalent.
  */
 function areInputPropsEqual(prev: InputPanelProps, next: InputPanelProps) {
   // If the onChange handler changed, we must re-render

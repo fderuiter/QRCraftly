@@ -59,3 +59,10 @@ export const WifiInput: React.FC<WifiInputProps> = ({ data, onChange }) => {
 ## QR Animation Configurations
 
 The centralized config structure in `src/types.ts` has optional fields for `animationValues`, `isAnimating`, and `animationFps` to drive high-performance frame playbacks in the canvas.
+
+## Dual-Mode QR Scanner Integration
+
+The `InputPanel` features an integrated, high-performance dual-mode QR Code Scanner:
+
+1. **Live Webcam Viewfinder**: Uses a custom `useCamera` hook to acquire media streams and robustly handles permission rejections (`NotAllowedError`) without throwing unhandled promise exceptions. Decodes real-time camera frames smoothly using the `useAdaptiveScanner` loop backpressure mechanism.
+2. **Client-Side File Upload Fallback**: If camera permissions are blocked or hardware is unavailable, displays an interactive troubleshooting card with platform-specific recovery instructions. Users can instantly transition to file upload mode to drag and drop or select QR code images for client-side decoding using `jsQR`. This guarantees user privacy by avoiding any external server transmissions.

@@ -441,4 +441,24 @@ describe('InputPanel Component', () => {
       renderPanel({ type: QRType.TEXT, value: 'Hello' });
       expect(screen.getByText('5 / 2500')).toBeInTheDocument();
   });
+
+  it('toggles the QR scanner when clicking the Scan QR Code button', () => {
+    renderPanel();
+
+    const scanBtn = screen.getByRole('button', { name: /scan qr code/i });
+    expect(scanBtn).toBeInTheDocument();
+
+    // Click to open scanner
+    fireEvent.click(scanBtn);
+
+    // Scan QR Code button should be hidden, and webcam select button from QRScanner should be visible
+    expect(scanBtn).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /webcam/i })).toBeInTheDocument();
+
+    // Close button of QRScanner should close it and restore manual input
+    const closeBtn = screen.getByLabelText(/close scanner/i);
+    fireEvent.click(closeBtn);
+
+    expect(screen.getByRole('button', { name: /scan qr code/i })).toBeInTheDocument();
+  });
 });
