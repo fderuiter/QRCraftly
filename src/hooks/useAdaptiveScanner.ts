@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { isValidScannerResponse } from '../utils/scannerContract';
 
 /**
  * Options for configuring the useAdaptiveScanner hook.
@@ -85,7 +86,12 @@ export function useAdaptiveScanner({
   const inFlightRef = useRef<boolean>(false);
   const sequenceRef = useRef<number>(0);
   const completedSequenceRef = useRef<number>(0);
-  
+
+  // Buffer Pool: Maintain a pool of pre-allocated buffers inside a useRef (double buffering)
+  const poolRef = useRef<ArrayBuffer[]>([]);
+  const currentWidthRef = useRef<number>(0);
+  const currentHeightRef = useRef<number>(0);
+
   // Track start times of in-flight requests mapped by sequenceId
   const startTimeMapRef = useRef<Map<number, number>>(new Map());
   const latencyHistoryRef = useRef<number[]>([]);
@@ -107,7 +113,24 @@ export function useAdaptiveScanner({
     workerRef.current = worker;
 
     const handleMessage = (e: MessageEvent) => {
-      const { status: resultStatus, sequenceId, decodedData, error } = e.data;
+      const payload = e.data;
+
+      // Schema validation
+      if (!isValidScannerResponse(payload)) {
+        console.error('Invalid scanner response payload:', payload);
+        return;
+      }
+
+      const { status: resultStatus, sequenceId, decodedData, error, buffer } = payload;
+
+      // Recycle buffer back into the pool even if message is stale
+      if (buffer && buffer.byteLength === currentWidthRef.current * currentHeightRef.current * 4) {
+        if (!poolRef.current.includes(buffer)) {
+          if (poolRef.current.length < 2) {
+            poolRef.current.push(buffer);
+          }
+        }
+      }
 
       const startTime = startTimeMapRef.current.get(sequenceId);
       if (startTime !== undefined) {
@@ -117,7 +140,7 @@ export function useAdaptiveScanner({
 
         // Requirement 5: Discard out-of-order older worker results
         if (sequenceId <= completedSequenceRef.current) {
-          // Releases backpressure for this discarded request
+          // Releases backpressure for this discarded request is handled when the current in-flight completes
           return;
         }
         completedSequenceRef.current = sequenceId;
@@ -139,7 +162,7 @@ export function useAdaptiveScanner({
           }
         } else if (resultStatus === 'fail') {
           if (onScanFailRef.current) {
-            onScanFailRef.current(error);
+            onScanFailRef.current(error || undefined);
           }
         }
 
@@ -239,6 +262,30 @@ export function useAdaptiveScanner({
             sequenceRef.current += 1;
             const seqId = sequenceRef.current;
 
+            // Lazily initialize/resize pool with exactly 2 buffers once resolution is known
+            if (width !== currentWidthRef.current || height !== currentHeightRef.current) {
+              currentWidthRef.current = width;
+              currentHeightRef.current = height;
+              const bufferSize = width * height * 4;
+              poolRef.current = [
+                new ArrayBuffer(bufferSize),
+                new ArrayBuffer(bufferSize),
+              ];
+            }
+
+            const buffer = poolRef.current.pop();
+            if (!buffer) {
+              // Enforce strict limit. If pool is somehow empty, discard frame and try next cycle
+              timerId = setTimeout(() => {
+                rafId = requestAnimationFrame(runLoop);
+              }, samplingDelay);
+              return;
+            }
+
+            // Copy pixel values from imageData.data into the recycled ArrayBuffer
+            const bufferView = new Uint8ClampedArray(buffer);
+            bufferView.set(imageData.data);
+
             inFlightRef.current = true;
             startTimeMapRef.current.set(seqId, performance.now());
             setStatus('checking');
@@ -246,12 +293,12 @@ export function useAdaptiveScanner({
             // Requirement 4: Transfer buffer to eliminate memory copying overhead (zero-copy)
             workerRef.current?.postMessage(
               {
-                imageData,
+                buffer,
                 width,
                 height,
                 sequenceId: seqId,
               },
-              [imageData.data.buffer]
+              [buffer]
             );
 
           } catch (err) {
@@ -291,10 +338,16 @@ export function useAdaptiveScanner({
     sequenceRef.current = 0;
     completedSequenceRef.current = 0;
     startTimeMapRef.current.clear();
+    poolRef.current = [];
+    currentWidthRef.current = 0;
+    currentHeightRef.current = 0;
   }, []);
 
   const stopScanning = useCallback(() => {
     setIsScanning(false);
+    poolRef.current = [];
+    currentWidthRef.current = 0;
+    currentHeightRef.current = 0;
   }, []);
 
   return {
