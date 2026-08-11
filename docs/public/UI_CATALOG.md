@@ -26,7 +26,7 @@ These low-level, primitive UI elements are designed to be extremely customizable
 - **RangeInput** (`RangeInput.tsx` / `RangeInput.test.tsx`): **Mandatory slider control component** supporting minimum, maximum, step-size configuration, and granular visual previews.
 - **SanitizedHtml** (`SanitizedHtml.tsx`): Safe, sanitized HTML injection system to avoid cross-site scripting (XSS) issues in dynamically parsed rich content.
 - **TextField** (`TextField.tsx`): Standard form text input primitive with full validation styles and focus rings.
-- **Toast** (`Toast.tsx` / `Toast.test.tsx`): Auto-dismissing alerts that slide into view to acknowledge user actions without interrupting their workflow.
+- **Toast** (`Toast.tsx` / `Toast.test.tsx`): Auto-dismissing alerts that slide into view to acknowledge user actions without interrupting their workflow, with a safe fallback mock context when running outside a provider (e.g., in unit tests).
 - **ToggleSwitch** (`ToggleSwitch.tsx` / `ToggleSwitch.test.tsx`): Accessible sliding checkbox switch used for toggle-only options (e.g., advanced modes or themes).
 
 ---
