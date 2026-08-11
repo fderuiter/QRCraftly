@@ -536,5 +536,76 @@ describe('useScannability - changed behavior: uses useQRStore instead of useQRCo
       expect(detail).toHaveProperty('errorType', 'SECURITY_VIOLATION');
     });
   });
+
+  describe('Self-Healing Worker Recovery on crash and subsequent retry', () => {
+    it('handles worker runtime crash, transitions to fail, shows recovery warning, and then heals on next check', async () => {
+      const { result } = renderHook(
+        () => ({
+          scan: useScannability(makeCanvasRef(), defaultConfig),
+          store: useQRStore(),
+        }),
+        { wrapper }
+      );
+
+      const signalCallback = vi.fn();
+      act(() => {
+        result.current.store.registerSignal('scannability-fail', signalCallback);
+      });
+
+      // 1. Trigger initial check
+      act(() => {
+        result.current.scan.checkScannability();
+      });
+
+      expect(result.current.scan.status).toBe('checking');
+      expect(result.current.scan.workerRecoveryActive).toBe(false);
+
+      const worker1 = getActiveWorker()!;
+      expect(worker1).not.toBeNull();
+
+      // 2. Simulate worker crash/error
+      act(() => {
+        worker1.dispatchError(new Error('Worker runtime exception'));
+      });
+
+      // The status should transition immediately to 'fail'
+      expect(result.current.scan.status).toBe('fail');
+      // A diagnostic warning is displayed / active
+      expect(result.current.scan.workerRecoveryActive).toBe(true);
+      // The worker is terminated
+      expect(worker1.terminate).toHaveBeenCalled();
+      // Emitted scannability-fail signal
+      expect(signalCallback).toHaveBeenCalledTimes(1);
+      expect(signalCallback.mock.calls[0][0]).toHaveProperty('errorType', 'WORKER_ERROR');
+
+      // 3. Trigger subsequent verification request (retry)
+      act(() => {
+        result.current.scan.checkScannability();
+      });
+
+      // It should instantly spin up a fresh worker thread (different from the first)
+      const worker2 = getActiveWorker()!;
+      expect(worker2).not.toBeNull();
+      expect(worker2).not.toBe(worker1);
+
+      // Status goes to checking
+      expect(result.current.scan.status).toBe('checking');
+
+      // Simulate the fresh worker succeeding
+      act(() => {
+        worker2.dispatchMessage({
+          success: true,
+          physicalReady: true,
+          error: null,
+          configId: '2',
+        });
+      });
+
+      // Result is successful
+      expect(result.current.scan.status).toBe('physical-pass');
+      // Worker recovery active is reset to false since the worker is now healthy and successfully processed the check
+      expect(result.current.scan.workerRecoveryActive).toBe(false);
+    });
+  });
 });
 

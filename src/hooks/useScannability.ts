@@ -37,44 +37,82 @@ export interface HealthScore {
  */
 export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | null>, config: QRConfig) {
   const [status, setStatus] = useState<ScannabilityStatus>('idle');
+  const [workerRecoveryActive, setWorkerRecoveryActive] = useState(false);
+  const [activeWorker, setActiveWorker] = useState<Worker | null>(null);
   const workerRef = useRef<Worker | null>(null);
   const sequenceRef = useRef<number>(0);
   const store = useQRStore();
   const { engine } = useCapabilities();
-  const workerFailedRef = useRef(false);
+  const workerUnsupportedRef = useRef(false);
 
   const health = useMemo<HealthScore>(() => {
     return ValidationEngine.calculateScannability(config);
   }, [config]);
 
+  const configRef = useRef(config);
+  useEffect(() => {
+    configRef.current = config;
+  }, [config]);
+
+  const statusRef = useRef(status);
+  useEffect(() => {
+    statusRef.current = status;
+  }, [status]);
+
+  const handleError = useCallback((err: any) => {
+    console.error("Worker error, transitioning immediately to fail state:", err);
+
+    setStatus('fail');
+    store.emitSignal('scannability-fail', {
+      engine,
+      styleId: configRef.current.style || 'default',
+      errorType: 'WORKER_ERROR'
+    });
+
+    setWorkerRecoveryActive(true);
+
+    if (workerRef.current) {
+      try {
+        workerRef.current.terminate();
+      } catch {}
+      workerRef.current = null;
+    }
+    setActiveWorker(null);
+  }, [store, engine]);
+
   const getOrInitWorker = useCallback(() => {
-    if (workerFailedRef.current) return null;
+    if (workerUnsupportedRef.current) return null;
     if (workerRef.current) return workerRef.current;
     if (typeof window === 'undefined') return null;
 
     try {
       const worker = new Worker(new URL('../utils/scannabilityWorker.ts', import.meta.url), { type: 'module' });
       workerRef.current = worker;
+      setActiveWorker(worker);
 
-      worker.addEventListener('error', (err) => {
-        console.error("Worker error, falling back to main-thread processing:", err);
-        workerFailedRef.current = true;
-        if (workerRef.current) {
-          try {
-            workerRef.current.terminate();
-          } catch {}
-          workerRef.current = null;
-        }
-      });
+      worker.addEventListener('error', handleError);
 
       return worker;
     } catch (err) {
-      console.error("Failed to initialize Worker, falling back to main-thread processing:", err);
-      workerFailedRef.current = true;
+      console.error("Failed to initialize Worker, transitioning immediately to fail state:", err);
+      
+      if (statusRef.current === 'checking') {
+        setStatus('fail');
+        store.emitSignal('scannability-fail', {
+          engine,
+          styleId: configRef.current.style || 'default',
+          errorType: 'WORKER_ERROR'
+        });
+        setWorkerRecoveryActive(true);
+      }
+
+      workerUnsupportedRef.current = true;
       workerRef.current = null;
+      setActiveWorker(null);
+
       return null;
     }
-  }, []);
+  }, [handleError, store, engine]);
 
   useEffect(() => {
     const worker = getOrInitWorker();
@@ -100,16 +138,19 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
         if (!success && error) {
           store.emitSignal('scannability-fail', {
             engine,
-            styleId: config.style || 'default',
+            styleId: configRef.current.style || 'default',
             errorType: error
           });
         }
+
+        // Successful message received means background worker is healthy
+        setWorkerRecoveryActive(false);
       } catch (err) {
         console.error("Worker response validation failed:", err);
         setStatus('fail');
         store.emitSignal('scannability-fail', {
           engine,
-          styleId: config.style || 'default',
+          styleId: configRef.current.style || 'default',
           errorType: 'VALIDATION_ERROR'
         });
       }
@@ -120,7 +161,7 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
     return () => {
       worker.removeEventListener('message', handleMessage);
     };
-  }, [config, store, engine, getOrInitWorker]);
+  }, [config, store, engine, getOrInitWorker, activeWorker]);
 
   // Handle worker cleanup on full unmount
   useEffect(() => {
@@ -269,5 +310,5 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
     }
   }, [canvasRef, getOrInitWorker, config, store, engine]);
 
-  return { status, checkScannability, health };
+  return { status, checkScannability, health, workerRecoveryActive };
 }
