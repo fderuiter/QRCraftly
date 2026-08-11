@@ -16,8 +16,9 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import React, { useEffect, useRef, useState } from 'react';
-import { QRConfig, SocialFormat, TemplateStyle } from '../types';
+import React, { useEffect, useRef, useCallback } from 'react';
+import QRCodeModule from 'qrcode';
+import { QRConfig, SocialFormat, TemplateStyle, QRModules } from '../types';
 import { drawQR, drawQRInternal } from '../utils/qrRenderer';
 import { drawWithTemplate, SOCIAL_DIMENSIONS } from '../utils/templateRenderer';
 import { useImage } from '../hooks/useImage';
@@ -90,8 +91,6 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
   const logoImg = useImage(config.logoUrl);
   const borderLogoImg = useImage(config.isBorderEnabled ? config.borderLogoUrl : null);
 
-  const [qrData, setQrData] = useState<any>(null);
-
   // Animation states and refs to ensure we can read latest visual styles without rebuilding/restarting loop
   const cachedFramesRef = useRef<{ value: string; modules: any }[]>([]);
   const isAnimatingRef = useRef(activeIsAnimating);
@@ -103,10 +102,15 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
     isAnimatingRef.current = activeIsAnimating;
   }, [activeIsAnimating]);
 
+  const onRenderedRef = useRef(onRendered);
+  const sizeRef = useRef(size);
+
   useEffect(() => {
     configRef.current = config;
     logoImgRef.current = logoImg;
     borderLogoImgRef.current = borderLogoImg;
+    onRenderedRef.current = onRendered;
+    sizeRef.current = size;
   });
 
   // Pre-calculate and cache the complete sequence of QR frame matrices before starting loop
@@ -245,63 +249,71 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
     };
   }, [activeIsAnimating, size, activeAnimationFps, onRendered]);
 
-  // Dynamically load QRCode and generate data
-  useEffect(() => {
-    if (!config.value) {
-      setQrData(null);
-      return;
-    }
+  // Web Worker setup and configuration calculation
+  const workerRef = useRef<Worker | null>(null);
+  const sequenceIdRef = useRef<number>(0);
+  const lastModulesRef = useRef<QRModules | null>(null);
+  const isWorkerFallbackRef = useRef<boolean>(
+    typeof window === 'undefined' ||
+    typeof Worker === 'undefined' ||
+    (typeof navigator !== 'undefined' && navigator.userAgent && navigator.userAgent.includes('jsdom')) ||
+    (typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 'test')
+  );
 
-    let isMounted = true;
-    import('qrcode').then((QRCode) => {
-      if (!isMounted) return;
-      try {
-        const data = QRCode.create(config.value, { errorCorrectionLevel: config.errorCorrectionLevel });
-        setQrData(data);
-      } catch (e) {
-        console.warn("QR generation failed:", e);
-        setQrData(null);
-      }
-    });
-
-    return () => { isMounted = false; };
-  }, [config.value, config.errorCorrectionLevel]);
-
-  useEffect(() => {
-    if (activeIsAnimating) return;
-
-    const isPerfTest = typeof window !== 'undefined' && (window as any).isPerformanceTest;
-    const activeSize = isPerfTest ? 256 : size;
-
+  const clearCanvasAndResize = useCallback(() => {
     const canvas = localCanvasRef.current;
     if (!canvas) return;
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const pixelRatio = typeof window !== 'undefined' ? (window.devicePixelRatio || 1) : 1;
-    const useTemplate =
-      config.templateStyle !== TemplateStyle.NONE ||
-      config.socialFormat !== SocialFormat.SQUARE_1_1;
+    const currentConfig = configRef.current;
+    const currentSize = sizeRef.current;
 
-    if (!qrData) {
-      // Clear if no data
-      if (useTemplate) {
-        const { width: fw, height: fh } = SOCIAL_DIMENSIONS[config.socialFormat];
-        const displayHeight = Math.round(activeSize * fh / fw);
-        canvas.width = activeSize * pixelRatio;
-        canvas.height = displayHeight * pixelRatio;
-      } else {
-        canvas.width = activeSize * pixelRatio;
-        canvas.height = activeSize * pixelRatio;
-      }
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      return;
-    }
+    const isPerfTest = typeof window !== 'undefined' && (window as any).isPerformanceTest;
+    const activeSize = isPerfTest ? 256 : currentSize;
+    const pixelRatio = typeof window !== 'undefined' ? (window.devicePixelRatio || 1) : 1;
+
+    const useTemplate =
+      currentConfig.templateStyle !== TemplateStyle.NONE ||
+      currentConfig.socialFormat !== SocialFormat.SQUARE_1_1;
 
     if (useTemplate) {
-      // ── Template / social format rendering ─────────────────────────────────
-      const { width: fw, height: fh } = SOCIAL_DIMENSIONS[config.socialFormat];
+      const { width: fw, height: fh } = SOCIAL_DIMENSIONS[currentConfig.socialFormat];
+      const displayHeight = Math.round(activeSize * fh / fw);
+      canvas.width = activeSize * pixelRatio;
+      canvas.height = displayHeight * pixelRatio;
+    } else {
+      canvas.width = activeSize * pixelRatio;
+      canvas.height = activeSize * pixelRatio;
+    }
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }, []);
+
+  const paintMatrix = useCallback((modules: QRModules) => {
+    const canvas = localCanvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const currentConfig = configRef.current;
+    const currentLogoImg = logoImgRef.current;
+    const currentBorderLogoImg = borderLogoImgRef.current;
+    const currentOnRendered = onRenderedRef.current;
+    const currentSize = sizeRef.current;
+
+    const isPerfTest = typeof window !== 'undefined' && (window as any).isPerformanceTest;
+    const activeSize = isPerfTest ? 256 : currentSize;
+    const pixelRatio = typeof window !== 'undefined' ? (window.devicePixelRatio || 1) : 1;
+
+    const useTemplate =
+      currentConfig.templateStyle !== TemplateStyle.NONE ||
+      currentConfig.socialFormat !== SocialFormat.SQUARE_1_1;
+
+    if (useTemplate) {
+      const { width: fw, height: fh } = SOCIAL_DIMENSIONS[currentConfig.socialFormat];
       const displayWidth = activeSize;
       const displayHeight = Math.round(activeSize * fh / fw);
 
@@ -313,35 +325,32 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
 
       drawWithTemplate(
         ctx as unknown as CanvasRenderingContext2D,
-        qrData.modules,
-        config,
-        logoImg,
-        borderLogoImg,
+        modules,
+        currentConfig,
+        currentLogoImg,
+        currentBorderLogoImg,
         displayWidth,
         displayHeight,
-        qrData.modules.size
+        modules.size
       );
 
       ctx.restore();
     } else {
-      // ── Original square rendering path (no change in behaviour) ────────────
-      drawQR(ctx, qrData.modules, config, logoImg, borderLogoImg, activeSize);
+      canvas.width = activeSize * pixelRatio;
+      canvas.height = activeSize * pixelRatio;
+      drawQR(ctx, modules, currentConfig, currentLogoImg, currentBorderLogoImg, activeSize);
     }
 
-    if (onRendered) {
-      onRendered({ moduleCount: qrData.modules.size });
+    if (currentOnRendered) {
+      currentOnRendered({ moduleCount: modules.size });
 
-      const isPerfTest = typeof window !== 'undefined' && (window as any).isPerformanceTest;
-      if (isPerfTest) {
-        return;
-      }
+      if (isPerfTest) return;
 
-      // Perform virtual offscreen rendering for deterministic validation
       const runVirtualRender = () => {
         try {
           const virtualSize = 256;
           let vCanvas: HTMLCanvasElement | OffscreenCanvas;
-          
+
           if (typeof OffscreenCanvas !== 'undefined') {
             vCanvas = new OffscreenCanvas(virtualSize, virtualSize);
           } else {
@@ -349,7 +358,7 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
             vCanvas.width = virtualSize;
             vCanvas.height = virtualSize;
           }
-          
+
           const vCtx = vCanvas.getContext('2d', { willReadFrequently: true }) as CanvasRenderingContext2D;
           if (!vCtx) return;
 
@@ -357,7 +366,7 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
           let displayHeight = virtualSize;
 
           if (useTemplate) {
-            const { width: fw, height: fh } = SOCIAL_DIMENSIONS[config.socialFormat];
+            const { width: fw, height: fh } = SOCIAL_DIMENSIONS[currentConfig.socialFormat];
             displayHeight = Math.round(virtualSize * fh / fw);
             if (typeof OffscreenCanvas !== 'undefined') {
               vCanvas.height = displayHeight;
@@ -367,33 +376,32 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
 
             drawWithTemplate(
               vCtx as unknown as CanvasRenderingContext2D,
-              qrData.modules,
-              config,
-              logoImg,
-              borderLogoImg,
+              modules,
+              currentConfig,
+              currentLogoImg,
+              currentBorderLogoImg,
               displayWidth,
               displayHeight,
-              qrData.modules.size,
+              modules.size,
               true
             );
           } else {
             vCtx.clearRect(0, 0, displayWidth, displayHeight);
             drawQRInternal(
               vCtx as unknown as CanvasRenderingContext2D,
-              qrData.modules,
-              config,
-              logoImg,
-              borderLogoImg,
+              modules,
+              currentConfig,
+              currentLogoImg,
+              currentBorderLogoImg,
               virtualSize,
-              qrData.modules.size,
+              modules.size,
               true
             );
           }
-          
+
           const imageData = vCtx.getImageData(0, 0, displayWidth, displayHeight);
-          onRendered({ moduleCount: qrData.modules.size, virtualImageData: imageData });
-          
-          // Free memory
+          currentOnRendered({ moduleCount: modules.size, virtualImageData: imageData });
+
           if (vCanvas) {
             vCanvas.width = 0;
             vCanvas.height = 0;
@@ -409,8 +417,132 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
         setTimeout(runVirtualRender, 50);
       }
     }
+  }, []);
 
-  }, [config, size, qrData, logoImg, borderLogoImg, onRendered, activeIsAnimating]);
+  const requestMatrixCalculation = useCallback(() => {
+    const currentConfig = configRef.current;
+    if (!currentConfig.value) {
+      lastModulesRef.current = null;
+      clearCanvasAndResize();
+      return;
+    }
+
+    sequenceIdRef.current += 1;
+    const currentSeqId = sequenceIdRef.current;
+
+    if (workerRef.current && !isWorkerFallbackRef.current) {
+      workerRef.current.postMessage({
+        config: currentConfig,
+        sequenceId: currentSeqId,
+      });
+    } else {
+      // Synchronous fallback calculation (crucial for testing and permission-blocked worker fallbacks)
+      try {
+        const violations = ValidationEngine.validateConfig(currentConfig);
+        if (violations.length > 0) {
+          lastModulesRef.current = null;
+          clearCanvasAndResize();
+          return;
+        }
+
+        const QRCode = QRCodeModule.default || QRCodeModule;
+        const data = QRCode.create(currentConfig.value, {
+          errorCorrectionLevel: currentConfig.errorCorrectionLevel,
+        });
+        const modules: QRModules = data.modules;
+        lastModulesRef.current = modules;
+        paintMatrix(modules);
+      } catch (e) {
+        console.warn("QR generation failed:", e);
+        lastModulesRef.current = null;
+        clearCanvasAndResize();
+      }
+    }
+  }, [paintMatrix, clearCanvasAndResize]);
+
+  // Web Worker lifecycle management
+  useEffect(() => {
+    let worker: Worker | null = null;
+    try {
+      worker = new Worker(
+        new URL('../utils/matrixWorker.ts', import.meta.url),
+        { type: 'module' }
+      );
+      worker.onmessage = (e) => {
+        const { status, sequenceId, size, matrix } = e.data;
+        if (sequenceId !== sequenceIdRef.current) {
+          return;
+        }
+
+        if (status === 'success' && size && matrix) {
+          const modules: QRModules = {
+            size,
+            get(r, c) {
+              return matrix[r * size + c] === 1;
+            }
+          };
+          lastModulesRef.current = modules;
+          paintMatrix(modules);
+        } else {
+          lastModulesRef.current = null;
+          clearCanvasAndResize();
+        }
+      };
+      workerRef.current = worker;
+    } catch (err) {
+      console.warn("Failed to initialize background worker, falling back:", err);
+      isWorkerFallbackRef.current = true;
+    }
+
+    return () => {
+      if (worker) {
+        worker.terminate();
+      }
+    };
+  }, [paintMatrix, clearCanvasAndResize]);
+
+  // Monitor value and error correction level to request calculations
+  useEffect(() => {
+    if (activeIsAnimating) return;
+    requestMatrixCalculation();
+  }, [config.value, config.errorCorrectionLevel, activeIsAnimating, requestMatrixCalculation]);
+
+  // Monitor structural and aesthetic changes to repaint immediately
+  useEffect(() => {
+    if (activeIsAnimating) return;
+    if (lastModulesRef.current) {
+      paintMatrix(lastModulesRef.current);
+    } else {
+      requestMatrixCalculation();
+    }
+  }, [
+    config.fgColor,
+    config.bgColor,
+    config.eyeColor,
+    config.style,
+    config.logoUrl,
+    config.logoSize,
+    config.logoPaddingStyle,
+    config.logoPadding,
+    config.logoBackgroundColor,
+    config.isBorderEnabled,
+    config.borderSize,
+    config.borderColor,
+    config.borderStyle,
+    config.borderText,
+    config.borderTextPosition,
+    config.borderTextColor,
+    config.borderLogoUrl,
+    config.borderLogoPosition,
+    config.socialFormat,
+    config.templateStyle,
+    logoImg,
+    borderLogoImg,
+    size,
+    activeIsAnimating,
+    paintMatrix,
+    requestMatrixCalculation,
+  ]);
 
   const typeLabel = config.type.charAt(0).toUpperCase() + config.type.slice(1).toLowerCase();
   const ariaLabel = `QR Code for ${typeLabel} - ${config.value ? 'Scan to view content' : 'Empty'}`;

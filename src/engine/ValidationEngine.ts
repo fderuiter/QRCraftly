@@ -14,7 +14,7 @@ export const ValidationEngine = {
   /**
    * Registry for type-specific validator functions to avoid tight coupling.
    */
-  typeValidators: {} as Record<string, (value: string) => string[]>,
+  typeValidators: Object.create(null) as Record<string, (value: string) => string[]>,
 
   /**
    * Registers a validator function for a specific QRType.
