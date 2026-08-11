@@ -156,6 +156,12 @@ export interface QRConfig {
    * Valid range: 0.5 – 1.5.
    */
   templateQrScale?: number;
+  /** Complete sequence of string values representing animated QR frames. */
+  animationValues?: string[];
+  /** Flag specifying if the visual animation loop is currently active. */
+  isAnimating?: boolean;
+  /** Desired playback speed of the animation loop in frames per second (FPS). Defaults to 30. */
+  animationFps?: number;
 }
 
 /**
