@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Camera, Upload, AlertTriangle, X, RefreshCw, FileImage } from 'lucide-react';
-import { useCamera, PermissionState } from '../hooks/useCamera';
+import { useCamera, type PermissionState } from '../hooks/useCamera';
 import { useAdaptiveScanner } from '../hooks/useAdaptiveScanner';
 import { Button } from './ui/Button';
 import jsQR from 'jsqr';
