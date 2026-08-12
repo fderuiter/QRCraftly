@@ -57,6 +57,10 @@ export interface UseAdaptiveScannerResult {
    * Stops the camera frame capture scheduler loop.
    */
   stopScanning: () => void;
+  /**
+   * React ref pointing to the shared persistent Web Worker instance.
+   */
+  workerRef?: React.MutableRefObject<Worker | null>;
 }
 
 /**
@@ -464,5 +468,6 @@ export function useAdaptiveScanner({
     latencyHistory,
     startScanning,
     stopScanning,
+    workerRef,
   };
 }
