@@ -388,6 +388,7 @@ function FileTransferToolInner() {
     if (fileList && fileList.length > 0) {
       setSelectedFile(fileList[0]);
       stopTransfer();
+      e.target.value = '';
     }
   };
 

@@ -51,6 +51,7 @@ export function useImageUpload(): UseImageUploadReturn {
       const validationError = validateImageUpload(file);
       if (validationError) {
         setError(validationError);
+        e.target.value = '';
         return;
       }
       if (file.type === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg')) {
@@ -70,6 +71,7 @@ export function useImageUpload(): UseImageUploadReturn {
         };
         reader.readAsDataURL(file);
       }
+      e.target.value = '';
     }
   }, []);
 
