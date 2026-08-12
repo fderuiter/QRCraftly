@@ -195,6 +195,139 @@ export function useAdaptiveScanner({
     };
   }, [minSamplingDelay, maxSamplingDelay]);
 
+  const captureFrame = useCallback(() => {
+    const video = videoRef.current;
+    if (!video) return false;
+
+    try {
+      const width = video.videoWidth || 640;
+      const height = video.videoHeight || 480;
+      if (width === 0 || height === 0) {
+        return false;
+      }
+
+      if (!canvasRef.current) {
+        canvasRef.current = document.createElement('canvas');
+      }
+      const canvas = canvasRef.current;
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return false;
+
+      // Copy video frame onto offscreen canvas and grab ImageData
+      ctx.drawImage(video, 0, 0, width, height);
+      const imageData = ctx.getImageData(0, 0, width, height);
+
+      // Increment sequence and track start time
+      sequenceRef.current += 1;
+      const seqId = sequenceRef.current;
+
+      // Lazily initialize/resize pool with exactly 2 buffers once resolution is known
+      if (width !== currentWidthRef.current || height !== currentHeightRef.current) {
+        currentWidthRef.current = width;
+        currentHeightRef.current = height;
+        const bufferSize = width * height * 4;
+        poolRef.current = [
+          new ArrayBuffer(bufferSize),
+          new ArrayBuffer(bufferSize),
+        ];
+      }
+
+      let buffer = poolRef.current.pop();
+      if (!buffer) {
+        buffer = new ArrayBuffer(width * height * 4);
+      }
+
+      // Copy pixel values from imageData.data into the recycled ArrayBuffer
+      const bufferView = new Uint8ClampedArray(buffer);
+      bufferView.set(imageData.data);
+
+      inFlightRef.current = true;
+      startTimeMapRef.current.set(seqId, performance.now());
+      setStatus('checking');
+
+      // Requirement 4: Transfer buffer to eliminate memory copying overhead (zero-copy)
+      workerRef.current?.postMessage(
+        {
+          buffer,
+          width,
+          height,
+          sequenceId: seqId,
+        },
+        [buffer]
+      );
+      return true;
+    } catch (err) {
+      console.error('Failed to capture or dispatch camera frame:', err);
+      return false;
+    }
+  }, [videoRef]);
+
+  const listenersAttachedRef = useRef<{
+    video: HTMLVideoElement;
+    onPause: () => void;
+    onSeeked: () => void;
+    onPlay: () => void;
+    onLoadedData: () => void;
+  } | null>(null);
+
+  const detachVideoListeners = useCallback(() => {
+    if (listenersAttachedRef.current) {
+      const { video, onPause, onSeeked, onPlay, onLoadedData } = listenersAttachedRef.current;
+      try {
+        video.removeEventListener('pause', onPause);
+        video.removeEventListener('seeked', onSeeked);
+        video.removeEventListener('play', onPlay);
+        video.removeEventListener('playing', onPlay);
+        video.removeEventListener('loadeddata', onLoadedData);
+      } catch (e) {
+        console.error('Failed to detach video listeners:', e);
+      }
+      listenersAttachedRef.current = null;
+    }
+  }, []);
+
+  const attachVideoListeners = useCallback((video: HTMLVideoElement, triggerPlay: () => void) => {
+    if (listenersAttachedRef.current && listenersAttachedRef.current.video === video) {
+      return;
+    }
+
+    if (listenersAttachedRef.current) {
+      detachVideoListeners();
+    }
+
+    const onPause = () => {
+      captureFrame();
+    };
+
+    const onSeeked = () => {
+      captureFrame();
+    };
+
+    const onPlay = () => {
+      triggerPlay();
+    };
+
+    const onLoadedData = () => {
+      captureFrame();
+    };
+
+    video.addEventListener('pause', onPause);
+    video.addEventListener('seeked', onSeeked);
+    video.addEventListener('play', onPlay);
+    video.addEventListener('playing', onPlay);
+    video.addEventListener('loadeddata', onLoadedData);
+
+    listenersAttachedRef.current = {
+      video,
+      onPause,
+      onSeeked,
+      onPlay,
+      onLoadedData,
+    };
+  }, [captureFrame, detachVideoListeners]);
+
   // Frame Capture and Dispatch Loop
   useEffect(() => {
     if (!isScanning) {
@@ -205,22 +338,57 @@ export function useAdaptiveScanner({
     let active = true;
     let timerId: any = null;
     let rafId: any = null;
+    let isLoopRunning = false;
 
     const runLoop = () => {
       if (!active) return;
 
       const performCapture = () => {
-        // Requirement 2 / Constraint: Block new frame dispatches while in-flight
-        if (inFlightRef.current) {
-          // Discard incoming frame and schedule next capture based on delay
+        const video = videoRef.current;
+        if (!video) {
+          isLoopRunning = false;
           timerId = setTimeout(() => {
             rafId = requestAnimationFrame(runLoop);
           }, samplingDelay);
           return;
         }
 
-        const video = videoRef.current;
-        if (!video || video.paused || video.ended) {
+        const isVideoFile = !video.srcObject && (!!video.src || !!video.currentSrc);
+
+        if (isVideoFile) {
+          attachVideoListeners(video, () => {
+            if (!isLoopRunning && active) {
+              isLoopRunning = true;
+              if (timerId) clearTimeout(timerId);
+              if (rafId) cancelAnimationFrame(rafId);
+              rafId = requestAnimationFrame(runLoop);
+            }
+          });
+
+          if (video.paused || video.ended) {
+            // Capture the initial/current frame immediately on pause/load
+            captureFrame();
+            // Continuous looping animation frame scheduler remains asleep when paused.
+            isLoopRunning = false;
+            return;
+          }
+        } else {
+          // Webcam isolation: detach listeners from non-file videos
+          detachVideoListeners();
+
+          // Live camera respects paused loop guard
+          if (video.paused || video.ended) {
+            isLoopRunning = true;
+            timerId = setTimeout(() => {
+              rafId = requestAnimationFrame(runLoop);
+            }, samplingDelay);
+            return;
+          }
+        }
+
+        // Requirement 2 / Constraint: Block new frame dispatches while in-flight
+        if (inFlightRef.current) {
+          isLoopRunning = true;
           timerId = setTimeout(() => {
             rafId = requestAnimationFrame(runLoop);
           }, samplingDelay);
@@ -230,82 +398,10 @@ export function useAdaptiveScanner({
         // Requirement 6: Wrap actual pixel acquisition in idle browser periods to keep active UI highly responsive
         const acquireAndDispatch = () => {
           if (!active) return;
-          try {
-            const width = video.videoWidth || 640;
-            const height = video.videoHeight || 480;
-            if (width === 0 || height === 0) {
-              timerId = setTimeout(() => {
-                rafId = requestAnimationFrame(runLoop);
-              }, samplingDelay);
-              return;
-            }
 
-            if (!canvasRef.current) {
-              canvasRef.current = document.createElement('canvas');
-            }
-            const canvas = canvasRef.current;
-            canvas.width = width;
-            canvas.height = height;
-            const ctx = canvas.getContext('2d');
-            if (!ctx) {
-              timerId = setTimeout(() => {
-                rafId = requestAnimationFrame(runLoop);
-              }, samplingDelay);
-              return;
-            }
+          captureFrame();
 
-            // Copy video frame onto offscreen canvas and grab ImageData
-            ctx.drawImage(video, 0, 0, width, height);
-            const imageData = ctx.getImageData(0, 0, width, height);
-
-            // Increment sequence and track start time
-            sequenceRef.current += 1;
-            const seqId = sequenceRef.current;
-
-            // Lazily initialize/resize pool with exactly 2 buffers once resolution is known
-            if (width !== currentWidthRef.current || height !== currentHeightRef.current) {
-              currentWidthRef.current = width;
-              currentHeightRef.current = height;
-              const bufferSize = width * height * 4;
-              poolRef.current = [
-                new ArrayBuffer(bufferSize),
-                new ArrayBuffer(bufferSize),
-              ];
-            }
-
-            const buffer = poolRef.current.pop();
-            if (!buffer) {
-              // Enforce strict limit. If pool is somehow empty, discard frame and try next cycle
-              timerId = setTimeout(() => {
-                rafId = requestAnimationFrame(runLoop);
-              }, samplingDelay);
-              return;
-            }
-
-            // Copy pixel values from imageData.data into the recycled ArrayBuffer
-            const bufferView = new Uint8ClampedArray(buffer);
-            bufferView.set(imageData.data);
-
-            inFlightRef.current = true;
-            startTimeMapRef.current.set(seqId, performance.now());
-            setStatus('checking');
-
-            // Requirement 4: Transfer buffer to eliminate memory copying overhead (zero-copy)
-            workerRef.current?.postMessage(
-              {
-                buffer,
-                width,
-                height,
-                sequenceId: seqId,
-              },
-              [buffer]
-            );
-
-          } catch (err) {
-            console.error('Failed to capture or dispatch camera frame:', err);
-          }
-
-          // Schedule next run
+          isLoopRunning = true;
           timerId = setTimeout(() => {
             rafId = requestAnimationFrame(runLoop);
           }, samplingDelay);
@@ -322,14 +418,16 @@ export function useAdaptiveScanner({
     };
 
     // Begin the adaptive capture loop
+    isLoopRunning = true;
     rafId = requestAnimationFrame(runLoop);
 
     return () => {
       active = false;
       if (timerId) clearTimeout(timerId);
       if (rafId) cancelAnimationFrame(rafId);
+      detachVideoListeners();
     };
-  }, [isScanning, samplingDelay, videoRef]);
+  }, [isScanning, samplingDelay, videoRef, captureFrame, attachVideoListeners, detachVideoListeners]);
 
   const startScanning = useCallback(() => {
     setIsScanning(true);
