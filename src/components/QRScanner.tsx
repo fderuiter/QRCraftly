@@ -13,6 +13,8 @@ export interface QRScannerProps {
   onScanSuccess: (data: string) => void;
   /** Optional callback to close or dismiss the scanner UI. */
   onClose?: () => void;
+  /** Optional flag to allow continuous scanning without stopping the camera stream. */
+  continuous?: boolean;
 }
 
 /**
@@ -22,9 +24,10 @@ export interface QRScannerProps {
  * @param props - Component properties.
  * @param props.onScanSuccess - Callback for decoded value.
  * @param props.onClose - Dismiss scanner callback.
+ * @param props.continuous - Enable continuous scanning.
  * @returns React functional component.
  */
-export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose }) => {
+export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, continuous = false }) => {
   const {
     permissionState,
     isInitializing,
@@ -50,8 +53,10 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose }) 
     videoRef,
     onScanSuccess: (data) => {
       onScanSuccess(data);
-      stopStream();
-      stopScanning();
+      if (!continuous) {
+        stopStream();
+        stopScanning();
+      }
     },
     onScanFail: () => {
       // Background scan frame decode failure, normal and expected
