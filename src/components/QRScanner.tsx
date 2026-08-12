@@ -313,12 +313,37 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
               }
               ctx.drawImage(img, 0, 0);
               const imageData = ctx.getImageData(0, 0, img.width, img.height);
-              const code = jsQR(imageData.data, imageData.width, imageData.height);
-              if (code && code.data) {
-                resolve(code.data);
-              } else {
-                reject(new Error('No QR code detected in this image. Try a clearer or higher-contrast QR code image.'));
-              }
+              
+              console.log('[Ephemeral Worker] Initializing temporary image decoding worker.');
+              const worker = new Worker(new URL('../utils/imageDecoderWorker.ts', import.meta.url), { type: 'module' });
+
+              const timeoutId = setTimeout(() => {
+                console.warn('[Ephemeral Worker] Image decoding worker timed out after 10 seconds. Terminating.');
+                worker.terminate();
+                reject(new Error('Analysis timed out. Please try a different image.'));
+              }, 10000);
+
+              worker.onmessage = (e) => {
+                clearTimeout(timeoutId);
+                console.log('[Ephemeral Worker] Decoded output received. Terminating worker.');
+                worker.terminate();
+                const { success, data, error } = e.data;
+                if (success) {
+                  resolve(data);
+                } else {
+                  reject(new Error(error || 'No QR code detected in this image. Try a clearer or higher-contrast QR code image.'));
+                }
+              };
+
+              worker.onerror = (err) => {
+                clearTimeout(timeoutId);
+                console.error('[Ephemeral Worker] Worker runtime error encountered. Terminating worker.', err);
+                worker.terminate();
+                reject(err);
+              };
+
+              const buffer = imageData.data.buffer;
+              worker.postMessage({ buffer, width: imageData.width, height: imageData.height }, [buffer]);
             } catch (err) {
               reject(err);
             }
