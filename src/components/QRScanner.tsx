@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Camera, Upload, AlertTriangle, X, RefreshCw, FileImage } from 'lucide-react';
-import { useCamera, type PermissionState } from '../hooks/useCamera';
+import { useCamera } from '../hooks/useCamera';
 import { useAdaptiveScanner } from '../hooks/useAdaptiveScanner';
 import { Button } from './ui/Button';
 import jsQR from 'jsqr';
@@ -30,11 +30,6 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose }) 
     isInitializing,
     startStream,
     stopStream,
-  }: {
-    permissionState: PermissionState;
-    isInitializing: boolean;
-    startStream: () => Promise<MediaStream | null>;
-    stopStream: () => void;
   } = useCamera();
 
   const [mode, setMode] = useState<'webcam' | 'file'>('webcam');
@@ -71,8 +66,10 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose }) 
 
   // Start webcam stream when in webcam mode
   useEffect(() => {
+    const controller = new AbortController();
+
     if (mode === 'webcam') {
-      startStream().then((activeStream) => {
+      startStream(controller.signal).then((activeStream) => {
         if (activeStream && videoRef.current) {
           videoRef.current.srcObject = activeStream;
           safePlay(videoRef.current);
@@ -85,6 +82,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose }) 
     }
 
     return () => {
+      controller.abort();
       stopStream();
       stopScanning();
     };

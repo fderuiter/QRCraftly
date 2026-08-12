@@ -445,7 +445,7 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
           return;
         }
 
-        const QRCode = QRCodeModule.default || QRCodeModule;
+        const QRCode = (QRCodeModule as any).default || QRCodeModule;
         const data = QRCode.create(currentConfig.value, {
           errorCorrectionLevel: currentConfig.errorCorrectionLevel,
         });

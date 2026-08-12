@@ -18,7 +18,7 @@ export interface UseCameraResult {
   /** Indicates whether the media stream initialization is in progress. */
   isInitializing: boolean;
   /** Trigger to request and start the webcam media stream. */
-  startStream: () => Promise<MediaStream | null>;
+  startStream: (signal?: AbortSignal) => Promise<MediaStream | null>;
   /** Trigger to release tracks and stop the active webcam media stream. */
   stopStream: () => void;
 }
@@ -33,6 +33,7 @@ export function useCamera(): UseCameraResult {
   const [error, setError] = useState<Error | null>(null);
   const [isInitializing, setIsInitializing] = useState<boolean>(false);
   const streamRef = useRef<MediaStream | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Sync permission state from navigator.permissions if available
   useEffect(() => {
@@ -73,6 +74,10 @@ export function useCamera(): UseCameraResult {
   }, []);
 
   const stopStream = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
@@ -80,21 +85,72 @@ export function useCamera(): UseCameraResult {
     setStream(null);
   }, []);
 
-  const startStream = useCallback(async () => {
+  const startStream = useCallback(async (externalSignal?: AbortSignal) => {
     if (typeof navigator === 'undefined' || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       setPermissionState('unavailable');
       setError(new Error('Camera API not available on this device/browser.'));
       return null;
     }
 
-    setIsInitializing(true);
-    setError(null);
+    // Stop and cleanup first (this aborts any previous pending request)
     stopStream();
 
+    const internalController = new AbortController();
+    abortControllerRef.current = internalController;
+    const internalSignal = internalController.signal;
+
+    if (internalSignal.aborted || externalSignal?.aborted) {
+      setIsInitializing(false);
+      return null;
+    }
+
+    setIsInitializing(true);
+    setError(null);
+
     try {
-      const activeStream = await navigator.mediaDevices.getUserMedia({
+      const getUserMediaPromise = navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'environment' },
       });
+
+      const activeStream = await new Promise<MediaStream>((resolve, reject) => {
+        let aborted = false;
+
+        const handleAbort = () => {
+          if (!aborted) {
+            aborted = true;
+            reject(new DOMException('Camera stream request was aborted', 'AbortError'));
+          }
+        };
+
+        internalSignal.addEventListener('abort', handleAbort);
+        if (externalSignal) {
+          externalSignal.addEventListener('abort', handleAbort);
+        }
+
+        const cleanup = () => {
+          internalSignal.removeEventListener('abort', handleAbort);
+          if (externalSignal) {
+            externalSignal.removeEventListener('abort', handleAbort);
+          }
+        };
+
+        getUserMediaPromise.then(
+          (stream) => {
+            cleanup();
+            if (aborted || internalSignal.aborted || externalSignal?.aborted) {
+              stream.getTracks().forEach((track) => track.stop());
+              reject(new DOMException('Camera stream request was aborted', 'AbortError'));
+            } else {
+              resolve(stream);
+            }
+          },
+          (err) => {
+            cleanup();
+            reject(err);
+          }
+        );
+      });
+
       streamRef.current = activeStream;
       setStream(activeStream);
       setPermissionState('granted');
@@ -102,8 +158,12 @@ export function useCamera(): UseCameraResult {
       return activeStream;
     } catch (err: any) {
       setIsInitializing(false);
-      // Safely catch NotAllowedError (permission denied) or standard device errors
-      // IMPORTANT: DO NOT console.error or log the error here to avoid console noise and satisfy acceptance criteria
+
+      if (err.name === 'AbortError') {
+        // Abort must fail silently in the background
+        return null;
+      }
+
       if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
         setPermissionState('denied');
       } else {
@@ -117,6 +177,9 @@ export function useCamera(): UseCameraResult {
   // Cleanup on unmount
   useEffect(() => {
     return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((track) => track.stop());
       }
