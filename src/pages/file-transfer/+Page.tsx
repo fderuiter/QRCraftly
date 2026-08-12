@@ -548,16 +548,26 @@ function FileTransferToolInner() {
               </a>
               <p className="text-sm text-slate-600 dark:text-slate-400">High-Performance File Streaming</p>
             </div>
-            <Button
-              variant="icon"
-              size="icon"
-              onClick={toggleDarkMode}
-              className="rounded-full"
-              title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
-              aria-label={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
-            >
-              {isDarkMode ? <Sun className="size-5" /> : <Moon className="size-5" />}
-            </Button>
+            <div className="flex items-center gap-2">
+              <a
+                href="/file-transfer/receive"
+                className="hidden items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold text-teal-600 transition-colors hover:bg-slate-100 sm:flex dark:text-teal-400 dark:hover:bg-slate-800"
+                title="Receive File"
+                aria-label="Receive Offline File"
+              >
+                Receive File
+              </a>
+              <Button
+                variant="icon"
+                size="icon"
+                onClick={toggleDarkMode}
+                className="rounded-full"
+                title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+                aria-label={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+              >
+                {isDarkMode ? <Sun className="size-5" /> : <Moon className="size-5" />}
+              </Button>
+            </div>
           </header>
 
           {/* Tab Switcher */}
