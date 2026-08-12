@@ -706,4 +706,53 @@ describe('useAdaptiveScanner Hook with Bidirectional Buffer Recycling', () => {
     // Pause should trigger a frame capture
     expect(postMessageCalls).toHaveLength(1);
   });
+
+  it('should not recreate or tear down the frame capture loop when sampling delay changes', () => {
+    const videoRef = makeVideoRef();
+    const { result } = renderHook(() =>
+      useAdaptiveScanner({
+        videoRef,
+        minSamplingDelay: 10,
+        maxSamplingDelay: 1000,
+      })
+    );
+
+    let activeWorker: any = null;
+    globalThis.mockWorkerControl.setInterceptor((msg, worker) => {
+      activeWorker = worker;
+      // Simulate fast response (10ms) to trigger a sampling delay change
+      setTimeout(() => {
+        worker.dispatchMessage({
+          status: 'pass',
+          sequenceId: msg.sequenceId,
+          decodedData: 'https://fast.qr',
+          buffer: msg.buffer,
+        });
+      }, 10);
+    });
+
+    act(() => {
+      result.current.startScanning();
+    });
+
+    // Advance timers so first capture and loop are fully scheduled
+    act(() => {
+      vi.advanceTimersByTime(50);
+    });
+
+    // Spy on cancelAnimationFrame to detect effect teardown / loop recreation
+    const cancelAnimationFrameSpy = vi.spyOn(window, 'cancelAnimationFrame');
+
+    // Trigger worker response which shifts the delay
+    act(() => {
+      vi.advanceTimersByTime(50);
+    });
+
+    // Ensure sampling delay actually shifted
+    expect(result.current.samplingDelay).toBeLessThan(33);
+
+    // Assert that cancelAnimationFrame was NOT called to tear down the loop
+    expect(cancelAnimationFrameSpy).not.toHaveBeenCalled();
+    cancelAnimationFrameSpy.mockRestore();
+  });
 });

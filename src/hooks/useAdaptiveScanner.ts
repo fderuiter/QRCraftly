@@ -82,6 +82,13 @@ export function useAdaptiveScanner({
   const [samplingDelay, setSamplingDelay] = useState<number>(33); // Start at 33ms (~30 FPS)
   const [latencyHistory, setLatencyHistory] = useState<number[]>([]);
 
+  const samplingDelayRef = useRef<number>(33);
+
+  // Keep ref in sync with state for continuous tick lookups
+  useEffect(() => {
+    samplingDelayRef.current = samplingDelay;
+  }, [samplingDelay]);
+
   const workerRef = useRef<Worker | null>(null);
   const inFlightRef = useRef<boolean>(false);
   const sequenceRef = useRef<number>(0);
@@ -171,14 +178,16 @@ export function useAdaptiveScanner({
           const avgDuration = updatedHistory.reduce((a, b) => a + b, 0) / updatedHistory.length;
           const latencyMetric = Math.max(duration, avgDuration);
 
+          let nextDelay = prevDelay;
           if (latencyMetric > 100) {
             // Scale down: increase sampling delay (slower capture rate)
-            return Math.min(maxSamplingDelay, Math.max(prevDelay + 50, latencyMetric * 1.5));
+            nextDelay = Math.min(maxSamplingDelay, Math.max(prevDelay + 50, latencyMetric * 1.5));
           } else if (latencyMetric < 40) {
             // Scale up: decrease sampling delay (faster capture rate)
-            return Math.max(minSamplingDelay, prevDelay - 10);
+            nextDelay = Math.max(minSamplingDelay, prevDelay - 10);
           }
-          return prevDelay;
+          samplingDelayRef.current = nextDelay;
+          return nextDelay;
         });
 
         // Release the in-flight block to allow next frame dispatches
@@ -349,7 +358,7 @@ export function useAdaptiveScanner({
           isLoopRunning = false;
           timerId = setTimeout(() => {
             rafId = requestAnimationFrame(runLoop);
-          }, samplingDelay);
+          }, samplingDelayRef.current);
           return;
         }
 
@@ -381,7 +390,7 @@ export function useAdaptiveScanner({
             isLoopRunning = true;
             timerId = setTimeout(() => {
               rafId = requestAnimationFrame(runLoop);
-            }, samplingDelay);
+            }, samplingDelayRef.current);
             return;
           }
         }
@@ -391,7 +400,7 @@ export function useAdaptiveScanner({
           isLoopRunning = true;
           timerId = setTimeout(() => {
             rafId = requestAnimationFrame(runLoop);
-          }, samplingDelay);
+          }, samplingDelayRef.current);
           return;
         }
 
@@ -404,7 +413,7 @@ export function useAdaptiveScanner({
           isLoopRunning = true;
           timerId = setTimeout(() => {
             rafId = requestAnimationFrame(runLoop);
-          }, samplingDelay);
+          }, samplingDelayRef.current);
         };
 
         if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
@@ -427,7 +436,7 @@ export function useAdaptiveScanner({
       if (rafId) cancelAnimationFrame(rafId);
       detachVideoListeners();
     };
-  }, [isScanning, samplingDelay, videoRef, captureFrame, attachVideoListeners, detachVideoListeners]);
+  }, [isScanning, videoRef, captureFrame, attachVideoListeners, detachVideoListeners]);
 
   const startScanning = useCallback(() => {
     setIsScanning(true);
