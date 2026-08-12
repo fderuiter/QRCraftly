@@ -27,7 +27,6 @@ The following status checks must pass successfully before a pull request can be 
 ### 3. Bypass Configurations
 The ruleset defines bypass options for specific roles and automated systems to ensure critical operations are not blocked. The following roles/actors can bypass these rules under appropriate conditions:
 - **Administrator Role** (Actor ID: `5`)
-- **Write Role** (Actor ID: `1`)
 - **Integration/Automation Bot** (Actor ID: `307`)
 
 ---

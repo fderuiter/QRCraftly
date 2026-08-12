@@ -12,11 +12,6 @@
       "bypass_mode": "always"
     },
     {
-      "actor_id": 1,
-      "actor_type": "RepositoryRole",
-      "bypass_mode": "always"
-    },
-    {
       "actor_id": 307,
       "actor_type": "Integration",
       "bypass_mode": "always"
