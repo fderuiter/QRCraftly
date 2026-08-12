@@ -1,4 +1,37 @@
 import { getPublicDomain } from "../utils/metadataEngine";
+
+export enum SchemaType {
+  SoftwareApplication = "SoftwareApplication",
+  WebApplication = "WebApplication",
+  AboutPage = "AboutPage",
+  FAQPage = "FAQPage",
+  HowTo = "HowTo"
+}
+
+export enum SchemaCategory {
+  UtilitiesApplication = "UtilitiesApplication",
+  BusinessApplication = "BusinessApplication",
+  SocialNetworkingApplication = "SocialNetworkingApplication",
+  TravelApplication = "TravelApplication",
+  DeveloperApplication = "DeveloperApplication"
+}
+
+export enum TargetPersona {
+  Developer = "Developer",
+  Marketer = "Marketer",
+  BusinessOwner = "Business Owner",
+  GeneralUser = "General User",
+  Professional = "Professional"
+}
+
+export enum StrategicValueCategory {
+  BusinessUtility = "Business Utility",
+  DeveloperTool = "Developer Tool",
+  MarketingCampaign = "Marketing Campaign",
+  PersonalUse = "Personal Use",
+  SocialSharing = "Social Sharing"
+}
+
 export interface ToolContent {
   id: string;
   name: string;
@@ -12,8 +45,10 @@ export interface ToolContent {
     steps: { name: string; text: string }[];
   };
   faqs?: { question: string; answer: string }[];
-  schemaType?: string | string[];
-  schemaCategory?: string;
+  schemaType: SchemaType | SchemaType[];
+  schemaCategory: SchemaCategory;
+  personas: TargetPersona[];
+  valueProposition: StrategicValueCategory;
 }
 
 export const contentRegistry: Record<string, ToolContent> = {
@@ -23,6 +58,10 @@ export const contentRegistry: Record<string, ToolContent> = {
     "url": getPublicDomain() + "/about",
     "description": "Privacy-focused, client-side QR code generator.",
     "features": [],
+    "schemaType": SchemaType.AboutPage,
+    "schemaCategory": SchemaCategory.UtilitiesApplication,
+    "personas": [TargetPersona.GeneralUser],
+    "valueProposition": StrategicValueCategory.PersonalUse,
     "faqs": [
       {
         "question": "Is QRCraftly free?",
@@ -52,6 +91,10 @@ export const contentRegistry: Record<string, ToolContent> = {
       "Secure Client-Side",
       "Custom Design"
     ],
+    "schemaType": [SchemaType.SoftwareApplication, SchemaType.WebApplication],
+    "schemaCategory": SchemaCategory.UtilitiesApplication,
+    "personas": [TargetPersona.Marketer, TargetPersona.BusinessOwner],
+    "valueProposition": StrategicValueCategory.MarketingCampaign,
     "howTo": {
       "name": "How to Create an Email QR Code",
       "description": "Generate a QR code that opens a drafted email.",
@@ -81,6 +124,10 @@ export const contentRegistry: Record<string, ToolContent> = {
       "Secure Client-Side",
       "Custom Design"
     ],
+    "schemaType": [SchemaType.SoftwareApplication, SchemaType.WebApplication],
+    "schemaCategory": SchemaCategory.UtilitiesApplication,
+    "personas": [TargetPersona.Marketer, TargetPersona.Professional],
+    "valueProposition": StrategicValueCategory.SocialSharing,
     "howTo": {
       "name": "How to Create an Event QR Code",
       "description": "Generate a QR code that prompts users to add an event to their calendar.",
@@ -112,6 +159,10 @@ export const contentRegistry: Record<string, ToolContent> = {
       "Secure Client-Side Generation",
       "Artistic Styles"
     ],
+    "schemaType": [SchemaType.SoftwareApplication, SchemaType.WebApplication],
+    "schemaCategory": SchemaCategory.UtilitiesApplication,
+    "personas": [TargetPersona.GeneralUser],
+    "valueProposition": StrategicValueCategory.PersonalUse,
     "howTo": {
       "name": "How to Create a URL QR Code",
       "description": "Convert any website URL into a scannable QR code instantly.",
@@ -151,6 +202,10 @@ export const contentRegistry: Record<string, ToolContent> = {
       "Secure Client-Side",
       "Custom Design"
     ],
+    "schemaType": [SchemaType.SoftwareApplication, SchemaType.WebApplication],
+    "schemaCategory": SchemaCategory.UtilitiesApplication,
+    "personas": [TargetPersona.GeneralUser, TargetPersona.BusinessOwner],
+    "valueProposition": StrategicValueCategory.BusinessUtility,
     "howTo": {
       "name": "How to Create a Location QR Code",
       "description": "Generate a QR code that opens a location in maps.",
@@ -180,6 +235,10 @@ export const contentRegistry: Record<string, ToolContent> = {
       "Zoom/Teams/Meet Support",
       "Secure Client-Side"
     ],
+    "schemaType": [SchemaType.SoftwareApplication, SchemaType.WebApplication],
+    "schemaCategory": SchemaCategory.UtilitiesApplication,
+    "personas": [TargetPersona.Professional, TargetPersona.BusinessOwner],
+    "valueProposition": StrategicValueCategory.BusinessUtility,
     "howTo": {
       "name": "How to Create a Meeting QR Code",
       "description": "Generate a QR code that directs users to a virtual meeting.",
@@ -209,6 +268,10 @@ export const contentRegistry: Record<string, ToolContent> = {
       "Bitcoin/Ethereum Support",
       "Secure Client-Side"
     ],
+    "schemaType": [SchemaType.SoftwareApplication, SchemaType.WebApplication],
+    "schemaCategory": SchemaCategory.BusinessApplication,
+    "personas": [TargetPersona.BusinessOwner, TargetPersona.Developer],
+    "valueProposition": StrategicValueCategory.BusinessUtility,
     "howTo": {
       "name": "How to Create a Payment QR Code",
       "description": "Generate a QR code to receive cryptocurrency payments.",
@@ -238,6 +301,10 @@ export const contentRegistry: Record<string, ToolContent> = {
       "Secure Client-Side",
       "Custom Design"
     ],
+    "schemaType": [SchemaType.SoftwareApplication, SchemaType.WebApplication],
+    "schemaCategory": SchemaCategory.UtilitiesApplication,
+    "personas": [TargetPersona.GeneralUser, TargetPersona.BusinessOwner],
+    "valueProposition": StrategicValueCategory.BusinessUtility,
     "howTo": {
       "name": "How to Create a Phone QR Code",
       "description": "Create a QR code that prompts the user to dial a number.",
@@ -267,6 +334,10 @@ export const contentRegistry: Record<string, ToolContent> = {
       "Secure Client-Side",
       "Custom Design"
     ],
+    "schemaType": [SchemaType.SoftwareApplication, SchemaType.WebApplication],
+    "schemaCategory": SchemaCategory.UtilitiesApplication,
+    "personas": [TargetPersona.Marketer, TargetPersona.BusinessOwner],
+    "valueProposition": StrategicValueCategory.MarketingCampaign,
     "howTo": {
       "name": "How to Create an SMS QR Code",
       "description": "Generate a QR code that opens a drafted text message.",
@@ -296,6 +367,10 @@ export const contentRegistry: Record<string, ToolContent> = {
       "Instagram/Twitter/TikTok Links",
       "Secure Client-Side"
     ],
+    "schemaType": [SchemaType.SoftwareApplication, SchemaType.WebApplication],
+    "schemaCategory": SchemaCategory.SocialNetworkingApplication,
+    "personas": [TargetPersona.Marketer, TargetPersona.GeneralUser],
+    "valueProposition": StrategicValueCategory.SocialSharing,
     "howTo": {
       "name": "How to Create a Social QR Code",
       "description": "Generate a QR code that links directly to your social profile.",
@@ -325,6 +400,10 @@ export const contentRegistry: Record<string, ToolContent> = {
       "Secure Client-Side",
       "Custom Design"
     ],
+    "schemaType": [SchemaType.SoftwareApplication, SchemaType.WebApplication],
+    "schemaCategory": SchemaCategory.UtilitiesApplication,
+    "personas": [TargetPersona.GeneralUser, TargetPersona.Developer],
+    "valueProposition": StrategicValueCategory.PersonalUse,
     "howTo": {
       "name": "How to Create a Text QR Code",
       "description": "Convert plain text into a scannable QR code.",
@@ -354,6 +433,10 @@ export const contentRegistry: Record<string, ToolContent> = {
       "Secure Client-Side",
       "Custom Design"
     ],
+    "schemaType": [SchemaType.SoftwareApplication, SchemaType.WebApplication],
+    "schemaCategory": SchemaCategory.BusinessApplication,
+    "personas": [TargetPersona.Professional, TargetPersona.BusinessOwner],
+    "valueProposition": StrategicValueCategory.BusinessUtility,
     "howTo": {
       "name": "How to Create a VCard QR Code",
       "description": "Create a digital business card that can be scanned to save contact info.",
@@ -383,6 +466,10 @@ export const contentRegistry: Record<string, ToolContent> = {
       "WPA/WPA2 Support",
       "Hidden SSID Support"
     ],
+    "schemaType": [SchemaType.SoftwareApplication, SchemaType.WebApplication],
+    "schemaCategory": SchemaCategory.UtilitiesApplication,
+    "personas": [TargetPersona.GeneralUser, TargetPersona.BusinessOwner],
+    "valueProposition": StrategicValueCategory.PersonalUse,
     "howTo": {
       "name": "How to Create a WiFi QR Code",
       "description": "Generate a QR code to share your WiFi network instantly.",
@@ -421,6 +508,10 @@ export const contentRegistry: Record<string, ToolContent> = {
       "Sequential Slicing Worker",
       "Recycled Canvas UI"
     ],
+    "schemaType": [SchemaType.SoftwareApplication, SchemaType.WebApplication],
+    "schemaCategory": SchemaCategory.DeveloperApplication,
+    "personas": [TargetPersona.Developer, TargetPersona.Professional],
+    "valueProposition": StrategicValueCategory.DeveloperTool,
     "howTo": {
       "name": "How to Transfer Files via Animated QR Codes",
       "description": "Share files sequentially through QR code animations.",

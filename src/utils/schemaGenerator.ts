@@ -6,57 +6,73 @@ export function generateSchema(content: ToolContent, resolvedDomain?: string, re
   const publicUrl = requestPath ? resolvePublicUrl(requestPath) : content.url;
   
   if (content.id === 'about') {
+    const aboutGraph: any[] = [
+      {
+        "@type": "AboutPage",
+        "name": content.name,
+        "url": publicUrl,
+        "mainEntity": {
+          "@id": `${domain}/#organization`
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": (content.faqs || []).map(faq => ({
+          "@type": "Question",
+          "name": faq.question,
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": faq.answer
+          }
+        }))
+      }
+    ];
+
+    if (content.personas && content.personas.length > 0) {
+      aboutGraph[0].audience = content.personas.map(persona => ({
+        "@type": "Audience",
+        "audienceType": persona
+      }));
+    }
+
     return {
       "@context": "https://schema.org",
-      "@graph": [
-        {
-          "@type": "AboutPage",
-          "name": content.name,
-          "url": publicUrl,
-          "mainEntity": {
-            "@id": `${domain}/#organization`
-          }
-        },
-        {
-          "@type": "FAQPage",
-          "mainEntity": (content.faqs || []).map(faq => ({
-            "@type": "Question",
-            "name": faq.question,
-            "acceptedAnswer": {
-              "@type": "Answer",
-              "text": faq.answer
-            }
-          }))
-        }
-      ]
+      "@graph": aboutGraph
     };
   }
 
-  const typeValue = content.schemaType !== undefined ? content.schemaType : ["SoftwareApplication", "WebApplication"];
-  const categoryValue = content.schemaCategory !== undefined ? content.schemaCategory : "UtilitiesApplication";
+  const typeValue = content.schemaType;
+  const categoryValue = content.schemaCategory;
 
-  const graph: any[] = [
-    {
-      "@type": typeValue,
-      "name": content.name,
-      "url": publicUrl,
-      "applicationCategory": categoryValue,
-      "operatingSystem": "All",
-      "softwareVersion": "0.1.0",
-      "image": `${domain}/og-image.png`,
-      "datePublished": "2025-01-01",
-      "author": {
-        "@id": `${domain}/#organization`
-      },
-      "browserRequirements": "Requires JavaScript. Works in all modern browsers.",
-      "offers": {
-        "@type": "Offer",
-        "price": "0",
-        "priceCurrency": "USD"
-      },
-      "featureList": content.features.join(", ")
-    }
-  ];
+  const appEntity: any = {
+    "@type": typeValue,
+    "name": content.name,
+    "url": publicUrl,
+    "applicationCategory": categoryValue,
+    "operatingSystem": "All",
+    "softwareVersion": "0.1.0",
+    "image": `${domain}/og-image.png`,
+    "datePublished": "2025-01-01",
+    "author": {
+      "@id": `${domain}/#organization`
+    },
+    "browserRequirements": "Requires JavaScript. Works in all modern browsers.",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "featureList": content.features.join(", ")
+  };
+
+  if (content.personas && content.personas.length > 0) {
+    appEntity.audience = content.personas.map(persona => ({
+      "@type": "Audience",
+      "audienceType": persona
+    }));
+  }
+
+  const graph: any[] = [appEntity];
 
   if (content.howTo) {
     const howToObj: any = {
@@ -105,8 +121,6 @@ export function generateSchema(content: ToolContent, resolvedDomain?: string, re
       }))
     });
   }
-
-
 
   return {
     "@context": "https://schema.org",

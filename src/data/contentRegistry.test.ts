@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { contentRegistry } from './contentRegistry';
+import { contentRegistry, SchemaType, SchemaCategory, TargetPersona, StrategicValueCategory } from './contentRegistry';
 import { ValidationEngine } from '../engine/ValidationEngine';
 
 describe('Content Registry Validation', () => {
@@ -67,6 +67,47 @@ describe('Content Registry Validation', () => {
           checkString(faq.answer, `faqs[${index}].answer`);
         });
       }
+    });
+  });
+
+  it('should enforce strict persona and schema metadata completeness', () => {
+    const validPersonas = Object.values(TargetPersona);
+    const validValueProps = Object.values(StrategicValueCategory);
+    const validSchemaTypes = Object.values(SchemaType);
+    const validSchemaCategories = Object.values(SchemaCategory);
+
+    // Verify exactly 14 registered tools exist and are fully populated
+    const registryKeys = Object.keys(contentRegistry);
+    expect(registryKeys.length).toBe(14);
+
+    registryKeys.forEach((key) => {
+      const tool = contentRegistry[key];
+
+      // 1. Persona validation (Must be populated and be valid TargetPersona enum value)
+      expect(tool.personas, `Tool '${key}' must have defined 'personas'`).toBeDefined();
+      expect(Array.isArray(tool.personas), `Tool '${key}': 'personas' must be an array`).toBe(true);
+      expect(tool.personas.length, `Tool '${key}': 'personas' array cannot be empty`).toBeGreaterThan(0);
+      tool.personas.forEach((p) => {
+        expect(validPersonas, `Tool '${key}': Persona '${p}' is not a valid TargetPersona enum value`).toContain(p);
+      });
+
+      // 2. Value proposition validation
+      expect(tool.valueProposition, `Tool '${key}' must have a valid 'valueProposition'`).toBeDefined();
+      expect(validValueProps, `Tool '${key}': Value proposition '${tool.valueProposition}' is not a valid StrategicValueCategory enum value`).toContain(tool.valueProposition);
+
+      // 3. Schema Type validation
+      expect(tool.schemaType, `Tool '${key}' must have 'schemaType' defined`).toBeDefined();
+      if (Array.isArray(tool.schemaType)) {
+        tool.schemaType.forEach((st) => {
+          expect(validSchemaTypes, `Tool '${key}': Schema Type '${st}' is not a valid SchemaType enum value`).toContain(st);
+        });
+      } else {
+        expect(validSchemaTypes, `Tool '${key}': Schema Type '${tool.schemaType}' is not a valid SchemaType enum value`).toContain(tool.schemaType);
+      }
+
+      // 4. Schema Category validation
+      expect(tool.schemaCategory, `Tool '${key}' must have 'schemaCategory' defined`).toBeDefined();
+      expect(validSchemaCategories, `Tool '${key}': Schema Category '${tool.schemaCategory}' is not a valid SchemaCategory enum value`).toContain(tool.schemaCategory);
     });
   });
 });
