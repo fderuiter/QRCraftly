@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { useCamera } from './useCamera';
+import { useCamera, type PermissionState } from './useCamera';
 
 describe('useCamera Hook', () => {
   let originalMediaDevices: any;
@@ -26,7 +26,8 @@ describe('useCamera Hook', () => {
 
   it('should initialize with standard defaults', () => {
     const { result } = renderHook(() => useCamera());
-    expect(result.current.permissionState).toBe('prompt');
+    const state: PermissionState = result.current.permissionState;
+    expect(state).toBe('prompt');
     expect(result.current.stream).toBeNull();
     expect(result.current.error).toBeNull();
     expect(result.current.isInitializing).toBe(false);
@@ -111,5 +112,78 @@ describe('useCamera Hook', () => {
 
     expect(result.current.stream).toBeNull();
     expect(stopMock).toHaveBeenCalled();
+  });
+
+  it('should support aborting active stream request with an external AbortSignal', async () => {
+    const stopMock = vi.fn();
+    const mockTracks = [{ stop: stopMock }];
+    const mockStream = {
+      getTracks: () => mockTracks,
+    } as any;
+
+    let resolveGetUserMedia: any;
+    const getUserMediaPromise = new Promise((resolve) => {
+      resolveGetUserMedia = resolve;
+    });
+    vi.mocked(navigator.mediaDevices.getUserMedia).mockReturnValue(getUserMediaPromise as any);
+
+    const { result } = renderHook(() => useCamera());
+    const controller = new AbortController();
+
+    let streamPromise: Promise<MediaStream | null>;
+    act(() => {
+      streamPromise = result.current.startStream(controller.signal);
+    });
+
+    // Abort the controller
+    act(() => {
+      controller.abort();
+    });
+
+    // Resolve the getUserMedia promise after abort
+    await act(async () => {
+      resolveGetUserMedia(mockStream);
+    });
+
+    const streamResult = await streamPromise!;
+    expect(streamResult).toBeNull();
+    expect(result.current.stream).toBeNull();
+    // Tracks must be stopped immediately when resolving after abort
+    expect(stopMock).toHaveBeenCalled();
+    // Error state should be silent (no error set)
+    expect(result.current.error).toBeNull();
+  });
+
+  it('should support immediate request re-initiation after abort', async () => {
+    const stopMock = vi.fn();
+    const mockTracks = [{ stop: stopMock }];
+    const mockStream = {
+      getTracks: () => mockTracks,
+    } as any;
+
+    vi.mocked(navigator.mediaDevices.getUserMedia).mockResolvedValue(mockStream);
+
+    const { result } = renderHook(() => useCamera());
+    const controller = new AbortController();
+
+    // 1. Start stream and abort it immediately
+    let streamResult1: MediaStream | null = null;
+    await act(async () => {
+      const p = result.current.startStream(controller.signal);
+      controller.abort();
+      streamResult1 = await p;
+    });
+
+    expect(streamResult1).toBeNull();
+
+    // 2. Start stream again with a new non-aborted request
+    let streamResult2: MediaStream | null = null;
+    await act(async () => {
+      streamResult2 = await result.current.startStream();
+    });
+
+    expect(streamResult2).toBe(mockStream);
+    expect(result.current.stream).toBe(mockStream);
+    expect(result.current.permissionState).toBe('granted');
   });
 });
