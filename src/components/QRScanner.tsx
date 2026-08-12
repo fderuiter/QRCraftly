@@ -129,6 +129,166 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
     return 'Click the padlock or site control icon next to the URL in your browser\'s address bar, and allow Camera permissions.';
   };
 
+  // Detect native browser support for the uploaded container type
+  const isContainerSupportedNatively = (file: File): boolean => {
+    if (typeof document === 'undefined') return false;
+    const video = document.createElement('video');
+    const type = file.type || (file.name.toLowerCase().endsWith('.mkv') ? 'video/x-matroska' : 'video/webm');
+    const support = video.canPlayType(type);
+    return support === 'probably' || support === 'maybe';
+  };
+
+  // Sequential native frame extraction using HTMLVideoElement
+  const extractNativeFrames = (
+    file: File,
+    onFrame: (imageData: ImageData) => void
+  ): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      if (typeof window === 'undefined') {
+        resolve();
+        return;
+      }
+      const video = document.createElement('video');
+      video.muted = true;
+      video.playsInline = true;
+      const url = URL.createObjectURL(file);
+      video.src = url;
+
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+
+      const cleanUp = () => {
+        video.pause();
+        video.removeAttribute('src');
+        video.load();
+        URL.revokeObjectURL(url);
+      };
+
+      video.onloadedmetadata = () => {
+        canvas.width = video.videoWidth || 640;
+        canvas.height = video.videoHeight || 480;
+
+        if (!ctx) {
+          cleanUp();
+          reject(new Error('Failed to create canvas context'));
+          return;
+        }
+
+        const duration = video.duration || 0;
+        if (duration === 0) {
+          cleanUp();
+          resolve();
+          return;
+        }
+
+        const fps = 24; // Maintaining minimum 24 frames per second
+        const step = 1 / fps;
+        let currentTime = 0;
+
+        const seekAndCapture = () => {
+          if (currentTime > duration) {
+            cleanUp();
+            resolve();
+            return;
+          }
+          video.currentTime = currentTime;
+        };
+
+        video.onseeked = () => {
+          try {
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            onFrame(imageData);
+          } catch (e) {
+            console.error('Error drawing native video frame:', e);
+          }
+          currentTime += step;
+          seekAndCapture();
+        };
+
+        video.onerror = () => {
+          cleanUp();
+          reject(new Error('Failed to load video natively'));
+        };
+
+        seekAndCapture();
+      };
+
+      video.onerror = () => {
+        cleanUp();
+        reject(new Error('Failed to load video metadata'));
+      };
+    });
+  };
+
+  // Lazy-load WebAssembly demuxer and codec assets, and decode in worker
+  const processVideoWithWasmDemuxer = async (file: File): Promise<void> => {
+    // 1. Trigger on-demand network request for WebAssembly assets
+    const wasmResponse = await fetch('/webm-demuxer.wasm');
+    if (!wasmResponse.ok) {
+      throw new Error('Failed to download WebAssembly demuxer assets');
+    }
+    const wasmBuffer = await wasmResponse.arrayBuffer();
+
+    // 2. Read video file to ArrayBuffer
+    const fileBuffer = await file.arrayBuffer();
+
+    // 3. Extract and scan frames inside a background worker
+    return new Promise<void>((resolve, reject) => {
+      const worker = new Worker(new URL('../utils/demuxerWorker.ts', import.meta.url), { type: 'module' });
+
+      worker.onmessage = (event) => {
+        const msg = event.data;
+        if (msg.type === 'frame_decoded') {
+          onScanSuccess(msg.data);
+        } else if (msg.type === 'frame_pixels') {
+          // Zero-copy transfer: feed extracted frame buffers into the scanning loop
+          const { buffer, width, height } = msg;
+          const u8Clamped = new Uint8ClampedArray(buffer);
+          const code = jsQR(u8Clamped, width, height);
+          if (code && code.data) {
+            onScanSuccess(code.data);
+          }
+        } else if (msg.type === 'done') {
+          worker.terminate();
+          resolve();
+        }
+      };
+
+      worker.onerror = (err) => {
+        worker.terminate();
+        reject(err);
+      };
+
+      // Feed buffers into worker using zero-copy transfers
+      worker.postMessage({ fileBuffer, wasmBuffer }, [fileBuffer, wasmBuffer]);
+    });
+  };
+
+  // Client-side QR decoding for video files
+  const processVideoFile = async (file: File) => {
+    setFileError(null);
+    setFileProcessing(true);
+
+    try {
+      const isNative = isContainerSupportedNatively(file);
+      if (isNative) {
+        await extractNativeFrames(file, (imageData) => {
+          const code = jsQR(imageData.data, imageData.width, imageData.height);
+          if (code && code.data) {
+            onScanSuccess(code.data);
+          }
+        });
+      } else {
+        await processVideoWithWasmDemuxer(file);
+      }
+    } catch (err: any) {
+      setFileError(err.message || 'Failed to parse video file.');
+    } finally {
+      setFileProcessing(false);
+    }
+  };
+
   // Client-side QR decoding for local uploaded image files (Data Privacy)
   const processImageFile = async (file: File) => {
     setFileError(null);
@@ -180,10 +340,19 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
     }
   };
 
+  const processFile = async (file: File) => {
+    const isVideo = file.name.toLowerCase().endsWith('.webm') || file.name.toLowerCase().endsWith('.mkv') || file.type.startsWith('video/');
+    if (isVideo) {
+      await processVideoFile(file);
+    } else {
+      await processImageFile(file);
+    }
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      processImageFile(file);
+      processFile(file);
     }
   };
 
@@ -200,10 +369,14 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
     e.preventDefault();
     setDragOver(false);
     const file = e.dataTransfer.files?.[0];
-    if (file && file.type.startsWith('image/')) {
-      processImageFile(file);
-    } else {
-      setFileError('Please drop an image file.');
+    if (file) {
+      const isVideo = file.name.toLowerCase().endsWith('.webm') || file.name.toLowerCase().endsWith('.mkv') || file.type.startsWith('video/');
+      const isImage = file.type.startsWith('image/');
+      if (isImage || isVideo) {
+        processFile(file);
+      } else {
+        setFileError('Please drop an image or video file.');
+      }
     }
   };
 
@@ -291,11 +464,11 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
       >
         <input
           type="file"
-          accept="image/*"
+          accept="image/*, .webm, .mkv, video/webm, video/x-matroska"
           className="hidden"
           ref={fileInputRef}
           onChange={handleFileChange}
-          aria-label="Upload QR code image file"
+          aria-label="Upload QR code image or video file"
         />
 
         {fileProcessing ? (
@@ -307,7 +480,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
           <div className="flex flex-col items-center">
             <FileImage className="mb-3 size-10 text-slate-400" />
             <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-              Drag & Drop QR Image
+              Drag & Drop QR Image or Video
             </p>
             <p className="mt-1 max-w-xs text-xs text-slate-500 dark:text-slate-400">
               or click here to select a file from your device.
