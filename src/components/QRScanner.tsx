@@ -153,6 +153,11 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
       video.muted = true;
       video.playsInline = true;
       const url = URL.createObjectURL(file);
+      // Validate that the created object URL is a safe local blob reference to prevent any potential DOM-XSS/HTML injection warnings (CodeQL)
+      if (!url || !url.startsWith('blob:') || !/^blob:[a-zA-Z0-9\-:\/\.]+$/.test(url)) {
+        reject(new Error('Unsafe video URL pattern detected'));
+        return;
+      }
       video.src = url;
 
       const canvas = document.createElement('canvas');
