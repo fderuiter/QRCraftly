@@ -3,6 +3,7 @@ import { Camera, Upload, AlertTriangle, X, RefreshCw, FileImage } from 'lucide-r
 import { useCamera } from '../hooks/useCamera';
 import { useAdaptiveScanner } from '../hooks/useAdaptiveScanner';
 import { Button } from './ui/Button';
+import { fetchWasmAsset } from '../utils/assetCache';
 import jsQR from 'jsqr';
 
 /**
@@ -223,12 +224,8 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
 
   // Lazy-load WebAssembly demuxer and codec assets, and decode in worker
   const processVideoWithWasmDemuxer = async (file: File): Promise<void> => {
-    // 1. Trigger on-demand network request for WebAssembly assets
-    const wasmResponse = await fetch('/webm-demuxer.wasm');
-    if (!wasmResponse.ok) {
-      throw new Error('Failed to download WebAssembly demuxer assets');
-    }
-    const wasmBuffer = await wasmResponse.arrayBuffer();
+    // 1. Trigger on-demand network request for WebAssembly assets using authorized utility
+    const wasmBuffer = await fetchWasmAsset('/webm-demuxer.wasm');
 
     // 2. Read video file to ArrayBuffer
     const fileBuffer = await file.arrayBuffer();
