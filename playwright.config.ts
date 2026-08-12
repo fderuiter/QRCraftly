@@ -40,6 +40,7 @@ export default defineConfig({
     baseURL: process.env.PLAYWRIGHT_TEST_BASE_URL || 'http://127.0.0.1:3000',
     /* Collect trace when retrying the failed test. */
     trace: 'on-first-retry',
+    bypassCSP: true,
   },
   projects: [
     {
