@@ -40,7 +40,18 @@ export const test = base.extend({
         
         if (type === 'fetch' || type === 'websocket' || type === 'xmlhttprequest') {
           // Do not fail tests on blocked external font requests
-          if (!url.includes('fonts.googleapis.com') && !url.includes('fonts.gstatic.com')) {
+          let isFontUrl = false;
+          try {
+            const parsed = new URL(url);
+            const hostname = parsed.hostname.toLowerCase();
+            if (hostname === 'fonts.googleapis.com' || hostname === 'fonts.gstatic.com') {
+              isFontUrl = true;
+            }
+          } catch {
+            // Treat as not a font URL if it fails to parse
+          }
+
+          if (!isFontUrl) {
             blockedRequests.push(url);
           }
         }
