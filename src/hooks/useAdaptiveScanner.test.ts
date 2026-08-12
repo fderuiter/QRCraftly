@@ -516,4 +516,194 @@ describe('useAdaptiveScanner Hook with Bidirectional Buffer Recycling', () => {
     expect(result.current.status).toBe('checking'); // remains checking, wasn't updated to pass!
     consoleErrorSpy.mockRestore();
   });
+
+  it('should identify a video element as a local video file versus live webcam', () => {
+    // 1. Live camera (srcObject set)
+    const videoWithStream = {
+      videoWidth: 640,
+      videoHeight: 480,
+      paused: false,
+      ended: false,
+      srcObject: {},
+    } as any;
+    
+    // 2. Local video file (src or currentSrc set, srcObject falsy)
+    const videoWithFile = {
+      videoWidth: 640,
+      videoHeight: 480,
+      paused: true,
+      ended: false,
+      src: 'blob:http://localhost/test.mp4',
+      srcObject: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    } as any;
+
+    const initialVideoRef = { current: videoWithStream } as any;
+
+    const { result, rerender } = renderHook(
+      ({ videoRef }) => useAdaptiveScanner({ videoRef }),
+      { initialProps: { videoRef: initialVideoRef } }
+    );
+
+    act(() => {
+      result.current.startScanning();
+    });
+
+    // For webcam, addEventListener should NOT have been called (Webcam Isolation)
+    expect(videoWithFile.addEventListener).not.toHaveBeenCalled();
+
+    // Rerender with video file (using a new stable ref for the file)
+    const fileVideoRef = { current: videoWithFile } as any;
+    rerender({ videoRef: fileVideoRef });
+
+    // Since it's a file, we should have attached listeners
+    act(() => {
+      vi.advanceTimersByTime(50);
+    });
+
+    expect(videoWithFile.addEventListener).toHaveBeenCalledWith('pause', expect.any(Function));
+    expect(videoWithFile.addEventListener).toHaveBeenCalledWith('seeked', expect.any(Function));
+  });
+
+  it('should attach and remove event listeners when switching inputs and unmounting', () => {
+    const videoWithFile = {
+      videoWidth: 640,
+      videoHeight: 480,
+      paused: true,
+      ended: false,
+      src: 'blob:http://localhost/test.mp4',
+      srcObject: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    } as any;
+
+    const videoRef = { current: videoWithFile } as any;
+
+    const { result, unmount } = renderHook(() =>
+      useAdaptiveScanner({
+        videoRef,
+      })
+    );
+
+    act(() => {
+      result.current.startScanning();
+    });
+
+    act(() => {
+      vi.advanceTimersByTime(50);
+    });
+
+    expect(videoWithFile.addEventListener).toHaveBeenCalled();
+    expect(videoWithFile.removeEventListener).not.toHaveBeenCalled();
+
+    // Clean up on unmount
+    unmount();
+    expect(videoWithFile.removeEventListener).toHaveBeenCalledWith('pause', expect.any(Function));
+    expect(videoWithFile.removeEventListener).toHaveBeenCalledWith('seeked', expect.any(Function));
+  });
+
+  it('should trigger frame capture immediately when paused video file is active', () => {
+    let postMessageCalls: any[] = [];
+    globalThis.mockWorkerControl.setInterceptor((msg) => {
+      postMessageCalls.push(msg);
+    });
+
+    const videoWithFile = {
+      videoWidth: 640,
+      videoHeight: 480,
+      paused: true, // paused!
+      ended: false,
+      src: 'blob:http://localhost/test.mp4',
+      srcObject: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    } as any;
+
+    const videoRef = { current: videoWithFile } as any;
+
+    const { result } = renderHook(() =>
+      useAdaptiveScanner({
+        videoRef,
+      })
+    );
+
+    act(() => {
+      result.current.startScanning();
+    });
+
+    act(() => {
+      vi.advanceTimersByTime(50);
+    });
+
+    // It should have triggered a capture immediately despite being paused!
+    expect(postMessageCalls).not.toHaveLength(0);
+  });
+
+  it('should trigger single frame capture on pause and seeked events', () => {
+    let postMessageCalls: any[] = [];
+    globalThis.mockWorkerControl.setInterceptor((msg) => {
+      postMessageCalls.push(msg);
+    });
+
+    const registeredEvents: Record<string, Function> = {};
+    const videoWithFile = {
+      videoWidth: 640,
+      videoHeight: 480,
+      paused: true,
+      ended: false,
+      src: 'blob:http://localhost/test.mp4',
+      srcObject: null,
+      addEventListener: vi.fn().mockImplementation((event, handler) => {
+        registeredEvents[event] = handler;
+      }),
+      removeEventListener: vi.fn(),
+    } as any;
+
+    const videoRef = { current: videoWithFile } as any;
+
+    const { result } = renderHook(() =>
+      useAdaptiveScanner({
+        videoRef,
+      })
+    );
+
+    act(() => {
+      result.current.startScanning();
+    });
+
+    act(() => {
+      vi.advanceTimersByTime(50);
+    });
+
+    // Clear initial capture call
+    postMessageCalls.length = 0;
+
+    // Trigger seeked event
+    expect(registeredEvents['seeked']).toBeDefined();
+    act(() => {
+      registeredEvents['seeked']();
+    });
+
+    act(() => {
+      vi.advanceTimersByTime(50);
+    });
+
+    // Seek should trigger a frame capture
+    expect(postMessageCalls).toHaveLength(1);
+
+    // Clear and trigger pause event
+    postMessageCalls.length = 0;
+    expect(registeredEvents['pause']).toBeDefined();
+    act(() => {
+      registeredEvents['pause']();
+    });
+
+    act(() => {
+      vi.advanceTimersByTime(50);
+    });
+
+    // Pause should trigger a frame capture
+    expect(postMessageCalls).toHaveLength(1);
+  });
 });

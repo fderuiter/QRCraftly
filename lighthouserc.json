@@ -6,6 +6,7 @@
         "http://localhost/about",
         "http://localhost/email-qr-code",
         "http://localhost/event-qr-code",
+        "http://localhost/file-transfer",
         "http://localhost/",
         "http://localhost/location-qr-code",
         "http://localhost/meeting-qr-code",
