@@ -237,6 +237,22 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
             
             <div className="flex gap-2">
               <a
+                href="/file-transfer"
+                className="hidden items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold text-teal-600 transition-colors hover:bg-slate-100 sm:flex dark:text-teal-400 dark:hover:bg-slate-800"
+                title="Send File"
+                aria-label="Send Offline File"
+              >
+                Send File
+              </a>
+              <a
+                href="/file-transfer/receive"
+                className="hidden items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold text-teal-600 transition-colors hover:bg-slate-100 sm:flex dark:text-teal-400 dark:hover:bg-slate-800"
+                title="Receive File"
+                aria-label="Receive Offline File"
+              >
+                Receive File
+              </a>
+              <a
                 href="#content-section"
                 className="rounded-full p-2 text-slate-500 transition-colors hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
                 title="About Us"
@@ -285,6 +301,8 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
                       <li><a href="/location-qr-code" className="transition-colors hover:text-teal-600 dark:hover:text-teal-400">Location QR Code</a></li>
                       <li><a href="/meeting-qr-code" className="transition-colors hover:text-teal-600 dark:hover:text-teal-400">Meeting QR Code</a></li>
                       <li><a href="/social-qr-code" className="transition-colors hover:text-teal-600 dark:hover:text-teal-400">Social QR Code</a></li>
+                      <li><a href="/file-transfer" className="font-semibold text-teal-600 transition-colors hover:text-teal-700 dark:text-teal-400 dark:hover:text-teal-300">File Share (Send)</a></li>
+                      <li><a href="/file-transfer/receive" className="font-semibold text-teal-600 transition-colors hover:text-teal-700 dark:text-teal-400 dark:hover:text-teal-300">File Share (Receive)</a></li>
                     </ul>
                   </div>
                   <div>
