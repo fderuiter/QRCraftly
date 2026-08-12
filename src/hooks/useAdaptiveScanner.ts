@@ -209,10 +209,17 @@ export function useAdaptiveScanner({
     if (!video) return false;
 
     try {
-      const width = video.videoWidth || 640;
-      const height = video.videoHeight || 480;
+      let width = video.videoWidth || 640;
+      let height = video.videoHeight || 480;
       if (width === 0 || height === 0) {
         return false;
+      }
+
+      const maxDim = Math.max(width, height);
+      if (maxDim > 1280) {
+        const scale = 1280 / maxDim;
+        width = Math.round(width * scale);
+        height = Math.round(height * scale);
       }
 
       if (!canvasRef.current) {

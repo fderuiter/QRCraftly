@@ -299,6 +299,18 @@ class MockWorker {
 }
 
 globalThis.Worker = MockWorker as any;
+if (typeof globalThis.ImageData === 'undefined') {
+  globalThis.ImageData = class ImageData {
+    data: Uint8ClampedArray;
+    width: number;
+    height: number;
+    constructor(data: Uint8ClampedArray, width: number, height: number) {
+      this.data = data;
+      this.width = width;
+      this.height = height;
+    }
+  } as any;
+}
 if (typeof window !== 'undefined') {
   (window as any).Worker = MockWorker as any;
 }
