@@ -23,7 +23,7 @@
     "dev": "vite",
     "prebuild": "node scripts/dependency_compliance.js && node scripts/git_lineage_auditor.js && node scripts/validate_ui_catalog.js && node scripts/audit_markdown.js && node scripts/static-path-tracker.js && node scripts/compile_docs_manifest.js && eslint .",
     "build": "pnpm run prebuild && vite build && pnpm run postbuild",
-    "postbuild": "node scripts/bundle_ast_audit.js && node scripts/generate_sitemap.js && node scripts/csp_hash_injector.js && node scripts/generate_lhci_manifest.js && node scripts/patch_wrangler.js && node scripts/patch_github_action.js && echo \"=== Git Status Before Reset ===\" && git status --porcelain --ignored && { [ -z \"$CI\" ] || (cp lighthouserc.json lighthouserc.json.bak && git reset --hard HEAD && mv lighthouserc.json.bak lighthouserc.json); } && echo \"=== Git Status After Reset ===\" && git status --porcelain --ignored",
+    "postbuild": "node scripts/generate_sw.cjs && node scripts/bundle_ast_audit.js && node scripts/generate_sitemap.js && node scripts/csp_hash_injector.js && node scripts/generate_lhci_manifest.js && node scripts/patch_wrangler.js && node scripts/patch_github_action.js && echo \"=== Git Status Before Reset ===\" && git status --porcelain --ignored && { [ -z \"$CI\" ] || (cp lighthouserc.json lighthouserc.json.bak && git reset --hard HEAD && mv lighthouserc.json.bak lighthouserc.json); } && echo \"=== Git Status After Reset ===\" && git status --porcelain --ignored",
     "preview": "vite preview",
     "test": "vitest",
     "test:e2e": "playwright test",

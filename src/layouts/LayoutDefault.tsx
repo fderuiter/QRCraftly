@@ -85,6 +85,15 @@ export default function LayoutDefault({ children }: { children: React.ReactNode 
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => {
     setHydrated(true);
+    if ('serviceWorker' in navigator && !import.meta.env.DEV) {
+      navigator.serviceWorker.register('/sw.js')
+        .then(reg => {
+          console.log('SW registered with scope:', reg.scope);
+        })
+        .catch(err => {
+          console.error('SW registration failed:', err);
+        });
+    }
   }, []);
 
   return (
