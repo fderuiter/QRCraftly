@@ -158,6 +158,64 @@ describe('QRScanner Component', () => {
     });
   });
 
+  it('resets the file input value immediately, allows consecutive uploads of the same file, displays spinner, and updates error states', async () => {
+    render(<QRScanner onScanSuccess={mockOnScanSuccess} onClose={mockOnClose} />);
+
+    const fileTab = screen.getByRole('button', { name: /file upload/i });
+    fireEvent.click(fileTab);
+
+    // Mock first upload as successful, second as failure, and third as success
+    let scanCount = 0;
+    vi.mocked(jsQR).mockImplementation(() => {
+      scanCount++;
+      if (scanCount === 1) return { data: 'scan 1' } as any;
+      if (scanCount === 2) return null;
+      return { data: 'scan 2' } as any;
+    });
+
+    const mockFile = new File(['dummy content'], 'test.png', { type: 'image/png' });
+    const fileInput = screen.getByLabelText(/upload qr code image or video file/i) as HTMLInputElement;
+
+    // First upload
+    fireEvent.change(fileInput, { target: { files: [mockFile] } });
+
+    // 1. Selecting any file immediately resets the native value of the hidden file input element.
+    expect(fileInput.value).toBe('');
+
+    // Ensure the processing loader spinner is visible initially
+    expect(screen.getByText(/processing file\.\.\./i)).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(mockOnScanSuccess).toHaveBeenCalledWith('scan 1');
+    });
+
+    // Second consecutive upload of the exact same file
+    fireEvent.change(fileInput, { target: { files: [mockFile] } });
+
+    // 2. Clear native value immediately again
+    expect(fileInput.value).toBe('');
+
+    // 3. The loading state spinner appears on the second consecutive upload of the same file.
+    expect(screen.getByText(/processing file\.\.\./i)).toBeInTheDocument();
+
+    // 4. The error notification container updates correctly if the second upload fails again.
+    await waitFor(() => {
+      expect(screen.getByText(/no qr code detected in this image/i)).toBeInTheDocument();
+    });
+
+    // Third consecutive upload of the exact same file
+    fireEvent.change(fileInput, { target: { files: [mockFile] } });
+    expect(fileInput.value).toBe('');
+    expect(screen.getByText(/processing file\.\.\./i)).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(mockOnScanSuccess).toHaveBeenCalledWith('scan 2');
+    });
+
+    // Reset jsQR mock implementation
+    vi.mocked(jsQR).mockReset();
+  });
+
   describe('WebM & MKV Video Importing and Decoding', () => {
     let originalCanPlayType: any;
     let originalURL: any;

@@ -380,6 +380,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
     const file = e.target.files?.[0];
     if (file) {
       processFile(file);
+      e.target.value = '';
     }
   };
 

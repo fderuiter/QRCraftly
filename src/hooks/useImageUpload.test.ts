@@ -38,12 +38,13 @@ describe('useImageUpload', () => {
     global.FileReader = MockFileReader as any;
 
     const file = new File(['dummy content'], 'test.png', { type: 'image/png' });
-    const event = { target: { files: [file] } } as unknown as React.ChangeEvent<HTMLInputElement>;
+    const event = { target: { files: [file], value: 'test.png' } } as unknown as React.ChangeEvent<HTMLInputElement>;
 
     act(() => {
       result.current.handleUpload(event, onSuccess);
     });
 
+    expect(event.target.value).toBe('');
     expect(security.validateImageUpload).toHaveBeenCalledWith(file);
     expect(mockReadAsDataURL).toHaveBeenCalledWith(file);
 
@@ -66,12 +67,13 @@ describe('useImageUpload', () => {
     const onSuccess = vi.fn();
 
     const file = new File(['dummy content'], 'test.png', { type: 'image/png' });
-    const event = { target: { files: [file] } } as unknown as React.ChangeEvent<HTMLInputElement>;
+    const event = { target: { files: [file], value: 'test.png' } } as unknown as React.ChangeEvent<HTMLInputElement>;
 
     act(() => {
       result.current.handleUpload(event, onSuccess);
     });
 
+    expect(event.target.value).toBe('');
     expect(result.current.error).toBe('Validation failed');
     expect(onSuccess).not.toHaveBeenCalled();
   });
@@ -102,12 +104,13 @@ describe('useImageUpload', () => {
     const spySanitize = vi.spyOn(security, 'sanitizeSvg').mockReturnValue('<svg xmlns="http://www.w3.org/2000/svg" />');
 
     const file = new File(['<svg><script>alert(1)</script></svg>'], 'test.svg', { type: 'image/svg+xml' });
-    const event = { target: { files: [file] } } as unknown as React.ChangeEvent<HTMLInputElement>;
+    const event = { target: { files: [file], value: 'test.svg' } } as unknown as React.ChangeEvent<HTMLInputElement>;
 
     act(() => {
       result.current.handleUpload(event, onSuccess);
     });
 
+    expect(event.target.value).toBe('');
     expect(security.validateImageUpload).toHaveBeenCalledWith(file);
     expect(mockReadAsText).toHaveBeenCalledWith(file);
 
