@@ -67,6 +67,8 @@ export function extractFramesFromEBML(fileBuffer: Uint8Array): Uint8Array[] {
   return frames;
 }
 
+const workerSelf: any = self;
+
 self.onmessage = async (e: MessageEvent) => {
   const { fileBuffer, wasmBuffer } = e.data;
 
@@ -93,9 +95,9 @@ self.onmessage = async (e: MessageEvent) => {
       const jsonStr = textDecoder.decode(u8Array.subarray(11));
       const mockFrames = JSON.parse(jsonStr);
       for (const frame of mockFrames) {
-        self.postMessage({ type: 'frame_decoded', data: frame });
+        workerSelf.postMessage({ type: 'frame_decoded', data: frame });
       }
-      self.postMessage({ type: 'done' });
+      workerSelf.postMessage({ type: 'done' });
       return;
     } catch (err) {
       console.error('Failed to parse mock video file:', err);
@@ -113,10 +115,10 @@ self.onmessage = async (e: MessageEvent) => {
       for (const line of lines) {
         const trimmed = line.trim();
         if (trimmed.startsWith('F|')) {
-          self.postMessage({ type: 'frame_decoded', data: trimmed });
+          workerSelf.postMessage({ type: 'frame_decoded', data: trimmed });
         }
       }
-      self.postMessage({ type: 'done' });
+      workerSelf.postMessage({ type: 'done' });
       return;
     }
   }
@@ -127,7 +129,7 @@ self.onmessage = async (e: MessageEvent) => {
     try {
       const decodedStr = textDecoder.decode(frameData);
       if (decodedStr.startsWith('F|')) {
-        self.postMessage({ type: 'frame_decoded', data: decodedStr });
+        workerSelf.postMessage({ type: 'frame_decoded', data: decodedStr });
         continue;
       }
     } catch {
@@ -149,12 +151,12 @@ self.onmessage = async (e: MessageEvent) => {
             // Run scanner on the pixels
             const code = jsQR(imageData.data, imageData.width, imageData.height);
             if (code && code.data) {
-              self.postMessage({ type: 'frame_decoded', data: code.data });
+              workerSelf.postMessage({ type: 'frame_decoded', data: code.data });
             }
 
             // Zero-copy transfer: send pixel buffer back
             const buffer = imageData.data.buffer;
-            self.postMessage(
+            workerSelf.postMessage(
               { type: 'frame_pixels', buffer, width: imageData.width, height: imageData.height },
               [buffer]
             );
@@ -168,7 +170,7 @@ self.onmessage = async (e: MessageEvent) => {
     }
   }
 
-  self.postMessage({ type: 'done' });
+  workerSelf.postMessage({ type: 'done' });
 };
 
 async function decodeWebCodecsFrame(frameData: Uint8Array, onFrame: (bitmap: ImageBitmap) => void): Promise<void> {
