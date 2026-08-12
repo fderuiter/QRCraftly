@@ -1,4 +1,4 @@
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -216,7 +216,7 @@ export function parseGitDiff(stdout) {
 export function runAuditor(options = {}) {
   const env = options.env || process.env;
   const argv = options.argv || process.argv;
-  const customExecSync = options.execSync || execSync;
+  const customExecSync = options.execSync || execFileSync;
   const customExistsSync = options.existsSync || fs.existsSync;
   const exit = options.exit || process.exit;
 
@@ -242,19 +242,19 @@ export function runAuditor(options = {}) {
 
       console.log(`[Lineage Auditor] Attempting target branch comparison against: ${targetBranch}`);
       try {
-        diffStdout = customExecSync(`git diff --name-only ${targetBranch}...HEAD`, { encoding: 'utf8', cwd: repoRoot });
+        diffStdout = customExecSync('git', ['diff', '--name-only', `${targetBranch}...HEAD`], { encoding: 'utf8', cwd: repoRoot });
         console.log(`[Lineage Auditor] Successfully resolved files via target branch diff.`);
       } catch (err) {
         console.warn(`⚠️ [Lineage Auditor] Target branch comparison failed: ${err.message}`);
         console.log('[Lineage Auditor] Falling back to single-commit comparison...');
         
         try {
-          diffStdout = customExecSync('git diff-tree --no-commit-id --name-only -r HEAD', { encoding: 'utf8', cwd: repoRoot });
+          diffStdout = customExecSync('git', ['diff-tree', '--no-commit-id', '--name-only', '-r', 'HEAD'], { encoding: 'utf8', cwd: repoRoot });
           console.log(`[Lineage Auditor] Successfully resolved files via single-commit diff-tree.`);
         } catch (fallbackErr1) {
           console.warn(`⚠️ [Lineage Auditor] Single-commit diff-tree failed: ${fallbackErr1.message}`);
           try {
-            diffStdout = customExecSync('git diff --name-only HEAD~1 HEAD', { encoding: 'utf8', cwd: repoRoot });
+            diffStdout = customExecSync('git', ['diff', '--name-only', 'HEAD~1', 'HEAD'], { encoding: 'utf8', cwd: repoRoot });
             console.log(`[Lineage Auditor] Successfully resolved files via HEAD~1 HEAD diff.`);
           } catch (fallbackErr2) {
             console.error('❌ [Lineage Auditor] Both target branch comparison and single-commit fallback failed.');
@@ -285,7 +285,7 @@ export function runAuditor(options = {}) {
 
         let stdout;
         try {
-          stdout = customExecSync('git status --porcelain', { encoding: 'utf8', cwd: repoRoot });
+          stdout = customExecSync('git', ['status', '--porcelain'], { encoding: 'utf8', cwd: repoRoot });
         } catch (err) {
           console.error('❌ [Lineage Auditor] Failed to query git status. Failed closed.', err.message);
           exit(1);
