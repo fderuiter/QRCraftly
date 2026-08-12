@@ -117,6 +117,18 @@ describe('QRScanner Component', () => {
   });
 
   it('allows switching to file upload mode via the tab and processes images', async () => {
+    // Intercept scanner worker and mock successful response
+    globalThis.mockWorkerControl.setInterceptor((msg, worker) => {
+      setTimeout(() => {
+        worker.dispatchMessage({
+          status: 'pass',
+          sequenceId: msg.sequenceId,
+          decodedData: 'https://qrcraftly.com',
+          buffer: msg.buffer || new ArrayBuffer(0),
+        });
+      }, 0);
+    });
+
     render(<QRScanner onScanSuccess={mockOnScanSuccess} onClose={mockOnClose} />);
 
     const fileTab = screen.getByRole('button', { name: /file upload/i });
@@ -140,6 +152,17 @@ describe('QRScanner Component', () => {
   });
 
   it('handles image decoding failures cleanly and displays an error message', async () => {
+    // Intercept scanner worker and mock fail response
+    globalThis.mockWorkerControl.setInterceptor((msg, worker) => {
+      setTimeout(() => {
+        worker.dispatchMessage({
+          status: 'fail',
+          sequenceId: msg.sequenceId,
+          buffer: msg.buffer || new ArrayBuffer(0),
+        });
+      }, 0);
+    });
+
     render(<QRScanner onScanSuccess={mockOnScanSuccess} onClose={mockOnClose} />);
 
     const fileTab = screen.getByRole('button', { name: /file upload/i });
