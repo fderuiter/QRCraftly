@@ -453,8 +453,9 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
       setFileError(err.message || 'Failed to parse image file.');
     } finally {
       setFileProcessing(false);
-      if (activeWorkerRef.current) {
-        activeWorkerRef.current.terminate();
+      const workerInstance = activeWorkerRef.current as Worker | null;
+      if (workerInstance) {
+        workerInstance.terminate();
         activeWorkerRef.current = null;
       }
     }
