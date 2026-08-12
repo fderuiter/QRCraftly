@@ -200,6 +200,24 @@ class MockWorker {
 
         // Run the actual verification engine logic (Requirement 2)
         try {
+          if (this.url.toString().includes('imageDecoderWorker')) {
+            const { buffer, width, height } = message;
+            if (buffer && typeof width === 'number' && typeof height === 'number') {
+              const { default: jsQR } = await import('jsqr');
+              const data = new Uint8ClampedArray(buffer);
+              let code = jsQR(data, width, height, { inversionAttempts: 'dontInvert' });
+              if (!code) {
+                code = jsQR(data, width, height, { inversionAttempts: 'attemptBoth' });
+              }
+              if (code && code.data) {
+                this.dispatchMessage({ success: true, data: code.data });
+              } else {
+                this.dispatchMessage({ success: false, error: 'No QR code detected in this image. Try a clearer or higher-contrast QR code image.' });
+              }
+              return;
+            }
+          }
+
           if (message && typeof message === 'object') {
             const { imageData, width, height, isTest, configId } = message;
             if (imageData && typeof width === 'number' && typeof height === 'number') {
