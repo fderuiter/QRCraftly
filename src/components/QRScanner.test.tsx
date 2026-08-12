@@ -188,11 +188,13 @@ describe('QRScanner Component', () => {
     fireEvent.click(fileTab);
 
     // Mock first upload as successful, second as failure, and third as success
-    let scanCount = 0;
-    vi.mocked(jsQR).mockImplementation(() => {
-      scanCount++;
-      if (scanCount === 1) return { data: 'scan 1' } as any;
-      if (scanCount === 2) return null;
+    let uploadCount = 0;
+    vi.mocked(jsQR).mockImplementation((data, width, height, options) => {
+      if (!options || options.inversionAttempts === 'dontInvert') {
+        uploadCount++;
+      }
+      if (uploadCount === 1) return { data: 'scan 1' } as any;
+      if (uploadCount === 2) return null;
       return { data: 'scan 2' } as any;
     });
 
