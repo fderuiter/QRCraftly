@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { generateSchema } from './schemaGenerator';
-import { ToolContent } from '../data/contentRegistry';
+import { ToolContent, SchemaType, SchemaCategory, TargetPersona, StrategicValueCategory } from '../data/contentRegistry';
 
 describe('schemaGenerator', () => {
   const dummyContent: ToolContent = {
@@ -9,6 +9,10 @@ describe('schemaGenerator', () => {
     description: 'Generate free wifi qr code',
     url: 'https://qrcraftly.com/wifi',
     features: ['WPA', 'WPA2'],
+    schemaType: [SchemaType.SoftwareApplication, SchemaType.WebApplication],
+    schemaCategory: SchemaCategory.UtilitiesApplication,
+    personas: [TargetPersona.GeneralUser],
+    valueProposition: StrategicValueCategory.PersonalUse,
     howTo: {
       name: 'How to generate Wifi QR Code',
       description: 'Follow these steps',
@@ -30,6 +34,10 @@ describe('schemaGenerator', () => {
     description: 'We are a secure QR code generator',
     url: 'https://qrcraftly.com/about',
     features: [],
+    schemaType: SchemaType.AboutPage,
+    schemaCategory: SchemaCategory.UtilitiesApplication,
+    personas: [TargetPersona.GeneralUser],
+    valueProposition: StrategicValueCategory.PersonalUse,
     faqs: [
       { question: 'What is this?', answer: 'An app' }
     ]
@@ -118,7 +126,11 @@ describe('schemaGenerator', () => {
       name: 'Event QR',
       description: 'Generate Event QR',
       url: 'https://qrcraftly.com/event-qr-code',
-      features: []
+      features: [],
+      schemaType: [SchemaType.WebApplication],
+      schemaCategory: SchemaCategory.UtilitiesApplication,
+      personas: [TargetPersona.Marketer],
+      valueProposition: StrategicValueCategory.MarketingCampaign
     };
     const eventSchema = generateSchema(eventContent);
     const eventObj = eventSchema['@graph'].find((g: any) => g['@type'] === 'Event');
@@ -133,7 +145,11 @@ describe('schemaGenerator', () => {
       name: 'Location QR',
       description: 'Generate Location QR',
       url: 'https://qrcraftly.com/location-qr-code',
-      features: []
+      features: [],
+      schemaType: [SchemaType.WebApplication],
+      schemaCategory: SchemaCategory.UtilitiesApplication,
+      personas: [TargetPersona.GeneralUser],
+      valueProposition: StrategicValueCategory.PersonalUse
     };
     const locationSchema = generateSchema(locationContent);
     const locationObj = locationSchema['@graph'].find((g: any) => g['@type'] === 'Place');
@@ -146,7 +162,11 @@ describe('schemaGenerator', () => {
       name: 'Meeting QR',
       description: 'Generate Meeting QR',
       url: 'https://qrcraftly.com/meeting-qr-code',
-      features: []
+      features: [],
+      schemaType: [SchemaType.WebApplication],
+      schemaCategory: SchemaCategory.UtilitiesApplication,
+      personas: [TargetPersona.Professional],
+      valueProposition: StrategicValueCategory.BusinessUtility
     };
     const meetingSchema = generateSchema(meetingContent);
     const meetingObj = meetingSchema['@graph'].find((g: any) => g['@type'] === 'Event');
@@ -159,7 +179,11 @@ describe('schemaGenerator', () => {
       name: 'Social QR',
       description: 'Generate Social QR',
       url: 'https://qrcraftly.com/social-qr-code',
-      features: []
+      features: [],
+      schemaType: [SchemaType.WebApplication],
+      schemaCategory: SchemaCategory.SocialNetworkingApplication,
+      personas: [TargetPersona.Marketer],
+      valueProposition: StrategicValueCategory.SocialSharing
     };
     const socialSchema = generateSchema(socialContent);
     const socialObj = socialSchema['@graph'].find((g: any) => g['@type'] === 'ProfilePage');
@@ -169,26 +193,39 @@ describe('schemaGenerator', () => {
   });
 
   it('supports schemaType and schemaCategory overrides directly from registry', () => {
-    // 1. Single string schemaType override
+    // 1. Single schemaType override
     const overrideTypeString: ToolContent = {
       ...dummyContent,
-      schemaType: 'SpecialApp',
-      schemaCategory: 'SpecialCategory'
+      schemaType: SchemaType.AboutPage,
+      schemaCategory: SchemaCategory.SocialNetworkingApplication
     };
     const schema1 = generateSchema(overrideTypeString);
-    const app1 = schema1['@graph'].find((g: any) => g['@type'] === 'SpecialApp');
+    const app1 = schema1['@graph'].find((g: any) => g['@type'] === 'AboutPage');
     expect(app1).toBeDefined();
-    expect(app1.applicationCategory).toBe('SpecialCategory');
+    expect(app1.applicationCategory).toBe('SocialNetworkingApplication');
 
     // 2. Array schemaType override
     const overrideTypeArray: ToolContent = {
       ...dummyContent,
-      schemaType: ['FirstType', 'SecondType'],
-      schemaCategory: 'AnotherCategory'
+      schemaType: [SchemaType.SoftwareApplication, SchemaType.WebApplication],
+      schemaCategory: SchemaCategory.BusinessApplication
     };
     const schema2 = generateSchema(overrideTypeArray);
-    const app2 = schema2['@graph'].find((g: any) => Array.isArray(g['@type']) && g['@type'].includes('FirstType') && g['@type'].includes('SecondType'));
+    const app2 = schema2['@graph'].find((g: any) => Array.isArray(g['@type']) && g['@type'].includes('SoftwareApplication') && g['@type'].includes('WebApplication'));
     expect(app2).toBeDefined();
-    expect(app2.applicationCategory).toBe('AnotherCategory');
+    expect(app2.applicationCategory).toBe('BusinessApplication');
+  });
+
+  it('successfully injects user segment values (audience) into the output JSON-LD structure', () => {
+    const schema = generateSchema(dummyContent);
+    const app = schema['@graph'].find((g: any) => Array.isArray(g['@type']) && g['@type'].includes('SoftwareApplication'));
+    expect(app).toBeDefined();
+    expect(app.audience).toBeDefined();
+    expect(app.audience).toEqual([
+      {
+        "@type": "Audience",
+        "audienceType": "General User"
+      }
+    ]);
   });
 });
