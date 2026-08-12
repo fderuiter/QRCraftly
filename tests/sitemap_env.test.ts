@@ -65,7 +65,7 @@ describe('Sitemap Environment-Level Variable Resolution', () => {
 
     expect(existsSync(sitemapPath)).toBe(true);
     const content = readFileSync(sitemapPath, 'utf8');
-    expect(content).toContain('<loc>https://qrcraftly.com/</loc>');
+    expect(content).toContain('<loc>https://qrcraftly.com</loc>');
     expect(content).toContain('<loc>https://qrcraftly.com/dummy-sample-route</loc>');
   });
 
@@ -81,9 +81,9 @@ describe('Sitemap Environment-Level Variable Resolution', () => {
 
     expect(existsSync(sitemapPath)).toBe(true);
     const content = readFileSync(sitemapPath, 'utf8');
-    expect(content).toContain('<loc>https://staging.qrcraftly.net/</loc>');
+    expect(content).toContain('<loc>https://staging.qrcraftly.net</loc>');
     expect(content).toContain('<loc>https://staging.qrcraftly.net/dummy-sample-route</loc>');
-    expect(content).not.toContain('https://qrcraftly.com/');
+    expect(content).not.toContain('https://qrcraftly.com');
   });
 
   it('should sanitize and strip any trailing slashes from the resolved VITE_DOMAIN', () => {
@@ -99,7 +99,7 @@ describe('Sitemap Environment-Level Variable Resolution', () => {
     expect(existsSync(sitemapPath)).toBe(true);
     const content = readFileSync(sitemapPath, 'utf8');
     // Ensure no double slashes on URLs like 'https://staging-trailing.qrcraftly.net//dummy-sample-route'
-    expect(content).toContain('<loc>https://staging-trailing.qrcraftly.net/</loc>');
+    expect(content).toContain('<loc>https://staging-trailing.qrcraftly.net</loc>');
     expect(content).toContain('<loc>https://staging-trailing.qrcraftly.net/dummy-sample-route</loc>');
   });
 
@@ -128,7 +128,7 @@ describe('Sitemap Environment-Level Variable Resolution', () => {
 
       expect(existsSync(sitemapPath)).toBe(true);
       const content = readFileSync(sitemapPath, 'utf8');
-      expect(content).toContain('<loc>https://dotenv-loaded.qrcraftly.org/</loc>');
+      expect(content).toContain('<loc>https://dotenv-loaded.qrcraftly.org</loc>');
       expect(content).toContain('<loc>https://dotenv-loaded.qrcraftly.org/dummy-sample-route</loc>');
     } finally {
       // Cleanup temporary .env.production file

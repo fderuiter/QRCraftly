@@ -1,5 +1,5 @@
 export const getPublicDomain = (): string => {
-  const domain = import.meta.env.VITE_DOMAIN || 'https://qrcraftly.com';
+  const domain = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_DOMAIN) || process.env.VITE_DOMAIN || 'https://qrcraftly.com';
   return domain.replace(/\/+$/, '');
 };
 
