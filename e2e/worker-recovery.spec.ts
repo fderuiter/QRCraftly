@@ -33,13 +33,18 @@ test.describe('Isolated Web Worker Recovery & Export Bypass', () => {
     await page.addInitScript(() => {
       const OriginalWorker = globalThis.Worker;
       class MockWorker extends OriginalWorker {
+        lastConfigId: any;
         constructor(scriptURL: string | URL, options?: WorkerOptions) {
           super(scriptURL, options);
+          this.lastConfigId = undefined;
           // Expose the created worker instance on the window object
           (window as any).activeWorker = this;
         }
 
         postMessage(message: any, transfer?: any) {
+          if (message && message.configId) {
+            this.lastConfigId = message.configId;
+          }
           if ((window as any).simulateFailure !== false) {
             const configId = message?.configId;
             // Simulate background worker crash/failure asynchronously
@@ -86,8 +91,9 @@ test.describe('Isolated Web Worker Recovery & Export Bypass', () => {
     await page.evaluate(() => {
       (window as any).simulateFailure = true;
       if ((window as any).activeWorker) {
+        const configId = (window as any).activeWorker.lastConfigId;
         (window as any).activeWorker.dispatchEvent(new MessageEvent('message', {
-          data: { success: false, physicalReady: false, error: 'NOT_FOUND' }
+          data: { success: false, physicalReady: false, error: 'NOT_FOUND', configId }
         }));
       }
     });
@@ -103,8 +109,9 @@ test.describe('Isolated Web Worker Recovery & Export Bypass', () => {
     await page.evaluate(() => {
       (window as any).simulateFailure = true;
       if ((window as any).activeWorker) {
+        const configId = (window as any).activeWorker.lastConfigId;
         (window as any).activeWorker.dispatchEvent(new MessageEvent('message', {
-          data: { success: false, physicalReady: false, error: 'NOT_FOUND' }
+          data: { success: false, physicalReady: false, error: 'NOT_FOUND', configId }
         }));
       }
     });
@@ -145,8 +152,9 @@ test.describe('Isolated Web Worker Recovery & Export Bypass', () => {
     await page.evaluate(() => {
       (window as any).simulateFailure = true;
       if ((window as any).activeWorker) {
+        const configId = (window as any).activeWorker.lastConfigId;
         (window as any).activeWorker.dispatchEvent(new MessageEvent('message', {
-          data: { success: false, physicalReady: false, error: 'NOT_FOUND' }
+          data: { success: false, physicalReady: false, error: 'NOT_FOUND', configId }
         }));
       }
     });

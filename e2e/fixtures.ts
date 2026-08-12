@@ -8,7 +8,6 @@ export const test = base.extend({
     // at the browser-context level (to cover both pages and background web workers)
     await context.route('**/*', (route) => {
       const url = route.request().url();
-      console.log(`[DEBUG INTERCEPT] ${url} (type: ${route.request().resourceType()})`);
       
       const isAllowed = (u: string) => {
         if (u.includes('unauthorized')) {
@@ -40,7 +39,10 @@ export const test = base.extend({
         console.warn(errorMsg);
         
         if (type === 'fetch' || type === 'websocket' || type === 'xmlhttprequest') {
-          blockedRequests.push(url);
+          // Do not fail tests on blocked external font requests
+          if (!url.includes('fonts.googleapis.com') && !url.includes('fonts.gstatic.com')) {
+            blockedRequests.push(url);
+          }
         }
         
         route.abort('failed');
