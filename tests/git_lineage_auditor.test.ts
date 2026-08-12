@@ -327,11 +327,12 @@ describe('Local Git-Diff Lineage Auditor', () => {
       const mockOptions = {
         env: { CI: 'true', GITHUB_BASE_REF: 'feature-branch' },
         argv: ['node', 'scripts/git_lineage_auditor.js'],
-        execSync: (cmd) => {
-          if (cmd.includes('git diff --name-only origin/feature-branch...HEAD')) {
+        execSync: (file, args) => {
+          const argStr = args.join(' ');
+          if (file === 'git' && argStr === 'diff --name-only origin/feature-branch...HEAD') {
             return 'src/utils/sharedContract.ts\ndocs/public/SCALING.md';
           }
-          throw new Error('Unexpected command');
+          throw new Error(`Unexpected command: ${file} ${argStr}`);
         },
         existsSync: () => true,
         exit: (code) => { exitCode = code; }
@@ -347,15 +348,16 @@ describe('Local Git-Diff Lineage Auditor', () => {
       const mockOptions = {
         env: { CI: 'true' },
         argv: ['node', 'scripts/git_lineage_auditor.js'],
-        execSync: (cmd) => {
-          if (cmd.includes('origin/main...HEAD')) {
+        execSync: (file, args) => {
+          const argStr = args.join(' ');
+          if (file === 'git' && argStr.includes('origin/main...HEAD')) {
             throw new Error('Ref not found / shallow clone');
           }
-          if (cmd.includes('git diff-tree --no-commit-id --name-only -r HEAD')) {
+          if (file === 'git' && argStr === 'diff-tree --no-commit-id --name-only -r HEAD') {
             usedFallback = true;
             return 'src/utils/sharedContract.ts\ndocs/public/SCALING.md';
           }
-          throw new Error('Unexpected command');
+          throw new Error(`Unexpected command: ${file} ${argStr}`);
         },
         existsSync: () => true,
         exit: (code) => { exitCode = code; }
@@ -372,18 +374,19 @@ describe('Local Git-Diff Lineage Auditor', () => {
       const mockOptions = {
         env: { CI: 'true' },
         argv: ['node', 'scripts/git_lineage_auditor.js'],
-        execSync: (cmd) => {
-          if (cmd.includes('origin/main...HEAD')) {
+        execSync: (file, args) => {
+          const argStr = args.join(' ');
+          if (file === 'git' && argStr.includes('origin/main...HEAD')) {
             throw new Error('Ref not found / shallow clone');
           }
-          if (cmd.includes('git diff-tree')) {
+          if (file === 'git' && argStr.includes('diff-tree')) {
             throw new Error('diff-tree fails');
           }
-          if (cmd.includes('git diff --name-only HEAD~1 HEAD')) {
+          if (file === 'git' && argStr === 'diff --name-only HEAD~1 HEAD') {
             usedFallback = true;
             return 'src/utils/sharedContract.ts\ndocs/public/SCALING.md';
           }
-          throw new Error('Unexpected command');
+          throw new Error(`Unexpected command: ${file} ${argStr}`);
         },
         existsSync: () => true,
         exit: (code) => { exitCode = code; }
@@ -471,11 +474,12 @@ describe('Local Git-Diff Lineage Auditor', () => {
       const mockOptions = {
         env: { CI: 'true' },
         argv: ['node', 'scripts/git_lineage_auditor.js'],
-        execSync: (cmd) => {
-          if (cmd.includes('origin/main...HEAD')) {
+        execSync: (file, args) => {
+          const argStr = args.join(' ');
+          if (file === 'git' && argStr.includes('origin/main...HEAD')) {
             return 'src/utils/sharedContract.ts'; // sharedContract.ts is modified, but docs/public/SCALING.md is not!
           }
-          throw new Error('Unexpected command');
+          throw new Error(`Unexpected command: ${file} ${argStr}`);
         },
         existsSync: () => true,
         exit: (code) => { exitCode = code; }

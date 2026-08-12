@@ -1,4 +1,4 @@
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -288,10 +288,10 @@ function runValidator() {
           const target = process.env.GITHUB_BASE_REF ? `origin/${process.env.GITHUB_BASE_REF}` : 'HEAD~1';
           console.log(`[UI Catalog Sync] CI Context detected. Querying diff against target ${target}...`);
           try {
-            stdout = execSync(`git diff --name-only ${target}...HEAD`, { encoding: 'utf8', cwd: repoRoot });
+            stdout = execFileSync('git', ['diff', '--name-only', `${target}...HEAD`], { encoding: 'utf8', cwd: repoRoot });
           } catch (err) {
             try {
-              stdout = execSync('git diff --name-only HEAD~1', { encoding: 'utf8', cwd: repoRoot });
+              stdout = execFileSync('git', ['diff', '--name-only', 'HEAD~1'], { encoding: 'utf8', cwd: repoRoot });
             } catch (err2) {
               stdout = '';
             }
@@ -304,7 +304,7 @@ function runValidator() {
         } else {
           // Local/dev: check uncommitted staged and unstaged files
           try {
-            stdout = execSync('git status --porcelain', { encoding: 'utf8', cwd: repoRoot });
+            stdout = execFileSync('git', ['status', '--porcelain'], { encoding: 'utf8', cwd: repoRoot });
             if (stdout.trim()) {
               modifiedFiles = parseGitStatus(stdout);
             }
