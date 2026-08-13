@@ -36,13 +36,20 @@ interface QRCanvasProps {
   /** Optional CSS class names to apply to the canvas element. */
   className?: string;
   /** Optional callback fired when rendering is complete. */
-  onRendered?: (info: { /**
-                         *
-                         */
-  moduleCount: number; /**
-                        *
-                        */
-  virtualImageData?: ImageData }) => void;
+  onRendered?: (info: {
+    /**
+     *
+     */
+    moduleCount: number;
+    /**
+     *
+     */
+    virtualImageData?: ImageData;
+    /**
+     *
+     */
+    virtualImageBitmap?: ImageBitmap;
+  }) => void;
   /** Sequence of string values representing animated QR frames. If omitted, falls back to config.animationValues. */
   animationValues?: string[];
   /** Flag specifying if the visual animation loop is currently active. If omitted, falls back to config.isAnimating. */
