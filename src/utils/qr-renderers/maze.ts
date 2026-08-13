@@ -1,12 +1,12 @@
 import { QRConfig, QRModules } from '../../types';
 import { getLogoMetrics, getIsCoveredByLogo } from './utils';
 
-export interface MazeNode {
+interface MazeNode {
   r: number;
   c: number;
 }
 
-export interface MazeEdge {
+interface MazeEdge {
   u: MazeNode;
   v: MazeNode;
 }
