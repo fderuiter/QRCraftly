@@ -241,6 +241,11 @@ export class SvgContext {
     return parseFloat(v.toFixed(3)).toString();
   }
 
+  private _pt(x: number, y: number): string {
+    const [tx, ty] = this._applyTransform(x, y);
+    return `${this._n(tx)} ${this._n(ty)}`;
+  }
+
   // ── State management ───────────────────────────────────────────────────────
 
   save(): void {
@@ -301,19 +306,15 @@ export class SvgContext {
   }
 
   moveTo(x: number, y: number): void {
-    const [tx, ty] = this._applyTransform(x, y);
-    this._pathData += `M ${this._n(tx)} ${this._n(ty)} `;
+    this._pathData += `M ${this._pt(x, y)} `;
   }
 
   lineTo(x: number, y: number): void {
-    const [tx, ty] = this._applyTransform(x, y);
-    this._pathData += `L ${this._n(tx)} ${this._n(ty)} `;
+    this._pathData += `L ${this._pt(x, y)} `;
   }
 
   quadraticCurveTo(cpx: number, cpy: number, x: number, y: number): void {
-    const [tcpx, tcpy] = this._applyTransform(cpx, cpy);
-    const [tx, ty] = this._applyTransform(x, y);
-    this._pathData += `Q ${this._n(tcpx)} ${this._n(tcpy)} ${this._n(tx)} ${this._n(ty)} `;
+    this._pathData += `Q ${this._pt(cpx, cpy)} ${this._pt(x, y)} `;
   }
 
   /**
@@ -321,14 +322,10 @@ export class SvgContext {
    * The four corners are transformed individually so rotated rects are handled correctly.
    */
   rect(x: number, y: number, w: number, h: number): void {
-    const [x0, y0] = this._applyTransform(x, y);
-    const [x1, y1] = this._applyTransform(x + w, y);
-    const [x2, y2] = this._applyTransform(x + w, y + h);
-    const [x3, y3] = this._applyTransform(x, y + h);
-    this._pathData += `M ${this._n(x0)} ${this._n(y0)} `;
-    this._pathData += `L ${this._n(x1)} ${this._n(y1)} `;
-    this._pathData += `L ${this._n(x2)} ${this._n(y2)} `;
-    this._pathData += `L ${this._n(x3)} ${this._n(y3)} Z `;
+    this._pathData += `M ${this._pt(x, y)} `;
+    this._pathData += `L ${this._pt(x + w, y)} `;
+    this._pathData += `L ${this._pt(x + w, y + h)} `;
+    this._pathData += `L ${this._pt(x, y + h)} Z `;
   }
 
   /**
@@ -340,20 +337,15 @@ export class SvgContext {
     // Clamp radius so it doesn't exceed half the shorter side and is not negative
     const safeR = clampCornerRadius(r, w, h);
 
-    const pt = (px: number, py: number) => {
-      const [tx, ty] = this._applyTransform(px, py);
-      return `${this._n(tx)} ${this._n(ty)}`;
-    };
-
-    this._pathData += `M ${pt(x + safeR, y)} `;
-    this._pathData += `L ${pt(x + w - safeR, y)} `;
-    this._pathData += `Q ${pt(x + w, y)} ${pt(x + w, y + safeR)} `;
-    this._pathData += `L ${pt(x + w, y + h - safeR)} `;
-    this._pathData += `Q ${pt(x + w, y + h)} ${pt(x + w - safeR, y + h)} `;
-    this._pathData += `L ${pt(x + safeR, y + h)} `;
-    this._pathData += `Q ${pt(x, y + h)} ${pt(x, y + h - safeR)} `;
-    this._pathData += `L ${pt(x, y + safeR)} `;
-    this._pathData += `Q ${pt(x, y)} ${pt(x + safeR, y)} Z `;
+    this._pathData += `M ${this._pt(x + safeR, y)} `;
+    this._pathData += `L ${this._pt(x + w - safeR, y)} `;
+    this._pathData += `Q ${this._pt(x + w, y)} ${this._pt(x + w, y + safeR)} `;
+    this._pathData += `L ${this._pt(x + w, y + h - safeR)} `;
+    this._pathData += `Q ${this._pt(x + w, y + h)} ${this._pt(x + w - safeR, y + h)} `;
+    this._pathData += `L ${this._pt(x + safeR, y + h)} `;
+    this._pathData += `Q ${this._pt(x, y + h)} ${this._pt(x, y + h - safeR)} `;
+    this._pathData += `L ${this._pt(x, y + safeR)} `;
+    this._pathData += `Q ${this._pt(x, y)} ${this._pt(x + safeR, y)} Z `;
   }
 
   /**
@@ -403,24 +395,18 @@ export class SvgContext {
       const p2x = p3x + k * r * Math.sin(a2);
       const p2y = p3y - k * r * Math.cos(a2);
 
-      // Apply transformation to all control points
-      const [tp0x, tp0y] = this._applyTransform(p0x, p0y);
-      const [tp1x, tp1y] = this._applyTransform(p1x, p1y);
-      const [tp2x, tp2y] = this._applyTransform(p2x, p2y);
-      const [tp3x, tp3y] = this._applyTransform(p3x, p3y);
-
       if (i === 0) {
         // First segment start point
         const isNewSubpath = !this._pathData.trim() || this._pathData.trim().endsWith('Z');
         if (isNewSubpath) {
-          this._pathData += `M ${this._n(tp0x)} ${this._n(tp0y)} `;
+          this._pathData += `M ${this._pt(p0x, p0y)} `;
         } else {
-          this._pathData += `L ${this._n(tp0x)} ${this._n(tp0y)} `;
+          this._pathData += `L ${this._pt(p0x, p0y)} `;
         }
       }
 
       // Add the cubic Bezier curve to the path
-      this._pathData += `C ${this._n(tp1x)} ${this._n(tp1y)}, ${this._n(tp2x)} ${this._n(tp2y)}, ${this._n(tp3x)} ${this._n(tp3y)} `;
+      this._pathData += `C ${this._pt(p1x, p1y)}, ${this._pt(p2x, p2y)}, ${this._pt(p3x, p3y)} `;
     }
   }
 
@@ -446,11 +432,7 @@ export class SvgContext {
   /** Fills a rectangle directly (without modifying the current path). */
   fillRect(x: number, y: number, w: number, h: number): void {
     const fill = this._cssColor(this.fillStyle);
-    const [x0, y0] = this._applyTransform(x, y);
-    const [x1, y1] = this._applyTransform(x + w, y);
-    const [x2, y2] = this._applyTransform(x + w, y + h);
-    const [x3, y3] = this._applyTransform(x, y + h);
-    const d = `M ${this._n(x0)} ${this._n(y0)} L ${this._n(x1)} ${this._n(y1)} L ${this._n(x2)} ${this._n(y2)} L ${this._n(x3)} ${this._n(y3)} Z`;
+    const d = `M ${this._pt(x, y)} L ${this._pt(x + w, y)} L ${this._pt(x + w, y + h)} L ${this._pt(x, y + h)} Z`;
     this._elements.push(`<path d="${d}" fill="${fill}"/>`);
   }
 
@@ -463,11 +445,7 @@ export class SvgContext {
     const dash = this._dashArray.length > 0
       ? ` stroke-dasharray="${this._dashArray.join(' ')}"`
       : '';
-    const [x0, y0] = this._applyTransform(x, y);
-    const [x1, y1] = this._applyTransform(x + w, y);
-    const [x2, y2] = this._applyTransform(x + w, y + h);
-    const [x3, y3] = this._applyTransform(x, y + h);
-    const d = `M ${this._n(x0)} ${this._n(y0)} L ${this._n(x1)} ${this._n(y1)} L ${this._n(x2)} ${this._n(y2)} L ${this._n(x3)} ${this._n(y3)} Z`;
+    const d = `M ${this._pt(x, y)} L ${this._pt(x + w, y)} L ${this._pt(x + w, y + h)} L ${this._pt(x, y + h)} Z`;
     this._elements.push(
       `<path d="${d}" fill="none" stroke="${stroke}" stroke-width="${this._n(this.lineWidth)}"${dash}/>`
     );

@@ -388,5 +388,54 @@ describe('SvgContext', () => {
       expect(svg).toContain('<stop offset="100%" stop-color="#0000ff" />');
       expect(svg).toContain('fill="url(#radial-grad-1)"');
     });
+
+    it('ensures standard rectangle shapes match canvas coordinate boundaries and transforms precisely using _pt helper', () => {
+      const ctx = new SvgContext(200, 200);
+      ctx.translate(10, 10);
+      ctx.rect(0, 0, 100, 50);
+      ctx.fill();
+
+      const svg = ctx.serialize();
+      // rect (0,0) with translate(10,10) should have corners: (10,10), (110,10), (110,60), (10,60)
+      expect(svg).toContain('d="M 10 10 L 110 10 L 110 60 L 10 60 Z"');
+    });
+
+    it('clamps corner radii on exported elements to never exceed half of shortest side', () => {
+      const ctx = new SvgContext(200, 200);
+      ctx.beginPath();
+      // Shortest side is 50, so max safeR should be 25. Let's pass radius 40.
+      ctx.roundRect(0, 0, 100, 50, 40);
+      ctx.fill();
+
+      const svg = ctx.serialize();
+      // First point at x + safeR, y => 25, 0
+      expect(svg).toContain('d="M 25 0 L 75 0 Q 100 0 100 25 L 100 25 Q 100 50 75 50 L 25 50 Q 0 50 0 25 L 0 25 Q 0 0 25 0 Z"');
+    });
+
+    it('produces identical rounded corner vectors under positive and negative scales', () => {
+      // Under scale(2, 2)
+      const ctxPos = new SvgContext(200, 200);
+      ctxPos.scale(2, 2);
+      ctxPos.beginPath();
+      ctxPos.roundRect(0, 0, 50, 25, 10);
+      ctxPos.fill();
+      const svgPos = ctxPos.serialize();
+
+      // Under scale(-2, -2)
+      const ctxNeg = new SvgContext(200, 200);
+      ctxNeg.scale(-2, -2);
+      ctxNeg.beginPath();
+      // Draw standard clockwise sequence with scaled dimensions
+      ctxNeg.roundRect(0, 0, 50, 25, 10);
+      ctxNeg.fill();
+      const svgNeg = ctxNeg.serialize();
+
+      // Verify positive scale coordinates match the shape scaling directly
+      expect(svgPos).toContain('d="M 20 0 L 80 0 Q 100 0 100 20 L 100 30 Q 100 50 80 50 L 20 50 Q 0 50 0 30 L 0 20 Q 0 0 20 0 Z"');
+
+      // Verify negative scale produces identical clockwise structure in coordinate output
+      // Since it's scaled by -2, coordinates are multiplied by -2, and any -0 or 0 is normalized appropriately
+      expect(svgNeg).toContain('d="M -20 0 L -80 0 Q -100 0 -100 -20 L -100 -30 Q -100 -50 -80 -50 L -20 -50 Q 0 -50 0 -30 L 0 -20 Q 0 0 -20 0 Z"');
+    });
   });
 });

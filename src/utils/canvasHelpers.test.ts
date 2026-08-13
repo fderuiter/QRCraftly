@@ -17,10 +17,23 @@
 */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { drawRoundRect, drawPoly, drawStar, drawRoughRect, drawScribble, drawCircularModule, drawCircuitModule, drawStandardModule } from './canvasHelpers';
+import { clampCornerRadius, drawRoundRect, drawPoly, drawStar, drawRoughRect, drawScribble, drawCircularModule, drawCircuitModule, drawStandardModule } from './canvasHelpers';
 
 describe('canvasHelpers', () => {
   let ctx: any;
+
+  describe('clampCornerRadius', () => {
+    it('clamps radius to half of shortest side', () => {
+      expect(clampCornerRadius(10, 100, 50)).toBe(10);
+      expect(clampCornerRadius(30, 100, 50)).toBe(25);
+      expect(clampCornerRadius(-5, 100, 50)).toBe(0);
+    });
+
+    it('correctly handles negative width and height values using their absolute values', () => {
+      expect(clampCornerRadius(15, -100, -50)).toBe(15);
+      expect(clampCornerRadius(30, -100, -50)).toBe(25);
+    });
+  });
 
   beforeEach(() => {
     // specific cast to allow optional methods like roundRect
