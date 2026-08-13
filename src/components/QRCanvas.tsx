@@ -24,6 +24,7 @@ import { useImage } from '../hooks/useImage';
 import { ValidationEngine } from '../engine/ValidationEngine';
 import { Alert } from './ui/Alert';
 import { normalizeUrl, shouldNormalizeUrl } from '../utils/url';
+import { useOptionalQRStoreSelector } from '../context/QRContext';
 
 /**
  * Props for the QRCanvas component.
@@ -71,6 +72,7 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
   isAnimating,
   animationFps
 }, ref) => {
+  const isOutOfSync = useOptionalQRStoreSelector((state) => state.isOutOfSync) ?? false;
   const activeIsAnimating = isAnimating !== undefined ? isAnimating : (config.isAnimating || false);
   const activeAnimationValues = animationValues !== undefined ? animationValues : (config.animationValues || []);
   const activeAnimationFps = animationFps !== undefined ? animationFps : (config.animationFps || 30);
@@ -682,6 +684,25 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
         role="img"
         aria-label={ariaLabel}
       />
+      {isOutOfSync && (
+        <div 
+          className="absolute inset-0 flex flex-col items-center justify-center rounded-3xl bg-slate-900/60 p-4 text-center text-white backdrop-blur-sm"
+          data-testid="out-of-sync-overlay"
+        >
+          <div className="mb-2 flex items-center gap-1.5 rounded-full bg-amber-500 px-3 py-1.5 text-xs font-bold tracking-wider text-slate-950 uppercase shadow-md">
+            <svg className="size-4 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            Out of Sync
+          </div>
+          <p className="max-w-xs text-sm font-semibold text-slate-100 drop-shadow-sm">
+            Form contains invalid inputs.
+          </p>
+          <p className="mt-1 max-w-xs text-xs text-slate-300 drop-shadow-sm">
+            Fix errors to sync and update preview.
+          </p>
+        </div>
+      )}
     </div>
   );
 });

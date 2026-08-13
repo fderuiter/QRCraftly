@@ -38,6 +38,10 @@ type QRState = {
    *
    */
   violations: string[];
+  /**
+   *
+   */
+  isOutOfSync: boolean;
 };
 
 /**
@@ -78,6 +82,10 @@ export interface QRStore {
    *
    */
   registerSignal: (name: SignalName, callback: SignalCallback) => () => void;
+  /**
+   * Set system-wide out-of-sync validation state
+   */
+  setOutOfSync: (isOutOfSync: boolean) => void;
 }
 
 const QRStoreContext = createContext<QRStore | undefined>(undefined);
@@ -115,6 +123,7 @@ function createQRStore(initialConfig?: Partial<QRConfig>): QRStore {
       darkMode: false,
     },
     violations: [],
+    isOutOfSync: false,
   };
 
   const listeners = new Set<() => void>();
@@ -159,6 +168,12 @@ function createQRStore(initialConfig?: Partial<QRConfig>): QRStore {
       return () => {
         signals[name].delete(callback);
       };
+    },
+    setOutOfSync: (isOutOfSync) => {
+      if (state.isOutOfSync !== isOutOfSync) {
+        state = { ...state, isOutOfSync };
+        listeners.forEach(l => l());
+      }
     }
   };
 
@@ -216,6 +231,13 @@ export function useQRStoreSelector<T>(selector: (state: QRState) => T): T {
     () => selector(store.getState()),
     () => selector(store.getState())
   );
+}
+
+/**
+ *
+ */
+export function useOptionalQRStore(): QRStore | undefined {
+  return useContext(QRStoreContext);
 }
 
 /**

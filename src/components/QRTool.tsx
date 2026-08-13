@@ -46,6 +46,7 @@ import { sidebarControls } from '@/registry';
  */
 function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: string }) {
   const config = useQRStoreSelector(s => s.config);
+  const isOutOfSync = useQRStoreSelector(s => s.isOutOfSync);
   const store = useQRStore();
   const emitSignal = store.emitSignal;
   const { isDarkMode, toggleDarkMode } = useTheme();
@@ -158,6 +159,7 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
   }, [addToast]);
 
   const onCopy = async () => {
+    if (isOutOfSync) return;
     const result = await handleCopy();
     if (result.success) {
       setCopied(true);
@@ -167,6 +169,7 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
   };
 
   const executeWithSafetyGate = (action: () => void | Promise<void>) => {
+    if (isOutOfSync) return;
     const isUnsafe = scannabilityStatus === 'fail' || scannabilityStatus === 'digital-pass' || (health && health.score < 80);
     if (isUnsafe) {
       setGateAction(() => action);
@@ -177,6 +180,7 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
   };
 
   const handleSaveAsFlow = async (format: 'png' | 'jpeg' | 'webp') => {
+    if (isOutOfSync) return;
     setShowDownloadMenu(false);
     const action = async () => {
       const result = await hookSaveAs(format);
@@ -186,6 +190,7 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
   };
 
   const handleSaveSvgFlow = async () => {
+    if (isOutOfSync) return;
     setShowDownloadMenu(false);
     const action = async () => {
       const result = await hookSaveSvg();
@@ -195,6 +200,7 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
   };
 
   const downloadToDeviceFlow = async (format: 'png' | 'jpeg' | 'webp', buttonRef: React.RefObject<HTMLButtonElement | null>) => {
+    if (isOutOfSync) return;
     setShowDownloadMenu(false);
     const action = async () => {
       const result = await hookDownload(format);
@@ -204,6 +210,7 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
   };
 
   const onShare = async () => {
+    if (isOutOfSync) return;
     const result = await handleShare();
     handleExportResult(result, shareButtonRef);
   };
@@ -363,6 +370,7 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
                        <div className="relative flex-1" ref={downloadMenuRef}>
                           <Button 
                               ref={downloadButtonRef}
+                              disabled={isOutOfSync}
                               variant={scannabilityStatus === 'fail' || scannabilityStatus === 'digital-pass' || (health && health.score < 80) ? 'error' : 'primary'}
                               fullWidth
                               onClick={() => executeWithSafetyGate(() => setShowDownloadMenu(!showDownloadMenu))}
@@ -396,6 +404,7 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
                        <Button
                           ref={copyButtonRef}
                           variant="secondary"
+                          disabled={isOutOfSync}
                           onClick={onCopy}
                           className="w-12 px-0"
                           title="Copy Image"
@@ -408,6 +417,7 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
                          <Button 
                             ref={shareButtonRef}
                             variant="secondary"
+                            disabled={isOutOfSync}
                             onClick={onShare}
                             className="w-12 px-0"
                             title="Share"
@@ -422,6 +432,7 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
                    <Button 
                       ref={photosButtonRef}
                       variant="outline"
+                      disabled={isOutOfSync}
                       fullWidth
                       onClick={() => downloadToDeviceFlow('png', photosButtonRef)}
                       aria-label="Save QR code to photos"

@@ -21,6 +21,7 @@ import { QRConfig, QRType } from "../../types";
 import { INPUT_REGISTRY, InputDataMap } from "./InputRegistry";
 import { isDangerousUrl } from "../../utils/security";
 import { ValidationEngine } from "../../engine/ValidationEngine";
+import { useOptionalQRStore } from "../../context/QRContext";
 
 const isInputDataValid = (type: QRType, data: any): boolean => {
   if (type === QRType.WIFI) {
@@ -60,6 +61,7 @@ export function useInputLogic(
   config: QRConfig,
   onChange: (updates: Partial<QRConfig>) => void,
 ): { InputComponent: ElementType | null; inputProps: { data: InputDataMap[keyof InputDataMap]; onChange: (updates: Partial<InputDataMap[keyof InputDataMap]>) => void } | Record<string, never> } {
+  const store = useOptionalQRStore();
   // Initialize state for all types from registry
   const [inputStates, setInputStates] = useState<InputDataMap>(() => {
     const states = {} as Partial<InputDataMap>;
@@ -86,6 +88,16 @@ export function useInputLogic(
   useEffect(() => {
     latestInputStates.current = inputStates;
   }, [inputStates]);
+
+  useEffect(() => {
+    if (!store) return;
+    const entry = INPUT_REGISTRY[config.type];
+    if (entry) {
+      const currentLocalState = latestInputStates.current[config.type];
+      const isValid = isInputDataValid(config.type, currentLocalState);
+      store.setOutOfSync(!isValid);
+    }
+  }, [config.type, store]);
 
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevTypeRef = useRef<QRType | null>(null);
@@ -154,6 +166,11 @@ export function useInputLogic(
   ) => {
     const currentData = inputStates[type];
     const newData = { ...currentData, ...updates };
+
+    const isValid = isInputDataValid(type, newData);
+    if (store) {
+      store.setOutOfSync(!isValid);
+    }
 
     setInputStates((prev) => ({
       ...prev,
