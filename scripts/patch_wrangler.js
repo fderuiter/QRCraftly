@@ -10,6 +10,16 @@ const wranglerJs = path.join(wranglerBinDir, 'wrangler.js');
 const wranglerRealJs = path.join(wranglerBinDir, 'wrangler-real.js');
 
 try {
+  if (!process.env.GITHUB_ACTIONS) {
+    if (fs.existsSync(wranglerRealJs)) {
+      console.log('[Patch Wrangler] Restoring unpatched wrangler.js from wrangler-real.js...');
+      fs.renameSync(wranglerRealJs, wranglerJs);
+    } else {
+      console.log('[Patch Wrangler] Not running inside GitHub Actions. Skipping wrangler patch.');
+    }
+    process.exit(0);
+  }
+
   if (!fs.existsSync(wranglerJs)) {
     console.error(`[Patch Wrangler] wrangler.js not found at ${wranglerJs}`);
     process.exit(1);
