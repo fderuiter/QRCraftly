@@ -72,11 +72,13 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
   const { status: scannabilityStatus, checkScannability, health, workerRecoveryActive } = useScannability(canvasRef, config);
 
   
-  const handleRendered = useCallback((info: { moduleCount: number, virtualImageData?: ImageData } = { moduleCount: 0 }) => {
-    if (info.moduleCount && !info.virtualImageData) emitSignal('render-complete', info);
-    if (info.virtualImageData) {
+  const handleRendered = useCallback((info: { moduleCount: number, virtualImageData?: ImageData, virtualImageBitmap?: ImageBitmap } = { moduleCount: 0 }) => {
+    if (info.moduleCount && !info.virtualImageData && !info.virtualImageBitmap) emitSignal('render-complete', info);
+    if (info.virtualImageBitmap) {
+      checkScannability(undefined, info.virtualImageBitmap);
+    } else if (info.virtualImageData) {
       checkScannability(info.virtualImageData);
-    } else if (!info.virtualImageData && !info.moduleCount) {
+    } else if (!info.virtualImageData && !info.virtualImageBitmap && !info.moduleCount) {
       checkScannability();
     }
   }, [emitSignal, checkScannability]);

@@ -607,5 +607,96 @@ describe('useScannability - changed behavior: uses useQRStore instead of useQRCo
       expect(result.current.scan.workerRecoveryActive).toBe(false);
     });
   });
+
+  describe('Asynchronous ImageBitmap & Backpressure optimizations', () => {
+    it('supports direct ImageBitmap checking if overrideImageBitmap is provided', () => {
+      const { result } = renderHook(
+        () => useScannability(makeCanvasRef(), defaultConfig),
+        { wrapper }
+      );
+
+      const worker = getActiveWorker()!;
+      worker.postMessage = vi.fn();
+
+      const mockImageBitmap = {
+        width: 100,
+        height: 100,
+        close: vi.fn(),
+      } as unknown as ImageBitmap;
+
+      act(() => {
+        result.current.checkScannability(undefined, mockImageBitmap);
+      });
+
+      expect(worker.postMessage).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          imageBitmap: mockImageBitmap,
+          width: 100,
+          height: 100,
+        }),
+        [mockImageBitmap]
+      );
+    });
+
+    it('drops/skips subsequent frames when the background worker is busy and previous latency exceeded frame interval', () => {
+      let mockTime = 0;
+      const nowSpy = vi.spyOn(performance, 'now').mockImplementation(() => mockTime);
+
+      const { result } = renderHook(
+        () => useScannability(makeCanvasRef(), defaultConfig),
+        { wrapper }
+      );
+
+      const mockImageData = {
+        data: new Uint8ClampedArray(4),
+        width: 1,
+        height: 1,
+      } as unknown as ImageData;
+
+      const worker = getActiveWorker()!;
+      worker.postMessage = vi.fn();
+
+      // Trigger first check
+      mockTime = 0;
+      act(() => {
+        result.current.checkScannability(mockImageData);
+      });
+
+      expect(worker.postMessage).toHaveBeenCalledTimes(1);
+
+      // Simulate first check completing after 50ms
+      mockTime = 50;
+      act(() => {
+        worker.dispatchMessage({
+          success: true,
+          physicalReady: true,
+          error: null,
+          configId: '1',
+        });
+      });
+
+      // Now, latency is 50ms (> 16.6ms)
+
+      // Start second check
+      mockTime = 60;
+      act(() => {
+        result.current.checkScannability(mockImageData);
+      });
+
+      expect(worker.postMessage).toHaveBeenCalledTimes(2);
+
+      // Try triggering a third check synchronously (while second is busy)
+      mockTime = 70;
+      act(() => {
+        result.current.checkScannability(mockImageData);
+      });
+
+      // Since worker is busy and latency is 50ms (> 16.6ms), it should skip!
+      // Therefore, postMessage should NOT be called a third time.
+      expect(worker.postMessage).toHaveBeenCalledTimes(2);
+
+      nowSpy.mockRestore();
+    });
+  });
 });
 

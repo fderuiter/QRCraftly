@@ -3,7 +3,9 @@ import {
   assertWorkerResponse,
   isWorkerRequest,
 } from './sharedContract';
-import { performScannabilityCheck } from './scannabilityChecker';
+import jsQR from 'jsqr';
+import { isDangerousUrl } from './security';
+import { applyOpticalSimulationMath } from './opticalSimulation';
 
 let latestConfigId: string | undefined | null = undefined;
 
@@ -38,18 +40,126 @@ self.onmessage = async (e: MessageEvent<unknown>) => {
       assertWorkerRequest(e.data);
     }
 
-    const { imageData, width, height, isTest } = e.data;
+    const { imageData: reqImageData, imageBitmap, width, height, isTest } = e.data;
 
-    const result = performScannabilityCheck(imageData as ImageData, width, height, !!isTest);
+    let imageData: { data: Uint8ClampedArray; width: number; height: number };
+
+    if (imageBitmap) {
+      if (typeof OffscreenCanvas !== 'undefined') {
+        const canvas = new OffscreenCanvas(width, height);
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          throw new Error('Failed to get 2d context on OffscreenCanvas');
+        }
+        ctx.drawImage(imageBitmap, 0, 0);
+        const extracted = ctx.getImageData(0, 0, width, height);
+        imageData = { data: extracted.data, width, height };
+        imageBitmap.close();
+      } else {
+        throw new Error('OffscreenCanvas is not supported in this environment');
+      }
+    } else if (reqImageData) {
+      imageData = reqImageData as any;
+    } else {
+      throw new Error('Neither imageData nor imageBitmap provided');
+    }
+
+    if (configId !== undefined && latestConfigId !== configId) {
+      return;
+    }
+
+    // Step 1: Digital-only check
+    let digitalCheckOk = false;
+    let decodedData = '';
+    
+    // Check jsQR
+    let code = jsQR(imageData.data, width, height, { inversionAttempts: "dontInvert" });
+    if (code) {
+      digitalCheckOk = true;
+      decodedData = code.data;
+    } else {
+      // Yield to let any newer message cancel this
+      await yieldToEventLoop();
+      if (configId !== undefined && latestConfigId !== configId) {
+        return;
+      }
+      
+      code = jsQR(imageData.data, width, height, { inversionAttempts: "attemptBoth" });
+      if (code) {
+        digitalCheckOk = true;
+        decodedData = code.data;
+      }
+    }
+
+    // Security Check: URL / Payload safety
+    if (digitalCheckOk && isDangerousUrl(decodedData)) {
+      const response = {
+        success: false,
+        physicalReady: false,
+        error: 'SECURITY_VIOLATION',
+        configId
+      };
+      assertWorkerResponse(response);
+      self.postMessage(response);
+      return;
+    }
+
+    if (!digitalCheckOk) {
+      const response = {
+        success: false,
+        physicalReady: false,
+        error: 'NOT_FOUND',
+        configId
+      };
+      assertWorkerResponse(response);
+      self.postMessage(response);
+      return;
+    }
+
+    // Yield to let any newer message cancel this
+    await yieldToEventLoop();
+    if (configId !== undefined && latestConfigId !== configId) {
+      return;
+    }
+
+    // Step 2: Optical simulation & physical check
+    let physicalCheckOk = false;
+    let simulatedData: ImageData | { data: Uint8ClampedArray; width: number; height: number };
+
+    if (isTest) {
+      simulatedData = imageData;
+    } else {
+      const dst = applyOpticalSimulationMath(imageData.data, width, height);
+      simulatedData = { data: dst, width, height };
+    }
+
+    // Yield to let any newer message cancel this
+    await yieldToEventLoop();
+    if (configId !== undefined && latestConfigId !== configId) {
+      return;
+    }
+
+    let codeSim = jsQR(simulatedData.data, width, height, { inversionAttempts: "dontInvert" });
+    if (codeSim) {
+      physicalCheckOk = true;
+    } else {
+      // Yield to let any newer message cancel this
+      await yieldToEventLoop();
+      if (configId !== undefined && latestConfigId !== configId) {
+        return;
+      }
+      
+      codeSim = jsQR(simulatedData.data, width, height, { inversionAttempts: "attemptBoth" });
+      if (codeSim) physicalCheckOk = true;
+    }
 
     if (configId !== undefined && latestConfigId !== configId) {
       return;
     }
 
     const response = {
-      success: result.success,
-      physicalReady: result.physicalReady,
-      error: result.error,
+      success: true,
+      physicalReady: physicalCheckOk,
       configId
     };
     assertWorkerResponse(response);

@@ -398,12 +398,29 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
             );
           }
 
-          const imageData = vCtx.getImageData(0, 0, displayWidth, displayHeight);
-          currentOnRendered({ moduleCount: modules.size, virtualImageData: imageData });
-
-          if (vCanvas) {
-            vCanvas.width = 0;
-            vCanvas.height = 0;
+          if (typeof globalThis.createImageBitmap === 'function') {
+            createImageBitmap(vCanvas).then((imageBitmap) => {
+              currentOnRendered({ moduleCount: modules.size, virtualImageBitmap: imageBitmap });
+              if (vCanvas) {
+                vCanvas.width = 0;
+                vCanvas.height = 0;
+              }
+            }).catch((err) => {
+              console.error("createImageBitmap failed in virtual render:", err);
+              const imageData = vCtx.getImageData(0, 0, displayWidth, displayHeight);
+              currentOnRendered({ moduleCount: modules.size, virtualImageData: imageData });
+              if (vCanvas) {
+                vCanvas.width = 0;
+                vCanvas.height = 0;
+              }
+            });
+          } else {
+            const imageData = vCtx.getImageData(0, 0, displayWidth, displayHeight);
+            currentOnRendered({ moduleCount: modules.size, virtualImageData: imageData });
+            if (vCanvas) {
+              vCanvas.width = 0;
+              vCanvas.height = 0;
+            }
           }
         } catch (err) {
           console.error("Virtual rendering failed:", err);
