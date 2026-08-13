@@ -18,7 +18,7 @@
 
 import { usePageContext } from 'vike-react/usePageContext';
 import { JsonLdScript } from '@/components/ui/JsonLdScript';
-import { resolveDomainForPath, resolvePublicUrl, resolveImageUrl, compileBreadcrumbSchema } from '@/utils/metadataEngine';
+import { resolveDomainForPath, resolvePublicUrl, resolveImageUrl, compileBreadcrumbSchema, getSanitizedPath } from '@/utils/metadataEngine';
 
 /**
  * HeadDefault Component
@@ -58,35 +58,51 @@ export default function HeadDefault() {
 
   const imageAlt = config?.imageAlt || "QRCraftly QR Code Example";
 
-  const schemaData = {
-    "@context": "https://schema.org",
-    "@graph": [
-      {
-        "@type": "Organization",
-        "@id": `${resolvedDomain}/#organization`,
-        "name": "QRCraftly",
-        "url": resolvedDomain,
-        "logo": `${resolvedDomain}/favicon.png`,
-        "description": "Privacy-focused, client-side QR code generator.",
-        "slogan": "Free. Secure. Open Source.",
-        "foundingDate": "2025",
-        "sameAs": [
-          "https://github.com/fderuiter/QRCraftly"
-        ]
-      },
-      {
-        "@type": "WebSite",
-        "name": "QRCraftly",
-        "url": resolvedDomain,
-        "description": "Free, secure, and client-side QR code generator with privacy-first architecture.",
-        "publisher": {
-          "@id": `${resolvedDomain}/#organization`
-        }
-      }
-    ]
-  };
+  const sanitizedPath = getSanitizedPath(pageContext.urlPathname);
+  const isHomepage = sanitizedPath === '/' || sanitizedPath === '';
 
-  const breadcrumbSchema = compileBreadcrumbSchema(pageContext.urlPathname);
+  const schemaGraph: any[] = [
+    {
+      "@type": "Organization",
+      "@id": `${resolvedDomain}/#organization`,
+      "name": "QRCraftly",
+      "url": resolvedDomain,
+      "logo": `${resolvedDomain}/favicon.png`,
+      "description": "Privacy-focused, client-side QR code generator.",
+      "slogan": "Free. Secure. Open Source.",
+      "foundingDate": "2025",
+      "sameAs": [
+        "https://github.com/fderuiter/QRCraftly"
+      ]
+    }
+  ];
+
+  if (isHomepage) {
+    schemaGraph.push({
+      "@type": "WebSite",
+      "name": "QRCraftly",
+      "url": resolvedDomain,
+      "description": "Free, secure, and client-side QR code generator with privacy-first architecture.",
+      "publisher": {
+        "@id": `${resolvedDomain}/#organization`
+      }
+    });
+  }
+
+  if (!is404) {
+    const breadcrumbSchema = compileBreadcrumbSchema(pageContext.urlPathname);
+    if (breadcrumbSchema && breadcrumbSchema.itemListElement) {
+      schemaGraph.push({
+        "@type": "BreadcrumbList",
+        "itemListElement": breadcrumbSchema.itemListElement
+      });
+    }
+  }
+
+  const consolidatedSchema = {
+    "@context": "https://schema.org",
+    "@graph": schemaGraph
+  };
 
   return (
     <>
@@ -106,8 +122,7 @@ export default function HeadDefault() {
       */}
 
       {/* Global Structured Data */}
-      <JsonLdScript data={schemaData} />
-      {!is404 && breadcrumbSchema && <JsonLdScript data={breadcrumbSchema} />}
+      <JsonLdScript data={consolidatedSchema} />
 
       {/* Canonical URL - Do not render for 404 pages to avoid indexing errors */}
       {!is404 && <link rel="canonical" href={canonicalUrl} />}
