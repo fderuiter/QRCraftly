@@ -1,6 +1,7 @@
 import QRCode from 'qrcode';
 import { ValidationEngine } from '../engine/ValidationEngine';
-import { QRConfig } from '../types';
+import { QRConfig, QRType } from '../types';
+import { normalizeUrl, shouldNormalizeUrl } from './url';
 
 let latestSequenceId = -1;
 
@@ -36,8 +37,13 @@ self.onmessage = async (e: MessageEvent<{ config: QRConfig; sequenceId: number }
       return;
     }
 
+    let val = config.value;
+    if (config.type === QRType.URL && shouldNormalizeUrl(val)) {
+      val = normalizeUrl(val);
+    }
+
     // 2. Perform QR calculations (Reed-Solomon & module layout)
-    const data = QRCode.create(config.value, {
+    const data = QRCode.create(val, {
       errorCorrectionLevel: config.errorCorrectionLevel,
     });
 
