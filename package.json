@@ -2,6 +2,9 @@
   "name": "qrcraftly",
   "description": "A powerful, privacy-focused, and user-friendly React application for generating customized QR codes.",
   "private": true,
+  "engines": {
+    "node": ">=22.14.0"
+  },
   "packageManager": "pnpm@11.1.3",
   "version": "0.0.0",
   "license": "AGPL-3.0-or-later",
