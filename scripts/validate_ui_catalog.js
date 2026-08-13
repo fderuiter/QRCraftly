@@ -415,11 +415,12 @@ function runValidator() {
     console.log('✅ UI Catalog Integrity matches shared components perfectly.');
 
     // 2. Run Git Lineage / Change Set verification
-    const isGHA = !!process.env.GITHUB_ACTIONS || (!!process.env.CI && !process.env.CF_PAGES && !process.env.SKIP_GIT_VALIDATION);
+    const isCloudflare = !!process.env.CF_PAGES || (process.env.HOME && process.env.HOME.startsWith('/opt/buildhome')) || process.env.USER === 'cloudflare';
+    const isGHA = !isCloudflare && (!!process.env.GITHUB_ACTIONS || (!!process.env.CI && !process.env.CF_PAGES && !process.env.SKIP_GIT_VALIDATION));
     const isOtherCI = !!process.env.CI && !isGHA;
 
-    if (process.env.SKIP_GIT_VALIDATION || isOtherCI) {
-      console.log('[UI Catalog Sync] SKIP_GIT_VALIDATION or non-GHA CI environment detected. Skipping git lineage check.');
+    if (process.env.SKIP_GIT_VALIDATION || isOtherCI || isCloudflare) {
+      console.log('[UI Catalog Sync] SKIP_GIT_VALIDATION, Cloudflare, or non-GHA CI environment detected. Skipping git lineage check.');
       console.log(`\n🎉 All catalog synchronization validations passed in ${Date.now() - startTime}ms.`);
       return;
     }

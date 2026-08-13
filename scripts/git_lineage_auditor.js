@@ -221,11 +221,12 @@ export function runAuditor(options = {}) {
   const exit = options.exit || process.exit;
 
   try {
-    const isGHA = !!env.GITHUB_ACTIONS || (!!env.CI && !env.CF_PAGES && !env.SKIP_GIT_VALIDATION);
+    const isCloudflare = !!env.CF_PAGES || (env.HOME && env.HOME.startsWith('/opt/buildhome')) || env.USER === 'cloudflare';
+    const isGHA = !isCloudflare && (!!env.GITHUB_ACTIONS || (!!env.CI && !env.CF_PAGES && !env.SKIP_GIT_VALIDATION));
     const isOtherCI = !!env.CI && !isGHA;
 
-    if (env.SKIP_GIT_VALIDATION || isOtherCI) {
-      console.log('[Lineage Auditor] SKIP_GIT_VALIDATION or non-GHA CI environment detected. Skipping git lineage auditor check.');
+    if (env.SKIP_GIT_VALIDATION || isOtherCI || isCloudflare) {
+      console.log('[Lineage Auditor] SKIP_GIT_VALIDATION, Cloudflare, or non-GHA CI environment detected. Skipping git lineage auditor check.');
       return;
     }
 
