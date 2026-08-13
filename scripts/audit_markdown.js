@@ -3,7 +3,7 @@ import path from 'path';
 import { marked } from 'marked';
 import { fileURLToPath } from 'url';
 import ts from 'typescript';
-import { parseFrontmatter } from './compile_docs_manifest.js';
+import { parseFrontmatter, isQuarantined } from './compile_docs_manifest.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -12,6 +12,9 @@ const repoRoot = path.join(__dirname, '..');
 export const parsedFilesCache = new Map();
 
 export function getParsedFile(file) {
+  if (isQuarantined(file)) {
+    return { content: '', frontmatter: {}, body: '' };
+  }
   const filePath = path.isAbsolute(file) ? file : path.join(repoRoot, file);
   const normalizedPath = path.resolve(filePath);
   if (parsedFilesCache.has(normalizedPath)) {
@@ -40,13 +43,15 @@ export function getFilesToAudit() {
         .map(file => path.join('docs', 'public', file))
     : [];
 
-  return [
+  const rawList = [
     ...docsPublicFiles,
     'docs/SECURITY.md',
     'README.md',
     'src/components/inputs/README.md',
     '.github/rulesets/README.md'
   ];
+
+  return rawList.filter(file => !isQuarantined(file));
 }
 
 export let hasErrors = false;
@@ -74,7 +79,32 @@ export function slugify(text) {
     .replace(/\s+/g, '-');    // replace spaces with hyphens
 }
 
+export function checkPublishApproved(file, content) {
+  if (isQuarantined(file)) {
+    return false;
+  }
+  
+  const filePathAbs = path.isAbsolute(file) ? file : path.resolve(repoRoot, file);
+  const docsPublicDirAbs = path.resolve(docsPublicDir);
+  const isInPublicDir = filePathAbs.startsWith(docsPublicDirAbs + path.sep) || filePathAbs === docsPublicDirAbs;
+  
+  if (!isInPublicDir) {
+    return false;
+  }
+  
+  const { frontmatter } = parseFrontmatter(content);
+  if (frontmatter['publish-approved'] !== true) {
+    console.error(`Error in ${file}: Public document is missing the required 'publish-approved: true' metadata attribute.`);
+    hasErrors = true;
+    return true;
+  }
+  return false;
+}
+
 export function checkPlaceholders(file, content) {
+  if (isQuarantined(file)) {
+    return false;
+  }
   const { frontmatter, body } = parseFrontmatter(content);
   if (frontmatter.draft === true) {
     return false;
@@ -91,6 +121,9 @@ export function checkPlaceholders(file, content) {
 }
 
 export function buildFileHeadings(file, content) {
+  if (isQuarantined(file)) {
+    return new Set();
+  }
   const { body } = parseFrontmatter(content);
   const tokens = marked.lexer(body);
   const headings = new Set();
@@ -105,6 +138,9 @@ export function buildFileHeadings(file, content) {
 }
 
 export function verifyLinks(file, content, fileHeadings) {
+  if (isQuarantined(file)) {
+    return false;
+  }
   const { body } = parseFrontmatter(content);
   let localHasErrors = false;
   const filePath = path.join(repoRoot, file);
@@ -430,6 +466,7 @@ export function runAudit() {
       continue;
     }
     const { content } = getParsedFile(file);
+    checkPublishApproved(file, content);
     checkPlaceholders(file, content);
     fileHeadings[file] = buildFileHeadings(file, content);
   }

@@ -1,3 +1,7 @@
+---
+publish-approved: true
+---
+
 # Shared UI Component Registry and Utility Catalog
 
 ## Overview

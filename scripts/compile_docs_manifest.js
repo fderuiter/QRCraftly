@@ -9,6 +9,14 @@ const repoRoot = path.join(__dirname, '..');
 export const docsPublicDir = path.join(repoRoot, 'docs', 'public');
 export const outputManifestPath = path.join(repoRoot, 'src', 'data', 'docs_manifest.json');
 
+export function isQuarantined(fileOrPath) {
+  if (!fileOrPath) return false;
+  const absolutePath = path.isAbsolute(fileOrPath) ? fileOrPath : path.resolve(repoRoot, fileOrPath);
+  const relativeFromRoot = path.relative(repoRoot, absolutePath);
+  const pathParts = relativeFromRoot.split(path.sep);
+  return pathParts.some(part => part === 'internal' || part === 'quarantine' || part === 'quarantined');
+}
+
 function slugify(text) {
   let prev;
   do {
@@ -83,16 +91,17 @@ export function parseFrontmatter(content) {
       const lowerKey = key.toLowerCase();
       const lowerValue = value.toLowerCase();
 
-      if (lowerKey === 'draft') {
+      if (lowerKey === 'draft' || lowerKey === 'publish-approved') {
+        const canonicalKey = lowerKey === 'draft' ? 'draft' : 'publish-approved';
         if (['true', 'yes', 'on', '1'].includes(lowerValue)) {
           frontmatter[key] = true;
-          if (key !== 'draft') {
-            frontmatter['draft'] = true;
+          if (key !== canonicalKey) {
+            frontmatter[canonicalKey] = true;
           }
         } else if (['false', 'no', 'off', '0'].includes(lowerValue)) {
           frontmatter[key] = false;
-          if (key !== 'draft') {
-            frontmatter['draft'] = false;
+          if (key !== canonicalKey) {
+            frontmatter[canonicalKey] = false;
           }
         } else {
           frontmatter[key] = value;
@@ -123,12 +132,22 @@ export function compileManifest(inputDir = docsPublicDir, outputPath = outputMan
 
   for (const file of files) {
     const filePath = path.join(inputDir, file);
+    if (isQuarantined(filePath)) {
+      continue;
+    }
+
     const content = fs.readFileSync(filePath, 'utf-8');
     const { frontmatter, body } = parseFrontmatter(content);
 
-    // Skip compiling files where draft frontmatter flag is explicitly true
-    if (frontmatter.draft === true) {
-      continue;
+    if (inputDir === docsPublicDir) {
+      if (frontmatter['publish-approved'] !== true || frontmatter.draft === true) {
+        continue;
+      }
+    } else {
+      // Skip compiling files where draft frontmatter flag is explicitly true
+      if (frontmatter.draft === true) {
+        continue;
+      }
     }
 
     const title = extractTitle(body);
@@ -153,7 +172,7 @@ export function compileManifest(inputDir = docsPublicDir, outputPath = outputMan
   // If we are compiling the standard docs folder, explicitly include docs/SECURITY.md
   if (inputDir === docsPublicDir) {
     const securityPath = path.join(repoRoot, 'docs', 'SECURITY.md');
-    if (fs.existsSync(securityPath)) {
+    if (fs.existsSync(securityPath) && !isQuarantined(securityPath)) {
       const content = fs.readFileSync(securityPath, 'utf-8');
       const { frontmatter, body } = parseFrontmatter(content);
       if (frontmatter.draft !== true) {

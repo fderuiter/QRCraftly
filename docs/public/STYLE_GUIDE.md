@@ -1,3 +1,7 @@
+---
+publish-approved: true
+---
+
 # Design System Visual Style Guide
 
 ## Overview

@@ -1,3 +1,7 @@
+---
+publish-approved: true
+---
+
 # Privacy and Compliance
 
 ## HIPAA Compliance Alignment

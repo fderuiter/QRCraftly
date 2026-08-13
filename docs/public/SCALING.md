@@ -1,3 +1,7 @@
+---
+publish-approved: true
+---
+
 # Scalability Analysis & Capacity Planning
 
 ## Executive Summary
