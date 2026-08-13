@@ -99,6 +99,7 @@ export function useAnimatedQrReceiver({
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const lookaheadRef = useRef<StreamLookaheadReceiver | null>(null);
+  const processedIndicesRef = useRef<Set<number>>(new Set());
 
   // Sync lookahead receiver configuration with streamMode option
   useEffect(() => {
@@ -120,6 +121,7 @@ export function useAnimatedQrReceiver({
     setIsVerifying(false);
     setDownloadTriggered(false);
     setReassembledData(null);
+    processedIndicesRef.current.clear();
     lookaheadRef.current = new StreamLookaheadReceiver({ mode: streamMode });
     if (addToast) {
       addToast({
@@ -208,6 +210,21 @@ export function useAnimatedQrReceiver({
   // Frame processor
   const handleFrame = useCallback(async (decodedText: string) => {
     if (!decodedText || receiverSuccess || isVerifying) return;
+
+    // Synchronously track and discard duplicates before downstream lookahead or direct scheme check
+    if (decodedText.startsWith('F|')) {
+      const parts = decodedText.split('|');
+      if (parts.length === 4) {
+        const index = parseInt(parts[1], 10);
+        const total = parseInt(parts[2], 10);
+        if (!isNaN(index) && !isNaN(total)) {
+          if (processedIndicesRef.current.has(index)) {
+            return; // Duplicate frame, discard synchronously
+          }
+          processedIndicesRef.current.add(index);
+        }
+      }
+    }
 
     // 1. Direct scheme check on raw decoded frame text
     if (streamMode === 'text') {
@@ -316,6 +333,7 @@ export function useAnimatedQrReceiver({
   // Start / Stop sessions
   const startCameraSession = useCallback(async () => {
     setSecurityAlert(null);
+    processedIndicesRef.current.clear();
     const activeStream = await startStream();
     if (activeStream) {
       setIsScanning(true);

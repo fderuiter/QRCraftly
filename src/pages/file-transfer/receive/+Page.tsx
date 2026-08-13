@@ -50,6 +50,7 @@ function FileTransferReceiveInner() {
     streamMode,
   });
 
+
   // Simulation controls
   const simulateOutOfOrder = () => {
     handleClear();

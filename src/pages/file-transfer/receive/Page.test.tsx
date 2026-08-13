@@ -22,6 +22,20 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import React from 'react';
 import Page from './+Page';
 import { ToastProvider } from '@/components/ui/Toast';
+import { StreamLookaheadReceiver } from '@/engine/StreamLookahead';
+
+let scanSuccessCallback: ((data: string) => void) | undefined;
+
+vi.mock('@/hooks/useAdaptiveScanner', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/hooks/useAdaptiveScanner')>();
+  return {
+    ...actual,
+    useAdaptiveScanner: (options: any) => {
+      scanSuccessCallback = options.onScanSuccess;
+      return actual.useAdaptiveScanner(options);
+    }
+  };
+});
 
 describe('File Transfer Receive Page & Pipeline', () => {
   let originalMediaDevices: any;
@@ -209,5 +223,108 @@ describe('File Transfer Receive Page & Pipeline', () => {
 
     expect(modeSwitch).not.toBeChecked();
     expect(screen.getByText('Enforces full security validation')).toBeInTheDocument();
+  });
+
+  describe('Synchronous Page-Level QR Frame Deduplication', () => {
+    it('should track processed frame indices and synchronously discard duplicates before downstream lookahead', async () => {
+      const receiveSpy = vi.spyOn(StreamLookaheadReceiver.prototype, 'receive');
+      render(
+        <ToastProvider>
+          <Page />
+        </ToastProvider>
+      );
+
+      // Verify callback was captured
+      expect(scanSuccessCallback).toBeDefined();
+
+      // Scan unique frame index 0
+      await act(async () => {
+        scanSuccessCallback!("F|0|3|Y2h1bmsw");
+      });
+
+      expect(receiveSpy).toHaveBeenCalledTimes(1);
+      expect(receiveSpy).toHaveBeenLastCalledWith("F|0|3|Y2h1bmsw");
+
+      // Scan duplicate frame index 0 - should be discarded synchronously
+      await act(async () => {
+        scanSuccessCallback!("F|0|3|Y2h1bmsw");
+      });
+
+      // StreamLookaheadReceiver.receive should NOT be called again
+      expect(receiveSpy).toHaveBeenCalledTimes(1);
+
+      // Scan a new unique frame index 1 - should be processed
+      await act(async () => {
+        scanSuccessCallback!("F|1|3|Y2h1bmsx");
+      });
+
+      expect(receiveSpy).toHaveBeenCalledTimes(2);
+      expect(receiveSpy).toHaveBeenLastCalledWith("F|1|3|Y2h1bmsx");
+    });
+
+    it('should clear the tracking cache when receiver state is reset', async () => {
+      const receiveSpy = vi.spyOn(StreamLookaheadReceiver.prototype, 'receive');
+      render(
+        <ToastProvider>
+          <Page />
+        </ToastProvider>
+      );
+
+      // Scan frame index 0
+      await act(async () => {
+        scanSuccessCallback!("F|0|3|Y2h1bmsw");
+      });
+      expect(receiveSpy).toHaveBeenCalledTimes(1);
+
+      // Reset the receiver state
+      const clearButton = screen.getByRole('button', { name: /reset all buffers/i });
+      await act(async () => {
+        fireEvent.click(clearButton);
+      });
+
+      // Scan frame index 0 again - should be processed since cache was cleared
+      await act(async () => {
+        scanSuccessCallback!("F|0|3|Y2h1bmsw");
+      });
+      // It will be processed on a new StreamLookaheadReceiver instance
+      expect(receiveSpy).toHaveBeenCalledTimes(2);
+    });
+
+    it('should clear the tracking cache when a new scanner session starts', async () => {
+      const receiveSpy = vi.spyOn(StreamLookaheadReceiver.prototype, 'receive');
+      render(
+        <ToastProvider>
+          <Page />
+        </ToastProvider>
+      );
+
+      // Scan frame index 0
+      await act(async () => {
+        scanSuccessCallback!("F|0|3|Y2h1bmsw");
+      });
+      expect(receiveSpy).toHaveBeenCalledTimes(1);
+
+      // Click Activate to initialize state, then Deactivate
+      const activateButton = screen.getByRole('button', { name: /activate camera scanner/i });
+      await act(async () => {
+        fireEvent.click(activateButton);
+      });
+      
+      const deactivateButton = screen.getByRole('button', { name: /deactivate camera scanner/i });
+      await act(async () => {
+        fireEvent.click(deactivateButton);
+      });
+
+      // Click Activate Camera Scanner again to start a new session
+      await act(async () => {
+        fireEvent.click(activateButton);
+      });
+
+      // Scan frame index 0 again - should be processed because starting a new session resets tracking cache
+      await act(async () => {
+        scanSuccessCallback!("F|0|3|Y2h1bmsw");
+      });
+      expect(receiveSpy).toHaveBeenCalledTimes(2);
+    });
   });
 });
