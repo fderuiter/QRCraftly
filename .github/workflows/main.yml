@@ -275,7 +275,6 @@ jobs:
     name: Deploy
     needs: [static-validation, test, e2e, build]
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && startsWith(github.event.head_commit.message, 'Revert'))
-    timeout-minutes: 15
     concurrency:
       group: production-deployment
       cancel-in-progress: false
