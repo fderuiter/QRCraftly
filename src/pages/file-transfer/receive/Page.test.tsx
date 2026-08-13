@@ -138,7 +138,22 @@ describe('File Transfer Receive Page & Pipeline', () => {
       expect(block).toHaveAttribute('data-received', 'true');
     }
 
-    // Verify that createObjectURL was called for client-side download reconstruction
+    // Verify the inline complete panel replaced the active camera space
+    expect(screen.getByTestId('inline-complete-panel')).toBeInTheDocument();
+    expect(screen.getByText('Transfer Complete')).toBeInTheDocument();
+
+    // Verify no download is automatically initiated before user confirmation
+    expect(global.URL.createObjectURL).not.toHaveBeenCalled();
+
+    // Click the manual Download File button inside the complete panel
+    const downloadBtn = screen.getByRole('button', { name: /download file/i });
+    expect(downloadBtn).toBeInTheDocument();
+    
+    await act(async () => {
+      fireEvent.click(downloadBtn);
+    });
+
+    // Verify that createObjectURL is now called after the user explicitly confirmed
     expect(global.URL.createObjectURL).toHaveBeenCalled();
   });
 

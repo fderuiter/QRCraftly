@@ -70,6 +70,10 @@ export interface UseAnimatedQrReceiverOptions {
    * Stream format mode: either 'text' or 'binary'. Defaults to 'text'.
    */
   streamMode?: 'text' | 'binary';
+  /**
+   * Automatically trigger download when complete. Defaults to true.
+   */
+  autoDownload?: boolean;
 }
 
 /**
@@ -79,11 +83,13 @@ export interface UseAnimatedQrReceiverOptions {
  * @param root0.addToast
  * @param root0.handshakeRequired
  * @param root0.streamMode
+ * @param root0.autoDownload
  */
 export function useAnimatedQrReceiver({
   addToast,
   handshakeRequired = false,
   streamMode = 'text',
+  autoDownload = true,
 }: UseAnimatedQrReceiverOptions = {}) {
   // Core states
   const [chunks, setChunks] = useState<Map<number, string>>(new Map());
@@ -183,6 +189,8 @@ export function useAnimatedQrReceiver({
 
         triggerFileDownload(reassembled, `received_file_${Date.now()}.bin`, 'application/octet-stream');
       }
+
+      setDownloadTriggered(true);
 
       if (addToast) {
         addToast({
@@ -362,11 +370,24 @@ export function useAnimatedQrReceiver({
   // Completion checking effect (without handshake requirement or with completed handshake)
   useEffect(() => {
     if (totalChunks !== null && chunks.size === totalChunks && !downloadTriggered) {
-      setDownloadTriggered(true);
-      stopCameraSession();
-      reconstructAndValidateFile(chunks, totalChunks, handshake || undefined);
+      if (autoDownload) {
+        setDownloadTriggered(true);
+        stopCameraSession();
+        reconstructAndValidateFile(chunks, totalChunks, handshake || undefined);
+      } else {
+        if (isScanning) {
+          stopCameraSession();
+          if (addToast) {
+            addToast({
+              type: 'success',
+              message: 'Scan complete! Camera stream shut down.',
+              duration: 3000,
+            });
+          }
+        }
+      }
     }
-  }, [chunks, totalChunks, downloadTriggered, handshake, reconstructAndValidateFile, stopCameraSession]);
+  }, [chunks, totalChunks, downloadTriggered, handshake, reconstructAndValidateFile, stopCameraSession, autoDownload, isScanning, addToast]);
 
   // Cleanup on unmount
   useEffect(() => {
