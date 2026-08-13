@@ -165,4 +165,37 @@ describe('renderModules', () => {
     // The rect method should not have been called to draw any modules (since only (10,10) is active)
     expect(ctx.rect).not.toHaveBeenCalled();
   });
+
+  it('applies adaptive geometric compensation for SWISS style modules when enabled', () => {
+    const ctx = createMockCtx();
+    const modules = createMockModules(21, [[10, 10]]);
+    
+    // Compensation disabled: scale = 1.05
+    renderModules(ctx, modules, { ...baseConfig, style: QRStyle.SWISS, isCompensationEnabled: false }, 0, 0, 10, 21, mockLogoMetrics, false);
+    // cellSize = 10. r = (10 / 2) * 1.05 = 5.25
+    expect(ctx.arc).toHaveBeenLastCalledWith(expect.any(Number), expect.any(Number), 5.25, 0, Math.PI * 2);
+
+    // Compensation enabled: scale = 1.45
+    const ctx2 = createMockCtx();
+    renderModules(ctx2, modules, { ...baseConfig, style: QRStyle.SWISS, isCompensationEnabled: true }, 0, 0, 10, 21, mockLogoMetrics, false);
+    // cellSize = 10. r = (10 / 2) * 1.45 = 7.25
+    expect(ctx2.arc).toHaveBeenLastCalledWith(expect.any(Number), expect.any(Number), 7.25, 0, Math.PI * 2);
+  });
+
+  it('applies adaptive geometric compensation for STARBURST style modules when enabled', () => {
+    const ctx = createMockCtx();
+    const modules = createMockModules(21, [[10, 10]]);
+    
+    // Compensation disabled: innerR = cellSize / 2.2 = 10 / 2.2 = 4.545454545454546
+    renderModules(ctx, modules, { ...baseConfig, style: QRStyle.STARBURST, isCompensationEnabled: false }, 0, 0, 10, 21, mockLogoMetrics, false);
+    const firstCalls = [...(ctx.lineTo as any).mock.calls];
+    
+    // Compensation enabled: innerR = cellSize / 1.6 = 10 / 1.6 = 6.25
+    const ctx2 = createMockCtx();
+    renderModules(ctx2, modules, { ...baseConfig, style: QRStyle.STARBURST, isCompensationEnabled: true }, 0, 0, 10, 21, mockLogoMetrics, false);
+    const secondCalls = [...(ctx2.lineTo as any).mock.calls];
+
+    // Assert that the lineTo calls have different coordinates because of the larger inner radius
+    expect(firstCalls).not.toEqual(secondCalls);
+  });
 });

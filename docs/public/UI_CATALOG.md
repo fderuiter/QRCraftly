@@ -55,7 +55,7 @@ These components capture specialized data structures required to construct disti
 
 Unified appearance control modules that manage and present customization options in a modular side navigation menu.
 
-- **PatternControls** (`PatternControls.tsx`): Layout and visual selectors allowing users to toggle through classic, rounded, or custom pattern templates.
+- **PatternControls** (`PatternControls.tsx`): Layout and visual selectors allowing users to toggle through classic, rounded, or custom pattern templates. Displays an automated Adaptive Geometric Compensation toggle switch when custom aesthetic styles (like Swiss Dot or Starburst) are selected to help close visual gaps.
 - **ColorControls** (`ColorControls.tsx`): Consolidates pickers and preset buttons for foreground, background, and corner eye accents.
 - **LogoControls** (`LogoControls.tsx`): Coordinates uploading custom logos, configuring scaling boundaries, and adjusting background-mask thresholds.
 - **BorderControls** (`BorderControls.tsx` / `BorderControls.test.tsx`): Controls options for border thickness, padding, and corner radius around outputs.

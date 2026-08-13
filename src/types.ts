@@ -162,6 +162,8 @@ export interface QRConfig {
   isAnimating?: boolean;
   /** Desired playback speed of the animation loop in frames per second (FPS). Defaults to 30. */
   animationFps?: number;
+  /** Whether adaptive geometric compensation is enabled for custom aesthetic patterns like Starburst and Swiss Dot. */
+  isCompensationEnabled?: boolean;
 }
 
 /**

@@ -53,6 +53,6 @@ To prevent custom SVG logo uploads and native vector exports from exposing users
   - Strips all inline event handlers (attributes starting with `on`).
   - Neutralizes any remote or dangerous resource requests inside style blocks, style attributes, or `href`/`xlink:href` references while preserving standard layout paths, responsive viewBox attributes, linear gradients, and clip paths.
 
-## QR Animation Loops
+## QR Animation & Style Configurations
 
-Animation configuration structures in `types.ts` are strictly statically typed to prevent any runtime execution or script-injection pathways during high-frequency loop playbacks.
+Animation and visual style configuration structures in `types.ts` (such as `isCompensationEnabled`) are strictly statically typed to prevent any runtime execution or script-injection pathways during high-frequency loop playbacks or dynamic geometric scaling calculations.

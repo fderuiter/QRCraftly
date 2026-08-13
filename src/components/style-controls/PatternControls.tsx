@@ -1,8 +1,9 @@
 import React from 'react';
-import { QRConfig } from '../../types';
+import { QRConfig, QRStyle } from '../../types';
 import { PATTERNS, LOW_RELIABILITY_PATTERNS } from '../../constants';
 import { PatternModule } from '../ui/PatternModule';
 import { Alert } from '../ui/Alert';
+import { ToggleSwitch } from '../ui/ToggleSwitch';
 
 /**
  *
@@ -75,6 +76,26 @@ export const PatternControls: React.FC<PatternControlsProps> = ({ config, onChan
           </label>
         ))}
       </div>
+
+      {(config.style === QRStyle.STARBURST || config.style === QRStyle.SWISS) && (
+        <div className="animate-in fade-in slide-in-from-top-2 mt-4 flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 p-3 duration-200 dark:border-slate-700 dark:bg-slate-800/50">
+          <div className="mr-3">
+            <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+              Adaptive Geometric Compensation
+            </p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Closes visual gaps and corner negative spaces for a more playable layout.
+            </p>
+          </div>
+          <ToggleSwitch
+            id="adaptive-compensation-toggle"
+            label="Enable Adaptive Geometric Compensation"
+            srLabel={true}
+            checked={!!config.isCompensationEnabled}
+            onChange={(checked) => onChange({ isCompensationEnabled: checked })}
+          />
+        </div>
+      )}
     </div>
   );
 };

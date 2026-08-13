@@ -11,7 +11,8 @@ const getModuleDrawer = (
     modules: QRModules,
     moduleCount: number,
     isCoveredByLogo: (r: number, c: number) => boolean,
-    isVirtual: boolean
+    isVirtual: boolean,
+    isCompensationEnabled: boolean = false
 ): DrawModuleFn => {
     switch(style) {
         case QRStyle.MODERN: {
@@ -19,7 +20,8 @@ const getModuleDrawer = (
             return (_r, _c, x, y, _cx, _cy) => drawRoundRect(ctx, x, y, cellSize, cellSize, rModern);
         }
         case QRStyle.SWISS: {
-            return (_r, _c, _x, _y, cx, cy) => drawCircularModule(ctx, cx, cy, cellSize, 1.05);
+            const scale = isCompensationEnabled ? 1.45 : 1.05;
+            return (_r, _c, _x, _y, cx, cy) => drawCircularModule(ctx, cx, cy, cellSize, scale);
         }
         case QRStyle.FLUID: {
             return (_r, _c, _x, _y, cx, cy) => drawCircularModule(ctx, cx, cy, cellSize, 1.1);
@@ -51,7 +53,7 @@ const getModuleDrawer = (
             return (_r, _c, x, y, _cx, _cy) => drawRoughRect(ctx, x, y, cellSize, cellSize, true);
         case QRStyle.STARBURST: {
             const outerR = cellSize / 1.5;
-            const innerR = cellSize / 2.2;
+            const innerR = isCompensationEnabled ? cellSize / 1.6 : cellSize / 2.2;
             return (_r, _c, _x, _y, cx, cy) => drawStar(ctx, cx, cy, outerR, innerR, 5, false, true);
         }
         case QRStyle.STANDARD:
@@ -76,7 +78,16 @@ export const renderModules = (
     const isCoveredByLogo = getIsCoveredByLogo(config, moduleCount, logoMetrics);
     
     ctx.beginPath();
-    const drawModuleFn = getModuleDrawer(config.style, ctx, cellSize, modules, moduleCount, isCoveredByLogo, isVirtual);
+    const drawModuleFn = getModuleDrawer(
+        config.style,
+        ctx,
+        cellSize,
+        modules,
+        moduleCount,
+        isCoveredByLogo,
+        isVirtual,
+        config.isCompensationEnabled
+    );
 
     const cellSizeHalf = cellSize / 2;
     const xs = new Float64Array(moduleCount);

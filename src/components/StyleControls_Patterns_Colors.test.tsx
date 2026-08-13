@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { PatternControls } from './style-controls/PatternControls';
 import { ColorControls } from './style-controls/ColorControls';
 import { DEFAULT_CONFIG } from '../constants';
@@ -59,6 +59,29 @@ describe('StyleControls Accessibility', () => {
       // Test switching back to high-reliability pattern (warning cleared from live region)
       rerender(<PatternControls config={DEFAULT_CONFIG} onChange={handleChange} />);
       expect(liveRegion).toBeEmptyDOMElement();
+    });
+
+    it('shows or hides the Adaptive Geometric Compensation toggle based on selected pattern style', () => {
+      const handleChange = vi.fn();
+      
+      // Standard style selected: toggle should not be in the document
+      const { rerender } = render(<PatternControls config={DEFAULT_CONFIG} onChange={handleChange} />);
+      expect(screen.queryByLabelText(/Enable Adaptive Geometric Compensation/i)).not.toBeInTheDocument();
+
+      // Swiss style selected: toggle should be visible
+      const swissConfig = { ...DEFAULT_CONFIG, style: QRStyle.SWISS };
+      rerender(<PatternControls config={swissConfig} onChange={handleChange} />);
+      const toggle = screen.getByLabelText(/Enable Adaptive Geometric Compensation/i);
+      expect(toggle).toBeInTheDocument();
+
+      // Toggling it should call onChange
+      fireEvent.click(toggle);
+      expect(handleChange).toHaveBeenCalledWith({ isCompensationEnabled: true });
+
+      // Starburst style selected: toggle should be visible
+      const starburstConfig = { ...DEFAULT_CONFIG, style: QRStyle.STARBURST };
+      rerender(<PatternControls config={starburstConfig} onChange={handleChange} />);
+      expect(screen.getByLabelText(/Enable Adaptive Geometric Compensation/i)).toBeInTheDocument();
     });
   });
 

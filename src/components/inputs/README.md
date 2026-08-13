@@ -56,9 +56,9 @@ export const WifiInput: React.FC<WifiInputProps> = ({ data, onChange }) => {
 4.  Register the component, its initial state, and helpers in `src/components/inputs/InputRegistry.ts`.
 5.  Add the new type to the `TypeSelector` options.
 
-## QR Animation Configurations
+## QR Animation & Style Configurations
 
-The centralized config structure in `src/types.ts` has optional fields for `animationValues`, `isAnimating`, and `animationFps` to drive high-performance frame playbacks in the canvas.
+The centralized config structure in `src/types.ts` has optional fields for `animationValues`, `isAnimating`, and `animationFps` to drive high-performance frame playbacks in the canvas, as well as `isCompensationEnabled` to control adaptive geometric style adjustments.
 
 ## Dual-Mode QR Scanner Integration
 
