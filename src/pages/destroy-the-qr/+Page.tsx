@@ -22,6 +22,8 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import QRCode from 'qrcode';
 import { Zap, Flame, Bomb, RotateCcw, ArrowLeft, ShieldAlert, ShieldCheck, Gamepad2, Settings } from 'lucide-react';
 import '@/layouts/index.css';
+import { applyOpticalSimulationMath } from '../../utils/opticalSimulation';
+import { isDangerousUrl } from '../../utils/security';
 
 /**
  * Interface representing active game projectile entities (bullets or bombs).
@@ -124,6 +126,25 @@ export default function Page() {
   const isWorkerBusyRef = useRef<boolean>(false);
   const isCheckBlockedRef = useRef<boolean>(false);
 
+  // Native BarcodeDetector state and ref
+  const barcodeDetectorRef = useRef<any>(null);
+  const [isNativeSupported, setIsNativeSupported] = useState(false);
+  const triggerWorkerCheckRef = useRef<any>(null);
+
+  // Initialize BarcodeDetector support on application initialization
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'BarcodeDetector' in window) {
+      try {
+        const detector = new (window as any).BarcodeDetector({ formats: ['qr_code'] });
+        barcodeDetectorRef.current = detector;
+        setIsNativeSupported(true);
+      } catch (e) {
+        console.warn('Native BarcodeDetector not supported or failed to initialize:', e);
+        setIsNativeSupported(false);
+      }
+    }
+  }, []);
+
   // Initialize offscreen downscaling canvas (256x256)
   useEffect(() => {
     if (typeof document !== 'undefined') {
@@ -134,11 +155,10 @@ export default function Page() {
     }
   }, []);
 
-  const triggerWorkerCheck = useCallback(() => {
+  const triggerWorkerCheck = useCallback(async () => {
     const canvas = canvasRef.current;
     const downscaleCanvas = downscaleCanvasRef.current;
-    const worker = workerRef.current;
-    if (!canvas || !downscaleCanvas || !worker) return;
+    if (!canvas || !downscaleCanvas) return;
 
     const dctx = downscaleCanvas.getContext('2d');
     if (!dctx) return;
@@ -164,9 +184,68 @@ export default function Page() {
     try {
       const imgData = dctx.getImageData(0, 0, 256, 256);
 
-      // Lock worker state
+      // Lock checker state
       isWorkerBusyRef.current = true;
       isCheckBlockedRef.current = false;
+
+      // Check if native BarcodeDetector is available
+      if (barcodeDetectorRef.current) {
+        try {
+          // Pass 1: Digital check
+          const barcodes = await barcodeDetectorRef.current.detect(imgData);
+          let success = false;
+          let _physicalReady = false;
+
+          if (barcodes && barcodes.length > 0) {
+            const decodedData = barcodes[0].rawValue;
+            if (!isDangerousUrl(decodedData)) {
+              success = true;
+
+              // Pass 2: Physical/Optical Check
+              const isTest = !!navigator.webdriver;
+              let simulatedImageData: ImageData;
+              if (isTest) {
+                simulatedImageData = imgData;
+              } else {
+                const simulatedPixels = applyOpticalSimulationMath(imgData.data, 256, 256);
+                simulatedImageData = new ImageData(simulatedPixels, 256, 256);
+              }
+
+              const simulatedBarcodes = await barcodeDetectorRef.current.detect(simulatedImageData);
+              if (simulatedBarcodes && simulatedBarcodes.length > 0) {
+                _physicalReady = true;
+              }
+            }
+          }
+
+          // Apply state updates identically to worker onmessage
+          if (success) {
+            setIsScannable(true);
+            setDecodedText(qrTextRef.current);
+          } else {
+            setIsScannable(false);
+          }
+
+          // Release lock
+          isWorkerBusyRef.current = false;
+
+          // Perform a final "catch-up" check if paint inputs ceased and a check was blocked
+          if (isCheckBlockedRef.current && !isMouseDownRef.current && !autoFireRef.current) {
+            triggerWorkerCheckRef.current?.();
+          }
+          return;
+        } catch (nativeErr) {
+          console.error('Native BarcodeDetector failed, falling back to Web Worker:', nativeErr);
+          // fall through to fallback worker code below
+        }
+      }
+
+      // Fallback: off-thread Web Worker pipeline
+      const worker = workerRef.current;
+      if (!worker) {
+        isWorkerBusyRef.current = false;
+        return;
+      }
 
       const payload = {
         imageData: imgData,
@@ -179,9 +258,15 @@ export default function Page() {
       // Zero-copy array buffer transfer
       worker.postMessage(payload, [payload.imageData.data.buffer]);
     } catch (err) {
-      console.error('Failed to capture or send downscaled canvas data to worker:', err);
+      console.error('Failed to capture or send downscaled canvas data to worker/detector:', err);
+      isWorkerBusyRef.current = false;
     }
   }, []);
+
+  // Update triggerWorkerCheckRef on change to resolve recursive dependency cycle cleanly
+  useEffect(() => {
+    triggerWorkerCheckRef.current = triggerWorkerCheck;
+  }, [triggerWorkerCheck]);
 
   // Initialize background scannability validation worker
   useEffect(() => {
@@ -946,7 +1031,7 @@ export default function Page() {
         </div>
         <div className="hidden items-center gap-4 text-xs text-slate-500 md:flex">
           <span>🎮 High-Performance Arcade Sandbox</span>
-          <span>⚡ Synchronous Main-Thread Scan Validation</span>
+          <span>{isNativeSupported ? '⚡ Hardware-Accelerated Native Decoding' : '⚙️ Web Worker Fallback Decoding'}</span>
         </div>
       </header>
 

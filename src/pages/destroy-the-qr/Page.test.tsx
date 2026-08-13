@@ -69,6 +69,7 @@ describe('Destroy the QR Code! Arcade Page', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   it('renders correctly with title, description, and status badges', () => {
@@ -236,6 +237,69 @@ describe('Destroy the QR Code! Arcade Page', () => {
       await new Promise<void>(resolve => setTimeout(resolve, 30));
 
       expect(mockPostMessage).toHaveBeenCalledTimes(1);
+    }
+  });
+
+  it('uses native BarcodeDetector when supported instead of sending message to Worker', async () => {
+    const mockDetect = vi.fn().mockResolvedValue([{ rawValue: 'https://qrcraftly.com' }]);
+    const mockPostMessage = vi.fn();
+    
+    vi.stubGlobal('BarcodeDetector', class {
+      detect = mockDetect;
+    });
+    vi.stubGlobal('Worker', class MockWorker {
+      postMessage = mockPostMessage;
+      addEventListener = vi.fn();
+      removeEventListener = vi.fn();
+      terminate = vi.fn();
+    });
+
+    render(<Page />);
+
+    const canvas = document.querySelector('canvas');
+    expect(canvas).toBeInTheDocument();
+
+    if (canvas) {
+      fireEvent.mouseDown(canvas, { clientX: 200, clientY: 200 });
+      
+      // Wait for async detect call to finish
+      await new Promise<void>(resolve => setTimeout(resolve, 50));
+
+      // Should call native detect
+      expect(mockDetect).toHaveBeenCalled();
+      // Should NOT call worker postMessage because native was successful
+      expect(mockPostMessage).not.toHaveBeenCalled();
+    }
+  });
+
+  it('seamlessly falls back to Worker if BarcodeDetector detection throws an error', async () => {
+    const mockDetect = vi.fn().mockRejectedValue(new Error('Hardware acceleration failed'));
+    const mockPostMessage = vi.fn();
+    
+    vi.stubGlobal('BarcodeDetector', class {
+      detect = mockDetect;
+    });
+    vi.stubGlobal('Worker', class MockWorker {
+      postMessage = mockPostMessage;
+      addEventListener = vi.fn();
+      removeEventListener = vi.fn();
+      terminate = vi.fn();
+    });
+
+    render(<Page />);
+
+    const canvas = document.querySelector('canvas');
+    expect(canvas).toBeInTheDocument();
+
+    if (canvas) {
+      fireEvent.mouseDown(canvas, { clientX: 200, clientY: 200 });
+      
+      // Wait for async detect failure and fallback to run
+      await new Promise<void>(resolve => setTimeout(resolve, 50));
+
+      expect(mockDetect).toHaveBeenCalled();
+      // Should fall back to worker's postMessage!
+      expect(mockPostMessage).toHaveBeenCalled();
     }
   });
 });
