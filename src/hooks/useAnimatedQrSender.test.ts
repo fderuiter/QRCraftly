@@ -21,28 +21,35 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import React from 'react';
 import { useAnimatedQrSender } from './useAnimatedQrSender';
-import { QRConfig } from '../types';
+import { QRConfig, QRType, QRStyle, QRErrorCorrectionLevel, SocialFormat, TemplateStyle } from '../types';
 
 const mockConfig: QRConfig = {
-  type: 'TEXT',
-  text: 'Hello World',
-  foreground: '#000000',
-  background: '#ffffff',
-  errorCorrectionLevel: 'M',
-  patternStyle: 'standard',
-  eyeStyle: 'standard',
-  eyeColor: '#000000',
+  value: 'Hello World',
+  type: QRType.TEXT,
+  fgColor: '#000000',
+  bgColor: '#ffffff',
+  style: QRStyle.STANDARD,
   logoUrl: null,
+  logoSize: 0.2,
   logoPaddingStyle: 'none',
-  logoOpacity: 1,
-  logoSize: 20,
-  logoX: 0,
-  logoY: 0,
+  logoPadding: 1,
+  logoBackgroundColor: '#ffffff',
+  eyeColor: '#000000',
+  errorCorrectionLevel: QRErrorCorrectionLevel.M,
   isBorderEnabled: false,
-  borderWidth: 0,
+  borderSize: 0.05,
+  borderColor: '#000000',
+  borderStyle: 'solid',
+  borderText: '',
+  borderTextPosition: 'bottom-center',
+  borderTextColor: '#ffffff',
   borderLogoUrl: null,
-  templateStyle: 'none',
-  socialFormat: '1:1',
+  borderLogoPosition: 'bottom-center',
+  socialFormat: SocialFormat.SQUARE_1_1,
+  templateStyle: TemplateStyle.NONE,
+  templateHeadline: '',
+  templateSubtext: '',
+  templateQrScale: 1.0,
 };
 
 describe('useAnimatedQrSender Hook', () => {
