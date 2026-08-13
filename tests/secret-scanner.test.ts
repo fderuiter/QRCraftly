@@ -32,6 +32,7 @@ describe('secret-scanner', () => {
     it('should identify self-assignments as false positives', () => {
       expect(isFalsePositive('CLOUDFLARE_API_TOKEN', 'CLOUDFLARE_API_TOKEN')).toBe(true);
       expect(isFalsePositive('SMTP_PASS', 'SMTP_PASS')).toBe(true);
+      expect(isFalsePositive('smtp_password', 'smtp_password')).toBe(true);
     });
 
     it('should identify extremely short strings as false positives', () => {
@@ -58,6 +59,17 @@ describe('secret-scanner', () => {
       const match = line.match(SMTP_PASS_REGEX);
       expect(match).not.toBeNull();
       expect(match![3]).toBe('super_secret_smtp_password');
+
+      // Test expanded SMTP alias assignments
+      const mailPassLine = 'mail_pass = "mySecretSmtpPass123"';
+      const mailPassMatch = mailPassLine.match(SMTP_PASS_REGEX);
+      expect(mailPassMatch).not.toBeNull();
+      expect(mailPassMatch![3]).toBe('mySecretSmtpPass123');
+
+      const smtpPasswordLine = 'smtp_password = "anotherSecurePass"';
+      const smtpPasswordMatch = smtpPasswordLine.match(SMTP_PASS_REGEX);
+      expect(smtpPasswordMatch).not.toBeNull();
+      expect(smtpPasswordMatch![3]).toBe('anotherSecurePass');
     });
 
     it('should match Cloudflare API keys and tokens assignment', () => {
@@ -70,6 +82,12 @@ describe('secret-scanner', () => {
       const match2 = line2.match(CLOUDFLARE_REGEX);
       expect(match2).not.toBeNull();
       expect(match2![4]).toBe('abcdefghijklmnopqrstuvwxyz0123456789abcd');
+
+      // Test expanded Cloudflare generic token/key assignments
+      const genericTokenLine = 'const api_token = "abcdefghijklmnopqrstuvwxyz0123456789abcd"';
+      const genericTokenMatch = genericTokenLine.match(CLOUDFLARE_REGEX);
+      expect(genericTokenMatch).not.toBeNull();
+      expect(genericTokenMatch![4]).toBe('abcdefghijklmnopqrstuvwxyz0123456789abcd');
     });
 
     it('should match AWS Access Keys', () => {
@@ -166,7 +184,7 @@ describe('secret-scanner', () => {
 
     it('should successfully detect all secrets in a file with secrets', () => {
       const findings = scanFile(tempFileWithSecret);
-      expect(findings.length).toBe(7);
+      expect(findings.length).toBe(11);
 
       const types = findings.map(f => f.type);
       expect(types).toContain('Cloudflare API Secret/Token');
