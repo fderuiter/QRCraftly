@@ -19,6 +19,7 @@
 import { QRConfig, QRModules, SocialFormat, TemplateStyle } from '../types';
 import { drawQRInternal } from './qrRenderer';
 import { drawRoundRect } from './canvasHelpers';
+import { MazeData } from './qr-renderers/maze';
 
 /**
  * Standard high-resolution dimensions for each social media format.
@@ -240,7 +241,8 @@ export function drawWithTemplate(
   displayWidth: number,
   displayHeight: number,
   moduleCount: number,
-  isVirtual: boolean = false
+  isVirtual: boolean = false,
+  precalculatedMaze?: MazeData
 ): void {
   ctx.clearRect(0, 0, displayWidth, displayHeight);
 
@@ -293,16 +295,30 @@ export function drawWithTemplate(
   // drawQRInternal works in the logical [0, displayWidth] × [0, displayWidth]
   // coordinate space; we pass displayWidth as both width and height because
   // the QR is always square.
-  drawQRInternal(
-    ctx as unknown as CanvasRenderingContext2D,
-    modules,
-    config,
-    logoImg,
-    borderLogoImg,
-    displayWidth,
-    moduleCount,
-    isVirtual
-  );
+  if (precalculatedMaze !== undefined) {
+    drawQRInternal(
+      ctx as unknown as CanvasRenderingContext2D,
+      modules,
+      config,
+      logoImg,
+      borderLogoImg,
+      displayWidth,
+      moduleCount,
+      isVirtual,
+      precalculatedMaze
+    );
+  } else {
+    drawQRInternal(
+      ctx as unknown as CanvasRenderingContext2D,
+      modules,
+      config,
+      logoImg,
+      borderLogoImg,
+      displayWidth,
+      moduleCount,
+      isVirtual
+    );
+  }
 
   ctx.restore();
 

@@ -24,6 +24,8 @@ import { useImage } from '../hooks/useImage';
 import { ValidationEngine } from '../engine/ValidationEngine';
 import { Alert } from './ui/Alert';
 import { normalizeUrl, shouldNormalizeUrl } from '../utils/url';
+import { deserializeMazeData, assertInputSchema, assertOutputSchema } from '../utils/mazeWorker';
+import { generateMaze, MazeData } from '../utils/qr-renderers/maze';
 
 /**
  * Props for the QRCanvas component.
@@ -36,13 +38,20 @@ interface QRCanvasProps {
   /** Optional CSS class names to apply to the canvas element. */
   className?: string;
   /** Optional callback fired when rendering is complete. */
-  onRendered?: (info: { /**
-                         *
-                         */
-  moduleCount: number; /**
-                        *
-                        */
-  virtualImageData?: ImageData }) => void;
+  onRendered?: (info: {
+    /**
+     *
+     */
+    moduleCount: number;
+    /**
+     *
+     */
+    virtualImageData?: ImageData;
+    /**
+     *
+     */
+    virtualImageBitmap?: ImageBitmap;
+  }) => void;
   /** Sequence of string values representing animated QR frames. If omitted, falls back to config.animationValues. */
   animationValues?: string[];
   /** Flag specifying if the visual animation loop is currently active. If omitted, falls back to config.isAnimating. */
@@ -251,8 +260,19 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
 
   // Web Worker setup and configuration calculation
   const workerRef = useRef<Worker | null>(null);
+  const mazeWorkerRef = useRef<Worker | null>(null);
   const sequenceIdRef = useRef<number>(0);
+  const mazeSequenceIdRef = useRef<number>(0);
   const lastModulesRef = useRef<QRModules | null>(null);
+  
+  const [_precalculatedMaze, _setPrecalculatedMaze] = React.useState<MazeData | null>(null);
+  const precalculatedMazeRef = useRef<MazeData | null>(null);
+
+  const setPrecalculatedMaze = useCallback((maze: MazeData | null) => {
+    precalculatedMazeRef.current = maze;
+    _setPrecalculatedMaze(maze);
+  }, []);
+
   const isWorkerFallbackRef = useRef<boolean>(
     typeof window === 'undefined' ||
     typeof Worker === 'undefined' ||
@@ -291,7 +311,7 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
     ctx.clearRect(0, 0, canvas.width, canvas.height);
   }, []);
 
-  const paintMatrix = useCallback((modules: QRModules) => {
+  const paintMatrix = useCallback((modules: QRModules, mazeData?: MazeData | null) => {
     const canvas = localCanvasRef.current;
     if (!canvas) return;
 
@@ -303,6 +323,8 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
     const currentBorderLogoImg = borderLogoImgRef.current;
     const currentOnRendered = onRenderedRef.current;
     const currentSize = sizeRef.current;
+
+    const activeMaze = mazeData !== undefined ? mazeData : precalculatedMazeRef.current;
 
     const isPerfTest = typeof window !== 'undefined' && (window as any).isPerformanceTest;
     const activeSize = isPerfTest ? 256 : currentSize;
@@ -331,14 +353,24 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
         currentBorderLogoImg,
         displayWidth,
         displayHeight,
-        modules.size
+        modules.size,
+        false,
+        activeMaze || undefined
       );
 
       ctx.restore();
     } else {
       canvas.width = activeSize * pixelRatio;
       canvas.height = activeSize * pixelRatio;
-      drawQR(ctx, modules, currentConfig, currentLogoImg, currentBorderLogoImg, activeSize);
+      drawQR(
+        ctx,
+        modules,
+        currentConfig,
+        currentLogoImg,
+        currentBorderLogoImg,
+        activeSize,
+        activeMaze || undefined
+      );
     }
 
     if (currentOnRendered) {
@@ -383,7 +415,8 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
               displayWidth,
               displayHeight,
               modules.size,
-              true
+              true,
+              activeMaze || undefined
             );
           } else {
             vCtx.clearRect(0, 0, displayWidth, displayHeight);
@@ -395,7 +428,8 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
               currentBorderLogoImg,
               virtualSize,
               modules.size,
-              true
+              true,
+              activeMaze || undefined
             );
           }
 
@@ -521,9 +555,63 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
     }
   }, [paintMatrix, clearCanvasAndResize]);
 
+  const requestMazeCalculation = useCallback(() => {
+    const modules = lastModulesRef.current;
+    if (!modules) {
+      setPrecalculatedMaze(null);
+      return;
+    }
+
+    const size = modules.size;
+    mazeSequenceIdRef.current += 1;
+    const currentSeqId = mazeSequenceIdRef.current;
+
+    const isTest = typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 'test';
+    if (isWorkerFallbackRef.current || isTest) {
+      // Fallback for tests or unsupported environments
+      try {
+        const result = generateMaze(modules, configRef.current, size);
+        setPrecalculatedMaze(result);
+        paintMatrix(modules, result);
+      } catch (e) {
+        console.warn("Synchronous fallback maze generation failed:", e);
+        setPrecalculatedMaze(null);
+      }
+      return;
+    }
+
+    // Prepare grid buffer
+    const grid = new Uint8Array(size * size);
+    for (let r = 0; r < size; r++) {
+      for (let c = 0; c < size; c++) {
+        grid[r * size + c] = modules.get(r, c) ? 1 : 0;
+      }
+    }
+
+    if (mazeWorkerRef.current) {
+      try {
+        const inputData = {
+          grid,
+          size,
+          config: configRef.current,
+          sequenceId: currentSeqId,
+        };
+
+        // Schema-based assertion
+        assertInputSchema(inputData);
+
+        // Transfer grid buffer
+        mazeWorkerRef.current.postMessage(inputData, [grid.buffer]);
+      } catch (err) {
+        console.error("Failed schema validation or serialization for maze worker:", err);
+      }
+    }
+  }, [paintMatrix, setPrecalculatedMaze]);
+
   // Web Worker lifecycle management
   useEffect(() => {
     let worker: Worker | null = null;
+    let mazeWorker: Worker | null = null;
     try {
       worker = new Worker(
         new URL('../utils/matrixWorker.ts', import.meta.url),
@@ -555,12 +643,50 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
       isWorkerFallbackRef.current = true;
     }
 
+    try {
+      if (!isWorkerFallbackRef.current) {
+        mazeWorker = new Worker(
+          new URL('../utils/mazeWorker.ts', import.meta.url),
+          { type: 'module' }
+        );
+        mazeWorker.onmessage = (e) => {
+          const { status, sequenceId, nodes, edges, start, end, solution } = e.data;
+          if (sequenceId !== mazeSequenceIdRef.current) {
+            return;
+          }
+
+          if (status === 'success' && nodes && edges && start && end && solution) {
+            try {
+              // schema assertion of outputs from boundary
+              assertOutputSchema(e.data);
+
+              const deserialized = deserializeMazeData({ nodes, edges, start, end, solution });
+              setPrecalculatedMaze(deserialized);
+              if (lastModulesRef.current) {
+                paintMatrix(lastModulesRef.current, deserialized);
+              }
+            } catch (err) {
+              console.error("Schema validation failed on maze worker output:", err);
+            }
+          } else {
+            setPrecalculatedMaze(null);
+          }
+        };
+        mazeWorkerRef.current = mazeWorker;
+      }
+    } catch (err) {
+      console.warn("Failed to initialize background maze worker, falling back:", err);
+    }
+
     return () => {
       if (worker) {
         worker.terminate();
       }
+      if (mazeWorker) {
+        mazeWorker.terminate();
+      }
     };
-  }, [paintMatrix, clearCanvasAndResize]);
+  }, [paintMatrix, clearCanvasAndResize, setPrecalculatedMaze]);
 
   // Monitor value and error correction level to request calculations
   useEffect(() => {
@@ -597,12 +723,41 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
     config.borderLogoPosition,
     config.socialFormat,
     config.templateStyle,
+    config.mazeColor,
+    config.mazePathWidth,
+    config.showMazeSolution,
     logoImg,
     borderLogoImg,
     size,
     activeIsAnimating,
     paintMatrix,
     requestMatrixCalculation,
+  ]);
+
+  // Throttled/debounced background maze generation
+  useEffect(() => {
+    if (activeIsAnimating) return;
+    if (!config.isMazeEnabled) {
+      setPrecalculatedMaze(null);
+      return;
+    }
+
+    const handler = setTimeout(() => {
+      requestMazeCalculation();
+    }, 100);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [
+    config.isMazeEnabled,
+    config.logoUrl,
+    config.logoSize,
+    config.logoPadding,
+    config.logoPaddingStyle,
+    lastModulesRef.current,
+    activeIsAnimating,
+    requestMazeCalculation,
   ]);
 
   const typeLabel = config.type.charAt(0).toUpperCase() + config.type.slice(1).toLowerCase();

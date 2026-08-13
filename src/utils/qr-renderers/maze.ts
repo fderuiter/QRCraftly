@@ -265,11 +265,13 @@ export function renderMaze(
   drawX: number,
   drawY: number,
   cellSize: number,
-  size: number
+  size: number,
+  precalculatedMaze?: MazeData
 ) {
   if (!config.isMazeEnabled) return;
 
-  const maze = generateMaze(modules, config, size);
+  const maze = precalculatedMaze || generateMaze(modules, config, size);
+  if (!maze) return;
   const pathWidth = cellSize * (config.mazePathWidth || 0.25);
 
   ctx.save();

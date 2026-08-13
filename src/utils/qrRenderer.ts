@@ -4,7 +4,7 @@ import { renderBorder, renderBorderDecoration } from './qr-renderers/border';
 import { renderModules } from './qr-renderers/modules';
 import { renderEyes } from './qr-renderers/eyes';
 import { renderLogo } from './qr-renderers/logo';
-import { renderMaze } from './qr-renderers/maze';
+import { renderMaze, MazeData } from './qr-renderers/maze';
 
 /**
  * Renders the QR code onto the canvas.
@@ -16,7 +16,8 @@ export const drawQR = (
   config: QRConfig,
   logoImg: HTMLImageElement | null,
   borderLogoImg: HTMLImageElement | null,
-  size: number
+  size: number,
+  precalculatedMaze?: MazeData
 ) => {
   const canvas = ctx.canvas;
 
@@ -37,7 +38,17 @@ export const drawQR = (
 
     ctx.scale(pixelRatio, pixelRatio);
 
-    drawQRInternal(ctx as unknown as CanvasRenderingContext2D, modules, config, logoImg, borderLogoImg, displaySize, moduleCount);
+    drawQRInternal(
+      ctx as unknown as CanvasRenderingContext2D,
+      modules,
+      config,
+      logoImg,
+      borderLogoImg,
+      displaySize,
+      moduleCount,
+      false,
+      precalculatedMaze
+    );
 
   } catch (err) {
     console.warn("QR generation failed:", err);
@@ -55,6 +66,8 @@ export const drawQR = (
  * @param borderLogoImg Pre-loaded border-logo image (or null).
  * @param displaySize  The logical size in pixels to draw into.
  * @param moduleCount  Number of modules (rows/cols) in the QR grid.
+ * @param isVirtual  Whether we are drawing a virtual canvas.
+ * @param precalculatedMaze Optional precalculated maze data.
  */
 export const drawQRInternal = (
   ctx: CanvasRenderingContext2D,
@@ -64,7 +77,8 @@ export const drawQRInternal = (
   borderLogoImg: HTMLImageElement | null,
   displaySize: number,
   moduleCount: number,
-  isVirtual: boolean = false
+  isVirtual: boolean = false,
+  precalculatedMaze?: MazeData
 ) => {
   // 1. Calculate Layout
   const { drawX, drawY, drawSize, cellSize, borderPx } = calculateLayout(config, displaySize, moduleCount);
@@ -88,7 +102,7 @@ export const drawQRInternal = (
   renderModules(ctx, modules, config, drawX, drawY, cellSize, moduleCount, logoMetrics, isVirtual);
 
   // 4b. Render Maze (if enabled)
-  renderMaze(ctx, modules, config, drawX, drawY, cellSize, moduleCount);
+  renderMaze(ctx, modules, config, drawX, drawY, cellSize, moduleCount, precalculatedMaze);
 
   // 5. Render Eyes
   renderEyes(ctx, config, drawX, drawY, cellSize, moduleCount);
