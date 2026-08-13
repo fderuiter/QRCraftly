@@ -10,7 +10,7 @@ const wranglerJs = path.join(wranglerBinDir, 'wrangler.js');
 const wranglerRealJs = path.join(wranglerBinDir, 'wrangler-real.js');
 
 const isGHA = !!process.env.GITHUB_ACTIONS;
-const isNonGhaCI = !!process.env.CI && !isGHA;
+const isNonGhaCI = (!!process.env.CI || !!process.env.CF_PAGES || !!process.env.SKIP_GIT_VALIDATION) && !isGHA;
 
 if (isNonGhaCI) {
   console.log('[Patch Wrangler] Non-GitHub Actions CI environment detected (e.g., Cloudflare Workers Builds). Skipping wrangler patching to allow standard deployments.');
