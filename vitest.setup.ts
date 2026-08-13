@@ -400,7 +400,7 @@ if (typeof globalThis.createImageBitmap === 'undefined') {
     } else if (source && typeof source.videoHeight === 'number') {
       height = source.videoHeight;
     }
-    const img = new globalThis.ImageBitmap(width, height);
+    const img = new (globalThis.ImageBitmap as any)(width, height);
     return {
       then(cb: any) {
         cb(img);
