@@ -32,6 +32,13 @@ const patternRenderers: Record<QRStyle, React.ReactNode> = {
       </svg>
     </div>
   ),
+  [QRStyle.MAZE]: (
+    <div className="relative flex size-full items-center justify-center bg-transparent">
+      <div className="size-2 bg-current" />
+      <div className="absolute inset-x-1.5 h-px bg-current" />
+      <div className="absolute inset-y-1.5 w-px bg-current" />
+    </div>
+  ),
   [QRStyle.STANDARD]: <div className="bg-current" />,
 };
 

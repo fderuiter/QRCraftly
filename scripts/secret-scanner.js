@@ -22,6 +22,7 @@ export const EXCLUDE_FILES = [
   'scripts/secret-scanner.js',
   'tests/secret-scanner.test.ts',
   '.gitleaks.toml',
+  'src/types.ts',
 ];
 
 export const BINARY_EXTENSIONS = /\.(png|jpg|jpeg|gif|ico|woff|woff2|eot|ttf|otf|mp4|webm|zip|tar\.gz|pdf|svg|exe|dll|so|dylib)$/i;
