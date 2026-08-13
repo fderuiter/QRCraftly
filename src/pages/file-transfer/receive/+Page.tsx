@@ -16,8 +16,8 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import React, { useState } from 'react';
-import { Play, Square, Camera, AlertTriangle, Activity, Cpu, Sun, Moon, QrCode, ArrowLeft, Trash2 } from 'lucide-react';
+import React, { useState, useCallback } from 'react';
+import { Play, Square, Camera, AlertTriangle, Activity, Cpu, Sun, Moon, QrCode, ArrowLeft, Trash2, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Alert } from '@/components/ui/Alert';
@@ -44,13 +44,23 @@ function FileTransferReceiveInner() {
     handleFrame,
     startCameraSession,
     stopCameraSession,
+    downloadTriggered,
+    reconstructAndValidateFile,
+    handshake,
   } = useAnimatedQrReceiver({
     addToast,
     handshakeRequired: false,
     streamMode,
+    autoDownload: false,
   });
 
+  const isComplete = totalChunks !== null && chunks.size === totalChunks;
 
+  // Handle manual compile and download on user click
+  const handleManualDownload = useCallback(() => {
+    if (!isComplete) return;
+    reconstructAndValidateFile(chunks, totalChunks, handshake || undefined);
+  }, [chunks, totalChunks, handshake, isComplete, reconstructAndValidateFile]);
   // Simulation controls
   const simulateOutOfOrder = () => {
     handleClear();
@@ -347,7 +357,27 @@ function FileTransferReceiveInner() {
 
               {/* Video frame box with targeting guide */}
               <div className="relative aspect-square w-full overflow-hidden rounded-2xl border border-slate-100 bg-slate-950 p-0 dark:border-slate-900">
-                {isScanning ? (
+                {isComplete ? (
+                  <div className="flex size-full flex-col items-center justify-center gap-4 bg-slate-900 p-6 text-center text-slate-100 dark:bg-slate-950" data-testid="inline-complete-panel">
+                    <div className="animate-pulse rounded-full bg-emerald-500/10 p-3 text-emerald-400">
+                      <CheckCircle2 className="size-12" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-slate-100">Transfer Complete</h3>
+                      <p className="mt-1 text-xs text-slate-400">
+                        Successfully buffered all {totalChunks} chunks of data in browser memory.
+                      </p>
+                    </div>
+                    <Button
+                      variant={downloadTriggered ? "outline" : "primary"}
+                      onClick={handleManualDownload}
+                      className="mt-2 font-semibold shadow-lg shadow-teal-500/20 hover:shadow-teal-500/35"
+                      aria-label={downloadTriggered ? "Download Again" : "Download File"}
+                    >
+                      {downloadTriggered ? "Download Again" : "Download File"}
+                    </Button>
+                  </div>
+                ) : isScanning ? (
                   <video
                     ref={videoRef}
                     className="size-full object-cover"
