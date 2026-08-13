@@ -47,7 +47,7 @@ self.onmessage = async (e: MessageEvent<unknown>) => {
     if (imageBitmap) {
       if (typeof OffscreenCanvas !== 'undefined') {
         const canvas = new OffscreenCanvas(width, height);
-        const ctx = canvas.getContext('2d');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
         if (!ctx) {
           throw new Error('Failed to get 2d context on OffscreenCanvas');
         }

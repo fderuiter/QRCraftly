@@ -248,7 +248,7 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
         }
 
         try {
-          const ctx = canvas.getContext('2d');
+          const ctx = canvas.getContext('2d', { willReadFrequently: true });
           if (!ctx) {
             setStatus('fail');
             return;
@@ -305,8 +305,8 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
       };
       try {
         assertWorkerRequest(payload);
-        // Do not transfer the raw TypedArray directly to prevent memory neutering and re-allocation loops
-        worker.postMessage(payload, []);
+        // Zero-copy ArrayBuffer transfer of the pixel buffer
+        worker.postMessage(payload, [payload.imageData.data.buffer]);
       } catch (err) {
         console.error("Outgoing worker request validation failed:", err);
         setStatus('fail');
@@ -376,7 +376,7 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
         return;
       }
       try {
-        const ctx = canvas.getContext('2d');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
         if (!ctx) {
           setStatus('fail');
           isWorkerBusyRef.current = false;
@@ -393,8 +393,8 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
           configId: currentSequence,
         };
         assertWorkerRequest(payload);
-        // Do not transfer the raw TypedArray directly to prevent memory neutering and re-allocation loops
-        worker.postMessage(payload, []);
+        // Zero-copy ArrayBuffer transfer of the pixel buffer
+        worker.postMessage(payload, [payload.imageData.data.buffer]);
       } catch (err) {
         console.error("Failed to read canvas data or validation failed", err);
         setStatus('fail');

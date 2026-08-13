@@ -95,7 +95,7 @@ export function useQRDownload(
     if (isTest) return true;
 
     try {
-      const ctx = canvas.getContext('2d');
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
       if (!ctx) return false;
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       const result = performScannabilityCheck(imageData, canvas.width, canvas.height, false);
