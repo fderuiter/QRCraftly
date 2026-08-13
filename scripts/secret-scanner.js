@@ -31,10 +31,10 @@ export const BINARY_EXTENSIONS = /\.(png|jpg|jpeg|gif|ico|woff|woff2|eot|ttf|otf
 export const SMTP_URI_REGEX = /smtps?:\/\/[^:]+:([^@\s]+)@[^\s/]+/i;
 
 // 2. SMTP Password / Keys assignment
-export const SMTP_PASS_REGEX = /(smtp)[_-]?(password|pass|secret|key|token)\s*[:=]\s*['"]?([a-zA-Z0-9_.-]{4,})['"]?/i;
+export const SMTP_PASS_REGEX = /(smtp|mail|email|password|pass)[_-]?(password|pass|secret|key|token)?\s*[:=]\s*['"]?([a-zA-Z0-9_.-]{4,})['"]?/i;
 
 // 3. Cloudflare API Key or Token assignment
-export const CLOUDFLARE_REGEX = /(cloudflare|cf)[_-]?(api)?[_-]?(token|key|secret)\s*[:=]\s*['"]?([a-zA-Z0-9_-]{16,})['"]?/i;
+export const CLOUDFLARE_REGEX = /(cloudflare|cf|api|token|key|secret)[_-]?(api)?[_-]?(token|key|secret)?\s*[:=]\s*['"]?([a-zA-Z0-9_-]{16,})['"]?/i;
 
 // 4. AWS Access Key ID
 export const AWS_REGEX = /\b((?:AKIA|ASCA|AGPA|AIDA|AROA|AIPA|ANPA|ANVA|ASIA)[A-Z0-9]{16})\b/i;
@@ -78,7 +78,8 @@ export function isFalsePositive(secret, varName = '') {
   }
 
   // If secret value is identical/similar to the variable name (e.g. SMTP_PASSWORD = "SMTP_PASSWORD")
-  if (lowerVar && (lowerSecret === lowerVar || lowerVar.includes(lowerSecret) || lowerSecret.includes(lowerVar))) {
+  const normalize = (str) => str.toLowerCase().replace(/[^a-z0-9]/g, '');
+  if (lowerVar && normalize(secret) === normalize(varName)) {
     return true;
   }
 
@@ -141,7 +142,7 @@ export function scanFile(filePath) {
     // Check SMTP password/key assignment
     const smtpPassMatch = line.match(SMTP_PASS_REGEX);
     if (smtpPassMatch) {
-      const varName = smtpPassMatch[1] + '_' + smtpPassMatch[2];
+      const varName = smtpPassMatch[1] + (smtpPassMatch[2] ? '_' + smtpPassMatch[2] : '');
       const secret = smtpPassMatch[3];
       if (!isFalsePositive(secret, varName)) {
         findings.push({
@@ -157,7 +158,7 @@ export function scanFile(filePath) {
     // Check Cloudflare secrets
     const cfMatch = line.match(CLOUDFLARE_REGEX);
     if (cfMatch) {
-      const varName = cfMatch[1] + '_' + (cfMatch[2] || '') + '_' + cfMatch[3];
+      const varName = [cfMatch[1], cfMatch[2], cfMatch[3]].filter(Boolean).join('_');
       const secret = cfMatch[4];
       if (!isFalsePositive(secret, varName)) {
         findings.push({
