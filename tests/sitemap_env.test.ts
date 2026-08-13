@@ -142,4 +142,31 @@ describe('Sitemap Environment-Level Variable Resolution', () => {
       }
     }
   });
+
+  it('should exclude any html files or routes containing experiments from the generated sitemap', () => {
+    const expFile = join(distDir, 'experiments-route.html');
+    writeFileSync(expFile, '<html></html>', 'utf8');
+
+    try {
+      execFileSync('node', [sitemapScriptPath], {
+        env: {
+          ...process.env,
+          VITE_DOMAIN: 'https://qrcraftly.com',
+          NODE_ENV: 'production'
+        }
+      });
+
+      expect(existsSync(sitemapPath)).toBe(true);
+      const content = readFileSync(sitemapPath, 'utf8');
+      expect(content).toContain('<loc>https://qrcraftly.com/dummy-sample-route</loc>');
+      expect(content).not.toContain('experiments-route');
+    } finally {
+      if (existsSync(expFile)) {
+        try {
+          const { unlinkSync } = require('fs');
+          unlinkSync(expFile);
+        } catch {}
+      }
+    }
+  });
 });

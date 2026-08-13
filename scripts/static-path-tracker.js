@@ -4,7 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-const EXCLUDE_DIRS = ['node_modules', '.git', 'dist', 'build', 'coverage'];
+const EXCLUDE_DIRS = ['node_modules', '.git', 'dist', 'build', 'coverage', 'experiments'];
 const EXCLUDE_FILES = ['scripts/static-path-tracker.js', 'tests/static-path-tracker.test.ts'];
 
 /**

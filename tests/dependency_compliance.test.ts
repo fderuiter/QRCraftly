@@ -110,6 +110,29 @@ describe('Dependency Compliance Guardrail', () => {
       expect(violations.length).toBe(0);
     });
 
+    it('should ignore files inside the experiments directory', () => {
+      const tempExperimentsFile = path.resolve('experiments/temp-violating.ts');
+      
+      const dir = path.dirname(tempExperimentsFile);
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+
+      fs.writeFileSync(
+        tempExperimentsFile,
+        `
+        import axios from 'axios';
+        fetch('https://malicious.com');
+        `,
+        'utf8'
+      );
+
+      try {
+        const violations = scanFileForCompliance(tempExperimentsFile);
+        expect(violations.length).toBe(0);
+      } finally {
+        if (fs.existsSync(tempExperimentsFile)) fs.unlinkSync(tempExperimentsFile);
+      }
+    });
+
     it('should ignore whitelisted files (like useTelemetry.ts) even if they use fetch', () => {
       // Simulate whitelisted file by using path.resolve to a whitelisted name
       const tempWhitelistedFile = path.resolve('src/hooks/useTelemetry.ts');

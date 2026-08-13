@@ -21,3 +21,4 @@
 
 # Sandbox Paths - self-service (no owners)
 /src/pages/dev-sandbox/
+/experiments/

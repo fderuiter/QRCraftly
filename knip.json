@@ -9,7 +9,7 @@
     "tests/**/*.test.tsx"
   ],
   "project": ["src/**/*.ts", "src/**/*.tsx"],
-  "ignore": ["src/utils/base64.ts"],
+  "ignore": ["src/utils/base64.ts", "experiments/**/*"],
   "paths": {
     "@/*": ["./src/*"]
   },

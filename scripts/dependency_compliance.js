@@ -49,6 +49,7 @@ function isExcludedFile(filePath) {
     normalized.startsWith('tests/') ||
     normalized.startsWith('e2e/') ||
     normalized.includes('dev-sandbox') ||
+    normalized.includes('experiments') ||
     normalized.endsWith('.test.ts') ||
     normalized.endsWith('.test.tsx') ||
     normalized.endsWith('.spec.ts') ||

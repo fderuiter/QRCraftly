@@ -10,6 +10,7 @@
     "**/mocks/**",
     "**/sandbox/**",
     "src/pages/dev-sandbox/**/*",
+    "experiments/**/*",
     "scripts/**/*",
     "scripts/*"
   ]

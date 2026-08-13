@@ -13,6 +13,7 @@ export const EXCLUDE_DIRS = [
   'build',
   'coverage',
   '.next',
+  'experiments',
 ];
 
 export const EXCLUDE_FILES = [

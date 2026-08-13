@@ -20,7 +20,7 @@ for (const [ruleName, ruleVal] of Object.entries(jsdoc.configs["flat/recommended
 
 export default tseslint.config(
   {
-    ignores: ["dist/**", "node_modules/**", "coverage/**", "scripts/**", "e2e/**", "**/*.test.ts", "**/*.test.tsx"]
+    ignores: ["dist/**", "node_modules/**", "coverage/**", "scripts/**", "e2e/**", "**/*.test.ts", "**/*.test.tsx", "experiments/**"]
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
@@ -164,7 +164,7 @@ export default tseslint.config(
   },
   {
     files: ["**/*.{ts,tsx,js,jsx}"],
-    ignores: ["src/pages/dev-sandbox/**/*"],
+    ignores: ["src/pages/dev-sandbox/**/*", "experiments/**/*"],
     rules: {
       "no-restricted-imports": [
         "error",
@@ -173,6 +173,10 @@ export default tseslint.config(
             {
               group: ["**/dev-sandbox", "**/dev-sandbox/**"],
               message: "Developer sandbox assets cannot be imported into production modules."
+            },
+            {
+              group: ["**/experiments", "**/experiments/**", "experiments/**"],
+              message: "Experimental workspace assets cannot be imported into production modules."
             }
           ]
         }
