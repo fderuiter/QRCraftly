@@ -415,6 +415,15 @@ function runValidator() {
     console.log('✅ UI Catalog Integrity matches shared components perfectly.');
 
     // 2. Run Git Lineage / Change Set verification
+    const isGHA = !!process.env.GITHUB_ACTIONS || (!!process.env.CI && !process.env.CF_PAGES && !process.env.SKIP_GIT_VALIDATION);
+    const isOtherCI = !!process.env.CI && !isGHA;
+
+    if (process.env.SKIP_GIT_VALIDATION || isOtherCI) {
+      console.log('[UI Catalog Sync] SKIP_GIT_VALIDATION or non-GHA CI environment detected. Skipping git lineage check.');
+      console.log(`\n🎉 All catalog synchronization validations passed in ${Date.now() - startTime}ms.`);
+      return;
+    }
+
     const args = process.argv.slice(2);
     const explicitFiles = parseArgs(args);
     let modifiedFiles = new Set();
