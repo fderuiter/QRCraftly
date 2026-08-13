@@ -108,9 +108,11 @@ describe('HeadDefault', () => {
     render(<HeadDefault />, { container: document.head });
 
     const scripts = document.head.querySelectorAll('script[type="application/ld+json"]');
-    // Find the one with BreadcrumbList
-    const breadcrumbScript = Array.from(scripts).find(s => s.textContent?.includes('BreadcrumbList'));
-    expect(breadcrumbScript).toBeUndefined();
+    expect(scripts).toHaveLength(1);
+
+    const rootData = JSON.parse(scripts[0].textContent!);
+    const breadcrumbNode = rootData['@graph'].find((item: any) => item['@type'] === 'BreadcrumbList');
+    expect(breadcrumbNode).toBeUndefined();
   });
 
   it('generates correct breadcrumbs for About page', () => {
@@ -122,9 +124,13 @@ describe('HeadDefault', () => {
     render(<HeadDefault />, { container: document.head });
 
     const scripts = document.head.querySelectorAll('script[type="application/ld+json"]');
-    const breadcrumbScript = Array.from(scripts).find(s => s.textContent?.includes('BreadcrumbList'));
+    const script = Array.from(scripts).find(s => s.textContent?.includes('BreadcrumbList'));
+    expect(script).toBeDefined();
 
-    const data = JSON.parse(breadcrumbScript!.textContent!);
+    const rootData = JSON.parse(script!.textContent!);
+    const data = rootData['@graph'].find((item: any) => item['@type'] === 'BreadcrumbList');
+    expect(data).toBeDefined();
+
     const expectedDomain = mockGetPublicDomain();
     expect(data.itemListElement).toHaveLength(2);
     expect(data.itemListElement[1].name).toBe('About');
@@ -140,9 +146,13 @@ describe('HeadDefault', () => {
     render(<HeadDefault />, { container: document.head });
 
     const scripts = document.head.querySelectorAll('script[type="application/ld+json"]');
-    const breadcrumbScript = Array.from(scripts).find(s => s.textContent?.includes('BreadcrumbList'));
+    const script = Array.from(scripts).find(s => s.textContent?.includes('BreadcrumbList'));
+    expect(script).toBeDefined();
 
-    const data = JSON.parse(breadcrumbScript!.textContent!);
+    const rootData = JSON.parse(script!.textContent!);
+    const data = rootData['@graph'].find((item: any) => item['@type'] === 'BreadcrumbList');
+    expect(data).toBeDefined();
+
     const expectedDomain = mockGetPublicDomain();
     expect(data.itemListElement).toHaveLength(2);
     expect(data.itemListElement[1].name).toBe('WiFi QR Code'); // Verify override works
@@ -158,9 +168,13 @@ describe('HeadDefault', () => {
     render(<HeadDefault />, { container: document.head });
 
     const scripts = document.head.querySelectorAll('script[type="application/ld+json"]');
-    const breadcrumbScript = Array.from(scripts).find(s => s.textContent?.includes('BreadcrumbList'));
+    const script = Array.from(scripts).find(s => s.textContent?.includes('BreadcrumbList'));
+    expect(script).toBeDefined();
 
-    const data = JSON.parse(breadcrumbScript!.textContent!);
+    const rootData = JSON.parse(script!.textContent!);
+    const data = rootData['@graph'].find((item: any) => item['@type'] === 'BreadcrumbList');
+    expect(data).toBeDefined();
+
     const expectedDomain = mockGetPublicDomain();
     expect(data.itemListElement).toHaveLength(3);
 
@@ -208,14 +222,50 @@ describe('HeadDefault', () => {
 
     // Check that breadcrumb schema is NOT generated for the garbage path
     const scripts = document.head.querySelectorAll('script[type="application/ld+json"]');
-    const breadcrumbScript = Array.from(scripts).find(s => s.textContent?.includes('BreadcrumbList'));
+    expect(scripts).toHaveLength(1);
+    const rootData = JSON.parse(scripts[0].textContent!);
+    const breadcrumbNode = rootData['@graph'].find((item: any) => item['@type'] === 'BreadcrumbList');
+    expect(breadcrumbNode).toBeUndefined();
+  });
 
-    // If breadcrumbs exist, ensure they don't include the 404 path
-    if (breadcrumbScript) {
-      const data = JSON.parse(breadcrumbScript!.textContent!);
-      const garbageItem = data.itemListElement.find((item: any) => item.item?.includes('garbage'));
-      expect(garbageItem).toBeUndefined();
-    }
+  it('excludes the WebSite schema node on non-root pages', () => {
+    mockUsePageContext.mockReturnValue({
+      urlPathname: '/about',
+      config: {}
+    });
+
+    render(<HeadDefault />, { container: document.head });
+
+    const scripts = document.head.querySelectorAll('script[type="application/ld+json"]');
+    expect(scripts).toHaveLength(1);
+
+    const rootData = JSON.parse(scripts[0].textContent!);
+    const websiteNode = rootData['@graph'].find((item: any) => item['@type'] === 'WebSite');
+    expect(websiteNode).toBeUndefined();
+
+    const orgNode = rootData['@graph'].find((item: any) => item['@type'] === 'Organization');
+    expect(orgNode).toBeDefined();
+  });
+
+  it('includes Organization and WebSite, but suppresses BreadcrumbList, on the homepage', () => {
+    mockUsePageContext.mockReturnValue({
+      urlPathname: '/',
+      config: {}
+    });
+
+    render(<HeadDefault />, { container: document.head });
+
+    const scripts = document.head.querySelectorAll('script[type="application/ld+json"]');
+    expect(scripts).toHaveLength(1);
+
+    const rootData = JSON.parse(scripts[0].textContent!);
+    const orgNode = rootData['@graph'].find((item: any) => item['@type'] === 'Organization');
+    const websiteNode = rootData['@graph'].find((item: any) => item['@type'] === 'WebSite');
+    const breadcrumbNode = rootData['@graph'].find((item: any) => item['@type'] === 'BreadcrumbList');
+
+    expect(orgNode).toBeDefined();
+    expect(websiteNode).toBeDefined();
+    expect(breadcrumbNode).toBeUndefined();
   });
 
   it('renders og:url on normal pages with the fully resolved public URL', () => {
@@ -304,8 +354,12 @@ describe('HeadDefault', () => {
     expect(ogUrl?.getAttribute('content')).toBe(`${expectedDomain}/about`);
 
     const scripts = document.head.querySelectorAll('script[type="application/ld+json"]');
-    const breadcrumbScript = Array.from(scripts).find(s => s.textContent?.includes('BreadcrumbList'));
-    const data = JSON.parse(breadcrumbScript!.textContent!);
+    const script = Array.from(scripts).find(s => s.textContent?.includes('BreadcrumbList'));
+    expect(script).toBeDefined();
+
+    const rootData = JSON.parse(script!.textContent!);
+    const data = rootData['@graph'].find((item: any) => item['@type'] === 'BreadcrumbList');
+    expect(data).toBeDefined();
 
     expect(data.itemListElement).toHaveLength(2);
     expect(data.itemListElement[0].item).toBe(expectedDomain);
