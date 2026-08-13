@@ -425,21 +425,19 @@ function runValidator() {
     } else {
       console.log('[UI Catalog Sync] No explicit file list provided. Querying git repository state...');
       if (!fs.existsSync(path.join(repoRoot, '.git'))) {
-        console.log('[UI Catalog Sync] Not a git repository or .git folder missing. Skipping lineage check.');
+        console.error('❌ [UI Catalog Sync] Not a git repository or .git folder missing. Failed closed.');
+        process.exit(1);
       } else {
         let stdout = '';
         if (process.env.CI) {
           // CI Pipeline check: inspect files changed in this branch/PR
-          const target = process.env.GITHUB_BASE_REF ? `origin/${process.env.GITHUB_BASE_REF}` : 'HEAD~1';
+          const target = process.env.GITHUB_BASE_REF ? `origin/${process.env.GITHUB_BASE_REF}` : 'origin/main';
           console.log(`[UI Catalog Sync] CI Context detected. Querying diff against target ${target}...`);
           try {
             stdout = execFileSync('git', ['diff', '--name-only', `${target}...HEAD`], { encoding: 'utf8', cwd: repoRoot });
           } catch (err) {
-            try {
-              stdout = execFileSync('git', ['diff', '--name-only', 'HEAD~1'], { encoding: 'utf8', cwd: repoRoot });
-            } catch (err2) {
-              stdout = '';
-            }
+            console.error(`❌ [UI Catalog Sync] Target branch comparison failed: ${err.message}`);
+            process.exit(1);
           }
           // Normalize git diff line endings and filter non-empty lines
           if (stdout) {
@@ -454,7 +452,8 @@ function runValidator() {
               modifiedFiles = parseGitStatus(stdout);
             }
           } catch (err) {
-            console.warn('[UI Catalog Sync] Failed to query git status. Skipping lineage check.', err.message);
+            console.error(`❌ [UI Catalog Sync] Failed to query git status: ${err.message}`);
+            process.exit(1);
           }
         }
       }

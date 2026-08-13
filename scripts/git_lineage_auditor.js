@@ -229,14 +229,9 @@ export function runAuditor(options = {}) {
       
       const gitDir = path.join(repoRoot, '.git');
       if (!customExistsSync(gitDir)) {
-        if (env.CF_PAGES) {
-          console.warn('⚠️ [Lineage Auditor] Missing Git directory in Cloudflare CI environment. Skipping lineage check.');
-          return;
-        } else {
-          console.error('❌ [Lineage Auditor] Missing Git directory! Failed closed in CI environment.');
-          exit(1);
-          return;
-        }
+        console.error('❌ [Lineage Auditor] Missing Git directory! Failed closed in CI environment.');
+        exit(1);
+        return;
       }
 
       let diffStdout = null;
@@ -250,28 +245,10 @@ export function runAuditor(options = {}) {
         diffStdout = customExecSync('git', ['diff', '--name-only', `${targetBranch}...HEAD`], { encoding: 'utf8', cwd: repoRoot });
         console.log(`[Lineage Auditor] Successfully resolved files via target branch diff.`);
       } catch (err) {
-        console.warn(`⚠️ [Lineage Auditor] Target branch comparison failed: ${err.message}`);
-        console.log('[Lineage Auditor] Falling back to single-commit comparison...');
-        
-        try {
-          diffStdout = customExecSync('git', ['diff-tree', '--no-commit-id', '--name-only', '-r', 'HEAD'], { encoding: 'utf8', cwd: repoRoot });
-          console.log(`[Lineage Auditor] Successfully resolved files via single-commit diff-tree.`);
-        } catch (fallbackErr1) {
-          console.warn(`⚠️ [Lineage Auditor] Single-commit diff-tree failed: ${fallbackErr1.message}`);
-          try {
-            diffStdout = customExecSync('git', ['diff', '--name-only', 'HEAD~1', 'HEAD'], { encoding: 'utf8', cwd: repoRoot });
-            console.log(`[Lineage Auditor] Successfully resolved files via HEAD~1 HEAD diff.`);
-          } catch (fallbackErr2) {
-            if (env.CF_PAGES) {
-              console.warn('⚠️ [Lineage Auditor] Git comparison failed in Cloudflare CI environment. Skipping lineage check.');
-              return;
-            }
-            console.error('❌ [Lineage Auditor] Both target branch comparison and single-commit fallback failed.');
-            console.error('Diagnostic info:', fallbackErr2.message);
-            exit(1);
-            return;
-          }
-        }
+        console.error(`❌ [Lineage Auditor] Target branch comparison failed: ${err.message}`);
+        console.error('❌ [Lineage Auditor] Failed closed in CI environment due to git comparison failure.');
+        exit(1);
+        return;
       }
 
       modifiedFiles = parseGitDiff(diffStdout);
