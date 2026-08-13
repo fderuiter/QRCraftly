@@ -458,5 +458,19 @@ describe('Local Git-Diff Lineage Auditor', () => {
       runAuditor(mockOptions);
       expect(exitCode).toBe(1);
     });
+
+    it('should skip CI checks and fall back to local check if SKIP_GIT_VALIDATION is set', () => {
+      let exitCode = null;
+      const mockOptions = {
+        env: { CI: 'true', SKIP_GIT_VALIDATION: 'true' },
+        argv: ['node', 'scripts/git_lineage_auditor.js'],
+        execSync: () => '', // simulated clean git status
+        existsSync: () => true,
+        exit: (code) => { exitCode = code; }
+      };
+
+      runAuditor(mockOptions);
+      expect(exitCode).toBeNull();
+    });
   });
 });

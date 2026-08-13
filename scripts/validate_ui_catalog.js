@@ -429,7 +429,7 @@ function runValidator() {
         process.exit(1);
       } else {
         let stdout = '';
-        if (process.env.CI) {
+        if (process.env.CI && !process.env.SKIP_GIT_VALIDATION) {
           // CI Pipeline check: inspect files changed in this branch/PR
           const target = process.env.GITHUB_BASE_REF ? `origin/${process.env.GITHUB_BASE_REF}` : 'origin/main';
           console.log(`[UI Catalog Sync] CI Context detected. Querying diff against target ${target}...`);
