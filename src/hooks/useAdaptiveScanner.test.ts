@@ -84,7 +84,7 @@ describe('useAdaptiveScanner Hook with Bidirectional Buffer Recycling', () => {
     expect(result.current.status).toBe('idle');
   });
 
-  it('should successfully pass image buffers as transferables (zero-copy)', () => {
+  it('should successfully pass image bitmaps as transferables (zero-copy)', () => {
     const videoRef = makeVideoRef();
     const { result } = renderHook(() =>
       useAdaptiveScanner({
@@ -99,7 +99,6 @@ describe('useAdaptiveScanner Hook with Bidirectional Buffer Recycling', () => {
           status: 'pass',
           sequenceId: msg.sequenceId,
           decodedData: 'https://craftly.qr',
-          buffer: msg.buffer,
         });
       }, 0);
     });
@@ -118,11 +117,11 @@ describe('useAdaptiveScanner Hook with Bidirectional Buffer Recycling', () => {
     expect(activeWorker!.postMessage).toHaveBeenCalled();
 
     const [payload, transfer] = activeWorker!.postMessage.mock.calls[0];
-    expect(payload).toHaveProperty('buffer');
-    expect(payload.buffer).toBeInstanceOf(ArrayBuffer);
+    expect(payload).toHaveProperty('image');
+    expect(payload.image).toBeInstanceOf(ImageBitmap);
     expect(payload).toHaveProperty('sequenceId', 1);
     expect(transfer).toBeDefined();
-    expect(transfer[0]).toBe(payload.buffer);
+    expect(transfer[0]).toBe(payload.image);
     
     // Validate request contract
     expect(isValidScannerRequest(payload)).toBe(true);
@@ -362,7 +361,7 @@ describe('useAdaptiveScanner Hook with Bidirectional Buffer Recycling', () => {
     expect(successCallback).not.toHaveBeenCalled();
   });
 
-  it('should strictly limit the pool size to exactly two buffers and recycle them', () => {
+  it('should create and transfer new ImageBitmap instances for each capture frame', () => {
     const videoRef = makeVideoRef();
     const { result } = renderHook(() =>
       useAdaptiveScanner({
@@ -381,32 +380,33 @@ describe('useAdaptiveScanner Hook with Bidirectional Buffer Recycling', () => {
       result.current.startScanning();
     });
 
-    // Capture Frame 1 (uses 1st buffer, leaving 1 in pool)
+    // Capture Frame 1
     act(() => {
       vi.advanceTimersByTime(50);
     });
     expect(postMessageCalls).toHaveLength(1);
-    const buf1 = postMessageCalls[0].buffer;
+    const img1 = postMessageCalls[0].image;
+    expect(img1).toBeInstanceOf(ImageBitmap);
 
-    // Return the buffer (recycles it, pool should have 2 again)
+    // Complete Frame 1
     act(() => {
       activeWorker.dispatchMessage({
         status: 'fail',
         sequenceId: 1,
-        buffer: buf1,
       });
     });
 
-    // Capture Frame 2 (uses recycled buffer)
+    // Capture Frame 2
     act(() => {
       vi.advanceTimersByTime(100);
     });
     expect(postMessageCalls).toHaveLength(2);
-    const buf2 = postMessageCalls[1].buffer;
-    expect(buf2).toBe(buf1); // Reused!
+    const img2 = postMessageCalls[1].image;
+    expect(img2).toBeInstanceOf(ImageBitmap);
+    expect(img2).not.toBe(img1); // New instance created each time
   });
 
-  it('should recycle returned buffers even if the response sequence is stale', () => {
+  it('should ignore stale responses and discard them', () => {
     const videoRef = makeVideoRef();
     const { result } = renderHook(() =>
       useAdaptiveScanner({
@@ -425,56 +425,37 @@ describe('useAdaptiveScanner Hook with Bidirectional Buffer Recycling', () => {
       result.current.startScanning();
     });
 
-    // 1. Capture Frame 1 (uses 1st buffer from pool)
+    // 1. Capture Frame 1
     act(() => {
       vi.advanceTimersByTime(50);
     });
     expect(postMessageCalls).toHaveLength(1);
-    const buf1 = postMessageCalls[0].buffer;
 
-    // 2. Complete Frame 1 (recycles buf1, completedSequenceRef becomes 1, pool has 2 again)
+    // 2. Complete Frame 1
     act(() => {
       activeWorker.dispatchMessage({
         status: 'fail',
         sequenceId: 1,
-        buffer: buf1,
       });
     });
 
-    // 3. Capture Frame 2 (uses recycled buf1 again)
+    // 3. Capture Frame 2
     act(() => {
       vi.advanceTimersByTime(100);
     });
     expect(postMessageCalls).toHaveLength(2);
-    const buf2 = postMessageCalls[1].buffer;
-    expect(buf2).toBe(buf1);
 
-    // 4. Send a late stale response for Frame 1 with buf1.
-    // Since completedSequenceRef is 1, sequenceId 1 is stale, but we still recycle buf1.
+    // 4. Send a late stale response for Frame 1
     act(() => {
       activeWorker.dispatchMessage({
-        status: 'fail',
+        status: 'pass',
         sequenceId: 1,
-        buffer: buf1,
+        decodedData: 'https://stale.qr',
       });
     });
 
-    // 5. Complete Frame 2 (recycles buf2 / buf1 again)
-    act(() => {
-      activeWorker.dispatchMessage({
-        status: 'fail',
-        sequenceId: 2,
-        buffer: buf2,
-      });
-    });
-
-    // 6. Capture Frame 3
-    act(() => {
-      vi.advanceTimersByTime(100);
-    });
-    expect(postMessageCalls).toHaveLength(3);
-    const buf3 = postMessageCalls[2].buffer;
-    expect(buf3).toBe(buf1);
+    // The status should still be 'checking' (since Frame 2 is in-flight) and NOT have updated to 'pass' from the stale response
+    expect(result.current.status).toBe('checking');
   });
 
   it('should run strict runtime schema validation on worker responses', () => {
@@ -500,20 +481,19 @@ describe('useAdaptiveScanner Hook with Bidirectional Buffer Recycling', () => {
       vi.advanceTimersByTime(50);
     });
 
-    // Send an INVALID response (missing buffer)
+    // Send an INVALID response (missing status)
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     act(() => {
       activeWorker.dispatchMessage({
-        status: 'pass',
         sequenceId: 1,
         decodedData: 'https://broken.qr',
-        // missing buffer completely!
+        // missing status completely!
       });
     });
 
     // Should have logged an error and ignored the state updates
     expect(consoleErrorSpy).toHaveBeenCalled();
-    expect(result.current.status).toBe('checking'); // remains checking, wasn't updated to pass!
+    expect(result.current.status).toBe('checking'); // remains checking, wasn't updated!
     consoleErrorSpy.mockRestore();
   });
 

@@ -6,11 +6,23 @@ import {
   assertScannerResponse,
 } from './scannerContract';
 
+if (typeof (globalThis as any).ImageBitmap === 'undefined') {
+  (globalThis as any).ImageBitmap = class ImageBitmap {
+    width: number;
+    height: number;
+    constructor(width = 100, height = 100) {
+      this.width = width;
+      this.height = height;
+    }
+    close() {}
+  };
+}
+
 describe('Scanner Contract Payload Validation', () => {
   describe('isValidScannerRequest', () => {
     it('should validate valid scanner requests', () => {
       const valid = {
-        buffer: new ArrayBuffer(10),
+        image: new ImageBitmap(100, 100),
         width: 100,
         height: 100,
         sequenceId: 5,
@@ -20,29 +32,29 @@ describe('Scanner Contract Payload Validation', () => {
     });
 
     it('should invalidate invalid scanner requests', () => {
-      const missingBuffer = {
+      const missingImage = {
         width: 100,
         height: 100,
         sequenceId: 5,
       };
       const invalidWidth = {
-        buffer: new ArrayBuffer(10),
+        image: new ImageBitmap(100, 100),
         width: -10,
         height: 100,
         sequenceId: 5,
       };
       const invalidSeq = {
-        buffer: new ArrayBuffer(10),
+        image: new ImageBitmap(100, 100),
         width: 100,
         height: 100,
         sequenceId: NaN,
       };
 
-      expect(isValidScannerRequest(missingBuffer)).toBe(false);
+      expect(isValidScannerRequest(missingImage)).toBe(false);
       expect(isValidScannerRequest(invalidWidth)).toBe(false);
       expect(isValidScannerRequest(invalidSeq)).toBe(false);
 
-      expect(() => assertScannerRequest(missingBuffer)).toThrow();
+      expect(() => assertScannerRequest(missingImage)).toThrow();
       expect(() => assertScannerRequest(invalidWidth)).toThrow();
     });
   });
@@ -53,13 +65,11 @@ describe('Scanner Contract Payload Validation', () => {
         status: 'pass' as const,
         sequenceId: 4,
         decodedData: 'https://qrcraftly.com',
-        buffer: new ArrayBuffer(10),
       };
       const validFail = {
         status: 'fail' as const,
         sequenceId: 4,
         error: 'DECODE_ERROR',
-        buffer: new ArrayBuffer(10),
       };
 
       expect(isValidScannerResponse(validPass)).toBe(true);
@@ -71,24 +81,16 @@ describe('Scanner Contract Payload Validation', () => {
     it('should invalidate invalid scanner responses', () => {
       const missingStatus = {
         sequenceId: 4,
-        buffer: new ArrayBuffer(10),
-      };
-      const missingBuffer = {
-        status: 'pass' as const,
-        sequenceId: 4,
       };
       const invalidStatus = {
         status: 'unknown',
         sequenceId: 4,
-        buffer: new ArrayBuffer(10),
       };
 
       expect(isValidScannerResponse(missingStatus)).toBe(false);
-      expect(isValidScannerResponse(missingBuffer)).toBe(false);
       expect(isValidScannerResponse(invalidStatus)).toBe(false);
 
       expect(() => assertScannerResponse(missingStatus)).toThrow();
-      expect(() => assertScannerResponse(missingBuffer)).toThrow();
     });
   });
 });
