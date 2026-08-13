@@ -413,4 +413,34 @@ describe('useQRDownload', () => {
     });
   });
 
+  describe('scannability validation before download', () => {
+    let originalEnv: any;
+
+    beforeEach(() => {
+      originalEnv = process.env.NODE_ENV;
+      // Temporarily change NODE_ENV from 'test' to force the check to execute
+      process.env.NODE_ENV = 'production';
+    });
+
+    afterEach(() => {
+      process.env.NODE_ENV = originalEnv;
+    });
+
+    it('blocks download if scannability validation fails', async () => {
+      const checkerModule = await import('../utils/scannabilityChecker');
+      const spyCheck = vi.spyOn(checkerModule, 'performScannabilityCheck').mockReturnValue({
+        success: false,
+        physicalReady: false,
+        error: 'CONTRAST_ERROR',
+      });
+
+      const { result } = renderHook(() => useQRDownload(mockQrRef, DEFAULT_CONFIG as QRConfig), { wrapper: ToastProvider });
+
+      const status = await result.current.downloadToDevice('png');
+      expect(status.success).toBe(false);
+      expect(status.error?.message).toBe('SCAN_VALIDATION_FAILED');
+      expect(spyCheck).toHaveBeenCalled();
+    });
+  });
+
 });

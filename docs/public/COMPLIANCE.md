@@ -11,6 +11,7 @@ This application is designed to **support** HIPAA-compliant workflows through a 
 - **Volatile Memory:** Data entered into the application is cleared when the browser tab is closed or refreshed.
 - **Animation Loop Frames:** Any cached frames or matrices generated for animation loops are also kept solely in volatile client-side memory.
 - **QR Maze Generating States:** Any permutation candidates, graph BFS states, and search results produced during the QR Maze style generation process are processed fully within client-side memory and immediately garbage-collected upon completion, ensuring zero data persistence or compliance leaks.
+- **Playable Maze Overlay:** All coordinates, keep-out boundary zones, and solutions computed for the playable maze overlay are processed completely in-memory locally in the user's browser, ensuring absolute privacy and data isolation.
 
 ### 2. Logging & Metrics Policy
 

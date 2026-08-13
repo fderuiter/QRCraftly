@@ -125,7 +125,7 @@ describe('InputPanel Component', () => {
       vi.advanceTimersByTime(100);
     });
 
-    expect(mockOnChange).toHaveBeenCalledWith({ value: 'https://new-url.com' });
+    expect(mockOnChange).toHaveBeenCalledWith({ value: 'https://new-url.com/' });
   });
 
   it('updates WiFi SSID', () => {
@@ -184,7 +184,7 @@ describe('InputPanel Component', () => {
     // The previous interactions would have called onChange with partial updates based on the local state at that time.
 
     // Let's verify the call for the last change (password)
-    // At this point: SSID=EnterpriseWiFi, Encryption=WPA2-EAP, Identity=user123, Password=secretPass
+    // At this point: SSID is EnterpriseWiFi, Encryption is WPA2-EAP, Identity is user123, and Password is secretPass
     const expectedValue = `WIFI:T:WPA2-EAP;S:EnterpriseWiFi;I:user123;P:secretPass;;`;
     expect(mockOnChange).toHaveBeenLastCalledWith({ value: expectedValue });
   });

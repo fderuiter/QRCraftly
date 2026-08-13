@@ -23,6 +23,7 @@ import { drawWithTemplate, SOCIAL_DIMENSIONS } from '../utils/templateRenderer';
 import { useImage } from '../hooks/useImage';
 import { ValidationEngine } from '../engine/ValidationEngine';
 import { Alert } from './ui/Alert';
+import { normalizeUrl, shouldNormalizeUrl } from '../utils/url';
 
 /**
  * Props for the QRCanvas component.
@@ -400,12 +401,29 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
             );
           }
 
-          const imageData = vCtx.getImageData(0, 0, displayWidth, displayHeight);
-          currentOnRendered({ moduleCount: modules.size, virtualImageData: imageData });
-
-          if (vCanvas) {
-            vCanvas.width = 0;
-            vCanvas.height = 0;
+          if (typeof globalThis.createImageBitmap === 'function') {
+            createImageBitmap(vCanvas).then((imageBitmap) => {
+              currentOnRendered({ moduleCount: modules.size, virtualImageBitmap: imageBitmap });
+              if (vCanvas) {
+                vCanvas.width = 0;
+                vCanvas.height = 0;
+              }
+            }).catch((err) => {
+              console.error("createImageBitmap failed in virtual render:", err);
+              const imageData = vCtx.getImageData(0, 0, displayWidth, displayHeight);
+              currentOnRendered({ moduleCount: modules.size, virtualImageData: imageData });
+              if (vCanvas) {
+                vCanvas.width = 0;
+                vCanvas.height = 0;
+              }
+            });
+          } else {
+            const imageData = vCtx.getImageData(0, 0, displayWidth, displayHeight);
+            currentOnRendered({ moduleCount: modules.size, virtualImageData: imageData });
+            if (vCanvas) {
+              vCanvas.width = 0;
+              vCanvas.height = 0;
+            }
           }
         } catch (err) {
           console.error("Virtual rendering failed:", err);
@@ -493,7 +511,11 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
             }
 
             const QRCode = (QRCodeModule as any).default || QRCodeModule;
-            const data = QRCode.create(currentConfig.value, {
+            let val = currentConfig.value;
+            if (currentConfig.type === QRType.URL && shouldNormalizeUrl(val)) {
+              val = normalizeUrl(val);
+            }
+            const data = QRCode.create(val, {
               errorCorrectionLevel: currentConfig.errorCorrectionLevel,
             });
             const modules: QRModules = data.modules;
@@ -516,7 +538,11 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
               }
 
               const QRCode = (mod as any).default || mod;
-              const data = QRCode.create(currentConfig.value, {
+              let val = currentConfig.value;
+              if (currentConfig.type === QRType.URL && shouldNormalizeUrl(val)) {
+                val = normalizeUrl(val);
+              }
+              const data = QRCode.create(val, {
                 errorCorrectionLevel: currentConfig.errorCorrectionLevel,
               });
               const modules: QRModules = data.modules;

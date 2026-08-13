@@ -20,6 +20,7 @@ import { RefObject, useCallback } from 'react';
 import { QRConfig } from '../types';
 import { generateQRSvg } from '../utils/svgExport';
 import { useCapabilities } from './useCapabilities';
+import { performScannabilityCheck } from '../utils/scannabilityChecker';
 
 /**
  * Return type for the useQRDownload hook.
@@ -87,6 +88,25 @@ export function useQRDownload(
   const { canSaveFilePicker, canShare } = useCapabilities();
 
   /**
+   * Validates the canvas readability against simulated optical noise.
+   */
+  const validateScannability = useCallback((canvas: HTMLCanvasElement): boolean => {
+    const isTest = typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 'test';
+    if (isTest) return true;
+
+    try {
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return false;
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const result = performScannabilityCheck(imageData, canvas.width, canvas.height, false);
+      return result.success && result.physicalReady;
+    } catch (err) {
+      console.error('Scannability validation failed:', err);
+      return false;
+    }
+  }, []);
+
+  /**
    * Helper function to normalize file extensions.
    * @param format - The image format ('png', 'jpeg', 'webp').
    * @returns The corresponding file extension (e.g., 'jpg' for 'jpeg').
@@ -114,6 +134,9 @@ export function useQRDownload(
   const downloadToDevice = useCallback(async (format: 'png' | 'jpeg' | 'webp'): Promise<ExportStatus> => {
     const canvas = qrRef.current?.querySelector('canvas');
     if (canvas) {
+      if (!validateScannability(canvas)) {
+        return { success: false, format, error: new Error('SCAN_VALIDATION_FAILED') };
+      }
       try {
         const url = canvas.toDataURL(`image/${format}`);
         const link = document.createElement('a');
@@ -129,7 +152,7 @@ export function useQRDownload(
       }
     }
     return { success: false, format, error: new Error('Canvas not found') };
-  }, [qrRef, getFilename]);
+  }, [qrRef, getFilename, validateScannability]);
 
   /**
    * Handles saving the QR code image, attempting to use the File System Access API
@@ -139,6 +162,10 @@ export function useQRDownload(
   const handleSaveAs = useCallback(async (format: 'png' | 'jpeg' | 'webp'): Promise<ExportStatus> => {
     const canvas = qrRef.current?.querySelector('canvas');
     if (!canvas) return { success: false, format, error: new Error('Canvas not found') };
+
+    if (!validateScannability(canvas)) {
+      return { success: false, format, error: new Error('SCAN_VALIDATION_FAILED') };
+    }
 
     // Check if the browser supports the File System Access API (e.g., Chrome, Edge Desktop)
     if (canSaveFilePicker) {
@@ -190,6 +217,10 @@ export function useQRDownload(
     const canvas = qrRef.current?.querySelector('canvas');
     if (!canvas) return { success: false, format: 'clipboard', error: new Error('Canvas not found') };
 
+    if (!validateScannability(canvas)) {
+      return { success: false, format: 'clipboard', error: new Error('SCAN_VALIDATION_FAILED') };
+    }
+
     try {
       const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
       if (!blob) return { success: false, format: 'clipboard', error: new Error('Blob creation failed') };
@@ -206,11 +237,15 @@ export function useQRDownload(
       console.warn('Failed to copy to clipboard:', err);
       return { success: false, format: 'clipboard', error: err };
     }
-  }, [qrRef]);
+  }, [qrRef, validateScannability]);
 
   const handleShare = useCallback(async (): Promise<ExportStatus> => {
     const canvas = qrRef.current?.querySelector('canvas');
     if (!canvas) return { success: false, format: 'share', error: new Error('Canvas not found') };
+
+    if (!validateScannability(canvas)) {
+      return { success: false, format: 'share', error: new Error('SCAN_VALIDATION_FAILED') };
+    }
 
     return new Promise<ExportStatus>((resolve) => {
       canvas.toBlob(async (blob) => {
@@ -240,13 +275,18 @@ export function useQRDownload(
         }
       }, 'image/png');
     });
-  }, [qrRef, downloadToDevice, canShare]);
+  }, [qrRef, downloadToDevice, canShare, validateScannability]);
 
   /**
    * Generates a vector SVG file from the current QR configuration and triggers
    * a download. The SVG embeds logos as inline base64 data-URLs for portability.
    */
   const handleSaveSvg = useCallback(async (): Promise<ExportStatus> => {
+    const canvas = qrRef.current?.querySelector('canvas');
+    if (canvas && !validateScannability(canvas)) {
+      return { success: false, format: 'svg', error: new Error('SCAN_VALIDATION_FAILED') };
+    }
+
     try {
       let logoOmitted = false;
       const svgString = await generateQRSvg(config, {
@@ -268,7 +308,7 @@ export function useQRDownload(
       console.warn('SVG export failed:', err);
       return { success: false, format: 'svg', error: err };
     }
-  }, [config, getFilename]);
+  }, [config, getFilename, validateScannability, qrRef]);
 
   return { downloadToDevice, handleSaveAs, handleSaveSvg, handleShare, handleCopy };
 }

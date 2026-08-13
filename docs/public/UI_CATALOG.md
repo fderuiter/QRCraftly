@@ -36,7 +36,7 @@ These low-level, primitive UI elements are designed to be extremely customizable
 These components capture specialized data structures required to construct distinct QR code types. They rely entirely on primitive UI inputs.
 
 - **TextInput** (`TextInput.tsx`): Minimalist form component capturing standard unformatted text.
-- **UrlInput** (`UrlInput.tsx`): Text input with automatic verification and correction of URL protocol schemes.
+- **UrlInput** (`UrlInput.tsx` / `UrlInput.test.tsx`): Text input with automatic verification and correction of URL protocol schemes.
 - **EmailInput** (`EmailInput.tsx`): Standard email layout supporting recipient, subject, and body message fields.
 - **PhoneInput** (`PhoneInput.tsx`): Clean, accessible phone dial code layout.
 - **SmsInput** (`SmsInput.tsx`): SMS composer form holding receiver number and predefined message.
@@ -60,7 +60,7 @@ Unified appearance control modules that manage and present customization options
 - **LogoControls** (`LogoControls.tsx`): Coordinates uploading custom logos, configuring scaling boundaries, and adjusting background-mask thresholds.
 - **BorderControls** (`BorderControls.tsx` / `BorderControls.test.tsx`): Controls options for border thickness, padding, and corner radius around outputs.
 - **LayoutControls** (`LayoutControls.tsx` / `LayoutControls.test.tsx`): Controls size, padding, margin, and output format.
-- **AdvancedControls** (`AdvancedControls.tsx`): Advanced visual overrides such as grid density and scannability modifiers.
+- **AdvancedControls** (`AdvancedControls.tsx`): Advanced visual overrides such as grid density, scannability modifiers, and playable maze overlay settings.
 - **ContrastWarning** (`ContrastWarning.tsx`): Dynamic accessibility banner that displays contrast warnings if combinations fall below WCAG parameters.
 
 ---

@@ -23,6 +23,6 @@ describe('qrHelpers Security - URL', () => {
     const result = constructUrlString({
       url: validPayload
     });
-    expect(result).toBe(validPayload);
+    expect(result).toBe('https://example.com/');
   });
 });

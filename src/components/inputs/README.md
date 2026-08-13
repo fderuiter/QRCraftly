@@ -70,3 +70,7 @@ The `InputPanel` features an integrated, high-performance dual-mode QR Code Scan
 
 1. **Live Webcam Viewfinder**: Uses a custom `useCamera` hook to acquire media streams and robustly handles permission rejections (`NotAllowedError`) without throwing unhandled promise exceptions. Decodes real-time camera frames smoothly using the `useAdaptiveScanner` loop backpressure mechanism.
 2. **Client-Side File Upload Fallback**: If camera permissions are blocked or hardware is unavailable, displays an interactive troubleshooting card with platform-specific recovery instructions. Users can instantly transition to file upload mode to drag and drop or select QR code images for client-side decoding using `jsQR`. This guarantees user privacy by avoiding any external server transmissions.
+
+## Playable Maze Overlay Configuration
+
+The centralized configuration in `src/types.ts` also contains parameters for generating a solvable maze overlay directly on the QR code, such as `isMazeEnabled`, `mazeColor`, `mazePathWidth`, and `showMazeSolution`. These parameters are controlled via `AdvancedControls.tsx`.

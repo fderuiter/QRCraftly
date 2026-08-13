@@ -115,3 +115,18 @@ export const SafeUrlPipeline = {
 export const normalizeUrl = (url: string | undefined): string => {
   return SafeUrlPipeline.normalize(url);
 };
+
+/**
+ * Checks if a string looks like a raw domain or web address that needs normalization.
+ * It must not already contain a protocol scheme, and must contain a dot or start with www.
+ */
+export const shouldNormalizeUrl = (url: string | undefined): boolean => {
+  if (!url) return false;
+  const hasProtocol = /^[a-z0-9+-.]+:\/\//i.test(url);
+  if (hasProtocol) return false;
+
+  const hasDot = url.includes('.');
+  const isWww = url.toLowerCase().startsWith('www.');
+
+  return hasDot || isWww;
+};

@@ -51,6 +51,9 @@ export const DEFAULT_CONFIG = {
   templateHeadline: '',
   templateSubtext: '',
   templateQrScale: 1.0,
+  isMazeEnabled: false,
+  mazeColor: '#3b82f6',
+  showMazeSolution: false,
 };
 
 /**

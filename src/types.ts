@@ -163,6 +163,14 @@ export interface QRConfig {
   isAnimating?: boolean;
   /** Desired playback speed of the animation loop in frames per second (FPS). Defaults to 30. */
   animationFps?: number;
+  /** Whether to draw a solvable maze overlay. */
+  isMazeEnabled?: boolean;
+  /** The color of the maze paths. */
+  mazeColor?: string;
+  /** Custom path width. */
+  mazePathWidth?: number;
+  /** Whether to show the solved maze path. */
+  showMazeSolution?: boolean;
 }
 
 /**

@@ -41,6 +41,10 @@ const isInputDataValid = (type: QRType, data: any): boolean => {
     if (data.address && isDangerousUrl(data.address)) {
       return false;
     }
+  } else if (type === QRType.URL) {
+    if (data.url && isDangerousUrl(data.url)) {
+      return false;
+    }
   }
   return true;
 };
@@ -84,11 +88,15 @@ export function useInputLogic(
   }, [inputStates]);
 
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const prevTypeRef = useRef<QRType | null>(null);
 
   // Synchronize input states reactively when config changes externally (e.g., undo/redo or preset loaded)
   useEffect(() => {
     const entry = INPUT_REGISTRY[config.type];
     if (!entry) return;
+
+    const prevType = prevTypeRef.current;
+    prevTypeRef.current = config.type;
 
     const currentLocalState = latestInputStates.current[config.type];
     const currentConstructed = entry.constructFn ? entry.constructFn(currentLocalState as never) : '';
@@ -97,6 +105,14 @@ export function useInputLogic(
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
         timeoutRef.current = null;
+      }
+
+      // If we switched types, and the target type has a non-empty local state,
+      // and the incoming config.value is empty (usually from tab select),
+      // then preserve the local state and push its constructed value to the global state.
+      if (prevType !== null && prevType !== config.type && config.value === '' && currentConstructed !== '') {
+        onChange({ value: currentConstructed });
+        return;
       }
 
       if (entry.hydrateFn && entry.canHydrateFn(config.value)) {
@@ -120,7 +136,7 @@ export function useInputLogic(
         }));
       }
     }
-  }, [config.type, config.value]);
+  }, [config.type, config.value, onChange]);
 
   // Clear timeout if type changes to prevent race conditions (simulating unmount of previous input)
   useEffect(() => {

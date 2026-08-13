@@ -20,7 +20,6 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import QRCode from 'qrcode';
-import jsQR from 'jsqr';
 import { Zap, Flame, Bomb, RotateCcw, ArrowLeft, ShieldAlert, ShieldCheck, Gamepad2, Settings } from 'lucide-react';
 import '@/layouts/index.css';
 
@@ -75,6 +74,7 @@ interface Particle {
  * Includes user controls to modify custom text to render as a QR code,
  * an arcade blaster cannon following mouse aiming, multiple weapon choices,
  * particle blast effects, screen shaking, and synchronous main-thread scan checks.
+ * @returns The rendered Page component.
  */
 export default function Page() {
   // Page state for reactive UI overlays
@@ -112,6 +112,111 @@ export default function Page() {
   useEffect(() => {
     autoFireRef.current = autoFire;
   }, [autoFire]);
+
+  const qrTextRef = useRef<string>(qrText);
+  useEffect(() => {
+    qrTextRef.current = qrText;
+  }, [qrText]);
+
+  // Worker-Locked Offscreen Downscaling Pipeline
+  const downscaleCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const workerRef = useRef<Worker | null>(null);
+  const isWorkerBusyRef = useRef<boolean>(false);
+  const isCheckBlockedRef = useRef<boolean>(false);
+
+  // Initialize offscreen downscaling canvas (256x256)
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      const canvas = document.createElement('canvas');
+      canvas.width = 256;
+      canvas.height = 256;
+      downscaleCanvasRef.current = canvas;
+    }
+  }, []);
+
+  const triggerWorkerCheck = useCallback(() => {
+    const canvas = canvasRef.current;
+    const downscaleCanvas = downscaleCanvasRef.current;
+    const worker = workerRef.current;
+    if (!canvas || !downscaleCanvas || !worker) return;
+
+    const dctx = downscaleCanvas.getContext('2d');
+    if (!dctx) return;
+
+    // Draw square region of the underlying QR code from the active gameplay canvas onto the 256x256 offscreen canvas
+    const qrDisplaySize = 320;
+    const qrX = (canvas.width - qrDisplaySize) / 2;
+    const qrY = 100;
+
+    dctx.clearRect(0, 0, 256, 256);
+    dctx.drawImage(
+      canvas,
+      qrX,
+      qrY,
+      qrDisplaySize,
+      qrDisplaySize,
+      0,
+      0,
+      256,
+      256
+    );
+
+    try {
+      const imgData = dctx.getImageData(0, 0, 256, 256);
+
+      // Lock worker state
+      isWorkerBusyRef.current = true;
+      isCheckBlockedRef.current = false;
+
+      const payload = {
+        imageData: imgData,
+        width: 256,
+        height: 256,
+        isTest: !!navigator.webdriver,
+        configId: String(Date.now())
+      };
+
+      // Zero-copy array buffer transfer
+      worker.postMessage(payload, [payload.imageData.data.buffer]);
+    } catch (err) {
+      console.error('Failed to capture or send downscaled canvas data to worker:', err);
+    }
+  }, []);
+
+  // Initialize background scannability validation worker
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const worker = new Worker(new URL('../../utils/scannabilityWorker.ts', import.meta.url), { type: 'module' });
+        workerRef.current = worker;
+
+        worker.onmessage = (e) => {
+          const { success } = e.data;
+          
+          if (success) {
+            setIsScannable(true);
+            setDecodedText(qrTextRef.current);
+          } else {
+            setIsScannable(false);
+          }
+
+          // Release the worker lock
+          isWorkerBusyRef.current = false;
+
+          // Perform a final "catch-up" check if paint inputs ceased and a check was blocked
+          if (isCheckBlockedRef.current && !isMouseDownRef.current && !autoFireRef.current) {
+            triggerWorkerCheck();
+          }
+        };
+
+        return () => {
+          worker.terminate();
+        };
+      } catch (err) {
+        console.error('Failed to initialize scannability worker:', err);
+      }
+    }
+  }, [triggerWorkerCheck]);
 
   /**
    * Constructs the QR code matrix from a text string and updates game loop data structures.
@@ -151,6 +256,8 @@ export default function Page() {
       setDecodedText(textValue);
       projectilesRef.current = [];
       particlesRef.current = [];
+      isWorkerBusyRef.current = false;
+      isCheckBlockedRef.current = false;
     } catch (err) {
       console.error('Failed to generate QR Code:', err);
     }
@@ -162,55 +269,14 @@ export default function Page() {
   }, [qrText, setupQRMatrix]);
 
   /**
-   * Scans the current matrix grid of intact blocks synchronously using jsQR.
+   * Triggers durability statistics calculations and background worker scannability checking.
    */
   const scanQRState = useCallback(() => {
     const grid = gameGridRef.current;
     const size = qrSizeRef.current;
     if (grid.length === 0) return;
 
-    // Build an offscreen canvas at standard size with 4 modules of quiet margins for high scanning success
-    const quietZone = 4;
-    const scale = 8;
-    const totalModules = size + quietZone * 2;
-    const canvasSize = totalModules * scale;
-
-    const offscreen = document.createElement('canvas');
-    offscreen.width = canvasSize;
-    offscreen.height = canvasSize;
-    const ctx = offscreen.getContext('2d');
-    if (!ctx) return;
-
-    // Fill background with pristine white
-    ctx.fillStyle = '#FFFFFF';
-    ctx.fillRect(0, 0, canvasSize, canvasSize);
-
-    // Draw intact dark blocks as solid black squares
-    ctx.fillStyle = '#000000';
-    for (let r = 0; r < size; r++) {
-      for (let c = 0; c < size; c++) {
-        if (grid[r][c]) {
-          ctx.fillRect(
-            (c + quietZone) * scale,
-            (r + quietZone) * scale,
-            scale,
-            scale
-          );
-        }
-      }
-    }
-
-    const imgData = ctx.getImageData(0, 0, canvasSize, canvasSize);
-    const code = jsQR(imgData.data, imgData.width, imgData.height, { inversionAttempts: 'dontInvert' });
-
-    if (code) {
-      setIsScannable(true);
-      setDecodedText(code.data);
-    } else {
-      setIsScannable(false);
-    }
-
-    // Calculate durability statistics
+    // Calculate durability statistics synchronously on the main thread (lightweight matrix iteration)
     const origGrid = originalGridRef.current;
     let currentIntact = 0;
     let destroyed = 0;
@@ -232,7 +298,16 @@ export default function Page() {
     const origDarkTotal = originalGridRef.current.flat().filter(Boolean).length;
     const currentDurability = origDarkTotal > 0 ? (currentIntact / origDarkTotal) * 100 : 0;
     setDurability(Math.round(currentDurability));
-  }, []);
+
+    // Lock scannability evaluations if a worker job is already active
+    if (isWorkerBusyRef.current) {
+      isCheckBlockedRef.current = true;
+      return;
+    }
+
+    // Trigger the background worker-locked offscreen downscaling pipeline
+    triggerWorkerCheck();
+  }, [triggerWorkerCheck]);
 
   /**
    * Fires a single fast plasma bolt.
@@ -752,6 +827,11 @@ export default function Page() {
 
       ctx.restore(); // restore screenshake translations
 
+      // Check if paint inputs have ceased and a check was blocked
+      if (isCheckBlockedRef.current && !isWorkerBusyRef.current && !isMouseDownRef.current && !autoFireRef.current) {
+        triggerWorkerCheck();
+      }
+
       // Schedule next frame
       animationFrameIdRef.current = requestAnimationFrame(loop);
     };
@@ -763,7 +843,7 @@ export default function Page() {
         cancelAnimationFrame(animationFrameIdRef.current);
       }
     };
-  }, [weapon, fireBullet, scanQRState]);
+  }, [weapon, fireBullet, scanQRState, triggerWorkerCheck]);
 
   // Keybindings for weapon switcher & spacebar firing
   useEffect(() => {
@@ -792,7 +872,7 @@ export default function Page() {
 
   /**
    * Updates coordinates of the mouse on move relative to canvas size.
-   * @param e
+   * @param e The mouse event object.
    */
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
@@ -806,16 +886,21 @@ export default function Page() {
       x: (e.clientX - rect.left) * scaleX,
       y: (e.clientY - rect.top) * scaleY
     };
+
+    if (isMouseDownRef.current) {
+      scanQRState();
+    }
   };
 
   /**
    * Tracks mouse triggers to active shot bursts.
-   * @param e
+   * @param e The mouse event object.
    */
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (e.button !== 0) return; // Left click only
     isMouseDownRef.current = true;
     handleShoot();
+    scanQRState();
   };
 
   /**

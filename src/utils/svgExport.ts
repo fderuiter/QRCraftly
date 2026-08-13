@@ -16,12 +16,12 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { QRConfig } from '../types';
+import { QRConfig, QRType } from '../types';
 import { SvgContext } from './svgContext';
 import { drawWithTemplate, SOCIAL_DIMENSIONS } from './templateRenderer';
 import { getQrTypeLabel, getQrTypeDescription } from './a11y';
 
-import { SafeUrlPipeline, normalizeUrl } from './url';
+import { SafeUrlPipeline, normalizeUrl, shouldNormalizeUrl } from './url';
 import { getCachedAsset } from './assetCache';
 import { sanitizeSvg } from './security';
 
@@ -139,7 +139,11 @@ export async function generateQRSvg(
 ): Promise<string> {
   // Dynamically import qrcode to match the pattern used elsewhere in the project
   const QRCode = await import('qrcode');
-  const qrData = QRCode.create(config.value, { errorCorrectionLevel: config.errorCorrectionLevel });
+  let val = config.value;
+  if (config.type === QRType.URL && shouldNormalizeUrl(val)) {
+    val = normalizeUrl(val);
+  }
+  const qrData = QRCode.create(val, { errorCorrectionLevel: config.errorCorrectionLevel });
   // The qrcode library's BitMatrix.get() returns a number (truthy for dark modules).
   // Our QRModules interface expects boolean, but all consumers treat it as truthy/falsy,
   // so the cast is safe.

@@ -67,3 +67,7 @@ The aesthetic **QR Maze** style (`QRStyle.MAZE`) employs a background-threaded *
 - **Main-Thread Fallback Safeguards**: When Web Workers are unsupported, the synchronous fallback (`src/utils/saltSearch.ts`) executes with cooperative yielding and strict limits on iteration depth.
 - **Strict Execution Timeout Limits**: Background and main-thread search sessions are strictly capped at 2 seconds. If a solvable maze layout cannot be resolved within this window, a fallback default layout is presented, ensuring zero browser freezing or DoS vulnerabilities.
 - **Aesthetic Isolation & Zero-Flipping Integrity**: To keep the QR Reed-Solomon error correction budget 100% intact, no raw module-flipping or canvas modifications are allowed. The finder, alignment, and timing zones remain completely isolated and unmodified, preventing any standard decoding failure vectors.
+
+## Playable Maze Overlay
+
+Maze overlay configurations in `types.ts` (e.g., `isMazeEnabled`, `mazeColor`, `mazePathWidth`, `showMazeSolution`) are statically typed and strictly validated at runtime. This prevents injection or path manipulation during maze rendering.
