@@ -24,7 +24,7 @@ import { useImage } from '../hooks/useImage';
 import { ValidationEngine } from '../engine/ValidationEngine';
 import { Alert } from './ui/Alert';
 import { normalizeUrl, shouldNormalizeUrl } from '../utils/url';
-import { deserializeMazeData, assertInputSchema, assertOutputSchema } from '../utils/mazeWorker';
+import { deserializeMazeData, assertInputSchema, assertOutputSchema } from '../utils/mazeWorkerShared';
 import { generateMaze, MazeData } from '../utils/qr-renderers/maze';
 
 /**
