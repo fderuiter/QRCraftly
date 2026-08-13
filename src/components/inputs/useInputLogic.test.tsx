@@ -132,4 +132,29 @@ describe("useInputLogic", () => {
     // Validation should fail and prevent the onChange callback from propagating
     expect(onChange).not.toHaveBeenCalled();
   });
+
+  it("should validate URL input locally and block onChange propagation if URL is dangerous", () => {
+    const config = createMockConfig(QRType.URL, "https://example.com");
+    const onChange = vi.fn();
+
+    const { result } = renderHook(
+      ({ cfg }) => useInputLogic(cfg, onChange),
+      { initialProps: { cfg: config } }
+    );
+
+    expect((result.current.inputProps.data as any).url).toBe("https://example.com");
+
+    // Change URL to a dangerous javascript URI
+    act(() => {
+      result.current.inputProps.onChange({ url: "javascript:alert(1)" });
+    });
+
+    // Advance timers by 200ms to trigger debounce
+    act(() => {
+      vi.advanceTimersByTime(200);
+    });
+
+    // Validation should fail and prevent the onChange callback from propagating
+    expect(onChange).not.toHaveBeenCalled();
+  });
 });

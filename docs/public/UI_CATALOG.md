@@ -36,7 +36,7 @@ These low-level, primitive UI elements are designed to be extremely customizable
 These components capture specialized data structures required to construct distinct QR code types. They rely entirely on primitive UI inputs.
 
 - **TextInput** (`TextInput.tsx`): Minimalist form component capturing standard unformatted text.
-- **UrlInput** (`UrlInput.tsx`): Text input with automatic verification and correction of URL protocol schemes.
+- **UrlInput** (`UrlInput.tsx` / `UrlInput.test.tsx`): Text input with automatic verification and correction of URL protocol schemes.
 - **EmailInput** (`EmailInput.tsx`): Standard email layout supporting recipient, subject, and body message fields.
 - **PhoneInput** (`PhoneInput.tsx`): Clean, accessible phone dial code layout.
 - **SmsInput** (`SmsInput.tsx`): SMS composer form holding receiver number and predefined message.

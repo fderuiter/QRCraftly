@@ -3,8 +3,9 @@ import { UrlContract, constructUrlString } from './url';
 import { QRType } from '../../types';
 
 describe('Url generator and contract', () => {
-  it('constructs url string', () => {
-    expect(constructUrlString({ url: 'https://example.com' })).toBe('https://example.com');
+  it('constructs url string with normalization', () => {
+    expect(constructUrlString({ url: 'https://example.com' })).toBe('https://example.com/');
+    expect(constructUrlString({ url: 'google.com' })).toBe('http://google.com/');
   });
 
   it('implements UrlContract correctly and validates URLs', () => {

@@ -41,6 +41,10 @@ const isInputDataValid = (type: QRType, data: any): boolean => {
     if (data.address && isDangerousUrl(data.address)) {
       return false;
     }
+  } else if (type === QRType.URL) {
+    if (data.url && isDangerousUrl(data.url)) {
+      return false;
+    }
   }
   return true;
 };
