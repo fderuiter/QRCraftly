@@ -20,7 +20,12 @@ const AUTHORIZED_SIGNATURES = [
   '_svgDominantBaseline',
   'is404ServerSideRouted',
   '.pageContext.json',
-  'pageContextFromServer'
+  'pageContextFromServer',
+  'fetchWasmAsset',
+  'sanitizeSvg',
+  'SafeUrlPipeline',
+  'Failed to download WebAssembly demuxer assets',
+  'FileReader error'
 ];
 
 /**

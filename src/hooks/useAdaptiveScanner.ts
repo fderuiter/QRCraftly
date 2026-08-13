@@ -108,6 +108,14 @@ export function useAdaptiveScanner({
   const latencyHistoryRef = useRef<number[]>([]);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
+  // Watchdog & stability tracking refs
+  const consecutiveRestartAttemptsRef = useRef<number>(0);
+  const inFlightStartRef = useRef<number | null>(null);
+
+  const handleMessageRef = useRef<((e: MessageEvent) => void) | null>(null);
+  const handleErrorRef = useRef<((err: any) => void) | null>(null);
+  const handleMessageErrorRef = useRef<((err: any) => void) | null>(null);
+
   // Sync ref with option functions to avoid re-triggering effects on callbacks change
   const onScanSuccessRef = useRef(onScanSuccess);
   const onScanFailRef = useRef(onScanFail);
@@ -116,6 +124,166 @@ export function useAdaptiveScanner({
     onScanFailRef.current = onScanFail;
   }, [onScanSuccess, onScanFail]);
 
+  const recreateWorker = useCallback(() => {
+    // 1. Stability guardrail: limit auto-restart attempts to a maximum of 3 consecutive retries
+    consecutiveRestartAttemptsRef.current += 1;
+    if (consecutiveRestartAttemptsRef.current > 3) {
+      console.error("Scanner background worker crashed repeatedly. Stopping scanning loop.");
+      setIsScanning(false);
+      poolRef.current = [];
+      currentWidthRef.current = 0;
+      currentHeightRef.current = 0;
+      consecutiveRestartAttemptsRef.current = 0; // Reset counter
+      if (onScanFailRef.current) {
+        onScanFailRef.current(
+          "The scanner background worker crashed repeatedly. Please restart the page or check your camera."
+        );
+      }
+      return;
+    }
+
+    console.warn(`Watchdog: Recreating worker. Attempt ${consecutiveRestartAttemptsRef.current} of 3 consecutive retries.`);
+
+    // 2. Terminate the active worker instance safely
+    if (workerRef.current) {
+      try {
+        workerRef.current.terminate();
+      } catch (err) {
+        console.error('Failed to terminate old worker during recovery:', err);
+      }
+      workerRef.current = null;
+    }
+
+    // 3. Clear/reset in-flight sequence tracking flags
+    inFlightRef.current = false;
+    inFlightStartRef.current = null;
+    startTimeMapRef.current.clear();
+
+    // 4. Replenish the double-buffering pool with exactly two ArrayBuffer instances matching the current dimension
+    if (currentWidthRef.current > 0 && currentHeightRef.current > 0) {
+      const bufferSize = currentWidthRef.current * currentHeightRef.current * 4;
+      poolRef.current = [
+        new ArrayBuffer(bufferSize),
+        new ArrayBuffer(bufferSize),
+      ];
+    } else {
+      poolRef.current = [];
+    }
+
+    // 5. Create new worker
+    if (typeof window === 'undefined') return;
+    try {
+      const worker = new Worker(new URL('../utils/scannerWorker.ts', import.meta.url), { type: 'module' });
+      workerRef.current = worker;
+
+      // 6. Re-attach listeners via delegating wrappers
+      const onMsg = (e: MessageEvent) => handleMessageRef.current?.(e);
+      const onErr = (err: any) => handleErrorRef.current?.(err);
+      const onMsgErr = (err: any) => handleMessageErrorRef.current?.(err);
+
+      worker.addEventListener('message', onMsg);
+      worker.addEventListener('error', onErr);
+      worker.addEventListener('messageerror', onMsgErr);
+    } catch (err) {
+      console.error('Failed to recreate worker:', err);
+    }
+  }, []);
+
+  const handleMessage = useCallback((e: MessageEvent) => {
+    const payload = e.data;
+
+    // Schema validation
+    if (!isValidScannerResponse(payload)) {
+      console.error('Invalid scanner response payload:', payload);
+      return;
+    }
+
+    // Reset consecutive restart attempts on a successful frame process/response
+    consecutiveRestartAttemptsRef.current = 0;
+
+    const { status: resultStatus, sequenceId, decodedData, error, buffer } = payload;
+
+    // Recycle buffer back into the pool even if message is stale
+    if (buffer && buffer.byteLength === currentWidthRef.current * currentHeightRef.current * 4) {
+      if (!poolRef.current.includes(buffer)) {
+        if (poolRef.current.length < 2) {
+          poolRef.current.push(buffer);
+        }
+      }
+    }
+
+    const startTime = startTimeMapRef.current.get(sequenceId);
+    if (startTime !== undefined) {
+      startTimeMapRef.current.delete(sequenceId);
+      const endTime = performance.now();
+      const duration = endTime - startTime;
+
+      // Requirement 5: Discard out-of-order older worker results
+      if (sequenceId <= completedSequenceRef.current) {
+        // Releases backpressure for this discarded request is handled when the current in-flight completes
+        return;
+      }
+      completedSequenceRef.current = sequenceId;
+
+      // Keep rolling latency history (last three cycles)
+      const updatedHistory = [...latencyHistoryRef.current, duration];
+      if (updatedHistory.length > 3) {
+        updatedHistory.shift();
+      }
+      latencyHistoryRef.current = updatedHistory;
+      setLatencyHistory(updatedHistory);
+
+      // Update status state
+      setStatus(resultStatus);
+
+      if (resultStatus === 'pass') {
+        if (decodedData && onScanSuccessRef.current) {
+          onScanSuccessRef.current(decodedData);
+        }
+      } else if (resultStatus === 'fail') {
+        if (onScanFailRef.current) {
+          onScanFailRef.current(error || undefined);
+        }
+      }
+
+      // Dynamic Throttling / Throttling Logic (Requirement 3 / Acceptance Criteria)
+      setSamplingDelay((prevDelay) => {
+        const avgDuration = updatedHistory.reduce((a, b) => a + b, 0) / updatedHistory.length;
+        const latencyMetric = Math.max(duration, avgDuration);
+
+        if (latencyMetric > 100) {
+          // Scale down: increase sampling delay (slower capture rate)
+          return Math.min(maxSamplingDelay, Math.max(prevDelay + 50, latencyMetric * 1.5));
+        } else if (latencyMetric < 40) {
+          // Scale up: decrease sampling delay (faster capture rate)
+          return Math.max(minSamplingDelay, prevDelay - 10);
+        }
+        return prevDelay;
+      });
+
+      // Release the in-flight block to allow next frame dispatches
+      inFlightRef.current = false;
+      inFlightStartRef.current = null;
+    }
+  }, [minSamplingDelay, maxSamplingDelay]);
+
+  const handleError = useCallback((err: any) => {
+    console.error('Worker thread-level runtime boundary error:', err);
+    recreateWorker();
+  }, [recreateWorker]);
+
+  const handleMessageError = useCallback((err: any) => {
+    console.error('Worker thread-level message data transfer error:', err);
+    recreateWorker();
+  }, [recreateWorker]);
+
+  // Update refs to point to the latest callback versions in an effect (not during render)
+  useEffect(() => {
+    handleMessageRef.current = handleMessage;
+    handleErrorRef.current = handleError;
+    handleMessageErrorRef.current = handleMessageError;
+  }, [handleMessage, handleError, handleMessageError]);
+
   // Handle worker initialization and communication lifecycle
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -123,90 +291,21 @@ export function useAdaptiveScanner({
     const worker = new Worker(new URL('../utils/scannerWorker.ts', import.meta.url), { type: 'module' });
     workerRef.current = worker;
 
-    const handleMessage = (e: MessageEvent) => {
-      const payload = e.data;
+    const onMsg = (e: MessageEvent) => handleMessageRef.current?.(e);
+    const onErr = (err: any) => handleErrorRef.current?.(err);
+    const onMsgErr = (err: any) => handleMessageErrorRef.current?.(err);
 
-      // Schema validation
-      if (!isValidScannerResponse(payload)) {
-        console.error('Invalid scanner response payload:', payload);
-        return;
-      }
-
-      const { status: resultStatus, sequenceId, decodedData, error, buffer } = payload;
-
-      // Recycle buffer back into the pool even if message is stale
-      if (buffer && buffer.byteLength === currentWidthRef.current * currentHeightRef.current * 4) {
-        if (!poolRef.current.includes(buffer)) {
-          if (poolRef.current.length < 2) {
-            poolRef.current.push(buffer);
-          }
-        }
-      }
-
-      const startTime = startTimeMapRef.current.get(sequenceId);
-      if (startTime !== undefined) {
-        startTimeMapRef.current.delete(sequenceId);
-        const endTime = performance.now();
-        const duration = endTime - startTime;
-
-        // Requirement 5: Discard out-of-order older worker results
-        if (sequenceId <= completedSequenceRef.current) {
-          // Releases backpressure for this discarded request is handled when the current in-flight completes
-          return;
-        }
-        completedSequenceRef.current = sequenceId;
-
-        // Keep rolling latency history (last three cycles)
-        const updatedHistory = [...latencyHistoryRef.current, duration];
-        if (updatedHistory.length > 3) {
-          updatedHistory.shift();
-        }
-        latencyHistoryRef.current = updatedHistory;
-        setLatencyHistory(updatedHistory);
-
-        // Update status state
-        setStatus(resultStatus);
-
-        if (resultStatus === 'pass') {
-          if (decodedData && onScanSuccessRef.current) {
-            onScanSuccessRef.current(decodedData);
-          }
-        } else if (resultStatus === 'fail') {
-          if (onScanFailRef.current) {
-            onScanFailRef.current(error || undefined);
-          }
-        }
-
-        // Dynamic Throttling / Throttling Logic (Requirement 3 / Acceptance Criteria)
-        setSamplingDelay((prevDelay) => {
-          const avgDuration = updatedHistory.reduce((a, b) => a + b, 0) / updatedHistory.length;
-          const latencyMetric = Math.max(duration, avgDuration);
-
-          let nextDelay = prevDelay;
-          if (latencyMetric > 100) {
-            // Scale down: increase sampling delay (slower capture rate)
-            nextDelay = Math.min(maxSamplingDelay, Math.max(prevDelay + 50, latencyMetric * 1.5));
-          } else if (latencyMetric < 40) {
-            // Scale up: decrease sampling delay (faster capture rate)
-            nextDelay = Math.max(minSamplingDelay, prevDelay - 10);
-          }
-          samplingDelayRef.current = nextDelay;
-          return nextDelay;
-        });
-
-        // Release the in-flight block to allow next frame dispatches
-        inFlightRef.current = false;
-      }
-    };
-
-    worker.addEventListener('message', handleMessage);
+    worker.addEventListener('message', onMsg);
+    worker.addEventListener('error', onErr);
+    worker.addEventListener('messageerror', onMsgErr);
 
     return () => {
-      worker.removeEventListener('message', handleMessage);
       worker.terminate();
-      workerRef.current = null;
+      if (workerRef.current === worker) {
+        workerRef.current = null;
+      }
     };
-  }, [minSamplingDelay, maxSamplingDelay]);
+  }, []);
 
   const captureFrame = useCallback(() => {
     const video = videoRef.current;
@@ -264,6 +363,7 @@ export function useAdaptiveScanner({
       bufferView.set(imageData.data);
 
       inFlightRef.current = true;
+      inFlightStartRef.current = performance.now();
       startTimeMapRef.current.set(seqId, performance.now());
       setStatus('checking');
 
@@ -408,11 +508,20 @@ export function useAdaptiveScanner({
 
         // Requirement 2 / Constraint: Block new frame dispatches while in-flight
         if (inFlightRef.current) {
-          isLoopRunning = true;
-          timerId = setTimeout(() => {
-            rafId = requestAnimationFrame(runLoop);
-          }, samplingDelayRef.current);
-          return;
+          if (inFlightStartRef.current) {
+            const elapsed = performance.now() - inFlightStartRef.current;
+            if (elapsed > 1500) {
+              console.warn(`Watchdog: Worker starvation detected (${elapsed.toFixed(0)}ms > 1500ms). Recreating worker.`);
+              recreateWorker();
+            }
+          }
+          if (inFlightRef.current) {
+            isLoopRunning = true;
+            timerId = setTimeout(() => {
+              rafId = requestAnimationFrame(runLoop);
+            }, samplingDelayRef.current);
+            return;
+          }
         }
 
         // Requirement 6: Wrap actual pixel acquisition in idle browser periods to keep active UI highly responsive
@@ -447,12 +556,14 @@ export function useAdaptiveScanner({
       if (rafId) cancelAnimationFrame(rafId);
       detachVideoListeners();
     };
-  }, [isScanning, videoRef, captureFrame, attachVideoListeners, detachVideoListeners]);
+  }, [isScanning, videoRef, captureFrame, attachVideoListeners, detachVideoListeners, recreateWorker]);
 
   const startScanning = useCallback(() => {
     setIsScanning(true);
+    consecutiveRestartAttemptsRef.current = 0;
     // Reset state counters when restarting
     inFlightRef.current = false;
+    inFlightStartRef.current = null;
     sequenceRef.current = 0;
     completedSequenceRef.current = 0;
     startTimeMapRef.current.clear();
@@ -463,6 +574,8 @@ export function useAdaptiveScanner({
 
   const stopScanning = useCallback(() => {
     setIsScanning(false);
+    consecutiveRestartAttemptsRef.current = 0;
+    inFlightStartRef.current = null;
     poolRef.current = [];
     currentWidthRef.current = 0;
     currentHeightRef.current = 0;

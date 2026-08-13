@@ -755,4 +755,179 @@ describe('useAdaptiveScanner Hook with Bidirectional Buffer Recycling', () => {
     expect(cancelAnimationFrameSpy).not.toHaveBeenCalled();
     cancelAnimationFrameSpy.mockRestore();
   });
+
+  it('should recover and continue scanning after a simulated worker thread crash', () => {
+    const videoRef = makeVideoRef();
+    const { result } = renderHook(() =>
+      useAdaptiveScanner({
+        videoRef,
+      })
+    );
+
+    let activeWorker: any = null;
+    let postMessageCalls: any[] = [];
+    globalThis.mockWorkerControl.setInterceptor((msg, worker) => {
+      activeWorker = worker;
+      postMessageCalls.push(msg);
+    });
+
+    act(() => {
+      result.current.startScanning();
+    });
+
+    // Advance to trigger first frame capture
+    act(() => {
+      vi.advanceTimersByTime(50);
+    });
+
+    expect(postMessageCalls).toHaveLength(1);
+    expect(result.current.status).toBe('checking');
+
+    const firstWorker = activeWorker;
+    expect(firstWorker).not.toBeNull();
+
+    // Now, simulate worker crash (trigger error)
+    act(() => {
+      firstWorker.dispatchError(new Error('Simulated thread crash'));
+    });
+
+    // Worker should have been recreated, and activeWorker should be a new instance
+    const secondWorker = getActiveWorker();
+    expect(secondWorker).not.toBe(firstWorker);
+    expect(firstWorker.terminate).toHaveBeenCalled();
+
+    // Advance timers further to allow the next loop tick to capture a new frame
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
+
+    // A second frame should be dispatched on the new worker
+    expect(postMessageCalls).toHaveLength(2);
+    expect(postMessageCalls[1].sequenceId).toBe(2);
+  });
+
+  it('should detect starvation when worker takes >1500ms and auto-restart', () => {
+    const videoRef = makeVideoRef();
+    const { result } = renderHook(() =>
+      useAdaptiveScanner({
+        videoRef,
+      })
+    );
+
+    let activeWorker: any = null;
+    let postMessageCalls: any[] = [];
+    globalThis.mockWorkerControl.setInterceptor((msg, worker) => {
+      activeWorker = worker;
+      postMessageCalls.push(msg);
+    });
+
+    act(() => {
+      result.current.startScanning();
+    });
+
+    // Trigger first frame capture
+    act(() => {
+      vi.advanceTimersByTime(50);
+    });
+
+    expect(postMessageCalls).toHaveLength(1);
+    const firstWorker = activeWorker;
+
+    // Advance by 1600ms (exceeding 1500ms starvation threshold)
+    act(() => {
+      vi.advanceTimersByTime(1600);
+    });
+
+    // Starvation should be detected, and worker recreated
+    const secondWorker = getActiveWorker();
+    expect(secondWorker).not.toBe(firstWorker);
+    expect(firstWorker.terminate).toHaveBeenCalled();
+
+    // Advance timers further to allow the next loop tick to capture a new frame
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
+
+    expect(postMessageCalls).toHaveLength(2);
+    expect(postMessageCalls[1].sequenceId).toBe(2);
+  });
+
+  it('should halt scanning and notify user if consecutive restarts exceed 3', () => {
+    const videoRef = makeVideoRef();
+    const failCallback = vi.fn();
+    const { result } = renderHook(() =>
+      useAdaptiveScanner({
+        videoRef,
+        onScanFail: failCallback,
+      })
+    );
+
+    let activeWorker: any = null;
+    let postMessageCalls: any[] = [];
+    globalThis.mockWorkerControl.setInterceptor((msg, worker) => {
+      activeWorker = worker;
+      postMessageCalls.push(msg);
+    });
+
+    act(() => {
+      result.current.startScanning();
+    });
+
+    // Trigger first frame capture
+    act(() => {
+      vi.advanceTimersByTime(50);
+    });
+
+    expect(postMessageCalls).toHaveLength(1);
+    
+    // Simulate 3 consecutive worker crashes
+    // Crash 1 -> Recreate 1
+    act(() => {
+      activeWorker.dispatchError(new Error('Crash 1'));
+    });
+    expect(result.current.isScanning).toBe(true);
+
+    // Let next frame dispatch on newly recreated worker
+    act(() => {
+      vi.advanceTimersByTime(50);
+    });
+    expect(postMessageCalls).toHaveLength(2);
+
+    // Crash 2 -> Recreate 2
+    act(() => {
+      activeWorker.dispatchError(new Error('Crash 2'));
+    });
+    expect(result.current.isScanning).toBe(true);
+
+    // Let next frame dispatch on newly recreated worker
+    act(() => {
+      vi.advanceTimersByTime(50);
+    });
+    expect(postMessageCalls).toHaveLength(3);
+
+    // Crash 3 -> Recreate 3
+    act(() => {
+      activeWorker.dispatchError(new Error('Crash 3'));
+    });
+    expect(result.current.isScanning).toBe(true);
+
+    // Let next frame dispatch on newly recreated worker
+    act(() => {
+      vi.advanceTimersByTime(50);
+    });
+    expect(postMessageCalls).toHaveLength(4);
+
+    // Crash 4 -> Should exceed limit (3 retries) and stop scanning
+    act(() => {
+      activeWorker.dispatchError(new Error('Crash 4'));
+    });
+
+    // Scanning should be stopped
+    expect(result.current.isScanning).toBe(false);
+
+    // User should be notified with the expected error message
+    expect(failCallback).toHaveBeenCalledWith(
+      "The scanner background worker crashed repeatedly. Please restart the page or check your camera."
+    );
+  });
 });

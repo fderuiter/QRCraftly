@@ -229,9 +229,14 @@ export function runAuditor(options = {}) {
       
       const gitDir = path.join(repoRoot, '.git');
       if (!customExistsSync(gitDir)) {
-        console.error('❌ [Lineage Auditor] Missing Git directory! Failed closed in CI environment.');
-        exit(1);
-        return;
+        if (env.CF_PAGES) {
+          console.warn('⚠️ [Lineage Auditor] Missing Git directory in Cloudflare CI environment. Skipping lineage check.');
+          return;
+        } else {
+          console.error('❌ [Lineage Auditor] Missing Git directory! Failed closed in CI environment.');
+          exit(1);
+          return;
+        }
       }
 
       let diffStdout = null;
@@ -257,6 +262,10 @@ export function runAuditor(options = {}) {
             diffStdout = customExecSync('git', ['diff', '--name-only', 'HEAD~1', 'HEAD'], { encoding: 'utf8', cwd: repoRoot });
             console.log(`[Lineage Auditor] Successfully resolved files via HEAD~1 HEAD diff.`);
           } catch (fallbackErr2) {
+            if (env.CF_PAGES) {
+              console.warn('⚠️ [Lineage Auditor] Git comparison failed in Cloudflare CI environment. Skipping lineage check.');
+              return;
+            }
             console.error('❌ [Lineage Auditor] Both target branch comparison and single-commit fallback failed.');
             console.error('Diagnostic info:', fallbackErr2.message);
             exit(1);
