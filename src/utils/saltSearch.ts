@@ -63,7 +63,7 @@ export async function performSaltSearch(
         errorCorrectionLevel: config.errorCorrectionLevel,
       });
       const currentSize = qrData.modules.size;
-      const modules: QRModules = qrData.modules;
+      const modules: QRModules = qrData.modules as unknown as QRModules;
 
       const solvable = isMazeSolvable(modules, actualEntry, actualExit);
       if (solvable) {

@@ -101,7 +101,7 @@ self.onmessage = async (e: MessageEvent<{
           errorCorrectionLevel: config.errorCorrectionLevel,
         });
         const currentSize = qrData.modules.size;
-        const modules: QRModules = qrData.modules;
+        const modules: QRModules = qrData.modules as unknown as QRModules;
 
         // Stage 1: Fast BFS Solvability check
         const solvable = isMazeSolvable(modules, actualEntry, actualExit);
