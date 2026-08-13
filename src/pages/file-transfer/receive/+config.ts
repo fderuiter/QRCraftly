@@ -17,8 +17,6 @@
 */
 
 export default {
-    title: 'Offline Animated QR File Receiver | High-Performance - QRCraftly',
-    description: 'Receive files offline safely using multi-frame QR streams and camera capture. Optimized with lookahead packet recovery.',
     image: '/og-image.png?type=file-transfer-receive',
     imageAlt: 'Preview of the High-Performance Animated QR File Receiver'
 }

@@ -21,6 +21,4 @@
  * Leverages the local +Layout.tsx file to bypass the default layout shell.
  */
 export default {
-  title: 'Destroy the QR! - Interactive Mini-Game',
-  description: 'An interactive 60 FPS mini-game to test the durability of your QR codes in real-time with lasers and explosions.'
 };

@@ -20,8 +20,6 @@
  * Page-specific configuration for the Meeting QR Code page.
  */
 export default {
-    title: 'Free Virtual Meeting QR Code Generator | Zoom & Teams - QRCraftly',
-    description: 'Generate QR codes for virtual meetings. Paste meeting join links for Zoom, Microsoft Teams, and Google Meet. Fast, free, and secure.',
     image: '/og-image.png?type=meeting',
     imageAlt: 'Preview of the Meeting QR Code Generator tool'
 }

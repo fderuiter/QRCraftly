@@ -17,8 +17,6 @@
 */
 
 export default {
-    title: 'Offline Animated QR File Transfer | High-Performance - QRCraftly',
-    description: 'Share files offline safely using multi-frame QR streams and recycled UI canvas. Optimized to prevent memory crashes on mobile browsers.',
     image: '/og-image.png?type=file-transfer',
     imageAlt: 'Preview of the High-Performance Animated QR File Transfer tool'
 }

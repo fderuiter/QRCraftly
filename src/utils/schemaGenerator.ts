@@ -42,6 +42,7 @@ export function generateSchema(content: ToolContent, resolvedDomain?: string, re
       {
         "@type": "AboutPage",
         "name": content.name,
+        "description": content.description,
         "url": publicUrl,
         "mainEntity": {
           "@id": `${domain}/#organization`
@@ -82,6 +83,7 @@ export function generateSchema(content: ToolContent, resolvedDomain?: string, re
   const appEntity: any = {
     "@type": typeValue,
     "name": content.name,
+    "description": content.description,
     "url": publicUrl,
     "applicationCategory": categoryValue,
     "operatingSystem": "All",

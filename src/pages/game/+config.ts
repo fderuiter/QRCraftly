@@ -22,7 +22,5 @@ import type { Config } from 'vike/types';
  * Page-specific configuration for the QR Damage Simulator Game page.
  */
 export default {
-  title: 'QR Damage Simulator Game | Interactive Gameplay - QRCraftly',
-  description: 'Play and damage QR codes in real-time. Map damage to coordinates and test error-correction health bars with smooth 60fps play.',
   prerender: false,
 } satisfies Config;

@@ -12,6 +12,7 @@ describe('Content Registry Validation', () => {
       expect(tool.name, `File src/data/contentRegistry.ts - Tool '${key}': Missing or invalid 'name'`).toBeTypeOf('string');
       expect(tool.url, `File src/data/contentRegistry.ts - Tool '${key}': Missing or invalid 'url'`).toBeTypeOf('string');
       expect(tool.description, `File src/data/contentRegistry.ts - Tool '${key}': Missing or invalid 'description'`).toBeTypeOf('string');
+      expect(tool.seoTitle, `File src/data/contentRegistry.ts - Tool '${key}': Missing or invalid 'seoTitle'`).toBeTypeOf('string');
       expect(Array.isArray(tool.features), `File src/data/contentRegistry.ts - Tool '${key}': 'features' must be an array`).toBe(true);
       if (tool.faqs !== undefined) {
         expect(Array.isArray(tool.faqs), `File src/data/contentRegistry.ts - Tool '${key}': 'faqs' must be an array`).toBe(true);
@@ -40,6 +41,7 @@ describe('Content Registry Validation', () => {
       checkString(tool.name, 'name');
       checkString(tool.url, 'url');
       checkString(tool.description, 'description');
+      checkString(tool.seoTitle, 'seoTitle');
 
       tool.features.forEach((feature, index) => {
         checkString(feature, `features[${index}]`);
