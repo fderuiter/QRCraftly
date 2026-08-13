@@ -4,7 +4,6 @@ import { useCamera } from '../hooks/useCamera';
 import { useAdaptiveScanner } from '../hooks/useAdaptiveScanner';
 import { Button } from './ui/Button';
 import { fetchWasmAsset } from '../utils/assetCache';
-import jsQR from 'jsqr';
 
 /**
  * QRScannerProps definition.
@@ -420,28 +419,33 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
               } catch (workerError) {
                 // Robust fallback to synchronous main-thread decoding if Worker fails to instantiate
                 console.warn('Worker creation failed, falling back to main-thread decoding:', workerError);
-                const code = jsQR(new Uint8ClampedArray(imageData1024.data.buffer), downscaledWidth, downscaledHeight);
-                if (code && code.data) {
-                  resolve(code.data);
-                } else {
-                  // Fallback to full resolution main-thread decoding
-                  const canvasFull = document.createElement('canvas');
-                  canvasFull.width = img.width;
-                  canvasFull.height = img.height;
-                  const ctxFull = canvasFull.getContext('2d');
-                  if (!ctxFull) {
-                    reject(new Error('Failed to create canvas context.'));
-                    return;
-                  }
-                  ctxFull.drawImage(img, 0, 0);
-                  const imageDataFull = ctxFull.getImageData(0, 0, img.width, img.height);
-                  const codeFull = jsQR(imageDataFull.data, img.width, img.height);
-                  if (codeFull && codeFull.data) {
-                    resolve(codeFull.data);
+                import('jsqr').then((jsQRModule) => {
+                  const jsQR = jsQRModule.default || jsQRModule;
+                  const code = jsQR(new Uint8ClampedArray(imageData1024.data.buffer), downscaledWidth, downscaledHeight);
+                  if (code && code.data) {
+                    resolve(code.data);
                   } else {
-                    reject(new Error('No QR code detected in this image. Try a clearer or higher-contrast QR code image.'));
+                    // Fallback to full resolution main-thread decoding
+                    const canvasFull = document.createElement('canvas');
+                    canvasFull.width = img.width;
+                    canvasFull.height = img.height;
+                    const ctxFull = canvasFull.getContext('2d');
+                    if (!ctxFull) {
+                      reject(new Error('Failed to create canvas context.'));
+                      return;
+                    }
+                    ctxFull.drawImage(img, 0, 0);
+                    const imageDataFull = ctxFull.getImageData(0, 0, img.width, img.height);
+                    const codeFull = jsQR(imageDataFull.data, img.width, img.height);
+                    if (codeFull && codeFull.data) {
+                      resolve(codeFull.data);
+                    } else {
+                      reject(new Error('No QR code detected in this image. Try a clearer or higher-contrast QR code image.'));
+                    }
                   }
-                }
+                }).catch((err) => {
+                  reject(err);
+                });
                 return;
               }
 

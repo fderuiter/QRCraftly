@@ -1,12 +1,27 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { Marked } from 'marked';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const repoRoot = path.join(__dirname, '..');
 export const docsPublicDir = path.join(repoRoot, 'docs', 'public');
 export const outputManifestPath = path.join(repoRoot, 'src', 'data', 'docs_manifest.json');
+
+function slugify(text) {
+  let prev;
+  do {
+    prev = text;
+    text = text.replace(/<[^>]*>/g, '');
+  } while (text !== prev);
+
+  return text
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, '') // remove non-word characters except spaces and hyphens
+    .replace(/\s+/g, '-');    // replace spaces with hyphens
+}
 
 export function extractTitle(content) {
   const match = content.match(/^#\s+(.+)$/m);
@@ -151,6 +166,47 @@ export function compileManifest(inputDir = docsPublicDir, outputPath = outputMan
         });
       }
     }
+  }
+
+  // Pre-compile Markdown to HTML using custom marked renderer & walkTokens
+  for (const doc of manifest) {
+    const contentWithoutH1 = doc.content.replace(/^#\s+.+$/m, '');
+    const scopedMarked = new Marked({
+      renderer: {
+        heading({ text, depth }) {
+          const newDepth = Math.min(depth + 1, 6);
+          const slug = slugify(text);
+          const id = `${doc.id}-${slug}`;
+          return `<h${newDepth} id="${id}">${text}</h${newDepth}>`;
+        }
+      },
+      walkTokens(token) {
+        if (token.type === 'link') {
+          const href = token.href;
+          if (href.startsWith('#')) {
+            const fragment = href.slice(1);
+            if (fragment) {
+              token.href = `#${doc.id}-${fragment}`;
+            }
+          } else {
+            const parts = href.split('#');
+            const file = parts[0];
+            const hash = parts[1];
+            const baseName = file.split('/').pop() || file;
+            const targetDoc = manifest.find(d => d.filename === baseName);
+            if (targetDoc) {
+              if (hash) {
+                token.href = `#${targetDoc.id}-${hash}`;
+              } else {
+                token.href = `#${targetDoc.id}`;
+              }
+            }
+          }
+        }
+      }
+    });
+
+    doc.html = scopedMarked.parse(contentWithoutH1);
   }
 
   fs.writeFileSync(outputPath, JSON.stringify(manifest, null, 2) + '\n', 'utf-8');
