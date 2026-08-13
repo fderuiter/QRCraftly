@@ -56,3 +56,7 @@ To prevent custom SVG logo uploads and native vector exports from exposing users
 ## QR Animation Loops
 
 Animation configuration structures in `types.ts` are strictly statically typed to prevent any runtime execution or script-injection pathways during high-frequency loop playbacks.
+
+## Playable Maze Overlay
+
+Maze overlay configurations in `types.ts` (e.g., `isMazeEnabled`, `mazeColor`, `mazePathWidth`, `showMazeSolution`) are statically typed and strictly validated at runtime. This prevents injection or path manipulation during maze rendering.
