@@ -27,7 +27,9 @@ import { QRStyle } from '../types';
  * @returns The safely clamped corner radius.
  */
 export const clampCornerRadius = (r: number, w: number, h: number): number => {
-  return Math.max(0, Math.min(r, w / 2, h / 2));
+  const absW = Math.abs(w);
+  const absH = Math.abs(h);
+  return Math.max(0, Math.min(r, absW / 2, absH / 2));
 };
 
 /**
