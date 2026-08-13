@@ -342,7 +342,7 @@ describe('Local Git-Diff Lineage Auditor', () => {
       expect(exitCode).toBeNull(); // passes!
     });
 
-    it('should run in CI and fallback to single-commit comparison if target branch fails', () => {
+    it('should run in CI and fail closed without fallback if target branch comparison fails', () => {
       let exitCode = null;
       let usedFallback = false;
       const mockOptions = {
@@ -353,9 +353,8 @@ describe('Local Git-Diff Lineage Auditor', () => {
           if (file === 'git' && argStr.includes('origin/main...HEAD')) {
             throw new Error('Ref not found / shallow clone');
           }
-          if (file === 'git' && argStr === 'diff-tree --no-commit-id --name-only -r HEAD') {
+          if (file === 'git' && (argStr.includes('diff-tree') || argStr.includes('HEAD~1'))) {
             usedFallback = true;
-            return 'src/utils/sharedContract.ts\ndocs/public/SCALING.md';
           }
           throw new Error(`Unexpected command: ${file} ${argStr}`);
         },
@@ -364,40 +363,11 @@ describe('Local Git-Diff Lineage Auditor', () => {
       };
 
       runAuditor(mockOptions);
-      expect(usedFallback).toBe(true);
-      expect(exitCode).toBeNull();
+      expect(usedFallback).toBe(false);
+      expect(exitCode).toBe(1);
     });
 
-    it('should run in CI and fallback to HEAD~1 comparison if diff-tree fails', () => {
-      let exitCode = null;
-      let usedFallback = false;
-      const mockOptions = {
-        env: { CI: 'true' },
-        argv: ['node', 'scripts/git_lineage_auditor.js'],
-        execSync: (file, args) => {
-          const argStr = args.join(' ');
-          if (file === 'git' && argStr.includes('origin/main...HEAD')) {
-            throw new Error('Ref not found / shallow clone');
-          }
-          if (file === 'git' && argStr.includes('diff-tree')) {
-            throw new Error('diff-tree fails');
-          }
-          if (file === 'git' && argStr === 'diff --name-only HEAD~1 HEAD') {
-            usedFallback = true;
-            return 'src/utils/sharedContract.ts\ndocs/public/SCALING.md';
-          }
-          throw new Error(`Unexpected command: ${file} ${argStr}`);
-        },
-        existsSync: () => true,
-        exit: (code) => { exitCode = code; }
-      };
-
-      runAuditor(mockOptions);
-      expect(usedFallback).toBe(true);
-      expect(exitCode).toBeNull();
-    });
-
-    it('should fail closed in CI if target branch comparison and single-commit fallback both fail', () => {
+    it('should fail closed in CI if target branch comparison fails', () => {
       let exitCode = null;
       const mockOptions = {
         env: { CI: 'true' },
