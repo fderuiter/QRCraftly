@@ -99,7 +99,7 @@ describe('HeadDefault', () => {
     expect(width?.getAttribute('content')).toBe('1280');
   });
 
-  it('generates correct breadcrumbs for home page', () => {
+  it('does not render breadcrumbs for the home page root path', () => {
     mockUsePageContext.mockReturnValue({
       urlPathname: '/',
       config: {}
@@ -110,14 +110,7 @@ describe('HeadDefault', () => {
     const scripts = document.head.querySelectorAll('script[type="application/ld+json"]');
     // Find the one with BreadcrumbList
     const breadcrumbScript = Array.from(scripts).find(s => s.textContent?.includes('BreadcrumbList'));
-    expect(breadcrumbScript).toBeDefined();
-
-    const data = JSON.parse(breadcrumbScript!.textContent!);
-    const expectedDomain = mockGetPublicDomain();
-    expect(data['@type']).toBe('BreadcrumbList');
-    expect(data.itemListElement).toHaveLength(1);
-    expect(data.itemListElement[0].name).toBe('Home');
-    expect(data.itemListElement[0].item).toBe(expectedDomain);
+    expect(breadcrumbScript).toBeUndefined();
   });
 
   it('generates correct breadcrumbs for About page', () => {

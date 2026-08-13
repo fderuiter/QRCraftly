@@ -103,3 +103,66 @@ export const resolveImageUrl = (imageConfig: string | undefined, _path: string):
   }
   return imageUrl;
 };
+
+export const formatPathName = (segment: string): string => {
+  // Dictionary for specific overrides
+  const overrides: Record<string, string> = {
+    'wifi-qr-code': 'WiFi QR Code',
+    'about': 'About',
+  };
+
+  if (overrides[segment]) {
+    return overrides[segment];
+  }
+
+  // Default: Capitalize each word (replace dashes with spaces)
+  return segment
+    .split('-')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+};
+
+export const compileBreadcrumbSchema = (path: string): any | null => {
+  if (!path) return null;
+
+  // Determine the base path to correctly resolve the home URL for domains and subdomains
+  const subdomainMatch = path.match(/^\/_subdomain\/[^\/]+/);
+  const basePath = subdomainMatch ? subdomainMatch[0] : '/';
+
+  const resolvedDomain = resolveDomainForPath(path);
+
+  const breadcrumbItems: any[] = [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": resolvePublicUrl(basePath)
+    }
+  ];
+
+  // Dynamically generate breadcrumbs from path
+  const sanitizedPath = getSanitizedPath(path);
+  const pathSegments = sanitizedPath.split('/').filter(Boolean);
+  let currentPath = '';
+
+  pathSegments.forEach((segment: string, index: number) => {
+    currentPath += `/${segment}`;
+    breadcrumbItems.push({
+      "@type": "ListItem",
+      "position": index + 2, // 1 is Home, so start at 2
+      "name": formatPathName(segment),
+      "item": `${resolvedDomain}${currentPath}`
+    });
+  });
+
+  if (breadcrumbItems.length < 2) {
+    return null;
+  }
+
+  return {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": breadcrumbItems
+  };
+};
+
