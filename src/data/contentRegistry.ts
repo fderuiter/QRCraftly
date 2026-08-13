@@ -1,4 +1,4 @@
-import { getPublicDomain } from "../utils/metadataEngine";
+import { getPublicDomain, getSanitizedPath } from "../utils/metadataEngine";
 
 export enum SchemaType {
   SoftwareApplication = "SoftwareApplication",
@@ -37,6 +37,7 @@ export interface ToolContent {
   name: string;
   url: string;
   description: string;
+  seoTitle: string;
   features: string[];
   howTo?: {
     name: string;
@@ -51,12 +52,20 @@ export interface ToolContent {
   valueProposition: StrategicValueCategory;
 }
 
+export interface AuxiliaryContent {
+  id: string;
+  name: string;
+  seoTitle: string;
+  description: string;
+}
+
 export const contentRegistry: Record<string, ToolContent> = {
   "about": {
     "id": "about",
     "name": "About QRCraftly",
     "url": getPublicDomain() + "/about",
-    "description": "Privacy-focused, client-side QR code generator.",
+    "description": "Learn about QRCraftly's mission to provide a free, secure, and open-source QR code generator with privacy-first architecture.",
+    "seoTitle": "About QRCraftly - Privacy & Open Source",
     "features": [],
     "schemaType": SchemaType.AboutPage,
     "schemaCategory": SchemaCategory.UtilitiesApplication,
@@ -85,7 +94,8 @@ export const contentRegistry: Record<string, ToolContent> = {
     "id": "email-qr-code",
     "name": "Email QR Code Generator",
     "url": getPublicDomain() + "/email-qr-code",
-    "description": "",
+    "description": "Create QR codes that open a pre-filled email. Set recipient, subject, and body. Ideal for feedback, support, or contact.",
+    "seoTitle": "Free Email QR Code Generator | Pre-filled Emails - QRCraftly",
     "features": [
       "Generate Pre-filled Emails",
       "Secure Client-Side",
@@ -118,7 +128,8 @@ export const contentRegistry: Record<string, ToolContent> = {
     "id": "event-qr-code",
     "name": "Event QR Code Generator",
     "url": getPublicDomain() + "/event-qr-code",
-    "description": "Create QR codes that save calendar events. Set title, date, location, and description. Ideal for invitations, RSVP, and scheduling.",
+    "description": "Generate Event QR codes to save calendar events instantly. Set your event title, date, location, and details. Fast, free, and secure.",
+    "seoTitle": "Free Event QR Code Generator | Save Calendar Events - QRCraftly",
     "features": [
       "Generate Calendar Event QR",
       "Secure Client-Side",
@@ -151,7 +162,8 @@ export const contentRegistry: Record<string, ToolContent> = {
     "id": "index",
     "name": "QRCraftly",
     "url": getPublicDomain(),
-    "description": "",
+    "description": "Generate beautiful, custom QR codes for free. No sign-up required. Secure, client-side generation.",
+    "seoTitle": "QRCraftly - Free Custom QR Code Generator",
     "features": [
       "Custom QR Codes",
       "WiFi QR Codes",
@@ -196,7 +208,8 @@ export const contentRegistry: Record<string, ToolContent> = {
     "id": "location-qr-code",
     "name": "Location QR Code Generator",
     "url": getPublicDomain() + "/location-qr-code",
-    "description": "Create QR codes that open maps and geographical locations. Set latitude and longitude. Ideal for navigation and sharing venue coordinates.",
+    "description": "Create QR codes for geographical map coordinates. Set latitude and longitude for easy physical navigation. Fast, free, and secure.",
+    "seoTitle": "Free Location QR Code Generator | Map Coordinates - QRCraftly",
     "features": [
       "Generate Location QR",
       "Secure Client-Side",
@@ -229,7 +242,8 @@ export const contentRegistry: Record<string, ToolContent> = {
     "id": "meeting-qr-code",
     "name": "Meeting QR Code Generator",
     "url": getPublicDomain() + "/meeting-qr-code",
-    "description": "Create QR codes that open virtual meeting invitations. Set the direct join URL. Compatible with Zoom, Teams, and Google Meet.",
+    "description": "Generate QR codes for virtual meetings. Paste meeting join links for Zoom, Microsoft Teams, and Google Meet. Fast, free, and secure.",
+    "seoTitle": "Free Virtual Meeting QR Code Generator | Zoom & Teams - QRCraftly",
     "features": [
       "Generate Virtual Meeting QR",
       "Zoom/Teams/Meet Support",
@@ -262,7 +276,8 @@ export const contentRegistry: Record<string, ToolContent> = {
     "id": "payment-qr-code",
     "name": "Payment QR Code Generator",
     "url": getPublicDomain() + "/payment-qr-code",
-    "description": "",
+    "description": "Create secure crypto payment QR codes for Bitcoin, Ethereum, Solana, and more. Accept payments easily.",
+    "seoTitle": "Free Crypto Payment QR Code Generator | Bitcoin, Ethereum - QRCraftly",
     "features": [
       "Generate Crypto Payment QR",
       "Bitcoin/Ethereum Support",
@@ -295,7 +310,8 @@ export const contentRegistry: Record<string, ToolContent> = {
     "id": "phone-qr-code",
     "name": "Phone QR Code Generator",
     "url": getPublicDomain() + "/phone-qr-code",
-    "description": "",
+    "description": "Create QR codes that dial a phone number when scanned. Ideal for business cards, flyers, and advertisements.",
+    "seoTitle": "Free Phone QR Code Generator | Click-to-Call - QRCraftly",
     "features": [
       "Generate Click-to-Call QR",
       "Secure Client-Side",
@@ -328,7 +344,8 @@ export const contentRegistry: Record<string, ToolContent> = {
     "id": "sms-qr-code",
     "name": "SMS QR Code Generator",
     "url": getPublicDomain() + "/sms-qr-code",
-    "description": "",
+    "description": "Generate QR codes that open a pre-filled SMS message. Set recipient and message body. Perfect for opt-ins and support.",
+    "seoTitle": "Free SMS QR Code Generator | Pre-filled Text Messages - QRCraftly",
     "features": [
       "Generate Pre-filled SMS",
       "Secure Client-Side",
@@ -361,7 +378,8 @@ export const contentRegistry: Record<string, ToolContent> = {
     "id": "social-qr-code",
     "name": "Social QR Code Generator",
     "url": getPublicDomain() + "/social-qr-code",
-    "description": "Create QR codes that link directly to social media profiles. Set your platform and handle. Ideal for Instagram, Twitter, and TikTok.",
+    "description": "Create QR codes linking directly to your social media profiles on Instagram, Twitter, or TikTok. Fast, free, and secure.",
+    "seoTitle": "Free Social Media QR Code Generator | Connect Profiles - QRCraftly",
     "features": [
       "Generate Social Profile QR",
       "Instagram/Twitter/TikTok Links",
@@ -394,7 +412,8 @@ export const contentRegistry: Record<string, ToolContent> = {
     "id": "text-qr-code",
     "name": "Text QR Code Generator",
     "url": getPublicDomain() + "/text-qr-code",
-    "description": "",
+    "description": "Convert any text into a QR code instantly. Free, secure, and customizable. Perfect for sharing messages, notes, or codes.",
+    "seoTitle": "Free Text QR Code Generator | Convert Text to QR - QRCraftly",
     "features": [
       "Convert Text to QR",
       "Secure Client-Side",
@@ -427,7 +446,8 @@ export const contentRegistry: Record<string, ToolContent> = {
     "id": "vcard-qr-code",
     "name": "VCard QR Code Generator",
     "url": getPublicDomain() + "/vcard-qr-code",
-    "description": "",
+    "description": "Generate VCard QR codes for digital business cards. Share contact details easily. Compatible with all smartphones.",
+    "seoTitle": "Free VCard QR Code Generator | Digital Business Cards - QRCraftly",
     "features": [
       "Generate VCard Contact QR",
       "Secure Client-Side",
@@ -460,7 +480,8 @@ export const contentRegistry: Record<string, ToolContent> = {
     "id": "wifi-qr-code",
     "name": "WiFi QR Code Generator",
     "url": getPublicDomain() + "/wifi-qr-code",
-    "description": "",
+    "description": "Create a QR code for your WiFi network. Allow guests to connect instantly without typing passwords. Secure and free.",
+    "seoTitle": "Free WiFi QR Code Generator | Connect Without Password - QRCraftly",
     "features": [
       "Generate WiFi Access QR Codes",
       "WPA/WPA2 Support",
@@ -502,9 +523,10 @@ export const contentRegistry: Record<string, ToolContent> = {
     "id": "file-transfer",
     "name": "Animated QR File Transfer",
     "url": getPublicDomain() + "/file-transfer",
-    "description": "High-capacity offline file sharing via animated QR code streams using a recycled UI canvas.",
+    "description": "Share files offline safely using multi-frame QR streams and recycled UI canvas. Optimized to prevent memory crashes on mobile browsers.",
+    "seoTitle": "Offline Animated QR File Transfer | High-Performance - QRCraftly",
     "features": [
-      "Offline File Streaming",
+      "Offline File Sharing",
       "Sequential Slicing Worker",
       "Recycled Canvas UI"
     ],
@@ -532,3 +554,77 @@ export const contentRegistry: Record<string, ToolContent> = {
     }
   }
 };
+
+export const auxiliaryRegistry: Record<string, AuxiliaryContent> = {
+  "audio-qr": {
+    "id": "audio-qr",
+    "name": "Audio QR & Acoustic Steganography",
+    "seoTitle": "Acoustic Steganography & Audio QR | Convert Data to Sound - QRCraftly",
+    "description": "Convert data into audible sound chirps or generate a spectrogram audio file that visualizes as a scannable QR code using the Web Audio API."
+  },
+  "destroy-the-qr": {
+    "id": "destroy-the-qr",
+    "name": "Destroy the QR!",
+    "seoTitle": "Destroy the QR! - Interactive Mini-Game",
+    "description": "An interactive 60 FPS mini-game to test the durability of your QR codes in real-time with lasers and explosions."
+  },
+  "game": {
+    "id": "game",
+    "name": "QR Damage Simulator Game",
+    "seoTitle": "QR Damage Simulator Game | Interactive Gameplay - QRCraftly",
+    "description": "Play and damage QR codes in real-time. Map damage to coordinates and test error-correction health bars with smooth 60fps play."
+  },
+  "security": {
+    "id": "security",
+    "name": "Security & Privacy",
+    "seoTitle": "Security & Privacy - QRCraftly",
+    "description": "Detailed information on QRCraftly's security architecture, privacy-first processing, and HIPAA compliance alignment."
+  },
+  "file-transfer/receive": {
+    "id": "file-transfer/receive",
+    "name": "Offline Animated QR File Receiver",
+    "seoTitle": "Offline Animated QR File Receiver | High-Performance - QRCraftly",
+    "description": "Receive files offline safely using multi-frame QR streams and camera capture. Optimized with lookahead packet recovery."
+  },
+  "_error": {
+    "id": "_error",
+    "name": "404 Page Not Found",
+    "seoTitle": "404 Page Not Found - QRCraftly",
+    "description": "The page you are looking for does not exist."
+  }
+};
+
+export const getRegistryKeyForPath = (path: string): string => {
+  let cleanPath = getSanitizedPath(path);
+  if (cleanPath !== "/" && cleanPath.endsWith("/")) {
+    cleanPath = cleanPath.slice(0, -1);
+  }
+  if (cleanPath === "" || cleanPath === "/") {
+    return "index";
+  }
+  const pathLookup = cleanPath.startsWith("/") ? cleanPath.slice(1) : cleanPath;
+  return pathLookup;
+};
+
+export function getMetadataForPath(path: string): { title: string; description: string } {
+  const pathLookup = getRegistryKeyForPath(path);
+  
+  if (contentRegistry[pathLookup]) {
+    return {
+      title: contentRegistry[pathLookup].seoTitle,
+      description: contentRegistry[pathLookup].description,
+    };
+  }
+  
+  if (auxiliaryRegistry[pathLookup]) {
+    return {
+      title: auxiliaryRegistry[pathLookup].seoTitle,
+      description: auxiliaryRegistry[pathLookup].description,
+    };
+  }
+
+  return {
+    title: "QRCraftly - Free Custom QR Code Generator",
+    description: "Generate beautiful, custom QR codes for free. No sign-up required.",
+  };
+}

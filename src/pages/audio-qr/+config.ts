@@ -20,8 +20,6 @@
  * Page-specific configuration for the Audio QR & Acoustic Steganography page.
  */
 export default {
-    title: 'Acoustic Steganography & Audio QR | Convert Data to Sound - QRCraftly',
-    description: 'Convert data into audible sound chirps or generate a spectrogram audio file that visualizes as a scannable QR code using the Web Audio API.',
     image: '/og-image.png?type=audio-qr',
     imageAlt: 'Preview of the Acoustic Steganography & Audio QR tool'
 }

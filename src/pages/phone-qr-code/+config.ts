@@ -20,8 +20,6 @@
  * Page-specific configuration for the Phone QR Code page.
  */
 export default {
-    title: 'Free Phone QR Code Generator | Click-to-Call - QRCraftly',
-    description: 'Create QR codes that dial a phone number when scanned. Ideal for business cards, flyers, and advertisements.',
     image: '/og-image.png?type=phone',
     imageAlt: 'Preview of the Phone QR Code Generator tool'
 }

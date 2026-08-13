@@ -20,8 +20,6 @@
  * Page-specific configuration for the Event QR Code page.
  */
 export default {
-    title: 'Free Event QR Code Generator | Save Calendar Events - QRCraftly',
-    description: 'Generate Event QR codes to save calendar events instantly. Set your event title, date, location, and details. Fast, free, and secure.',
     image: '/og-image.png?type=event',
     imageAlt: 'Preview of the Event QR Code Generator tool'
 }

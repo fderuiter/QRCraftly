@@ -20,8 +20,6 @@
  * Page-specific configuration for the Location QR Code page.
  */
 export default {
-    title: 'Free Location QR Code Generator | Map Coordinates - QRCraftly',
-    description: 'Create QR codes for geographical map coordinates. Set latitude and longitude for easy physical navigation. Fast, free, and secure.',
     image: '/og-image.png?type=location',
     imageAlt: 'Preview of the Location QR Code Generator tool'
 }

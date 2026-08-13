@@ -20,8 +20,6 @@
  * Page-specific configuration for the Social QR Code page.
  */
 export default {
-    title: 'Free Social Media QR Code Generator | Connect Profiles - QRCraftly',
-    description: 'Create QR codes linking directly to your social media profiles on Instagram, Twitter, or TikTok. Fast, free, and secure.',
     image: '/og-image.png?type=social',
     imageAlt: 'Preview of the Social QR Code Generator tool'
 }
