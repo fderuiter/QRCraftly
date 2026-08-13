@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { isValidScannerResponse } from '../utils/scannerContract';
+import { getSharedScannerWorker, terminateSharedScannerWorker } from '../utils/sharedScannerWorker';
 
 /**
  * Options for configuring the useAdaptiveScanner hook.
@@ -180,14 +181,8 @@ export function useAdaptiveScanner({
     console.warn(`Watchdog: Recreating worker. Attempt ${consecutiveRestartAttemptsRef.current} of 3 consecutive retries.`);
 
     // 2. Terminate the active worker instance safely
-    if (workerRef.current) {
-      try {
-        workerRef.current.terminate();
-      } catch (err) {
-        console.error('Failed to terminate old worker during recovery:', err);
-      }
-      workerRef.current = null;
-    }
+    terminateSharedScannerWorker();
+    workerRef.current = null;
 
     // 3. Clear/reset in-flight sequence tracking flags
     inFlightRef.current = false;
@@ -197,7 +192,7 @@ export function useAdaptiveScanner({
     // 5. Create new worker
     if (typeof window === 'undefined') return;
     try {
-      const worker = new Worker(new URL('../utils/scannerWorker.ts', import.meta.url), { type: 'module' });
+      const worker = getSharedScannerWorker();
       workerRef.current = worker;
 
       // 6. Re-attach listeners via delegating wrappers
@@ -205,9 +200,14 @@ export function useAdaptiveScanner({
       const onErr = (err: any) => handleErrorRef.current?.(err);
       const onMsgErr = (err: any) => handleMessageErrorRef.current?.(err);
 
-      worker.addEventListener('message', onMsg);
-      worker.addEventListener('error', onErr);
-      worker.addEventListener('messageerror', onMsgErr);
+      if (typeof worker.addEventListener === 'function') {
+        worker.addEventListener('message', onMsg);
+        worker.addEventListener('error', onErr);
+        worker.addEventListener('messageerror', onMsgErr);
+      } else {
+        (worker as any).onmessage = onMsg;
+        (worker as any).onerror = onErr;
+      }
     } catch (err) {
       console.error('Failed to recreate worker:', err);
     }
@@ -319,26 +319,36 @@ export function useAdaptiveScanner({
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    const worker = new Worker(new URL('../utils/scannerWorker.ts', import.meta.url), { type: 'module' });
+    const worker = getSharedScannerWorker();
     workerRef.current = worker;
 
     const onMsg = (e: MessageEvent) => handleMessageRef.current?.(e);
     const onErr = (err: any) => handleErrorRef.current?.(err);
     const onMsgErr = (err: any) => handleMessageErrorRef.current?.(err);
 
-    worker.addEventListener('message', onMsg);
-    worker.addEventListener('error', onErr);
-    worker.addEventListener('messageerror', onMsgErr);
+    if (typeof worker.addEventListener === 'function') {
+      worker.addEventListener('message', onMsg);
+      worker.addEventListener('error', onErr);
+      worker.addEventListener('messageerror', onMsgErr);
+    } else {
+      (worker as any).onmessage = onMsg;
+      (worker as any).onerror = onErr;
+    }
 
     return () => {
       const activeWorker = workerRef.current;
       if (activeWorker) {
-        activeWorker.terminate();
-        workerRef.current = null;
+        if (typeof activeWorker.removeEventListener === 'function') {
+          activeWorker.removeEventListener('message', onMsg);
+          activeWorker.removeEventListener('error', onErr);
+          activeWorker.removeEventListener('messageerror', onMsgErr);
+        } else {
+          (activeWorker as any).onmessage = null;
+          (activeWorker as any).onerror = null;
+        }
       }
-      if (activeWorker !== worker) {
-        worker.terminate();
-      }
+      terminateSharedScannerWorker();
+      workerRef.current = null;
     };
   }, []);
 

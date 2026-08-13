@@ -4,6 +4,8 @@ import { useCamera } from '../hooks/useCamera';
 import { useAdaptiveScanner } from '../hooks/useAdaptiveScanner';
 import { Button } from './ui/Button';
 import { fetchWasmAsset } from '../utils/assetCache';
+import { getSharedScannerWorker } from '../utils/sharedScannerWorker';
+import { getDownscaledDimensions } from '../utils/scannerContract';
 
 /**
  * QRScannerProps definition.
@@ -45,7 +47,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
   const activeWorkerRef = useRef<Worker | null>(null);
 
   // Initialize Adaptive Scanner hook
-  const { startScanning, stopScanning, workerRef } = useAdaptiveScanner({
+  const { startScanning, stopScanning } = useAdaptiveScanner({
     videoRef,
     onScanSuccess: (data) => {
       onScanSuccess(data);
@@ -59,25 +61,10 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
     },
   });
 
-  const fallbackWorkerRef = useRef<Worker | null>(null);
   const fileSequenceRef = useRef<number>(1000000);
 
-  // Terminate fallback worker on unmount
-  useEffect(() => {
-    return () => {
-      fallbackWorkerRef.current?.terminate();
-      fallbackWorkerRef.current = null;
-    };
-  }, []);
-
   const getWorker = () => {
-    if (workerRef?.current) {
-      return workerRef.current;
-    }
-    if (!fallbackWorkerRef.current && typeof window !== 'undefined') {
-      fallbackWorkerRef.current = new Worker(new URL('../utils/scannerWorker.ts', import.meta.url), { type: 'module' });
-    }
-    return fallbackWorkerRef.current;
+    return getSharedScannerWorker();
   };
 
   const decodeFrameOffThread = (buffer: ArrayBuffer, width: number, height: number): Promise<string | null> => {
@@ -94,7 +81,11 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
         const payload = e.data;
         // In some test environments, fallback is triggered with a generic success response
         if (payload && (payload.sequenceId === seqId || payload.success !== undefined)) {
-          worker.removeEventListener('message', handleMessage);
+          if (typeof worker.removeEventListener === 'function') {
+            worker.removeEventListener('message', handleMessage);
+          } else {
+            (worker as any).onmessage = null;
+          }
           if (payload.status === 'pass' && payload.decodedData) {
             resolve(payload.decodedData);
           } else if (payload.success) {
@@ -117,7 +108,11 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
         }
       };
 
-      worker.addEventListener('message', handleMessage);
+      if (typeof worker.addEventListener === 'function') {
+        worker.addEventListener('message', handleMessage);
+      } else {
+        (worker as any).onmessage = handleMessage;
+      }
       worker.postMessage({ buffer, width, height, sequenceId: seqId }, [buffer]);
     });
   };
@@ -155,7 +150,6 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
       stopStream();
       stopScanning();
       if (activeWorkerRef.current) {
-        activeWorkerRef.current.terminate();
         activeWorkerRef.current = null;
       }
     };
@@ -238,8 +232,14 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
       };
 
       video.onloadedmetadata = () => {
-        canvas.width = video.videoWidth || 640;
-        canvas.height = video.videoHeight || 480;
+        let width = video.videoWidth || 640;
+        let height = video.videoHeight || 480;
+
+        // Shared downscaling logic using a bounding box limits approach capped at 1280px
+        const { width: dWidth, height: dHeight } = getDownscaledDimensions(width, height, 1280);
+
+        canvas.width = dWidth;
+        canvas.height = dHeight;
 
         if (!ctx) {
           cleanUp();
@@ -309,34 +309,58 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
     // 2. Read video file to ArrayBuffer
     const fileBuffer = await file.arrayBuffer();
 
-    // 3. Extract and scan frames inside a background worker
+    // 3. Extract and scan frames inside the unified background worker directly in a single pass
     return new Promise<void>((resolve, reject) => {
-      const worker = new Worker(new URL('../utils/demuxerWorker.ts', import.meta.url), { type: 'module' });
+      const worker = getWorker();
+      if (!worker) {
+        reject(new Error('Background worker not available.'));
+        return;
+      }
 
-      worker.onmessage = async (event) => {
+      // Generate a unique taskId for this demux request
+      const taskId = `demux-${Date.now()}-${Math.random()}`;
+
+      const handleMessage = (event: MessageEvent) => {
         const msg = event.data;
-        if (msg.type === 'frame_decoded') {
+        // Verify taskId if present, or fallback for older/mock messages
+        if (msg && msg.taskId && msg.taskId !== taskId) {
+          return;
+        }
+        if (msg && msg.type === 'frame_decoded') {
           onScanSuccess(msg.data);
-        } else if (msg.type === 'frame_pixels') {
-          // Zero-copy transfer: feed extracted frame buffers into the scanning loop
-          const { buffer, width, height } = msg;
-          const decoded = await decodeFrameOffThread(buffer, width, height);
-          if (decoded) {
-            onScanSuccess(decoded);
+        } else if (msg && msg.type === 'done') {
+          if (worker && typeof worker.removeEventListener === 'function') {
+            worker.removeEventListener('message', handleMessage);
+            worker.removeEventListener('error', handleError);
+          } else if (worker) {
+            (worker as any).onmessage = null;
+            (worker as any).onerror = null;
           }
-        } else if (msg.type === 'done') {
-          worker.terminate();
           resolve();
         }
       };
 
-      worker.onerror = (err) => {
-        worker.terminate();
+      const handleError = (err: any) => {
+        if (worker && typeof worker.removeEventListener === 'function') {
+          worker.removeEventListener('message', handleMessage);
+          worker.removeEventListener('error', handleError);
+        } else if (worker) {
+          (worker as any).onmessage = null;
+          (worker as any).onerror = null;
+        }
         reject(err);
       };
 
-      // Feed buffers into worker using zero-copy transfers
-      worker.postMessage({ fileBuffer, wasmBuffer }, [fileBuffer, wasmBuffer]);
+      if (worker && typeof worker.addEventListener === 'function') {
+        worker.addEventListener('message', handleMessage);
+        worker.addEventListener('error', handleError);
+      } else if (worker) {
+        (worker as any).onmessage = handleMessage;
+        (worker as any).onerror = handleError;
+      }
+
+      // Feed buffers into the unified worker using zero-copy transfers
+      worker.postMessage({ type: 'demux', fileBuffer, wasmBuffer, taskId }, [fileBuffer, wasmBuffer]);
     });
   };
 
@@ -376,11 +400,6 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
     setFileError(null);
     setFileProcessing(true);
 
-    if (activeWorkerRef.current) {
-      activeWorkerRef.current.terminate();
-      activeWorkerRef.current = null;
-    }
-
     try {
       const decodedData = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
@@ -388,15 +407,8 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
           const img = new Image();
           img.onload = async () => {
             try {
-              // 1. Calculate downscaled dimensions (max 1024px bounding box)
-              let downscaledWidth = img.width;
-              let downscaledHeight = img.height;
-              const maxDim = Math.max(img.width, img.height);
-              if (maxDim > 1024) {
-                const scale = 1024 / maxDim;
-                downscaledWidth = Math.round(img.width * scale);
-                downscaledHeight = Math.round(img.height * scale);
-              }
+              // 1. Calculate downscaled dimensions (max 1024px bounding box) using shared utility
+              const { width: downscaledWidth, height: downscaledHeight } = getDownscaledDimensions(img.width, img.height, 1024);
 
               // Create downscaled canvas
               const canvas1024 = document.createElement('canvas');
@@ -411,14 +423,11 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
               const imageData1024 = ctx1024.getImageData(0, 0, downscaledWidth, downscaledHeight);
               const buffer1024 = imageData1024.data.buffer.slice(0);
 
-              // 2. Instantiate Background Worker
-              let worker: Worker;
-              try {
-                worker = new Worker(new URL('../utils/scannerWorker.ts', import.meta.url), { type: 'module' });
-                activeWorkerRef.current = worker;
-              } catch (workerError) {
+              // 2. Obtain shared Background Worker
+              const worker = getWorker();
+              if (!worker) {
                 // Robust fallback to synchronous main-thread decoding if Worker fails to instantiate
-                console.warn('Worker creation failed, falling back to main-thread decoding:', workerError);
+                console.warn('Worker creation failed, falling back to main-thread decoding:');
                 import('jsqr').then((jsQRModule) => {
                   const jsQR = jsQRModule.default || jsQRModule;
                   const code = jsQR(new Uint8ClampedArray(imageData1024.data.buffer), downscaledWidth, downscaledHeight);
@@ -449,25 +458,34 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
                 return;
               }
 
-              // Listen to responses from worker
-              worker.onmessage = (e) => {
+              // Listen to responses from worker using event listeners to support sharing
+              const handleMessage = (e: MessageEvent) => {
                 const response = e.data;
                 // Support both standard ScannerResponse and generic/mock responses from tests
                 if (response.status === 'pass' || (response.success && response.decodedData)) {
+                  if (worker && typeof worker.removeEventListener === 'function') {
+                    worker.removeEventListener('message', handleMessage);
+                    worker.removeEventListener('error', handleError);
+                  } else if (worker) {
+                    (worker as any).onmessage = null;
+                    (worker as any).onerror = null;
+                  }
                   resolve(response.decodedData || '');
                 } else if (response.status === 'fail' || response.error || response.success === false) {
                   // Fall back to original full-resolution image scan
-                  if (activeWorkerRef.current !== worker) {
-                    // Stale or cancelled upload/scanner closed
-                    return;
-                  }
-
                   try {
                     const canvasFull = document.createElement('canvas');
                     canvasFull.width = img.width;
                     canvasFull.height = img.height;
                     const ctxFull = canvasFull.getContext('2d');
                     if (!ctxFull) {
+                      if (worker && typeof worker.removeEventListener === 'function') {
+                        worker.removeEventListener('message', handleMessage);
+                        worker.removeEventListener('error', handleError);
+                      } else if (worker) {
+                        (worker as any).onmessage = null;
+                        (worker as any).onerror = null;
+                      }
                       reject(new Error('Failed to create canvas context.'));
                       return;
                     }
@@ -476,14 +494,35 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
                     const bufferFull = imageDataFull.data.buffer.slice(0);
 
                     // Re-register listener for full resolution result
-                    worker.onmessage = (e2) => {
+                    const handleMessageFull = (e2: MessageEvent) => {
                       const response2 = e2.data;
                       if (response2.status === 'pass' || (response2.success && response2.decodedData)) {
+                        if (worker && typeof worker.removeEventListener === 'function') {
+                          worker.removeEventListener('message', handleMessageFull);
+                          worker.removeEventListener('error', handleError);
+                        } else if (worker) {
+                          (worker as any).onmessage = null;
+                          (worker as any).onerror = null;
+                        }
                         resolve(response2.decodedData || '');
                       } else {
+                        if (worker && typeof worker.removeEventListener === 'function') {
+                          worker.removeEventListener('message', handleMessageFull);
+                          worker.removeEventListener('error', handleError);
+                        } else if (worker) {
+                          (worker as any).onmessage = null;
+                          (worker as any).onerror = null;
+                        }
                         reject(new Error('No QR code detected in this image. Try a clearer or higher-contrast QR code image.'));
                       }
                     };
+
+                    if (worker && typeof worker.removeEventListener === 'function') {
+                      worker.removeEventListener('message', handleMessage);
+                      worker.addEventListener('message', handleMessageFull);
+                    } else if (worker) {
+                      (worker as any).onmessage = handleMessageFull;
+                    }
 
                     worker.postMessage({
                       buffer: bufferFull,
@@ -494,14 +533,36 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
                       imageData: imageDataFull,
                     }, [bufferFull]);
                   } catch (err) {
+                    if (worker && typeof worker.removeEventListener === 'function') {
+                      worker.removeEventListener('message', handleMessage);
+                      worker.removeEventListener('error', handleError);
+                    } else if (worker) {
+                      (worker as any).onmessage = null;
+                      (worker as any).onerror = null;
+                    }
                     reject(err);
                   }
                 }
               };
 
-              worker.onerror = (err) => {
+              const handleError = (err: any) => {
+                if (worker && typeof worker.removeEventListener === 'function') {
+                  worker.removeEventListener('message', handleMessage);
+                  worker.removeEventListener('error', handleError);
+                } else if (worker) {
+                  (worker as any).onmessage = null;
+                  (worker as any).onerror = null;
+                }
                 reject(err);
               };
+
+              if (worker && typeof worker.addEventListener === 'function') {
+                worker.addEventListener('message', handleMessage);
+                worker.addEventListener('error', handleError);
+              } else if (worker) {
+                (worker as any).onmessage = handleMessage;
+                (worker as any).onerror = handleError;
+              }
 
               // First post downscaled version
               worker.postMessage({
@@ -533,11 +594,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
       setFileError(err.message || 'Failed to parse image file.');
     } finally {
       setFileProcessing(false);
-      const workerInstance = activeWorkerRef.current as Worker | null;
-      if (workerInstance) {
-        workerInstance.terminate();
-        activeWorkerRef.current = null;
-      }
+      activeWorkerRef.current = null;
     }
   };
 

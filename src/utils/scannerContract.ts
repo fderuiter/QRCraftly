@@ -85,3 +85,19 @@ export function assertScannerResponse(data: unknown): asserts data is ScannerRes
     throw new Error('Scanner response error must be a string or null');
   }
 }
+
+/**
+ * Proportional downscaling logic for high-density frames, capped at maxLimit (default 1280px).
+ */
+export function getDownscaledDimensions(width: number, height: number, maxLimit = 1280): { width: number; height: number } {
+  const maxDim = Math.max(width, height);
+  if (maxDim > maxLimit) {
+    const scale = maxLimit / maxDim;
+    return {
+      width: Math.round(width * scale),
+      height: Math.round(height * scale),
+    };
+  }
+  return { width, height };
+}
+
