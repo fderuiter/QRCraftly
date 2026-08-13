@@ -51,15 +51,15 @@ describe('InputPanel Security (Input Limits)', () => {
     const ssid = screen.getByLabelText('Network Name (SSID)');
     expect(ssid).toHaveAttribute('maxLength', '32');
 
-    const password = screen.getByLabelText('Password');
-    expect(password).toHaveAttribute('maxLength', '63');
+    const wifiPasswordInput = screen.getByLabelText('Password');
+    expect(wifiPasswordInput).toHaveAttribute('maxLength', '63');
   });
 
   it('enforces maxLength on Email inputs', () => {
     render(<InputPanel config={{ ...DEFAULT_CONFIG, type: QRType.EMAIL }} onChange={mockOnChange} />);
 
-    const email = screen.getByLabelText('Email Address');
-    expect(email).toHaveAttribute('maxLength', '254'); // RFC 5321
+    const emailAddressInput = screen.getByLabelText('Email Address');
+    expect(emailAddressInput).toHaveAttribute('maxLength', '254'); // RFC 5321
 
     const subject = screen.getByLabelText('Subject');
     expect(subject).toHaveAttribute('maxLength', '200');
@@ -92,6 +92,6 @@ describe('InputPanel Security (Input Limits)', () => {
       vi.advanceTimersByTime(100);
     });
 
-    expect(mockOnChange).toHaveBeenCalledWith({ value: 'javascript:alert(1)' });
+    expect(mockOnChange).not.toHaveBeenCalled();
   });
 });

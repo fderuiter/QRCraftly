@@ -19,13 +19,14 @@
 import { UrlData, QRType, QRGeneratorContract } from '../../types';
 import { validateUrlAndInject } from '../security';
 import { ValidationEngine } from '../../engine/ValidationEngine';
+import { normalizeUrl } from '../url';
 
 /**
  * Constructs the URL QR code string.
  * Currently just returns the raw URL as normalization happens in the input or renderer.
  */
 export const constructUrlString = (data: UrlData): string => {
-  return data.url;
+  return normalizeUrl(data.url);
 };
 
 /**
