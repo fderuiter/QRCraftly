@@ -5,11 +5,12 @@ type GuardedType<T> = T extends (x: any) => x is infer U ? U : never;
  * Type-guard function for validating the Worker Request structure.
  */
 export function isWorkerRequest(data: unknown): data is {
-  imageData: {
+  imageData?: {
     data: Uint8ClampedArray;
     width?: number;
     height?: number;
   };
+  imageBitmap?: ImageBitmap;
   width: number;
   height: number;
   configId?: string | null;
@@ -17,8 +18,14 @@ export function isWorkerRequest(data: unknown): data is {
 } {
   if (typeof data !== 'object' || data === null) return false;
   const d = data as any;
-  if (typeof d.imageData !== 'object' || d.imageData === null) return false;
-  if (!d.imageData.data || !(d.imageData.data instanceof Uint8ClampedArray)) return false;
+  if (d.imageData !== undefined) {
+    if (typeof d.imageData !== 'object' || d.imageData === null) return false;
+    if (!d.imageData.data || !(d.imageData.data instanceof Uint8ClampedArray)) return false;
+  } else if (d.imageBitmap !== undefined) {
+    if (typeof d.imageBitmap !== 'object' || d.imageBitmap === null) return false;
+  } else {
+    return false;
+  }
   if (typeof d.width !== 'number' || isNaN(d.width) || d.width <= 0) return false;
   if (typeof d.height !== 'number' || isNaN(d.height) || d.height <= 0) return false;
   if (d.configId !== undefined && d.configId !== null && typeof d.configId !== 'string') return false;
@@ -36,11 +43,20 @@ export function assertWorkerRequest(data: unknown): asserts data is WorkerReques
     throw new Error('Worker request must be a non-null object');
   }
   const d = data as any;
-  if (typeof d.imageData !== 'object' || d.imageData === null) {
+  if (d.imageData === undefined && d.imageBitmap === undefined) {
     throw new Error('Worker request must contain an imageData object');
   }
-  if (!d.imageData.data || !(d.imageData.data instanceof Uint8ClampedArray)) {
-    throw new Error('Worker request imageData.data must be a Uint8ClampedArray');
+  if (d.imageData !== undefined) {
+    if (typeof d.imageData !== 'object' || d.imageData === null) {
+      throw new Error('Worker request must contain an imageData object');
+    }
+    if (!d.imageData.data || !(d.imageData.data instanceof Uint8ClampedArray)) {
+      throw new Error('Worker request imageData.data must be a Uint8ClampedArray');
+    }
+  } else if (d.imageBitmap !== undefined) {
+    if (typeof d.imageBitmap !== 'object' || d.imageBitmap === null) {
+      throw new Error('Worker request must contain a valid imageBitmap');
+    }
   }
   if (typeof d.width !== 'number' || isNaN(d.width) || d.width <= 0) {
     throw new Error('Worker request width must be a positive number');
