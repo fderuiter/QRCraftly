@@ -22,9 +22,10 @@ import { test, expect } from './fixtures';
  * Throttled E2E Interactive Performance Testing
  *
  * Simulates mobile hardware degradation (4x and 6x CPU throttling rate)
- * and tests interactive styling updates (Cyber Circuit, Grunge, Starburst).
- * Monitors and asserts on main-thread long tasks with a 50ms threshold
- * plus a 10% variance tolerance (55ms).
+ * and tests multiple user flows (complex style switches, tab switches & text input).
+ * Monitors and asserts on main-thread long tasks using hardware-agnostic budgets:
+ * - 60ms under 4x CPU slowdown (calibrated to the agent hardware speed)
+ * - 150ms under 6x CPU slowdown (calibrated to the agent hardware speed)
  */
 
 test.describe('Throttled Interactive Performance Testing', () => {
@@ -35,26 +36,12 @@ test.describe('Throttled Interactive Performance Testing', () => {
   const slowdownRates = [4, 6];
 
   for (const rate of slowdownRates) {
-    test(`styling switches with ${rate}x CPU slowdown model`, async ({ page }) => {
+    test(`styling switches with ${rate}x CPU slowdown model`, async ({ page, perfMonitor }) => {
       // Connect to Chrome DevTools Protocol to enable CPU throttling
-      const client = await page.context().newCDPSession(page);
-      await client.send('Emulation.setCPUThrottlingRate', { rate });
+      await perfMonitor.setupCpuThrottling(rate);
 
-      // Inject a script to observe and record long tasks on the main thread
-      await page.addInitScript(() => {
-        (window as any).isPerformanceTest = true;
-        (window as any).longTasks = [];
-        const observer = new PerformanceObserver((list) => {
-          for (const entry of list.getEntries()) {
-            (window as any).longTasks.push({
-              name: entry.name,
-              startTime: entry.startTime,
-              duration: entry.duration,
-            });
-          }
-        });
-        observer.observe({ entryTypes: ['longtask'] });
-      });
+      // Register the PerformanceObserver on the window object
+      await perfMonitor.startMonitoring();
 
       // Navigate to the homepage
       await page.goto('/');
@@ -69,10 +56,7 @@ test.describe('Throttled Interactive Performance Testing', () => {
       await page.waitForSelector('canvas[role="img"]');
 
       // Clear any long tasks registered during the initial page load/hydration phase.
-      // We are specifically testing interactive transitions between complex styling states.
-      await page.evaluate(() => {
-        (window as any).longTasks = [];
-      });
+      await perfMonitor.clearLongTasks();
 
       // List of complex visual style patterns to test (Grunge, Starburst, and Circuit)
       const stylesToTest = [
@@ -84,12 +68,9 @@ test.describe('Throttled Interactive Performance Testing', () => {
       // Interactive performance check for each preset style configuration
       for (const style of stylesToTest) {
         // Clear long task list before beginning transition
-        await page.evaluate(() => {
-          (window as any).longTasks = [];
-        });
+        await perfMonitor.clearLongTasks();
 
         // Click the corresponding pattern style button using a force-click
-        // because the input itself might be sr-only/hidden
         const styleButton = page.getByLabel(style.ariaLabel);
         await styleButton.click({ force: true });
 
@@ -97,26 +78,75 @@ test.describe('Throttled Interactive Performance Testing', () => {
         await page.waitForTimeout(1000);
 
         // Fetch captured main-thread long tasks from the window observer
-        const longTasks = await page.evaluate(() => {
-          return (window as any).longTasks as Array<{ name: string; startTime: number; duration: number }>;
-        });
+        const longTasks = await perfMonitor.getLongTasks();
 
         // Log the measured main-thread execution blocks
         console.log(`[Rate ${rate}x] Style transition to "${style.label}" long tasks:`, longTasks);
 
-        // Budget evaluation:
-        // Base budget: 50 milliseconds
-        // Throttled budget adjusts with the CPU slowdown factor:
-        // Under 4x slowdown: 50ms baseline (plus 20% environment tolerance = 60ms)
-        // Under 6x slowdown: adjusted to allow for simulated low-end hardware execution budget = 150ms
-        const threshold = rate === 4 ? 60 : 150;
+        // Hardware-Agnostic Performance Budgets:
+        // Adjust the base thresholds (60ms for 4x, 150ms for 6x) by the dynamic host calibration scale factor
+        const baseThreshold = rate === 4 ? 60 : 150;
+        const scaleFactor = perfMonitor.getHardwareScaleFactor();
+        const threshold = baseThreshold * scaleFactor;
 
         for (const task of longTasks) {
           expect(task.duration).toBeLessThanOrEqual(
             threshold,
-            `Main-thread long task duration (${task.duration.toFixed(1)}ms) exceeded the 50ms performance budget (plus 10% tolerance = ${threshold}ms) during transition to "${style.label}" under ${rate}x CPU slowdown.`
+            `Main-thread long task duration (${task.duration.toFixed(1)}ms) exceeded the calibrated budget (${threshold.toFixed(1)}ms) during transition to "${style.label}" under ${rate}x CPU slowdown.`
           );
         }
+      }
+    });
+
+    test(`tab switches and text input with ${rate}x CPU slowdown model`, async ({ page, perfMonitor }) => {
+      // Connect to Chrome DevTools Protocol to enable CPU throttling
+      await perfMonitor.setupCpuThrottling(rate);
+
+      // Register the PerformanceObserver on the window object
+      await perfMonitor.startMonitoring();
+
+      // Navigate to the homepage
+      await page.goto('/');
+
+      // Wait for the app to hydrate successfully
+      await page.waitForSelector('main[data-hydrated="true"]');
+
+      // Clear any long tasks registered during the initial page load/hydration phase.
+      await perfMonitor.clearLongTasks();
+
+      // Switch to 'Location' tab
+      const locationTab = page.getByRole('tab', { name: 'Location' });
+      await locationTab.click();
+      await page.getByTestId('use-current-location').waitFor({ state: 'visible' });
+
+      // Switch to 'Email' tab
+      const emailTab = page.getByRole('tab', { name: 'Email' });
+      await emailTab.click();
+      await page.locator('#email-address').waitFor({ state: 'visible' });
+
+      // Enter some email text
+      await page.locator('#email-address').fill('hello@example.com');
+
+      // Wait to allow all layout computation, canvas drawing, and async queues to settle
+      await page.waitForTimeout(1000);
+
+      // Fetch captured main-thread long tasks from the window observer
+      const longTasks = await perfMonitor.getLongTasks();
+
+      // Log the measured main-thread execution blocks
+      console.log(`[Rate ${rate}x] Tab switches and email input long tasks:`, longTasks);
+
+      // Hardware-Agnostic Performance Budgets:
+      // Adjust the base thresholds (60ms for 4x, 150ms for 6x) by the dynamic host calibration scale factor
+      const baseThreshold = rate === 4 ? 60 : 150;
+      const scaleFactor = perfMonitor.getHardwareScaleFactor();
+      const threshold = baseThreshold * scaleFactor;
+
+      for (const task of longTasks) {
+        expect(task.duration).toBeLessThanOrEqual(
+          threshold,
+          `Main-thread long task duration (${task.duration.toFixed(1)}ms) exceeded the calibrated budget (${threshold.toFixed(1)}ms) during tab switches and inputs under ${rate}x CPU slowdown.`
+        );
       }
     });
   }

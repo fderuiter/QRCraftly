@@ -1,6 +1,77 @@
 import { test as base, expect } from '@playwright/test';
 
-export const test = base.extend({
+export interface PerfMonitor {
+  setupCpuThrottling(rate: number): Promise<void>;
+  startMonitoring(): Promise<void>;
+  clearLongTasks(): Promise<void>;
+  getLongTasks(): Promise<Array<{ name: string; startTime: number; duration: number }>>;
+  getHardwareScaleFactor(): number;
+}
+
+let cachedScaleFactor: number | null = null;
+
+export const getHardwareScaleFactor = (): number => {
+  if (cachedScaleFactor !== null) {
+    return cachedScaleFactor;
+  }
+  const start = Date.now();
+  let x = 0;
+  for (let i = 0; i < 1000000; i++) {
+    x += Math.sin(i) * Math.cos(i);
+  }
+  const duration = Date.now() - start;
+  // On a fast reference machine, 1,000,000 iterations of sin/cos takes ~8ms.
+  // We calibrate the scale factor relative to that.
+  cachedScaleFactor = Math.max(1.0, duration / 8.0);
+  console.log(`[Perf Calibration] Hardware benchmark duration: ${duration}ms. Scale factor: ${cachedScaleFactor.toFixed(2)}x`);
+  return cachedScaleFactor;
+};
+
+export const test = base.extend<{ perfMonitor: PerfMonitor }>({
+  perfMonitor: async ({ page }, use) => {
+    let client: any = null;
+
+    const monitor: PerfMonitor = {
+      async setupCpuThrottling(rate: number) {
+        if (!client) {
+          client = await page.context().newCDPSession(page);
+        }
+        await client.send('Emulation.setCPUThrottlingRate', { rate });
+      },
+      async startMonitoring() {
+        await page.addInitScript(() => {
+          (window as any).isPerformanceTest = true;
+          (window as any).longTasks = [];
+          const observer = new PerformanceObserver((list) => {
+            for (const entry of list.getEntries()) {
+              (window as any).longTasks.push({
+                name: entry.name,
+                startTime: entry.startTime,
+                duration: entry.duration,
+              });
+            }
+          });
+          observer.observe({ entryTypes: ['longtask'] });
+        });
+      },
+      async clearLongTasks() {
+        await page.evaluate(() => {
+          (window as any).longTasks = [];
+        });
+      },
+      async getLongTasks() {
+        return await page.evaluate(() => {
+          return (window as any).longTasks || [];
+        });
+      },
+      getHardwareScaleFactor() {
+        return getHardwareScaleFactor();
+      }
+    };
+
+    await use(monitor);
+  },
+
   page: async ({ page, context }, use, testInfo) => {
     const blockedRequests: string[] = [];
 

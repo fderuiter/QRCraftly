@@ -86,10 +86,12 @@ function generateLhciManifest() {
   
   lhciConfig.ci.collect.url = urls;
 
-  // Ensure strict SEO threshold of 0.95
+  // Ensure strict CLS, LCP, and SEO thresholds
   if (!lhciConfig.ci.assert) lhciConfig.ci.assert = {};
   if (!lhciConfig.ci.assert.assertions) lhciConfig.ci.assert.assertions = {};
   lhciConfig.ci.assert.assertions['categories:seo'] = ['error', { minScore: 0.95 }];
+  lhciConfig.ci.assert.assertions['cumulative-layout-shift'] = ['error', { maxNumericValue: 0.1 }];
+  lhciConfig.ci.assert.assertions['largest-contentful-paint'] = ['error', { maxNumericValue: 2500 }];
 
   fs.writeFileSync(LIGHTHOUSE_RC_FILE, JSON.stringify(lhciConfig, null, 2) + '\n', 'utf8');
   console.log(`[LHCI Manifest] Successfully wrote ${urls.length} audit URLs and updated SEO threshold in ${LIGHTHOUSE_RC_FILE}`);
