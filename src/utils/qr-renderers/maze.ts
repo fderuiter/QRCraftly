@@ -197,16 +197,33 @@ export function generateMaze(modules: QRModules, config: QRConfig, size: number)
       }
 
       if (bestEnd) {
-        // Run BFS pathfinder
-        const queue: MazeNode[] = [sCand];
+        // Run A* pathfinder
+        const openSet: MazeNode[] = [sCand];
         const visited = new Set<string>([sKey]);
+        const gScore = new Map<string, number>();
+        gScore.set(sKey, 0);
+
+        const fScore = new Map<string, number>();
+        const h = (a: MazeNode, b: MazeNode) => Math.abs(a.r - b.r) + Math.abs(a.c - b.c);
+        fScore.set(sKey, h(sCand, bestEnd));
+
         const parentMap = new Map<string, MazeNode>();
         let found = false;
 
         const endKey = `${bestEnd.r},${bestEnd.c}`;
-        while (queue.length > 0) {
-          const curr = queue.shift()!;
+        while (openSet.length > 0) {
+          let lowestIdx = 0;
+          for (let i = 1; i < openSet.length; i++) {
+            const nodeKey = `${openSet[i].r},${openSet[i].c}`;
+            const lowestKey = `${openSet[lowestIdx].r},${openSet[lowestIdx].c}`;
+            if ((fScore.get(nodeKey) ?? Infinity) < (fScore.get(lowestKey) ?? Infinity)) {
+              lowestIdx = i;
+            }
+          }
+
+          const curr = openSet.splice(lowestIdx, 1)[0];
           const currKey = `${curr.r},${curr.c}`;
+
           if (currKey === endKey) {
             found = true;
             break;
@@ -215,10 +232,16 @@ export function generateMaze(modules: QRModules, config: QRConfig, size: number)
           const neighbors = adj.get(currKey) || [];
           for (const n of neighbors) {
             const nKey = `${n.r},${n.c}`;
-            if (!visited.has(nKey)) {
-              visited.add(nKey);
+            const tentativeGScore = (gScore.get(currKey) ?? Infinity) + 1;
+
+            if (tentativeGScore < (gScore.get(nKey) ?? Infinity)) {
               parentMap.set(nKey, curr);
-              queue.push(n);
+              gScore.set(nKey, tentativeGScore);
+              fScore.set(nKey, tentativeGScore + h(n, bestEnd));
+              if (!visited.has(nKey)) {
+                visited.add(nKey);
+                openSet.push(n);
+              }
             }
           }
         }
@@ -265,11 +288,12 @@ export function renderMaze(
   drawX: number,
   drawY: number,
   cellSize: number,
-  size: number
+  size: number,
+  mazeData?: MazeData | null
 ) {
   if (!config.isMazeEnabled) return;
 
-  const maze = generateMaze(modules, config, size);
+  const maze = mazeData || generateMaze(modules, config, size);
   const pathWidth = cellSize * (config.mazePathWidth || 0.25);
 
   ctx.save();

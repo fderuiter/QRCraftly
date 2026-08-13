@@ -16,7 +16,8 @@ export const drawQR = (
   config: QRConfig,
   logoImg: HTMLImageElement | null,
   borderLogoImg: HTMLImageElement | null,
-  size: number
+  size: number,
+  mazeData?: any | null
 ) => {
   const canvas = ctx.canvas;
 
@@ -37,7 +38,17 @@ export const drawQR = (
 
     ctx.scale(pixelRatio, pixelRatio);
 
-    drawQRInternal(ctx as unknown as CanvasRenderingContext2D, modules, config, logoImg, borderLogoImg, displaySize, moduleCount);
+    drawQRInternal(
+      ctx as unknown as CanvasRenderingContext2D,
+      modules,
+      config,
+      logoImg,
+      borderLogoImg,
+      displaySize,
+      moduleCount,
+      false,
+      mazeData
+    );
 
   } catch (err) {
     console.warn("QR generation failed:", err);
@@ -64,7 +75,8 @@ export const drawQRInternal = (
   borderLogoImg: HTMLImageElement | null,
   displaySize: number,
   moduleCount: number,
-  isVirtual: boolean = false
+  isVirtual: boolean = false,
+  mazeData?: any | null
 ) => {
   // 1. Calculate Layout
   const { drawX, drawY, drawSize, cellSize, borderPx } = calculateLayout(config, displaySize, moduleCount);
@@ -88,7 +100,7 @@ export const drawQRInternal = (
   renderModules(ctx, modules, config, drawX, drawY, cellSize, moduleCount, logoMetrics, isVirtual);
 
   // 4b. Render Maze (if enabled)
-  renderMaze(ctx, modules, config, drawX, drawY, cellSize, moduleCount);
+  renderMaze(ctx, modules, config, drawX, drawY, cellSize, moduleCount, mazeData);
 
   // 5. Render Eyes
   renderEyes(ctx, config, drawX, drawY, cellSize, moduleCount);

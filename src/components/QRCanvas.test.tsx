@@ -55,6 +55,7 @@ describe('QRCanvas Component', () => {
       moveTo: vi.fn(),
       lineTo: vi.fn(),
       closePath: vi.fn(),
+      stroke: vi.fn(),
       bezierCurveTo: vi.fn(),
       canvas: { width: 0, height: 0 },
       fillStyle: '',
@@ -470,5 +471,115 @@ describe('QRCanvas Component', () => {
         (window as any).requestIdleCallback = originalIdleCallback;
       }
     }
+  });
+
+  describe('Off-Thread Maze Pathfinder Web Worker Integration', () => {
+    it('initializes and triggers background maze worker on config update if isMazeEnabled is true', async () => {
+      const postMessageMock = vi.fn();
+      const terminateMock = vi.fn();
+      
+      const originalWorker = globalThis.Worker;
+      class MockWorker {
+        onmessage: any = null;
+        onerror: any = null;
+        postMessage = postMessageMock;
+        terminate = terminateMock;
+        addEventListener = vi.fn();
+        removeEventListener = vi.fn();
+      }
+
+      globalThis.Worker = function (urlObj: any, options?: any) {
+        const urlStr = urlObj.toString();
+        if (urlStr.includes('matrixWorker.ts')) {
+          throw new Error('Fallback matrix worker to sync path');
+        }
+        return new MockWorker();
+      } as any;
+
+      const originalURL = globalThis.URL;
+      globalThis.URL = class extends originalURL {
+        constructor(url: string | URL, base?: string | URL) {
+          const urlStr = typeof url === 'string' ? url : url.toString();
+          if (urlStr.includes('matrixWorker.ts')) {
+            super('http://localhost/matrixWorker.ts');
+          } else {
+            super('http://localhost/mazeWorker.ts');
+          }
+        }
+      } as any;
+
+      const originalEnv = process.env.NODE_ENV;
+      const originalUserAgent = navigator.userAgent;
+
+      // redfine NODE_ENV and userAgent to allow worker initialization in test
+      process.env.NODE_ENV = 'production';
+      Object.defineProperty(navigator, 'userAgent', {
+        value: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)',
+        configurable: true,
+      });
+
+      try {
+        const mazeConfig = {
+          ...DEFAULT_CONFIG,
+          isMazeEnabled: true,
+          mazeColor: '#ff0000',
+        };
+
+        const { rerender } = render(<QRCanvas config={mazeConfig} size={100} />);
+        
+        // Wait a short tick for mount effects to fully resolve and initialize workers
+        await act(async () => {
+          await new Promise((resolve) => setTimeout(resolve, 50));
+        });
+
+        // Trigger config update to dispatch calculation to the active worker
+        rerender(<QRCanvas config={{ ...mazeConfig, value: 'https://qrcraftly.com/updated-test' }} size={100} />);
+
+        await waitFor(() => {
+          expect(postMessageMock).toHaveBeenCalled();
+        });
+
+        const firstPayload = postMessageMock.mock.calls[0][0];
+        expect(firstPayload).toHaveProperty('size');
+        expect(firstPayload).toHaveProperty('matrix');
+        expect(firstPayload).toHaveProperty('config');
+        expect(firstPayload).toHaveProperty('sequenceId');
+      } finally {
+        globalThis.Worker = originalWorker;
+        globalThis.URL = originalURL;
+        process.env.NODE_ENV = originalEnv;
+        Object.defineProperty(navigator, 'userAgent', {
+          value: originalUserAgent,
+          configurable: true,
+        });
+      }
+    });
+
+    it('falls back to main-thread pathfinding calculation using requestIdleCallback if Worker throws', async () => {
+      const originalWorker = globalThis.Worker;
+      globalThis.Worker = class {
+        constructor() {
+          throw new Error('Worker blocked');
+        }
+      } as any;
+
+      try {
+        const mazeConfig = {
+          ...DEFAULT_CONFIG,
+          isMazeEnabled: true,
+          mazeColor: '#00ff00',
+        };
+
+        const spyGenerateMaze = vi.spyOn(await import('../utils/qr-renderers/maze'), 'generateMaze');
+
+        render(<QRCanvas config={mazeConfig} size={100} />);
+
+        await waitFor(() => {
+          expect(spyGenerateMaze).toHaveBeenCalled();
+        });
+      } finally {
+        globalThis.Worker = originalWorker;
+      }
+    });
   });
 });

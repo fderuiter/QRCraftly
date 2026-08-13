@@ -240,7 +240,8 @@ export function drawWithTemplate(
   displayWidth: number,
   displayHeight: number,
   moduleCount: number,
-  isVirtual: boolean = false
+  isVirtual: boolean = false,
+  mazeData?: any | null
 ): void {
   ctx.clearRect(0, 0, displayWidth, displayHeight);
 
@@ -293,16 +294,30 @@ export function drawWithTemplate(
   // drawQRInternal works in the logical [0, displayWidth] × [0, displayWidth]
   // coordinate space; we pass displayWidth as both width and height because
   // the QR is always square.
-  drawQRInternal(
-    ctx as unknown as CanvasRenderingContext2D,
-    modules,
-    config,
-    logoImg,
-    borderLogoImg,
-    displayWidth,
-    moduleCount,
-    isVirtual
-  );
+  if (mazeData !== undefined) {
+    drawQRInternal(
+      ctx as unknown as CanvasRenderingContext2D,
+      modules,
+      config,
+      logoImg,
+      borderLogoImg,
+      displayWidth,
+      moduleCount,
+      isVirtual,
+      mazeData
+    );
+  } else {
+    drawQRInternal(
+      ctx as unknown as CanvasRenderingContext2D,
+      modules,
+      config,
+      logoImg,
+      borderLogoImg,
+      displayWidth,
+      moduleCount,
+      isVirtual
+    );
+  }
 
   ctx.restore();
 
