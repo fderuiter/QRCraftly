@@ -179,4 +179,38 @@ describe('Metadata-Driven Frontmatter Filtering', () => {
       expect(explicitPub.content).toContain('# Explicit Public Document');
     });
   });
+
+  describe('Strict Opt-In and Quarantine Isolation Pass', () => {
+    it('should ignore all markdown files inside a quarantine or internal folder', () => {
+      const quarantineDir = path.join(tempDir, 'quarantine');
+      const internalDir = path.join(tempDir, 'internal');
+      if (!fs.existsSync(quarantineDir)) fs.mkdirSync(quarantineDir, { recursive: true });
+      if (!fs.existsSync(internalDir)) fs.mkdirSync(internalDir, { recursive: true });
+
+      fs.writeFileSync(
+        path.join(quarantineDir, 'quarantined-note.md'),
+        `# Internal Note\nThis should be completely ignored.`,
+        'utf-8'
+      );
+      fs.writeFileSync(
+        path.join(internalDir, 'internal-note.md'),
+        `# Secret Note\nThis should also be completely ignored.`,
+        'utf-8'
+      );
+
+      // Execute compileManifest
+      compileManifest(tempDir, tempManifestPath);
+
+      const compiledData = JSON.parse(fs.readFileSync(tempManifestPath, 'utf-8'));
+      const ids = compiledData.map((doc: { id: string }) => doc.id);
+      expect(ids).not.toContain('quarantined-note');
+      expect(ids).not.toContain('internal-note');
+    });
+
+    it('should successfully parse publish-approved property', () => {
+      const input = `---\npublish-approved: true\ntitle: "Approved Doc"\n---\n# Approved Document`;
+      const { frontmatter } = parseFrontmatter(input);
+      expect(frontmatter['publish-approved']).toBe(true);
+    });
+  });
 });

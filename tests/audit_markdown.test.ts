@@ -218,4 +218,38 @@ No private info.
       expect(hasLinkErrors).toBe(true);
     });
   });
+
+  describe('Quarantine and Strict Opt-In Auditing', () => {
+    it('should fail validation if a public folder file lacks publish-approved metadata', () => {
+      const content = `---\ntitle: "No Publish Approved"\n---\n# Some Content`;
+      // Import checkPublishApproved from audit_markdown.js
+      const { checkPublishApproved } = require('../scripts/audit_markdown.js');
+      const hasErrors = checkPublishApproved('docs/public/test-no-approve.md', content);
+      expect(hasErrors).toBe(true);
+    });
+
+    it('should pass validation if a public folder file has publish-approved: true metadata', () => {
+      const content = `---\npublish-approved: true\ntitle: "Yes Publish Approved"\n---\n# Some Content`;
+      const { checkPublishApproved } = require('../scripts/audit_markdown.js');
+      const hasErrors = checkPublishApproved('docs/public/test-yes-approve.md', content);
+      expect(hasErrors).toBe(false);
+    });
+
+    it('should pass validation for a non-public folder file even without publish-approved metadata', () => {
+      const content = `# Global File`;
+      const { checkPublishApproved } = require('../scripts/audit_markdown.js');
+      const hasErrors = checkPublishApproved('docs/SECURITY.md', content);
+      expect(hasErrors).toBe(false);
+    });
+
+    it('should completely bypass checking placeholders and return false for quarantined files', () => {
+      const { checkPublishApproved, checkPlaceholders } = require('../scripts/audit_markdown.js');
+      const content = `TODO: this contains a placeholder but is quarantined.`;
+      const hasPlaceholderErrors = checkPlaceholders('docs/internal/note.md', content);
+      expect(hasPlaceholderErrors).toBe(false);
+
+      const hasApproveErrors = checkPublishApproved('docs/internal/note.md', content);
+      expect(hasApproveErrors).toBe(false);
+    });
+  });
 });
