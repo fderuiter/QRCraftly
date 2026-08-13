@@ -218,6 +218,23 @@ class MockWorker {
             }
           }
 
+          if (this.url.toString().includes('scannerWorker') && message && typeof message === 'object' && typeof message.sequenceId === 'number') {
+            const { imageData, width, height } = message;
+            if (imageData && typeof width === 'number' && typeof height === 'number') {
+              const { default: jsQR } = await import('jsqr');
+              let code = jsQR(imageData.data, width, height, { inversionAttempts: 'dontInvert' });
+              if (!code) {
+                code = jsQR(imageData.data, width, height, { inversionAttempts: 'attemptBoth' });
+              }
+              if (code && code.data) {
+                this.dispatchMessage({ success: true, decodedData: code.data, sequenceId: message.sequenceId });
+              } else {
+                this.dispatchMessage({ success: false, error: 'No QR code detected in this image. Try a clearer or higher-contrast QR code image.', sequenceId: message.sequenceId });
+              }
+              return;
+            }
+          }
+
           if (message && typeof message === 'object') {
             const { imageData, width, height, isTest, configId } = message;
             if (imageData && typeof width === 'number' && typeof height === 'number') {
