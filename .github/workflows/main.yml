@@ -56,57 +56,9 @@ jobs:
       - name: Audit Dependencies
         run: pnpm audit --audit-level=high
 
-  # JOB 2a: Syntax Linting (Parallel)
-  eslint:
-    name: Syntax Linting (ESLint)
-    needs: setup
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Setup Environment
-        uses: ./.github/actions/setup
-
-      - name: Run ESLint
-        run: pnpm exec eslint .
-
-  # JOB 2b: Type-Safety Checks (Parallel)
-  tsc:
-    name: Type-Safety Checks (TypeScript)
-    needs: setup
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Setup Environment
-        uses: ./.github/actions/setup
-
-      - name: Run TypeScript Compiler Check
-        run: pnpm exec tsc --noEmit
-
-  # JOB 2c: Dead-Code Scanning (Parallel)
-  knip:
-    name: Dead-Code Scanning (Knip)
-    needs: setup
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Setup Environment
-        uses: ./.github/actions/setup
-
-      - name: Run Knip Check
-        run: pnpm exec knip
-
-  # JOB 2d: Compliance & Security (Parallel)
-  compliance:
-    name: Compliance & Security
+  # JOB 2: Consolidated Static Validation Quality Gate
+  static-validation:
+    name: Consolidated Static Validation
     needs: setup
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -122,32 +74,11 @@ jobs:
         id: changed-files
         uses: tj-actions/changed-files@v47
 
-      - name: Run Lineage Auditor on Changed Files
-        run: node scripts/git_lineage_auditor.js
+      - name: Run Sequential Static Validation
+        run: pnpm run lint
 
       - name: Run Secret Scanning Guardrail
         run: node scripts/secret-scanner.js
-
-      - name: Run Markdown & Compliance Audit
-        run: node scripts/audit_markdown.js
-
-      - name: Run Dependency & Network Boundary Compliance Guardrail
-        run: node scripts/dependency_compliance.js
-
-      - name: Run UI Catalog Validation
-        run: node scripts/validate_ui_catalog.js
-
-      - name: Run Static Path Tracker
-        run: node scripts/static-path-tracker.js
-
-      - name: Compile Docs Manifest
-        run: node scripts/compile_docs_manifest.js
-
-      - name: Run Contrast Check
-        run: node scripts/contrast_check.js
-
-      - name: Check for Code Duplication
-        run: pnpm run validate:duplication
 
       - name: Set up Python
         uses: actions/setup-python@v7
@@ -207,27 +138,12 @@ jobs:
           path: playwright-report/
           retention-days: 14
 
-  # JOB 4: Layout & Format Checks (Parallel)
-  layout:
-    name: Layout & Format Checks
-    needs: setup
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Setup Environment
-        uses: ./.github/actions/setup
-
-      - name: Verify Layout Format
-        run: pnpm run format:check
 
   # JOB 5: Build Application
   build:
     name: Build & Artifact
-    needs: [eslint, tsc, knip, compliance, test, e2e, layout] # Wait for quality checks before burning CPU on build
+    needs: [static-validation, test, e2e] # Wait for quality checks before burning CPU on build
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -357,7 +273,7 @@ jobs:
 
   deploy:
     name: Deploy
-    needs: [eslint, tsc, knip, compliance, test, e2e, build]
+    needs: [static-validation, test, e2e, build]
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && startsWith(github.event.head_commit.message, 'Revert'))
     timeout-minutes: 15
     concurrency:
