@@ -115,7 +115,7 @@ export const AdvancedControls: React.FC<AdvancedControlsProps> = ({ config, onCh
             </div>
 
             {config.isMazeEnabled && (
-              <div className="pl-12 space-y-4">
+              <div className="space-y-4 pl-12">
                 <ColorInput
                   id="maze-color"
                   label="Maze Path Color"
