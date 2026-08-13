@@ -1,6 +1,38 @@
 import { ToolContent } from '../data/contentRegistry';
 import { resolveDomainForPath, resolvePublicUrl } from './metadataEngine';
 
+import aboutConfig from '../pages/about/+config';
+import emailConfig from '../pages/email-qr-code/+config';
+import eventConfig from '../pages/event-qr-code/+config';
+import fileTransferConfig from '../pages/file-transfer/+config';
+import indexConfig from '../pages/index/+config';
+import locationConfig from '../pages/location-qr-code/+config';
+import meetingConfig from '../pages/meeting-qr-code/+config';
+import paymentConfig from '../pages/payment-qr-code/+config';
+import phoneConfig from '../pages/phone-qr-code/+config';
+import smsConfig from '../pages/sms-qr-code/+config';
+import socialConfig from '../pages/social-qr-code/+config';
+import textConfig from '../pages/text-qr-code/+config';
+import vcardConfig from '../pages/vcard-qr-code/+config';
+import wifiConfig from '../pages/wifi-qr-code/+config';
+
+const configMap: Record<string, any> = {
+  'about': aboutConfig,
+  'email-qr-code': emailConfig,
+  'event-qr-code': eventConfig,
+  'file-transfer': fileTransferConfig,
+  'index': indexConfig,
+  'location-qr-code': locationConfig,
+  'meeting-qr-code': meetingConfig,
+  'payment-qr-code': paymentConfig,
+  'phone-qr-code': phoneConfig,
+  'sms-qr-code': smsConfig,
+  'social-qr-code': socialConfig,
+  'text-qr-code': textConfig,
+  'vcard-qr-code': vcardConfig,
+  'wifi-qr-code': wifiConfig,
+};
+
 export function generateSchema(content: ToolContent, resolvedDomain?: string, requestPath?: string): any {
   const domain = resolvedDomain || resolveDomainForPath(content.url);
   const publicUrl = requestPath ? resolvePublicUrl(requestPath) : content.url;
@@ -78,10 +110,23 @@ export function generateSchema(content: ToolContent, resolvedDomain?: string, re
   const graph: any[] = [appEntity];
 
   if (content.howTo) {
+    const pageConfig = configMap[content.id];
+    let extension = 'png';
+    const imagePath = pageConfig?.image;
+    if (typeof imagePath === 'string') {
+      const withoutQuery = imagePath.split('?')[0];
+      const dotIndex = withoutQuery.lastIndexOf('.');
+      if (dotIndex !== -1) {
+        extension = withoutQuery.slice(dotIndex + 1);
+      }
+    }
+    const imageUrl = `${domain}/assets/images/completed/${content.id}.${extension}`;
+
     const howToObj: any = {
       "@type": "HowTo",
       "name": content.howTo.name,
       "description": content.howTo.description,
+      "image": imageUrl,
       "totalTime": "PT1M",
       "estimatedCost": {
         "@type": "MonetaryAmount",

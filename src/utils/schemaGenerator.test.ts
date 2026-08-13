@@ -69,6 +69,7 @@ describe('schemaGenerator', () => {
     // Check HowTo
     const howTo = schema['@graph'].find((g: any) => g['@type'] === 'HowTo');
     expect(howTo).toBeDefined();
+    expect(howTo.image).toBe('https://qrcraftly.com/assets/images/completed/wifi.png');
     expect(howTo.supply).toBeDefined();
     expect(howTo.supply[0].name).toBe('Internet connection');
 
@@ -82,6 +83,10 @@ describe('schemaGenerator', () => {
     const app = schema['@graph'].find((g: any) => Array.isArray(g['@type']) && g['@type'].includes('WebApplication'));
     expect(app.url).toContain('/request-path');
     expect(app.image).toBe('https://test.domain.com/og-image.png');
+
+    const howTo = schema['@graph'].find((g: any) => g['@type'] === 'HowTo');
+    expect(howTo).toBeDefined();
+    expect(howTo.image).toBe('https://test.domain.com/assets/images/completed/wifi.png');
   });
 
   it('handles howTo without supply or faq list', () => {
@@ -239,5 +244,31 @@ describe('schemaGenerator', () => {
         "audienceType": "General User"
       }
     ]);
+  });
+
+  it('resolves image extension from page configuration metadata', () => {
+    const wifiToolContent: ToolContent = {
+      id: 'wifi-qr-code',
+      name: 'WiFi QR Code Generator',
+      description: 'wifi desc',
+      url: 'https://qrcraftly.com/wifi-qr-code',
+      features: [],
+      schemaType: SchemaType.WebApplication,
+      schemaCategory: SchemaCategory.UtilitiesApplication,
+      personas: [TargetPersona.GeneralUser],
+      valueProposition: StrategicValueCategory.PersonalUse,
+      howTo: {
+        name: 'Steps',
+        description: 'Steps to do wifi',
+        steps: [{ name: 'SSID', text: 'SSID name' }]
+      }
+    };
+
+    const schema = generateSchema(wifiToolContent);
+    const howTo = schema['@graph'].find((g: any) => g['@type'] === 'HowTo');
+    expect(howTo).toBeDefined();
+    // wifi-qr-code +config image property is '/og-image.png?type=wifi'
+    // so extension is png
+    expect(howTo.image).toBe('https://qrcraftly.com/assets/images/completed/wifi-qr-code.png');
   });
 });
