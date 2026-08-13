@@ -368,48 +368,272 @@ globalThis.mockWorkerControl = {
 // Global mocks for Canvas Context, Fetch, URL
 // ---------------------------------------------------------------------------
 
-const createMockContext = () => ({
-  clearRect: vi.fn(),
-  fillRect: vi.fn(),
-  roundRect: vi.fn(),
-  beginPath: vi.fn(),
-  fill: vi.fn(),
-  arc: vi.fn(),
-  rect: vi.fn(),
-  save: vi.fn(),
-  translate: vi.fn(),
-  rotate: vi.fn(),
-  restore: vi.fn(),
-  scale: vi.fn(),
-  drawImage: vi.fn(),
-  moveTo: vi.fn(),
-  lineTo: vi.fn(),
-  closePath: vi.fn(),
-  bezierCurveTo: vi.fn(),
-  setLineDash: vi.fn(),
-  strokeRect: vi.fn(),
-  stroke: vi.fn(),
-  fillText: vi.fn(),
-  measureText: vi.fn().mockReturnValue({ width: 0 }),
-  getImageData: vi.fn().mockImplementation((_x: any, _y: any, w: any, h: any) => ({
-    data: new Uint8ClampedArray(w * h * 4)
-  })),
-  putImageData: vi.fn(),
-  createImageData: vi.fn().mockReturnValue([]),
-  setTransform: vi.fn(),
-  transform: vi.fn(),
-  clip: vi.fn(),
-  quadraticCurveTo: vi.fn(),
-  canvas: { width: 0, height: 0 },
-  fillStyle: '',
-  strokeStyle: '',
-  lineWidth: 0,
-});
+function parseColor(color: string): { r: number, g: number, b: number, a: number } {
+  if (!color) return { r: 0, g: 0, b: 0, a: 0 };
+  const trimmed = color.trim().toLowerCase();
+  
+  if (trimmed.startsWith('#')) {
+    const hex = trimmed.slice(1);
+    if (hex.length === 3) {
+      const r = parseInt(hex[0] + hex[0], 16);
+      const g = parseInt(hex[1] + hex[1], 16);
+      const b = parseInt(hex[2] + hex[2], 16);
+      return { r, g, b, a: 255 };
+    }
+    if (hex.length === 4) {
+      const r = parseInt(hex[0] + hex[0], 16);
+      const g = parseInt(hex[1] + hex[1], 16);
+      const b = parseInt(hex[2] + hex[2], 16);
+      const a = parseInt(hex[3] + hex[3], 16);
+      return { r, g, b, a };
+    }
+    if (hex.length === 6) {
+      const r = parseInt(hex.slice(0, 2), 16);
+      const g = parseInt(hex.slice(2, 4), 16);
+      const b = parseInt(hex.slice(4, 6), 16);
+      return { r, g, b, a: 255 };
+    }
+    if (hex.length === 8) {
+      const r = parseInt(hex.slice(0, 2), 16);
+      const g = parseInt(hex.slice(2, 4), 16);
+      const b = parseInt(hex.slice(4, 6), 16);
+      const a = parseInt(hex.slice(6, 8), 16);
+      return { r, g, b, a };
+    }
+  }
+
+  const rgbMatch = trimmed.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*([\d.]+)\s*)?\)$/);
+  if (rgbMatch) {
+    const r = parseInt(rgbMatch[1], 10);
+    const g = parseInt(rgbMatch[2], 10);
+    const b = parseInt(rgbMatch[3], 10);
+    const a = rgbMatch[4] !== undefined ? Math.round(parseFloat(rgbMatch[4]) * 255) : 255;
+    return { r, g, b, a };
+  }
+
+  if (trimmed === 'white') return { r: 255, g: 255, b: 255, a: 255 };
+  if (trimmed === 'black') return { r: 0, g: 0, b: 0, a: 255 };
+  if (trimmed === 'transparent') return { r: 0, g: 0, b: 0, a: 0 };
+
+  return { r: 0, g: 0, b: 0, a: 255 };
+}
+
+const createMockContext = (canvasEl?: any) => {
+  const ctx = {
+    _virtualGrid: new Map<string, string>(),
+    _bgColor: '',
+    _segments: [] as any[],
+    _currentPoint: { x: 0, y: 0 },
+    
+    isFilled(x: number, y: number): boolean {
+      const px = Math.floor(x);
+      const py = Math.floor(y);
+      const color = this._virtualGrid.get(`${px},${py}`);
+      if (!color) return false;
+      const parsed = parseColor(color);
+      if (parsed.a === 0) return false;
+      // White is background/empty
+      if (parsed.r === 255 && parsed.g === 255 && parsed.b === 255) return false;
+      if (this._bgColor) {
+        const bgParsed = parseColor(this._bgColor);
+        if (parsed.r === bgParsed.r && parsed.g === bgParsed.g && parsed.b === bgParsed.b) {
+          return false;
+        }
+      }
+      return true;
+    },
+
+    clearRect: vi.fn().mockImplementation(function(this: any, x: number, y: number, w: number, h: number) {
+      const startX = Math.floor(x);
+      const endX = Math.ceil(x + w);
+      const startY = Math.floor(y);
+      const endY = Math.ceil(y + h);
+      for (let px = startX; px < endX; px++) {
+        for (let py = startY; py < endY; py++) {
+          this._virtualGrid.delete(`${px},${py}`);
+        }
+      }
+    }),
+    
+    fillRect: vi.fn().mockImplementation(function(this: any, x: number, y: number, w: number, h: number) {
+      const startX = Math.floor(x);
+      const endX = Math.ceil(x + w);
+      const startY = Math.floor(y);
+      const endY = Math.ceil(y + h);
+      const fillStyle = this.fillStyle || '#000000';
+      
+      const canvasW = this.canvas?.width || 0;
+      const canvasH = this.canvas?.height || 0;
+      if (canvasW > 0 && canvasH > 0 && w >= canvasW - 10 && h >= canvasH - 10) {
+        this._bgColor = fillStyle;
+      }
+      
+      for (let px = startX; px < endX; px++) {
+        for (let py = startY; py < endY; py++) {
+          this._virtualGrid.set(`${px},${py}`, fillStyle);
+        }
+      }
+    }),
+    
+    roundRect: vi.fn().mockImplementation(function(this: any, x: number, y: number, w: number, h: number, _r?: any) {
+      this._segments.push({ type: 'rect', x, y, w, h });
+    }),
+    
+    beginPath: vi.fn().mockImplementation(function(this: any) {
+      this._segments = [];
+      this._currentPoint = { x: 0, y: 0 };
+    }),
+    
+    fill: vi.fn().mockImplementation(function(this: any) {
+      const fillStyle = this.fillStyle || '#000000';
+      for (const segment of this._segments) {
+        if (segment.type === 'rect') {
+          const { x, y, w, h } = segment;
+          const startX = Math.floor(x);
+          const endX = Math.ceil(x + w);
+          const startY = Math.floor(y);
+          const endY = Math.ceil(y + h);
+          for (let px = startX; px < endX; px++) {
+            for (let py = startY; py < endY; py++) {
+              this._virtualGrid.set(`${px},${py}`, fillStyle);
+            }
+          }
+        } else if (segment.type === 'arc') {
+          const { cx, cy, r } = segment;
+          const startX = Math.floor(cx - r);
+          const endX = Math.ceil(cx + r);
+          const startY = Math.floor(cy - r);
+          const endY = Math.ceil(cy + r);
+          for (let px = startX; px < endX; px++) {
+            for (let py = startY; py < endY; py++) {
+              const dx = px - cx;
+              const dy = py - cy;
+              if (dx * dx + dy * dy <= r * r) {
+                this._virtualGrid.set(`${px},${py}`, fillStyle);
+              }
+            }
+          }
+        } else if (segment.type === 'points' && segment.points && segment.points.length > 0) {
+          const xs = segment.points.map((p: any) => p.x);
+          const ys = segment.points.map((p: any) => p.y);
+          const minX = Math.floor(Math.min(...xs));
+          const maxX = Math.ceil(Math.max(...xs));
+          const minY = Math.floor(Math.min(...ys));
+          const maxY = Math.ceil(Math.max(...ys));
+          for (let px = minX; px < maxX; px++) {
+            for (let py = minY; py < maxY; py++) {
+              this._virtualGrid.set(`${px},${py}`, fillStyle);
+            }
+          }
+        }
+      }
+    }),
+    
+    arc: vi.fn().mockImplementation(function(this: any, cx: number, cy: number, r: number, _startAngle?: any, _endAngle?: any) {
+      this._segments.push({ type: 'arc', cx, cy, r });
+    }),
+    
+    rect: vi.fn().mockImplementation(function(this: any, x: number, y: number, w: number, h: number) {
+      this._segments.push({ type: 'rect', x, y, w, h });
+    }),
+    
+    save: vi.fn(),
+    translate: vi.fn(),
+    rotate: vi.fn(),
+    restore: vi.fn(),
+    scale: vi.fn(),
+    drawImage: vi.fn(),
+    
+    moveTo: vi.fn().mockImplementation(function(this: any, x: number, y: number) {
+      this._currentPoint = { x, y };
+      this._segments.push({ type: 'points', points: [{ x, y }] });
+    }),
+    
+    lineTo: vi.fn().mockImplementation(function(this: any, x: number, y: number) {
+      let lastSeg = this._segments[this._segments.length - 1];
+      if (!lastSeg || lastSeg.type !== 'points') {
+        lastSeg = { type: 'points', points: [this._currentPoint || { x, y }] };
+        this._segments.push(lastSeg);
+      }
+      lastSeg.points.push({ x, y });
+      this._currentPoint = { x, y };
+    }),
+    
+    closePath: vi.fn(),
+    
+    bezierCurveTo: vi.fn().mockImplementation(function(this: any, cpx1: number, cpy1: number, cpx2: number, cpy2: number, x: number, y: number) {
+      let lastSeg = this._segments[this._segments.length - 1];
+      if (!lastSeg || lastSeg.type !== 'points') {
+        lastSeg = { type: 'points', points: [this._currentPoint || { x, y }] };
+        this._segments.push(lastSeg);
+      }
+      lastSeg.points.push({ x: cpx1, y: cpy1 });
+      lastSeg.points.push({ x: cpx2, y: cpy2 });
+      lastSeg.points.push({ x, y });
+      this._currentPoint = { x, y };
+    }),
+    
+    quadraticCurveTo: vi.fn().mockImplementation(function(this: any, cpx: number, cpy: number, x: number, y: number) {
+      let lastSeg = this._segments[this._segments.length - 1];
+      if (!lastSeg || lastSeg.type !== 'points') {
+        lastSeg = { type: 'points', points: [this._currentPoint || { x, y }] };
+        this._segments.push(lastSeg);
+      }
+      lastSeg.points.push({ x: cpx, y: cpy });
+      lastSeg.points.push({ x, y });
+      this._currentPoint = { x, y };
+    }),
+    
+    setLineDash: vi.fn(),
+    strokeRect: vi.fn(),
+    stroke: vi.fn().mockImplementation(function(this: any) {
+      this.fill();
+    }),
+    fillText: vi.fn(),
+    measureText: vi.fn().mockReturnValue({ width: 0 }),
+    
+    getImageData: vi.fn().mockImplementation(function(this: any, x: number, y: number, w: number, h: number) {
+      const data = new Uint8ClampedArray(w * h * 4);
+      const defaultBg = this._bgColor ? parseColor(this._bgColor) : { r: 255, g: 255, b: 255, a: 255 };
+      for (let j = 0; j < h; j++) {
+        for (let i = 0; i < w; i++) {
+          const px = Math.floor(x + i);
+          const py = Math.floor(y + j);
+          const colorStr = this._virtualGrid.get(`${px},${py}`);
+          const color = colorStr ? parseColor(colorStr) : defaultBg;
+          
+          const idx = (j * w + i) * 4;
+          data[idx] = color.r;
+          data[idx + 1] = color.g;
+          data[idx + 2] = color.b;
+          data[idx + 3] = color.a;
+        }
+      }
+      return {
+        data,
+        width: w,
+        height: h,
+      };
+    }),
+    
+    putImageData: vi.fn(),
+    createImageData: vi.fn().mockReturnValue([]),
+    setTransform: vi.fn(),
+    transform: vi.fn(),
+    clip: vi.fn(),
+    canvas: canvasEl || { width: 0, height: 0 },
+    fillStyle: '',
+    strokeStyle: '',
+    lineWidth: 0,
+  };
+
+  return ctx;
+};
 
 HTMLCanvasElement.prototype.getContext = vi.fn().mockImplementation(function (this: HTMLCanvasElement, contextId: string) {
   if (contextId === '2d') {
     if (!(this as any)._mockContext) {
-      (this as any)._mockContext = createMockContext();
+      (this as any)._mockContext = createMockContext(this);
     }
     return (this as any)._mockContext;
   }
