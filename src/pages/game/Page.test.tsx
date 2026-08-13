@@ -17,31 +17,30 @@
 */
 
 import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import Page from './+Page';
+import { findAStarPath } from '@/utils/astar';
 
-describe('QR Damage Simulator Game Page', () => {
+describe('QR Resampled Maze Game & Solver Page', () => {
   it('renders the game page layout and headers', () => {
     render(<Page />);
 
     // Check primary page headings
-    expect(screen.getByRole('heading', { level: 1, name: /QR Analytical Module-Damage Simulator/i })).toBeInTheDocument();
-    expect(screen.getByText(/Interactive playground mapping physical screen blast coordinates/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: /QR Fixed Grid Resampling & Maze Solver/i })).toBeInTheDocument();
+    expect(screen.getByText(/Downsample or upsample any QR matrix size to a standard 31x31 grid/i)).toBeInTheDocument();
   });
 
-  it('renders target customizer and weapon selectors', () => {
+  it('renders target customizer and telemetry', () => {
     render(<Page />);
 
     // Check customize headers
     expect(screen.getByRole('heading', { name: /1\. Customize Target QR/i })).toBeInTheDocument();
-    expect(screen.getByRole('textbox', { name: /QR Data Payload/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/QR Data Payload/i)).toBeInTheDocument();
 
-    // Check weapon selectors
-    expect(screen.getByRole('heading', { name: /2\. Select Blast Weapon/i })).toBeInTheDocument();
-    expect(screen.getByRole('radio', { name: /Pinpoint Laser/i })).toBeInTheDocument();
-    expect(screen.getByRole('radio', { name: /Plasma Charge/i })).toBeInTheDocument();
-    expect(screen.getByRole('radio', { name: /Neutron Blast/i })).toBeInTheDocument();
-    expect(screen.getByRole('radio', { name: /Thermonuclear Nuke/i })).toBeInTheDocument();
+    // Check telemetry headers
+    expect(screen.getByRole('heading', { name: /2\. Real-Time Telemetry/i })).toBeInTheDocument();
+    expect(screen.getByText(/Original QR Size/i)).toBeInTheDocument();
+    expect(screen.getByText(/Fixed Resampled Grid/i)).toBeInTheDocument();
   });
 
   it('renders interactive canvas and action buttons', () => {
@@ -53,13 +52,13 @@ describe('QR Damage Simulator Game Page', () => {
 
     // Check button elements
     expect(screen.getByRole('button', { name: /Reset Grid/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Artillery Barrage/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Show Solution/i })).toBeInTheDocument();
   });
 
   it('allows customizing target text and error correction levels', () => {
     render(<Page />);
 
-    const input = screen.getByRole('textbox', { name: /QR Data Payload/i });
+    const input = screen.getByLabelText(/QR Data Payload/i);
     fireEvent.change(input, { target: { value: 'https://github.com' } });
     expect(input).toHaveValue('https://github.com');
 
@@ -69,28 +68,34 @@ describe('QR Damage Simulator Game Page', () => {
     expect(levelHButton).toHaveClass('bg-teal-600');
   });
 
-  it('allows weapon selection', () => {
-    render(<Page />);
+  it('runs A* pathfinding algorithm successfully', () => {
+    // Generate a simple 31x31 grid with no walls
+    const grid = Array.from({ length: 31 }, () => Array(31).fill(false));
+    const start = { r: 8, c: 15 };
+    const end = { r: 22, c: 15 };
 
-    const nukeButton = screen.getByRole('radio', { name: /Thermonuclear Nuke/i });
-    fireEvent.click(nukeButton);
-    expect(nukeButton).toHaveAttribute('aria-checked', 'true');
+    const path = findAStarPath(grid, start, end);
+    expect(path.length).toBeGreaterThan(0);
+    expect(path[0]).toEqual(start);
+    expect(path[path.length - 1]).toEqual(end);
   });
 
-  it('allows firing a barrage of artillery', () => {
+  it('allows solving the maze using the Show Solution action and resets correctly', () => {
     render(<Page />);
 
+    const solveBtn = screen.getByRole('button', { name: /Show Solution/i });
     const resetBtn = screen.getByRole('button', { name: /Reset Grid/i });
-    expect(resetBtn).toBeDisabled();
 
-    const barrageBtn = screen.getByRole('button', { name: /Artillery Barrage/i });
-    fireEvent.click(barrageBtn);
+    // Click Show Solution
+    fireEvent.click(solveBtn);
 
-    // After barrage, reset grid should be active (since modules were damaged)
-    expect(resetBtn).not.toBeDisabled();
+    // Overlay is shown with Victory details
+    expect(screen.getByText(/Maze Solved!/i)).toBeInTheDocument();
 
-    // Resetting should disable the button again
-    fireEvent.click(resetBtn);
-    expect(resetBtn).toBeDisabled();
+    // Resetting should return back to original state
+    const playAgainBtn = screen.getByRole('button', { name: /Reset & Play Again/i });
+    fireEvent.click(playAgainBtn);
+
+    expect(screen.queryByText(/Maze Solved!/i)).not.toBeInTheDocument();
   });
 });

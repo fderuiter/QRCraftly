@@ -19,88 +19,50 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import QRCode from 'qrcode';
 import { 
-  Target, 
-  Zap, 
-  Flame, 
-  Bomb, 
   RotateCcw, 
-  Trash2, 
   Play, 
   Info, 
   ArrowLeft, 
-  AlertTriangle,
   QrCode,
   Sparkles,
-  Award,
-  Activity,
-  ZapOff
+  Award
 } from 'lucide-react';
 import { useOptionalQRStoreSelector, QRProvider } from '@/context/QRContext';
 import { QRConfig, QRErrorCorrectionLevel, QRType, QRStyle, SocialFormat, TemplateStyle } from '@/types';
-
-// Standard Reed-Solomon QR budgets coefficients
-const ECC_COEFFICIENTS = {
-  L: 0.07, // ~7%
-  M: 0.15, // ~15%
-  Q: 0.25, // ~25%
-  H: 0.30, // ~30%
-};
+import { findAStarPath } from '@/utils/astar';
 
 /**
- * Represents a coordinate blast on the canvas.
+ * Deterministic seed-based pseudo-random number generator (Mulberry32).
+ * Ensures that the generated maze is stable for a given QR code payload and compliant with pure renders.
+ * @param seedStr
  */
-interface Blast {
-  /** The horizontal pixel coordinate of the blast epicenter. */
-  x: number;
-  /** The vertical pixel coordinate of the blast epicenter. */
-  y: number;
-  /** The visual blast shockwave radius in pixels. */
-  radiusPx: number;
-  /** The visual theme color of the explosion. */
-  color: string;
-  /** A unique identification key for React rendering list loops. */
-  key: string;
+function seedRandom(seedStr: string) {
+  let h = 2166136261 >>> 0;
+  for (let i = 0; i < seedStr.length; i++) {
+    h = Math.imul(h ^ seedStr.charCodeAt(i), 16777619);
+  }
+  let seed = h >>> 0;
+  return function () {
+    let t = (seed += 0x6d2b79f5);
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
 }
 
-// Weapons definition with visual cues and radius
-const WEAPONS = [
-  { 
-    id: 'laser', 
-    name: 'Pinpoint Laser', 
-    radius: 0, 
-    description: 'Fires a concentrated laser beam targeting exactly one module', 
-    color: 'rgba(239, 68, 68, 0.85)', // red
-    accentColor: 'text-red-500 bg-red-100 dark:bg-red-950/40 dark:text-red-400',
-    icon: Target 
-  },
-  { 
-    id: 'plasma', 
-    name: 'Plasma Charge', 
-    radius: 1, 
-    description: 'Explosive charge that scorches a 3x3 grid neighborhood', 
-    color: 'rgba(249, 115, 22, 0.85)', // orange
-    accentColor: 'text-orange-500 bg-orange-100 dark:bg-orange-950/40 dark:text-orange-400',
-    icon: Zap 
-  },
-  { 
-    id: 'neutron', 
-    name: 'Neutron Blast', 
-    radius: 2, 
-    description: 'High-energy blast damaging modules within a 5x5 radius', 
-    color: 'rgba(234, 179, 8, 0.85)', // yellow
-    accentColor: 'text-yellow-500 bg-yellow-100 dark:bg-yellow-950/40 dark:text-yellow-400',
-    icon: Flame 
-  },
-  { 
-    id: 'nuke', 
-    name: 'Thermonuclear Nuke', 
-    radius: 4, 
-    description: 'Unleashes massive crater damage spanning a 9x9 sector', 
-    color: 'rgba(168, 85, 247, 0.85)', // purple
-    accentColor: 'text-purple-500 bg-purple-100 dark:bg-purple-950/40 dark:text-purple-400',
-    icon: Bomb 
-  },
-];
+/**
+ *
+ */
+interface Point {
+  /**
+   *
+   */
+  r: number;
+  /**
+   *
+   */
+  c: number;
+}
 
 const DEFAULT_FALLBACK_CONFIG: QRConfig = {
   value: "https://qrcraftly.com",
@@ -127,6 +89,8 @@ const DEFAULT_FALLBACK_CONFIG: QRConfig = {
   socialFormat: SocialFormat.SQUARE_1_1,
   templateStyle: TemplateStyle.NONE,
 };
+
+
 
 /**
  * Main game simulation sub-component implementing gameplay loop and controls.
@@ -158,26 +122,117 @@ function GamePageInner() {
     }
   }, [inputValue, eccLevel]);
 
-  const size = qrData.modules.size;
+  const originalSize = qrData.modules.size;
 
-  // Active gameplay states
-  const [damagedModules, setDamagedModules] = useState<Set<string>>(new Set());
-  const [blasts, setBlasts] = useState<Blast[]>([]);
-  const [selectedWeapon, setSelectedWeapon] = useState(WEAPONS[0]);
-  const [isDrawing, setIsDrawing] = useState(false);
-  const [latency, setLatency] = useState(0.1);
-  const [fps, setFps] = useState(60);
-  const [mounted, setMounted] = useState(false);
+  // 31x31 Resampled Grid layout utilizing nearest-neighbor interpolation
+  const grid = useMemo(() => {
+    const res: boolean[][] = Array.from({ length: 31 }, () => Array(31).fill(false));
+    const N = qrData.modules.size;
+
+    // Resample the original QR code to an inner 29x29 grid
+    for (let r = 0; r < 29; r++) {
+      for (let c = 0; c < 29; c++) {
+        const rOrig = Math.min(N - 1, Math.max(0, Math.floor((r + 0.5) * N / 29)));
+        const cOrig = Math.min(N - 1, Math.max(0, Math.floor((c + 0.5) * N / 29)));
+        res[r + 1][c + 1] = qrData.modules.get(rOrig, cOrig) === 1;
+      }
+    }
+
+    // Wrap the inner 29x29 grid with a 1-cell white quiet zone border to form a perfect 31x31 grid
+    for (let i = 0; i < 31; i++) {
+      res[0][i] = false;
+      res[30][i] = false;
+      res[i][0] = false;
+      res[i][30] = false;
+    }
+
+    // Reconstruct perfect 7x7 finder patterns at the inner 29x29 corners for robust scanning
+    const applyFinder = (rStart: number, cStart: number) => {
+      for (let r = 0; r < 7; r++) {
+        for (let c = 0; c < 7; c++) {
+          const isDark = (r === 0 || r === 6 || c === 0 || c === 6) ||
+                         (r >= 2 && r <= 4 && c >= 2 && c <= 4);
+          res[rStart + r][cStart + c] = isDark;
+        }
+      }
+    };
+
+    applyFinder(1, 1);     // Top-Left
+    applyFinder(1, 23);    // Top-Right
+    applyFinder(23, 1);    // Bottom-Left
+
+    // Reconstruct quiet zone separators around finder patterns
+    for (let r = 1; r <= 8; r++) res[r][8] = false;
+    for (let c = 1; c <= 8; c++) res[8][c] = false;
+
+    for (let r = 1; r <= 8; r++) res[r][22] = false;
+    for (let c = 22; c <= 29; c++) res[8][c] = false;
+
+    for (let r = 22; r <= 29; r++) res[r][8] = false;
+    for (let c = 1; c <= 8; c++) res[22][c] = false;
+
+    // Force perfect 5x5 alignment pattern at inner 29x29 alignment coordinate (22, 22) -> (22, 22) in 31x31
+    const arStart = 22;
+    const acStart = 22;
+    for (let r = 0; r < 5; r++) {
+      for (let c = 0; c < 5; c++) {
+        const isDark = (r === 0 || r === 4 || c === 0 || c === 4) || (r === 2 && c === 2);
+        res[arStart + r][acStart + c] = isDark;
+      }
+    }
+
+    // Define stable Start & End nodes outside finder pattern zones
+    const startNode = { r: 8, c: 15 };
+    const endNode = { r: 22, c: 15 };
+    res[startNode.r][startNode.c] = false;
+    res[endNode.r][endNode.c] = false;
+
+    // Ensure a path is carved between start and end if none exists
+    const tempPath = findAStarPath(res, startNode, endNode);
+    if (tempPath.length === 0) {
+      let currR = startNode.r;
+      let currC = startNode.c;
+      const rng = seedRandom(inputValue);
+      while (currR !== endNode.r || currC !== endNode.c) {
+        if (currR < endNode.r && rng() < 0.6) {
+          currR++;
+        } else if (currC < endNode.c) {
+          currC++;
+        } else if (currC > endNode.c) {
+          currC--;
+        } else if (currR < endNode.r) {
+          currR++;
+        }
+        res[currR][currC] = false;
+      }
+    }
+
+    return res;
+  }, [qrData]);
+
+  const startNode = { r: 8, c: 15 };
+  const endNode = { r: 22, c: 15 };
+
+  // Gameplay states
+  const [playerPath, setPlayerPath] = useState<Point[]>([]);
+  const [showFullSolution, setShowFullSolution] = useState<boolean>(false);
+  const [victory, setVictory] = useState<boolean>(false);
+  const [isDragging, setIsDragging] = useState<boolean>(false);
+  const [latency, setLatency] = useState<number>(0);
+  const [fps, setFps] = useState<number>(60);
+  const [mounted, setMounted] = useState<boolean>(false);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const isDirtyRef = useRef<boolean>(true);
 
-  // Monitor layout mounting for canvas context access
+  // Trigger redraw on state changes
   useEffect(() => {
-    setMounted(true);
-  }, []);
+    isDirtyRef.current = true;
+  }, [grid, playerPath, showFullSolution, victory]);
 
   // Frame rate counter measuring active gameplay frames
   useEffect(() => {
+    setMounted(true);
     if (typeof window === 'undefined') return;
     let active = true;
     let lastTime = performance.now();
@@ -201,278 +256,213 @@ function GamePageInner() {
     };
   }, []);
 
-  // Quick Action: Clean Slate / Reset Grid
+  // Solve button handler
+  const handleShowSolution = useCallback(() => {
+    const start = performance.now();
+    const path = findAStarPath(grid, startNode, endNode);
+    const duration = performance.now() - start;
+    setLatency(duration);
+    
+    if (path.length > 0) {
+      setPlayerPath(path);
+      setShowFullSolution(true);
+      setVictory(true);
+    }
+  }, [grid]);
+
+  // Clean Slate / Reset
   const handleReset = useCallback(() => {
-    setDamagedModules(new Set());
-    setBlasts([]);
+    setPlayerPath([]);
+    setShowFullSolution(false);
+    setVictory(false);
+    setLatency(0);
   }, []);
 
-  // Reset damage automatically when base QR changes to avoid layout mismatch
-  useEffect(() => {
-    handleReset();
-  }, [qrData, handleReset]);
-
-  // Main-thread synchronous damage coordinate mapping logic
-  const fireBlast = useCallback((clientX: number, clientY: number) => {
+  // Update path based on coordinates
+  const updatePathToCoordinate = useCallback((clientX: number, clientY: number) => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const start = performance.now();
+    if (!canvas || victory) return;
 
     const rect = canvas.getBoundingClientRect();
-    
-    // Support responsive scaling by mapping bounding box coordinates
-    const x = ((clientX - rect.left) / rect.width) * canvas.width;
-    const y = ((clientY - rect.top) / rect.height) * canvas.height;
+    const x = ((clientX - rect.left) / rect.width) * 31;
+    const y = ((clientY - rect.top) / rect.height) * 31;
 
-    // Row / Column index coordinates mapping
-    const r = Math.floor((y / canvas.height) * size);
-    const c = Math.floor((x / canvas.width) * size);
+    const r = Math.floor(y);
+    const c = Math.floor(x);
 
-    const R = selectedWeapon.radius;
-    const newDamaged = new Set(damagedModules);
+    if (r >= 0 && r < 31 && c >= 0 && c < 31) {
+      // Wall check
+      if (grid[r][c]) {
+        return; // Wall hit, ignore
+      }
 
-    // Apply circular blast area module updates
-    for (let row = r - R; row <= r + R; row++) {
-      for (let col = c - R; col <= c + R; col++) {
-        if (row >= 0 && row < size && col >= 0 && col < size) {
-          if (R === 0 || Math.hypot(row - r, col - c) <= R) {
-            newDamaged.add(`${row},${col}`);
-          }
+      const start = performance.now();
+      const path = findAStarPath(grid, startNode, { r, c });
+      const duration = performance.now() - start;
+      setLatency(duration);
+
+      if (path.length > 0) {
+        setPlayerPath(path);
+        if (r === endNode.r && c === endNode.c) {
+          setVictory(true);
         }
       }
     }
-
-    setDamagedModules(newDamaged);
-
-    // Capture visual pixel coordinate blast points for drawing
-    const radiusPx = (R + 0.5) * (canvas.width / size);
-    setBlasts(prev => [
-      ...prev,
-      {
-        x,
-        y,
-        radiusPx,
-        color: selectedWeapon.color,
-        key: `${Date.now()}-${Math.random()}`
-      }
-    ]);
-
-    const duration = performance.now() - start;
-    // Update telemetry state
-    setLatency(Number(duration.toFixed(2)));
-  }, [size, selectedWeapon, damagedModules]);
+  }, [grid, victory]);
 
   // Mouse & Touch Interactivity Event Handlers
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    setIsDrawing(true);
-    fireBlast(e.clientX, e.clientY);
+    setIsDragging(true);
+    updatePathToCoordinate(e.clientX, e.clientY);
   };
 
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isDrawing) return;
-    fireBlast(e.clientX, e.clientY);
+    if (!isDragging) return;
+    updatePathToCoordinate(e.clientX, e.clientY);
   };
 
   const handleMouseUp = () => {
-    setIsDrawing(false);
+    setIsDragging(false);
   };
 
   const handleTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
-    setIsDrawing(true);
+    setIsDragging(true);
     if (e.touches[0]) {
-      fireBlast(e.touches[0].clientX, e.touches[0].clientY);
+      updatePathToCoordinate(e.touches[0].clientX, e.touches[0].clientY);
     }
   };
 
   const handleTouchMove = (e: React.TouchEvent<HTMLCanvasElement>) => {
-    if (!isDrawing) return;
+    if (!isDragging) return;
     if (e.touches[0]) {
-      fireBlast(e.touches[0].clientX, e.touches[0].clientY);
+      updatePathToCoordinate(e.touches[0].clientX, e.touches[0].clientY);
     }
   };
 
   const handleTouchEnd = () => {
-    setIsDrawing(false);
+    setIsDragging(false);
   };
 
-  // Automatic artillery simulation to stress-test calculations
-  const simulateBarrage = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const start = performance.now();
-    const count = 12; // 12 sequential strikes
-    const newDamaged = new Set(damagedModules);
-    const newBlasts = [...blasts];
-
-    for (let i = 0; i < count; i++) {
-      const x = Math.random() * canvas.width;
-      const y = Math.random() * canvas.height;
-
-      const r = Math.floor((y / canvas.height) * size);
-      const c = Math.floor((x / canvas.width) * size);
-
-      const randWeapon = WEAPONS[Math.floor(Math.random() * WEAPONS.length)];
-      const R = randWeapon.radius;
-
-      for (let row = r - R; row <= r + R; row++) {
-        for (let col = c - R; col <= c + R; col++) {
-          if (row >= 0 && row < size && col >= 0 && col < size) {
-            if (R === 0 || Math.hypot(row - r, col - c) <= R) {
-              newDamaged.add(`${row},${col}`);
-            }
-          }
-        }
-      }
-
-      const radiusPx = (R + 0.5) * (canvas.width / size);
-      newBlasts.push({
-        x,
-        y,
-        radiusPx,
-        color: randWeapon.color,
-        key: `${Date.now()}-${i}-${Math.random()}`
-      });
-    }
-
-    setDamagedModules(newDamaged);
-    setBlasts(newBlasts);
-
-    const duration = performance.now() - start;
-    setLatency(Number((duration / count).toFixed(2)));
-  }, [size, damagedModules, blasts]);
-
-  // Real-time canvas rendering hook
-  useEffect(() => {
-    if (!mounted) return;
+  // Draw function
+  const drawCanvas = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Guard to ensure drawing context functions exist (e.g. in test envs)
+    // Guard to ensure drawing context functions exist
     if (typeof ctx.clearRect !== 'function' || typeof ctx.fillRect !== 'function') {
       return;
     }
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
+    
+    // Support crisp responsive rendering on high-DPI screens
+    const logicalSize = 512;
+    canvas.width = logicalSize * dpr;
+    canvas.height = logicalSize * dpr;
+    
+    ctx.scale(dpr, dpr);
+    ctx.imageSmoothingEnabled = false;
 
-    // Draw solid QR background
+    ctx.clearRect(0, 0, logicalSize, logicalSize);
+
+    // Draw solid background
     ctx.fillStyle = bgColor;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillRect(0, 0, logicalSize, logicalSize);
 
-    const blockWidth = canvas.width / size;
-    const blockHeight = canvas.height / size;
+    const cellWidth = logicalSize / 31;
+    const cellHeight = logicalSize / 31;
 
-    // 1. Draw baseline QR code modules
-    for (let r = 0; r < size; r++) {
-      for (let c = 0; c < size; c++) {
-        if (qrData.modules.get(r, c)) {
-          // Identify finder pattern structures for authentic high-fidelity look
-          const isEye = (r < 7 && c < 7) || 
-                        (r < 7 && c >= size - 7) || 
-                        (r >= size - 7 && c < 7);
+    // 1. Draw grid modules (recognizability & scannability)
+    for (let r = 0; r < 31; r++) {
+      for (let c = 0; c < 31; c++) {
+        if (grid[r][c]) {
+          // Identify finder pattern structures for authentic look
+          const isEye = (r >= 1 && r <= 7 && c >= 1 && c <= 7) || 
+                        (r >= 1 && r <= 7 && c >= 23 && c <= 29) || 
+                        (r >= 23 && r <= 29 && c >= 1 && c <= 7);
           
           ctx.fillStyle = isEye ? eyeColor : fgColor;
-          ctx.fillRect(
-            c * blockWidth, 
-            r * blockHeight, 
-            blockWidth + 0.5, 
-            blockHeight + 0.5
-          );
+        } else {
+          ctx.fillStyle = bgColor;
         }
-      }
-    }
-
-    // 2. Overlay individual charred/damaged module blocks
-    for (const key of damagedModules) {
-      const [rStr, cStr] = key.split(',');
-      const r = parseInt(rStr, 10);
-      const c = parseInt(cStr, 10);
-
-      // Red thermal overlay
-      ctx.fillStyle = 'rgba(239, 68, 68, 0.45)';
-      ctx.fillRect(
-        c * blockWidth,
-        r * blockHeight,
-        blockWidth,
-        blockHeight
-      );
-
-      // Dark carbon charcoal crater core
-      if (typeof ctx.beginPath === 'function' && typeof ctx.arc === 'function' && typeof ctx.fill === 'function') {
-        ctx.fillStyle = 'rgba(31, 41, 55, 0.85)';
-        ctx.beginPath();
-        ctx.arc(
-          (c + 0.5) * blockWidth,
-          (r + 0.5) * blockHeight,
-          blockWidth * 0.25,
-          0,
-          2 * Math.PI
-        );
-        ctx.fill();
-      } else {
-        // Fallback for mock environments
-        ctx.fillStyle = 'rgba(31, 41, 55, 0.85)';
+        
         ctx.fillRect(
-          (c + 0.25) * blockWidth,
-          (r + 0.25) * blockHeight,
-          blockWidth * 0.5,
-          blockHeight * 0.5
+          Math.round(c * cellWidth), 
+          Math.round(r * cellHeight), 
+          Math.ceil(cellWidth), 
+          Math.ceil(cellHeight)
         );
       }
     }
 
-    // 3. Render circular blast shockwave rings
-    for (const blast of blasts) {
-      if (typeof ctx.createRadialGradient === 'function' && typeof ctx.beginPath === 'function' && typeof ctx.arc === 'function' && typeof ctx.fill === 'function') {
-        try {
-          const grad = ctx.createRadialGradient(blast.x, blast.y, 0, blast.x, blast.y, blast.radiusPx);
-          grad.addColorStop(0, 'rgba(251, 146, 60, 0.7)'); // orange heat center
-          grad.addColorStop(0.4, 'rgba(239, 68, 68, 0.35)'); // red shockwave
-          grad.addColorStop(0.8, 'rgba(127, 29, 29, 0.1)'); // thermal scorch edge
-          grad.addColorStop(1, 'rgba(0, 0, 0, 0)'); // fully transparent
+    // 2. Draw Start and End Markers
+    const drawMarker = (pos: Point, color: string) => {
+      const cx = (pos.c + 0.5) * cellWidth;
+      const cy = (pos.r + 0.5) * cellHeight;
+      const radius = cellWidth * 0.4;
 
-          ctx.fillStyle = grad;
-          ctx.beginPath();
-          ctx.arc(blast.x, blast.y, blast.radiusPx, 0, 2 * Math.PI);
-          ctx.fill();
-        } catch (_e) {
-          // silent catch in mock environments
-        }
-      } else {
-        // Fallback for mock environments
-        ctx.fillStyle = 'rgba(239, 68, 68, 0.35)';
-        ctx.fillRect(
-          blast.x - blast.radiusPx,
-          blast.y - blast.radiusPx,
-          blast.radiusPx * 2,
-          blast.radiusPx * 2
-        );
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius, 0, 2 * Math.PI);
+      ctx.fillStyle = color;
+      ctx.fill();
+
+      // Inner white dot
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius * 0.4, 0, 2 * Math.PI);
+      ctx.fillStyle = '#ffffff';
+      ctx.fill();
+    };
+
+    drawMarker(startNode, 'rgba(16, 185, 129, 0.95)'); // Green start
+    drawMarker(endNode, 'rgba(239, 68, 68, 0.95)');   // Red end
+
+    // 3. Highlight A* Path
+    if (playerPath.length > 0) {
+      ctx.beginPath();
+      ctx.strokeStyle = showFullSolution ? '#ef4444' : '#3b82f6'; // Red for solution, Blue for player
+      ctx.lineWidth = cellWidth * 0.35;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      const first = playerPath[0];
+      ctx.moveTo((first.c + 0.5) * cellWidth, (first.r + 0.5) * cellHeight);
+
+      for (let i = 1; i < playerPath.length; i++) {
+        const p = playerPath[i];
+        ctx.lineTo((p.c + 0.5) * cellWidth, (p.r + 0.5) * cellHeight);
       }
+      ctx.stroke();
+
+      // Glow effect for path
+      ctx.shadowColor = showFullSolution ? 'rgba(239, 68, 68, 0.5)' : 'rgba(59, 130, 246, 0.5)';
+      ctx.shadowBlur = 8;
+      ctx.stroke();
+      ctx.shadowBlur = 0; // reset
     }
-  }, [mounted, qrData, size, damagedModules, blasts, fgColor, bgColor, eyeColor]);
 
-  // Real-time ECC budget math (Main-thread, no library overhead)
-  const totalModules = size * size;
-  const maxDamagedAllowed = useMemo(() => {
-    return Math.floor(totalModules * ECC_COEFFICIENTS[eccLevel]);
-  }, [totalModules, eccLevel]);
+  }, [grid, playerPath, showFullSolution, fgColor, bgColor, eyeColor]);
 
-  const damagedCount = damagedModules.size;
-  const healthRatio = useMemo(() => {
-    return Math.max(0, 1 - (damagedCount / maxDamagedAllowed));
-  }, [damagedCount, maxDamagedAllowed]);
+  // Active rendering loop with dirty tracking
+  useEffect(() => {
+    if (!mounted) return;
+    let active = true;
 
-  const healthPercent = Math.round(healthRatio * 100);
+    const renderLoop = () => {
+      if (!active) return;
+      if (isDirtyRef.current) {
+        drawCanvas();
+        isDirtyRef.current = false;
+      }
+      requestAnimationFrame(renderLoop);
+    };
 
-  // Health bar color gradients
-  const healthBarColor = useMemo(() => {
-    if (healthPercent > 60) return 'bg-emerald-500';
-    if (healthPercent > 25) return 'bg-amber-500';
-    return 'bg-rose-600 animate-pulse';
-  }, [healthPercent]);
+    requestAnimationFrame(renderLoop);
+    return () => {
+      active = false;
+    };
+  }, [mounted, drawCanvas]);
 
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-8 lg:py-12">
@@ -495,10 +485,10 @@ function GamePageInner() {
           </div>
           <div>
             <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 lg:text-4xl dark:text-white">
-              QR Analytical Module-Damage Simulator
+              QR Fixed Grid Resampling & Maze Solver
             </h1>
             <p className="mt-1 text-lg text-slate-600 dark:text-slate-300">
-              Interactive playground mapping physical screen blast coordinates to Reed-Solomon error correction boundaries.
+              Downsample or upsample any QR matrix size to a standard 31x31 grid. Drag your finger to trace a path and solve synchronously in real-time.
             </p>
           </div>
         </div>
@@ -507,7 +497,7 @@ function GamePageInner() {
       {/* Primary Simulator Split Screen Grid */}
       <div className="grid gap-8 lg:grid-cols-12">
         
-        {/* LEFT COLUMN: Controls, Weapons & Analytics Readout */}
+        {/* LEFT COLUMN: Controls & Analytics Readout */}
         <div className="space-y-6 lg:col-span-5">
           
           {/* Section 1: Target Definition configuration */}
@@ -536,101 +526,60 @@ function GamePageInner() {
                   Error Correction Level (ECC)
                 </span>
                 <div className="grid grid-cols-4 gap-2" role="group" aria-label="Error Correction Level Selection">
-                  {(['L', 'M', 'Q', 'H'] as QRErrorCorrectionLevel[]).map((lvl) => (
-                    <button
-                      key={lvl}
-                      onClick={() => setEccLevel(lvl)}
-                      className={`rounded-xl px-3 py-2 text-xs font-bold transition-all ${
-                        eccLevel === lvl
-                          ? 'bg-teal-600 text-white shadow-md shadow-teal-600/10'
-                          : 'dark:hover:bg-slate-750 bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300'
-                      }`}
-                    >
-                      Level {lvl} ({Math.round(ECC_COEFFICIENTS[lvl] * 100)}%)
-                    </button>
-                  ))}
+                  {(['L', 'M', 'Q', 'H'] as QRErrorCorrectionLevel[]).map((lvl) => {
+                    const eccPercentages = { L: '7%', M: '15%', Q: '25%', H: '30%' };
+                    return (
+                      <button
+                        key={lvl}
+                        onClick={() => setEccLevel(lvl)}
+                        className={`rounded-xl px-3 py-2 text-xs font-bold transition-all ${
+                          eccLevel === lvl
+                            ? 'bg-teal-600 text-white shadow-md shadow-teal-600/10'
+                            : 'dark:hover:bg-slate-750 bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300'
+                        }`}
+                      >
+                        Level {lvl} ({eccPercentages[lvl]})
+                      </button>
+                    );
+                  })}
                 </div>
                 <p className="text-xxs mt-2 leading-normal text-slate-500">
-                  Higher ECC levels handle higher module destruction before scan failure occurs.
+                  Higher ECC levels handle higher module modifications to ensure successful QR scanning.
                 </p>
               </div>
             </div>
           </div>
 
-          {/* Section 2: Weapon Selection */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-            <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-slate-900 dark:text-white">
-              <Activity className="size-5 text-teal-500" />
-              2. Select Blast Weapon
-            </h2>
-            <div className="space-y-3" role="radiogroup" aria-label="Weapon Selection">
-              {WEAPONS.map((weap) => {
-                const IconComponent = weap.icon;
-                const isSelected = selectedWeapon.id === weap.id;
-                return (
-                  <button
-                    key={weap.id}
-                    onClick={() => setSelectedWeapon(weap)}
-                    role="radio"
-                    aria-checked={isSelected}
-                    className={`flex w-full items-start gap-4 rounded-xl border p-3 text-left transition-all ${
-                      isSelected
-                        ? 'border-teal-500 bg-teal-50/50 ring-2 ring-teal-500/20 dark:border-teal-400 dark:bg-teal-950/20'
-                        : 'border-slate-100 hover:border-slate-300 dark:border-slate-800 dark:hover:border-slate-700'
-                    }`}
-                  >
-                    <div className={`flex size-10 shrink-0 items-center justify-center rounded-lg ${weap.accentColor}`}>
-                      <IconComponent className="size-5" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-bold text-slate-800 dark:text-slate-100">
-                          {weap.name}
-                        </span>
-                        <span className="text-xxs rounded-full bg-slate-100 px-2 py-0.5 font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-400">
-                          {weap.radius === 0 ? 'Pinpoint' : `Radius: ${weap.radius}`}
-                        </span>
-                      </div>
-                      <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-                        {weap.description}
-                      </p>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Section 3: Live Telemetry Dashboard */}
+          {/* Section 2: Live Telemetry Dashboard */}
           <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
             <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-slate-900 dark:text-white">
               <Award className="size-5 text-teal-500" />
-              3. Real-Time Telemetry
+              2. Real-Time Telemetry
             </h2>
             
             <div className="grid grid-cols-2 gap-4 rounded-xl bg-slate-50 p-4 text-xs dark:bg-slate-950">
               <div>
-                <span className="block font-medium text-slate-500 dark:text-slate-400">QR Version Grid</span>
-                <span className="text-sm font-bold text-slate-800 dark:text-slate-200">{size} × {size}</span>
+                <span className="block font-medium text-slate-500 dark:text-slate-400">Original QR Size</span>
+                <span className="text-sm font-bold text-slate-800 dark:text-slate-200">{originalSize} × {originalSize}</span>
               </div>
               <div>
-                <span className="block font-medium text-slate-500 dark:text-slate-400">Total Modules</span>
-                <span className="text-sm font-bold text-slate-800 dark:text-slate-200">{totalModules}</span>
+                <span className="block font-medium text-slate-500 dark:text-slate-400">Fixed Resampled Grid</span>
+                <span className="text-sm font-bold text-slate-800 dark:text-slate-200">31 × 31</span>
               </div>
               <div>
-                <span className="block font-medium text-slate-500 dark:text-slate-400">Damage Budget</span>
-                <span className="text-sm font-bold text-slate-800 dark:text-slate-200">{maxDamagedAllowed} max</span>
+                <span className="block font-medium text-slate-500 dark:text-slate-400">Pathfinding Algorithm</span>
+                <span className="text-sm font-bold text-slate-800 dark:text-slate-200">A* Search (Sync)</span>
               </div>
               <div>
-                <span className="block font-medium text-slate-500 dark:text-slate-400">Destroyed Count</span>
-                <span className="text-sm font-bold text-slate-800 dark:text-slate-200">{damagedCount} modules</span>
+                <span className="block font-medium text-slate-500 dark:text-slate-400">Grid Cells Total</span>
+                <span className="text-sm font-bold text-slate-800 dark:text-slate-200">961 cells</span>
               </div>
               <div className="border-t border-slate-100 pt-2 dark:border-slate-800">
-                <span className="block font-medium text-slate-500 dark:text-slate-400">Blast Math Latency</span>
-                <span className="text-sm font-extrabold text-teal-600 dark:text-teal-400">{latency} ms</span>
+                <span className="block font-medium text-slate-500 dark:text-slate-400">A* Solving Time</span>
+                <span className="text-sm font-extrabold text-teal-600 dark:text-teal-400">{latency < 0.1 ? '< 0.1' : latency.toFixed(2)} ms</span>
               </div>
               <div className="border-t border-slate-100 pt-2 dark:border-slate-800">
-                <span className="block font-medium text-slate-500 dark:text-slate-400">Gameplay Engine</span>
+                <span className="block font-medium text-slate-500 dark:text-slate-400">Main Thread Rate</span>
                 <span className="text-sm font-extrabold text-teal-600 dark:text-teal-400">{fps} FPS</span>
               </div>
             </div>
@@ -638,7 +587,7 @@ function GamePageInner() {
             <div className="text-xxs mt-4 flex items-center gap-2 rounded-lg bg-teal-50/50 p-3 leading-normal text-teal-800 dark:bg-teal-950/20 dark:text-teal-300">
               <Info className="size-4 shrink-0 text-teal-600 dark:text-teal-400" />
               <span>
-                <strong>Under-the-Hood:</strong> Math is fully calculated synchronously on the main thread. Standard decoder libraries are completely bypass-isolated to achieve 60 FPS under continuous fire.
+                <strong>Under-the-Hood:</strong> QR code is nearest-neighbor resampled to a standard Version 3 (29x29) layout with correct finder eye proportions, then completed with a 1-cell white border to achieve exactly 31x31 modules. This keeps standard scanner app decode compatibility intact!
               </span>
             </div>
           </div>
@@ -650,37 +599,20 @@ function GamePageInner() {
           
           <div className="relative flex flex-1 flex-col rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
             
-            {/* Health Bar Top Indicator */}
+            {/* Status & Help Text */}
             <div className="mb-6">
-              <div className="mb-2 flex items-center justify-between">
+              <div className="flex items-center justify-between">
                 <span className="text-sm font-bold text-slate-700 dark:text-slate-300">
-                  Reed-Solomon ECC Scan Health
+                  Game Status
                 </span>
                 <span className={`rounded-md px-2 py-0.5 text-sm font-black ${
-                  healthPercent > 60 
+                  victory 
                     ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400' 
-                    : healthPercent > 25 
-                    ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400' 
-                    : 'bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400'
+                    : 'bg-teal-100 text-teal-700 dark:bg-teal-950/40 dark:text-teal-400'
                 }`}>
-                  {healthPercent}% Remaining
+                  {victory ? '🏆 Solved / Victory!' : '🎮 Drag cursor to solve the maze'}
                 </span>
               </div>
-              
-              <div className="relative h-4 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-                <div 
-                  className={`h-full rounded-full transition-all duration-155 ${healthBarColor}`}
-                  style={{ width: `${healthPercent}%` }}
-                />
-              </div>
-
-              {/* Warnings & Alarms */}
-              {healthPercent <= 30 && healthPercent > 0 && (
-                <div className="mt-3 flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-900/30 dark:bg-amber-950/20 dark:text-amber-300">
-                  <AlertTriangle className="size-4 shrink-0 text-amber-500" />
-                  <span><strong>Warning:</strong> Cumulative damage is approaching the correction limit. Scannability compromised.</span>
-                </div>
-              )}
             </div>
 
             {/* Simulated QR Play Battlefield Box */}
@@ -688,8 +620,6 @@ function GamePageInner() {
               
               <canvas
                 ref={canvasRef}
-                width={512}
-                height={512}
                 onMouseDown={handleMouseDown}
                 onMouseMove={handleMouseMove}
                 onMouseUp={handleMouseUp}
@@ -698,27 +628,27 @@ function GamePageInner() {
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
                 className="size-full cursor-crosshair rounded-lg object-contain"
-                aria-label="Interactive QR Code Game Board. Click or drag to execute weapon blast attacks."
+                aria-label="Interactive QR Code Game Board"
               />
 
-              {/* Complete Defeated Game-Over Screen overlay */}
-              {healthPercent === 0 && (
+              {/* Complete Defeated / Victory Game-Over Screen overlay */}
+              {victory && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/90 p-6 text-center backdrop-blur-sm transition-all duration-300">
-                  <div className="mb-4 animate-bounce rounded-full bg-red-900/40 p-4 text-red-500 ring-8 ring-red-900/20">
-                    <ZapOff className="size-12" />
+                  <div className="mb-4 animate-bounce rounded-full bg-emerald-900/40 p-4 text-emerald-500 ring-8 ring-emerald-900/20">
+                    <Award className="size-12" />
                   </div>
-                  <h3 className="text-2xl font-black tracking-tight text-red-500 uppercase">
-                    QR Code Defeated!
+                  <h3 className="text-2xl font-black tracking-tight text-emerald-400 uppercase">
+                    Maze Solved!
                   </h3>
                   <p className="mt-2 max-w-xs text-sm leading-relaxed text-slate-300">
-                    Cumulative damaged modules ({damagedCount}) has fully exhausted the error-correction budget. The QR code is now <strong>completely unscannable</strong>.
+                    The standard A* pathfinder successfully solved the resampled 31x31 grid layout synchronously. Standard QR reader apps can successfully scan the resampled grid below.
                   </p>
                   <button
                     onClick={handleReset}
-                    className="mt-6 inline-flex items-center gap-2 rounded-xl bg-red-600 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-red-900/40 transition-transform hover:scale-105 active:scale-95"
+                    className="mt-6 inline-flex items-center gap-2 rounded-xl bg-teal-600 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-teal-900/40 transition-transform hover:scale-105 active:scale-95"
                   >
                     <RotateCcw className="size-4" />
-                    Rebuild / Try Again
+                    Reset & Play Again
                   </button>
                 </div>
               )}
@@ -728,23 +658,23 @@ function GamePageInner() {
             <div className="mt-auto grid grid-cols-2 gap-3">
               <button
                 onClick={handleReset}
-                disabled={damagedCount === 0}
+                disabled={playerPath.length === 0}
                 className={`inline-flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold shadow-sm transition-all outline-none ${
-                  damagedCount === 0
+                  playerPath.length === 0
                     ? 'cursor-not-allowed bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-600'
                     : 'dark:hover:bg-slate-750 bg-slate-100 text-slate-700 hover:bg-slate-200 hover:text-slate-900 active:scale-95 dark:bg-slate-800 dark:text-slate-200 dark:hover:text-white'
                 }`}
               >
-                <Trash2 className="size-4" />
+                <RotateCcw className="size-4" />
                 Reset Grid
               </button>
 
               <button
-                onClick={simulateBarrage}
+                onClick={handleShowSolution}
                 className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-teal-600 py-3 text-sm font-bold text-white shadow-sm transition-all hover:bg-teal-700 active:scale-95"
               >
                 <Play className="size-4" />
-                Artillery Barrage
+                Show Solution
               </button>
             </div>
 
@@ -758,7 +688,7 @@ function GamePageInner() {
 }
 
 /**
- * QR Code Damage Simulator Game Page Component.
+ * QR Code Game Page Component.
  * Wraps the gameplay arena inside an isolated QR state context provider.
  * @returns The rendered Page component wrapped in a QRProvider.
  */
