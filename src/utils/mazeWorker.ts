@@ -381,73 +381,75 @@ async function generateMazeCooperative(
   };
 }
 
-self.onmessage = async (e: MessageEvent<any>) => {
-  const data = e.data;
+if (typeof self !== 'undefined') {
+  self.onmessage = async (e: MessageEvent<any>) => {
+    const data = e.data;
 
-  try {
-    if (data && typeof data === 'object' && typeof data.sequenceId === 'number') {
-      if (data.sequenceId > latestSequenceId) {
-        latestSequenceId = data.sequenceId;
+    try {
+      if (data && typeof data === 'object' && typeof data.sequenceId === 'number') {
+        if (data.sequenceId > latestSequenceId) {
+          latestSequenceId = data.sequenceId;
+        }
+      }
+
+      // Assert schema
+      assertInputSchema(data);
+
+      const { grid, size, config, sequenceId } = data;
+
+      // Yield initially to let subsequent rapid changes interrupt immediately
+      await yieldToEventLoop();
+
+      if (sequenceId < latestSequenceId) {
+        return;
+      }
+
+      const mockModules = {
+        get: (r: number, c: number) => {
+          return grid[r * size + c] === 1;
+        },
+      };
+
+      const mazeResult = await generateMazeCooperative(
+        mockModules,
+        config,
+        size,
+        sequenceId,
+        () => latestSequenceId
+      );
+
+      if (sequenceId === latestSequenceId) {
+        const serialized = serializeMazeData(mazeResult);
+        const transferables = [
+          serialized.nodes.buffer,
+          serialized.edges.buffer,
+          serialized.start.buffer,
+          serialized.end.buffer,
+          serialized.solution.buffer,
+        ];
+
+        (self as any).postMessage({
+          status: 'success',
+          sequenceId,
+          nodes: serialized.nodes,
+          edges: serialized.edges,
+          start: serialized.start,
+          end: serialized.end,
+          solution: serialized.solution,
+        }, transferables);
+      }
+    } catch (error: any) {
+      if (error?.message === 'INTERRUPTED') {
+        return;
+      }
+
+      if (typeof data === 'object' && typeof data.sequenceId === 'number' && data.sequenceId === latestSequenceId) {
+        self.postMessage({
+          status: 'error',
+          sequenceId: data.sequenceId,
+          error: error?.message || 'MAZE_GENERATION_FAILED',
+        });
       }
     }
-
-    // Assert schema
-    assertInputSchema(data);
-
-    const { grid, size, config, sequenceId } = data;
-
-    // Yield initially to let subsequent rapid changes interrupt immediately
-    await yieldToEventLoop();
-
-    if (sequenceId < latestSequenceId) {
-      return;
-    }
-
-    const mockModules = {
-      get: (r: number, c: number) => {
-        return grid[r * size + c] === 1;
-      },
-    };
-
-    const mazeResult = await generateMazeCooperative(
-      mockModules,
-      config,
-      size,
-      sequenceId,
-      () => latestSequenceId
-    );
-
-    if (sequenceId === latestSequenceId) {
-      const serialized = serializeMazeData(mazeResult);
-      const transferables = [
-        serialized.nodes.buffer,
-        serialized.edges.buffer,
-        serialized.start.buffer,
-        serialized.end.buffer,
-        serialized.solution.buffer,
-      ];
-
-      (self as any).postMessage({
-        status: 'success',
-        sequenceId,
-        nodes: serialized.nodes,
-        edges: serialized.edges,
-        start: serialized.start,
-        end: serialized.end,
-        solution: serialized.solution,
-      }, transferables);
-    }
-  } catch (error: any) {
-    if (error?.message === 'INTERRUPTED') {
-      return;
-    }
-
-    if (typeof data === 'object' && typeof data.sequenceId === 'number' && data.sequenceId === latestSequenceId) {
-      self.postMessage({
-        status: 'error',
-        sequenceId: data.sequenceId,
-        error: error?.message || 'MAZE_GENERATION_FAILED',
-      });
-    }
-  }
-};
+  };
+}
