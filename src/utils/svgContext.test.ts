@@ -438,4 +438,65 @@ describe('SvgContext', () => {
       expect(svgNeg).toContain('d="M -20 0 L -80 0 Q -100 0 -100 -20 L -100 -30 Q -100 -50 -80 -50 L -20 -50 Q 0 -50 0 -30 L 0 -20 Q 0 0 -20 0 Z"');
     });
   });
+
+  describe('Stroke styling, Bezier curves and nested states', () => {
+    it('bezierCurveTo draws a cubic Bezier curve with C command and transformed points', () => {
+      const ctx = new SvgContext(200, 200);
+      ctx.translate(10, 20);
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.bezierCurveTo(10, 10, 20, 20, 30, 30);
+      ctx.fill();
+      const svg = ctx.serialize();
+      // M should be translated (10, 20)
+      // C should have control points translated by (10, 20): (20, 30), (30, 40), (40, 50)
+      expect(svg).toContain('M 10 20');
+      expect(svg).toContain('C 20 30, 30 40, 40 50');
+    });
+
+    it('stroke formats active lineCap and lineJoin parameters using a compiler formatter', () => {
+      const ctx = new SvgContext(200, 200);
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'bevel';
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(100, 100);
+      ctx.stroke();
+      const svg = ctx.serialize();
+      expect(svg).toContain('stroke-linecap="round"');
+      expect(svg).toContain('stroke-linejoin="bevel"');
+    });
+
+    it('strokeRect formats active lineCap and lineJoin parameters correctly', () => {
+      const ctx = new SvgContext(200, 200);
+      ctx.lineCap = 'square';
+      ctx.lineJoin = 'round';
+      ctx.strokeRect(10, 10, 50, 50);
+      const svg = ctx.serialize();
+      expect(svg).toContain('stroke-linecap="square"');
+      expect(svg).toContain('stroke-linejoin="round"');
+    });
+
+    it('preserves, saves, and restores nested lineCap and lineJoin states correctly', () => {
+      const ctx = new SvgContext(200, 200);
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      
+      ctx.save();
+      ctx.lineCap = 'butt';
+      ctx.lineJoin = 'miter';
+      ctx.strokeRect(10, 10, 50, 50);
+      
+      ctx.restore();
+      ctx.strokeRect(10, 10, 50, 50);
+      
+      const svg = ctx.serialize();
+      
+      // Should have one path with butt/miter and one with round/round
+      expect(svg).toContain('stroke-linecap="butt"');
+      expect(svg).toContain('stroke-linejoin="miter"');
+      expect(svg).toContain('stroke-linecap="round"');
+      expect(svg).toContain('stroke-linejoin="round"');
+    });
+  });
 });

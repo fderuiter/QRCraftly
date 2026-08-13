@@ -140,6 +140,8 @@ interface ContextState {
   textAlign: string;
   textBaseline: string;
   dashArray: number[];
+  lineCap: CanvasLineCap;
+  lineJoin: CanvasLineJoin;
 }
 
 let cachedCtx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null = null;
@@ -184,6 +186,8 @@ export class SvgContext {
   font: string = '10px sans-serif';
   textAlign: string = 'start';
   textBaseline: string = 'alphabetic';
+  lineCap: CanvasLineCap = 'butt';
+  lineJoin: CanvasLineJoin = 'miter';
 
   public title?: string;
   public description?: string;
@@ -258,6 +262,8 @@ export class SvgContext {
       textAlign: this.textAlign,
       textBaseline: this.textBaseline,
       dashArray: [...this._dashArray],
+      lineCap: this.lineCap,
+      lineJoin: this.lineJoin,
     });
   }
 
@@ -272,6 +278,8 @@ export class SvgContext {
       this.textAlign = state.textAlign;
       this.textBaseline = state.textBaseline;
       this._dashArray = state.dashArray;
+      this.lineCap = state.lineCap;
+      this.lineJoin = state.lineJoin;
     }
   }
 
@@ -315,6 +323,10 @@ export class SvgContext {
 
   quadraticCurveTo(cpx: number, cpy: number, x: number, y: number): void {
     this._pathData += `Q ${this._pt(cpx, cpy)} ${this._pt(x, y)} `;
+  }
+
+  bezierCurveTo(cp1x: number, cp1y: number, cp2x: number, cp2y: number, x: number, y: number): void {
+    this._pathData += `C ${this._pt(cp1x, cp1y)}, ${this._pt(cp2x, cp2y)}, ${this._pt(x, y)} `;
   }
 
   /**
@@ -418,14 +430,22 @@ export class SvgContext {
     this._elements.push(`<path d="${this._pathData.trim()}" fill="${fill}" fill-rule="evenodd"/>`);
   }
 
+  /**
+   * Compiles the active stroke styling parameters into standard SVG XML attributes.
+   * Reused across all shape outlines (paths and rectangles) to prevent duplication.
+   */
+  private _compileStrokeAttributes(): string {
+    const stroke = this._cssColor(this.strokeStyle);
+    const width = this._n(this.lineWidth);
+    const dash = this._dashArray.length > 0 ? ` stroke-dasharray="${this._dashArray.join(' ')}"` : '';
+    return `fill="none" stroke="${stroke}" stroke-width="${width}" stroke-linecap="${this.lineCap}" stroke-linejoin="${this.lineJoin}"${dash}`;
+  }
+
   stroke(): void {
     if (!this._pathData.trim()) return;
-    const stroke = this._cssColor(this.strokeStyle);
-    const dash = this._dashArray.length > 0
-      ? ` stroke-dasharray="${this._dashArray.join(' ')}"`
-      : '';
+    const strokeAttrs = this._compileStrokeAttributes();
     this._elements.push(
-      `<path d="${this._pathData.trim()}" fill="none" stroke="${stroke}" stroke-width="${this._n(this.lineWidth)}"${dash}/>`
+      `<path d="${this._pathData.trim()}" ${strokeAttrs}/>`
     );
   }
 
@@ -441,13 +461,10 @@ export class SvgContext {
    * Supports the dashed/dotted border styles used in the QR border renderer.
    */
   strokeRect(x: number, y: number, w: number, h: number): void {
-    const stroke = this._cssColor(this.strokeStyle);
-    const dash = this._dashArray.length > 0
-      ? ` stroke-dasharray="${this._dashArray.join(' ')}"`
-      : '';
+    const strokeAttrs = this._compileStrokeAttributes();
     const d = `M ${this._pt(x, y)} L ${this._pt(x + w, y)} L ${this._pt(x + w, y + h)} L ${this._pt(x, y + h)} Z`;
     this._elements.push(
-      `<path d="${d}" fill="none" stroke="${stroke}" stroke-width="${this._n(this.lineWidth)}"${dash}/>`
+      `<path d="${d}" ${strokeAttrs}/>`
     );
   }
 
