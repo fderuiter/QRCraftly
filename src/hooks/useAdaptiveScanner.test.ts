@@ -1005,4 +1005,132 @@ describe('useAdaptiveScanner Hook with Bidirectional Buffer Recycling', () => {
       }
     }
   });
+
+  it('should implement Hook-Level Optimization Bypass for stale frames (STALE_FRAME)', () => {
+    const videoRef = makeVideoRef();
+    const successCallback = vi.fn();
+    const failCallback = vi.fn();
+    const { result } = renderHook(() =>
+      useAdaptiveScanner({
+        videoRef,
+        onScanSuccess: successCallback,
+        onScanFail: failCallback,
+      })
+    );
+
+    let activeWorker: any = null;
+    let postMessageCalls: any[] = [];
+    globalThis.mockWorkerControl.setInterceptor((msg, worker) => {
+      activeWorker = worker;
+      postMessageCalls.push(msg);
+    });
+
+    act(() => {
+      result.current.startScanning();
+    });
+
+    // Trigger frame capture to generate sequenceId = 1
+    act(() => {
+      vi.advanceTimersByTime(50);
+    });
+
+    expect(postMessageCalls).toHaveLength(1);
+    const sentMessage = postMessageCalls[0];
+    expect(sentMessage.sequenceId).toBe(1);
+    expect(result.current.status).toBe('checking');
+
+    // Now, dispatch a STALE_FRAME response from the worker
+    act(() => {
+      activeWorker.dispatchMessage({
+        status: 'fail',
+        sequenceId: 1,
+        error: 'STALE_FRAME',
+        buffer: sentMessage.buffer,
+      });
+    });
+
+    // 1. Consumer callbacks must NOT be triggered
+    expect(successCallback).not.toHaveBeenCalled();
+    expect(failCallback).not.toHaveBeenCalled();
+
+    // 2. State/status must remain unchanged (skip public status updates)
+    expect(result.current.status).toBe('checking');
+
+    // 3. Speed metrics/latency should ignore the dropped frame
+    expect(result.current.latencyHistory).toEqual([]);
+
+    // 4. Memory/Buffer should be recycled, allowing the next captured frames to immediately run
+    act(() => {
+      vi.advanceTimersByTime(50);
+    });
+    expect(postMessageCalls).toHaveLength(2);
+    expect(postMessageCalls[1].sequenceId).toBe(2);
+  });
+
+  it('should ignore older out-of-order stale frames and not clear active in-flight status', () => {
+    const videoRef = makeVideoRef();
+    const successCallback = vi.fn();
+    const failCallback = vi.fn();
+    const { result } = renderHook(() =>
+      useAdaptiveScanner({
+        videoRef,
+        onScanSuccess: successCallback,
+        onScanFail: failCallback,
+      })
+    );
+
+    let activeWorker: any = null;
+    let postMessageCalls: any[] = [];
+    globalThis.mockWorkerControl.setInterceptor((msg, worker) => {
+      activeWorker = worker;
+      postMessageCalls.push(msg);
+    });
+
+    act(() => {
+      result.current.startScanning();
+    });
+
+    // Dispatch frame 1
+    act(() => {
+      vi.advanceTimersByTime(50);
+    });
+    expect(postMessageCalls).toHaveLength(1);
+    expect(postMessageCalls[0].sequenceId).toBe(1);
+
+    // Complete frame 1 successfully
+    act(() => {
+      activeWorker.dispatchMessage({
+        status: 'pass',
+        sequenceId: 1,
+        decodedData: 'QR_CODE_DATA',
+        buffer: postMessageCalls[0].buffer,
+      });
+    });
+    expect(successCallback).toHaveBeenCalledWith('QR_CODE_DATA');
+    expect(result.current.status).toBe('pass');
+
+    // Now capture frame 2
+    act(() => {
+      vi.advanceTimersByTime(50);
+    });
+    expect(postMessageCalls).toHaveLength(2);
+    expect(postMessageCalls[1].sequenceId).toBe(2);
+
+    // Now, dispatch delayed STALE_FRAME for frame 1 (out-of-order)
+    act(() => {
+      activeWorker.dispatchMessage({
+        status: 'fail',
+        sequenceId: 1,
+        error: 'STALE_FRAME',
+        buffer: postMessageCalls[0].buffer,
+      });
+    });
+
+    // It should not clear the in-flight block of frame 2!
+    // If we try to capture frame 3, it should be blocked since frame 2 is still in-flight.
+    act(() => {
+      vi.advanceTimersByTime(50);
+    });
+    expect(postMessageCalls).toHaveLength(2); // Still 2, frame 3 was blocked!
+  });
 });

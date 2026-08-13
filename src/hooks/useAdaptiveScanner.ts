@@ -227,6 +227,22 @@ export function useAdaptiveScanner({
 
     const { status: resultStatus, sequenceId, decodedData, error } = payload;
 
+    // Catch STALE_FRAME immediately from the background worker
+    if (error === 'STALE_FRAME') {
+      // Clear state for the dropped frame
+      startTimeMapRef.current.delete(sequenceId);
+
+      if (sequenceId > completedSequenceRef.current) {
+        completedSequenceRef.current = sequenceId;
+        // Release the in-flight block to allow next frame dispatches
+        inFlightRef.current = false;
+        inFlightStartRef.current = null;
+      }
+
+      // Skip public status updates, user error callbacks, and latency calculations
+      return;
+    }
+
     const startTime = startTimeMapRef.current.get(sequenceId);
     if (startTime !== undefined) {
       startTimeMapRef.current.delete(sequenceId);
