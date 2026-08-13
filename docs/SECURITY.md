@@ -56,3 +56,7 @@ To prevent custom SVG logo uploads and native vector exports from exposing users
 ## QR Animation Loops
 
 Animation configuration structures in `types.ts` are strictly statically typed to prevent any runtime execution or script-injection pathways during high-frequency loop playbacks.
+
+## Playable Maze Mode
+
+When Maze Mode is enabled, the generator automatically locks and enforces the highest error correction level (Level H). This Reed-Solomon redundancy protects against matrix degradation caused by custom pathway carving and ensures the QR code remains scannable.

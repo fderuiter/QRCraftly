@@ -7,6 +7,7 @@ This application is designed to **support** HIPAA-compliant workflows through a 
 ### 1. Data Privacy (The "Won't Use Your Data" Guarantee)
 
 - **Local Processing:** All QR code generation happens locally within the user's browser using HTML5 Canvas and JavaScript.
+- **Interactive Playable Maze Mode:** Path calculations, pointer drag tracing, and dynamic overlay rendering are processed 100% client-side within the browser. No trace coordinates, start/end interactions, or solved paths are ever transmitted to any external server.
 - **Data Transmission:** The sensitive data you enter to generate a QR code (which may include PHI) remains strictly in your device's memory and is not sent to our servers.
 - **Volatile Memory:** Data entered into the application is cleared when the browser tab is closed or refreshed.
 - **Animation Loop Frames:** Any cached frames or matrices generated for animation loops are also kept solely in volatile client-side memory.

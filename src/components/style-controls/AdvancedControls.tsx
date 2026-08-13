@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Button } from '../ui/Button';
-import { QRConfig, QRErrorCorrectionLevel } from '../../types';
+import { QRConfig, QRErrorCorrectionLevel, QRStyle } from '../../types';
 import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ToggleSwitch } from '../ui/ToggleSwitch';
 
 /**
  *
@@ -46,6 +47,26 @@ export const AdvancedControls: React.FC<AdvancedControlsProps> = ({ config, onCh
 
       {showAdvanced && (
         <div className="mt-4 space-y-4" id="advanced-settings-panel">
+          <div className="border-b border-slate-100 pb-4 dark:border-slate-800">
+            <ToggleSwitch
+              id="maze-mode-toggle"
+              label="Playable Maze Mode"
+              checked={config.isMazeModeEnabled || false}
+              onChange={(checked) => {
+                onChange({
+                  isMazeModeEnabled: checked,
+                  ...(checked ? {
+                    style: QRStyle.CIRCUIT,
+                    errorCorrectionLevel: QRErrorCorrectionLevel.H,
+                  } : {})
+                });
+              }}
+            />
+            <p className="mt-1 pl-12 text-[10px] text-slate-500 dark:text-slate-400">
+              Transform the QR code into an interactive, playable maze by carving valid pathways. Enforces Level H correction and connected circuit styling.
+            </p>
+          </div>
+
           <div>
             <span className="mb-2 block text-xs font-medium text-slate-500 dark:text-slate-400">Error Correction Level</span>
             <div
@@ -60,13 +81,16 @@ export const AdvancedControls: React.FC<AdvancedControlsProps> = ({ config, onCh
                 { id: QRErrorCorrectionLevel.H, label: 'High (~30%)', desc: 'Best for logos' },
               ].map((level) => {
                 const descId = `ecc-desc-${level.id}`;
+                const isDisabled = config.isMazeModeEnabled && level.id !== QRErrorCorrectionLevel.H;
                 return (
                   <label
                     key={level.id}
                     className={`inline-flex cursor-pointer flex-col items-start rounded-lg border p-2 text-left transition-colors focus-within:ring-2 focus-within:ring-teal-500 ${
                       config.errorCorrectionLevel === level.id
                         ? 'border-teal-500 bg-teal-50 text-teal-700 dark:bg-slate-800 dark:text-teal-400'
-                        : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700/50'
+                        : isDisabled
+                          ? 'cursor-not-allowed border-slate-100 bg-slate-50/50 text-slate-300 dark:border-slate-800 dark:bg-slate-900/50 dark:text-slate-600'
+                          : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700/50'
                     }`}
                   >
                     <input
@@ -74,8 +98,12 @@ export const AdvancedControls: React.FC<AdvancedControlsProps> = ({ config, onCh
                       name="error-correction-level"
                       value={level.id}
                       checked={config.errorCorrectionLevel === level.id}
-                      onChange={() => onChange({ errorCorrectionLevel: level.id })}
-                      onClick={() => onChange({ errorCorrectionLevel: level.id })}
+                      disabled={isDisabled}
+                      onChange={() => {
+                        if (!isDisabled) {
+                          onChange({ errorCorrectionLevel: level.id });
+                        }
+                      }}
                       className="sr-only"
                       aria-label={`Set error correction level to ${level.label}`}
                       aria-describedby={descId}
@@ -94,7 +122,9 @@ export const AdvancedControls: React.FC<AdvancedControlsProps> = ({ config, onCh
               })}
             </div>
             <p className="mt-2 text-[10px] text-slate-500 dark:text-slate-400">
-              Higher levels allow the QR code to be scanned even if damaged or covered (e.g., by a logo), but result in a denser code.
+              {config.isMazeModeEnabled 
+                ? 'Error correction is locked to High (Level H) in Playable Maze Mode to keep the modified maze scannable.'
+                : 'Higher levels allow the QR code to be scanned even if damaged or covered (e.g., by a logo), but result in a denser code.'}
             </p>
           </div>
         </div>

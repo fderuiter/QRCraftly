@@ -60,7 +60,7 @@ Unified appearance control modules that manage and present customization options
 - **LogoControls** (`LogoControls.tsx`): Coordinates uploading custom logos, configuring scaling boundaries, and adjusting background-mask thresholds.
 - **BorderControls** (`BorderControls.tsx` / `BorderControls.test.tsx`): Controls options for border thickness, padding, and corner radius around outputs.
 - **LayoutControls** (`LayoutControls.tsx` / `LayoutControls.test.tsx`): Controls size, padding, margin, and output format.
-- **AdvancedControls** (`AdvancedControls.tsx`): Advanced visual overrides such as grid density and scannability modifiers.
+- **AdvancedControls** (`AdvancedControls.tsx`): Advanced visual overrides such as grid density, scannability modifiers, and the interactive Playable Maze Mode toggle switch.
 - **ContrastWarning** (`ContrastWarning.tsx`): Dynamic accessibility banner that displays contrast warnings if combinations fall below WCAG parameters.
 
 ---

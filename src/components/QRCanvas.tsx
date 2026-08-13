@@ -16,13 +16,15 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import React, { useEffect, useRef, useCallback } from 'react';
+import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { QRConfig, SocialFormat, TemplateStyle, QRModules } from '../types';
 import { drawQR, drawQRInternal } from '../utils/qrRenderer';
 import { drawWithTemplate, SOCIAL_DIMENSIONS } from '../utils/templateRenderer';
 import { useImage } from '../hooks/useImage';
 import { ValidationEngine } from '../engine/ValidationEngine';
 import { Alert } from './ui/Alert';
+import { useToast } from './ui/Toast';
+import { calculateLayout } from '../utils/qr-renderers/utils';
 
 /**
  * Props for the QRCanvas component.
@@ -50,6 +52,99 @@ interface QRCanvasProps {
   animationFps?: number;
 }
 
+function findShortestPath(
+  start: { r: number; c: number },
+  end: { r: number; c: number },
+  modules: QRModules,
+  size: number
+) {
+  const isTraversable = (r: number, c: number) => {
+    if (r < 0 || r >= size || c < 0 || c >= size) return false;
+    if (r >= 2 && r <= 4 && c >= 2 && c <= 4) return true; // Top-Left eyeball
+    if (r >= size - 5 && r <= size - 3 && c >= 2 && c <= 4) return true; // Bottom-Left eyeball
+    return !modules.get(r, c);
+  };
+
+  const queue: { r: number; c: number; path: { r: number; c: number }[] }[] = [];
+  queue.push({ ...start, path: [start] });
+  const visited = new Set<string>();
+  visited.add(`${start.r},${start.c}`);
+
+  const dirs = [
+    { dr: -1, dc: 0 },
+    { dr: 1, dc: 0 },
+    { dr: 0, dc: -1 },
+    { dr: 0, dc: 1 },
+  ];
+
+  while (queue.length > 0) {
+    const { r, c, path } = queue.shift()!;
+    if (r === end.r && c === end.c) {
+      return path;
+    }
+
+    for (const { dr, dc } of dirs) {
+      const nr = r + dr;
+      const nc = c + dc;
+      const key = `${nr},${nc}`;
+      if (isTraversable(nr, nc) && !visited.has(key)) {
+        visited.add(key);
+        queue.push({ r: nr, c: nc, path: [...path, { r: nr, c: nc }] });
+      }
+    }
+  }
+
+  return null;
+}
+
+const modifyModulesForMaze = (modules: QRModules, config: QRConfig): QRModules => {
+  if (!config.isMazeModeEnabled) return modules;
+
+  const size = modules.size;
+  const matrix = new Uint8Array(size * size);
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) {
+      matrix[r * size + c] = modules.get(r, c) ? 1 : 0;
+    }
+  }
+
+  // Carve pathways through outer finder pattern frames
+  // Top-Left (0, 0)
+  matrix[6 * size + 3] = 0;
+  matrix[3 * size + 6] = 0;
+
+  // Top-Right (0, size - 7)
+  matrix[6 * size + (size - 4)] = 0;
+  matrix[3 * size + (size - 7)] = 0;
+
+  // Bottom-Left (size - 7, 0)
+  matrix[(size - 7) * size + 3] = 0;
+  matrix[(size - 4) * size + 6] = 0;
+
+  // Wrap matrix in temporary modules getter to run pathfinder
+  const tempModules = {
+    size,
+    get(r: number, c: number) {
+      return matrix[r * size + c] === 1;
+    }
+  };
+
+  const path = findShortestPath({ r: 3, c: 3 }, { r: size - 4, c: 3 }, tempModules, size);
+  if (!path) {
+    // Solvability fallback: carve a straight bridge down column 3 from row 4 to size - 5
+    for (let r = 4; r <= size - 5; r++) {
+      matrix[r * size + 3] = 0;
+    }
+  }
+
+  return {
+    size,
+    get(r, c) {
+      return matrix[r * size + c] === 1;
+    }
+  };
+};
+
 /**
  * A component that renders a QR code to a canvas element.
  * It supports customization of colors, styles (squares, dots, rounded, etc.),
@@ -75,6 +170,19 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
   const activeAnimationFps = animationFps !== undefined ? animationFps : (config.animationFps || 30);
 
   const localCanvasRef = useRef<HTMLCanvasElement>(null);
+  
+  const { addToast } = useToast();
+  const [_userPath, setUserPath] = useState<{ r: number; c: number }[]>([]);
+  const isDrawingRef = useRef(false);
+  const userPathRef = useRef<{ r: number; c: number }[]>([]);
+  const solvedToastShownRef = useRef(false);
+  const solvedPathRef = useRef<{ r: number; c: number }[] | null>(null);
+
+  useEffect(() => {
+    solvedToastShownRef.current = false;
+    userPathRef.current = [];
+    setUserPath([]);
+  }, [config.value, config.isMazeModeEnabled]);
   
   // Use either the forwarded ref or the local one
   const handleRef = (node: HTMLCanvasElement | null) => {
@@ -340,6 +448,110 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
       drawQR(ctx, modules, currentConfig, currentLogoImg, currentBorderLogoImg, activeSize);
     }
 
+    // DRAW THE PATH OVERLAY!
+    if (currentConfig.isMazeModeEnabled) {
+      const solved = findShortestPath({ r: 3, c: 3 }, { r: modules.size - 4, c: 3 }, modules, modules.size);
+      solvedPathRef.current = solved;
+
+      const displayWidth = activeSize;
+      let displayHeight = activeSize;
+      if (useTemplate) {
+        const { width: fw, height: fh } = SOCIAL_DIMENSIONS[currentConfig.socialFormat];
+        displayHeight = Math.round(activeSize * fh / fw);
+      }
+
+      ctx.save();
+      ctx.scale(pixelRatio, pixelRatio);
+
+      if (useTemplate) {
+        const isNoneSquare =
+          currentConfig.templateStyle === TemplateStyle.NONE &&
+          currentConfig.socialFormat === SocialFormat.SQUARE_1_1;
+
+        const userScale = Math.min(1.5, Math.max(0.5, currentConfig.templateQrScale ?? 1.0));
+        const baseQrFraction = isNoneSquare ? 1.0 : 0.5 * userScale;
+
+        const qrSize = displayWidth * baseQrFraction;
+        const qrX = (displayWidth - qrSize) / 2;
+        const qrY = (displayHeight - qrSize) / 2;
+        const ctxScale = qrSize / displayWidth;
+
+        ctx.translate(qrX, qrY);
+        ctx.scale(ctxScale, ctxScale);
+      }
+
+      const { drawX, drawY, cellSize } = calculateLayout(currentConfig, displayWidth, modules.size);
+
+      // Draw path overlay
+      if (userPathRef.current.length > 0) {
+        ctx.beginPath();
+        ctx.strokeStyle = '#2dd4bf'; // teal-400
+        ctx.lineWidth = cellSize * 0.45;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+
+        userPathRef.current.forEach((pt, idx) => {
+          const px = drawX + (pt.c + 0.5) * cellSize;
+          const py = drawY + (pt.r + 0.5) * cellSize;
+          if (idx === 0) {
+            ctx.moveTo(px, py);
+          } else {
+            ctx.lineTo(px, py);
+          }
+        });
+        ctx.stroke();
+
+        // Start indicator
+        ctx.beginPath();
+        ctx.fillStyle = '#14b8a6'; // teal-500
+        ctx.arc(drawX + 3.5 * cellSize, drawY + 3.5 * cellSize, cellSize * 0.45, 0, 2 * Math.PI);
+        ctx.fill();
+
+        // End indicator
+        const lastPt = userPathRef.current[userPathRef.current.length - 1];
+        const reachedEnd = lastPt.r === modules.size - 4 && lastPt.c === 3;
+        ctx.beginPath();
+        ctx.fillStyle = reachedEnd ? '#22c55e' : '#f97316'; // green-500 if solved, else orange-500
+        ctx.arc(drawX + 3.5 * cellSize, drawY + (modules.size - 3.5) * cellSize, cellSize * 0.45, 0, 2 * Math.PI);
+        ctx.fill();
+      } else {
+        // Draw guideline
+        if (solvedPathRef.current && solvedPathRef.current.length > 0) {
+          ctx.beginPath();
+          ctx.strokeStyle = 'rgba(20, 184, 166, 0.25)'; // teal-500 0.25 opacity
+          ctx.lineWidth = cellSize * 0.25;
+          ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
+          ctx.setLineDash([cellSize * 0.2, cellSize * 0.2]);
+
+          solvedPathRef.current.forEach((pt, idx) => {
+            const px = drawX + (pt.c + 0.5) * cellSize;
+            const py = drawY + (pt.r + 0.5) * cellSize;
+            if (idx === 0) {
+              ctx.moveTo(px, py);
+            } else {
+              ctx.lineTo(px, py);
+            }
+          });
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+
+        // Just highlight start and end
+        ctx.beginPath();
+        ctx.fillStyle = '#14b8a6'; // teal-500
+        ctx.arc(drawX + 3.5 * cellSize, drawY + 3.5 * cellSize, cellSize * 0.45, 0, 2 * Math.PI);
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.fillStyle = '#f97316'; // orange-500
+        ctx.arc(drawX + 3.5 * cellSize, drawY + (modules.size - 3.5) * cellSize, cellSize * 0.45, 0, 2 * Math.PI);
+        ctx.fill();
+      }
+
+      ctx.restore();
+    }
+
     if (currentOnRendered) {
       currentOnRendered({ moduleCount: modules.size });
 
@@ -456,10 +668,11 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
           }
 
           const QRCode = (QRCodeModule as any).default || QRCodeModule;
+          const errCorr = currentConfig.isMazeModeEnabled ? 'H' : currentConfig.errorCorrectionLevel;
           const data = QRCode.create(currentConfig.value, {
-            errorCorrectionLevel: currentConfig.errorCorrectionLevel,
+            errorCorrectionLevel: errCorr,
           });
-          const modules: QRModules = data.modules;
+          const modules: QRModules = modifyModulesForMaze(data.modules as unknown as QRModules, currentConfig);
           lastModulesRef.current = modules;
           paintMatrix(modules);
         } catch (e) {
@@ -479,10 +692,11 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
             }
 
             const QRCode = (mod as any).default || mod;
+            const errCorr = currentConfig.isMazeModeEnabled ? 'H' : currentConfig.errorCorrectionLevel;
             const data = QRCode.create(currentConfig.value, {
-              errorCorrectionLevel: currentConfig.errorCorrectionLevel,
+              errorCorrectionLevel: errCorr,
             });
-            const modules: QRModules = data.modules;
+            const modules: QRModules = modifyModulesForMaze(data.modules as unknown as QRModules, currentConfig);
             lastModulesRef.current = modules;
             paintMatrix(modules);
           } catch (e) {
@@ -540,7 +754,7 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
   useEffect(() => {
     if (activeIsAnimating) return;
     requestMatrixCalculation();
-  }, [config.value, config.errorCorrectionLevel, activeIsAnimating, requestMatrixCalculation]);
+  }, [config.value, config.errorCorrectionLevel, config.isMazeModeEnabled, activeIsAnimating, requestMatrixCalculation]);
 
   // Monitor structural and aesthetic changes to repaint immediately
   useEffect(() => {
@@ -571,6 +785,7 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
     config.borderLogoPosition,
     config.socialFormat,
     config.templateStyle,
+    config.isMazeModeEnabled,
     logoImg,
     borderLogoImg,
     size,
@@ -578,6 +793,190 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
     paintMatrix,
     requestMatrixCalculation,
   ]);
+
+  const redrawCanvasWithOverlay = useCallback(() => {
+    if (lastModulesRef.current) {
+      paintMatrix(lastModulesRef.current);
+    }
+  }, [paintMatrix]);
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    const currentConfig = configRef.current;
+    if (!currentConfig.isMazeModeEnabled || !lastModulesRef.current) return;
+
+    const canvas = localCanvasRef.current;
+    if (!canvas) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    const useTemplate =
+      currentConfig.templateStyle !== TemplateStyle.NONE ||
+      currentConfig.socialFormat !== SocialFormat.SQUARE_1_1;
+
+    const isPerfTest = typeof window !== 'undefined' && (window as any).isPerformanceTest;
+    const activeSize = isPerfTest ? 256 : sizeRef.current;
+
+    let displayWidth = activeSize;
+    let displayHeight = activeSize;
+    if (useTemplate) {
+      const { width: fw, height: fh } = SOCIAL_DIMENSIONS[currentConfig.socialFormat];
+      displayHeight = Math.round(activeSize * fh / fw);
+    }
+
+    const { drawX, drawY, cellSize } = calculateLayout(currentConfig, displayWidth, lastModulesRef.current.size);
+
+    let x_logical = x * (displayWidth / rect.width);
+    let y_logical = y * (displayHeight / rect.height);
+
+    if (useTemplate) {
+      const isNoneSquare =
+        currentConfig.templateStyle === TemplateStyle.NONE &&
+        currentConfig.socialFormat === SocialFormat.SQUARE_1_1;
+
+      const userScale = Math.min(1.5, Math.max(0.5, currentConfig.templateQrScale ?? 1.0));
+      const baseQrFraction = isNoneSquare ? 1.0 : 0.5 * userScale;
+
+      const qrSize = displayWidth * baseQrFraction;
+      const qrX = (displayWidth - qrSize) / 2;
+      const qrY = (displayHeight - qrSize) / 2;
+      const ctxScale = qrSize / displayWidth;
+
+      x_logical = (x_logical - qrX) / ctxScale;
+      y_logical = (y_logical - qrY) / ctxScale;
+    }
+
+    const col = Math.floor((x_logical - drawX) / cellSize);
+    const row = Math.floor((y_logical - drawY) / cellSize);
+
+    // Generous start check (anywhere inside start eyeball 2..4, 2..4)
+    const isAtStart = row >= 2 && row <= 4 && col >= 2 && col <= 4;
+
+    if (isAtStart) {
+      isDrawingRef.current = true;
+      userPathRef.current = [{ r: 3, c: 3 }];
+      setUserPath([{ r: 3, c: 3 }]);
+      canvas.setPointerCapture(e.pointerId);
+      redrawCanvasWithOverlay();
+    }
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (!isDrawingRef.current || !lastModulesRef.current) return;
+
+    const currentConfig = configRef.current;
+    const canvas = localCanvasRef.current;
+    if (!canvas) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    const useTemplate =
+      currentConfig.templateStyle !== TemplateStyle.NONE ||
+      currentConfig.socialFormat !== SocialFormat.SQUARE_1_1;
+
+    const isPerfTest = typeof window !== 'undefined' && (window as any).isPerformanceTest;
+    const activeSize = isPerfTest ? 256 : sizeRef.current;
+
+    let displayWidth = activeSize;
+    let displayHeight = activeSize;
+    if (useTemplate) {
+      const { width: fw, height: fh } = SOCIAL_DIMENSIONS[currentConfig.socialFormat];
+      displayHeight = Math.round(activeSize * fh / fw);
+    }
+
+    const { drawX, drawY, cellSize } = calculateLayout(currentConfig, displayWidth, lastModulesRef.current.size);
+
+    let x_logical = x * (displayWidth / rect.width);
+    let y_logical = y * (displayHeight / rect.height);
+
+    if (useTemplate) {
+      const isNoneSquare =
+        currentConfig.templateStyle === TemplateStyle.NONE &&
+        currentConfig.socialFormat === SocialFormat.SQUARE_1_1;
+
+      const userScale = Math.min(1.5, Math.max(0.5, currentConfig.templateQrScale ?? 1.0));
+      const baseQrFraction = isNoneSquare ? 1.0 : 0.5 * userScale;
+
+      const qrSize = displayWidth * baseQrFraction;
+      const qrX = (displayWidth - qrSize) / 2;
+      const qrY = (displayHeight - qrSize) / 2;
+      const ctxScale = qrSize / displayWidth;
+
+      x_logical = (x_logical - qrX) / ctxScale;
+      y_logical = (y_logical - qrY) / ctxScale;
+    }
+
+    const col = Math.floor((x_logical - drawX) / cellSize);
+    const row = Math.floor((y_logical - drawY) / cellSize);
+
+    const size = lastModulesRef.current.size;
+
+    if (row < 0 || row >= size || col < 0 || col >= size) return;
+
+    const lastCell = userPathRef.current[userPathRef.current.length - 1];
+    if (lastCell.r === row && lastCell.c === col) return;
+
+    const isTraversable = (r: number, c: number) => {
+      if (r < 0 || r >= size || c < 0 || c >= size) return false;
+      if (r >= 2 && r <= 4 && c >= 2 && c <= 4) return true;
+      if (r >= size - 5 && r <= size - 3 && c >= 2 && c <= 4) return true;
+      return lastModulesRef.current ? !lastModulesRef.current.get(r, c) : false;
+    };
+
+    if (!isTraversable(row, col)) return;
+
+    // Backtracking check
+    const existingIndex = userPathRef.current.findIndex(pt => pt.r === row && pt.c === col);
+    if (existingIndex !== -1) {
+      const truncated = userPathRef.current.slice(0, existingIndex + 1);
+      userPathRef.current = truncated;
+      setUserPath(truncated);
+      redrawCanvasWithOverlay();
+      return;
+    }
+
+    // Try to find shortest path to step/drag smoothly
+    const pathSegment = findShortestPath(lastCell, { r: row, c: col }, lastModulesRef.current, size);
+    if (pathSegment && pathSegment.length > 1) {
+      const newPath = [...userPathRef.current, ...pathSegment.slice(1)];
+      userPathRef.current = newPath;
+      setUserPath(newPath);
+      redrawCanvasWithOverlay();
+
+      const reachedEnd = row >= size - 5 && row <= size - 3 && col >= 2 && col <= 4;
+      if (reachedEnd && !solvedToastShownRef.current) {
+        addToast({
+          type: 'success',
+          message: 'Congratulations! You solved the QR code maze! 🎉',
+          duration: 4000,
+        });
+        solvedToastShownRef.current = true;
+      }
+    }
+  };
+
+  const handlePointerUp = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (isDrawingRef.current) {
+      isDrawingRef.current = false;
+      const canvas = localCanvasRef.current;
+      if (canvas) {
+        canvas.releasePointerCapture(e.pointerId);
+      }
+    }
+  };
+
+  const handlePointerCancel = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (isDrawingRef.current) {
+      isDrawingRef.current = false;
+      const canvas = localCanvasRef.current;
+      if (canvas) {
+        canvas.releasePointerCapture(e.pointerId);
+      }
+    }
+  };
 
   const typeLabel = config.type.charAt(0).toUpperCase() + config.type.slice(1).toLowerCase();
   const ariaLabel = `QR Code for ${typeLabel} - ${config.value ? 'Scan to view content' : 'Empty'}`;
@@ -652,9 +1051,14 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
     <div className={`relative ${containerClasses} w-full`}>
       <canvas
         ref={handleRef}
-        className={`block h-auto w-full ${aspectRatioClass}`}
+        className={`block h-auto w-full ${aspectRatioClass} ${config.isMazeModeEnabled ? 'cursor-crosshair' : ''}`}
         role="img"
         aria-label={ariaLabel}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerCancel}
+        style={{ touchAction: config.isMazeModeEnabled ? 'none' : 'auto' }}
       />
     </div>
   );

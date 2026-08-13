@@ -51,6 +51,7 @@ export const DEFAULT_CONFIG = {
   templateHeadline: '',
   templateSubtext: '',
   templateQrScale: 1.0,
+  isMazeModeEnabled: false,
 };
 
 /**
