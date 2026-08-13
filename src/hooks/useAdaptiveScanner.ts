@@ -142,15 +142,9 @@ export function useAdaptiveScanner({
   const sequenceRef = useRef<number>(0);
   const completedSequenceRef = useRef<number>(0);
 
-  // Buffer Pool: Maintain a pool of pre-allocated buffers inside a useRef (double buffering)
-  const poolRef = useRef<ArrayBuffer[]>([]);
-  const currentWidthRef = useRef<number>(0);
-  const currentHeightRef = useRef<number>(0);
-
   // Track start times of in-flight requests mapped by sequenceId
   const startTimeMapRef = useRef<Map<number, number>>(new Map());
   const latencyHistoryRef = useRef<number[]>([]);
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   // Watchdog & stability tracking refs
   const consecutiveRestartAttemptsRef = useRef<number>(0);
@@ -174,9 +168,6 @@ export function useAdaptiveScanner({
     if (consecutiveRestartAttemptsRef.current > 3) {
       console.error("Scanner background worker crashed repeatedly. Stopping scanning loop.");
       setIsScanning(false);
-      poolRef.current = [];
-      currentWidthRef.current = 0;
-      currentHeightRef.current = 0;
       consecutiveRestartAttemptsRef.current = 0; // Reset counter
       if (onScanFailRef.current) {
         onScanFailRef.current(
@@ -202,17 +193,6 @@ export function useAdaptiveScanner({
     inFlightRef.current = false;
     inFlightStartRef.current = null;
     startTimeMapRef.current.clear();
-
-    // 4. Replenish the double-buffering pool with exactly two ArrayBuffer instances matching the current dimension
-    if (currentWidthRef.current > 0 && currentHeightRef.current > 0) {
-      const bufferSize = currentWidthRef.current * currentHeightRef.current * 4;
-      poolRef.current = [
-        new ArrayBuffer(bufferSize),
-        new ArrayBuffer(bufferSize),
-      ];
-    } else {
-      poolRef.current = [];
-    }
 
     // 5. Create new worker
     if (typeof window === 'undefined') return;
@@ -245,16 +225,7 @@ export function useAdaptiveScanner({
     // Reset consecutive restart attempts on a successful frame process/response
     consecutiveRestartAttemptsRef.current = 0;
 
-    const { status: resultStatus, sequenceId, decodedData, error, buffer } = payload;
-
-    // Recycle buffer back into the pool even if message is stale
-    if (buffer && buffer.byteLength === currentWidthRef.current * currentHeightRef.current * 4) {
-      if (!poolRef.current.includes(buffer)) {
-        if (poolRef.current.length < 2) {
-          poolRef.current.push(buffer);
-        }
-      }
-    }
+    const { status: resultStatus, sequenceId, decodedData, error } = payload;
 
     const startTime = startTimeMapRef.current.get(sequenceId);
     if (startTime !== undefined) {
@@ -373,58 +344,35 @@ export function useAdaptiveScanner({
         height = Math.round(height * scale);
       }
 
-      if (!canvasRef.current) {
-        canvasRef.current = document.createElement('canvas');
-      }
-      const canvas = canvasRef.current;
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return false;
+      // Capture video frame as non-blocking image bitmap resource on the main thread
+      // instead of drawing them to a main-thread canvas
+      createImageBitmap(video, {
+        resizeWidth: width,
+        resizeHeight: height,
+        resizeQuality: 'low',
+      }).then((image) => {
+        // Increment sequence and track start time
+        sequenceRef.current += 1;
+        const seqId = sequenceRef.current;
 
-      // Copy video frame onto offscreen canvas and grab ImageData
-      ctx.drawImage(video, 0, 0, width, height);
-      const imageData = ctx.getImageData(0, 0, width, height);
+        inFlightRef.current = true;
+        inFlightStartRef.current = performance.now();
+        startTimeMapRef.current.set(seqId, performance.now());
+        updateScannerState({ status: 'checking' });
 
-      // Increment sequence and track start time
-      sequenceRef.current += 1;
-      const seqId = sequenceRef.current;
-
-      // Lazily initialize/resize pool with exactly 2 buffers once resolution is known
-      if (width !== currentWidthRef.current || height !== currentHeightRef.current) {
-        currentWidthRef.current = width;
-        currentHeightRef.current = height;
-        const bufferSize = width * height * 4;
-        poolRef.current = [
-          new ArrayBuffer(bufferSize),
-          new ArrayBuffer(bufferSize),
-        ];
-      }
-
-      let buffer = poolRef.current.pop();
-      if (!buffer) {
-        buffer = new ArrayBuffer(width * height * 4);
-      }
-
-      // Copy pixel values from imageData.data into the recycled ArrayBuffer
-      const bufferView = new Uint8ClampedArray(buffer);
-      bufferView.set(imageData.data);
-
-      inFlightRef.current = true;
-      inFlightStartRef.current = performance.now();
-      startTimeMapRef.current.set(seqId, performance.now());
-      updateScannerState({ status: 'checking' });
-
-      // Requirement 4: Transfer buffer to eliminate memory copying overhead (zero-copy)
-      workerRef.current?.postMessage(
-        {
-          buffer,
-          width,
-          height,
-          sequenceId: seqId,
-        },
-        [buffer]
-      );
+        // Transfer captured image resource directly to the background Web Worker using zero-copy serialization mechanisms
+        workerRef.current?.postMessage(
+          {
+            image,
+            width,
+            height,
+            sequenceId: seqId,
+          },
+          [image]
+        );
+      }).catch((err) => {
+        console.error('Failed to capture or dispatch camera frame:', err);
+      });
       return true;
     } catch (err) {
       console.error('Failed to capture or dispatch camera frame:', err);
@@ -622,18 +570,12 @@ export function useAdaptiveScanner({
     sequenceRef.current = 0;
     completedSequenceRef.current = 0;
     startTimeMapRef.current.clear();
-    poolRef.current = [];
-    currentWidthRef.current = 0;
-    currentHeightRef.current = 0;
   }, []);
 
   const stopScanning = useCallback(() => {
     setIsScanning(false);
     consecutiveRestartAttemptsRef.current = 0;
     inFlightStartRef.current = null;
-    poolRef.current = [];
-    currentWidthRef.current = 0;
-    currentHeightRef.current = 0;
   }, []);
 
   return {

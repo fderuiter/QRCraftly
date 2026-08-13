@@ -219,17 +219,18 @@ class MockWorker {
           }
 
           if (this.url.toString().includes('scannerWorker') && message && typeof message === 'object' && typeof message.sequenceId === 'number') {
-            const { imageData, width, height } = message;
-            if (imageData && typeof width === 'number' && typeof height === 'number') {
+            const { image, width, height } = message;
+            if (image && typeof width === 'number' && typeof height === 'number') {
               const { default: jsQR } = await import('jsqr');
-              let code = jsQR(imageData.data, width, height, { inversionAttempts: 'dontInvert' });
+              const data = (image as any)._data || new Uint8ClampedArray(width * height * 4);
+              let code = jsQR(data, width, height, { inversionAttempts: 'dontInvert' });
               if (!code) {
-                code = jsQR(imageData.data, width, height, { inversionAttempts: 'attemptBoth' });
+                code = jsQR(data, width, height, { inversionAttempts: 'attemptBoth' });
               }
               if (code && code.data) {
-                this.dispatchMessage({ success: true, decodedData: code.data, sequenceId: message.sequenceId });
+                this.dispatchMessage({ status: 'pass', decodedData: code.data, sequenceId: message.sequenceId });
               } else {
-                this.dispatchMessage({ success: false, error: 'No QR code detected in this image. Try a clearer or higher-contrast QR code image.', sequenceId: message.sequenceId });
+                this.dispatchMessage({ status: 'fail', error: 'No QR code detected in this image. Try a clearer or higher-contrast QR code image.', sequenceId: message.sequenceId });
               }
               return;
             }
@@ -241,45 +242,45 @@ class MockWorker {
               const { default: jsQR } = await import('jsqr');
 
               // 1. Digital pass check
-              let digitalPass = false;
+              let digitalCheckSuccess = false;
               let decodedData = '';
               let code = jsQR(imageData.data, width, height, { inversionAttempts: "dontInvert" });
               if (code) {
-                digitalPass = true;
+                digitalCheckSuccess = true;
                 decodedData = code.data;
               } else {
                 code = jsQR(imageData.data, width, height, { inversionAttempts: "attemptBoth" });
                 if (code) {
-                  digitalPass = true;
+                  digitalCheckSuccess = true;
                   decodedData = code.data;
                 }
               }
 
               // 2. Security Check (Dangerous URL check)
-              if (digitalPass && isDangerousUrl(decodedData)) {
+              if (digitalCheckSuccess && isDangerousUrl(decodedData)) {
                 const response = { success: false, physicalReady: false, error: 'SECURITY_VIOLATION', configId };
                 this.dispatchMessage(response);
                 return;
               }
 
-              if (!digitalPass) {
+              if (!digitalCheckSuccess) {
                 const response = { success: false, physicalReady: false, error: 'NOT_FOUND', configId };
                 this.dispatchMessage(response);
                 return;
               }
 
               // 3. Physical check (Optical Simulation math)
-              let physicalPass = false;
+              let physicalCheckSuccess = false;
               const simulatedData = isTest ? imageData : new ImageData(applyOpticalSimulationMath(imageData.data, width, height), width, height);
               let codeSim = jsQR(simulatedData.data, width, height, { inversionAttempts: "dontInvert" });
               if (codeSim) {
-                physicalPass = true;
+                physicalCheckSuccess = true;
               } else {
                 codeSim = jsQR(simulatedData.data, width, height, { inversionAttempts: "attemptBoth" });
-                if (codeSim) physicalPass = true;
+                if (codeSim) physicalCheckSuccess = true;
               }
 
-              const response = { success: true, physicalReady: physicalPass, configId };
+              const response = { success: true, physicalReady: physicalCheckSuccess, configId };
               this.dispatchMessage(response);
               return;
             }
@@ -316,6 +317,76 @@ class MockWorker {
 }
 
 globalThis.Worker = MockWorker as any;
+
+if (typeof globalThis.ImageBitmap === 'undefined') {
+  globalThis.ImageBitmap = class ImageBitmap {
+    width = 0;
+    height = 0;
+    _data: Uint8ClampedArray | null = null;
+    constructor(width = 100, height = 100, data: Uint8ClampedArray | null = null) {
+      this.width = width;
+      this.height = height;
+      this._data = data;
+    }
+    close() {}
+  } as any;
+}
+
+if (typeof globalThis.createImageBitmap === 'undefined') {
+  globalThis.createImageBitmap = vi.fn().mockImplementation((source, options) => {
+    let width = 100;
+    let height = 100;
+    if (options && typeof options.resizeWidth === 'number') {
+      width = options.resizeWidth;
+    } else if (source && typeof source.videoWidth === 'number') {
+      width = source.videoWidth;
+    }
+    if (options && typeof options.resizeHeight === 'number') {
+      height = options.resizeHeight;
+    } else if (source && typeof source.videoHeight === 'number') {
+      height = source.videoHeight;
+    }
+    const img = new globalThis.ImageBitmap(width, height);
+    return {
+      then(cb: any) {
+        cb(img);
+        return {
+          catch() {
+            return this;
+          }
+        };
+      }
+    } as any;
+  });
+}
+
+if (typeof globalThis.OffscreenCanvas === 'undefined') {
+  globalThis.OffscreenCanvas = class OffscreenCanvas {
+    width: number;
+    height: number;
+    constructor(width: number, height: number) {
+      this.width = width;
+      this.height = height;
+    }
+    getContext(contextId: string) {
+      if (contextId === '2d') {
+        return {
+          drawImage() {},
+          getImageData(x: number, y: number, w: number, h: number) {
+            return {
+              data: new Uint8ClampedArray(w * h * 4),
+              width: w,
+              height: h,
+            };
+          },
+          clearRect() {},
+        };
+      }
+      return null;
+    }
+  } as any;
+}
+
 if (typeof globalThis.ImageData === 'undefined') {
   globalThis.ImageData = class ImageData {
     data: Uint8ClampedArray;

@@ -3,7 +3,7 @@
  */
 
 export interface ScannerRequest {
-  buffer: ArrayBuffer;
+  image: ImageBitmap;
   width: number;
   height: number;
   sequenceId: number;
@@ -14,7 +14,6 @@ export interface ScannerResponse {
   sequenceId: number;
   decodedData?: string | null;
   error?: string | null;
-  buffer: ArrayBuffer;
 }
 
 /**
@@ -23,7 +22,7 @@ export interface ScannerResponse {
 export function isValidScannerRequest(data: unknown): data is ScannerRequest {
   if (typeof data !== 'object' || data === null) return false;
   const d = data as any;
-  if (!(d.buffer instanceof ArrayBuffer)) return false;
+  if (typeof ImageBitmap === 'undefined' || !(d.image instanceof ImageBitmap)) return false;
   if (typeof d.width !== 'number' || !Number.isFinite(d.width) || d.width <= 0) return false;
   if (typeof d.height !== 'number' || !Number.isFinite(d.height) || d.height <= 0) return false;
   if (typeof d.sequenceId !== 'number' || !Number.isFinite(d.sequenceId)) return false;
@@ -38,8 +37,8 @@ export function assertScannerRequest(data: unknown): asserts data is ScannerRequ
     throw new Error('Scanner request must be a non-null object');
   }
   const d = data as any;
-  if (!(d.buffer instanceof ArrayBuffer)) {
-    throw new Error('Scanner request must contain a valid ArrayBuffer');
+  if (typeof ImageBitmap === 'undefined' || !(d.image instanceof ImageBitmap)) {
+    throw new Error('Scanner request must contain a valid ImageBitmap');
   }
   if (typeof d.width !== 'number' || !Number.isFinite(d.width) || d.width <= 0) {
     throw new Error('Scanner request width must be a positive number');
@@ -62,7 +61,6 @@ export function isValidScannerResponse(data: unknown): data is ScannerResponse {
   if (typeof d.sequenceId !== 'number' || !Number.isFinite(d.sequenceId)) return false;
   if (d.decodedData !== undefined && d.decodedData !== null && typeof d.decodedData !== 'string') return false;
   if (d.error !== undefined && d.error !== null && typeof d.error !== 'string') return false;
-  if (!(d.buffer instanceof ArrayBuffer)) return false;
   return true;
 }
 
@@ -85,8 +83,5 @@ export function assertScannerResponse(data: unknown): asserts data is ScannerRes
   }
   if (d.error !== undefined && d.error !== null && typeof d.error !== 'string') {
     throw new Error('Scanner response error must be a string or null');
-  }
-  if (!(d.buffer instanceof ArrayBuffer)) {
-    throw new Error('Scanner response must contain a valid ArrayBuffer');
   }
 }
