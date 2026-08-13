@@ -22,7 +22,7 @@ describe('Scanner Contract Payload Validation', () => {
   describe('isValidScannerRequest', () => {
     it('should validate valid scanner requests', () => {
       const valid = {
-        image: new ImageBitmap(100, 100),
+        image: new (ImageBitmap as any)(100, 100),
         width: 100,
         height: 100,
         sequenceId: 5,
@@ -38,13 +38,13 @@ describe('Scanner Contract Payload Validation', () => {
         sequenceId: 5,
       };
       const invalidWidth = {
-        image: new ImageBitmap(100, 100),
+        image: new (ImageBitmap as any)(100, 100),
         width: -10,
         height: 100,
         sequenceId: 5,
       };
       const invalidSeq = {
-        image: new ImageBitmap(100, 100),
+        image: new (ImageBitmap as any)(100, 100),
         width: 100,
         height: 100,
         sequenceId: NaN,
