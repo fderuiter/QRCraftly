@@ -49,7 +49,7 @@ let exitStatus = 0;
 let deployOutput = '';
 const outputPath = path.resolve(process.cwd(), 'deploy_output.txt');
 
-if (!hasCloudflareSecrets) {
+if (process.env.GITHUB_ACTIONS && !hasCloudflareSecrets) {
   console.log('[Wrangler Wrapper] CLOUDFLARE_API_TOKEN or CLOUDFLARE_ACCOUNT_ID is empty/missing.');
   console.log('[Wrangler Wrapper] Falling back to starting local preview server on port 3000...');
   
