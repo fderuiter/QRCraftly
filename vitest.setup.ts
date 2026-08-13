@@ -218,6 +218,60 @@ class MockWorker {
             }
           }
 
+          if (this.url.toString().includes('fileReassemblyWorker') && message && typeof message === 'object') {
+            const { type, chunks, totalChunks } = message;
+            if (type === 'START_REASSEMBLY') {
+              try {
+                if (!chunks || !Array.isArray(chunks)) {
+                  throw new Error('Invalid or missing chunks array.');
+                }
+                const sortedChunks = [...chunks].sort((a, b) => a.index - b.index);
+                if (sortedChunks.length !== totalChunks) {
+                  throw new Error(`Chunk count mismatch. Expected ${totalChunks}, got ${sortedChunks.length}`);
+                }
+                const decodedChunks: Uint8Array[] = [];
+                let totalLength = 0;
+                for (let i = 0; i < totalChunks; i++) {
+                  const base64Str = sortedChunks[i].base64;
+                  const binaryString = atob(base64Str);
+                  const len = binaryString.length;
+                  const bytes = new Uint8Array(len);
+                  for (let j = 0; j < len; j++) {
+                    bytes[j] = binaryString.charCodeAt(j);
+                  }
+                  decodedChunks.push(bytes);
+                  totalLength += len;
+
+                  this.dispatchMessage({
+                    type: 'PROGRESS',
+                    progress: Math.round(((i + 1) / totalChunks) * 100),
+                    current: i + 1,
+                    total: totalChunks,
+                  });
+                }
+
+                const mergedArray = new Uint8Array(totalLength);
+                let offset = 0;
+                for (let i = 0; i < totalChunks; i++) {
+                  mergedArray.set(decodedChunks[i], offset);
+                  offset += decodedChunks[i].length;
+                }
+
+                const buffer = mergedArray.buffer;
+                this.dispatchMessage({
+                  type: 'COMPLETE',
+                  buffer
+                });
+              } catch (err: any) {
+                this.dispatchMessage({
+                  type: 'ERROR',
+                  error: err?.message || 'Unknown reassembly error'
+                });
+              }
+              return;
+            }
+          }
+
           if (this.url.toString().includes('scannerWorker') && message && typeof message === 'object' && typeof message.sequenceId === 'number') {
             const { image, width, height } = message;
             if (image && typeof width === 'number' && typeof height === 'number') {
