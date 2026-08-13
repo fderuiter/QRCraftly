@@ -32,7 +32,6 @@ function FileTransferReceiveInner() {
   const { addToast } = useToast();
 
   const [streamMode, setStreamMode] = useState<'text' | 'binary'>('text');
-
   // Use the unified animated QR receiver hook
   const {
     chunks,
@@ -47,6 +46,7 @@ function FileTransferReceiveInner() {
     downloadTriggered,
     reconstructAndValidateFile,
     handshake,
+    compilationStatus,
   } = useAnimatedQrReceiver({
     addToast,
     handshakeRequired: false,
@@ -232,6 +232,13 @@ function FileTransferReceiveInner() {
                 <Activity className="size-4 text-teal-600" />
                 2. Live Progress & Assembly
               </h2>
+
+              {compilationStatus && (
+                <div className="flex animate-pulse items-center gap-2 rounded-xl border border-teal-100 bg-teal-50/50 p-4 text-xs text-teal-800 dark:border-teal-900/60 dark:bg-teal-950/20 dark:text-teal-400" data-testid="compilation-status">
+                  <Cpu className="size-4 animate-spin text-teal-600" />
+                  <span className="font-semibold">{compilationStatus}</span>
+                </div>
+              )}
 
               {totalChunks !== null ? (
                 <div className="space-y-3 rounded-xl border border-slate-100 bg-slate-50/50 p-4 text-xs dark:border-slate-900 dark:bg-slate-900/40">

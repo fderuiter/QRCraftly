@@ -102,7 +102,9 @@ export function useAnimatedQrReceiver({
   const [downloadTriggered, setDownloadTriggered] = useState<boolean>(false);
   const [isScanning, setIsScanning] = useState<boolean>(false);
   const [reassembledData, setReassembledData] = useState<Uint8Array | null>(null);
+  const [compilationStatus, setCompilationStatus] = useState<string | null>(null);
 
+  const workerRef = useRef<Worker | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const lookaheadRef = useRef<StreamLookaheadReceiver | null>(null);
   const processedIndicesRef = useRef<Set<number>>(new Set());
@@ -116,6 +118,23 @@ export function useAnimatedQrReceiver({
   const camera = useCamera();
   const { startStream, stopStream, stream } = camera;
 
+  const initWorker = useCallback(() => {
+    if (!workerRef.current) {
+      workerRef.current = new Worker(
+        new URL('../utils/fileReassemblyWorker.ts', import.meta.url),
+        { type: 'module' }
+      );
+    }
+    return workerRef.current;
+  }, []);
+
+  const terminateWorker = useCallback(() => {
+    if (workerRef.current) {
+      workerRef.current.terminate();
+      workerRef.current = null;
+    }
+  }, []);
+
   // Reset/Clear state
   const handleClear = useCallback(() => {
     setChunks(new Map());
@@ -127,6 +146,8 @@ export function useAnimatedQrReceiver({
     setIsVerifying(false);
     setDownloadTriggered(false);
     setReassembledData(null);
+    setCompilationStatus(null);
+    terminateWorker();
     processedIndicesRef.current.clear();
     lookaheadRef.current = new StreamLookaheadReceiver({ mode: streamMode });
     if (addToast) {
@@ -136,7 +157,7 @@ export function useAnimatedQrReceiver({
         duration: 3000,
       });
     }
-  }, [addToast, streamMode]);
+  }, [addToast, streamMode, terminateWorker]);
 
   // Reassemble and validate file
   const reconstructAndValidateFile = useCallback(async (
@@ -146,59 +167,125 @@ export function useAnimatedQrReceiver({
   ) => {
     try {
       setIsVerifying(true);
-      const uint8Arrays: Uint8Array[] = [];
+      setReceiverError(null);
+      setReceiverSuccess(false);
+      setCompilationStatus('Initializing background compilation...');
+
+      const worker = initWorker();
+      const chunksToSend: Array<{ index: number; base64: string }> = [];
       for (let i = 0; i < total; i++) {
-        const chunkBase64 = activeChunks.get(i);
-        if (!chunkBase64) {
+        const base64 = activeChunks.get(i);
+        if (base64) {
+          chunksToSend.push({ index: i, base64 });
+        } else {
+          setDownloadTriggered(false);
+          setIsVerifying(false);
+          setCompilationStatus(null);
           throw new Error(`Missing frame chunk at index ${i}`);
         }
-        const arr = base64ToUint8Array(chunkBase64);
-        uint8Arrays.push(arr);
       }
 
-      // Concatenate arrays
-      let totalLength = uint8Arrays.reduce((acc, arr) => acc + arr.length, 0);
-      const reassembled = new Uint8Array(totalLength);
-      let offset = 0;
-      for (const arr of uint8Arrays) {
-        reassembled.set(arr, offset);
-        offset += arr.length;
-      }
+      worker.onmessage = async (e: MessageEvent) => {
+        const { type, progress, current, total: tot, buffer, error } = e.data;
 
-      if (activeHandshake) {
-        // Compute and verify SHA-256
-        const hashBuffer = await crypto.subtle.digest('SHA-256', reassembled.buffer);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        const actualSHA256 = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        if (type === 'PROGRESS') {
+          setCompilationStatus(`Compiling file: ${current}/${tot} chunks decoded (${progress}%)`);
+        } else if (type === 'COMPLETE') {
+          try {
+            setCompilationStatus('Finalizing download...');
+            const reassembled = new Uint8Array(buffer);
 
-        if (actualSHA256 !== activeHandshake.sha256) {
-          throw new Error(`Integrity validation failed! SHA-256 hash does not match handshake value.\nExpected: ${activeHandshake.sha256}\nActual: ${actualSHA256}`);
+            if (activeHandshake) {
+              // Compute and verify SHA-256
+              const hashBuffer = await crypto.subtle.digest('SHA-256', reassembled.buffer);
+              const hashArray = Array.from(new Uint8Array(hashBuffer));
+              const actualSHA256 = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+              if (actualSHA256 !== activeHandshake.sha256) {
+                throw new Error(`Integrity validation failed! SHA-256 hash does not match handshake value.\nExpected: ${activeHandshake.sha256}\nActual: ${actualSHA256}`);
+              }
+
+              setReassembledData(reassembled);
+              setReceiverSuccess(true);
+              setReceiverError(null);
+
+              // Download
+              triggerFileDownload(reassembled, activeHandshake.fileName, activeHandshake.mimeType);
+            } else {
+              // Standard flow without handshake (e.g. receive page)
+              setReassembledData(reassembled);
+              setReceiverSuccess(true);
+              setReceiverError(null);
+
+              triggerFileDownload(reassembled, `received_file_${Date.now()}.bin`, 'application/octet-stream');
+            }
+
+            setDownloadTriggered(true);
+
+            if (addToast) {
+              addToast({
+                type: 'success',
+                message: 'File completely received & offline binary reconstruction triggered!',
+                duration: 5000,
+              });
+            }
+          } catch (err: any) {
+            setReceiverError(err?.message || 'Verification or reassembly failed.');
+            setReceiverSuccess(false);
+            setReassembledData(null);
+            if (addToast) {
+              addToast({
+                type: 'error',
+                message: `Failed to compile binary content: ${err.message}`,
+                duration: 5000,
+              });
+            }
+          } finally {
+            terminateWorker();
+            setCompilationStatus(null);
+            setIsVerifying(false);
+          }
+        } else if (type === 'ERROR') {
+          setReceiverError(error || 'Failed to compile binary content.');
+          setReceiverSuccess(false);
+          setReassembledData(null);
+          if (addToast) {
+            addToast({
+              type: 'error',
+              message: `Failed to compile binary content: ${error}`,
+              duration: 5000,
+            });
+          }
+          setDownloadTriggered(false);
+          terminateWorker();
+          setCompilationStatus(null);
+          setIsVerifying(false);
         }
+      };
 
-        setReassembledData(reassembled);
-        setReceiverSuccess(true);
-        setReceiverError(null);
+      worker.onerror = (e) => {
+        setReceiverError(e.message || 'Background worker error.');
+        setReceiverSuccess(false);
+        setReassembledData(null);
+        if (addToast) {
+          addToast({
+            type: 'error',
+            message: `Background worker error: ${e.message}`,
+            duration: 5000,
+          });
+        }
+        setDownloadTriggered(false);
+        terminateWorker();
+        setCompilationStatus(null);
+        setIsVerifying(false);
+      };
 
-        // Download
-        triggerFileDownload(reassembled, activeHandshake.fileName, activeHandshake.mimeType);
-      } else {
-        // Standard flow without handshake (e.g. receive page)
-        setReassembledData(reassembled);
-        setReceiverSuccess(true);
-        setReceiverError(null);
+      worker.postMessage({
+        type: 'START_REASSEMBLY',
+        chunks: chunksToSend,
+        totalChunks: total
+      });
 
-        triggerFileDownload(reassembled, `received_file_${Date.now()}.bin`, 'application/octet-stream');
-      }
-
-      setDownloadTriggered(true);
-
-      if (addToast) {
-        addToast({
-          type: 'success',
-          message: 'File completely received & offline binary reconstruction triggered!',
-          duration: 5000,
-        });
-      }
     } catch (err: any) {
       setReceiverError(err?.message || 'Verification or reassembly failed.');
       setReceiverSuccess(false);
@@ -206,14 +293,16 @@ export function useAnimatedQrReceiver({
       if (addToast) {
         addToast({
           type: 'error',
-          message: `Failed to compile binary content: ${err.message}`,
+          message: `Failed to start background compilation: ${err.message}`,
           duration: 5000,
         });
       }
-    } finally {
+      setDownloadTriggered(false);
+      terminateWorker();
+      setCompilationStatus(null);
       setIsVerifying(false);
     }
-  }, [addToast]);
+  }, [addToast, initWorker, terminateWorker]);
 
   // Frame processor
   const handleFrame = useCallback(async (decodedText: string) => {
@@ -342,6 +431,7 @@ export function useAnimatedQrReceiver({
   const startCameraSession = useCallback(async () => {
     setSecurityAlert(null);
     processedIndicesRef.current.clear();
+    initWorker();
     const activeStream = await startStream();
     if (activeStream) {
       setIsScanning(true);
@@ -353,7 +443,7 @@ export function useAnimatedQrReceiver({
         });
       }
     }
-  }, [startStream, addToast]);
+  }, [startStream, addToast, initWorker]);
 
   const stopCameraSession = useCallback(() => {
     setIsScanning(false);
@@ -394,8 +484,9 @@ export function useAnimatedQrReceiver({
     return () => {
       stopScanning();
       stopStream();
+      terminateWorker();
     };
-  }, [stopScanning, stopStream]);
+  }, [stopScanning, stopStream, terminateWorker]);
 
   return {
     chunks,
@@ -417,5 +508,6 @@ export function useAnimatedQrReceiver({
     startCameraSession,
     stopCameraSession,
     reconstructAndValidateFile,
+    compilationStatus,
   };
 }

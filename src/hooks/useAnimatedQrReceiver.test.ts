@@ -80,4 +80,23 @@ describe('useAnimatedQrReceiver Hook', () => {
 
     expect(result.current.securityAlert).toContain('Dangerous protocol detected and blocked');
   });
+
+  it('should compile and reassemble files via background worker', async () => {
+    const { result } = renderHook(() => useAnimatedQrReceiver());
+
+    await act(async () => {
+      await result.current.handleFrame('F|0|2|Zm9v');
+    });
+
+    await act(async () => {
+      await result.current.handleFrame('F|1|2|YmFy');
+    });
+
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    });
+
+    expect(result.current.receiverSuccess).toBe(true);
+    expect(global.URL.createObjectURL).toHaveBeenCalled();
+  });
 });
