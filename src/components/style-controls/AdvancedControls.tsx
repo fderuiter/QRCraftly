@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Button } from '../ui/Button';
 import { QRConfig, QRErrorCorrectionLevel } from '../../types';
 import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ToggleSwitch } from '../ui/ToggleSwitch';
+import { ColorInput } from '../ui/ColorInput';
 
 /**
  *
@@ -96,6 +98,39 @@ export const AdvancedControls: React.FC<AdvancedControlsProps> = ({ config, onCh
             <p className="mt-2 text-[10px] text-slate-500 dark:text-slate-400">
               Higher levels allow the QR code to be scanned even if damaged or covered (e.g., by a logo), but result in a denser code.
             </p>
+          </div>
+
+          {/* Maze Overlay Controls */}
+          <div className="border-t border-slate-100 pt-4 dark:border-slate-800">
+            <div className="mb-4">
+              <ToggleSwitch
+                id="is-maze-enabled"
+                label="Playable Maze Overlay"
+                checked={!!config.isMazeEnabled}
+                onChange={(checked) => onChange({ isMazeEnabled: checked })}
+              />
+              <p className="mt-1 pl-12 text-[10px] text-slate-500 dark:text-slate-400">
+                Generates a solvable maze on empty modules and quiet zones without changing data modules.
+              </p>
+            </div>
+
+            {config.isMazeEnabled && (
+              <div className="pl-12 space-y-4">
+                <ColorInput
+                  id="maze-color"
+                  label="Maze Path Color"
+                  value={config.mazeColor || '#3b82f6'}
+                  onChange={(val) => onChange({ mazeColor: val })}
+                />
+                
+                <ToggleSwitch
+                  id="show-maze-solution"
+                  label="Show Maze Solution"
+                  checked={!!config.showMazeSolution}
+                  onChange={(checked) => onChange({ showMazeSolution: checked })}
+                />
+              </div>
+            )}
           </div>
         </div>
       )}

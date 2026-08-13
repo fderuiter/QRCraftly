@@ -4,6 +4,7 @@ import { renderBorder, renderBorderDecoration } from './qr-renderers/border';
 import { renderModules } from './qr-renderers/modules';
 import { renderEyes } from './qr-renderers/eyes';
 import { renderLogo } from './qr-renderers/logo';
+import { renderMaze } from './qr-renderers/maze';
 
 /**
  * Renders the QR code onto the canvas.
@@ -85,6 +86,9 @@ export const drawQRInternal = (
 
   // 4. Render Modules
   renderModules(ctx, modules, config, drawX, drawY, cellSize, moduleCount, logoMetrics, isVirtual);
+
+  // 4b. Render Maze (if enabled)
+  renderMaze(ctx, modules, config, drawX, drawY, cellSize, moduleCount);
 
   // 5. Render Eyes
   renderEyes(ctx, config, drawX, drawY, cellSize, moduleCount);
