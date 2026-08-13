@@ -3,9 +3,21 @@ export const getPublicDomain = (): string => {
   return domain.replace(/\/+$/, '');
 };
 
+const sanitizedPathCache = new Map<string, string>();
+const domainForPathCache = new Map<string, string>();
+const publicUrlCache = new Map<string, string>();
+
 export const resolveDomainForPath = (path: string): string => {
   const domain = getPublicDomain();
-  if (!path) return domain;
+  const cacheKey = `${domain}::${path}`;
+  if (domainForPathCache.has(cacheKey)) {
+    return domainForPathCache.get(cacheKey)!;
+  }
+
+  if (!path) {
+    domainForPathCache.set(cacheKey, domain);
+    return domain;
+  }
   
   let cleanPath = path;
   if (!cleanPath.startsWith('/')) {
@@ -18,11 +30,14 @@ export const resolveDomainForPath = (path: string): string => {
     try {
       const url = new URL(domain);
       url.hostname = `${subdomain}.${url.hostname}`;
-      return `${url.protocol}//${url.host}`;
+      const result = `${url.protocol}//${url.host}`;
+      domainForPathCache.set(cacheKey, result);
+      return result;
     } catch (_e) {
       // Fallback
     }
   }
+  domainForPathCache.set(cacheKey, domain);
   return domain;
 };
 
@@ -61,6 +76,11 @@ const normalizeTrailingSlashes = (path: string): string => {
 };
 
 export const getSanitizedPath = (path: string): string => {
+  const cacheKey = path || '';
+  if (sanitizedPathCache.has(cacheKey)) {
+    return sanitizedPathCache.get(cacheKey)!;
+  }
+
   let cleanPath = path || '/';
   if (!cleanPath.startsWith('/')) {
     cleanPath = '/' + cleanPath;
@@ -73,10 +93,18 @@ export const getSanitizedPath = (path: string): string => {
     cleanPath = '/';
   }
   
-  return normalizeTrailingSlashes(cleanPath);
+  const result = normalizeTrailingSlashes(cleanPath);
+  sanitizedPathCache.set(cacheKey, result);
+  return result;
 };
 
 export const resolvePublicUrl = (path: string): string => {
+  const domain = getPublicDomain();
+  const cacheKey = `${domain}::${path}`;
+  if (publicUrlCache.has(cacheKey)) {
+    return publicUrlCache.get(cacheKey)!;
+  }
+
   const resolvedDomain = resolveDomainForPath(path);
   let cleanPath = getSanitizedPath(path);
   
@@ -85,7 +113,9 @@ export const resolvePublicUrl = (path: string): string => {
   }
   
   const finalPath = cleanPath === '/' ? '' : cleanPath;
-  return `${resolvedDomain}${finalPath}`;
+  const result = `${resolvedDomain}${finalPath}`;
+  publicUrlCache.set(cacheKey, result);
+  return result;
 };
 
 export const resolveImageUrl = (imageConfig: string | undefined, _path: string): string => {

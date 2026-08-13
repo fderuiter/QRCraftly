@@ -60,3 +60,7 @@ Animation configuration structures in `types.ts` are strictly statically typed t
 ## Playable Maze Overlay
 
 Maze overlay configurations in `types.ts` (e.g., `isMazeEnabled`, `mazeColor`, `mazePathWidth`, `showMazeSolution`) are statically typed and strictly validated at runtime. This prevents injection or path manipulation during maze rendering.
+
+## JSON-LD Caching & Performance Security
+
+To prevent performance bottlenecks during client-side hydration and SPA navigation, the application caches serialized and escaped JSON-LD schema strings. Since JSON-LD requires synchronous regex replacement of unsafe characters (such as `<` and `>`), caching the computed string primitives protects the main thread from CPU-heavy operations while keeping cache keys lightweight and clean of memory leaks.

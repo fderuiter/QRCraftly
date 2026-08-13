@@ -19,6 +19,8 @@
 import { SYSTEM_LIMITS } from '../constants';
 import { SafeUrlPipeline } from './url';
 
+const jsonLdCache = new Map<string, string>();
+
 /**
  * Safely serializes data for use in a JSON-LD script tag.
  * Escapes <, >, and & to prevent XSS via </script> injection.
@@ -30,9 +32,16 @@ export const safeJsonLdStringify = (data: any): string => {
   const str = JSON.stringify(data);
   if (!str) return '{}';
 
-  return str.replace(/</g, '\\u003c')
-            .replace(/>/g, '\\u003e')
-            .replace(/&/g, '\\u0026');
+  if (jsonLdCache.has(str)) {
+    return jsonLdCache.get(str)!;
+  }
+
+  const escaped = str.replace(/</g, '\\u003c')
+                    .replace(/>/g, '\\u003e')
+                    .replace(/&/g, '\\u0026');
+
+  jsonLdCache.set(str, escaped);
+  return escaped;
 };
 
 /**
