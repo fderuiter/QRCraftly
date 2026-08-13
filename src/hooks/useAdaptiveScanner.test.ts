@@ -930,4 +930,33 @@ describe('useAdaptiveScanner Hook with Bidirectional Buffer Recycling', () => {
       "The scanner background worker crashed repeatedly. Please restart the page or check your camera."
     );
   });
+
+  it('should terminate the currently active (recreated) worker when the hook unmounts', () => {
+    const videoRef = makeVideoRef();
+    const { unmount } = renderHook(() =>
+      useAdaptiveScanner({
+        videoRef,
+      })
+    );
+
+    const initialWorker = getActiveWorker();
+    expect(initialWorker).not.toBeNull();
+
+    // Trigger a simulated worker thread crash to force recreation
+    act(() => {
+      initialWorker.dispatchError(new Error('Simulated thread crash'));
+    });
+
+    const recreatedWorker = getActiveWorker();
+    expect(recreatedWorker).not.toBeNull();
+    expect(recreatedWorker).not.toBe(initialWorker);
+    expect(initialWorker.terminate).toHaveBeenCalled();
+    expect(recreatedWorker.terminate).not.toHaveBeenCalled();
+
+    // Unmount the hook
+    unmount();
+
+    // The recreated worker should have been terminated
+    expect(recreatedWorker.terminate).toHaveBeenCalled();
+  });
 });
