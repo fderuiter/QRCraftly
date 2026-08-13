@@ -16,220 +16,39 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState } from 'react';
 import { Play, Square, Camera, AlertTriangle, Activity, Cpu, Sun, Moon, QrCode, ArrowLeft, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Alert } from '@/components/ui/Alert';
 import { useTheme } from '@/hooks/useTheme';
 import { useToast } from '@/components/ui/Toast';
-import { useCamera } from '@/hooks/useCamera';
-import { useAdaptiveScanner } from '@/hooks/useAdaptiveScanner';
-import { StreamLookaheadReceiver, DANGEROUS_SCHEMES } from '@/engine/StreamLookahead';
+import { useAnimatedQrReceiver } from '@/hooks/useAnimatedQrReceiver';
 import { QRProvider } from '@/context/QRContext';
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
-
-/**
- * Helper to convert Base64 back into Uint8Array for binary reconstruction.
- * @param base64 - The input base64 string to convert.
- * @returns The reconstructed binary Uint8Array.
- */
-function base64ToUint8Array(base64: string): Uint8Array {
-  const binaryString = atob(base64);
-  const len = binaryString.length;
-  const bytes = new Uint8Array(len);
-  for (let i = 0; i < len; i++) {
-    bytes[i] = binaryString.charCodeAt(i);
-  }
-  return bytes;
-}
 
 function FileTransferReceiveInner() {
   const { isDarkMode, toggleDarkMode } = useTheme();
   const { addToast } = useToast();
 
   const [streamMode, setStreamMode] = useState<'text' | 'binary'>('text');
-  const [chunks, setChunks] = useState<Map<number, string>>(new Map());
-  const [totalChunks, setTotalChunks] = useState<number | null>(null);
-  const [securityAlert, setSecurityAlert] = useState<string | null>(null);
-  const [downloadTriggered, setDownloadTriggered] = useState<boolean>(false);
-  const [isScanning, setIsScanning] = useState<boolean>(false);
 
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const lookaheadRef = useRef<StreamLookaheadReceiver | null>(null);
-
-  // Initialize camera hook
+  // Use the unified animated QR receiver hook
   const {
-    startStream,
-    stopStream,
-    stream,
-  } = useCamera();
-
-  // Reset/Clear everything to initial state
-  const handleClear = useCallback(() => {
-    setChunks(new Map());
-    setTotalChunks(null);
-    setSecurityAlert(null);
-    setDownloadTriggered(false);
-    lookaheadRef.current = new StreamLookaheadReceiver({ mode: streamMode });
-    addToast({
-      type: 'info',
-      message: 'Receiver state has been reset.',
-      duration: 3000,
-    });
-  }, [addToast, streamMode]);
-
-  // Handle incoming frame data
-  const handleFrame = useCallback((decodedText: string) => {
-    if (!decodedText) return;
-
-    // 1. Direct scheme check on raw decoded frame text
-    if (streamMode === 'text') {
-      const cleanText = decodedText.replace(/[\x00-\x1F\x7F-\x9F\s\u200B-\u200D\uFEFF]+/g, '').toLowerCase();
-      const dangerousMatch = DANGEROUS_SCHEMES.find(scheme => cleanText.includes(scheme));
-      if (dangerousMatch) {
-        setSecurityAlert(`Dangerous protocol detected and blocked: ${dangerousMatch}`);
-        setIsScanning(false);
-        stopStream();
-        return;
-      }
-    }
-
-    // 2. Incremental lookahead check
-    try {
-      if (!lookaheadRef.current) {
-        lookaheadRef.current = new StreamLookaheadReceiver({ mode: streamMode });
-      }
-      lookaheadRef.current.receive(decodedText);
-    } catch (err: any) {
-      setSecurityAlert(err.message || 'Dangerous protocol split across frames blocked!');
-      setIsScanning(false);
-      stopStream();
-      return;
-    }
-
-    // 3. Process file transfer protocol
-    if (decodedText.startsWith('F|')) {
-      const parts = decodedText.split('|');
-      if (parts.length === 4) {
-        const index = parseInt(parts[1], 10);
-        const total = parseInt(parts[2], 10);
-        const base64Data = parts[3];
-
-        if (!isNaN(index) && !isNaN(total)) {
-          setChunks(prev => {
-            if (prev.has(index)) return prev; // Already received
-            const next = new Map(prev);
-            next.set(index, base64Data);
-            return next;
-          });
-          setTotalChunks(total);
-        }
-      }
-    }
-  }, [stopStream, streamMode]);
-
-  // Initialize Adaptive Scanner hook
-  const { startScanning, stopScanning } = useAdaptiveScanner({
+    chunks,
+    totalChunks,
+    securityAlert,
+    isScanning,
     videoRef,
-    onScanSuccess: (data) => {
-      handleFrame(data);
-    },
-    onScanFail: () => {
-      // Expected scan frame decode failures on standard camera stream frames
-    },
+    handleClear,
+    handleFrame,
+    startCameraSession,
+    stopCameraSession,
+  } = useAnimatedQrReceiver({
+    addToast,
+    handshakeRequired: false,
+    streamMode,
   });
-
-  // Effect to attach stream to video element when stream or isScanning changes
-  useEffect(() => {
-    if (isScanning && stream && videoRef.current) {
-      videoRef.current.srcObject = stream;
-      const playPromise = videoRef.current.play();
-      if (playPromise !== undefined && typeof playPromise.catch === 'function') {
-        playPromise.catch(() => {});
-      }
-      startScanning();
-    } else if (!isScanning) {
-      stopScanning();
-    }
-  }, [isScanning, stream, startScanning, stopScanning]);
-
-  // Toggle active camera scanning session
-  const startCameraSession = useCallback(async () => {
-    setSecurityAlert(null);
-    const activeStream = await startStream();
-    if (activeStream) {
-      setIsScanning(true);
-      addToast({
-        type: 'success',
-        message: 'Camera scanner activated.',
-        duration: 3000,
-      });
-    }
-  }, [startStream, addToast]);
-
-  const stopCameraSession = useCallback(() => {
-    setIsScanning(false);
-    stopStream();
-    addToast({
-      type: 'info',
-      message: 'Camera scanner deactivated.',
-      duration: 3000,
-    });
-  }, [stopStream, addToast]);
-
-  // Auto-trigger reconstruction & download when file frames complete
-  useEffect(() => {
-    if (totalChunks !== null && chunks.size === totalChunks && !downloadTriggered) {
-      setDownloadTriggered(true);
-      stopCameraSession();
-
-      try {
-        const uint8Arrays: Uint8Array[] = [];
-        for (let i = 0; i < totalChunks; i++) {
-          const base64 = chunks.get(i);
-          if (base64) {
-            uint8Arrays.push(base64ToUint8Array(base64));
-          } else {
-            // Gap detected, reset flag
-            setDownloadTriggered(false);
-            return;
-          }
-        }
-
-        const fileBlob = new Blob(uint8Arrays, { type: 'application/octet-stream' });
-        const url = URL.createObjectURL(fileBlob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `received_file_${Date.now()}.bin`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-
-        addToast({
-          type: 'success',
-          message: 'File completely received & offline binary reconstruction triggered!',
-          duration: 5000,
-        });
-      } catch (err: any) {
-        addToast({
-          type: 'error',
-          message: `Failed to compile binary content: ${err.message}`,
-          duration: 5000,
-        });
-        setDownloadTriggered(false);
-      }
-    }
-  }, [chunks, totalChunks, downloadTriggered, stopCameraSession, addToast]);
-
-  // Clean up on component unmount
-  useEffect(() => {
-    return () => {
-      stopScanning();
-      stopStream();
-    };
-  }, [stopScanning, stopStream]);
 
   // Simulation controls
   const simulateOutOfOrder = () => {
@@ -382,7 +201,6 @@ function FileTransferReceiveInner() {
                       onChange={(checked) => {
                         const newMode = checked ? 'binary' : 'text';
                         setStreamMode(newMode);
-                        lookaheadRef.current = new StreamLookaheadReceiver({ mode: newMode });
                         addToast({
                           type: 'info',
                           message: `Switched stream mode to ${newMode === 'binary' ? 'Binary' : 'Text'}`,
