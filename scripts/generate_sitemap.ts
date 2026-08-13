@@ -40,7 +40,18 @@ function findHtmlFiles(dir: string, fileList: string[] = []): string[] {
   return fileList;
 }
 
-function generateSitemap() {
+/**
+ * Determines whether a given relative or absolute path/route should be excluded from the sitemap.
+ * @param posixPath - The clean posix path of the file or route.
+ * @returns True if the path should be excluded, false otherwise.
+ */
+export function shouldExcludePath(posixPath: string): boolean {
+  if (posixPath.endsWith('404.html')) return true;
+  if (posixPath.includes('draft') || posixPath.includes('test') || posixPath.includes('dev-sandbox')) return true;
+  return false;
+}
+
+export function generateSitemap() {
   if (!fs.existsSync(DIST_DIR)) {
     console.warn(`[Sitemap] Directory ${DIST_DIR} does not exist. Skipping sitemap generation.`);
     return;
@@ -54,8 +65,7 @@ function generateSitemap() {
     const posixPath = relativePath.split(path.sep).join('/');
     
     // Exclude certain files/routes
-    if (posixPath.endsWith('404.html')) continue;
-    if (posixPath.includes('draft') || posixPath.includes('test') || posixPath.includes('dev-sandbox')) continue;
+    if (shouldExcludePath(posixPath)) continue;
 
     let route = `/${posixPath}`;
     
@@ -94,4 +104,9 @@ ${urls.join('\n')}
   console.log(`[Sitemap] Generated ${OUTPUT_FILE} with ${urls.length} URLs.`);
 }
 
-generateSitemap();
+// Only execute if run directly
+const isMain = process.argv[1] ? (path.resolve(process.argv[1]) === path.resolve(__filename)) : false;
+
+if (isMain) {
+  generateSitemap();
+}

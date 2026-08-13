@@ -2,6 +2,7 @@ import { readFileSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { describe, it, expect } from 'vitest';
+import { shouldExcludePath } from '../scripts/generate_sitemap';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -15,13 +16,17 @@ describe('Search Engine Indexing Prevention', () => {
     expect(robotsContent).toContain('Disallow: /dev-sandbox');
   });
 
-  it('should ensure the sitemap generator ignores the developer sandbox route', () => {
-    const sitemapGenPath = join(__dirname, '../scripts/generate_sitemap.js');
-    expect(existsSync(sitemapGenPath)).toBe(true);
-    
-    const sitemapGenContent = readFileSync(sitemapGenPath, 'utf8');
-    expect(sitemapGenContent).toContain('dev-sandbox');
-    expect(sitemapGenContent).toContain('draft');
-    expect(sitemapGenContent).toContain('test');
+  it('should ensure the sitemap generator ignores draft, test, and dev-sandbox routes via its validation helper', () => {
+    // Assert exclusion logic with diverse test paths
+    expect(shouldExcludePath('dev-sandbox')).toBe(true);
+    expect(shouldExcludePath('draft')).toBe(true);
+    expect(shouldExcludePath('test')).toBe(true);
+    expect(shouldExcludePath('404.html')).toBe(true);
+
+    expect(shouldExcludePath('dist/client/draft/index.html')).toBe(true);
+    expect(shouldExcludePath('dist/client/test/route.html')).toBe(true);
+    expect(shouldExcludePath('dist/client/dev-sandbox/index.html')).toBe(true);
+    expect(shouldExcludePath('dist/client/index.html')).toBe(false);
+    expect(shouldExcludePath('dist/client/about.html')).toBe(false);
   });
 });

@@ -42,7 +42,11 @@ interface QRCanvasProps {
   moduleCount: number; /**
                         *
                         */
-  virtualImageData?: ImageData }) => void;
+  virtualImageData?: ImageData;
+  /**
+   *
+   */
+  virtualImageBitmap?: ImageBitmap; }) => void;
   /** Sequence of string values representing animated QR frames. If omitted, falls back to config.animationValues. */
   animationValues?: string[];
   /** Flag specifying if the visual animation loop is currently active. If omitted, falls back to config.isAnimating. */

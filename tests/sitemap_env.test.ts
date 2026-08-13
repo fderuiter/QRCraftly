@@ -7,7 +7,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const sitemapScriptPath = join(__dirname, '../scripts/generate_sitemap.js');
+const sitemapScriptPath = join(__dirname, '../scripts/generate_sitemap.ts');
 const distDir = join(__dirname, '../dist/client');
 const sitemapPath = join(distDir, 'sitemap.xml');
 const backupPath = join(distDir, 'sitemap.xml.bak');
@@ -55,7 +55,7 @@ describe('Sitemap Environment-Level Variable Resolution', () => {
 
   it('should use fallback domain when no VITE_DOMAIN environment variable or .env file is configured', () => {
     // Run the sitemap script with empty environment for VITE_DOMAIN
-    execFileSync('node', [sitemapScriptPath], {
+    execFileSync('npx', ['tsx', sitemapScriptPath], {
       env: {
         ...process.env,
         VITE_DOMAIN: '',
@@ -71,7 +71,7 @@ describe('Sitemap Environment-Level Variable Resolution', () => {
 
   it('should resolve and apply a custom staging domain via process.env', () => {
     // Run the sitemap script with VITE_DOMAIN set in env
-    execFileSync('node', [sitemapScriptPath], {
+    execFileSync('npx', ['tsx', sitemapScriptPath], {
       env: {
         ...process.env,
         VITE_DOMAIN: 'https://staging.qrcraftly.net',
@@ -88,7 +88,7 @@ describe('Sitemap Environment-Level Variable Resolution', () => {
 
   it('should sanitize and strip any trailing slashes from the resolved VITE_DOMAIN', () => {
     // Run with trailing slashes in VITE_DOMAIN
-    execFileSync('node', [sitemapScriptPath], {
+    execFileSync('npx', ['tsx', sitemapScriptPath], {
       env: {
         ...process.env,
         VITE_DOMAIN: 'https://staging-trailing.qrcraftly.net////',
@@ -119,7 +119,7 @@ describe('Sitemap Environment-Level Variable Resolution', () => {
       const cleanedEnv = { ...process.env };
       delete cleanedEnv.VITE_DOMAIN;
 
-      execFileSync('node', [sitemapScriptPath], {
+      execFileSync('npx', ['tsx', sitemapScriptPath], {
         env: {
           ...cleanedEnv,
           NODE_ENV: 'production'
