@@ -221,7 +221,15 @@ export function runAuditor(options = {}) {
   const exit = options.exit || process.exit;
 
   try {
-    const isCI = !!env.CI && !env.SKIP_GIT_VALIDATION;
+    const isGHA = !!env.GITHUB_ACTIONS || (!!env.CI && !env.CF_PAGES && !env.SKIP_GIT_VALIDATION);
+    const isOtherCI = !!env.CI && !isGHA;
+
+    if (env.SKIP_GIT_VALIDATION || isOtherCI) {
+      console.log('[Lineage Auditor] SKIP_GIT_VALIDATION or non-GHA CI environment detected. Skipping git lineage auditor check.');
+      return;
+    }
+
+    const isCI = !!env.CI;
     let modifiedFiles = new Set();
 
     if (isCI) {

@@ -472,5 +472,19 @@ describe('Local Git-Diff Lineage Auditor', () => {
       runAuditor(mockOptions);
       expect(exitCode).toBeNull();
     });
+
+    it('should skip checks completely on non-GHA CI environments like Cloudflare Pages', () => {
+      let exitCode = null;
+      const mockOptions = {
+        env: { CI: 'true', CF_PAGES: 'true' },
+        argv: ['node', 'scripts/git_lineage_auditor.js'],
+        execSync: () => { throw new Error('should not call git'); },
+        existsSync: () => false, // even if .git is missing completely
+        exit: (code) => { exitCode = code; }
+      };
+
+      runAuditor(mockOptions);
+      expect(exitCode).toBeNull();
+    });
   });
 });
