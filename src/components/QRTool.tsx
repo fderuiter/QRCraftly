@@ -45,7 +45,7 @@ import { sidebarControls } from '@/registry';
  * @returns The QR code generator interface.
  */
 function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: string }) {
-  const config = useQRStoreSelector(s => s.config);
+  const config = useQRStoreSelector(s => s.effectiveConfig);
   const store = useQRStore();
   const emitSignal = store.emitSignal;
   const { isDarkMode, toggleDarkMode } = useTheme();

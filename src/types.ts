@@ -170,6 +170,10 @@ export interface QRConfig {
   mazePathWidth?: number;
   /** Whether to show the solved maze path. */
   showMazeSolution?: boolean;
+  /** Whether automatic scannability optimizations are enabled. */
+  autoOptimize: boolean;
+  /** Dynamically shrunk individual module footprint scale factor. */
+  moduleScale?: number;
 }
 
 /**

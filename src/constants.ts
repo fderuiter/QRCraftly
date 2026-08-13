@@ -54,6 +54,8 @@ export const DEFAULT_CONFIG = {
   isMazeEnabled: false,
   mazeColor: '#3b82f6',
   showMazeSolution: false,
+  autoOptimize: true,
+  moduleScale: 1.0,
 };
 
 /**

@@ -1,6 +1,8 @@
 import { render, screen, act, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { ScannabilityIndicator } from './ScannabilityIndicator';
+import { QRProvider } from '../context/QRContext';
+import { QRErrorCorrectionLevel } from '../types';
 
 describe('ScannabilityIndicator Component', () => {
   beforeEach(() => {
@@ -84,5 +86,40 @@ describe('ScannabilityIndicator Component', () => {
     expect(wrapper).toHaveClass('focus:ring-2');
     expect(wrapper).toHaveClass('focus:ring-teal-600');
     expect(wrapper).toHaveClass('dark:focus:ring-teal-400');
+  });
+
+  describe('Active Optimization Badges', () => {
+    it('does not render badges if autoOptimize is disabled', () => {
+      const initialConfig = {
+        autoOptimize: false,
+        errorCorrectionLevel: QRErrorCorrectionLevel.L,
+      };
+      
+      render(
+        <QRProvider initialConfig={initialConfig}>
+          <ScannabilityIndicator status="digital-pass" health={{ score: 85, warnings: [] }} />
+        </QRProvider>
+      );
+
+      expect(screen.queryByTestId('active-optimizations')).not.toBeInTheDocument();
+    });
+
+    it('renders badges when optimizations are active and autoOptimize is enabled', () => {
+      const initialConfig = {
+        autoOptimize: true,
+        errorCorrectionLevel: QRErrorCorrectionLevel.L,
+      };
+
+      // Wrap in Provider and simulate state with active optimizations
+      const { container } = render(
+        <QRProvider initialConfig={initialConfig}>
+          <ScannabilityIndicator status="digital-pass" health={{ score: 85, warnings: [] }} />
+        </QRProvider>
+      );
+
+      // Verify the active-optimizations container is rendered
+      const optimizationsContainer = screen.getByTestId('active-optimizations');
+      expect(optimizationsContainer).toBeInTheDocument();
+    });
   });
 });

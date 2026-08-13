@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ShieldCheck, Loader2, ShieldX } from 'lucide-react';
 import { ScannabilityStatus, HealthScore } from '../hooks/useScannability';
+import { useOptionalQRStoreSelector } from '../context/QRContext';
 
 /**
  *
@@ -56,6 +57,9 @@ export const ScannabilityIndicator: React.FC<Props> = ({ status, health }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [announcement, setAnnouncement] = useState('');
 
+  const activeOptimizations = useOptionalQRStoreSelector(s => s.activeOptimizations);
+  const baseConfig = useOptionalQRStoreSelector(s => s.config);
+
   // 1. Debounce screen reader announcements by 1000ms
   useEffect(() => {
     const text = getAnnouncementText(status, health);
@@ -102,7 +106,7 @@ export const ScannabilityIndicator: React.FC<Props> = ({ status, health }) => {
       ref={containerRef}
       tabIndex={0}
       aria-label="Scannability feedback"
-      className="flex h-13 flex-col items-end justify-start rounded-lg transition-all duration-300 select-none focus:ring-2 focus:ring-teal-600 focus:ring-offset-2 focus:outline-none dark:focus:ring-teal-400 dark:focus:ring-offset-slate-900"
+      className="flex h-13 min-h-13 flex-col items-end justify-start rounded-lg transition-all duration-300 select-none focus:ring-2 focus:ring-teal-600 focus:ring-offset-2 focus:outline-none dark:focus:ring-teal-400 dark:focus:ring-offset-slate-900"
       data-testid="scannability-feedback-wrapper"
     >
       {/* 
@@ -163,6 +167,20 @@ export const ScannabilityIndicator: React.FC<Props> = ({ status, health }) => {
           </span>
         )}
       </div>
+      {baseConfig?.autoOptimize && (
+        <div className="mt-1 flex flex-wrap justify-end gap-1" data-testid="active-optimizations">
+          {activeOptimizations?.errorCorrectionLevel && activeOptimizations.errorCorrectionLevel !== baseConfig?.errorCorrectionLevel && (
+            <span className="rounded bg-teal-100 px-1.5 py-0.5 text-[9px] font-semibold text-teal-800 dark:bg-teal-900/30 dark:text-teal-400" data-testid="badge-ecc-upgraded">
+              ECC Upgraded
+            </span>
+          )}
+          {activeOptimizations?.moduleScale && activeOptimizations.moduleScale < 1.0 && (
+            <span className="rounded bg-indigo-100 px-1.5 py-0.5 text-[9px] font-semibold text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400" data-testid="badge-modules-scaled">
+              Modules Scaled
+            </span>
+          )}
+        </div>
+      )}
       <div className="mt-1 flex h-5 w-full items-center justify-end">
         {showHealth && health.warnings.length > 0 && (
           <div

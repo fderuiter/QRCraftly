@@ -76,20 +76,24 @@ export const renderModules = (
     const isCoveredByLogo = getIsCoveredByLogo(config, moduleCount, logoMetrics);
     
     ctx.beginPath();
-    const drawModuleFn = getModuleDrawer(config.style, ctx, cellSize, modules, moduleCount, isCoveredByLogo, isVirtual);
+    const moduleScale = config.moduleScale ?? 1.0;
+    const scaledCellSize = cellSize * moduleScale;
+    const drawModuleFn = getModuleDrawer(config.style, ctx, scaledCellSize, modules, moduleCount, isCoveredByLogo, isVirtual);
 
     const cellSizeHalf = cellSize / 2;
+    const halfDiff = (cellSize - scaledCellSize) / 2;
+
     const xs = new Float64Array(moduleCount);
     const cxs = new Float64Array(moduleCount);
     for (let c = 0; c < moduleCount; c++) {
-        xs[c] = drawX + c * cellSize;
-        cxs[c] = xs[c] + cellSizeHalf;
+        xs[c] = drawX + c * cellSize + halfDiff;
+        cxs[c] = drawX + c * cellSize + cellSizeHalf;
     }
 
     const ys = new Float64Array(moduleCount);
     const cys = new Float64Array(moduleCount);
     for (let r = 0; r < moduleCount; r++) {
-        ys[r] = drawY + r * cellSize;
+        ys[r] = drawY + r * cellSize + halfDiff;
         cys[r] = ys[r] + cellSizeHalf;
     }
 

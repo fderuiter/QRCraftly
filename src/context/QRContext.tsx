@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useSyncExternalStore } from 'react';
-import { QRConfig } from '@/types';
+import { QRConfig, QRErrorCorrectionLevel } from '@/types';
 import { DEFAULT_CONFIG } from '@/constants';
 import { ValidationEngine } from '@/engine/ValidationEngine';
 
@@ -11,6 +11,20 @@ type SignalName = 'scannability-fail' | 'render-complete';
  *
  */
 type SignalCallback = (detail: any) => void;
+
+/**
+ *
+ */
+export type ActiveOptimizations = {
+  /**
+   *
+   */
+  errorCorrectionLevel?: QRErrorCorrectionLevel;
+  /**
+   *
+   */
+  moduleScale?: number;
+};
 
 /**
  *
@@ -38,6 +52,14 @@ type QRState = {
    *
    */
   violations: string[];
+  /**
+   *
+   */
+  activeOptimizations?: ActiveOptimizations;
+  /**
+   *
+   */
+  effectiveConfig: QRConfig;
 };
 
 /**
@@ -78,6 +100,10 @@ export interface QRStore {
    *
    */
   registerSignal: (name: SignalName, callback: SignalCallback) => () => void;
+  /**
+   *
+   */
+  updateActiveOptimizations: (updates: ActiveOptimizations) => void;
 }
 
 const QRStoreContext = createContext<QRStore | undefined>(undefined);
@@ -103,18 +129,37 @@ const getSafeLocalStorage = () => {
   };
 };
 
+function calculateEffectiveConfig(config: QRConfig, activeOpts?: ActiveOptimizations): QRConfig {
+  if (!config.autoOptimize || !activeOpts) {
+    return config;
+  }
+  return {
+    ...config,
+    errorCorrectionLevel: activeOpts.errorCorrectionLevel ?? config.errorCorrectionLevel,
+    moduleScale: activeOpts.moduleScale ?? 1.0,
+  };
+}
+
 function createQRStore(initialConfig?: Partial<QRConfig>): QRStore {
   const storage = getSafeLocalStorage();
   const savedOptIn = storage.getItem('qr-telemetry-opt-in');
   
+  const baseConfig = { ...DEFAULT_CONFIG, ...initialConfig } as QRConfig;
+  const initialActiveOpts = {
+    errorCorrectionLevel: undefined,
+    moduleScale: undefined,
+  };
+
   let state: QRState = {
-    config: { ...DEFAULT_CONFIG, ...initialConfig },
+    config: baseConfig,
     moduleCount: 0,
     preferences: {
       telemetryOptIn: savedOptIn === 'true' ? true : savedOptIn === 'false' ? false : null,
       darkMode: false,
     },
     violations: [],
+    activeOptimizations: initialActiveOpts,
+    effectiveConfig: calculateEffectiveConfig(baseConfig, initialActiveOpts),
   };
 
   const listeners = new Set<() => void>();
@@ -135,7 +180,28 @@ function createQRStore(initialConfig?: Partial<QRConfig>): QRStore {
       const proposed = { ...state.config, ...updates };
       const violations = ValidationEngine.validateConfig(proposed);
       const sanitized = ValidationEngine.sanitizeConfig(proposed);
-      state = { ...state, config: sanitized, violations };
+      
+      let nextActiveOpts = state.activeOptimizations;
+      if (
+        updates.style !== undefined ||
+        updates.value !== undefined ||
+        updates.errorCorrectionLevel !== undefined ||
+        updates.logoUrl !== undefined ||
+        updates.autoOptimize !== undefined
+      ) {
+        nextActiveOpts = {
+          errorCorrectionLevel: undefined,
+          moduleScale: undefined,
+        };
+      }
+
+      state = {
+        ...state,
+        config: sanitized,
+        violations,
+        activeOptimizations: nextActiveOpts,
+        effectiveConfig: calculateEffectiveConfig(sanitized, nextActiveOpts),
+      };
       listeners.forEach(l => l());
     },
     updatePreferences: (updates) => {
@@ -159,6 +225,18 @@ function createQRStore(initialConfig?: Partial<QRConfig>): QRStore {
       return () => {
         signals[name].delete(callback);
       };
+    },
+    updateActiveOptimizations: (updates) => {
+      const nextActiveOpts = {
+        ...state.activeOptimizations,
+        ...updates,
+      };
+      state = {
+        ...state,
+        activeOptimizations: nextActiveOpts,
+        effectiveConfig: calculateEffectiveConfig(state.config, nextActiveOpts),
+      };
+      listeners.forEach(l => l());
     }
   };
 

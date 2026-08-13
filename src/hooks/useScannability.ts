@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
-import { QRConfig } from '../types';
+import { QRConfig, QRErrorCorrectionLevel } from '../types';
 import { useQRStore } from '@/context/QRContext';
 import { ValidationEngine } from '../engine/ValidationEngine';
 import { useCapabilities } from './useCapabilities';
@@ -409,6 +409,43 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
       setTimeout(runCaptureAndSend, 100);
     }
   }, [canvasRef, getOrInitWorker, config, store, engine]);
+
+  // Reactive feedback loop for Auto-Optimize Scannability
+  useEffect(() => {
+    if (!config.autoOptimize) return;
+    if (status === 'idle' || status === 'checking' || status === 'physical-pass') return;
+
+    const activeOpts = store.getState().activeOptimizations || {};
+    const baseConfig = store.getState().config;
+    const currentEcc = activeOpts.errorCorrectionLevel ?? baseConfig.errorCorrectionLevel;
+    const currentScale = activeOpts.moduleScale ?? 1.0;
+
+    const eccOrder = [
+      QRErrorCorrectionLevel.L,
+      QRErrorCorrectionLevel.M,
+      QRErrorCorrectionLevel.Q,
+      QRErrorCorrectionLevel.H
+    ];
+    const currentEccIdx = eccOrder.indexOf(currentEcc);
+
+    if (currentEccIdx >= 0 && currentEccIdx < 3) {
+      const nextEcc = eccOrder[currentEccIdx + 1];
+      store.updateActiveOptimizations({
+        errorCorrectionLevel: nextEcc,
+        moduleScale: currentScale,
+      });
+    } else if (currentScale > 0.85) {
+      store.updateActiveOptimizations({
+        errorCorrectionLevel: currentEcc,
+        moduleScale: 0.85,
+      });
+    } else if (currentScale > 0.75) {
+      store.updateActiveOptimizations({
+        errorCorrectionLevel: currentEcc,
+        moduleScale: 0.75,
+      });
+    }
+  }, [status, config.autoOptimize, store]);
 
   return { status, checkScannability, health, workerRecoveryActive };
 }
