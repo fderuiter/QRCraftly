@@ -14,10 +14,13 @@ export function generateSchema(content: ToolContent, resolvedDomain?: string, re
         "mainEntity": {
           "@id": `${domain}/#organization`
         }
-      },
-      {
+      }
+    ];
+
+    if (content.faqs && content.faqs.length > 0) {
+      aboutGraph.push({
         "@type": "FAQPage",
-        "mainEntity": (content.faqs || []).map(faq => ({
+        "mainEntity": content.faqs.map(faq => ({
           "@type": "Question",
           "name": faq.question,
           "acceptedAnswer": {
@@ -25,8 +28,8 @@ export function generateSchema(content: ToolContent, resolvedDomain?: string, re
             "text": faq.answer
           }
         }))
-      }
-    ];
+      });
+    }
 
     if (content.personas && content.personas.length > 0) {
       aboutGraph[0].audience = content.personas.map(persona => ({
