@@ -16,7 +16,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import React, { useEffect, useRef, useCallback } from 'react';
+import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { QRConfig, SocialFormat, TemplateStyle, QRModules, QRType } from '../types';
 import { drawQR, drawQRInternal } from '../utils/qrRenderer';
 import { drawWithTemplate, SOCIAL_DIMENSIONS } from '../utils/templateRenderer';
@@ -24,6 +24,12 @@ import { useImage } from '../hooks/useImage';
 import { ValidationEngine } from '../engine/ValidationEngine';
 import { Alert } from './ui/Alert';
 import { normalizeUrl, shouldNormalizeUrl } from '../utils/url';
+import {
+  isMazeWorkerRequest,
+  isMazeWorkerResponse,
+  assertMazeWorkerResponse,
+  type MazeData,
+} from '../utils/mazeContract';
 
 /**
  * Props for the QRCanvas component.
@@ -264,6 +270,133 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
     (typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 'test')
   );
 
+  const mazeWorkerRef = useRef<Worker | null>(null);
+  const mazeSequenceIdRef = useRef<number>(0);
+  const isMazeWorkerFallbackRef = useRef<boolean>(
+    typeof window === 'undefined' ||
+    typeof Worker === 'undefined' ||
+    (typeof navigator !== 'undefined' && navigator.userAgent && navigator.userAgent.includes('jsdom')) ||
+    (typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 'test')
+  );
+  const [computedMazeData, setComputedMazeData] = useState<MazeData | null>(null);
+  const computedMazeDataRef = useRef<MazeData | null>(null);
+
+  useEffect(() => {
+    computedMazeDataRef.current = computedMazeData;
+  }, [computedMazeData]);
+
+  const initMazeWorker = useCallback(() => {
+    if (isMazeWorkerFallbackRef.current) return;
+
+    if (mazeWorkerRef.current) {
+      mazeWorkerRef.current.terminate();
+      mazeWorkerRef.current = null;
+    }
+
+    try {
+      const worker = new Worker(
+        new URL('../utils/mazeWorker.ts', import.meta.url),
+        { type: 'module' }
+      );
+
+      worker.onmessage = (e) => {
+        // Strictly validate message format at runtime
+        if (!isMazeWorkerResponse(e.data)) {
+          assertMazeWorkerResponse(e.data);
+        } else {
+          assertMazeWorkerResponse(e.data);
+        }
+
+        const { status, sequenceId, mazeData, error } = e.data;
+        if (sequenceId !== mazeSequenceIdRef.current) {
+          return;
+        }
+
+        if (status === 'success' && mazeData) {
+          setComputedMazeData(mazeData);
+        } else {
+          console.warn("Background maze calculation failed:", error);
+        }
+      };
+
+      worker.onerror = (e) => {
+        console.error("Maze background worker error, restarting:", e);
+        // Crash recovery: terminate current process and spin up replacement
+        initMazeWorker();
+      };
+
+      mazeWorkerRef.current = worker;
+    } catch (err) {
+      console.warn("Failed to initialize background maze worker, falling back:", err);
+      isMazeWorkerFallbackRef.current = true;
+    }
+  }, []);
+
+  useEffect(() => {
+    initMazeWorker();
+    return () => {
+      if (mazeWorkerRef.current) {
+        mazeWorkerRef.current.terminate();
+        mazeWorkerRef.current = null;
+      }
+    };
+  }, [initMazeWorker]);
+
+  const requestMazeCalculation = useCallback((modules: QRModules) => {
+    if (!config.isMazeEnabled) {
+      setComputedMazeData(null);
+      return;
+    }
+
+    mazeSequenceIdRef.current += 1;
+    const currentSeqId = mazeSequenceIdRef.current;
+
+    const size = modules.size;
+    const matrix = new Uint8Array(size * size);
+    for (let r = 0; r < size; r++) {
+      for (let c = 0; c < size; c++) {
+        matrix[r * size + c] = modules.get(r, c) ? 1 : 0;
+      }
+    }
+
+    if (mazeWorkerRef.current && !isMazeWorkerFallbackRef.current) {
+      const requestPayload = {
+        size,
+        matrix,
+        config,
+        sequenceId: currentSeqId,
+      };
+
+      // Strict validation before posting
+      if (!isMazeWorkerRequest(requestPayload)) {
+        throw new Error('Invalid MazeWorkerRequest payload built on main thread');
+      }
+
+      mazeWorkerRef.current.postMessage(requestPayload);
+    } else {
+      // Dynamic import fallback running pathfinding on main thread during idle time
+      import('../utils/qr-renderers/maze').then((module) => {
+        if (currentSeqId !== mazeSequenceIdRef.current) return;
+
+        const runner = () => {
+          if (currentSeqId !== mazeSequenceIdRef.current) return;
+          try {
+            const mazeData = module.generateMaze(modules, config, size);
+            setComputedMazeData(mazeData);
+          } catch (e) {
+            console.warn("Main thread fallback maze generation failed:", e);
+          }
+        };
+
+        if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+          (window as any).requestIdleCallback(runner);
+        } else {
+          setTimeout(runner, 0);
+        }
+      });
+    }
+  }, [config]);
+
   const clearCanvasAndResize = useCallback(() => {
     const canvas = localCanvasRef.current;
     if (!canvas) return;
@@ -296,6 +429,7 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
   }, []);
 
   const paintMatrix = useCallback((modules: QRModules) => {
+    requestMazeCalculation(modules);
     const canvas = localCanvasRef.current;
     if (!canvas) return;
 
@@ -335,14 +469,16 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
         currentBorderLogoImg,
         displayWidth,
         displayHeight,
-        modules.size
+        modules.size,
+        false,
+        computedMazeDataRef.current
       );
 
       ctx.restore();
     } else {
       canvas.width = activeSize * pixelRatio;
       canvas.height = activeSize * pixelRatio;
-      drawQR(ctx, modules, currentConfig, currentLogoImg, currentBorderLogoImg, activeSize);
+      drawQR(ctx, modules, currentConfig, currentLogoImg, currentBorderLogoImg, activeSize, computedMazeDataRef.current);
     }
 
     if (currentOnRendered) {
@@ -387,7 +523,8 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
               displayWidth,
               displayHeight,
               modules.size,
-              true
+              true,
+              computedMazeDataRef.current
             );
           } else {
             vCtx.clearRect(0, 0, displayWidth, displayHeight);
@@ -399,7 +536,8 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
               currentBorderLogoImg,
               virtualSize,
               modules.size,
-              true
+              true,
+              computedMazeDataRef.current
             );
           }
 
@@ -601,6 +739,11 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
     config.borderLogoPosition,
     config.socialFormat,
     config.templateStyle,
+    config.isMazeEnabled,
+    config.mazeColor,
+    config.mazePathWidth,
+    config.showMazeSolution,
+    computedMazeData,
     logoImg,
     borderLogoImg,
     size,
