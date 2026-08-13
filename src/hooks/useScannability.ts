@@ -8,7 +8,6 @@ import {
   assertWorkerResponse,
   isWorkerResponse,
 } from '../utils/sharedContract';
-import { performScannabilityCheck } from '../utils/scannabilityChecker';
 
 
 /**
@@ -183,7 +182,8 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
 
     if (!worker) {
       // Worker failed or isn't supported, run on the main thread!
-      const runMainThreadCheck = () => {
+      const runMainThreadCheck = async () => {
+        const { performScannabilityCheck } = await import('../utils/scannabilityChecker');
         const performValidation = (imgData: ImageData) => {
           try {
             const isTest = !!navigator.webdriver;

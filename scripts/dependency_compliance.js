@@ -11,7 +11,6 @@ const repoRoot = path.join(__dirname, '..');
 export const ALLOWED_DEPENDENCIES = new Set([
   'jsqr',
   'lucide-react',
-  'marked',
   'qrcode',
   'react',
   'react-dom',
@@ -21,7 +20,7 @@ export const ALLOWED_DEPENDENCIES = new Set([
 
 // 2. Forbidden imports / patterns to detect bypasses
 export const FORBIDDEN_IMPORTS = [
-  'axios', 'request', 'superagent', 'got', 'node-fetch', 'isomorphic-fetch', 'urllib', 'undici',
+  'qram', 'axios', 'request', 'superagent', 'got', 'node-fetch', 'isomorphic-fetch', 'urllib', 'undici',
   'socket.io', 'socket.io-client', 'ws', 'graphql-request', 'apollo-client', 'mqtt',
   'mixpanel', 'amplitude', '@amplitude/analytics-browser', 'amplitude-js', 'sentry', '@sentry/browser',
   '@sentry/react', '@sentry/node', 'datadog', '@datadog/browser-logs', '@datadog/browser-rum',
@@ -69,12 +68,17 @@ export function auditPackageJson() {
 
   const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
   const dependencies = packageJson.dependencies || {};
+  const devDependencies = packageJson.devDependencies || {};
   const violations = [];
 
   for (const dep of Object.keys(dependencies)) {
     if (!ALLOWED_DEPENDENCIES.has(dep)) {
       violations.push(`Unauthorized production dependency detected in package.json: '${dep}'`);
     }
+  }
+
+  if (dependencies['qram'] || devDependencies['qram']) {
+    violations.push(`Forbidden package 'qram' detected in package.json (both dependencies and devDependencies are prohibited).`);
   }
 
   return violations;

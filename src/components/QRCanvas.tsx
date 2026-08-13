@@ -17,7 +17,6 @@
 */
 
 import React, { useEffect, useRef, useCallback } from 'react';
-import QRCodeModule from 'qrcode';
 import { QRConfig, SocialFormat, TemplateStyle, QRModules } from '../types';
 import { drawQR, drawQRInternal } from '../utils/qrRenderer';
 import { drawWithTemplate, SOCIAL_DIMENSIONS } from '../utils/templateRenderer';
@@ -437,25 +436,61 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
       });
     } else {
       // Synchronous fallback calculation (crucial for testing and permission-blocked worker fallbacks)
+      let QRCodeModule: any = (globalThis as any).mockQRCode;
       try {
-        const violations = ValidationEngine.validateConfig(currentConfig);
-        if (violations.length > 0) {
+        if (!QRCodeModule) {
+          const req = typeof require !== 'undefined' ? require : null;
+          if (req) {
+            QRCodeModule = req('qrcode');
+          }
+        }
+      } catch {}
+
+      if (QRCodeModule) {
+        try {
+          const violations = ValidationEngine.validateConfig(currentConfig);
+          if (violations.length > 0) {
+            lastModulesRef.current = null;
+            clearCanvasAndResize();
+            return;
+          }
+
+          const QRCode = (QRCodeModule as any).default || QRCodeModule;
+          const data = QRCode.create(currentConfig.value, {
+            errorCorrectionLevel: currentConfig.errorCorrectionLevel,
+          });
+          const modules: QRModules = data.modules;
+          lastModulesRef.current = modules;
+          paintMatrix(modules);
+        } catch (e) {
+          console.warn("QR generation failed:", e);
           lastModulesRef.current = null;
           clearCanvasAndResize();
-          return;
         }
+      } else {
+        import('qrcode').then((mod) => {
+          if (currentSeqId !== sequenceIdRef.current) return;
+          try {
+            const violations = ValidationEngine.validateConfig(currentConfig);
+            if (violations.length > 0) {
+              lastModulesRef.current = null;
+              clearCanvasAndResize();
+              return;
+            }
 
-        const QRCode = (QRCodeModule as any).default || QRCodeModule;
-        const data = QRCode.create(currentConfig.value, {
-          errorCorrectionLevel: currentConfig.errorCorrectionLevel,
+            const QRCode = (mod as any).default || mod;
+            const data = QRCode.create(currentConfig.value, {
+              errorCorrectionLevel: currentConfig.errorCorrectionLevel,
+            });
+            const modules: QRModules = data.modules;
+            lastModulesRef.current = modules;
+            paintMatrix(modules);
+          } catch (e) {
+            console.warn("QR generation failed:", e);
+            lastModulesRef.current = null;
+            clearCanvasAndResize();
+          }
         });
-        const modules: QRModules = data.modules;
-        lastModulesRef.current = modules;
-        paintMatrix(modules);
-      } catch (e) {
-        console.warn("QR generation failed:", e);
-        lastModulesRef.current = null;
-        clearCanvasAndResize();
       }
     }
   }, [paintMatrix, clearCanvasAndResize]);

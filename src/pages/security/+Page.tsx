@@ -1,21 +1,6 @@
 import { ArrowLeft, ShieldCheck, ShieldAlert, FileText } from 'lucide-react';
-import { Marked } from 'marked';
 import { SanitizedHtml } from '@/components/ui/SanitizedHtml';
 import docsManifest from '../../data/docs_manifest.json';
-
-function slugify(text: string): string {
-  let prev;
-  do {
-    prev = text;
-    text = text.replace(/<[^>]*>/g, '');
-  } while (text !== prev);
-
-  return text
-    .toLowerCase()
-    .trim()
-    .replace(/[^\w\s-]/g, '') // remove non-word characters except spaces and hyphens
-    .replace(/\s+/g, '-');    // replace spaces with hyphens
-}
 
 /**
  *
@@ -44,46 +29,6 @@ export default function Page() {
 
       <div className="mb-16 grid gap-12 md:grid-cols-2">
         {docsManifest.map(doc => {
-          // Remove the first h1 to avoid duplicate titles if we display doc.title as h2
-          const contentWithoutH1 = doc.content.replace(/^#\s+.+$/m, '');
-
-          // Create a scoped, document-aware parser instance to avoid global state pollution
-          const scopedMarked = new Marked({
-            renderer: {
-              heading({ text, depth }) {
-                const newDepth = Math.min(depth + 1, 6);
-                const slug = slugify(text);
-                const id = `${doc.id}-${slug}`;
-                return `<h${newDepth} id="${id}">${text}</h${newDepth}>`;
-              }
-            },
-            walkTokens(token) {
-              if (token.type === 'link') {
-                const href = token.href;
-                if (href.startsWith('#')) {
-                  const fragment = href.slice(1);
-                  if (fragment) {
-                    token.href = `#${doc.id}-${fragment}`;
-                  }
-                } else {
-                  const parts = href.split('#');
-                  const file = parts[0];
-                  const hash = parts[1];
-                  const baseName = file.split('/').pop() || file;
-                  const targetDoc = docsManifest.find(d => d.filename === baseName);
-                  if (targetDoc) {
-                    if (hash) {
-                      token.href = `#${targetDoc.id}-${hash}`;
-                    } else {
-                      token.href = `#${targetDoc.id}`;
-                    }
-                  }
-                }
-              }
-            }
-          });
-
-          const html = scopedMarked.parse(contentWithoutH1) as string;
           return (
             <section key={doc.id} id={doc.id} className="prose dark:prose-invert prose-slate col-span-1 max-w-none rounded-2xl border border-slate-100 bg-white p-8 shadow-sm dark:border-slate-700 dark:bg-slate-800">
               <div className="not-prose mb-6 flex items-center gap-3">
@@ -92,7 +37,7 @@ export default function Page() {
                 </div>
                 <h2 className="m-0 text-2xl font-bold text-slate-900 dark:text-white">{doc.title}</h2>
               </div>
-              <SanitizedHtml html={html} />
+              <SanitizedHtml html={doc.html} />
             </section>
           );
         })}

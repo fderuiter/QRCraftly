@@ -24,9 +24,6 @@ importers:
       lucide-react:
         specifier: ^0.556.0
         version: 0.556.0(react@19.2.4)
-      marked:
-        specifier: ^18.0.4
-        version: 18.0.4
       qrcode:
         specifier: ^1.5.4
         version: 1.5.4
@@ -115,6 +112,9 @@ importers:
       lint-staged:
         specifier: ^17.2.0
         version: 17.2.0
+      marked:
+        specifier: ^18.0.4
+        version: 18.0.4
       postcss:
         specifier: ^8.5.22
         version: 8.5.22

@@ -565,7 +565,7 @@ vi.mock('qrcode', () => {
     };
   });
 
-  return {
+  const mockObj = {
     create: createMock,
     toCanvas: vi.fn().mockResolvedValue(undefined),
     toDataURL: vi.fn().mockResolvedValue('data:image/png;base64,mock'),
@@ -575,6 +575,10 @@ vi.mock('qrcode', () => {
       toDataURL: vi.fn().mockResolvedValue('data:image/png;base64,mock'),
     }
   };
+
+  (globalThis as any).mockQRCode = mockObj;
+
+  return mockObj;
 });
 
 const originalImage = window.Image;
