@@ -1,0 +1,146 @@
+/*
+    QRCraftly
+    Copyright (C) 2026 fderuiter
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
+import React from 'react';
+import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import Page from './+Page';
+
+describe('Destroy the QR Code! Arcade Page', () => {
+  beforeEach(() => {
+    // Stub requestAnimationFrame
+    vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {
+      return setTimeout(() => cb(Date.now()), 16);
+    });
+    vi.stubGlobal('cancelAnimationFrame', (id: number) => {
+      clearTimeout(id);
+    });
+
+    // Mock HTMLCanvasElement.prototype.getContext
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({
+      fillStyle: '',
+      strokeStyle: '',
+      lineWidth: 0,
+      font: '',
+      shadowColor: '',
+      shadowBlur: 0,
+      clearRect: vi.fn(),
+      fillRect: vi.fn(),
+      strokeRect: vi.fn(),
+      beginPath: vi.fn(),
+      moveTo: vi.fn(),
+      lineTo: vi.fn(),
+      stroke: vi.fn(),
+      fill: vi.fn(),
+      arc: vi.fn(),
+      drawImage: vi.fn(),
+      getImageData: vi.fn(() => ({
+        data: new Uint8ClampedArray(4 * 8 * 8),
+        width: 8,
+        height: 8,
+      })),
+      putImageData: vi.fn(),
+      createImageData: vi.fn(() => ({
+        data: new Uint8ClampedArray(4 * 8 * 8),
+      })),
+      save: vi.fn(),
+      restore: vi.fn(),
+      translate: vi.fn(),
+    } as any);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('renders correctly with title, description, and status badges', () => {
+    render(<Page />);
+
+    expect(screen.getByRole('heading', { name: /Destroy the QR!/i })).toBeInTheDocument();
+    expect(screen.getByText('🎮 High-Performance Arcade Sandbox')).toBeInTheDocument();
+    expect(screen.getByText('Durability Index')).toBeInTheDocument();
+    expect(screen.getByText('Blaster Weapons')).toBeInTheDocument();
+  });
+
+  it('displays the weapon options correctly', () => {
+    render(<Page />);
+
+    // Query buttons using full titles or name match
+    expect(screen.getByRole('button', { name: /Plasma Blaster/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Thermal Laser/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Antimatter Rocket/i })).toBeInTheDocument();
+  });
+
+  it('switches weapons correctly when clicking weapon selection buttons', () => {
+    render(<Page />);
+
+    const laserBtn = screen.getByRole('button', { name: /Thermal Laser/i });
+    fireEvent.click(laserBtn);
+
+    // Thermal Laser button should now have the active indicator classes or be selected
+    expect(laserBtn).toHaveClass('border-cyan-500');
+
+    const rocketBtn = screen.getByRole('button', { name: /Antimatter Rocket/i });
+    fireEvent.click(rocketBtn);
+    expect(rocketBtn).toHaveClass('border-rose-500');
+
+    const blasterBtn = screen.getByRole('button', { name: /Plasma Blaster/i });
+    fireEvent.click(blasterBtn);
+    expect(blasterBtn).toHaveClass('border-teal-500');
+  });
+
+  it('responds to keyboard shortcut presses (1, 2, 3) to switch weapons', () => {
+    render(<Page />);
+
+    // Press '2' to equip Thermal Laser
+    fireEvent.keyDown(window, { key: '2' });
+    expect(screen.getByRole('button', { name: /Thermal Laser/i })).toHaveClass('border-cyan-500');
+
+    // Press '3' to equip Antimatter Rocket
+    fireEvent.keyDown(window, { key: '3' });
+    expect(screen.getByRole('button', { name: /Antimatter Rocket/i })).toHaveClass('border-rose-500');
+
+    // Press '1' to equip Plasma Blaster
+    fireEvent.keyDown(window, { key: '1' });
+    expect(screen.getByRole('button', { name: /Plasma Blaster/i })).toHaveClass('border-teal-500');
+  });
+
+  it('can trigger target resets with the HEAL QR CODE button', () => {
+    render(<Page />);
+
+    const healBtn = screen.getByRole('button', { name: /HEAL QR CODE/i });
+    expect(healBtn).toBeInTheDocument();
+
+    fireEvent.click(healBtn);
+    // Real-time Durability should be restored to 100%
+    expect(screen.getByText('100%')).toBeInTheDocument();
+  });
+
+  it('does not throw any errors when simulation triggers clicks on the canvas', () => {
+    render(<Page />);
+
+    const canvas = document.querySelector('canvas');
+    expect(canvas).toBeInTheDocument();
+
+    if (canvas) {
+      fireEvent.mouseDown(canvas, { clientX: 200, clientY: 200 });
+      fireEvent.mouseMove(canvas, { clientX: 210, clientY: 210 });
+      fireEvent.mouseUp(canvas);
+    }
+  });
+});
