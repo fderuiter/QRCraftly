@@ -66,7 +66,7 @@ self.onmessage = async (e: MessageEvent<StartReassemblyMessage>) => {
 
         // Post progress message (dynamic progress)
         const progress = Math.round(((i + 1) / totalChunks) * 100);
-        self.postMessage({
+        (self as any).postMessage({
           type: 'PROGRESS',
           progress,
           current: i + 1,
@@ -85,13 +85,13 @@ self.onmessage = async (e: MessageEvent<StartReassemblyMessage>) => {
       const buffer = mergedArray.buffer;
 
       // Return COMPLETE with transferable ArrayBuffer
-      self.postMessage({
+      (self as any).postMessage({
         type: 'COMPLETE',
         buffer
       }, [buffer]);
 
     } catch (err: any) {
-      self.postMessage({
+      (self as any).postMessage({
         type: 'ERROR',
         error: err?.message || 'Unknown reassembly error'
       });
