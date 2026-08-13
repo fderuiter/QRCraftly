@@ -4,6 +4,7 @@ import { renderHook, act } from '@testing-library/react';
 import React from 'react';
 import { useAdaptiveScanner } from './useAdaptiveScanner';
 import { isValidScannerRequest, isValidScannerResponse } from '../utils/scannerContract';
+import { resetSharedScannerWorker } from '../utils/sharedScannerWorker';
 
 function makeVideoRef() {
   const video = {
@@ -20,6 +21,7 @@ const getActiveWorker = () => globalThis.mockWorkerControl.activeWorker;
 describe('useAdaptiveScanner Hook with Bidirectional Buffer Recycling', () => {
   beforeEach(() => {
     vi.useFakeTimers();
+    resetSharedScannerWorker();
 
     // Mock requestAnimationFrame & cancelAnimationFrame
     vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb: FrameRequestCallback) => {
@@ -45,6 +47,7 @@ describe('useAdaptiveScanner Hook with Bidirectional Buffer Recycling', () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.restoreAllMocks();
+    resetSharedScannerWorker();
     if (globalThis.mockWorkerControl) {
       globalThis.mockWorkerControl.reset();
     }
