@@ -107,7 +107,19 @@ describe('schemaGenerator', () => {
   it('handles about page schema without faqs', () => {
     const aboutNoFaqs = { ...aboutContent, faqs: undefined };
     const schema = generateSchema(aboutNoFaqs);
-    expect(schema['@graph'][1]['mainEntity']).toEqual([]);
+    expect(schema['@graph']).toHaveLength(1);
+    expect(schema['@graph'][0]['@type']).toBe('AboutPage');
+    const hasFaqPage = schema['@graph'].some((item: any) => item['@type'] === 'FAQPage');
+    expect(hasFaqPage).toBe(false);
+  });
+
+  it('handles about page schema with empty faqs array', () => {
+    const aboutEmptyFaqs = { ...aboutContent, faqs: [] };
+    const schema = generateSchema(aboutEmptyFaqs);
+    expect(schema['@graph']).toHaveLength(1);
+    expect(schema['@graph'][0]['@type']).toBe('AboutPage');
+    const hasFaqPage = schema['@graph'].some((item: any) => item['@type'] === 'FAQPage');
+    expect(hasFaqPage).toBe(false);
   });
 
   it('handles tool content without howTo', () => {
