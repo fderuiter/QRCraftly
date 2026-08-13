@@ -300,9 +300,13 @@ export function useAdaptiveScanner({
     worker.addEventListener('messageerror', onMsgErr);
 
     return () => {
-      worker.terminate();
-      if (workerRef.current === worker) {
+      const activeWorker = workerRef.current;
+      if (activeWorker) {
+        activeWorker.terminate();
         workerRef.current = null;
+      }
+      if (activeWorker !== worker) {
+        worker.terminate();
       }
     };
   }, []);
