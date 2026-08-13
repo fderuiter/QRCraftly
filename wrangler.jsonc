@@ -6,7 +6,7 @@
     "directory": "./dist/client",
   },
   "build": {
-    "command": "npx pnpm@11.1.3 install && SKIP_GIT_VALIDATION=1 npx pnpm@11.1.3 run build",
+    "command": "npx -y -p node@22 -p pnpm@11.1.3 pnpm install && SKIP_GIT_VALIDATION=1 npx -y -p node@22 -p pnpm@11.1.3 pnpm run build",
   },
   "observability": {
     "enabled": true,
