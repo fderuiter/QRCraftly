@@ -5,6 +5,8 @@ import {
   getSanitizedPath,
   resolvePublicUrl,
   resolveImageUrl,
+  formatPathName,
+  compileBreadcrumbSchema,
 } from './metadataEngine';
 
 describe('metadataEngine', () => {
@@ -158,6 +160,73 @@ describe('metadataEngine', () => {
     it('keeps absolute imageUrl untouched on subdomain page path', () => {
       vi.stubEnv('VITE_DOMAIN', 'https://qrcraftly.com');
       expect(resolveImageUrl('https://externalsite.com/img.png', '/_subdomain/tenant1/about')).toBe('https://externalsite.com/img.png');
+    });
+  });
+
+  describe('formatPathName', () => {
+    it('applies override for known path segments', () => {
+      expect(formatPathName('wifi-qr-code')).toBe('WiFi QR Code');
+      expect(formatPathName('about')).toBe('About');
+    });
+
+    it('capitalizes each word and replaces dashes with spaces for unknown segments', () => {
+      expect(formatPathName('special-offer')).toBe('Special Offer');
+      expect(formatPathName('nested-path-segment')).toBe('Nested Path Segment');
+    });
+  });
+
+  describe('compileBreadcrumbSchema', () => {
+    it('returns null for empty path or null input', () => {
+      expect(compileBreadcrumbSchema('')).toBeNull();
+    });
+
+    it('returns null for the homepage path (fewer than two items)', () => {
+      vi.stubEnv('VITE_DOMAIN', 'https://qrcraftly.com');
+      expect(compileBreadcrumbSchema('/')).toBeNull();
+    });
+
+    it('returns null for the homepage path of a subdomain (fewer than two items)', () => {
+      vi.stubEnv('VITE_DOMAIN', 'https://qrcraftly.com');
+      expect(compileBreadcrumbSchema('/_subdomain/tenant1')).toBeNull();
+    });
+
+    it('returns valid schema for deep paths (two or more items)', () => {
+      vi.stubEnv('VITE_DOMAIN', 'https://qrcraftly.com');
+      const schema = compileBreadcrumbSchema('/about');
+      expect(schema).not.toBeNull();
+      expect(schema['@context']).toBe('https://schema.org');
+      expect(schema['@type']).toBe('BreadcrumbList');
+      expect(schema.itemListElement).toHaveLength(2);
+      expect(schema.itemListElement[0]).toEqual({
+        "@type": "ListItem",
+        "position": 1,
+        "name": "Home",
+        "item": "https://qrcraftly.com"
+      });
+      expect(schema.itemListElement[1]).toEqual({
+        "@type": "ListItem",
+        "position": 2,
+        "name": "About",
+        "item": "https://qrcraftly.com/about"
+      });
+    });
+
+    it('returns valid schema with overridden names and nested paths', () => {
+      vi.stubEnv('VITE_DOMAIN', 'https://qrcraftly.com');
+      const schema = compileBreadcrumbSchema('/wifi-qr-code/deep-test');
+      expect(schema).not.toBeNull();
+      expect(schema.itemListElement).toHaveLength(3);
+      expect(schema.itemListElement[1].name).toBe('WiFi QR Code');
+      expect(schema.itemListElement[2].name).toBe('Deep Test');
+    });
+
+    it('correctly compiles subdomain hosts in breadcrumb list items', () => {
+      vi.stubEnv('VITE_DOMAIN', 'https://qrcraftly.com');
+      const schema = compileBreadcrumbSchema('/_subdomain/tenant1/about');
+      expect(schema).not.toBeNull();
+      expect(schema.itemListElement).toHaveLength(2);
+      expect(schema.itemListElement[0].item).toBe('https://tenant1.qrcraftly.com');
+      expect(schema.itemListElement[1].item).toBe('https://tenant1.qrcraftly.com/about');
     });
   });
 });

@@ -18,7 +18,7 @@
 
 import { usePageContext } from 'vike-react/usePageContext';
 import { JsonLdScript } from '@/components/ui/JsonLdScript';
-import { resolveDomainForPath, resolvePublicUrl, resolveImageUrl, getSanitizedPath } from '@/utils/metadataEngine';
+import { resolveDomainForPath, resolvePublicUrl, resolveImageUrl, compileBreadcrumbSchema } from '@/utils/metadataEngine';
 
 /**
  * HeadDefault Component
@@ -86,59 +86,7 @@ export default function HeadDefault() {
     ]
   };
 
-  // Breadcrumb Schema Generation
-  // Helper to format path segments into readable names
-  const formatPathName = (segment: string): string => {
-    // Dictionary for specific overrides
-    const overrides: Record<string, string> = {
-      'wifi-qr-code': 'WiFi QR Code',
-      'about': 'About',
-    };
-
-    if (overrides[segment]) {
-      return overrides[segment];
-    }
-
-    // Default: Capitalize each word (replace dashes with spaces)
-    return segment
-      .split('-')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
-  };
-
-  // Determine the base path to correctly resolve the home URL for domains and subdomains
-  const subdomainMatch = pageContext.urlPathname.match(/^\/_subdomain\/[^\/]+/);
-  const basePath = subdomainMatch ? subdomainMatch[0] : '/';
-
-  const breadcrumbItems: any[] = [
-    {
-      "@type": "ListItem",
-      "position": 1,
-      "name": "Home",
-      "item": resolvePublicUrl(basePath)
-    }
-  ];
-
-  // Dynamically generate breadcrumbs from path
-  const sanitizedPath = getSanitizedPath(pageContext.urlPathname);
-  const pathSegments = sanitizedPath.split('/').filter(Boolean);
-  let currentPath = '';
-
-  pathSegments.forEach((segment: string, index: number) => {
-    currentPath += `/${segment}`;
-    breadcrumbItems.push({
-      "@type": "ListItem",
-      "position": index + 2, // 1 is Home, so start at 2
-      "name": formatPathName(segment),
-      "item": `${resolvedDomain}${currentPath}`
-    });
-  });
-
-  const breadcrumbSchema = {
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    "itemListElement": breadcrumbItems
-  };
+  const breadcrumbSchema = compileBreadcrumbSchema(pageContext.urlPathname);
 
   return (
     <>
@@ -159,7 +107,7 @@ export default function HeadDefault() {
 
       {/* Global Structured Data */}
       <JsonLdScript data={schemaData} />
-      {!is404 && <JsonLdScript data={breadcrumbSchema} />}
+      {!is404 && breadcrumbSchema && <JsonLdScript data={breadcrumbSchema} />}
 
       {/* Canonical URL - Do not render for 404 pages to avoid indexing errors */}
       {!is404 && <link rel="canonical" href={canonicalUrl} />}

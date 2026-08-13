@@ -4,6 +4,7 @@ import { useCamera } from '../hooks/useCamera';
 import { useAdaptiveScanner } from '../hooks/useAdaptiveScanner';
 import { Button } from './ui/Button';
 import { fetchWasmAsset } from '../utils/assetCache';
+import jsQR from 'jsqr';
 
 /**
  * QRScannerProps definition.
