@@ -10,6 +10,7 @@ This application is designed to **support** HIPAA-compliant workflows through a 
 - **Data Transmission:** The sensitive data you enter to generate a QR code (which may include PHI) remains strictly in your device's memory and is not sent to our servers.
 - **Volatile Memory:** Data entered into the application is cleared when the browser tab is closed or refreshed.
 - **Animation Loop Frames:** Any cached frames or matrices generated for animation loops are also kept solely in volatile client-side memory.
+- **QR Maze Generating States:** Any permutation candidates, graph BFS states, and search results produced during the QR Maze style generation process are processed fully within client-side memory and immediately garbage-collected upon completion, ensuring zero data persistence or compliance leaks.
 
 ### 2. Logging & Metrics Policy
 

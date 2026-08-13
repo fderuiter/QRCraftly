@@ -56,3 +56,14 @@ To prevent custom SVG logo uploads and native vector exports from exposing users
 ## QR Animation Loops
 
 Animation configuration structures in `types.ts` are strictly statically typed to prevent any runtime execution or script-injection pathways during high-frequency loop playbacks.
+
+## QR Maze Generation (Payload-Permutation Salt Search)
+
+The aesthetic **QR Maze** style (`QRStyle.MAZE`) employs a background-threaded **Payload-Permutation Salt Search** utility. To secure this process against performance exhaustion and URL spoofing attacks, several controls are implemented:
+
+- **Strict Safe-Parameter Appending**: To search for alternative QR layouts (permutations) pointing to the same base destination, a dynamic utility safely appends or increments a `salt=X` query parameter to the URL value. This query parameter parsing strictly sanitizes inputs to prevent parameter pollution or injection of dangerous protocol elements.
+- **Dedicated Background Web Worker Threading**: Computational search loops are fully encapsulated within `src/utils/saltSearchWorker.ts`. Running heavy operations in a parallel background thread ensures the main UI thread continues rendering fluidly at 60 FPS.
+- **Cooperative Cancellation and Backpressure yielding**: The search loop regularly yields control to the event loop and checks for stale requests. When a user changes the destination input or style, older search sequences are instantly cancelled via tracked sequence IDs, avoiding unnecessary thread/CPU execution.
+- **Main-Thread Fallback Safeguards**: When Web Workers are unsupported, the synchronous fallback (`src/utils/saltSearch.ts`) executes with cooperative yielding and strict limits on iteration depth.
+- **Strict Execution Timeout Limits**: Background and main-thread search sessions are strictly capped at 2 seconds. If a solvable maze layout cannot be resolved within this window, a fallback default layout is presented, ensuring zero browser freezing or DoS vulnerabilities.
+- **Aesthetic Isolation & Zero-Flipping Integrity**: To keep the QR Reed-Solomon error correction budget 100% intact, no raw module-flipping or canvas modifications are allowed. The finder, alignment, and timing zones remain completely isolated and unmodified, preventing any standard decoding failure vectors.

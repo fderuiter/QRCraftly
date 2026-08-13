@@ -60,6 +60,10 @@ export const WifiInput: React.FC<WifiInputProps> = ({ data, onChange }) => {
 
 The centralized config structure in `src/types.ts` has optional fields for `animationValues`, `isAnimating`, and `animationFps` to drive high-performance frame playbacks in the canvas.
 
+## QR Maze Generation (Payload-Permutation Salt Search)
+
+The config structures inside `src/types.ts` support `QRStyle.MAZE`, activating a background thread or a cooperative fallback main-thread permutation search (`src/utils/saltSearch.ts`). This search engine generates alternative URL layouts containing a sanitized salt query parameter, verifies readability, and applies a BFS graph solver to guarantee a solvable white corridor between entrance and exit boundaries.
+
 ## Dual-Mode QR Scanner Integration
 
 The `InputPanel` features an integrated, high-performance dual-mode QR Code Scanner:
