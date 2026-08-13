@@ -16,6 +16,8 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+declare const FileReaderSync: any;
+
 let cachedCanvas: OffscreenCanvas | null = null;
 let cachedCtx: OffscreenCanvasRenderingContext2D | null = null;
 
