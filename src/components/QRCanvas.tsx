@@ -17,7 +17,7 @@
 */
 
 import React, { useEffect, useRef, useCallback } from 'react';
-import { QRConfig, SocialFormat, TemplateStyle, QRModules } from '../types';
+import { QRConfig, SocialFormat, TemplateStyle, QRModules, QRStyle, QRType } from '../types';
 import { drawQR, drawQRInternal } from '../utils/qrRenderer';
 import { drawWithTemplate, SOCIAL_DIMENSIONS } from '../utils/templateRenderer';
 import { useImage } from '../hooks/useImage';
@@ -250,6 +250,8 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
 
   // Web Worker setup and configuration calculation
   const workerRef = useRef<Worker | null>(null);
+  const saltSearchWorkerRef = useRef<Worker | null>(null);
+  const activeConfigRef = useRef<QRConfig | null>(null);
   const sequenceIdRef = useRef<number>(0);
   const lastModulesRef = useRef<QRModules | null>(null);
   const isWorkerFallbackRef = useRef<boolean>(
@@ -297,7 +299,7 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const currentConfig = configRef.current;
+    const currentConfig = activeConfigRef.current || configRef.current;
     const currentLogoImg = logoImgRef.current;
     const currentBorderLogoImg = borderLogoImgRef.current;
     const currentOnRendered = onRenderedRef.current;
@@ -422,6 +424,7 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
     const currentConfig = configRef.current;
     if (!currentConfig.value) {
       lastModulesRef.current = null;
+      activeConfigRef.current = null;
       clearCanvasAndResize();
       return;
     }
@@ -429,47 +432,58 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
     sequenceIdRef.current += 1;
     const currentSeqId = sequenceIdRef.current;
 
-    if (workerRef.current && !isWorkerFallbackRef.current) {
-      workerRef.current.postMessage({
-        config: currentConfig,
-        sequenceId: currentSeqId,
-      });
-    } else {
-      // Synchronous fallback calculation (crucial for testing and permission-blocked worker fallbacks)
-      let QRCodeModule: any = (globalThis as any).mockQRCode;
-      try {
-        if (!QRCodeModule) {
-          const req = typeof require !== 'undefined' ? require : null;
-          if (req) {
-            QRCodeModule = req('qrcode');
-          }
-        }
-      } catch {}
+    const isMazeMode = currentConfig.style === QRStyle.MAZE && currentConfig.type === QRType.URL;
 
-      if (QRCodeModule) {
-        try {
-          const violations = ValidationEngine.validateConfig(currentConfig);
-          if (violations.length > 0) {
-            lastModulesRef.current = null;
-            clearCanvasAndResize();
-            return;
-          }
-
-          const QRCode = (QRCodeModule as any).default || QRCodeModule;
-          const data = QRCode.create(currentConfig.value, {
-            errorCorrectionLevel: currentConfig.errorCorrectionLevel,
-          });
-          const modules: QRModules = data.modules;
-          lastModulesRef.current = modules;
-          paintMatrix(modules);
-        } catch (e) {
-          console.warn("QR generation failed:", e);
-          lastModulesRef.current = null;
-          clearCanvasAndResize();
-        }
+    if (isMazeMode) {
+      if (saltSearchWorkerRef.current && !isWorkerFallbackRef.current) {
+        saltSearchWorkerRef.current.postMessage({
+          config: currentConfig,
+          sequenceId: currentSeqId,
+        });
       } else {
-        import('qrcode').then((mod) => {
-          if (currentSeqId !== sequenceIdRef.current) return;
+        // Synchronous/Main-thread fallback calculation
+        import('../utils/saltSearch').then(async ({ performSaltSearch }) => {
+          try {
+            const result = await performSaltSearch(
+              currentConfig,
+              undefined,
+              undefined,
+              2000,
+              () => currentSeqId !== sequenceIdRef.current
+            );
+            if (currentSeqId !== sequenceIdRef.current) return;
+            activeConfigRef.current = result.config;
+            lastModulesRef.current = result.modules;
+            paintMatrix(result.modules);
+          } catch (err: any) {
+            if (err?.message === 'CANCELLED') return;
+            console.warn("Main thread salt search failed, falling back:", err);
+            lastModulesRef.current = null;
+            activeConfigRef.current = null;
+            clearCanvasAndResize();
+          }
+        });
+      }
+    } else {
+      activeConfigRef.current = null;
+      if (workerRef.current && !isWorkerFallbackRef.current) {
+        workerRef.current.postMessage({
+          config: currentConfig,
+          sequenceId: currentSeqId,
+        });
+      } else {
+        // Synchronous fallback calculation (crucial for testing and permission-blocked worker fallbacks)
+        let QRCodeModule: any = (globalThis as any).mockQRCode;
+        try {
+          if (!QRCodeModule) {
+            const req = typeof require !== 'undefined' ? require : null;
+            if (req) {
+              QRCodeModule = req('qrcode');
+            }
+          }
+        } catch {}
+
+        if (QRCodeModule) {
           try {
             const violations = ValidationEngine.validateConfig(currentConfig);
             if (violations.length > 0) {
@@ -478,7 +492,7 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
               return;
             }
 
-            const QRCode = (mod as any).default || mod;
+            const QRCode = (QRCodeModule as any).default || QRCodeModule;
             const data = QRCode.create(currentConfig.value, {
               errorCorrectionLevel: currentConfig.errorCorrectionLevel,
             });
@@ -490,7 +504,31 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
             lastModulesRef.current = null;
             clearCanvasAndResize();
           }
-        });
+        } else {
+          import('qrcode').then((mod) => {
+            if (currentSeqId !== sequenceIdRef.current) return;
+            try {
+              const violations = ValidationEngine.validateConfig(currentConfig);
+              if (violations.length > 0) {
+                lastModulesRef.current = null;
+                clearCanvasAndResize();
+                return;
+              }
+
+              const QRCode = (mod as any).default || mod;
+              const data = QRCode.create(currentConfig.value, {
+                errorCorrectionLevel: currentConfig.errorCorrectionLevel,
+              });
+              const modules: QRModules = data.modules;
+              lastModulesRef.current = modules;
+              paintMatrix(modules);
+            } catch (e) {
+              console.warn("QR generation failed:", e);
+              lastModulesRef.current = null;
+              clearCanvasAndResize();
+            }
+          });
+        }
       }
     }
   }, [paintMatrix, clearCanvasAndResize]);
@@ -536,15 +574,61 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
     };
   }, [paintMatrix, clearCanvasAndResize]);
 
-  // Monitor value and error correction level to request calculations
+  // Salt Search Worker lifecycle management
+  useEffect(() => {
+    let worker: Worker | null = null;
+    try {
+      worker = new Worker(
+        new URL('../utils/saltSearchWorker.ts', import.meta.url),
+        { type: 'module' }
+      );
+      worker.onmessage = (e) => {
+        const { status, sequenceId, config: resultConfig, size, matrix } = e.data;
+        if (sequenceId !== sequenceIdRef.current) {
+          return;
+        }
+
+        if (status === 'success' && size && matrix) {
+          const modules: QRModules = {
+            size,
+            get(r, c) {
+              return matrix[r * size + c] === 1;
+            }
+          };
+          activeConfigRef.current = resultConfig;
+          lastModulesRef.current = modules;
+          paintMatrix(modules);
+        } else {
+          lastModulesRef.current = null;
+          activeConfigRef.current = null;
+          clearCanvasAndResize();
+        }
+      };
+      saltSearchWorkerRef.current = worker;
+    } catch (err) {
+      console.warn("Failed to initialize salt search worker, falling back:", err);
+    }
+
+    return () => {
+      if (worker) {
+        worker.terminate();
+      }
+    };
+  }, [paintMatrix, clearCanvasAndResize]);
+
+  // Monitor value, style, and error correction level to request calculations
   useEffect(() => {
     if (activeIsAnimating) return;
     requestMatrixCalculation();
-  }, [config.value, config.errorCorrectionLevel, activeIsAnimating, requestMatrixCalculation]);
+  }, [config.value, config.style, config.errorCorrectionLevel, activeIsAnimating, requestMatrixCalculation]);
 
   // Monitor structural and aesthetic changes to repaint immediately
   useEffect(() => {
     if (activeIsAnimating) return;
+    if (config.style === QRStyle.MAZE) {
+      requestMatrixCalculation();
+      return;
+    }
     if (lastModulesRef.current) {
       paintMatrix(lastModulesRef.current);
     } else {
@@ -554,7 +638,6 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
     config.fgColor,
     config.bgColor,
     config.eyeColor,
-    config.style,
     config.logoUrl,
     config.logoSize,
     config.logoPaddingStyle,

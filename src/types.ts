@@ -30,6 +30,7 @@ export enum QRStyle {
   HIVE = 'hive',
   GRUNGE = 'grunge',
   STARBURST = 'starburst',
+  MAZE = 'maze',
 }
 
 /**

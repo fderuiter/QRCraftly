@@ -66,6 +66,7 @@ export const PATTERNS = [
   { id: QRStyle.HIVE, label: 'The Hive' },
   { id: QRStyle.GRUNGE, label: 'Grunge' },
   { id: QRStyle.STARBURST, label: 'Starburst' },
+  { id: QRStyle.MAZE, label: 'QR Maze' },
 ];
 
 export const LOW_RELIABILITY_PATTERNS = [QRStyle.GRUNGE, QRStyle.CIRCUIT, QRStyle.STARBURST];

@@ -54,6 +54,7 @@ const getModuleDrawer = (
             const innerR = cellSize / 2.2;
             return (_r, _c, _x, _y, cx, cy) => drawStar(ctx, cx, cy, outerR, innerR, 5, false, true);
         }
+        case QRStyle.MAZE:
         case QRStyle.STANDARD:
         default: {
             return (_r, _c, x, y, _cx, _cy) => drawStandardModule(ctx, x, y, cellSize, isVirtual);
