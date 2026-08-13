@@ -5,6 +5,8 @@
 **Projected Capacity:** Effectively Unlimited Daily Users
 **Bottleneck:** Deployment frequency (Builds/month), not Traffic.
 
+_Streamlined and secured QR code file transfer capability._
+
 QRCraftly is architected as a **Static Site (SSG)** with **Client-Side Processing**. This architecture decouples user volume from server-side resource consumption. Hosted on Cloudflare Pages (Free Tier), the application leverages Cloudflare's global CDN for asset delivery while offloading all computational logic (QR code generation, image processing) to the user's device.
 
 ## Architecture & Resource Usage

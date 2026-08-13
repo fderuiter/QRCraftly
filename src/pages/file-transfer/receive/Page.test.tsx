@@ -171,4 +171,43 @@ describe('File Transfer Receive Page & Pipeline', () => {
     expect(screen.getByText(/MaliciousStreamError: Detected dangerous protocol prefix "javascript:" split across frames./i)).toBeInTheDocument();
     expect(screen.getByText('Camera inactive')).toBeInTheDocument();
   });
+
+  it('allows toggling between text and binary mode and bypasses security alerts in binary mode', async () => {
+    render(
+      <ToastProvider>
+        <Page />
+      </ToastProvider>
+    );
+
+    // Initial state: Enforces full security validation
+    expect(screen.getByText('Enforces full security validation')).toBeInTheDocument();
+
+    const modeSwitch = screen.getByRole('switch', { name: /binary mode/i });
+    expect(modeSwitch).not.toBeChecked();
+
+    // Toggle to binary mode
+    await act(async () => {
+      fireEvent.click(modeSwitch);
+    });
+
+    expect(modeSwitch).toBeChecked();
+    expect(screen.getByText('Bypasses recursive sanitization checks')).toBeInTheDocument();
+
+    // Now try simulating a restricted schema - it should not trigger a security warning in binary mode!
+    const simDangerousButton = screen.getByRole('button', { name: /simulate dangerous scheme/i });
+    await act(async () => {
+      fireEvent.click(simDangerousButton);
+    });
+
+    // Security alert is NOT rendered
+    expect(screen.queryByText(/Security Intercepted/i)).not.toBeInTheDocument();
+
+    // Switch back to text mode
+    await act(async () => {
+      fireEvent.click(modeSwitch);
+    });
+
+    expect(modeSwitch).not.toBeChecked();
+    expect(screen.getByText('Enforces full security validation')).toBeInTheDocument();
+  });
 });

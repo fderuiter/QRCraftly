@@ -314,5 +314,52 @@ describe('StreamLookaheadReceiver', () => {
       expect(receiver.getBuffer()).toBe('');
       expect(onTerminateMock).toHaveBeenCalled();
     });
+
+    describe('Configurable Stream Mode (Binary vs Text)', () => {
+      it('initializes with configurable stream mode, defaulting to text', () => {
+        const textReceiver = new StreamLookaheadReceiver();
+        // Since we cannot inspect config directly, we can check behavior
+        expect(() => textReceiver.receive('javascript:alert(1)')).toThrow();
+
+        const binaryReceiver = new StreamLookaheadReceiver({ mode: 'binary' });
+        expect(() => binaryReceiver.receive('javascript:alert(1)')).not.toThrow();
+      });
+
+      it('preserves binary control bytes with zero omissions when binary mode is active', () => {
+        const binaryReceiver = new StreamLookaheadReceiver({ mode: 'binary' });
+        const controlPayload = 'F|0|1|\x00\x01\x02\r\n\x1F\x7F';
+        binaryReceiver.receive(controlPayload);
+        expect(binaryReceiver.getBuffer()).toBe(controlPayload);
+        expect(binaryReceiver.isActiveSession()).toBe(true);
+      });
+
+      it('does not trigger session termination on random bytes matching restricted schemes in binary mode', () => {
+        const binaryReceiver = new StreamLookaheadReceiver({ mode: 'binary' });
+        // Under text mode, 'javascript:' would terminate the stream.
+        // Under binary mode, it must succeed.
+        binaryReceiver.receive('javascript:');
+        expect(binaryReceiver.getBuffer()).toBe('javascript:');
+        expect(binaryReceiver.isActiveSession()).toBe(true);
+      });
+
+      it('retains timeout functionality in binary mode', () => {
+        const binaryReceiver = new StreamLookaheadReceiver(
+          { mode: 'binary', onTerminate: onTerminateMock },
+          5000
+        );
+        binaryReceiver.receive('some_binary_bytes');
+        expect(binaryReceiver.isActiveSession()).toBe(true);
+
+        vi.advanceTimersByTime(6000);
+        expect(binaryReceiver.isActiveSession()).toBe(false);
+        expect(onTerminateMock).toHaveBeenCalled();
+      });
+
+      it('triggers immediate termination in text mode for restricted schemes', () => {
+        const textReceiver = new StreamLookaheadReceiver({ mode: 'text' });
+        expect(() => textReceiver.receive('vbscript:malicious')).toThrow();
+        expect(textReceiver.isActiveSession()).toBe(false);
+      });
+    });
   });
 });

@@ -31,6 +31,8 @@ export interface StreamLookaheadConfig {
   onTerminate?: () => void;
   /** Callback triggered when the safe stream successfully completes. */
   onSuccess?: (finalPayload: string) => void;
+  /** Stream format mode: either 'text' or 'binary'. Defaults to 'text'. */
+  mode?: 'text' | 'binary';
 }
 
 const NAMED_ENTITIES: Record<string, string> = {
@@ -146,6 +148,11 @@ export class StreamLookaheadReceiver {
 
     this.resetTimeout();
     this.buffer += chunk;
+
+    const mode = this.config.mode || 'text';
+    if (mode === 'binary') {
+      return;
+    }
 
     // Perform lookahead validation
     // 1. Decode recursively up to 10 levels deep

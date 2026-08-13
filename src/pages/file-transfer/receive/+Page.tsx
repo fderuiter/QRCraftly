@@ -27,6 +27,7 @@ import { useCamera } from '@/hooks/useCamera';
 import { useAdaptiveScanner } from '@/hooks/useAdaptiveScanner';
 import { StreamLookaheadReceiver, DANGEROUS_SCHEMES } from '@/engine/StreamLookahead';
 import { QRProvider } from '@/context/QRContext';
+import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
 
 /**
  * Helper to convert Base64 back into Uint8Array for binary reconstruction.
@@ -47,6 +48,7 @@ function FileTransferReceiveInner() {
   const { isDarkMode, toggleDarkMode } = useTheme();
   const { addToast } = useToast();
 
+  const [streamMode, setStreamMode] = useState<'text' | 'binary'>('text');
   const [chunks, setChunks] = useState<Map<number, string>>(new Map());
   const [totalChunks, setTotalChunks] = useState<number | null>(null);
   const [securityAlert, setSecurityAlert] = useState<string | null>(null);
@@ -69,32 +71,34 @@ function FileTransferReceiveInner() {
     setTotalChunks(null);
     setSecurityAlert(null);
     setDownloadTriggered(false);
-    lookaheadRef.current = new StreamLookaheadReceiver();
+    lookaheadRef.current = new StreamLookaheadReceiver({ mode: streamMode });
     addToast({
       type: 'info',
       message: 'Receiver state has been reset.',
       duration: 3000,
     });
-  }, [addToast]);
+  }, [addToast, streamMode]);
 
   // Handle incoming frame data
   const handleFrame = useCallback((decodedText: string) => {
     if (!decodedText) return;
 
     // 1. Direct scheme check on raw decoded frame text
-    const cleanText = decodedText.replace(/[\x00-\x1F\x7F-\x9F\s\u200B-\u200D\uFEFF]+/g, '').toLowerCase();
-    const dangerousMatch = DANGEROUS_SCHEMES.find(scheme => cleanText.includes(scheme));
-    if (dangerousMatch) {
-      setSecurityAlert(`Dangerous protocol detected and blocked: ${dangerousMatch}`);
-      setIsScanning(false);
-      stopStream();
-      return;
+    if (streamMode === 'text') {
+      const cleanText = decodedText.replace(/[\x00-\x1F\x7F-\x9F\s\u200B-\u200D\uFEFF]+/g, '').toLowerCase();
+      const dangerousMatch = DANGEROUS_SCHEMES.find(scheme => cleanText.includes(scheme));
+      if (dangerousMatch) {
+        setSecurityAlert(`Dangerous protocol detected and blocked: ${dangerousMatch}`);
+        setIsScanning(false);
+        stopStream();
+        return;
+      }
     }
 
     // 2. Incremental lookahead check
     try {
       if (!lookaheadRef.current) {
-        lookaheadRef.current = new StreamLookaheadReceiver();
+        lookaheadRef.current = new StreamLookaheadReceiver({ mode: streamMode });
       }
       lookaheadRef.current.receive(decodedText);
     } catch (err: any) {
@@ -123,7 +127,7 @@ function FileTransferReceiveInner() {
         }
       }
     }
-  }, [stopStream]);
+  }, [stopStream, streamMode]);
 
   // Initialize Adaptive Scanner hook
   const { startScanning, stopScanning } = useAdaptiveScanner({
@@ -355,6 +359,38 @@ function FileTransferReceiveInner() {
                   >
                     <Trash2 className="size-4" />
                   </Button>
+                </div>
+
+                {/* Stream Mode Selection Control */}
+                <div className="mt-2 rounded-xl border border-slate-100 bg-slate-50/50 p-4 dark:border-slate-800/60 dark:bg-slate-900/40">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <label htmlFor="stream-mode-switch" className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                        Binary Transfer Mode
+                      </label>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        {streamMode === 'binary'
+                          ? 'Bypasses recursive sanitization checks'
+                          : 'Enforces full security validation'}
+                      </p>
+                    </div>
+                    <ToggleSwitch
+                      id="stream-mode-switch"
+                      label="Binary Mode"
+                      srLabel={true}
+                      checked={streamMode === 'binary'}
+                      onChange={(checked) => {
+                        const newMode = checked ? 'binary' : 'text';
+                        setStreamMode(newMode);
+                        lookaheadRef.current = new StreamLookaheadReceiver({ mode: newMode });
+                        addToast({
+                          type: 'info',
+                          message: `Switched stream mode to ${newMode === 'binary' ? 'Binary' : 'Text'}`,
+                          duration: 3000,
+                        });
+                      }}
+                    />
+                  </div>
                 </div>
               </div>
             </section>
