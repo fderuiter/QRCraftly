@@ -45,22 +45,167 @@ export function validateCatalog(uiDir = DEFAULT_UI_DIR, catalogPath = DEFAULT_CA
   const catalogContent = fs.readFileSync(catalogPath, 'utf8');
   const catalogLines = catalogContent.split('\n');
 
+  // Helper: Find directory for heading line
+  function findDirForHeading(headingLine, dirs, root) {
+    const cleanHeading = headingLine.replace(/\\/g, '/').toLowerCase();
+    
+    // List of key segments we want to check
+    const segments = ['style-controls', 'inputs', 'ui'];
+
+    for (const segment of segments) {
+      if (cleanHeading.includes(segment)) {
+        // Find a directory that contains this segment in its base name or path
+        const matched = dirs.find(d => {
+          const norm = d.replace(/\\/g, '/').toLowerCase();
+          return norm.includes(segment);
+        });
+        if (matched) {
+          return matched;
+        }
+      }
+    }
+
+    // Fallback 1: Try relative path match (case-insensitive)
+    for (const d of dirs) {
+      const relativePath = path.relative(root, d).replace(/\\/g, '/').toLowerCase();
+      if (relativePath && cleanHeading.includes(relativePath)) {
+        return d;
+      }
+    }
+
+    // Fallback 2: Try exact base name match as whole word or path component (case-insensitive)
+    for (const d of dirs) {
+      const baseName = path.basename(d).toLowerCase();
+      const escapedBaseName = baseName.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+      const regex = new RegExp(`(?:\\b|\\/|\\\\)${escapedBaseName}(?:\\b|\\/|\\\\)`);
+      if (regex.test(cleanHeading)) {
+        return d;
+      }
+    }
+
+    // Fallback 3: If only one directory, and heading looks like a component section, return it
+    if (dirs.length === 1 && (cleanHeading.includes('component') || cleanHeading.includes('src/'))) {
+      return dirs[0];
+    }
+
+    return null;
+  }
+
+  // Parse the catalog into structured sections
+  const sections = [];
+  let currentSection = {
+    headingLine: '',
+    headingName: 'Root',
+    dir: null,
+    lines: []
+  };
+
+  for (const line of catalogLines) {
+    if (line.startsWith('##')) {
+      if (currentSection.lines.length > 0 || currentSection.headingLine) {
+        sections.push(currentSection);
+      }
+      const headingName = line.replace(/^#+\s+/, '').trim();
+      const matchedDir = findDirForHeading(line, directories, repoRoot);
+      currentSection = {
+        headingLine: line,
+        headingName,
+        dir: matchedDir,
+        lines: []
+      };
+    } else {
+      currentSection.lines.push(line);
+    }
+  }
+  if (currentSection.lines.length > 0 || currentSection.headingLine) {
+    sections.push(currentSection);
+  }
+
+  // Helper: Find if a file exists in any of the tracked directories
+  function findFileInDirectories(filename, dirs) {
+    for (const d of dirs) {
+      if (fs.existsSync(path.join(d, filename))) {
+        return d;
+      }
+    }
+    return null;
+  }
+
+  // Helper: Extract all filenames ending in .tsx from a line
+  function extractFileNames(line) {
+    const regex = /`([^`]+)`/g;
+    const files = [];
+    let match;
+    while ((match = regex.exec(line)) !== null) {
+      const val = match[1].trim();
+      if (val.endsWith('.tsx')) {
+        files.push(val);
+      }
+    }
+    return files;
+  }
+
+  // Pass 1: Catalog -> Disk (Reverse Check)
+  for (const section of sections) {
+    if (section.dir) {
+      if (!fs.existsSync(section.dir)) {
+        errors.push(`UI directory does not exist: ${section.dir}`);
+        continue;
+      }
+
+      for (const line of section.lines) {
+        const referencedFiles = extractFileNames(line);
+        for (const file of referencedFiles) {
+          const expectedPath = path.join(section.dir, file);
+          if (!fs.existsSync(expectedPath)) {
+            // Check if the file exists in some other tracked directory
+            const actualDir = findFileInDirectories(file, directories);
+            if (actualDir) {
+              errors.push(`UI component '${file}' is listed under the wrong section heading in the catalog (referenced under '${section.headingName}', but exists in '${path.basename(actualDir)}').`);
+            } else {
+              if (file.endsWith('.test.tsx')) {
+                errors.push(`Documented test file '${file}' does not exist in the same folder as its source component.`);
+              } else {
+                errors.push(`Documented source file '${file}' does not exist on disk.`);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Pass 2: Disk -> Catalog (Forward Check)
   for (const dir of directories) {
     if (!fs.existsSync(dir)) {
-      errors.push(`UI directory does not exist: ${dir}`);
+      if (!errors.includes(`UI directory does not exist: ${dir}`)) {
+        errors.push(`UI directory does not exist: ${dir}`);
+      }
       continue;
     }
 
-    // 1. Discover all UI components (.tsx files) and exclude test files (.test.tsx)
+    // Discover all UI components (.tsx files) and exclude test files (.test.tsx)
     const files = fs.readdirSync(dir);
     const componentFiles = files.filter(file => file.endsWith('.tsx') && !file.endsWith('.test.tsx'));
 
-    // 2. Verify each discovered component
+    // Verify each discovered component
     for (const componentFile of componentFiles) {
-      const componentLine = catalogLines.find(line => line.includes(`\`${componentFile}\``));
+      // Find which section lists this component
+      const listingSection = sections.find(sec => sec.lines.some(line => line.includes(`\`${componentFile}\``)));
 
-      if (!componentLine) {
+      if (!listingSection) {
         errors.push(`UI component '${componentFile}' is missing from the catalog (${path.basename(catalogPath)}).`);
+        continue;
+      }
+
+      // Verify listingSection maps to the current directory
+      if (listingSection.dir !== null && listingSection.dir !== dir) {
+        errors.push(`UI component '${componentFile}' exists on disk in '${path.basename(dir)}' but is listed under the wrong section heading '${listingSection.headingName}' in the catalog.`);
+        continue;
+      }
+
+      const componentLine = listingSection.lines.find(line => line.includes(`\`${componentFile}\``));
+      if (!componentLine) {
         continue;
       }
 
