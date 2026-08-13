@@ -30,6 +30,9 @@ describe('QRScanner Component', () => {
   let originalImage: any;
 
   beforeEach(() => {
+    if (globalThis.mockWorkerControl) {
+      globalThis.mockWorkerControl.reset();
+    }
     originalImage = global.Image;
     global.Image = class {
       onload: any = null;
@@ -79,6 +82,9 @@ describe('QRScanner Component', () => {
   });
 
   afterEach(() => {
+    if (globalThis.mockWorkerControl) {
+      globalThis.mockWorkerControl.reset();
+    }
     global.Image = originalImage;
     vi.restoreAllMocks();
     vi.clearAllMocks();
@@ -182,6 +188,37 @@ describe('QRScanner Component', () => {
   });
 
   it('resets the file input value immediately, allows consecutive uploads of the same file, displays spinner, and updates error states', async () => {
+    // Set up a worker interceptor to sequentially simulate successful, failed, and successful uploads
+    let uploadIndex = 0;
+    globalThis.mockWorkerControl.setInterceptor((msg, worker) => {
+      setTimeout(() => {
+        if (msg.sequenceId === 1) {
+          uploadIndex++;
+        }
+        if (uploadIndex === 1) {
+          worker.dispatchMessage({
+            status: 'pass',
+            sequenceId: msg.sequenceId,
+            decodedData: 'scan 1',
+            buffer: msg.buffer || new ArrayBuffer(0),
+          });
+        } else if (uploadIndex === 2) {
+          worker.dispatchMessage({
+            status: 'fail',
+            sequenceId: msg.sequenceId,
+            buffer: msg.buffer || new ArrayBuffer(0),
+          });
+        } else {
+          worker.dispatchMessage({
+            status: 'pass',
+            sequenceId: msg.sequenceId,
+            decodedData: 'scan 2',
+            buffer: msg.buffer || new ArrayBuffer(0),
+          });
+        }
+      }, 0);
+    });
+
     render(<QRScanner onScanSuccess={mockOnScanSuccess} onClose={mockOnClose} />);
 
     const fileTab = screen.getByRole('button', { name: /file upload/i });
