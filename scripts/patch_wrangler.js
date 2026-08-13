@@ -138,10 +138,26 @@ if (process.env.GITHUB_ACTIONS || process.env.CI) {
       '\\\`\\\`\\\`'
     ].join('\\n');
 
+    let prNumber = '682';
+    if (process.env.GITHUB_EVENT_PATH) {
+      try {
+        const event = JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH, 'utf8'));
+        if (event.pull_request && event.pull_request.number) {
+          prNumber = event.pull_request.number;
+        } else if (event.issue && event.issue.number) {
+          prNumber = event.issue.number;
+        } else if (event.number) {
+          prNumber = event.number;
+        }
+      } catch (e) {
+        console.error('[Wrangler Wrapper] Failed to parse event JSON:', e);
+      }
+    }
+    const repo = process.env.GITHUB_REPOSITORY || 'fderuiter/QRCraftly';
     const postData = JSON.stringify({ body: commentBody });
     const req = https.request({
       hostname: 'api.github.com',
-      path: '/repos/fderuiter/QRCraftly/issues/682/comments',
+      path: '/repos/' + repo + '/issues/' + prNumber + '/comments',
       method: 'POST',
       headers: {
         'Authorization': \`Bearer \${githubToken.trim()}\`,
