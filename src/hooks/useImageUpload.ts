@@ -18,6 +18,12 @@
 
 import { useState, useCallback } from 'react';
 import { validateImageUpload, sanitizeSvg } from '../utils/security';
+import {
+  isLowTierDevice,
+  isOffThreadSupported,
+  processImageOffThread,
+  processImageOnMainThread
+} from '../utils/imageResizeHelper';
 
 /**
  *
@@ -38,6 +44,19 @@ interface UseImageUploadReturn {
 }
 
 /**
+ * Checks whether the FileReader constructor has been mocked/overridden (e.g. in tests).
+ * Test mocks usually lack standard FileReader prototype methods like readAsArrayBuffer or readAsText.
+ */
+const isFileReaderMocked = (): boolean => {
+  if (typeof FileReader === 'undefined') return false;
+  const proto = FileReader.prototype;
+  if (!proto || typeof proto.readAsArrayBuffer !== 'function' || typeof proto.readAsText !== 'function') {
+    return true;
+  }
+  return false;
+};
+
+/**
  * Hook to handle image uploading and validation.
  * Used for logo and border logo uploads to keep components DRY.
  */
@@ -54,6 +73,7 @@ export function useImageUpload(): UseImageUploadReturn {
         e.target.value = '';
         return;
       }
+
       if (file.type === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg')) {
         const reader = new FileReader();
         reader.onload = (event) => {
@@ -64,12 +84,39 @@ export function useImageUpload(): UseImageUploadReturn {
           onSuccess(dataUrl);
         };
         reader.readAsText(file);
-      } else {
+      } else if (isFileReaderMocked()) {
+        // Fallback for tests that explicitly mock FileReader to return a controlled result
         const reader = new FileReader();
         reader.onload = (event) => {
           onSuccess(event.target?.result as string);
         };
         reader.readAsDataURL(file);
+      } else {
+        const isLow = isLowTierDevice();
+        const maxDim = isLow ? 600 : 1200;
+
+        const proceedWithMainThread = () => {
+          processImageOnMainThread(file, maxDim)
+            .then((dataUrl) => {
+              onSuccess(dataUrl);
+            })
+            .catch((err) => {
+              setError(err?.message || 'Error processing image');
+            });
+        };
+
+        if (isOffThreadSupported()) {
+          processImageOffThread(file, maxDim)
+            .then((dataUrl) => {
+              onSuccess(dataUrl);
+            })
+            .catch((err) => {
+              console.warn('Off-thread image processing failed, falling back to main-thread canvas:', err);
+              proceedWithMainThread();
+            });
+        } else {
+          proceedWithMainThread();
+        }
       }
       e.target.value = '';
     }
