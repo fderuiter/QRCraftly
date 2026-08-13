@@ -112,6 +112,77 @@ describe('UI Catalog Validator and Lineage Sync Checks', () => {
       fs.rmSync(mockInputsDir, { recursive: true, force: true });
       fs.unlinkSync(customCatalogPath);
     });
+
+    it('should fail validation when a documented source file does not exist on disk', () => {
+      const mockUiDirNew = path.join(tempTestDir, 'ui_not_exist_test');
+      fs.mkdirSync(mockUiDirNew, { recursive: true });
+
+      const mockCatalogContent = `
+# UI Catalog
+## 1. Core Shared UI Elements (\`src/components/ui/\`)
+- **MissingSource** (\`MissingSource.tsx\`): This source component does not exist.
+`;
+      const customCatalogPath = path.join(tempTestDir, 'MISSING_SOURCE_CATALOG.md');
+      fs.writeFileSync(customCatalogPath, mockCatalogContent);
+
+      const errors = validateCatalog(mockUiDirNew, customCatalogPath);
+      expect(errors).toContain("Documented source file 'MissingSource.tsx' does not exist on disk.");
+
+      // Clean up
+      fs.rmSync(mockUiDirNew, { recursive: true, force: true });
+      fs.unlinkSync(customCatalogPath);
+    });
+
+    it('should fail validation when a documented test file does not exist in the same folder as its source component', () => {
+      const mockUiDirNew = path.join(tempTestDir, 'ui_test_file_not_exist');
+      fs.mkdirSync(mockUiDirNew, { recursive: true });
+      fs.writeFileSync(path.join(mockUiDirNew, 'MyComp.tsx'), 'export const MyComp = () => <div />;');
+
+      const mockCatalogContent = `
+# UI Catalog
+## 1. Core Shared UI Elements (\`src/components/ui/\`)
+- **MyComp** (\`MyComp.tsx\` / \`MyComp.test.tsx\`): A component whose test file is missing.
+`;
+      const customCatalogPath = path.join(tempTestDir, 'MISSING_TEST_CATALOG.md');
+      fs.writeFileSync(customCatalogPath, mockCatalogContent);
+
+      const errors = validateCatalog(mockUiDirNew, customCatalogPath);
+      expect(errors).toContain("Documented test file 'MyComp.test.tsx' does not exist in the same folder as its source component.");
+
+      // Clean up
+      fs.rmSync(mockUiDirNew, { recursive: true, force: true });
+      fs.unlinkSync(customCatalogPath);
+    });
+
+    it('should fail validation if a component exists on disk but is listed under the wrong section heading in the catalog', () => {
+      const mockUiDir1 = path.join(tempTestDir, 'ui_wrong_heading_test');
+      const mockUiDir2 = path.join(tempTestDir, 'inputs_wrong_heading_test');
+      fs.mkdirSync(mockUiDir1, { recursive: true });
+      fs.mkdirSync(mockUiDir2, { recursive: true });
+
+      // Put Accordion.tsx in ui_wrong_heading_test (so it's under ui)
+      fs.writeFileSync(path.join(mockUiDir1, 'Accordion.tsx'), 'export const Accordion = () => <div />;');
+
+      // Catalog lists Accordion.tsx under Inputs instead of UI
+      const mockCatalogContent = `
+# UI Catalog
+## 1. Core Shared UI Elements (\`src/components/ui/\`)
+- **Placeholder** (\`Placeholder.tsx\`): A generic placeholder description.
+
+## 2. QR Input Form Panel Components (\`src/components/inputs/\`)
+- **Accordion** (\`Accordion.tsx\`): Accordion component wrongly placed under inputs.
+`;
+      const customCatalogPath = path.join(tempTestDir, 'WRONG_HEADING_CATALOG.md');
+      fs.writeFileSync(customCatalogPath, mockCatalogContent);
+
+      const errors = validateCatalog([mockUiDir1, mockUiDir2], customCatalogPath);
+      expect(errors.some(err => err.includes("wrong section heading") || err.includes("listed under the wrong section"))).toBe(true);
+
+      // Clean up
+      fs.rmSync(mockUiDir1, { recursive: true, force: true });
+      fs.rmSync(mockUiDir2, { recursive: true, force: true });
+      fs.unlinkSync(customCatalogPath);
+    });
   });
 
   describe('checkLineage() Git History Checks', () => {
