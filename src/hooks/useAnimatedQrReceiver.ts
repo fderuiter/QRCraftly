@@ -20,7 +20,6 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useCamera } from './useCamera';
 import { useAdaptiveScanner } from './useAdaptiveScanner';
 import { StreamLookaheadReceiver, DANGEROUS_SCHEMES } from '../engine/StreamLookahead';
-import { base64ToUint8Array } from '../utils/base64';
 import { triggerFileDownload } from '../utils/downloadManager';
 
 /**
@@ -57,7 +56,7 @@ export interface UseAnimatedQrReceiverOptions {
                         */
   type: 'success' | 'info' | 'error' | 'warning'; /**
                                                    *
-                                                    */
+                                                   */
   message: string; /**
                     *
                     */
