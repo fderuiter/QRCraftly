@@ -9,6 +9,14 @@ const wranglerBinDir = path.resolve(__dirname, '../node_modules/wrangler/bin');
 const wranglerJs = path.join(wranglerBinDir, 'wrangler.js');
 const wranglerRealJs = path.join(wranglerBinDir, 'wrangler-real.js');
 
+const isGHA = !!process.env.GITHUB_ACTIONS;
+const isNonGhaCI = !!process.env.CI && !isGHA;
+
+if (isNonGhaCI) {
+  console.log('[Patch Wrangler] Non-GitHub Actions CI environment detected (e.g., Cloudflare Workers Builds). Skipping wrangler patching to allow standard deployments.');
+  process.exit(0);
+}
+
 try {
   if (!fs.existsSync(wranglerJs)) {
     console.error(`[Patch Wrangler] wrangler.js not found at ${wranglerJs}`);
