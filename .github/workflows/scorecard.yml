@@ -1,7 +1,6 @@
 name: Scorecard supply-chain security
 on:
   branch_protection_rule:
-  repository_ruleset:
   schedule:
     - cron: '30 1 * * 6'
   push:
