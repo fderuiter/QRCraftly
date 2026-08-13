@@ -75,8 +75,9 @@ self.onmessage = async (e: MessageEvent<{ file: Blob | File; maxDim: number }>) 
 
     // Convert blob to Data URL off-thread using FileReaderSync
     let dataUrl: string;
-    if (typeof FileReaderSync !== 'undefined') {
-      const reader = new FileReaderSync();
+    const FileReaderSyncClass = (self as any).FileReaderSync;
+    if (typeof FileReaderSyncClass !== 'undefined') {
+      const reader = new FileReaderSyncClass();
       dataUrl = reader.readAsDataURL(blob);
     } else {
       // In case FileReaderSync is not available, return blob and convert on main thread
