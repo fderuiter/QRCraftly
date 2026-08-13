@@ -17,12 +17,13 @@
 */
 
 import React, { useEffect, useRef, useCallback } from 'react';
-import { QRConfig, SocialFormat, TemplateStyle, QRModules } from '../types';
+import { QRConfig, SocialFormat, TemplateStyle, QRModules, QRType } from '../types';
 import { drawQR, drawQRInternal } from '../utils/qrRenderer';
 import { drawWithTemplate, SOCIAL_DIMENSIONS } from '../utils/templateRenderer';
 import { useImage } from '../hooks/useImage';
 import { ValidationEngine } from '../engine/ValidationEngine';
 import { Alert } from './ui/Alert';
+import { normalizeUrl, shouldNormalizeUrl } from '../utils/url';
 
 /**
  * Props for the QRCanvas component.
@@ -456,7 +457,11 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
           }
 
           const QRCode = (QRCodeModule as any).default || QRCodeModule;
-          const data = QRCode.create(currentConfig.value, {
+          let val = currentConfig.value;
+          if (currentConfig.type === QRType.URL && shouldNormalizeUrl(val)) {
+            val = normalizeUrl(val);
+          }
+          const data = QRCode.create(val, {
             errorCorrectionLevel: currentConfig.errorCorrectionLevel,
           });
           const modules: QRModules = data.modules;
@@ -479,7 +484,11 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
             }
 
             const QRCode = (mod as any).default || mod;
-            const data = QRCode.create(currentConfig.value, {
+            let val = currentConfig.value;
+            if (currentConfig.type === QRType.URL && shouldNormalizeUrl(val)) {
+              val = normalizeUrl(val);
+            }
+            const data = QRCode.create(val, {
               errorCorrectionLevel: currentConfig.errorCorrectionLevel,
             });
             const modules: QRModules = data.modules;

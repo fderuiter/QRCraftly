@@ -157,4 +157,32 @@ describe("useInputLogic", () => {
     // Validation should fail and prevent the onChange callback from propagating
     expect(onChange).not.toHaveBeenCalled();
   });
+
+  it("should preserve newly normalized URL state and push constructed value when swapping tabs", () => {
+    const config = createMockConfig(QRType.URL, "http://google.com/");
+    const onChange = vi.fn();
+
+    const { result, rerender } = renderHook(
+      ({ cfg }) => useInputLogic(cfg, onChange),
+      { initialProps: { cfg: config } }
+    );
+
+    // Initial state is normalized url
+    expect((result.current.inputProps.data as any).url).toBe("http://google.com/");
+
+    // Simulate tab swap: QRContext updates type to TEXT and value to empty string
+    const textConfig = createMockConfig(QRType.TEXT, "");
+    rerender({ cfg: textConfig });
+
+    // The local state of URL should remain preserved in useInputLogic's inputStates under URL key,
+    // and we should now be looking at TEXT state
+    expect((result.current.inputProps.data as any).text).toBe("");
+
+    // Simulate switching back to URL: QRContext updates type back to URL and value to empty string
+    const backToUrlConfig = createMockConfig(QRType.URL, "");
+    rerender({ cfg: backToUrlConfig });
+
+    // It should detect the tab switch, preserve the local "http://google.com/" state, and push it back to the store
+    expect(onChange).toHaveBeenCalledWith({ value: "http://google.com/" });
+  });
 });
