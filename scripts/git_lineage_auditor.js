@@ -221,7 +221,7 @@ export function runAuditor(options = {}) {
   const exit = options.exit || process.exit;
 
   try {
-    const isCI = !!env.CI;
+    const isCI = !!env.CI && !env.SKIP_GIT_VALIDATION;
     let modifiedFiles = new Set();
 
     if (isCI) {
