@@ -10,6 +10,11 @@ const wranglerJs = path.join(wranglerBinDir, 'wrangler.js');
 const wranglerRealJs = path.join(wranglerBinDir, 'wrangler-real.js');
 
 try {
+  if (!process.env.GITHUB_ACTIONS) {
+    console.log('[Patch Wrangler] Skipping wrangler patch because GITHUB_ACTIONS is not set.');
+    process.exit(0);
+  }
+
   if (!fs.existsSync(wranglerJs)) {
     console.error(`[Patch Wrangler] wrangler.js not found at ${wranglerJs}`);
     process.exit(1);
