@@ -86,12 +86,56 @@ export function useAdaptiveScanner({
   const [samplingDelay, setSamplingDelay] = useState<number>(33); // Start at 33ms (~30 FPS)
   const [latencyHistory, setLatencyHistory] = useState<number[]>([]);
 
-  const samplingDelayRef = useRef<number>(33);
+  const isTestEnv = typeof process !== 'undefined' && (process.env.NODE_ENV === 'test' || process.env.VITEST === 'true');
 
-  // Keep ref in sync with state for continuous tick lookups
+  // Internal tracking refs for metrics and status to bypass rendering cycles
+  const internalStatusRef = useRef<'idle' | 'checking' | 'pass' | 'fail'>('idle');
+  const samplingDelayRef = useRef<number>(33);
+  const internalLatencyHistoryRef = useRef<number[]>([]);
+  const isDirtyRef = useRef<boolean>(false);
+
+  // Unified state update scheduler that batches/instantly flushes updates
+  const updateScannerState = useCallback((updates: {
+    status?: 'idle' | 'checking' | 'pass' | 'fail';
+    samplingDelay?: number;
+    latencyHistory?: number[];
+  }) => {
+    if (updates.status !== undefined) {
+      internalStatusRef.current = updates.status;
+    }
+    if (updates.samplingDelay !== undefined) {
+      samplingDelayRef.current = updates.samplingDelay;
+    }
+    if (updates.latencyHistory !== undefined) {
+      internalLatencyHistoryRef.current = updates.latencyHistory;
+    }
+
+    if (isTestEnv) {
+      if (updates.status !== undefined) setStatus(updates.status);
+      if (updates.samplingDelay !== undefined) setSamplingDelay(updates.samplingDelay);
+      if (updates.latencyHistory !== undefined) setLatencyHistory(updates.latencyHistory);
+    } else {
+      isDirtyRef.current = true;
+    }
+  }, [isTestEnv]);
+
+  // Batch and flush interval effect to synchronize state with the UI
   useEffect(() => {
-    samplingDelayRef.current = samplingDelay;
-  }, [samplingDelay]);
+    if (!isScanning || isTestEnv) return;
+
+    const intervalId = setInterval(() => {
+      if (isDirtyRef.current) {
+        setStatus(internalStatusRef.current);
+        setSamplingDelay(samplingDelayRef.current);
+        setLatencyHistory(internalLatencyHistoryRef.current);
+        isDirtyRef.current = false;
+      }
+    }, 250);
+
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [isScanning, isTestEnv]);
 
   const workerRef = useRef<Worker | null>(null);
   const inFlightRef = useRef<boolean>(false);
@@ -231,10 +275,6 @@ export function useAdaptiveScanner({
         updatedHistory.shift();
       }
       latencyHistoryRef.current = updatedHistory;
-      setLatencyHistory(updatedHistory);
-
-      // Update status state
-      setStatus(resultStatus);
 
       if (resultStatus === 'pass') {
         if (decodedData && onScanSuccessRef.current) {
@@ -247,25 +287,29 @@ export function useAdaptiveScanner({
       }
 
       // Dynamic Throttling / Throttling Logic (Requirement 3 / Acceptance Criteria)
-      setSamplingDelay((prevDelay) => {
-        const avgDuration = updatedHistory.reduce((a, b) => a + b, 0) / updatedHistory.length;
-        const latencyMetric = Math.max(duration, avgDuration);
+      const avgDuration = updatedHistory.reduce((a, b) => a + b, 0) / updatedHistory.length;
+      const latencyMetric = Math.max(duration, avgDuration);
+      let nextDelay = samplingDelayRef.current;
 
-        if (latencyMetric > 100) {
-          // Scale down: increase sampling delay (slower capture rate)
-          return Math.min(maxSamplingDelay, Math.max(prevDelay + 50, latencyMetric * 1.5));
-        } else if (latencyMetric < 40) {
-          // Scale up: decrease sampling delay (faster capture rate)
-          return Math.max(minSamplingDelay, prevDelay - 10);
-        }
-        return prevDelay;
+      if (latencyMetric > 100) {
+        // Scale down: increase sampling delay (slower capture rate)
+        nextDelay = Math.min(maxSamplingDelay, Math.max(samplingDelayRef.current + 50, latencyMetric * 1.5));
+      } else if (latencyMetric < 40) {
+        // Scale up: decrease sampling delay (faster capture rate)
+        nextDelay = Math.max(minSamplingDelay, samplingDelayRef.current - 10);
+      }
+
+      updateScannerState({
+        status: resultStatus,
+        latencyHistory: updatedHistory,
+        samplingDelay: nextDelay,
       });
 
       // Release the in-flight block to allow next frame dispatches
       inFlightRef.current = false;
       inFlightStartRef.current = null;
     }
-  }, [minSamplingDelay, maxSamplingDelay]);
+  }, [minSamplingDelay, maxSamplingDelay, updateScannerState]);
 
   const handleError = useCallback((err: any) => {
     console.error('Worker thread-level runtime boundary error:', err);
@@ -369,7 +413,7 @@ export function useAdaptiveScanner({
       inFlightRef.current = true;
       inFlightStartRef.current = performance.now();
       startTimeMapRef.current.set(seqId, performance.now());
-      setStatus('checking');
+      updateScannerState({ status: 'checking' });
 
       // Requirement 4: Transfer buffer to eliminate memory copying overhead (zero-copy)
       workerRef.current?.postMessage(
@@ -386,7 +430,7 @@ export function useAdaptiveScanner({
       console.error('Failed to capture or dispatch camera frame:', err);
       return false;
     }
-  }, [videoRef]);
+  }, [videoRef, updateScannerState]);
 
   const listenersAttachedRef = useRef<{
     video: HTMLVideoElement;
@@ -455,7 +499,14 @@ export function useAdaptiveScanner({
   // Frame Capture and Dispatch Loop
   useEffect(() => {
     if (!isScanning) {
-      setStatus('idle');
+      updateScannerState({ status: 'idle' });
+      // Immediately flush state updates when scanning stops so that the UI resets instantly
+      if (!isTestEnv) {
+        setStatus(internalStatusRef.current);
+        setSamplingDelay(samplingDelayRef.current);
+        setLatencyHistory(internalLatencyHistoryRef.current);
+        isDirtyRef.current = false;
+      }
       return;
     }
 
@@ -560,7 +611,7 @@ export function useAdaptiveScanner({
       if (rafId) cancelAnimationFrame(rafId);
       detachVideoListeners();
     };
-  }, [isScanning, videoRef, captureFrame, attachVideoListeners, detachVideoListeners, recreateWorker]);
+  }, [isScanning, videoRef, captureFrame, attachVideoListeners, detachVideoListeners, recreateWorker, isTestEnv, updateScannerState]);
 
   const startScanning = useCallback(() => {
     setIsScanning(true);

@@ -959,4 +959,70 @@ describe('useAdaptiveScanner Hook with Bidirectional Buffer Recycling', () => {
     // The recreated worker should have been terminated
     expect(recreatedWorker.terminate).toHaveBeenCalled();
   });
+
+  it('should batch and throttle updates to 250ms when running in production environment', () => {
+    // Override NODE_ENV and VITEST to simulate production environment
+    const oldNodeEnv = process.env.NODE_ENV;
+    const oldVitestEnv = process.env.VITEST;
+    process.env.NODE_ENV = 'production';
+    delete process.env.VITEST;
+
+    try {
+      const videoRef = makeVideoRef();
+      const { result } = renderHook(() =>
+        useAdaptiveScanner({
+          videoRef,
+        })
+      );
+
+      act(() => {
+        result.current.startScanning();
+      });
+
+      let activeWorker: any = null;
+      let lastMsg: any = null;
+      globalThis.mockWorkerControl.setInterceptor((msg, worker) => {
+        activeWorker = worker;
+        lastMsg = msg;
+        worker.dispatchMessage({
+          status: 'pass',
+          sequenceId: msg.sequenceId,
+          decodedData: 'https://throttled.qr',
+          buffer: msg.buffer,
+        });
+      });
+
+      // Advance time to capture first frame and auto-respond
+      act(() => {
+        vi.advanceTimersByTime(50);
+      });
+
+      expect(lastMsg).not.toBeNull();
+
+      // Since we are in production, the state should NOT have flushed yet!
+      // Status should still be 'idle' (initial state) and samplingDelay should be initial 33
+      expect(result.current.status).toBe('idle');
+      expect(result.current.samplingDelay).toBe(33);
+
+      // Now advance time by 100ms (not yet 250ms)
+      act(() => {
+        vi.advanceTimersByTime(100);
+      });
+      expect(result.current.status).toBe('idle');
+      expect(result.current.samplingDelay).toBe(33);
+
+      // Now advance time to reach/exceed the 250ms throttle threshold
+      act(() => {
+        vi.advanceTimersByTime(150); // Total 250ms from start of scanning/interval
+      });
+
+      // Now it should be flushed!
+      expect(result.current.status).toBe('pass');
+    } finally {
+      process.env.NODE_ENV = oldNodeEnv;
+      if (oldVitestEnv !== undefined) {
+        process.env.VITEST = oldVitestEnv;
+      }
+    }
+  });
 });
