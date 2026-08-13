@@ -27,6 +27,7 @@ const createMockConfig = (type: QRType, value: string): QRConfig => ({
   borderLogoPosition: "bottom-right" as any,
   socialFormat: SocialFormat.SQUARE_1_1,
   templateStyle: TemplateStyle.NONE,
+  autoOptimize: true,
 });
 
 describe("useInputLogic", () => {

@@ -15,7 +15,7 @@ type SignalCallback = (detail: any) => void;
 /**
  *
  */
-export type ActiveOptimizations = {
+type ActiveOptimizations = {
   /**
    *
    */

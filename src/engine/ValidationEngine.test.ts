@@ -27,6 +27,7 @@ const getBaseConfig = (): QRConfig => ({
   borderLogoUrl: null,
   borderTextPosition: 'bottom-center',
   borderLogoPosition: 'bottom-center',
+  autoOptimize: true,
 });
 
 describe('ValidationEngine', () => {

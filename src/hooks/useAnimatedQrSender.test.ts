@@ -50,6 +50,7 @@ const mockConfig: QRConfig = {
   templateHeadline: '',
   templateSubtext: '',
   templateQrScale: 1.0,
+  autoOptimize: true,
 };
 
 describe('useAnimatedQrSender Hook', () => {

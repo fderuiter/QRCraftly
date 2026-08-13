@@ -47,6 +47,7 @@ describe('matrixWorker', () => {
     borderLogoPosition: 'bottom-center',
     socialFormat: SocialFormat.SQUARE_1_1,
     templateStyle: TemplateStyle.NONE,
+    autoOptimize: true,
   });
 
   it('generates QR matrix and sends success message', async () => {

@@ -415,7 +415,7 @@ function runValidator() {
     console.log('✅ UI Catalog Integrity matches shared components perfectly.');
 
     // 2. Run Git Lineage / Change Set verification
-    const isGHA = !!process.env.GITHUB_ACTIONS || (!!process.env.CI && !process.env.CF_PAGES && !process.env.SKIP_GIT_VALIDATION);
+    const isGHA = !!process.env.GITHUB_ACTIONS;
     const isOtherCI = !!process.env.CI && !isGHA;
 
     if (process.env.SKIP_GIT_VALIDATION || isOtherCI) {

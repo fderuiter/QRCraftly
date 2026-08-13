@@ -126,6 +126,7 @@ const DEFAULT_FALLBACK_CONFIG: QRConfig = {
   borderLogoPosition: "bottom-center",
   socialFormat: SocialFormat.SQUARE_1_1,
   templateStyle: TemplateStyle.NONE,
+  autoOptimize: true,
 };
 
 /**
