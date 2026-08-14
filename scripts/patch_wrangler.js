@@ -11,8 +11,8 @@ const wranglerRealJs = path.join(wranglerBinDir, 'wrangler-real.js');
 
 try {
   if (!fs.existsSync(wranglerJs)) {
-    console.error(`[Patch Wrangler] wrangler.js not found at ${wranglerJs}`);
-    process.exit(1);
+    console.warn(`[Patch Wrangler] wrangler.js not found at ${wranglerJs}. Skipping patch since wrangler is not installed.`);
+    process.exit(0);
   }
 
   if (fs.existsSync(wranglerRealJs)) {
