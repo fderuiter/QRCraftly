@@ -65,6 +65,27 @@ export const isDangerousUrl = (url: string | undefined): boolean => {
 };
 
 /**
+ * Safely sanitizes a URL string for use in an anchor href attribute.
+ * Prevents DOM-based XSS (e.g., javascript:, data:, vbscript: protocols) by enforcing
+ * safe prefixes (http://, https://, or relative paths starting with /).
+ *
+ * @param url The input URL string.
+ * @returns A safe, sanitized URL string, or '#' if unsafe/invalid.
+ */
+export const sanitizeHref = (url: string | undefined): string => {
+  if (!url) return '#';
+  const trimmed = url.trim();
+  if (
+    trimmed.startsWith('http://') ||
+    trimmed.startsWith('https://') ||
+    trimmed.startsWith('/')
+  ) {
+    return trimmed;
+  }
+  return '#';
+};
+
+/**
  * Sanitizes a plain input string by stripping control characters and cutting off query parameters.
  * Direct single-function implementation.
  *

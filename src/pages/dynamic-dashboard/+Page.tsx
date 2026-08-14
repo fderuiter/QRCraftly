@@ -5,7 +5,7 @@ import { useToast } from '@/components/ui/Toast';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { TextField } from '@/components/ui/FormFields';
-import { isDangerousUrl } from '@/utils/security';
+import { isDangerousUrl, sanitizeHref } from '@/utils/security';
 import { normalizeUrl } from '@/utils/url';
 
 /**
@@ -142,7 +142,7 @@ export default function DynamicDashboardPage() {
                         <code className="rounded bg-slate-100 px-2 py-1 font-mono text-sm break-all text-slate-800 dark:bg-slate-800 dark:text-slate-200">
                           {r.redirectUrl}
                         </code>
-                        <a href={r.redirectUrl} target="_blank" rel="noopener noreferrer" className="text-teal-600 hover:text-teal-700 dark:text-teal-400" title="Visit redirector">
+                        <a href={sanitizeHref(r.redirectUrl)} target="_blank" rel="noopener noreferrer" className="text-teal-600 hover:text-teal-700 dark:text-teal-400" title="Visit redirector">
                           <ExternalLink className="size-4" />
                         </a>
                       </div>
