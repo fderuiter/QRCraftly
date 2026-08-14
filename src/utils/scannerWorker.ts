@@ -251,9 +251,14 @@ self.onmessage = async (e: MessageEvent<any>) => {
       status: code ? ('pass' as const) : ('fail' as const),
       sequenceId,
       decodedData: code ? code.data : null,
+      buffer: isBufferRequest ? payload.buffer : undefined,
     };
     assertScannerResponse(response);
-    (self as any).postMessage(response);
+    if (isBufferRequest) {
+      (self as any).postMessage(response, [payload.buffer]);
+    } else {
+      (self as any).postMessage(response);
+    }
     return;
   }
 
