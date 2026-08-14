@@ -38,12 +38,12 @@
   },
   "dependencies": {
     "jsqr": "^1.4.0",
-    "lucide-react": "^0.556.0",
+    "lucide-react": "^1.31.0",
     "qrcode": "^1.5.4",
-    "react": "^19.2.1",
-    "react-dom": "^19.2.1",
-    "vike": "^0.4.247",
-    "vike-react": "^0.6.13"
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "vike": "^0.4.260",
+    "vike-react": "^0.6.25"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.12.1",
@@ -55,8 +55,8 @@
     "@testing-library/user-event": "^14.6.1",
     "@types/node": "^22.14.0",
     "@types/qrcode": "^1.5.6",
-    "@types/react": "^19.2.14",
-    "@types/react-dom": "^19.2.3",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
     "@vitejs/plugin-react": "^5.0.0",
     "@vitest/coverage-v8": "^4.1.9",
     "eslint": "^9.39.4",
