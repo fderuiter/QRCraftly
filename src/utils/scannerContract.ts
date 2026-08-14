@@ -14,6 +14,7 @@ export interface ScannerResponse {
   sequenceId: number;
   decodedData?: string | null;
   error?: string | null;
+  buffer?: ArrayBuffer;
 }
 
 /**
@@ -83,6 +84,9 @@ export function assertScannerResponse(data: unknown): asserts data is ScannerRes
   }
   if (d.error !== undefined && d.error !== null && typeof d.error !== 'string') {
     throw new Error('Scanner response error must be a string or null');
+  }
+  if (d.buffer !== undefined && d.buffer !== null && !(d.buffer instanceof ArrayBuffer)) {
+    throw new Error('Scanner response buffer must be an ArrayBuffer');
   }
 }
 

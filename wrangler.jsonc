@@ -6,7 +6,7 @@
     "directory": "./dist/client",
   },
   "build": {
-    "command": "NODE_ENV=development corepack pnpm install --production=false && SKIP_GIT_VALIDATION=1 corepack pnpm run build",
+    "command": "NODE_ENV=development npx pnpm install --production=false && SKIP_GIT_VALIDATION=1 npx pnpm run build",
   },
   "observability": {
     "enabled": true,
