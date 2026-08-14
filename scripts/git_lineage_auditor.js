@@ -244,8 +244,16 @@ export function runAuditor(options = {}) {
 
       let diffStdout = null;
       let targetBranch = 'origin/main';
+      const baseRef = env.GITHUB_BASE_REF || 'main';
       if (env.GITHUB_BASE_REF) {
         targetBranch = `origin/${env.GITHUB_BASE_REF}`;
+      }
+
+      console.log(`[Lineage Auditor] Fetching target branch 'origin/${baseRef}' to ensure it is in the working tree...`);
+      try {
+        customExecSync('git', ['fetch', '--depth=1', 'origin', `${baseRef}:refs/remotes/origin/${baseRef}`], { stdio: 'ignore', cwd: repoRoot });
+      } catch (fetchErr) {
+        console.warn(`[Lineage Auditor] Warning: target branch fetch failed (continuing anyway): ${fetchErr.message || fetchErr}`);
       }
 
       console.log(`[Lineage Auditor] Attempting target branch comparison against: ${targetBranch}`);
