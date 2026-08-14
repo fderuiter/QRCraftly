@@ -116,7 +116,7 @@ function FileTransferReceiveInner() {
                 <QrCode className="size-6" />
                 <h1 className="text-xl font-bold tracking-tight text-slate-700 dark:text-slate-100">QRCraftly</h1>
               </a>
-              <p className="text-sm text-slate-600 dark:text-slate-400">High-Performance File Receiver</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">Receive a File by QR Code</p>
             </div>
             <div className="flex gap-2">
               <a
@@ -146,7 +146,7 @@ function FileTransferReceiveInner() {
             <section className="space-y-4">
               <h2 className="flex items-center gap-2 text-xs font-bold tracking-wider text-slate-600 uppercase dark:text-slate-400">
                 <Camera className="size-4 text-teal-600" />
-                1. Stream Receiver State
+                1. Scan Transfer QR
               </h2>
 
               <div className="flex flex-col gap-3">
@@ -183,8 +183,8 @@ function FileTransferReceiveInner() {
                   <Button
                     variant="outline"
                     onClick={handleClear}
-                    title="Reset all buffers"
-                    aria-label="Reset all buffers"
+                    title="Clear transfer progress"
+                    aria-label="Clear transfer progress"
                     className="px-3"
                   >
                     <Trash2 className="size-4" />
@@ -196,17 +196,17 @@ function FileTransferReceiveInner() {
                   <div className="flex items-center justify-between">
                     <div>
                       <label htmlFor="stream-mode-switch" className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-                        Binary Transfer Mode
+                        Compatibility mode
                       </label>
                       <p className="text-xs text-slate-500 dark:text-slate-400">
                         {streamMode === 'binary'
-                          ? 'Bypasses recursive sanitization checks'
-                          : 'Enforces full security validation'}
+                          ? 'Accepts all file data, but skips checks that block potentially unsafe text content.'
+                          : 'Checks text content for potentially unsafe links and commands.'}
                       </p>
                     </div>
                     <ToggleSwitch
                       id="stream-mode-switch"
-                      label="Binary Mode"
+                      label="Compatibility mode"
                       srLabel={true}
                       checked={streamMode === 'binary'}
                       onChange={(checked) => {
@@ -214,7 +214,7 @@ function FileTransferReceiveInner() {
                         setStreamMode(newMode);
                         addToast({
                           type: 'info',
-                          message: `Switched stream mode to ${newMode === 'binary' ? 'Binary' : 'Text'}`,
+                          message: `Compatibility mode ${newMode === 'binary' ? 'enabled' : 'disabled'}`,
                           duration: 3000,
                         });
                       }}
@@ -230,7 +230,7 @@ function FileTransferReceiveInner() {
             <section className="space-y-4">
               <h2 className="flex items-center gap-2 text-xs font-bold tracking-wider text-slate-600 uppercase dark:text-slate-400">
                 <Activity className="size-4 text-teal-600" />
-                2. Live Progress & Assembly
+                2. Transfer Progress
               </h2>
 
               {compilationStatus && (
@@ -255,11 +255,11 @@ function FileTransferReceiveInner() {
                     <div>
                       <div className="text-slate-400">Received</div>
                       <div className="font-mono text-sm font-semibold text-slate-700 dark:text-slate-300">
-                        {receivedCount} / {totalChunks} chunks
+                        {receivedCount} / {totalChunks} parts
                       </div>
                     </div>
                     <div>
-                      <div className="text-slate-400">Buffered Frames</div>
+                      <div className="text-slate-400">Parts received</div>
                       <div className="font-mono text-sm font-semibold text-slate-700 dark:text-slate-300">
                         {chunks.size}
                       </div>
@@ -267,7 +267,7 @@ function FileTransferReceiveInner() {
                   </div>
 
                   <div className="pt-2">
-                    <div className="mb-2 font-semibold text-slate-500">Frame Completion Grid:</div>
+                    <div className="mb-2 font-semibold text-slate-500">Received parts:</div>
                     <div className="mx-auto grid max-w-sm grid-cols-5 gap-2" data-testid="progress-grid">
                       {Array.from({ length: totalChunks }).map((_, idx) => {
                         const isReceived = chunks.has(idx);
@@ -281,7 +281,7 @@ function FileTransferReceiveInner() {
                                 ? 'border-emerald-500 bg-emerald-500 text-white'
                                 : 'border-slate-200 bg-slate-50 text-slate-400 dark:border-slate-800 dark:bg-slate-900'
                             }`}
-                            title={`Chunk ${idx + 1}: ${isReceived ? 'Received' : 'Missing'}`}
+                            title={`Part ${idx + 1}: ${isReceived ? 'Received' : 'Missing'}`}
                           >
                             {idx + 1}
                           </div>
@@ -297,7 +297,7 @@ function FileTransferReceiveInner() {
               )}
             </section>
 
-            {!import.meta.env.PROD && (
+            {import.meta.env.DEV && (
               <>
                 <div className="h-px bg-slate-100 dark:bg-slate-800" />
 
@@ -376,7 +376,7 @@ function FileTransferReceiveInner() {
                     <div>
                       <h3 className="text-lg font-bold text-slate-100">Transfer Complete</h3>
                       <p className="mt-1 text-xs text-slate-400">
-                        Successfully buffered all {totalChunks} chunks of data in browser memory.
+                        All {totalChunks} parts were received. Your file is ready to download.
                       </p>
                     </div>
                     <Button
@@ -416,7 +416,7 @@ function FileTransferReceiveInner() {
               </div>
 
               <div className="mt-4 text-center text-xs leading-relaxed text-slate-400">
-                Position the streaming QR code directly inside the target frame. Ensure adequate lighting and avoid glares for optimal scanning speed.
+                Position the transfer QR inside the guide. Use good lighting and avoid glare for faster scanning.
               </div>
             </Card>
           </div>

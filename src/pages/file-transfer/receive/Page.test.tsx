@@ -86,7 +86,7 @@ describe('File Transfer Receive Page & Pipeline', () => {
   });
 
   it('does not expose simulation or security-testing controls in production', () => {
-    vi.stubEnv('PROD', true);
+    vi.stubEnv('DEV', false);
     render(
       <ToastProvider>
         <Page />
@@ -225,10 +225,9 @@ describe('File Transfer Receive Page & Pipeline', () => {
       </ToastProvider>
     );
 
-    // Initial state: Enforces full security validation
-    expect(screen.getByText('Enforces full security validation')).toBeInTheDocument();
+    expect(screen.getByText('Checks text content for potentially unsafe links and commands.')).toBeInTheDocument();
 
-    const modeSwitch = screen.getByRole('switch', { name: /binary mode/i });
+    const modeSwitch = screen.getByRole('switch', { name: /compatibility mode/i });
     expect(modeSwitch).not.toBeChecked();
 
     // Toggle to binary mode
@@ -237,7 +236,7 @@ describe('File Transfer Receive Page & Pipeline', () => {
     });
 
     expect(modeSwitch).toBeChecked();
-    expect(screen.getByText('Bypasses recursive sanitization checks')).toBeInTheDocument();
+    expect(screen.getByText('Accepts all file data, but skips checks that block potentially unsafe text content.')).toBeInTheDocument();
 
     // Now try simulating a restricted schema - it should not trigger a security warning in binary mode!
     const simDangerousButton = screen.getByRole('button', { name: /simulate dangerous scheme/i });
@@ -254,7 +253,7 @@ describe('File Transfer Receive Page & Pipeline', () => {
     });
 
     expect(modeSwitch).not.toBeChecked();
-    expect(screen.getByText('Enforces full security validation')).toBeInTheDocument();
+    expect(screen.getByText('Checks text content for potentially unsafe links and commands.')).toBeInTheDocument();
   });
 
   describe('Synchronous Page-Level QR Frame Deduplication', () => {
