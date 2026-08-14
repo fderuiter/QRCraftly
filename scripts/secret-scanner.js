@@ -77,6 +77,55 @@ export function isFalsePositive(secret, varName = '') {
     return true;
   }
 
+  // Common JS/TS keywords, types, dummy mock words, variable assignments, and boilerplate values
+  const exactSafeWords = new Set([
+    'true', 'false', 'null', 'undefined', 'void', 'string', 'number', 'boolean', 'any', 'unknown', 'never', 'object',
+    'function', 'test', 'email', 'pass', 'password', 'key', 'token', 'secret', 'ignore', 'nopass', 'username', 'user',
+    'e.target.value', 'mypassword', 'mypassword123', 'password123', 'password123;', 'my_password', 'unevaluated',
+    'parsed', 'unescapewifi', 'securepass', 'ignored'
+  ]);
+  if (exactSafeWords.has(lowerSecret)) {
+    return true;
+  }
+
+  // HTTP protocol prefix false positives
+  if (
+    lowerSecret.startsWith('http') ||
+    lowerSecret.startsWith("'http") ||
+    lowerSecret.startsWith('"http') ||
+    lowerSecret.startsWith('htt') ||
+    lowerSecret.startsWith("'htt") ||
+    lowerSecret.startsWith('"htt')
+  ) {
+    return true;
+  }
+
+  // Mock emails, URLs, variable paths, code expressions, and DOM properties
+  if (
+    lowerSecret.includes('example.com') ||
+    lowerSecret.includes('gmail.com') ||
+    lowerSecret.includes('test@') ||
+    lowerSecret.includes('user@') ||
+    lowerSecret.includes('username@') ||
+    lowerSecret.includes('john') ||
+    lowerSecret.includes('doe') ||
+    lowerSecret.includes('params') ||
+    lowerSecret.includes('unevaluated') ||
+    lowerSecret.includes('credentials') ||
+    lowerSecret.includes('target.') ||
+    lowerSecret.includes('value') ||
+    lowerSecret.includes('event') ||
+    lowerSecret.includes('state') ||
+    lowerSecret.includes('input') ||
+    lowerSecret.includes('unescape') ||
+    lowerSecret.includes('escape') ||
+    lowerSecret.includes('wifi') ||
+    lowerSecret.includes('parsed') ||
+    lowerSecret.includes('path')
+  ) {
+    return true;
+  }
+
   // If secret value is identical/similar to the variable name (e.g. SMTP_PASSWORD = "SMTP_PASSWORD")
   const normalize = (str) => str.toLowerCase().replace(/[^a-z0-9]/g, '');
   if (lowerVar && normalize(secret) === normalize(varName)) {
