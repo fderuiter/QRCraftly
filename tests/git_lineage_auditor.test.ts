@@ -342,6 +342,67 @@ describe('Local Git-Diff Lineage Auditor', () => {
       expect(exitCode).toBeNull(); // passes!
     });
 
+    it('should run in CI and gracefully fall back to two-dot diff if three-dot diff fails', () => {
+      let exitCode = null;
+      let usedTwoDotFallback = false;
+      let fetchedBaseBranch = false;
+      const mockOptions = {
+        env: { CI: 'true', GITHUB_BASE_REF: 'feature-branch' },
+        argv: ['node', 'scripts/git_lineage_auditor.js'],
+        execSync: (file, args) => {
+          const argStr = args.join(' ');
+          if (file === 'git' && argStr === 'fetch origin feature-branch:refs/remotes/origin/feature-branch --depth=1') {
+            fetchedBaseBranch = true;
+            return '';
+          }
+          if (file === 'git' && argStr === 'diff --name-only origin/feature-branch...HEAD') {
+            throw new Error('Ref not found / shallow clone');
+          }
+          if (file === 'git' && argStr === 'diff --name-only origin/feature-branch HEAD') {
+            usedTwoDotFallback = true;
+            return 'src/utils/sharedContract.ts\ndocs/public/SCALING.md';
+          }
+          throw new Error(`Unexpected command: ${file} ${argStr}`);
+        },
+        existsSync: () => true,
+        exit: (code) => { exitCode = code; }
+      };
+
+      runAuditor(mockOptions);
+      expect(fetchedBaseBranch).toBe(true);
+      expect(usedTwoDotFallback).toBe(true);
+      expect(exitCode).toBeNull(); // passes because both sharedContract.ts and SCALING.md are modified
+    });
+
+    it('should run in CI and handle fetch failure gracefully during target branch comparison', () => {
+      let exitCode = null;
+      let fetchAttempted = false;
+      const mockOptions = {
+        env: { CI: 'true' },
+        argv: ['node', 'scripts/git_lineage_auditor.js'],
+        execSync: (file, args) => {
+          const argStr = args.join(' ');
+          if (file === 'git' && argStr === 'fetch origin main:refs/remotes/origin/main --depth=1') {
+            fetchAttempted = true;
+            throw new Error('Network offline or git fetch disallowed');
+          }
+          if (file === 'git' && argStr === 'fetch origin main --depth=1') {
+            return '';
+          }
+          if (file === 'git' && argStr === 'diff --name-only origin/main...HEAD') {
+            return 'src/utils/sharedContract.ts\ndocs/public/SCALING.md';
+          }
+          throw new Error(`Unexpected command: ${file} ${argStr}`);
+        },
+        existsSync: () => true,
+        exit: (code) => { exitCode = code; }
+      };
+
+      runAuditor(mockOptions);
+      expect(fetchAttempted).toBe(true);
+      expect(exitCode).toBeNull(); // passes because fetch error was ignored, and three-dot diff succeeded
+    });
+
     it('should run in CI and fail closed without fallback if target branch comparison fails', () => {
       let exitCode = null;
       let usedFallback = false;

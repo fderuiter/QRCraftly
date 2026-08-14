@@ -249,15 +249,21 @@ export function runAuditor(options = {}) {
       }
 
       console.log(`[Lineage Auditor] Attempting target branch comparison against: ${targetBranch}`);
+      const baseBranch = targetBranch.startsWith('origin/') ? targetBranch.substring(7) : targetBranch;
       try {
-        const baseBranchName = env.GITHUB_BASE_REF || 'main';
+        console.log(`[Lineage Auditor] Fetching target branch origin/${baseBranch} with depth 1...`);
+        // Use an explicit refspec to ensure the local tracking branch (e.g., origin/main) is created/updated.
+        customExecSync('git', ['fetch', 'origin', `${baseBranch}:refs/remotes/origin/${baseBranch}`, '--depth=1'], { encoding: 'utf8', cwd: repoRoot });
+      } catch (fetchErr) {
+        console.log(`[Lineage Auditor] Fetch with explicit refspec failed: ${fetchErr.message || fetchErr}. Trying standard fetch...`);
         try {
-          // Attempt to fetch the target branch from origin first to make sure it exists locally.
-          customExecSync('git', ['fetch', 'origin', baseBranchName, '--depth=1'], { stdio: 'ignore', cwd: repoRoot });
-        } catch (fetchErr) {
-          // Ignore fetch failures (e.g. offline, mock test environments, or missing origin)
+          customExecSync('git', ['fetch', 'origin', baseBranch, '--depth=1'], { encoding: 'utf8', cwd: repoRoot });
+        } catch (fetchErr2) {
+          console.log(`[Lineage Auditor] Standard fetch also failed: ${fetchErr2.message || fetchErr2}`);
         }
+      }
 
+      try {
         try {
           diffStdout = customExecSync('git', ['diff', '--name-only', `${targetBranch}...HEAD`], { encoding: 'utf8', cwd: repoRoot });
           console.log(`[Lineage Auditor] Successfully resolved files via target branch diff.`);

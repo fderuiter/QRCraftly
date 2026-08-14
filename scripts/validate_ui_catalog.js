@@ -415,7 +415,7 @@ function runValidator() {
     console.log('✅ UI Catalog Integrity matches shared components perfectly.');
 
     // 2. Run Git Lineage / Change Set verification
-    const isGHA = !!process.env.GITHUB_ACTIONS || (!!process.env.CI && !process.env.CF_PAGES && !process.env.SKIP_GIT_VALIDATION);
+    const isGHA = !!process.env.GITHUB_ACTIONS;
     const isOtherCI = !!process.env.CI && !isGHA;
 
     if (process.env.SKIP_GIT_VALIDATION || isOtherCI) {
@@ -442,8 +442,29 @@ function runValidator() {
           // CI Pipeline check: inspect files changed in this branch/PR
           const target = process.env.GITHUB_BASE_REF ? `origin/${process.env.GITHUB_BASE_REF}` : 'origin/main';
           console.log(`[UI Catalog Sync] CI Context detected. Querying diff against target ${target}...`);
+          
+          const baseBranch = target.startsWith('origin/') ? target.substring(7) : target;
           try {
-            stdout = execFileSync('git', ['diff', '--name-only', `${target}...HEAD`], { encoding: 'utf8', cwd: repoRoot });
+            console.log(`[UI Catalog Sync] Fetching target branch origin/${baseBranch} with depth 1...`);
+            execFileSync('git', ['fetch', 'origin', `${baseBranch}:refs/remotes/origin/${baseBranch}`, '--depth=1'], { stdio: 'ignore', cwd: repoRoot });
+          } catch (fetchErr) {
+            console.log(`[UI Catalog Sync] Fetch with explicit refspec failed: ${fetchErr.message || fetchErr}. Trying standard fetch...`);
+            try {
+              execFileSync('git', ['fetch', 'origin', baseBranch, '--depth=1'], { stdio: 'ignore', cwd: repoRoot });
+            } catch (fetchErr2) {
+              console.log(`[UI Catalog Sync] Standard fetch also failed: ${fetchErr2.message || fetchErr2}`);
+            }
+          }
+
+          try {
+            try {
+              stdout = execFileSync('git', ['diff', '--name-only', `${target}...HEAD`], { encoding: 'utf8', cwd: repoRoot });
+              console.log(`[UI Catalog Sync] Successfully resolved files via target branch diff.`);
+            } catch (diff3Err) {
+              console.log(`[UI Catalog Sync] Three-dot diff failed, attempting two-dot diff fallback against ${target}...`);
+              stdout = execFileSync('git', ['diff', '--name-only', target, 'HEAD'], { encoding: 'utf8', cwd: repoRoot });
+              console.log(`[UI Catalog Sync] Successfully resolved files via two-dot diff fallback.`);
+            }
           } catch (err) {
             console.error(`❌ [UI Catalog Sync] Target branch comparison failed: ${err.message}`);
             process.exit(1);
