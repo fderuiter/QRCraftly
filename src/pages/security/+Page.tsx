@@ -1,12 +1,14 @@
 import { ArrowLeft, ShieldCheck, ShieldAlert, FileText } from 'lucide-react';
 import { SanitizedHtml } from '@/components/ui/SanitizedHtml';
 import docsManifest from '../../data/docs_manifest.json';
+import { ProductShell } from '@/components/ProductShell';
 
 /**
  *
  */
 export default function Page() {
   return (
+    <ProductShell>
     <div className="mx-auto max-w-7xl px-4 py-12">
       <nav className="mb-8">
         <a
@@ -64,5 +66,6 @@ export default function Page() {
         </div>
       </section>
     </div>
+    </ProductShell>
   );
 }

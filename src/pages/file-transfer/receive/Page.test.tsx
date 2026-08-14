@@ -77,7 +77,7 @@ describe('File Transfer Receive Page & Pipeline', () => {
     );
 
     expect(screen.getByText('QRCraftly')).toBeInTheDocument();
-    expect(screen.getByText('High-Performance File Receiver')).toBeInTheDocument();
+    expect(screen.getByText('Receive a File by QR Code')).toBeInTheDocument();
     expect(screen.getByText('Ready to scan. Start an animated QR file transfer from the sender.')).toBeInTheDocument();
     
     // Check buttons
@@ -308,7 +308,7 @@ describe('File Transfer Receive Page & Pipeline', () => {
       expect(receiveSpy).toHaveBeenCalledTimes(1);
 
       // Reset the receiver state
-      const clearButton = screen.getByRole('button', { name: /reset all buffers/i });
+      const clearButton = screen.getByRole('button', { name: /clear transfer progress/i });
       await act(async () => {
         fireEvent.click(clearButton);
       });

@@ -32,6 +32,7 @@ import { useAnimatedQrSender } from '@/hooks/useAnimatedQrSender';
  * @returns The FileTransferToolInner component.
  */
 function FileTransferToolInner() {
+  const [isDraggingFile, setIsDraggingFile] = React.useState(false);
   const config = useQRStoreSelector(s => s.config);
   const store = useQRStore();
   const { isDarkMode, toggleDarkMode } = useTheme();
@@ -43,6 +44,7 @@ function FileTransferToolInner() {
   // Hook into the unified animated QR sender
   const {
     selectedFile,
+    setSelectedFile,
     isTransferring,
     progress,
     currentFrameIndex,
@@ -62,6 +64,33 @@ function FileTransferToolInner() {
     logoImg,
     borderLogoImg,
   });
+
+  const handleDragOver = (event: React.DragEvent<HTMLLabelElement>) => {
+    event.preventDefault();
+    if (!isTransferring) {
+      event.dataTransfer.dropEffect = 'copy';
+      setIsDraggingFile(true);
+    }
+  };
+
+  const handleDragLeave = (event: React.DragEvent<HTMLLabelElement>) => {
+    if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+      setIsDraggingFile(false);
+    }
+  };
+
+  const handleDrop = (event: React.DragEvent<HTMLLabelElement>) => {
+    event.preventDefault();
+    setIsDraggingFile(false);
+
+    if (isTransferring) return;
+
+    const file = event.dataTransfer.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      stopTransfer();
+    }
+  };
 
   return (
     <div className={`${isDarkMode ? 'dark' : ''} w-full`}>
@@ -108,7 +137,19 @@ function FileTransferToolInner() {
               </h2>
               
               <div className="flex flex-col gap-3">
-                <label className="flex h-24 w-full cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50/50 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950/20 dark:hover:bg-slate-950/40">
+                <label
+                  onDragEnter={handleDragOver}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  className={`flex h-24 w-full flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed transition-colors ${
+                    isTransferring
+                      ? 'cursor-not-allowed border-slate-200 bg-slate-50/50 opacity-60 dark:border-slate-800 dark:bg-slate-950/20'
+                      : isDraggingFile
+                        ? 'cursor-copy border-teal-500 bg-teal-50 dark:bg-teal-950/30'
+                        : 'cursor-pointer border-slate-200 bg-slate-50/50 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950/20 dark:hover:bg-slate-950/40'
+                  }`}
+                >
                   <FileUp className="size-6 text-slate-400" />
                   <span className="text-xs font-medium text-slate-600 dark:text-slate-400">
                     {selectedFile ? selectedFile.name : 'Choose file or drag & drop'}

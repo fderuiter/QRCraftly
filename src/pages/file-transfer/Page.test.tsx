@@ -143,6 +143,18 @@ describe('File Transfer Page & Pipeline', () => {
     expect(fpsSlider.value).toBe('30');
   });
 
+  it('selects a file dropped onto the file drop zone', () => {
+    render(<Page />);
+
+    const file = new File(['payload'], 'dropped.txt', { type: 'text/plain' });
+    const fileInput = screen.getByText('Choose file or drag & drop').closest('label');
+
+    expect(fileInput).not.toBeNull();
+    fireEvent.drop(fileInput!, { dataTransfer: { files: [file] } });
+
+    expect(screen.getAllByText('dropped.txt')).toHaveLength(2);
+  });
+
   it('simulates the 50MB high-load file and starts/stops transfer', async () => {
     render(<Page />);
 

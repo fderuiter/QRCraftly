@@ -17,6 +17,7 @@
 */
 
 import { usePageContext } from 'vike-react/usePageContext';
+import { ProductShell } from '@/components/ProductShell';
 
 /**
  * Error Page Component
@@ -30,7 +31,8 @@ export default function Page() {
   const is404 = (pageContext as any).is404;
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-slate-50 text-slate-700">
+    <ProductShell>
+    <div className="flex min-h-[60vh] flex-col items-center justify-center px-4 text-center text-slate-700 dark:text-slate-200">
       {is404 ? (
         <>
           <h1 className="mb-4 text-4xl font-bold">404 - Page Not Found</h1>
@@ -46,5 +48,6 @@ export default function Page() {
         Go Home
       </a>
     </div>
+    </ProductShell>
   );
 }
