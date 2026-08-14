@@ -6,7 +6,7 @@
     "directory": "./dist/client",
   },
   "build": {
-    "command": "export SKIP_GIT_VALIDATION=1 && node scripts/compile_docs_manifest.js && node node_modules/vite/bin/vite.js build && node scripts/generate_sw.cjs && node scripts/bundle_ast_audit.js && node node_modules/tsx/dist/cli.mjs scripts/generate_sitemap.ts && node scripts/csp_hash_injector.js && node scripts/generate_lhci_manifest.js && node scripts/patch_wrangler.js && node scripts/patch_github_action.js",
+    "command": "export SKIP_GIT_VALIDATION=1 && npm run build",
   },
   "observability": {
     "enabled": true,
