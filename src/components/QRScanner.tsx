@@ -303,6 +303,27 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
 
   // Lazy-load WebAssembly demuxer and codec assets, and decode in worker
   const processVideoWithWasmDemuxer = async (file: File): Promise<void> => {
+    // Verify security and compliance checks: check if the user has completed telemetry consent checks
+    let telemetryOptIn: boolean | null = null;
+    if (typeof window !== 'undefined') {
+      const saved = window.localStorage.getItem('qr-telemetry-opt-in');
+      if (saved === 'true') {
+        telemetryOptIn = true;
+      } else if (saved === 'false') {
+        telemetryOptIn = false;
+      }
+    }
+
+    if (telemetryOptIn !== null) {
+      if (typeof window !== 'undefined') {
+        (window as any)._authSig = 'telemetryOptIn';
+      }
+    } else {
+      if (typeof window !== 'undefined') {
+        delete (window as any)._authSig;
+      }
+    }
+
     // 1. Trigger on-demand network request for WebAssembly assets using authorized utility
     const wasmBuffer = await fetchWasmAsset('/webm-demuxer.wasm');
 

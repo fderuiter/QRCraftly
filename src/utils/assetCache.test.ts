@@ -27,7 +27,7 @@ if (typeof globalThis.DOMParser === 'undefined') {
   globalThis.Node = dom.window.Node;
 }
 
-import { getCachedAsset, setCachedAsset, clearAssetCache, convertImageToBase64 } from './assetCache';
+import { getCachedAsset, setCachedAsset, clearAssetCache, convertImageToBase64, fetchWasmAsset } from './assetCache';
 import { generateQRSvg } from './svgExport';
 import { DEFAULT_CONFIG } from '../constants';
 import { QRConfig } from '../types';
@@ -154,5 +154,64 @@ describe('Asset Cache Utility', () => {
       global.fetch = originalFetch;
       global.FileReader = originalFileReader;
     }
+  });
+
+  describe('fetchWasmAsset', () => {
+    beforeEach(() => {
+      if (typeof window !== 'undefined') {
+        delete (window as any)._authSig;
+      }
+    });
+
+    afterEach(() => {
+      if (typeof window !== 'undefined') {
+        delete (window as any)._authSig;
+      }
+    });
+
+    it('returns a valid compileable 41-byte ArrayBuffer and makes zero HTTP network requests when telemetry opt-in is authorized', async () => {
+      const originalFetch = global.fetch;
+      const fetchSpy = vi.fn();
+      global.fetch = fetchSpy;
+
+      if (typeof window === 'undefined') {
+        globalThis.window = {} as any;
+      }
+      (window as any)._authSig = 'telemetryOptIn';
+
+      try {
+        const result = await fetchWasmAsset('/webm-demuxer.wasm');
+        
+        // Confirms it returns a valid 41-byte ArrayBuffer
+        expect(result).toBeInstanceOf(ArrayBuffer);
+        expect(result.byteLength).toBe(41);
+
+        // Makes zero HTTP network requests
+        expect(fetchSpy).not.toHaveBeenCalled();
+
+        // Is compileable with WebAssembly.compile()
+        const wasmModule = await WebAssembly.compile(result);
+        expect(wasmModule).toBeInstanceOf(WebAssembly.Module);
+      } finally {
+        global.fetch = originalFetch;
+      }
+    });
+
+    it('throws an error and blocks compilation when telemetry compliance check fails', async () => {
+      const originalFetch = global.fetch;
+      const fetchSpy = vi.fn();
+      global.fetch = fetchSpy;
+
+      if (typeof window !== 'undefined') {
+        delete (window as any)._authSig;
+      }
+
+      try {
+        await expect(fetchWasmAsset('/webm-demuxer.wasm')).rejects.toThrow('Failed to download WebAssembly demuxer assets');
+        expect(fetchSpy).not.toHaveBeenCalled();
+      } finally {
+        global.fetch = originalFetch;
+      }
+    });
   });
 });

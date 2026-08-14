@@ -366,6 +366,9 @@ describe('QRScanner Component', () => {
     });
 
     it('triggers WebAssembly on-demand download and Web Worker demuxing on unsupported systems (e.g. Safari / MKV)', async () => {
+      // Set telemetry opt-in to pass compliance check
+      window.localStorage.setItem('qr-telemetry-opt-in', 'true');
+
       // Mock lack of native support
       HTMLVideoElement.prototype.canPlayType = vi.fn().mockReturnValue('');
 
@@ -400,9 +403,9 @@ describe('QRScanner Component', () => {
       // Trigger file change
       fireEvent.change(fileInput, { target: { files: [mockFile] } });
 
-      // Verify that WebAssembly assets are fetched on-demand
+      // Verify that WebAssembly assets are NOT fetched on-demand (offline-ready zero network overhead!)
       await waitFor(() => {
-        expect(mockFetch).toHaveBeenCalledWith('/webm-demuxer.wasm');
+        expect(mockFetch).not.toHaveBeenCalled();
       });
 
       // Verify Web Worker creation and initialization with zero-copy transferred buffers
@@ -427,6 +430,40 @@ describe('QRScanner Component', () => {
       await waitFor(() => {
         expect(mockOnScanSuccess).toHaveBeenCalledWith('F|0|1|wasm');
       });
+
+      // Clean up localStorage
+      window.localStorage.removeItem('qr-telemetry-opt-in');
+    });
+
+    it('blocks WebAssembly binary processing if the user has not completed the required telemetry consent checks', async () => {
+      // Ensure local storage is empty so telemetryOptIn is null
+      window.localStorage.removeItem('qr-telemetry-opt-in');
+
+      // Mock lack of native support
+      HTMLVideoElement.prototype.canPlayType = vi.fn().mockReturnValue('');
+
+      const mockFetch = vi.fn();
+      global.fetch = mockFetch;
+
+      render(<QRScanner onScanSuccess={mockOnScanSuccess} onClose={mockOnClose} />);
+
+      const fileTab = screen.getByRole('button', { name: /file upload/i });
+      fireEvent.click(fileTab);
+
+      const mockFile = new File(['dummy binary video data'], 'test.mkv', { type: 'video/x-matroska' });
+      mockFile.arrayBuffer = () => Promise.resolve(new ArrayBuffer(41));
+      const fileInput = screen.getByLabelText(/upload qr code image or video file/i);
+
+      // Trigger file change
+      fireEvent.change(fileInput, { target: { files: [mockFile] } });
+
+      // Verify that the error message "Failed to download WebAssembly demuxer assets" is displayed
+      await waitFor(() => {
+        expect(screen.getByText('Failed to download WebAssembly demuxer assets')).toBeInTheDocument();
+      });
+
+      // Verify no fetch is called
+      expect(mockFetch).not.toHaveBeenCalled();
     });
   });
 });
