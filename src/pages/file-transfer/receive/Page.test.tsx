@@ -60,6 +60,7 @@ describe('File Transfer Receive Page & Pipeline', () => {
   });
 
   afterEach(() => {
+    vi.unstubAllEnvs();
     Object.defineProperty(navigator, 'mediaDevices', {
       writable: true,
       configurable: true,
@@ -77,11 +78,25 @@ describe('File Transfer Receive Page & Pipeline', () => {
 
     expect(screen.getByText('QRCraftly')).toBeInTheDocument();
     expect(screen.getByText('High-Performance File Receiver')).toBeInTheDocument();
-    expect(screen.getByText('Ready to scan. Please stream or simulate an animated QR file transfer.')).toBeInTheDocument();
+    expect(screen.getByText('Ready to scan. Start an animated QR file transfer from the sender.')).toBeInTheDocument();
     
     // Check buttons
     expect(screen.getByRole('button', { name: /activate camera scanner/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /simulate out-of-order/i })).toBeInTheDocument();
+  });
+
+  it('does not expose simulation or security-testing controls in production', () => {
+    vi.stubEnv('PROD', true);
+    render(
+      <ToastProvider>
+        <Page />
+      </ToastProvider>
+    );
+
+    expect(screen.queryByText('Simulation & Validation Testing')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /simulate out-of-order/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /simulate dangerous scheme/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /simulate split threat/i })).not.toBeInTheDocument();
   });
 
   it('can activate and deactivate the camera scanner', async () => {

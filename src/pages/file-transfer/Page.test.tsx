@@ -102,6 +102,7 @@ describe('File Transfer Page & Pipeline', () => {
 
   afterEach(() => {
     vi.clearAllMocks();
+    vi.unstubAllEnvs();
     if (globalThis.mockWorkerControl) {
       globalThis.mockWorkerControl.reset();
     }
@@ -120,6 +121,13 @@ describe('File Transfer Page & Pipeline', () => {
     // Canvas exists
     const canvas = screen.getByRole('img', { name: /stream/i });
     expect(canvas).toBeInTheDocument();
+  });
+
+  it('does not expose the high-load simulation control in production', () => {
+    vi.stubEnv('PROD', true);
+    render(<Page />);
+
+    expect(screen.queryByRole('button', { name: /simulate 50mb/i })).not.toBeInTheDocument();
   });
 
   it('allows adjusting stream swap rate (FPS) slider controls', async () => {

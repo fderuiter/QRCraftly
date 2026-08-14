@@ -121,15 +121,17 @@ function FileTransferToolInner() {
                   />
                 </label>
 
-                <Button
-                  variant="outline"
-                  onClick={simulate50MBFile}
-                  disabled={isTransferring}
-                  className="w-full text-xs"
-                >
-                  <Cpu className="size-4" />
-                  Simulate 50MB High-Load File
-                </Button>
+                {!import.meta.env.PROD && (
+                  <Button
+                    variant="outline"
+                    onClick={simulate50MBFile}
+                    disabled={isTransferring}
+                    className="w-full text-xs"
+                  >
+                    <Cpu className="size-4" />
+                    Simulate 50MB High-Load File
+                  </Button>
+                )}
               </div>
 
               {selectedFile && (

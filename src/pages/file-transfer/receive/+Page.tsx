@@ -292,47 +292,51 @@ function FileTransferReceiveInner() {
                 </div>
               ) : (
                 <div className="rounded-xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-400 dark:border-slate-800">
-                  Ready to scan. Please stream or simulate an animated QR file transfer.
+                  Ready to scan. Start an animated QR file transfer from the sender.
                 </div>
               )}
             </section>
 
-            <div className="h-px bg-slate-100 dark:bg-slate-800" />
+            {!import.meta.env.PROD && (
+              <>
+                <div className="h-px bg-slate-100 dark:bg-slate-800" />
 
-            {/* Quick Testing Simulation Controls */}
-            <section className="space-y-4">
-              <h2 className="flex items-center gap-2 text-xs font-bold tracking-wider text-slate-600 uppercase dark:text-slate-400">
-                <Cpu className="size-4 text-teal-600" />
-                3. Simulation & Validation Testing
-              </h2>
+                {/* Quick Testing Simulation Controls */}
+                <section className="space-y-4">
+                  <h2 className="flex items-center gap-2 text-xs font-bold tracking-wider text-slate-600 uppercase dark:text-slate-400">
+                    <Cpu className="size-4 text-teal-600" />
+                    3. Simulation & Validation Testing
+                  </h2>
 
-              <div className="grid grid-cols-1 gap-2">
-                <Button
-                  variant="outline"
-                  onClick={simulateOutOfOrder}
-                  className="justify-start text-left text-xs"
-                >
-                  <Activity className="mr-2 size-4 text-teal-600" />
-                  Simulate Out-of-Order (10 blocks)
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={simulateRestrictedSchema}
-                  className="justify-start text-left text-xs text-amber-600 dark:text-amber-400"
-                >
-                  <AlertTriangle className="mr-2 size-4" />
-                  Simulate Dangerous Scheme (javascript:)
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={simulateSplitRestricted}
-                  className="justify-start text-left text-xs text-red-600 dark:text-red-400"
-                >
-                  <AlertTriangle className="mr-2 size-4" />
-                  Simulate Split Threat (java + script:)
-                </Button>
-              </div>
-            </section>
+                  <div className="grid grid-cols-1 gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={simulateOutOfOrder}
+                      className="justify-start text-left text-xs"
+                    >
+                      <Activity className="mr-2 size-4 text-teal-600" />
+                      Simulate Out-of-Order (10 blocks)
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={simulateRestrictedSchema}
+                      className="justify-start text-left text-xs text-amber-600 dark:text-amber-400"
+                    >
+                      <AlertTriangle className="mr-2 size-4" />
+                      Simulate Dangerous Scheme (javascript:)
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={simulateSplitRestricted}
+                      className="justify-start text-left text-xs text-red-600 dark:text-red-400"
+                    >
+                      <AlertTriangle className="mr-2 size-4" />
+                      Simulate Split Threat (java + script:)
+                    </Button>
+                  </div>
+                </section>
+              </>
+            )}
 
           </div>
         </aside>
