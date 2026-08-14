@@ -6,6 +6,7 @@ describe('schemaGenerator', () => {
   const dummyContent: ToolContent = {
     id: 'wifi',
     name: 'WiFi QR Code Generator',
+    seoTitle: 'WiFi QR Code Generator | QRCraftly',
     description: 'Generate free wifi qr code',
     url: 'https://qrcraftly.com/wifi',
     features: ['WPA', 'WPA2'],
@@ -31,6 +32,7 @@ describe('schemaGenerator', () => {
   const aboutContent: ToolContent = {
     id: 'about',
     name: 'About QRCraftly',
+    seoTitle: 'About QRCraftly | QRCraftly',
     description: 'We are a secure QR code generator',
     url: 'https://qrcraftly.com/about',
     features: [],
@@ -141,6 +143,7 @@ describe('schemaGenerator', () => {
     const eventContent: ToolContent = {
       id: 'event-qr-code',
       name: 'Event QR',
+      seoTitle: 'Event QR | QRCraftly',
       description: 'Generate Event QR',
       url: 'https://qrcraftly.com/event-qr-code',
       features: [],
@@ -160,6 +163,7 @@ describe('schemaGenerator', () => {
     const locationContent: ToolContent = {
       id: 'location-qr-code',
       name: 'Location QR',
+      seoTitle: 'Location QR | QRCraftly',
       description: 'Generate Location QR',
       url: 'https://qrcraftly.com/location-qr-code',
       features: [],
@@ -177,6 +181,7 @@ describe('schemaGenerator', () => {
     const meetingContent: ToolContent = {
       id: 'meeting-qr-code',
       name: 'Meeting QR',
+      seoTitle: 'Meeting QR | QRCraftly',
       description: 'Generate Meeting QR',
       url: 'https://qrcraftly.com/meeting-qr-code',
       features: [],
@@ -194,6 +199,7 @@ describe('schemaGenerator', () => {
     const socialContent: ToolContent = {
       id: 'social-qr-code',
       name: 'Social QR',
+      seoTitle: 'Social QR | QRCraftly',
       description: 'Generate Social QR',
       url: 'https://qrcraftly.com/social-qr-code',
       features: [],
@@ -250,6 +256,7 @@ describe('schemaGenerator', () => {
     const wifiToolContent: ToolContent = {
       id: 'wifi-qr-code',
       name: 'WiFi QR Code Generator',
+      seoTitle: 'WiFi QR Code Generator | QRCraftly',
       description: 'wifi desc',
       url: 'https://qrcraftly.com/wifi-qr-code',
       features: [],

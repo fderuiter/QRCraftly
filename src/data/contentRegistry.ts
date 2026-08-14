@@ -52,7 +52,7 @@ export interface ToolContent {
   valueProposition: StrategicValueCategory;
 }
 
-export interface AuxiliaryContent {
+interface AuxiliaryContent {
   id: string;
   name: string;
   seoTitle: string;
@@ -555,7 +555,7 @@ export const contentRegistry: Record<string, ToolContent> = {
   }
 };
 
-export const auxiliaryRegistry: Record<string, AuxiliaryContent> = {
+const auxiliaryRegistry: Record<string, AuxiliaryContent> = {
   "audio-qr": {
     "id": "audio-qr",
     "name": "Audio QR & Acoustic Steganography",
@@ -594,7 +594,7 @@ export const auxiliaryRegistry: Record<string, AuxiliaryContent> = {
   }
 };
 
-export const getRegistryKeyForPath = (path: string): string => {
+const getRegistryKeyForPath = (path: string): string => {
   let cleanPath = getSanitizedPath(path);
   if (cleanPath !== "/" && cleanPath.endsWith("/")) {
     cleanPath = cleanPath.slice(0, -1);
