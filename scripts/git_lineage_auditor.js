@@ -250,8 +250,22 @@ export function runAuditor(options = {}) {
 
       console.log(`[Lineage Auditor] Attempting target branch comparison against: ${targetBranch}`);
       try {
-        diffStdout = customExecSync('git', ['diff', '--name-only', `${targetBranch}...HEAD`], { encoding: 'utf8', cwd: repoRoot });
-        console.log(`[Lineage Auditor] Successfully resolved files via target branch diff.`);
+        const baseBranchName = env.GITHUB_BASE_REF || 'main';
+        try {
+          // Attempt to fetch the target branch from origin first to make sure it exists locally.
+          customExecSync('git', ['fetch', 'origin', baseBranchName, '--depth=1'], { stdio: 'ignore', cwd: repoRoot });
+        } catch (fetchErr) {
+          // Ignore fetch failures (e.g. offline, mock test environments, or missing origin)
+        }
+
+        try {
+          diffStdout = customExecSync('git', ['diff', '--name-only', `${targetBranch}...HEAD`], { encoding: 'utf8', cwd: repoRoot });
+          console.log(`[Lineage Auditor] Successfully resolved files via target branch diff.`);
+        } catch (diff3Err) {
+          console.log(`[Lineage Auditor] Three-dot diff failed, attempting two-dot diff fallback against ${targetBranch}...`);
+          diffStdout = customExecSync('git', ['diff', '--name-only', targetBranch, 'HEAD'], { encoding: 'utf8', cwd: repoRoot });
+          console.log(`[Lineage Auditor] Successfully resolved files via target branch two-dot diff fallback.`);
+        }
       } catch (err) {
         console.error(`❌ [Lineage Auditor] Target branch comparison failed: ${err.message}`);
         console.error('❌ [Lineage Auditor] Failed closed in CI environment due to git comparison failure.');
