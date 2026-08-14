@@ -9,7 +9,7 @@ const repoRoot = path.join(__dirname, '..');
 
 function getGitStatus() {
   try {
-    return execSync('git status --porcelain --ignored', { encoding: 'utf8', cwd: repoRoot });
+    return execSync('git status --porcelain --ignored', { stdio: ['ignore', 'pipe', 'ignore'], encoding: 'utf8', cwd: repoRoot });
   } catch (err) {
     return 'No git status';
   }
