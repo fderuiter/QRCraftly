@@ -285,6 +285,11 @@ jobs:
     name: Deploy
     needs: [static-validation, test, e2e, build]
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && startsWith(github.event.head_commit.message, 'Revert'))
+    permissions:
+      attestations: write
+      contents: write
+      deployments: write
+      id-token: write
     concurrency:
       group: production-deployment
       cancel-in-progress: false
@@ -293,5 +298,4 @@ jobs:
       version_bump: ${{ github.event.inputs.version_bump || '' }}
       is_rollback: ${{ github.event_name == 'push' && startsWith(github.event.head_commit.message, 'Revert') }}
     secrets: inherit
-
 
