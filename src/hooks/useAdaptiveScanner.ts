@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { isValidScannerResponse } from '../utils/scannerContract';
 import { getSharedScannerWorker, terminateSharedScannerWorker } from '../utils/sharedScannerWorker';
+import { AdaptiveFrameScheduler } from '../utils/AdaptiveFrameScheduler';
 
 /**
  * Options for configuring the useAdaptiveScanner hook.
@@ -67,13 +68,12 @@ export interface UseAdaptiveScannerResult {
 /**
  * A custom React hook that coordinates off-thread web worker QR code decoding on camera stream frames,
  * tracking execution latency and implementing an adaptive backpressure-based sampling throttling loop.
- * @param options - Hook configuration options including video element ref and callbacks.
- * @param options.videoRef
- * @param options.onScanSuccess
- * @param options.onScanFail
- * @param options.minSamplingDelay
- * @param options.maxSamplingDelay
- * @returns The active state, current dynamic sampling delay, latency history, and control functions.
+ * @param root0
+ * @param root0.videoRef
+ * @param root0.onScanSuccess
+ * @param root0.onScanFail
+ * @param root0.minSamplingDelay
+ * @param root0.maxSamplingDelay
  */
 export function useAdaptiveScanner({
   videoRef,
@@ -139,17 +139,7 @@ export function useAdaptiveScanner({
   }, [isScanning, isTestEnv]);
 
   const workerRef = useRef<Worker | null>(null);
-  const inFlightRef = useRef<boolean>(false);
-  const sequenceRef = useRef<number>(0);
-  const completedSequenceRef = useRef<number>(0);
-
-  // Track start times of in-flight requests mapped by sequenceId
-  const startTimeMapRef = useRef<Map<number, number>>(new Map());
-  const latencyHistoryRef = useRef<number[]>([]);
-
-  // Watchdog & stability tracking refs
   const consecutiveRestartAttemptsRef = useRef<number>(0);
-  const inFlightStartRef = useRef<number | null>(null);
 
   const handleMessageRef = useRef<((e: MessageEvent) => void) | null>(null);
   const handleErrorRef = useRef<((err: any) => void) | null>(null);
@@ -162,6 +152,8 @@ export function useAdaptiveScanner({
     onScanSuccessRef.current = onScanSuccess;
     onScanFailRef.current = onScanFail;
   }, [onScanSuccess, onScanFail]);
+
+  const schedulerRef = useRef<AdaptiveFrameScheduler | null>(null);
 
   const recreateWorker = useCallback(() => {
     // 1. Stability guardrail: limit auto-restart attempts to a maximum of 3 consecutive retries
@@ -184,18 +176,16 @@ export function useAdaptiveScanner({
     terminateSharedScannerWorker();
     workerRef.current = null;
 
-    // 3. Clear/reset in-flight sequence tracking flags
-    inFlightRef.current = false;
-    inFlightStartRef.current = null;
-    startTimeMapRef.current.clear();
+    // 3. Clear/reset in-flight scheduler flags without triggering nested onWatchdogTriggered notifications
+    schedulerRef.current?.triggerRecovery(1500, false);
 
-    // 5. Create new worker
+    // 4. Create new worker
     if (typeof window === 'undefined') return;
     try {
       const worker = getSharedScannerWorker();
       workerRef.current = worker;
 
-      // 6. Re-attach listeners via delegating wrappers
+      // 5. Re-attach listeners via delegating wrappers
       const onMsg = (e: MessageEvent) => handleMessageRef.current?.(e);
       const onErr = (err: any) => handleErrorRef.current?.(err);
       const onMsgErr = (err: any) => handleMessageErrorRef.current?.(err);
@@ -213,6 +203,33 @@ export function useAdaptiveScanner({
     }
   }, []);
 
+  // Instantiate the decoupled AdaptiveFrameScheduler lazily inside callback helper to avoid useRef render access
+  const getScheduler = useCallback(() => {
+    if (schedulerRef.current === null) {
+      schedulerRef.current = new AdaptiveFrameScheduler({
+        minSamplingDelay,
+        maxSamplingDelay,
+        onStatusChange: (status) => updateScannerState({ status }),
+        onDelayChange: (delay) => updateScannerState({ samplingDelay: delay }),
+        onLatencyHistoryChange: (history) => updateScannerState({ latencyHistory: history }),
+        onScanSuccess: (data) => {
+          if (onScanSuccessRef.current) {
+            onScanSuccessRef.current(data);
+          }
+        },
+        onScanFail: (error) => {
+          if (onScanFailRef.current) {
+            onScanFailRef.current(error);
+          }
+        },
+        onWatchdogTriggered: (_elapsed) => {
+          recreateWorker();
+        },
+      });
+    }
+    return schedulerRef.current;
+  }, [minSamplingDelay, maxSamplingDelay, updateScannerState, recreateWorker]);
+
   const handleMessage = useCallback((e: MessageEvent) => {
     const payload = e.data;
 
@@ -225,78 +242,10 @@ export function useAdaptiveScanner({
     // Reset consecutive restart attempts on a successful frame process/response
     consecutiveRestartAttemptsRef.current = 0;
 
-    const { status: resultStatus, sequenceId, decodedData, error } = payload;
+    const { status: resultStatus, sequenceId, decodedData, error, buffer } = payload;
 
-    // Catch STALE_FRAME immediately from the background worker
-    if (error === 'STALE_FRAME') {
-      // Clear state for the dropped frame
-      startTimeMapRef.current.delete(sequenceId);
-
-      if (sequenceId > completedSequenceRef.current) {
-        completedSequenceRef.current = sequenceId;
-        // Release the in-flight block to allow next frame dispatches
-        inFlightRef.current = false;
-        inFlightStartRef.current = null;
-      }
-
-      // Skip public status updates, user error callbacks, and latency calculations
-      return;
-    }
-
-    const startTime = startTimeMapRef.current.get(sequenceId);
-    if (startTime !== undefined) {
-      startTimeMapRef.current.delete(sequenceId);
-      const endTime = performance.now();
-      const duration = endTime - startTime;
-
-      // Requirement 5: Discard out-of-order older worker results
-      if (sequenceId <= completedSequenceRef.current) {
-        // Releases backpressure for this discarded request is handled when the current in-flight completes
-        return;
-      }
-      completedSequenceRef.current = sequenceId;
-
-      // Keep rolling latency history (last three cycles)
-      const updatedHistory = [...latencyHistoryRef.current, duration];
-      if (updatedHistory.length > 3) {
-        updatedHistory.shift();
-      }
-      latencyHistoryRef.current = updatedHistory;
-
-      if (resultStatus === 'pass') {
-        if (decodedData && onScanSuccessRef.current) {
-          onScanSuccessRef.current(decodedData);
-        }
-      } else if (resultStatus === 'fail') {
-        if (onScanFailRef.current) {
-          onScanFailRef.current(error || undefined);
-        }
-      }
-
-      // Dynamic Throttling / Throttling Logic (Requirement 3 / Acceptance Criteria)
-      const avgDuration = updatedHistory.reduce((a, b) => a + b, 0) / updatedHistory.length;
-      const latencyMetric = Math.max(duration, avgDuration);
-      let nextDelay = samplingDelayRef.current;
-
-      if (latencyMetric > 100) {
-        // Scale down: increase sampling delay (slower capture rate)
-        nextDelay = Math.min(maxSamplingDelay, Math.max(samplingDelayRef.current + 50, latencyMetric * 1.5));
-      } else if (latencyMetric < 40) {
-        // Scale up: decrease sampling delay (faster capture rate)
-        nextDelay = Math.max(minSamplingDelay, samplingDelayRef.current - 10);
-      }
-
-      updateScannerState({
-        status: resultStatus,
-        latencyHistory: updatedHistory,
-        samplingDelay: nextDelay,
-      });
-
-      // Release the in-flight block to allow next frame dispatches
-      inFlightRef.current = false;
-      inFlightStartRef.current = null;
-    }
-  }, [minSamplingDelay, maxSamplingDelay, updateScannerState]);
+    getScheduler().endFrame(sequenceId, resultStatus, decodedData, error, buffer);
+  }, [getScheduler]);
 
   const handleError = useCallback((err: any) => {
     console.error('Worker thread-level runtime boundary error:', err);
@@ -308,7 +257,7 @@ export function useAdaptiveScanner({
     recreateWorker();
   }, [recreateWorker]);
 
-  // Update refs to point to the latest callback versions in an effect (not during render)
+  // Update refs to point to the latest callback versions in an effect
   useEffect(() => {
     handleMessageRef.current = handleMessage;
     handleErrorRef.current = handleError;
@@ -352,9 +301,16 @@ export function useAdaptiveScanner({
     };
   }, []);
 
-  const captureFrame = useCallback(() => {
+  const captureFrame = useCallback((force = false) => {
     const video = videoRef.current;
     if (!video) return false;
+    const scheduler = getScheduler();
+    if (!scheduler) return false;
+
+    // Strict backpressure lock checked directly at capture trigger
+    if (!force && scheduler.getInFlight()) {
+      return false;
+    }
 
     try {
       let width = video.videoWidth || 640;
@@ -370,23 +326,18 @@ export function useAdaptiveScanner({
         height = Math.round(height * scale);
       }
 
+      const seqId = scheduler.beginFrame(force);
+      if (seqId === null) {
+        return false;
+      }
+
       // Capture video frame as non-blocking image bitmap resource on the main thread
-      // instead of drawing them to a main-thread canvas
       createImageBitmap(video, {
         resizeWidth: width,
         resizeHeight: height,
         resizeQuality: 'low',
       }).then((image) => {
-        // Increment sequence and track start time
-        sequenceRef.current += 1;
-        const seqId = sequenceRef.current;
-
-        inFlightRef.current = true;
-        inFlightStartRef.current = performance.now();
-        startTimeMapRef.current.set(seqId, performance.now());
-        updateScannerState({ status: 'checking' });
-
-        // Transfer captured image resource directly to the background Web Worker using zero-copy serialization mechanisms
+        // Transfer captured image resource directly to the background Web Worker
         workerRef.current?.postMessage(
           {
             image,
@@ -398,13 +349,14 @@ export function useAdaptiveScanner({
         );
       }).catch((err) => {
         console.error('Failed to capture or dispatch camera frame:', err);
+        scheduler.endFrame(seqId, 'fail', null, 'CAPTURE_ERROR');
       });
       return true;
     } catch (err) {
       console.error('Failed to capture or dispatch camera frame:', err);
       return false;
     }
-  }, [videoRef, updateScannerState]);
+  }, [videoRef, getScheduler]);
 
   const listenersAttachedRef = useRef<{
     video: HTMLVideoElement;
@@ -440,11 +392,11 @@ export function useAdaptiveScanner({
     }
 
     const onPause = () => {
-      captureFrame();
+      captureFrame(true);
     };
 
     const onSeeked = () => {
-      captureFrame();
+      captureFrame(true);
     };
 
     const onPlay = () => {
@@ -452,7 +404,7 @@ export function useAdaptiveScanner({
     };
 
     const onLoadedData = () => {
-      captureFrame();
+      captureFrame(true);
     };
 
     video.addEventListener('pause', onPause);
@@ -474,7 +426,7 @@ export function useAdaptiveScanner({
   useEffect(() => {
     if (!isScanning) {
       updateScannerState({ status: 'idle' });
-      // Immediately flush state updates when scanning stops so that the UI resets instantly
+      // Immediately flush state updates when scanning stops
       if (!isTestEnv) {
         setStatus(internalStatusRef.current);
         setSamplingDelay(samplingDelayRef.current);
@@ -516,8 +468,7 @@ export function useAdaptiveScanner({
 
           if (video.paused || video.ended) {
             // Capture the initial/current frame immediately on pause/load
-            captureFrame();
-            // Continuous looping animation frame scheduler remains asleep when paused.
+            captureFrame(true);
             isLoopRunning = false;
             return;
           }
@@ -535,16 +486,11 @@ export function useAdaptiveScanner({
           }
         }
 
-        // Requirement 2 / Constraint: Block new frame dispatches while in-flight
-        if (inFlightRef.current) {
-          if (inFlightStartRef.current) {
-            const elapsed = performance.now() - inFlightStartRef.current;
-            if (elapsed > 1500) {
-              console.warn(`Watchdog: Worker starvation detected (${elapsed.toFixed(0)}ms > 1500ms). Recreating worker.`);
-              recreateWorker();
-            }
-          }
-          if (inFlightRef.current) {
+        // Apply strict Backpressure Lock and Starvation Watchdog
+        const scheduler = getScheduler();
+        if (scheduler?.getInFlight()) {
+          scheduler.checkWatchdog();
+          if (scheduler.getInFlight()) {
             isLoopRunning = true;
             timerId = setTimeout(() => {
               rafId = requestAnimationFrame(runLoop);
@@ -553,7 +499,7 @@ export function useAdaptiveScanner({
           }
         }
 
-        // Requirement 6: Wrap actual pixel acquisition in idle browser periods to keep active UI highly responsive
+        // Wrap actual pixel acquisition in idle browser periods to keep rendering thread extremely responsive
         const acquireAndDispatch = () => {
           if (!active) return;
 
@@ -585,24 +531,19 @@ export function useAdaptiveScanner({
       if (rafId) cancelAnimationFrame(rafId);
       detachVideoListeners();
     };
-  }, [isScanning, videoRef, captureFrame, attachVideoListeners, detachVideoListeners, recreateWorker, isTestEnv, updateScannerState]);
+  }, [isScanning, videoRef, captureFrame, attachVideoListeners, detachVideoListeners, isTestEnv, updateScannerState, getScheduler]);
 
   const startScanning = useCallback(() => {
     setIsScanning(true);
     consecutiveRestartAttemptsRef.current = 0;
-    // Reset state counters when restarting
-    inFlightRef.current = false;
-    inFlightStartRef.current = null;
-    sequenceRef.current = 0;
-    completedSequenceRef.current = 0;
-    startTimeMapRef.current.clear();
-  }, []);
+    getScheduler().start();
+  }, [getScheduler]);
 
   const stopScanning = useCallback(() => {
     setIsScanning(false);
     consecutiveRestartAttemptsRef.current = 0;
-    inFlightStartRef.current = null;
-  }, []);
+    getScheduler().stop();
+  }, [getScheduler]);
 
   return {
     isScanning,
