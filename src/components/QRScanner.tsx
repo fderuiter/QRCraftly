@@ -8,6 +8,7 @@ import { useVideoPlayer } from '../hooks/useVideoPlayer';
 import { fetchWasmAsset } from '../utils/assetCache';
 import { getSharedScannerWorker } from '../utils/sharedScannerWorker';
 import { getDownscaledDimensions } from '../utils/scannerContract';
+import { AdaptiveFrameScheduler } from '../utils/AdaptiveFrameScheduler';
 
 /**
  * QRScannerProps definition.
@@ -81,21 +82,22 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
     },
   });
 
-  const fileSequenceRef = useRef<number>(1000000);
-
   const getWorker = () => {
     return getSharedScannerWorker();
   };
 
-  const decodeFrameOffThread = (buffer: ArrayBuffer, width: number, height: number): Promise<string | null> => {
+  const decodeFrameOffThread = (
+    buffer: ArrayBuffer,
+    width: number,
+    height: number,
+    seqId: number
+  ): Promise<{ decoded: string | null; buffer?: ArrayBuffer }> => {
     return new Promise((resolve) => {
       const worker = getWorker();
       if (!worker) {
-        resolve(null);
+        resolve({ decoded: null, buffer });
         return;
       }
-
-      const seqId = fileSequenceRef.current++;
 
       const handleMessage = (e: MessageEvent) => {
         const payload = e.data;
@@ -107,7 +109,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
             (worker as any).onmessage = null;
           }
           if (payload.status === 'pass' && payload.decodedData) {
-            resolve(payload.decodedData);
+            resolve({ decoded: payload.decodedData, buffer: payload.buffer });
           } else if (payload.success) {
             // Under tests where jsQR is mocked, we can simulate the jsQR call directly in test mode if the worker is a mock
             if (typeof globalThis !== 'undefined' && (globalThis as any).mockWorkerControl) {
@@ -115,15 +117,15 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
                 const jsQRfn = mod.default || mod;
                 const u8 = new Uint8ClampedArray(buffer);
                 const code = jsQRfn(u8, width, height);
-                resolve(code ? code.data : null);
+                resolve({ decoded: code ? code.data : null, buffer: payload.buffer });
               }).catch(() => {
-                resolve(null);
+                resolve({ decoded: null, buffer: payload.buffer });
               });
             } else {
-              resolve(null);
+              resolve({ decoded: null, buffer: payload.buffer });
             }
           } else {
-            resolve(null);
+            resolve({ decoded: null, buffer: payload.buffer });
           }
         }
       };
@@ -316,7 +318,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
   // Sequential native frame extraction using HTMLVideoElement
   const extractNativeFrames = (
     file: File,
-    onFrame: (imageData: ImageData) => Promise<void>
+    onFrame: (buffer: ArrayBuffer, width: number, height: number, seqId: number) => Promise<{ decoded: string | null; buffer?: ArrayBuffer }>
   ): Promise<void> => {
     return new Promise((resolve, reject) => {
       if (typeof window === 'undefined') {
@@ -378,8 +380,16 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
         const step = 1 / fps;
         let currentTime = 0;
 
+        // Create the scheduler to hold the DoubleBufferPool
+        const scheduler = new AdaptiveFrameScheduler();
+        scheduler.pool.resize(dWidth, dHeight);
+
+        let decodedQR: string | null = null;
+        let fileSequenceId = 1000000;
+
         const seekAndCapture = () => {
-          if (currentTime > duration) {
+          if (currentTime > duration || decodedQR) {
+            scheduler.stop();
             cleanUp();
             resolve();
             return;
@@ -388,10 +398,36 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
         };
 
         video.onseeked = async () => {
+          if (decodedQR) {
+            scheduler.stop();
+            cleanUp();
+            resolve();
+            return;
+          }
+
           try {
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            await onFrame(imageData);
+            ctx.drawImage(video, 0, 0, dWidth, dHeight);
+            const imageData = ctx.getImageData(0, 0, dWidth, dHeight);
+
+            // Acquire buffer from the pre-allocated double-buffering pool
+            const pooledBuffer = scheduler.pool.acquire();
+            const view = new Uint8ClampedArray(pooledBuffer);
+            view.set(imageData.data);
+
+            const seqId = fileSequenceId++;
+            const { decoded, buffer: recycledBuffer } = await onFrame(pooledBuffer, dWidth, dHeight, seqId);
+
+            if (recycledBuffer) {
+              scheduler.pool.release(recycledBuffer);
+            }
+
+            if (decoded) {
+              decodedQR = decoded;
+              scheduler.stop();
+              cleanUp();
+              resolve();
+              return;
+            }
           } catch (e) {
             console.error('Error drawing native video frame:', e);
           }
@@ -400,6 +436,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
         };
 
         video.onerror = () => {
+          scheduler.stop();
           cleanUp();
           reject(new Error('Failed to load video natively'));
         };
@@ -509,24 +546,23 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
         setFileProcessing(false);
 
         let decodedQR: string | null = null;
-        await extractNativeFrames(file, async (imageData) => {
+        await extractNativeFrames(file, async (buffer, width, height, seqId) => {
+          // Store the frame for interactive playback/scrubbing
           const imgCopy = new ImageData(
-            new Uint8ClampedArray(imageData.data),
-            imageData.width,
-            imageData.height
+            new Uint8ClampedArray(buffer.slice(0)),
+            width,
+            height
           );
           loadedFrames.push({ imageData: imgCopy });
           setVideoFrames([...loadedFrames]);
 
-          // Run automatic background scan on this frame too!
-          if (!decodedQR) {
-            const buffer = imageData.data.buffer.slice(0);
-            const decoded = await decodeFrameOffThread(buffer, imageData.width, imageData.height);
-            if (decoded) {
-              decodedQR = decoded;
-              onScanSuccess(decoded);
-            }
+          if (decodedQR) return { decoded: null, buffer };
+          const result = await decodeFrameOffThread(buffer, width, height, seqId);
+          if (result.decoded) {
+            decodedQR = result.decoded;
+            onScanSuccess(result.decoded);
           }
+          return result;
         });
       } else {
         await processVideoWithWasmDemuxer(file);

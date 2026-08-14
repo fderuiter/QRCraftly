@@ -432,6 +432,9 @@ describe('QRScanner Component', () => {
 
   describe('Unified Playback Scrubber Integration', () => {
     it('renders scrubber controls and responds to interactive seek, play/pause and step button clicks', async () => {
+      // Mock successful jsQR decoding to null so scrubber extracts multiple frames
+      vi.mocked(jsQR).mockReturnValue(null);
+
       // Mock native support
       HTMLVideoElement.prototype.canPlayType = vi.fn().mockReturnValue('probably');
 

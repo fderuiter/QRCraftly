@@ -27,7 +27,7 @@ if (typeof globalThis.DOMParser === 'undefined') {
   globalThis.Node = dom.window.Node;
 }
 
-import { isDangerousUrl, safeJsonLdStringify, cleanPhoneNumber, sanitizeInput, validateImageUpload, sanitizeSvg } from './security';
+import { isDangerousUrl, sanitizeHref, safeJsonLdStringify, cleanPhoneNumber, sanitizeInput, validateImageUpload, sanitizeSvg, escapeHtml } from './security';
 
 describe('Security Utils', () => {
   describe('isDangerousUrl', () => {
@@ -93,6 +93,53 @@ describe('Security Utils', () => {
 
     it('returns false for undefined url', () => {
       expect(isDangerousUrl(undefined)).toBe(false);
+    });
+  });
+
+  describe('sanitizeHref', () => {
+    it('allows valid https URLs', () => {
+      expect(sanitizeHref('https://example.com/api/redirect')).toBe('https://example.com/api/redirect');
+    });
+
+    it('allows valid http URLs', () => {
+      expect(sanitizeHref('http://localhost:3000')).toBe('http://localhost:3000');
+    });
+
+    it('allows relative path URLs starting with /', () => {
+      expect(sanitizeHref('/api/redirect/123')).toBe('/api/redirect/123');
+    });
+
+    it('neutralizes javascript: URLs and returns #', () => {
+      expect(sanitizeHref('javascript:alert(1)')).toBe('#');
+    });
+
+    it('neutralizes data: URLs and returns #', () => {
+      expect(sanitizeHref('data:text/html,<html>')).toBe('#');
+    });
+
+    it('neutralizes undefined or null or empty string and returns #', () => {
+      expect(sanitizeHref(undefined)).toBe('#');
+      expect(sanitizeHref('')).toBe('#');
+    });
+
+    it('trims whitespace before checking', () => {
+      expect(sanitizeHref('   https://example.com ')).toBe('https://example.com');
+      expect(sanitizeHref(' \t javascript:alert(1) ')).toBe('#');
+    });
+
+    it('escapes HTML meta-characters in valid URLs', () => {
+      expect(sanitizeHref('https://example.com?a=1&b=2<script>')).toBe('https://example.com?a=1&amp;b=2&lt;script&gt;');
+    });
+  });
+
+  describe('escapeHtml', () => {
+    it('escapes ampersand, less than, greater than, double quote, and single quote', () => {
+      expect(escapeHtml('a & b < c > d " e \' f')).toBe('a &amp; b &lt; c &gt; d &quot; e &#39; f');
+    });
+
+    it('handles undefined and empty string', () => {
+      expect(escapeHtml(undefined)).toBe('');
+      expect(escapeHtml('')).toBe('');
     });
   });
 

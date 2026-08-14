@@ -547,5 +547,72 @@ describe('Local Git-Diff Lineage Auditor', () => {
       runAuditor(mockOptions);
       expect(exitCode).toBeNull();
     });
+
+    it('should retry after fetch and pass when origin/main ref initially missing', () => {
+      let exitCode = null;
+      let fetched = false;
+      let diffRetried = false;
+      const mockOptions = {
+        env: { CI: 'true' },
+        argv: ['node', 'scripts/git_lineage_auditor.js'],
+        execSync: (file, args) => {
+          const argStr = args.join(' ');
+          if (file === 'git' && argStr === 'diff --name-only origin/main...HEAD') {
+            if (!fetched) {
+              throw new Error('unknown revision or path not in the working tree');
+            }
+            diffRetried = true;
+            return 'src/utils/sharedContract.ts\ndocs/public/SCALING.md';
+          }
+          if (file === 'git' && argStr === 'fetch origin main:refs/remotes/origin/main') {
+            fetched = true;
+            return '';
+          }
+          throw new Error(`Unexpected command: ${file} ${argStr}`);
+        },
+        existsSync: () => true,
+        exit: (code) => { exitCode = code; }
+      };
+
+      runAuditor(mockOptions);
+      expect(fetched).toBe(true);
+      expect(diffRetried).toBe(true);
+      expect(exitCode).toBeNull();
+    });
+
+    it('should fall back to double-dot diff if triple-dot diff fails after fetch', () => {
+      let exitCode = null;
+      let fetched = false;
+      let doubleDotTried = false;
+      const mockOptions = {
+        env: { CI: 'true' },
+        argv: ['node', 'scripts/git_lineage_auditor.js'],
+        execSync: (file, args) => {
+          const argStr = args.join(' ');
+          if (file === 'git' && argStr === 'diff --name-only origin/main...HEAD') {
+            if (!fetched) {
+              throw new Error('unknown revision or path not in the working tree');
+            }
+            throw new Error('No common ancestor');
+          }
+          if (file === 'git' && argStr === 'fetch origin main:refs/remotes/origin/main') {
+            fetched = true;
+            return '';
+          }
+          if (file === 'git' && argStr === 'diff --name-only origin/main..HEAD') {
+            doubleDotTried = true;
+            return 'src/utils/sharedContract.ts\ndocs/public/SCALING.md';
+          }
+          throw new Error(`Unexpected command: ${file} ${argStr}`);
+        },
+        existsSync: () => true,
+        exit: (code) => { exitCode = code; }
+      };
+
+      runAuditor(mockOptions);
+      expect(fetched).toBe(true);
+      expect(doubleDotTried).toBe(true);
+      expect(exitCode).toBeNull();
+    });
   });
 });
