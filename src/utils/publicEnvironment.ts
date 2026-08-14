@@ -32,9 +32,14 @@ interface PublicEnvironment {
  * @returns The configured public domain, or the production domain by default.
  */
 export const getConfiguredPublicDomain = (environment?: PublicEnvironment): string => {
-  const viteDomain = environment
-    ? environment.viteDomain
-    : import.meta.env.VITE_DOMAIN;
+  let viteDomain = environment?.viteDomain;
+  if (!environment) {
+    try {
+      viteDomain = import.meta.env.VITE_DOMAIN;
+    } catch {
+      // Native Node runtimes expose import.meta without Vite's env object.
+    }
+  }
   const nodeProcess = environment
     ? environment.nodeProcess
     : typeof process !== 'undefined'
