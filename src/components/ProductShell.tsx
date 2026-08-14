@@ -8,12 +8,17 @@ const generatorLinks = [
   ['vCard', '/vcard-qr-code'],
 ] as const;
 
-/** Shared product chrome for informational and system pages. */
+/**
+ * Shared product chrome for informational and system pages.
+ * @param root0 - Component properties.
+ * @param root0.children - Page content displayed between the header and footer.
+ * @returns The page wrapped in QRCraftly product chrome.
+ */
 export function ProductShell({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-screen w-full flex-col bg-slate-50 dark:bg-slate-950">
       <header className="border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-6 px-4 py-4 sm:px-6">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-6 p-4 sm:px-6">
           <a href="/" aria-label="QRCraftly Home" className="flex items-center gap-2 text-teal-700 transition-opacity hover:opacity-80 dark:text-teal-400">
             <QrCode className="size-7" aria-hidden="true" />
             <span className="text-xl font-bold tracking-tight text-slate-800 dark:text-slate-100">QRCraftly</span>

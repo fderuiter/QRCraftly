@@ -77,9 +77,8 @@ export const TypeSelector: React.FC<TypeSelectorProps> = ({
     const isEnd = e.key === "End";
     const isSpace = e.key === " " || e.key === "Spacebar";
     const isEnter = e.key === "Enter";
-    const isTab = e.key === "Tab";
 
-    if (!isArrowLeft && !isArrowRight && !isHome && !isEnd && !isSpace && !isEnter && !isTab) {
+    if (!isArrowLeft && !isArrowRight && !isHome && !isEnd && !isSpace && !isEnter) {
       return;
     }
 
@@ -125,23 +124,6 @@ export const TypeSelector: React.FC<TypeSelectorProps> = ({
       }
     }
 
-    if (isTab && !e.shiftKey) {
-      const activePanel = document.querySelector('[role="tabpanel"]');
-      if (activePanel) {
-        const fields = Array.from(
-          activePanel.querySelectorAll<HTMLElement>(
-            'input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), a[href]:not([disabled])'
-          )
-        ).filter(el => {
-          return el.offsetWidth > 0 || el.offsetHeight > 0 || (el as any).style?.display !== 'none';
-        });
-        const firstField = fields[0];
-        if (firstField) {
-          e.preventDefault();
-          firstField.focus();
-        }
-      }
-    }
   };
 
   return (
