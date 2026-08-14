@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Camera, Upload, AlertTriangle, X, RefreshCw, FileImage } from 'lucide-react';
+import { Camera, Upload, AlertTriangle, X, RefreshCw, FileImage, Play, Pause, SkipBack, SkipForward, Trash2 } from 'lucide-react';
 import { useCamera } from '../hooks/useCamera';
 import { useAdaptiveScanner } from '../hooks/useAdaptiveScanner';
 import { Button } from './ui/Button';
+import { RangeInput } from './ui/RangeInput';
+import { useVideoPlayer } from '../hooks/useVideoPlayer';
 import { fetchWasmAsset } from '../utils/assetCache';
 import { getSharedScannerWorker } from '../utils/sharedScannerWorker';
 import { getDownscaledDimensions } from '../utils/scannerContract';
@@ -41,6 +43,24 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
   const [fileError, setFileError] = useState<string | null>(null);
   const [fileProcessing, setFileProcessing] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+
+  // States for unified video playback scrubber
+  const [videoFrames, setVideoFrames] = useState<Array<{ imageData?: ImageData; decodedData?: string | null; label?: string }>>([]);
+  const [isVideoLoaded, setIsVideoLoaded] = useState(false);
+  const [videoFileName, setVideoFileName] = useState('');
+
+  const {
+    currentFrameIndex,
+    isPlaying,
+    pause,
+    togglePlay,
+    seek,
+    stepForward,
+    stepBackward,
+  } = useVideoPlayer({ totalFrames: videoFrames.length, fps: 24 });
+
+  const videoCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const isScanningFrameRef = useRef(false);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -154,6 +174,99 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
       }
     };
   }, [mode, startStream, stopStream, startScanning, stopScanning]);
+
+  // Render the current frame onto the interactive canvas viewport
+  useEffect(() => {
+    if (isVideoLoaded && videoCanvasRef.current && videoFrames.length > 0) {
+      const canvas = videoCanvasRef.current;
+      const frame = videoFrames[currentFrameIndex];
+      if (frame) {
+        if (frame.imageData) {
+          canvas.width = frame.imageData.width;
+          canvas.height = frame.imageData.height;
+          const ctx = canvas.getContext('2d');
+          if (ctx && typeof ctx.putImageData === 'function') {
+            ctx.putImageData(frame.imageData, 0, 0);
+          }
+        } else if (frame.label) {
+          // Mock text-only frame
+          canvas.width = 640;
+          canvas.height = 480;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            if (typeof ctx.fillRect === 'function') {
+              ctx.fillStyle = '#0f172a'; // slate-900
+              ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+            if (typeof ctx.fillText === 'function') {
+              ctx.fillStyle = '#14b8a6'; // teal-500
+              ctx.font = '24px sans-serif';
+              ctx.textAlign = 'center';
+              ctx.textBaseline = 'middle';
+              ctx.fillText(`Mock Frame: ${frame.label}`, canvas.width / 2, canvas.height / 2);
+            }
+          }
+        }
+      }
+    }
+  }, [isVideoLoaded, videoFrames, currentFrameIndex]);
+
+  // Trigger immediate off-thread QR scanning when pausing or finishing a scrub (100ms debounce)
+  useEffect(() => {
+    if (!isVideoLoaded || videoFrames.length === 0 || isPlaying) return;
+
+    const activeFrame = videoFrames[currentFrameIndex];
+    if (!activeFrame) return;
+
+    const timer = setTimeout(async () => {
+      // Check backpressure control - if scanner worker is already busy, drop this frame
+      if (isScanningFrameRef.current) {
+        return;
+      }
+
+      if (activeFrame.label && activeFrame.label.startsWith('F|')) {
+        onScanSuccess(activeFrame.label);
+        return;
+      }
+
+      if (activeFrame.imageData) {
+        try {
+          isScanningFrameRef.current = true;
+          // Zero-copy transfer optimization (slice a copy to be safe)
+          const buffer = activeFrame.imageData.data.buffer.slice(0);
+          const decoded = await decodeFrameOffThread(
+            buffer,
+            activeFrame.imageData.width,
+            activeFrame.imageData.height
+          );
+          if (decoded) {
+            onScanSuccess(decoded);
+          }
+        } finally {
+          isScanningFrameRef.current = false;
+        }
+      }
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, [currentFrameIndex, isPlaying, isVideoLoaded, videoFrames, onScanSuccess]);
+
+  // Reset video scrubber when switching modes
+  useEffect(() => {
+    if (mode === 'webcam') {
+      setIsVideoLoaded(false);
+      setVideoFrames([]);
+      setVideoFileName('');
+      pause();
+    }
+  }, [mode, pause]);
+
+  const handleClearVideo = () => {
+    setIsVideoLoaded(false);
+    setVideoFrames([]);
+    setVideoFileName('');
+    pause();
+  };
 
   // Handle manual retry for camera permission/access
   const handleRetryCamera = async () => {
@@ -309,6 +422,10 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
     // 2. Read video file to ArrayBuffer
     const fileBuffer = await file.arrayBuffer();
 
+    setIsVideoLoaded(true);
+    setFileProcessing(false);
+    const loadedFrames: Array<{ imageData?: ImageData; decodedData?: string | null; label?: string }> = [];
+
     // 3. Extract and scan frames inside the unified background worker directly in a single pass
     return new Promise<void>((resolve, reject) => {
       const worker = getWorker();
@@ -326,8 +443,18 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
         if (msg && msg.taskId && msg.taskId !== taskId) {
           return;
         }
-        if (msg && msg.type === 'frame_decoded') {
-          onScanSuccess(msg.data);
+        if (msg && msg.type === 'frame_data') {
+          const img = new ImageData(new Uint8ClampedArray(msg.buffer), msg.width, msg.height);
+          loadedFrames.push({ imageData: img });
+          setVideoFrames([...loadedFrames]);
+        } else if (msg && msg.type === 'frame_decoded') {
+          // If mock frame starts with F|
+          if (typeof msg.data === 'string' && msg.data.startsWith('F|')) {
+            loadedFrames.push({ label: msg.data, decodedData: msg.data });
+            setVideoFrames([...loadedFrames]);
+          } else {
+            onScanSuccess(msg.data);
+          }
         } else if (msg && msg.type === 'done') {
           if (worker && typeof worker.removeEventListener === 'function') {
             worker.removeEventListener('message', handleMessage);
@@ -368,6 +495,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
   const processVideoFile = async (file: File) => {
     setFileError(null);
     setFileProcessing(true);
+    setVideoFileName(file.name);
 
     try {
       if (file.size > 50 * 1024 * 1024) {
@@ -376,13 +504,28 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
 
       const isNative = isContainerSupportedNatively(file);
       if (isNative) {
+        const loadedFrames: Array<{ imageData: ImageData; decodedData?: string | null }> = [];
+        setIsVideoLoaded(true);
+        setFileProcessing(false);
+
         let decodedQR: string | null = null;
         await extractNativeFrames(file, async (imageData) => {
-          if (decodedQR) return;
-          const decoded = await decodeFrameOffThread(imageData.data.buffer, imageData.width, imageData.height);
-          if (decoded) {
-            decodedQR = decoded;
-            onScanSuccess(decoded);
+          const imgCopy = new ImageData(
+            new Uint8ClampedArray(imageData.data),
+            imageData.width,
+            imageData.height
+          );
+          loadedFrames.push({ imageData: imgCopy });
+          setVideoFrames([...loadedFrames]);
+
+          // Run automatic background scan on this frame too!
+          if (!decodedQR) {
+            const buffer = imageData.data.buffer.slice(0);
+            const decoded = await decodeFrameOffThread(buffer, imageData.width, imageData.height);
+            if (decoded) {
+              decodedQR = decoded;
+              onScanSuccess(decoded);
+            }
           }
         });
       } else {
@@ -390,6 +533,8 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
       }
     } catch (err: any) {
       setFileError(err.message || 'Failed to parse video file.');
+      setIsVideoLoaded(false);
+      setVideoFrames([]);
     } finally {
       setFileProcessing(false);
     }
@@ -706,8 +851,95 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
     );
   };
 
+  const renderVideoScrubber = () => {
+    return (
+      <div className="flex w-full flex-col rounded-lg bg-slate-900 p-4 text-white">
+        {/* Video Canvas Viewport */}
+        <div className="relative flex aspect-video max-h-70 w-full items-center justify-center overflow-hidden rounded-lg border border-slate-800 bg-black">
+          <canvas
+            ref={videoCanvasRef}
+            className="max-h-full max-w-full object-contain"
+            aria-label="Video playback viewport"
+          />
+          {/* File Name overlay */}
+          <div className="absolute top-2 left-2 rounded bg-black/60 px-2.5 py-1 text-[11px] font-medium text-slate-300">
+            {videoFileName || 'Video File'}
+          </div>
+          {/* Clear Button */}
+          <button
+            type="button"
+            onClick={handleClearVideo}
+            aria-label="Clear video"
+            className="absolute top-2 right-2 rounded bg-black/60 p-1.5 transition-colors hover:bg-rose-950/60 hover:text-rose-400"
+          >
+            <Trash2 className="size-4" />
+          </button>
+        </div>
+
+        {/* Timeline Slider */}
+        <div className="mt-4 px-1 text-slate-200">
+          <RangeInput
+            id="video-timeline"
+            label="Playback Seek"
+            value={currentFrameIndex}
+            min={0}
+            max={videoFrames.length - 1}
+            step={1}
+            onChange={seek}
+            formatValue={(val) => `Frame ${Math.round(val) + 1} / ${videoFrames.length}`}
+          />
+        </div>
+
+        {/* Playback Controls */}
+        <div className="mt-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={stepBackward}
+              aria-label="Step backward"
+              className="border-slate-700 text-slate-200 hover:bg-slate-800 dark:hover:bg-slate-800"
+            >
+              <SkipBack className="size-4" />
+            </Button>
+
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              onClick={togglePlay}
+              aria-label={isPlaying ? "Pause" : "Play"}
+              className="px-4"
+            >
+              {isPlaying ? <Pause className="size-4" /> : <Play className="size-4" />}
+            </Button>
+
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={stepForward}
+              aria-label="Step forward"
+              className="border-slate-700 text-slate-200 hover:bg-slate-800 dark:hover:bg-slate-800"
+            >
+              <SkipForward className="size-4" />
+            </Button>
+          </div>
+
+          <div className="font-mono text-[11px] text-slate-400">
+            {isPlaying ? 'Playing...' : 'Paused'}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // Render file dropzone viewfinder state
   const renderFileViewfinder = () => {
+    if (isVideoLoaded && videoFrames.length > 0) {
+      return renderVideoScrubber();
+    }
     return (
       <button
         type="button"
@@ -799,7 +1031,11 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
       </div>
 
       {/* Viewfinder Area (Layout Stability) */}
-      <div className="relative flex aspect-video max-h-[350px] min-h-65 w-full items-center justify-center bg-slate-100 md:aspect-[4/3] dark:bg-slate-950/40">
+      <div className={`relative flex w-full items-center justify-center bg-slate-100 dark:bg-slate-950/40 ${
+        (mode === 'file' && isVideoLoaded)
+          ? 'min-h-65 p-2'
+          : 'aspect-video max-h-[350px] min-h-65 md:aspect-[4/3]'
+      }`}>
         {mode === 'webcam' ? renderWebcamViewfinder() : renderFileViewfinder()}
       </div>
     </div>

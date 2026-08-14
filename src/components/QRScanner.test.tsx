@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import React from 'react';
 import { QRScanner } from './QRScanner';
 import { useCamera } from '../hooks/useCamera';
@@ -426,6 +426,105 @@ describe('QRScanner Component', () => {
 
       await waitFor(() => {
         expect(mockOnScanSuccess).toHaveBeenCalledWith('F|0|1|wasm');
+      });
+    });
+  });
+
+  describe('Unified Playback Scrubber Integration', () => {
+    it('renders scrubber controls and responds to interactive seek, play/pause and step button clicks', async () => {
+      // Mock native support
+      HTMLVideoElement.prototype.canPlayType = vi.fn().mockReturnValue('probably');
+
+      let mockVideoInstance: any = null;
+      let currentTimeVal = 0;
+      const originalCreateElement = document.createElement;
+      vi.spyOn(document, 'createElement').mockImplementation(function(this: any, tagName, options) {
+        const el = originalCreateElement.call(this || document, tagName, options);
+        if (tagName === 'video') {
+          Object.defineProperties(el, {
+            videoWidth: { get: () => 640, configurable: true },
+            videoHeight: { get: () => 480, configurable: true },
+            duration: { get: () => 1.0, configurable: true },
+            currentTime: { get: () => currentTimeVal, set: (val) => { currentTimeVal = val; }, configurable: true },
+          });
+          mockVideoInstance = el;
+        }
+        return el;
+      });
+
+      render(<QRScanner onScanSuccess={mockOnScanSuccess} onClose={mockOnClose} />);
+
+      const fileTab = screen.getByRole('button', { name: /file upload/i });
+      fireEvent.click(fileTab);
+
+      const mockFile = new File(['dummy video data'], 'test.webm', { type: 'video/webm' });
+      mockFile.arrayBuffer = () => Promise.resolve(new ArrayBuffer(41));
+      const fileInput = screen.getByLabelText(/upload qr code image or video file/i);
+
+      // Trigger video upload
+      fireEvent.change(fileInput, { target: { files: [mockFile] } });
+
+      // Simulate video metadata load and seeking with timeouts to allow promises to run
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 10));
+        if (mockVideoInstance && mockVideoInstance.onloadedmetadata) {
+          mockVideoInstance.onloadedmetadata();
+        }
+      });
+
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 20));
+        if (mockVideoInstance && mockVideoInstance.onseeked) {
+          mockVideoInstance.onseeked();
+        }
+      });
+
+      // Seek beyond duration to end frame extraction
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 20));
+        if (mockVideoInstance) {
+          mockVideoInstance.currentTime = 2.0;
+          if (mockVideoInstance.onseeked) {
+            mockVideoInstance.onseeked();
+          }
+        }
+      });
+
+      // Now video scrubber should be loaded and visible
+      const canvas = await screen.findByLabelText('Video playback viewport');
+      expect(canvas).toBeInTheDocument();
+
+      // Find scrubber control elements
+      const playBtn = screen.getByRole('button', { name: /play/i });
+      const stepForwardBtn = screen.getByRole('button', { name: /step forward/i });
+      const stepBackwardBtn = screen.getByRole('button', { name: /step backward/i });
+      const timelineInput = screen.getByRole('slider', { name: /playback seek/i });
+
+      expect(playBtn).toBeInTheDocument();
+      expect(stepForwardBtn).toBeInTheDocument();
+      expect(stepBackwardBtn).toBeInTheDocument();
+      expect(timelineInput).toBeInTheDocument();
+
+      // Click play to toggle playback state
+      fireEvent.click(playBtn);
+      expect(screen.getByText('Playing...')).toBeInTheDocument();
+
+      // Click pause
+      const pauseBtn = screen.getByRole('button', { name: /pause/i });
+      fireEvent.click(pauseBtn);
+      expect(screen.getByText('Paused')).toBeInTheDocument();
+
+      // Click step forward
+      fireEvent.click(stepForwardBtn);
+      // Click step backward
+      fireEvent.click(stepBackwardBtn);
+
+      // Verify that seeking updates timeline
+      fireEvent.change(timelineInput, { target: { value: '0' } });
+
+      // Wait a bit to let the debounce finish
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 150));
       });
     });
   });

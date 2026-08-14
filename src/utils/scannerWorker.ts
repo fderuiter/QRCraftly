@@ -202,6 +202,16 @@ self.onmessage = async (e: MessageEvent<any>) => {
               const imageData = ctx.getImageData(0, 0, dWidth, dHeight);
               imageBitmap.close();
 
+              // Post frame data back to main thread for the interactive scrubber
+              const bufferCopy = imageData.data.buffer.slice(0);
+              (self as any).postMessage({
+                type: 'frame_data',
+                taskId,
+                width: dWidth,
+                height: dHeight,
+                buffer: bufferCopy,
+              }, [bufferCopy]);
+
               // Run scanner on the pixels with inverted fallback
               let code = jsQR(imageData.data, dWidth, dHeight, { inversionAttempts: 'dontInvert' });
               if (!code) {
