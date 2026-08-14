@@ -64,3 +64,9 @@ Maze overlay configurations in `types.ts` (e.g., `isMazeEnabled`, `mazeColor`, `
 ## JSON-LD Caching & Performance Security
 
 To prevent performance bottlenecks during client-side hydration and SPA navigation, the application caches serialized and escaped JSON-LD schema strings. Since JSON-LD requires synchronous regex replacement of unsafe characters (such as `<` and `>`), caching the computed string primitives protects the main thread from CPU-heavy operations while keeping cache keys lightweight and clean of memory leaks.
+
+## URL Sanitization & DOM-XSS Protection
+
+To prevent DOM-based Cross-Site Scripting (DOM-XSS) via dynamic anchors and `href` bindings of user-controlled or edge proxy URLs, we enforce strict URL sanitization:
+
+- **Anchor Link Sanitization (`sanitizeHref`)**: Dynamic values destined for anchor `href` attributes are passed through `sanitizeHref` to ensure they only use safe, permitted schemes. This forces all URLs to start with safe, whitelisted prefixes: `http://`, `https://`, or relative paths starting with `/`. Any unsafe schemes (such as `javascript:`, `data:`, or `vbscript:`) are neutralized and fallback to `#`.
