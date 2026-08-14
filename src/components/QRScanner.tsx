@@ -236,13 +236,14 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
           isScanningFrameRef.current = true;
           // Zero-copy transfer optimization (slice a copy to be safe)
           const buffer = activeFrame.imageData.data.buffer.slice(0);
-          const decoded = await decodeFrameOffThread(
+          const result = await decodeFrameOffThread(
             buffer,
             activeFrame.imageData.width,
-            activeFrame.imageData.height
+            activeFrame.imageData.height,
+            currentFrameIndex
           );
-          if (decoded) {
-            onScanSuccess(decoded);
+          if (result.decoded) {
+            onScanSuccess(result.decoded);
           }
         } finally {
           isScanningFrameRef.current = false;
