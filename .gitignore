@@ -41,3 +41,4 @@ verification/
 jules/*
 .jules/*
 .pnpm-bin/
+.pnpm-global/
