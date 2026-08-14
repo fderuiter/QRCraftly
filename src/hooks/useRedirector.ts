@@ -63,7 +63,7 @@ export function useRedirector() {
       const data = await response.json() as { id: string; redirectUrl: string; adminKey: string };
       // Construct redirection URL pointing to our edge function router
       const edgeRedirectUrl = `${window.location.origin}/api/redirect/${data.id}`;
-      
+
       const newRecord: DynamicQRRecord = {
         id: data.id,
         originalUrl: targetUrl,
