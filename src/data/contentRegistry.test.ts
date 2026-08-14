@@ -41,7 +41,9 @@ describe('Content Registry Validation', () => {
       checkString(tool.name, 'name');
       checkString(tool.url, 'url');
       checkString(tool.description, 'description');
-      checkString(tool.seoTitle, 'seoTitle');
+      if (tool.seoTitle !== undefined) {
+        checkString(tool.seoTitle, 'seoTitle');
+      }
 
       tool.features.forEach((feature, index) => {
         checkString(feature, `features[${index}]`);

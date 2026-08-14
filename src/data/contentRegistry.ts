@@ -37,7 +37,7 @@ export interface ToolContent {
   name: string;
   url: string;
   description: string;
-  seoTitle: string;
+  seoTitle?: string;
   features: string[];
   howTo?: {
     name: string;
@@ -556,6 +556,12 @@ export const contentRegistry: Record<string, ToolContent> = {
 };
 
 export const auxiliaryRegistry: Record<string, AuxiliaryContent> = {
+  "dynamic-dashboard": {
+    "id": "dynamic-dashboard",
+    "name": "Dynamic Redirection Dashboard",
+    "seoTitle": "Dynamic Redirection Dashboard - QRCraftly",
+    "description": "Manage your dynamic QR destinations, update target URLs, and view cumulative scan statistics in real-time."
+  },
   "audio-qr": {
     "id": "audio-qr",
     "name": "Audio QR & Acoustic Steganography",
@@ -611,7 +617,7 @@ export function getMetadataForPath(path: string): { title: string; description: 
   
   if (contentRegistry[pathLookup]) {
     return {
-      title: contentRegistry[pathLookup].seoTitle,
+      title: contentRegistry[pathLookup].seoTitle || contentRegistry[pathLookup].name,
       description: contentRegistry[pathLookup].description,
     };
   }
