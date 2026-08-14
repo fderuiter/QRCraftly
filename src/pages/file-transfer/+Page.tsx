@@ -32,6 +32,7 @@ import { useAnimatedQrSender } from '@/hooks/useAnimatedQrSender';
  * @returns The FileTransferToolInner component.
  */
 function FileTransferToolInner() {
+  const [isDraggingFile, setIsDraggingFile] = React.useState(false);
   const config = useQRStoreSelector(s => s.config);
   const store = useQRStore();
   const { isDarkMode, toggleDarkMode } = useTheme();
@@ -43,6 +44,7 @@ function FileTransferToolInner() {
   // Hook into the unified animated QR sender
   const {
     selectedFile,
+    setSelectedFile,
     isTransferring,
     progress,
     currentFrameIndex,
@@ -63,6 +65,33 @@ function FileTransferToolInner() {
     borderLogoImg,
   });
 
+  const handleDragOver = (event: React.DragEvent<HTMLLabelElement>) => {
+    event.preventDefault();
+    if (!isTransferring) {
+      event.dataTransfer.dropEffect = 'copy';
+      setIsDraggingFile(true);
+    }
+  };
+
+  const handleDragLeave = (event: React.DragEvent<HTMLLabelElement>) => {
+    if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+      setIsDraggingFile(false);
+    }
+  };
+
+  const handleDrop = (event: React.DragEvent<HTMLLabelElement>) => {
+    event.preventDefault();
+    setIsDraggingFile(false);
+
+    if (isTransferring) return;
+
+    const file = event.dataTransfer.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      stopTransfer();
+    }
+  };
+
   return (
     <div className={`${isDarkMode ? 'dark' : ''} w-full`}>
       <div className="relative flex h-screen min-h-screen flex-col-reverse overflow-hidden bg-slate-50 transition-colors duration-300 md:h-auto md:min-h-0 md:flex-row md:overflow-visible dark:bg-slate-950">
@@ -75,7 +104,7 @@ function FileTransferToolInner() {
                 <QrCode className="size-6" />
                 <h1 className="text-xl font-bold tracking-tight text-slate-700 dark:text-slate-100">QRCraftly</h1>
               </a>
-              <p className="text-sm text-slate-600 dark:text-slate-400">High-Performance File Streaming</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">Send a File by QR Code</p>
             </div>
             <div className="flex items-center gap-2">
               <a
@@ -104,11 +133,23 @@ function FileTransferToolInner() {
             <section className="space-y-4">
               <h2 className="flex items-center gap-2 text-xs font-bold tracking-wider text-slate-600 uppercase dark:text-slate-400">
                 <Upload className="size-4 text-teal-600" />
-                1. File Stream Source
+                1. Choose a File
               </h2>
               
               <div className="flex flex-col gap-3">
-                <label className="flex h-24 w-full cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50/50 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950/20 dark:hover:bg-slate-950/40">
+                <label
+                  onDragEnter={handleDragOver}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  className={`flex h-24 w-full flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed transition-colors ${
+                    isTransferring
+                      ? 'cursor-not-allowed border-slate-200 bg-slate-50/50 opacity-60 dark:border-slate-800 dark:bg-slate-950/20'
+                      : isDraggingFile
+                        ? 'cursor-copy border-teal-500 bg-teal-50 dark:bg-teal-950/30'
+                        : 'cursor-pointer border-slate-200 bg-slate-50/50 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950/20 dark:hover:bg-slate-950/40'
+                  }`}
+                >
                   <FileUp className="size-6 text-slate-400" />
                   <span className="text-xs font-medium text-slate-600 dark:text-slate-400">
                     {selectedFile ? selectedFile.name : 'Choose file or drag & drop'}
@@ -121,15 +162,17 @@ function FileTransferToolInner() {
                   />
                 </label>
 
-                <Button
-                  variant="outline"
-                  onClick={simulate50MBFile}
-                  disabled={isTransferring}
-                  className="w-full text-xs"
-                >
-                  <Cpu className="size-4" />
-                  Simulate 50MB High-Load File
-                </Button>
+                {import.meta.env.DEV && (
+                  <Button
+                    variant="outline"
+                    onClick={simulate50MBFile}
+                    disabled={isTransferring}
+                    className="w-full text-xs"
+                  >
+                    <Cpu className="size-4" />
+                    Simulate 50MB High-Load File
+                  </Button>
+                )}
               </div>
 
               {selectedFile && (
@@ -152,12 +195,12 @@ function FileTransferToolInner() {
             <section className="space-y-6">
               <h2 className="flex items-center gap-2 text-xs font-bold tracking-wider text-slate-600 uppercase dark:text-slate-400">
                 <Sliders className="size-4 text-teal-600" />
-                2. Playback Speed & Chunking
+                2. Transfer Settings
               </h2>
 
               <RangeInput
                 id="fps-slider"
-                label="Stream Swap Rate (FPS)"
+                label="Transfer speed"
                 min={1}
                 max={60}
                 step={1}
@@ -168,7 +211,7 @@ function FileTransferToolInner() {
 
               <RangeInput
                 id="chunk-slider"
-                label="Slice Block Size"
+                label="Data per QR"
                 min={64}
                 max={512}
                 step={32}
@@ -186,7 +229,7 @@ function FileTransferToolInner() {
             {/* Style Customization Section */}
             <section className="space-y-4">
               <h2 className="text-xs font-bold tracking-wider text-slate-600 uppercase dark:text-slate-400">
-                3. QR Frame Customizer
+                3. QR Appearance
               </h2>
               <StyleControls config={config} onChange={store.updateConfig} />
             </section>
@@ -194,7 +237,7 @@ function FileTransferToolInner() {
         </aside>
 
         {/* Right Preview Recycled Canvas / Camera Area */}
-        <section aria-label="Animated Stream Output" className="relative flex max-h-[50vh] flex-1 flex-col items-center justify-center overflow-x-hidden overflow-y-auto bg-slate-50 p-4 transition-colors duration-300 md:sticky md:top-0 md:h-[100dvh] md:max-h-none md:p-8 dark:bg-slate-950">
+        <section aria-label="Transfer QR" className="relative flex max-h-[50vh] flex-1 flex-col items-center justify-center overflow-x-hidden overflow-y-auto bg-slate-50 p-4 transition-colors duration-300 md:sticky md:top-0 md:h-[100dvh] md:max-h-none md:p-8 dark:bg-slate-950">
           
           {/* Background Decorative glow */}
           <div className="pointer-events-none absolute inset-0 opacity-40 dark:opacity-20">
@@ -206,7 +249,7 @@ function FileTransferToolInner() {
             <Card className="hover:scale-1.01 transform transition-all duration-300">
               <div className="mb-6 flex items-center justify-between">
                 <h2 className="font-semibold text-slate-700 dark:text-slate-200">
-                  Recycled UI Stream Canvas
+                  Transfer QR
                 </h2>
                 <div className="flex items-center gap-2">
                   <span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-xs font-bold ${
@@ -227,7 +270,7 @@ function FileTransferToolInner() {
                     ref={canvasRef}
                     className="max-h-[60vh] w-full rounded-lg bg-white object-contain shadow-sm dark:bg-slate-900"
                     role="img"
-                    aria-label="High-performance animation transfer stream canvas"
+                    aria-label="Transfer QR code"
                     width={512}
                     height={512}
                   />
@@ -251,12 +294,12 @@ function FileTransferToolInner() {
 
                       <div className="grid grid-cols-2 gap-4 pt-2">
                         <div>
-                          <div className="text-slate-400">Current Frame</div>
+                          <div className="text-slate-400">Current QR</div>
                           <div className="font-mono text-sm font-semibold text-slate-700 dark:text-slate-300">{currentFrameIndex} / {totalFrames}</div>
                         </div>
                         <div>
                           <div className="flex items-center gap-1 text-slate-400">
-                            <Cpu className="size-3 text-teal-500" /> Active Heap
+                            <Cpu className="size-3 text-teal-500" /> Memory use
                           </div>
                           <div className="font-mono text-sm font-semibold text-slate-700 dark:text-slate-300">{transferStats.activeMemory}</div>
                         </div>
@@ -271,20 +314,20 @@ function FileTransferToolInner() {
                         fullWidth
                         onClick={startTransfer}
                         disabled={!selectedFile}
-                        aria-label="Start streaming file"
+                        aria-label="Start file transfer"
                       >
                         <Play className="size-4" />
-                        Start Transfer Stream
+                        Start Transfer
                       </Button>
                     ) : (
                       <Button
                         variant="error"
                         fullWidth
                         onClick={stopTransfer}
-                        aria-label="Stop streaming file"
+                        aria-label="Stop file transfer"
                       >
                         <Square className="size-4" />
-                        Stop Transfer Stream
+                        Stop Transfer
                       </Button>
                     )}
                   </div>

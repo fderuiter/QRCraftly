@@ -43,8 +43,8 @@ describe('Structural Isolation and Reserved Space for QR Preview', () => {
     });
   });
 
-  describe('Requirement 2: Pre-allocated Style Configuration Warning Slot', () => {
-    it('renders an invisible warning slot of exact same dimensions above the grid when using high-reliability patterns', () => {
+  describe('Requirement 2: Conditional Style Configuration Warning', () => {
+    it('does not reserve warning space when using high-reliability patterns', () => {
       const config: QRConfig = {
         ...DEFAULT_CONFIG,
         style: QRStyle.STANDARD,
@@ -53,16 +53,11 @@ describe('Structural Isolation and Reserved Space for QR Preview', () => {
       
       render(<PatternControls config={config} onChange={handleChange} />);
       
-      const slot = screen.getByTestId('pattern-warning-slot');
-      expect(slot).toBeInTheDocument();
-      
-      // The child div should be invisible
-      const innerDiv = slot.firstChild;
-      expect(innerDiv).toHaveClass('invisible');
-      expect(innerDiv).not.toHaveClass('visible');
+      expect(screen.queryByTestId('pattern-warning-slot')).not.toBeInTheDocument();
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     });
 
-    it('renders a visible warning slot in the pre-allocated space when selecting a low-reliability pattern', () => {
+    it('renders a warning when selecting a low-reliability pattern', () => {
       const config: QRConfig = {
         ...DEFAULT_CONFIG,
         style: QRStyle.CIRCUIT, // LOW_RELIABILITY_PATTERN
@@ -73,11 +68,6 @@ describe('Structural Isolation and Reserved Space for QR Preview', () => {
       
       const slot = screen.getByTestId('pattern-warning-slot');
       expect(slot).toBeInTheDocument();
-      
-      // The child div should be visible
-      const innerDiv = slot.firstChild;
-      expect(innerDiv).toHaveClass('visible');
-      expect(innerDiv).not.toHaveClass('invisible');
       
       const warningText = screen.getByRole('alert');
       expect(warningText).toBeInTheDocument();
@@ -120,29 +110,29 @@ describe('Structural Isolation and Reserved Space for QR Preview', () => {
     });
   });
 
-  describe('Requirement 4: Mobile Workspace Isolation via Separate Scroll Panels', () => {
-    it('renders separate scroll panels with fixed maximum heights on mobile devices', () => {
+  describe('Requirement 4: Mobile Workspace Uses Document Scrolling', () => {
+    it('does not constrain the workspace or its panels to separate mobile scroll areas', () => {
       const { container } = render(
         <ToastProvider>
           <QRTool />
         </ToastProvider>
       );
       
-      // Parent container should have mobile layout constraints: h-screen, overflow-hidden, flex-col-reverse
+      // The mobile workspace retains its preview-first layout without locking the document viewport.
       const parentContainer = container.querySelector('.bg-slate-50.dark\\:bg-slate-950');
-      expect(parentContainer).toHaveClass('h-screen');
-      expect(parentContainer).toHaveClass('overflow-hidden');
+      expect(parentContainer).toHaveClass('min-h-screen');
       expect(parentContainer).toHaveClass('flex-col-reverse');
+      expect(parentContainer).not.toHaveClass('h-screen');
+      expect(parentContainer).not.toHaveClass('overflow-hidden');
       
-      // Settings sidebar panel should have max-h-[50vh] and overflow-y-auto on mobile
+      // Both panels participate in normal document flow on mobile and at high zoom.
       const settingsPanel = screen.getByLabelText(/QR Code Settings/i);
-      expect(settingsPanel).toHaveClass('max-h-[50vh]');
-      expect(settingsPanel).toHaveClass('overflow-y-auto');
+      expect(settingsPanel).not.toHaveClass('max-h-[50vh]');
+      expect(settingsPanel).not.toHaveClass('overflow-y-auto');
       
-      // Preview area panel should also have max-h-[50vh] and overflow-y-auto on mobile
       const previewPanel = screen.getByLabelText(/QR Code Preview/i);
-      expect(previewPanel).toHaveClass('max-h-[50vh]');
-      expect(previewPanel).toHaveClass('overflow-y-auto');
+      expect(previewPanel).not.toHaveClass('max-h-[50vh]');
+      expect(previewPanel).not.toHaveClass('overflow-y-auto');
     });
   });
 });

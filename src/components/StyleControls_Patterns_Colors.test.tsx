@@ -27,38 +27,31 @@ describe('StyleControls Accessibility', () => {
       expect(standardRadio).toBeChecked();
     });
 
-    it('renders persistent visually-hidden polite live region for scannability warnings', () => {
+    it('announces scannability warnings through one alert', () => {
       const handleChange = vi.fn();
-      // Test standard pattern (no warning expected in live region)
       const { rerender } = render(<PatternControls config={DEFAULT_CONFIG} onChange={handleChange} />);
 
-      const liveRegion = screen.getByText((content, element) => {
-        return element?.className === 'sr-only' && element?.getAttribute('aria-live') === 'polite';
-      });
-      expect(liveRegion).toBeInTheDocument();
-      expect(liveRegion).toHaveAttribute('aria-atomic', 'true');
-      expect(liveRegion).toBeEmptyDOMElement();
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
 
-      // Test low-reliability pattern (warning expected in live region)
       const lowReliabilityConfig = {
         ...DEFAULT_CONFIG,
         style: QRStyle.GRUNGE,
       };
       rerender(<PatternControls config={lowReliabilityConfig} onChange={handleChange} />);
-      expect(liveRegion).not.toBeEmptyDOMElement();
-      expect(liveRegion).toHaveTextContent(/Scannability Warning: The selected pattern \("Grunge"\) is complex and may reduce scannability/);
+      expect(screen.getByRole('alert')).toHaveTextContent(/Scannability Warning: The selected pattern \("Grunge"\) is complex and may reduce scannability/);
+      expect(screen.getAllByRole('alert')).toHaveLength(1);
+      expect(document.querySelector('[aria-live]')).not.toBeInTheDocument();
 
-      // Test another low-reliability pattern
       const circuitConfig = {
         ...DEFAULT_CONFIG,
         style: QRStyle.CIRCUIT,
       };
       rerender(<PatternControls config={circuitConfig} onChange={handleChange} />);
-      expect(liveRegion).toHaveTextContent(/Scannability Warning: The selected pattern \("Cyber Circuit"\) is complex and may reduce scannability/);
+      expect(screen.getByRole('alert')).toHaveTextContent(/Scannability Warning: The selected pattern \("Cyber Circuit"\) is complex and may reduce scannability/);
+      expect(screen.getAllByRole('alert')).toHaveLength(1);
 
-      // Test switching back to high-reliability pattern (warning cleared from live region)
       rerender(<PatternControls config={DEFAULT_CONFIG} onChange={handleChange} />);
-      expect(liveRegion).toBeEmptyDOMElement();
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     });
   });
 

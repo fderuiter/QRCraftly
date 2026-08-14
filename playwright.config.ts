@@ -20,6 +20,7 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: './e2e',
+  testIgnore: 'development-hydration.spec.ts',
   timeout: 30000,
   expect: {
     timeout: 10000,

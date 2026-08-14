@@ -30,6 +30,8 @@ describe('About Page', () => {
     // Check existing content
     expect(screen.getByText(/Privacy-focused QR code generator/i)).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /Free & No Login/i })).toBeInTheDocument();
+    expect(screen.getByRole('navigation', { name: /Primary navigation/i })).toBeInTheDocument();
+    expect(screen.getByRole('contentinfo')).toBeInTheDocument();
   });
 
   it('contains a link to the WiFi QR Code generator for better SEO discovery', () => {

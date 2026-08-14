@@ -53,7 +53,7 @@ describe('Sitemap Environment-Level Variable Resolution', () => {
     }
   });
 
-  it('should use fallback domain when no VITE_DOMAIN environment variable or .env file is configured', () => {
+  it('should use fallback domain under native tsx when import.meta.env and VITE_DOMAIN are unavailable', () => {
     // Run the sitemap script with empty environment for VITE_DOMAIN
     execFileSync('npx', ['tsx', sitemapScriptPath], {
       env: {

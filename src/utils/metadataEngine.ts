@@ -1,6 +1,7 @@
+import { getConfiguredPublicDomain } from './publicEnvironment';
+
 export const getPublicDomain = (): string => {
-  const domain = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_DOMAIN) || process.env.VITE_DOMAIN || 'https://qrcraftly.com';
-  return domain.replace(/\/+$/, '');
+  return getConfiguredPublicDomain().replace(/\/+$/, '');
 };
 
 const sanitizedPathCache = new Map<string, string>();
@@ -195,4 +196,3 @@ export const compileBreadcrumbSchema = (path: string): any | null => {
     "itemListElement": breadcrumbItems
   };
 };
-

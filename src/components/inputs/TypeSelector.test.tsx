@@ -117,26 +117,15 @@ describe("TypeSelector Component Accessibility & Keyboard Navigation", () => {
     expect(mockOnSelect).toHaveBeenCalledWith(QRType.WIFI);
   });
 
-  it("moves focus to the first interactive field inside the tabpanel when Tab is pressed from a tab", () => {
-    // Set up a mock panel in the document body to simulate the DOM structure
-    const panel = document.createElement("div");
-    panel.id = "panel-URL";
-    panel.setAttribute("role", "tabpanel");
-    
-    const input = document.createElement("input");
-    input.id = "website-url";
-    panel.appendChild(input);
-    document.body.appendChild(panel);
-
+  it("leaves Tab navigation to the browser", () => {
     render(<TypeSelector currentType={QRType.URL} onSelect={mockOnSelect} />);
     const tablist = screen.getByRole("tablist");
     const tabs = screen.getAllByRole("tab");
 
     tabs[0].focus();
-    expect(document.activeElement).toBe(tabs[0]);
+    const eventWasNotCancelled = fireEvent.keyDown(tablist, { key: "Tab" });
 
-    // Press Tab
-    fireEvent.keyDown(tablist, { key: "Tab" });
-    expect(document.activeElement).toBe(input);
+    expect(eventWasNotCancelled).toBe(true);
+    expect(document.activeElement).toBe(tabs[0]);
   });
 });

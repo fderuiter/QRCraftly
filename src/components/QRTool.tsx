@@ -22,7 +22,7 @@ import { Card } from "./ui/Card";
 import { Alert } from "./ui/Alert";
 import { QRConfig } from '@/types';
 import QRCanvas from '@/components/QRCanvas';
-import { Download, Share2, QrCode, ChevronDown, Camera, Moon, Sun, Info, Copy, Check, AlertTriangle } from 'lucide-react';
+import { Download, Share2, QrCode, ChevronDown, Moon, Sun, Info, Copy, Check, AlertTriangle, Menu } from 'lucide-react';
 import { Modal } from './ui/Modal';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useOnClickOutside } from '@/hooks/useOnClickOutside';
@@ -52,11 +52,13 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
   const { addToast } = useToast();
   
   const [showDownloadMenu, setShowDownloadMenu] = useState(false);
+  const [showMobileNav, setShowMobileNav] = useState(false);
   const [showSafetyGate, setShowSafetyGate] = useState(false);
   const [gateAction, setGateAction] = useState<(() => void | Promise<void>) | null>(null);
   const qrRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const downloadMenuRef = useRef<HTMLDivElement>(null);
+  const mobileNavRef = useRef<HTMLDivElement>(null);
 
   // Focus preservation refs for originating buttons
   const downloadButtonRef = useRef<HTMLButtonElement>(null);
@@ -87,6 +89,8 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
   // Close download menu when clicking outside
   const closeDownloadMenu = useCallback(() => setShowDownloadMenu(false), []);
   useOnClickOutside(downloadMenuRef, closeDownloadMenu, showDownloadMenu);
+  const closeMobileNav = useCallback(() => setShowMobileNav(false), []);
+  useOnClickOutside(mobileNavRef, closeMobileNav, showMobileNav);
 
   // Debounce the config for QRCanvas to prevent lag during rapid typing or style changes.
   const debouncedConfig = useDebounce(config, 100);
@@ -225,9 +229,9 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
           </div>
         </div>
       </Modal>
-      <div className="relative flex h-screen min-h-screen flex-col-reverse overflow-hidden bg-slate-50 transition-colors duration-300 md:h-auto md:min-h-0 md:flex-row md:overflow-visible dark:bg-slate-950">
+      <div className="relative flex min-h-screen flex-col-reverse bg-slate-50 transition-colors duration-300 md:min-h-0 md:flex-row dark:bg-slate-950">
         {/* Sidebar Controls */}
-        <aside aria-label="QR Code Settings" className="relative z-10 flex max-h-[50vh] w-full flex-col overflow-y-auto border-r border-slate-200 bg-white shadow-xl transition-colors duration-300 md:max-h-none md:w-120 dark:border-slate-800 dark:bg-slate-900">
+        <aside aria-label="QR Code Settings" className="relative z-10 flex w-full flex-col border-r border-slate-200 bg-white shadow-xl transition-colors duration-300 md:w-120 dark:border-slate-800 dark:bg-slate-900">
           <header className="sticky top-0 z-20 flex items-center justify-between border-b border-slate-100 bg-white p-6 transition-colors duration-300 dark:border-slate-800 dark:bg-slate-900">
             <div>
               <a href="/" aria-label="QRCraftly Home" className="mb-1 flex items-center gap-2 text-teal-700 transition-opacity hover:opacity-80 dark:text-teal-400">
@@ -237,7 +241,41 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
               <p className="text-sm text-slate-600 dark:text-slate-400">Design beautiful QR codes in seconds.</p>
             </div>
             
-            <div className="flex gap-2">
+            <div className="flex items-center gap-2">
+              <div ref={mobileNavRef} className="relative sm:hidden">
+                <Button
+                  variant="icon"
+                  size="icon"
+                  onClick={() => setShowMobileNav((isOpen) => !isOpen)}
+                  className="rounded-full"
+                  title="File transfer menu"
+                  aria-label="File transfer menu"
+                  aria-expanded={showMobileNav}
+                  aria-controls="mobile-file-transfer-menu"
+                >
+                  <Menu className="size-5" />
+                </Button>
+                {showMobileNav && (
+                  <nav
+                    id="mobile-file-transfer-menu"
+                    aria-label="File transfer"
+                    className="absolute top-full right-0 z-30 mt-2 w-44 overflow-hidden rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl dark:border-slate-700 dark:bg-slate-900"
+                  >
+                    <a
+                      href="/file-transfer"
+                      className="block rounded-lg px-3 py-2 text-sm font-semibold text-teal-600 transition-colors hover:bg-slate-100 dark:text-teal-400 dark:hover:bg-slate-800"
+                    >
+                      Send File
+                    </a>
+                    <a
+                      href="/file-transfer/receive"
+                      className="block rounded-lg px-3 py-2 text-sm font-semibold text-teal-600 transition-colors hover:bg-slate-100 dark:text-teal-400 dark:hover:bg-slate-800"
+                    >
+                      Receive File
+                    </a>
+                  </nav>
+                )}
+              </div>
               <a
                 href="/dynamic-dashboard"
                 className="hidden items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold text-teal-600 transition-colors hover:bg-slate-100 sm:flex dark:text-teal-400 dark:hover:bg-slate-800"
@@ -294,6 +332,26 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
             ))}
 
             <footer className="mt-8 border-t border-slate-100 pt-8 dark:border-slate-800">
+              {showTelemetryPrompt && (
+                <section
+                  aria-labelledby="telemetry-consent-title"
+                  className="mb-8 border-b border-slate-100 pb-8 dark:border-slate-800"
+                >
+                  <h2
+                    id="telemetry-consent-title"
+                    className="mb-2 flex items-center gap-2 text-xs font-semibold tracking-wider text-slate-900 uppercase dark:text-slate-200"
+                  >
+                    <Info className="size-4 text-blue-500" /> Anonymous diagnostics
+                  </h2>
+                  <p className="mb-3 text-xs leading-relaxed text-slate-600 dark:text-slate-400">
+                    If a scan check fails, may we send your browser engine and QR style settings to help improve QRCraftly? QR content and images are never sent.
+                  </p>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={() => handleOptIn(true)} className="flex-1 text-xs">Allow</Button>
+                    <Button variant="outline" size="sm" onClick={() => handleOptIn(false)} className="flex-1 text-xs">No thanks</Button>
+                  </div>
+                </section>
+              )}
               <nav aria-label="Site Map">
                 <div className="mb-4 grid grid-cols-2 gap-4">
                   <div>
@@ -335,7 +393,7 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
         </aside>
 
         {/* Preview Area */}
-        <section aria-label="QR Code Preview" className="relative flex max-h-[50vh] flex-1 flex-col items-center justify-center overflow-x-hidden overflow-y-auto bg-slate-50 p-4 transition-colors duration-300 md:sticky md:top-0 md:h-[100dvh] md:max-h-none md:p-8 dark:bg-slate-950">
+        <section aria-label="QR Code Preview" className="relative flex flex-1 flex-col items-center justify-center overflow-x-hidden bg-slate-50 p-4 transition-colors duration-300 md:sticky md:top-0 md:h-[100dvh] md:justify-start md:overflow-y-auto md:p-8 dark:bg-slate-950">
            {/* Background Decoration */}
            <div className="pointer-events-none absolute inset-0 opacity-40 dark:opacity-20">
                <div className="absolute top-0 left-0 size-96 -translate-1/2 rounded-full bg-teal-200 blur-3xl transition-colors duration-300 dark:bg-teal-900"></div>
@@ -346,10 +404,7 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
              <Card className="hover:scale-1.01 transform transition-all duration-300">
                 <div className="mb-6 flex items-center justify-between">
                     <h2 className="font-semibold text-slate-700 dark:text-slate-200">Live Preview</h2>
-                    <div className="flex items-center gap-2">
-                       <ScannabilityIndicator status={scannabilityStatus} health={health} />
-                       <span className="rounded-full border border-emerald-200 bg-emerald-100 px-2 py-1 text-xs font-bold text-emerald-700 dark:border-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400">Active</span>
-                    </div>
+                    <ScannabilityIndicator status={scannabilityStatus} health={health} />
                 </div>
                 
                 {workerRecoveryActive && (
@@ -426,34 +481,18 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
                        )}
                    </div>
 
-                   {/* Row 2: Save to Camera Roll */}
+                   {/* Row 2: Quick PNG download */}
                    <Button 
                       ref={photosButtonRef}
                       variant="outline"
                       fullWidth
                       onClick={() => downloadToDeviceFlow('png', photosButtonRef)}
-                      aria-label="Save QR code to photos"
+                      aria-label="Download QR code as PNG"
                    >
-                      <Camera className="size-4" />
-                      Save to Photos
+                      <Download className="size-4" />
+                      Download PNG
                    </Button>
 
-                   {showTelemetryPrompt && (
-                      <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm dark:border-slate-700 dark:bg-slate-800">
-                         <h3 className="mb-2 flex items-center gap-2 font-semibold text-slate-800 dark:text-slate-200">
-                           <Info className="size-4 text-blue-500" /> Help Improve Scannability
-                         </h3>
-                         <p className="mb-3 text-xs leading-relaxed text-slate-600 dark:text-slate-400">
-                           We noticed your QR code might be hard to scan. Would you like to send an anonymous telemetry ping to help us fix bugs?
-                           <br/><br/>
-                           <strong>Privacy Guarantee:</strong> We only send your device engine and style settings. We <strong>never</strong> send the QR content or image.
-                         </p>
-                         <div className="flex gap-2">
-                           <Button variant="primary" size="sm" onClick={() => handleOptIn(true)} className="flex-1 text-xs">Yes, Help Fix This</Button>
-                           <Button variant="outline" size="sm" onClick={() => handleOptIn(false)} className="flex-1 text-xs">No Thanks</Button>
-                         </div>
-                      </div>
-                   )}
                 </div>
              </Card>
           </div>

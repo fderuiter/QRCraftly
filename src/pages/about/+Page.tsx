@@ -24,6 +24,7 @@ import { generateSchema } from '@/utils/schemaGenerator';
 import { resolveDomainForPath } from '@/utils/metadataEngine';
 import { SidebarContent } from '@/components/SidebarContent';
 import { usePageContext } from 'vike-react/usePageContext';
+import { ProductShell } from '@/components/ProductShell';
 
 /**
  * About Page Component
@@ -40,6 +41,7 @@ export default function Page() {
   const schemaData = generateSchema(contentRegistry['about'], resolvedDomain, urlPathname);
 
   return (
+    <ProductShell>
     <div className="mx-auto max-w-5xl px-4 py-12">
       <JsonLdScript data={schemaData} />
       <nav className="mb-8">
@@ -168,5 +170,6 @@ export default function Page() {
         <SidebarContent toolId="about" />
       </div>
     </div>
+    </ProductShell>
   );
 }

@@ -54,7 +54,7 @@ describe('DynamicDashboardPage', () => {
 
     expect(screen.getByText('https://dest.com')).toBeInTheDocument();
     expect(screen.getByText('https://qrcraftly.com/api/redirect/id-123')).toBeInTheDocument();
-    
+
     // Scans should update via stats effect
     await waitFor(() => {
       expect(screen.getByText('15')).toBeInTheDocument();

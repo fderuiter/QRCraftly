@@ -60,6 +60,7 @@ describe('File Transfer Receive Page & Pipeline', () => {
   });
 
   afterEach(() => {
+    vi.unstubAllEnvs();
     Object.defineProperty(navigator, 'mediaDevices', {
       writable: true,
       configurable: true,
@@ -76,12 +77,26 @@ describe('File Transfer Receive Page & Pipeline', () => {
     );
 
     expect(screen.getByText('QRCraftly')).toBeInTheDocument();
-    expect(screen.getByText('High-Performance File Receiver')).toBeInTheDocument();
-    expect(screen.getByText('Ready to scan. Please stream or simulate an animated QR file transfer.')).toBeInTheDocument();
+    expect(screen.getByText('Receive a File by QR Code')).toBeInTheDocument();
+    expect(screen.getByText('Ready to scan. Start an animated QR file transfer from the sender.')).toBeInTheDocument();
     
     // Check buttons
     expect(screen.getByRole('button', { name: /activate camera scanner/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /simulate out-of-order/i })).toBeInTheDocument();
+  });
+
+  it('does not expose simulation or security-testing controls in production', () => {
+    vi.stubEnv('DEV', false);
+    render(
+      <ToastProvider>
+        <Page />
+      </ToastProvider>
+    );
+
+    expect(screen.queryByText('Simulation & Validation Testing')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /simulate out-of-order/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /simulate dangerous scheme/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /simulate split threat/i })).not.toBeInTheDocument();
   });
 
   it('can activate and deactivate the camera scanner', async () => {
@@ -210,10 +225,9 @@ describe('File Transfer Receive Page & Pipeline', () => {
       </ToastProvider>
     );
 
-    // Initial state: Enforces full security validation
-    expect(screen.getByText('Enforces full security validation')).toBeInTheDocument();
+    expect(screen.getByText('Checks text content for potentially unsafe links and commands.')).toBeInTheDocument();
 
-    const modeSwitch = screen.getByRole('switch', { name: /binary mode/i });
+    const modeSwitch = screen.getByRole('switch', { name: /compatibility mode/i });
     expect(modeSwitch).not.toBeChecked();
 
     // Toggle to binary mode
@@ -222,7 +236,7 @@ describe('File Transfer Receive Page & Pipeline', () => {
     });
 
     expect(modeSwitch).toBeChecked();
-    expect(screen.getByText('Bypasses recursive sanitization checks')).toBeInTheDocument();
+    expect(screen.getByText('Accepts all file data, but skips checks that block potentially unsafe text content.')).toBeInTheDocument();
 
     // Now try simulating a restricted schema - it should not trigger a security warning in binary mode!
     const simDangerousButton = screen.getByRole('button', { name: /simulate dangerous scheme/i });
@@ -239,7 +253,7 @@ describe('File Transfer Receive Page & Pipeline', () => {
     });
 
     expect(modeSwitch).not.toBeChecked();
-    expect(screen.getByText('Enforces full security validation')).toBeInTheDocument();
+    expect(screen.getByText('Checks text content for potentially unsafe links and commands.')).toBeInTheDocument();
   });
 
   describe('Synchronous Page-Level QR Frame Deduplication', () => {
@@ -294,7 +308,7 @@ describe('File Transfer Receive Page & Pipeline', () => {
       expect(receiveSpy).toHaveBeenCalledTimes(1);
 
       // Reset the receiver state
-      const clearButton = screen.getByRole('button', { name: /reset all buffers/i });
+      const clearButton = screen.getByRole('button', { name: /clear transfer progress/i });
       await act(async () => {
         fireEvent.click(clearButton);
       });

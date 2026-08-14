@@ -102,6 +102,7 @@ describe('File Transfer Page & Pipeline', () => {
 
   afterEach(() => {
     vi.clearAllMocks();
+    vi.unstubAllEnvs();
     if (globalThis.mockWorkerControl) {
       globalThis.mockWorkerControl.reset();
     }
@@ -111,21 +112,28 @@ describe('File Transfer Page & Pipeline', () => {
     render(<Page />);
 
     expect(screen.getByText('QRCraftly')).toBeInTheDocument();
-    expect(screen.getByText('High-Performance File Streaming')).toBeInTheDocument();
+    expect(screen.getByText('Send a File by QR Code')).toBeInTheDocument();
     
     // Sliders exist
-    expect(screen.getByLabelText('Stream Swap Rate (FPS)')).toBeInTheDocument();
-    expect(screen.getByLabelText('Slice Block Size')).toBeInTheDocument();
+    expect(screen.getByLabelText('Transfer speed')).toBeInTheDocument();
+    expect(screen.getByLabelText('Data per QR')).toBeInTheDocument();
 
     // Canvas exists
-    const canvas = screen.getByRole('img', { name: /stream/i });
+    const canvas = screen.getByRole('img', { name: /transfer qr/i });
     expect(canvas).toBeInTheDocument();
+  });
+
+  it('does not expose the high-load simulation control in production', () => {
+    vi.stubEnv('DEV', false);
+    render(<Page />);
+
+    expect(screen.queryByRole('button', { name: /simulate 50mb/i })).not.toBeInTheDocument();
   });
 
   it('allows adjusting stream swap rate (FPS) slider controls', async () => {
     render(<Page />);
 
-    const fpsSlider = screen.getByLabelText('Stream Swap Rate (FPS)') as HTMLInputElement;
+    const fpsSlider = screen.getByLabelText('Transfer speed') as HTMLInputElement;
     expect(fpsSlider.value).toBe('15');
 
     await act(async () => {
@@ -133,6 +141,18 @@ describe('File Transfer Page & Pipeline', () => {
     });
 
     expect(fpsSlider.value).toBe('30');
+  });
+
+  it('selects a file dropped onto the file drop zone', () => {
+    render(<Page />);
+
+    const file = new File(['payload'], 'dropped.txt', { type: 'text/plain' });
+    const fileInput = screen.getByText('Choose file or drag & drop').closest('label');
+
+    expect(fileInput).not.toBeNull();
+    fireEvent.drop(fileInput!, { dataTransfer: { files: [file] } });
+
+    expect(screen.getAllByText('dropped.txt')).toHaveLength(2);
   });
 
   it('simulates the 50MB high-load file and starts/stops transfer', async () => {
@@ -176,7 +196,7 @@ describe('File Transfer Page & Pipeline', () => {
     });
 
     // Start streaming
-    const startStreamButton = screen.getByRole('button', { name: /start streaming file/i });
+    const startStreamButton = screen.getByRole('button', { name: /start file transfer/i });
     await act(async () => {
       fireEvent.click(startStreamButton);
     });
@@ -184,14 +204,14 @@ describe('File Transfer Page & Pipeline', () => {
     expect(startTriggered).toHaveBeenCalled();
 
     // Check progress is rendered
-    expect(screen.getByText('Active Heap')).toBeInTheDocument();
+    expect(screen.getByText('Memory use')).toBeInTheDocument();
 
     // Stop streaming
-    const stopStreamButton = screen.getByRole('button', { name: /stop streaming file/i });
+    const stopStreamButton = screen.getByRole('button', { name: /stop file transfer/i });
     await act(async () => {
       fireEvent.click(stopStreamButton);
     });
 
-    expect(screen.queryByText('Active Heap')).not.toBeInTheDocument();
+    expect(screen.queryByText('Memory use')).not.toBeInTheDocument();
   });
 });

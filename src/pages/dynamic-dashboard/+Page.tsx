@@ -16,7 +16,7 @@ import { normalizeUrl } from '@/utils/url';
 export default function DynamicDashboardPage() {
   const { records, updateRedirect, fetchStats, deleteRecord } = useRedirector();
   const { addToast } = useToast();
-  
+
   const [stats, setStats] = useState<Record<string, number>>({});
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editUrlValue, setEditUrlValue] = useState('');

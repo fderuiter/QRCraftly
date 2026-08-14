@@ -17,7 +17,7 @@
 */
 
 import { ToastProvider } from "./ui/Toast";
-import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, cleanup, within } from '@testing-library/react';
 import QRTool from './QRTool';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
@@ -64,6 +64,21 @@ describe('QRTool Component', () => {
     render(<ToastProvider><QRTool /></ToastProvider>);
     expect(screen.getByText('QRCraftly')).toBeInTheDocument();
     expect(screen.getByText('Design beautiful QR codes in seconds.')).toBeInTheDocument();
+    expect(screen.queryByText('Active')).not.toBeInTheDocument();
+  });
+
+  it('exposes file transfer routes from the mobile navigation menu', () => {
+    render(<ToastProvider><QRTool /></ToastProvider>);
+
+    const menuButton = screen.getByRole('button', { name: 'File transfer menu' });
+    expect(menuButton).toHaveAttribute('aria-expanded', 'false');
+
+    fireEvent.click(menuButton);
+
+    expect(menuButton).toHaveAttribute('aria-expanded', 'true');
+    const mobileNav = screen.getByRole('navigation', { name: 'File transfer' });
+    expect(within(mobileNav).getByRole('link', { name: 'Send File' })).toHaveAttribute('href', '/file-transfer');
+    expect(within(mobileNav).getByRole('link', { name: 'Receive File' })).toHaveAttribute('href', '/file-transfer/receive');
   });
 
   it('applies initial config if provided', () => {
@@ -122,7 +137,7 @@ describe('QRTool Component', () => {
     expect(screen.getByText('WebP (Modern)')).toBeInTheDocument();
   });
 
-  it('handles save to photos (downloadToDevice) fallback', () => {
+  it('handles the quick PNG download', () => {
      render(<ToastProvider><QRTool /></ToastProvider>);
 
      // Spy on document.createElement but we can't easily mock return value without affecting internal React logic if it uses 'a' tags (it might)
@@ -140,7 +155,7 @@ describe('QRTool Component', () => {
      // To verify click, we can spy on HTMLAnchorElement.prototype.click
      const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click');
 
-     const saveBtns = screen.getAllByText('Save to Photos');
+     const saveBtns = screen.getAllByText('Download PNG');
      fireEvent.click(saveBtns[0]);
 
      expect(HTMLCanvasElement.prototype.toDataURL).toHaveBeenCalledWith('image/png');
@@ -360,9 +375,9 @@ describe('QRTool Component', () => {
       }
     });
 
-    it('restores focus and triggers a polite success toast when Save to Photos is triggered', async () => {
+    it('restores focus and triggers a polite success toast when Download PNG is triggered', async () => {
       render(<ToastProvider><QRTool /></ToastProvider>);
-      const photosBtn = screen.getByLabelText('Save QR code to photos');
+      const photosBtn = screen.getByLabelText('Download QR code as PNG');
 
       // Set focus to the save to photos button
       photosBtn.focus();

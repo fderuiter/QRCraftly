@@ -10,6 +10,8 @@ describe('Security Page', () => {
     const h1s = screen.getAllByRole('heading', { level: 1 });
     expect(h1s).toHaveLength(1);
     expect(h1s[0]).toHaveTextContent(/Security & Privacy Transparency Hub/i);
+    expect(screen.getByRole('navigation', { name: /Primary navigation/i })).toBeInTheDocument();
+    expect(screen.getByRole('contentinfo')).toBeInTheDocument();
 
     // Verify sub-headings inside document sections are shifted down (depth + 1)
     // E.g., doc titles are h2. Any markdown headers that would have been h2 should now be h3, etc.

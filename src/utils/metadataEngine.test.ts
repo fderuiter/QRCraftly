@@ -8,6 +8,7 @@ import {
   formatPathName,
   compileBreadcrumbSchema,
 } from './metadataEngine';
+import { getConfiguredPublicDomain } from './publicEnvironment';
 
 describe('metadataEngine', () => {
   beforeEach(() => {
@@ -16,6 +17,7 @@ describe('metadataEngine', () => {
 
   afterEach(() => {
     vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
   });
 
   describe('getPublicDomain', () => {
@@ -27,6 +29,13 @@ describe('metadataEngine', () => {
     it('returns configured VITE_DOMAIN with trailing slashes stripped', () => {
       vi.stubEnv('VITE_DOMAIN', 'https://test.qrcraftly.com///');
       expect(getPublicDomain()).toBe('https://test.qrcraftly.com');
+    });
+
+    it('returns the default domain when process is unavailable', () => {
+      expect(getConfiguredPublicDomain({
+        viteDomain: undefined,
+        nodeProcess: undefined,
+      })).toBe('https://qrcraftly.com');
     });
   });
 

@@ -27,6 +27,7 @@
     "preview": "vite preview",
     "test": "vitest",
     "test:e2e": "playwright test",
+    "test:e2e:dev": "playwright test --config playwright.dev.config.ts",
     "lint": "node scripts/dependency_compliance.js && node scripts/git_lineage_auditor.js && node scripts/validate_ui_catalog.js && node scripts/audit_markdown.js && node scripts/static-path-tracker.js && node scripts/compile_docs_manifest.js && tsc --noEmit && eslint . && knip && node scripts/contrast_check.js && prettier --check . && node scripts/check-duplication.js",
     "validate:ui-catalog": "node scripts/validate_ui_catalog.js",
     "validate:duplication": "node scripts/check-duplication.js",
@@ -81,7 +82,7 @@
     "vite": "^6.4.3",
     "vitest": "^4.1.9",
     "vitest-axe": "^0.1.0",
-    "wrangler": "^4.103.0"
+    "wrangler": "^4.123.0"
   },
   "simple-git-hooks": {
     "pre-commit": "pnpm run pre-commit"
