@@ -693,15 +693,6 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
 
   // Render webcam viewfinder state
   const renderWebcamViewfinder = () => {
-    if (isInitializing) {
-      return (
-        <div className="flex flex-col items-center justify-center p-6 text-slate-500 dark:text-slate-400">
-          <RefreshCw className="mb-3 size-8 animate-spin text-teal-600 dark:text-teal-400" />
-          <p className="text-sm font-medium">Initializing camera stream...</p>
-        </div>
-      );
-    }
-
     if (permissionState === 'denied' || permissionState === 'unavailable') {
       return (
         <div className="flex size-full flex-col justify-between p-5 text-center text-slate-800 dark:text-slate-200">
@@ -736,10 +727,17 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
         <video
           ref={videoRef}
           className="size-full object-cover"
+          autoPlay
           playsInline
           muted
           aria-label="Webcam feed"
         />
+        {isInitializing && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 p-6 text-white">
+            <RefreshCw className="mb-3 size-8 animate-spin text-teal-400" />
+            <p className="text-sm font-medium">Initializing camera stream...</p>
+          </div>
+        )}
         {/* Scanning targeting guide overlay */}
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center border-[3px] border-teal-500/40">
           <div className="relative flex size-48 animate-pulse items-center justify-center rounded-lg border-2 border-teal-400">
