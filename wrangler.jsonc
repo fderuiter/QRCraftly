@@ -6,7 +6,7 @@
     "directory": "./dist/client",
   },
   "build": {
-    "command": "npm install -g pnpm@11.1.3 --prefix .pnpm-bin && export PATH=\"$(pwd)/.pnpm-bin/bin:$PATH\" && NODE_ENV=development SKIP_GIT_VALIDATION=1 pnpm install --production=false && SKIP_GIT_VALIDATION=1 pnpm run build",
+    "command": "mkdir -p ~/.npm-global && npm config set prefix '~/.npm-global' && export PATH=\"$HOME/.npm-global/bin:$PATH\" && npm install -g pnpm@11.1.3 && NODE_ENV=development SKIP_GIT_VALIDATION=1 pnpm install --production=false && SKIP_GIT_VALIDATION=1 pnpm run build",
   },
   "observability": {
     "enabled": true,
