@@ -221,7 +221,8 @@ export function runAuditor(options = {}) {
   const exit = options.exit || process.exit;
 
   try {
-    const isGHA = !!env.GITHUB_ACTIONS || (!!env.CI && !env.CF_PAGES && !env.SKIP_GIT_VALIDATION);
+    const isCloudflare = !!env.CF_PAGES || Object.keys(env).some(key => key.startsWith('CF_') || key.startsWith('CLOUDFLARE_'));
+    const isGHA = !!env.GITHUB_ACTIONS || (!!env.CI && !isCloudflare && !env.SKIP_GIT_VALIDATION);
     const isOtherCI = !!env.CI && !isGHA;
 
     if (env.SKIP_GIT_VALIDATION || isOtherCI) {
