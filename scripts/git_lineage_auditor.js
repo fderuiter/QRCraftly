@@ -221,7 +221,7 @@ export function runAuditor(options = {}) {
   const exit = options.exit || process.exit;
 
   try {
-    const isGHA = !!env.GITHUB_ACTIONS || (!!env.CI && !env.CF_PAGES && !env.SKIP_GIT_VALIDATION);
+    const isGHA = !!env.GITHUB_ACTIONS;
     const isOtherCI = !!env.CI && !isGHA;
 
     if (env.SKIP_GIT_VALIDATION || isOtherCI) {

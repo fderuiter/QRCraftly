@@ -325,7 +325,7 @@ describe('Local Git-Diff Lineage Auditor', () => {
     it('should run in CI and use target branch comparison', () => {
       let exitCode = null;
       const mockOptions = {
-        env: { CI: 'true', GITHUB_BASE_REF: 'feature-branch' },
+        env: { CI: 'true', GITHUB_ACTIONS: 'true', GITHUB_BASE_REF: 'feature-branch' },
         argv: ['node', 'scripts/git_lineage_auditor.js'],
         execSync: (file, args) => {
           const argStr = args.join(' ');
@@ -346,7 +346,7 @@ describe('Local Git-Diff Lineage Auditor', () => {
       let exitCode = null;
       let usedFallback = false;
       const mockOptions = {
-        env: { CI: 'true' },
+        env: { CI: 'true', GITHUB_ACTIONS: 'true' },
         argv: ['node', 'scripts/git_lineage_auditor.js'],
         execSync: (file, args) => {
           const argStr = args.join(' ');
@@ -370,7 +370,7 @@ describe('Local Git-Diff Lineage Auditor', () => {
     it('should fail closed in CI if target branch comparison fails', () => {
       let exitCode = null;
       const mockOptions = {
-        env: { CI: 'true' },
+        env: { CI: 'true', GITHUB_ACTIONS: 'true' },
         argv: ['node', 'scripts/git_lineage_auditor.js'],
         execSync: () => {
           throw new Error('Git command completely failed');
@@ -386,7 +386,7 @@ describe('Local Git-Diff Lineage Auditor', () => {
     it('should fail closed in CI if .git directory is missing', () => {
       let exitCode = null;
       const mockOptions = {
-        env: { CI: 'true' },
+        env: { CI: 'true', GITHUB_ACTIONS: 'true' },
         argv: ['node', 'scripts/git_lineage_auditor.js'],
         execSync: () => 'src/types.ts',
         existsSync: (p) => !p.endsWith('.git'), // simulate missing .git
@@ -442,7 +442,7 @@ describe('Local Git-Diff Lineage Auditor', () => {
     it('should exit with 1 when documentation updates are missing', () => {
       let exitCode = null;
       const mockOptions = {
-        env: { CI: 'true' },
+        env: { CI: 'true', GITHUB_ACTIONS: 'true' },
         argv: ['node', 'scripts/git_lineage_auditor.js'],
         execSync: (file, args) => {
           const argStr = args.join(' ');
@@ -480,6 +480,20 @@ describe('Local Git-Diff Lineage Auditor', () => {
         argv: ['node', 'scripts/git_lineage_auditor.js'],
         execSync: () => { throw new Error('should not call git'); },
         existsSync: () => false, // even if .git is missing completely
+        exit: (code) => { exitCode = code; }
+      };
+
+      runAuditor(mockOptions);
+      expect(exitCode).toBeNull();
+    });
+
+    it('should skip checks on CI providers that do not expose GitHub Actions metadata', () => {
+      let exitCode = null;
+      const mockOptions = {
+        env: { CI: 'true' },
+        argv: ['node', 'scripts/git_lineage_auditor.js'],
+        execSync: () => { throw new Error('should not call git'); },
+        existsSync: () => false,
         exit: (code) => { exitCode = code; }
       };
 
