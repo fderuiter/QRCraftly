@@ -51,7 +51,7 @@ These components capture specialized data structures required to construct disti
 - **LocationInput** (`LocationInput.tsx` / `LocationInput.test.tsx`): High-accuracy coordinate form requiring proper latitude and longitude decimals.
 - **MeetingInput** (`MeetingInput.tsx` / `MeetingInput.test.tsx`): Specialized input fields to enter URL links and meeting passwords.
 - **SocialInput** (`SocialInput.tsx` / `SocialInput.test.tsx`): Selectors for major platforms alongside handler name parsing.
-- **TypeSelector** (`TypeSelector.tsx` / `TypeSelector.test.tsx`): Tabbed layout facilitating quick, clean switching between active QR configurations.
+- **TypeSelector** (`TypeSelector.tsx` / `TypeSelector.test.tsx`): Accessible tabbed layout for switching between QR configurations, with arrow, Home, End, Enter, and Space keyboard controls while leaving Tab navigation to the browser's native focus order.
 
 ---
 
@@ -59,7 +59,7 @@ These components capture specialized data structures required to construct disti
 
 Unified appearance control modules that manage and present customization options in a modular side navigation menu.
 
-- **PatternControls** (`PatternControls.tsx`): Layout and visual selectors allowing users to toggle through classic, rounded, or custom pattern templates.
+- **PatternControls** (`PatternControls.tsx`): Pattern-style selector that conditionally displays one assertive scannability warning for low-reliability patterns, avoiding duplicate screen-reader announcements.
 - **ColorControls** (`ColorControls.tsx`): Consolidates pickers and preset buttons for foreground, background, and corner eye accents.
 - **LogoControls** (`LogoControls.tsx`): Coordinates uploading custom logos, configuring scaling boundaries, and adjusting background-mask thresholds.
 - **BorderControls** (`BorderControls.tsx` / `BorderControls.test.tsx`): Controls options for border thickness, padding, and corner radius around outputs.
