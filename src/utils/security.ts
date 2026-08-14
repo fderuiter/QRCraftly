@@ -80,9 +80,26 @@ export const sanitizeHref = (url: string | undefined): string => {
     trimmed.startsWith('https://') ||
     trimmed.startsWith('/')
   ) {
-    return trimmed;
+    return escapeHtml(trimmed);
   }
   return '#';
+};
+
+/**
+ * Escapes HTML meta-characters to prevent DOM-XSS and HTML injection.
+ * Replaces &, <, >, ", and ' with their corresponding HTML entity equivalents.
+ *
+ * @param str The input string to escape.
+ * @returns The escaped, safe string.
+ */
+export const escapeHtml = (str: string | undefined): string => {
+  if (!str) return '';
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 };
 
 /**
