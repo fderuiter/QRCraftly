@@ -225,9 +225,9 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
           </div>
         </div>
       </Modal>
-      <div className="relative flex h-screen min-h-screen flex-col-reverse overflow-hidden bg-slate-50 transition-colors duration-300 md:h-auto md:min-h-0 md:flex-row md:overflow-visible dark:bg-slate-950">
+      <div className="relative flex min-h-screen flex-col-reverse bg-slate-50 transition-colors duration-300 md:min-h-0 md:flex-row dark:bg-slate-950">
         {/* Sidebar Controls */}
-        <aside aria-label="QR Code Settings" className="relative z-10 flex max-h-[50vh] w-full flex-col overflow-y-auto border-r border-slate-200 bg-white shadow-xl transition-colors duration-300 md:max-h-none md:w-120 dark:border-slate-800 dark:bg-slate-900">
+        <aside aria-label="QR Code Settings" className="relative z-10 flex w-full flex-col border-r border-slate-200 bg-white shadow-xl transition-colors duration-300 md:w-120 dark:border-slate-800 dark:bg-slate-900">
           <header className="sticky top-0 z-20 flex items-center justify-between border-b border-slate-100 bg-white p-6 transition-colors duration-300 dark:border-slate-800 dark:bg-slate-900">
             <div>
               <a href="/" aria-label="QRCraftly Home" className="mb-1 flex items-center gap-2 text-teal-700 transition-opacity hover:opacity-80 dark:text-teal-400">
@@ -286,6 +286,26 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
             ))}
 
             <footer className="mt-8 border-t border-slate-100 pt-8 dark:border-slate-800">
+              {showTelemetryPrompt && (
+                <section
+                  aria-labelledby="telemetry-consent-title"
+                  className="mb-8 border-b border-slate-100 pb-8 dark:border-slate-800"
+                >
+                  <h2
+                    id="telemetry-consent-title"
+                    className="mb-2 flex items-center gap-2 text-xs font-semibold tracking-wider text-slate-900 uppercase dark:text-slate-200"
+                  >
+                    <Info className="size-4 text-blue-500" /> Anonymous diagnostics
+                  </h2>
+                  <p className="mb-3 text-xs leading-relaxed text-slate-600 dark:text-slate-400">
+                    If a scan check fails, may we send your browser engine and QR style settings to help improve QRCraftly? QR content and images are never sent.
+                  </p>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={() => handleOptIn(true)} className="flex-1 text-xs">Allow</Button>
+                    <Button variant="outline" size="sm" onClick={() => handleOptIn(false)} className="flex-1 text-xs">No thanks</Button>
+                  </div>
+                </section>
+              )}
               <nav aria-label="Site Map">
                 <div className="mb-4 grid grid-cols-2 gap-4">
                   <div>
@@ -327,7 +347,7 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
         </aside>
 
         {/* Preview Area */}
-        <section aria-label="QR Code Preview" className="relative flex max-h-[50vh] flex-1 flex-col items-center justify-center overflow-x-hidden overflow-y-auto bg-slate-50 p-4 transition-colors duration-300 md:sticky md:top-0 md:h-[100dvh] md:max-h-none md:p-8 dark:bg-slate-950">
+        <section aria-label="QR Code Preview" className="relative flex flex-1 flex-col items-center justify-center overflow-x-hidden bg-slate-50 p-4 transition-colors duration-300 md:sticky md:top-0 md:h-[100dvh] md:p-8 dark:bg-slate-950">
            {/* Background Decoration */}
            <div className="pointer-events-none absolute inset-0 opacity-40 dark:opacity-20">
                <div className="absolute top-0 left-0 size-96 -translate-1/2 rounded-full bg-teal-200 blur-3xl transition-colors duration-300 dark:bg-teal-900"></div>
@@ -430,22 +450,6 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
                       Save to Photos
                    </Button>
 
-                   {showTelemetryPrompt && (
-                      <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm dark:border-slate-700 dark:bg-slate-800">
-                         <h3 className="mb-2 flex items-center gap-2 font-semibold text-slate-800 dark:text-slate-200">
-                           <Info className="size-4 text-blue-500" /> Help Improve Scannability
-                         </h3>
-                         <p className="mb-3 text-xs leading-relaxed text-slate-600 dark:text-slate-400">
-                           We noticed your QR code might be hard to scan. Would you like to send an anonymous telemetry ping to help us fix bugs?
-                           <br/><br/>
-                           <strong>Privacy Guarantee:</strong> We only send your device engine and style settings. We <strong>never</strong> send the QR content or image.
-                         </p>
-                         <div className="flex gap-2">
-                           <Button variant="primary" size="sm" onClick={() => handleOptIn(true)} className="flex-1 text-xs">Yes, Help Fix This</Button>
-                           <Button variant="outline" size="sm" onClick={() => handleOptIn(false)} className="flex-1 text-xs">No Thanks</Button>
-                         </div>
-                      </div>
-                   )}
                 </div>
              </Card>
           </div>

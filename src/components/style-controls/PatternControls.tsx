@@ -31,13 +31,13 @@ export const PatternControls: React.FC<PatternControlsProps> = ({ config, onChan
     <div>
       <h3 className="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-300">Pattern Style</h3>
       
-      <div className="mb-4" data-testid="pattern-warning-slot">
-        <div className={isLowReliability ? 'visible' : 'invisible'} aria-hidden={!isLowReliability}>
+      {isLowReliability && (
+        <div className="mb-4" data-testid="pattern-warning-slot">
           <Alert variant="error" title="Scannability Warning" role={isLowReliability ? "alert" : undefined}>
-            The selected pattern ("{isLowReliability ? (PATTERNS.find(p => p.id === config.style)?.label || '') : 'pattern'}") is complex and may reduce scannability on older mobile devices or in poor lighting. Consider testing thoroughly before printing.
+            The selected pattern ("{PATTERNS.find(p => p.id === config.style)?.label || ''}") is complex and may reduce scannability on older mobile devices or in poor lighting. Consider testing thoroughly before printing.
           </Alert>
         </div>
-      </div>
+      )}
 
       <div className="sr-only" aria-live="polite" aria-atomic="true">
         {isLowReliability ? `Scannability Warning: The selected pattern ("${PATTERNS.find(p => p.id === config.style)?.label || ''}") is complex and may reduce scannability on older mobile devices or in poor lighting. Consider testing thoroughly before printing.` : ''}
