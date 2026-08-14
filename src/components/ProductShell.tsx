@@ -32,7 +32,7 @@ export function ProductShell({ children }: { children: ReactNode }) {
         </div>
       </header>
 
-      <div className="flex-1">{children}</div>
+      <main className="flex-1">{children}</main>
 
       <footer className="border-t border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
         <div className="mx-auto grid max-w-7xl gap-8 px-4 py-10 sm:grid-cols-[1fr_auto_auto] sm:px-6">
