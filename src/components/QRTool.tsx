@@ -259,7 +259,7 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
                   <nav
                     id="mobile-file-transfer-menu"
                     aria-label="File transfer"
-                    className="absolute right-0 top-full z-30 mt-2 w-44 overflow-hidden rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl dark:border-slate-700 dark:bg-slate-900"
+                    className="absolute top-full right-0 z-30 mt-2 w-44 overflow-hidden rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl dark:border-slate-700 dark:bg-slate-900"
                   >
                     <a
                       href="/file-transfer"

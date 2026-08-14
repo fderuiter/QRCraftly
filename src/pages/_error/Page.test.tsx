@@ -56,6 +56,8 @@ describe('Error Page Integration Tests', () => {
     const goHomeLink = screen.getByRole('link', { name: /Go Home/i });
     expect(goHomeLink).toBeInTheDocument();
     expect(goHomeLink).toHaveAttribute('href', '/');
+    expect(screen.getByRole('navigation', { name: /Primary navigation/i })).toBeInTheDocument();
+    expect(screen.getByRole('contentinfo')).toBeInTheDocument();
   });
 
   it('handles 500 status correctly', () => {
