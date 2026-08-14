@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { act, render, screen, fireEvent, waitFor } from '@testing-library/react';
 import React from 'react';
 import { QRScanner } from './QRScanner';
 import { useCamera } from '../hooks/useCamera';
@@ -95,6 +95,44 @@ describe('QRScanner Component', () => {
 
     expect(screen.getByRole('button', { name: /webcam/i })).toHaveClass('bg-white');
     expect(mockStartStream).toHaveBeenCalled();
+  });
+
+  it('keeps the video mounted while camera permission is initializing', async () => {
+    let resolveStream: (stream: MediaStream) => void = () => {};
+    const streamPromise = new Promise<MediaStream>((resolve) => {
+      resolveStream = resolve;
+    });
+    mockStartStream.mockReturnValue(streamPromise);
+
+    let isInitializing = false;
+    vi.mocked(useCamera).mockImplementation(() => ({
+      permissionState: 'prompt',
+      stream: null,
+      error: null,
+      isInitializing,
+      startStream: mockStartStream,
+      stopStream: mockStopStream,
+    }));
+
+    const { rerender } = render(
+      <QRScanner onScanSuccess={mockOnScanSuccess} onClose={mockOnClose} />
+    );
+    const video = screen.getByLabelText('Webcam feed') as HTMLVideoElement;
+
+    isInitializing = true;
+    rerender(<QRScanner onScanSuccess={mockOnScanSuccess} onClose={mockOnClose} />);
+
+    expect(screen.getByLabelText('Webcam feed')).toBe(video);
+    expect(screen.getByText('Initializing camera stream...')).toBeInTheDocument();
+
+    const activeStream = { getTracks: () => [] } as unknown as MediaStream;
+    await act(async () => {
+      resolveStream(activeStream);
+      await streamPromise;
+    });
+
+    expect(video.srcObject).toBe(activeStream);
+    expect(mockStartScanning).toHaveBeenCalled();
   });
 
   it('renders troubleshooting card immediately upon camera permission denial', async () => {
