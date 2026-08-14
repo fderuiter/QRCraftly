@@ -347,7 +347,7 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
         </aside>
 
         {/* Preview Area */}
-        <section aria-label="QR Code Preview" className="relative flex flex-1 flex-col items-center justify-center overflow-x-hidden bg-slate-50 p-4 transition-colors duration-300 md:sticky md:top-0 md:h-[100dvh] md:justify-start md:overflow-y-auto md:px-8 md:py-8 dark:bg-slate-950">
+        <section aria-label="QR Code Preview" className="relative flex flex-1 flex-col items-center justify-center overflow-x-hidden bg-slate-50 p-4 transition-colors duration-300 md:sticky md:top-0 md:h-[100dvh] md:justify-start md:overflow-y-auto md:p-8 dark:bg-slate-950">
            {/* Background Decoration */}
            <div className="pointer-events-none absolute inset-0 opacity-40 dark:opacity-20">
                <div className="absolute top-0 left-0 size-96 -translate-1/2 rounded-full bg-teal-200 blur-3xl transition-colors duration-300 dark:bg-teal-900"></div>
