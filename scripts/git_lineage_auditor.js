@@ -253,19 +253,37 @@ export function runAuditor(options = {}) {
         diffStdout = customExecSync('git', ['diff', '--name-only', `${targetBranch}...HEAD`], { encoding: 'utf8', cwd: repoRoot });
         console.log(`[Lineage Auditor] Successfully resolved files via target branch diff.`);
       } catch (err) {
-        console.log(`[Lineage Auditor] Initial target branch comparison failed: ${err.message}`);
-        const remoteName = 'origin';
-        const remoteBranch = targetBranch.startsWith(`${remoteName}/`) ? targetBranch.substring(remoteName.length + 1) : targetBranch;
-        
-        console.log(`[Lineage Auditor] Attempting to fetch branch '${remoteBranch}' from remote '${remoteName}'...`);
-        try {
-          customExecSync('git', ['fetch', remoteName, `${remoteBranch}:refs/remotes/${remoteName}/${remoteBranch}`, '--depth=1'], { encoding: 'utf8', cwd: repoRoot });
-          console.log(`[Lineage Auditor] Successfully fetched ${remoteBranch}. Retrying target branch comparison...`);
-          diffStdout = customExecSync('git', ['diff', '--name-only', `${targetBranch}...HEAD`], { encoding: 'utf8', cwd: repoRoot });
-          console.log(`[Lineage Auditor] Successfully resolved files via target branch diff after fetch.`);
-        } catch (fetchErr) {
-          console.error(`❌ [Lineage Auditor] Target branch comparison and fetch recovery both failed.`);
-          console.error(`❌ Fetch error details: ${fetchErr.message}`);
+        console.warn(`[Lineage Auditor] Initial target branch comparison failed, attempting to fetch and retry...`);
+        const slashIndex = targetBranch.indexOf('/');
+        if (slashIndex !== -1) {
+          const remote = targetBranch.substring(0, slashIndex);
+          const branch = targetBranch.substring(slashIndex + 1);
+          console.log(`[Lineage Auditor] Fetching '${branch}' from remote '${remote}' to refs/remotes/${targetBranch}...`);
+          try {
+            customExecSync('git', ['fetch', remote, `${branch}:refs/remotes/${targetBranch}`], { encoding: 'utf8', cwd: repoRoot });
+            console.log(`[Lineage Auditor] Successfully fetched target branch ref. Retrying diff...`);
+            try {
+              diffStdout = customExecSync('git', ['diff', '--name-only', `${targetBranch}...HEAD`], { encoding: 'utf8', cwd: repoRoot });
+              console.log(`[Lineage Auditor] Successfully resolved files via target branch diff after fetch.`);
+            } catch (diffErr) {
+              console.warn(`[Lineage Auditor] Triple-dot diff failed: ${diffErr.message}. Falling back to double-dot diff...`);
+              try {
+                diffStdout = customExecSync('git', ['diff', '--name-only', `${targetBranch}..HEAD`], { encoding: 'utf8', cwd: repoRoot });
+                console.log(`[Lineage Auditor] Successfully resolved files via double-dot diff.`);
+              } catch (doubleDotErr) {
+                console.warn(`[Lineage Auditor] Double-dot diff failed: ${doubleDotErr.message}. Falling back to direct diff...`);
+                diffStdout = customExecSync('git', ['diff', '--name-only', targetBranch, 'HEAD'], { encoding: 'utf8', cwd: repoRoot });
+                console.log(`[Lineage Auditor] Successfully resolved files via direct diff.`);
+              }
+            }
+          } catch (retryErr) {
+            console.error(`❌ [Lineage Auditor] Retry comparison failed: ${retryErr.message}`);
+            console.error('❌ [Lineage Auditor] Failed closed in CI environment due to git comparison failure.');
+            exit(1);
+            return;
+          }
+        } else {
+          console.error(`❌ [Lineage Auditor] Target branch comparison failed and could not parse remote: ${err.message}`);
           console.error('❌ [Lineage Auditor] Failed closed in CI environment due to git comparison failure.');
           exit(1);
           return;
