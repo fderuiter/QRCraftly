@@ -415,7 +415,8 @@ function runValidator() {
     console.log('✅ UI Catalog Integrity matches shared components perfectly.');
 
     // 2. Run Git Lineage / Change Set verification
-    const isGHA = !!process.env.GITHUB_ACTIONS || (!!process.env.CI && !process.env.CF_PAGES && !process.env.SKIP_GIT_VALIDATION);
+    const isCloudflare = !!process.env.CF_PAGES || Object.keys(process.env).some(key => key.startsWith('CF_') || key.startsWith('CLOUDFLARE_'));
+    const isGHA = !!process.env.GITHUB_ACTIONS || (!!process.env.CI && !isCloudflare && !process.env.SKIP_GIT_VALIDATION);
     const isOtherCI = !!process.env.CI && !isGHA;
 
     if (process.env.SKIP_GIT_VALIDATION || isOtherCI) {
