@@ -5,7 +5,7 @@ import { useToast } from '@/components/ui/Toast';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { TextField } from '@/components/ui/FormFields';
-import { isDangerousUrl, sanitizeHref } from '@/utils/security';
+import { isDangerousUrl, sanitizeHref, escapeHtml } from '@/utils/security';
 import { normalizeUrl } from '@/utils/url';
 
 /**
@@ -140,7 +140,7 @@ export default function DynamicDashboardPage() {
                       <div className="text-xs font-semibold tracking-wider text-slate-400 uppercase">Tracking Router (Printed QR Value)</div>
                       <div className="flex items-center gap-2">
                         <code className="rounded bg-slate-100 px-2 py-1 font-mono text-sm break-all text-slate-800 dark:bg-slate-800 dark:text-slate-200">
-                          {r.redirectUrl}
+                          {escapeHtml(r.redirectUrl)}
                         </code>
                         <a href={sanitizeHref(r.redirectUrl)} target="_blank" rel="noopener noreferrer" className="text-teal-600 hover:text-teal-700 dark:text-teal-400" title="Visit redirector">
                           <ExternalLink className="size-4" />
@@ -174,7 +174,7 @@ export default function DynamicDashboardPage() {
                       <div className="space-y-1">
                         <div className="text-xs font-semibold tracking-wider text-slate-400 uppercase">Redirects to</div>
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium break-all text-slate-700 dark:text-slate-300">{r.originalUrl}</span>
+                          <span className="text-sm font-medium break-all text-slate-700 dark:text-slate-300">{escapeHtml(r.originalUrl)}</span>
                           <Button variant="ghost" size="icon" onClick={() => handleStartEdit(r)} title="Edit Destination">
                             <Edit2 className="size-4" />
                           </Button>

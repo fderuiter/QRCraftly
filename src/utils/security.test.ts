@@ -27,7 +27,7 @@ if (typeof globalThis.DOMParser === 'undefined') {
   globalThis.Node = dom.window.Node;
 }
 
-import { isDangerousUrl, sanitizeHref, safeJsonLdStringify, cleanPhoneNumber, sanitizeInput, validateImageUpload, sanitizeSvg } from './security';
+import { isDangerousUrl, sanitizeHref, safeJsonLdStringify, cleanPhoneNumber, sanitizeInput, validateImageUpload, sanitizeSvg, escapeHtml } from './security';
 
 describe('Security Utils', () => {
   describe('isDangerousUrl', () => {
@@ -125,6 +125,21 @@ describe('Security Utils', () => {
     it('trims whitespace before checking', () => {
       expect(sanitizeHref('   https://example.com ')).toBe('https://example.com');
       expect(sanitizeHref(' \t javascript:alert(1) ')).toBe('#');
+    });
+
+    it('escapes HTML meta-characters in valid URLs', () => {
+      expect(sanitizeHref('https://example.com?a=1&b=2<script>')).toBe('https://example.com?a=1&amp;b=2&lt;script&gt;');
+    });
+  });
+
+  describe('escapeHtml', () => {
+    it('escapes ampersand, less than, greater than, double quote, and single quote', () => {
+      expect(escapeHtml('a & b < c > d " e \' f')).toBe('a &amp; b &lt; c &gt; d &quot; e &#39; f');
+    });
+
+    it('handles undefined and empty string', () => {
+      expect(escapeHtml(undefined)).toBe('');
+      expect(escapeHtml('')).toBe('');
     });
   });
 
