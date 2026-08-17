@@ -38,14 +38,16 @@ export function applyOpticalSimulationMath(
   pixels: Uint8ClampedArray | Uint8Array,
   width: number,
   height: number,
-  noiseLevel = 10
+  noiseLevel = 10,
+  dstBuffer?: Uint8ClampedArray,
+  tempBuffer?: Uint8ClampedArray
 ): Uint8ClampedArray {
   const src = pixels;
-  const dst = new Uint8ClampedArray(src.length);
+  const dst = dstBuffer && dstBuffer.length === src.length ? dstBuffer : new Uint8ClampedArray(src.length);
   const blurRadius = calculateBlurRadius(width);
   
   // Fast box blur (horizontal then vertical)
-  const temp = new Uint8ClampedArray(src.length);
+  const temp = tempBuffer && tempBuffer.length === src.length ? tempBuffer : new Uint8ClampedArray(src.length);
   
   // Horizontal pass
   for (let y = 0; y < height; y++) {

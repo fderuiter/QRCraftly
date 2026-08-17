@@ -149,47 +149,12 @@ describe('Destroy the QR Code! Arcade Page', () => {
   });
 
   it('implements the Worker-Locked Offscreen Downscaling Pipeline correctly', async () => {
-    const mockDrawImage = vi.fn();
-    const mockGetImageData = vi.fn(() => ({
-      data: new Uint8ClampedArray(256 * 256 * 4),
-      width: 256,
-      height: 256,
-    }));
-
-    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(function(this: HTMLCanvasElement, contextId: string) {
-      if (this.width === 256 && this.height === 256) {
-        return {
-          clearRect: vi.fn(),
-          drawImage: mockDrawImage,
-          getImageData: mockGetImageData,
-        } as any;
-      }
-      return {
-        fillStyle: '',
-        strokeStyle: '',
-        lineWidth: 0,
-        clearRect: vi.fn(),
-        fillRect: vi.fn(),
-        strokeRect: vi.fn(),
-        beginPath: vi.fn(),
-        moveTo: vi.fn(),
-        lineTo: vi.fn(),
-        stroke: vi.fn(),
-        fill: vi.fn(),
-        arc: vi.fn(),
-        drawImage: vi.fn(),
-        getImageData: vi.fn(() => ({
-          data: new Uint8ClampedArray(4 * 8 * 8),
-          width: 8,
-          height: 8,
-        })),
-        save: vi.fn(),
-        restore: vi.fn(),
-        translate: vi.fn(),
-        setLineDash: vi.fn(),
-        rotate: vi.fn(),
-        createLinearGradient: vi.fn(() => ({ addColorStop: vi.fn() })),
-      } as any;
+    const mockPostMessage = vi.fn();
+    vi.stubGlobal('Worker', class MockWorker {
+      postMessage = mockPostMessage;
+      addEventListener = vi.fn();
+      removeEventListener = vi.fn();
+      terminate = vi.fn();
     });
 
     render(<Page />);
@@ -200,14 +165,14 @@ describe('Destroy the QR Code! Arcade Page', () => {
     if (canvas) {
       fireEvent.mouseDown(canvas, { clientX: 200, clientY: 200 });
       
-      expect(mockDrawImage).toHaveBeenCalled();
-      expect(mockGetImageData).toHaveBeenCalled();
+      // Wait for async createImageBitmap to finish and postMessage to be called
+      await new Promise<void>(resolve => setTimeout(resolve, 50));
 
-      const lastDrawCall = mockDrawImage.mock.calls[0];
-      expect(lastDrawCall[5]).toBe(0);
-      expect(lastDrawCall[6]).toBe(0);
-      expect(lastDrawCall[7]).toBe(256);
-      expect(lastDrawCall[8]).toBe(256);
+      expect(mockPostMessage).toHaveBeenCalled();
+      const lastCall = mockPostMessage.mock.calls[0][0];
+      expect(lastCall.imageBitmap).toBeDefined();
+      expect(lastCall.width).toBe(256);
+      expect(lastCall.height).toBe(256);
     }
   });
 
@@ -230,11 +195,14 @@ describe('Destroy the QR Code! Arcade Page', () => {
       fireEvent.mouseMove(canvas, { clientX: 210, clientY: 210 });
       fireEvent.mouseMove(canvas, { clientX: 220, clientY: 220 });
 
+      // Wait for async createImageBitmap to resolve
+      await new Promise<void>(resolve => setTimeout(resolve, 50));
+
       expect(mockPostMessage).toHaveBeenCalledTimes(1);
 
       fireEvent.mouseUp(canvas);
       
-      await new Promise<void>(resolve => setTimeout(resolve, 30));
+      await new Promise<void>(resolve => setTimeout(resolve, 50));
 
       expect(mockPostMessage).toHaveBeenCalledTimes(1);
     }
@@ -247,6 +215,7 @@ describe('Destroy the QR Code! Arcade Page', () => {
     vi.stubGlobal('BarcodeDetector', class {
       detect = mockDetect;
     });
+    vi.stubGlobal('createImageBitmap', undefined); // Force fallback synchronous path to test BarcodeDetector!
     vi.stubGlobal('Worker', class MockWorker {
       postMessage = mockPostMessage;
       addEventListener = vi.fn();
@@ -279,6 +248,7 @@ describe('Destroy the QR Code! Arcade Page', () => {
     vi.stubGlobal('BarcodeDetector', class {
       detect = mockDetect;
     });
+    vi.stubGlobal('createImageBitmap', undefined); // Force fallback synchronous path to test fallback!
     vi.stubGlobal('Worker', class MockWorker {
       postMessage = mockPostMessage;
       addEventListener = vi.fn();
