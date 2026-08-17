@@ -27,6 +27,17 @@ let lastAckedIndex = -1;
 let errorCorrectionLevel = 'M';
 let isGenerating = false;
 let fileSHA256 = '';
+let lookaheadLimit = 3;
+
+const hashCache = new Map<string, string>();
+
+function getFileCacheKey(blob: Blob): string {
+  const name = (blob as any).name || 'file';
+  const size = blob.size;
+  const type = blob.type || '';
+  const lastModified = (blob as any).lastModified || '';
+  return `${name}:${size}:${type}:${lastModified}`;
+}
 
 /**
  * Converts an ArrayBuffer to a standard Base64 string in a worker-compatible way.
@@ -102,17 +113,17 @@ async function generateFrame(index: number) {
 }
 
 /**
- * Evaluates lookahead and processes sequential frames up to lastAckedIndex + 3.
+ * Evaluates lookahead and processes sequential frames up to lastAckedIndex + lookaheadLimit.
  */
 async function processPipeline() {
   if (isGenerating || !file) return;
   isGenerating = true;
 
   try {
-    // Generate frames as long as we don't exceed 3 frames ahead of the last ACK
+    // Generate frames as long as we don't exceed lookaheadLimit frames ahead of the last ACK
     while (
       nextIndexToGenerate < totalFrames &&
-      nextIndexToGenerate <= lastAckedIndex + 3
+      nextIndexToGenerate <= lastAckedIndex + lookaheadLimit
     ) {
       const currentIndex = nextIndexToGenerate;
       nextIndexToGenerate++;
@@ -135,16 +146,25 @@ self.onmessage = async (e: MessageEvent) => {
       chunkSize = payload.chunkSize || 256;
       errorCorrectionLevel = payload.errorCorrectionLevel || 'M';
       
+      const fps = payload.fps || 15;
+      lookaheadLimit = Math.min(16, Math.max(3, Math.ceil(fps * 0.2)));
+      
       if (!file) {
         (self as any).postMessage({ type: 'ERROR', message: 'No file provided' });
         return;
       }
 
-      try {
-        fileSHA256 = await computeSHA256(file);
-      } catch (err: any) {
-        (self as any).postMessage({ type: 'ERROR', message: `Hashing failed: ${err?.message || err}` });
-        return;
+      const cacheKey = getFileCacheKey(file);
+      if (hashCache.has(cacheKey)) {
+        fileSHA256 = hashCache.get(cacheKey)!;
+      } else {
+        try {
+          fileSHA256 = await computeSHA256(file);
+          hashCache.set(cacheKey, fileSHA256);
+        } catch (err: any) {
+          (self as any).postMessage({ type: 'ERROR', message: `Hashing failed: ${err?.message || err}` });
+          return;
+        }
       }
 
       totalDataFrames = Math.ceil(file.size / chunkSize);
@@ -187,6 +207,14 @@ self.onmessage = async (e: MessageEvent) => {
       break;
     }
 
+    case 'HEAL': {
+      if (payload && typeof payload.lastAckedIndex === 'number') {
+        lastAckedIndex = Math.max(lastAckedIndex, payload.lastAckedIndex);
+      }
+      await processPipeline();
+      break;
+    }
+
     case 'STOP': {
       file = null;
       totalFrames = 0;
@@ -195,6 +223,7 @@ self.onmessage = async (e: MessageEvent) => {
       lastAckedIndex = -1;
       fileSHA256 = '';
       isGenerating = false;
+      lookaheadLimit = 3;
       break;
     }
 
