@@ -164,6 +164,8 @@ export interface QRConfig {
   animationFps?: number;
   /** Whether to draw a solvable maze overlay. */
   isMazeEnabled?: boolean;
+  /** Whether to enable scannability-audited bridge channels. */
+  isMazeBridgesEnabled?: boolean;
   /** The color of the maze paths. */
   mazeColor?: string;
   /** Custom path width. */

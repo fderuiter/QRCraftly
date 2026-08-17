@@ -218,6 +218,10 @@ export function useQRStoreSelector<T>(selector: (state: QRState) => T): T {
   );
 }
 
+export function useOptionalQRStore() {
+  return useContext(QRStoreContext);
+}
+
 /**
  *
  */

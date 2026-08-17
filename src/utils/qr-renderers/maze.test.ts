@@ -141,4 +141,47 @@ describe('generateMaze & renderMaze', () => {
     expect(ctx.arc).toHaveBeenCalled(); // for start/end dot
     expect(ctx.restore).toHaveBeenCalled();
   });
+
+  describe('Scannability-Audited Bridge Channels', () => {
+    it('generates bridges across the safety zones when isMazeBridgesEnabled is true', () => {
+      const size = 21;
+      const modules = createMockModules(size);
+      const configWithBridges = { ...baseConfig, isMazeBridgesEnabled: true };
+      const mazeData = generateMaze(modules, configWithBridges, size);
+
+      // Verify that bridge cells are present as nodes in the maze
+      const tlBridgeNodes = mazeData.nodes.filter(n => n.c === 3 && n.r >= 6 && n.r <= 8);
+      const trBridgeNodes = mazeData.nodes.filter(n => n.c === size - 4 && n.r >= 6 && n.r <= 8);
+      const blBridgeNodes = mazeData.nodes.filter(n => n.r === size - 4 && n.c >= 6 && n.c <= 8);
+
+      expect(tlBridgeNodes.length).toBe(3);
+      expect(trBridgeNodes.length).toBe(3);
+      expect(blBridgeNodes.length).toBe(3);
+
+      // Verify that edges are created for the bridge paths
+      const tlBridgeEdges = mazeData.edges.filter(e => 
+        (e.u.c === 3 && e.u.r === 6 && e.v.c === 3 && e.v.r === 7) ||
+        (e.u.c === 3 && e.u.r === 7 && e.v.c === 3 && e.v.r === 6) ||
+        (e.u.c === 3 && e.u.r === 7 && e.v.c === 3 && e.v.r === 8) ||
+        (e.u.c === 3 && e.u.r === 8 && e.v.c === 3 && e.v.r === 7)
+      );
+      expect(tlBridgeEdges.length).toBe(2);
+    });
+
+    it('does not generate bridges when isMazeBridgesEnabled is false', () => {
+      const size = 21;
+      const modules = createMockModules(size);
+      const configNoBridges = { ...baseConfig, isMazeBridgesEnabled: false };
+      const mazeData = generateMaze(modules, configNoBridges, size);
+
+      // Verify that bridge cells in safety zone (r=7,8 for TL/TR, c=7,8 for BL) are NOT present
+      const tlBridgeNodes = mazeData.nodes.filter(n => n.c === 3 && n.r >= 7 && n.r <= 8);
+      const trBridgeNodes = mazeData.nodes.filter(n => n.c === size - 4 && n.r >= 7 && n.r <= 8);
+      const blBridgeNodes = mazeData.nodes.filter(n => n.r === size - 4 && n.c >= 7 && n.c <= 8);
+
+      expect(tlBridgeNodes.length).toBe(0);
+      expect(trBridgeNodes.length).toBe(0);
+      expect(blBridgeNodes.length).toBe(0);
+    });
+  });
 });

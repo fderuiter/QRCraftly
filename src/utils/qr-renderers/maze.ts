@@ -36,6 +36,23 @@ export function isFinderEyeZone(r: number, c: number, size: number): boolean {
 }
 
 /**
+ * Checks if a grid coordinate is part of a single-module bridge corridor
+ * routing directly across the finder pattern safety zone.
+ */
+export function isBridgeCell(r: number, c: number, size: number): boolean {
+  // TL Bridge Corridor: column 3, rows 6, 7, 8
+  if (c === 3 && r >= 6 && r <= 8) return true;
+
+  // TR Bridge Corridor: column size - 4, rows 6, 7, 8
+  if (c === size - 4 && r >= 6 && r <= 8) return true;
+
+  // BL Bridge Corridor: row size - 4, columns 6, 7, 8
+  if (r === size - 4 && c >= 6 && c <= 8) return true;
+
+  return false;
+}
+
+/**
  * Deterministic seed-based pseudo-random number generator (Mulberry32).
  * Ensures that the generated maze is stable for a given QR code payload.
  */
@@ -89,7 +106,7 @@ class DSU {
  * Generates the maze structure deterministically based on configuration.
  */
 export function generateMaze(modules: QRModules, config: QRConfig, size: number): MazeData {
-  const cacheKey = `${config.value}_${config.errorCorrectionLevel}_${size}_${config.logoUrl}_${config.logoSize}_${config.logoPaddingStyle}_${config.logoPadding}`;
+  const cacheKey = `${config.value}_${config.errorCorrectionLevel}_${size}_${config.logoUrl}_${config.logoSize}_${config.logoPaddingStyle}_${config.logoPadding}_${config.isMazeBridgesEnabled !== false}`;
   const isTest = typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 'test';
   if (!isTest && mazeCache.has(cacheKey)) {
     return mazeCache.get(cacheKey)!;
@@ -102,18 +119,23 @@ export function generateMaze(modules: QRModules, config: QRConfig, size: number)
   const nodes: MazeNode[] = [];
   const nodeMap = new Map<string, MazeNode>();
 
+  const bridgesEnabled = config.isMazeBridgesEnabled !== false;
+
   // Extract all traversable cells (light modules + 4-module quiet zone margin floor)
   // Grid coordinates range from -4 to size + 3
   for (let r = -4; r < size + 4; r++) {
     for (let c = -4; c < size + 4; c++) {
+      const isBridge = !!(bridgesEnabled && isBridgeCell(r, c, size));
       if (isFinderEyeZone(r, c, size)) {
-        continue;
+        if (!isBridge) {
+          continue;
+        }
       }
       if (r >= 0 && r < size && c >= 0 && c < size) {
         if (isCoveredByLogo(r, c)) {
           continue;
         }
-        if (modules.get(r, c) === true) {
+        if (modules.get(r, c) === true && !isBridge) {
           continue;
         }
       }

@@ -52,6 +52,7 @@ export const DEFAULT_CONFIG = {
   templateSubtext: '',
   templateQrScale: 1.0,
   isMazeEnabled: false,
+  isMazeBridgesEnabled: true,
   mazeColor: '#3b82f6',
   showMazeSolution: false,
 };

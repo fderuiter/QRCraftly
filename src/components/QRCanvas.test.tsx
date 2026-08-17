@@ -581,5 +581,52 @@ describe('QRCanvas Component', () => {
         globalThis.Worker = originalWorker;
       }
     });
+
+    it('seamlessly reverts bridges to standard safety zones if scannability-fail is emitted', async () => {
+      const mazeConfig = {
+        ...DEFAULT_CONFIG,
+        isMazeEnabled: true,
+        isMazeBridgesEnabled: true,
+      };
+
+      const spyGenerateMaze = vi.spyOn(await import('../utils/qr-renderers/maze'), 'generateMaze');
+
+      // We need a custom store to emit the signal
+      const { QRProvider, useQRStore } = await import('../context/QRContext');
+      let storeRef: any;
+
+      const TestComponent = () => {
+        const store = useQRStore();
+        storeRef = store;
+        return <QRCanvas config={mazeConfig} size={100} />;
+      };
+
+      render(
+        <QRProvider>
+          <TestComponent />
+        </QRProvider>
+      );
+
+      // Verify it was initially generated with bridges enabled (default is true or explicitly true)
+      await waitFor(() => {
+        expect(spyGenerateMaze).toHaveBeenCalled();
+      });
+      const initialCallConfig = spyGenerateMaze.mock.calls[0][1];
+      expect(initialCallConfig.isMazeBridgesEnabled).not.toBe(false);
+
+      // Clear spy calls history
+      spyGenerateMaze.mockClear();
+
+      // Emit scannability-fail signal via the store
+      await act(async () => {
+        storeRef.emitSignal('scannability-fail', { errorType: 'TEST' });
+      });
+
+      // Verify that generateMaze gets called again, this time with isMazeBridgesEnabled set to false
+      await waitFor(() => {
+        const fallbackCall = spyGenerateMaze.mock.calls.find(call => call[1].isMazeBridgesEnabled === false);
+        expect(fallbackCall).toBeDefined();
+      });
+    });
   });
 });
