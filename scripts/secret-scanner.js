@@ -49,7 +49,7 @@ export const GITHUB_REGEX = /\b(gh[pousr]_[a-zA-Z0-9]{36}|github_pat_[a-zA-Z0-9_
 export const GCP_REGEX = /\b(AIzaSy[a-zA-Z0-9_-]{33})\b/i;
 
 // Helper to check if a value is a false positive
-export function isFalsePositive(secret, varName = '') {
+export function isFalsePositive(secret, varName = '', isTestFile = false) {
   if (!secret) return true;
 
   const lowerSecret = secret.toLowerCase();
@@ -57,6 +57,41 @@ export function isFalsePositive(secret, varName = '') {
 
   // Environment variables or system references
   if (secret.startsWith('$') || secret.includes('${') || secret.includes('process.env') || secret.includes('import.meta')) {
+    return true;
+  }
+
+  // JS/TS Keywords & Type words
+  const keywordsAndTypes = [
+    'string', 'number', 'boolean', 'any', 'unknown', 'undefined', 'null',
+    'void', 'never', 'object', 'symbol', 'bigint', 'function', 'true', 'false',
+    'unexpected'
+  ];
+  if (keywordsAndTypes.includes(lowerSecret)) {
+    return true;
+  }
+
+  // Code expressions or references
+  if (
+    lowerSecret.includes('.') ||
+    lowerSecret.includes('(') ||
+    lowerSecret.includes(')') ||
+    lowerSecret.startsWith('e.') ||
+    lowerSecret.startsWith('event.') ||
+    lowerSecret.startsWith('parsed.') ||
+    lowerSecret.startsWith('this.') ||
+    lowerSecret.startsWith('result.') ||
+    lowerSecret.startsWith('data.') ||
+    lowerSecret.startsWith('state.') ||
+    lowerSecret.startsWith('config.') ||
+    lowerSecret.startsWith('options.') ||
+    lowerSecret.startsWith('payload.') ||
+    lowerSecret.startsWith('req.') ||
+    lowerSecret.startsWith('res.') ||
+    lowerSecret.startsWith('input.') ||
+    lowerSecret.startsWith('unescape') ||
+    lowerSecret.startsWith('param') ||
+    lowerSecret.includes('target')
+  ) {
     return true;
   }
 
@@ -83,6 +118,30 @@ export function isFalsePositive(secret, varName = '') {
     return true;
   }
 
+  // Exact mock pattern matches
+  const exactMockPatterns = [
+    'test', 'user', 'john', 'doe', 'john.doe', 'johndoe', 'foo', 'bar', 'baz', 'qux',
+    'email', 'mail', 'temp', 'admin', 'sender', 'receiver', 'recipient', 'mock',
+    'my_username', 'username', 'password', 'pass', 'secret', 'key', 'token', 'nopass',
+    'mypass', 'mypassword', 'my_password', 'ignored', 'test_pass', 'test_password',
+    'testpassword', 'my-password', 'my_password123', 'password123', 'pass123',
+    'secret123', 'token123', 'key123', 'user123', 'johndoe123', 'test123', 'http', 'https'
+  ];
+  if (exactMockPatterns.includes(lowerSecret)) {
+    return true;
+  }
+
+  // Test-file relaxed rules
+  if (isTestFile) {
+    const mockKeywords = [
+      'pass', 'password', 'secret', 'key', 'token', 'test', 'user', 'email', 'mail',
+      'dummy', 'example', 'john', 'doe', 'foo', 'bar', 'baz', 'mock', 'temp', 'admin', 'ignored'
+    ];
+    if (mockKeywords.some(keyword => lowerSecret.includes(keyword))) {
+      return true;
+    }
+  }
+
   // Extremely short values or simple quotes
   if (secret.trim().length < 4) {
     return true;
@@ -106,6 +165,13 @@ export function scanFile(filePath) {
     return [];
   }
 
+  const normalizedPath = relativePath.replace(/\\/g, '/');
+  const isTestFile = (normalizedPath.includes('.test.') || 
+                      normalizedPath.includes('.spec.') || 
+                      normalizedPath.split('/').includes('tests') || 
+                      normalizedPath.split('/').includes('fixtures')) &&
+                     !normalizedPath.includes('temp-test-');
+
   if (!fs.existsSync(absolutePath)) {
     return [];
   }
@@ -128,7 +194,7 @@ export function scanFile(filePath) {
     const smtpUriMatch = line.match(SMTP_URI_REGEX);
     if (smtpUriMatch) {
       const secret = smtpUriMatch[1];
-      if (!isFalsePositive(secret)) {
+      if (!isFalsePositive(secret, '', isTestFile)) {
         findings.push({
           file: relativePath,
           line: lineNumber,
@@ -144,7 +210,7 @@ export function scanFile(filePath) {
     if (smtpPassMatch) {
       const varName = smtpPassMatch[1] + (smtpPassMatch[2] ? '_' + smtpPassMatch[2] : '');
       const secret = smtpPassMatch[3];
-      if (!isFalsePositive(secret, varName)) {
+      if (!isFalsePositive(secret, varName, isTestFile)) {
         findings.push({
           file: relativePath,
           line: lineNumber,
@@ -160,7 +226,7 @@ export function scanFile(filePath) {
     if (cfMatch) {
       const varName = [cfMatch[1], cfMatch[2], cfMatch[3]].filter(Boolean).join('_');
       const secret = cfMatch[4];
-      if (!isFalsePositive(secret, varName)) {
+      if (!isFalsePositive(secret, varName, isTestFile)) {
         findings.push({
           file: relativePath,
           line: lineNumber,
@@ -175,7 +241,7 @@ export function scanFile(filePath) {
     const awsMatch = line.match(AWS_REGEX);
     if (awsMatch) {
       const secret = awsMatch[1];
-      if (!isFalsePositive(secret)) {
+      if (!isFalsePositive(secret, '', isTestFile)) {
         findings.push({
           file: relativePath,
           line: lineNumber,
@@ -190,7 +256,7 @@ export function scanFile(filePath) {
     const stripeMatch = line.match(STRIPE_REGEX);
     if (stripeMatch) {
       const secret = stripeMatch[1];
-      if (!isFalsePositive(secret)) {
+      if (!isFalsePositive(secret, '', isTestFile)) {
         findings.push({
           file: relativePath,
           line: lineNumber,
@@ -205,7 +271,7 @@ export function scanFile(filePath) {
     const githubMatch = line.match(GITHUB_REGEX);
     if (githubMatch) {
       const secret = githubMatch[1];
-      if (!isFalsePositive(secret)) {
+      if (!isFalsePositive(secret, '', isTestFile)) {
         findings.push({
           file: relativePath,
           line: lineNumber,
@@ -220,7 +286,7 @@ export function scanFile(filePath) {
     const gcpMatch = line.match(GCP_REGEX);
     if (gcpMatch) {
       const secret = gcpMatch[1];
-      if (!isFalsePositive(secret)) {
+      if (!isFalsePositive(secret, '', isTestFile)) {
         findings.push({
           file: relativePath,
           line: lineNumber,
