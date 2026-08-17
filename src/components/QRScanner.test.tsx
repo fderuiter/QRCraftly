@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import React from 'react';
 import { QRScanner } from './QRScanner';
 import { useCamera } from '../hooks/useCamera';
@@ -412,7 +412,9 @@ describe('QRScanner Component', () => {
 
       // At this point, metadata is loaded
       if (mockVideoInstance && mockVideoInstance.onloadedmetadata) {
-        mockVideoInstance.onloadedmetadata();
+        await act(async () => {
+          mockVideoInstance.onloadedmetadata();
+        });
       }
 
       // Check event handlers are registered
@@ -421,7 +423,9 @@ describe('QRScanner Component', () => {
 
       // Trigger seeked which decodes and triggers scan success, which immediately triggers cleanup
       if (mockVideoInstance && mockVideoInstance.onseeked) {
-        await mockVideoInstance.onseeked();
+        await act(async () => {
+          await mockVideoInstance.onseeked();
+        });
       }
 
       await waitFor(() => {
@@ -438,6 +442,7 @@ describe('QRScanner Component', () => {
 
       // Restore
       URL.revokeObjectURL = originalRevokeObjectURL;
+      document.createElement = originalCreateElement;
     });
 
     it('triggers WebAssembly on-demand download and Web Worker demuxing on unsupported systems (e.g. Safari / MKV)', async () => {
