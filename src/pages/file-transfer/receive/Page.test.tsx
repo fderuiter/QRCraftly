@@ -274,7 +274,7 @@ describe('File Transfer Receive Page & Pipeline', () => {
       });
 
       expect(receiveSpy).toHaveBeenCalledTimes(1);
-      expect(receiveSpy).toHaveBeenLastCalledWith("F|0|3|Y2h1bmsw");
+      expect(receiveSpy).toHaveBeenLastCalledWith("chunk0");
 
       // Scan duplicate frame index 0 - should be discarded synchronously
       await act(async () => {
@@ -290,7 +290,7 @@ describe('File Transfer Receive Page & Pipeline', () => {
       });
 
       expect(receiveSpy).toHaveBeenCalledTimes(2);
-      expect(receiveSpy).toHaveBeenLastCalledWith("F|1|3|Y2h1bmsx");
+      expect(receiveSpy).toHaveBeenLastCalledWith("chunk1");
     });
 
     it('should clear the tracking cache when receiver state is reset', async () => {

@@ -339,7 +339,27 @@ export function useAnimatedQrReceiver({
       if (!lookaheadRef.current) {
         lookaheadRef.current = new StreamLookaheadReceiver({ mode: streamMode });
       }
-      lookaheadRef.current.receive(decodedText);
+
+      if (decodedText.startsWith('F|')) {
+        const parts = decodedText.split('|');
+        if (parts.length === 4) {
+          const base64Data = parts[3];
+          let decodedPayload = '';
+          try {
+            const binaryString = atob(base64Data);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+              bytes[i] = binaryString.charCodeAt(i);
+            }
+            decodedPayload = new TextDecoder('utf-8').decode(bytes);
+          } catch (_e) {
+            decodedPayload = '';
+          }
+          lookaheadRef.current.receive(decodedPayload);
+        }
+      } else if (!decodedText.startsWith('H|')) {
+        lookaheadRef.current.receive(decodedText);
+      }
     } catch (err: any) {
       setSecurityAlert(err.message || 'Dangerous protocol split across frames blocked!');
       setIsScanning(false);

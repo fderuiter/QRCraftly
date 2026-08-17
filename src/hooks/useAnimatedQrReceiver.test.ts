@@ -99,4 +99,39 @@ describe('useAnimatedQrReceiver Hook', () => {
     expect(result.current.receiverSuccess).toBe(true);
     expect(global.URL.createObjectURL).toHaveBeenCalled();
   });
+
+  it('should block split-payload attacks (e.g., java and script:) across frames immediately', async () => {
+    const { result } = renderHook(() => useAnimatedQrReceiver());
+
+    // 'java' in base64 is 'amF2YQ=='
+    await act(async () => {
+      await result.current.handleFrame('F|0|2|amF2YQ==');
+    });
+
+    expect(result.current.securityAlert).toBeNull();
+
+    // 'script:alert(1)' in base64 is 'c2NyaXB0OmFsZXJ0KDEp'
+    await act(async () => {
+      await result.current.handleFrame('F|1|2|c2NyaXB0OmFsZXJ0KDEp');
+    });
+
+    expect(result.current.securityAlert).toContain('MaliciousStreamError: Detected dangerous protocol prefix "javascript:" split across frames.');
+    expect(result.current.isScanning).toBe(false);
+  });
+
+  it('should not block legitimate QR codes containing standard data', async () => {
+    const { result } = renderHook(() => useAnimatedQrReceiver());
+
+    // 'hello' in base64 is 'aGVsbG8='
+    await act(async () => {
+      await result.current.handleFrame('F|0|2|aGVsbG8=');
+    });
+
+    // ' world' in base64 is 'IHdvcmxk'
+    await act(async () => {
+      await result.current.handleFrame('F|1|2|IHdvcmxk');
+    });
+
+    expect(result.current.securityAlert).toBeNull();
+  });
 });
