@@ -28,11 +28,15 @@ jobs:
 
             // Only issue an API call if a change actually occurred
             if (updatedBody !== originalBody) {
-              await github.rest.issues.updateComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                comment_id: commentId,
-                body: updatedBody
-              });
-              console.log(`Successfully updated comment ${commentId}`);
+              try {
+                await github.rest.issues.updateComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: commentId,
+                  body: updatedBody
+                });
+                console.log(`Successfully updated comment ${commentId}`);
+              } catch (error) {
+                console.error(`Warning: Failed to update comment ${commentId}:`, error);
+              }
             }
