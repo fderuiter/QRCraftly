@@ -1,5 +1,5 @@
 import { QRConfig, QRModules } from '../../types';
-import { getLogoMetrics, getIsCoveredByLogo } from './utils';
+import { getLogoMetrics, getIsCoveredByLogo, isAlignmentPatternZone } from './utils';
 
 interface MazeNode {
   r: number;
@@ -129,6 +129,9 @@ export function generateMaze(modules: QRModules, config: QRConfig, size: number)
         if (!isBridge) {
           continue;
         }
+      }
+      if (isAlignmentPatternZone(r, c, size)) {
+        continue;
       }
       if (r >= 0 && r < size && c >= 0 && c < size) {
         if (isCoveredByLogo(r, c)) {
