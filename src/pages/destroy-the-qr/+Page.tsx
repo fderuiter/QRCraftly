@@ -125,6 +125,7 @@ export default function Page() {
   const workerRef = useRef<Worker | null>(null);
   const isWorkerBusyRef = useRef<boolean>(false);
   const isCheckBlockedRef = useRef<boolean>(false);
+  const sequenceRef = useRef<number>(0);
 
   // Native BarcodeDetector state and ref
   const barcodeDetectorRef = useRef<any>(null);
@@ -160,13 +161,60 @@ export default function Page() {
     const downscaleCanvas = downscaleCanvasRef.current;
     if (!canvas || !downscaleCanvas) return;
 
-    const dctx = downscaleCanvas.getContext('2d');
-    if (!dctx) return;
-
-    // Draw square region of the underlying QR code from the active gameplay canvas onto the 256x256 offscreen canvas
     const qrDisplaySize = 320;
     const qrX = (canvas.width - qrDisplaySize) / 2;
     const qrY = 100;
+
+    const currentSequence = String(++sequenceRef.current);
+
+    // Lock checker state
+    isWorkerBusyRef.current = true;
+    isCheckBlockedRef.current = false;
+
+    // Check if asynchronous native browser bitmap generation is supported
+    if (typeof globalThis.createImageBitmap === 'function') {
+      try {
+        const imageBitmap = await createImageBitmap(canvas, qrX, qrY, qrDisplaySize, qrDisplaySize, {
+          resizeWidth: 256,
+          resizeHeight: 256,
+          resizeQuality: 'high'
+        });
+
+        // Abort if a newer check has been triggered
+        if (currentSequence !== String(sequenceRef.current)) {
+          imageBitmap.close();
+          return;
+        }
+
+        const worker = workerRef.current;
+        if (!worker) {
+          imageBitmap.close();
+          isWorkerBusyRef.current = false;
+          return;
+        }
+
+        const payload = {
+          imageBitmap,
+          width: 256,
+          height: 256,
+          isTest: !!navigator.webdriver,
+          configId: currentSequence
+        };
+
+        // Zero-copy transfer of ImageBitmap
+        worker.postMessage(payload, [payload.imageBitmap]);
+        return;
+      } catch (err) {
+        console.error('Async createImageBitmap failed, falling back to synchronous draw:', err);
+      }
+    }
+
+    // FALLBACK: Synchronous canvas downscaling and pixel extraction
+    const dctx = downscaleCanvas.getContext('2d');
+    if (!dctx) {
+      isWorkerBusyRef.current = false;
+      return;
+    }
 
     dctx.clearRect(0, 0, 256, 256);
     dctx.drawImage(
@@ -183,10 +231,6 @@ export default function Page() {
 
     try {
       const imgData = dctx.getImageData(0, 0, 256, 256);
-
-      // Lock checker state
-      isWorkerBusyRef.current = true;
-      isCheckBlockedRef.current = false;
 
       // Check if native BarcodeDetector is available
       if (barcodeDetectorRef.current) {
@@ -252,7 +296,7 @@ export default function Page() {
         width: 256,
         height: 256,
         isTest: !!navigator.webdriver,
-        configId: String(Date.now())
+        configId: currentSequence
       };
 
       // Zero-copy array buffer transfer
@@ -276,8 +320,12 @@ export default function Page() {
         workerRef.current = worker;
 
         worker.onmessage = (e) => {
-          const { success } = e.data;
+          const { success, configId } = e.data;
           
+          if (configId !== undefined && configId !== String(sequenceRef.current)) {
+            return;
+          }
+
           if (success) {
             setIsScannable(true);
             setDecodedText(qrTextRef.current);
