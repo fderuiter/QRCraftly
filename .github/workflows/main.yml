@@ -82,7 +82,8 @@ jobs:
         run: pnpm run lint
 
       - name: Run Secret Scanning Guardrail
-        run: node scripts/secret-scanner.js
+        if: steps.changed-files.outputs.any_changed == 'true'
+        run: node scripts/secret-scanner.js ${{ steps.changed-files.outputs.all_changed_files }}
 
       - name: Set up Python
         uses: actions/setup-python@v7
