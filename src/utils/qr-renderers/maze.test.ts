@@ -117,6 +117,28 @@ describe('generateMaze & renderMaze', () => {
     expect(hasDarkNode).toBe(false);
   });
 
+  it('excludes any 7x7 alignment pattern zone from maze nodes and edges (V2 and larger)', () => {
+    // Version 2 has size 25, alignment pattern center at (18, 18)
+    const size = 25;
+    const modules = createMockModules(size);
+    const mazeData = generateMaze(modules, baseConfig, size);
+
+    const centerR = 18;
+    const centerC = 18;
+
+    for (const node of mazeData.nodes) {
+      const inZone = Math.abs(node.r - centerR) <= 3 && Math.abs(node.c - centerC) <= 3;
+      expect(inZone).toBe(false);
+    }
+
+    for (const edge of mazeData.edges) {
+      const uInZone = Math.abs(edge.u.r - centerR) <= 3 && Math.abs(edge.u.c - centerC) <= 3;
+      const vInZone = Math.abs(edge.v.r - centerR) <= 3 && Math.abs(edge.v.c - centerC) <= 3;
+      expect(uInZone).toBe(false);
+      expect(vInZone).toBe(false);
+    }
+  });
+
   it('renders nothing if isMazeEnabled is false', () => {
     const ctx = createMockCtx();
     const size = 21;

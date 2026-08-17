@@ -174,3 +174,96 @@ export const calculateLayout = (config: QRConfig, displaySize: number, moduleCou
 
     return { drawX, drawY, drawSize, cellSize, borderPx };
 };
+
+export const ALIGNMENT_PATTERN_COORDINATES: Record<number, number[]> = {
+  1: [],
+  2: [6, 18],
+  3: [6, 22],
+  4: [6, 26],
+  5: [6, 30],
+  6: [6, 34],
+  7: [6, 22, 38],
+  8: [6, 24, 42],
+  9: [6, 26, 46],
+  10: [6, 28, 50],
+  11: [6, 30, 54],
+  12: [6, 32, 58],
+  13: [6, 34, 62],
+  14: [6, 26, 46, 66],
+  15: [6, 26, 48, 70],
+  16: [6, 26, 50, 74],
+  17: [6, 30, 54, 78],
+  18: [6, 30, 56, 82],
+  19: [6, 30, 58, 86],
+  20: [6, 34, 62, 90],
+  21: [6, 28, 50, 72, 94],
+  22: [6, 26, 50, 74, 98],
+  23: [6, 30, 54, 78, 102],
+  24: [6, 28, 54, 80, 106],
+  25: [6, 32, 58, 84, 110],
+  26: [6, 30, 58, 86, 114],
+  27: [6, 34, 62, 90, 118],
+  28: [6, 26, 50, 74, 98, 122],
+  29: [6, 30, 54, 78, 102, 126],
+  30: [6, 26, 52, 78, 104, 130],
+  31: [6, 30, 56, 82, 108, 134],
+  32: [6, 34, 60, 86, 112, 138],
+  33: [6, 30, 58, 86, 114, 142],
+  34: [6, 34, 62, 90, 118, 146],
+  35: [6, 30, 54, 78, 102, 126, 150],
+  36: [6, 24, 50, 76, 102, 128, 154],
+  37: [6, 28, 54, 80, 106, 132, 158],
+  38: [6, 32, 60, 88, 116, 144, 172],
+  39: [6, 26, 54, 82, 110, 138, 166],
+  40: [6, 30, 58, 86, 114, 142, 170]
+};
+
+/**
+ * Retrieves the centers (row, col) of all valid alignment patterns for a given version.
+ * This excludes the 3 corners covered by the Finder Patterns.
+ */
+export function getAlignmentPatternCenters(version: number): { r: number; c: number }[] {
+  const L = ALIGNMENT_PATTERN_COORDINATES[version];
+  if (!L || L.length === 0) return [];
+
+  const centers: { r: number; c: number }[] = [];
+  const len = L.length;
+
+  for (let i = 0; i < len; i++) {
+    for (let j = 0; j < len; j++) {
+      const ar = L[i];
+      const ac = L[j];
+
+      // Exclude the 3 corners covered by finder patterns
+      const isTopLeft = i === 0 && j === 0;
+      const isTopRight = i === 0 && j === len - 1;
+      const isBottomLeft = i === len - 1 && j === 0;
+
+      if (isTopLeft || isTopRight || isBottomLeft) {
+        continue;
+      }
+
+      centers.push({ r: ar, c: ac });
+    }
+  }
+
+  return centers;
+}
+
+/**
+ * Checks if a coordinate (r, c) is within the 7x7 protection safety buffer
+ * of any alignment pattern for the given QR code module count (size).
+ */
+export function isAlignmentPatternZone(r: number, c: number, size: number): boolean {
+  const version = Math.round((size - 17) / 4);
+  if (version < 2) return false;
+
+  const centers = getAlignmentPatternCenters(version);
+  for (const center of centers) {
+    if (Math.abs(r - center.r) <= 3 && Math.abs(c - center.c) <= 3) {
+      return true;
+    }
+  }
+  return false;
+}
+

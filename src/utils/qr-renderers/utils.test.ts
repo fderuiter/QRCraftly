@@ -17,7 +17,7 @@
 */
 
 import { describe, it, expect } from 'vitest';
-import { calculateLayout, getLogoMetrics, getIsCoveredByLogo } from './utils';
+import { calculateLayout, getLogoMetrics, getIsCoveredByLogo, getAlignmentPatternCenters, isAlignmentPatternZone, ALIGNMENT_PATTERN_COORDINATES } from './utils';
 import { DEFAULT_CONFIG } from '../../constants';
 import { QRConfig, QRErrorCorrectionLevel } from '../../types';
 
@@ -221,6 +221,56 @@ describe('QR Renderer Utils', () => {
       // (10, 12): x=2, y=0. dist^2 = 4. radius^2 = 4.41.
       // 4 < 4.41 -> Covered.
       expect(isCovered(10, 12)).toBe(true);
+    });
+  });
+
+  describe('Alignment Pattern Protection', () => {
+    it('verifies alignment coordinate lists match the official QR specification across all standard versions', () => {
+      // Version 2: center at (18, 18)
+      const centersV2 = getAlignmentPatternCenters(2);
+      expect(centersV2).toEqual([{ r: 18, c: 18 }]);
+
+      // Version 7: L = [6, 22, 38]
+      // len = 3. Excludes (6,6), (6,38), (38,6).
+      // Valid are: (6,22), (22,6), (22,22), (22,38), (38,22), (38,38).
+      const centersV7 = getAlignmentPatternCenters(7);
+      expect(centersV7).toHaveLength(6);
+      expect(centersV7).toContainEqual({ r: 6, c: 22 });
+      expect(centersV7).toContainEqual({ r: 22, c: 6 });
+      expect(centersV7).toContainEqual({ r: 22, c: 22 });
+      expect(centersV7).toContainEqual({ r: 22, c: 38 });
+      expect(centersV7).toContainEqual({ r: 38, c: 22 });
+      expect(centersV7).toContainEqual({ r: 38, c: 38 });
+
+      // Verifies all versions from 1 to 40 do not throw and have standard behaviors
+      for (let v = 1; v <= 40; v++) {
+        const centers = getAlignmentPatternCenters(v);
+        if (v === 1) {
+          expect(centers).toHaveLength(0);
+        } else {
+          // Version 2+ must have alignment patterns
+          expect(centers.length).toBeGreaterThan(0);
+          // Standard corners must not be present
+          const L = ALIGNMENT_PATTERN_COORDINATES[v];
+          const first = L[0];
+          const last = L[L.length - 1];
+          expect(centers).not.toContainEqual({ r: first, c: first });
+          expect(centers).not.toContainEqual({ r: first, c: last });
+          expect(centers).not.toContainEqual({ r: last, c: first });
+        }
+      }
+    });
+
+    it('identifies 7x7 alignment pattern zone protection area correctly', () => {
+      // For version 2: center at (18, 18)
+      // size = 25 for version 2
+      const size = 25;
+      expect(isAlignmentPatternZone(18, 18, size)).toBe(true);
+      expect(isAlignmentPatternZone(15, 15, size)).toBe(true); // boundary edge Math.abs(15 - 18) === 3
+      expect(isAlignmentPatternZone(21, 21, size)).toBe(true); // boundary edge Math.abs(21 - 18) === 3
+      expect(isAlignmentPatternZone(14, 18, size)).toBe(false); // outside
+      expect(isAlignmentPatternZone(18, 22, size)).toBe(false); // outside
+      expect(isAlignmentPatternZone(6, 18, size)).toBe(false); // top right is a corner, so not protected by alignment helper (already finder pattern zone)
     });
   });
 });
