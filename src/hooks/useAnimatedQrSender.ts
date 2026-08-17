@@ -240,8 +240,10 @@ export function useAnimatedQrSender({
   }, []);
 
   const runAnimationLoop = useCallback(() => {
-    const loop = (now: number) => {
+    const loop = (_rafNow: number) => {
       if (!isTransferringRef.current) return;
+
+      const now = performance.now();
 
       // Adaptive self-healing logic: check for missing acknowledgments/stalled frame generation
       if (!frameBufferRef.current.has(currentPlayIndexRef.current)) {
