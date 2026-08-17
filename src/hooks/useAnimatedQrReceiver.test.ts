@@ -99,4 +99,15 @@ describe('useAnimatedQrReceiver Hook', () => {
     expect(result.current.receiverSuccess).toBe(true);
     expect(global.URL.createObjectURL).toHaveBeenCalled();
   });
+
+  it('should reject transfers exceeding 5,000 chunks', async () => {
+    const { result } = renderHook(() => useAnimatedQrReceiver());
+
+    await act(async () => {
+      await result.current.handleFrame('F|0|5001|Zm9v');
+    });
+
+    expect(result.current.receiverError).toBe('File transfer rejected: exceeds the maximum limit of 5000 chunks.');
+    expect(result.current.isScanning).toBe(false);
+  });
 });
