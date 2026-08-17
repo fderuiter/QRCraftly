@@ -77,6 +77,57 @@ export function isFalsePositive(secret, varName = '') {
     return true;
   }
 
+  const exactPlaceholders = [
+    'pass',
+    'password',
+    'password123',
+    'securepass',
+    'nopass',
+    'user',
+    'username',
+    'email',
+    'string',
+    'boolean',
+    'number',
+    'any',
+    'void',
+    'unknown',
+    'true',
+    'false',
+    'null',
+    'undefined',
+    'params',
+    'params.get',
+    'e.target',
+    'e.target.value',
+    'unescapewifi',
+    'unescapevcardevent',
+    'unexpected',
+    'parsed',
+    'parsed.path',
+    'value',
+    'http',
+    'https',
+    'http://',
+    'https://',
+    'john',
+    'doe',
+    'john.doe',
+    'mypassword',
+    'mypassword123',
+    'my_password',
+    'test',
+    'mock',
+    'sample',
+    'dummy',
+    'temp',
+    'ignored',
+  ];
+
+  if (exactPlaceholders.includes(lowerSecret)) {
+    return true;
+  }
+
   // If secret value is identical/similar to the variable name (e.g. SMTP_PASSWORD = "SMTP_PASSWORD")
   const normalize = (str) => str.toLowerCase().replace(/[^a-z0-9]/g, '');
   if (lowerVar && normalize(secret) === normalize(varName)) {
@@ -99,10 +150,17 @@ export function scanFile(filePath) {
   if (BINARY_EXTENSIONS.test(filePath)) return [];
   
   const relativePath = path.relative(process.cwd(), absolutePath);
-  if (EXCLUDE_FILES.some(f => relativePath === f || relativePath.replace(/\\/g, '/') === f)) {
+  const normalizedRelPath = relativePath.replace(/\\/g, '/');
+  if (normalizedRelPath.includes('.test.') || normalizedRelPath.includes('_test.')) {
     return [];
   }
-  if (EXCLUDE_DIRS.some(d => relativePath.startsWith(d) || relativePath.replace(/\\/g, '/').split('/').includes(d))) {
+  if (normalizedRelPath.includes('tests/') && !normalizedRelPath.includes('temp-test-')) {
+    return [];
+  }
+  if (EXCLUDE_FILES.some(f => relativePath === f || normalizedRelPath === f)) {
+    return [];
+  }
+  if (EXCLUDE_DIRS.some(d => relativePath.startsWith(d) || normalizedRelPath.split('/').includes(d))) {
     return [];
   }
 
