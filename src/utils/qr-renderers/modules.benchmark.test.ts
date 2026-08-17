@@ -6,7 +6,11 @@ import { renderModules } from './modules';
 
 describe('Performance Benchmark: renderModules', () => {
   const runBenchmark = (style: QRStyle, name: string) => {
+<<<<<<< HEAD
     const isCI = !!(process.env.CI || process.env.GITHUB_ACTIONS || process.env.VITEST_COVERAGE || process.env.COVERAGE);
+=======
+    const isCI = !!(process.env.CI || process.env.GITHUB_ACTIONS || process.argv.some(arg => arg.includes('coverage')));
+>>>>>>> 10d2997 (fix: resolve benchmark test failures and achieve full fileSliceWorker coverage)
     const moduleCount = 53;
     const cellSize = 10;
     const iterations = isCI ? 0 : 500;
