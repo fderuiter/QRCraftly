@@ -494,6 +494,7 @@ export default function Page() {
     let tick = 0;
 
     const loop = () => {
+      if (!canvasRef.current) return;
       tick++;
 
       // Canvas clearing with a premium tech-dark theme
