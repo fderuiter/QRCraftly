@@ -37,6 +37,7 @@ function FileTransferReceiveInner() {
     chunks,
     totalChunks,
     securityAlert,
+    receiverError,
     isScanning,
     videoRef,
     handleClear,
@@ -158,6 +159,14 @@ function FileTransferReceiveInner() {
                   </div>
                 )}
 
+                {receiverError && (
+                  <div className="animate-bounce" data-testid="receiver-error">
+                    <Alert variant="error" title="Transfer Error">
+                      {receiverError}
+                    </Alert>
+                  </div>
+                )}
+
                 <div className="flex gap-3">
                   {!isScanning ? (
                     <Button
@@ -266,29 +275,38 @@ function FileTransferReceiveInner() {
                     </div>
                   </div>
 
-                  <div className="pt-2">
-                    <div className="mb-2 font-semibold text-slate-500">Received parts:</div>
-                    <div className="mx-auto grid max-w-sm grid-cols-5 gap-2" data-testid="progress-grid">
-                      {Array.from({ length: totalChunks }).map((_, idx) => {
-                        const isReceived = chunks.has(idx);
-                        return (
-                          <div
-                            key={idx}
-                            data-testid={`chunk-block-${idx}`}
-                            data-received={isReceived}
-                            className={`flex size-10 items-center justify-center rounded-lg border font-mono text-xs font-bold transition-all ${
-                              isReceived
-                                ? 'border-emerald-500 bg-emerald-500 text-white'
-                                : 'border-slate-200 bg-slate-50 text-slate-400 dark:border-slate-800 dark:bg-slate-900'
-                            }`}
-                            title={`Part ${idx + 1}: ${isReceived ? 'Received' : 'Missing'}`}
-                          >
-                            {idx + 1}
-                          </div>
-                        );
-                      })}
+                  {totalChunks <= 200 ? (
+                    <div className="pt-2">
+                      <div className="mb-2 font-semibold text-slate-500">Received parts:</div>
+                      <div className="mx-auto grid max-w-sm grid-cols-5 gap-2" data-testid="progress-grid">
+                        {Array.from({ length: totalChunks }).map((_, idx) => {
+                          const isReceived = chunks.has(idx);
+                          return (
+                            <div
+                              key={idx}
+                              data-testid={`chunk-block-${idx}`}
+                              data-received={isReceived}
+                              className={`flex size-10 items-center justify-center rounded-lg border font-mono text-xs font-bold transition-all ${
+                                isReceived
+                                  ? 'border-emerald-500 bg-emerald-500 text-white'
+                                  : 'border-slate-200 bg-slate-50 text-slate-400 dark:border-slate-800 dark:bg-slate-900'
+                              }`}
+                              title={`Part ${idx + 1}: ${isReceived ? 'Received' : 'Missing'}`}
+                            >
+                              {idx + 1}
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="mt-4 rounded-xl border border-teal-100 bg-teal-50/20 p-4 text-center dark:border-teal-900/50 dark:bg-teal-950/10" data-testid="fallback-progress-card">
+                      <p className="mb-1 text-sm font-bold text-teal-800 dark:text-teal-400">High-Performance Progress Bar Active</p>
+                      <p className="text-xs text-slate-600 dark:text-slate-400">
+                        Detailed grid rendering is disabled to keep transfer smooth and avoid browser tab freeze.
+                      </p>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="rounded-xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-400 dark:border-slate-800">

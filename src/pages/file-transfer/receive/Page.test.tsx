@@ -358,4 +358,74 @@ describe('File Transfer Receive Page & Pipeline', () => {
       expect(receiveSpy).toHaveBeenCalledTimes(2);
     });
   });
+
+  describe('Adaptive Progress Rendering and Validation for File Transfers', () => {
+    it('rejects transfers with more than 5000 chunks and displays a user-friendly error message', async () => {
+      render(
+        <ToastProvider>
+          <Page />
+        </ToastProvider>
+      );
+
+      expect(scanSuccessCallback).toBeDefined();
+
+      await act(async () => {
+        scanSuccessCallback!("F|0|5001|Zm9v");
+      });
+
+      // Verify error message is rendered
+      const errorAlert = screen.getByTestId('receiver-error');
+      expect(errorAlert).toBeInTheDocument();
+      expect(errorAlert).toHaveTextContent('File transfer rejected: exceeds the maximum limit of 5000 chunks.');
+
+      // Verify grid is not in the document
+      expect(screen.queryByTestId('progress-grid')).not.toBeInTheDocument();
+    });
+
+    it('renders a fallback high-performance progress bar card and no grid cells when total chunks count is > 200', async () => {
+      render(
+        <ToastProvider>
+          <Page />
+        </ToastProvider>
+      );
+
+      expect(scanSuccessCallback).toBeDefined();
+
+      await act(async () => {
+        scanSuccessCallback!("F|0|250|Zm9v");
+      });
+
+      // Check progress percentage text
+      expect(screen.getByText('0%')).toBeInTheDocument();
+      // Received parts text: receivedCount / totalChunks parts
+      expect(screen.getByText('1 / 250 parts')).toBeInTheDocument();
+
+      // Verify fallback-progress-card is in the document
+      expect(screen.getByTestId('fallback-progress-card')).toBeInTheDocument();
+      expect(screen.getByText('High-Performance Progress Bar Active')).toBeInTheDocument();
+
+      // Verify detailed block grid is NOT in the document
+      expect(screen.queryByTestId('progress-grid')).not.toBeInTheDocument();
+    });
+
+    it('renders a detailed block grid and no fallback card when total chunks count is 200 or fewer', async () => {
+      render(
+        <ToastProvider>
+          <Page />
+        </ToastProvider>
+      );
+
+      expect(scanSuccessCallback).toBeDefined();
+
+      await act(async () => {
+        scanSuccessCallback!("F|0|150|Zm9v");
+      });
+
+      // Verify detailed block grid is in the document
+      expect(screen.getByTestId('progress-grid')).toBeInTheDocument();
+
+      // Verify fallback progress card is NOT in the document
+      expect(screen.queryByTestId('fallback-progress-card')).not.toBeInTheDocument();
+    });
+  });
 });
