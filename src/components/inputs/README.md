@@ -69,4 +69,16 @@ The `InputPanel` features an integrated, high-performance dual-mode QR Code Scan
 
 ## Playable Maze Overlay Configuration
 
-The centralized configuration in `src/types.ts` also contains parameters for generating a solvable maze overlay directly on the QR code, such as `isMazeEnabled`, `isMazeBridgesEnabled`, `mazeColor`, `mazePathWidth`, and `showMazeSolution`. These parameters are controlled via `AdvancedControls.tsx`.
+The centralized configuration in `src/types.ts` also contains parameters for generating a solvable maze overlay directly on the QR code:
+
+- `isMazeEnabled`: Enables/disables maze overlay rendering.
+- `isMazeBridgesEnabled`: Enables scannability-audited bridge channels in maze generation.
+- `mazeColor`: Sets maze path color.
+- `mazePathWidth`: Controls maze path width.
+- `showMazeSolution`: Toggles solved path visibility.
+
+These parameters are controlled via `AdvancedControls.tsx`.
+
+## Template Export Configuration
+
+Template export options in `QRConfig` include `templateStyle`, optional `templateHeadline`/`templateSubtext`, color overrides (`templateBgColor`, `templateTextColor`), and `templateQrScale`.
