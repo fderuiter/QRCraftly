@@ -99,7 +99,7 @@ export function generateSchema(content: ToolContent, resolvedDomain?: string, re
       "price": "0",
       "priceCurrency": "USD"
     },
-    "featureList": content.features.join(", ")
+    "featureList": [content.valueProposition, ...content.features].filter(Boolean).join(", ")
   };
 
   if (content.personas && content.personas.length > 0) {
