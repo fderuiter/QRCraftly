@@ -140,6 +140,7 @@ export function useAdaptiveScanner({
 
   const workerRef = useRef<Worker | null>(null);
   const consecutiveRestartAttemptsRef = useRef<number>(0);
+  const epochRef = useRef<number>(1);
 
   const handleMessageRef = useRef<((e: MessageEvent) => void) | null>(null);
   const handleErrorRef = useRef<((err: any) => void) | null>(null);
@@ -172,12 +173,19 @@ export function useAdaptiveScanner({
 
     console.warn(`Watchdog: Recreating worker. Attempt ${consecutiveRestartAttemptsRef.current} of 3 consecutive retries.`);
 
+    // Increment unique epoch ID upon each worker recreation
+    epochRef.current += 1;
+
+    // Calculate adaptive startup timeout using exponential backoff formula
+    const nextTimeout = Math.min(6000, 1500 * Math.pow(2, consecutiveRestartAttemptsRef.current));
+    schedulerRef.current?.setWatchdogTimeout(nextTimeout);
+
     // 2. Terminate the active worker instance safely
     terminateSharedScannerWorker();
     workerRef.current = null;
 
     // 3. Clear/reset in-flight scheduler flags without triggering nested onWatchdogTriggered notifications
-    schedulerRef.current?.triggerRecovery(1500, false);
+    schedulerRef.current?.triggerRecovery(nextTimeout, false);
 
     // 4. Create new worker
     if (typeof window === 'undefined') return;
@@ -239,10 +247,19 @@ export function useAdaptiveScanner({
       return;
     }
 
-    // Reset consecutive restart attempts on a successful frame process/response
-    consecutiveRestartAttemptsRef.current = 0;
+    // Reject incoming messages with an outdated or mismatched epoch ID
+    if (payload.epochId !== undefined && payload.epochId !== epochRef.current) {
+      console.warn(`Discarding stale message from outdated epoch: ${payload.epochId} (current: ${epochRef.current})`);
+      return;
+    }
 
     const { status: resultStatus, sequenceId, decodedData, error, buffer } = payload;
+
+    // Reset consecutive restart attempts ONLY on a successful frame decode ('pass' status)
+    if (resultStatus === 'pass') {
+      consecutiveRestartAttemptsRef.current = 0;
+      schedulerRef.current?.setWatchdogTimeout(1500); // Reset timeout back to 1500 on success
+    }
 
     getScheduler().endFrame(sequenceId, resultStatus, decodedData, error, buffer);
   }, [getScheduler]);
@@ -344,6 +361,7 @@ export function useAdaptiveScanner({
             width,
             height,
             sequenceId: seqId,
+            epochId: epochRef.current,
           },
           [image]
         );
@@ -536,13 +554,18 @@ export function useAdaptiveScanner({
   const startScanning = useCallback(() => {
     setIsScanning(true);
     consecutiveRestartAttemptsRef.current = 0;
-    getScheduler().start();
+    epochRef.current += 1; // Increment epoch ID upon worker initialization / starting scan
+    const scheduler = getScheduler();
+    scheduler.setWatchdogTimeout(1500); // Reset startup timeout
+    scheduler.start();
   }, [getScheduler]);
 
   const stopScanning = useCallback(() => {
     setIsScanning(false);
     consecutiveRestartAttemptsRef.current = 0;
-    getScheduler().stop();
+    const scheduler = getScheduler();
+    scheduler.setWatchdogTimeout(1500); // Reset startup timeout
+    scheduler.stop();
   }, [getScheduler]);
 
   return {
