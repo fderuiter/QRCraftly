@@ -147,4 +147,12 @@ describe('drawQR', () => {
       (globalThis as any).window = originalWindow;
     }
   });
+
+  it('bails out early if fillRect is not a function on the context', () => {
+    const invalidContext = { ...mockContext, fillRect: undefined };
+    drawQR(invalidContext as any, mockModules, DEFAULT_CONFIG, null, null, 100);
+    // clearRect is called in drawQR before drawQRInternal, so check that drawing (fillRect) didn't occur
+    expect(mockContext.fillRect).not.toHaveBeenCalled();
+  });
 });
+
