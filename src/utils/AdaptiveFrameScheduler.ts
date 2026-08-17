@@ -94,6 +94,7 @@ export class AdaptiveFrameScheduler {
   private completedSequenceId = 0;
   private startTimeMap = new Map<number, number>();
   private options: SchedulerOptions;
+  private watchdogTimeout = 1500;
 
   constructor(options: SchedulerOptions = {}) {
     this.options = options;
@@ -113,6 +114,7 @@ export class AdaptiveFrameScheduler {
     this.startTimeMap.clear();
     this.latencyHistory = [];
     this.samplingDelay = 33;
+    this.watchdogTimeout = 1500;
     this.startWatchdog();
   }
 
@@ -223,6 +225,14 @@ export class AdaptiveFrameScheduler {
     }
   }
 
+  public setWatchdogTimeout(timeout: number) {
+    this.watchdogTimeout = timeout;
+  }
+
+  public getWatchdogTimeout(): number {
+    return this.watchdogTimeout;
+  }
+
   /**
    * Starvation Watchdog Check: Can be called on-demand (e.g. within frame loop).
    * Returns true if starvation was detected and handled, false otherwise.
@@ -230,8 +240,8 @@ export class AdaptiveFrameScheduler {
   public checkWatchdog(): boolean {
     if (this.inFlight && this.inFlightStart !== null) {
       const elapsed = performance.now() - this.inFlightStart;
-      if (elapsed > 1500) {
-        console.warn(`Watchdog: Worker starvation detected (${elapsed.toFixed(0)}ms > 1500ms). Recreating worker.`);
+      if (elapsed > this.watchdogTimeout) {
+        console.warn(`Watchdog: Worker starvation detected (${elapsed.toFixed(0)}ms > ${this.watchdogTimeout}ms). Recreating worker.`);
         this.triggerRecovery(elapsed);
         return true;
       }
@@ -247,8 +257,8 @@ export class AdaptiveFrameScheduler {
     this.watchdogTimer = setInterval(() => {
       if (this.inFlight && this.inFlightStart !== null) {
         const elapsed = performance.now() - this.inFlightStart;
-        if (elapsed > 1500) {
-          console.warn(`Watchdog: Worker starvation detected (${elapsed.toFixed(0)}ms > 1500ms). Recreating worker.`);
+        if (elapsed > this.watchdogTimeout) {
+          console.warn(`Watchdog: Worker starvation detected (${elapsed.toFixed(0)}ms > ${this.watchdogTimeout}ms). Recreating worker.`);
           this.triggerRecovery(elapsed);
         }
       }
@@ -266,6 +276,7 @@ export class AdaptiveFrameScheduler {
    * Forces release of the backpressure lock during recovery.
    */
   public triggerRecovery(elapsed: number, notify = true) {
+    if (!this.inFlight) return; // Guard against redundant/concurrent recovery triggers!
     this.inFlight = false;
     this.inFlightStart = null;
     if (notify) {

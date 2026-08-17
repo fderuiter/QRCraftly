@@ -118,6 +118,7 @@ async function decodeWebCodecsFrame(frameData: Uint8Array, onFrame: (bitmap: Ima
 self.onmessage = async (e: MessageEvent<any>) => {
   const payload = e.data;
   if (!payload) return;
+  const epochId = payload.epochId;
 
   // 1. Check for Video Demuxing and Off-Thread Scanning Mode
   if (payload.fileBuffer || payload.type === 'demux') {
@@ -252,6 +253,7 @@ self.onmessage = async (e: MessageEvent<any>) => {
       sequenceId,
       decodedData: code ? code.data : null,
       buffer: isBufferRequest ? payload.buffer : undefined,
+      epochId,
     };
     assertScannerResponse(response);
     if (isBufferRequest) {
@@ -277,6 +279,7 @@ self.onmessage = async (e: MessageEvent<any>) => {
       status: 'fail' as const,
       sequenceId: (payload && typeof payload.sequenceId === 'number') ? payload.sequenceId : -1,
       error: 'INVALID_REQUEST_PAYLOAD',
+      epochId,
     };
     try {
       assertScannerResponse(response);
@@ -300,6 +303,7 @@ self.onmessage = async (e: MessageEvent<any>) => {
       status: 'fail' as const,
       sequenceId,
       error: 'STALE_FRAME',
+      epochId,
     };
     assertScannerResponse(response);
     (self as any).postMessage(response);
@@ -321,6 +325,7 @@ self.onmessage = async (e: MessageEvent<any>) => {
       status: 'fail' as const,
       sequenceId,
       error: 'STALE_FRAME',
+      epochId,
     };
     assertScannerResponse(response);
     (self as any).postMessage(response);
@@ -363,6 +368,7 @@ self.onmessage = async (e: MessageEvent<any>) => {
       status: code ? ('pass' as const) : ('fail' as const),
       sequenceId,
       decodedData: code ? code.data : null,
+      epochId,
     };
     assertScannerResponse(response);
     (self as any).postMessage(response);
@@ -377,6 +383,7 @@ self.onmessage = async (e: MessageEvent<any>) => {
       status: 'fail' as const,
       sequenceId,
       error: error?.message || 'DECODE_ERROR',
+      epochId,
     };
     assertScannerResponse(response);
     (self as any).postMessage(response);
