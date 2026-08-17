@@ -31,10 +31,10 @@ export const BINARY_EXTENSIONS = /\.(png|jpg|jpeg|gif|ico|woff|woff2|eot|ttf|otf
 export const SMTP_URI_REGEX = /smtps?:\/\/[^:]+:([^@\s]+)@[^\s/]+/i;
 
 // 2. SMTP Password / Keys assignment
-export const SMTP_PASS_REGEX = /(smtp|mail|email|password|pass)[_-]?(password|pass|secret|key|token)?\s*[:=]\s*['"]?([a-zA-Z0-9_.-]{4,})['"]?/i;
+export const SMTP_PASS_REGEX = /(smtp|mail|email|password|pass)[_-]?(password|pass|secret|key|token)?\s*[:=]\s*['"]?([a-zA-Z0-9_.@-]{4,})['"]?/i;
 
 // 3. Cloudflare API Key or Token assignment
-export const CLOUDFLARE_REGEX = /(cloudflare|cf|api|token|key|secret)[_-]?(api)?[_-]?(token|key|secret)?\s*[:=]\s*['"]?([a-zA-Z0-9_-]{16,})['"]?/i;
+export const CLOUDFLARE_REGEX = /(cloudflare|cf|api|token|key|secret)[_-]?(api)?[_-]?(token|key|secret)?\s*[:=]\s*['"]?([a-zA-Z0-9_@-]{16,})['"]?/i;
 
 // 4. AWS Access Key ID
 export const AWS_REGEX = /\b((?:AKIA|ASCA|AGPA|AIDA|AROA|AIPA|ANPA|ANVA|ASIA)[A-Z0-9]{16})\b/i;
@@ -60,6 +60,73 @@ export function isFalsePositive(secret, varName = '') {
     return true;
   }
 
+  // Check for JavaScript property accesses, function calls, or punctuation/syntax
+  if (
+    secret.includes('(') ||
+    secret.includes(')') ||
+    secret.includes('{') ||
+    secret.includes('}') ||
+    secret.includes('[') ||
+    secret.includes(']') ||
+    secret.includes(';') ||
+    secret.includes('=>')
+  ) {
+    return true;
+  }
+
+  const codePrefixes = [
+    'parsed.',
+    'result.',
+    'data.',
+    'e.',
+    'config.',
+    'state.',
+    'props.',
+    'this.',
+    'window.',
+    'document.',
+    'process.',
+    'import.',
+    'unescape',
+    'parse',
+  ];
+  if (codePrefixes.some(pref => lowerSecret.startsWith(pref))) {
+    return true;
+  }
+
+  // Code keywords, types, or event handling constructs
+  const codeConstructs = [
+    'string',
+    'boolean',
+    'number',
+    'undefined',
+    'null',
+    'true',
+    'false',
+    'any',
+    'unknown',
+    'never',
+    'void',
+    'object',
+    'e.target.value',
+    'e.target.checked',
+    'e.target.id',
+    'e.currenttarget.value',
+    'unspecified',
+  ];
+  if (codeConstructs.includes(lowerSecret)) {
+    return true;
+  }
+
+  if (lowerSecret.includes('e.target') || lowerSecret.includes('target.value') || lowerSecret.includes('target.checked')) {
+    return true;
+  }
+
+  const commonWords = ['password', 'pass', 'secret', 'ignore', 'test', 'dummy', 'none', 'value'];
+  if (commonWords.includes(lowerSecret)) {
+    return true;
+  }
+
   // Standard safe placeholders or identical to variable name
   const placeholders = [
     'placeholder',
@@ -71,6 +138,13 @@ export function isFalsePositive(secret, varName = '') {
     'example',
     'dummy_value',
     'dummy-value',
+    'dummy',
+    'test@',
+    'user@',
+    'john@',
+    'john.doe',
+    'mailtrap',
+    'nopass',
   ];
 
   if (placeholders.some(p => lowerSecret.includes(p))) {
@@ -103,6 +177,17 @@ export function scanFile(filePath) {
     return [];
   }
   if (EXCLUDE_DIRS.some(d => relativePath.startsWith(d) || relativePath.replace(/\\/g, '/').split('/').includes(d))) {
+    return [];
+  }
+
+  // Exclude test, spec, and fixture files
+  const normalizedPath = relativePath.replace(/\\/g, '/');
+  if (
+    /\.test\.[jt]sx?$/i.test(normalizedPath) ||
+    /\.spec\.[jt]sx?$/i.test(normalizedPath) ||
+    normalizedPath.includes('/fixtures/') ||
+    normalizedPath.startsWith('tests/fixtures/')
+  ) {
     return [];
   }
 
