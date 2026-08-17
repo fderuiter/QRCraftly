@@ -274,7 +274,7 @@ class MockWorker {
           }
 
           if (this.url.toString().includes('scannerWorker') && message && typeof message === 'object' && typeof message.sequenceId === 'number') {
-            const { image, width, height } = message;
+            const { image, width, height, epochId } = message;
             if (image && typeof width === 'number' && typeof height === 'number') {
               const { default: jsQR } = await import('jsqr');
               const data = (image as any)._data || new Uint8ClampedArray(width * height * 4);
@@ -283,9 +283,9 @@ class MockWorker {
                 code = jsQR(data, width, height, { inversionAttempts: 'attemptBoth' });
               }
               if (code && code.data) {
-                this.dispatchMessage({ status: 'pass', decodedData: code.data, sequenceId: message.sequenceId });
+                this.dispatchMessage({ status: 'pass', decodedData: code.data, sequenceId: message.sequenceId, epochId });
               } else {
-                this.dispatchMessage({ status: 'fail', error: 'No QR code detected in this image. Try a clearer or higher-contrast QR code image.', sequenceId: message.sequenceId });
+                this.dispatchMessage({ status: 'fail', error: 'No QR code detected in this image. Try a clearer or higher-contrast QR code image.', sequenceId: message.sequenceId, epochId });
               }
               return;
             }

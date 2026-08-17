@@ -7,6 +7,7 @@ export interface ScannerRequest {
   width: number;
   height: number;
   sequenceId: number;
+  epochId?: number;
 }
 
 export interface ScannerResponse {
@@ -15,6 +16,7 @@ export interface ScannerResponse {
   decodedData?: string | null;
   error?: string | null;
   buffer?: ArrayBuffer;
+  epochId?: number;
 }
 
 /**
@@ -27,6 +29,7 @@ export function isValidScannerRequest(data: unknown): data is ScannerRequest {
   if (typeof d.width !== 'number' || !Number.isFinite(d.width) || d.width <= 0) return false;
   if (typeof d.height !== 'number' || !Number.isFinite(d.height) || d.height <= 0) return false;
   if (typeof d.sequenceId !== 'number' || !Number.isFinite(d.sequenceId)) return false;
+  if (d.epochId !== undefined && (typeof d.epochId !== 'number' || !Number.isFinite(d.epochId))) return false;
   return true;
 }
 
@@ -50,6 +53,9 @@ export function assertScannerRequest(data: unknown): asserts data is ScannerRequ
   if (typeof d.sequenceId !== 'number' || !Number.isFinite(d.sequenceId)) {
     throw new Error('Scanner request sequenceId must be a valid number');
   }
+  if (d.epochId !== undefined && (typeof d.epochId !== 'number' || !Number.isFinite(d.epochId))) {
+    throw new Error('Scanner request epochId must be a valid number');
+  }
 }
 
 /**
@@ -62,6 +68,7 @@ export function isValidScannerResponse(data: unknown): data is ScannerResponse {
   if (typeof d.sequenceId !== 'number' || !Number.isFinite(d.sequenceId)) return false;
   if (d.decodedData !== undefined && d.decodedData !== null && typeof d.decodedData !== 'string') return false;
   if (d.error !== undefined && d.error !== null && typeof d.error !== 'string') return false;
+  if (d.epochId !== undefined && (typeof d.epochId !== 'number' || !Number.isFinite(d.epochId))) return false;
   return true;
 }
 
@@ -87,6 +94,9 @@ export function assertScannerResponse(data: unknown): asserts data is ScannerRes
   }
   if (d.buffer !== undefined && d.buffer !== null && !(d.buffer instanceof ArrayBuffer)) {
     throw new Error('Scanner response buffer must be an ArrayBuffer');
+  }
+  if (d.epochId !== undefined && (typeof d.epochId !== 'number' || !Number.isFinite(d.epochId))) {
+    throw new Error('Scanner response epochId must be a valid number');
   }
 }
 

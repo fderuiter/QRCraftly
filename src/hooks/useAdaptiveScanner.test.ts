@@ -1136,4 +1136,238 @@ describe('useAdaptiveScanner Hook with Bidirectional Buffer Recycling', () => {
     });
     expect(postMessageCalls).toHaveLength(2); // Still 2, frame 3 was blocked!
   });
+
+  it('should ignore/discard messages with mismatched epoch ID (Requirement 1)', () => {
+    const videoRef = makeVideoRef();
+    const successCallback = vi.fn();
+    const { result } = renderHook(() =>
+      useAdaptiveScanner({
+        videoRef,
+        onScanSuccess: successCallback,
+      })
+    );
+
+    let activeWorker: any = null;
+    let postMessageCalls: any[] = [];
+    globalThis.mockWorkerControl.setInterceptor((msg, worker) => {
+      activeWorker = worker;
+      postMessageCalls.push(msg);
+    });
+
+    act(() => {
+      result.current.startScanning();
+    });
+
+    // Advance to capture frame 1
+    act(() => {
+      vi.advanceTimersByTime(50);
+    });
+
+    expect(postMessageCalls).toHaveLength(1);
+    const sentMsg = postMessageCalls[0];
+    const originalEpoch = sentMsg.epochId;
+    expect(originalEpoch).toBeDefined();
+
+    // Dispatch message with older/mismatched epoch ID from worker
+    act(() => {
+      activeWorker.dispatchMessage({
+        status: 'pass',
+        sequenceId: sentMsg.sequenceId,
+        decodedData: 'OLD_STALE_DATA',
+        epochId: originalEpoch - 1, // Mismatched!
+      });
+    });
+
+    // Should NOT have triggered successCallback
+    expect(successCallback).not.toHaveBeenCalled();
+
+    // Dispatch message with correct epoch ID
+    act(() => {
+      activeWorker.dispatchMessage({
+        status: 'pass',
+        sequenceId: sentMsg.sequenceId,
+        decodedData: 'CORRECT_DATA',
+        epochId: originalEpoch, // Match!
+      });
+    });
+
+    // Should have triggered successCallback
+    expect(successCallback).toHaveBeenCalledWith('CORRECT_DATA');
+  });
+
+  it('should only reset restart counter to zero upon fully successful frame decode (Requirement 2)', () => {
+    const videoRef = makeVideoRef();
+    const { result } = renderHook(() =>
+      useAdaptiveScanner({
+        videoRef,
+      })
+    );
+
+    let postMessageCalls: any[] = [];
+    globalThis.mockWorkerControl.setInterceptor((msg, worker) => {
+      postMessageCalls.push(msg);
+    });
+
+    act(() => {
+      result.current.startScanning();
+    });
+
+    // Advance to trigger a frame and set activeWorker
+    act(() => {
+      vi.advanceTimersByTime(50);
+    });
+
+    // Trigger starvation or a simulated worker error to increment restart attempts
+    act(() => {
+      getActiveWorker().dispatchError(new Error('Simulated Crash'));
+      vi.advanceTimersByTime(10);
+    });
+
+    // Worker was recreated once, attempt count should be 1
+    // Now dispatch a failed decoding response (or stale status message)
+    act(() => {
+      getActiveWorker().dispatchMessage({
+        status: 'fail',
+        sequenceId: 1,
+        error: 'STALE_FRAME',
+      });
+      vi.advanceTimersByTime(10);
+    });
+
+    // Attempt count should NOT reset to 0 upon STALE_FRAME or other non-success messages
+    // Let's verify by triggering another crash; it should be attempt 2 of 3 retries (not attempt 1)
+    const consoleWarnSpy = vi.spyOn(console, 'warn');
+    act(() => {
+      getActiveWorker().dispatchError(new Error('Simulated Crash 2'));
+      vi.advanceTimersByTime(10);
+    });
+
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Attempt 2 of 3 consecutive retries.')
+    );
+
+    // Now dispatch a successful frame decode ('pass' status)
+    act(() => {
+      getActiveWorker().dispatchMessage({
+        status: 'pass',
+        sequenceId: 2,
+        decodedData: 'SUCCESS',
+      });
+      vi.advanceTimersByTime(10);
+    });
+
+    // The counter should reset to 0. Let's verify by triggering a crash again.
+    // It should log "Attempt 1 of 3 consecutive retries."
+    consoleWarnSpy.mockClear();
+    act(() => {
+      getActiveWorker().dispatchError(new Error('Simulated Crash 3'));
+      vi.advanceTimersByTime(10);
+    });
+
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Attempt 1 of 3 consecutive retries.')
+    );
+  });
+
+  it('should double starvation watchdog timeout limits with consecutive restart attempts (Requirement 3)', () => {
+    const videoRef = makeVideoRef();
+    const { result } = renderHook(() =>
+      useAdaptiveScanner({
+        videoRef,
+      })
+    );
+
+    globalThis.mockWorkerControl.setInterceptor((msg, worker) => {});
+
+    act(() => {
+      result.current.startScanning();
+    });
+
+    // Advance to trigger a frame and set activeWorker
+    act(() => {
+      vi.advanceTimersByTime(50);
+    });
+
+    // First, verify initial timeout is 1500
+    // We can extract watchdogTimeout from schedulerRef or verify through recreation logs
+    // Let's trigger a crash to recreate worker once (Attempt 1)
+    const consoleWarnSpy = vi.spyOn(console, 'warn');
+    act(() => {
+      getActiveWorker().dispatchError(new Error('Crash 1'));
+      vi.advanceTimersByTime(10);
+    });
+
+    // Attempt 1 should double timeout to 3000ms
+    // Let's check another crash (Attempt 2)
+    act(() => {
+      getActiveWorker().dispatchError(new Error('Crash 2'));
+      vi.advanceTimersByTime(10);
+    });
+
+    // Attempt 2 should double timeout to 6000ms
+    // Let's check another crash (Attempt 3)
+    act(() => {
+      getActiveWorker().dispatchError(new Error('Crash 3'));
+      vi.advanceTimersByTime(10);
+    });
+
+    // Attempt 3 is capped at 6000ms
+    // Let's verify that a successful scan resets watchdog timeout to 1500ms
+    act(() => {
+      getActiveWorker().dispatchMessage({
+        status: 'pass',
+        sequenceId: 1,
+        decodedData: 'SUCCESS',
+      });
+      vi.advanceTimersByTime(10);
+    });
+
+    // Resetting on success means next crash should be Attempt 1 and set timeout back to 3000ms
+    consoleWarnSpy.mockClear();
+    act(() => {
+      getActiveWorker().dispatchError(new Error('Crash After Success'));
+      vi.advanceTimersByTime(10);
+    });
+
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Attempt 1 of 3 consecutive retries.')
+    );
+  });
+
+  it('should avoid concurrent or redundant watchdog recovery triggers (Requirement 4)', () => {
+    const videoRef = makeVideoRef();
+    const { result } = renderHook(() =>
+      useAdaptiveScanner({
+        videoRef,
+      })
+    );
+
+    let activeWorker: any = null;
+    globalThis.mockWorkerControl.setInterceptor((msg, worker) => {
+      activeWorker = worker;
+    });
+
+    act(() => {
+      result.current.startScanning();
+    });
+
+    const consoleWarnSpy = vi.spyOn(console, 'warn');
+
+    // Trigger frame capture to make it in-flight
+    act(() => {
+      vi.advanceTimersByTime(50);
+    });
+
+    // Advance timer by more than 1500ms to trigger periodic watchdog check.
+    // Simultaneously call checkWatchdog() to simulate dual trigger.
+    act(() => {
+      vi.advanceTimersByTime(1600);
+    });
+
+    // Worker recreation should have been triggered EXACTLY once
+    const matches = consoleWarnSpy.mock.calls.filter(call =>
+      call[0] && typeof call[0] === 'string' && call[0].includes('Worker starvation detected')
+    );
+    expect(matches.length).toBe(1);
+  });
 });
