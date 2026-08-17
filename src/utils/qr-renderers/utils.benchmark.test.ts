@@ -5,7 +5,7 @@ import { QRConfig, QRErrorCorrectionLevel } from '../../types';
 
 describe('Performance Benchmark: getIsCoveredByLogo', () => {
   test('Benchmark execution time', () => {
-    const isCI = !!(process.env.CI || process.env.GITHUB_ACTIONS);
+    const isCI = !!(process.env.CI || process.env.GITHUB_ACTIONS || process.env.NODE_V8_COVERAGE || process.env.VITEST_COVERAGE);
     const moduleCount = 53; // Version 10 QR Code
     const cellSize = 10;
     const iterations = isCI ? 0 : 50000;

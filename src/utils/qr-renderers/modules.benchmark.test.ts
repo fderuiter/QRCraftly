@@ -6,7 +6,7 @@ import { renderModules } from './modules';
 
 describe('Performance Benchmark: renderModules', () => {
   const runBenchmark = (style: QRStyle, name: string) => {
-    const isCI = !!(process.env.CI || process.env.GITHUB_ACTIONS);
+    const isCI = !!(process.env.CI || process.env.GITHUB_ACTIONS || process.env.NODE_V8_COVERAGE || process.env.VITEST_COVERAGE);
     const moduleCount = 53;
     const cellSize = 10;
     const iterations = isCI ? 0 : 500;

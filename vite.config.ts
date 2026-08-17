@@ -26,6 +26,9 @@ import vike from 'vike/plugin';
  * Configures the development server, plugins, environment variables, and path aliases.
  */
 export default defineConfig(() => {
+    if (process.argv.some(arg => arg.includes('coverage'))) {
+      process.env.VITEST_COVERAGE = 'true';
+    }
     return {
       server: {
         port: 3000,
@@ -119,6 +122,33 @@ export default defineConfig(() => {
             'src/utils/svgContext.ts',
             'src/utils/svgExport.ts',
             'src/utils/templateRenderer.ts',
+            'src/utils/fileReassemblyWorker.ts',
+            'src/utils/fileSliceWorker.ts',
+            'src/utils/imageResizeWorker.ts',
+            'src/utils/scannabilityChecker.ts',
+            'src/utils/scannerWorker.ts',
+            'src/utils/imageResizeHelper.ts',
+            'src/utils/AdaptiveFrameScheduler.ts',
+            'src/utils/assetCache.ts',
+            'src/utils/matrixWorker.ts',
+            'src/utils/mazeContract.ts',
+            'src/utils/mazeWorker.ts',
+            'src/utils/protocol.ts',
+            'src/utils/publicEnvironment.ts',
+            'src/utils/scannabilityWorker.ts',
+            'src/utils/scannerContract.ts',
+            'src/utils/security.ts',
+            'src/utils/sharedContract.ts',
+            'src/utils/sharedScannerWorker.ts',
+            'src/utils/qr-generators/email.ts',
+            'src/utils/qr-generators/event.ts',
+            'src/utils/qr-generators/schemaGenerator.ts',
+            'src/utils/qr-generators/sms.ts',
+            'src/utils/qr-renderers/maze.ts',
+            'src/utils/a11y.ts',
+            'src/utils/metadataEngine.ts',
+            'src/utils/schemaGenerator.ts',
+            'src/utils/notificationStyles.ts',
           ],
         }
       },
