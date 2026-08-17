@@ -33,6 +33,17 @@ declare module 'vitest' {
 
 expect.extend(matchers);
 
+if (typeof Blob !== 'undefined' && !Blob.prototype.arrayBuffer) {
+  Blob.prototype.arrayBuffer = function (this: Blob) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as ArrayBuffer);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsArrayBuffer(this);
+    });
+  };
+}
+
 declare global {
   var mockWorkerControl: {
     setInterceptor: (fn: ((message: any, worker: any) => void) | null) => void;
