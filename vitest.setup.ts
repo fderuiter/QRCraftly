@@ -33,6 +33,7 @@ declare module 'vitest' {
 
 expect.extend(matchers);
 
+<<<<<<< HEAD
 function createMemoryStorage(): Storage {
   let store: Record<string, string> = {};
   const storageObj = {
@@ -118,6 +119,17 @@ if (typeof window !== 'undefined') {
     writable: true,
     configurable: true,
   });
+}
+
+if (typeof Blob !== 'undefined' && !Blob.prototype.arrayBuffer) {
+  Blob.prototype.arrayBuffer = function (this: Blob) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as ArrayBuffer);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsArrayBuffer(this);
+    });
+  };
 }
 
 declare global {

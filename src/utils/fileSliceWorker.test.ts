@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach, beforeAll } from 'vitest';
+import QRCode from 'qrcode';
 
 describe('fileSliceWorker', () => {
   let workerHandler: any;
@@ -172,5 +173,245 @@ describe('fileSliceWorker', () => {
     frameCalls = postMessageSpy.mock.calls.filter(c => c[0].type === 'FRAME');
     expect(frameCalls.map(c => c[0].index)).toContain(3);
     expect(frameCalls.map(c => c[0].index)).toContain(4);
+  });
+
+  it('handles ACK messages and generates next frames up to lookahead limit', async () => {
+    const postMessageSpy = vi.fn();
+    (globalThis as any).postMessage = postMessageSpy;
+
+    const dummyBlob = new Blob([new Uint8Array(20)], { type: 'application/octet-stream' });
+
+    await workerHandler({
+      data: {
+        type: 'START',
+        payload: {
+          file: dummyBlob,
+          chunkSize: 5,
+          fps: 15
+        }
+      }
+    });
+
+    await new Promise(resolve => setTimeout(resolve, 10));
+    postMessageSpy.mockClear();
+
+    await workerHandler({
+      data: {
+        type: 'ACK',
+        payload: {
+          index: 0
+        }
+      }
+    });
+
+    await new Promise(resolve => setTimeout(resolve, 10));
+
+    const progressCalls = postMessageSpy.mock.calls.filter(c => c[0].type === 'PROGRESS');
+    expect(progressCalls.length).toBe(1);
+    expect(progressCalls[0][0].index).toBe(1);
+
+    const frameCalls = postMessageSpy.mock.calls.filter(c => c[0].type === 'FRAME');
+    expect(frameCalls.length).toBe(1);
+    expect(frameCalls[0][0].index).toBe(3);
+  });
+
+  it('sends COMPLETE when last frame is ACKed', async () => {
+    const postMessageSpy = vi.fn();
+    (globalThis as any).postMessage = postMessageSpy;
+
+    const dummyBlob = new Blob(['one'], { type: 'text/plain' });
+
+    await workerHandler({
+      data: {
+        type: 'START',
+        payload: {
+          file: dummyBlob,
+          chunkSize: 5,
+          fps: 15
+        }
+      }
+    });
+
+    await new Promise(resolve => setTimeout(resolve, 10));
+    postMessageSpy.mockClear();
+
+    await workerHandler({
+      data: {
+        type: 'ACK',
+        payload: { index: 0 }
+      }
+    });
+    await new Promise(resolve => setTimeout(resolve, 10));
+
+    await workerHandler({
+      data: {
+        type: 'ACK',
+        payload: { index: 1 }
+      }
+    });
+    await new Promise(resolve => setTimeout(resolve, 10));
+
+    const completeCalls = postMessageSpy.mock.calls.filter(c => c[0].type === 'COMPLETE');
+    expect(completeCalls.length).toBe(1);
+  });
+
+  it('posts ERROR message when SHA-256 computation fails', async () => {
+    const postMessageSpy = vi.fn();
+    (globalThis as any).postMessage = postMessageSpy;
+
+    const digestSpy = vi.spyOn(globalThis.crypto.subtle, 'digest').mockRejectedValueOnce(new Error('Mocked hash error'));
+    const dummyBlob = new Blob(['hash fail'], { type: 'text/plain' });
+
+    await workerHandler({
+      data: {
+        type: 'START',
+        payload: {
+          file: dummyBlob,
+          chunkSize: 5,
+          fps: 15
+        }
+      }
+    });
+
+    await new Promise(resolve => setTimeout(resolve, 10));
+
+    const errorCalls = postMessageSpy.mock.calls.filter(c => c[0].type === 'ERROR');
+    expect(errorCalls.length).toBe(1);
+    expect(errorCalls[0][0].message).toContain('Hashing failed: Mocked hash error');
+
+    digestSpy.mockRestore();
+  });
+
+  it('ignores unknown message types', async () => {
+    const postMessageSpy = vi.fn();
+    (globalThis as any).postMessage = postMessageSpy;
+
+    await workerHandler({
+      data: {
+        type: 'UNKNOWN_TYPE_BLABLA'
+      }
+    });
+
+    await new Promise(resolve => setTimeout(resolve, 10));
+    expect(postMessageSpy).not.toHaveBeenCalled();
+  });
+
+  it('posts ERROR message when QRCode.create throws an error during frame generation', async () => {
+    const postMessageSpy = vi.fn();
+    (globalThis as any).postMessage = postMessageSpy;
+
+    const createSpy = vi.spyOn(QRCode, 'create').mockImplementationOnce(() => {
+      throw new Error('Mocked QR creation failure');
+    });
+
+    const dummyBlob = new Blob(['one'], { type: 'text/plain' });
+
+    await workerHandler({
+      data: {
+        type: 'START',
+        payload: {
+          file: dummyBlob,
+          chunkSize: 5,
+          fps: 15
+        }
+      }
+    });
+
+    await new Promise(resolve => setTimeout(resolve, 10));
+
+    const errorCalls = postMessageSpy.mock.calls.filter(c => c[0].type === 'ERROR');
+    expect(errorCalls.length).toBe(1);
+    expect(errorCalls[0][0].message).toContain('Failed to generate frame 0: Mocked QR creation failure');
+
+    createSpy.mockRestore();
+  });
+
+  it('posts ERROR message when START payload has no file', async () => {
+    const postMessageSpy = vi.fn();
+    (globalThis as any).postMessage = postMessageSpy;
+
+    await workerHandler({
+      data: {
+        type: 'START',
+        payload: {
+          file: undefined,
+          chunkSize: 5,
+          fps: 15
+        }
+      }
+    });
+
+    await new Promise(resolve => setTimeout(resolve, 10));
+
+    const errorCalls = postMessageSpy.mock.calls.filter(c => c[0].type === 'ERROR');
+    expect(errorCalls.length).toBe(1);
+    expect(errorCalls[0][0].message).toBe('No file provided');
+  });
+
+  it('covers remaining edge case branches of fileSliceWorker', async () => {
+    const postMessageSpy = vi.fn();
+    (globalThis as any).postMessage = postMessageSpy;
+
+    const dummyBlob = new Blob(['fallback fps test'], { type: 'text/plain' });
+    await workerHandler({
+      data: {
+        type: 'START',
+        payload: {
+          file: dummyBlob,
+          chunkSize: 5
+        }
+      }
+    });
+    await new Promise(resolve => setTimeout(resolve, 10));
+
+    postMessageSpy.mockClear();
+    await workerHandler({
+      data: {
+        type: 'ACK',
+        payload: { index: -2 }
+      }
+    });
+    await new Promise(resolve => setTimeout(resolve, 10));
+    expect(postMessageSpy).not.toHaveBeenCalled();
+
+    await workerHandler({
+      data: {
+        type: 'HEAL'
+      }
+    });
+    await workerHandler({
+      data: {
+        type: 'HEAL',
+        payload: {}
+      }
+    });
+    await workerHandler({
+      data: {
+        type: 'HEAL',
+        payload: { lastAckedIndex: 'not a number' }
+      }
+    });
+    await new Promise(resolve => setTimeout(resolve, 10));
+
+    await workerHandler({ data: { type: 'STOP' } });
+
+    const freshBlob = new Blob(['fresh unique hash fail content'], { type: 'text/plain' });
+    const digestSpy = vi.spyOn(globalThis.crypto.subtle, 'digest').mockRejectedValueOnce('Mocked string hash error');
+    postMessageSpy.mockClear();
+    await workerHandler({
+      data: {
+        type: 'START',
+        payload: {
+          file: freshBlob,
+          chunkSize: 5
+        }
+      }
+    });
+    await new Promise(resolve => setTimeout(resolve, 10));
+    const errorCalls = postMessageSpy.mock.calls.filter(c => c[0].type === 'ERROR');
+    expect(errorCalls.length).toBe(1);
+    expect(errorCalls[0][0].message).toBe('Hashing failed: Mocked string hash error');
+
+    digestSpy.mockRestore();
   });
 });
