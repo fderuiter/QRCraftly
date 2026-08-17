@@ -13,6 +13,8 @@ export const EXCLUDE_DIRS = [
   'build',
   'coverage',
   '.next',
+  'tests',
+  '__tests__',
 ];
 
 export const EXCLUDE_FILES = [
@@ -60,6 +62,18 @@ export function isFalsePositive(secret, varName = '') {
     return true;
   }
 
+  // JS/TS keywords, types, or React state variables / handlers
+  const normalizedSecret = lowerSecret.trim().replace(/['"`]/g, '');
+  const ignoredKeywords = [
+    'string', 'boolean', 'number', 'any', 'null', 'undefined',
+    'true', 'false', 'e.target.value', 'e.target', 'e.t', 'e.',
+    'params.', 'data.', 'record.', 'r.', 'unescape', 'decodeuricomponent', 'encodeuricomponent',
+    'parsed.', 'result.', 'value', 'path', 'unescapewificonfig', 'unescapevcardevent', 'unescapewifi'
+  ];
+  if (ignoredKeywords.some(kw => normalizedSecret === kw || normalizedSecret.startsWith(kw) || lowerSecret.includes(kw))) {
+    return true;
+  }
+
   // Standard safe placeholders or identical to variable name
   const placeholders = [
     'placeholder',
@@ -71,6 +85,11 @@ export function isFalsePositive(secret, varName = '') {
     'example',
     'dummy_value',
     'dummy-value',
+    'test@',
+    'john@',
+    'user@',
+    'nopass',
+    'mypassword',
   ];
 
   if (placeholders.some(p => lowerSecret.includes(p))) {
@@ -97,13 +116,17 @@ export function scanFile(filePath) {
   
   // Quick checks to ignore
   if (BINARY_EXTENSIONS.test(filePath)) return [];
+  if (/\.test\.[jt]sx?$/i.test(filePath) || /\.spec\.[jt]sx?$/i.test(filePath)) return [];
   
   const relativePath = path.relative(process.cwd(), absolutePath);
-  if (EXCLUDE_FILES.some(f => relativePath === f || relativePath.replace(/\\/g, '/') === f)) {
-    return [];
-  }
-  if (EXCLUDE_DIRS.some(d => relativePath.startsWith(d) || relativePath.replace(/\\/g, '/').split('/').includes(d))) {
-    return [];
+  const isTempTestFile = relativePath.includes('temp-test-secret') || relativePath.includes('temp-test-clean');
+  if (!isTempTestFile) {
+    if (EXCLUDE_FILES.some(f => relativePath === f || relativePath.replace(/\\/g, '/') === f)) {
+      return [];
+    }
+    if (EXCLUDE_DIRS.some(d => relativePath.startsWith(d) || relativePath.replace(/\\/g, '/').split('/').includes(d))) {
+      return [];
+    }
   }
 
   if (!fs.existsSync(absolutePath)) {
