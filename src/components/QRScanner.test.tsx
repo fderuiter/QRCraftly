@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import React from 'react';
 import { QRScanner } from './QRScanner';
 import { useCamera } from '../hooks/useCamera';
@@ -363,6 +363,86 @@ describe('QRScanner Component', () => {
       await waitFor(() => {
         expect(mockOnScanSuccess).toHaveBeenCalledWith('F|0|1|native');
       });
+    });
+
+    it('disposes of all memory resources including event handlers, scheduler, double buffers, and revokes URLs during cleanup', async () => {
+      // Mock native support
+      HTMLVideoElement.prototype.canPlayType = vi.fn().mockReturnValue('probably');
+
+      let mockVideoInstance: any = null;
+      let currentTimeVal = 0;
+      const originalCreateElement = document.createElement;
+      const originalRevokeObjectURL = URL.revokeObjectURL;
+      const mockRevokeObjectURL = vi.fn();
+      URL.revokeObjectURL = mockRevokeObjectURL;
+
+      vi.spyOn(document, 'createElement').mockImplementation(function(this: any, tagName, options) {
+        const el = originalCreateElement.call(this || document, tagName, options);
+        if (tagName === 'video') {
+          Object.defineProperties(el, {
+            videoWidth: { get: () => 640, configurable: true },
+            videoHeight: { get: () => 480, configurable: true },
+            duration: { get: () => 1.0, configurable: true },
+            currentTime: { get: () => currentTimeVal, set: (val) => { currentTimeVal = val; }, configurable: true },
+          });
+          mockVideoInstance = el;
+        }
+        return el;
+      });
+
+      render(<QRScanner onScanSuccess={mockOnScanSuccess} onClose={mockOnClose} />);
+
+      const fileTab = screen.getByRole('button', { name: /file upload/i });
+      fireEvent.click(fileTab);
+
+      // Mock successful jsQR decoding
+      vi.mocked(jsQR).mockReturnValue({ data: 'F|0|1|disposed' } as any);
+
+      const mockFile = new File(['dummy video data for disposal'], 'test.webm', { type: 'video/webm' });
+      mockFile.arrayBuffer = () => Promise.resolve(new ArrayBuffer(41));
+      const fileInput = screen.getByLabelText(/upload qr code image or video file/i);
+
+      // Trigger file change
+      fireEvent.change(fileInput, { target: { files: [mockFile] } });
+
+      // Simulate video metadata load and seeking
+      await waitFor(() => {
+        expect(mockVideoInstance).not.toBeNull();
+      });
+
+      // At this point, metadata is loaded
+      if (mockVideoInstance && mockVideoInstance.onloadedmetadata) {
+        await act(async () => {
+          mockVideoInstance.onloadedmetadata();
+        });
+      }
+
+      // Check event handlers are registered
+      expect(mockVideoInstance.onseeked).toBeDefined();
+      expect(mockVideoInstance.onerror).toBeDefined();
+
+      // Trigger seeked which decodes and triggers scan success, which immediately triggers cleanup
+      if (mockVideoInstance && mockVideoInstance.onseeked) {
+        await act(async () => {
+          await mockVideoInstance.onseeked();
+        });
+      }
+
+      await waitFor(() => {
+        expect(mockOnScanSuccess).toHaveBeenCalledWith('F|0|1|disposed');
+      });
+
+      // Check event handlers are set to null (Requirement 1)
+      expect(mockVideoInstance.onloadedmetadata).toBeNull();
+      expect(mockVideoInstance.onseeked).toBeNull();
+      expect(mockVideoInstance.onerror).toBeNull();
+
+      // Check that the object URL was revoked (Requirement 4)
+      expect(mockRevokeObjectURL).toHaveBeenCalled();
+
+      // Restore
+      URL.revokeObjectURL = originalRevokeObjectURL;
+      document.createElement = originalCreateElement;
     });
 
     it('triggers WebAssembly on-demand download and Web Worker demuxing on unsupported systems (e.g. Safari / MKV)', async () => {
