@@ -107,6 +107,7 @@ export function useAnimatedQrReceiver({
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const lookaheadRef = useRef<StreamLookaheadReceiver | null>(null);
   const processedIndicesRef = useRef<Set<number>>(new Set());
+  const handshakeRef = useRef<HandshakeInfo | null>(null);
 
   // Sync lookahead receiver configuration with streamMode option
   useEffect(() => {
@@ -139,6 +140,7 @@ export function useAnimatedQrReceiver({
     setChunks(new Map());
     setTotalChunks(null);
     setHandshake(null);
+    handshakeRef.current = null;
     setSecurityAlert(null);
     setReceiverError(null);
     setReceiverSuccess(false);
@@ -363,16 +365,22 @@ export function useAnimatedQrReceiver({
           throw new Error('Invalid file size in handshake.');
         }
 
-        setHandshake(prev => {
-          if (prev && prev.sha256 === sha256) return prev;
+        const isNewFile = !handshakeRef.current || handshakeRef.current.sha256 !== sha256;
+        if (isNewFile) {
+          processedIndicesRef.current.clear();
+          lookaheadRef.current = new StreamLookaheadReceiver({ mode: streamMode });
+          handshakeRef.current = { fileName, fileSize, mimeType, sha256 };
+
           setChunks(new Map());
           setTotalChunks(null);
           setReceiverError(null);
           setReceiverSuccess(false);
           setDownloadTriggered(false);
           setReassembledData(null);
-          return { fileName, fileSize, mimeType, sha256 };
-        });
+          setCompilationStatus(null);
+          setIsVerifying(false);
+          setHandshake({ fileName, fileSize, mimeType, sha256 });
+        }
       } else if (decodedText.startsWith('F|')) {
         const parts = decodedText.split('|');
         if (parts.length === 4) {
