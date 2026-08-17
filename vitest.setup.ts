@@ -458,6 +458,18 @@ if (typeof window !== 'undefined') {
   (window as any).Worker = MockWorker as any;
 }
 
+if (typeof globalThis.requestAnimationFrame === 'undefined') {
+  globalThis.requestAnimationFrame = (callback: (time: number) => void) => {
+    return setTimeout(() => callback(Date.now()), 16) as any;
+  };
+}
+
+if (typeof globalThis.cancelAnimationFrame === 'undefined') {
+  globalThis.cancelAnimationFrame = (id: any) => {
+    clearTimeout(id);
+  };
+}
+
 globalThis.mockWorkerControl = {
   setInterceptor: (fn: ((message: any, worker: any) => void) | null) => {
     mockConfig.interceptor = fn;
