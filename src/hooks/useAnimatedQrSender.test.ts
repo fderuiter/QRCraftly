@@ -18,7 +18,7 @@
 
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import { renderHook, act, waitFor } from '@testing-library/react';
 import React from 'react';
 import { useAnimatedQrSender } from './useAnimatedQrSender';
 import { QRConfig, QRType, QRStyle, QRErrorCorrectionLevel, SocialFormat, TemplateStyle } from '../types';
@@ -99,5 +99,78 @@ describe('useAnimatedQrSender Hook', () => {
     expect(result.current.selectedFile).not.toBeNull();
     expect(result.current.selectedFile?.name).toBe('simulation_50mb_payload.bin');
     expect(result.current.selectedFile?.size).toBe(50 * 1024 * 1024);
+  });
+
+  it('sends the fps parameter to the worker on START', async () => {
+    const { result } = renderHook(() =>
+      useAnimatedQrSender({
+        config: mockConfig,
+        logoImg: null,
+        borderLogoImg: null,
+      })
+    );
+
+    act(() => {
+      result.current.setSelectedFile(new File(['test content'], 'test.txt', { type: 'text/plain' }));
+    });
+
+    let startMessage: any = null;
+    globalThis.mockWorkerControl.setInterceptor((message: any) => {
+      if (message.type === 'START') {
+        startMessage = message;
+      }
+    });
+
+    act(() => {
+      result.current.startTransfer();
+    });
+
+    await waitFor(() => {
+      expect(startMessage).not.toBeNull();
+    });
+    expect(startMessage.payload.fps).toBe(15);
+  });
+
+  it('triggers the self-healing watch loop when frame generation is stalled for 100ms', () => {
+    vi.useFakeTimers();
+
+    const { result } = renderHook(() =>
+      useAnimatedQrSender({
+        config: mockConfig,
+        logoImg: null,
+        borderLogoImg: null,
+      })
+    );
+
+    act(() => {
+      result.current.setSelectedFile(new File(['test content'], 'test.txt', { type: 'text/plain' }));
+    });
+
+    const sentMessages: any[] = [];
+    globalThis.mockWorkerControl.setInterceptor((message: any) => {
+      sentMessages.push(message);
+    });
+
+    act(() => {
+      result.current.startTransfer();
+    });
+
+    // Clear initial messages (like START)
+    sentMessages.length = 0;
+
+    // Advance time by 120ms (>= 100ms) with no frames received (so frameBuffer is empty and playIdx remains 0)
+    act(() => {
+      vi.advanceTimersByTime(120);
+    });
+
+    // Check if self-healing (HEAL and ACK messages) were sent to the worker
+    const healMessages = sentMessages.filter(m => m.type === 'HEAL');
+    const ackMessages = sentMessages.filter(m => m.type === 'ACK');
+
+    expect(healMessages.length).toBeGreaterThan(0);
+    expect(ackMessages.length).toBeGreaterThan(0);
+    expect(healMessages[0].payload.lastAckedIndex).toBe(-1); // currentPlayIndex - 1 = -1
+
+    vi.useRealTimers();
   });
 });
