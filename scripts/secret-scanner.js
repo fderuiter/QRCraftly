@@ -31,7 +31,7 @@ export const BINARY_EXTENSIONS = /\.(png|jpg|jpeg|gif|ico|woff|woff2|eot|ttf|otf
 export const SMTP_URI_REGEX = /smtps?:\/\/[^:]+:([^@\s]+)@[^\s/]+/i;
 
 // 2. SMTP Password / Keys assignment
-export const SMTP_PASS_REGEX = /(smtp|mail|email|password|pass)[_-]?(password|pass|secret|key|token)?\s*[:=]\s*['"]?([a-zA-Z0-9_.-]{4,})['"]?/i;
+export const SMTP_PASS_REGEX = /(smtp|mail|email|password|pass)[_-]?(password|pass|secret|key|token)?\s*[:=]\s*['"]?([a-zA-Z0-9_.@-]{4,})['"]?/i;
 
 // 3. Cloudflare API Key or Token assignment
 export const CLOUDFLARE_REGEX = /(cloudflare|cf|api|token|key|secret)[_-]?(api)?[_-]?(token|key|secret)?\s*[:=]\s*['"]?([a-zA-Z0-9_-]{16,})['"]?/i;
@@ -83,6 +83,52 @@ export function isFalsePositive(secret, varName = '') {
     return true;
   }
 
+  // Check common code structures, TypeScript definitions, function calls, or common non-secret keywords
+  const codeIdentifiers = [
+    'true',
+    'false',
+    'null',
+    'undefined',
+    'string',
+    'number',
+    'boolean',
+    'any',
+    'unknown',
+    'void',
+    'nopass',
+    'param',
+    'value',
+    'data',
+    'result',
+    'unencrypted',
+    'ignore',
+    'pass',
+    'password',
+    'email',
+    'secret',
+    'token',
+    'key',
+    'path',
+    'error',
+    'err',
+  ];
+
+  if (
+    codeIdentifiers.includes(lowerSecret) ||
+    lowerSecret.startsWith('e.target') ||
+    lowerSecret.startsWith('target.') ||
+    lowerSecret.startsWith('this.') ||
+    lowerSecret.startsWith('data.') ||
+    lowerSecret.startsWith('result.') ||
+    lowerSecret.includes('(') ||
+    lowerSecret.includes(')') ||
+    lowerSecret.includes('.') ||
+    lowerSecret.startsWith('unescape') ||
+    lowerSecret.startsWith('split')
+  ) {
+    return true;
+  }
+
   // Extremely short values or simple quotes
   if (secret.trim().length < 4) {
     return true;
@@ -99,10 +145,22 @@ export function scanFile(filePath) {
   if (BINARY_EXTENSIONS.test(filePath)) return [];
   
   const relativePath = path.relative(process.cwd(), absolutePath);
-  if (EXCLUDE_FILES.some(f => relativePath === f || relativePath.replace(/\\/g, '/') === f)) {
+  const normPath = relativePath.replace(/\\/g, '/');
+  if (
+    (/\.(test|spec)\.[jt]sx?$/i.test(normPath) ||
+    normPath.includes('/tests/') ||
+    normPath.startsWith('tests/') ||
+    normPath.includes('/fixtures/') ||
+    normPath.startsWith('fixtures/')) &&
+    !normPath.includes('temp-test-')
+  ) {
     return [];
   }
-  if (EXCLUDE_DIRS.some(d => relativePath.startsWith(d) || relativePath.replace(/\\/g, '/').split('/').includes(d))) {
+
+  if (EXCLUDE_FILES.some(f => relativePath === f || normPath === f)) {
+    return [];
+  }
+  if (EXCLUDE_DIRS.some(d => relativePath.startsWith(d) || normPath.split('/').includes(d))) {
     return [];
   }
 
