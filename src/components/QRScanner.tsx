@@ -226,7 +226,21 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
 
+      let scheduler: AdaptiveFrameScheduler | null = null;
+
       const cleanUp = () => {
+        // Nullify all event handlers on the programmatic video element to release closure memory
+        video.onloadedmetadata = null;
+        video.onseeked = null;
+        video.onerror = null;
+
+        // Stop frame scheduler and clear pre-allocated double-buffer memory pools
+        if (scheduler) {
+          scheduler.stop();
+          scheduler.pool.clear();
+          scheduler = null;
+        }
+
         video.pause();
         video.removeAttribute('src');
         video.load();
@@ -268,7 +282,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
         let currentTime = 0;
 
         // Create the scheduler to hold the DoubleBufferPool
-        const scheduler = new AdaptiveFrameScheduler();
+        scheduler = new AdaptiveFrameScheduler();
         scheduler.pool.resize(dWidth, dHeight);
 
         let decodedQR: string | null = null;
@@ -276,7 +290,6 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
 
         const seekAndCapture = () => {
           if (currentTime > duration || decodedQR) {
-            scheduler.stop();
             cleanUp();
             resolve();
             return;
@@ -286,7 +299,6 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
 
         video.onseeked = async () => {
           if (decodedQR) {
-            scheduler.stop();
             cleanUp();
             resolve();
             return;
@@ -297,20 +309,19 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
             const imageData = ctx.getImageData(0, 0, dWidth, dHeight);
 
             // Acquire buffer from the pre-allocated double-buffering pool
-            const pooledBuffer = scheduler.pool.acquire();
+            const pooledBuffer = scheduler ? scheduler.pool.acquire() : new ArrayBuffer(dWidth * dHeight * 4);
             const view = new Uint8ClampedArray(pooledBuffer);
             view.set(imageData.data);
 
             const seqId = fileSequenceId++;
             const { decoded, buffer: recycledBuffer } = await onFrame(pooledBuffer, dWidth, dHeight, seqId);
 
-            if (recycledBuffer) {
+            if (recycledBuffer && scheduler) {
               scheduler.pool.release(recycledBuffer);
             }
 
             if (decoded) {
               decodedQR = decoded;
-              scheduler.stop();
               cleanUp();
               resolve();
               return;
@@ -323,7 +334,6 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
         };
 
         video.onerror = () => {
-          scheduler.stop();
           cleanUp();
           reject(new Error('Failed to load video natively'));
         };
