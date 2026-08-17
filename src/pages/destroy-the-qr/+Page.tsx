@@ -728,8 +728,11 @@ export default function Page() {
 
         // Module collision checking
         let projectileHit = false;
-        for (let r = 0; r < size; r++) {
-          for (let c = 0; c < size; c++) {
+        if (p.type === 'bullet') {
+          // Standard projectiles must perform collision detection exclusively against the targeted cell
+          const c = Math.floor((p.x - qrX) / moduleScreenSize);
+          const r = Math.floor((p.y - qrY) / moduleScreenSize);
+          if (r >= 0 && r < size && c >= 0 && c < size) {
             if (grid[r] && grid[r][c] && origGrid[r][c]) {
               const mX = qrX + c * moduleScreenSize;
               const mY = qrY + r * moduleScreenSize;
@@ -743,33 +746,61 @@ export default function Page() {
 
               if (distSq < p.radius * p.radius) {
                 projectileHit = true;
+                grid[r][c] = false;
 
-                if (p.type === 'bullet') {
-                  // Direct single block damage
-                  grid[r][c] = false;
+                // High speed neon sparks
+                for (let k = 0; k < 12; k++) {
+                  particlesRef.current.push({
+                    x: p.x,
+                    y: p.y,
+                    vx: (Math.random() - 0.5) * 8 + p.vx * 0.25,
+                    vy: (Math.random() - 0.5) * 8 + p.vy * 0.25,
+                    radius: 1 + Math.random() * 3,
+                    alpha: 1.0,
+                    color: '#2dd4bf',
+                    decay: 0.03 + Math.random() * 0.03,
+                    gravity: true
+                  });
+                }
+                screenShakeRef.current = Math.min(screenShakeRef.current + 3.5, 9);
+                scanQRState();
+              }
+            }
+          }
+        } else if (p.type === 'bomb') {
+          // Explosive weapons must calculate a localized bounding box of grid rows and columns
+          const minRow = Math.max(0, Math.floor((p.y - p.radius - qrY) / moduleScreenSize));
+          const maxRow = Math.min(size - 1, Math.floor((p.y + p.radius - qrY) / moduleScreenSize));
+          const minCol = Math.max(0, Math.floor((p.x - p.radius - qrX) / moduleScreenSize));
+          const maxCol = Math.min(size - 1, Math.floor((p.x + p.radius - qrX) / moduleScreenSize));
 
-                  // High speed neon sparks
-                  for (let k = 0; k < 12; k++) {
-                    particlesRef.current.push({
-                      x: p.x,
-                      y: p.y,
-                      vx: (Math.random() - 0.5) * 8 + p.vx * 0.25,
-                      vy: (Math.random() - 0.5) * 8 + p.vy * 0.25,
-                      radius: 1 + Math.random() * 3,
-                      alpha: 1.0,
-                      color: '#2dd4bf',
-                      decay: 0.03 + Math.random() * 0.03,
-                      gravity: true
-                    });
-                  }
-                  screenShakeRef.current = Math.min(screenShakeRef.current + 3.5, 9);
-                } else if (p.type === 'bomb') {
+          for (let r = minRow; r <= maxRow; r++) {
+            for (let c = minCol; c <= maxCol; c++) {
+              if (grid[r] && grid[r][c] && origGrid[r][c]) {
+                const mX = qrX + c * moduleScreenSize;
+                const mY = qrY + r * moduleScreenSize;
+
+                // Check circle vs box intersection
+                const closestX = Math.max(mX, Math.min(p.x, mX + moduleScreenSize));
+                const closestY = Math.max(mY, Math.min(p.y, mY + moduleScreenSize));
+                const distX = p.x - closestX;
+                const distY = p.y - closestY;
+                const distSq = distX * distX + distY * distY;
+
+                if (distSq < p.radius * p.radius) {
+                  projectileHit = true;
+
                   // Massive radius explosive antimatter breach
                   const blastRadius = 55; // pixels
                   
-                  // Explode modules in area
-                  for (let br = 0; br < size; br++) {
-                    for (let bc = 0; bc < size; bc++) {
+                  // Explode modules in area using localized bounding box
+                  const minBlastRow = Math.max(0, Math.floor((p.y - blastRadius - qrY) / moduleScreenSize));
+                  const maxBlastRow = Math.min(size - 1, Math.floor((p.y + blastRadius - qrY) / moduleScreenSize));
+                  const minBlastCol = Math.max(0, Math.floor((p.x - blastRadius - qrX) / moduleScreenSize));
+                  const maxBlastCol = Math.min(size - 1, Math.floor((p.x + blastRadius - qrX) / moduleScreenSize));
+
+                  for (let br = minBlastRow; br <= maxBlastRow; br++) {
+                    for (let bc = minBlastCol; bc <= maxBlastCol; bc++) {
                       if (grid[br] && grid[br][bc] && origGrid[br][bc]) {
                         const cellX = qrX + bc * moduleScreenSize + moduleScreenSize / 2;
                         const cellY = qrY + br * moduleScreenSize + moduleScreenSize / 2;
@@ -815,14 +846,13 @@ export default function Page() {
                   }
 
                   screenShakeRef.current = Math.min(screenShakeRef.current + 18, 25);
+                  scanQRState();
+                  break;
                 }
-
-                scanQRState();
-                break;
               }
             }
+            if (projectileHit) break;
           }
-          if (projectileHit) break;
         }
 
         if (projectileHit) {

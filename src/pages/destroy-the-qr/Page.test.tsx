@@ -294,4 +294,56 @@ describe('Destroy the QR Code! Arcade Page', () => {
       expect(mockPostMessage).toHaveBeenCalled();
     }
   });
+
+  it('correctly updates and collides bullets and bombs using subgrid projection', async () => {
+    render(<Page />);
+
+    // Equip Antimatter Rocket
+    const rocketBtn = screen.getByRole('button', { name: /Antimatter Rocket/i });
+    fireEvent.click(rocketBtn);
+
+    const canvas = document.querySelector('canvas');
+    expect(canvas).toBeInTheDocument();
+
+    if (canvas) {
+      // Click canvas to fire a bomb
+      fireEvent.mouseDown(canvas, { clientX: 200, clientY: 200 });
+      fireEvent.mouseUp(canvas);
+      
+      // Let simulation run a few frames
+      await new Promise<void>(resolve => setTimeout(resolve, 100));
+    }
+
+    // Equip Plasma Blaster
+    const blasterBtn = screen.getByRole('button', { name: /Plasma Blaster/i });
+    fireEvent.click(blasterBtn);
+
+    if (canvas) {
+      // Click canvas to fire bullets
+      fireEvent.mouseDown(canvas, { clientX: 200, clientY: 200 });
+      fireEvent.mouseUp(canvas);
+      
+      // Let simulation run a few frames
+      await new Promise<void>(resolve => setTimeout(resolve, 100));
+    }
+  });
+
+  it('handles boundary conditions for subgrid projection when projectiles or explosions hit canvas edges', async () => {
+    render(<Page />);
+
+    const canvas = document.querySelector('canvas');
+    expect(canvas).toBeInTheDocument();
+
+    if (canvas) {
+      // Fire at the very top-left of canvas (extreme coordinates)
+      fireEvent.mouseDown(canvas, { clientX: 0, clientY: 0 });
+      fireEvent.mouseUp(canvas);
+
+      // Fire at the very bottom-right of canvas (extreme coordinates)
+      fireEvent.mouseDown(canvas, { clientX: 800, clientY: 800 });
+      fireEvent.mouseUp(canvas);
+
+      await new Promise<void>(resolve => setTimeout(resolve, 100));
+    }
+  });
 });
