@@ -102,50 +102,67 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const prNumber = context.payload.pull_request.number;
-            const { owner, repo } = context.repo;
-            
-            const deployOutcome = "${{ steps.cloudflare_deploy.outcome }}";
-            const smokeOutcome = "${{ steps.smoke_tests.outcome }}";
-            
-            const deployStatus = deployOutcome === 'success' ? '✅ Success' : (deployOutcome === 'skipped' ? '⏭️ Skipped' : '❌ Failed');
-            const smokeStatus = smokeOutcome === 'success' ? '✅ Passed' : (smokeOutcome === 'skipped' ? '⏭️ Skipped' : '❌ Failed');
-            const deploymentUrl = "${{ steps.cloudflare_deploy.outputs.deployment-url }}";
-
-            // List existing comments to find previous bot comments
-            const { data: comments } = await github.rest.issues.listComments({
-              owner,
-              repo,
-              issue_number: prNumber,
-            });
-
-            const botComment = comments.find(c => c.body && c.body.includes('🚀 Cloudflare Pages Preview Deployment'));
-
-            let body = `### 🚀 Cloudflare Pages Preview Deployment\n\n`;
-            if (deployOutcome === 'success') {
-              body += `- **Staging URL**: [${deploymentUrl}](${deploymentUrl})\n`;
-            } else {
-              body += `- **Staging URL**: *Unavailable*\n`;
+            async function withRetry(fn, maxRetries = 3, delayMs = 2000) {
+              for (let i = 0; i < maxRetries; i++) {
+                try {
+                  return await fn();
+                } catch (err) {
+                  if (i === maxRetries - 1) throw err;
+                  const waitTime = delayMs * Math.pow(2, i);
+                  console.warn(`[Retry Warning] Attempt ${i + 1} failed. Retrying in ${waitTime}ms... Error: ${err.message}`);
+                  await new Promise(resolve => setTimeout(resolve, waitTime));
+                }
+              }
             }
-            body += `- **Deployment Status**: ${deployStatus}\n`;
-            body += `- **Smoke Tests**: ${smokeStatus}\n`;
-            body += `- **Triggered By**: @${context.actor}\n`;
-            body += `- **Last Updated**: ${new Date().toISOString()}`;
 
-            if (botComment) {
-              await github.rest.issues.updateComment({
-                owner,
-                repo,
-                comment_id: botComment.id,
-                body,
-              });
-            } else {
-              await github.rest.issues.createComment({
+            try {
+              const prNumber = context.payload.pull_request.number;
+              const { owner, repo } = context.repo;
+              
+              const deployOutcome = "${{ steps.cloudflare_deploy.outcome }}";
+              const smokeOutcome = "${{ steps.smoke_tests.outcome }}";
+              
+              const deployStatus = deployOutcome === 'success' ? '✅ Success' : (deployOutcome === 'skipped' ? '⏭️ Skipped' : '❌ Failed');
+              const smokeStatus = smokeOutcome === 'success' ? '✅ Passed' : (smokeOutcome === 'skipped' ? '⏭️ Skipped' : '❌ Failed');
+              const deploymentUrl = "${{ steps.cloudflare_deploy.outputs.deployment-url }}";
+
+              // List existing comments to find previous bot comments
+              const { data: comments } = await withRetry(() => github.rest.issues.listComments({
                 owner,
                 repo,
                 issue_number: prNumber,
-                body,
-              });
+              }));
+
+              const botComment = comments.find(c => c.body && c.body.includes('🚀 Cloudflare Pages Preview Deployment'));
+
+              let body = `### 🚀 Cloudflare Pages Preview Deployment\n\n`;
+              if (deployOutcome === 'success') {
+                body += `- **Staging URL**: [${deploymentUrl}](${deploymentUrl})\n`;
+              } else {
+                body += `- **Staging URL**: *Unavailable*\n`;
+              }
+              body += `- **Deployment Status**: ${deployStatus}\n`;
+              body += `- **Smoke Tests**: ${smokeStatus}\n`;
+              body += `- **Triggered By**: @${context.actor}\n`;
+              body += `- **Last Updated**: ${new Date().toISOString()}`;
+
+              if (botComment) {
+                await withRetry(() => github.rest.issues.updateComment({
+                  owner,
+                  repo,
+                  comment_id: botComment.id,
+                  body,
+                }));
+              } else {
+                await withRetry(() => github.rest.issues.createComment({
+                  owner,
+                  repo,
+                  issue_number: prNumber,
+                  body,
+                }));
+              }
+            } catch (err) {
+              console.error('Failed to post or update PR status comment after retries:', err);
             }
 
   decommission-preview:
@@ -166,12 +183,29 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const prNumber = context.payload.pull_request.number;
-            const { owner, repo } = context.repo;
-            
-            await github.rest.issues.createComment({
-              owner,
-              repo,
-              issue_number: prNumber,
-              body: `🧹 **Preview Environment Decommissioned**\nThe dynamic staging environment for this pull request has been automatically torn down on Cloudflare Pages.`
-            });
+            async function withRetry(fn, maxRetries = 3, delayMs = 2000) {
+              for (let i = 0; i < maxRetries; i++) {
+                try {
+                  return await fn();
+                } catch (err) {
+                  if (i === maxRetries - 1) throw err;
+                  const waitTime = delayMs * Math.pow(2, i);
+                  console.warn(`[Retry Warning] Attempt ${i + 1} failed. Retrying in ${waitTime}ms... Error: ${err.message}`);
+                  await new Promise(resolve => setTimeout(resolve, waitTime));
+                }
+              }
+            }
+
+            try {
+              const prNumber = context.payload.pull_request.number;
+              const { owner, repo } = context.repo;
+              
+              await withRetry(() => github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: prNumber,
+                body: `🧹 **Preview Environment Decommissioned**\nThe dynamic staging environment for this pull request has been automatically torn down on Cloudflare Pages.`
+              }));
+            } catch (err) {
+              console.error('Failed to post decommission comment after retries:', err);
+            }
