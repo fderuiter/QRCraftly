@@ -77,6 +77,55 @@ export function isFalsePositive(secret, varName = '') {
     return true;
   }
 
+  const keywords = new Set([
+    'undefined',
+    'null',
+    'true',
+    'false',
+    'string',
+    'boolean',
+    'number',
+    'any',
+    'void',
+    'pass',
+    'nopass',
+    'password',
+    'mypassword',
+    'secret',
+    'ignore',
+    'john',
+    'test',
+    'http',
+    'https',
+    'email',
+  ]);
+
+  if (keywords.has(lowerSecret)) {
+    return true;
+  }
+
+  const codeSubstrings = [
+    'target',
+    'value',
+    'params',
+    'input',
+    'element',
+    'unexpected',
+    'field',
+    'unescape',
+    'escape',
+    'parsed',
+    'path',
+    'parse',
+    'format',
+    'action',
+    'event',
+  ];
+
+  if (codeSubstrings.some(s => lowerSecret.includes(s))) {
+    return true;
+  }
+
   // If secret value is identical/similar to the variable name (e.g. SMTP_PASSWORD = "SMTP_PASSWORD")
   const normalize = (str) => str.toLowerCase().replace(/[^a-z0-9]/g, '');
   if (lowerVar && normalize(secret) === normalize(varName)) {
@@ -99,10 +148,14 @@ export function scanFile(filePath) {
   if (BINARY_EXTENSIONS.test(filePath)) return [];
   
   const relativePath = path.relative(process.cwd(), absolutePath);
-  if (EXCLUDE_FILES.some(f => relativePath === f || relativePath.replace(/\\/g, '/') === f)) {
+  const normalizedPath = relativePath.replace(/\\/g, '/');
+  if (/\.(test|spec)\.[jt]sx?$/.test(normalizedPath)) {
     return [];
   }
-  if (EXCLUDE_DIRS.some(d => relativePath.startsWith(d) || relativePath.replace(/\\/g, '/').split('/').includes(d))) {
+  if (EXCLUDE_FILES.some(f => relativePath === f || normalizedPath === f)) {
+    return [];
+  }
+  if (EXCLUDE_DIRS.some(d => relativePath.startsWith(d) || normalizedPath.split('/').includes(d))) {
     return [];
   }
 
