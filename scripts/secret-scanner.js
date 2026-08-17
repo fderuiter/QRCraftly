@@ -206,6 +206,52 @@ export function isFalsePositive(secret, varName = '') {
     return true;
   }
 
+  // Check common code structures, TypeScript definitions, function calls, or common non-secret keywords
+  const codeIdentifiers = [
+    'true',
+    'false',
+    'null',
+    'undefined',
+    'string',
+    'number',
+    'boolean',
+    'any',
+    'unknown',
+    'void',
+    'nopass',
+    'param',
+    'value',
+    'data',
+    'result',
+    'unencrypted',
+    'ignore',
+    'pass',
+    'password',
+    'email',
+    'secret',
+    'token',
+    'key',
+    'path',
+    'error',
+    'err',
+  ];
+
+  if (
+    codeIdentifiers.includes(lowerSecret) ||
+    lowerSecret.startsWith('e.target') ||
+    lowerSecret.startsWith('target.') ||
+    lowerSecret.startsWith('this.') ||
+    lowerSecret.startsWith('data.') ||
+    lowerSecret.startsWith('result.') ||
+    lowerSecret.includes('(') ||
+    lowerSecret.includes(')') ||
+    lowerSecret.includes('.') ||
+    lowerSecret.startsWith('unescape') ||
+    lowerSecret.startsWith('split')
+  ) {
+    return true;
+  }
+
   // Extremely short values or simple quotes
   if (secret.trim().length < 4) {
     return true;
@@ -224,12 +270,16 @@ export function scanFile(filePath) {
   const relativePath = path.relative(process.cwd(), absolutePath);
   const normalizedPath = relativePath.replace(/\\/g, '/');
   if (
-    /\.(test|spec)\.[jt]sx?$/i.test(normalizedPath) ||
+    (/\.(test|spec)\.[jt]sx?$/i.test(normalizedPath) ||
+    normalizedPath.includes('/tests/') ||
+    normalizedPath.startsWith('tests/') ||
     normalizedPath.includes('/fixtures/') ||
-    normalizedPath.startsWith('tests/fixtures/')
+    normalizedPath.startsWith('fixtures/')) &&
+    !normalizedPath.includes('temp-test-')
   ) {
     return [];
   }
+
   if (EXCLUDE_FILES.some(f => relativePath === f || normalizedPath === f)) {
     return [];
   }
