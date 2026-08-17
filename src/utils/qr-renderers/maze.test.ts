@@ -117,6 +117,20 @@ describe('generateMaze & renderMaze', () => {
     expect(hasDarkNode).toBe(false);
   });
 
+  it('excludes cells covered by logo from maze generation', () => {
+    const size = 21;
+    const modules = createMockModules(size);
+    const configWithLogo = {
+      ...baseConfig,
+      logoUrl: 'https://qrcraftly.com/logo.png',
+      logoSize: 0.3,
+    };
+    const mazeData = generateMaze(modules, configWithLogo, size);
+    // Since logo covers the center (e.g. 10,10), there should be no node at (10,10)
+    const hasCenterNode = mazeData.nodes.some(n => n.r === 10 && n.c === 10);
+    expect(hasCenterNode).toBe(false);
+  });
+
   it('renders nothing if isMazeEnabled is false', () => {
     const ctx = createMockCtx();
     const size = 21;
