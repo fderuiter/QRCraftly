@@ -8,7 +8,7 @@ export interface FrameMetrics {
   processingLatency: number;
 }
 
-export interface FrameProvider {
+interface FrameProvider {
   start(): void | Promise<void>;
   stop(): void;
   onFrameDecoded(callback: (result: { status: 'pass' | 'fail'; decodedData: string | null; error?: string | null }) => void): void;
