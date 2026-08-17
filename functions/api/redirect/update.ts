@@ -1,3 +1,5 @@
+import { SafeUrlPipeline } from "../../../src/utils/url";
+
 interface Env {
   REDIRECTS_KV?: any;
 }
@@ -10,6 +12,13 @@ export const onRequestPost = async (context: {
     const { id, adminKey, newUrl } = await context.request.json() as { id: string, adminKey: string, newUrl: string };
     if (!id || !adminKey || !newUrl) {
       return new Response(JSON.stringify({ error: "Missing required fields" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+
+    if (SafeUrlPipeline.isDangerous(newUrl)) {
+      return new Response(JSON.stringify({ error: "Unsafe or dangerous redirect URL scheme detected" }), {
         status: 400,
         headers: { "Content-Type": "application/json" }
       });
