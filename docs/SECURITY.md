@@ -59,7 +59,7 @@ Animation configuration structures in `types.ts` are strictly statically typed t
 
 ## Playable Maze Overlay
 
-Maze overlay configurations in `types.ts` (e.g., `isMazeEnabled`, `mazeColor`, `mazePathWidth`, `showMazeSolution`) are statically typed and strictly validated at runtime. This prevents injection or path manipulation during maze rendering.
+Maze overlay configurations in `types.ts` (e.g., `isMazeEnabled`, `isMazeBridgesEnabled`, `mazeColor`, `mazePathWidth`, `showMazeSolution`) are statically typed and strictly validated at runtime. This prevents injection or path manipulation during maze rendering.
 
 ## JSON-LD Caching & Performance Security
 
