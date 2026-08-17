@@ -307,7 +307,7 @@ export function useAnimatedQrReceiver({
 
   // Frame processor
   const handleFrame = useCallback(async (decodedText: string) => {
-    if (!decodedText || receiverSuccess || isVerifying) return;
+    if (!decodedText || receiverSuccess || isVerifying || receiverError) return;
 
     // Synchronously track and discard duplicates before downstream lookahead or direct scheme check
     if (decodedText.startsWith('F|')) {
@@ -316,6 +316,20 @@ export function useAnimatedQrReceiver({
         const index = parseInt(parts[1], 10);
         const total = parseInt(parts[2], 10);
         if (!isNaN(index) && !isNaN(total)) {
+          if (total > 5000) {
+            const errMsg = 'File transfer rejected: exceeds the maximum limit of 5000 chunks.';
+            setReceiverError(errMsg);
+            setIsScanning(false);
+            stopStream();
+            if (addToast) {
+              addToast({
+                type: 'error',
+                message: errMsg,
+                duration: 5000,
+              });
+            }
+            return;
+          }
           if (processedIndicesRef.current.has(index)) {
             return; // Duplicate frame, discard synchronously
           }
@@ -427,7 +441,7 @@ export function useAnimatedQrReceiver({
     } catch (err: any) {
       setReceiverError(err?.message || 'An error occurred during scan decoding.');
     }
-  }, [receiverSuccess, isVerifying, handshakeRequired, handshake, stopStream, streamMode]);
+  }, [receiverSuccess, isVerifying, handshakeRequired, handshake, stopStream, streamMode, receiverError, addToast]);
 
   // Hook into useAdaptiveScanner
   const { startScanning, stopScanning } = useAdaptiveScanner({

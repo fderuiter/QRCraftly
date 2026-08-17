@@ -100,6 +100,7 @@ describe('useAnimatedQrReceiver Hook', () => {
     expect(global.URL.createObjectURL).toHaveBeenCalled();
   });
 
+<<<<<<< HEAD
   it('should synchronously and atomically reset state and frame-tracking memory when a new file handshake with a different SHA-256 is detected', async () => {
     const { result } = renderHook(() => useAnimatedQrReceiver());
 
@@ -198,5 +199,16 @@ describe('useAnimatedQrReceiver Hook', () => {
     });
 
     expect(result.current.securityAlert).toBeNull();
+  });
+
+  it('should reject transfers exceeding 5,000 chunks', async () => {
+    const { result } = renderHook(() => useAnimatedQrReceiver());
+
+    await act(async () => {
+      await result.current.handleFrame('F|0|5001|Zm9v');
+    });
+
+    expect(result.current.receiverError).toBe('File transfer rejected: exceeds the maximum limit of 5000 chunks.');
+    expect(result.current.isScanning).toBe(false);
   });
 });
