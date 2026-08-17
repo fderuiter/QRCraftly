@@ -415,33 +415,6 @@ if (typeof globalThis.createImageBitmap === 'undefined') {
   });
 }
 
-if (typeof globalThis.OffscreenCanvas === 'undefined') {
-  globalThis.OffscreenCanvas = class OffscreenCanvas {
-    width: number;
-    height: number;
-    constructor(width: number, height: number) {
-      this.width = width;
-      this.height = height;
-    }
-    getContext(contextId: string) {
-      if (contextId === '2d') {
-        return {
-          drawImage() {},
-          getImageData(x: number, y: number, w: number, h: number) {
-            return {
-              data: new Uint8ClampedArray(w * h * 4),
-              width: w,
-              height: h,
-            };
-          },
-          clearRect() {},
-        };
-      }
-      return null;
-    }
-  } as any;
-}
-
 if (typeof globalThis.ImageData === 'undefined') {
   globalThis.ImageData = class ImageData {
     data: Uint8ClampedArray;
@@ -765,6 +738,27 @@ HTMLCanvasElement.prototype.getContext = vi.fn().mockImplementation(function (th
   }
   return null;
 }) as any;
+
+if (typeof globalThis.OffscreenCanvas === 'undefined') {
+  globalThis.OffscreenCanvas = class OffscreenCanvas {
+    width: number;
+    height: number;
+    _mockContext: any = null;
+    constructor(width: number, height: number) {
+      this.width = width;
+      this.height = height;
+    }
+    getContext(contextId: string) {
+      if (contextId === '2d') {
+        if (!this._mockContext) {
+          this._mockContext = createMockContext(this);
+        }
+        return this._mockContext;
+      }
+      return null;
+    }
+  } as any;
+}
 
 const originalCreateElement = document.createElement.bind(document);
 vi.spyOn(document, 'createElement').mockImplementation((tagName: string, options?: ElementCreationOptions) => {

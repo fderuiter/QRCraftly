@@ -499,8 +499,10 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
             vCanvas.height = virtualSize;
           }
 
-          const vCtx = vCanvas.getContext('2d', { willReadFrequently: true }) as CanvasRenderingContext2D;
-          if (!vCtx) return;
+          const vCtx = vCanvas.getContext('2d', { willReadFrequently: true }) as CanvasRenderingContext2D | null;
+          if (!vCtx || typeof vCtx.fillRect !== 'function' || typeof vCtx.clearRect !== 'function') {
+            return;
+          }
 
           let displayWidth = virtualSize;
           let displayHeight = virtualSize;
