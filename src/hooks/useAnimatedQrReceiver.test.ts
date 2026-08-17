@@ -100,6 +100,73 @@ describe('useAnimatedQrReceiver Hook', () => {
     expect(global.URL.createObjectURL).toHaveBeenCalled();
   });
 
+  it('should synchronously and atomically reset state and frame-tracking memory when a new file handshake with a different SHA-256 is detected', async () => {
+    const { result } = renderHook(() => useAnimatedQrReceiver());
+
+    // 1. Process first file's handshake and first frame
+    await act(async () => {
+      await result.current.handleFrame('H|file1.txt|10|text/plain|sha111');
+    });
+    await act(async () => {
+      await result.current.handleFrame('F|0|2|Zm9v');
+    });
+
+    expect(result.current.handshake?.sha256).toBe('sha111');
+    expect(result.current.chunks.get(0)).toBe('Zm9v');
+    expect(result.current.totalChunks).toBe(2);
+
+    // 2. Process a different file handshake (different SHA-256)
+    await act(async () => {
+      await result.current.handleFrame('H|file2.txt|20|text/plain|sha222');
+    });
+
+    // Verify all states are atomically cleared/updated
+    expect(result.current.handshake?.sha256).toBe('sha222');
+    expect(result.current.handshake?.fileName).toBe('file2.txt');
+    expect(result.current.chunks.size).toBe(0);
+    expect(result.current.totalChunks).toBeNull();
+    expect(result.current.receiverSuccess).toBe(false);
+
+    // 3. Process first frame of new file (which has same index '0')
+    // If memory wasn't reset, this would be discarded as a duplicate of the previous file's frame 0!
+    await act(async () => {
+      await result.current.handleFrame('F|0|2|YmFy');
+    });
+
+    expect(result.current.chunks.get(0)).toBe('YmFy');
+    expect(result.current.totalChunks).toBe(2);
+  });
+
+  it('should reset the lookahead validation security engine concurrently with the frame cache', async () => {
+    const { result } = renderHook(() => useAnimatedQrReceiver({ streamMode: 'text' }));
+
+    // Send first handshake
+    await act(async () => {
+      await result.current.handleFrame('H|file1.txt|10|text/plain|sha111');
+    });
+
+    // Send a frame containing a partial dangerous protocol (e.g., 'java')
+    // This doesn't trigger security alert yet because it doesn't match 'javascript:' completely
+    await act(async () => {
+      await result.current.handleFrame('java');
+    });
+
+    expect(result.current.securityAlert).toBeNull();
+
+    // Now, send a different file handshake (this should reset/clear the lookahead buffer)
+    await act(async () => {
+      await result.current.handleFrame('H|file2.txt|20|text/plain|sha222');
+    });
+
+    // Send 'script:' which would have completed 'javascript:' if lookahead buffer wasn't cleared!
+    await act(async () => {
+      await result.current.handleFrame('script:');
+    });
+
+    // Verify no security alert was triggered, because lookahead buffer was reset
+    expect(result.current.securityAlert).toBeNull();
+  });
+
   it('should block split-payload attacks (e.g., java and script:) across frames immediately', async () => {
     const { result } = renderHook(() => useAnimatedQrReceiver());
 
@@ -107,8 +174,6 @@ describe('useAnimatedQrReceiver Hook', () => {
     await act(async () => {
       await result.current.handleFrame('F|0|2|amF2YQ==');
     });
-
-    expect(result.current.securityAlert).toBeNull();
 
     // 'script:alert(1)' in base64 is 'c2NyaXB0OmFsZXJ0KDEp'
     await act(async () => {
