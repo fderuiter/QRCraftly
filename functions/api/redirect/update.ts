@@ -1,3 +1,5 @@
+import { validateUrl } from "./register";
+
 interface Env {
   REDIRECTS_KV?: any;
 }
@@ -10,6 +12,14 @@ export const onRequestPost = async (context: {
     const { id, adminKey, newUrl } = await context.request.json() as { id: string, adminKey: string, newUrl: string };
     if (!id || !adminKey || !newUrl) {
       return new Response(JSON.stringify({ error: "Missing required fields" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+
+    const validation = validateUrl(newUrl);
+    if (!validation.valid) {
+      return new Response(JSON.stringify({ error: validation.error }), {
         status: 400,
         headers: { "Content-Type": "application/json" }
       });
