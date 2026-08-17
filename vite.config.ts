@@ -119,6 +119,7 @@ export default defineConfig(() => {
             'src/utils/svgContext.ts',
             'src/utils/svgExport.ts',
             'src/utils/templateRenderer.ts',
+            'src/utils/FrameProvider.ts',
           ],
         }
       },
