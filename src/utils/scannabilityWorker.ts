@@ -8,6 +8,10 @@ import { isDangerousUrl } from './security';
 import { applyOpticalSimulationMath } from './opticalSimulation';
 
 let latestConfigId: string | undefined | null = undefined;
+let cachedCanvas: OffscreenCanvas | null = null;
+let cachedCtx: OffscreenCanvasRenderingContext2D | null = null;
+let cachedDstBuffer: Uint8ClampedArray | null = null;
+let cachedTempBuffer: Uint8ClampedArray | null = null;
 
 const yieldToEventLoop = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 
@@ -46,11 +50,15 @@ self.onmessage = async (e: MessageEvent<unknown>) => {
 
     if (imageBitmap) {
       if (typeof OffscreenCanvas !== 'undefined') {
-        const canvas = new OffscreenCanvas(width, height);
-        const ctx = canvas.getContext('2d');
+        if (!cachedCanvas || cachedCanvas.width !== width || cachedCanvas.height !== height) {
+          cachedCanvas = new OffscreenCanvas(width, height);
+          cachedCtx = cachedCanvas.getContext('2d');
+        }
+        const ctx = cachedCtx;
         if (!ctx) {
           throw new Error('Failed to get 2d context on OffscreenCanvas');
         }
+        ctx.clearRect(0, 0, width, height);
         ctx.drawImage(imageBitmap, 0, 0);
         const extracted = ctx.getImageData(0, 0, width, height);
         imageData = { data: extracted.data, width, height };
@@ -129,7 +137,14 @@ self.onmessage = async (e: MessageEvent<unknown>) => {
     if (isTest) {
       simulatedData = imageData;
     } else {
-      const dst = applyOpticalSimulationMath(imageData.data, width, height);
+      const bufferLength = width * height * 4;
+      if (!cachedDstBuffer || cachedDstBuffer.length !== bufferLength) {
+        cachedDstBuffer = new Uint8ClampedArray(bufferLength);
+      }
+      if (!cachedTempBuffer || cachedTempBuffer.length !== bufferLength) {
+        cachedTempBuffer = new Uint8ClampedArray(bufferLength);
+      }
+      const dst = applyOpticalSimulationMath(imageData.data, width, height, 10, cachedDstBuffer, cachedTempBuffer);
       simulatedData = { data: dst, width, height };
     }
 
