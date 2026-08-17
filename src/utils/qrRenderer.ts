@@ -78,6 +78,11 @@ export const drawQRInternal = (
   isVirtual: boolean = false,
   mazeData?: any | null
 ) => {
+  const canFill = ctx && typeof (ctx as any).fillRect === 'function';
+  if (!canFill) {
+    return;
+  }
+
   // 1. Calculate Layout
   const { drawX, drawY, drawSize, cellSize, borderPx } = calculateLayout(config, displaySize, moduleCount);
 
