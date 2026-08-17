@@ -533,6 +533,7 @@ export default function Page() {
 
   // Main high-performance Animation Loop
   useEffect(() => {
+    let active = true;
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -542,7 +543,7 @@ export default function Page() {
     let tick = 0;
 
     const loop = () => {
-      if (!canvasRef.current) return;
+      if (!active || !canvasRef.current) return;
       tick++;
 
       // Canvas clearing with a premium tech-dark theme
@@ -997,13 +998,18 @@ export default function Page() {
       }
 
       // Schedule next frame
-      animationFrameIdRef.current = requestAnimationFrame(loop);
+      if (active && typeof requestAnimationFrame === 'function') {
+        animationFrameIdRef.current = requestAnimationFrame(loop);
+      }
     };
 
-    animationFrameIdRef.current = requestAnimationFrame(loop);
+    if (typeof requestAnimationFrame === 'function') {
+      animationFrameIdRef.current = requestAnimationFrame(loop);
+    }
 
     return () => {
-      if (animationFrameIdRef.current) {
+      active = false;
+      if (animationFrameIdRef.current && typeof cancelAnimationFrame === 'function') {
         cancelAnimationFrame(animationFrameIdRef.current);
       }
     };
