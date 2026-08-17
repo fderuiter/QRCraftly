@@ -123,6 +123,28 @@ export default function DynamicDashboardPage() {
             const currentScans = stats[r.id] ?? 0;
             const isRefreshing = refreshing[r.id] ?? false;
 
+            const sanitizedUrl = sanitizeHref(r.redirectUrl);
+            let externalLinkEl = null;
+            if (!isDangerousUrl(sanitizedUrl)) {
+              externalLinkEl = (
+                <a href={sanitizedUrl} target="_blank" rel="noopener noreferrer" className="text-teal-600 hover:text-teal-700 dark:text-teal-400" title="Visit redirector">
+                  <ExternalLink className="size-4" />
+                </a>
+              );
+            }
+
+            const designerUrl = `/?value=${encodeURIComponent(r.redirectUrl)}`;
+            let designerLinkEl = null;
+            if (!isDangerousUrl(designerUrl)) {
+              designerLinkEl = (
+                <a href={designerUrl}>
+                  <Button variant="outline" size="sm" className="flex items-center gap-1">
+                    <QrCode className="size-4" /> Designer
+                  </Button>
+                </a>
+              );
+            }
+
             return (
               <Card key={r.id} className="relative overflow-hidden border-slate-200 dark:border-slate-800">
                 <div className="flex flex-col justify-between gap-6 md:flex-row md:items-center">
@@ -142,9 +164,7 @@ export default function DynamicDashboardPage() {
                         <code className="rounded bg-slate-100 px-2 py-1 font-mono text-sm break-all text-slate-800 dark:bg-slate-800 dark:text-slate-200">
                           {escapeHtml(r.redirectUrl)}
                         </code>
-                        <a href={sanitizeHref(r.redirectUrl)} target="_blank" rel="noopener noreferrer" className="text-teal-600 hover:text-teal-700 dark:text-teal-400" title="Visit redirector">
-                          <ExternalLink className="size-4" />
-                        </a>
+                        {externalLinkEl}
                       </div>
                     </div>
 
@@ -201,11 +221,7 @@ export default function DynamicDashboardPage() {
                     </div>
 
                     <div className="flex gap-2">
-                      <a href={`/?value=${encodeURIComponent(r.redirectUrl)}`}>
-                        <Button variant="outline" size="sm" className="flex items-center gap-1">
-                          <QrCode className="size-4" /> Designer
-                        </Button>
-                      </a>
+                      {designerLinkEl}
                       <Button variant="ghost" size="icon" onClick={() => handleDelete(r.id)} className="text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/20" title="Delete Link">
                         <Trash2 className="size-4" />
                       </Button>
