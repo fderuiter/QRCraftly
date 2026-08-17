@@ -1,13 +1,6 @@
 import type { ReactNode } from 'react';
 import { QrCode } from 'lucide-react';
 
-const generatorLinks = [
-  ['URL', '/'],
-  ['Text', '/text-qr-code'],
-  ['WiFi', '/wifi-qr-code'],
-  ['vCard', '/vcard-qr-code'],
-] as const;
-
 /**
  * Shared product chrome for informational and system pages.
  * @param root0 - Component properties.
@@ -46,7 +39,10 @@ export function ProductShell({ children }: { children: ReactNode }) {
           <nav aria-label="QR generators">
             <h2 className="mb-3 text-xs font-semibold tracking-wider text-slate-900 uppercase dark:text-slate-200">Generators</h2>
             <ul className="grid grid-cols-2 gap-x-5 gap-y-2 text-sm text-slate-500 dark:text-slate-400">
-              {generatorLinks.map(([label, href]) => <li key={href}><a href={href} className="hover:text-teal-600 dark:hover:text-teal-400">{label}</a></li>)}
+              <li><a href="/" className="hover:text-teal-600 dark:hover:text-teal-400">URL</a></li>
+              <li><a href="/text-qr-code" className="hover:text-teal-600 dark:hover:text-teal-400">Text</a></li>
+              <li><a href="/wifi-qr-code" className="hover:text-teal-600 dark:hover:text-teal-400">WiFi</a></li>
+              <li><a href="/vcard-qr-code" className="hover:text-teal-600 dark:hover:text-teal-400">vCard</a></li>
             </ul>
           </nav>
           <nav aria-label="Company">
