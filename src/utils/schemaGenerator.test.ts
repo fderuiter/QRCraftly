@@ -11,8 +11,8 @@ describe('schemaGenerator', () => {
     features: ['WPA', 'WPA2'],
     schemaType: [SchemaType.SoftwareApplication, SchemaType.WebApplication],
     schemaCategory: SchemaCategory.UtilitiesApplication,
-    personas: [TargetPersona.GeneralUser],
-    valueProposition: StrategicValueCategory.PersonalUse,
+    personas: [TargetPersona.SecurityConsciousEnterprise],
+    valueProposition: StrategicValueCategory.AsynchronousWebWorkerDiagnostics,
     howTo: {
       name: 'How to generate Wifi QR Code',
       description: 'Follow these steps',
@@ -36,8 +36,8 @@ describe('schemaGenerator', () => {
     features: [],
     schemaType: SchemaType.AboutPage,
     schemaCategory: SchemaCategory.UtilitiesApplication,
-    personas: [TargetPersona.GeneralUser],
-    valueProposition: StrategicValueCategory.PersonalUse,
+    personas: [TargetPersona.HealthcareLegal],
+    valueProposition: StrategicValueCategory.ZeroTransitPrivacySovereignty,
     faqs: [
       { question: 'What is this?', answer: 'An app' }
     ]
@@ -65,6 +65,7 @@ describe('schemaGenerator', () => {
     expect(app).toBeDefined();
     expect(app.name).toBe(dummyContent.name);
     expect(app.applicationCategory).toBe('UtilitiesApplication');
+    expect(app.featureList).toBe('Asynchronous Web Worker Diagnostics, WPA, WPA2');
     
     // Check HowTo
     const howTo = schema['@graph'].find((g: any) => g['@type'] === 'HowTo');
@@ -146,8 +147,8 @@ describe('schemaGenerator', () => {
       features: [],
       schemaType: [SchemaType.WebApplication],
       schemaCategory: SchemaCategory.UtilitiesApplication,
-      personas: [TargetPersona.Marketer],
-      valueProposition: StrategicValueCategory.MarketingCampaign
+      personas: [TargetPersona.SecurityConsciousEnterprise],
+      valueProposition: StrategicValueCategory.ZeroTransitPrivacySovereignty
     };
     const eventSchema = generateSchema(eventContent);
     const eventObj = eventSchema['@graph'].find((g: any) => g['@type'] === 'Event');
@@ -165,8 +166,8 @@ describe('schemaGenerator', () => {
       features: [],
       schemaType: [SchemaType.WebApplication],
       schemaCategory: SchemaCategory.UtilitiesApplication,
-      personas: [TargetPersona.GeneralUser],
-      valueProposition: StrategicValueCategory.PersonalUse
+      personas: [TargetPersona.HealthcareLegal],
+      valueProposition: StrategicValueCategory.ZeroTransitPrivacySovereignty
     };
     const locationSchema = generateSchema(locationContent);
     const locationObj = locationSchema['@graph'].find((g: any) => g['@type'] === 'Place');
@@ -182,8 +183,8 @@ describe('schemaGenerator', () => {
       features: [],
       schemaType: [SchemaType.WebApplication],
       schemaCategory: SchemaCategory.UtilitiesApplication,
-      personas: [TargetPersona.Professional],
-      valueProposition: StrategicValueCategory.BusinessUtility
+      personas: [TargetPersona.SecurityConsciousEnterprise],
+      valueProposition: StrategicValueCategory.ZeroTransitPrivacySovereignty
     };
     const meetingSchema = generateSchema(meetingContent);
     const meetingObj = meetingSchema['@graph'].find((g: any) => g['@type'] === 'Event');
@@ -199,8 +200,8 @@ describe('schemaGenerator', () => {
       features: [],
       schemaType: [SchemaType.WebApplication],
       schemaCategory: SchemaCategory.SocialNetworkingApplication,
-      personas: [TargetPersona.Marketer],
-      valueProposition: StrategicValueCategory.SocialSharing
+      personas: [TargetPersona.SecurityConsciousEnterprise],
+      valueProposition: StrategicValueCategory.ZeroTransitPrivacySovereignty
     };
     const socialSchema = generateSchema(socialContent);
     const socialObj = socialSchema['@graph'].find((g: any) => g['@type'] === 'ProfilePage');
@@ -241,7 +242,7 @@ describe('schemaGenerator', () => {
     expect(app.audience).toEqual([
       {
         "@type": "Audience",
-        "audienceType": "General User"
+        "audienceType": "Security-Conscious Enterprise"
       }
     ]);
   });
@@ -255,8 +256,8 @@ describe('schemaGenerator', () => {
       features: [],
       schemaType: SchemaType.WebApplication,
       schemaCategory: SchemaCategory.UtilitiesApplication,
-      personas: [TargetPersona.GeneralUser],
-      valueProposition: StrategicValueCategory.PersonalUse,
+      personas: [TargetPersona.SecurityConsciousEnterprise],
+      valueProposition: StrategicValueCategory.ZeroTransitPrivacySovereignty,
       howTo: {
         name: 'Steps',
         description: 'Steps to do wifi',

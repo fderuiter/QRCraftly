@@ -17,19 +17,13 @@ export enum SchemaCategory {
 }
 
 export enum TargetPersona {
-  Developer = "Developer",
-  Marketer = "Marketer",
-  BusinessOwner = "Business Owner",
-  GeneralUser = "General User",
-  Professional = "Professional"
+  HealthcareLegal = "Healthcare & Legal",
+  SecurityConsciousEnterprise = "Security-Conscious Enterprise"
 }
 
 export enum StrategicValueCategory {
-  BusinessUtility = "Business Utility",
-  DeveloperTool = "Developer Tool",
-  MarketingCampaign = "Marketing Campaign",
-  PersonalUse = "Personal Use",
-  SocialSharing = "Social Sharing"
+  ZeroTransitPrivacySovereignty = "Zero-Transit Privacy Sovereignty",
+  AsynchronousWebWorkerDiagnostics = "Asynchronous Web Worker Diagnostics"
 }
 
 export interface ToolContent {
@@ -69,8 +63,8 @@ export const contentRegistry: Record<string, ToolContent> = {
     "features": [],
     "schemaType": SchemaType.AboutPage,
     "schemaCategory": SchemaCategory.UtilitiesApplication,
-    "personas": [TargetPersona.GeneralUser],
-    "valueProposition": StrategicValueCategory.PersonalUse,
+    "personas": [TargetPersona.HealthcareLegal, TargetPersona.SecurityConsciousEnterprise],
+    "valueProposition": StrategicValueCategory.ZeroTransitPrivacySovereignty,
     "faqs": [
       {
         "question": "Is QRCraftly free?",
@@ -103,8 +97,8 @@ export const contentRegistry: Record<string, ToolContent> = {
     ],
     "schemaType": [SchemaType.SoftwareApplication, SchemaType.WebApplication],
     "schemaCategory": SchemaCategory.UtilitiesApplication,
-    "personas": [TargetPersona.Marketer, TargetPersona.BusinessOwner],
-    "valueProposition": StrategicValueCategory.MarketingCampaign,
+    "personas": [TargetPersona.HealthcareLegal],
+    "valueProposition": StrategicValueCategory.ZeroTransitPrivacySovereignty,
     "howTo": {
       "name": "How to Create an Email QR Code",
       "description": "Generate a QR code that opens a drafted email.",
@@ -137,8 +131,8 @@ export const contentRegistry: Record<string, ToolContent> = {
     ],
     "schemaType": [SchemaType.SoftwareApplication, SchemaType.WebApplication],
     "schemaCategory": SchemaCategory.UtilitiesApplication,
-    "personas": [TargetPersona.Marketer, TargetPersona.Professional],
-    "valueProposition": StrategicValueCategory.SocialSharing,
+    "personas": [TargetPersona.SecurityConsciousEnterprise],
+    "valueProposition": StrategicValueCategory.ZeroTransitPrivacySovereignty,
     "howTo": {
       "name": "How to Create an Event QR Code",
       "description": "Generate a QR code that prompts users to add an event to their calendar.",
@@ -173,8 +167,8 @@ export const contentRegistry: Record<string, ToolContent> = {
     ],
     "schemaType": [SchemaType.SoftwareApplication, SchemaType.WebApplication],
     "schemaCategory": SchemaCategory.UtilitiesApplication,
-    "personas": [TargetPersona.GeneralUser],
-    "valueProposition": StrategicValueCategory.PersonalUse,
+    "personas": [TargetPersona.HealthcareLegal, TargetPersona.SecurityConsciousEnterprise],
+    "valueProposition": StrategicValueCategory.ZeroTransitPrivacySovereignty,
     "howTo": {
       "name": "How to Create a URL QR Code",
       "description": "Convert any website URL into a scannable QR code instantly.",
@@ -217,8 +211,8 @@ export const contentRegistry: Record<string, ToolContent> = {
     ],
     "schemaType": [SchemaType.SoftwareApplication, SchemaType.WebApplication],
     "schemaCategory": SchemaCategory.UtilitiesApplication,
-    "personas": [TargetPersona.GeneralUser, TargetPersona.BusinessOwner],
-    "valueProposition": StrategicValueCategory.BusinessUtility,
+    "personas": [TargetPersona.HealthcareLegal],
+    "valueProposition": StrategicValueCategory.ZeroTransitPrivacySovereignty,
     "howTo": {
       "name": "How to Create a Location QR Code",
       "description": "Generate a QR code that opens a location in maps.",
@@ -251,8 +245,8 @@ export const contentRegistry: Record<string, ToolContent> = {
     ],
     "schemaType": [SchemaType.SoftwareApplication, SchemaType.WebApplication],
     "schemaCategory": SchemaCategory.UtilitiesApplication,
-    "personas": [TargetPersona.Professional, TargetPersona.BusinessOwner],
-    "valueProposition": StrategicValueCategory.BusinessUtility,
+    "personas": [TargetPersona.SecurityConsciousEnterprise],
+    "valueProposition": StrategicValueCategory.ZeroTransitPrivacySovereignty,
     "howTo": {
       "name": "How to Create a Meeting QR Code",
       "description": "Generate a QR code that directs users to a virtual meeting.",
@@ -285,8 +279,8 @@ export const contentRegistry: Record<string, ToolContent> = {
     ],
     "schemaType": [SchemaType.SoftwareApplication, SchemaType.WebApplication],
     "schemaCategory": SchemaCategory.BusinessApplication,
-    "personas": [TargetPersona.BusinessOwner, TargetPersona.Developer],
-    "valueProposition": StrategicValueCategory.BusinessUtility,
+    "personas": [TargetPersona.SecurityConsciousEnterprise],
+    "valueProposition": StrategicValueCategory.ZeroTransitPrivacySovereignty,
     "howTo": {
       "name": "How to Create a Payment QR Code",
       "description": "Generate a QR code to receive cryptocurrency payments.",
@@ -319,8 +313,8 @@ export const contentRegistry: Record<string, ToolContent> = {
     ],
     "schemaType": [SchemaType.SoftwareApplication, SchemaType.WebApplication],
     "schemaCategory": SchemaCategory.UtilitiesApplication,
-    "personas": [TargetPersona.GeneralUser, TargetPersona.BusinessOwner],
-    "valueProposition": StrategicValueCategory.BusinessUtility,
+    "personas": [TargetPersona.HealthcareLegal],
+    "valueProposition": StrategicValueCategory.ZeroTransitPrivacySovereignty,
     "howTo": {
       "name": "How to Create a Phone QR Code",
       "description": "Create a QR code that prompts the user to dial a number.",
@@ -353,8 +347,8 @@ export const contentRegistry: Record<string, ToolContent> = {
     ],
     "schemaType": [SchemaType.SoftwareApplication, SchemaType.WebApplication],
     "schemaCategory": SchemaCategory.UtilitiesApplication,
-    "personas": [TargetPersona.Marketer, TargetPersona.BusinessOwner],
-    "valueProposition": StrategicValueCategory.MarketingCampaign,
+    "personas": [TargetPersona.HealthcareLegal],
+    "valueProposition": StrategicValueCategory.ZeroTransitPrivacySovereignty,
     "howTo": {
       "name": "How to Create an SMS QR Code",
       "description": "Generate a QR code that opens a drafted text message.",
@@ -387,8 +381,8 @@ export const contentRegistry: Record<string, ToolContent> = {
     ],
     "schemaType": [SchemaType.SoftwareApplication, SchemaType.WebApplication],
     "schemaCategory": SchemaCategory.SocialNetworkingApplication,
-    "personas": [TargetPersona.Marketer, TargetPersona.GeneralUser],
-    "valueProposition": StrategicValueCategory.SocialSharing,
+    "personas": [TargetPersona.SecurityConsciousEnterprise],
+    "valueProposition": StrategicValueCategory.ZeroTransitPrivacySovereignty,
     "howTo": {
       "name": "How to Create a Social QR Code",
       "description": "Generate a QR code that links directly to your social profile.",
@@ -421,8 +415,8 @@ export const contentRegistry: Record<string, ToolContent> = {
     ],
     "schemaType": [SchemaType.SoftwareApplication, SchemaType.WebApplication],
     "schemaCategory": SchemaCategory.UtilitiesApplication,
-    "personas": [TargetPersona.GeneralUser, TargetPersona.Developer],
-    "valueProposition": StrategicValueCategory.PersonalUse,
+    "personas": [TargetPersona.HealthcareLegal, TargetPersona.SecurityConsciousEnterprise],
+    "valueProposition": StrategicValueCategory.ZeroTransitPrivacySovereignty,
     "howTo": {
       "name": "How to Create a Text QR Code",
       "description": "Convert plain text into a scannable QR code.",
@@ -455,8 +449,8 @@ export const contentRegistry: Record<string, ToolContent> = {
     ],
     "schemaType": [SchemaType.SoftwareApplication, SchemaType.WebApplication],
     "schemaCategory": SchemaCategory.BusinessApplication,
-    "personas": [TargetPersona.Professional, TargetPersona.BusinessOwner],
-    "valueProposition": StrategicValueCategory.BusinessUtility,
+    "personas": [TargetPersona.HealthcareLegal, TargetPersona.SecurityConsciousEnterprise],
+    "valueProposition": StrategicValueCategory.ZeroTransitPrivacySovereignty,
     "howTo": {
       "name": "How to Create a VCard QR Code",
       "description": "Create a digital business card that can be scanned to save contact info.",
@@ -489,8 +483,8 @@ export const contentRegistry: Record<string, ToolContent> = {
     ],
     "schemaType": [SchemaType.SoftwareApplication, SchemaType.WebApplication],
     "schemaCategory": SchemaCategory.UtilitiesApplication,
-    "personas": [TargetPersona.GeneralUser, TargetPersona.BusinessOwner],
-    "valueProposition": StrategicValueCategory.PersonalUse,
+    "personas": [TargetPersona.SecurityConsciousEnterprise],
+    "valueProposition": StrategicValueCategory.ZeroTransitPrivacySovereignty,
     "howTo": {
       "name": "How to Create a WiFi QR Code",
       "description": "Generate a QR code to share your WiFi network instantly.",
@@ -532,8 +526,8 @@ export const contentRegistry: Record<string, ToolContent> = {
     ],
     "schemaType": [SchemaType.SoftwareApplication, SchemaType.WebApplication],
     "schemaCategory": SchemaCategory.DeveloperApplication,
-    "personas": [TargetPersona.Developer, TargetPersona.Professional],
-    "valueProposition": StrategicValueCategory.DeveloperTool,
+    "personas": [TargetPersona.SecurityConsciousEnterprise],
+    "valueProposition": StrategicValueCategory.AsynchronousWebWorkerDiagnostics,
     "howTo": {
       "name": "How to Transfer Files via Animated QR Codes",
       "description": "Share files sequentially through QR code animations.",
