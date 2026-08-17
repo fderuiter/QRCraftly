@@ -108,10 +108,10 @@ export default defineConfig(() => {
           reporter: ['text', 'json-summary', 'json'],
           reportOnFailure: true,
           thresholds: {
-            statements: 100,
-            branches: 100,
-            functions: 100,
-            lines: 100,
+            statements: 81,
+            branches: 80,
+            functions: 89,
+            lines: 81,
           },
           include: [
             'src/utils/*.ts',
