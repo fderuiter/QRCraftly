@@ -470,6 +470,15 @@ if (typeof globalThis.cancelAnimationFrame === 'undefined') {
   };
 }
 
+if (typeof window !== 'undefined') {
+  if (typeof (window as any).requestAnimationFrame === 'undefined') {
+    (window as any).requestAnimationFrame = globalThis.requestAnimationFrame;
+  }
+  if (typeof (window as any).cancelAnimationFrame === 'undefined') {
+    (window as any).cancelAnimationFrame = globalThis.cancelAnimationFrame;
+  }
+}
+
 globalThis.mockWorkerControl = {
   setInterceptor: (fn: ((message: any, worker: any) => void) | null) => {
     mockConfig.interceptor = fn;
