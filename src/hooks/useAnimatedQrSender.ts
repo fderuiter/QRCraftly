@@ -82,6 +82,7 @@ export function useAnimatedQrSender({
   const chunkSizeRef = useRef(chunkSize);
   const animationIdRef = useRef<number | null>(null);
   const lastFrameTimeRef = useRef(0);
+  const lastRenderSuccessTimeRef = useRef(0);
 
   // Sync refs
   useEffect(() => {
@@ -147,9 +148,118 @@ export function useAnimatedQrSender({
     setProgress(0);
   }, []);
 
+  const renderFrame = useCallback((playIdx: number, frame: { size: number; data: Uint8Array }) => {
+    const modules = {
+      size: frame.size,
+      get: (r: number, c: number) => !!frame.data[r * frame.size + c]
+    };
+
+    const canvas = canvasRef.current;
+    if (canvas) {
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        const displaySize = 512;
+        const pixelRatio = window.devicePixelRatio || 1;
+        const currentConfig = configRef.current;
+
+        const useTemplate =
+          currentConfig.templateStyle !== 'none' ||
+          currentConfig.socialFormat !== '1:1';
+
+        if (useTemplate) {
+          const { width: fw, height: fh } = SOCIAL_DIMENSIONS[currentConfig.socialFormat];
+          const displayHeight = Math.round(displaySize * fh / fw);
+          canvas.width = displaySize * pixelRatio;
+          canvas.height = displayHeight * pixelRatio;
+
+          ctx.save();
+          ctx.scale(pixelRatio, pixelRatio);
+          drawWithTemplate(
+            ctx as unknown as CanvasRenderingContext2D,
+            modules,
+            currentConfig,
+            logoImgRef.current,
+            borderLogoImgRef.current,
+            displaySize,
+            displayHeight,
+            modules.size
+          );
+          ctx.restore();
+        } else {
+          canvas.width = displaySize * pixelRatio;
+          canvas.height = displaySize * pixelRatio;
+
+          ctx.save();
+          ctx.scale(pixelRatio, pixelRatio);
+          ctx.clearRect(0, 0, displaySize, displaySize);
+          drawQRInternal(
+            ctx as unknown as CanvasRenderingContext2D,
+            modules,
+            currentConfig,
+            logoImgRef.current,
+            borderLogoImgRef.current,
+            displaySize,
+            modules.size
+          );
+          ctx.restore();
+        }
+      }
+    }
+
+    setCurrentFrameIndex(playIdx + 1);
+    setProgress(Math.round(((playIdx + 1) / totalFramesRef.current) * 100));
+
+    if (workerRef.current) {
+      workerRef.current.postMessage({
+        type: 'ACK',
+        payload: { index: playIdx }
+      });
+    }
+
+    frameBufferRef.current.delete(playIdx);
+
+    if (playIdx + 1 >= totalFramesRef.current) {
+      currentPlayIndexRef.current = 0;
+      frameBufferRef.current.clear();
+      if (workerRef.current && selectedFileRef.current) {
+        workerRef.current.postMessage({
+          type: 'START',
+          payload: {
+            file: selectedFileRef.current,
+            chunkSize: chunkSizeRef.current,
+            errorCorrectionLevel: configRef.current.errorCorrectionLevel,
+            fps: fpsRef.current
+          }
+        });
+      }
+    } else {
+      currentPlayIndexRef.current = playIdx + 1;
+    }
+
+    lastRenderSuccessTimeRef.current = performance.now();
+  }, []);
+
   const runAnimationLoop = useCallback(() => {
     const loop = (now: number) => {
       if (!isTransferringRef.current) return;
+
+      // Adaptive self-healing logic: check for missing acknowledgments/stalled frame generation
+      if (!frameBufferRef.current.has(currentPlayIndexRef.current)) {
+        if (now - lastRenderSuccessTimeRef.current >= 100) {
+          lastRenderSuccessTimeRef.current = now; // Throttle retries
+          if (workerRef.current) {
+            const lastRenderedIdx = currentPlayIndexRef.current - 1;
+            workerRef.current.postMessage({
+              type: 'HEAL',
+              payload: { lastAckedIndex: lastRenderedIdx }
+            });
+            workerRef.current.postMessage({
+              type: 'ACK',
+              payload: { index: lastRenderedIdx }
+            });
+          }
+        }
+      }
 
       const interval = 1000 / fpsRef.current;
       const elapsed = now - lastFrameTimeRef.current;
@@ -162,92 +272,7 @@ export function useAnimatedQrSender({
 
         if (buffer.has(playIdx)) {
           const frame = buffer.get(playIdx)!;
-
-          const modules = {
-            size: frame.size,
-            get: (r: number, c: number) => !!frame.data[r * frame.size + c]
-          };
-
-          const canvas = canvasRef.current;
-          if (canvas) {
-            const ctx = canvas.getContext('2d');
-            if (ctx) {
-              const displaySize = 512;
-              const pixelRatio = window.devicePixelRatio || 1;
-              const currentConfig = configRef.current;
-
-              const useTemplate =
-                currentConfig.templateStyle !== 'none' ||
-                currentConfig.socialFormat !== '1:1';
-
-              if (useTemplate) {
-                const { width: fw, height: fh } = SOCIAL_DIMENSIONS[currentConfig.socialFormat];
-                const displayHeight = Math.round(displaySize * fh / fw);
-                canvas.width = displaySize * pixelRatio;
-                canvas.height = displayHeight * pixelRatio;
-
-                ctx.save();
-                ctx.scale(pixelRatio, pixelRatio);
-                drawWithTemplate(
-                  ctx as unknown as CanvasRenderingContext2D,
-                  modules,
-                  currentConfig,
-                  logoImgRef.current,
-                  borderLogoImgRef.current,
-                  displaySize,
-                  displayHeight,
-                  modules.size
-                );
-                ctx.restore();
-              } else {
-                canvas.width = displaySize * pixelRatio;
-                canvas.height = displaySize * pixelRatio;
-
-                ctx.save();
-                ctx.scale(pixelRatio, pixelRatio);
-                ctx.clearRect(0, 0, displaySize, displaySize);
-                drawQRInternal(
-                  ctx as unknown as CanvasRenderingContext2D,
-                  modules,
-                  currentConfig,
-                  logoImgRef.current,
-                  borderLogoImgRef.current,
-                  displaySize,
-                  modules.size
-                );
-                ctx.restore();
-              }
-            }
-          }
-
-          setCurrentFrameIndex(playIdx + 1);
-          setProgress(Math.round(((playIdx + 1) / totalFramesRef.current) * 100));
-
-          if (workerRef.current) {
-            workerRef.current.postMessage({
-              type: 'ACK',
-              payload: { index: playIdx }
-            });
-          }
-
-          buffer.delete(playIdx);
-
-          if (playIdx + 1 >= totalFramesRef.current) {
-            currentPlayIndexRef.current = 0;
-            buffer.clear();
-            if (workerRef.current && selectedFileRef.current) {
-              workerRef.current.postMessage({
-                type: 'START',
-                payload: {
-                  file: selectedFileRef.current,
-                  chunkSize: chunkSizeRef.current,
-                  errorCorrectionLevel: configRef.current.errorCorrectionLevel
-                }
-              });
-            }
-          } else {
-            currentPlayIndexRef.current = playIdx + 1;
-          }
+          renderFrame(playIdx, frame);
         }
       }
 
@@ -255,7 +280,7 @@ export function useAnimatedQrSender({
     };
 
     animationIdRef.current = requestAnimationFrame(loop);
-  }, []);
+  }, [renderFrame]);
 
   const startTransfer = useCallback(() => {
     if (!selectedFile) return;
@@ -267,6 +292,7 @@ export function useAnimatedQrSender({
     currentPlayIndexRef.current = 0;
     frameBufferRef.current.clear();
     lastFrameTimeRef.current = performance.now();
+    lastRenderSuccessTimeRef.current = performance.now();
 
     setTransferStats({
       fileName: selectedFile.name,
@@ -292,6 +318,10 @@ export function useAnimatedQrSender({
 
         case 'FRAME': {
           frameBufferRef.current.set(index, { size, data });
+          // Instant loop restart render: if waiting for frame 0, render it immediately to cut down restart delay.
+          if (index === 0 && currentPlayIndexRef.current === 0 && isTransferringRef.current) {
+            renderFrame(0, { size, data });
+          }
           break;
         }
 
@@ -311,12 +341,13 @@ export function useAnimatedQrSender({
       payload: {
         file: selectedFile,
         chunkSize,
-        errorCorrectionLevel: config.errorCorrectionLevel
+        errorCorrectionLevel: config.errorCorrectionLevel,
+        fps: fpsRef.current
       }
     });
 
     runAnimationLoop();
-  }, [selectedFile, chunkSize, config.errorCorrectionLevel, stopTransfer, runAnimationLoop]);
+  }, [selectedFile, chunkSize, config.errorCorrectionLevel, stopTransfer, runAnimationLoop, renderFrame]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const fileList = e.target.files;
