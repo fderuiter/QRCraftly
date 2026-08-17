@@ -1,6 +1,13 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { generateSchema } from './schemaGenerator';
 import { ToolContent, SchemaType, SchemaCategory, TargetPersona, StrategicValueCategory } from '../data/contentRegistry';
+
+vi.mock('../pages/text-qr-code/+config', () => ({
+  default: {
+    image: 'no_dot_extension',
+    imageAlt: 'Test no dot extension'
+  }
+}));
 
 describe('schemaGenerator', () => {
   const dummyContent: ToolContent = {
@@ -271,5 +278,55 @@ describe('schemaGenerator', () => {
     // wifi-qr-code +config image property is '/og-image.png?type=wifi'
     // so extension is png
     expect(howTo.image).toBe('https://qrcraftly.com/assets/images/completed/wifi-qr-code.png');
+  });
+
+  it('handles empty or undefined personas on about page and standard tool', () => {
+    // 1. About Page without personas
+    const aboutNoPersonas = { ...aboutContent, personas: undefined } as any;
+    const schemaAboutNo = generateSchema(aboutNoPersonas);
+    expect(schemaAboutNo['@graph'][0].audience).toBeUndefined();
+
+    // 2. About Page with empty personas
+    const aboutEmptyPersonas = { ...aboutContent, personas: [] };
+    const schemaAboutEmpty = generateSchema(aboutEmptyPersonas);
+    expect(schemaAboutEmpty['@graph'][0].audience).toBeUndefined();
+
+    // 3. Standard Tool without personas
+    const toolNoPersonas = { ...dummyContent, personas: undefined } as any;
+    const schemaToolNo = generateSchema(toolNoPersonas);
+    const appNo = schemaToolNo['@graph'].find((g: any) => Array.isArray(g['@type']) && g['@type'].includes('SoftwareApplication'));
+    expect(appNo.audience).toBeUndefined();
+
+    // 4. Standard Tool with empty personas
+    const toolEmptyPersonas = { ...dummyContent, personas: [] };
+    const schemaToolEmpty = generateSchema(toolEmptyPersonas);
+    const appEmpty = schemaToolEmpty['@graph'].find((g: any) => Array.isArray(g['@type']) && g['@type'].includes('SoftwareApplication'));
+    expect(appEmpty.audience).toBeUndefined();
+  });
+
+  it('handles image paths with no dot extension correctly', () => {
+    const textToolContent: ToolContent = {
+      id: 'text-qr-code',
+      name: 'Text QR Code Generator',
+      description: 'text desc',
+      url: 'https://qrcraftly.com/text-qr-code',
+      features: [],
+      schemaType: SchemaType.WebApplication,
+      schemaCategory: SchemaCategory.UtilitiesApplication,
+      personas: [TargetPersona.SecurityConsciousEnterprise],
+      valueProposition: StrategicValueCategory.ZeroTransitPrivacySovereignty,
+      howTo: {
+        name: 'Steps',
+        description: 'Steps to do text',
+        steps: [{ name: 'Text', text: 'Enter text' }]
+      }
+    };
+
+    const schema = generateSchema(textToolContent);
+    const howTo = schema['@graph'].find((g: any) => g['@type'] === 'HowTo');
+    expect(howTo).toBeDefined();
+    // Since we mocked '../pages/text-qr-code/+config' to have image: 'no_dot_extension' (no dot),
+    // the resolved extension should fallback to 'png'
+    expect(howTo.image).toBe('https://qrcraftly.com/assets/images/completed/text-qr-code.png');
   });
 });
