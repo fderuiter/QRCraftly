@@ -57,7 +57,14 @@ export function useRedirector() {
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to register redirect: ${response.statusText}`);
+        let errorMsg = `Failed to register redirect: ${response.statusText}`;
+        try {
+          const errData = await response.json() as { error?: string };
+          if (errData && errData.error) {
+            errorMsg = errData.error;
+          }
+        } catch {}
+        throw new Error(errorMsg);
       }
 
       const data = await response.json() as { id: string; redirectUrl: string; adminKey: string };
@@ -98,7 +105,14 @@ export function useRedirector() {
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to update destination: ${response.statusText}`);
+        let errorMsg = `Failed to update destination: ${response.statusText}`;
+        try {
+          const errData = await response.json() as { error?: string };
+          if (errData && errData.error) {
+            errorMsg = errData.error;
+          }
+        } catch {}
+        throw new Error(errorMsg);
       }
 
       const updatedRecords = records.map(record => {

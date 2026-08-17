@@ -1,3 +1,5 @@
+import { SafeUrlPipeline } from "../../../src/utils/url";
+
 interface Env {
   REDIRECTS_KV?: any;
 }
