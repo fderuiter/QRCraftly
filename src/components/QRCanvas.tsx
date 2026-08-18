@@ -260,7 +260,9 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
                 currentBorderLogoImg,
                 displayWidth,
                 displayHeight,
-                frame.modules.size
+                frame.modules.size,
+                false,
+                computedMazeDataRef.current
               );
               ctx.restore();
             } else {
@@ -270,7 +272,8 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
                 currentConfig,
                 currentLogoImg,
                 currentBorderLogoImg,
-                activeSize
+                activeSize,
+                computedMazeDataRef.current
               );
             }
 
@@ -463,8 +466,7 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
     ctx.clearRect(0, 0, canvas.width, canvas.height);
   }, []);
 
-  const paintMatrix = useCallback((modules: QRModules) => {
-    requestMazeCalculation(modules);
+  const repaintCanvasOnly = useCallback((modules: QRModules) => {
     const canvas = localCanvasRef.current;
     if (!canvas) return;
 
@@ -613,7 +615,12 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
         setTimeout(runVirtualRender, 50);
       }
     }
-  }, [requestMazeCalculation]);
+  }, []);
+
+  const paintMatrix = useCallback((modules: QRModules) => {
+    requestMazeCalculation(modules);
+    repaintCanvasOnly(modules);
+  }, [requestMazeCalculation, repaintCanvasOnly]);
 
   const requestMatrixCalculation = useCallback(() => {
     const currentConfig = configRef.current;
@@ -747,13 +754,19 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
     requestMatrixCalculation();
   }, [config.value, config.errorCorrectionLevel, activeIsAnimating, requestMatrixCalculation]);
 
+  // Repaint canvas when computed background maze data updates without triggering a new calculation
+  useEffect(() => {
+    if (activeIsAnimating) return;
+    if (computedMazeData && lastModulesRef.current) {
+      repaintCanvasOnly(lastModulesRef.current);
+    }
+  }, [computedMazeData, activeIsAnimating, repaintCanvasOnly]);
+
   // Monitor structural and aesthetic changes to repaint immediately
   useEffect(() => {
     if (activeIsAnimating) return;
     if (lastModulesRef.current) {
       paintMatrix(lastModulesRef.current);
-    } else {
-      requestMatrixCalculation();
     }
   }, [
     config.fgColor,
@@ -781,13 +794,11 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
     activeConfig.mazeColor,
     activeConfig.mazePathWidth,
     activeConfig.showMazeSolution,
-    computedMazeData,
     logoImg,
     borderLogoImg,
     size,
     activeIsAnimating,
     paintMatrix,
-    requestMatrixCalculation,
   ]);
 
   const typeLabel = config.type.charAt(0).toUpperCase() + config.type.slice(1).toLowerCase();
