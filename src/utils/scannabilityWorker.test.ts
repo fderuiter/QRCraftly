@@ -359,27 +359,25 @@ describe('scannabilityWorker', () => {
     );
   });
 
-  it('falls back seamlessly to JS decoding if WebAssembly instantiation fails', async () => {
+  it('executes frame evaluation using pure JavaScript logic without WebAssembly instantiation or stubs', async () => {
     const postMessageSpy = vi.fn();
     globalThis.postMessage = postMessageSpy;
 
-    const originalInstantiate = globalThis.WebAssembly.instantiate;
-    // Force WebAssembly.instantiate to throw
-    globalThis.WebAssembly.instantiate = vi.fn().mockRejectedValue(new Error('WASM instantiation failed'));
+    const instantiateSpy = vi.spyOn(globalThis.WebAssembly, 'instantiate');
 
-    vi.mocked(jsQR).mockReturnValueOnce({ data: 'https://fallback.com' } as any)
-                  .mockReturnValueOnce({ data: 'https://fallback.com' } as any);
+    vi.mocked(jsQR).mockReturnValueOnce({ data: 'https://pure-js.com' } as any)
+                  .mockReturnValueOnce({ data: 'https://pure-js.com' } as any);
 
-    await workerHandler({ data: createDummyRequest('wasm-fail-1') } as MessageEvent);
+    await workerHandler({ data: createDummyRequest('pure-js-1') } as MessageEvent);
 
     expect(postMessageSpy).toHaveBeenCalledWith(
       expect.objectContaining({
         success: true,
         physicalReady: true,
-        configId: 'wasm-fail-1',
+        configId: 'pure-js-1',
       })
     );
-
-    globalThis.WebAssembly.instantiate = originalInstantiate;
+    expect(instantiateSpy).not.toHaveBeenCalled();
+    instantiateSpy.mockRestore();
   });
 });
