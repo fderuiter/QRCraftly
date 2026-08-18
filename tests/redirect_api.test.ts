@@ -843,5 +843,226 @@ describe("Secure Dynamic Redirection API Suite", () => {
       expect(statsJson.scans).toBe(1);
     });
   });
+
+  describe("Read-Through KV Edge Cache with D1 Error Fallback Requirements", () => {
+    it("should serve target URL from KV edge storage on cache hit without triggering synchronous SQL read", async () => {
+      const kv = new MockKV();
+      const record = {
+        id: "kv-hit-id",
+        redirectUrl: "https://cached-destination.com/fast",
+        adminKey: "key-hit",
+        scans: 10,
+        createdAt: new Date().toISOString()
+      };
+      await kv.put("redirect:kv-hit-id", JSON.stringify(record));
+
+      let d1SelectCalled = false;
+      const throwingD1 = {
+        prepare: (query: string) => {
+          if (query.toUpperCase().includes("SELECT")) {
+            d1SelectCalled = true;
+            throw new Error("D1 should not be called synchronously on KV cache hit!");
+          }
+          return {
+            bind: () => ({
+              run: async () => ({ success: true })
+            })
+          };
+        }
+      };
+
+      const req = new Request("https://qrcraftly.com/api/redirect/kv-hit-id");
+      const context = {
+        request: req,
+        env: { REDIRECTS_KV: kv, DB: throwingD1 as any },
+        params: { id: "kv-hit-id" }
+      };
+
+      const res = await lookupOnRequestGet(context);
+      expect(res.status).toBe(307);
+      expect(res.headers.get("Location")).toBe("https://cached-destination.com/fast");
+      expect(d1SelectCalled).toBe(false);
+    });
+
+    it("should populate KV edge store with complete redirect metadata on cache miss", async () => {
+      const kv = new MockKV();
+      const mockD1 = new MockD1Database();
+      const id = "kv-miss-id";
+
+      await mockD1.prepare("INSERT INTO redirects (id, redirect_url, admin_key, scans, created_at, ios_url, android_url) VALUES (?, ?, ?, 0, ?, ?, ?)")
+        .bind(id, "https://d1-original-target.com", "admin-key-miss", 0, new Date().toISOString(), "https://apps.apple.com/app/id999", "https://play.google.com/store/apps/details?id=com.miss")
+        .run();
+
+      // KV initially does NOT have this key
+      expect(await kv.get("redirect:kv-miss-id")).toBeNull();
+
+      const req = new Request(`https://qrcraftly.com/api/redirect/${id}`);
+      const promises: Promise<any>[] = [];
+      const res = await lookupOnRequestGet({
+        request: req,
+        env: { REDIRECTS_KV: kv, DB: mockD1 },
+        params: { id },
+        waitUntil: (p) => promises.push(p)
+      });
+      await Promise.all(promises);
+
+      expect(res.status).toBe(307);
+      expect(res.headers.get("Location")).toContain("https://d1-original-target.com");
+
+      // Verify KV edge store was populated with complete metadata
+      const cachedStr = await kv.get("redirect:kv-miss-id");
+      expect(cachedStr).not.toBeNull();
+      const cached = JSON.parse(cachedStr!);
+      expect(cached.id).toBe(id);
+      expect(cached.redirectUrl).toBe("https://d1-original-target.com");
+      expect(cached.iosUrl).toBe("https://apps.apple.com/app/id999");
+      expect(cached.androidUrl).toBe("https://play.google.com/store/apps/details?id=com.miss");
+    });
+
+    it("should automatically fall back to reading from KV edge storage when primary D1 database query errors", async () => {
+      const kv = new MockKV();
+      const record = {
+        id: "d1-fail-id",
+        redirectUrl: "https://fallback-safe-target.com",
+        adminKey: "key-fallback",
+        scans: 5,
+        createdAt: new Date().toISOString()
+      };
+      await kv.put("redirect:d1-fail-id", JSON.stringify(record));
+
+      const faultyD1 = {
+        prepare: () => {
+          throw new Error("D1 Database connection timeout / outage");
+        }
+      };
+
+      const req = new Request("https://qrcraftly.com/api/redirect/d1-fail-id");
+      const promises: Promise<any>[] = [];
+      const res = await lookupOnRequestGet({
+        request: req,
+        env: { REDIRECTS_KV: kv, DB: faultyD1 as any },
+        params: { id: "d1-fail-id" },
+        waitUntil: (p) => promises.push(p)
+      });
+      await Promise.all(promises);
+
+      expect(res.status).toBe(307);
+      expect(res.headers.get("Location")).toContain("https://fallback-safe-target.com");
+    });
+
+    it("should dynamically evaluate iOS, Android, and default user agents against cached KV metadata", async () => {
+      const kv = new MockKV();
+      const record = {
+        id: "multi-device-id",
+        redirectUrl: "https://example.com/desktop",
+        iosUrl: "https://apps.apple.com/app/id111",
+        androidUrl: "https://play.google.com/store/apps/details?id=com.multi",
+        adminKey: "multi-key",
+        scans: 0
+      };
+      await kv.put("redirect:multi-device-id", JSON.stringify(record));
+
+      // iOS test
+      const iosReq = new Request("https://qrcraftly.com/api/redirect/multi-device-id", {
+        headers: { "user-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)" }
+      });
+      const iosRes = await lookupOnRequestGet({ request: iosReq, env: { REDIRECTS_KV: kv }, params: { id: "multi-device-id" } });
+      expect(iosRes.status).toBe(307);
+      expect(iosRes.headers.get("Location")).toBe("https://apps.apple.com/app/id111");
+
+      // Android test
+      const androidReq = new Request("https://qrcraftly.com/api/redirect/multi-device-id", {
+        headers: { "user-agent": "Mozilla/5.0 (Linux; Android 14; Mobile)" }
+      });
+      const androidRes = await lookupOnRequestGet({ request: androidReq, env: { REDIRECTS_KV: kv }, params: { id: "multi-device-id" } });
+      expect(androidRes.status).toBe(307);
+      expect(androidRes.headers.get("Location")).toBe("https://play.google.com/store/apps/details?id=com.multi");
+
+      // Desktop test
+      const desktopReq = new Request("https://qrcraftly.com/api/redirect/multi-device-id", {
+        headers: { "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" }
+      });
+      const desktopRes = await lookupOnRequestGet({ request: desktopReq, env: { REDIRECTS_KV: kv }, params: { id: "multi-device-id" } });
+      expect(desktopRes.status).toBe(307);
+      expect(desktopRes.headers.get("Location")).toBe("https://example.com/desktop");
+    });
+
+    it("should return expected 200 JSON payload from cached metadata when requested via query parameter or Accept header", async () => {
+      const kv = new MockKV();
+      const record = {
+        id: "json-cached-id",
+        redirectUrl: "https://example.com/main",
+        iosUrl: "https://apps.apple.com/app/id222",
+        androidUrl: "https://play.google.com/store/apps/details?id=com.json",
+        adminKey: "json-key",
+        scans: 2
+      };
+      await kv.put("redirect:json-cached-id", JSON.stringify(record));
+
+      // Query param json=1
+      const paramReq = new Request("https://qrcraftly.com/api/redirect/json-cached-id?json=1");
+      const paramRes = await lookupOnRequestGet({ request: paramReq, env: { REDIRECTS_KV: kv }, params: { id: "json-cached-id" } });
+      expect(paramRes.status).toBe(200);
+      expect(paramRes.headers.get("Content-Type")).toContain("application/json");
+      const paramJson = await paramRes.json() as any;
+      expect(paramJson.id).toBe("json-cached-id");
+      expect(paramJson.redirectUrl).toBe("https://example.com/main");
+      expect(paramJson.iosUrl).toBe("https://apps.apple.com/app/id222");
+      expect(paramJson.androidUrl).toBe("https://play.google.com/store/apps/details?id=com.json");
+
+      // Accept header application/json
+      const headerReq = new Request("https://qrcraftly.com/api/redirect/json-cached-id", {
+        headers: { Accept: "application/json" }
+      });
+      const headerRes = await lookupOnRequestGet({ request: headerReq, env: { REDIRECTS_KV: kv }, params: { id: "json-cached-id" } });
+      expect(headerRes.status).toBe(200);
+      const headerJson = await headerRes.json() as any;
+      expect(headerJson.id).toBe("json-cached-id");
+      expect(headerJson.redirectUrl).toBe("https://example.com/main");
+    });
+
+    it("should execute telemetry and scan counting as non-blocking tasks that fail open on D1 error", async () => {
+      const kv = new MockKV();
+      const record = {
+        id: "fail-open-telemetry-id",
+        redirectUrl: "https://target.com/fail-open",
+        adminKey: "fo-key",
+        scans: 0
+      };
+      await kv.put("redirect:fail-open-telemetry-id", JSON.stringify(record));
+
+      const faultyD1 = {
+        prepare: () => {
+          return {
+            bind: () => ({
+              run: async () => {
+                throw new Error("D1 UPDATE error during background scan increment");
+              }
+            })
+          };
+        }
+      };
+
+      const req = new Request("https://qrcraftly.com/api/redirect/fail-open-telemetry-id");
+      const promises: Promise<any>[] = [];
+      const res = await lookupOnRequestGet({
+        request: req,
+        env: { REDIRECTS_KV: kv, DB: faultyD1 as any },
+        params: { id: "fail-open-telemetry-id" },
+        waitUntil: (p) => promises.push(p)
+      });
+
+      // User redirection must succeed immediately without throwing or failing
+      expect(res.status).toBe(307);
+      expect(res.headers.get("Location")).toBe("https://target.com/fail-open");
+
+      // Non-blocking telemetry background task runs and catches D1 error without unhandled rejection
+      await expect(Promise.all(promises)).resolves.toBeDefined();
+
+      // Telemetry event key is still written to KV
+      const events = await kv.list({ prefix: "event:fail-open-telemetry-id:" });
+      expect(events.keys.length).toBe(1);
+    });
+  });
 });
 

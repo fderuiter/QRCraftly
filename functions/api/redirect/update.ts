@@ -83,6 +83,23 @@ export const onRequestPost = async (context: {
       .bind(targetNewUrl, finalIosUrl, finalAndroidUrl, id)
       .run();
 
+    if (context.env?.REDIRECTS_KV) {
+      const kvPayload = {
+        id,
+        redirectUrl: targetNewUrl,
+        adminKey: storedAdminKey,
+        scans: record.scans || 0,
+        createdAt: record.created_at || record.createdAt || new Date().toISOString(),
+        iosUrl: finalIosUrl || undefined,
+        androidUrl: finalAndroidUrl || undefined,
+      };
+      try {
+        await context.env.REDIRECTS_KV.put(`redirect:${id}`, JSON.stringify(kvPayload));
+      } catch (err) {
+        console.error("KV cache update failed on link edit:", err);
+      }
+    }
+
     return new Response(JSON.stringify({
       success: true,
       redirectUrl: targetNewUrl,
