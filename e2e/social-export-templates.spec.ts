@@ -372,7 +372,7 @@ test.describe('SVG download', () => {
     const [download] = await Promise.all([
       page.waitForEvent('download'),
       (async () => {
-        await page.getByRole('button', { name: /Download/i }).click();
+        await page.getByRole('button', { name: 'Download', exact: true }).click();
         await page.getByRole('menuitem', { name: /SVG/i }).click();
       })(),
     ]);
@@ -391,7 +391,7 @@ test.describe('SVG download', () => {
     const [download] = await Promise.all([
       page.waitForEvent('download'),
       (async () => {
-        await page.getByRole('button', { name: /Download/i }).click();
+        await page.getByRole('button', { name: 'Download', exact: true }).click();
         await page.getByRole('menuitem', { name: /SVG/i }).click();
       })(),
     ]);
@@ -410,7 +410,7 @@ test.describe('SVG download', () => {
     const [download] = await Promise.all([
       page.waitForEvent('download'),
       (async () => {
-        await page.getByRole('button', { name: /Download/i }).click();
+        await page.getByRole('button', { name: 'Download', exact: true }).click();
         await page.getByRole('menuitem', { name: /SVG/i }).click();
       })(),
     ]);
@@ -433,7 +433,7 @@ test.describe('PNG download', () => {
     const [download] = await Promise.all([
       page.waitForEvent('download'),
       (async () => {
-        await page.getByRole('button', { name: /Download/i }).click();
+        await page.getByRole('button', { name: 'Download', exact: true }).click();
         await page.getByRole('menuitem', { name: /PNG/i }).click();
       })(),
     ]);
@@ -447,7 +447,7 @@ test.describe('PNG download', () => {
     const [download] = await Promise.all([
       page.waitForEvent('download'),
       (async () => {
-        await page.getByRole('button', { name: /Download/i }).click();
+        await page.getByRole('button', { name: 'Download', exact: true }).click();
         await page.getByRole('menuitem', { name: /PNG/i }).click();
       })(),
     ]);

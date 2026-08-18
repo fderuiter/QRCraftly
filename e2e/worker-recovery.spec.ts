@@ -37,15 +37,17 @@ test.describe('Isolated Web Worker Recovery & Export Bypass', () => {
         constructor(scriptURL: string | URL, options?: WorkerOptions) {
           super(scriptURL, options);
           this.lastConfigId = undefined;
-          // Expose the created worker instance on the window object
-          (window as any).activeWorker = this;
+          // Expose the scannability worker instance on the window object
+          if (String(scriptURL).includes('scannabilityWorker')) {
+            (window as any).activeWorker = this;
+          }
         }
 
         postMessage(message: any, transfer?: any) {
           if (message && message.configId) {
             this.lastConfigId = message.configId;
           }
-          if ((window as any).simulateFailure !== false) {
+          if (this === (window as any).activeWorker && (window as any).simulateFailure !== false) {
             const configId = message?.configId;
             // Simulate background worker crash/failure asynchronously
             setTimeout(() => {
@@ -77,9 +79,9 @@ test.describe('Isolated Web Worker Recovery & Export Bypass', () => {
     const urlInput = page.locator('#url-input');
     await urlInput.waitFor({ state: 'visible' });
 
-    // Wait for the active worker instance to be instantiated and captured
+    // Wait for the active worker instance to be instantiated and captured with an active message configId
     await expect.poll(async () => {
-      return await page.evaluate(() => !!(window as any).activeWorker);
+      return await page.evaluate(() => !!((window as any).activeWorker && (window as any).activeWorker.lastConfigId !== undefined));
     }, {
       timeout: 15000,
       intervals: [250]
@@ -165,11 +167,11 @@ test.describe('Isolated Web Worker Recovery & Export Bypass', () => {
     await expect(alertBadge).toContainText('Low Scannability');
 
     // Assert that the diagnostic options popup renders (help improve scannability card)
-    const telemetryTitle = page.getByText('Help Improve Scannability');
+    const telemetryTitle = page.getByText(/Anonymous diagnostics/i);
     await expect(telemetryTitle).toBeVisible({ timeout: 15000 });
 
-    // Click 'No Thanks' option to save choice and dismiss popup
-    const noThanksButton = page.getByRole('button', { name: 'No Thanks' });
+    // Click 'No thanks' option to save choice and dismiss popup
+    const noThanksButton = page.getByRole('button', { name: /No thanks/i });
     await expect(noThanksButton).toBeVisible();
     await noThanksButton.click();
 
