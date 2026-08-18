@@ -23,8 +23,8 @@ import QRCode from 'qrcode';
 import { Zap, Flame, Bomb, RotateCcw, ArrowLeft, ShieldAlert, ShieldCheck, Gamepad2, Settings } from 'lucide-react';
 import '@/layouts/index.css';
 import { applyOpticalSimulationMath } from '../../utils/opticalSimulation';
-import { isDangerousUrl } from '../../utils/security';
 import { assertWorkerRequest } from '../../utils/sharedContract';
+import { AdaptiveFrameScheduler } from '../../utils/AdaptiveFrameScheduler';
 
 /**
  * Interface representing active game projectile entities (bullets or bombs).
@@ -154,9 +154,33 @@ export default function Page() {
   // Worker-Locked Offscreen Downscaling Pipeline
   const downscaleCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const workerRef = useRef<Worker | null>(null);
+  const schedulerRef = useRef<AdaptiveFrameScheduler | null>(null);
   const isWorkerBusyRef = useRef<boolean>(false);
   const isCheckBlockedRef = useRef<boolean>(false);
   const sequenceRef = useRef<number>(0);
+
+  // Initialize double-buffered adaptive scheduler for background scanning
+  useEffect(() => {
+    const scheduler = new AdaptiveFrameScheduler({
+      minSamplingDelay: 16,
+      maxSamplingDelay: 500,
+      onStatusChange: (status) => {
+        if (status === 'pass') {
+          setIsScannable(true);
+          setDecodedText(qrTextRef.current);
+        } else if (status === 'fail') {
+          setIsScannable(false);
+        }
+      },
+    });
+    scheduler.pool.resize(256, 256);
+    scheduler.start();
+    schedulerRef.current = scheduler;
+
+    return () => {
+      scheduler.stop();
+    };
+  }, []);
 
   // Native BarcodeDetector state and ref
   const barcodeDetectorRef = useRef<any>(null);
@@ -316,7 +340,7 @@ export default function Page() {
         }
       }
 
-      // Fallback: off-thread Web Worker pipeline
+      // Fallback: off-thread Web Worker pipeline with double-buffered memory pool recycling
       const worker = workerRef.current;
       if (!worker) {
         isWorkerBusyRef.current = false;
@@ -325,44 +349,26 @@ export default function Page() {
 
       const isTest = !!navigator.webdriver;
       const configId = currentSequence;
+      const scheduler = schedulerRef.current;
+      const seqId = scheduler ? scheduler.beginFrame() : null;
+      const buffer = scheduler ? scheduler.pool.acquire() : new ArrayBuffer(256 * 256 * 4);
+      const imgData = dctx.getImageData(0, 0, 256, 256);
+      const u8 = new Uint8ClampedArray(buffer);
+      u8.set(imgData.data);
 
-      if (typeof globalThis.createImageBitmap === 'function') {
-        try {
-          const imageBitmap = await createImageBitmap(downscaleCanvas);
-          const payload = {
-            imageBitmap,
-            width: 256,
-            height: 256,
-            isTest,
-            configId
-          };
-          assertWorkerRequest(payload);
-          worker.postMessage(payload, [payload.imageBitmap]);
-        } catch (bitmapErr) {
-          console.error('createImageBitmap failed, falling back to synchronous read:', bitmapErr);
-          const imgData = dctx.getImageData(0, 0, 256, 256);
-          const payload = {
-            imageData: imgData,
-            width: 256,
-            height: 256,
-            isTest,
-            configId
-          };
-          assertWorkerRequest(payload);
-          worker.postMessage(payload, [payload.imageData.data.buffer]);
-        }
-      } else {
-        const imgData = dctx.getImageData(0, 0, 256, 256);
-        const payload = {
-          imageData: imgData,
-          width: 256,
-          height: 256,
-          isTest,
-          configId
-        };
-        assertWorkerRequest(payload);
-        worker.postMessage(payload, [payload.imageData.data.buffer]);
-      }
+      const payload = {
+        imageData: { data: u8, width: 256, height: 256 },
+        buffer: buffer,
+        width: 256,
+        height: 256,
+        isTest,
+        configId,
+        sequenceId: seqId !== null ? seqId : undefined,
+      };
+      assertWorkerRequest(payload);
+
+      // Zero-copy array buffer transfer
+      worker.postMessage(payload, [buffer]);
     } catch (err) {
       console.error('Failed to capture or send downscaled canvas data to worker/detector:', err);
       isWorkerBusyRef.current = false;
@@ -382,7 +388,19 @@ export default function Page() {
         workerRef.current = worker;
 
         worker.onmessage = (e) => {
-          const { success, configId } = e.data;
+          const { success, configId, sequenceId, buffer: recycledBuffer } = e.data;
+
+          if (schedulerRef.current && typeof sequenceId === 'number') {
+            schedulerRef.current.endFrame(
+              sequenceId,
+              success ? 'pass' : 'fail',
+              success ? qrTextRef.current : null,
+              e.data.error,
+              recycledBuffer
+            );
+          } else if (recycledBuffer && schedulerRef.current) {
+            schedulerRef.current.pool.release(recycledBuffer);
+          }
           
           if (configId !== undefined && configId !== String(sequenceRef.current)) {
             return;

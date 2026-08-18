@@ -322,4 +322,64 @@ describe('scannabilityWorker', () => {
       })
     );
   });
+
+  it('recycles pre-allocated double-buffer ArrayBuffer back to main thread in postMessage transfer list', async () => {
+    const postMessageSpy = vi.fn();
+    globalThis.postMessage = postMessageSpy;
+
+    vi.mocked(jsQR).mockReturnValueOnce({ data: 'https://safe.com' } as any)
+                  .mockReturnValueOnce({ data: 'https://safe.com' } as any);
+
+    const buffer = new ArrayBuffer(400);
+    const req = {
+      imageData: {
+        data: new Uint8ClampedArray(buffer),
+        width: 10,
+        height: 10,
+      },
+      buffer,
+      width: 10,
+      height: 10,
+      configId: 'buf-123',
+      sequenceId: 1,
+      isTest: true,
+    };
+
+    await workerHandler({ data: req } as MessageEvent);
+
+    expect(postMessageSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: true,
+        physicalReady: true,
+        configId: 'buf-123',
+        sequenceId: 1,
+        buffer,
+      }),
+      [buffer]
+    );
+  });
+
+  it('falls back seamlessly to JS decoding if WebAssembly instantiation fails', async () => {
+    const postMessageSpy = vi.fn();
+    globalThis.postMessage = postMessageSpy;
+
+    const originalInstantiate = globalThis.WebAssembly.instantiate;
+    // Force WebAssembly.instantiate to throw
+    globalThis.WebAssembly.instantiate = vi.fn().mockRejectedValue(new Error('WASM instantiation failed'));
+
+    vi.mocked(jsQR).mockReturnValueOnce({ data: 'https://fallback.com' } as any)
+                  .mockReturnValueOnce({ data: 'https://fallback.com' } as any);
+
+    await workerHandler({ data: createDummyRequest('wasm-fail-1') } as MessageEvent);
+
+    expect(postMessageSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: true,
+        physicalReady: true,
+        configId: 'wasm-fail-1',
+      })
+    );
+
+    globalThis.WebAssembly.instantiate = originalInstantiate;
+  });
 });
