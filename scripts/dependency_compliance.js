@@ -33,7 +33,8 @@ export const AUTHORIZED_NETWORK_FILES = new Set([
   'src/hooks/useTelemetry.ts',
   'src/utils/svgExport.ts',
   'src/utils/assetCache.ts',
-  'src/hooks/useRedirector.ts'
+  'src/hooks/useRedirector.ts',
+  'src/pages/r/@id/+Page.tsx'
 ]);
 
 /**
