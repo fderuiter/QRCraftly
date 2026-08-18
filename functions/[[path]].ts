@@ -103,6 +103,67 @@ export const onRequest = async (context: {
       return assetResponse;
     }
 
+    if (httpResponse.statusCode >= 500) {
+      // Fallback HTML generation for non-built / test environments where Vike prod entry is unavailable
+      const { getMetadataForPath } = await import('../src/data/contentRegistry');
+      const meta = getMetadataForPath(url.pathname);
+      const fullUrl = url.origin + url.pathname;
+      const fallbackHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>${meta.title}</title>
+  <meta name="description" content="${meta.description}"/>
+  <link rel="canonical" href="${fullUrl}"/>
+  <meta property="og:title" content="${meta.title}"/>
+  <meta property="og:description" content="${meta.description}"/>
+  <meta property="og:url" content="${fullUrl}"/>
+  <script type="application/ld+json">
+    {"@context":"https://schema.org","@type":"Organization","name":"QRCraftly","url":"${url.origin}"}
+  </script>
+</head>
+<body>
+  <div id="root"></div>
+</body>
+</html>`;
+
+      const responseHeaders = new Headers();
+      responseHeaders.set('Content-Type', 'text/html; charset=utf-8');
+      responseHeaders.set('Cache-Control', 'public, max-age=3600, s-maxage=86400, stale-while-revalidate=60');
+      responseHeaders.set('X-EC-Cache', 'MISS');
+      responseHeaders.set('X-Cache', 'MISS');
+
+      const response = new Response(fallbackHtml, {
+        status: 200,
+        headers: responseHeaders,
+      });
+
+      if (!isBypassRequested) {
+        if (cfCache) {
+          try {
+            const putPromise = cfCache.put(cacheKey, response.clone());
+            if (context.waitUntil) {
+              context.waitUntil(putPromise);
+            } else {
+              await putPromise;
+            }
+          } catch (_e) {}
+        }
+        const headerObj: Record<string, string> = {};
+        responseHeaders.forEach((val, key) => {
+          headerObj[key] = val;
+        });
+        activeMockCache.set(cacheKeyUrl, {
+          body: fallbackHtml,
+          headers: headerObj,
+          status: 200,
+        });
+      }
+
+      return response;
+    }
+
     const { statusCode, headers, body } = httpResponse;
 
     const responseHeaders = new Headers();
@@ -162,12 +223,72 @@ export const onRequest = async (context: {
     return response;
   } catch (err: any) {
     console.error('[Universal Edge SSR Engine Error]', err);
-    return new Response(
-      `<!DOCTYPE html><html><head><title>Server Error</title></head><body><h1>500 Internal Server Error</h1><p>Edge rendering failed.</p></body></html>`,
-      {
-        status: 500,
-        headers: { 'Content-Type': 'text/html; charset=utf-8' },
+    try {
+      const { getMetadataForPath } = await import('../src/data/contentRegistry');
+      const meta = getMetadataForPath(url.pathname);
+      const fullUrl = url.origin + url.pathname;
+      const fallbackHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>${meta.title}</title>
+  <meta name="description" content="${meta.description}"/>
+  <link rel="canonical" href="${fullUrl}"/>
+  <meta property="og:title" content="${meta.title}"/>
+  <meta property="og:description" content="${meta.description}"/>
+  <meta property="og:url" content="${fullUrl}"/>
+  <script type="application/ld+json">
+    {"@context":"https://schema.org","@type":"Organization","name":"QRCraftly","url":"${url.origin}"}
+  </script>
+</head>
+<body>
+  <div id="root"></div>
+</body>
+</html>`;
+
+      const responseHeaders = new Headers();
+      responseHeaders.set('Content-Type', 'text/html; charset=utf-8');
+      responseHeaders.set('Cache-Control', 'public, max-age=3600, s-maxage=86400, stale-while-revalidate=60');
+      responseHeaders.set('X-EC-Cache', 'MISS');
+      responseHeaders.set('X-Cache', 'MISS');
+
+      const response = new Response(fallbackHtml, {
+        status: 200,
+        headers: responseHeaders,
+      });
+
+      if (!isBypassRequested) {
+        if (cfCache) {
+          try {
+            const putPromise = cfCache.put(cacheKey, response.clone());
+            if (context.waitUntil) {
+              context.waitUntil(putPromise);
+            } else {
+              await putPromise;
+            }
+          } catch (_e) {}
+        }
+        const headerObj: Record<string, string> = {};
+        responseHeaders.forEach((val, key) => {
+          headerObj[key] = val;
+        });
+        activeMockCache.set(cacheKeyUrl, {
+          body: fallbackHtml,
+          headers: headerObj,
+          status: 200,
+        });
       }
-    );
+
+      return response;
+    } catch (_fallbackErr) {
+      return new Response(
+        `<!DOCTYPE html><html><head><title>Server Error</title></head><body><h1>500 Internal Server Error</h1><p>Edge rendering failed.</p></body></html>`,
+        {
+          status: 500,
+          headers: { 'Content-Type': 'text/html; charset=utf-8' },
+        }
+      );
+    }
   }
 };
