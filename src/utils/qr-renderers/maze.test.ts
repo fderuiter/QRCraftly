@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { generateMaze, renderMaze, isFinderEyeZone, isBridgeCell } from './maze';
+import { generateMaze, renderMaze, isFinderEyeZone, isBridgeCell, DSU } from './maze';
 import { QRStyle, QRType, QRErrorCorrectionLevel } from '../../types';
 
 describe('isFinderEyeZone', () => {
@@ -441,5 +441,90 @@ describe('generateMaze & renderMaze', () => {
       expect(smallGridMaze.nodes.length).toBeGreaterThan(1);
       expect(smallGridMaze.solution.length).toBeGreaterThan(1); // dynamically adapted step threshold produces solvable path
     });
+
+    it('connects fragmented components by adding connector cells', () => {
+      const size = 21;
+      // Create three disconnected components separated by dark modules in columns 7 and 14
+      const wallMap: Record<string, boolean> = {};
+      for (let r = 0; r < size; r++) {
+        wallMap[`${r},7`] = true;
+        wallMap[`${r},14`] = true;
+      }
+      const modules = createMockModules(size, wallMap);
+      const configNoBridges = { ...baseConfig, isMazeBridgesEnabled: false };
+      const mazeData = generateMaze(modules, configNoBridges, size);
+
+      // Verify connector cells in column 7 and column 14 were added as nodes
+      expect(mazeData.nodes.some(n => n.c === 7)).toBe(true);
+      expect(mazeData.nodes.some(n => n.c === 14)).toBe(true);
+    });
+
+    it('handles unsolvable multi-component maze with mixed component sizes by using fallback component tree diameter', () => {
+      const size = 21;
+      const wallMap: Record<string, boolean> = {};
+      // Wall of 2 dark columns (col 9 and 10) so main components cannot be bridged
+      for (let r = 0; r < size; r++) {
+        wallMap[`${r},9`] = true;
+        wallMap[`${r},10`] = true;
+      }
+      // Create an isolated single-node component at (10, 2) (outside finder pattern areas)
+      // surrounded by 2 layers of dark cells so connector cells cannot bridge it
+      for (let r = 8; r <= 12; r++) {
+        for (let c = 0; c <= 4; c++) {
+          wallMap[`${r},${c}`] = true;
+        }
+      }
+      // Leave (10, 2) light
+      delete wallMap['10,2'];
+
+      const modules = createMockModules(size, wallMap);
+      const configNoBridges = { ...baseConfig, isMazeBridgesEnabled: false };
+      const mazeData = generateMaze(modules, configNoBridges, size);
+
+      expect(mazeData.start).not.toBeNull();
+      expect(mazeData.end).not.toBeNull();
+      expect(mazeData.solution.length).toBeGreaterThan(1);
+    });
+
+    it('handles isolated single-node components where no path can be formed', () => {
+      const size = 21;
+      const wallMap: Record<string, boolean> = {};
+      // Set all cells in the matrix to dark
+      for (let r = 0; r < size; r++) {
+        for (let c = 0; c < size; c++) {
+          wallMap[`${r},${c}`] = true;
+        }
+      }
+      // Leave two light cells far apart outside finder eye patterns
+      delete wallMap['10,2'];
+      delete wallMap['10,18'];
+
+      const modules = createMockModules(size, wallMap);
+      const configNoBridges = { ...baseConfig, isMazeBridgesEnabled: false };
+      const mazeData = generateMaze(modules, configNoBridges, size);
+
+      expect(mazeData.start).toBeNull();
+      expect(mazeData.end).toBeNull();
+      expect(mazeData.solution.length).toBe(0);
+    });
+  });
+});
+
+describe('DSU', () => {
+  it('manages disjoint sets and supports add, find, and union', () => {
+    const dsu = new DSU(['a', 'b']);
+    expect(dsu.find('a')).toBe('a');
+    expect(dsu.find('b')).toBe('b');
+    expect(dsu.union('a', 'b')).toBe(true);
+    expect(dsu.union('a', 'b')).toBe(false);
+
+    // Test add for new key
+    dsu.add('c');
+    expect(dsu.find('c')).toBe('c');
+    expect(dsu.union('a', 'c')).toBe(true);
+
+    // Test add for existing key
+    dsu.add('a');
+    expect(dsu.find('a')).toBe('c');
   });
 });
