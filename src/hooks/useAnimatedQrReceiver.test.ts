@@ -68,7 +68,7 @@ describe('useAnimatedQrReceiver Hook', () => {
     });
 
     expect(result.current.totalChunks).toBe(2);
-    expect(result.current.chunks.get(0)).toBe('Zm9v');
+    expect(result.current.chunks.has(0)).toBe(true);
   });
 
   it('should intercept dangerous schemes immediately', async () => {
@@ -112,7 +112,7 @@ describe('useAnimatedQrReceiver Hook', () => {
     });
 
     expect(result.current.handshake?.sha256).toBe('sha111');
-    expect(result.current.chunks.get(0)).toBe('Zm9v');
+    expect(result.current.chunks.has(0)).toBe(true);
     expect(result.current.totalChunks).toBe(2);
 
     // 2. Process a different file handshake (different SHA-256)
@@ -133,7 +133,7 @@ describe('useAnimatedQrReceiver Hook', () => {
       await result.current.handleFrame('F|0|2|YmFy');
     });
 
-    expect(result.current.chunks.get(0)).toBe('YmFy');
+    expect(result.current.chunks.has(0)).toBe(true);
     expect(result.current.totalChunks).toBe(2);
   });
 

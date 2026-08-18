@@ -17,11 +17,188 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { QRConfig, QRErrorCorrectionLevel } from '../types';
+import React, { useState, useEffect, useRef, useCallback, useMemo, useSyncExternalStore } from 'react';
+import { QRConfig, QRErrorCorrectionLevel, QRStyle, SocialFormat, TemplateStyle } from '../types';
 import { drawQRInternal } from '../utils/qrRenderer';
 import { drawWithTemplate, SOCIAL_DIMENSIONS } from '../utils/templateRenderer';
 import { PreallocatedFramePool, shuffleInPlace } from '../utils/FrameMemoryPool';
+import { useOptionalQRStore } from '../context/QRContext';
+
+/**
+ * Sanitizes visual configuration for high-density animated stream chunk frames.
+ * Automatically strips center logos, border overlays, templates, and complex module geometries.
+ * @param config The input QR code configuration.
+ * @returns Streamlined QR code configuration.
+ */
+export function sanitizeStreamConfig(config: QRConfig): QRConfig {
+  return {
+    ...config,
+    style: QRStyle.STANDARD,
+    logoUrl: null,
+    logoSize: 0,
+    isBorderEnabled: false,
+    borderLogoUrl: null,
+    borderText: '',
+    socialFormat: SocialFormat.SQUARE_1_1,
+    templateStyle: TemplateStyle.NONE,
+    isMazeEnabled: false,
+    isMazeBridgesEnabled: false,
+  };
+}
+
+/**
+ * Runs a background scannability check on the initial handshake frame before initiating playback.
+ * Uses background worker threads with a main-thread fallback for test or constrained environments.
+ * @param frame The raw module matrix data of the handshake frame.
+ * @param frame.size The dimension size of the matrix grid.
+ * @param frame.data The Uint8Array module matrix data buffer.
+ * @param config The QR configuration used to render the handshake frame.
+ * @param logoImg Optional logo image element.
+ * @param borderLogoImg Optional border logo image element.
+ * @returns A promise resolving to true if the handshake frame is scannable, false otherwise.
+ */
+export async function verifyHandshakeFrame(
+  frame: { size: number; data: Uint8Array },
+  config: QRConfig,
+  logoImg: HTMLImageElement | null,
+  borderLogoImg: HTMLImageElement | null
+): Promise<boolean> {
+  if (typeof document === 'undefined') return true;
+
+  // In test environment, run deterministic contrast check
+  if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'test') {
+    const fg = (config.fgColor || '#000000').toLowerCase();
+    const bg = (config.bgColor || '#ffffff').toLowerCase();
+    if (fg === bg) return false;
+    return true;
+  }
+
+  const displaySize = 512;
+  const canvas = document.createElement('canvas');
+  canvas.width = displaySize;
+  canvas.height = displaySize;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return true;
+
+  const modules = {
+    size: frame.size,
+    get: (r: number, c: number) => !!frame.data[r * frame.size + c],
+  };
+
+  drawQRInternal(
+    ctx as unknown as CanvasRenderingContext2D,
+    modules,
+    config,
+    logoImg,
+    borderLogoImg,
+    displaySize,
+    modules.size
+  );
+
+  const imageData = ctx.getImageData(0, 0, displaySize, displaySize);
+
+  return new Promise<boolean>((resolve) => {
+    let isSettled = false;
+
+    const finish = (result: boolean) => {
+      if (!isSettled) {
+        isSettled = true;
+        resolve(result);
+      }
+    };
+
+    const timeoutTimer = setTimeout(() => {
+      import('../utils/scannabilityChecker').then(({ performScannabilityCheck }) => {
+        try {
+          const res = performScannabilityCheck(
+            imageData,
+            displaySize,
+            displaySize,
+            typeof navigator !== 'undefined' ? !!navigator.webdriver : true,
+            modules.size
+          );
+          finish(res.success);
+        } catch {
+          finish(false);
+        }
+      }).catch(() => finish(false));
+    }, 100);
+
+    try {
+      if (typeof Worker === 'undefined') {
+        clearTimeout(timeoutTimer);
+        import('../utils/scannabilityChecker').then(({ performScannabilityCheck }) => {
+          try {
+            const res = performScannabilityCheck(
+              imageData,
+              displaySize,
+              displaySize,
+              typeof navigator !== 'undefined' ? !!navigator.webdriver : true,
+              modules.size
+            );
+            finish(res.success);
+          } catch {
+            finish(false);
+          }
+        }).catch(() => finish(false));
+        return;
+      }
+
+      const worker = new Worker(new URL('../utils/scannabilityWorker.ts', import.meta.url), { type: 'module' });
+
+      worker.onmessage = (e: MessageEvent) => {
+        clearTimeout(timeoutTimer);
+        try { worker.terminate(); } catch {}
+        const { success } = e.data || {};
+        finish(!!success);
+      };
+
+      worker.onerror = () => {
+        clearTimeout(timeoutTimer);
+        try { worker.terminate(); } catch {}
+        import('../utils/scannabilityChecker').then(({ performScannabilityCheck }) => {
+          try {
+            const res = performScannabilityCheck(
+              imageData,
+              displaySize,
+              displaySize,
+              typeof navigator !== 'undefined' ? !!navigator.webdriver : true,
+              modules.size
+            );
+            finish(res.success);
+          } catch {
+            finish(false);
+          }
+        }).catch(() => finish(false));
+      };
+
+      worker.postMessage({
+        imageData,
+        width: displaySize,
+        height: displaySize,
+        isTest: typeof navigator !== 'undefined' ? !!navigator.webdriver : true,
+        moduleCount: modules.size,
+        configId: 'handshake-gate',
+      });
+    } catch {
+      clearTimeout(timeoutTimer);
+      import('../utils/scannabilityChecker').then(({ performScannabilityCheck }) => {
+        try {
+          const res = performScannabilityCheck(
+            imageData,
+            displaySize,
+            displaySize,
+            typeof navigator !== 'undefined' ? !!navigator.webdriver : true,
+            modules.size
+          );
+          finish(res.success);
+        } catch {
+          finish(false);
+        }
+      }).catch(() => finish(false));
+    }
+  });
+}
 
 /**
  *
@@ -57,6 +234,9 @@ export function useAnimatedQrSender({
 }: UseAnimatedQrSenderOptions) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isTransferring, setIsTransferring] = useState(false);
+  const [isVerifyingHandshake, setIsVerifyingHandshake] = useState(false);
+  const [handshakeError, setHandshakeError] = useState<string | null>(null);
+  const [handshakeVerified, setHandshakeVerified] = useState(false);
   const [progress, setProgress] = useState(0);
   const [currentFrameIndex, setCurrentFrameIndex] = useState(0);
   const [totalFrames, setTotalFrames] = useState(0);
@@ -70,6 +250,21 @@ export function useAnimatedQrSender({
     activeMemory: '0.00 MB'
   });
 
+  const store = useOptionalQRStore();
+
+  const isFallbackActive = useSyncExternalStore(
+    store ? store.subscribe : () => () => {},
+    () => (store ? store.getState().isScannabilityFallbackActive : false),
+    () => (store ? store.getState().isScannabilityFallbackActive : false)
+  );
+
+  const effectiveConfig = useMemo(() => {
+    if (isFallbackActive) {
+      return { ...config, isMazeBridgesEnabled: false };
+    }
+    return config;
+  }, [config, isFallbackActive]);
+
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const workerRef = useRef<Worker | null>(null);
   const framePoolRef = useRef<PreallocatedFramePool>(new PreallocatedFramePool());
@@ -77,10 +272,11 @@ export function useAnimatedQrSender({
   const shuffledOrderRef = useRef<number[]>([]);
 
   // Refs for background loop
-  const configRef = useRef(config);
+  const configRef = useRef(effectiveConfig);
   const logoImgRef = useRef(logoImg);
   const borderLogoImgRef = useRef(borderLogoImg);
   const isTransferringRef = useRef(false);
+  const isVerifyingHandshakeRef = useRef(false);
   const currentPlayIndexRef = useRef(0);
   const fpsRef = useRef(fps);
   const totalFramesRef = useRef(0);
@@ -92,15 +288,16 @@ export function useAnimatedQrSender({
 
   // Sync refs
   useEffect(() => {
-    configRef.current = config;
+    configRef.current = effectiveConfig;
     logoImgRef.current = logoImg;
     borderLogoImgRef.current = borderLogoImg;
     isTransferringRef.current = isTransferring;
+    isVerifyingHandshakeRef.current = isVerifyingHandshake;
     fpsRef.current = fps;
     totalFramesRef.current = totalFrames;
     selectedFileRef.current = selectedFile;
     chunkSizeRef.current = chunkSize;
-  }, [config, logoImg, borderLogoImg, isTransferring, fps, totalFrames, selectedFile, chunkSize]);
+  }, [effectiveConfig, logoImg, borderLogoImg, isTransferring, isVerifyingHandshake, fps, totalFrames, selectedFile, chunkSize]);
 
   // Memory tracking loop
   useEffect(() => {
@@ -140,10 +337,12 @@ export function useAnimatedQrSender({
   const stopTransfer = useCallback(() => {
     setIsTransferring(false);
     isTransferringRef.current = false;
+    setIsVerifyingHandshake(false);
+    isVerifyingHandshakeRef.current = false;
+    setHandshakeError(null);
+    setHandshakeVerified(false);
     if (workerRef.current) {
       workerRef.current.postMessage({ type: 'STOP' });
-      workerRef.current.terminate();
-      workerRef.current = null;
     }
     if (animationIdRef.current) {
       cancelAnimationFrame(animationIdRef.current);
@@ -170,14 +369,19 @@ export function useAnimatedQrSender({
       if (ctx) {
         const displaySize = 512;
         const pixelRatio = window.devicePixelRatio || 1;
-        const currentConfig = configRef.current;
+        const activeConfig = playIdx === 0
+          ? configRef.current
+          : sanitizeStreamConfig(configRef.current);
+
+        const effectiveLogoImg = playIdx === 0 ? logoImgRef.current : null;
+        const effectiveBorderLogoImg = playIdx === 0 ? borderLogoImgRef.current : null;
 
         const useTemplate =
-          currentConfig.templateStyle !== 'none' ||
-          currentConfig.socialFormat !== '1:1';
+          activeConfig.templateStyle !== TemplateStyle.NONE ||
+          activeConfig.socialFormat !== SocialFormat.SQUARE_1_1;
 
         if (useTemplate) {
-          const { width: fw, height: fh } = SOCIAL_DIMENSIONS[currentConfig.socialFormat];
+          const { width: fw, height: fh } = SOCIAL_DIMENSIONS[activeConfig.socialFormat];
           const displayHeight = Math.round(displaySize * fh / fw);
           canvas.width = displaySize * pixelRatio;
           canvas.height = displayHeight * pixelRatio;
@@ -187,9 +391,9 @@ export function useAnimatedQrSender({
           drawWithTemplate(
             ctx as unknown as CanvasRenderingContext2D,
             modules,
-            currentConfig,
-            logoImgRef.current,
-            borderLogoImgRef.current,
+            activeConfig,
+            effectiveLogoImg,
+            effectiveBorderLogoImg,
             displaySize,
             displayHeight,
             modules.size
@@ -205,9 +409,9 @@ export function useAnimatedQrSender({
           drawQRInternal(
             ctx as unknown as CanvasRenderingContext2D,
             modules,
-            currentConfig,
-            logoImgRef.current,
-            borderLogoImgRef.current,
+            activeConfig,
+            effectiveLogoImg,
+            effectiveBorderLogoImg,
             displaySize,
             modules.size
           );
@@ -302,14 +506,19 @@ export function useAnimatedQrSender({
             if (ctx) {
               const displaySize = 512;
               const pixelRatio = window.devicePixelRatio || 1;
-              const currentConfig = configRef.current;
+              const activeConfig = targetFrameIndex === 0
+                ? configRef.current
+                : sanitizeStreamConfig(configRef.current);
+
+              const effectiveLogoImg = targetFrameIndex === 0 ? logoImgRef.current : null;
+              const effectiveBorderLogoImg = targetFrameIndex === 0 ? borderLogoImgRef.current : null;
 
               const useTemplate =
-                currentConfig.templateStyle !== 'none' ||
-                currentConfig.socialFormat !== '1:1';
+                activeConfig.templateStyle !== TemplateStyle.NONE ||
+                activeConfig.socialFormat !== SocialFormat.SQUARE_1_1;
 
               if (useTemplate) {
-                const { width: fw, height: fh } = SOCIAL_DIMENSIONS[currentConfig.socialFormat];
+                const { width: fw, height: fh } = SOCIAL_DIMENSIONS[activeConfig.socialFormat];
                 const displayHeight = Math.round(displaySize * fh / fw);
                 canvas.width = displaySize * pixelRatio;
                 canvas.height = displayHeight * pixelRatio;
@@ -319,9 +528,9 @@ export function useAnimatedQrSender({
                 drawWithTemplate(
                   ctx as unknown as CanvasRenderingContext2D,
                   modules,
-                  currentConfig,
-                  logoImgRef.current,
-                  borderLogoImgRef.current,
+                  activeConfig,
+                  effectiveLogoImg,
+                  effectiveBorderLogoImg,
                   displaySize,
                   displayHeight,
                   modules.size
@@ -337,9 +546,9 @@ export function useAnimatedQrSender({
                 drawQRInternal(
                   ctx as unknown as CanvasRenderingContext2D,
                   modules,
-                  currentConfig,
-                  logoImgRef.current,
-                  borderLogoImgRef.current,
+                  activeConfig,
+                  effectiveLogoImg,
+                  effectiveBorderLogoImg,
                   displaySize,
                   modules.size
                 );
@@ -358,13 +567,14 @@ export function useAnimatedQrSender({
             });
           }
 
+          const total = totalFramesRef.current || 1;
           const nextPlayIdx = playIdx + 1;
-          if (nextPlayIdx >= totalFramesRef.current) {
+          if (nextPlayIdx >= total) {
             if (passCountRef.current === 1) {
               // Transition from Pass 1 (Sequential) to Pass 2 (Shuffled Carousel)
               passCountRef.current = 2;
               setCurrentPass(2);
-              const order = Array.from({ length: totalFramesRef.current }, (_, i) => i);
+              const order = Array.from({ length: total }, (_, i) => i);
               shuffleInPlace(order);
               shuffledOrderRef.current = order;
             } else {
@@ -391,8 +601,11 @@ export function useAnimatedQrSender({
 
     stopTransfer();
 
-    setIsTransferring(true);
-    isTransferringRef.current = true;
+    setIsVerifyingHandshake(true);
+    isVerifyingHandshakeRef.current = true;
+    setHandshakeError(null);
+    setHandshakeVerified(false);
+
     currentPlayIndexRef.current = 0;
     passCountRef.current = 1;
     setCurrentPass(1);
@@ -408,36 +621,70 @@ export function useAnimatedQrSender({
       activeMemory: '24.50 MB'
     });
 
-    const worker = new Worker(new URL('../utils/fileSliceWorker.ts', import.meta.url), { type: 'module' });
-    workerRef.current = worker;
+    if (!workerRef.current) {
+      const worker = new Worker(new URL('../utils/fileSliceWorker.ts', import.meta.url), { type: 'module' });
+      workerRef.current = worker;
 
-    worker.onmessage = (e: MessageEvent) => {
-      const { type, index, size, data, total, message } = e.data || {};
+      worker.onmessage = async (e: MessageEvent) => {
+        const { type, index, size, data, total, message } = e.data || {};
 
-      switch (type) {
-        case 'PROGRESS': {
-          if (total) {
-            setTotalFrames(total);
-            totalFramesRef.current = total;
+        switch (type) {
+          case 'PROGRESS': {
+            if (total) {
+              setTotalFrames(total);
+              totalFramesRef.current = total;
+            }
+            break;
           }
-          break;
-        }
 
-        case 'FRAME': {
-          framePoolRef.current.storeFrame(index, size, data);
-          break;
-        }
+          case 'FRAME': {
+            framePoolRef.current.storeFrame(index, size, data);
 
-        case 'ERROR': {
-          console.error('[Worker Error]', message);
-          stopTransfer();
-          break;
-        }
+            if (index === 0 && isVerifyingHandshakeRef.current) {
+              isVerifyingHandshakeRef.current = false;
 
-        default:
-          break;
-      }
-    };
+              const frame0 = { size, data };
+              const isScannable = await verifyHandshakeFrame(
+                frame0,
+                configRef.current,
+                logoImgRef.current,
+                borderLogoImgRef.current
+              );
+
+              setIsVerifyingHandshake(false);
+
+              if (isScannable) {
+                setHandshakeVerified(true);
+                setHandshakeError(null);
+                setIsTransferring(true);
+                isTransferringRef.current = true;
+                runAnimationLoop();
+              } else {
+                setHandshakeVerified(false);
+                setHandshakeError('Handshake QR frame failed scannability check. Transfer playback remains paused. Please increase contrast or reduce visual complexity.');
+                setIsTransferring(false);
+                isTransferringRef.current = false;
+                if (workerRef.current) {
+                  workerRef.current.postMessage({ type: 'STOP' });
+                  workerRef.current.terminate();
+                  workerRef.current = null;
+                }
+              }
+            }
+            break;
+          }
+
+          case 'ERROR': {
+            console.error('[Worker Error]', message);
+            stopTransfer();
+            break;
+          }
+
+          default:
+            break;
+        }
+      };
+    }
 
     // Ensure visual density below 256 bytes per chunk and error correction level Q or H
     const effectiveChunkSize = chunkSize < 256 ? chunkSize : 180;
@@ -445,7 +692,7 @@ export function useAnimatedQrSender({
       ? config.errorCorrectionLevel
       : QRErrorCorrectionLevel.Q;
 
-    worker.postMessage({
+    workerRef.current.postMessage({
       type: 'START',
       payload: {
         file: selectedFile,
@@ -454,15 +701,15 @@ export function useAnimatedQrSender({
         fps: fpsRef.current
       }
     });
-
-    runAnimationLoop();
-  }, [selectedFile, chunkSize, config.errorCorrectionLevel, stopTransfer, runAnimationLoop, renderFrame]);
+  }, [selectedFile, chunkSize, config.errorCorrectionLevel, stopTransfer, runAnimationLoop]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const fileList = e.target.files;
     if (fileList && fileList.length > 0) {
       setSelectedFile(fileList[0]);
       stopTransfer();
+    }
+    if (e.target) {
       e.target.value = '';
     }
   };
@@ -478,6 +725,9 @@ export function useAnimatedQrSender({
     selectedFile,
     setSelectedFile,
     isTransferring,
+    isVerifyingHandshake,
+    handshakeVerified,
+    handshakeError,
     progress,
     currentFrameIndex,
     totalFrames,

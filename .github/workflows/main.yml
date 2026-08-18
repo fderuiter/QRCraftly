@@ -294,6 +294,11 @@ jobs:
           path: dist
           retention-days: 1
 
+      - name: Restore Workspace Source Metadata
+        if: always()
+        run: |
+          git checkout -- .
+
   deploy:
     name: Deploy
     needs: [static-validation, test, e2e, build]

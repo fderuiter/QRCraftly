@@ -23,32 +23,34 @@ import { StreamLookaheadReceiver, DANGEROUS_SCHEMES } from '../engine/StreamLook
 import { triggerFileDownload } from '../utils/downloadManager';
 
 /**
- *
+ * Handshake information sent at the beginning of a file transfer session.
  */
 export interface HandshakeInfo {
   /**
-   *
+   * File name.
    */
   fileName: string;
   /**
-   *
+   * Total file size in bytes.
    */
   fileSize: number;
   /**
-   *
+   * MIME type of the file.
    */
   mimeType: string;
   /**
-   *
+   * Expected SHA-256 hash of the complete file binary.
    */
   sha256: string;
 }
 
 /**
- *
+ * Options for the useAnimatedQrReceiver hook.
  */
 export interface UseAnimatedQrReceiverOptions {
-  /** Callback to display toast notifications. */
+  /**
+   * Optional toast notification callback.
+   */
   addToast?: (toast: {
     /**
      *
@@ -63,7 +65,9 @@ export interface UseAnimatedQrReceiverOptions {
      */
     duration?: number;
   }) => void;
-  /** Whether handshake frame is required before processing data frames. */
+  /**
+   * Whether data frames require a prior handshake frame before processing.
+   */
   handshakeRequired?: boolean;
   /** Stream format mode: either 'text' or 'binary'. Defaults to 'text'. */
   streamMode?: 'text' | 'binary';
@@ -91,13 +95,13 @@ export function useAnimatedQrReceiver({
   autoDownload = true,
   initialMode = 'camera',
 }: UseAnimatedQrReceiverOptions = {}) {
-  // Core states
+  // Core states - chunks tracks completed chunk indices without storing raw Base64 strings
   const [receiverMode, setReceiverModeState] = useState<'camera' | 'file'>(initialMode);
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [videoObjectUrl, setVideoObjectUrl] = useState<string | null>(null);
   const [fileValidationError, setFileValidationError] = useState<string | null>(null);
 
-  const [chunks, setChunks] = useState<Map<number, string>>(new Map());
+  const [chunks, setChunks] = useState<Set<number>>(new Set());
   const [totalChunks, setTotalChunks] = useState<number | null>(null);
   const [handshake, setHandshake] = useState<HandshakeInfo | null>(null);
   const [securityAlert, setSecurityAlert] = useState<string | null>(null);
@@ -116,6 +120,17 @@ export function useAnimatedQrReceiver({
   const processedIndicesRef = useRef<Set<number>>(new Set());
   const handshakeRef = useRef<HandshakeInfo | null>(null);
   const videoObjectUrlRef = useRef<string | null>(null);
+  const reassembledDataRef = useRef<Uint8Array | null>(null);
+
+  const autoDownloadRef = useRef(autoDownload);
+  useEffect(() => {
+    autoDownloadRef.current = autoDownload;
+  }, [autoDownload]);
+
+  const addToastRef = useRef(addToast);
+  useEffect(() => {
+    addToastRef.current = addToast;
+  }, [addToast]);
 
   // Sync lookahead receiver configuration with streamMode option
   useEffect(() => {
@@ -128,16 +143,97 @@ export function useAnimatedQrReceiver({
 
   const initWorker = useCallback(() => {
     if (!workerRef.current) {
-      workerRef.current = new Worker(
+      const worker = new Worker(
         new URL('../utils/fileReassemblyWorker.ts', import.meta.url),
         { type: 'module' }
       );
+
+      worker.onmessage = async (e: MessageEvent) => {
+        const { type, progress, current, total: tot, buffer, error, handshake: workerHandshake } = e.data;
+
+        if (type === 'PROGRESS') {
+          setCompilationStatus(`Compiling file: ${current}/${tot} chunks decoded (${progress}%)`);
+        } else if (type === 'COMPLETE') {
+          try {
+            setCompilationStatus('Finalizing download...');
+            const reassembled = new Uint8Array(buffer);
+            reassembledDataRef.current = reassembled;
+            setReassembledData(reassembled);
+
+            const activeHandshake = workerHandshake || handshakeRef.current;
+
+            if (activeHandshake) {
+              // Compute and verify SHA-256
+              const hashBuffer = await crypto.subtle.digest('SHA-256', reassembled);
+              const hashArray = Array.from(new Uint8Array(hashBuffer));
+              const actualSHA256 = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+              if (actualSHA256 !== activeHandshake.sha256) {
+                throw new Error(`Integrity validation failed! SHA-256 hash does not match handshake value.\nExpected: ${activeHandshake.sha256}\nActual: ${actualSHA256}`);
+              }
+            }
+
+            setReceiverSuccess(true);
+            setReceiverError(null);
+
+            if (autoDownloadRef.current) {
+              setDownloadTriggered(true);
+              triggerFileDownload(
+                reassembled,
+                activeHandshake?.fileName || `received_file_${Date.now()}.bin`,
+                activeHandshake?.mimeType || 'application/octet-stream'
+              );
+
+              if (addToastRef.current) {
+                addToastRef.current({
+                  type: 'success',
+                  message: 'File completely received & offline binary reconstruction triggered!',
+                  duration: 5000,
+                });
+              }
+            }
+          } catch (err: any) {
+            setReceiverError(err?.message || 'Verification or reassembly failed.');
+            setReceiverSuccess(false);
+            setReassembledData(null);
+            reassembledDataRef.current = null;
+          } finally {
+            setCompilationStatus(null);
+            setIsVerifying(false);
+          }
+        } else if (type === 'ERROR') {
+          setReceiverError(error || 'Failed to compile binary content.');
+          setReceiverSuccess(false);
+          setReassembledData(null);
+          reassembledDataRef.current = null;
+          setDownloadTriggered(false);
+          setCompilationStatus(null);
+          setIsVerifying(false);
+        }
+      };
+
+      worker.onerror = (e) => {
+        setReceiverError(e.message || 'Background worker error.');
+        setReceiverSuccess(false);
+        setReassembledData(null);
+        reassembledDataRef.current = null;
+        setDownloadTriggered(false);
+        setCompilationStatus(null);
+        setIsVerifying(false);
+      };
+
+      workerRef.current = worker;
     }
     return workerRef.current;
   }, []);
 
   const terminateWorker = useCallback(() => {
     if (workerRef.current) {
+      try {
+        workerRef.current.postMessage({ type: 'CLEAR' });
+      } catch {
+        // Ignore if detached
+      }
       workerRef.current.terminate();
       workerRef.current = null;
     }
@@ -252,7 +348,8 @@ export function useAnimatedQrReceiver({
 
   // Reset/Clear state
   const handleClear = useCallback(() => {
-    setChunks(new Map());
+    terminateWorker();
+    setChunks(new Set());
     setTotalChunks(null);
     setHandshake(null);
     handshakeRef.current = null;
@@ -263,10 +360,10 @@ export function useAnimatedQrReceiver({
     setIsVerifying(false);
     setDownloadTriggered(false);
     setReassembledData(null);
+    reassembledDataRef.current = null;
     setCompilationStatus(null);
     revokeVideoUrl();
     setVideoFile(null);
-    terminateWorker();
     processedIndicesRef.current.clear();
     lookaheadRef.current = new StreamLookaheadReceiver({ mode: streamMode });
     if (addToast) {
@@ -280,148 +377,72 @@ export function useAnimatedQrReceiver({
 
   // Reassemble and validate file
   const reconstructAndValidateFile = useCallback(async (
-    activeChunks: Map<number, string>,
-    total: number,
+    _activeChunks?: any,
+    _total?: number,
     activeHandshake?: HandshakeInfo
   ) => {
     try {
       setIsVerifying(true);
       setReceiverError(null);
-      setReceiverSuccess(false);
-      setCompilationStatus('Initializing background compilation...');
+      const data = reassembledDataRef.current || reassembledData;
+      const hs = activeHandshake || handshakeRef.current;
 
-      const worker = initWorker();
-      const chunksToSend: Array<{ index: number; base64: string }> = [];
-      for (let i = 0; i < total; i++) {
-        const base64 = activeChunks.get(i);
-        if (base64) {
-          chunksToSend.push({ index: i, base64 });
-        } else {
-          setDownloadTriggered(false);
-          setIsVerifying(false);
-          setCompilationStatus(null);
-          throw new Error(`Missing frame chunk at index ${i}`);
-        }
-      }
+      if (data) {
+        if (hs) {
+          const hashBuffer = await crypto.subtle.digest('SHA-256', data.buffer);
+          const hashArray = Array.from(new Uint8Array(hashBuffer));
+          const actualSHA256 = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 
-      worker.onmessage = async (e: MessageEvent) => {
-        const { type, progress, current, total: tot, buffer, error } = e.data;
-
-        if (type === 'PROGRESS') {
-          setCompilationStatus(`Compiling file: ${current}/${tot} chunks decoded (${progress}%)`);
-        } else if (type === 'COMPLETE') {
-          try {
-            setCompilationStatus('Finalizing download...');
-            const reassembled = new Uint8Array(buffer);
-
-            if (activeHandshake) {
-              // Compute and verify SHA-256
-              const hashBuffer = await crypto.subtle.digest('SHA-256', reassembled.buffer);
-              const hashArray = Array.from(new Uint8Array(hashBuffer));
-              const actualSHA256 = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-
-              if (actualSHA256 !== activeHandshake.sha256) {
-                throw new Error(`Integrity validation failed! SHA-256 hash does not match handshake value.\nExpected: ${activeHandshake.sha256}\nActual: ${actualSHA256}`);
-              }
-
-              setReassembledData(reassembled);
-              setReceiverSuccess(true);
-              setReceiverError(null);
-
-              // Download
-              triggerFileDownload(reassembled, activeHandshake.fileName, activeHandshake.mimeType);
-            } else {
-              // Standard flow without handshake (e.g. receive page)
-              setReassembledData(reassembled);
-              setReceiverSuccess(true);
-              setReceiverError(null);
-
-              triggerFileDownload(reassembled, `received_file_${Date.now()}.bin`, 'application/octet-stream');
-            }
-
-            setDownloadTriggered(true);
-
-            if (addToast) {
-              addToast({
-                type: 'success',
-                message: 'File completely received & offline binary reconstruction triggered!',
-                duration: 5000,
-              });
-            }
-          } catch (err: any) {
-            setReceiverError(err?.message || 'Verification or reassembly failed.');
-            setReceiverSuccess(false);
-            setReassembledData(null);
-            if (addToast) {
-              addToast({
-                type: 'error',
-                message: `Failed to compile binary content: ${err.message}`,
-                duration: 5000,
-              });
-            }
-          } finally {
-            terminateWorker();
-            setCompilationStatus(null);
-            setIsVerifying(false);
+          if (actualSHA256 !== hs.sha256) {
+            throw new Error(`Integrity validation failed! SHA-256 hash does not match handshake value.\nExpected: ${hs.sha256}\nActual: ${actualSHA256}`);
           }
-        } else if (type === 'ERROR') {
-          setReceiverError(error || 'Failed to compile binary content.');
-          setReceiverSuccess(false);
-          setReassembledData(null);
-          if (addToast) {
-            addToast({
-              type: 'error',
-              message: `Failed to compile binary content: ${error}`,
-              duration: 5000,
-            });
-          }
-          setDownloadTriggered(false);
-          terminateWorker();
-          setCompilationStatus(null);
-          setIsVerifying(false);
         }
-      };
 
-      worker.onerror = (e) => {
-        setReceiverError(e.message || 'Background worker error.');
-        setReceiverSuccess(false);
-        setReassembledData(null);
-        if (addToast) {
-          addToast({
-            type: 'error',
-            message: `Background worker error: ${e.message}`,
+        setReceiverSuccess(true);
+        setReceiverError(null);
+        setDownloadTriggered(true);
+        triggerFileDownload(
+          data,
+          hs?.fileName || `received_file_${Date.now()}.bin`,
+          hs?.mimeType || 'application/octet-stream'
+        );
+
+        if (addToastRef.current) {
+          addToastRef.current({
+            type: 'success',
+            message: 'File completely received & offline binary reconstruction triggered!',
             duration: 5000,
           });
         }
-        setDownloadTriggered(false);
-        terminateWorker();
-        setCompilationStatus(null);
-        setIsVerifying(false);
-      };
-
-      worker.postMessage({
-        type: 'START_REASSEMBLY',
-        chunks: chunksToSend,
-        totalChunks: total
-      });
-
+      } else if (_activeChunks && typeof _activeChunks.get === 'function' && typeof _total === 'number') {
+        // Fallback for legacy batch calls
+        const worker = initWorker();
+        const chunksToSend: Array<{ index: number; base64: string }> = [];
+        for (let i = 0; i < _total; i++) {
+          const base64 = _activeChunks.get(i);
+          if (base64) {
+            chunksToSend.push({ index: i, base64 });
+          } else {
+            setDownloadTriggered(false);
+            setIsVerifying(false);
+            setCompilationStatus(null);
+            throw new Error(`Missing frame chunk at index ${i}`);
+          }
+        }
+        worker.postMessage({
+          type: 'START_REASSEMBLY',
+          chunks: chunksToSend,
+          totalChunks: _total,
+        });
+      }
     } catch (err: any) {
       setReceiverError(err?.message || 'Verification or reassembly failed.');
       setReceiverSuccess(false);
-      setReassembledData(null);
-      if (addToast) {
-        addToast({
-          type: 'error',
-          message: `Failed to start background compilation: ${err.message}`,
-          duration: 5000,
-        });
-      }
-      setDownloadTriggered(false);
-      terminateWorker();
-      setCompilationStatus(null);
+    } finally {
       setIsVerifying(false);
+      setCompilationStatus(null);
     }
-  }, [addToast, initWorker, terminateWorker]);
+  }, [reassembledData, initWorker]);
 
   // Frame processor
   const handleFrame = useCallback(async (decodedText: string) => {
@@ -527,15 +548,26 @@ export function useAnimatedQrReceiver({
           lookaheadRef.current = new StreamLookaheadReceiver({ mode: streamMode });
           handshakeRef.current = { fileName, fileSize, mimeType, sha256 };
 
-          setChunks(new Map());
+          setChunks(new Set());
           setTotalChunks(null);
           setReceiverError(null);
           setReceiverSuccess(false);
           setDownloadTriggered(false);
           setReassembledData(null);
+          reassembledDataRef.current = null;
           setCompilationStatus(null);
           setIsVerifying(false);
           setHandshake({ fileName, fileSize, mimeType, sha256 });
+
+          // Pre-allocate memory buffer in worker off-thread using handshake metadata
+          const worker = initWorker();
+          worker.postMessage({
+            type: 'INIT',
+            fileSize,
+            fileName,
+            mimeType,
+            sha256,
+          });
         }
       } else if (decodedText.startsWith('F|')) {
         const parts = decodedText.split('|');
@@ -553,9 +585,18 @@ export function useAnimatedQrReceiver({
             setTotalChunks(total);
             setChunks(prev => {
               if (prev.has(index)) return prev;
-              const next = new Map(prev);
-              next.set(index, base64Data);
+              const next = new Set(prev);
+              next.add(index);
               return next;
+            });
+
+            // Stream raw chunk immediately to worker off-thread without storing Base64 string in main-thread state
+            const worker = initWorker();
+            worker.postMessage({
+              type: 'CHUNK',
+              index,
+              totalChunks: total,
+              base64: base64Data,
             });
           }
         }
@@ -563,7 +604,7 @@ export function useAnimatedQrReceiver({
     } catch (err: any) {
       setReceiverError(err?.message || 'An error occurred during scan decoding.');
     }
-  }, [receiverSuccess, isVerifying, handshakeRequired, handshake, stopStream, streamMode, receiverError, addToast]);
+  }, [receiverSuccess, isVerifying, handshakeRequired, stopStream, streamMode, receiverError, addToast, initWorker]);
 
   // Hook into useAdaptiveScanner
   const { startScanning, stopScanning } = useAdaptiveScanner({
@@ -638,14 +679,16 @@ export function useAnimatedQrReceiver({
     }
   }, [stopStream, addToast, flushVideoHardware]);
 
-  // Completion checking effect (without handshake requirement or with completed handshake)
+  // Completion checking effect
   useEffect(() => {
     if (totalChunks !== null && chunks.size === totalChunks && !downloadTriggered) {
       revokeVideoUrl();
       if (autoDownload) {
         setDownloadTriggered(true);
         stopCameraSession();
-        reconstructAndValidateFile(chunks, totalChunks, handshake || undefined);
+        if (reassembledData) {
+          reconstructAndValidateFile(undefined, totalChunks, handshake || undefined);
+        }
       } else {
         if (isScanning) {
           stopCameraSession();
@@ -660,7 +703,7 @@ export function useAnimatedQrReceiver({
         }
       }
     }
-  }, [chunks, totalChunks, downloadTriggered, handshake, reconstructAndValidateFile, stopCameraSession, autoDownload, isScanning, addToast, revokeVideoUrl]);
+  }, [chunks, totalChunks, downloadTriggered, handshake, reconstructAndValidateFile, stopCameraSession, autoDownload, isScanning, addToast, revokeVideoUrl, reassembledData]);
 
   // Cleanup on unmount
   useEffect(() => {

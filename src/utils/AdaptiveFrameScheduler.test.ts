@@ -130,12 +130,80 @@ describe('AdaptiveFrameScheduler', () => {
     scheduler.endFrame(seqFail2!, 'fail', null, null);
     expect(onScanFail).toHaveBeenCalledWith(undefined);
 
-    // Shift history by having 4 iterations
-    for (let i = 0; i < 4; i++) {
+    // Shift history by having 6 iterations (capacity 5)
+    for (let i = 0; i < 6; i++) {
       const seq = scheduler.beginFrame(true);
       scheduler.endFrame(seq!, 'pass', 'data', null);
     }
-    expect(scheduler.getLatencyHistory().length).toBe(3);
+    expect(scheduler.getLatencyHistory().length).toBe(5);
+  });
+
+  it('should ignore single isolated frame spike and not increase sampling delay', () => {
+    const scheduler = new AdaptiveFrameScheduler({
+      minSamplingDelay: 10,
+      maxSamplingDelay: 1000,
+    });
+    scheduler.start();
+
+    // Establish healthy history of 4 frames at 20ms
+    for (let i = 0; i < 4; i++) {
+      const seq = scheduler.beginFrame(true);
+      mockTime += 20;
+      scheduler.endFrame(seq!, 'pass', 'data', null);
+    }
+    const delayBeforeSpike = scheduler.getSamplingDelay();
+
+    // Isolated single-frame spike of 300ms
+    const seqSpike = scheduler.beginFrame(true);
+    mockTime += 300;
+    scheduler.endFrame(seqSpike!, 'pass', 'data', null);
+
+    // Median of [20, 20, 20, 20, 300] is 20ms, so delay should NOT increase
+    expect(scheduler.getSamplingDelay()).toBeLessThanOrEqual(delayBeforeSpike);
+  });
+
+  it('should recover from maximum sampling delay to baseline within 1.5 seconds under healthy conditions', () => {
+    const scheduler = new AdaptiveFrameScheduler({
+      minSamplingDelay: 16,
+      maxSamplingDelay: 1000,
+    });
+    scheduler.start();
+
+    // Force sampling delay to max (1000ms) via sustained high latency
+    for (let i = 0; i < 5; i++) {
+      const seq = scheduler.beginFrame(true);
+      mockTime += 700;
+      scheduler.endFrame(seq!, 'pass', 'data', null);
+    }
+    expect(scheduler.getSamplingDelay()).toBe(1000);
+
+    // Now simulate healthy condition (10ms latency per frame)
+    // First, complete frames until median latency drops below 40ms and recovery begins
+    let seq = scheduler.beginFrame(true);
+    while (scheduler.getSamplingDelay() === 1000) {
+      mockTime += 10;
+      scheduler.endFrame(seq!, 'pass', 'data', null);
+      seq = scheduler.beginFrame(true);
+    }
+
+    // Measure total sampling delay time elapsed during recovery back to baseline (<= 33ms)
+    let totalRecoveryTimeMs = 0;
+    while (scheduler.getSamplingDelay() > 33) {
+      const currentDelay = scheduler.getSamplingDelay();
+      totalRecoveryTimeMs += currentDelay;
+
+      mockTime += 10;
+      scheduler.endFrame(seq!, 'pass', 'data', null);
+      seq = scheduler.beginFrame(true);
+    }
+    // Clean up last unused frame request
+    if (seq !== null) {
+      scheduler.endFrame(seq, 'pass', 'data', null);
+    }
+
+    expect(scheduler.getSamplingDelay()).toBeLessThanOrEqual(33);
+    // Recovery time from 1000ms back to baseline must be strictly under 1500ms (1.5 seconds)
+    expect(totalRecoveryTimeMs).toBeLessThan(1500);
   });
 
   it('should handle watchdog checking and triggers', () => {
