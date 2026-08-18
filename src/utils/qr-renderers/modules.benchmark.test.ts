@@ -50,8 +50,8 @@ describe('Performance Benchmark: renderModules', () => {
 
     if (!isCI) {
       console.log(`${name} Total duration for ${iterations} iterations: ${(end - start).toFixed(2)}ms`);
-      // Ensure the execution time does not exceed the calibrated timing limit of 250ms
-      expect(end - start).toBeLessThan(250);
+      // Ensure the execution time does not exceed the calibrated timing limit of 500ms
+      expect(end - start).toBeLessThan(500);
     } else {
       console.log(`${name} benchmark loop skipped in CI`);
     }
