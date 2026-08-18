@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Camera, Upload, AlertTriangle, X, RefreshCw, FileImage } from 'lucide-react';
 import { useCamera } from '../hooks/useCamera';
 import { useAdaptiveScanner } from '../hooks/useAdaptiveScanner';
@@ -44,8 +44,37 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
   const [dragOver, setDragOver] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const videoElementRef = useRef<HTMLVideoElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const activeWorkerRef = useRef<Worker | null>(null);
+
+  const setVideoRef = useCallback((node: HTMLVideoElement | null) => {
+    videoRef.current = node;
+    if (node) {
+      videoElementRef.current = node;
+    }
+  }, []);
+
+  // Defensive hardware flush sequence for DOM-specific video elements
+  const flushVideoHardware = useCallback(() => {
+    const video = videoElementRef.current || videoRef.current;
+    if (video) {
+      try {
+        if (typeof video.pause === 'function') {
+          video.pause();
+        }
+        video.srcObject = null;
+        if (typeof video.removeAttribute === 'function') {
+          video.removeAttribute('src');
+        }
+        if (typeof video.load === 'function') {
+          video.load();
+        }
+      } catch {
+        // Safe catch for unmounted or detached video elements
+      }
+    }
+  }, []);
 
   // Initialize Adaptive Scanner hook
   const { startScanning, stopScanning } = useAdaptiveScanner({
@@ -55,6 +84,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
       if (!continuous) {
         stopStream();
         stopScanning();
+        flushVideoHardware();
       }
     },
     onScanFail: () => {
@@ -136,6 +166,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
 
     if (mode === 'webcam') {
       startStream(controller.signal).then((activeStream) => {
+        if (controller.signal.aborted) return;
         if (activeStream && videoRef.current) {
           videoRef.current.srcObject = activeStream;
           safePlay(videoRef.current);
@@ -143,19 +174,21 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
         }
       });
     } else {
+      flushVideoHardware();
       stopStream();
       stopScanning();
     }
 
     return () => {
       controller.abort();
+      flushVideoHardware();
       stopStream();
       stopScanning();
       if (activeWorkerRef.current) {
         activeWorkerRef.current = null;
       }
     };
-  }, [mode, startStream, stopStream, startScanning, stopScanning]);
+  }, [mode, startStream, stopStream, startScanning, stopScanning, flushVideoHardware]);
 
   // Handle manual retry for camera permission/access
   const handleRetryCamera = async () => {
@@ -734,7 +767,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
       <div className="relative size-full bg-black">
         {/* Live video feed */}
         <video
-          ref={videoRef}
+          ref={setVideoRef}
           className="size-full object-cover"
           playsInline
           muted

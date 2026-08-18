@@ -509,4 +509,143 @@ describe('QRScanner Component', () => {
       });
     });
   });
+
+  describe('Defensive Hardware Flush Sequence', () => {
+    it('executes hardware flush (pause, srcObject null, remove src, load) upon component unmount', async () => {
+      const mockPause = vi.fn();
+      const mockLoad = vi.fn();
+      const mockRemoveAttribute = vi.fn();
+
+      vi.spyOn(HTMLVideoElement.prototype, 'pause').mockImplementation(mockPause);
+      vi.spyOn(HTMLVideoElement.prototype, 'load').mockImplementation(mockLoad);
+      vi.spyOn(HTMLVideoElement.prototype, 'removeAttribute').mockImplementation(mockRemoveAttribute);
+
+      const { unmount } = render(<QRScanner onScanSuccess={mockOnScanSuccess} onClose={mockOnClose} />);
+
+      await act(async () => {
+        unmount();
+      });
+
+      expect(mockPause).toHaveBeenCalled();
+      expect(mockRemoveAttribute).toHaveBeenCalledWith('src');
+      expect(mockLoad).toHaveBeenCalled();
+      expect(mockStopStream).toHaveBeenCalled();
+    });
+
+    it('flushes video element when non-continuous scan completes successfully', async () => {
+      const mockPause = vi.fn();
+      const mockLoad = vi.fn();
+      const mockRemoveAttribute = vi.fn();
+
+      vi.spyOn(HTMLVideoElement.prototype, 'pause').mockImplementation(mockPause);
+      vi.spyOn(HTMLVideoElement.prototype, 'load').mockImplementation(mockLoad);
+      vi.spyOn(HTMLVideoElement.prototype, 'removeAttribute').mockImplementation(mockRemoveAttribute);
+
+      let capturedOnScanSuccess: ((data: string) => void) | undefined;
+      vi.mocked(useAdaptiveScanner).mockImplementation((options: any) => {
+        capturedOnScanSuccess = options.onScanSuccess;
+        return {
+          isScanning: true,
+          status: 'scanning',
+          samplingDelay: 33,
+          latencyHistory: [],
+          startScanning: mockStartScanning,
+          stopScanning: mockStopScanning,
+        };
+      });
+
+      render(<QRScanner onScanSuccess={mockOnScanSuccess} onClose={mockOnClose} continuous={false} />);
+
+      await act(async () => {
+        if (capturedOnScanSuccess) {
+          capturedOnScanSuccess('https://scanned-qr.com');
+        }
+      });
+
+      expect(mockOnScanSuccess).toHaveBeenCalledWith('https://scanned-qr.com');
+      expect(mockStopStream).toHaveBeenCalled();
+      expect(mockStopScanning).toHaveBeenCalled();
+      expect(mockPause).toHaveBeenCalled();
+      expect(mockRemoveAttribute).toHaveBeenCalledWith('src');
+      expect(mockLoad).toHaveBeenCalled();
+    });
+
+    it('flushes video element hardware when switching from webcam to file upload mode', async () => {
+      const mockPause = vi.fn();
+      const mockLoad = vi.fn();
+      const mockRemoveAttribute = vi.fn();
+
+      vi.spyOn(HTMLVideoElement.prototype, 'pause').mockImplementation(mockPause);
+      vi.spyOn(HTMLVideoElement.prototype, 'load').mockImplementation(mockLoad);
+      vi.spyOn(HTMLVideoElement.prototype, 'removeAttribute').mockImplementation(mockRemoveAttribute);
+
+      render(<QRScanner onScanSuccess={mockOnScanSuccess} onClose={mockOnClose} />);
+
+      const fileTab = screen.getByRole('button', { name: /file upload/i });
+      await act(async () => {
+        fireEvent.click(fileTab);
+      });
+
+      expect(mockPause).toHaveBeenCalled();
+      expect(mockRemoveAttribute).toHaveBeenCalledWith('src');
+      expect(mockLoad).toHaveBeenCalled();
+      expect(mockStopStream).toHaveBeenCalled();
+      expect(mockStopScanning).toHaveBeenCalled();
+    });
+
+    it('remains stable through 20 consecutive mount and unmount cycles', async () => {
+      const mockPause = vi.fn();
+      const mockLoad = vi.fn();
+      const mockRemoveAttribute = vi.fn();
+
+      vi.spyOn(HTMLVideoElement.prototype, 'pause').mockImplementation(mockPause);
+      vi.spyOn(HTMLVideoElement.prototype, 'load').mockImplementation(mockLoad);
+      vi.spyOn(HTMLVideoElement.prototype, 'removeAttribute').mockImplementation(mockRemoveAttribute);
+
+      for (let i = 0; i < 20; i++) {
+        const { unmount } = render(<QRScanner onScanSuccess={mockOnScanSuccess} onClose={mockOnClose} />);
+        await act(async () => {
+          unmount();
+        });
+      }
+
+      expect(mockPause).toHaveBeenCalledTimes(20);
+      expect(mockLoad).toHaveBeenCalledTimes(20);
+      expect(mockRemoveAttribute).toHaveBeenCalledWith('src');
+    } );
+
+    it('allows file-upload component to mount and process files after scanner unmounts', async () => {
+      globalThis.mockWorkerControl.setInterceptor((msg: any, worker: any) => {
+        setTimeout(() => {
+          worker.dispatchMessage({
+            status: 'pass',
+            sequenceId: msg.sequenceId,
+            decodedData: 'https://post-unmount-scan.com',
+            buffer: msg.buffer || new ArrayBuffer(0),
+          });
+        }, 0);
+      });
+
+      // 1. Mount and unmount QRScanner
+      const { unmount } = render(<QRScanner onScanSuccess={mockOnScanSuccess} onClose={mockOnClose} />);
+      await act(async () => {
+        unmount();
+      });
+
+      // 2. Mount QRScanner in file mode and verify file processing works
+      render(<QRScanner onScanSuccess={mockOnScanSuccess} onClose={mockOnClose} />);
+      const fileTab = screen.getByRole('button', { name: /file upload/i });
+      fireEvent.click(fileTab);
+
+      vi.mocked(jsQR).mockReturnValue({ data: 'https://post-unmount-scan.com' } as any);
+      const mockFile = new File(['dummy content'], 'test.png', { type: 'image/png' });
+      const fileInput = screen.getByLabelText(/upload qr code image or video file/i);
+
+      fireEvent.change(fileInput, { target: { files: [mockFile] } });
+
+      await waitFor(() => {
+        expect(mockOnScanSuccess).toHaveBeenCalledWith('https://post-unmount-scan.com');
+      });
+    });
+  });
 });

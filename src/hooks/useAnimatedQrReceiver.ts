@@ -105,6 +105,7 @@ export function useAnimatedQrReceiver({
 
   const workerRef = useRef<Worker | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const videoElementRef = useRef<HTMLVideoElement | null>(null);
   const lookaheadRef = useRef<StreamLookaheadReceiver | null>(null);
   const processedIndicesRef = useRef<Set<number>>(new Set());
 
@@ -131,6 +132,30 @@ export function useAnimatedQrReceiver({
     if (workerRef.current) {
       workerRef.current.terminate();
       workerRef.current = null;
+    }
+  }, []);
+
+  // Defensive hardware flush sequence for DOM-specific video elements
+  const flushVideoHardware = useCallback(() => {
+    if (videoRef.current) {
+      videoElementRef.current = videoRef.current;
+    }
+    const video = videoElementRef.current || videoRef.current;
+    if (video) {
+      try {
+        if (typeof video.pause === 'function') {
+          video.pause();
+        }
+        video.srcObject = null;
+        if (typeof video.removeAttribute === 'function') {
+          video.removeAttribute('src');
+        }
+        if (typeof video.load === 'function') {
+          video.load();
+        }
+      } catch {
+        // Safe catch for unmounted or detached video elements
+      }
     }
   }, []);
 
@@ -423,8 +448,9 @@ export function useAnimatedQrReceiver({
       startScanning();
     } else if (!isScanning) {
       stopScanning();
+      flushVideoHardware();
     }
-  }, [isScanning, stream, startScanning, stopScanning]);
+  }, [isScanning, stream, startScanning, stopScanning, flushVideoHardware]);
 
   // Start / Stop sessions
   const startCameraSession = useCallback(async () => {
@@ -447,6 +473,7 @@ export function useAnimatedQrReceiver({
   const stopCameraSession = useCallback(() => {
     setIsScanning(false);
     stopStream();
+    flushVideoHardware();
     if (addToast) {
       addToast({
         type: 'info',
@@ -454,7 +481,7 @@ export function useAnimatedQrReceiver({
         duration: 3000,
       });
     }
-  }, [stopStream, addToast]);
+  }, [stopStream, addToast, flushVideoHardware]);
 
   // Completion checking effect (without handshake requirement or with completed handshake)
   useEffect(() => {
@@ -483,9 +510,10 @@ export function useAnimatedQrReceiver({
     return () => {
       stopScanning();
       stopStream();
+      flushVideoHardware();
       terminateWorker();
     };
-  }, [stopScanning, stopStream, terminateWorker]);
+  }, [stopScanning, stopStream, terminateWorker, flushVideoHardware]);
 
   return {
     chunks,
