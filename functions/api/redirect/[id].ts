@@ -8,6 +8,7 @@ export const onRequestGet = async (context: {
   request: Request;
   env: Env;
   params: { id: string };
+  waitUntil?: (promise: Promise<any>) => void;
 }) => {
   const { id } = context.params;
   const kv = context.env.REDIRECTS_KV;
@@ -24,7 +25,17 @@ export const onRequestGet = async (context: {
     }
     const data = JSON.parse(dataStr);
     data.scans = (data.scans || 0) + 1;
-    (globalThis as any).__mockKV.set(`redirect:${id}`, JSON.stringify(data));
+
+    const updatePromise = (async () => {
+      (globalThis as any).__mockKV.set(`redirect:${id}`, JSON.stringify(data));
+    })();
+
+    if (context.waitUntil) {
+      context.waitUntil(updatePromise);
+    } else {
+      (globalThis as any).__mockKV.set(`redirect:${id}`, JSON.stringify(data));
+    }
+
     return Response.redirect(data.redirectUrl, 307);
   }
 
@@ -36,7 +47,18 @@ export const onRequestGet = async (context: {
 
     const data = JSON.parse(dataStr);
     data.scans = (data.scans || 0) + 1;
-    await kv.put(`redirect:${id}`, JSON.stringify(data));
+
+    const updatePromise = (async () => {
+      try {
+        await kv.put(`redirect:${id}`, JSON.stringify(data));
+      } catch (err) {
+        console.error("Asynchronous KV put failed:", err);
+      }
+    })();
+
+    if (context.waitUntil) {
+      context.waitUntil(updatePromise);
+    }
 
     return Response.redirect(data.redirectUrl, 307);
   } catch (err: any) {

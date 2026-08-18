@@ -112,40 +112,44 @@ jobs:
             const smokeStatus = smokeOutcome === 'success' ? '✅ Passed' : (smokeOutcome === 'skipped' ? '⏭️ Skipped' : '❌ Failed');
             const deploymentUrl = "${{ steps.cloudflare_deploy.outputs.deployment-url }}";
 
-            // List existing comments to find previous bot comments
-            const { data: comments } = await github.rest.issues.listComments({
-              owner,
-              repo,
-              issue_number: prNumber,
-            });
-
-            const botComment = comments.find(c => c.body && c.body.includes('🚀 Cloudflare Pages Preview Deployment'));
-
-            let body = `### 🚀 Cloudflare Pages Preview Deployment\n\n`;
-            if (deployOutcome === 'success') {
-              body += `- **Staging URL**: [${deploymentUrl}](${deploymentUrl})\n`;
-            } else {
-              body += `- **Staging URL**: *Unavailable*\n`;
-            }
-            body += `- **Deployment Status**: ${deployStatus}\n`;
-            body += `- **Smoke Tests**: ${smokeStatus}\n`;
-            body += `- **Triggered By**: @${context.actor}\n`;
-            body += `- **Last Updated**: ${new Date().toISOString()}`;
-
-            if (botComment) {
-              await github.rest.issues.updateComment({
-                owner,
-                repo,
-                comment_id: botComment.id,
-                body,
-              });
-            } else {
-              await github.rest.issues.createComment({
+            try {
+              // List existing comments to find previous bot comments
+              const { data: comments } = await github.rest.issues.listComments({
                 owner,
                 repo,
                 issue_number: prNumber,
-                body,
               });
+
+              const botComment = comments.find(c => c.body && c.body.includes('🚀 Cloudflare Pages Preview Deployment'));
+
+              let body = `### 🚀 Cloudflare Pages Preview Deployment\n\n`;
+              if (deployOutcome === 'success') {
+                body += `- **Staging URL**: [${deploymentUrl}](${deploymentUrl})\n`;
+              } else {
+                body += `- **Staging URL**: *Unavailable*\n`;
+              }
+              body += `- **Deployment Status**: ${deployStatus}\n`;
+              body += `- **Smoke Tests**: ${smokeStatus}\n`;
+              body += `- **Triggered By**: @${context.actor}\n`;
+              body += `- **Last Updated**: ${new Date().toISOString()}`;
+
+              if (botComment) {
+                await github.rest.issues.updateComment({
+                  owner,
+                  repo,
+                  comment_id: botComment.id,
+                  body,
+                });
+              } else {
+                await github.rest.issues.createComment({
+                  owner,
+                  repo,
+                  issue_number: prNumber,
+                  body,
+                });
+              }
+            } catch (error) {
+              console.error("Warning: Failed to update or post PR status comment due to a GitHub API error:", error);
             }
 
   decommission-preview:
@@ -169,9 +173,13 @@ jobs:
             const prNumber = context.payload.pull_request.number;
             const { owner, repo } = context.repo;
             
-            await github.rest.issues.createComment({
-              owner,
-              repo,
-              issue_number: prNumber,
-              body: `🧹 **Preview Environment Decommissioned**\nThe dynamic staging environment for this pull request has been automatically torn down on Cloudflare Pages.`
-            });
+            try {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: prNumber,
+                body: `🧹 **Preview Environment Decommissioned**\nThe dynamic staging environment for this pull request has been automatically torn down on Cloudflare Pages.`
+              });
+            } catch (error) {
+              console.error("Warning: Failed to post decommission comment due to a GitHub API error:", error);
+            }

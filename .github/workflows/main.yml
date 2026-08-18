@@ -184,12 +184,16 @@ jobs:
           script: |
             const fs = require('fs');
             const report = fs.readFileSync('quota-report.md', 'utf8');
-            await github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: report
-            });
+            try {
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: report
+              });
+            } catch (error) {
+              console.error("Warning: Failed to post Resource Quota comment due to a GitHub API error:", error);
+            }
 
       - name: Run Lighthouse CI
         id: lighthouse_audit
@@ -267,12 +271,16 @@ jobs:
                 comment += '\n';
               });
 
-              await github.rest.issues.createComment({
-                issue_number: context.issue.number,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: comment
-              });
+              try {
+                await github.rest.issues.createComment({
+                  issue_number: context.issue.number,
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  body: comment
+                });
+              } catch (error) {
+                console.error("Warning: Failed to post Lighthouse report comment due to a GitHub API error:", error);
+              }
             }
 
       # UPLOAD ARTIFACT for Deployment
