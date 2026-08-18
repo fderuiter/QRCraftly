@@ -27,6 +27,11 @@ import { QRProvider, useQRStore, useQRStoreSelector } from '@/context/QRContext'
 import { useImage } from '@/hooks/useImage';
 import { useTheme } from '@/hooks/useTheme';
 import { useAnimatedQrSender } from '@/hooks/useAnimatedQrSender';
+import { JsonLdScript } from '@/components/ui/JsonLdScript';
+import { generateSchema } from '@/utils/schemaGenerator';
+import { resolveDomainForPath } from '@/utils/metadataEngine';
+import { usePageContext } from 'vike-react/usePageContext';
+import { contentRegistry } from '@/data/contentRegistry';
 
 /**
  * High-Performance Animated QR File Transfer Tool - Sender only view
@@ -379,8 +384,14 @@ function FileTransferToolInner() {
  * @returns The rendered Page component wrapped in a QRProvider.
  */
 export default function Page() {
+  const pageContext = usePageContext();
+  const urlPathname = pageContext?.urlPathname ?? '/file-transfer';
+  const resolvedDomain = resolveDomainForPath(urlPathname);
+  const schemaData = generateSchema(contentRegistry['file-transfer'], resolvedDomain, urlPathname);
+
   return (
     <QRProvider>
+      <JsonLdScript data={schemaData} />
       <FileTransferToolInner />
     </QRProvider>
   );

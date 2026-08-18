@@ -1,50 +1,40 @@
-import { ToolContent } from '../data/contentRegistry';
+import { ToolContent, AuxiliaryContent, getContentForPath, getContentById } from '../data/contentRegistry';
 import { resolveDomainForPath, resolvePublicUrl } from './metadataEngine';
 
-import aboutConfig from '../pages/about/+config';
-import audioConfig from '../pages/audio-qr/+config';
-import destroyTheQrConfig from '../pages/destroy-the-qr/+config';
-import emailConfig from '../pages/email-qr-code/+config';
-import eventConfig from '../pages/event-qr-code/+config';
-import fileTransferConfig from '../pages/file-transfer/+config';
-import gameConfig from '../pages/game/+config';
-import indexConfig from '../pages/index/+config';
-import locationConfig from '../pages/location-qr-code/+config';
-import meetingConfig from '../pages/meeting-qr-code/+config';
-import paymentConfig from '../pages/payment-qr-code/+config';
-import phoneConfig from '../pages/phone-qr-code/+config';
-import securityConfig from '../pages/security/+config';
-import smsConfig from '../pages/sms-qr-code/+config';
-import socialConfig from '../pages/social-qr-code/+config';
-import textConfig from '../pages/text-qr-code/+config';
-import vcardConfig from '../pages/vcard-qr-code/+config';
-import wifiConfig from '../pages/wifi-qr-code/+config';
+/**
+ * Dynamically generates structured schema.org JSON-LD graph data directly from central content registry.
+ * Eliminates static route config import maps.
+ *
+ * @param contentOrPath The registry content object or route path / tool ID string.
+ * @param resolvedDomain Optional domain string override.
+ * @param requestPath Optional request path string override.
+ * @returns Structured JSON-LD schema graph.
+ */
+export function generateSchema(
+  contentOrPath: ToolContent | AuxiliaryContent | string,
+  resolvedDomain?: string,
+  requestPath?: string
+): any {
+  let content: ToolContent | AuxiliaryContent | undefined;
 
-const configMap: Record<string, any> = {
-  'about': aboutConfig,
-  'audio-qr': audioConfig,
-  'destroy-the-qr': destroyTheQrConfig,
-  'email-qr-code': emailConfig,
-  'event-qr-code': eventConfig,
-  'file-transfer': fileTransferConfig,
-  'game': gameConfig,
-  'index': indexConfig,
-  'location-qr-code': locationConfig,
-  'meeting-qr-code': meetingConfig,
-  'payment-qr-code': paymentConfig,
-  'phone-qr-code': phoneConfig,
-  'security': securityConfig,
-  'sms-qr-code': smsConfig,
-  'social-qr-code': socialConfig,
-  'text-qr-code': textConfig,
-  'vcard-qr-code': vcardConfig,
-  'wifi-qr-code': wifiConfig,
-};
+  if (typeof contentOrPath === 'string') {
+    content = getContentForPath(contentOrPath) || getContentById(contentOrPath);
+  } else {
+    content = contentOrPath;
+  }
 
-export function generateSchema(content: ToolContent, resolvedDomain?: string, requestPath?: string): any {
-  const domain = resolvedDomain || resolveDomainForPath(content.url);
-  const publicUrl = requestPath ? resolvePublicUrl(requestPath) : content.url;
-  
+  if (!content) {
+    return {
+      "@context": "https://schema.org",
+      "@graph": []
+    };
+  }
+
+  const contentUrl = (content as ToolContent).url || (requestPath ? resolvePublicUrl(requestPath) : '');
+  const domain = resolvedDomain || resolveDomainForPath(contentUrl || (requestPath ? resolvePublicUrl(requestPath) : ''));
+  const publicUrl = requestPath ? resolvePublicUrl(requestPath) : (contentUrl || `${domain}/${content.id}`);
+
+
   if (content.id === 'about') {
     const aboutGraph: any[] = [
       {
@@ -58,10 +48,11 @@ export function generateSchema(content: ToolContent, resolvedDomain?: string, re
       }
     ];
 
-    if (content.faqs && content.faqs.length > 0) {
+    const faqs = (content as ToolContent).faqs;
+    if (faqs && faqs.length > 0) {
       aboutGraph.push({
         "@type": "FAQPage",
-        "mainEntity": content.faqs.map(faq => ({
+        "mainEntity": faqs.map(faq => ({
           "@type": "Question",
           "name": faq.question,
           "acceptedAnswer": {
@@ -85,8 +76,11 @@ export function generateSchema(content: ToolContent, resolvedDomain?: string, re
     };
   }
 
-  const typeValue = content.schemaType;
-  const categoryValue = content.schemaCategory;
+  const toolContent = content as ToolContent;
+  const typeValue = toolContent.schemaType || "WebApplication";
+  const categoryValue = toolContent.schemaCategory || "UtilitiesApplication";
+
+  const featureList = [toolContent.valueProposition, ...(toolContent.features || [])].filter(Boolean).join(", ");
 
   const appEntity: any = {
     "@type": typeValue,
@@ -107,7 +101,7 @@ export function generateSchema(content: ToolContent, resolvedDomain?: string, re
       "price": "0",
       "priceCurrency": "USD"
     },
-    "featureList": [content.valueProposition, ...content.features].filter(Boolean).join(", ")
+    "featureList": featureList
   };
 
   if (content.personas && content.personas.length > 0) {
@@ -119,10 +113,9 @@ export function generateSchema(content: ToolContent, resolvedDomain?: string, re
 
   const graph: any[] = [appEntity];
 
-  if (content.howTo) {
-    const pageConfig = configMap[content.id];
+  if (toolContent.howTo) {
     let extension = 'png';
-    const imagePath = pageConfig?.image;
+    const imagePath = content.image || content.ogImage;
     if (typeof imagePath === 'string') {
       const withoutQuery = imagePath.split('?')[0];
       const dotIndex = withoutQuery.lastIndexOf('.');
@@ -134,8 +127,8 @@ export function generateSchema(content: ToolContent, resolvedDomain?: string, re
 
     const howToObj: any = {
       "@type": "HowTo",
-      "name": content.howTo.name,
-      "description": content.howTo.description,
+      "name": toolContent.howTo.name,
+      "description": toolContent.howTo.description,
       "image": imageUrl,
       "totalTime": "PT1M",
       "estimatedCost": {
@@ -149,15 +142,15 @@ export function generateSchema(content: ToolContent, resolvedDomain?: string, re
           "name": `QRCraftly ${content.name.replace(' QR Code Generator', '')} Generator`
         }
       ],
-      "step": content.howTo.steps.map(step => ({
+      "step": toolContent.howTo.steps.map(step => ({
         "@type": "HowToStep",
         "name": step.name,
         "text": step.text
       }))
     };
 
-    if (content.howTo.supply) {
-      howToObj.supply = content.howTo.supply.map(s => ({
+    if (toolContent.howTo.supply) {
+      howToObj.supply = toolContent.howTo.supply.map(s => ({
         "@type": "HowToSupply",
         "name": s.name
       }));
@@ -166,10 +159,10 @@ export function generateSchema(content: ToolContent, resolvedDomain?: string, re
     graph.push(howToObj);
   }
 
-  if (content.faqs && content.faqs.length > 0) {
+  if (toolContent.faqs && toolContent.faqs.length > 0) {
     graph.push({
       "@type": "FAQPage",
-      "mainEntity": content.faqs.map(faq => ({
+      "mainEntity": toolContent.faqs.map(faq => ({
         "@type": "Question",
         "name": faq.question,
         "acceptedAnswer": {

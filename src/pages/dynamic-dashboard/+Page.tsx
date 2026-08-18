@@ -7,6 +7,11 @@ import { Card } from '@/components/ui/Card';
 import { TextField } from '@/components/ui/FormFields';
 import { isDangerousUrl, sanitizeHref, escapeHtml } from '@/utils/security';
 import { normalizeUrl } from '@/utils/url';
+import { JsonLdScript } from '@/components/ui/JsonLdScript';
+import { generateSchema } from '@/utils/schemaGenerator';
+import { resolveDomainForPath } from '@/utils/metadataEngine';
+import { usePageContext } from 'vike-react/usePageContext';
+import { contentRegistry } from '@/data/contentRegistry';
 
 /**
  *
@@ -330,8 +335,15 @@ export default function DynamicDashboardPage() {
     }
   };
 
+  const pageContext = usePageContext();
+  const urlPathname = pageContext?.urlPathname ?? '/dynamic-dashboard';
+  const resolvedDomain = resolveDomainForPath(urlPathname);
+  const schemaData = generateSchema(contentRegistry['dynamic-dashboard'], resolvedDomain, urlPathname);
+
   return (
-    <div className="mx-auto max-w-5xl px-4 py-12">
+    <>
+      <JsonLdScript data={schemaData} />
+      <div className="mx-auto max-w-5xl px-4 py-12">
       <nav className="mb-8">
         <a
           href="/"
@@ -524,6 +536,7 @@ export default function DynamicDashboardPage() {
         </div>
       )}
     </div>
+    </>
   );
 }
 
