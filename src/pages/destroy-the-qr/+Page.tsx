@@ -1187,11 +1187,6 @@ export default function Page() {
     setupQRMatrix(qrText, eccLevel);
   };
 
-  const pageContext = usePageContext();
-  const urlPathname = pageContext?.urlPathname ?? '/destroy-the-qr';
-  const resolvedDomain = resolveDomainForPath(urlPathname);
-  const schemaData = generateSchema(contentRegistry['destroy-the-qr'], resolvedDomain, urlPathname);
-
   return (
     <>
       <JsonLdScript data={schemaData} />

@@ -858,13 +858,15 @@ export function getContentForPath(path: string): ToolContent | AuxiliaryContent 
 export function getMetadataForPath(path: string): { title: string; description: string; image: string; imageAlt: string } {
   const pathLookup = getRegistryKeyForPath(path);
 
-  if (pathLookup.startsWith("r/")) {
-    const id = pathLookup.slice(2);
-    return {
-      title: id ? `Dynamic Redirect (${id}) | QRCraftly` : "Zero-Knowledge Dynamic Link | QRCraftly",
-      description: id ? `Secure client-side decrypted redirect for dynamic link ${id}.` : "Secure zero-knowledge encrypted dynamic link redirection portal.",
-    };
-  }
+    if (pathLookup.startsWith("r/")) {
+      const id = pathLookup.slice(2);
+      return {
+        title: id ? `Dynamic Redirect (${id}) | QRCraftly` : "Zero-Knowledge Dynamic Link | QRCraftly",
+        description: id ? `Secure client-side decrypted redirect for dynamic link ${id}.` : "Secure zero-knowledge encrypted dynamic link redirection portal.",
+        image: "/og-image.png",
+        imageAlt: "Zero-Knowledge Dynamic Link | QRCraftly",
+      };
+    }
   
   if (contentRegistry[pathLookup]) {
     const item = contentRegistry[pathLookup];
