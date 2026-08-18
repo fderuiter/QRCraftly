@@ -1,8 +1,5 @@
 import { SafeUrlPipeline } from "../../../src/utils/url";
-
-interface Env {
-  REDIRECTS_KV?: any;
-}
+import { getDB, ensureTableExists, Env } from "./_db";
 
 export function validateUrl(url: string): { valid: boolean; error?: string } {
   if (typeof url !== "string" || !url.trim()) {
@@ -64,8 +61,9 @@ export const onRequestPost = async (context: {
       });
     }
 
-    if (iosUrl && iosUrl.trim() !== "") {
-      const iosValidation = validateUrl(iosUrl.trim());
+    const cleanIosUrl = (iosUrl && iosUrl.trim() !== "") ? iosUrl.trim() : undefined;
+    if (cleanIosUrl) {
+      const iosValidation = validateUrl(cleanIosUrl);
       if (!iosValidation.valid) {
         return new Response(JSON.stringify({ error: `iOS URL: ${iosValidation.error}` }), {
           status: 400,
@@ -74,8 +72,9 @@ export const onRequestPost = async (context: {
       }
     }
 
-    if (androidUrl && androidUrl.trim() !== "") {
-      const androidValidation = validateUrl(androidUrl.trim());
+    const cleanAndroidUrl = (androidUrl && androidUrl.trim() !== "") ? androidUrl.trim() : undefined;
+    if (cleanAndroidUrl) {
+      const androidValidation = validateUrl(cleanAndroidUrl);
       if (!androidValidation.valid) {
         return new Response(JSON.stringify({ error: `Android URL: ${androidValidation.error}` }), {
           status: 400,
@@ -86,38 +85,35 @@ export const onRequestPost = async (context: {
 
     const id = crypto.randomUUID();
     const adminKey = crypto.randomUUID().replace(/-/g, '');
-    const data: Record<string, any> = {
-      id,
-      redirectUrl,
-      adminKey,
-      scans: 0,
-      createdAt: new Date().toISOString()
-    };
+    const createdAt = new Date().toISOString();
 
-    if (iosUrl && iosUrl.trim() !== "") {
-      data.iosUrl = iosUrl.trim();
-    }
-    if (androidUrl && androidUrl.trim() !== "") {
-      data.androidUrl = androidUrl.trim();
+    const { db, isRealD1 } = getDB(context.env);
+    if (isRealD1) {
+      await ensureTableExists(db);
     }
 
-    const kv = context.env.REDIRECTS_KV;
-    if (!kv) {
-      // Local/Dev Fallback
-      if (!(globalThis as any).__mockKV) {
-        (globalThis as any).__mockKV = new Map<string, string>();
-      }
-      (globalThis as any).__mockKV.set(`redirect:${id}`, JSON.stringify(data));
-      console.log(`[Dev Redirector] Registered local mock dynamic redirect:`, data);
-    } else {
-      await kv.put(`redirect:${id}`, JSON.stringify(data));
+    await db
+      .prepare("INSERT INTO redirects (id, redirect_url, admin_key, scans, created_at, ios_url, android_url) VALUES (?, ?, ?, 0, ?, ?, ?)")
+      .bind(id, redirectUrl, adminKey, createdAt, cleanIosUrl || null, cleanAndroidUrl || null)
+      .run();
+
+    if (!isRealD1) {
+      console.log(`[Dev Redirector] Registered local mock dynamic redirect:`, {
+        id,
+        redirectUrl,
+        adminKey,
+        scans: 0,
+        createdAt,
+        iosUrl: cleanIosUrl,
+        androidUrl: cleanAndroidUrl
+      });
     }
 
     return new Response(JSON.stringify({
       id,
       redirectUrl,
-      iosUrl: data.iosUrl,
-      androidUrl: data.androidUrl,
+      iosUrl: cleanIosUrl,
+      androidUrl: cleanAndroidUrl,
       adminKey
     }), {
       status: 200,

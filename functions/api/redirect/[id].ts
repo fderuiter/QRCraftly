@@ -1,15 +1,12 @@
 import { SafeUrlPipeline } from "../../../src/utils/url";
-
-interface Env {
-  REDIRECTS_KV?: any;
-}
+import { getDB, ensureTableExists, Env } from "./_db";
 
 const globalMockKV = new Map<string, string>();
 
 /**
  * Handles incoming redirection requests.
- * Records scan event details under a unique key prefixed with the redirect ID in KV.
- * Keeps the parent redirect record immutable.
+ * Records scan event details under a unique key prefixed with the redirect ID in KV,
+ * and atomically increments the total scan counter in D1.
  */
 export const onRequestGet = async (context: {
   request: Request;
@@ -18,20 +15,22 @@ export const onRequestGet = async (context: {
   waitUntil?: (promise: Promise<any>) => void;
 }) => {
   const { id } = context.params;
-  const kv = context.env.REDIRECTS_KV;
   const userAgent = context.request.headers.get('user-agent') || '';
 
-  const resolveTargetUrl = (data: any): string => {
+  const resolveTargetUrl = (record: any): string => {
     const isIos = /iPhone|iPad|iPod/i.test(userAgent);
     const isAndroid = /Android/i.test(userAgent);
+    const iosUrl = record.ios_url || record.iosUrl;
+    const androidUrl = record.android_url || record.androidUrl;
+    const redirectUrl = record.redirect_url || record.redirectUrl;
 
-    if (isIos && data.iosUrl && typeof data.iosUrl === 'string' && data.iosUrl.trim() !== '') {
-      return data.iosUrl.trim();
+    if (isIos && iosUrl && typeof iosUrl === 'string' && iosUrl.trim() !== '') {
+      return iosUrl.trim();
     }
-    if (isAndroid && data.androidUrl && typeof data.androidUrl === 'string' && data.androidUrl.trim() !== '') {
-      return data.androidUrl.trim();
+    if (isAndroid && androidUrl && typeof androidUrl === 'string' && androidUrl.trim() !== '') {
+      return androidUrl.trim();
     }
-    return data.redirectUrl;
+    return redirectUrl;
   };
 
   const renderSecureErrorPage = () => {
@@ -61,77 +60,29 @@ export const onRequestGet = async (context: {
     );
   };
 
-  if (!kv) {
-    // Local / Dev Fallback mode
-    if (!(globalThis as any).__mockKV) {
-      (globalThis as any).__mockKV = new Map<string, string>();
-    }
-    const dataStr = (globalThis as any).__mockKV.get(`redirect:${id}`) || globalMockKV.get(`redirect:${id}`);
-    if (!dataStr) {
-      return new Response("Dynamic redirect ID not found (Mock KV)", { status: 404 });
-    }
-    const data = JSON.parse(dataStr);
-
-    if (SafeUrlPipeline.isDangerous(data.redirectUrl)) {
-      return renderSecureErrorPage();
-    }
-
-    const timestamp = new Date().toISOString();
-    const eventId = crypto.randomUUID();
-    const userAgent = context.request.headers.get("user-agent") || "Unknown";
-
-    let device: 'mobile' | 'desktop' | 'tablet' | 'other' = 'desktop';
-    if (/ipad|tablet/i.test(userAgent)) {
-      device = 'tablet';
-    } else if (/mobile|android|iphone|ipod|blackberry|iemobile|opera mini/i.test(userAgent)) {
-      device = 'mobile';
-    }
-
-    const cf = (context.request as any).cf;
-    const country = cf?.country || context.request.headers.get("cf-ipcountry") || "Unknown";
-    const region = cf?.region || context.request.headers.get("cf-region") || "Unknown";
-    const city = cf?.city || context.request.headers.get("cf-ipcity") || "Unknown";
-
-    const event = {
-      id: eventId,
-      redirectId: id,
-      timestamp,
-      userAgent,
-      device,
-      location: { country, region, city }
-    };
-
-    const eventKey = `event:${id}:${timestamp}:${eventId}`;
-
-    const updatePromise = (async () => {
-      (globalThis as any).__mockKV.set(eventKey, JSON.stringify(event));
-    })();
-
-    if (context.waitUntil) {
-      context.waitUntil(updatePromise);
-    } else {
-      (globalThis as any).__mockKV.set(eventKey, JSON.stringify(event));
-    }
-
-    const targetUrl = resolveTargetUrl(data);
-    return Response.redirect(targetUrl, 307);
+  const { db, isRealD1 } = getDB(context.env);
+  if (isRealD1) {
+    await ensureTableExists(db);
   }
 
   try {
-    const dataStr = await kv.get(`redirect:${id}`);
-    if (!dataStr) {
+    const record = await db
+      .prepare("SELECT * FROM redirects WHERE id = ?")
+      .bind(id)
+      .first<any>();
+
+    if (!record) {
       return new Response("Dynamic redirect ID not found", { status: 404 });
     }
 
-    const data = JSON.parse(dataStr);
+    const targetUrl = resolveTargetUrl(record);
 
-    if (SafeUrlPipeline.isDangerous(data.redirectUrl)) {
+    if (!targetUrl || SafeUrlPipeline.isDangerous(targetUrl)) {
       return renderSecureErrorPage();
     }
 
     const timestamp = new Date().toISOString();
     const eventId = crypto.randomUUID();
-    const userAgent = context.request.headers.get("user-agent") || "Unknown";
 
     let device: 'mobile' | 'desktop' | 'tablet' | 'other' = 'desktop';
     if (/ipad|tablet/i.test(userAgent)) {
@@ -149,7 +100,7 @@ export const onRequestGet = async (context: {
       id: eventId,
       redirectId: id,
       timestamp,
-      userAgent,
+      userAgent: userAgent || "Unknown",
       device,
       location: { country, region, city }
     };
@@ -158,17 +109,30 @@ export const onRequestGet = async (context: {
 
     const updatePromise = (async () => {
       try {
-        await kv.put(eventKey, JSON.stringify(event), { metadata: event });
+        await db
+          .prepare("UPDATE redirects SET scans = scans + 1 WHERE id = ?")
+          .bind(id)
+          .run();
+
+        const kv = context.env.REDIRECTS_KV;
+        if (kv) {
+          await kv.put(eventKey, JSON.stringify(event), { metadata: event });
+        } else if ((globalThis as any).__mockKV) {
+          (globalThis as any).__mockKV.set(eventKey, JSON.stringify(event));
+        } else {
+          globalMockKV.set(eventKey, JSON.stringify(event));
+        }
       } catch (err) {
-        console.error("Asynchronous KV event put failed:", err);
+        console.error("Asynchronous scan tracking failed:", err);
       }
     })();
 
     if (context.waitUntil) {
       context.waitUntil(updatePromise);
+    } else {
+      updatePromise.catch(() => {});
     }
 
-    const targetUrl = resolveTargetUrl(data);
     return Response.redirect(targetUrl, 307);
   } catch (err: any) {
     return new Response(JSON.stringify({ error: err.message }), {
@@ -177,4 +141,3 @@ export const onRequestGet = async (context: {
     });
   }
 };
-
