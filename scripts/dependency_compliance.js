@@ -34,6 +34,7 @@ export const AUTHORIZED_NETWORK_FILES = new Set([
   'src/utils/svgExport.ts',
   'src/utils/assetCache.ts',
   'src/hooks/useRedirector.ts',
+  'src/utils/reputation.ts',
   'src/pages/r/@id/+Page.tsx'
 ]);
 

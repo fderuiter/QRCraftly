@@ -1,5 +1,6 @@
 import { validateUrl } from "./register";
 import { getDB, ensureTableExists, Env } from "./_db";
+import { checkUrlReputation } from "../../../src/utils/reputation";
 
 export const onRequestPost = async (context: {
   request: Request;
@@ -48,6 +49,15 @@ export const onRequestPost = async (context: {
           headers: { "Content-Type": "application/json" }
         });
       }
+    }
+
+    // Synchronous Reputation Check on updated URL
+    const reputationResult = await checkUrlReputation(targetNewUrl, context.env);
+    if (!reputationResult.safe) {
+      return new Response(JSON.stringify({ error: reputationResult.reason || "Update failed: Destination domain is flagged as malicious" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" }
+      });
     }
 
     const { db, isRealD1 } = getDB(context.env);

@@ -11,7 +11,7 @@ describe('Double-Ended Redirect Security Endpoints', () => {
 
   describe('POST /api/redirect/register', () => {
     it('should successfully register a standard http/https URL', async () => {
-      const payload = { redirectUrl: 'https://standard-safe-url.com/path?foo=bar' };
+      const payload = { redirectUrl: 'https://standard-safe-url.com/path?foo=bar', turnstileToken: 'valid-turnstile-token' };
       const request = new Request('https://domain.com/api/redirect/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -37,7 +37,7 @@ describe('Double-Ended Redirect Security Endpoints', () => {
       const request = new Request('https://domain.com/api/redirect/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
+        body: JSON.stringify({ turnstileToken: 'valid-turnstile-token' }),
       });
 
       const response = await registerHandler({ request, env: {} });
@@ -58,7 +58,7 @@ describe('Double-Ended Redirect Security Endpoints', () => {
         const request = new Request('https://domain.com/api/redirect/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ redirectUrl: url }),
+          body: JSON.stringify({ redirectUrl: url, turnstileToken: 'valid-turnstile-token' }),
         });
 
         const response = await registerHandler({ request, env: {} });
@@ -78,7 +78,7 @@ describe('Double-Ended Redirect Security Endpoints', () => {
         const request = new Request('https://domain.com/api/redirect/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ redirectUrl: url }),
+          body: JSON.stringify({ redirectUrl: url, turnstileToken: 'valid-turnstile-token' }),
         });
 
         const response = await registerHandler({ request, env: {} });
@@ -93,7 +93,7 @@ describe('Double-Ended Redirect Security Endpoints', () => {
       const request = new Request('https://domain.com/api/redirect/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ redirectUrl: url }),
+        body: JSON.stringify({ redirectUrl: url, turnstileToken: 'valid-turnstile-token' }),
       });
 
       const response = await registerHandler({ request, env: {} });
@@ -109,7 +109,7 @@ describe('Double-Ended Redirect Security Endpoints', () => {
 
     beforeEach(async () => {
       // Register a safe link first
-      const payload = { redirectUrl: 'https://initial-safe-url.com' };
+      const payload = { redirectUrl: 'https://initial-safe-url.com', turnstileToken: 'valid-turnstile-token' };
       const request = new Request('https://domain.com/api/redirect/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -189,7 +189,7 @@ describe('Double-Ended Redirect Security Endpoints', () => {
       const registerRequest = new Request('https://domain.com/api/redirect/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ redirectUrl: 'https://my-good-site.com' }),
+        body: JSON.stringify({ redirectUrl: 'https://my-good-site.com', turnstileToken: 'valid-turnstile-token' }),
       });
       const regResponse = await registerHandler({ request: registerRequest, env: {} });
       const regBody = await regResponse.json() as any;

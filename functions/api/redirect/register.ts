@@ -1,6 +1,7 @@
 import { SafeUrlPipeline } from "../../../src/utils/url";
 import { isEncrypted } from "../../../src/utils/encryption";
 import { getDB, ensureTableExists, Env } from "./_db";
+import { validateTurnstileToken, checkUrlReputation, deobfuscateUrl } from "../../../src/utils/reputation";
 
 export function validateUrl(url: string): { valid: boolean; error?: string } {
   if (typeof url !== "string" || !url.trim()) {
@@ -25,9 +26,16 @@ export function validateUrl(url: string): { valid: boolean; error?: string } {
     return { valid: false, error: "Invalid encrypted payload format" };
   }
 
+  // Handle de-obfuscation if url is encoded
+  const deob = deobfuscateUrl(url);
+  // Use deobfuscatedUrl only if it already contains an explicit protocol scheme after decoding, otherwise test raw url
+  const urlToParse = deob.deobfuscatedUrl && /^[a-zA-Z0-9+-.]+:\/\//.test(deob.deobfuscatedUrl)
+    ? deob.deobfuscatedUrl
+    : url;
+
   let parsedUrl: URL;
   try {
-    parsedUrl = new URL(url);
+    parsedUrl = new URL(urlToParse);
   } catch (_err) {
     return { valid: false, error: "Invalid URL format" };
   }
@@ -51,11 +59,29 @@ export const onRequestPost = async (context: {
   env: Env;
 }) => {
   try {
-    const { redirectUrl, iosUrl, androidUrl } = await context.request.json() as {
+    const body = await context.request.json() as {
       redirectUrl: string;
       iosUrl?: string;
       androidUrl?: string;
+      turnstileToken?: string;
+      turnstile_token?: string;
+      "cf-turnstile-response"?: string;
     };
+
+    const clientIp = context.request.headers.get("CF-Connecting-IP") || undefined;
+    const token = body.turnstileToken || body.turnstile_token || body["cf-turnstile-response"];
+
+    // 1. Requirement 1 & 2: Turnstile Bot Challenge Verification
+    // Guardrail: Turnstile verification failures must block processing before calling external threat intelligence services.
+    const turnstileResult = await validateTurnstileToken(token, context.env, clientIp);
+    if (!turnstileResult.success) {
+      return new Response(JSON.stringify({ error: turnstileResult.error || "Turnstile challenge verification failed" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+
+    const { redirectUrl, iosUrl, androidUrl } = body;
     if (!redirectUrl) {
       return new Response(JSON.stringify({ error: "Missing redirectUrl" }), {
         status: 400,
@@ -87,6 +113,35 @@ export const onRequestPost = async (context: {
       const androidValidation = validateUrl(cleanAndroidUrl);
       if (!androidValidation.valid) {
         return new Response(JSON.stringify({ error: `Android URL: ${androidValidation.error}` }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" }
+        });
+      }
+    }
+
+    // 2. Requirement 3, 4 & 5: Synchronous URL De-obfuscation & External Threat Intelligence Check
+    const reputationResult = await checkUrlReputation(redirectUrl, context.env);
+    if (!reputationResult.safe) {
+      return new Response(JSON.stringify({ error: reputationResult.reason || "Registration failed: Destination domain is flagged as malicious" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+
+    if (cleanIosUrl) {
+      const iosReputation = await checkUrlReputation(cleanIosUrl, context.env);
+      if (!iosReputation.safe) {
+        return new Response(JSON.stringify({ error: `iOS Destination: ${iosReputation.reason}` }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" }
+        });
+      }
+    }
+
+    if (cleanAndroidUrl) {
+      const androidReputation = await checkUrlReputation(cleanAndroidUrl, context.env);
+      if (!androidReputation.safe) {
+        return new Response(JSON.stringify({ error: `Android Destination: ${androidReputation.reason}` }), {
           status: 400,
           headers: { "Content-Type": "application/json" }
         });
