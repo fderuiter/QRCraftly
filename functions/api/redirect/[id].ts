@@ -19,6 +19,20 @@ export const onRequestGet = async (context: {
 }) => {
   const { id } = context.params;
   const kv = context.env.REDIRECTS_KV;
+  const userAgent = context.request.headers.get('user-agent') || '';
+
+  const resolveTargetUrl = (data: any): string => {
+    const isIos = /iPhone|iPad|iPod/i.test(userAgent);
+    const isAndroid = /Android/i.test(userAgent);
+
+    if (isIos && data.iosUrl && typeof data.iosUrl === 'string' && data.iosUrl.trim() !== '') {
+      return data.iosUrl.trim();
+    }
+    if (isAndroid && data.androidUrl && typeof data.androidUrl === 'string' && data.androidUrl.trim() !== '') {
+      return data.androidUrl.trim();
+    }
+    return data.redirectUrl;
+  };
 
   const renderSecureErrorPage = () => {
     return new Response(
@@ -99,7 +113,8 @@ export const onRequestGet = async (context: {
       (globalThis as any).__mockKV.set(eventKey, JSON.stringify(event));
     }
 
-    return Response.redirect(data.redirectUrl, 307);
+    const targetUrl = resolveTargetUrl(data);
+    return Response.redirect(targetUrl, 307);
   }
 
   try {
@@ -153,7 +168,8 @@ export const onRequestGet = async (context: {
       context.waitUntil(updatePromise);
     }
 
-    return Response.redirect(data.redirectUrl, 307);
+    const targetUrl = resolveTargetUrl(data);
+    return Response.redirect(targetUrl, 307);
   } catch (err: any) {
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500,

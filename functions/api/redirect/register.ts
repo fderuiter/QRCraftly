@@ -44,7 +44,11 @@ export const onRequestPost = async (context: {
   env: Env;
 }) => {
   try {
-    const { redirectUrl } = await context.request.json() as { redirectUrl: string };
+    const { redirectUrl, iosUrl, androidUrl } = await context.request.json() as {
+      redirectUrl: string;
+      iosUrl?: string;
+      androidUrl?: string;
+    };
     if (!redirectUrl) {
       return new Response(JSON.stringify({ error: "Missing redirectUrl" }), {
         status: 400,
@@ -60,15 +64,42 @@ export const onRequestPost = async (context: {
       });
     }
 
+    if (iosUrl && iosUrl.trim() !== "") {
+      const iosValidation = validateUrl(iosUrl.trim());
+      if (!iosValidation.valid) {
+        return new Response(JSON.stringify({ error: `iOS URL: ${iosValidation.error}` }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" }
+        });
+      }
+    }
+
+    if (androidUrl && androidUrl.trim() !== "") {
+      const androidValidation = validateUrl(androidUrl.trim());
+      if (!androidValidation.valid) {
+        return new Response(JSON.stringify({ error: `Android URL: ${androidValidation.error}` }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" }
+        });
+      }
+    }
+
     const id = crypto.randomUUID();
     const adminKey = crypto.randomUUID().replace(/-/g, '');
-    const data = {
+    const data: Record<string, any> = {
       id,
       redirectUrl,
       adminKey,
       scans: 0,
       createdAt: new Date().toISOString()
     };
+
+    if (iosUrl && iosUrl.trim() !== "") {
+      data.iosUrl = iosUrl.trim();
+    }
+    if (androidUrl && androidUrl.trim() !== "") {
+      data.androidUrl = androidUrl.trim();
+    }
 
     const kv = context.env.REDIRECTS_KV;
     if (!kv) {
@@ -82,7 +113,13 @@ export const onRequestPost = async (context: {
       await kv.put(`redirect:${id}`, JSON.stringify(data));
     }
 
-    return new Response(JSON.stringify({ id, redirectUrl, adminKey }), {
+    return new Response(JSON.stringify({
+      id,
+      redirectUrl,
+      iosUrl: data.iosUrl,
+      androidUrl: data.androidUrl,
+      adminKey
+    }), {
       status: 200,
       headers: { "Content-Type": "application/json" }
     });

@@ -49,4 +49,29 @@ describe('UrlInput', () => {
     expect(alertMessage).toBeInTheDocument();
     expect(alertMessage.textContent).toContain('Unsafe URL scheme or malicious protocol detected.');
   });
+
+  it('renders platform toggles and URL inputs when dynamic mode is active', () => {
+    window.localStorage.setItem('qrcraftly:dynamic-consent-accepted', 'true');
+    render(<UrlInput data={{ url: 'https://example.com' }} onChange={mockOnChange} />);
+
+    const dynamicToggle = screen.getByLabelText('Dynamic QR (Trackable Redirect)');
+    fireEvent.click(dynamicToggle);
+
+    expect(screen.getByText('Dual-Platform App Store Destinations (Optional)')).toBeInTheDocument();
+
+    const iosToggle = screen.getByLabelText('Apple App Store Link (iOS)');
+    const androidToggle = screen.getByLabelText('Google Play Store Link (Android)');
+    expect(iosToggle).toBeInTheDocument();
+    expect(androidToggle).toBeInTheDocument();
+
+    // Toggle iOS ON
+    fireEvent.click(iosToggle);
+    const iosInput = screen.getByLabelText('Apple App Store URL');
+    expect(iosInput).toBeInTheDocument();
+
+    // Toggle Android ON
+    fireEvent.click(androidToggle);
+    const androidInput = screen.getByLabelText('Google Play Store URL');
+    expect(androidInput).toBeInTheDocument();
+  });
 });
