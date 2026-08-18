@@ -318,7 +318,6 @@ export function useAnimatedQrReceiver({
           if (actualSHA256 !== hs.sha256) {
             throw new Error(`Integrity validation failed! SHA-256 hash does not match handshake value.\nExpected: ${hs.sha256}\nActual: ${actualSHA256}`);
           }
-          }
         }
 
         setReceiverSuccess(true);
