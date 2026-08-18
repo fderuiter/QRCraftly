@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { isValidScannerResponse } from '../utils/scannerContract';
+import jsQR from 'jsqr';
+import { isValidScannerResponse, getDownscaledDimensions } from '../utils/scannerContract';
 import { getSharedScannerWorker, terminateSharedScannerWorker } from '../utils/sharedScannerWorker';
 import { AdaptiveFrameScheduler } from '../utils/AdaptiveFrameScheduler';
 
@@ -140,6 +141,8 @@ export function useAdaptiveScanner({
 
   const workerRef = useRef<Worker | null>(null);
   const consecutiveRestartAttemptsRef = useRef<number>(0);
+  const useMainThreadFallbackRef = useRef<boolean>(false);
+  const fallbackCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const handleMessageRef = useRef<((e: MessageEvent) => void) | null>(null);
   const handleErrorRef = useRef<((err: any) => void) | null>(null);
@@ -156,17 +159,14 @@ export function useAdaptiveScanner({
   const schedulerRef = useRef<AdaptiveFrameScheduler | null>(null);
 
   const recreateWorker = useCallback(() => {
-    // 1. Stability guardrail: limit auto-restart attempts to a maximum of 3 consecutive retries
+    // 1. Stability guardrail: activate main-thread fallback if auto-restart attempts exceed 3 consecutive retries
     consecutiveRestartAttemptsRef.current += 1;
     if (consecutiveRestartAttemptsRef.current > 3) {
-      console.error("Scanner background worker crashed repeatedly. Stopping scanning loop.");
-      setIsScanning(false);
-      consecutiveRestartAttemptsRef.current = 0; // Reset counter
-      if (onScanFailRef.current) {
-        onScanFailRef.current(
-          "The scanner background worker crashed repeatedly. Please restart the page or check your camera."
-        );
-      }
+      console.warn("Scanner background worker crashed repeatedly. Activating main-thread fallback.");
+      useMainThreadFallbackRef.current = true;
+      terminateSharedScannerWorker();
+      workerRef.current = null;
+      schedulerRef.current?.triggerRecovery(1500, false);
       return;
     }
 
@@ -199,7 +199,9 @@ export function useAdaptiveScanner({
         (worker as any).onerror = onErr;
       }
     } catch (err) {
-      console.error('Failed to recreate worker:', err);
+      console.warn('Failed to recreate worker, activating main-thread fallback:', err);
+      useMainThreadFallbackRef.current = true;
+      workerRef.current = null;
     }
   }, []);
 
@@ -268,20 +270,26 @@ export function useAdaptiveScanner({
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    const worker = getSharedScannerWorker();
-    workerRef.current = worker;
-
     const onMsg = (e: MessageEvent) => handleMessageRef.current?.(e);
     const onErr = (err: any) => handleErrorRef.current?.(err);
     const onMsgErr = (err: any) => handleMessageErrorRef.current?.(err);
 
-    if (typeof worker.addEventListener === 'function') {
-      worker.addEventListener('message', onMsg);
-      worker.addEventListener('error', onErr);
-      worker.addEventListener('messageerror', onMsgErr);
-    } else {
-      (worker as any).onmessage = onMsg;
-      (worker as any).onerror = onErr;
+    try {
+      const worker = getSharedScannerWorker();
+      workerRef.current = worker;
+
+      if (typeof worker.addEventListener === 'function') {
+        worker.addEventListener('message', onMsg);
+        worker.addEventListener('error', onErr);
+        worker.addEventListener('messageerror', onMsgErr);
+      } else {
+        (worker as any).onmessage = onMsg;
+        (worker as any).onerror = onErr;
+      }
+    } catch (err) {
+      console.warn('Failed to initialize background scanner worker, activating main-thread fallback:', err);
+      useMainThreadFallbackRef.current = true;
+      workerRef.current = null;
     }
 
     return () => {
@@ -319,16 +327,70 @@ export function useAdaptiveScanner({
         return false;
       }
 
+      const seqId = scheduler.beginFrame(force);
+      if (seqId === null) {
+        return false;
+      }
+
+      if (useMainThreadFallbackRef.current || !workerRef.current) {
+        if (!fallbackCanvasRef.current && typeof document !== 'undefined') {
+          fallbackCanvasRef.current = document.createElement('canvas');
+        }
+        const canvas = fallbackCanvasRef.current;
+        const { width: dWidth, height: dHeight } = getDownscaledDimensions(width, height, 800);
+
+        if (canvas) {
+          if (canvas.width !== dWidth || canvas.height !== dHeight) {
+            canvas.width = dWidth;
+            canvas.height = dHeight;
+          }
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            try {
+              ctx.drawImage(video, 0, 0, dWidth, dHeight);
+              const imageData = ctx.getImageData(0, 0, dWidth, dHeight);
+
+              const performMainThreadDecode = () => {
+                try {
+                  let code = jsQR(imageData.data, dWidth, dHeight, { inversionAttempts: 'dontInvert' });
+                  if (!code) {
+                    code = jsQR(imageData.data, dWidth, dHeight, { inversionAttempts: 'attemptBoth' });
+                  }
+                  if (code && code.data) {
+                    consecutiveRestartAttemptsRef.current = 0;
+                    scheduler.endFrame(seqId, 'pass', code.data, null);
+                  } else {
+                    scheduler.endFrame(seqId, 'fail', null, null);
+                  }
+                } catch (decodeErr: any) {
+                  console.error('Main-thread QR decoding error:', decodeErr);
+                  scheduler.endFrame(seqId, 'fail', null, decodeErr?.message || 'DECODE_ERROR');
+                }
+              };
+
+              if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+                (window as any).requestIdleCallback(performMainThreadDecode, { timeout: 50 });
+              } else {
+                setTimeout(performMainThreadDecode, 0);
+              }
+            } catch (drawErr) {
+              console.error('Failed to draw or read canvas during main-thread decode:', drawErr);
+              scheduler.endFrame(seqId, 'fail', null, 'CANVAS_READ_ERROR');
+            }
+          } else {
+            scheduler.endFrame(seqId, 'fail', null, 'CANVAS_CONTEXT_ERROR');
+          }
+        } else {
+          scheduler.endFrame(seqId, 'fail', null, 'CANVAS_UNAVAILABLE');
+        }
+        return true;
+      }
+
       const maxDim = Math.max(width, height);
       if (maxDim > 1280) {
         const scale = 1280 / maxDim;
         width = Math.round(width * scale);
         height = Math.round(height * scale);
-      }
-
-      const seqId = scheduler.beginFrame(force);
-      if (seqId === null) {
-        return false;
       }
 
       // Capture video frame as non-blocking image bitmap resource on the main thread
@@ -337,8 +399,13 @@ export function useAdaptiveScanner({
         resizeHeight: height,
         resizeQuality: 'low',
       }).then((image) => {
+        if (!workerRef.current) {
+          useMainThreadFallbackRef.current = true;
+          scheduler.endFrame(seqId, 'fail', null, 'WORKER_UNAVAILABLE');
+          return;
+        }
         // Transfer captured image resource directly to the background Web Worker
-        workerRef.current?.postMessage(
+        workerRef.current.postMessage(
           {
             image,
             width,
