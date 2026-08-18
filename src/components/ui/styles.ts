@@ -1,7 +1,7 @@
 /**
  *
  */
-export const BASE_INPUT_CLASSES = "bg-white border border-slate-300 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100 rounded-lg text-slate-700 text-sm transition-all w-full placeholder-slate-600 dark:placeholder-slate-400";
+export const BASE_INPUT_CLASSES = "bg-white border border-slate-600 dark:bg-slate-900 dark:border-slate-400 dark:text-slate-100 rounded-lg text-slate-700 text-sm transition-all w-full placeholder-slate-600 dark:placeholder-slate-400";
 
 /**
  * Unified Layout Spacing & Structure Variables

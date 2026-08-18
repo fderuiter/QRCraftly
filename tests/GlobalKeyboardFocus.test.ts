@@ -37,4 +37,12 @@ describe('Global Keyboard Focus Restoration', () => {
     // Verify outline suppression with !important
     expect(cssContent).toContain('outline: none !important;');
   });
+
+  it('should maintain visible focus outline under forced-colors / OS high contrast mode', () => {
+    const cssContent = readFileSync(cssPath, 'utf8');
+
+    // Verify forced-colors media query and Highlight outline
+    expect(cssContent).toContain('@media (forced-colors: active)');
+    expect(cssContent).toContain('outline: 2px solid Highlight !important;');
+  });
 });

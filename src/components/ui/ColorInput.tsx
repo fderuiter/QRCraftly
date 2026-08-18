@@ -139,7 +139,7 @@ export const ColorInput: React.FC<ColorInputProps> = ({
           onChange={handleTextChange}
           disabled={disabled}
           className={mergeClasses(
-            "w-24 rounded border border-transparent bg-transparent px-1 py-0.5 font-mono text-xs text-slate-600 transition-colors hover:border-slate-300 dark:text-slate-300 disabled:opacity-50 disabled:cursor-not-allowed",
+            "w-24 rounded border border-transparent bg-transparent px-1 py-0.5 font-mono text-xs text-slate-600 transition-colors hover:border-slate-600 dark:text-slate-300 disabled:opacity-50 disabled:cursor-not-allowed",
             error ? ERROR_INPUT_CLASSES : undefined
           )}
           aria-label={cleanLabel ? `${cleanLabel} Hex Code` : "Hex Code"}

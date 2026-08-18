@@ -51,6 +51,10 @@ export const scenarios = [
     {mode: 'Light', element: 'License Section', bg: 'slate-50', fg: 'slate-900', text: 'License H2', size: 'large'},
     {mode: 'Light', element: 'License Section', bg: 'slate-50', fg: 'slate-600', text: 'License P', size: 'normal'},
     {mode: 'Light', element: 'Button', bg: 'slate-900', fg: 'white', text: 'Github Button', size: 'normal'},
+    {mode: 'Light', element: 'Form Input', bg: 'white', fg: 'slate-600', text: 'Input Border', size: 'large'},
+    {mode: 'Light', element: 'Toggle Switch', bg: 'white', fg: 'slate-600', text: 'Switch Track Inactive', size: 'large'},
+    {mode: 'Light', element: 'Toggle Switch', bg: 'white', fg: 'teal-700', text: 'Switch Track Active', size: 'large'},
+    {mode: 'Light', element: 'Focus Indicator', bg: 'white', fg: 'indigo-600', text: 'Focus Ring', size: 'large'},
 
     // Dark Mode
     {mode: 'Dark', element: 'Page Background', bg: 'slate-900', fg: 'white', text: 'H1 (About QRCraftly)', size: 'large'},
@@ -63,6 +67,10 @@ export const scenarios = [
     {mode: 'Dark', element: 'License Section', bg: ['slate-800', 0.5, 'slate-900'], fg: 'white', text: 'License H2', size: 'large'},
     {mode: 'Dark', element: 'License Section', bg: ['slate-800', 0.5, 'slate-900'], fg: 'slate-300', text: 'License P', size: 'normal'},
     {mode: 'Dark', element: 'Button', bg: 'white', fg: 'slate-900', text: 'Github Button', size: 'normal'},
+    {mode: 'Dark', element: 'Form Input', bg: 'slate-900', fg: 'slate-400', text: 'Input Border', size: 'large'},
+    {mode: 'Dark', element: 'Toggle Switch', bg: 'slate-900', fg: 'slate-400', text: 'Switch Track Inactive', size: 'large'},
+    {mode: 'Dark', element: 'Toggle Switch', bg: 'slate-900', fg: 'teal-600', text: 'Switch Track Active', size: 'large'},
+    {mode: 'Dark', element: 'Focus Indicator', bg: 'slate-900', fg: 'indigo-400', text: 'Focus Ring', size: 'large'},
 ];
 
 export function validateKeys(scenariosList, colorsDict) {
