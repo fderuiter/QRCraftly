@@ -142,8 +142,6 @@ export function useAnimatedQrSender({
     isTransferringRef.current = false;
     if (workerRef.current) {
       workerRef.current.postMessage({ type: 'STOP' });
-      workerRef.current.terminate();
-      workerRef.current = null;
     }
     if (animationIdRef.current) {
       cancelAnimationFrame(animationIdRef.current);
@@ -408,36 +406,38 @@ export function useAnimatedQrSender({
       activeMemory: '24.50 MB'
     });
 
-    const worker = new Worker(new URL('../utils/fileSliceWorker.ts', import.meta.url), { type: 'module' });
-    workerRef.current = worker;
+    if (!workerRef.current) {
+      const worker = new Worker(new URL('../utils/fileSliceWorker.ts', import.meta.url), { type: 'module' });
+      workerRef.current = worker;
 
-    worker.onmessage = (e: MessageEvent) => {
-      const { type, index, size, data, total, message } = e.data || {};
+      worker.onmessage = (e: MessageEvent) => {
+        const { type, index, size, data, total, message } = e.data || {};
 
-      switch (type) {
-        case 'PROGRESS': {
-          if (total) {
-            setTotalFrames(total);
-            totalFramesRef.current = total;
+        switch (type) {
+          case 'PROGRESS': {
+            if (total) {
+              setTotalFrames(total);
+              totalFramesRef.current = total;
+            }
+            break;
           }
-          break;
-        }
 
-        case 'FRAME': {
-          framePoolRef.current.storeFrame(index, size, data);
-          break;
-        }
+          case 'FRAME': {
+            framePoolRef.current.storeFrame(index, size, data);
+            break;
+          }
 
-        case 'ERROR': {
-          console.error('[Worker Error]', message);
-          stopTransfer();
-          break;
-        }
+          case 'ERROR': {
+            console.error('[Worker Error]', message);
+            stopTransfer();
+            break;
+          }
 
-        default:
-          break;
-      }
-    };
+          default:
+            break;
+        }
+      };
+    }
 
     // Ensure visual density below 256 bytes per chunk and error correction level Q or H
     const effectiveChunkSize = chunkSize < 256 ? chunkSize : 180;
@@ -445,7 +445,7 @@ export function useAnimatedQrSender({
       ? config.errorCorrectionLevel
       : QRErrorCorrectionLevel.Q;
 
-    worker.postMessage({
+    workerRef.current.postMessage({
       type: 'START',
       payload: {
         file: selectedFile,
@@ -463,6 +463,8 @@ export function useAnimatedQrSender({
     if (fileList && fileList.length > 0) {
       setSelectedFile(fileList[0]);
       stopTransfer();
+    }
+    if (e.target) {
       e.target.value = '';
     }
   };
