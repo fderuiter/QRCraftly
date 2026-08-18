@@ -86,6 +86,17 @@ describe('useAnimatedQrReceiver Hook', () => {
     expect(result.current.totalChunks).toBeNull();
   });
 
+  it('should reject/ignore incoming data frames when no handshake frame is scanned', async () => {
+    const { result } = renderHook(() => useAnimatedQrReceiver());
+
+    await act(async () => {
+      await result.current.handleFrame('F|0|2|Zm9v');
+    });
+
+    expect(result.current.chunks.size).toBe(0);
+    expect(result.current.totalChunks).toBeNull();
+  });
+
   it('should intercept dangerous schemes immediately', async () => {
     const { result } = renderHook(() => useAnimatedQrReceiver());
 
