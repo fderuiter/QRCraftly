@@ -285,6 +285,7 @@ export function useAdaptiveScanner({
     }
 
     return () => {
+      schedulerRef.current?.stop();
       const activeWorker = workerRef.current;
       if (activeWorker) {
         if (typeof activeWorker.removeEventListener === 'function') {
