@@ -170,7 +170,7 @@ describe("Secure Dynamic Redirection API Suite", () => {
       expect(json.error).toContain("Scheme must be http: or https:");
     });
 
-    it("should block dangerous schemes explicitly", async () => {
+    it("should block dangerous schemes explicitly with descriptive error messages", async () => {
       const dangerous = [
         "javascript:alert(1)",
         "data:text/html,<h1>Hacked</h1>",
@@ -184,6 +184,7 @@ describe("Secure Dynamic Redirection API Suite", () => {
         expect(res.status).toBe(400);
         const json = await res.json() as { error: string };
         expect(json.error).toBeDefined();
+        expect(json.error).toContain("Blocked dangerous URL scheme");
       }
     });
 
@@ -203,24 +204,40 @@ describe("Secure Dynamic Redirection API Suite", () => {
       }
     });
 
-    it("should enforce URL validation rules on update endpoint too", async () => {
+    it("should enforce URL validation rules on update endpoint and leave original destination unchanged on rejection", async () => {
       // Seed an initial entry in Mock KV so update passes existence checks
-      (globalThis as any).__mockKV.set("redirect:some-id", JSON.stringify({
+      const originalRecord = {
         id: "some-id",
-        redirectUrl: "https://initial.com",
+        redirectUrl: "https://initial-destination.com/original",
         adminKey: "some-key",
         scans: 0
-      }));
+      };
+      (globalThis as any).__mockKV.set("redirect:some-id", JSON.stringify(originalRecord));
 
       // A valid url update works
       const successRes = await runUpdate("https://new-destination.com");
       expect(successRes.status).toBe(200);
+      const successData = JSON.parse((globalThis as any).__mockKV.get("redirect:some-id"));
+      expect(successData.redirectUrl).toBe("https://new-destination.com");
 
-      // An invalid scheme is rejected
+      // An invalid scheme is rejected with 400 and leaves the destination unchanged
       const failRes = await runUpdate("javascript:alert(1)");
       expect(failRes.status).toBe(400);
       const json = await failRes.json() as { error: string };
-      expect(json.error).toBeDefined();
+      expect(json.error).toContain("Blocked dangerous URL scheme");
+
+      // Original destination remains unchanged after rejection
+      const unchangedData = JSON.parse((globalThis as any).__mockKV.get("redirect:some-id"));
+      expect(unchangedData.redirectUrl).toBe("https://new-destination.com");
+
+      // Non-http scheme is rejected with 400 and leaves the destination unchanged
+      const failRes2 = await runUpdate("ftp://ftp.example.com/file");
+      expect(failRes2.status).toBe(400);
+      const json2 = await failRes2.json() as { error: string };
+      expect(json2.error).toContain("Scheme must be http: or https:");
+
+      const unchangedData2 = JSON.parse((globalThis as any).__mockKV.get("redirect:some-id"));
+      expect(unchangedData2.redirectUrl).toBe("https://new-destination.com");
     });
   });
 
