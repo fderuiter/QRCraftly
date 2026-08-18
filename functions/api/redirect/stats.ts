@@ -1,10 +1,9 @@
-interface Env {
-  REDIRECTS_KV?: any;
-}
+import { getDB, ensureTableExists, Env } from "./_db";
 
 /**
  * Handles fetching aggregated scan statistics and trend analytics for a dynamic redirect ID.
- * Queries KV keys matching the prefix 'event:{id}:' to calculate total count, hourly/daily trends, device breakdown, and location stats.
+ * Queries D1 for base redirect metadata, and queries KV keys matching the prefix 'event:{id}:'
+ * to calculate total count, hourly/daily trends, device breakdown, and location stats.
  */
 export const onRequestGet = async (context: {
   request: Request;
@@ -20,24 +19,29 @@ export const onRequestGet = async (context: {
       });
     }
 
-    const kv = context.env.REDIRECTS_KV;
-    let dataStr: string | null = null;
-
-    if (!kv) {
-      // Local/Dev Fallback
-      dataStr = (globalThis as any).__mockKV?.get(`redirect:${id}`) || null;
-    } else {
-      dataStr = await kv.get(`redirect:${id}`);
+    const { db, isRealD1 } = getDB(context.env);
+    if (isRealD1) {
+      await ensureTableExists(db);
     }
 
-    if (!dataStr) {
+    const record = await db
+      .prepare("SELECT * FROM redirects WHERE id = ?")
+      .bind(id)
+      .first<any>();
+
+    if (!record) {
       return new Response(JSON.stringify({ error: "Not Found" }), {
         status: 404,
         headers: { "Content-Type": "application/json" }
       });
     }
 
-    const data = JSON.parse(dataStr);
+    const redirectUrl = record.redirect_url || record.redirectUrl;
+    const createdAt = record.created_at || record.createdAt;
+    const iosUrl = record.ios_url || record.iosUrl;
+    const androidUrl = record.android_url || record.androidUrl;
+
+    const kv = context.env.REDIRECTS_KV;
     const prefix = `event:${id}:`;
     const events: any[] = [];
 
@@ -83,7 +87,7 @@ export const onRequestGet = async (context: {
     // Sort events newest first
     events.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
-    const totalScans = Math.max(events.length, data.scans || 0);
+    const totalScans = Math.max(events.length, record.scans || 0);
 
     // Device breakdown
     const devices = { mobile: 0, desktop: 0, tablet: 0, other: 0 };
@@ -126,9 +130,11 @@ export const onRequestGet = async (context: {
     return new Response(JSON.stringify({
       id,
       scans: totalScans,
-      redirectUrl: data.redirectUrl,
-      originalUrl: data.originalUrl || data.redirectUrl,
-      createdAt: data.createdAt,
+      redirectUrl,
+      originalUrl: redirectUrl,
+      createdAt,
+      iosUrl,
+      androidUrl,
       hourly,
       daily,
       devices,
@@ -145,4 +151,3 @@ export const onRequestGet = async (context: {
     });
   }
 };
-
