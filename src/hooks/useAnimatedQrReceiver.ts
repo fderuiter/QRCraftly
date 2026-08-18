@@ -90,7 +90,7 @@ export interface UseAnimatedQrReceiverOptions {
  */
 export function useAnimatedQrReceiver({
   addToast,
-  handshakeRequired = false,
+  handshakeRequired = true,
   streamMode = 'text',
   autoDownload = true,
 }: UseAnimatedQrReceiverOptions = {}) {
@@ -155,9 +155,13 @@ export function useAnimatedQrReceiver({
 
             const activeHandshake = workerHandshake || handshakeRef.current;
 
+            if (handshakeRequired && !activeHandshake) {
+              throw new Error('Handshake metadata is required prior to data frame reassembly and file reconstruction.');
+            }
+
             if (activeHandshake) {
               // Compute and verify SHA-256
-              const hashBuffer = await crypto.subtle.digest('SHA-256', reassembled);
+              const hashBuffer = await crypto.subtle.digest('SHA-256', Uint8Array.from(reassembled));
               const hashArray = Array.from(new Uint8Array(hashBuffer));
               const actualSHA256 = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 
@@ -190,6 +194,13 @@ export function useAnimatedQrReceiver({
             setReceiverSuccess(false);
             setReassembledData(null);
             reassembledDataRef.current = null;
+            if (addToastRef.current) {
+              addToastRef.current({
+                type: 'error',
+                message: `Failed to compile binary content: ${err?.message || 'Verification or reassembly failed.'}`,
+                duration: 5000,
+              });
+            }
           } finally {
             setCompilationStatus(null);
             setIsVerifying(false);
@@ -294,9 +305,13 @@ export function useAnimatedQrReceiver({
       const data = reassembledDataRef.current || reassembledData;
       const hs = activeHandshake || handshakeRef.current;
 
+      if (handshakeRequired && !hs) {
+        throw new Error('Handshake metadata is required prior to data frame reassembly and file reconstruction.');
+      }
+
       if (data) {
         if (hs) {
-          const hashBuffer = await crypto.subtle.digest('SHA-256', data.buffer);
+          const hashBuffer = await crypto.subtle.digest('SHA-256', Uint8Array.from(data));
           const hashArray = Array.from(new Uint8Array(hashBuffer));
           const actualSHA256 = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 
@@ -345,17 +360,31 @@ export function useAnimatedQrReceiver({
     } catch (err: any) {
       setReceiverError(err?.message || 'Verification or reassembly failed.');
       setReceiverSuccess(false);
+      setReassembledData(null);
+      reassembledDataRef.current = null;
+      if (addToastRef.current) {
+        addToastRef.current({
+          type: 'error',
+          message: `Failed to compile binary content: ${err?.message || 'Verification or reassembly failed.'}`,
+          duration: 5000,
+        });
+      }
     } finally {
       setIsVerifying(false);
       setCompilationStatus(null);
     }
-  }, [reassembledData, initWorker]);
+  }, [reassembledData, initWorker, handshakeRequired]);
 
   // Frame processor
   const handleFrame = useCallback(async (decodedText: string) => {
     if (!decodedText || receiverSuccess || isVerifying) return;
     // A new handshake starts a new transfer and must be able to clear a prior error.
     if (receiverError && !decodedText.startsWith('H|')) return;
+
+    // Reject incoming data frames when no handshake frame has been scanned
+    if (decodedText.startsWith('F|') && handshakeRequired && !handshakeRef.current) {
+      return;
+    }
 
     // Synchronously track and discard duplicates before downstream lookahead or direct scheme check
     if (decodedText.startsWith('F|')) {

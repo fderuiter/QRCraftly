@@ -60,8 +60,12 @@ describe('useAnimatedQrReceiver Hook', () => {
     expect(result.current.isScanning).toBe(false);
   });
 
-  it('should process simulated normal data frames', async () => {
+  it('should process simulated normal data frames after handshake', async () => {
     const { result } = renderHook(() => useAnimatedQrReceiver());
+
+    await act(async () => {
+      await result.current.handleFrame('H|file.txt|6|text/plain|c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2');
+    });
 
     await act(async () => {
       await result.current.handleFrame('F|0|2|Zm9v');
@@ -69,6 +73,17 @@ describe('useAnimatedQrReceiver Hook', () => {
 
     expect(result.current.totalChunks).toBe(2);
     expect(result.current.chunks.has(0)).toBe(true);
+  });
+
+  it('should reject/ignore incoming data frames when no handshake frame is scanned', async () => {
+    const { result } = renderHook(() => useAnimatedQrReceiver());
+
+    await act(async () => {
+      await result.current.handleFrame('F|0|2|Zm9v');
+    });
+
+    expect(result.current.chunks.size).toBe(0);
+    expect(result.current.totalChunks).toBeNull();
   });
 
   it('should intercept dangerous schemes immediately', async () => {
@@ -81,8 +96,14 @@ describe('useAnimatedQrReceiver Hook', () => {
     expect(result.current.securityAlert).toContain('Dangerous protocol detected and blocked');
   });
 
-  it('should compile and reassemble files via background worker', async () => {
-    const { result } = renderHook(() => useAnimatedQrReceiver());
+  it('should compile and reassemble files via background worker with valid SHA-256 handshake', async () => {
+    const addToast = vi.fn();
+    const { result } = renderHook(() => useAnimatedQrReceiver({ addToast }));
+
+    // foobar SHA-256: c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2
+    await act(async () => {
+      await result.current.handleFrame('H|test.txt|6|text/plain|c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2');
+    });
 
     await act(async () => {
       await result.current.handleFrame('F|0|2|Zm9v');
@@ -97,7 +118,64 @@ describe('useAnimatedQrReceiver Hook', () => {
     });
 
     expect(result.current.receiverSuccess).toBe(true);
+    expect(result.current.receiverError).toBeNull();
     expect(global.URL.createObjectURL).toHaveBeenCalled();
+    expect(addToast).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'success',
+    }));
+  });
+
+  it('should abort download and trigger error toast notification when SHA-256 mismatches', async () => {
+    const addToast = vi.fn();
+    const { result } = renderHook(() => useAnimatedQrReceiver({ addToast }));
+
+    // Send handshake with wrong SHA-256 checksum
+    await act(async () => {
+      await result.current.handleFrame('H|corrupted.txt|6|text/plain|0000000000000000000000000000000000000000000000000000000000000000');
+    });
+
+    await act(async () => {
+      await result.current.handleFrame('F|0|2|Zm9v');
+    });
+
+    await act(async () => {
+      await result.current.handleFrame('F|1|2|YmFy');
+    });
+
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    });
+
+    expect(result.current.receiverSuccess).toBe(false);
+    expect(result.current.reassembledData).toBeNull();
+    expect(result.current.receiverError).toContain('Integrity validation failed! SHA-256 hash does not match handshake value.');
+    expect(global.URL.createObjectURL).not.toHaveBeenCalled();
+    expect(addToast).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'error',
+    }));
+  });
+
+  it('should abort download and trigger error toast notification when reconstructAndValidateFile is invoked without handshake when required', async () => {
+    const addToast = vi.fn();
+    const { result } = renderHook(() => useAnimatedQrReceiver({ addToast, handshakeRequired: true }));
+
+    const mockChunks = new Map<number, string>([[0, 'Zm9v']]);
+
+    await act(async () => {
+      await result.current.reconstructAndValidateFile(mockChunks, 1);
+    });
+
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    });
+
+    expect(result.current.receiverSuccess).toBe(false);
+    expect(result.current.reassembledData).toBeNull();
+    expect(result.current.receiverError).toContain('Handshake metadata is required prior to data frame reassembly and file reconstruction.');
+    expect(global.URL.createObjectURL).not.toHaveBeenCalled();
+    expect(addToast).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'error',
+    }));
   });
 
   it('should synchronously and atomically reset state and frame-tracking memory when a new file handshake with a different SHA-256 is detected', async () => {
@@ -171,6 +249,10 @@ describe('useAnimatedQrReceiver Hook', () => {
   it('should block split-payload attacks (e.g., java and script:) across frames immediately', async () => {
     const { result } = renderHook(() => useAnimatedQrReceiver());
 
+    await act(async () => {
+      await result.current.handleFrame('H|file1.txt|10|text/plain|sha111');
+    });
+
     // 'java' in base64 is 'amF2YQ=='
     await act(async () => {
       await result.current.handleFrame('F|0|2|amF2YQ==');
@@ -188,6 +270,10 @@ describe('useAnimatedQrReceiver Hook', () => {
   it('should not block legitimate QR codes containing standard data', async () => {
     const { result } = renderHook(() => useAnimatedQrReceiver());
 
+    await act(async () => {
+      await result.current.handleFrame('H|file1.txt|10|text/plain|sha111');
+    });
+
     // 'hello' in base64 is 'aGVsbG8='
     await act(async () => {
       await result.current.handleFrame('F|0|2|aGVsbG8=');
@@ -203,6 +289,10 @@ describe('useAnimatedQrReceiver Hook', () => {
 
   it('should reject transfers exceeding 5,000 chunks', async () => {
     const { result } = renderHook(() => useAnimatedQrReceiver());
+
+    await act(async () => {
+      await result.current.handleFrame('H|file1.txt|10000|text/plain|sha111');
+    });
 
     await act(async () => {
       await result.current.handleFrame('F|0|5001|Zm9v');
