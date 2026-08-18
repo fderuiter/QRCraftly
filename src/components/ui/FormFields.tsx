@@ -206,7 +206,7 @@ export const CheckboxField: React.FC<CheckboxFieldProps> = ({
       <input
         id={inputId}
         type="checkbox"
-        className="rounded border-slate-300 bg-white text-teal-700 dark:border-slate-600 dark:bg-slate-900 dark:text-teal-700"
+        className="rounded border-slate-600 bg-white text-teal-700 dark:border-slate-400 dark:bg-slate-900 dark:text-teal-700"
         aria-invalid={!!error}
         {...props}
         aria-describedby={describedBy}

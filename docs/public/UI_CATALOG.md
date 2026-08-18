@@ -20,10 +20,10 @@ These low-level, primitive UI elements are designed to be extremely customizable
 - **Alert** (`Alert.tsx` / `Alert.test.tsx`): Displays warning, error, or informational banners to the user with standard status states.
 - **Button** (`Button.tsx`): High-reusability button supporting multiple visual variants (primary, secondary, outline, danger, ghost), sizes, and loading states.
 - **Card** (`Card.tsx` / `Card.test.tsx`): Container box styled consistently with modern borders, background transitions, and padding rules.
-- **ColorInput** (`ColorInput.tsx` / `ColorInput.test.tsx`): A specialized, keyboard-accessible text and visual picker element for hex colors.
+- **ColorInput** (`ColorInput.tsx` / `ColorInput.test.tsx`): A specialized, keyboard-accessible text and visual picker element for hex colors with WCAG 2.1 SC 1.4.11 compliant hover states.
 - **FieldWrapper** (`FieldWrapper.tsx`): Form layout primitive that automatically renders labels, assistive descriptions, character counts, and error states.
 - **FormBlock** (`FormBlock.tsx` / `FormBlock.test.tsx`): Structural wrapper to organize form fields, titles, and action grids neatly.
-- **FormFields** (`FormFields.tsx`): Standard field grouping configurations.
+- **FormFields** (`FormFields.tsx`): Standard field grouping configurations with WCAG 2.1 SC 1.4.11 compliant border boundaries.
 - **JsonLdScript** (`JsonLdScript.tsx`): Secure utility component that safely injects structural SEO schema metadata.
 - **Modal** (`Modal.tsx` / `Modal.test.tsx`): Accessibility-compliant dialog component complete with focus traps, exit listeners, and smooth animations.
 - **PatternModule** (`PatternModule.tsx`): Visual sub-module used to configure and showcase QR pattern variants.
@@ -31,7 +31,7 @@ These low-level, primitive UI elements are designed to be extremely customizable
 - **SanitizedHtml** (`SanitizedHtml.tsx`): Safe, sanitized HTML injection system to avoid cross-site scripting (XSS) issues in dynamically parsed rich content.
 - **TextField** (`TextField.tsx`): Standard form text input primitive with full validation styles and focus rings.
 - **Toast** (`Toast.tsx` / `Toast.test.tsx`): Auto-dismissing alerts that slide into view to acknowledge user actions without interrupting their workflow, with a safe fallback mock context when running outside a provider (e.g., in unit tests).
-- **ToggleSwitch** (`ToggleSwitch.tsx` / `ToggleSwitch.test.tsx`): Accessible sliding checkbox switch used for toggle-only options (e.g., advanced modes or themes).
+- **ToggleSwitch** (`ToggleSwitch.tsx` / `ToggleSwitch.test.tsx`): Accessible sliding checkbox switch used for toggle-only options with 3:1 non-text contrast tracks in both active and inactive states.
 
 ---
 
