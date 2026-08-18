@@ -15,6 +15,7 @@ export interface MazeData {
   edges: MazeEdge[];
   start: MazeNode | null;
   end: MazeNode | null;
+  key: MazeNode | null;
   solution: MazeNode[];
 }
 
