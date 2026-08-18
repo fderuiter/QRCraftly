@@ -268,6 +268,11 @@ describe('File Transfer Receive Page & Pipeline', () => {
       // Verify callback was captured
       expect(scanSuccessCallback).toBeDefined();
 
+      // Scan handshake first
+      await act(async () => {
+        scanSuccessCallback!("H|test.txt|100|text/plain|hash123");
+      });
+
       // Scan unique frame index 0
       await act(async () => {
         scanSuccessCallback!("F|0|3|Y2h1bmsw");
@@ -301,6 +306,11 @@ describe('File Transfer Receive Page & Pipeline', () => {
         </ToastProvider>
       );
 
+      // Scan handshake first
+      await act(async () => {
+        scanSuccessCallback!("H|test.txt|100|text/plain|hash123");
+      });
+
       // Scan frame index 0
       await act(async () => {
         scanSuccessCallback!("F|0|3|Y2h1bmsw");
@@ -311,6 +321,11 @@ describe('File Transfer Receive Page & Pipeline', () => {
       const clearButton = screen.getByRole('button', { name: /clear transfer progress/i });
       await act(async () => {
         fireEvent.click(clearButton);
+      });
+
+      // Scan handshake again after reset
+      await act(async () => {
+        scanSuccessCallback!("H|test2.txt|100|text/plain|hash456");
       });
 
       // Scan frame index 0 again - should be processed since cache was cleared
@@ -328,6 +343,11 @@ describe('File Transfer Receive Page & Pipeline', () => {
           <Page />
         </ToastProvider>
       );
+
+      // Scan handshake first
+      await act(async () => {
+        scanSuccessCallback!("H|test.txt|100|text/plain|hash123");
+      });
 
       // Scan frame index 0
       await act(async () => {
@@ -351,6 +371,11 @@ describe('File Transfer Receive Page & Pipeline', () => {
         fireEvent.click(activateButton);
       });
 
+      // Scan handshake again for new session
+      await act(async () => {
+        scanSuccessCallback!("H|test2.txt|100|text/plain|hash456");
+      });
+
       // Scan frame index 0 again - should be processed because starting a new session resets tracking cache
       await act(async () => {
         scanSuccessCallback!("F|0|3|Y2h1bmsw");
@@ -368,6 +393,10 @@ describe('File Transfer Receive Page & Pipeline', () => {
       );
 
       expect(scanSuccessCallback).toBeDefined();
+
+      await act(async () => {
+        scanSuccessCallback!("H|test.txt|100000|text/plain|hash123");
+      });
 
       await act(async () => {
         scanSuccessCallback!("F|0|5001|Zm9v");
@@ -390,6 +419,10 @@ describe('File Transfer Receive Page & Pipeline', () => {
       );
 
       expect(scanSuccessCallback).toBeDefined();
+
+      await act(async () => {
+        scanSuccessCallback!("H|test.txt|100000|text/plain|hash123");
+      });
 
       await act(async () => {
         scanSuccessCallback!("F|0|250|Zm9v");
@@ -416,6 +449,10 @@ describe('File Transfer Receive Page & Pipeline', () => {
       );
 
       expect(scanSuccessCallback).toBeDefined();
+
+      await act(async () => {
+        scanSuccessCallback!("H|test.txt|10000|text/plain|hash123");
+      });
 
       await act(async () => {
         scanSuccessCallback!("F|0|150|Zm9v");

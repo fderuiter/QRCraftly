@@ -50,7 +50,7 @@ function FileTransferReceiveInner() {
     compilationStatus,
   } = useAnimatedQrReceiver({
     addToast,
-    handshakeRequired: false,
+    handshakeRequired: true,
     streamMode,
     autoDownload: false,
   });
@@ -66,6 +66,9 @@ function FileTransferReceiveInner() {
   const simulateOutOfOrder = () => {
     handleClear();
     const message = "Congratulations! Out-of-order packet reassembly and recovery is working flawlessly!";
+    const sha256 = 'c67d1359e2dbf94943e81f0e0d9edbc3614e6bc3ec2bec04f527ed4c3f845886';
+    handleFrame(`H|simulation.txt|${message.length}|text/plain|${sha256}`);
+
     const total = 10;
     const size = Math.ceil(message.length / total);
     const simulatedFrames: string[] = [];
@@ -78,7 +81,7 @@ function FileTransferReceiveInner() {
 
     // Sequence: 1-5 (indices 0-4), then 8-10 (indices 7-9), then 6-7 (indices 5-6)
     const scanOrder = [0, 1, 2, 3, 4, 7, 8, 9, 5, 6];
-    let delay = 0;
+    let delay = 100;
     scanOrder.forEach((idx) => {
       setTimeout(() => {
         handleFrame(simulatedFrames[idx]);

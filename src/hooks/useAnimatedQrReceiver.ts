@@ -86,7 +86,7 @@ export interface UseAnimatedQrReceiverOptions {
  */
 export function useAnimatedQrReceiver({
   addToast,
-  handshakeRequired = false,
+  handshakeRequired = true,
   streamMode = 'text',
   autoDownload = true,
 }: UseAnimatedQrReceiverOptions = {}) {
@@ -221,6 +221,10 @@ export function useAnimatedQrReceiver({
             setCompilationStatus('Finalizing download...');
             const reassembled = new Uint8Array(buffer);
 
+            if (handshakeRequired && !activeHandshake) {
+              throw new Error('Handshake metadata is required prior to data frame reassembly and file reconstruction.');
+            }
+
             if (activeHandshake) {
               // Compute and verify SHA-256
               const hashBuffer = await crypto.subtle.digest('SHA-256', reassembled.buffer);
@@ -238,7 +242,7 @@ export function useAnimatedQrReceiver({
               // Download
               triggerFileDownload(reassembled, activeHandshake.fileName, activeHandshake.mimeType);
             } else {
-              // Standard flow without handshake (e.g. receive page)
+              // Standard flow without handshake (e.g. receive page when handshake is not required)
               setReassembledData(reassembled);
               setReceiverSuccess(true);
               setReceiverError(null);
@@ -328,13 +332,18 @@ export function useAnimatedQrReceiver({
       setCompilationStatus(null);
       setIsVerifying(false);
     }
-  }, [addToast, initWorker, terminateWorker]);
+  }, [addToast, initWorker, terminateWorker, handshakeRequired]);
 
   // Frame processor
   const handleFrame = useCallback(async (decodedText: string) => {
     if (!decodedText || receiverSuccess || isVerifying) return;
     // A new handshake starts a new transfer and must be able to clear a prior error.
     if (receiverError && !decodedText.startsWith('H|')) return;
+
+    // Reject incoming data frames when no handshake frame has been scanned
+    if (decodedText.startsWith('F|') && handshakeRequired && !handshakeRef.current) {
+      return;
+    }
 
     // Synchronously track and discard duplicates before downstream lookahead or direct scheme check
     if (decodedText.startsWith('F|')) {
