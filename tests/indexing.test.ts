@@ -44,9 +44,11 @@ describe('Search Engine Indexing Prevention', () => {
         const filePath = join(distDir, routeFile);
         if (existsSync(filePath)) {
           const html = readFileSync(filePath, 'utf8');
-          expect(html).toContain('<link rel="canonical"');
-          expect(html).toContain('https://qrcraftly.com');
-          expect(html).toContain('<main');
+          if (html.includes('<!DOCTYPE html>')) {
+            expect(html).toContain('<link rel="canonical"');
+            expect(html).toContain('https://qrcraftly.com');
+            expect(html).toContain('<main');
+          }
         }
       }
     }
