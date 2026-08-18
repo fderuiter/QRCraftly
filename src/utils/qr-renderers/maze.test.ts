@@ -96,7 +96,9 @@ describe('generateMaze & renderMaze', () => {
     expect(mazeData.edges.length).toBeGreaterThan(0);
     expect(mazeData.start).not.toBeNull();
     expect(mazeData.end).not.toBeNull();
+    expect(mazeData.key).not.toBeNull();
     expect(mazeData.solution.length).toBeGreaterThan(1);
+    expect(mazeData.key).toEqual(mazeData.solution[Math.floor(mazeData.solution.length / 2)]);
 
     // Verify coordinates are within range [-4, size + 3]
     for (const node of mazeData.nodes) {
@@ -223,13 +225,14 @@ describe('generateMaze & renderMaze', () => {
       expect(ctx.stroke).toHaveBeenCalledTimes(1);
     });
 
-    it('handles rendering with null start or end nodes', () => {
+    it('handles rendering with null start or end or key nodes', () => {
       const ctx = createMockCtx();
       const mockMazeData = {
         nodes: [],
         edges: [],
         start: null,
         end: null,
+        key: null,
         solution: [],
       };
       const size = 21;
@@ -237,8 +240,60 @@ describe('generateMaze & renderMaze', () => {
 
       renderMaze(ctx, modules, baseConfig, 0, 0, 10, size, mockMazeData);
 
-      // Should not call arc since start/end are null
+      // Should not call arc since start/end/key are null
       expect(ctx.arc).not.toHaveBeenCalled();
+    });
+
+    it('renders gold concentric circle marker at mathematical midpoint key position', () => {
+      const ctx = createMockCtx();
+      const size = 21;
+      const modules = createMockModules(size);
+      const mockMazeData = {
+        nodes: [],
+        edges: [],
+        start: null,
+        end: null,
+        key: { r: 5, c: 10 },
+        solution: [{ r: 0, c: 0 }, { r: 5, c: 10 }, { r: 10, c: 10 }],
+      };
+
+      const cellSize = 12;
+      const drawX = 0;
+      const drawY = 0;
+
+      renderMaze(ctx, modules, baseConfig, drawX, drawY, cellSize, size, mockMazeData);
+
+      // Calculate expected coordinates for key at (r: 5, c: 10)
+      const expectedKx = drawX + (10 + 0.5) * cellSize; // 126
+      const expectedKy = drawY + (5 + 0.5) * cellSize;  // 66
+
+      // Outer ring: radius = 12 * 0.35 = 4.2, fillStyle = 'rgba(234, 179, 8, 0.3)'
+      // Inner dot: radius = 12 * 0.18 = 2.16, fillStyle = '#eab308'
+      expect(ctx.arc).toHaveBeenCalledWith(expectedKx, expectedKy, cellSize * 0.35, 0, 2 * Math.PI);
+      expect(ctx.arc).toHaveBeenCalledWith(expectedKx, expectedKy, cellSize * 0.18, 0, 2 * Math.PI);
+    });
+
+    it('scales key marker proportionally when cell size changes', () => {
+      const ctx = createMockCtx();
+      const size = 21;
+      const modules = createMockModules(size);
+      const mockMazeData = {
+        nodes: [],
+        edges: [],
+        start: null,
+        end: null,
+        key: { r: 2, c: 3 },
+        solution: [],
+      };
+
+      const cellSizeLarge = 20;
+      renderMaze(ctx, modules, baseConfig, 0, 0, cellSizeLarge, size, mockMazeData);
+
+      const expectedKx = (3 + 0.5) * cellSizeLarge; // 70
+      const expectedKy = (2 + 0.5) * cellSizeLarge; // 50
+
+      expect(ctx.arc).toHaveBeenCalledWith(expectedKx, expectedKy, cellSizeLarge * 0.35, 0, 2 * Math.PI);
+      expect(ctx.arc).toHaveBeenCalledWith(expectedKx, expectedKy, cellSizeLarge * 0.18, 0, 2 * Math.PI);
     });
 
     it('covers all branch conditions in isFinderEyeZone', () => {

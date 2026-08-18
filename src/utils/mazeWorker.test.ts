@@ -86,6 +86,7 @@ describe('Maze Worker & Contract Validation', () => {
           edges: [],
           start: null,
           end: null,
+          key: null,
           solution: [],
         },
       };

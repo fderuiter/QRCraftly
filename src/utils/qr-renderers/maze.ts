@@ -16,6 +16,7 @@ export interface MazeData {
   edges: MazeEdge[];
   start: MazeNode | null;
   end: MazeNode | null;
+  key: MazeNode | null;
   solution: MazeNode[];
 }
 
@@ -282,11 +283,14 @@ export function generateMaze(modules: QRModules, config: QRConfig, size: number)
     }
   }
 
+  const keyNode: MazeNode | null = solution.length > 0 ? solution[Math.floor(solution.length / 2)] : null;
+
   const result: MazeData = {
     nodes,
     edges: mazeEdges,
     start: startNode,
     end: endNode,
+    key: keyNode,
     solution,
   };
 
@@ -350,7 +354,7 @@ export function renderMaze(
     ctx.stroke();
   }
 
-  // 3. Draw Start and End Markers
+  // 3. Draw Start, Key, and End Markers
   if (maze.start) {
     const sx = drawX + (maze.start.c + 0.5) * cellSize;
     const sy = drawY + (maze.start.r + 0.5) * cellSize;
@@ -364,6 +368,22 @@ export function renderMaze(
     ctx.beginPath();
     ctx.arc(sx, sy, cellSize * 0.18, 0, 2 * Math.PI);
     ctx.fillStyle = '#10b981'; // solid green inner dot
+    ctx.fill();
+  }
+
+  if (maze.key) {
+    const kx = drawX + (maze.key.c + 0.5) * cellSize;
+    const ky = drawY + (maze.key.r + 0.5) * cellSize;
+
+    // Gold key checkpoint dot
+    ctx.beginPath();
+    ctx.arc(kx, ky, cellSize * 0.35, 0, 2 * Math.PI);
+    ctx.fillStyle = 'rgba(234, 179, 8, 0.3)'; // translucent gold outer ring
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(kx, ky, cellSize * 0.18, 0, 2 * Math.PI);
+    ctx.fillStyle = '#eab308'; // solid gold inner dot
     ctx.fill();
   }
 
