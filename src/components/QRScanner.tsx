@@ -30,7 +30,6 @@ export interface QRScannerProps {
 export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, continuous = false }) => {
   const {
     permissionState,
-    stream,
     isInitializing,
     startStream,
     stopStream,

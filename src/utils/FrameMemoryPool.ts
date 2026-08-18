@@ -90,6 +90,20 @@ export class PreallocatedFramePool {
   }
 
   /**
+   * Deletes a frame mapping by index.
+   */
+  public delete(index: number): boolean {
+    return this.frameMap.delete(index);
+  }
+
+  /**
+   * Releases a frame mapping by index.
+   */
+  public releaseFrame(index: number): boolean {
+    return this.frameMap.delete(index);
+  }
+
+  /**
    * Clears frame mappings while keeping the allocated underlying memory pool intact for reuse.
    */
   public clear(): void {

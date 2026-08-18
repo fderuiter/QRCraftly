@@ -1,5 +1,3 @@
-import { SafeUrlPipeline } from "../../../src/utils/url";
-
 export interface RedirectRecord {
   id: string;
   redirect_url: string;
@@ -199,6 +197,17 @@ export class MockD1Database implements D1Database {
               const currentScans = typeof record.scans === "number" ? record.scans : (parseInt(record.scans, 10) || 0);
               record.scans = currentScans + 1;
               store.set(id, record);
+              if ((globalThis as any).__mockKV && !kvFallback) {
+                (globalThis as any).__mockKV.set(`redirect:${record.id}`, JSON.stringify({
+                  id: record.id,
+                  redirectUrl: record.redirect_url,
+                  adminKey: record.admin_key,
+                  scans: record.scans,
+                  createdAt: record.created_at,
+                  iosUrl: record.ios_url,
+                  androidUrl: record.android_url
+                }));
+              }
             }
             return { success: true };
           }
