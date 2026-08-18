@@ -83,6 +83,12 @@ class DSU {
     }
   }
 
+  add(x: string): void {
+    if (!this.parent.has(x)) {
+      this.parent.set(x, x);
+    }
+  }
+
   find(x: string): string {
     const px = this.parent.get(x)!;
     if (px === x) return x;
