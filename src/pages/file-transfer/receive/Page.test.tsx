@@ -596,6 +596,11 @@ describe('File Transfer Receive Page & Pipeline', () => {
         fireEvent.change(fileInput, { target: { files: [validFile] } });
       });
 
+      // Scan handshake first
+      await act(async () => {
+        scanSuccessCallback!('H|test.txt|100|text/plain|sha256');
+      });
+
       // Scan frame 0 and frame 1
       await act(async () => {
         scanSuccessCallback!('F|0|2|Zm9v');
