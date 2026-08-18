@@ -162,6 +162,23 @@ export const onRequestPost = async (context: {
       .bind(id, redirectUrl, adminKey, createdAt, cleanIosUrl || null, cleanAndroidUrl || null)
       .run();
 
+    if (context.env?.REDIRECTS_KV) {
+      const kvPayload = {
+        id,
+        redirectUrl,
+        adminKey,
+        scans: 0,
+        createdAt,
+        iosUrl: cleanIosUrl,
+        androidUrl: cleanAndroidUrl,
+      };
+      try {
+        await context.env.REDIRECTS_KV.put(`redirect:${id}`, JSON.stringify(kvPayload));
+      } catch (err) {
+        console.error("KV cache warming failed on registration:", err);
+      }
+    }
+
     if (!isRealD1) {
       console.log(`[Dev Redirector] Registered local mock dynamic redirect:`, {
         id,

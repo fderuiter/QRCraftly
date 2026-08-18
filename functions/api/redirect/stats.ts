@@ -63,7 +63,7 @@ export const onRequestGet = async (context: {
       let listComplete = false;
 
       while (!listComplete) {
-        const listResult = await kv.list({ prefix, cursor });
+        const listResult: any = await kv.list({ prefix, cursor });
         const keys = listResult.keys || [];
 
         for (const k of keys) {
