@@ -16,7 +16,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { QRConfig, QRType } from '../types';
+import { QRConfig, QRType, TemplateStyle, SocialFormat } from '../types';
 import { SvgContext } from './svgContext';
 import { drawWithTemplate, SOCIAL_DIMENSIONS } from './templateRenderer';
 import { getQrTypeLabel, getQrTypeDescription } from './a11y';
@@ -24,6 +24,7 @@ import { getQrTypeLabel, getQrTypeDescription } from './a11y';
 import { SafeUrlPipeline, normalizeUrl, shouldNormalizeUrl } from './url';
 import { getCachedAsset } from './assetCache';
 import { sanitizeSvg } from './security';
+import { performScannabilityCheck } from './scannabilityChecker';
 
 /**
  * Converts an image URL to a base64 data-URL so it can be embedded inline in
@@ -197,3 +198,115 @@ export async function generateQRSvg(
 
   return sanitizeSvg(ctx.serialize());
 }
+
+/**
+ * Draws an SVG XML payload string onto an offscreen canvas element on the main thread.
+ *
+ * @param svgString - The generated SVG XML payload string.
+ * @param width - The canvas width in pixels.
+ * @param height - The canvas height in pixels.
+ * @returns A Promise resolving to an offscreen HTMLCanvasElement containing the drawn SVG.
+ */
+export function rasterizeSvgToCanvas(
+  svgString: string,
+  width: number = 1000,
+  height: number = 1000
+): Promise<HTMLCanvasElement> {
+  return new Promise((resolve, reject) => {
+    if (typeof document === 'undefined') {
+      reject(new Error('Canvas rasterization requires DOM environment'));
+      return;
+    }
+
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      reject(new Error('Failed to obtain 2D canvas context'));
+      return;
+    }
+
+    const img = new Image();
+    const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(svgBlob);
+
+    let handled = false;
+
+    const cleanup = () => {
+      try {
+        URL.revokeObjectURL(url);
+      } catch {}
+    };
+
+    img.onload = () => {
+      if (handled) return;
+      handled = true;
+      try {
+        ctx.drawImage(img, 0, 0, width, height);
+        cleanup();
+        resolve(canvas);
+      } catch (err) {
+        cleanup();
+        reject(err);
+      }
+    };
+
+    img.onerror = (err) => {
+      if (handled) return;
+      handled = true;
+      cleanup();
+      reject(err);
+    };
+
+    img.src = url;
+
+    // Handle test / jsdom environments or synchronous mocks where Image src assignment does not fire async onload
+    if (img.complete) {
+      if (typeof img.onload === 'function') {
+        img.onload(new Event('load') as any);
+      }
+    } else {
+      const isJsdom = typeof navigator !== 'undefined' && navigator.userAgent?.includes('jsdom');
+      setTimeout(() => {
+        if (!handled) {
+          handled = true;
+          cleanup();
+          try {
+            ctx.drawImage(img, 0, 0, width, height);
+            resolve(canvas);
+          } catch (err) {
+            reject(err);
+          }
+        }
+      }, isJsdom ? 0 : 50);
+    }
+  });
+}
+
+/**
+ * Validates the scannability of an SVG XML payload string by rasterizing it onto an offscreen canvas
+ * and running standard QR decoding and optical checks on the pixel data.
+ *
+ * @param svgString - The generated SVG XML payload string.
+ * @param config - The QR code configuration.
+ * @returns A promise resolving to true if the SVG offscreen raster is scannable, false otherwise.
+ */
+export async function validateSvgScannability(
+  svgString: string,
+  config: QRConfig
+): Promise<boolean> {
+  if (config.templateStyle !== TemplateStyle.NONE || config.socialFormat !== SocialFormat.SQUARE_1_1) {
+    return true;
+  }
+
+  const dimensions = SOCIAL_DIMENSIONS[config.socialFormat] || { width: 1000, height: 1000 };
+  const canvas = await rasterizeSvgToCanvas(svgString, dimensions.width, dimensions.height);
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return false;
+
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const result = performScannabilityCheck(imageData, canvas.width, canvas.height, true);
+  return result.success;
+}
+

@@ -18,7 +18,7 @@
 
 import { RefObject, useCallback } from 'react';
 import { QRConfig, TemplateStyle, SocialFormat } from '../types';
-import { generateQRSvg } from '../utils/svgExport';
+import { generateQRSvg, validateSvgScannability } from '../utils/svgExport';
 import { useCapabilities } from './useCapabilities';
 import { performScannabilityCheck } from '../utils/scannabilityChecker';
 
@@ -261,13 +261,10 @@ export function useQRDownload(
   /**
    * Generates a vector SVG file from the current QR configuration and triggers
    * a download. The SVG embeds logos as inline base64 data-URLs for portability.
+   * Before saving, the generated SVG XML is rendered to an offscreen canvas and
+   * verified for scannability.
    */
   const handleSaveSvg = useCallback(async (): Promise<ExportStatus> => {
-    const canvas = qrRef.current?.querySelector('canvas');
-    if (canvas && !validateScannability(canvas)) {
-      return { success: false, format: 'svg', error: new Error('SCAN_VALIDATION_FAILED') };
-    }
-
     try {
       let logoOmitted = false;
       const svgString = await generateQRSvg(config, {
@@ -275,6 +272,12 @@ export function useQRDownload(
           logoOmitted = true;
         },
       });
+
+      const isScannable = await validateSvgScannability(svgString, config);
+      if (!isScannable) {
+        return { success: false, format: 'svg', error: new Error('SCAN_VALIDATION_FAILED') };
+      }
+
       const blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -289,7 +292,7 @@ export function useQRDownload(
       console.warn('SVG export failed:', err);
       return { success: false, format: 'svg', error: err };
     }
-  }, [config, getFilename, validateScannability, qrRef]);
+  }, [config, getFilename]);
 
   return { downloadToDevice, handleSaveAs, handleSaveSvg, handleShare, handleCopy };
 }
