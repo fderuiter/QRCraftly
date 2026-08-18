@@ -100,7 +100,6 @@ describe('useAnimatedQrReceiver Hook', () => {
     expect(global.URL.createObjectURL).toHaveBeenCalled();
   });
 
-<<<<<<< HEAD
   it('should synchronously and atomically reset state and frame-tracking memory when a new file handshake with a different SHA-256 is detected', async () => {
     const { result } = renderHook(() => useAnimatedQrReceiver());
 
