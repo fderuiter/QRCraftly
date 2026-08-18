@@ -273,7 +273,7 @@ export class AdaptiveFrameScheduler {
 
       // Maintain dynamic latency history
       const updatedHistory = [...this.latencyHistory, duration];
-      if (updatedHistory.length > 3) {
+      if (updatedHistory.length > 5) {
         updatedHistory.shift();
       }
       this.latencyHistory = updatedHistory;
@@ -287,17 +287,29 @@ export class AdaptiveFrameScheduler {
         this.options.onScanFail?.(error || undefined);
       }
 
-      // Dynamic Throttling / Latency Scaling (Requirement 1 & Acceptance Criteria)
-      const avgDuration = updatedHistory.reduce((a, b) => a + b, 0) / updatedHistory.length;
-      const latencyMetric = Math.max(duration, avgDuration);
+      // Compute 5-frame median latency (Requirement 1)
+      const sorted = [...updatedHistory].sort((a, b) => a - b);
+      const mid = Math.floor(sorted.length / 2);
+      const medianLatency =
+        sorted.length % 2 === 0
+          ? (sorted[mid - 1] + sorted[mid]) / 2
+          : sorted[mid];
+
       let nextDelay = this.samplingDelay;
 
-      if (latencyMetric > 100) {
-        // Scale back capture frequency when latency exceeds 100ms
-        nextDelay = Math.min(this.maxSamplingDelay, Math.max(this.samplingDelay + 50, latencyMetric * 1.5));
-      } else if (latencyMetric < 40) {
-        // Scale up: decrease sampling delay (faster capture rate)
-        nextDelay = Math.max(this.minSamplingDelay, this.samplingDelay - 10);
+      if (medianLatency > 100) {
+        // Scale back capture frequency when median latency exceeds 100ms
+        nextDelay = Math.min(
+          this.maxSamplingDelay,
+          Math.max(this.samplingDelay + 50, medianLatency * 1.5)
+        );
+      } else if (medianLatency < 40) {
+        // Recover capture frequency using proportional decay scaling towards baseline (~33ms) (Requirement 2)
+        const baselineDelay = 33;
+        const targetDelay = Math.max(this.minSamplingDelay, baselineDelay);
+        const excess = this.samplingDelay - targetDelay;
+        const step = Math.max(10, Math.round(excess * 0.5));
+        nextDelay = Math.max(this.minSamplingDelay, this.samplingDelay - step);
       }
 
       this.samplingDelay = nextDelay;
