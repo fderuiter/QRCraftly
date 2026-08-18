@@ -42,3 +42,4 @@ jules/*
 .pnpm-bin/
 .pnpm-store/
 quota-report.md
+.lighthouseci/

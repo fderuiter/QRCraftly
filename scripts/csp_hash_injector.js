@@ -215,7 +215,7 @@ export function run() {
   console.log(`[CSP Hash Injector] Found ${htmlFiles.length} HTML files.`);
   
   // Base CSP string to parse
-  const baseCspPattern = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';";
+  const baseCspPattern = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';";
   
   const baseCsp = updateCsp(baseCspPattern, []);
   const routeCspMap = new Map();

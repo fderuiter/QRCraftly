@@ -112,7 +112,7 @@ export default function HeadDefault() {
         - style-src: Removed 'unsafe-inline' by refactoring font loading and dynamic preview styles.
         - object-src 'none': Prevents Flash/Java applets.
       */}
-      <meta httpEquiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';" />
+      <meta httpEquiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';" />
 
       {/*
         Note: 'viewport' and 'description' are handled by Vike/Config to avoid duplicates.
