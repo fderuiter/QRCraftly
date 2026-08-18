@@ -49,22 +49,25 @@ self.onmessage = async (e: MessageEvent<unknown>) => {
     let imageData: { data: Uint8ClampedArray; width: number; height: number };
 
     if (imageBitmap) {
-      if (typeof OffscreenCanvas !== 'undefined') {
-        if (!cachedCanvas || cachedCanvas.width !== width || cachedCanvas.height !== height) {
-          cachedCanvas = new OffscreenCanvas(width, height);
-          cachedCtx = cachedCanvas.getContext('2d');
+      try {
+        if (typeof OffscreenCanvas !== 'undefined') {
+          if (!cachedCanvas || cachedCanvas.width !== width || cachedCanvas.height !== height) {
+            cachedCanvas = new OffscreenCanvas(width, height);
+            cachedCtx = cachedCanvas.getContext('2d');
+          }
+          const ctx = cachedCtx;
+          if (!ctx) {
+            throw new Error('Failed to get 2d context on OffscreenCanvas');
+          }
+          ctx.clearRect(0, 0, width, height);
+          ctx.drawImage(imageBitmap, 0, 0);
+          const extracted = ctx.getImageData(0, 0, width, height);
+          imageData = { data: extracted.data, width, height };
+        } else {
+          throw new Error('OffscreenCanvas is not supported in this environment');
         }
-        const ctx = cachedCtx;
-        if (!ctx) {
-          throw new Error('Failed to get 2d context on OffscreenCanvas');
-        }
-        ctx.clearRect(0, 0, width, height);
-        ctx.drawImage(imageBitmap, 0, 0);
-        const extracted = ctx.getImageData(0, 0, width, height);
-        imageData = { data: extracted.data, width, height };
+      } finally {
         imageBitmap.close();
-      } else {
-        throw new Error('OffscreenCanvas is not supported in this environment');
       }
     } else if (reqImageData) {
       imageData = reqImageData as any;
