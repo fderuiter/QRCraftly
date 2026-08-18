@@ -415,6 +415,10 @@ export class FileFrameProvider implements FrameProvider {
       const ctx = canvas.getContext('2d');
       
       const cleanUp = () => {
+        video.onloadedmetadata = null;
+        video.onseeked = null;
+        video.onerror = null;
+        sharedBufferPool.clear();
         video.pause();
         video.removeAttribute('src');
         video.load();
