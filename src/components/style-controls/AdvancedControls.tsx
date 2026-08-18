@@ -116,6 +116,13 @@ export const AdvancedControls: React.FC<AdvancedControlsProps> = ({ config, onCh
 
             {config.isMazeEnabled && (
               <div className="space-y-4 pl-12">
+                <ToggleSwitch
+                  id="is-maze-bridges-enabled"
+                  label="Finder Pattern Bridges"
+                  checked={config.isMazeBridgesEnabled !== false}
+                  onChange={(checked) => onChange({ isMazeBridgesEnabled: checked })}
+                />
+
                 <ColorInput
                   id="maze-color"
                   label="Maze Path Color"

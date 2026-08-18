@@ -16,7 +16,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import React, { useEffect, useRef, useCallback, useState } from 'react';
+import React, { useEffect, useRef, useCallback, useState, useMemo } from 'react';
 import { QRConfig, SocialFormat, TemplateStyle, QRModules, QRType } from '../types';
 import { drawQR, drawQRInternal } from '../utils/qrRenderer';
 import { drawWithTemplate, SOCIAL_DIMENSIONS } from '../utils/templateRenderer';
@@ -24,6 +24,7 @@ import { useImage } from '../hooks/useImage';
 import { ValidationEngine } from '../engine/ValidationEngine';
 import { Alert } from './ui/Alert';
 import { normalizeUrl, shouldNormalizeUrl } from '../utils/url';
+import { useOptionalQRStore } from '../context/QRContext';
 import {
   isMazeWorkerRequest,
   isMazeWorkerResponse,
@@ -97,14 +98,48 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
     }
   };
 
+  const [fallbackActive, setFallbackActive] = useState(false);
+
+  const activeConfig = useMemo(() => {
+    if (fallbackActive) {
+      return { ...config, isMazeBridgesEnabled: false };
+    }
+    return config;
+  }, [config, fallbackActive]);
+
+  useEffect(() => {
+    setFallbackActive(false);
+  }, [
+    config.value,
+    config.style,
+    config.fgColor,
+    config.bgColor,
+    config.eyeColor,
+    config.errorCorrectionLevel,
+    config.isMazeEnabled,
+    config.isMazeBridgesEnabled,
+  ]);
+
+  const store = useOptionalQRStore();
+
+  useEffect(() => {
+    if (!store) return;
+    const unregister = store.registerSignal('scannability-fail', () => {
+      setFallbackActive(true);
+    });
+    return () => {
+      unregister();
+    };
+  }, [store]);
+
   // Pre-load images to avoid async rendering and flickering
-  const logoImg = useImage(config.logoUrl);
-  const borderLogoImg = useImage(config.isBorderEnabled ? config.borderLogoUrl : null);
+  const logoImg = useImage(activeConfig.logoUrl);
+  const borderLogoImg = useImage(activeConfig.isBorderEnabled ? activeConfig.borderLogoUrl : null);
 
   // Animation states and refs to ensure we can read latest visual styles without rebuilding/restarting loop
   const cachedFramesRef = useRef<{ value: string; modules: any }[]>([]);
   const isAnimatingRef = useRef(activeIsAnimating);
-  const configRef = useRef(config);
+  const configRef = useRef(activeConfig);
   const logoImgRef = useRef(logoImg);
   const borderLogoImgRef = useRef(borderLogoImg);
 
@@ -116,7 +151,7 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
   const sizeRef = useRef(size);
 
   useEffect(() => {
-    configRef.current = config;
+    configRef.current = activeConfig;
     logoImgRef.current = logoImg;
     borderLogoImgRef.current = borderLogoImg;
     onRenderedRef.current = onRendered;
@@ -343,7 +378,7 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
   }, [initMazeWorker]);
 
   const requestMazeCalculation = useCallback((modules: QRModules) => {
-    if (!config.isMazeEnabled) {
+    if (!activeConfig.isMazeEnabled) {
       setComputedMazeData(null);
       return;
     }
@@ -363,7 +398,7 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
       const requestPayload = {
         size,
         matrix,
-        config,
+        config: activeConfig,
         sequenceId: currentSeqId,
       };
 
@@ -381,7 +416,7 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
         const runner = () => {
           if (currentSeqId !== mazeSequenceIdRef.current) return;
           try {
-            const mazeData = module.generateMaze(modules, config, size);
+            const mazeData = module.generateMaze(modules, activeConfig, size);
             setComputedMazeData(mazeData);
           } catch (e) {
             console.warn("Main thread fallback maze generation failed:", e);
@@ -395,7 +430,7 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
         }
       });
     }
-  }, [config]);
+  }, [activeConfig]);
 
   const clearCanvasAndResize = useCallback(() => {
     const canvas = localCanvasRef.current;
@@ -576,7 +611,7 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
         setTimeout(runVirtualRender, 50);
       }
     }
-  }, []);
+  }, [requestMazeCalculation]);
 
   const requestMatrixCalculation = useCallback(() => {
     const currentConfig = configRef.current;
@@ -739,10 +774,11 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
     config.borderLogoPosition,
     config.socialFormat,
     config.templateStyle,
-    config.isMazeEnabled,
-    config.mazeColor,
-    config.mazePathWidth,
-    config.showMazeSolution,
+    activeConfig.isMazeEnabled,
+    activeConfig.isMazeBridgesEnabled,
+    activeConfig.mazeColor,
+    activeConfig.mazePathWidth,
+    activeConfig.showMazeSolution,
     computedMazeData,
     logoImg,
     borderLogoImg,

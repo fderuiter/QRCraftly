@@ -23,14 +23,6 @@ import Page from './+Page';
 
 describe('Destroy the QR Code! Arcade Page', () => {
   beforeEach(() => {
-    // Stub requestAnimationFrame
-    vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {
-      return setTimeout(() => cb(Date.now()), 16);
-    });
-    vi.stubGlobal('cancelAnimationFrame', (id: number) => {
-      clearTimeout(id);
-    });
-
     // Mock HTMLCanvasElement.prototype.getContext
     vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({
       fillStyle: '',

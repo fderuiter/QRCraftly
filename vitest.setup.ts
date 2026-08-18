@@ -458,6 +458,27 @@ if (typeof window !== 'undefined') {
   (window as any).Worker = MockWorker as any;
 }
 
+if (typeof globalThis.requestAnimationFrame === 'undefined') {
+  globalThis.requestAnimationFrame = (callback: (time: number) => void) => {
+    return setTimeout(() => callback(Date.now()), 16) as any;
+  };
+}
+
+if (typeof globalThis.cancelAnimationFrame === 'undefined') {
+  globalThis.cancelAnimationFrame = (id: any) => {
+    clearTimeout(id);
+  };
+}
+
+if (typeof window !== 'undefined') {
+  if (typeof (window as any).requestAnimationFrame === 'undefined') {
+    (window as any).requestAnimationFrame = globalThis.requestAnimationFrame;
+  }
+  if (typeof (window as any).cancelAnimationFrame === 'undefined') {
+    (window as any).cancelAnimationFrame = globalThis.cancelAnimationFrame;
+  }
+}
+
 globalThis.mockWorkerControl = {
   setInterceptor: (fn: ((message: any, worker: any) => void) | null) => {
     mockConfig.interceptor = fn;

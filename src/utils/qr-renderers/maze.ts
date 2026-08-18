@@ -36,6 +36,23 @@ export function isFinderEyeZone(r: number, c: number, size: number): boolean {
 }
 
 /**
+ * Checks if a grid coordinate is part of a single-module bridge corridor
+ * routing directly across the finder pattern safety zone.
+ */
+export function isBridgeCell(r: number, c: number, size: number): boolean {
+  // TL Bridge Corridor: column 3, rows 6, 7, 8
+  if (c === 3 && r >= 6 && r <= 8) return true;
+
+  // TR Bridge Corridor: column size - 4, rows 6, 7, 8
+  if (c === size - 4 && r >= 6 && r <= 8) return true;
+
+  // BL Bridge Corridor: row size - 4, columns 6, 7, 8
+  if (r === size - 4 && c >= 6 && c <= 8) return true;
+
+  return false;
+}
+
+/**
  * Deterministic seed-based pseudo-random number generator (Mulberry32).
  * Ensures that the generated maze is stable for a given QR code payload.
  */
@@ -66,8 +83,7 @@ class DSU {
   }
 
   find(x: string): string {
-    const px = this.parent.get(x);
-    if (!px) return x;
+    const px = this.parent.get(x)!;
     if (px === x) return x;
     const root = this.find(px);
     this.parent.set(x, root);
@@ -89,8 +105,8 @@ class DSU {
  * Generates the maze structure deterministically based on configuration.
  */
 export function generateMaze(modules: QRModules, config: QRConfig, size: number): MazeData {
-  const cacheKey = `${config.value}_${config.errorCorrectionLevel}_${size}_${config.logoUrl}_${config.logoSize}_${config.logoPaddingStyle}_${config.logoPadding}`;
-  const isTest = typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 'test';
+  const cacheKey = `${config.value}_${config.errorCorrectionLevel}_${size}_${config.logoUrl}_${config.logoSize}_${config.logoPaddingStyle}_${config.logoPadding}_${config.isMazeBridgesEnabled !== false}`;
+  const isTest = process.env.NODE_ENV === 'test';
   if (!isTest && mazeCache.has(cacheKey)) {
     return mazeCache.get(cacheKey)!;
   }
@@ -102,18 +118,23 @@ export function generateMaze(modules: QRModules, config: QRConfig, size: number)
   const nodes: MazeNode[] = [];
   const nodeMap = new Map<string, MazeNode>();
 
+  const bridgesEnabled = config.isMazeBridgesEnabled !== false;
+
   // Extract all traversable cells (light modules + 4-module quiet zone margin floor)
   // Grid coordinates range from -4 to size + 3
   for (let r = -4; r < size + 4; r++) {
     for (let c = -4; c < size + 4; c++) {
+      const isBridge = !!(bridgesEnabled && isBridgeCell(r, c, size));
       if (isFinderEyeZone(r, c, size)) {
-        continue;
+        if (!isBridge) {
+          continue;
+        }
       }
       if (r >= 0 && r < size && c >= 0 && c < size) {
         if (isCoveredByLogo(r, c)) {
           continue;
         }
-        if (modules.get(r, c) === true) {
+        if (modules.get(r, c) === true && !isBridge) {
           continue;
         }
       }
@@ -161,11 +182,12 @@ export function generateMaze(modules: QRModules, config: QRConfig, size: number)
 
   // Find adjacency list for BFS
   const adj = new Map<string, MazeNode[]>();
+  for (const node of nodes) {
+    adj.set(`${node.r},${node.c}`, []);
+  }
   for (const edge of mazeEdges) {
     const uKey = `${edge.u.r},${edge.u.c}`;
     const vKey = `${edge.v.r},${edge.v.c}`;
-    if (!adj.has(uKey)) adj.set(uKey, []);
-    if (!adj.has(vKey)) adj.set(vKey, []);
     adj.get(uKey)!.push(edge.v);
     adj.get(vKey)!.push(edge.u);
   }
@@ -177,8 +199,10 @@ export function generateMaze(modules: QRModules, config: QRConfig, size: number)
 
   if (nodes.length > 0) {
     const sortedByDist = [...nodes].sort((a, b) => a.r + a.c - (b.r + b.c));
+    let foundSolution = false;
 
     for (const sCand of sortedByDist) {
+      if (foundSolution) break;
       const sKey = `${sCand.r},${sCand.c}`;
       const sRoot = dsu.find(sKey);
 
@@ -208,7 +232,6 @@ export function generateMaze(modules: QRModules, config: QRConfig, size: number)
         fScore.set(sKey, h(sCand, bestEnd));
 
         const parentMap = new Map<string, MazeNode>();
-        let found = false;
 
         const endKey = `${bestEnd.r},${bestEnd.c}`;
         while (openSet.length > 0) {
@@ -216,7 +239,7 @@ export function generateMaze(modules: QRModules, config: QRConfig, size: number)
           for (let i = 1; i < openSet.length; i++) {
             const nodeKey = `${openSet[i].r},${openSet[i].c}`;
             const lowestKey = `${openSet[lowestIdx].r},${openSet[lowestIdx].c}`;
-            if ((fScore.get(nodeKey) ?? Infinity) < (fScore.get(lowestKey) ?? Infinity)) {
+            if (fScore.get(nodeKey)! < fScore.get(lowestKey)!) {
               lowestIdx = i;
             }
           }
@@ -225,41 +248,34 @@ export function generateMaze(modules: QRModules, config: QRConfig, size: number)
           const currKey = `${curr.r},${curr.c}`;
 
           if (currKey === endKey) {
-            found = true;
+            const path: MazeNode[] = [];
+            let currNode: MazeNode | undefined = bestEnd;
+            while (currNode) {
+              path.push(currNode);
+              currNode = parentMap.get(`${currNode.r},${currNode.c}`);
+            }
+            path.reverse();
+
+            if (path.length > 10) {
+              startNode = sCand;
+              endNode = bestEnd;
+              solution = path;
+              foundSolution = true;
+            }
             break;
           }
 
-          const neighbors = adj.get(currKey) || [];
+          const neighbors = adj.get(currKey)!;
           for (const n of neighbors) {
             const nKey = `${n.r},${n.c}`;
-            const tentativeGScore = (gScore.get(currKey) ?? Infinity) + 1;
-
-            if (tentativeGScore < (gScore.get(nKey) ?? Infinity)) {
+            if (!visited.has(nKey)) {
+              const tentativeGScore = gScore.get(currKey)! + 1;
               parentMap.set(nKey, curr);
               gScore.set(nKey, tentativeGScore);
               fScore.set(nKey, tentativeGScore + h(n, bestEnd));
-              if (!visited.has(nKey)) {
-                visited.add(nKey);
-                openSet.push(n);
-              }
+              visited.add(nKey);
+              openSet.push(n);
             }
-          }
-        }
-
-        if (found) {
-          const path: MazeNode[] = [];
-          let curr: MazeNode | undefined = bestEnd;
-          while (curr) {
-            path.push(curr);
-            curr = parentMap.get(`${curr.r},${curr.c}`);
-          }
-          path.reverse();
-
-          if (path.length > 10) {
-            startNode = sCand;
-            endNode = bestEnd;
-            solution = path;
-            break;
           }
         }
       }

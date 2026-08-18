@@ -14,7 +14,7 @@ This application is designed to **support** HIPAA-compliant workflows through a 
 - **Data Transmission:** The sensitive data you enter to generate a QR code (which may include PHI) remains strictly in your device's memory and is not sent to our servers.
 - **Volatile Memory:** Data entered into the application is cleared when the browser tab is closed or refreshed.
 - **Animation Loop Frames:** Any cached frames or matrices generated for animation loops are also kept solely in volatile client-side memory.
-- **Playable Maze Overlay:** All coordinates, keep-out boundary zones, and solutions computed for the playable maze overlay are processed completely in-memory locally in the user's browser, ensuring absolute privacy and data isolation.
+- **Playable Maze Overlay:** All coordinates, keep-out boundary zones, scannability-audited finder pattern bridge channels, and solutions computed for the playable maze overlay are processed completely in-memory locally in the user's browser, ensuring absolute privacy and data isolation.
 
 ### 2. Logging & Metrics Policy
 
@@ -27,6 +27,10 @@ To maintain security, performance, and legal accountability, we collect basic ac
   - Timestamp.
 - **Opt-In Telemetry:**
   - If you encounter a scannability issue and opt-in to telemetry, we transmit limited diagnostic data to help us improve the application. This data consists only of the following parameters: `engine` (browser engine), `styleId` (the QR pattern style used), `errorType` (the scannability error type), `fgColor` (foreground color), `bgColor` (background color), `eyeColor` (eye frame and eyeball color), `errorCorrectionLevel` (error correction level), `isBorderEnabled` (whether a border is enabled), `borderSize` (thickness of the border), `borderColor` (color of the border), `borderStyle` (style of the border), and `templateStyle` (the template layout style).
+  - **Telemetry Schema Contract (source of truth):**
+    - Diagnostic telemetry is strictly allowlisted in `src/types.ts` via ALLOWED_TELEMETRY_KEYS.
+    - Accepted keys are: `engine`, `styleId`, `errorType`, `fgColor`, `bgColor`, `eyeColor`, `errorCorrectionLevel`, `isBorderEnabled`, `borderSize`, `borderColor`, `borderStyle`, `templateStyle`.
+    - Values are constrained to non-sensitive primitive types (string | number | boolean | null) through TelemetryPayload.
 - **What is NOT Logged:**
   - **User Input:** Since the application runs client-side, the text, URLs, or WiFi passwords you type are never part of the HTTP request to the server.
   - **Generated Images:** The QR codes created are generated in the browser and never uploaded.

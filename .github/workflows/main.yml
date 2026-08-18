@@ -114,6 +114,8 @@ jobs:
         uses: ./.github/actions/setup
 
       - run: pnpm exec vitest run --coverage
+        env:
+          VITEST_COVERAGE: "true"
 
       - name: "Report Coverage"
         if: github.event_name == 'pull_request'
