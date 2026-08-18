@@ -10,6 +10,14 @@ import {
 } from '../utils/sharedContract';
 
 
+const releaseImageHandle = (handle: any) => {
+  if (handle && typeof handle.close === 'function') {
+    try {
+      handle.close();
+    } catch {}
+  }
+};
+
 /**
  *
  */
@@ -194,6 +202,9 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
 
     // Backpressure guard: drops/skips frames when background worker is busy and latency is high
     if (worker && isWorkerBusyRef.current && lastLatencyRef.current > 16.6) {
+      if (overrideImageBitmap) {
+        releaseImageHandle(overrideImageBitmap);
+      }
       return;
     }
 
@@ -204,6 +215,63 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
     if (!worker) {
       // Worker failed or isn't supported, run on the main thread!
       const runMainThreadCheck = async () => {
+        if (overrideImageBitmap) {
+          try {
+            if (currentSequence === String(sequenceRef.current)) {
+              const { performScannabilityCheck } = await import('../utils/scannabilityChecker');
+              let imageData: ImageData | null = null;
+
+              if (typeof OffscreenCanvas !== 'undefined') {
+                const canvas = new OffscreenCanvas(overrideImageBitmap.width || 1, overrideImageBitmap.height || 1);
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                  ctx.drawImage(overrideImageBitmap, 0, 0);
+                  imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                }
+              } else if (typeof document !== 'undefined') {
+                const canvas = document.createElement('canvas');
+                canvas.width = overrideImageBitmap.width || 1;
+                canvas.height = overrideImageBitmap.height || 1;
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                  ctx.drawImage(overrideImageBitmap, 0, 0);
+                  imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                }
+              }
+
+              if (imageData && currentSequence === String(sequenceRef.current)) {
+                try {
+                  const isTest = !!navigator.webdriver;
+                  const result = performScannabilityCheck(imageData, imageData.width, imageData.height, isTest);
+                  if (currentSequence === String(sequenceRef.current)) {
+                    setStatus(result.success ? (result.physicalReady ? 'physical-pass' : 'digital-pass') : 'fail');
+                    if (!result.success && result.error) {
+                      store.emitSignal('scannability-fail', {
+                        engine,
+                        styleId: config.style || 'default',
+                        errorType: result.error
+                      });
+                    }
+                  }
+                } catch (err) {
+                  console.error("Main-thread fallback processing failed:", err);
+                  if (currentSequence === String(sequenceRef.current)) {
+                    setStatus('fail');
+                    store.emitSignal('scannability-fail', {
+                      engine,
+                      styleId: config.style || 'default',
+                      errorType: 'VALIDATION_ERROR'
+                    });
+                  }
+                }
+              }
+            }
+          } finally {
+            releaseImageHandle(overrideImageBitmap);
+          }
+          return;
+        }
+
         const { performScannabilityCheck } = await import('../utils/scannabilityChecker');
         const performValidation = (imgData: ImageData) => {
           try {
@@ -275,6 +343,11 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
 
     // If virtual renderer provided deterministic ImageBitmap, use it directly
     if (overrideImageBitmap) {
+      if (currentSequence !== String(sequenceRef.current)) {
+        releaseImageHandle(overrideImageBitmap);
+        return;
+      }
+
       const payload = {
         imageBitmap: overrideImageBitmap,
         width: overrideImageBitmap.width,
@@ -290,6 +363,7 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
         setStatus('fail');
         isWorkerBusyRef.current = false;
         startTimeRef.current = null;
+        releaseImageHandle(overrideImageBitmap);
       }
       return;
     }
