@@ -77,11 +77,11 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
   const handleRendered = useCallback((info: { moduleCount: number, virtualImageData?: ImageData, virtualImageBitmap?: ImageBitmap } = { moduleCount: 0 }) => {
     if (info.moduleCount && !info.virtualImageData && !info.virtualImageBitmap) emitSignal('render-complete', info);
     if (info.virtualImageBitmap) {
-      checkScannability(undefined, info.virtualImageBitmap);
+      checkScannability(undefined, info.virtualImageBitmap, info.moduleCount);
     } else if (info.virtualImageData) {
-      checkScannability(info.virtualImageData);
-    } else if (!info.virtualImageData && !info.virtualImageBitmap && !info.moduleCount) {
-      checkScannability();
+      checkScannability(info.virtualImageData, undefined, info.moduleCount);
+    } else {
+      checkScannability(undefined, undefined, info.moduleCount);
     }
   }, [emitSignal, checkScannability]);
   const { showTelemetryPrompt, handleOptIn } = useTelemetry(scannabilityStatus);

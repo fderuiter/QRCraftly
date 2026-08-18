@@ -6,6 +6,7 @@ import {
 import jsQR from 'jsqr';
 import { isDangerousUrl } from './security';
 import { applyOpticalSimulationMath } from './opticalSimulation';
+import { auditModuleContrast } from './contrastAudit';
 
 let latestConfigId: string | undefined | null = undefined;
 let cachedCanvas: OffscreenCanvas | null = null;
@@ -57,7 +58,7 @@ self.onmessage = async (e: MessageEvent<unknown>) => {
       assertWorkerRequest(e.data);
     }
 
-    const { imageData: reqImageData, width, height, isTest } = e.data;
+    const { imageData: reqImageData, width, height, isTest, moduleCount } = e.data;
 
     let imageData: { data: Uint8ClampedArray; width: number; height: number };
 
@@ -93,6 +94,16 @@ self.onmessage = async (e: MessageEvent<unknown>) => {
       return;
     }
 
+    // Localized QR module contrast audit
+    let localContrastViolations = 0;
+    let minLocalContrast = 21;
+
+    if (moduleCount && moduleCount > 0) {
+      const audit = auditModuleContrast({ data: imageData.data, width, height }, moduleCount);
+      localContrastViolations = audit.violations;
+      minLocalContrast = audit.minContrast;
+    }
+
     // Step 1: Digital-only check
     let digitalCheckOk = false;
     let decodedData = '';
@@ -122,6 +133,8 @@ self.onmessage = async (e: MessageEvent<unknown>) => {
         success: false,
         physicalReady: false,
         error: 'SECURITY_VIOLATION',
+        localContrastViolations,
+        minLocalContrast,
         configId
       };
       assertWorkerResponse(response);
@@ -134,6 +147,8 @@ self.onmessage = async (e: MessageEvent<unknown>) => {
         success: false,
         physicalReady: false,
         error: 'NOT_FOUND',
+        localContrastViolations,
+        minLocalContrast,
         configId
       };
       assertWorkerResponse(response);
@@ -192,6 +207,8 @@ self.onmessage = async (e: MessageEvent<unknown>) => {
     const response = {
       success: true,
       physicalReady: physicalCheckOk,
+      localContrastViolations,
+      minLocalContrast,
       configId
     };
     assertWorkerResponse(response);

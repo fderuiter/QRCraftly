@@ -56,9 +56,11 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
   const startTimeRef = useRef<number | null>(null);
   const isWorkerBusyRef = useRef<boolean>(false);
 
+  const [localMetrics, setLocalMetrics] = useState<{ violations?: number; minContrast?: number } | undefined>();
+
   const health = useMemo<HealthScore>(() => {
-    return ValidationEngine.calculateScannability(config);
-  }, [config]);
+    return ValidationEngine.calculateScannability(config, localMetrics);
+  }, [config, localMetrics]);
 
   const configRef = useRef(config);
   useEffect(() => {
@@ -139,7 +141,7 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
           assertWorkerResponse(e.data);
         }
 
-        const { success, physicalReady, error, configId } = e.data;
+        const { success, physicalReady, error, configId, localContrastViolations, minLocalContrast } = e.data;
 
         // Sequence ID check: discard if configId does not match current sequence ID
         if (configId !== String(sequenceRef.current)) {
@@ -151,6 +153,10 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
           startTimeRef.current = null;
         }
         isWorkerBusyRef.current = false;
+
+        if (localContrastViolations !== undefined) {
+          setLocalMetrics({ violations: localContrastViolations, minContrast: minLocalContrast });
+        }
 
         setStatus(success ? (physicalReady ? 'physical-pass' : 'digital-pass') : 'fail');
 
@@ -197,7 +203,7 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
   }, []);
 
   // Expose a function to trigger check
-  const checkScannability = useCallback((overrideImageData?: ImageData, overrideImageBitmap?: ImageBitmap) => {
+  const checkScannability = useCallback((overrideImageData?: ImageData, overrideImageBitmap?: ImageBitmap, overrideModuleCount?: number) => {
     const worker = getOrInitWorker();
 
     // Backpressure guard: drops/skips frames when background worker is busy and latency is high
@@ -211,6 +217,9 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
     setStatus('checking');
     sequenceRef.current += 1;
     const currentSequence = String(sequenceRef.current);
+
+    const storeModuleCount = store ? store.getState().moduleCount : undefined;
+    const moduleCountToUse = (overrideModuleCount && overrideModuleCount > 0) ? overrideModuleCount : (storeModuleCount && storeModuleCount > 0 ? storeModuleCount : undefined);
 
     if (!worker) {
       // Worker failed or isn't supported, run on the main thread!
@@ -276,8 +285,11 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
         const performValidation = (imgData: ImageData) => {
           try {
             const isTest = !!navigator.webdriver;
-            const result = performScannabilityCheck(imgData, imgData.width, imgData.height, isTest);
+            const result = performScannabilityCheck(imgData, imgData.width, imgData.height, isTest, moduleCountToUse);
             if (currentSequence !== String(sequenceRef.current)) return;
+            if (result.localContrastViolations !== undefined) {
+              setLocalMetrics({ violations: result.localContrastViolations, minContrast: result.minLocalContrast });
+            }
             setStatus(result.success ? (result.physicalReady ? 'physical-pass' : 'digital-pass') : 'fail');
             if (!result.success && result.error) {
               store.emitSignal('scannability-fail', {
@@ -375,6 +387,7 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
         height: overrideImageBitmap.height,
         isTest: !!navigator.webdriver,
         configId: currentSequence,
+        moduleCount: moduleCountToUse,
       };
       try {
         assertWorkerRequest(payload);
@@ -397,6 +410,7 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
         height: overrideImageData.height,
         isTest: !!navigator.webdriver,
         configId: currentSequence,
+        moduleCount: moduleCountToUse,
       };
       try {
         assertWorkerRequest(payload);
@@ -443,6 +457,7 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
             height: canvas.height,
             isTest: !!navigator.webdriver,
             configId: currentSequence,
+            moduleCount: moduleCountToUse,
           };
           try {
             assertWorkerRequest(payload);
@@ -488,6 +503,7 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
           height: canvas.height,
           isTest: !!navigator.webdriver,
           configId: currentSequence,
+          moduleCount: moduleCountToUse,
         };
         assertWorkerRequest(payload);
         // Do not transfer the raw TypedArray directly to prevent memory neutering and re-allocation loops

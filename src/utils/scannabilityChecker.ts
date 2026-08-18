@@ -1,23 +1,37 @@
 import jsQR from 'jsqr';
 import { isDangerousUrl } from './security';
 import { applyOpticalSimulationMath } from './opticalSimulation';
+import { auditModuleContrast } from './contrastAudit';
 
 export interface ScannabilityResult {
   success: boolean;
   physicalReady: boolean;
   error?: string | null;
+  localContrastViolations?: number;
+  minLocalContrast?: number;
 }
 
 /**
- * Shared function to run decoding, security, and optical simulation checks.
+ * Shared function to run decoding, security, optical simulation, and localized module contrast checks.
  * This is used by both the worker thread and the main-thread fallback to guarantee parity.
  */
 export function performScannabilityCheck(
   imageData: ImageData | { data: Uint8ClampedArray; width: number; height: number },
   width: number,
   height: number,
-  isTest: boolean
+  isTest: boolean,
+  moduleCount?: number
 ): ScannabilityResult {
+  // 0. Localized module contrast audit
+  let localContrastViolations = 0;
+  let minLocalContrast = 21;
+
+  if (moduleCount && moduleCount > 0) {
+    const audit = auditModuleContrast({ data: imageData.data, width, height }, moduleCount);
+    localContrastViolations = audit.violations;
+    minLocalContrast = audit.minContrast;
+  }
+
   // 1. Digital-only check
   let digitalPass = false;
   let decodedData = '';
@@ -35,11 +49,23 @@ export function performScannabilityCheck(
 
   // Security Check: URL / Payload safety
   if (digitalPass && isDangerousUrl(decodedData)) {
-    return { success: false, physicalReady: false, error: 'SECURITY_VIOLATION' };
+    return {
+      success: false,
+      physicalReady: false,
+      error: 'SECURITY_VIOLATION',
+      localContrastViolations,
+      minLocalContrast,
+    };
   }
 
   if (!digitalPass) {
-    return { success: false, physicalReady: false, error: 'NOT_FOUND' };
+    return {
+      success: false,
+      physicalReady: false,
+      error: 'NOT_FOUND',
+      localContrastViolations,
+      minLocalContrast,
+    };
   }
 
   // 2. Optical simulation & physical check
@@ -61,5 +87,10 @@ export function performScannabilityCheck(
     if (codeSim) physicalPass = true;
   }
 
-  return { success: true, physicalReady: physicalPass };
+  return {
+    success: true,
+    physicalReady: physicalPass,
+    localContrastViolations,
+    minLocalContrast,
+  };
 }

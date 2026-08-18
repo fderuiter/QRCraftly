@@ -111,4 +111,20 @@ describe('ValidationEngine', () => {
       }).not.toThrow();
     });
   });
+
+  describe('calculateScannability', () => {
+    it('should calculate standard scannability score without local contrast violations', () => {
+      const config = getBaseConfig();
+      const result = ValidationEngine.calculateScannability(config);
+      expect(result.score).toBe(100);
+      expect(result.warnings).toHaveLength(0);
+    });
+
+    it('should deduct score points when local contrast violations are present', () => {
+      const config = getBaseConfig();
+      const result = ValidationEngine.calculateScannability(config, { violations: 5, minContrast: 2.1 });
+      expect(result.score).toBeLessThan(100);
+      expect(result.warnings.some(w => w.includes('Local contrast drop detected'))).toBe(true);
+    });
+  });
 });
