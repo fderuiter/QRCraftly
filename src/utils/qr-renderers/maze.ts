@@ -101,11 +101,15 @@ class DSU {
   }
 }
 
+export function getMazeCacheKey(config: QRConfig, size: number): string {
+  return `${config.value}_${config.errorCorrectionLevel}_${size}_${config.logoUrl}_${config.logoSize}_${config.logoPaddingStyle}_${config.logoPadding}_${config.isMazeBridgesEnabled !== false}`;
+}
+
 /**
  * Generates the maze structure deterministically based on configuration.
  */
 export function generateMaze(modules: QRModules, config: QRConfig, size: number): MazeData {
-  const cacheKey = `${config.value}_${config.errorCorrectionLevel}_${size}_${config.logoUrl}_${config.logoSize}_${config.logoPaddingStyle}_${config.logoPadding}_${config.isMazeBridgesEnabled !== false}`;
+  const cacheKey = getMazeCacheKey(config, size);
   const isTest = process.env.NODE_ENV === 'test';
   if (!isTest && mazeCache.has(cacheKey)) {
     return mazeCache.get(cacheKey)!;
@@ -309,7 +313,17 @@ export function renderMaze(
 ) {
   if (!config.isMazeEnabled) return;
 
-  const maze = mazeData || generateMaze(modules, config, size);
+  const cacheKey = getMazeCacheKey(config, size);
+  let maze = mazeData || mazeCache.get(cacheKey);
+
+  if (!maze) {
+    if (process.env.NODE_ENV === 'test') {
+      maze = generateMaze(modules, config, size);
+    } else {
+      return;
+    }
+  }
+
   const pathWidth = cellSize * (config.mazePathWidth || 0.25);
 
   ctx.save();
