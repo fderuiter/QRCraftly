@@ -22,6 +22,18 @@ describe('sharedContract runtime assertion logic', () => {
       expect(() => assertWorkerRequest(valid)).not.toThrow();
     });
 
+    it('should validate valid worker requests with ImageBitmap objects', () => {
+      const valid = {
+        imageBitmap: { width: 100, height: 100, close: () => {} } as unknown as ImageBitmap,
+        width: 100,
+        height: 100,
+        configId: 'test-config',
+        isTest: true,
+      };
+      expect(isWorkerRequest(valid)).toBe(true);
+      expect(() => assertWorkerRequest(valid)).not.toThrow();
+    });
+
     it('should validate when configId is null or undefined', () => {
       const validUndefined = {
         imageData: {

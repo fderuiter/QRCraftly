@@ -24,6 +24,7 @@ import { Zap, Flame, Bomb, RotateCcw, ArrowLeft, ShieldAlert, ShieldCheck, Gamep
 import '@/layouts/index.css';
 import { applyOpticalSimulationMath } from '../../utils/opticalSimulation';
 import { isDangerousUrl } from '../../utils/security';
+import { assertWorkerRequest } from '../../utils/sharedContract';
 
 /**
  * Interface representing active game projectile entities (bullets or bombs).
@@ -236,6 +237,7 @@ export default function Page() {
       // Check if native BarcodeDetector is available
       if (barcodeDetectorRef.current) {
         try {
+          const imgData = dctx.getImageData(0, 0, 256, 256);
           // Pass 1: Digital check
           const barcodes = await barcodeDetectorRef.current.detect(imgData);
           let success = false;
@@ -292,16 +294,46 @@ export default function Page() {
         return;
       }
 
-      const payload = {
-        imageData: imgData,
-        width: 256,
-        height: 256,
-        isTest: !!navigator.webdriver,
-        configId: currentSequence
-      };
+      const isTest = !!navigator.webdriver;
+      const configId = currentSequence;
 
-      // Zero-copy array buffer transfer
-      worker.postMessage(payload, [payload.imageData.data.buffer]);
+      if (typeof globalThis.createImageBitmap === 'function') {
+        try {
+          const imageBitmap = await createImageBitmap(downscaleCanvas);
+          const payload = {
+            imageBitmap,
+            width: 256,
+            height: 256,
+            isTest,
+            configId
+          };
+          assertWorkerRequest(payload);
+          worker.postMessage(payload, [payload.imageBitmap]);
+        } catch (bitmapErr) {
+          console.error('createImageBitmap failed, falling back to synchronous read:', bitmapErr);
+          const imgData = dctx.getImageData(0, 0, 256, 256);
+          const payload = {
+            imageData: imgData,
+            width: 256,
+            height: 256,
+            isTest,
+            configId
+          };
+          assertWorkerRequest(payload);
+          worker.postMessage(payload, [payload.imageData.data.buffer]);
+        }
+      } else {
+        const imgData = dctx.getImageData(0, 0, 256, 256);
+        const payload = {
+          imageData: imgData,
+          width: 256,
+          height: 256,
+          isTest,
+          configId
+        };
+        assertWorkerRequest(payload);
+        worker.postMessage(payload, [payload.imageData.data.buffer]);
+      }
     } catch (err) {
       console.error('Failed to capture or send downscaled canvas data to worker/detector:', err);
       isWorkerBusyRef.current = false;
