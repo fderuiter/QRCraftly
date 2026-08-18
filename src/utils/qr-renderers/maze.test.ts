@@ -333,14 +333,13 @@ describe('generateMaze & renderMaze', () => {
       generateMaze(modules, emptyValConfig, size);
 
       // 2. Single node grid (where all except one cell are dark) to test bestEnd/solution null
-      const singleNodeModules = createMockModules(10, {
-        ...Array.from({ length: 10 }).reduce((acc: any, _, r) => {
-          for (let c = 0; c < 10; c++) {
-            if (!(r === 9 && c === 9)) acc[`${r},${c}`] = true;
-          }
-          return acc;
-        }, {}),
-      });
+      const singleNodeMap: Record<string, boolean> = {};
+      for (let r = 0; r < 10; r++) {
+        for (let c = 0; c < 10; c++) {
+          if (!(r === 9 && c === 9)) singleNodeMap[`${r},${c}`] = true;
+        }
+      }
+      const singleNodeModules = createMockModules(10, singleNodeMap);
       const singleNodeMaze = generateMaze(singleNodeModules, { ...baseConfig, isMazeBridgesEnabled: false }, 10);
       expect(singleNodeMaze.nodes.length).toBe(1);
       expect(singleNodeMaze.start).toBeNull();
