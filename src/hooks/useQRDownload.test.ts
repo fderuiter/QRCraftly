@@ -22,6 +22,11 @@ import { useQRDownload } from './useQRDownload';
 import { DEFAULT_CONFIG } from '../constants';
 import { QRConfig } from '../types';
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
+import jsQR from 'jsqr';
+
+vi.mock('jsqr', () => ({
+  default: vi.fn(),
+}));
 
 describe('useQRDownload', () => {
   let mockCanvas: HTMLCanvasElement;
@@ -29,8 +34,12 @@ describe('useQRDownload', () => {
   let originalShowSaveFilePicker: any;
 
   beforeEach(() => {
+    vi.mocked(jsQR).mockReturnValue({ data: 'https://qrcraftly.com' } as any);
+
     // Setup mock canvas
     mockCanvas = document.createElement('canvas');
+    mockCanvas.width = 100;
+    mockCanvas.height = 100;
     mockCanvas.toDataURL = vi.fn(() => 'data:image/png;base64,mock');
     mockCanvas.toBlob = vi.fn((callback) => callback(new Blob(['mock']), 'image/png'));
 
@@ -129,6 +138,9 @@ describe('useQRDownload', () => {
 
   it('downloadToDevice catches toDataURL error', async () => {
     const errorCanvas = {
+      getContext: HTMLCanvasElement.prototype.getContext,
+      width: 100,
+      height: 100,
       toDataURL: vi.fn().mockImplementation(() => {
         throw new Error('toDataURL throw');
       }),
@@ -138,6 +150,7 @@ describe('useQRDownload', () => {
     const res = await result.current.downloadToDevice('png');
     expect(res.success).toBe(false);
     expect(res.error).toBeDefined();
+    expect(res.error.message).toBe('toDataURL throw');
   });
 
   it('handleSaveAs falls back to downloadToDevice if File System Access API is not available', async () => {
@@ -413,33 +426,55 @@ describe('useQRDownload', () => {
     });
   });
 
-  describe('scannability validation before download', () => {
-    let originalEnv: any;
-
-    beforeEach(() => {
-      originalEnv = process.env.NODE_ENV;
-      // Temporarily change NODE_ENV from 'test' to force the check to execute
-      process.env.NODE_ENV = 'production';
-    });
-
-    afterEach(() => {
-      process.env.NODE_ENV = originalEnv;
-    });
-
-    it('blocks download if scannability validation fails', async () => {
-      const checkerModule = await import('../utils/scannabilityChecker');
-      const spyCheck = vi.spyOn(checkerModule, 'performScannabilityCheck').mockReturnValue({
-        success: false,
-        physicalReady: false,
-        error: 'CONTRAST_ERROR',
-      });
+  describe('scannability validation before asset export', () => {
+    it('blocks downloadToDevice if scannability validation fails', async () => {
+      vi.mocked(jsQR).mockReturnValue(null);
 
       const { result } = renderHook(() => useQRDownload(mockQrRef, DEFAULT_CONFIG as QRConfig), { wrapper: ToastProvider });
 
       const status = await result.current.downloadToDevice('png');
       expect(status.success).toBe(false);
       expect(status.error?.message).toBe('SCAN_VALIDATION_FAILED');
-      expect(spyCheck).toHaveBeenCalled();
+    });
+
+    it('blocks handleSaveAs if scannability validation fails', async () => {
+      vi.mocked(jsQR).mockReturnValue(null);
+
+      const { result } = renderHook(() => useQRDownload(mockQrRef, DEFAULT_CONFIG as QRConfig), { wrapper: ToastProvider });
+
+      const status = await result.current.handleSaveAs('png');
+      expect(status.success).toBe(false);
+      expect(status.error?.message).toBe('SCAN_VALIDATION_FAILED');
+    });
+
+    it('blocks handleCopy if scannability validation fails', async () => {
+      vi.mocked(jsQR).mockReturnValue(null);
+
+      const { result } = renderHook(() => useQRDownload(mockQrRef, DEFAULT_CONFIG as QRConfig), { wrapper: ToastProvider });
+
+      const status = await result.current.handleCopy();
+      expect(status.success).toBe(false);
+      expect(status.error?.message).toBe('SCAN_VALIDATION_FAILED');
+    });
+
+    it('blocks handleShare if scannability validation fails', async () => {
+      vi.mocked(jsQR).mockReturnValue(null);
+
+      const { result } = renderHook(() => useQRDownload(mockQrRef, DEFAULT_CONFIG as QRConfig), { wrapper: ToastProvider });
+
+      const status = await result.current.handleShare();
+      expect(status.success).toBe(false);
+      expect(status.error?.message).toBe('SCAN_VALIDATION_FAILED');
+    });
+
+    it('blocks handleSaveSvg if scannability validation fails', async () => {
+      vi.mocked(jsQR).mockReturnValue(null);
+
+      const { result } = renderHook(() => useQRDownload(mockQrRef, DEFAULT_CONFIG as QRConfig), { wrapper: ToastProvider });
+
+      const status = await result.current.handleSaveSvg();
+      expect(status.success).toBe(false);
+      expect(status.error?.message).toBe('SCAN_VALIDATION_FAILED');
     });
   });
 

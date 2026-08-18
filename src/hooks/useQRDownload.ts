@@ -91,9 +91,6 @@ export function useQRDownload(
    * Validates the canvas readability against simulated optical noise.
    */
   const validateScannability = useCallback((canvas: HTMLCanvasElement): boolean => {
-    const isTest = typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 'test';
-    if (isTest) return true;
-
     try {
       const ctx = canvas.getContext('2d');
       if (!ctx) return false;

@@ -31,9 +31,18 @@ import { generateQRSvg } from './svgExport';
 import { DEFAULT_CONFIG } from '../constants';
 import { QRStyle, QRConfig, SocialFormat, TemplateStyle, QRType } from '../types';
 
+function parseAndAssertValidSvg(svgString: string): Document {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(svgString, 'image/svg+xml');
+  const parserErrors = doc.getElementsByTagName('parsererror');
+  expect(parserErrors.length).toBe(0);
+  return doc;
+}
+
 describe('generateQRSvg', () => {
   it('returns a valid SVG string for a basic URL', async () => {
     const svg = await generateQRSvg(DEFAULT_CONFIG as QRConfig);
+    parseAndAssertValidSvg(svg);
     expect(svg).toContain('<svg');
     expect(svg).toContain('</svg>');
     expect(svg).toContain('xmlns="http://www.w3.org/2000/svg"');
@@ -41,6 +50,7 @@ describe('generateQRSvg', () => {
 
   it('includes the correct viewport dimensions for SQUARE_1_1 (1080x1080)', async () => {
     const svg = await generateQRSvg(DEFAULT_CONFIG as QRConfig);
+    parseAndAssertValidSvg(svg);
     expect(svg).toContain('width="1080"');
     expect(svg).toContain('height="1080"');
     expect(svg).toContain('viewBox="0 0 1080 1080"');
@@ -49,18 +59,21 @@ describe('generateQRSvg', () => {
   it('encodes foreground colour in generated paths', async () => {
     const config = { ...DEFAULT_CONFIG, fgColor: '#123456' } as QRConfig;
     const svg = await generateQRSvg(config);
+    parseAndAssertValidSvg(svg);
     expect(svg).toContain('#123456');
   });
 
   it('encodes background colour in generated paths', async () => {
     const config = { ...DEFAULT_CONFIG, bgColor: '#abcdef' } as QRConfig;
     const svg = await generateQRSvg(config);
+    parseAndAssertValidSvg(svg);
     expect(svg).toContain('#abcdef');
   });
 
   it('produces SVG for MODERN style (rounded rects)', async () => {
     const config = { ...DEFAULT_CONFIG, style: QRStyle.MODERN } as QRConfig;
     const svg = await generateQRSvg(config);
+    parseAndAssertValidSvg(svg);
     expect(svg).toContain('<svg');
     // MODERN uses roundRect which produces Q (quadratic Bezier) path commands
     expect(svg).toContain('Q');
@@ -69,6 +82,7 @@ describe('generateQRSvg', () => {
   it('produces SVG for SWISS style (circles)', async () => {
     const config = { ...DEFAULT_CONFIG, style: QRStyle.SWISS } as QRConfig;
     const svg = await generateQRSvg(config);
+    parseAndAssertValidSvg(svg);
     expect(svg).toContain('<svg');
     // SWISS uses arcs (converted to C commands in SVG path)
     expect(svg).toContain(' C ');
@@ -77,6 +91,7 @@ describe('generateQRSvg', () => {
   it('produces SVG for FLUID style (circles)', async () => {
     const config = { ...DEFAULT_CONFIG, style: QRStyle.FLUID } as QRConfig;
     const svg = await generateQRSvg(config);
+    parseAndAssertValidSvg(svg);
     expect(svg).toContain('<svg');
     expect(svg).toContain(' C ');
   });
@@ -84,6 +99,7 @@ describe('generateQRSvg', () => {
   it('produces SVG for GRUNGE style', async () => {
     const config = { ...DEFAULT_CONFIG, style: QRStyle.GRUNGE } as QRConfig;
     const svg = await generateQRSvg(config);
+    parseAndAssertValidSvg(svg);
     expect(svg).toContain('<svg');
     expect(svg).toContain('<path');
   });
@@ -401,8 +417,41 @@ describe('generateQRSvg', () => {
       };
 
       const svg = await generateQRSvg(config);
+      parseAndAssertValidSvg(svg);
       expect(svg).not.toContain('<script>');
       expect(svg).not.toContain('alert(1)');
+    });
+  });
+
+  describe('In-memory XML schema DOM parser validation suite', () => {
+    it('parses exported SVG vector strings using DOMParser and asserts zero parser error tags', async () => {
+      const svg = await generateQRSvg(DEFAULT_CONFIG as QRConfig);
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(svg, 'image/svg+xml');
+      const parserErrors = doc.getElementsByTagName('parsererror');
+      expect(parserErrors.length).toBe(0);
+      expect(doc.documentElement.tagName.toLowerCase()).toBe('svg');
+    });
+
+    it('fails XML DOM validation and generates parsererror tags when malformed XML structure is injected', () => {
+      const malformedSvg = '<svg xmlns="http://www.w3.org/2000/svg"><g><rect x="0" y="0"></svg>';
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(malformedSvg, 'image/svg+xml');
+      const parserErrors = doc.getElementsByTagName('parsererror');
+      expect(parserErrors.length).toBeGreaterThan(0);
+    });
+
+    it('asserts zero parser errors for complex styled QR configurations', async () => {
+      const config: QRConfig = {
+        ...(DEFAULT_CONFIG as QRConfig),
+        style: QRStyle.MODERN,
+        isBorderEnabled: true,
+        borderText: 'SCAN ME',
+        fgColor: '#1a56db',
+        bgColor: '#f8fafc',
+      };
+      const svg = await generateQRSvg(config);
+      parseAndAssertValidSvg(svg);
     });
   });
 });
