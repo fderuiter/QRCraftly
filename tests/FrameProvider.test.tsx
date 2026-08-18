@@ -158,4 +158,76 @@ describe('Polymorphic FrameProvider Abstraction Tests', () => {
 
     window.removeEventListener('scanner-telemetry-dispatch', telemetrySpy);
   });
+
+  // 6. Bounded Secondary Fallback Canvas Allocation
+  it('should bound secondary fallback canvas allocation to 2048px while preserving aspect ratio and 1024px initial pass', async () => {
+    vi.useRealTimers();
+    const file = new File(['mock_image'], 'large_photo.jpg', { type: 'image/jpeg' });
+    const fileProvider = new FileFrameProvider(file);
+
+    vi.spyOn(fileProvider as any, 'loadImage').mockResolvedValue({
+      width: 6000,
+      height: 4000,
+    } as any);
+
+    const createdCanvases: HTMLCanvasElement[] = [];
+    const origCreateElement = document.createElement.bind(document);
+    vi.spyOn(document, 'createElement').mockImplementation((tagName: string, options?: any) => {
+      const el = origCreateElement(tagName, options);
+      if (tagName.toLowerCase() === 'canvas') {
+        createdCanvases.push(el as HTMLCanvasElement);
+      }
+      return el;
+    });
+
+    try {
+      await fileProvider.start();
+    } catch {
+      // Expected exception when no QR code detected
+    }
+
+    expect(createdCanvases.length).toBeGreaterThanOrEqual(2);
+    expect(createdCanvases[0].width).toBe(1024);
+    expect(createdCanvases[0].height).toBe(683);
+
+    expect(createdCanvases[1].width).toBe(2048);
+    expect(createdCanvases[1].height).toBe(1365);
+  });
+
+  it('should bound main-thread secondary fallback canvas allocation to 2048px when worker is unavailable', async () => {
+    vi.useRealTimers();
+    const file = new File(['mock_image'], 'large_photo.jpg', { type: 'image/jpeg' });
+    const fileProvider = new FileFrameProvider(file);
+
+    vi.spyOn(fileProvider as any, 'loadImage').mockResolvedValue({
+      width: 4000,
+      height: 6000,
+    } as any);
+
+    const sharedWorkerMod = await import('../src/utils/sharedScannerWorker');
+    vi.spyOn(sharedWorkerMod, 'getSharedScannerWorker').mockReturnValue(null as any);
+
+    const createdCanvases: HTMLCanvasElement[] = [];
+    const origCreateElement = document.createElement.bind(document);
+    vi.spyOn(document, 'createElement').mockImplementation((tagName: string, options?: any) => {
+      const el = origCreateElement(tagName, options);
+      if (tagName.toLowerCase() === 'canvas') {
+        createdCanvases.push(el as HTMLCanvasElement);
+      }
+      return el;
+    });
+
+    try {
+      await fileProvider.start();
+    } catch {
+      // Expected exception when no QR code detected
+    }
+
+    expect(createdCanvases.length).toBeGreaterThanOrEqual(2);
+    expect(createdCanvases[0].width).toBe(683);
+    expect(createdCanvases[0].height).toBe(1024);
+
+    expect(createdCanvases[1].width).toBe(1365);
+    expect(createdCanvases[1].height).toBe(2048);
+  });
 });
