@@ -75,7 +75,7 @@ export async function encryptUrl(plainText: string, keyHex: string): Promise<str
   const keyBuffer = hexToBuffer(keyHex);
   const cryptoKey = await cryptoObj.subtle.importKey(
     "raw",
-    keyBuffer.buffer,
+    keyBuffer,
     { name: "AES-GCM" },
     false,
     ["encrypt"]
@@ -130,7 +130,7 @@ export async function decryptUrl(encryptedStr: string, keyHex: string): Promise<
 
   const cryptoKey = await cryptoObj.subtle.importKey(
     "raw",
-    keyBuffer.buffer,
+    keyBuffer,
     { name: "AES-GCM" },
     false,
     ["decrypt"]
@@ -143,7 +143,7 @@ export async function decryptUrl(encryptedStr: string, keyHex: string): Promise<
         iv,
       },
       cryptoKey,
-      ciphertextBuffer.buffer
+      ciphertextBuffer
     );
 
     return new TextDecoder().decode(decryptedBuffer);
