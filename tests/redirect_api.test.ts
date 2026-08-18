@@ -222,6 +222,39 @@ describe("Secure Dynamic Redirection API Suite", () => {
       const json = await failRes.json() as { error: string };
       expect(json.error).toBeDefined();
     });
+
+    it("should register platform-specific store URLs when provided", async () => {
+      const req = new Request("https://qrcraftly.com/api/redirect/register", {
+        method: "POST",
+        body: JSON.stringify({
+          redirectUrl: "https://example.com",
+          iosUrl: "https://apps.apple.com/app/id123456789",
+          androidUrl: "https://play.google.com/store/apps/details?id=com.example.app"
+        }),
+        headers: { "Content-Type": "application/json" }
+      });
+      const res = await registerOnRequestPost({ request: req, env: {} });
+      expect(res.status).toBe(200);
+      const json = await res.json() as { id: string; redirectUrl: string; iosUrl?: string; androidUrl?: string };
+      expect(json.redirectUrl).toBe("https://example.com");
+      expect(json.iosUrl).toBe("https://apps.apple.com/app/id123456789");
+      expect(json.androidUrl).toBe("https://play.google.com/store/apps/details?id=com.example.app");
+    });
+
+    it("should reject invalid platform-specific store URLs", async () => {
+      const req = new Request("https://qrcraftly.com/api/redirect/register", {
+        method: "POST",
+        body: JSON.stringify({
+          redirectUrl: "https://example.com",
+          iosUrl: "javascript:alert('ios')"
+        }),
+        headers: { "Content-Type": "application/json" }
+      });
+      const res = await registerOnRequestPost({ request: req, env: {} });
+      expect(res.status).toBe(400);
+      const json = await res.json() as { error: string };
+      expect(json.error).toContain("iOS URL");
+    });
   });
 
   describe("Browser Redirection & Asynchronous Analytics", () => {
@@ -267,6 +300,105 @@ describe("Secure Dynamic Redirection API Suite", () => {
       expect(updatedStr).not.toBeNull();
       const updatedData = JSON.parse(updatedStr!);
       expect(updatedData.scans).toBe(6);
+    });
+
+    it("should route iOS device to Apple App Store URL with 307 status", async () => {
+      const kv = new MockKV();
+      const record = {
+        id: "app-id",
+        redirectUrl: "https://example.com/fallback",
+        iosUrl: "https://apps.apple.com/app/id123456",
+        androidUrl: "https://play.google.com/store/apps/details?id=com.app",
+        adminKey: "key",
+        scans: 0
+      };
+      await kv.put("redirect:app-id", JSON.stringify(record));
+
+      const req = new Request("https://qrcraftly.com/api/redirect/app-id", {
+        headers: {
+          "user-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15"
+        }
+      });
+      const context = { request: req, env: { REDIRECTS_KV: kv }, params: { id: "app-id" } };
+      const res = await lookupOnRequestGet(context);
+
+      expect(res.status).toBe(307);
+      expect(res.headers.get("Location")).toBe("https://apps.apple.com/app/id123456");
+    });
+
+    it("should route Android device to Google Play Store URL with 307 status", async () => {
+      const kv = new MockKV();
+      const record = {
+        id: "app-id",
+        redirectUrl: "https://example.com/fallback",
+        iosUrl: "https://apps.apple.com/app/id123456",
+        androidUrl: "https://play.google.com/store/apps/details?id=com.app",
+        adminKey: "key",
+        scans: 0
+      };
+      await kv.put("redirect:app-id", JSON.stringify(record));
+
+      const req = new Request("https://qrcraftly.com/api/redirect/app-id", {
+        headers: {
+          "user-agent": "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36"
+        }
+      });
+      const context = { request: req, env: { REDIRECTS_KV: kv }, params: { id: "app-id" } };
+      const res = await lookupOnRequestGet(context);
+
+      expect(res.status).toBe(307);
+      expect(res.headers.get("Location")).toBe("https://play.google.com/store/apps/details?id=com.app");
+    });
+
+    it("should route Desktop device to default fallback URL with 307 status", async () => {
+      const kv = new MockKV();
+      const record = {
+        id: "app-id",
+        redirectUrl: "https://example.com/fallback",
+        iosUrl: "https://apps.apple.com/app/id123456",
+        androidUrl: "https://play.google.com/store/apps/details?id=com.app",
+        adminKey: "key",
+        scans: 0
+      };
+      await kv.put("redirect:app-id", JSON.stringify(record));
+
+      const req = new Request("https://qrcraftly.com/api/redirect/app-id", {
+        headers: {
+          "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
+        }
+      });
+      const context = { request: req, env: { REDIRECTS_KV: kv }, params: { id: "app-id" } };
+      const res = await lookupOnRequestGet(context);
+
+      expect(res.status).toBe(307);
+      expect(res.headers.get("Location")).toBe("https://example.com/fallback");
+    });
+
+    it("should fall back to default destination if platform URL is empty or whitespace", async () => {
+      const kv = new MockKV();
+      const record = {
+        id: "empty-platform-id",
+        redirectUrl: "https://example.com/fallback",
+        iosUrl: "   ",
+        androidUrl: "",
+        adminKey: "key",
+        scans: 0
+      };
+      await kv.put("redirect:empty-platform-id", JSON.stringify(record));
+
+      const reqIos = new Request("https://qrcraftly.com/api/redirect/empty-platform-id", {
+        headers: { "user-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X)" }
+      });
+      const resIos = await lookupOnRequestGet({ request: reqIos, env: { REDIRECTS_KV: kv }, params: { id: "empty-platform-id" } });
+      expect(resIos.status).toBe(307);
+      expect(resIos.headers.get("Location")).toBe("https://example.com/fallback");
+
+      const reqAndroid = new Request("https://qrcraftly.com/api/redirect/empty-platform-id", {
+        headers: { "user-agent": "Mozilla/5.0 (Linux; Android 12)" }
+      });
+      const resAndroid = await lookupOnRequestGet({ request: reqAndroid, env: { REDIRECTS_KV: kv }, params: { id: "empty-platform-id" } });
+      expect(resAndroid.status).toBe(307);
+      expect(resAndroid.headers.get("Location")).toBe("https://example.com/fallback");
     });
   });
 });

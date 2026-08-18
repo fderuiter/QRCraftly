@@ -35,6 +35,10 @@ export const UrlInput: React.FC<UrlInputProps> = ({ data, onChange }) => {
   const [isDynamicMode, setIsDynamicMode] = useState(false);
   const [showConsentModal, setShowConsentModal] = useState(false);
   const [targetUrl, setTargetUrl] = useState("");
+  const [enableIos, setEnableIos] = useState(false);
+  const [iosUrl, setIosUrl] = useState("");
+  const [enableAndroid, setEnableAndroid] = useState(false);
+  const [androidUrl, setAndroidUrl] = useState("");
 
   const urlError = data.url && isDangerousUrl(data.url)
     ? "Unsafe URL scheme or malicious protocol detected."
@@ -108,7 +112,30 @@ export const UrlInput: React.FC<UrlInputProps> = ({ data, onChange }) => {
       return;
     }
 
-    const record = await registerRedirect(normalized);
+    const finalIos = enableIos && iosUrl.trim() ? normalizeUrl(iosUrl.trim()) : undefined;
+    if (finalIos && isDangerousUrl(finalIos)) {
+      addToast({
+        type: "error",
+        message: "Unsafe protocol in iOS URL.",
+        duration: 4000,
+      });
+      return;
+    }
+
+    const finalAndroid = enableAndroid && androidUrl.trim() ? normalizeUrl(androidUrl.trim()) : undefined;
+    if (finalAndroid && isDangerousUrl(finalAndroid)) {
+      addToast({
+        type: "error",
+        message: "Unsafe protocol in Android URL.",
+        duration: 4000,
+      });
+      return;
+    }
+
+    const record = await registerRedirect(normalized, {
+      iosUrl: finalIos,
+      androidUrl: finalAndroid,
+    });
     if (record) {
       onChange({ url: record.redirectUrl });
       addToast({
@@ -202,6 +229,18 @@ export const UrlInput: React.FC<UrlInputProps> = ({ data, onChange }) => {
                       <strong className="text-slate-500">Destination:</strong>{" "}
                       <span className="font-mono break-all">{activeRecord.originalUrl}</span>
                     </div>
+                    {activeRecord.iosUrl && (
+                      <div>
+                        <strong className="text-slate-500">iOS Destination:</strong>{" "}
+                        <span className="font-mono break-all">{activeRecord.iosUrl}</span>
+                      </div>
+                    )}
+                    {activeRecord.androidUrl && (
+                      <div>
+                        <strong className="text-slate-500">Android Destination:</strong>{" "}
+                        <span className="font-mono break-all">{activeRecord.androidUrl}</span>
+                      </div>
+                    )}
                     <div>
                       <strong className="text-slate-500">Edge Pointer:</strong>{" "}
                       <span className="font-mono break-all">{data.url}</span>
@@ -228,6 +267,54 @@ export const UrlInput: React.FC<UrlInputProps> = ({ data, onChange }) => {
                 onChange={(e) => setTargetUrl(e.target.value)}
                 error={urlError}
               />
+
+              {/* Platform-Specific App Store Destinations */}
+              <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50/50 p-3 dark:border-slate-800 dark:bg-slate-900/50">
+                <div className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  Dual-Platform App Store Destinations (Optional)
+                </div>
+
+                <div className="space-y-2">
+                  <ToggleSwitch
+                    id="toggle-ios-redirect"
+                    label="Apple App Store Link (iOS)"
+                    checked={enableIos}
+                    onChange={(checked) => setEnableIos(checked)}
+                    labelClassName="text-xs font-medium text-slate-700 dark:text-slate-300"
+                  />
+                  {enableIos && (
+                    <TextField
+                      id="ios-url-input"
+                      label="Apple App Store URL"
+                      placeholder="https://apps.apple.com/app/id123456789"
+                      value={iosUrl}
+                      onChange={(e) => setIosUrl(e.target.value)}
+                      type="url"
+                    />
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <ToggleSwitch
+                    id="toggle-android-redirect"
+                    label="Google Play Store Link (Android)"
+                    checked={enableAndroid}
+                    onChange={(checked) => setEnableAndroid(checked)}
+                    labelClassName="text-xs font-medium text-slate-700 dark:text-slate-300"
+                  />
+                  {enableAndroid && (
+                    <TextField
+                      id="android-url-input"
+                      label="Google Play Store URL"
+                      placeholder="https://play.google.com/store/apps/details?id=com.example.app"
+                      value={androidUrl}
+                      onChange={(e) => setAndroidUrl(e.target.value)}
+                      type="url"
+                    />
+                  )}
+                </div>
+              </div>
+
               <Button
                 variant="primary"
                 fullWidth
