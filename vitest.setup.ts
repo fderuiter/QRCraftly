@@ -1023,6 +1023,7 @@ vi.mock('qrcode', () => {
     return {
       modules: {
         size: 21,
+        data: new Uint8Array(21 * 21),
         get: vi.fn().mockImplementation((r, c) => ((r === 0 && c === 0) || (r === 10 && c === 10))),
       }
     };
