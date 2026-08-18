@@ -11,6 +11,7 @@
         "http://localhost/event-qr-code",
         "http://localhost/file-transfer",
         "http://localhost/file-transfer/receive",
+        "http://localhost/game",
         "http://localhost/",
         "http://localhost/location-qr-code",
         "http://localhost/meeting-qr-code",

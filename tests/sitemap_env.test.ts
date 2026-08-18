@@ -12,15 +12,21 @@ const distDir = join(__dirname, '../dist/client');
 const sitemapPath = join(distDir, 'sitemap.xml');
 const backupPath = join(distDir, 'sitemap.xml.bak');
 const dummyHtmlFile = join(distDir, 'dummy-sample-route.html');
+const indexHtmlFile = join(distDir, 'index.html');
+
+let createdDistDir = false;
+let createdIndexHtml = false;
 
 describe('Sitemap Environment-Level Variable Resolution', () => {
   beforeAll(() => {
     // Ensure dist directory and a dummy html file exist to generate sitemap URLs
     if (!existsSync(distDir)) {
       mkdirSync(distDir, { recursive: true });
+      createdDistDir = true;
     }
-    if (!existsSync(join(distDir, 'index.html'))) {
-      writeFileSync(join(distDir, 'index.html'), '<html></html>', 'utf8');
+    if (!existsSync(indexHtmlFile)) {
+      writeFileSync(indexHtmlFile, '<html></html>', 'utf8');
+      createdIndexHtml = true;
     }
     writeFileSync(dummyHtmlFile, '<html></html>', 'utf8');
 
@@ -39,6 +45,20 @@ describe('Sitemap Environment-Level Variable Resolution', () => {
       } catch {
         // Safe fallback if unlink fails
       }
+    }
+
+    if (createdIndexHtml && existsSync(indexHtmlFile)) {
+      try {
+        const { unlinkSync } = require('fs');
+        unlinkSync(indexHtmlFile);
+      } catch {}
+    }
+
+    if (createdDistDir && existsSync(distDir)) {
+      try {
+        const { rmSync } = require('fs');
+        rmSync(distDir, { recursive: true, force: true });
+      } catch {}
     }
 
     // Restore original sitemap if backed up
