@@ -89,22 +89,9 @@ JSON.stringify = function(value, replacer, space) {
       
       if (deployOutputPath && fs.existsSync(deployOutputPath)) {
         const deployOutput = fs.readFileSync(deployOutputPath, 'utf8');
-        
-        let gitStatus = '';
-        try {
-          const cp = require('child_process');
-          gitStatus = cp.execSync('git status --porcelain --ignored', { encoding: 'utf8' });
-        } catch (e) {
-          gitStatus = 'Failed to execute git status: ' + e.message;
-        }
-
         const ticks = "\\x60\\x60\\x60";
 
         value.body += '\\n\\n### 🔍 GHA Runner Wrangler Diagnostics\\n' +
-                      '**Workspace Git Status**:\\n' +
-                      ticks + 'git\\n' +
-                      (gitStatus || '(clean)') + '\\n' +
-                      ticks + '\\n\\n' +
                       '**Wrangler Deploy Output (deploy_output.txt)**:\\n' +
                       ticks + 'text\\n' +
                       (deployOutput || '(empty)') + '\\n' +
