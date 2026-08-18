@@ -84,7 +84,7 @@ self.onmessage = async (e: MessageEvent<unknown>) => {
         return;
       }
       
-      code = jsQR(imageData.data, width, height, { inversionAttempts: "attemptBoth" });
+      code = jsQR(imageData.data, width, height, { inversionAttempts: "onlyInvert" });
       if (code) {
         digitalCheckOk = true;
         decodedData = code.data;
@@ -149,7 +149,7 @@ self.onmessage = async (e: MessageEvent<unknown>) => {
         return;
       }
       
-      codeSim = jsQR(simulatedData.data, width, height, { inversionAttempts: "attemptBoth" });
+      codeSim = jsQR(simulatedData.data, width, height, { inversionAttempts: "onlyInvert" });
       if (codeSim) physicalCheckOk = true;
     }
 

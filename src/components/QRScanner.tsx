@@ -96,7 +96,10 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
               import('jsqr').then((mod) => {
                 const jsQRfn = mod.default || mod;
                 const u8 = new Uint8ClampedArray(buffer);
-                const code = jsQRfn(u8, width, height);
+                let code = jsQRfn(u8, width, height, { inversionAttempts: 'dontInvert' });
+                if (!code) {
+                  code = jsQRfn(u8, width, height, { inversionAttempts: 'onlyInvert' });
+                }
                 resolve({ decoded: code ? code.data : null, buffer: payload.buffer });
               }).catch(() => {
                 resolve({ decoded: null, buffer: payload.buffer });
@@ -478,7 +481,10 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
                 console.warn('Worker creation failed, falling back to main-thread decoding:');
                 import('jsqr').then((jsQRModule) => {
                   const jsQR = jsQRModule.default || jsQRModule;
-                  const code = jsQR(new Uint8ClampedArray(imageData1024.data.buffer), downscaledWidth, downscaledHeight);
+                  let code = jsQR(new Uint8ClampedArray(imageData1024.data.buffer), downscaledWidth, downscaledHeight, { inversionAttempts: 'dontInvert' });
+                  if (!code) {
+                    code = jsQR(new Uint8ClampedArray(imageData1024.data.buffer), downscaledWidth, downscaledHeight, { inversionAttempts: 'onlyInvert' });
+                  }
                   if (code && code.data) {
                     resolve(code.data);
                   } else {
@@ -493,7 +499,10 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
                     }
                     ctxFull.drawImage(img, 0, 0);
                     const imageDataFull = ctxFull.getImageData(0, 0, img.width, img.height);
-                    const codeFull = jsQR(imageDataFull.data, img.width, img.height);
+                    let codeFull = jsQR(imageDataFull.data, img.width, img.height, { inversionAttempts: 'dontInvert' });
+                    if (!codeFull) {
+                      codeFull = jsQR(imageDataFull.data, img.width, img.height, { inversionAttempts: 'onlyInvert' });
+                    }
                     if (codeFull && codeFull.data) {
                       resolve(codeFull.data);
                     } else {
