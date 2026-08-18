@@ -4,9 +4,6 @@
       "staticDistDir": "./dist/client",
       "url": [
         "http://localhost/about",
-        "http://localhost/audio-qr",
-        "http://localhost/destroy-the-qr",
-        "http://localhost/dynamic-dashboard",
         "http://localhost/email-qr-code",
         "http://localhost/event-qr-code",
         "http://localhost/file-transfer",

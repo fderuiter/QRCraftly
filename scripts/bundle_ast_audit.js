@@ -25,9 +25,7 @@ const AUTHORIZED_SIGNATURES = [
   'sanitizeSvg',
   'SafeUrlPipeline',
   'Failed to download WebAssembly demuxer assets',
-  'FileReader error',
-  '/api/redirect',
-  'optInRedirector'
+  'FileReader error'
 ];
 
 /**

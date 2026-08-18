@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { contentRegistry, SchemaType, SchemaCategory, TargetPersona, StrategicValueCategory } from './contentRegistry';
+import { contentRegistry, auxiliaryRegistry, SchemaType, SchemaCategory, TargetPersona, StrategicValueCategory } from './contentRegistry';
 import { ValidationEngine } from '../engine/ValidationEngine';
 
 describe('Content Registry Validation', () => {
@@ -112,6 +112,44 @@ describe('Content Registry Validation', () => {
       // 4. Schema Category validation
       expect(tool.schemaCategory, `Tool '${key}' must have 'schemaCategory' defined`).toBeDefined();
       expect(validSchemaCategories, `Tool '${key}': Schema Category '${tool.schemaCategory}' is not a valid SchemaCategory enum value`).toContain(tool.schemaCategory);
+    });
+  });
+
+  it('should enforce strict persona and strategic value classifications for all auxiliary routes', () => {
+    const validPersonas = Object.values(TargetPersona);
+    const validValueProps = Object.values(StrategicValueCategory);
+
+    const auxKeys = Object.keys(auxiliaryRegistry);
+    expect(auxKeys.length).toBeGreaterThan(0);
+
+    auxKeys.forEach((key) => {
+      const item = auxiliaryRegistry[key];
+
+      expect(item.id, `Auxiliary item '${key}': Missing or invalid 'id'`).toBeTypeOf('string');
+      expect(item.name, `Auxiliary item '${key}': Missing or invalid 'name'`).toBeTypeOf('string');
+      expect(item.seoTitle, `Auxiliary item '${key}': Missing or invalid 'seoTitle'`).toBeTypeOf('string');
+      expect(item.description, `Auxiliary item '${key}': Missing or invalid 'description'`).toBeTypeOf('string');
+
+      // 1. Persona validation
+      expect(item.personas, `Auxiliary route '${key}' must have defined 'personas'`).toBeDefined();
+      expect(Array.isArray(item.personas), `Auxiliary route '${key}': 'personas' must be an array`).toBe(true);
+      expect(item.personas.length, `Auxiliary route '${key}': 'personas' array cannot be empty`).toBeGreaterThan(0);
+      item.personas.forEach((p) => {
+        expect(validPersonas, `Auxiliary route '${key}': Persona '${p}' is not a valid TargetPersona enum value`).toContain(p);
+      });
+
+      // 2. Value proposition validation
+      expect(item.valueProposition, `Auxiliary route '${key}' must have a valid 'valueProposition'`).toBeDefined();
+      expect(validValueProps, `Auxiliary route '${key}': Value proposition '${item.valueProposition}' is not a valid StrategicValueCategory enum value`).toContain(item.valueProposition);
+    });
+  });
+
+  it('should exclude pruned legacy/recreational/tracking routes from all registries', () => {
+    const prunedRoutes = ['dynamic-dashboard', 'audio-qr', 'destroy-the-qr', 'game'];
+
+    prunedRoutes.forEach((route) => {
+      expect(contentRegistry[route], `Pruned route '${route}' should not be in contentRegistry`).toBeUndefined();
+      expect(auxiliaryRegistry[route], `Pruned route '${route}' should not be in auxiliaryRegistry`).toBeUndefined();
     });
   });
 });

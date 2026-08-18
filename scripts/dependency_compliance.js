@@ -32,8 +32,7 @@ export const FORBIDDEN_IMPORTS = [
 export const AUTHORIZED_NETWORK_FILES = new Set([
   'src/hooks/useTelemetry.ts',
   'src/utils/svgExport.ts',
-  'src/utils/assetCache.ts',
-  'src/hooks/useRedirector.ts'
+  'src/utils/assetCache.ts'
 ]);
 
 /**
