@@ -330,7 +330,7 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
       };
 
       if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-        (window as any).requestIdleCallback(runMainThreadCheck);
+        (window as any).requestIdleCallback(runMainThreadCheck, { timeout: 100 });
       } else {
         setTimeout(runMainThreadCheck, 100);
       }
@@ -345,6 +345,8 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
     if (overrideImageBitmap) {
       if (currentSequence !== String(sequenceRef.current)) {
         releaseImageHandle(overrideImageBitmap);
+        isWorkerBusyRef.current = false;
+        startTimeRef.current = null;
         return;
       }
 
@@ -412,6 +414,8 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
         createImageBitmap(canvas).then((imageBitmap) => {
           if (currentSequence !== String(sequenceRef.current)) {
             imageBitmap.close();
+            isWorkerBusyRef.current = false;
+            startTimeRef.current = null;
             return;
           }
           const payload = {
@@ -478,7 +482,7 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
     };
 
     if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-      (window as any).requestIdleCallback(runCaptureAndSend);
+      (window as any).requestIdleCallback(runCaptureAndSend, { timeout: 100 });
     } else {
       setTimeout(runCaptureAndSend, 100);
     }

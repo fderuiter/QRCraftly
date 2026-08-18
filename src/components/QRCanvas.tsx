@@ -608,7 +608,7 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
       };
 
       if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-        (window as any).requestIdleCallback(runVirtualRender);
+        (window as any).requestIdleCallback(runVirtualRender, { timeout: 100 });
       } else {
         setTimeout(runVirtualRender, 50);
       }
