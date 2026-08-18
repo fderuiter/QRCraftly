@@ -157,7 +157,7 @@ export function useAnimatedQrReceiver({
 
             if (activeHandshake) {
               // Compute and verify SHA-256
-              const hashBuffer = await crypto.subtle.digest('SHA-256', reassembled.buffer);
+              const hashBuffer = await crypto.subtle.digest('SHA-256', reassembled);
               const hashArray = Array.from(new Uint8Array(hashBuffer));
               const actualSHA256 = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 
