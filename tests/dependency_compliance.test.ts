@@ -110,17 +110,10 @@ describe('Dependency Compliance Guardrail', () => {
       expect(violations.length).toBe(0);
     });
 
-    it('should ignore whitelisted files (like useTelemetry.ts) even if they use fetch', () => {
-      // Simulate whitelisted file by using path.resolve to a whitelisted name
-      const tempWhitelistedFile = path.resolve('src/hooks/useTelemetry.ts');
-      
-      // We don't want to overwrite the real file, so we spy/stub or temporarily bypass.
-      // But since useTelemetry.ts is an actual whitelisted file, we can scan the actual src/hooks/useTelemetry.ts!
-      // The real file uses fetch(), but it should not return any "Unauthorized Network Call" violations.
-      const violations = scanFileForCompliance(tempWhitelistedFile);
-      
-      const unauthorizedCalls = violations.filter(v => v.type === 'Unauthorized Network Call');
-      expect(unauthorizedCalls.length).toBe(0);
+    it('enforces zero network whitelist exemptions across all source files', () => {
+      // Confirm that AUTHORIZED_NETWORK_FILES is empty with zero overrides allowed
+      const { AUTHORIZED_NETWORK_FILES } = require('../scripts/dependency_compliance.js');
+      expect(AUTHORIZED_NETWORK_FILES.size).toBe(0);
     });
   });
 });

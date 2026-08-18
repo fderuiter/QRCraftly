@@ -89,7 +89,7 @@ describe('Telemetry Consent & Compliance Integration Tests', () => {
       expect(fetchSpy).not.toHaveBeenCalled();
     });
 
-    it('triggers telemetry pings only when user has explicitly opted in', () => {
+    it('processes telemetry signals offline without triggering network fetch requests', () => {
       const { result } = renderTelemetry('idle');
 
       // Explicitly set opt-in
@@ -97,61 +97,29 @@ describe('Telemetry Consent & Compliance Integration Tests', () => {
         result.current.telemetry.handleOptIn(true);
       });
 
-      // Emit a signal, telemetry ping should trigger
+      // Emit a signal, telemetry processing occurs locally without fetch
       act(() => {
         result.current.store.emitSignal('scannability-fail', FULL_TEST_PAYLOAD);
       });
 
-      expect(fetchSpy).toHaveBeenCalledTimes(1);
+      expect(fetchSpy).not.toHaveBeenCalled();
     });
   });
 
-  // 2. Payload Parameter Sanitization / Auditing
-  describe('Payload Parameter Sanitization', () => {
-    it('only permits allowlisted tracking parameters and strips any sensitive user parameter keys', () => {
+  // 2. Zero-Transit Privacy Integration
+  describe('Zero-Transit Privacy Enforcement', () => {
+    it('ensures zero network fetch calls originate from telemetry opt-in or signals', () => {
       const { result } = renderTelemetry('idle');
 
-      // Explicitly set opt-in
       act(() => {
         result.current.telemetry.handleOptIn(true);
       });
 
-      // Emit a signal containing allowlisted parameters along with multiple sensitive user fields
       act(() => {
         result.current.store.emitSignal('scannability-fail', FULL_TEST_PAYLOAD);
       });
 
-      expect(fetchSpy).toHaveBeenCalledTimes(1);
-
-      const callArgs = fetchSpy.mock.calls[0];
-      const payload = JSON.parse(callArgs[1].body);
-
-      // Verify allowlisted parameters are present with expected values
-      expect(payload).toHaveProperty('engine', 'Chromium');
-      expect(payload).toHaveProperty('styleId', 'standard');
-      expect(payload).toHaveProperty('errorType', 'NOT_FOUND');
-      expect(payload).toHaveProperty('fgColor', '#000000');
-      expect(payload).toHaveProperty('bgColor', '#ffffff');
-      expect(payload).toHaveProperty('eyeColor', '#000000');
-      expect(payload).toHaveProperty('errorCorrectionLevel', 'M');
-      expect(payload).toHaveProperty('isBorderEnabled', true);
-      expect(payload).toHaveProperty('borderSize', 4);
-      expect(payload).toHaveProperty('borderColor', '#000000');
-      expect(payload).toHaveProperty('borderStyle', 'solid');
-      expect(payload).toHaveProperty('templateStyle', 'none');
-
-      // Verify all non-allowlisted / sensitive keys are stripped out
-      expect(payload).not.toHaveProperty('text');
-      expect(payload).not.toHaveProperty('url');
-      expect(payload).not.toHaveProperty('password');
-      expect(payload).not.toHaveProperty('ssid');
-      expect(payload).not.toHaveProperty('latitude');
-      expect(payload).not.toHaveProperty('longitude');
-      expect(payload).not.toHaveProperty('customKey');
-
-      // Confirm only allowlisted fields exist in the payload
-      const payloadKeys = Object.keys(payload);
-      expect(payloadKeys.sort()).toEqual([...ALLOWED_TELEMETRY_KEYS].sort());
+      expect(fetchSpy).not.toHaveBeenCalled();
     });
   });
 });

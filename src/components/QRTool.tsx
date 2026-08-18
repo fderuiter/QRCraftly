@@ -277,14 +277,6 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
                 )}
               </div>
               <a
-                href="/dynamic-dashboard"
-                className="hidden items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold text-teal-600 transition-colors hover:bg-slate-100 sm:flex dark:text-teal-400 dark:hover:bg-slate-800"
-                title="Dynamic Dashboard"
-                aria-label="Dynamic QR Code Redirection Dashboard"
-              >
-                Dynamic Dashboard
-              </a>
-              <a
                 href="/file-transfer"
                 className="hidden items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold text-teal-600 transition-colors hover:bg-slate-100 sm:flex dark:text-teal-400 dark:hover:bg-slate-800"
                 title="Send File"

@@ -348,36 +348,23 @@ describe('generateQRSvg', () => {
       }
     });
 
-    it('does NOT trigger onLogoOmitted callback if a remote logo fetch succeeds', async () => {
+    it('does NOT trigger onLogoOmitted callback if a data-URL logo is configured', async () => {
       const originalFetch = global.fetch;
-      const originalFileReader = global.FileReader;
-
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        blob: () => Promise.resolve(new Blob(['fake image data'], { type: 'image/png' })),
-      } as any);
-
-      class MockFileReader {
-        onload: () => void = () => {};
-        result = 'data:image/png;base64,ZmFrZSBpbWFnZSBkYXRh';
-        readAsDataURL() {
-          this.onload();
-        }
-      }
-      global.FileReader = MockFileReader as any;
+      const fetchSpy = vi.fn();
+      global.fetch = fetchSpy;
 
       try {
         const config: QRConfig = {
           ...(DEFAULT_CONFIG as QRConfig),
-          logoUrl: 'https://example.com/success-logo.png',
+          logoUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
         };
 
         const onLogoOmitted = vi.fn();
         await generateQRSvg(config, { onLogoOmitted });
 
         expect(onLogoOmitted).not.toHaveBeenCalled();
+        expect(fetchSpy).not.toHaveBeenCalled();
       } finally {
-        global.FileReader = originalFileReader;
         global.fetch = originalFetch;
       }
     });

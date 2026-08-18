@@ -29,12 +29,8 @@ export function useTelemetry(status: ScannabilityStatus) {
   const sendTelemetryPing = useCallback((detail: any) => {
     try {
       const sanitized = sanitizeTelemetryPayload(detail);
-      fetch('/api/telemetry/scannability', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(sanitized),
-        keepalive: true
-      }).catch(() => {});
+      // Zero-transit policy: telemetry payload is sanitized locally in memory without triggering network requests
+      void sanitized;
     } catch {}
   }, []);
 

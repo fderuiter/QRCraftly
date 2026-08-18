@@ -98,7 +98,7 @@ describe('Security Utils', () => {
 
   describe('sanitizeHref', () => {
     it('allows valid https URLs', () => {
-      expect(sanitizeHref('https://example.com/api/redirect')).toBe('https://example.com/api/redirect');
+      expect(sanitizeHref('https://example.com/about')).toBe('https://example.com/about');
     });
 
     it('allows valid http URLs', () => {
@@ -106,7 +106,7 @@ describe('Security Utils', () => {
     });
 
     it('allows relative path URLs starting with /', () => {
-      expect(sanitizeHref('/api/redirect/123')).toBe('/api/redirect/123');
+      expect(sanitizeHref('/about/123')).toBe('/about/123');
     });
 
     it('neutralizes javascript: URLs and returns #', () => {

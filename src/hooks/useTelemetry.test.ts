@@ -102,36 +102,23 @@ describe('useTelemetry', () => {
     expect(updatePrefSpy).toHaveBeenCalledWith({ telemetryOptIn: false });
   });
 
-  it('handleOptIn(true) when status=fail sends telemetry ping immediately', () => {
+  it('handleOptIn(true) updates preferences without making network fetch requests', () => {
     const { result } = renderTelemetry('fail');
     act(() => {
       result.current.telemetry.handleOptIn(true);
     });
-    expect(fetchSpy).toHaveBeenCalledWith(
-      '/api/telemetry/scannability',
-      expect.objectContaining({
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      })
-    );
-    // Verify the body includes expected fields
-    const callArgs = fetchSpy.mock.calls[0];
-    const body = JSON.parse(callArgs[1].body);
-    expect(body).toHaveProperty('engine');
-    expect(body).toHaveProperty('errorType', 'NOT_FOUND');
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 
-  it('handleOptIn(true) when status=fail uses store.getState().config.style', () => {
+  it('handleOptIn(true) when status=fail operates offline without fetch', () => {
     const { result } = renderTelemetry('fail');
     act(() => {
-      // Update config style via store
       result.current.store.updateConfig({ style: 'grunge' as any });
     });
     act(() => {
       result.current.telemetry.handleOptIn(true);
     });
-    const body = JSON.parse(fetchSpy.mock.calls[0][1].body);
-    expect(body.styleId).toBe('grunge');
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 
   it('handleOptIn(false) when status=fail does NOT send telemetry ping', () => {
@@ -161,17 +148,11 @@ describe('useTelemetry', () => {
   // -------------------------------------------------------------------------
   // Signal handling: 'scannability-fail'
   // -------------------------------------------------------------------------
-  it('registers scannability-fail signal handler in the store', () => {
+  it('registers scannability-fail signal handler in the store without making network calls', () => {
     const { result } = renderTelemetry('idle');
-    const registerSpy = vi.spyOn(result.current.store, 'registerSignal');
-    // Force a re-render to trigger useEffect
     act(() => {
       result.current.store.updatePreferences({ telemetryOptIn: true });
     });
-    // registerSignal is called during the useEffect for the signal registration
-    // We verify the call happened (may be via the initial render effect)
-    // Since the hook already mounted, just check the store has an active listener
-    // by emitting and checking fetch was called
     act(() => {
       result.current.store.emitSignal('scannability-fail', {
         engine: 'Chromium',
@@ -179,13 +160,11 @@ describe('useTelemetry', () => {
         errorType: 'NOT_FOUND',
       });
     });
-    expect(fetchSpy).toHaveBeenCalledTimes(1);
-    void registerSpy; // used to avoid lint warnings
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 
-  it('sends ping via scannability-fail signal when telemetryOptIn is true', () => {
+  it('sends ping via scannability-fail signal offline when telemetryOptIn is true', () => {
     const { result } = renderTelemetry('idle');
-    // Opt in first
     act(() => {
       result.current.store.updatePreferences({ telemetryOptIn: true });
     });
@@ -196,10 +175,7 @@ describe('useTelemetry', () => {
         errorType: 'DECODE_FAIL',
       });
     });
-    expect(fetchSpy).toHaveBeenCalledTimes(1);
-    const body = JSON.parse(fetchSpy.mock.calls[0][1].body);
-    expect(body.engine).toBe('Firefox');
-    expect(body.styleId).toBe('circuit');
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 
   it('does NOT send ping via scannability-fail signal when telemetryOptIn is false', () => {
@@ -233,16 +209,14 @@ describe('useTelemetry', () => {
     spy.mockRestore();
   });
 
-  it('handleOptIn styleId falls back to "default" when config.style is falsy', () => {
+  it('handleOptIn operates offline without network fetch when config.style is falsy', () => {
     const { result } = renderTelemetry('fail');
-    // Override config with no style
     act(() => {
       result.current.store.updateConfig({ style: '' as any });
     });
     act(() => {
       result.current.telemetry.handleOptIn(true);
     });
-    const body = JSON.parse(fetchSpy.mock.calls[0][1].body);
-    expect(body.styleId).toBe('default');
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 });

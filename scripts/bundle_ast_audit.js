@@ -10,24 +10,11 @@ const distDir = path.join(repoRoot, 'dist');
 
 const BANNED_APIS = new Set(['fetch', 'WebSocket', 'XMLHttpRequest', 'sendBeacon']);
 
-// Chunks containing code from these whitelisted files/framework dependencies are allowed to contain 'fetch'
+// Chunks containing code from these whitelisted static framework dependencies are allowed to contain 'fetch'
 const AUTHORIZED_SIGNATURES = [
-  '/api/telemetry/scannability',
-  'scannability-fail',
-  'telemetryOptIn',
   'xmlns="http://www.w3.org/2000/svg"',
-  '_svgTextAnchor',
-  '_svgDominantBaseline',
-  'is404ServerSideRouted',
   '.pageContext.json',
-  'pageContextFromServer',
-  'fetchWasmAsset',
-  'sanitizeSvg',
-  'SafeUrlPipeline',
-  'Failed to download WebAssembly demuxer assets',
-  'FileReader error',
-  '/api/redirect',
-  'optInRedirector'
+  'pageContextFromServer'
 ];
 
 /**

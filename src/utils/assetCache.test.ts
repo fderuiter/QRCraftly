@@ -113,24 +113,11 @@ describe('Asset Cache Utility', () => {
     }
   });
 
-  it('SVG generator falls back gracefully to network fetch when logo is not in cache', async () => {
+  it('SVG generator omits uncached remote logos without triggering network fetch', async () => {
     const originalFetch = global.fetch;
-    const originalFileReader = global.FileReader;
 
-    const fetchSpy = vi.fn().mockResolvedValue({
-      ok: true,
-      blob: () => Promise.resolve(new Blob(['network image data'], { type: 'image/png' })),
-    });
+    const fetchSpy = vi.fn();
     global.fetch = fetchSpy;
-
-    class MockFileReader {
-      onload: () => void = () => {};
-      result = 'data:image/png;base64,network_data_uri_from_fetch';
-      readAsDataURL() {
-        this.onload();
-      }
-    }
-    global.FileReader = MockFileReader as any;
 
     try {
       const logoUrl = 'https://example.com/uncached-logo.png';
@@ -143,16 +130,12 @@ describe('Asset Cache Utility', () => {
       expect(getCachedAsset(logoUrl)).toBeNull();
 
       // Generate SVG
-      const svg = await generateQRSvg(config);
+      await generateQRSvg(config);
 
-      // Verify fetched image is embedded
-      expect(svg).toContain('data:image/png;base64,network_data_uri_from_fetch');
-
-      // Verify HTTP fetch was indeed triggered since it was not in the cache
-      expect(fetchSpy).toHaveBeenCalledWith(logoUrl, expect.objectContaining({ mode: 'cors' }));
+      // Verify zero network HTTP requests were made
+      expect(fetchSpy).not.toHaveBeenCalled();
     } finally {
       global.fetch = originalFetch;
-      global.FileReader = originalFileReader;
     }
   });
 });

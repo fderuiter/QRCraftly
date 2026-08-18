@@ -556,12 +556,6 @@ export const contentRegistry: Record<string, ToolContent> = {
 };
 
 const auxiliaryRegistry: Record<string, AuxiliaryContent> = {
-  "dynamic-dashboard": {
-    "id": "dynamic-dashboard",
-    "name": "Dynamic Redirection Dashboard",
-    "seoTitle": "Dynamic Redirection Dashboard - QRCraftly",
-    "description": "Manage your dynamic QR destinations, update target URLs, and view cumulative scan statistics in real-time."
-  },
   "audio-qr": {
     "id": "audio-qr",
     "name": "Audio QR & Acoustic Steganography",

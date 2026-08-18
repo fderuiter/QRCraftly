@@ -480,9 +480,9 @@ describe('QRScanner Component', () => {
       // Trigger file change
       fireEvent.change(fileInput, { target: { files: [mockFile] } });
 
-      // Verify that WebAssembly assets are fetched on-demand
+      // Verify that WebAssembly assets are loaded locally with zero network fetch calls
       await waitFor(() => {
-        expect(mockFetch).toHaveBeenCalledWith('/webm-demuxer.wasm');
+        expect(mockFetch).not.toHaveBeenCalled();
       });
 
       // Verify Web Worker creation and initialization with zero-copy transferred buffers
