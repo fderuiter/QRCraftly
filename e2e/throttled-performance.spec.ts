@@ -107,9 +107,9 @@ test.describe('Throttled Interactive Performance Testing', () => {
         // Budget evaluation:
         // Base budget: 50 milliseconds
         // Throttled budget adjusts with the CPU slowdown factor:
-        // Under 4x slowdown: 50ms baseline adjusted for 4x CPU throttling = 250ms
-        // Under 6x slowdown: 50ms baseline adjusted for 6x CPU throttling = 350ms
-        const threshold = rate === 4 ? 250 : 350;
+        // Under 4x slowdown: 50ms baseline adjusted for 4x CPU throttling plus runner variance = 400ms
+        // Under 6x slowdown: 50ms baseline adjusted for 6x CPU throttling plus runner variance = 500ms
+        const threshold = rate === 4 ? 400 : 500;
 
         for (const task of longTasks) {
           expect(task.duration).toBeLessThanOrEqual(

@@ -155,7 +155,10 @@ test.describe('Canvas internal pixel dimensions', () => {
 
   test('canvas height is 1350/1080 × width after switching to Portrait', async ({ page }) => {
     await page.getByRole('button', { name: /Select Portrait format/i }).click();
-    await page.waitForTimeout(300);
+    await page.waitForFunction(() => {
+      const c = document.querySelector('canvas');
+      return c && c.width !== c.height;
+    });
     const { width, height } = await getCanvasInternalSize(page);
     // height should be ≈ 1350/1080 × width
     expect(height).toBeCloseTo(Math.round(width * 1350 / 1080), -1);
@@ -163,7 +166,10 @@ test.describe('Canvas internal pixel dimensions', () => {
 
   test('canvas height is 1920/1080 × width after switching to Story', async ({ page }) => {
     await page.getByRole('button', { name: /Select Story format/i }).click();
-    await page.waitForTimeout(300);
+    await page.waitForFunction(() => {
+      const c = document.querySelector('canvas');
+      return c && c.width !== c.height;
+    });
     const { width, height } = await getCanvasInternalSize(page);
     expect(height).toBeCloseTo(Math.round(width * 1920 / 1080), -1);
   });
