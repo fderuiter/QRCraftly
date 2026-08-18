@@ -49,7 +49,7 @@ export const onRequest = async (context: {
     request.headers.get('pragma') === 'no-cache' ||
     request.headers.get('x-bypass-cache') === '1';
 
-  const cfCache = typeof caches !== 'undefined' && caches.default ? caches.default : null;
+  const cfCache = typeof caches !== 'undefined' && (caches as any).default ? (caches as any).default : null;
   const activeMockCache = (globalThis as any).__edgeCache || globalMockEdgeCache;
 
   // 4. Serve from Edge Cache if available and not bypassing
@@ -98,12 +98,7 @@ export const onRequest = async (context: {
     const pageContext = await renderPage(pageContextInit);
     const { httpResponse } = pageContext;
 
-    if (!httpResponse) {
-      // Return 404 asset response if Vike has no matching route
-      return assetResponse;
-    }
-
-    if (httpResponse.statusCode >= 500) {
+    if (!httpResponse || httpResponse.statusCode >= 400 || (pageContext as any).is404) {
       // Fallback HTML generation for non-built / test environments where Vike prod entry is unavailable
       const { getMetadataForPath } = await import('../src/data/contentRegistry');
       const meta = getMetadataForPath(url.pathname);

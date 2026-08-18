@@ -112,9 +112,9 @@ export const onRequestPost = async (context: {
 
     // Invalidate Edge Cache for the updated dynamic route
     const cacheUrl = new URL(`/r/${id}`, context.request.url).href;
-    if (typeof caches !== 'undefined' && caches.default) {
+    if (typeof caches !== 'undefined' && (caches as any).default) {
       try {
-        await caches.default.delete(new Request(cacheUrl));
+        await (caches as any).default.delete(new Request(cacheUrl));
       } catch (_e) {
         // Ignore cache delete errors
       }

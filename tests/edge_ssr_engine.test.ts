@@ -205,7 +205,10 @@ describe('Universal Edge SSR Engine', () => {
       const regReq = new Request('https://qrcraftly.com/api/redirect/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ redirectUrl: 'https://initial-destination.com' }),
+        body: JSON.stringify({
+          redirectUrl: 'https://initial-destination.com',
+          turnstileToken: 'valid-turnstile-token',
+        }),
       });
       const regRes = await registerRedirectHandler({ request: regReq, env: {} });
       const regData = await regRes.json() as any;
