@@ -28,6 +28,26 @@ let errorCorrectionLevel = 'M';
 let isGenerating = false;
 let fileSHA256 = '';
 
+let cachedSHA256 = '';
+let cachedFileMetadata: { name?: string; size: number; type: string; lastModified?: number } | null = null;
+
+/**
+ * Checks if a Blob/File matches the currently cached file metadata.
+ */
+function matchesCachedFile(blob: Blob): boolean {
+  if (!cachedFileMetadata || !cachedSHA256) {
+    return false;
+  }
+  const blobName = (blob as any).name;
+  const blobLastModified = (blob as any).lastModified;
+  return (
+    cachedFileMetadata.size === blob.size &&
+    cachedFileMetadata.type === blob.type &&
+    cachedFileMetadata.name === blobName &&
+    cachedFileMetadata.lastModified === blobLastModified
+  );
+}
+
 /**
  * Converts an ArrayBuffer to a standard Base64 string in a worker-compatible way.
  */
@@ -140,11 +160,22 @@ self.onmessage = async (e: MessageEvent) => {
         return;
       }
 
-      try {
-        fileSHA256 = await computeSHA256(file);
-      } catch (err: any) {
-        (self as any).postMessage({ type: 'ERROR', message: `Hashing failed: ${err?.message || err}` });
-        return;
+      if (matchesCachedFile(file)) {
+        fileSHA256 = cachedSHA256;
+      } else {
+        try {
+          fileSHA256 = await computeSHA256(file);
+          cachedSHA256 = fileSHA256;
+          cachedFileMetadata = {
+            name: (file as any).name,
+            size: file.size,
+            type: file.type,
+            lastModified: (file as any).lastModified
+          };
+        } catch (err: any) {
+          (self as any).postMessage({ type: 'ERROR', message: `Hashing failed: ${err?.message || err}` });
+          return;
+        }
       }
 
       totalDataFrames = Math.ceil(file.size / chunkSize);
@@ -194,6 +225,8 @@ self.onmessage = async (e: MessageEvent) => {
       nextIndexToGenerate = 0;
       lastAckedIndex = -1;
       fileSHA256 = '';
+      cachedSHA256 = '';
+      cachedFileMetadata = null;
       isGenerating = false;
       break;
     }
