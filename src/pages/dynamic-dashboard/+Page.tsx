@@ -236,6 +236,8 @@ export default function DynamicDashboardPage() {
   const [analyticsData, setAnalyticsData] = useState<Record<string, ScanAnalytics>>({});
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editUrlValue, setEditUrlValue] = useState('');
+  const [editIosUrlValue, setEditIosUrlValue] = useState('');
+  const [editAndroidUrlValue, setEditAndroidUrlValue] = useState('');
   const [editError, setEditError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState<Record<string, boolean>>({});
   const [expandedAnalytics, setExpandedAnalytics] = useState<Record<string, boolean>>({});
@@ -266,6 +268,8 @@ export default function DynamicDashboardPage() {
   const handleStartEdit = (record: DynamicQRRecord) => {
     setEditingId(record.id);
     setEditUrlValue(record.originalUrl);
+    setEditIosUrlValue(record.iosUrl || '');
+    setEditAndroidUrlValue(record.androidUrl || '');
     setEditError(null);
   };
 
@@ -281,7 +285,28 @@ export default function DynamicDashboardPage() {
       return;
     }
 
-    const success = await updateRedirect(record.id, record.adminKey, normalized);
+    let finalIos: string | undefined = undefined;
+    if (editIosUrlValue.trim()) {
+      finalIos = normalizeUrl(editIosUrlValue.trim());
+      if (isDangerousUrl(finalIos)) {
+        setEditError('Unsafe iOS URL scheme detected.');
+        return;
+      }
+    }
+
+    let finalAndroid: string | undefined = undefined;
+    if (editAndroidUrlValue.trim()) {
+      finalAndroid = normalizeUrl(editAndroidUrlValue.trim());
+      if (isDangerousUrl(finalAndroid)) {
+        setEditError('Unsafe Android URL scheme detected.');
+        return;
+      }
+    }
+
+    const success = await updateRedirect(record.id, record.adminKey, normalized, {
+      iosUrl: finalIos,
+      androidUrl: finalAndroid,
+    });
     if (success) {
       addToast({
         type: 'success',
@@ -392,36 +417,67 @@ export default function DynamicDashboardPage() {
                     </div>
 
                     {isEditing ? (
-                      <div className="space-y-2 pt-2">
-                        <div className="text-xs font-semibold tracking-wider text-slate-400 uppercase">Update Target URL</div>
-                        <div className="flex flex-col gap-2 sm:flex-row">
+                      <div className="space-y-3 pt-2">
+                        <div className="space-y-1">
+                          <div className="text-xs font-semibold tracking-wider text-slate-400 uppercase">Default Target URL</div>
                           <TextField
                             id={`edit-url-${r.id}`}
                             value={editUrlValue}
                             onChange={(e) => setEditUrlValue(e.target.value)}
                             error={editError || undefined}
                             placeholder="https://new-destination.com"
-                            className="flex-1"
                           />
-                          <div className="flex gap-2 self-start sm:self-center">
-                            <Button variant="primary" size="sm" onClick={() => handleSaveEdit(r)}>
-                              <Save className="mr-1 size-4" /> Save
-                            </Button>
-                            <Button variant="outline" size="sm" onClick={() => setEditingId(null)}>
-                              <X className="size-4" /> Cancel
-                            </Button>
-                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <div className="text-xs font-semibold tracking-wider text-slate-400 uppercase">Apple App Store URL (iOS)</div>
+                          <TextField
+                            id={`edit-ios-url-${r.id}`}
+                            value={editIosUrlValue}
+                            onChange={(e) => setEditIosUrlValue(e.target.value)}
+                            placeholder="https://apps.apple.com/app/id123456789"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <div className="text-xs font-semibold tracking-wider text-slate-400 uppercase">Google Play Store URL (Android)</div>
+                          <TextField
+                            id={`edit-android-url-${r.id}`}
+                            value={editAndroidUrlValue}
+                            onChange={(e) => setEditAndroidUrlValue(e.target.value)}
+                            placeholder="https://play.google.com/store/apps/details?id=com.example.app"
+                          />
+                        </div>
+                        <div className="flex gap-2 pt-1">
+                          <Button variant="primary" size="sm" onClick={() => handleSaveEdit(r)}>
+                            <Save className="mr-1 size-4" /> Save
+                          </Button>
+                          <Button variant="outline" size="sm" onClick={() => setEditingId(null)}>
+                            <X className="size-4" /> Cancel
+                          </Button>
                         </div>
                       </div>
                     ) : (
-                      <div className="space-y-1">
-                        <div className="text-xs font-semibold tracking-wider text-slate-400 uppercase">Redirects to</div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium break-all text-slate-700 dark:text-slate-300">{escapeHtml(r.originalUrl)}</span>
-                          <Button variant="ghost" size="icon" onClick={() => handleStartEdit(r)} title="Edit Destination">
-                            <Edit2 className="size-4" />
-                          </Button>
+                      <div className="space-y-2">
+                        <div className="space-y-1">
+                          <div className="text-xs font-semibold tracking-wider text-slate-400 uppercase">Default Destination</div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium break-all text-slate-700 dark:text-slate-300">{escapeHtml(r.originalUrl)}</span>
+                            <Button variant="ghost" size="icon" onClick={() => handleStartEdit(r)} title="Edit Destination">
+                              <Edit2 className="size-4" />
+                            </Button>
+                          </div>
                         </div>
+                        {r.iosUrl && (
+                          <div className="space-y-1 text-xs">
+                            <div className="font-semibold tracking-wider text-slate-400 uppercase">iOS Destination (App Store)</div>
+                            <span className="font-mono break-all text-slate-700 dark:text-slate-300">{escapeHtml(r.iosUrl)}</span>
+                          </div>
+                        )}
+                        {r.androidUrl && (
+                          <div className="space-y-1 text-xs">
+                            <div className="font-semibold tracking-wider text-slate-400 uppercase">Android Destination (Play Store)</div>
+                            <span className="font-mono break-all text-slate-700 dark:text-slate-300">{escapeHtml(r.androidUrl)}</span>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

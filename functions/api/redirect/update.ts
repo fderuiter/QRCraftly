@@ -9,20 +9,48 @@ export const onRequestPost = async (context: {
   env: Env;
 }) => {
   try {
-    const { id, adminKey, newUrl } = await context.request.json() as { id: string, adminKey: string, newUrl: string };
-    if (!id || !adminKey || !newUrl) {
+    const { id, adminKey, newUrl, redirectUrl, iosUrl, androidUrl } = await context.request.json() as {
+      id: string;
+      adminKey: string;
+      newUrl?: string;
+      redirectUrl?: string;
+      iosUrl?: string;
+      androidUrl?: string;
+    };
+    const targetNewUrl = newUrl || redirectUrl;
+    if (!id || !adminKey || !targetNewUrl) {
       return new Response(JSON.stringify({ error: "Missing required fields" }), {
         status: 400,
         headers: { "Content-Type": "application/json" }
       });
     }
 
-    const validation = validateUrl(newUrl);
+    const validation = validateUrl(targetNewUrl);
     if (!validation.valid) {
       return new Response(JSON.stringify({ error: validation.error }), {
         status: 400,
         headers: { "Content-Type": "application/json" }
       });
+    }
+
+    if (iosUrl && iosUrl.trim() !== "") {
+      const iosValidation = validateUrl(iosUrl.trim());
+      if (!iosValidation.valid) {
+        return new Response(JSON.stringify({ error: `iOS URL: ${iosValidation.error}` }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" }
+        });
+      }
+    }
+
+    if (androidUrl && androidUrl.trim() !== "") {
+      const androidValidation = validateUrl(androidUrl.trim());
+      if (!androidValidation.valid) {
+        return new Response(JSON.stringify({ error: `Android URL: ${androidValidation.error}` }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" }
+        });
+      }
     }
 
     const kv = context.env.REDIRECTS_KV;
@@ -50,7 +78,13 @@ export const onRequestPost = async (context: {
       });
     }
 
-    data.redirectUrl = newUrl;
+    data.redirectUrl = targetNewUrl;
+    if (iosUrl !== undefined) {
+      data.iosUrl = iosUrl && iosUrl.trim() !== "" ? iosUrl.trim() : undefined;
+    }
+    if (androidUrl !== undefined) {
+      data.androidUrl = androidUrl && androidUrl.trim() !== "" ? androidUrl.trim() : undefined;
+    }
 
     if (!kv) {
       if (!(globalThis as any).__mockKV) {
@@ -61,7 +95,12 @@ export const onRequestPost = async (context: {
       await kv.put(`redirect:${id}`, JSON.stringify(data));
     }
 
-    return new Response(JSON.stringify({ success: true, redirectUrl: newUrl }), {
+    return new Response(JSON.stringify({
+      success: true,
+      redirectUrl: targetNewUrl,
+      iosUrl: data.iosUrl,
+      androidUrl: data.androidUrl
+    }), {
       status: 200,
       headers: { "Content-Type": "application/json" }
     });

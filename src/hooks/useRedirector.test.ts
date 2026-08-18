@@ -75,6 +75,45 @@ describe('useRedirector Hook', () => {
     expect(stored[0].id).toBe('new-uuid-456');
   });
 
+  it('successfully registers dynamic redirect with iosUrl and androidUrl options', async () => {
+    const mockResponseData = {
+      id: 'store-uuid-789',
+      redirectUrl: 'https://example.com',
+      iosUrl: 'https://apps.apple.com/app/id123',
+      androidUrl: 'https://play.google.com/store/apps/details?id=com.app',
+      adminKey: 'adm-key-store',
+    };
+
+    fetchSpy.mockResolvedValueOnce({
+      ok: true,
+      json: async () => mockResponseData,
+    });
+
+    const { result } = renderHook(() => useRedirector());
+
+    let record;
+    await act(async () => {
+      record = await result.current.registerRedirect('https://example.com', {
+        iosUrl: 'https://apps.apple.com/app/id123',
+        androidUrl: 'https://play.google.com/store/apps/details?id=com.app',
+      });
+    });
+
+    expect(fetchSpy).toHaveBeenCalledWith('/api/redirect/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        redirectUrl: 'https://example.com',
+        iosUrl: 'https://apps.apple.com/app/id123',
+        androidUrl: 'https://play.google.com/store/apps/details?id=com.app',
+      }),
+    });
+
+    expect(record).toBeDefined();
+    expect(record!.iosUrl).toBe('https://apps.apple.com/app/id123');
+    expect(record!.androidUrl).toBe('https://play.google.com/store/apps/details?id=com.app');
+  });
+
   it('successfully updates a dynamic redirect', async () => {
     const initialRecord = {
       id: 'existing-id',
