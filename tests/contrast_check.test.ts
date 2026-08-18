@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { hexToRgb, luminance, contrastRatio, blendColor, validateKeys } from '../scripts/contrast_check.js';
+import { hexToRgb, luminance, contrastRatio, blendColor, validateKeys, scenarios, colors } from '../scripts/contrast_check.js';
 
 describe('contrast_check', () => {
   describe('hexToRgb', () => {
@@ -140,6 +140,30 @@ describe('contrast_check', () => {
       expect(validateKeys(mockScenarios, null)).toEqual(['slate-900', 'slate-50']);
       expect(validateKeys(mockScenarios, undefined)).toEqual(['slate-900', 'slate-50']);
       expect(validateKeys(mockScenarios, {})).toEqual(['slate-900', 'slate-50']);
+    });
+  });
+
+  describe('non-text component contrast compliance (WCAG 2.1 SC 1.4.11)', () => {
+    it('should validate form input borders, switch tracks, and focus indicators meet 3:1 minimum ratio in light and dark modes', () => {
+      const nonTextElements = ['Input Border', 'Switch Track Inactive', 'Switch Track Active', 'Focus Ring'];
+      
+      const nonTextScenarios = scenarios.filter(s => nonTextElements.includes(s.text));
+      expect(nonTextScenarios.length).toBeGreaterThanOrEqual(8);
+
+      for (const s of nonTextScenarios) {
+        let bgRgb: [number, number, number];
+        if (Array.isArray(s.bg)) {
+          const overlayRgb = hexToRgb(colors[s.bg[0]]);
+          const baseRgb = hexToRgb(colors[s.bg[2]]);
+          bgRgb = blendColor(overlayRgb, baseRgb, s.bg[1]);
+        } else {
+          bgRgb = hexToRgb(colors[s.bg]);
+        }
+        const fgRgb = hexToRgb(colors[s.fg]);
+        const ratio = contrastRatio(fgRgb, bgRgb);
+
+        expect(ratio, `${s.mode} ${s.text} contrast ratio ${ratio.toFixed(2)}:1 must be >= 3.0:1`).toBeGreaterThanOrEqual(3.0);
+      }
     });
   });
 });

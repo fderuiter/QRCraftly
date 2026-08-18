@@ -23,4 +23,13 @@
     outline-offset: 2px !important;
     @apply ring-2 ring-indigo-600 ring-offset-2 dark:ring-indigo-500 dark:ring-offset-slate-900;
   }
+
+  @media (forced-colors: active) {
+    :focus-visible,
+    :focus-visible + .peer,
+    :focus-visible ~ .peer {
+      outline: 2px solid Highlight !important;
+      outline-offset: 2px !important;
+    }
+  }
 }
