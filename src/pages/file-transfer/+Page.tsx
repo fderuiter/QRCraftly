@@ -21,6 +21,7 @@ import { Play, Square, Upload, FileUp, Cpu, Sliders, Sun, Moon, QrCode, Activity
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { RangeInput } from '@/components/ui/RangeInput';
+import { Alert } from '@/components/ui/Alert';
 import StyleControls from '@/components/StyleControls';
 import { QRProvider, useQRStore, useQRStoreSelector } from '@/context/QRContext';
 import { useImage } from '@/hooks/useImage';
@@ -46,6 +47,8 @@ function FileTransferToolInner() {
     selectedFile,
     setSelectedFile,
     isTransferring,
+    isVerifyingHandshake,
+    handshakeError,
     progress,
     currentFrameIndex,
     totalFrames,
@@ -265,6 +268,22 @@ function FileTransferToolInner() {
               </div>
 
               <>
+                {/* Visual notice informing user about high-density stream style sanitization */}
+                <div className="mb-4">
+                  <Alert variant="warning" title="Stream Style Preset Active">
+                    Styling options are automatically streamlined (center logos, borders, and complex module geometries are suppressed) on high-density data chunk frames to ensure maximum scannability.
+                  </Alert>
+                </div>
+
+                {/* Handshake scannability failure alert */}
+                {handshakeError && (
+                  <div className="mb-4">
+                    <Alert variant="error" title="Transfer Paused" role="alert" aria-live="assertive">
+                      {handshakeError}
+                    </Alert>
+                  </div>
+                )}
+
                 {/* Recycled UI Canvas Container */}
                 <div className="mb-8 flex min-h-75 items-center justify-center rounded-2xl border border-slate-100 bg-slate-50 p-6 dark:border-slate-900 dark:bg-slate-950/50">
                   <canvas
@@ -319,11 +338,11 @@ function FileTransferToolInner() {
                         variant="primary"
                         fullWidth
                         onClick={startTransfer}
-                        disabled={!selectedFile}
+                        disabled={!selectedFile || isVerifyingHandshake}
                         aria-label="Start file transfer"
                       >
                         <Play className="size-4" />
-                        Start Transfer
+                        {isVerifyingHandshake ? 'Verifying Handshake...' : 'Start Transfer'}
                       </Button>
                     ) : (
                       <Button
