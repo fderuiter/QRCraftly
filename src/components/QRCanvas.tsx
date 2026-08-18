@@ -16,7 +16,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import React, { useEffect, useRef, useCallback, useState, useMemo } from 'react';
+import React, { useEffect, useRef, useCallback, useState, useMemo, useSyncExternalStore } from 'react';
 import { QRConfig, SocialFormat, TemplateStyle, QRModules, QRType } from '../types';
 import { drawQR, drawQRInternal } from '../utils/qrRenderer';
 import { drawWithTemplate, SOCIAL_DIMENSIONS } from '../utils/templateRenderer';
@@ -25,6 +25,7 @@ import { ValidationEngine } from '../engine/ValidationEngine';
 import { Alert } from './ui/Alert';
 import { normalizeUrl, shouldNormalizeUrl } from '../utils/url';
 import { useOptionalQRStore } from '../context/QRContext';
+import { getMazeCacheKey, mazeCache } from '../utils/qr-renderers/maze';
 import {
   isMazeWorkerRequest,
   isMazeWorkerResponse,
@@ -98,7 +99,17 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
     }
   };
 
-  const [fallbackActive, setFallbackActive] = useState(false);
+  const store = useOptionalQRStore();
+
+  const isStoreFallbackActive = useSyncExternalStore(
+    store ? store.subscribe : () => () => {},
+    () => (store ? store.getState().isScannabilityFallbackActive : false),
+    () => (store ? store.getState().isScannabilityFallbackActive : false)
+  );
+
+  const [localFallbackActive, setLocalFallbackActive] = useState(false);
+
+  const fallbackActive = isStoreFallbackActive || localFallbackActive;
 
   const activeConfig = useMemo(() => {
     if (fallbackActive) {
@@ -108,7 +119,7 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
   }, [config, fallbackActive]);
 
   useEffect(() => {
-    setFallbackActive(false);
+    setLocalFallbackActive(false);
   }, [
     config.value,
     config.style,
@@ -120,12 +131,10 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
     config.isMazeBridgesEnabled,
   ]);
 
-  const store = useOptionalQRStore();
-
   useEffect(() => {
     if (!store) return;
     const unregister = store.registerSignal('scannability-fail', () => {
-      setFallbackActive(true);
+      setLocalFallbackActive(true);
     });
     return () => {
       unregister();
@@ -352,6 +361,8 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
 
         if (status === 'success' && mazeData) {
           setComputedMazeData(mazeData);
+          const cacheKey = getMazeCacheKey(configRef.current, sizeRef.current);
+          mazeCache.set(cacheKey, mazeData);
         } else {
           console.warn("Background maze calculation failed:", error);
         }
