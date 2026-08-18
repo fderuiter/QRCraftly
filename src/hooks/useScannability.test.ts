@@ -698,5 +698,124 @@ describe('useScannability - changed behavior: uses useQRStore instead of useQRCo
       nowSpy.mockRestore();
     });
   });
+
+  describe('Deterministic Resource Scoping & Cleanup', () => {
+    it('frees image handles when main-thread backpressure drops a scannability verification request', () => {
+      let mockTime = 0;
+      const nowSpy = vi.spyOn(performance, 'now').mockImplementation(() => mockTime);
+
+      const { result } = renderHook(
+        () => useScannability(makeCanvasRef(), defaultConfig),
+        { wrapper }
+      );
+
+      const worker = getActiveWorker()!;
+      worker.postMessage = vi.fn();
+
+      // Send initial check
+      const initialBitmap = { width: 10, height: 10, close: vi.fn() } as unknown as ImageBitmap;
+      mockTime = 0;
+      act(() => {
+        result.current.checkScannability(undefined, initialBitmap);
+      });
+
+      // Simulate 50ms latency response
+      mockTime = 50;
+      act(() => {
+        worker.dispatchMessage({
+          success: true,
+          physicalReady: true,
+          configId: '1',
+        });
+      });
+
+      // Start another check so worker is busy
+      const busyBitmap = { width: 10, height: 10, close: vi.fn() } as unknown as ImageBitmap;
+      mockTime = 60;
+      act(() => {
+        result.current.checkScannability(undefined, busyBitmap);
+      });
+
+      // Try to check again while worker is busy and latency is high
+      const droppedBitmap = { width: 10, height: 10, close: vi.fn() } as unknown as ImageBitmap;
+      mockTime = 70;
+      act(() => {
+        result.current.checkScannability(undefined, droppedBitmap);
+      });
+
+      // The dropped bitmap MUST be closed by backpressure guard
+      expect(droppedBitmap.close).toHaveBeenCalledTimes(1);
+
+      nowSpy.mockRestore();
+    });
+
+    it('frees image handles when worker dispatch fails due to validation or postMessage exceptions', () => {
+      const { result } = renderHook(
+        () => useScannability(makeCanvasRef(), defaultConfig),
+        { wrapper }
+      );
+
+      const worker = getActiveWorker()!;
+      worker.postMessage = vi.fn().mockImplementation(() => {
+        throw new Error('DataCloneError: message serialization failed');
+      });
+
+      const mockImageBitmap = { width: 10, height: 10, close: vi.fn() } as unknown as ImageBitmap;
+
+      act(() => {
+        result.current.checkScannability(undefined, mockImageBitmap);
+      });
+
+      expect(mockImageBitmap.close).toHaveBeenCalledTimes(1);
+      expect(result.current.status).toBe('fail');
+    });
+
+    it('frees image handles in main-thread fallback mode across completed checks and bypassed runs', async () => {
+      const originalWorker = globalThis.Worker;
+      delete (globalThis as any).Worker;
+
+      const { result } = renderHook(
+        () => useScannability(makeCanvasRef(), defaultConfig),
+        { wrapper }
+      );
+
+      const mockImageBitmap1 = { width: 10, height: 10, close: vi.fn() } as unknown as ImageBitmap;
+
+      await act(async () => {
+        result.current.checkScannability(undefined, mockImageBitmap1);
+        await new Promise((r) => setTimeout(r, 150));
+      });
+
+      expect(mockImageBitmap1.close).toHaveBeenCalledTimes(1);
+
+      globalThis.Worker = originalWorker;
+    });
+
+    it('maintains zero memory leak across 1,000 rapid cycles of parameter adjustments', () => {
+      const { result } = renderHook(
+        () => useScannability(makeCanvasRef(), defaultConfig),
+        { wrapper }
+      );
+
+      const worker = getActiveWorker()!;
+      worker.postMessage = vi.fn();
+
+      const createdBitmaps: { width: number; height: number; close: any }[] = [];
+
+      for (let i = 0; i < 1000; i++) {
+        const bitmap = { width: 10, height: 10, close: vi.fn() };
+        createdBitmaps.push(bitmap);
+        act(() => {
+          result.current.checkScannability(undefined, bitmap as unknown as ImageBitmap);
+        });
+      }
+
+      // Verify that every bitmap created was either transferred to worker or closed via backpressure/error cleanup
+      const closedCount = createdBitmaps.filter((b) => b.close.mock.calls.length > 0).length;
+      const transferredCount = (worker.postMessage as any).mock.calls.length;
+
+      expect(closedCount + transferredCount).toBe(1000);
+    });
+  });
 });
 

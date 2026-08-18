@@ -15,15 +15,26 @@ let cachedTempBuffer: Uint8ClampedArray | null = null;
 
 const yieldToEventLoop = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 
+const releaseImageHandle = (handle: any) => {
+  if (handle && typeof handle.close === 'function') {
+    try {
+      handle.close();
+    } catch {}
+  }
+};
+
 /**
  * Handles incoming messages to process QR code scannability.
  * @param e - The message event containing worker data.
  */
 self.onmessage = async (e: MessageEvent<unknown>) => {
   let configId: string | undefined;
+  let imageBitmap: any = undefined;
+
   try {
     if (e.data && typeof e.data === 'object') {
       configId = (e.data as any).configId;
+      imageBitmap = (e.data as any).imageBitmap;
     }
 
     if (configId !== undefined) {
@@ -34,6 +45,8 @@ self.onmessage = async (e: MessageEvent<unknown>) => {
     await yieldToEventLoop();
 
     if (configId !== undefined && latestConfigId !== configId) {
+      releaseImageHandle(imageBitmap);
+      imageBitmap = undefined;
       return;
     }
 
@@ -44,7 +57,7 @@ self.onmessage = async (e: MessageEvent<unknown>) => {
       assertWorkerRequest(e.data);
     }
 
-    const { imageData: reqImageData, imageBitmap, width, height, isTest } = e.data;
+    const { imageData: reqImageData, width, height, isTest } = e.data;
 
     let imageData: { data: Uint8ClampedArray; width: number; height: number };
 
@@ -67,7 +80,8 @@ self.onmessage = async (e: MessageEvent<unknown>) => {
           throw new Error('OffscreenCanvas is not supported in this environment');
         }
       } finally {
-        imageBitmap.close();
+        releaseImageHandle(imageBitmap);
+        imageBitmap = undefined;
       }
     } else if (reqImageData) {
       imageData = reqImageData as any;
@@ -184,6 +198,9 @@ self.onmessage = async (e: MessageEvent<unknown>) => {
     self.postMessage(response);
     
   } catch (_err) {
+    releaseImageHandle(imageBitmap);
+    imageBitmap = undefined;
+
     if (configId !== undefined && latestConfigId !== configId) {
       return;
     }
