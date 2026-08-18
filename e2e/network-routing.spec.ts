@@ -67,11 +67,15 @@ test.describe('Context-Level Network Routing & Worker Interception', () => {
 
       worker.postMessage('start');
 
-      const result = await responsePromise;
+      const result = await responsePromise as { status: string; message?: string };
       console.log('Worker Result:', result);
       
       // Wait another 500ms to let the Node.js event loop process the route interception completely
       await new Promise(resolve => setTimeout(resolve, 500));
+
+      if (result.status === 'error') {
+        throw new Error(`Worker fetch blocked: ${result.message}`);
+      }
     });
   });
 });
