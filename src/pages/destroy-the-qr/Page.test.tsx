@@ -271,11 +271,15 @@ describe('Destroy the QR Code! Arcade Page', () => {
     expect(canvas).toBeInTheDocument();
 
     if (canvas) {
-      // Click canvas to fire a bomb
-      fireEvent.mouseDown(canvas, { clientX: 200, clientY: 200 });
+      canvas.getBoundingClientRect = () => ({
+        left: 0, top: 0, width: 600, height: 600, right: 600, bottom: 600, x: 0, y: 0, toJSON: () => {}
+      });
+
+      // Move mouse to target position and fire a bomb
+      fireEvent.mouseMove(canvas, { clientX: 200, clientY: 200 });
+      fireEvent.mouseDown(canvas);
       fireEvent.mouseUp(canvas);
       
-      // Let simulation run a few frames
       await new Promise<void>(resolve => setTimeout(resolve, 100));
     }
 
@@ -284,13 +288,14 @@ describe('Destroy the QR Code! Arcade Page', () => {
     fireEvent.click(blasterBtn);
 
     if (canvas) {
-      // Click canvas to fire bullets
-      fireEvent.mouseDown(canvas, { clientX: 200, clientY: 200 });
+      fireEvent.mouseMove(canvas, { clientX: 200, clientY: 200 });
+      fireEvent.mouseDown(canvas);
       fireEvent.mouseUp(canvas);
       
-      // Let simulation run a few frames
       await new Promise<void>(resolve => setTimeout(resolve, 100));
     }
+
+    expect(canvas).toBeInTheDocument();
   });
 
   it('handles boundary conditions for subgrid projection when projectiles or explosions hit canvas edges', async () => {
@@ -300,16 +305,24 @@ describe('Destroy the QR Code! Arcade Page', () => {
     expect(canvas).toBeInTheDocument();
 
     if (canvas) {
-      // Fire at the very top-left of canvas (extreme coordinates)
-      fireEvent.mouseDown(canvas, { clientX: 0, clientY: 0 });
+      canvas.getBoundingClientRect = () => ({
+        left: 0, top: 0, width: 600, height: 600, right: 600, bottom: 600, x: 0, y: 0, toJSON: () => {}
+      });
+
+      // Fire at top-left edge
+      fireEvent.mouseMove(canvas, { clientX: 0, clientY: 0 });
+      fireEvent.mouseDown(canvas);
       fireEvent.mouseUp(canvas);
 
-      // Fire at the very bottom-right of canvas (extreme coordinates)
-      fireEvent.mouseDown(canvas, { clientX: 800, clientY: 800 });
+      // Fire at bottom-right edge
+      fireEvent.mouseMove(canvas, { clientX: 600, clientY: 600 });
+      fireEvent.mouseDown(canvas);
       fireEvent.mouseUp(canvas);
 
       await new Promise<void>(resolve => setTimeout(resolve, 100));
     }
+
+    expect(canvas).toBeInTheDocument();
   });
 
   it('displays options for L, M, Q, and H error correction tiers in the configuration panel', () => {

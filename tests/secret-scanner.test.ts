@@ -43,6 +43,8 @@ describe('secret-scanner', () => {
     it('should identify legitimate dummy keys/secrets as NOT false positives', () => {
       expect(isFalsePositive('1234567890123456789012345678901234567', 'CF_API_KEY')).toBe(false);
       expect(isFalsePositive('mySecretSmtpPass123', 'SMTP_PASS')).toBe(false);
+      expect(isFalsePositive('mail.pass-42', 'SMTP_PASS')).toBe(false);
+      expect(isFalsePositive('correct(horse)', 'SMTP_PASS')).toBe(false);
     });
   });
 

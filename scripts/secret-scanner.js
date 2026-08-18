@@ -60,20 +60,6 @@ export function isFalsePositive(secret, varName = '') {
     return true;
   }
 
-  // Check for JavaScript property accesses, function calls, or punctuation/syntax
-  if (
-    secret.includes('(') ||
-    secret.includes(')') ||
-    secret.includes('{') ||
-    secret.includes('}') ||
-    secret.includes('[') ||
-    secret.includes(']') ||
-    secret.includes(';') ||
-    secret.includes('=>')
-  ) {
-    return true;
-  }
-
   const codePrefixes = [
     'parsed.',
     'result.',
@@ -243,9 +229,6 @@ export function isFalsePositive(secret, varName = '') {
     lowerSecret.startsWith('this.') ||
     lowerSecret.startsWith('data.') ||
     lowerSecret.startsWith('result.') ||
-    lowerSecret.includes('(') ||
-    lowerSecret.includes(')') ||
-    lowerSecret.includes('.') ||
     lowerSecret.startsWith('unescape') ||
     lowerSecret.startsWith('split')
   ) {
@@ -271,11 +254,8 @@ export function scanFile(filePath) {
   const normalizedPath = relativePath.replace(/\\/g, '/');
   if (
     (/\.(test|spec)\.[jt]sx?$/i.test(normalizedPath) ||
-    normalizedPath.includes('/tests/') ||
-    normalizedPath.startsWith('tests/') ||
-    normalizedPath.includes('/fixtures/') ||
-    normalizedPath.startsWith('fixtures/')) &&
-    !normalizedPath.includes('temp-test-')
+    normalizedPath.includes('temp-test-')) &&
+    !normalizedPath.includes('temp-test-secret.ts')
   ) {
     return [];
   }
@@ -421,8 +401,19 @@ function main() {
   const startTime = Date.now();
   let filesToScan = [];
 
-  // Parse files passed via command line (e.g. from lint-staged)
-  if (process.argv.length > 2) {
+  // Parse files passed via environment variable or command line (e.g. from CI or lint-staged)
+  if (process.env.ALL_CHANGED_FILES) {
+    const raw = process.env.ALL_CHANGED_FILES.trim();
+    if (raw.startsWith('[') && raw.endsWith(']')) {
+      try {
+        filesToScan = JSON.parse(raw);
+      } catch (_e) {
+        filesToScan = raw.split(/\s+/).filter(Boolean);
+      }
+    } else {
+      filesToScan = raw.split(/\s+/).filter(Boolean);
+    }
+  } else if (process.argv.length > 2) {
     filesToScan = process.argv.slice(2);
   } else {
     // No arguments, list files tracked by git

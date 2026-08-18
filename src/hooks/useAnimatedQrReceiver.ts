@@ -332,7 +332,9 @@ export function useAnimatedQrReceiver({
 
   // Frame processor
   const handleFrame = useCallback(async (decodedText: string) => {
-    if (!decodedText || receiverSuccess || isVerifying || receiverError) return;
+    if (!decodedText || receiverSuccess || isVerifying) return;
+    // A new handshake starts a new transfer and must be able to clear a prior error.
+    if (receiverError && !decodedText.startsWith('H|')) return;
 
     // Synchronously track and discard duplicates before downstream lookahead or direct scheme check
     if (decodedText.startsWith('F|')) {
@@ -341,8 +343,10 @@ export function useAnimatedQrReceiver({
         const index = parseInt(parts[1], 10);
         const total = parseInt(parts[2], 10);
         if (!isNaN(index) && !isNaN(total)) {
-          if (total > 5000) {
-            const errMsg = 'File transfer rejected: exceeds the maximum limit of 5000 chunks.';
+          if (total < 1 || total > 5000 || index < 0 || index >= total) {
+            const errMsg = total < 1 || total > 5000
+              ? 'File transfer rejected: exceeds the maximum limit of 5000 chunks.'
+              : 'File transfer rejected: invalid chunk metadata or index range.';
             setReceiverError(errMsg);
             setIsScanning(false);
             stopStream();
@@ -448,7 +452,7 @@ export function useAnimatedQrReceiver({
           const base64Data = parts[3];
 
           if (!isNaN(index) && !isNaN(total)) {
-            if (handshakeRequired && !handshake) {
+            if (handshakeRequired && !handshakeRef.current) {
               // Ignore data frames until handshake is scanned
               return;
             }

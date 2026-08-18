@@ -32,7 +32,12 @@ export function calculateBlurRadius(width: number): number {
  * @param width - Image width.
  * @param height - Image height.
  * @param noiseLevel - Intensity of randomized noise.
- * @returns A new Uint8ClampedArray containing the modified pixel data.
+ * @param dstBuffer - Optional reusable destination buffer. Mutated in place and returned if length equals pixels.length.
+ * @param tempBuffer - Optional reusable scratch buffer for horizontal blur pass. Mutated in place if length equals pixels.length.
+ *
+ * Note: pixels, dstBuffer, and tempBuffer must be three distinct arrays. Aliasing any two of them corrupts the blur output.
+ * Callers must not reuse dstBuffer while concurrently reading a previously returned result.
+ * @returns A Uint8ClampedArray containing the modified pixel data.
  */
 export function applyOpticalSimulationMath(
   pixels: Uint8ClampedArray | Uint8Array,

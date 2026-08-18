@@ -32,6 +32,8 @@ export class CameraFrameProvider implements FrameProvider {
   private consecutiveRestartAttempts = 0;
   
   private worker: Worker | null = null;
+  private boundOnMsg: ((e: MessageEvent) => void) | null = null;
+  private boundOnErr: ((err: any) => void) | null = null;
   private timerId: any = null;
   private rafId: any = null;
   private active = false;
@@ -63,7 +65,22 @@ export class CameraFrameProvider implements FrameProvider {
     this.scheduler.pool = sharedBufferPool;
   }
   
+  private detachWorkerListeners() {
+    if (this.worker) {
+      if (typeof this.worker.removeEventListener === 'function') {
+        if (this.boundOnMsg) this.worker.removeEventListener('message', this.boundOnMsg);
+        if (this.boundOnErr) this.worker.removeEventListener('error', this.boundOnErr);
+      } else {
+        (this.worker as any).onmessage = null;
+        (this.worker as any).onerror = null;
+      }
+    }
+    this.boundOnMsg = null;
+    this.boundOnErr = null;
+  }
+
   private recreateWorker() {
+    this.detachWorkerListeners();
     this.consecutiveRestartAttempts += 1;
     if (this.consecutiveRestartAttempts > 3) {
       console.error("CameraFrameProvider background worker crashed repeatedly. Stopping scanning.");
@@ -88,9 +105,10 @@ export class CameraFrameProvider implements FrameProvider {
   private initializeWorker() {
     if (typeof window === 'undefined') return;
     try {
+      this.detachWorkerListeners();
       this.worker = getSharedScannerWorker();
       
-      const onMsg = (e: MessageEvent) => {
+      this.boundOnMsg = (e: MessageEvent) => {
         const payload = e.data;
         if (!isValidScannerResponse(payload)) return;
         
@@ -99,17 +117,19 @@ export class CameraFrameProvider implements FrameProvider {
         this.scheduler.endFrame(sequenceId, status, decodedData, error, buffer);
       };
       
-      const onErr = (err: any) => {
+      this.boundOnErr = (err: any) => {
         console.error('Worker thread-level runtime boundary error:', err);
-        this.recreateWorker();
+        if (this.isScanning) {
+          this.recreateWorker();
+        }
       };
       
       if (typeof this.worker.addEventListener === 'function') {
-        this.worker.addEventListener('message', onMsg);
-        this.worker.addEventListener('error', onErr);
+        this.worker.addEventListener('message', this.boundOnMsg);
+        this.worker.addEventListener('error', this.boundOnErr);
       } else {
-        (this.worker as any).onmessage = onMsg;
-        (this.worker as any).onerror = onErr;
+        (this.worker as any).onmessage = this.boundOnMsg;
+        (this.worker as any).onerror = this.boundOnErr;
       }
     } catch (err) {
       console.error('Failed to initialize worker inside CameraFrameProvider:', err);
@@ -129,6 +149,7 @@ export class CameraFrameProvider implements FrameProvider {
   
   public stop() {
     if (!this.isScanning) return;
+    this.detachWorkerListeners();
     this.isScanning = false;
     this.active = false;
     if (this.timerId) clearTimeout(this.timerId);
@@ -146,7 +167,6 @@ export class CameraFrameProvider implements FrameProvider {
         }
       }));
     }
-    console.log(`[Telemetry Diagnostics] Camera scan session completed. Latency: ${this.getMetrics().processingLatency.toFixed(2)}ms, Frame drops: ${this.getMetrics().frameDropCount}`);
   }
   
   public onFrameDecoded(callback: (result: { status: 'pass' | 'fail'; decodedData: string | null; error?: string | null }) => void) {
@@ -288,7 +308,6 @@ export class FileFrameProvider implements FrameProvider {
         }
       }));
     }
-    console.log(`[Telemetry Diagnostics] File scan session completed. Latency: ${this.getMetrics().processingLatency.toFixed(2)}ms, Frame drops: ${this.getMetrics().frameDropCount}`);
   }
   
   public onFrameDecoded(callback: (result: { status: 'pass' | 'fail'; decodedData: string | null; error?: string | null }) => void) {

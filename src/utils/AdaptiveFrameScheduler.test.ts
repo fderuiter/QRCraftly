@@ -150,10 +150,13 @@ describe('AdaptiveFrameScheduler', () => {
 
     // On-demand watchdog check
     expect(scheduler.checkWatchdog()).toBe(true);
-    expect(onWatchdogTriggered).toHaveBeenCalled();
+    expect(onWatchdogTriggered).toHaveBeenCalledTimes(1);
 
     // Trigger recovery redundantly (should guard against it)
     scheduler.triggerRecovery(2000);
+    expect(onWatchdogTriggered).toHaveBeenCalledTimes(1);
+    expect(scheduler.getInFlight()).toBe(false);
+    scheduler.stop();
   });
 
   it('should trigger watchdog automatically via setInterval', () => {

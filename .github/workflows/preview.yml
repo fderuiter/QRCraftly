@@ -154,12 +154,31 @@ jobs:
                   body,
                 }));
               } else {
-                await withRetry(() => github.rest.issues.createComment({
-                  owner,
-                  repo,
-                  issue_number: prNumber,
-                  body,
-                }));
+                try {
+                  await github.rest.issues.createComment({
+                    owner,
+                    repo,
+                    issue_number: prNumber,
+                    body,
+                  });
+                } catch (createErr) {
+                  const { data: latestComments } = await withRetry(() => github.rest.issues.listComments({
+                    owner,
+                    repo,
+                    issue_number: prNumber,
+                  }));
+                  const existing = latestComments.find(c => c.body && c.body.includes('🚀 Cloudflare Pages Preview Deployment'));
+                  if (existing) {
+                    await withRetry(() => github.rest.issues.updateComment({
+                      owner,
+                      repo,
+                      comment_id: existing.id,
+                      body,
+                    }));
+                  } else {
+                    throw createErr;
+                  }
+                }
               }
             } catch (err) {
               console.error('Failed to post or update PR status comment after retries:', err);
@@ -200,12 +219,40 @@ jobs:
               const prNumber = context.payload.pull_request.number;
               const { owner, repo } = context.repo;
               
-              await withRetry(() => github.rest.issues.createComment({
+              const { data: comments } = await withRetry(() => github.rest.issues.listComments({
                 owner,
                 repo,
                 issue_number: prNumber,
-                body: `🧹 **Preview Environment Decommissioned**\nThe dynamic staging environment for this pull request has been automatically torn down on Cloudflare Pages.`
               }));
+
+              const decommissionComment = comments.find(c => c.body && c.body.includes('Preview Environment Decommissioned'));
+              const decommissionBody = `🧹 **Preview Environment Decommissioned**\nThe dynamic staging environment for this pull request has been automatically torn down on Cloudflare Pages.`;
+
+              if (decommissionComment) {
+                await withRetry(() => github.rest.issues.updateComment({
+                  owner,
+                  repo,
+                  comment_id: decommissionComment.id,
+                  body: decommissionBody,
+                }));
+              } else {
+                try {
+                  await github.rest.issues.createComment({
+                    owner,
+                    repo,
+                    issue_number: prNumber,
+                    body: decommissionBody,
+                  });
+                } catch (createErr) {
+                  const { data: rechecked } = await withRetry(() => github.rest.issues.listComments({
+                    owner,
+                    repo,
+                    issue_number: prNumber,
+                  }));
+                  const existing = rechecked.find(c => c.body && c.body.includes('Preview Environment Decommissioned'));
+                  if (!existing) throw createErr;
+                }
+              }
             } catch (err) {
               console.error('Failed to post decommission comment after retries:', err);
             }
