@@ -294,4 +294,51 @@ describe('Destroy the QR Code! Arcade Page', () => {
       expect(mockPostMessage).toHaveBeenCalled();
     }
   });
+
+  it('displays options for L, M, Q, and H error correction tiers in the configuration panel', () => {
+    render(<Page />);
+
+    expect(screen.getByText('Error Correction Level')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'L' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'M' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Q' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'H' })).toBeInTheDocument();
+  });
+
+  it('resets active game state and matrix density when switching error correction level', () => {
+    render(<Page />);
+
+    const levelLBtn = screen.getByRole('button', { name: 'L' });
+    const levelHBtn = screen.getByRole('button', { name: 'H' });
+
+    // Initially H is selected
+    expect(levelHBtn).toHaveAttribute('aria-pressed', 'true');
+
+    // Click tier L
+    fireEvent.click(levelLBtn);
+    expect(levelLBtn).toHaveAttribute('aria-pressed', 'true');
+    expect(levelHBtn).toHaveAttribute('aria-pressed', 'false');
+
+    // Durability should reset to 100%
+    expect(screen.getByText('100%')).toBeInTheDocument();
+  });
+
+  it('clears existing block damage and resets active projectiles when error correction level changes', () => {
+    render(<Page />);
+
+    const canvas = document.querySelector('canvas');
+    if (canvas) {
+      // Fire shots to inflict damage
+      fireEvent.mouseDown(canvas, { clientX: 200, clientY: 200 });
+      fireEvent.mouseMove(canvas, { clientX: 210, clientY: 210 });
+      fireEvent.mouseUp(canvas);
+    }
+
+    // Switch tier to M
+    const levelMBtn = screen.getByRole('button', { name: 'M' });
+    fireEvent.click(levelMBtn);
+
+    // Grid damage and durability should reset completely
+    expect(screen.getByText('100%')).toBeInTheDocument();
+  });
 });
