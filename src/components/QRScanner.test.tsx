@@ -546,7 +546,7 @@ describe('QRScanner Component', () => {
         capturedOnScanSuccess = options.onScanSuccess;
         return {
           isScanning: true,
-          status: 'scanning',
+          status: 'checking',
           samplingDelay: 33,
           latencyHistory: [],
           startScanning: mockStartScanning,
