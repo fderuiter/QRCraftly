@@ -40,7 +40,7 @@ describe('scannabilityWorker', () => {
     globalThis.postMessage = originalPostMessage;
   });
 
-  const createDummyRequest = (configId = '123', isTest = true) => {
+  const createDummyRequest = (configId = '123', isTest = true, moduleCount?: number) => {
     return {
       imageData: {
         data: new Uint8ClampedArray(400),
@@ -51,6 +51,7 @@ describe('scannabilityWorker', () => {
       height: 10,
       configId,
       isTest,
+      moduleCount,
     };
   };
 
@@ -70,6 +71,8 @@ describe('scannabilityWorker', () => {
     expect(postMessageSpy).toHaveBeenCalledWith({
       success: true,
       physicalReady: true,
+      localContrastViolations: 0,
+      minLocalContrast: 21,
       configId: '123',
     });
   });
@@ -87,6 +90,8 @@ describe('scannabilityWorker', () => {
     expect(postMessageSpy).toHaveBeenCalledWith({
       success: true,
       physicalReady: false,
+      localContrastViolations: 0,
+      minLocalContrast: 21,
       configId: '123',
     });
   });
@@ -99,12 +104,12 @@ describe('scannabilityWorker', () => {
 
     await workerHandler({ data: createDummyRequest() } as MessageEvent);
 
-    expect(postMessageSpy).toHaveBeenCalledWith({
+    expect(postMessageSpy).toHaveBeenCalledWith(expect.objectContaining({
       success: false,
       physicalReady: false,
       error: 'SECURITY_VIOLATION',
       configId: '123',
-    });
+    }));
   });
 
   it('handles case where first digital scan fails but second (attemptBoth) passes', async () => {
@@ -117,11 +122,11 @@ describe('scannabilityWorker', () => {
 
     await workerHandler({ data: createDummyRequest() } as MessageEvent);
 
-    expect(postMessageSpy).toHaveBeenCalledWith({
+    expect(postMessageSpy).toHaveBeenCalledWith(expect.objectContaining({
       success: true,
       physicalReady: true,
       configId: '123',
-    });
+    }));
   });
 
   it('handles case where both digital scans fail', async () => {
@@ -133,12 +138,12 @@ describe('scannabilityWorker', () => {
 
     await workerHandler({ data: createDummyRequest() } as MessageEvent);
 
-    expect(postMessageSpy).toHaveBeenCalledWith({
+    expect(postMessageSpy).toHaveBeenCalledWith(expect.objectContaining({
       success: false,
       physicalReady: false,
       error: 'NOT_FOUND',
       configId: '123',
-    });
+    }));
   });
 
   it('applies optical simulation math when isTest is false', async () => {
@@ -150,11 +155,11 @@ describe('scannabilityWorker', () => {
 
     await workerHandler({ data: createDummyRequest('123', false) } as MessageEvent);
 
-    expect(postMessageSpy).toHaveBeenCalledWith({
+    expect(postMessageSpy).toHaveBeenCalledWith(expect.objectContaining({
       success: true,
       physicalReady: true,
       configId: '123',
-    });
+    }));
   });
 
   it('catches validation error if the payload is invalid', async () => {
@@ -227,11 +232,11 @@ describe('scannabilityWorker', () => {
 
     await workerHandler({ data: createDummyRequest() } as MessageEvent);
 
-    expect(postMessageSpy).toHaveBeenCalledWith({
+    expect(postMessageSpy).toHaveBeenCalledWith(expect.objectContaining({
       success: true,
       physicalReady: true,
       configId: '123',
-    });
+    }));
   });
 
   it('cooperatively cancels older execution sequence when a newer configId is dispatched', async () => {
@@ -249,10 +254,10 @@ describe('scannabilityWorker', () => {
 
     // Only '102' should have successfully called postMessage; '101' should have cooperatively aborted without posting.
     expect(postMessageSpy).toHaveBeenCalledTimes(1);
-    expect(postMessageSpy).toHaveBeenCalledWith({
+    expect(postMessageSpy).toHaveBeenCalledWith(expect.objectContaining({
       success: true,
       physicalReady: true,
       configId: '102',
-    });
+    }));
   });
 });
