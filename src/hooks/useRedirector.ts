@@ -133,7 +133,7 @@ export function useRedirector() {
 
   const registerRedirect = async (
     targetUrl: string,
-    options?: { iosUrl?: string; androidUrl?: string }
+    options?: { iosUrl?: string; androidUrl?: string; turnstileToken?: string }
   ): Promise<DynamicQRRecord | null> => {
     setIsLoading(true);
     setError(null);
@@ -148,6 +148,7 @@ export function useRedirector() {
           redirectUrl: targetUrl,
           iosUrl: options?.iosUrl,
           androidUrl: options?.androidUrl,
+          turnstileToken: options?.turnstileToken,
         }),
       });
 

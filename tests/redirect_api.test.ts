@@ -160,7 +160,7 @@ describe("Secure Dynamic Redirection API Suite", () => {
     const runRegister = async (url: string) => {
       const req = new Request("https://qrcraftly.com/api/redirect/register", {
         method: "POST",
-        body: JSON.stringify({ redirectUrl: url }),
+        body: JSON.stringify({ redirectUrl: url, turnstileToken: "valid-turnstile-token" }),
         headers: { "Content-Type": "application/json" }
       });
       return await registerOnRequestPost({ request: req, env: {} });
@@ -273,7 +273,8 @@ describe("Secure Dynamic Redirection API Suite", () => {
         body: JSON.stringify({
           redirectUrl: "https://example.com",
           iosUrl: "https://apps.apple.com/app/id123456789",
-          androidUrl: "https://play.google.com/store/apps/details?id=com.example.app"
+          androidUrl: "https://play.google.com/store/apps/details?id=com.example.app",
+          turnstileToken: "valid-turnstile-token"
         }),
         headers: { "Content-Type": "application/json" }
       });
@@ -290,7 +291,8 @@ describe("Secure Dynamic Redirection API Suite", () => {
         method: "POST",
         body: JSON.stringify({
           redirectUrl: "https://example.com",
-          iosUrl: "javascript:alert('ios')"
+          iosUrl: "javascript:alert('ios')",
+          turnstileToken: "valid-turnstile-token"
         }),
         headers: { "Content-Type": "application/json" }
       });
@@ -686,7 +688,7 @@ describe("Secure Dynamic Redirection API Suite", () => {
       // Un-bound env (no active Cloudflare edge connection)
       const regReq = new Request("https://qrcraftly.com/api/redirect/register", {
         method: "POST",
-        body: JSON.stringify({ redirectUrl: "https://offline-dev.local/page" }),
+        body: JSON.stringify({ redirectUrl: "https://offline-dev.local/page", turnstileToken: "valid-turnstile-token" }),
         headers: { "Content-Type": "application/json" },
       });
 
