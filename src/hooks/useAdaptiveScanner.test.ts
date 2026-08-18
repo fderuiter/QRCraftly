@@ -835,7 +835,7 @@ describe('useAdaptiveScanner Hook with Bidirectional Buffer Recycling', () => {
     expect(postMessageCalls[1].sequenceId).toBe(2);
   });
 
-  it('should halt scanning and notify user if consecutive restarts exceed 3', () => {
+  it('should activate main-thread fallback and continue scanning if consecutive restarts exceed 3', () => {
     const videoRef = makeVideoRef();
     const failCallback = vi.fn();
     const { result } = renderHook(() =>
@@ -900,18 +900,34 @@ describe('useAdaptiveScanner Hook with Bidirectional Buffer Recycling', () => {
     });
     expect(postMessageCalls).toHaveLength(4);
 
-    // Crash 4 -> Should exceed limit (3 retries) and stop scanning
+    // Crash 4 -> Should exceed limit (3 retries) and activate main-thread fallback
     act(() => {
       activeWorker.dispatchError(new Error('Crash 4'));
     });
 
-    // Scanning should be stopped
-    expect(result.current.isScanning).toBe(false);
+    // Scanning should remain active on main-thread fallback
+    expect(result.current.isScanning).toBe(true);
+  });
 
-    // User should be notified with the expected error message
-    expect(failCallback).toHaveBeenCalledWith(
-      "The scanner background worker crashed repeatedly. Please restart the page or check your camera."
+  it('should remain fully functional when background worker instantiation throws a security exception (CSP restrictions)', () => {
+    const videoRef = makeVideoRef();
+    const { result } = renderHook(() =>
+      useAdaptiveScanner({
+        videoRef,
+      })
     );
+
+    act(() => {
+      result.current.startScanning();
+    });
+
+    expect(result.current.isScanning).toBe(true);
+
+    act(() => {
+      vi.advanceTimersByTime(50);
+    });
+
+    expect(result.current.isScanning).toBe(true);
   });
 
   it('should terminate the currently active (recreated) worker when the hook unmounts', () => {

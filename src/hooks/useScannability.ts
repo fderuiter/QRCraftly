@@ -303,6 +303,25 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
           return;
         }
 
+        if (overrideImageBitmap) {
+          try {
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = overrideImageBitmap.width;
+            tempCanvas.height = overrideImageBitmap.height;
+            const tempCtx = tempCanvas.getContext('2d');
+            if (tempCtx) {
+              tempCtx.drawImage(overrideImageBitmap, 0, 0);
+              const imgData = tempCtx.getImageData(0, 0, overrideImageBitmap.width, overrideImageBitmap.height);
+              performValidation(imgData);
+            } else {
+              setStatus('fail');
+            }
+          } catch {
+            setStatus('fail');
+          }
+          return;
+        }
+
         const canvas = canvasRef.current;
         if (!canvas) {
           setStatus('idle');
