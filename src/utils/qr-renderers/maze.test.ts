@@ -98,12 +98,12 @@ describe('generateMaze & renderMaze', () => {
     expect(mazeData.end).not.toBeNull();
     expect(mazeData.solution.length).toBeGreaterThan(1);
 
-    // Verify coordinates are within range [-4, size + 3]
+    // Verify coordinates are strictly within inner matrix range [0, size - 1]
     for (const node of mazeData.nodes) {
-      expect(node.r).toBeGreaterThanOrEqual(-4);
-      expect(node.r).toBeLessThanOrEqual(size + 3);
-      expect(node.c).toBeGreaterThanOrEqual(-4);
-      expect(node.c).toBeLessThanOrEqual(size + 3);
+      expect(node.r).toBeGreaterThanOrEqual(0);
+      expect(node.r).toBeLessThan(size);
+      expect(node.c).toBeGreaterThanOrEqual(0);
+      expect(node.c).toBeLessThan(size);
     }
   });
 
@@ -332,15 +332,24 @@ describe('generateMaze & renderMaze', () => {
       const emptyValConfig = { ...baseConfig, value: '' };
       generateMaze(modules, emptyValConfig, size);
 
-      // 2. size = -7 to test exactly one node where bestEnd is null
-      const singleNodeMaze = generateMaze(modules, baseConfig, -7);
+      // 2. Single node grid (where all except one cell are dark) to test bestEnd/solution null
+      const singleNodeModules = createMockModules(10, {
+        ...Array.from({ length: 10 }).reduce((acc: any, _, r) => {
+          for (let c = 0; c < 10; c++) {
+            if (!(r === 9 && c === 9)) acc[`${r},${c}`] = true;
+          }
+          return acc;
+        }, {}),
+      });
+      const singleNodeMaze = generateMaze(singleNodeModules, { ...baseConfig, isMazeBridgesEnabled: false }, 10);
       expect(singleNodeMaze.nodes.length).toBe(1);
       expect(singleNodeMaze.start).toBeNull();
 
-      // 3. size = -4 to test 4x4 grid where solved path is <= 10
-      const smallGridMaze = generateMaze(modules, baseConfig, -4);
+      // 3. Small grid where solved path is <= 10 steps, testing dynamic step threshold adaptation
+      const smallGridModules = createMockModules(12);
+      const smallGridMaze = generateMaze(smallGridModules, { ...baseConfig, isMazeBridgesEnabled: false }, 12);
       expect(smallGridMaze.nodes.length).toBeGreaterThan(1);
-      expect(smallGridMaze.solution.length).toBe(0); // path length was <= 10, so it didn't accept the solution
+      expect(smallGridMaze.solution.length).toBeGreaterThan(1); // dynamically adapted step threshold produces solvable path
     });
   });
 });
