@@ -39,10 +39,10 @@ describe('useRedirector Hook', () => {
     expect(result.current.records[0].id).toBe('id-123');
   });
 
-  it('successfully registers a dynamic redirect and updates localStorage', async () => {
+  it('successfully registers a dynamic redirect and updates localStorage with zero-knowledge encryption', async () => {
     const mockResponseData = {
       id: 'new-uuid-456',
-      redirectUrl: 'https://final-dest.com',
+      redirectUrl: 'enc:v1:mockiv:mockciphertext',
       adminKey: 'adm-key-new',
     };
 
@@ -58,15 +58,22 @@ describe('useRedirector Hook', () => {
       record = await result.current.registerRedirect('https://final-dest.com');
     });
 
-    expect(fetchSpy).toHaveBeenCalledWith('/api/redirect/register', {
+    expect(fetchSpy).toHaveBeenCalledWith('/api/redirect/register', expect.objectContaining({
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ redirectUrl: 'https://final-dest.com' }),
-    });
+      body: expect.stringMatching(/"redirectUrl":"enc:v1:[a-fA-F0-9]+:[a-fA-F0-9]+"/),
+    }));
+
+    // Verify plain text URL was NOT sent in fetch payload
+    const sentBody = JSON.parse(fetchSpy.mock.calls[0][1].body);
+    expect(sentBody.redirectUrl).not.toContain('https://final-dest.com');
+    expect(sentBody.redirectUrl.startsWith('enc:v1:')).toBe(true);
 
     expect(record).toBeDefined();
     expect(record!.id).toBe('new-uuid-456');
     expect(record!.originalUrl).toBe('https://final-dest.com');
+    expect(record!.redirectUrl).toContain('/r/new-uuid-456#key=');
+    expect(record!.key).toBeDefined();
     expect(record!.adminKey).toBe('adm-key-new');
     expect(result.current.records).toHaveLength(1);
 
@@ -75,12 +82,12 @@ describe('useRedirector Hook', () => {
     expect(stored[0].id).toBe('new-uuid-456');
   });
 
-  it('successfully registers dynamic redirect with iosUrl and androidUrl options', async () => {
+  it('successfully registers dynamic redirect with iosUrl and androidUrl options encrypted', async () => {
     const mockResponseData = {
       id: 'store-uuid-789',
-      redirectUrl: 'https://example.com',
-      iosUrl: 'https://apps.apple.com/app/id123',
-      androidUrl: 'https://play.google.com/store/apps/details?id=com.app',
+      redirectUrl: 'enc:v1:mockiv:mockciphertext',
+      iosUrl: 'enc:v1:mockiv:mockiosciphertext',
+      androidUrl: 'enc:v1:mockiv:mockandroidciphertext',
       adminKey: 'adm-key-store',
     };
 
@@ -99,26 +106,28 @@ describe('useRedirector Hook', () => {
       });
     });
 
-    expect(fetchSpy).toHaveBeenCalledWith('/api/redirect/register', {
+    expect(fetchSpy).toHaveBeenCalledWith('/api/redirect/register', expect.objectContaining({
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        redirectUrl: 'https://example.com',
-        iosUrl: 'https://apps.apple.com/app/id123',
-        androidUrl: 'https://play.google.com/store/apps/details?id=com.app',
-      }),
-    });
+    }));
+
+    const sentBody = JSON.parse(fetchSpy.mock.calls[0][1].body);
+    expect(sentBody.redirectUrl.startsWith('enc:v1:')).toBe(true);
+    expect(sentBody.iosUrl.startsWith('enc:v1:')).toBe(true);
+    expect(sentBody.androidUrl.startsWith('enc:v1:')).toBe(true);
+    expect(sentBody.iosUrl).not.toContain('https://apps.apple.com');
+    expect(sentBody.androidUrl).not.toContain('https://play.google.com');
 
     expect(record).toBeDefined();
     expect(record!.iosUrl).toBe('https://apps.apple.com/app/id123');
     expect(record!.androidUrl).toBe('https://play.google.com/store/apps/details?id=com.app');
   });
 
-  it('successfully updates a dynamic redirect', async () => {
+  it('successfully updates a dynamic redirect with re-encrypted target URL', async () => {
     const initialRecord = {
       id: 'existing-id',
       originalUrl: 'https://old-dest.com',
-      redirectUrl: 'http://localhost:3000/api/redirect/existing-id',
+      redirectUrl: 'http://localhost:3000/r/existing-id#key=a1b2c3d4e5f60123456789abcdef0123456789abcdef0123456789abcdef0123',
       adminKey: 'admin-key',
       createdAt: new Date().toISOString(),
     };
@@ -126,7 +135,7 @@ describe('useRedirector Hook', () => {
 
     fetchSpy.mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ success: true, redirectUrl: 'https://new-dest.com' }),
+      json: async () => ({ success: true, redirectUrl: 'enc:v1:newiv:newciphertext' }),
     });
 
     const { result } = renderHook(() => useRedirector());
@@ -137,11 +146,16 @@ describe('useRedirector Hook', () => {
     });
 
     expect(success).toBe(true);
-    expect(fetchSpy).toHaveBeenCalledWith('/api/redirect/update', {
+    expect(fetchSpy).toHaveBeenCalledWith('/api/redirect/update', expect.objectContaining({
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: 'existing-id', adminKey: 'admin-key', newUrl: 'https://new-dest.com' }),
-    });
+    }));
+
+    const sentBody = JSON.parse(fetchSpy.mock.calls[0][1].body);
+    expect(sentBody.id).toBe('existing-id');
+    expect(sentBody.adminKey).toBe('admin-key');
+    expect(sentBody.newUrl.startsWith('enc:v1:')).toBe(true);
+    expect(sentBody.newUrl).not.toContain('https://new-dest.com');
 
     expect(result.current.records[0].originalUrl).toBe('https://new-dest.com');
   });

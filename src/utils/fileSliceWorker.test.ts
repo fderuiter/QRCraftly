@@ -655,4 +655,43 @@ describe('fileSliceWorker State Cache', () => {
 
     expect(run1Frame0Data).toEqual(run2Frame0Data);
   });
+
+  it('invalidates stale session and silently aborts previous emissions when START is dispatched mid-stream', async () => {
+    const file1 = createTestFile('superseded.bin', 'This transfer will be interrupted mid-stream');
+    const file2 = createTestFile('active.bin', 'This is the fresh new transfer session');
+
+    // Start session 1
+    const start1Promise = workerHandler({
+      data: {
+        type: 'START',
+        payload: { file: file1, chunkSize: 10, fps: 15 },
+      },
+    } as MessageEvent);
+
+    // Immediately dispatch session 2 START while session 1 is still processing
+    const start2Promise = workerHandler({
+      data: {
+        type: 'START',
+        payload: { file: file2, chunkSize: 10, fps: 15 },
+      },
+    } as MessageEvent);
+
+    await Promise.all([start1Promise, start2Promise]);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    // Inspect emitted PROGRESS and FRAME messages
+    const progressMessages = postedMessages.filter((m) => m.type === 'PROGRESS');
+    const frameMessages = postedMessages.filter((m) => m.type === 'FRAME');
+
+    // All emitted progress and frames must belong strictly to active file2 session ('active.bin')
+    const file1Progress = progressMessages.filter((m) => m.fileName === 'superseded.bin');
+    expect(file1Progress.length).toBe(0);
+
+    const file2Progress = progressMessages.filter((m) => m.fileName === 'active.bin');
+    expect(file2Progress.length).toBeGreaterThan(0);
+
+    // Ensure frame sequence numbers start cleanly at index 0 for the active session
+    expect(frameMessages[0].index).toBe(0);
+    expect(frameMessages[0].total).toBe(Math.ceil(file2.size / 10) + 1);
+  });
 });
