@@ -1122,6 +1122,13 @@ export default function Page() {
     };
   }, [handleShoot]);
 
+  const durabilityBarRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (durabilityBarRef.current) {
+      durabilityBarRef.current.style.width = `${durability}%`;
+    }
+  }, [durability]);
+
   /**
    * Updates coordinates of the mouse on move relative to canvas size.
    * @param e The mouse event object.
@@ -1476,7 +1483,7 @@ export default function Page() {
               {/* Progress bar */}
               <div className="h-3 w-full overflow-hidden rounded-full border border-slate-900 bg-slate-950 p-0.5 shadow-inner">
                 <div
-                  style={{ width: `${durability}%` }}
+                  ref={durabilityBarRef}
                   className={`h-full rounded-full transition-all duration-100 ${
                     durability > 70
                       ? 'bg-gradient-to-r from-teal-500 to-teal-400'

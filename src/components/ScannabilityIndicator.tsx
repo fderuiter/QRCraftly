@@ -113,17 +113,6 @@ export const ScannabilityIndicator: React.FC<Props> = ({ status, health }) => {
         className="sr-only"
         aria-live="polite"
         role="status"
-        style={{
-          position: 'absolute',
-          width: '1px',
-          height: '1px',
-          padding: '0',
-          margin: '-1px',
-          overflow: 'hidden',
-          clip: 'rect(0, 0, 0, 0)',
-          whiteSpace: 'nowrap',
-          borderWidth: '0',
-        }}
       >
         {announcement}
       </div>

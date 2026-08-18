@@ -847,7 +847,7 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
         </div>
         <canvas
           ref={handleRef}
-          style={{ display: 'none' }}
+          className="hidden"
           role="img"
           aria-label={ariaLabel}
         />

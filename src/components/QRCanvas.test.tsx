@@ -449,7 +449,7 @@ describe('QRCanvas Component', () => {
     // Check that underlying canvas remains mounted in the background (hidden)
     const canvasElement = document.querySelector('canvas');
     expect(canvasElement).toBeInTheDocument();
-    expect(canvasElement).toHaveStyle({ display: 'none' });
+    expect(canvasElement).toHaveClass('hidden');
   });
 
   it('handles window.devicePixelRatio and requestIdleCallback being undefined safely', async () => {
