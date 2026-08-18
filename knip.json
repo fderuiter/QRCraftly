@@ -9,11 +9,9 @@
     "tests/**/*.test.tsx"
   ],
   "project": ["src/**/*.ts", "src/**/*.tsx"],
-  "ignore": ["src/utils/base64.ts"],
   "paths": {
     "@/*": ["./src/*"]
   },
-  "ignoreDependencies": ["wrangler", "tailwindcss"],
   "rules": {
     "files": "error",
     "dependencies": "error",
