@@ -55,6 +55,24 @@ export const drawRoundRect = (ctx: CanvasRenderingContext2D, x: number, y: numbe
   ctx.closePath();
 };
 
+const HEX_OFFSETS = Array.from({ length: 6 }, (_, i) => {
+  const theta = (i * 2 * Math.PI) / 6;
+  return { cos: Math.cos(theta), sin: Math.sin(theta) };
+});
+
+const STAR_5_OFFSETS = (() => {
+  const offsets: Array<{ cos: number; sin: number }> = [];
+  let rot = (Math.PI / 2) * 3;
+  const step = Math.PI / 5;
+  for (let i = 0; i < 5; i++) {
+    offsets.push({ cos: Math.cos(rot), sin: Math.sin(rot) });
+    rot += step;
+    offsets.push({ cos: Math.cos(rot), sin: Math.sin(rot) });
+    rot += step;
+  }
+  return offsets;
+})();
+
 /**
  * Draws a regular polygon.
  * @param ctx The canvas context.
@@ -68,12 +86,19 @@ export const drawRoundRect = (ctx: CanvasRenderingContext2D, x: number, y: numbe
  */
 export const drawPoly = (ctx: CanvasRenderingContext2D, x: number, y: number, r: number, sides: number, rotate: number = 0, fill: boolean = true, addToPath: boolean = false) => {
   if (!addToPath) ctx.beginPath();
-  for (let i = 0; i < sides; i++) {
-    const theta = rotate + (i * 2 * Math.PI / sides);
-    const px = x + r * Math.cos(theta);
-    const py = y + r * Math.sin(theta);
-    if (i === 0) ctx.moveTo(px, py);
-    else ctx.lineTo(px, py);
+  if (sides === 6 && rotate === 0) {
+    ctx.moveTo(x + r * HEX_OFFSETS[0].cos, y + r * HEX_OFFSETS[0].sin);
+    for (let i = 1; i < 6; i++) {
+      ctx.lineTo(x + r * HEX_OFFSETS[i].cos, y + r * HEX_OFFSETS[i].sin);
+    }
+  } else {
+    for (let i = 0; i < sides; i++) {
+      const theta = rotate + (i * 2 * Math.PI / sides);
+      const px = x + r * Math.cos(theta);
+      const py = y + r * Math.sin(theta);
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
   }
   ctx.closePath();
   if (!addToPath) {
@@ -93,25 +118,35 @@ export const drawPoly = (ctx: CanvasRenderingContext2D, x: number, y: number, r:
  * @param addToPath Whether to add to the current path without starting a new one or filling (default: false).
  */
 export const drawStar = (ctx: CanvasRenderingContext2D, cx: number, cy: number, outerR: number, innerR: number, spikes: number, fill: boolean = true, addToPath: boolean = false) => {
-  let rot = Math.PI / 2 * 3;
-  let x = cx;
-  let y = cy;
-  const step = Math.PI / spikes;
-
   if (!addToPath) ctx.beginPath();
-  ctx.moveTo(cx, cy - outerR);
-  for (let i = 0; i < spikes; i++) {
-    x = cx + Math.cos(rot) * outerR;
-    y = cy + Math.sin(rot) * outerR;
-    ctx.lineTo(x, y);
-    rot += step;
+  if (spikes === 5) {
+    ctx.moveTo(cx + STAR_5_OFFSETS[0].cos * outerR, cy + STAR_5_OFFSETS[0].sin * outerR);
+    for (let i = 0; i < 5; i++) {
+      const oOuter = STAR_5_OFFSETS[i * 2];
+      const oInner = STAR_5_OFFSETS[i * 2 + 1];
+      ctx.lineTo(cx + oOuter.cos * outerR, cy + oOuter.sin * outerR);
+      ctx.lineTo(cx + oInner.cos * innerR, cy + oInner.sin * innerR);
+    }
+    ctx.lineTo(cx + STAR_5_OFFSETS[0].cos * outerR, cy + STAR_5_OFFSETS[0].sin * outerR);
+  } else {
+    let rot = Math.PI / 2 * 3;
+    let x = cx;
+    let y = cy;
+    const step = Math.PI / spikes;
+    ctx.moveTo(cx, cy - outerR);
+    for (let i = 0; i < spikes; i++) {
+      x = cx + Math.cos(rot) * outerR;
+      y = cy + Math.sin(rot) * outerR;
+      ctx.lineTo(x, y);
+      rot += step;
 
-    x = cx + Math.cos(rot) * innerR;
-    y = cy + Math.sin(rot) * innerR;
-    ctx.lineTo(x, y);
-    rot += step;
+      x = cx + Math.cos(rot) * innerR;
+      y = cy + Math.sin(rot) * innerR;
+      ctx.lineTo(x, y);
+      rot += step;
+    }
+    ctx.lineTo(cx, cy - outerR);
   }
-  ctx.lineTo(cx, cy - outerR);
   ctx.closePath();
   if (!addToPath) {
     if (fill) ctx.fill(); else ctx.stroke();
