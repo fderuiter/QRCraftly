@@ -19,29 +19,24 @@
 import React from 'react';
 
 /**
- *
+ * Props for the CharCount component.
  */
 interface CharCountProps {
-  /**
-   *
-   */
+  /** Current character count. */
   current: number;
-  /**
-   *
-   */
+  /** Maximum allowable character count. */
   max: number;
-  /**
-   *
-   */
+  /** Optional element identifier. */
   id?: string;
 }
 
 /**
- *
- * @param root0
- * @param root0.current
- * @param root0.max
- * @param root0.id
+ * Renders an accessible character count badge and circular progress indicator.
+ * @param props - Component properties.
+ * @param props.current - Current character count.
+ * @param props.max - Maximum allowable character limit.
+ * @param props.id - Optional element identifier for accessibility linking.
+ * @returns The rendered character count element.
  */
 export const CharCount: React.FC<CharCountProps> = ({ current, max, id }) => {
   const percentage = (current / max) * 100;

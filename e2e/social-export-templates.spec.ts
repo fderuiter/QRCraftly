@@ -455,31 +455,27 @@ test.describe('PNG download', () => {
     expect(download.suggestedFilename()).toMatch(/\.png$/i);
   });
 
-  test('"Save to Photos" button triggers a PNG download', async ({ page }) => {
-    await page.waitForTimeout(500); // wait for render
+  test('"Download PNG" button triggers a PNG download', async ({ page }) => {
     const [download] = await Promise.all([
       page.waitForEvent('download'),
-      page.evaluate(() => {
-        console.log("Evaluating click...");
-        const btn = Array.from(document.querySelectorAll('button')).find(b => b.textContent?.includes('Save to Photos'));
-        if (btn) btn.click();
-        else console.log("Button NOT FOUND!");
-      }),
+      (async () => {
+        await page.getByRole('button', { name: 'Download', exact: true }).click();
+        await page.getByRole('menuitem', { name: /PNG/i }).click();
+      })(),
     ]);
 
     expect(download.suggestedFilename()).toMatch(/\.png$/i);
   });
 
-  test('"Save to Photos" in Story format triggers a PNG download', async ({ page }) => {
+  test('"Download PNG" in Story format triggers a PNG download', async ({ page }) => {
     await page.getByRole('button', { name: /Select Story format/i }).click();
-    await page.waitForTimeout(500);
 
     const [download] = await Promise.all([
       page.waitForEvent('download'),
-      page.evaluate(() => {
-        const btn = Array.from(document.querySelectorAll('button')).find(b => b.textContent?.includes('Save to Photos'));
-        if (btn) btn.click();
-      }),
+      (async () => {
+        await page.getByRole('button', { name: 'Download', exact: true }).click();
+        await page.getByRole('menuitem', { name: /PNG/i }).click();
+      })(),
     ]);
 
     expect(download.suggestedFilename()).toMatch(/\.png$/i);

@@ -30,20 +30,6 @@ interface TypeSelectorProps {
   onSelect: (type: QRType) => void;
 }
 
-const TYPE_ROUTES: Partial<Record<QRType, string>> = {
-  [QRType.URL]: "/",
-  [QRType.WIFI]: "/wifi-qr-code",
-  [QRType.TEXT]: "/text-qr-code",
-  [QRType.VCARD]: "/vcard-qr-code",
-  [QRType.EMAIL]: "/email-qr-code",
-  [QRType.PHONE]: "/phone-qr-code",
-  [QRType.SMS]: "/sms-qr-code",
-  [QRType.PAYMENT]: "/payment-qr-code",
-  [QRType.EVENT]: "/event-qr-code",
-  [QRType.LOCATION]: "/location-qr-code",
-  [QRType.MEETING]: "/meeting-qr-code",
-  [QRType.SOCIAL]: "/social-qr-code",
-};
 
 const ITEMS = [
   { type: QRType.URL, icon: Link, label: "URL" },
@@ -135,38 +121,7 @@ export const TypeSelector: React.FC<TypeSelectorProps> = ({
         className="grid grid-cols-4 gap-2 rounded-xl bg-slate-100 p-2 transition-colors duration-300 dark:bg-slate-800"
       >
         {ITEMS.map((item) => {
-          const route = TYPE_ROUTES[item.type];
           const isActive = currentType === item.type;
-          const className = `flex flex-col w-full items-center justify-center gap-1 px-2 py-2 rounded-lg text-xs font-medium transition-all ${
-            isActive
-              ? "bg-teal-50 dark:bg-slate-800 border border-teal-200 dark:border-slate-700 text-teal-700 dark:text-teal-400"
-              : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 bg-transparent border border-transparent"
-          }`;
-
-          if (route) {
-            return (
-              <li key={item.type} role="presentation">
-                {/* nosemgrep: require-isdangerousurl */}
-                <a
-                  id={`tab-${item.type}`}
-                  role="tab"
-                  aria-controls={`panel-${item.type}`}
-                  aria-selected={isActive}
-                  tabIndex={isActive ? 0 : -1}
-                  href={route}
-                  onClick={() => {
-                    onSelect(item.type);
-                  }}
-                  className={className}
-                >
-                  <item.icon className="size-4" />
-                  <span className="w-full text-center break-words whitespace-normal text-slate-700 dark:text-slate-200">
-                    {item.label}
-                  </span>
-                </a>
-              </li>
-            );
-          }
 
           return (
             <li key={item.type} role="presentation">
@@ -179,7 +134,11 @@ export const TypeSelector: React.FC<TypeSelectorProps> = ({
                 variant={isActive ? 'secondary' : 'ghost'}
                 size="none"
                 onClick={() => onSelect(item.type)}
-                className="h-auto w-full flex-col items-center justify-center gap-1 rounded-lg p-2 text-xs font-medium"
+                className={`h-auto w-full flex-col items-center justify-center gap-1 rounded-lg p-2 text-xs font-medium transition-all ${
+                  isActive
+                    ? 'border border-teal-200 bg-teal-50 text-teal-700 shadow-sm dark:border-slate-700 dark:bg-slate-800 dark:text-teal-400'
+                    : 'border border-transparent bg-transparent text-slate-500 hover:bg-slate-200/50 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-700/50 dark:hover:text-slate-200'
+                }`}
               >
                 <item.icon className="size-4" />
                 <span className="w-full text-center break-words whitespace-normal text-slate-700 dark:text-slate-200">

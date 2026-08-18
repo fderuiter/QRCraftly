@@ -56,6 +56,12 @@ function generateSW() {
       url,
       revision: hash
     });
+    if (relativePath === 'index.html') {
+      precacheManifest.push({
+        url: '/',
+        revision: hash
+      });
+    }
   });
 
   // Calculate a unique build hash from the files
@@ -72,7 +78,6 @@ const CACHE_NAME = 'qrcraftly-precache-${buildHash}';
 const PRECACHE_ASSETS = ${JSON.stringify(precacheManifest, null, 2)};
 
 self.addEventListener('install', (event) => {
-  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       // Map and fetch all static assets to store them in the cache
@@ -84,7 +89,7 @@ self.addEventListener('install', (event) => {
           });
         })
       );
-    })
+    }).then(() => self.skipWaiting())
   );
 });
 
@@ -113,33 +118,50 @@ self.addEventListener('fetch', (event) => {
   }
 
   event.respondWith(
-    caches.match(request, { ignoreSearch: true }).then((cachedResponse) => {
+    caches.match(url.pathname, { ignoreSearch: true, ignoreVary: true }).then((cachedResponse) => {
       if (cachedResponse) {
         return cachedResponse;
       }
-
-      // Handle navigation requests for SSG pre-rendered structure
-      if (request.mode === 'navigate') {
-        let cleanPath = url.pathname;
-        if (!cleanPath.endsWith('.html')) {
-          if (cleanPath.endsWith('/')) {
-            cleanPath += 'index.html';
-          } else {
-            cleanPath += '/index.html';
-          }
+      return caches.match(request, { ignoreSearch: true, ignoreVary: true }).then((reqMatch) => {
+        if (reqMatch) {
+          return reqMatch;
         }
-        return caches.match(cleanPath, { ignoreSearch: true }).then((htmlResponse) => {
-          if (htmlResponse) {
-            return htmlResponse;
-          }
-          // Default fallback to root index.html
-          return caches.match('/index.html', { ignoreSearch: true }).then((indexResponse) => {
-            return indexResponse || fetch(request);
-          });
-        });
-      }
 
-      return fetch(request);
+        // Handle navigation requests for SSG pre-rendered structure
+        if (request.mode === 'navigate') {
+          let cleanPath = url.pathname;
+          if (!cleanPath.endsWith('.html')) {
+            if (cleanPath.endsWith('/')) {
+              cleanPath += 'index.html';
+            } else {
+              cleanPath += '/index.html';
+            }
+          }
+          return caches.match(cleanPath, { ignoreSearch: true, ignoreVary: true }).then((htmlResponse) => {
+            if (htmlResponse) {
+              return htmlResponse;
+            }
+            // Default fallback to root / or /index.html
+            return caches.match('/', { ignoreSearch: true, ignoreVary: true }).then((rootResponse) => {
+              if (rootResponse) return rootResponse;
+              return caches.match('/index.html', { ignoreSearch: true, ignoreVary: true }).then((indexResponse) => {
+                return indexResponse || fetch(request);
+              });
+            });
+          });
+        }
+
+        if (url.pathname.includes('pageContext.json') || url.search.includes('pageContext')) {
+          return caches.match(url.pathname, { ignoreSearch: true, ignoreVary: true }).then((pcResponse) => {
+            if (pcResponse) return pcResponse;
+            return caches.match('/index.pageContext.json', { ignoreSearch: true, ignoreVary: true }).then((rootPc) => {
+              return rootPc || fetch(request);
+            });
+          });
+        }
+
+        return fetch(request);
+      });
     })
   );
 });

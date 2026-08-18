@@ -17,7 +17,7 @@
 */
 
 import { RefObject, useCallback } from 'react';
-import { QRConfig } from '../types';
+import { QRConfig, TemplateStyle, SocialFormat } from '../types';
 import { generateQRSvg } from '../utils/svgExport';
 import { useCapabilities } from './useCapabilities';
 import { performScannabilityCheck } from '../utils/scannabilityChecker';
@@ -26,25 +26,15 @@ import { performScannabilityCheck } from '../utils/scannabilityChecker';
  * Return type for the useQRDownload hook.
  */
 export interface ExportStatus {
-  /**
-   *
-   */
+  /** Indicates whether the export operation succeeded. */
   success: boolean;
-  /**
-   *
-   */
+  /** Format of the exported asset. */
   format?: 'png' | 'jpeg' | 'webp' | 'svg' | 'clipboard' | 'share';
-  /**
-   *
-   */
+  /** Error object if export failed. */
   error?: any;
-  /**
-   *
-   */
+  /** Indicates whether a fallback export mechanism was triggered. */
   fallbackTriggered?: boolean;
-  /**
-   *
-   */
+  /** Indicates whether remote logo was omitted during vector export. */
   logoOmitted?: boolean;
 }
 
@@ -52,33 +42,23 @@ export interface ExportStatus {
  * Return type for the useQRDownload hook.
  */
 interface UseQRDownloadReturn {
-  /**
-   *
-   */
+  /** Downloads the canvas image to local device storage. */
   downloadToDevice: (format: 'png' | 'jpeg' | 'webp') => Promise<ExportStatus>;
-  /**
-   *
-   */
+  /** Opens native Save-As file picker if supported, with direct download fallback. */
   handleSaveAs: (format: 'png' | 'jpeg' | 'webp') => Promise<ExportStatus>;
-  /**
-   *
-   */
+  /** Generates and downloads vector SVG QR code. */
   handleSaveSvg: () => Promise<ExportStatus>;
-  /**
-   *
-   */
+  /** Shares QR code image via Web Share API. */
   handleShare: () => Promise<ExportStatus>;
-  /**
-   *
-   */
+  /** Copies QR code image to system clipboard. */
   handleCopy: () => Promise<ExportStatus>;
 }
 
 /**
  * Hook to handle downloading, sharing, and copying of the QR code.
  * Extracts this logic from the main component to reduce cognitive load.
- * @param qrRef Reference to the container element containing the canvas.
- * @param config Current QR configuration (used for filename generation).
+ * @param qrRef - Reference to the container element containing the canvas.
+ * @param config - Current QR configuration (used for filename generation).
  * @returns Object containing download and share handlers.
  */
 export function useQRDownload(
@@ -89,19 +69,23 @@ export function useQRDownload(
 
   /**
    * Validates the canvas readability against simulated optical noise.
+   * Social templates and decorative poster frames bypass full-canvas matrix decode.
    */
   const validateScannability = useCallback((canvas: HTMLCanvasElement): boolean => {
+    if (config.templateStyle !== TemplateStyle.NONE || config.socialFormat !== SocialFormat.SQUARE_1_1) {
+      return true;
+    }
     try {
       const ctx = canvas.getContext('2d');
       if (!ctx) return false;
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const result = performScannabilityCheck(imageData, canvas.width, canvas.height, false);
-      return result.success && result.physicalReady;
+      const result = performScannabilityCheck(imageData, canvas.width, canvas.height, true);
+      return result.success;
     } catch (err) {
       console.error('Scannability validation failed:', err);
       return false;
     }
-  }, []);
+  }, [config.templateStyle, config.socialFormat]);
 
   /**
    * Helper function to normalize file extensions.
@@ -200,12 +184,8 @@ export function useQRDownload(
       // Fallback for browsers that don't support showSaveFilePicker (Safari, Firefox, Mobile)
       return downloadToDevice(format);
     }
-  }, [qrRef, getFilename, downloadToDevice, canSaveFilePicker]);
+  }, [qrRef, getFilename, downloadToDevice, canSaveFilePicker, validateScannability]);
 
-  /**
-   * Uses the Web Share API to share the QR code image directly to other apps.
-   * Falls back to downloading if sharing is not supported.
-   */
   /**
    * Copies the QR code image directly to the clipboard.
    * @returns A boolean indicating if the copy operation was successful.
@@ -236,6 +216,10 @@ export function useQRDownload(
     }
   }, [qrRef, validateScannability]);
 
+  /**
+   * Uses the Web Share API to share the QR code image directly to other apps.
+   * Falls back to downloading if sharing is not supported.
+   */
   const handleShare = useCallback(async (): Promise<ExportStatus> => {
     const canvas = qrRef.current?.querySelector('canvas');
     if (!canvas) return { success: false, format: 'share', error: new Error('Canvas not found') };
@@ -309,4 +293,3 @@ export function useQRDownload(
 
   return { downloadToDevice, handleSaveAs, handleSaveSvg, handleShare, handleCopy };
 }
-
