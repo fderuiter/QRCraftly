@@ -16,7 +16,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-export interface LowContrastCell {
+interface LowContrastCell {
   row: number;
   col: number;
   contrast: number;
