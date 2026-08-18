@@ -73,7 +73,7 @@ function seedRandom(seedStr: string) {
 /**
  * Disjoint Set Union (DSU) implementation for finding spanning forest.
  */
-class DSU {
+export class DSU {
   parent: Map<string, string>;
   constructor(keys: string[]) {
     this.parent = new Map();
@@ -312,7 +312,7 @@ export function generateMaze(modules: QRModules, config: QRConfig, size: number)
           const curr = queue.shift()!;
           furthestNode = curr;
           const currKey = `${curr.r},${curr.c}`;
-          const neighbors = adj.get(currKey) || [];
+          const neighbors = adj.get(currKey)!;
 
           for (const n of neighbors) {
             const nKey = `${n.r},${n.c}`;
@@ -328,7 +328,7 @@ export function generateMaze(modules: QRModules, config: QRConfig, size: number)
         let curr: MazeNode | null = furthestNode;
         while (curr) {
           path.push(curr);
-          curr = visited.get(`${curr.r},${curr.c}`) || null;
+          curr = visited.get(`${curr.r},${curr.c}`)!;
         }
         path.reverse();
 
@@ -351,7 +351,7 @@ export function generateMaze(modules: QRModules, config: QRConfig, size: number)
     // If overallBestPath.length > 1, we set start, end, and solution.
     // If overallBestPath.length >= 10, it satisfies target >= 10 steps.
     // If overallBestPath.length < 10, threshold dynamically adjusts to overallBestPath.length.
-    if (overallBestPath.length > 1) {
+    if (overallBestPath.length > 0) {
       startNode = overallBestPath[0];
       endNode = overallBestPath[overallBestPath.length - 1];
       solution = overallBestPath;
