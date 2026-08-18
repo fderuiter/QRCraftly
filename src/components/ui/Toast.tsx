@@ -36,13 +36,17 @@ interface ToastMessage {
  */
 interface ToastContextType {
   /**
-   * Adds a new toast message.
+   * Adds a new toast message and returns its unique identifier.
    */
-  addToast: (toast: Omit<ToastMessage, 'id'>) => void;
+  addToast: (toast: Omit<ToastMessage, 'id'>) => string;
   /**
-   * Removes an existing toast message.
+   * Removes an existing toast message by id.
    */
   removeToast: (id: string) => void;
+  /**
+   * Clears all active toast messages.
+   */
+  clearToasts: () => void;
 }
 
 const ToastContext = createContext<ToastContextType | undefined>(undefined);
@@ -56,8 +60,9 @@ export const useToast = () => {
   if (!context) {
     // Return safe fallback for unit tests running outside ToastProvider
     return {
-      addToast: () => {},
+      addToast: () => '',
       removeToast: () => {},
+      clearToasts: () => {},
     };
   }
   return context;
@@ -75,14 +80,19 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
   const addToast = useCallback((toast: Omit<ToastMessage, 'id'>) => {
     const id = Math.random().toString(36).substring(2, 9);
     setToasts((prev) => [...prev, { ...toast, id }]);
+    return id;
   }, []);
 
   const removeToast = useCallback((id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
+  const clearToasts = useCallback(() => {
+    setToasts([]);
+  }, []);
+
   return (
-    <ToastContext.Provider value={{ addToast, removeToast }}>
+    <ToastContext.Provider value={{ addToast, removeToast, clearToasts }}>
       {children}
       <div className="pointer-events-none fixed inset-x-4 bottom-4 z-50 flex flex-col items-center gap-2 md:right-4 md:left-auto md:items-end">
         {toasts.map((toast) => (

@@ -20,11 +20,13 @@ import React from 'react';
 import { Play, Square, Upload, FileUp, Cpu, Sliders, Sun, Moon, QrCode, Activity } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { Alert } from '@/components/ui/Alert';
 import { RangeInput } from '@/components/ui/RangeInput';
 import StyleControls from '@/components/StyleControls';
 import { QRProvider, useQRStore, useQRStoreSelector } from '@/context/QRContext';
 import { useImage } from '@/hooks/useImage';
 import { useTheme } from '@/hooks/useTheme';
+import { useToast } from '@/components/ui/Toast';
 import { useAnimatedQrSender } from '@/hooks/useAnimatedQrSender';
 
 /**
@@ -36,6 +38,7 @@ function FileTransferToolInner() {
   const config = useQRStoreSelector(s => s.config);
   const store = useQRStore();
   const { isDarkMode, toggleDarkMode } = useTheme();
+  const { addToast, clearToasts } = useToast();
 
   // Logo images
   const logoImg = useImage(config.logoUrl);
@@ -60,10 +63,14 @@ function FileTransferToolInner() {
     stopTransfer,
     handleFileChange,
     simulate50MBFile,
+    senderError,
+    dismissError,
   } = useAnimatedQrSender({
     config,
     logoImg,
     borderLogoImg,
+    addToast,
+    clearToasts,
   });
 
   const handleDragOver = (event: React.DragEvent<HTMLLabelElement>) => {
@@ -136,6 +143,25 @@ function FileTransferToolInner() {
                 <Upload className="size-4 text-teal-600" />
                 1. Choose a File
               </h2>
+
+              {senderError && (
+                <div className="animate-bounce" data-testid="sender-error">
+                  <Alert variant="error" title="Transfer Error">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="flex-1">{senderError}</span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={dismissError}
+                        className="ml-2 flex-shrink-0 text-xs font-semibold hover:bg-red-100 dark:hover:bg-red-900/30"
+                        aria-label="Dismiss error notice"
+                      >
+                        Dismiss
+                      </Button>
+                    </div>
+                  </Alert>
+                </div>
+              )}
               
               <div className="flex flex-col gap-3">
                 <label

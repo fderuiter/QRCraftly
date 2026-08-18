@@ -102,7 +102,9 @@ async function generateFrame(index: number) {
   } catch (err: any) {
     (self as any).postMessage({
       type: 'ERROR',
-      message: `Failed to generate frame ${index}: ${err?.message || err}`
+      message: `Failed to generate frame ${index}: ${err?.message || err}`,
+      code: 'FRAME_GEN_FAILED',
+      details: err?.stack || String(err)
     });
   }
 }
@@ -133,97 +135,116 @@ async function processPipeline() {
  * Main Web Worker message router.
  */
 self.onmessage = async (e: MessageEvent) => {
-  const { type, payload } = e.data || {};
+  try {
+    const { type, payload } = e.data || {};
 
-  switch (type) {
-    case 'START': {
-      file = payload.file;
-      const requestedChunkSize = payload.chunkSize || 180;
-      chunkSize = Math.min(requestedChunkSize < 256 ? requestedChunkSize : 180, 240);
-      const reqEcc = payload.errorCorrectionLevel;
-      errorCorrectionLevel = (reqEcc === 'H' || reqEcc === 'Q') ? reqEcc : 'Q';
-      
-      const fps = payload.fps || 15;
-      lookaheadLimit = Math.min(16, Math.max(3, Math.ceil(fps * 0.2)));
-      
-      if (!file) {
-        (self as any).postMessage({ type: 'ERROR', message: 'No file provided' });
-        return;
-      }
-
-      if (hashCache.has(file)) {
-        fileSHA256 = hashCache.get(file)!;
-      } else {
-        try {
-          fileSHA256 = await computeSHA256(file);
-          hashCache.set(file, fileSHA256);
-        } catch (err: any) {
-          (self as any).postMessage({ type: 'ERROR', message: `Hashing failed: ${err?.message || err}` });
+    switch (type) {
+      case 'START': {
+        file = payload?.file;
+        const requestedChunkSize = payload?.chunkSize || 180;
+        chunkSize = Math.min(requestedChunkSize < 256 ? requestedChunkSize : 180, 240);
+        const reqEcc = payload?.errorCorrectionLevel;
+        errorCorrectionLevel = (reqEcc === 'H' || reqEcc === 'Q') ? reqEcc : 'Q';
+        
+        const fps = payload?.fps || 15;
+        lookaheadLimit = Math.min(16, Math.max(3, Math.ceil(fps * 0.2)));
+        
+        if (!file) {
+          (self as any).postMessage({
+            type: 'ERROR',
+            message: 'No file provided',
+            code: 'NO_FILE',
+            details: 'A valid file payload must be attached to start transfer.'
+          });
           return;
         }
-      }
 
-      totalDataFrames = Math.ceil(file.size / chunkSize);
-      totalFrames = totalDataFrames + 1; // 1 handshake frame + totalDataFrames
-      nextIndexToGenerate = 0;
-      lastAckedIndex = -1;
-      
-      (self as any).postMessage({
-        type: 'PROGRESS',
-        index: 0,
-        total: totalFrames,
-        fileName: (file as any).name || 'file',
-        fileSize: file.size
-      });
+        if (hashCache.has(file)) {
+          fileSHA256 = hashCache.get(file)!;
+        } else {
+          try {
+            fileSHA256 = await computeSHA256(file);
+            hashCache.set(file, fileSHA256);
+          } catch (err: any) {
+            (self as any).postMessage({
+              type: 'ERROR',
+              message: `Hashing failed: ${err?.message || err}`,
+              code: 'HASHING_FAILED',
+              details: err?.message || String(err)
+            });
+            return;
+          }
+        }
 
-      // Kick off generation
-      await processPipeline();
-      break;
-    }
-
-    case 'ACK': {
-      const acked = payload.index;
-      if (acked > lastAckedIndex) {
-        lastAckedIndex = acked;
+        totalDataFrames = Math.ceil(file.size / chunkSize);
+        totalFrames = totalDataFrames + 1; // 1 handshake frame + totalDataFrames
+        nextIndexToGenerate = 0;
+        lastAckedIndex = -1;
         
-        // Report progress to UI
         (self as any).postMessage({
           type: 'PROGRESS',
-          index: lastAckedIndex + 1,
-          total: totalFrames
+          index: 0,
+          total: totalFrames,
+          fileName: (file as any).name || 'file',
+          fileSize: file.size
         });
 
-        if (lastAckedIndex + 1 >= totalFrames) {
-          (self as any).postMessage({ type: 'COMPLETE' });
-        } else {
-          // Trigger generation of more frames within our sliding window limit
-          await processPipeline();
+        // Kick off generation
+        await processPipeline();
+        break;
+      }
+
+      case 'ACK': {
+        const acked = payload?.index;
+        if (typeof acked === 'number' && acked > lastAckedIndex) {
+          lastAckedIndex = acked;
+          
+          // Report progress to UI
+          (self as any).postMessage({
+            type: 'PROGRESS',
+            index: lastAckedIndex + 1,
+            total: totalFrames
+          });
+
+          if (lastAckedIndex + 1 >= totalFrames) {
+            (self as any).postMessage({ type: 'COMPLETE' });
+          } else {
+            // Trigger generation of more frames within our sliding window limit
+            await processPipeline();
+          }
         }
+        break;
       }
-      break;
-    }
 
-    case 'HEAL': {
-      if (payload && typeof payload.lastAckedIndex === 'number') {
-        lastAckedIndex = Math.max(lastAckedIndex, payload.lastAckedIndex);
+      case 'HEAL': {
+        if (payload && typeof payload.lastAckedIndex === 'number') {
+          lastAckedIndex = Math.max(lastAckedIndex, payload.lastAckedIndex);
+        }
+        await processPipeline();
+        break;
       }
-      await processPipeline();
-      break;
-    }
 
-    case 'STOP': {
-      file = null;
-      totalFrames = 0;
-      totalDataFrames = 0;
-      nextIndexToGenerate = 0;
-      lastAckedIndex = -1;
-      fileSHA256 = '';
-      isGenerating = false;
-      lookaheadLimit = 3;
-      break;
-    }
+      case 'STOP': {
+        file = null;
+        totalFrames = 0;
+        totalDataFrames = 0;
+        nextIndexToGenerate = 0;
+        lastAckedIndex = -1;
+        fileSHA256 = '';
+        isGenerating = false;
+        lookaheadLimit = 3;
+        break;
+      }
 
-    default:
-      break;
+      default:
+        break;
+    }
+  } catch (err: any) {
+    (self as any).postMessage({
+      type: 'ERROR',
+      message: `Worker processing failure: ${err?.message || err}`,
+      code: 'WORKER_RUNTIME_ERROR',
+      details: err?.stack || String(err)
+    });
   }
 };

@@ -214,4 +214,50 @@ describe('File Transfer Page & Pipeline', () => {
 
     expect(screen.queryByText('Memory use')).not.toBeInTheDocument();
   });
+
+  it('displays inline Alert and toast notice when background worker fails, and dismisses on user action', async () => {
+    render(<Page />);
+
+    // Select file
+    const file = new File(['payload'], 'error_test.txt', { type: 'text/plain' });
+    const fileInput = screen.getByText('Choose file or drag & drop').closest('label');
+    await act(async () => {
+      fireEvent.drop(fileInput!, { dataTransfer: { files: [file] } });
+    });
+
+    globalThis.mockWorkerControl.setInterceptor((message: any, worker: any) => {
+      if (message.type === 'START') {
+        worker.dispatchMessage({
+          type: 'ERROR',
+          payload: {
+            message: 'Failed to slice file in background worker',
+            code: 'WORKER_FAIL',
+            details: 'Out of memory during slicing',
+          },
+        });
+      }
+    });
+
+    const startStreamButton = screen.getByRole('button', { name: /start file transfer/i });
+    await act(async () => {
+      fireEvent.click(startStreamButton);
+    });
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    });
+
+    // Check inline error banner is rendered
+    expect(screen.getByTestId('sender-error')).toBeInTheDocument();
+    expect(screen.getByText(/Transfer Error/i)).toBeInTheDocument();
+    expect(screen.getByText(/Failed to slice file in background worker/i)).toBeInTheDocument();
+
+    // Click Dismiss button
+    const dismissButton = screen.getByRole('button', { name: /dismiss error notice/i });
+    await act(async () => {
+      fireEvent.click(dismissButton);
+    });
+
+    expect(screen.queryByTestId('sender-error')).not.toBeInTheDocument();
+  });
 });

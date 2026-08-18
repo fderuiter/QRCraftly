@@ -26,19 +26,54 @@ import { PreallocatedFramePool, shuffleInPlace } from '../utils/FrameMemoryPool'
 /**
  *
  */
-export interface UseAnimatedQrSenderOptions {
+export interface SenderErrorPayload {
   /**
    *
+   */
+  message: string;
+  /**
+   *
+   */
+  code?: string;
+  /**
+   *
+   */
+  details?: string;
+}
+
+/**
+ * Options for the useAnimatedQrSender hook.
+ */
+export interface UseAnimatedQrSenderOptions {
+  /**
+   * QR code configuration.
    */
   config: QRConfig;
   /**
-   *
+   * Logo image element.
    */
   logoImg: HTMLImageElement | null;
   /**
-   *
+   * Border logo image element.
    */
   borderLogoImg: HTMLImageElement | null;
+  /**
+   * Optional callback to trigger toast notifications.
+   */
+  addToast?: (toast: { /**
+                        *
+                        */
+  type: 'success' | 'info' | 'error' | 'warning'; /**
+                                                   *
+                                                   */
+  message: string; /**
+                    *
+                    */
+  duration?: number }) => string | void;
+  /**
+   * Optional callback to clear active toasts.
+   */
+  clearToasts?: () => void;
 }
 
 /**
@@ -48,12 +83,16 @@ export interface UseAnimatedQrSenderOptions {
  * @param root0.config QR code configuration.
  * @param root0.logoImg Logo image element.
  * @param root0.borderLogoImg Border logo image element.
+ * @param root0.addToast Optional toast dispatcher function.
+ * @param root0.clearToasts Optional toast clearing function.
  * @returns Animated QR sender state and controller functions.
  */
 export function useAnimatedQrSender({
   config,
   logoImg,
   borderLogoImg,
+  addToast,
+  clearToasts,
 }: UseAnimatedQrSenderOptions) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isTransferring, setIsTransferring] = useState(false);
@@ -63,6 +102,8 @@ export function useAnimatedQrSender({
   const [chunkSize, setChunkSize] = useState(180);
   const [fps, setFps] = useState(15);
   const [currentPass, setCurrentPass] = useState(1);
+  const [senderError, setSenderError] = useState<string | null>(null);
+  const [senderErrorPayload, setSenderErrorPayload] = useState<SenderErrorPayload | null>(null);
   const [transferStats, setTransferStats] = useState({
     fileName: '',
     fileSize: 0,
@@ -76,7 +117,7 @@ export function useAnimatedQrSender({
   const passCountRef = useRef<number>(1);
   const shuffledOrderRef = useRef<number[]>([]);
 
-  // Refs for background loop
+  // Refs for background loop & toast callbacks
   const configRef = useRef(config);
   const logoImgRef = useRef(logoImg);
   const borderLogoImgRef = useRef(borderLogoImg);
@@ -89,6 +130,8 @@ export function useAnimatedQrSender({
   const animationIdRef = useRef<number | null>(null);
   const lastFrameTimeRef = useRef(0);
   const lastRenderSuccessTimeRef = useRef(0);
+  const addToastRef = useRef(addToast);
+  const clearToastsRef = useRef(clearToasts);
 
   // Sync refs
   useEffect(() => {
@@ -100,7 +143,34 @@ export function useAnimatedQrSender({
     totalFramesRef.current = totalFrames;
     selectedFileRef.current = selectedFile;
     chunkSizeRef.current = chunkSize;
-  }, [config, logoImg, borderLogoImg, isTransferring, fps, totalFrames, selectedFile, chunkSize]);
+    addToastRef.current = addToast;
+    clearToastsRef.current = clearToasts;
+  }, [config, logoImg, borderLogoImg, isTransferring, fps, totalFrames, selectedFile, chunkSize, addToast, clearToasts]);
+
+  const clearError = useCallback(() => {
+    setSenderError(null);
+    setSenderErrorPayload(null);
+    if (clearToastsRef.current) {
+      clearToastsRef.current();
+    }
+  }, []);
+
+  const dismissError = clearError;
+
+  const handleSetSelectedFile = useCallback((file: React.SetStateAction<File | null>) => {
+    clearError();
+    setSelectedFile(file);
+  }, [clearError]);
+
+  const handleSetFps = useCallback((newFps: React.SetStateAction<number>) => {
+    clearError();
+    setFps(newFps);
+  }, [clearError]);
+
+  const handleSetChunkSize = useCallback((newChunkSize: React.SetStateAction<number>) => {
+    clearError();
+    setChunkSize(newChunkSize);
+  }, [clearError]);
 
   // Memory tracking loop
   useEffect(() => {
@@ -137,7 +207,7 @@ export function useAnimatedQrSender({
     };
   }, []);
 
-  const stopTransfer = useCallback(() => {
+  const stopTransferInternal = useCallback(() => {
     setIsTransferring(false);
     isTransferringRef.current = false;
     if (workerRef.current) {
@@ -157,6 +227,42 @@ export function useAnimatedQrSender({
     setCurrentFrameIndex(0);
     setProgress(0);
   }, []);
+
+  const stopTransfer = useCallback(() => {
+    clearError();
+    stopTransferInternal();
+  }, [clearError, stopTransferInternal]);
+
+  const handleWorkerError = useCallback((errorData: any) => {
+    stopTransferInternal();
+
+    let rawMessage = 'Background file processing failed';
+    let code: string | undefined;
+    let details: string | undefined;
+
+    if (typeof errorData === 'string') {
+      rawMessage = errorData;
+    } else if (errorData && typeof errorData === 'object') {
+      rawMessage = errorData.message || errorData.error || rawMessage;
+      code = errorData.code;
+      details = errorData.details;
+    }
+
+    const humanReadableMsg = details && !rawMessage.includes(details)
+      ? `${rawMessage}: ${details}`
+      : rawMessage;
+
+    setSenderError(humanReadableMsg);
+    setSenderErrorPayload({ message: rawMessage, code, details });
+
+    if (addToastRef.current) {
+      addToastRef.current({
+        type: 'error',
+        message: humanReadableMsg,
+        duration: 5000,
+      });
+    }
+  }, [stopTransferInternal]);
 
   const renderFrame = useCallback((playIdx: number, frame: { size: number; data: Uint8Array }) => {
     const modules = {
@@ -389,7 +495,8 @@ export function useAnimatedQrSender({
   const startTransfer = useCallback(() => {
     if (!selectedFile) return;
 
-    stopTransfer();
+    clearError();
+    stopTransferInternal();
 
     setIsTransferring(true);
     isTransferringRef.current = true;
@@ -412,7 +519,7 @@ export function useAnimatedQrSender({
     workerRef.current = worker;
 
     worker.onmessage = (e: MessageEvent) => {
-      const { type, index, size, data, total, message } = e.data || {};
+      const { type, index, size, data, total, message, payload, error } = e.data || {};
 
       switch (type) {
         case 'PROGRESS': {
@@ -429,14 +536,23 @@ export function useAnimatedQrSender({
         }
 
         case 'ERROR': {
-          console.error('[Worker Error]', message);
-          stopTransfer();
+          console.error('[Worker Error]', message || error || payload);
+          handleWorkerError(payload || e.data);
           break;
         }
 
         default:
           break;
       }
+    };
+
+    worker.onerror = (evt: ErrorEvent) => {
+      console.error('[Worker Runtime Error]', evt);
+      handleWorkerError({
+        message: 'Background worker runtime failure',
+        code: 'WORKER_CRASH',
+        details: evt.message || 'Worker thread encountered an unexpected error',
+      });
     };
 
     // Ensure visual density below 256 bytes per chunk and error correction level Q or H
@@ -456,35 +572,37 @@ export function useAnimatedQrSender({
     });
 
     runAnimationLoop();
-  }, [selectedFile, chunkSize, config.errorCorrectionLevel, stopTransfer, runAnimationLoop, renderFrame]);
+  }, [selectedFile, chunkSize, config.errorCorrectionLevel, clearError, stopTransferInternal, runAnimationLoop, renderFrame, handleWorkerError]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    clearError();
     const fileList = e.target.files;
     if (fileList && fileList.length > 0) {
       setSelectedFile(fileList[0]);
-      stopTransfer();
+      stopTransferInternal();
       e.target.value = '';
     }
   };
 
   const simulate50MBFile = () => {
+    clearError();
     const dummyBlob = new Blob([new Uint8Array(50 * 1024 * 1024)], { type: 'application/octet-stream' });
     const dummyFile = new File([dummyBlob], 'simulation_50mb_payload.bin', { type: 'application/octet-stream' });
     setSelectedFile(dummyFile);
-    stopTransfer();
+    stopTransferInternal();
   };
 
   return {
     selectedFile,
-    setSelectedFile,
+    setSelectedFile: handleSetSelectedFile,
     isTransferring,
     progress,
     currentFrameIndex,
     totalFrames,
     chunkSize,
-    setChunkSize,
+    setChunkSize: handleSetChunkSize,
     fps,
-    setFps,
+    setFps: handleSetFps,
     currentPass,
     framePoolRef,
     transferStats,
@@ -493,5 +611,9 @@ export function useAnimatedQrSender({
     stopTransfer,
     handleFileChange,
     simulate50MBFile,
+    senderError,
+    senderErrorPayload,
+    dismissError,
+    clearError,
   };
 }

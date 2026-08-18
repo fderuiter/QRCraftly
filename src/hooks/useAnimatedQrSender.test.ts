@@ -207,4 +207,124 @@ describe('useAnimatedQrSender Hook', () => {
     expect(result.current.framePoolRef.current.hasFrame(0)).toBe(true);
     expect(result.current.framePoolRef.current.hasFrame(1)).toBe(true);
   });
+
+  it('handles background worker ERROR events, sets senderError, triggers toast, and halts transfer', async () => {
+    const addToastMock = vi.fn();
+    const clearToastsMock = vi.fn();
+
+    const { result } = renderHook(() =>
+      useAnimatedQrSender({
+        config: mockConfig,
+        logoImg: null,
+        borderLogoImg: null,
+        addToast: addToastMock,
+        clearToasts: clearToastsMock,
+      })
+    );
+
+    act(() => {
+      result.current.setSelectedFile(new File(['test content'], 'test.txt', { type: 'text/plain' }));
+    });
+
+    globalThis.mockWorkerControl.setInterceptor((message: any, worker: any) => {
+      if (message.type === 'START') {
+        worker.dispatchMessage({
+          type: 'ERROR',
+          payload: {
+            message: 'File slice processing failed',
+            code: 'SLICE_FAILED',
+            details: 'Corrupt chunk buffer at offset 512',
+          },
+        });
+      }
+    });
+
+    act(() => {
+      result.current.startTransfer();
+    });
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    });
+
+    expect(result.current.senderError).toBe('File slice processing failed: Corrupt chunk buffer at offset 512');
+    expect(result.current.senderErrorPayload).toEqual({
+      message: 'File slice processing failed',
+      code: 'SLICE_FAILED',
+      details: 'Corrupt chunk buffer at offset 512',
+    });
+    expect(result.current.isTransferring).toBe(false);
+    expect(addToastMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'error',
+        message: 'File slice processing failed: Corrupt chunk buffer at offset 512',
+      })
+    );
+  });
+
+  it('clears error state when dismissError, stopTransfer, setSelectedFile, setFps, or setChunkSize is invoked', async () => {
+    const addToastMock = vi.fn();
+    const clearToastsMock = vi.fn();
+
+    const { result } = renderHook(() =>
+      useAnimatedQrSender({
+        config: mockConfig,
+        logoImg: null,
+        borderLogoImg: null,
+        addToast: addToastMock,
+        clearToasts: clearToastsMock,
+      })
+    );
+
+    globalThis.mockWorkerControl.setInterceptor((message: any, worker: any) => {
+      if (message.type === 'START') {
+        worker.dispatchMessage({
+          type: 'ERROR',
+          payload: { message: 'Unexpected worker exception' },
+        });
+      }
+    });
+
+    act(() => {
+      result.current.setSelectedFile(new File(['test content'], 'test.txt', { type: 'text/plain' }));
+    });
+    act(() => {
+      result.current.startTransfer();
+    });
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    });
+
+    expect(result.current.senderError).toBeTruthy();
+
+    // 1. Explicit dismiss
+    act(() => {
+      result.current.dismissError();
+    });
+
+    expect(result.current.senderError).toBeNull();
+    expect(result.current.senderErrorPayload).toBeNull();
+
+    // Re-trigger error
+    act(() => {
+      result.current.setSelectedFile(new File(['test content'], 'test.txt', { type: 'text/plain' }));
+    });
+    act(() => {
+      result.current.startTransfer();
+    });
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    });
+
+    expect(result.current.senderError).toBeTruthy();
+
+    // 2. Set FPS auto-clears
+    act(() => {
+      result.current.setFps(30);
+    });
+    expect(result.current.senderError).toBeNull();
+    expect(clearToastsMock).toHaveBeenCalled();
+  });
 });
