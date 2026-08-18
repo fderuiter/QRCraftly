@@ -1,7 +1,45 @@
 import { describe, it, expect } from 'vitest';
-import { extractInlineScripts, computeCspHash, replaceMetaCSP, updateCsp, validateHeaders } from '../scripts/csp_hash_injector.js';
+import { extractInlineScripts, computeCspHash, replaceMetaCSP, updateCsp, validateHeaders, pathToRoute, generateHeadersContent } from '../scripts/csp_hash_injector.js';
 
 describe('CSP Hash Injector Unit Tests', () => {
+  describe('pathToRoute', () => {
+    it('should correctly map HTML file paths to URL route paths', () => {
+      expect(pathToRoute('index.html')).toBe('/');
+      expect(pathToRoute('/index.html')).toBe('/');
+      expect(pathToRoute('about/index.html')).toBe('/about');
+      expect(pathToRoute('file-transfer/receive/index.html')).toBe('/file-transfer/receive');
+      expect(pathToRoute('404.html')).toBe('/404');
+    });
+  });
+
+  describe('generateHeadersContent', () => {
+    it('should generate distinct route blocks without accumulating script hashes in /* global rule', () => {
+      const baseCsp = "default-src 'self'; script-src 'self';";
+      const existingHeaders = `/*\n  X-Frame-Options: DENY\n  Strict-Transport-Security: max-age=63072000\n`;
+      
+      const routeCspMap = new Map();
+      routeCspMap.set('/', {
+        routeCsp: "default-src 'self'; script-src 'self' 'sha256-hashIndex';",
+        hashes: ["'sha256-hashIndex'"]
+      });
+      routeCspMap.set('/about', {
+        routeCsp: "default-src 'self'; script-src 'self' 'sha256-hashAbout';",
+        hashes: ["'sha256-hashAbout'"]
+      });
+
+      const generated = generateHeadersContent(existingHeaders, baseCsp, routeCspMap);
+
+      expect(generated).toContain('/*\n  Content-Security-Policy: default-src \'self\'; script-src \'self\';\n  X-Frame-Options: DENY');
+      expect(generated).toContain('/\n  Content-Security-Policy: default-src \'self\'; script-src \'self\' \'sha256-hashIndex\';');
+      expect(generated).toContain('/about\n  Content-Security-Policy: default-src \'self\'; script-src \'self\' \'sha256-hashAbout\';');
+      
+      // Ensure global /* does NOT contain route-scoped hashes
+      const globalBlock = generated.split('\n\n').find(b => b.startsWith('/*'));
+      expect(globalBlock).not.toContain('sha256-hashIndex');
+      expect(globalBlock).not.toContain('sha256-hashAbout');
+    });
+  });
+
   describe('extractInlineScripts', () => {
     it('should extract simple inline scripts and ignore scripts with src attribute', () => {
       const html = `
