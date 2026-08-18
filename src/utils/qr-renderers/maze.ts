@@ -45,14 +45,14 @@ export function isFinderEyeZone(r: number, c: number, size: number): boolean {
  * routing directly across the finder pattern safety zone.
  */
 export function isBridgeCell(r: number, c: number, size: number): boolean {
-  // TL Bridge Corridor: column 3, rows 6, 7, 8
-  if (c === 3 && r >= 6 && r <= 8) return true;
+  // TL Bridge Corridor: column 3, row 8
+  if (c === 3 && r === 8) return true;
 
-  // TR Bridge Corridor: column size - 4, rows 6, 7, 8
-  if (c === size - 4 && r >= 6 && r <= 8) return true;
+  // TR Bridge Corridor: column size - 4, row 8
+  if (c === size - 4 && r === 8) return true;
 
-  // BL Bridge Corridor: row size - 4, columns 6, 7, 8
-  if (r === size - 4 && c >= 6 && c <= 8) return true;
+  // BL Bridge Corridor: row size - 4, column 8
+  if (r === size - 4 && c === 8) return true;
 
   return false;
 }
@@ -214,11 +214,11 @@ export function generateMaze(modules: QRModules, config: QRConfig, size: number)
           const key = `${r},${c}`;
           if (nodeMap.has(key)) continue;
           if (isCoveredByLogo(r, c)) continue;
-          // Avoid finder eye pattern inner core (0..6 x 0..6, etc.)
+          // Avoid finder patterns and quiet zone boundaries (0..7 x 0..7, 0..7 x size-8..size-1, size-8..size-1 x 0..7)
           if (
-            (r >= 0 && r <= 6 && c >= 0 && c <= 6) ||
-            (r >= 0 && r <= 6 && c >= size - 7 && c <= size - 1) ||
-            (r >= size - 7 && r <= size - 1 && c >= 0 && c <= 6)
+            (r >= 0 && r <= 7 && c >= 0 && c <= 7) ||
+            (r >= 0 && r <= 7 && c >= size - 8 && c <= size - 1) ||
+            (r >= size - 8 && r <= size - 1 && c >= 0 && c <= 7)
           ) {
             continue;
           }

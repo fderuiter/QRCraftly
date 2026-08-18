@@ -187,23 +187,23 @@ describe('generateMaze & renderMaze', () => {
       const configWithBridges = { ...baseConfig, isMazeBridgesEnabled: true };
       const mazeData = generateMaze(modules, configWithBridges, size);
 
-      // Verify that bridge cells are present as nodes in the maze
-      const tlBridgeNodes = mazeData.nodes.filter(n => n.c === 3 && n.r >= 6 && n.r <= 8);
-      const trBridgeNodes = mazeData.nodes.filter(n => n.c === size - 4 && n.r >= 6 && n.r <= 8);
-      const blBridgeNodes = mazeData.nodes.filter(n => n.r === size - 4 && n.c >= 6 && n.c <= 8);
+      // Verify that bridge cells are present at row 8 (TL/TR) and col 8 (BL) as nodes in the maze
+      const tlBridgeNodes = mazeData.nodes.filter(n => n.c === 3 && n.r === 8);
+      const trBridgeNodes = mazeData.nodes.filter(n => n.c === size - 4 && n.r === 8);
+      const blBridgeNodes = mazeData.nodes.filter(n => n.r === size - 4 && n.c === 8);
 
-      expect(tlBridgeNodes.length).toBe(3);
-      expect(trBridgeNodes.length).toBe(3);
-      expect(blBridgeNodes.length).toBe(3);
+      expect(tlBridgeNodes.length).toBe(1);
+      expect(trBridgeNodes.length).toBe(1);
+      expect(blBridgeNodes.length).toBe(1);
 
-      // Verify that edges are created for the bridge paths
-      const tlBridgeEdges = mazeData.edges.filter(e => 
-        (e.u.c === 3 && e.u.r === 6 && e.v.c === 3 && e.v.r === 7) ||
-        (e.u.c === 3 && e.u.r === 7 && e.v.c === 3 && e.v.r === 6) ||
-        (e.u.c === 3 && e.u.r === 7 && e.v.c === 3 && e.v.r === 8) ||
-        (e.u.c === 3 && e.u.r === 8 && e.v.c === 3 && e.v.r === 7)
-      );
-      expect(tlBridgeEdges.length).toBe(2);
+      // Verify ZERO nodes on row 7 or column 7 in finder pattern quiet zones
+      const quietZoneRow7orCol7Nodes = mazeData.nodes.filter(n => {
+        const isTLQuietZone = n.r <= 7 && n.c <= 7 && (n.r === 7 || n.c === 7);
+        const isTRQuietZone = n.r <= 7 && n.c >= size - 8 && (n.r === 7 || n.c === size - 8);
+        const isBLQuietZone = n.r >= size - 8 && n.c <= 7 && (n.r === size - 8 || n.c === 7);
+        return isTLQuietZone || isTRQuietZone || isBLQuietZone;
+      });
+      expect(quietZoneRow7orCol7Nodes.length).toBe(0);
     });
 
     it('does not generate bridges when isMazeBridgesEnabled is false', () => {
@@ -212,10 +212,10 @@ describe('generateMaze & renderMaze', () => {
       const configNoBridges = { ...baseConfig, isMazeBridgesEnabled: false };
       const mazeData = generateMaze(modules, configNoBridges, size);
 
-      // Verify that bridge cells in safety zone (r=7,8 for TL/TR, c=7,8 for BL) are NOT present
-      const tlBridgeNodes = mazeData.nodes.filter(n => n.c === 3 && n.r >= 7 && n.r <= 8);
-      const trBridgeNodes = mazeData.nodes.filter(n => n.c === size - 4 && n.r >= 7 && n.r <= 8);
-      const blBridgeNodes = mazeData.nodes.filter(n => n.r === size - 4 && n.c >= 7 && n.c <= 8);
+      // Verify that bridge cells at row 8 / col 8 in safety zone are NOT present
+      const tlBridgeNodes = mazeData.nodes.filter(n => n.c === 3 && n.r === 8);
+      const trBridgeNodes = mazeData.nodes.filter(n => n.c === size - 4 && n.r === 8);
+      const blBridgeNodes = mazeData.nodes.filter(n => n.r === size - 4 && n.c === 8);
 
       expect(tlBridgeNodes.length).toBe(0);
       expect(trBridgeNodes.length).toBe(0);
@@ -244,9 +244,9 @@ describe('generateMaze & renderMaze', () => {
       const { isMazeBridgesEnabled, ...configWithoutBridgesProp } = baseConfig;
       const mazeData = generateMaze(modules, configWithoutBridgesProp, size);
 
-      // Verify that bridge cells are present as nodes in the maze
-      const tlBridgeNodes = mazeData.nodes.filter(n => n.c === 3 && n.r >= 6 && n.r <= 8);
-      expect(tlBridgeNodes.length).toBe(3);
+      // Verify that bridge cells are present as nodes in the maze at row 8
+      const tlBridgeNodes = mazeData.nodes.filter(n => n.c === 3 && n.r === 8);
+      expect(tlBridgeNodes.length).toBe(1);
     });
 
     it('does not render solution path if showMazeSolution is false', () => {
@@ -351,20 +351,23 @@ describe('generateMaze & renderMaze', () => {
 
     it('covers all branch conditions in isBridgeCell', () => {
       const size = 21;
-      // Condition 1: c === 3 && r >= 6 && r <= 8
-      expect(isBridgeCell(5, 3, size)).toBe(false); // r < 6
-      expect(isBridgeCell(9, 3, size)).toBe(false); // r > 8
-      expect(isBridgeCell(6, 4, size)).toBe(false); // c !== 3
+      // Condition 1: c === 3 && r === 8
+      expect(isBridgeCell(8, 3, size)).toBe(true);
+      expect(isBridgeCell(7, 3, size)).toBe(false); // r !== 8
+      expect(isBridgeCell(9, 3, size)).toBe(false); // r !== 8
+      expect(isBridgeCell(8, 4, size)).toBe(false); // c !== 3
 
-      // Condition 2: c === size - 4 && r >= 6 && r <= 8
-      expect(isBridgeCell(5, size - 4, size)).toBe(false); // r < 6
-      expect(isBridgeCell(9, size - 4, size)).toBe(false); // r > 8
-      expect(isBridgeCell(6, size - 5, size)).toBe(false); // c !== size - 4
+      // Condition 2: c === size - 4 && r === 8
+      expect(isBridgeCell(8, size - 4, size)).toBe(true);
+      expect(isBridgeCell(7, size - 4, size)).toBe(false); // r !== 8
+      expect(isBridgeCell(9, size - 4, size)).toBe(false); // r !== 8
+      expect(isBridgeCell(8, size - 5, size)).toBe(false); // c !== size - 4
 
-      // Condition 3: r === size - 4 && c >= 6 && c <= 8
-      expect(isBridgeCell(size - 4, 5, size)).toBe(false); // c < 6
-      expect(isBridgeCell(size - 4, 9, size)).toBe(false); // c > 8
-      expect(isBridgeCell(size - 5, 6, size)).toBe(false); // r !== size - 4
+      // Condition 3: r === size - 4 && c === 8
+      expect(isBridgeCell(size - 4, 8, size)).toBe(true);
+      expect(isBridgeCell(size - 4, 7, size)).toBe(false); // c !== 8
+      expect(isBridgeCell(size - 4, 9, size)).toBe(false); // c !== 8
+      expect(isBridgeCell(size - 5, 8, size)).toBe(false); // r !== size - 4
     });
 
     it('covers process.env.NODE_ENV cache and empty nodes branch', () => {
@@ -405,13 +408,13 @@ describe('generateMaze & renderMaze', () => {
 
     it('covers dark module on a bridge cell', () => {
       const size = 21;
-      // Bridge cell (7, 3) is set as dark module
-      const modules = createMockModules(size, { '7,3': true });
+      // Bridge cell (8, 3) is set as dark module
+      const modules = createMockModules(size, { '8,3': true });
       const configWithBridges = { ...baseConfig, isMazeBridgesEnabled: true };
       const mazeData = generateMaze(modules, configWithBridges, size);
 
-      // Verify that (7, 3) is STILL present as a node in the maze because it is a bridge!
-      const bridgeNode = mazeData.nodes.find(n => n.r === 7 && n.c === 3);
+      // Verify that (8, 3) is STILL present as a node in the maze because it is a bridge!
+      const bridgeNode = mazeData.nodes.find(n => n.r === 8 && n.c === 3);
       expect(bridgeNode).toBeDefined();
     });
 
