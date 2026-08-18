@@ -9,10 +9,9 @@ describe('Same-Repo Gate & Local Mock Preview Workflow Integration', () => {
     expect(fs.existsSync(workflowPath)).toBe(true);
   });
 
-  it('runs deploy-preview job for both internal and fork PRs without closed filter restriction', () => {
+  it('gates deploy-preview job to same-repository PRs to prevent untrusted checkout vulnerability', () => {
     const content = fs.readFileSync(workflowPath, 'utf8');
-    expect(content).toContain("if: github.event.action != 'closed'");
-    expect(content).not.toContain("if: github.event.action != 'closed' && github.event.pull_request.head.repo.full_name == github.repository");
+    expect(content).toContain("if: github.event.action != 'closed' && github.event.pull_request.head.repo.full_name == github.repository");
   });
 
   it('restricts Cloudflare deployment credentials strictly to same-repository branches', () => {
