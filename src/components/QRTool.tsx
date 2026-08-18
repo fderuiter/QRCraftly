@@ -20,7 +20,7 @@ import React, { useState, useRef, useCallback } from 'react';
 import { Button } from "./ui/Button";
 import { Card } from "./ui/Card";
 import { Alert } from "./ui/Alert";
-import { QRConfig } from '@/types';
+import { QRConfig, TemplateStyle, SocialFormat } from '@/types';
 import QRCanvas from '@/components/QRCanvas';
 import { Download, Share2, QrCode, ChevronDown, Moon, Sun, Info, Copy, Check, AlertTriangle, Menu } from 'lucide-react';
 import { Modal } from './ui/Modal';
@@ -162,16 +162,20 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
   }, [addToast]);
 
   const onCopy = async () => {
-    const result = await handleCopy();
-    if (result.success) {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-    handleExportResult(result, copyButtonRef);
+    const action = async () => {
+      const result = await handleCopy();
+      if (result.success) {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }
+      handleExportResult(result, copyButtonRef);
+    };
+    executeWithSafetyGate(action);
   };
 
   const executeWithSafetyGate = (action: () => void | Promise<void>) => {
-    const isUnsafe = scannabilityStatus === 'fail' || scannabilityStatus === 'digital-pass' || (health && health.score < 80);
+    const isTemplateOrSocial = config.templateStyle !== TemplateStyle.NONE || config.socialFormat !== SocialFormat.SQUARE_1_1;
+    const isUnsafe = !isTemplateOrSocial && (scannabilityStatus === 'fail' || scannabilityStatus === 'digital-pass' || (health && health.score < 80));
     if (isUnsafe) {
       setGateAction(() => action);
       setShowSafetyGate(true);
@@ -182,34 +186,28 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
 
   const handleSaveAsFlow = async (format: 'png' | 'jpeg' | 'webp') => {
     setShowDownloadMenu(false);
-    const action = async () => {
-      const result = await hookSaveAs(format);
-      handleExportResult(result, downloadButtonRef);
-    };
-    executeWithSafetyGate(action);
+    const result = await hookSaveAs(format);
+    handleExportResult(result, downloadButtonRef);
   };
 
   const handleSaveSvgFlow = async () => {
     setShowDownloadMenu(false);
-    const action = async () => {
-      const result = await hookSaveSvg();
-      handleExportResult(result, downloadButtonRef);
-    };
-    executeWithSafetyGate(action);
+    const result = await hookSaveSvg();
+    handleExportResult(result, downloadButtonRef);
   };
 
   const downloadToDeviceFlow = async (format: 'png' | 'jpeg' | 'webp', buttonRef: React.RefObject<HTMLButtonElement | null>) => {
     setShowDownloadMenu(false);
-    const action = async () => {
-      const result = await hookDownload(format);
-      handleExportResult(result, buttonRef);
-    };
-    executeWithSafetyGate(action);
+    const result = await hookDownload(format);
+    handleExportResult(result, buttonRef);
   };
 
   const onShare = async () => {
-    const result = await handleShare();
-    handleExportResult(result, shareButtonRef);
+    const action = async () => {
+      const result = await handleShare();
+      handleExportResult(result, shareButtonRef);
+    };
+    executeWithSafetyGate(action);
   };
 
   return (
@@ -263,13 +261,13 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
                   >
                     <a
                       href="/file-transfer"
-                      className="block rounded-lg px-3 py-2 text-sm font-semibold text-teal-600 transition-colors hover:bg-slate-100 dark:text-teal-400 dark:hover:bg-slate-800"
+                      className="block rounded-lg px-3 py-2 text-sm font-semibold text-teal-700 transition-colors hover:bg-slate-100 dark:text-teal-400 dark:hover:bg-slate-800"
                     >
                       Send File
                     </a>
                     <a
                       href="/file-transfer/receive"
-                      className="block rounded-lg px-3 py-2 text-sm font-semibold text-teal-600 transition-colors hover:bg-slate-100 dark:text-teal-400 dark:hover:bg-slate-800"
+                      className="block rounded-lg px-3 py-2 text-sm font-semibold text-teal-700 transition-colors hover:bg-slate-100 dark:text-teal-400 dark:hover:bg-slate-800"
                     >
                       Receive File
                     </a>
@@ -278,7 +276,7 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
               </div>
               <a
                 href="/dynamic-dashboard"
-                className="hidden items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold text-teal-600 transition-colors hover:bg-slate-100 sm:flex dark:text-teal-400 dark:hover:bg-slate-800"
+                className="hidden items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold text-teal-700 transition-colors hover:bg-slate-100 sm:flex dark:text-teal-400 dark:hover:bg-slate-800"
                 title="Dynamic Dashboard"
                 aria-label="Dynamic QR Code Redirection Dashboard"
               >
@@ -286,7 +284,7 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
               </a>
               <a
                 href="/file-transfer"
-                className="hidden items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold text-teal-600 transition-colors hover:bg-slate-100 sm:flex dark:text-teal-400 dark:hover:bg-slate-800"
+                className="hidden items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold text-teal-700 transition-colors hover:bg-slate-100 sm:flex dark:text-teal-400 dark:hover:bg-slate-800"
                 title="Send File"
                 aria-label="Send Offline File"
               >
@@ -294,7 +292,7 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
               </a>
               <a
                 href="/file-transfer/receive"
-                className="hidden items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold text-teal-600 transition-colors hover:bg-slate-100 sm:flex dark:text-teal-400 dark:hover:bg-slate-800"
+                className="hidden items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold text-teal-700 transition-colors hover:bg-slate-100 sm:flex dark:text-teal-400 dark:hover:bg-slate-800"
                 title="Receive File"
                 aria-label="Receive Offline File"
               >
@@ -357,30 +355,30 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
                   <div>
                     <h2 className="mb-3 text-xs font-semibold tracking-wider text-slate-900 uppercase dark:text-slate-200">Generators</h2>
                     <ul className="space-y-2 text-sm text-slate-500 dark:text-slate-400">
-                      <li><a href="/" className="transition-colors hover:text-teal-600 dark:hover:text-teal-400">URL QR Code</a></li>
-                      <li><a href="/text-qr-code" className="transition-colors hover:text-teal-600 dark:hover:text-teal-400">Text QR Code</a></li>
-                      <li><a href="/wifi-qr-code" className="transition-colors hover:text-teal-600 dark:hover:text-teal-400">WiFi QR Code</a></li>
-                      <li><a href="/vcard-qr-code" className="transition-colors hover:text-teal-600 dark:hover:text-teal-400">vCard QR Code</a></li>
-                      <li><a href="/email-qr-code" className="transition-colors hover:text-teal-600 dark:hover:text-teal-400">Email QR Code</a></li>
-                      <li><a href="/phone-qr-code" className="transition-colors hover:text-teal-600 dark:hover:text-teal-400">Phone QR Code</a></li>
-                      <li><a href="/sms-qr-code" className="transition-colors hover:text-teal-600 dark:hover:text-teal-400">SMS QR Code</a></li>
-                      <li><a href="/payment-qr-code" className="transition-colors hover:text-teal-600 dark:hover:text-teal-400">Payment QR Code</a></li>
-                      <li><a href="/event-qr-code" className="transition-colors hover:text-teal-600 dark:hover:text-teal-400">Event QR Code</a></li>
-                      <li><a href="/location-qr-code" className="transition-colors hover:text-teal-600 dark:hover:text-teal-400">Location QR Code</a></li>
-                      <li><a href="/meeting-qr-code" className="transition-colors hover:text-teal-600 dark:hover:text-teal-400">Meeting QR Code</a></li>
-                      <li><a href="/social-qr-code" className="transition-colors hover:text-teal-600 dark:hover:text-teal-400">Social QR Code</a></li>
-                      <li><a href="/file-transfer" className="font-semibold text-teal-600 transition-colors hover:text-teal-700 dark:text-teal-400 dark:hover:text-teal-300">File Share (Send)</a></li>
-                      <li><a href="/file-transfer/receive" className="font-semibold text-teal-600 transition-colors hover:text-teal-700 dark:text-teal-400 dark:hover:text-teal-300">File Share (Receive)</a></li>
+                      <li><a href="/" className="transition-colors hover:text-teal-700 dark:hover:text-teal-400">URL QR Code</a></li>
+                      <li><a href="/text-qr-code" className="transition-colors hover:text-teal-700 dark:hover:text-teal-400">Text QR Code</a></li>
+                      <li><a href="/wifi-qr-code" className="transition-colors hover:text-teal-700 dark:hover:text-teal-400">WiFi QR Code</a></li>
+                      <li><a href="/vcard-qr-code" className="transition-colors hover:text-teal-700 dark:hover:text-teal-400">vCard QR Code</a></li>
+                      <li><a href="/email-qr-code" className="transition-colors hover:text-teal-700 dark:hover:text-teal-400">Email QR Code</a></li>
+                      <li><a href="/phone-qr-code" className="transition-colors hover:text-teal-700 dark:hover:text-teal-400">Phone QR Code</a></li>
+                      <li><a href="/sms-qr-code" className="transition-colors hover:text-teal-700 dark:hover:text-teal-400">SMS QR Code</a></li>
+                      <li><a href="/payment-qr-code" className="transition-colors hover:text-teal-700 dark:hover:text-teal-400">Payment QR Code</a></li>
+                      <li><a href="/event-qr-code" className="transition-colors hover:text-teal-700 dark:hover:text-teal-400">Event QR Code</a></li>
+                      <li><a href="/location-qr-code" className="transition-colors hover:text-teal-700 dark:hover:text-teal-400">Location QR Code</a></li>
+                      <li><a href="/meeting-qr-code" className="transition-colors hover:text-teal-700 dark:hover:text-teal-400">Meeting QR Code</a></li>
+                      <li><a href="/social-qr-code" className="transition-colors hover:text-teal-700 dark:hover:text-teal-400">Social QR Code</a></li>
+                      <li><a href="/file-transfer" className="font-semibold text-teal-700 transition-colors hover:text-teal-800 dark:text-teal-300 dark:hover:text-teal-200">File Share (Send)</a></li>
+                      <li><a href="/file-transfer/receive" className="font-semibold text-teal-700 transition-colors hover:text-teal-800 dark:text-teal-300 dark:hover:text-teal-200">File Share (Receive)</a></li>
                     </ul>
                   </div>
                   <div>
                     <h2 className="mb-3 text-xs font-semibold tracking-wider text-slate-900 uppercase dark:text-slate-200">Company</h2>
                     <ul className="space-y-2 text-sm text-slate-500 dark:text-slate-400">
-                      <li><a href="/about" className="transition-colors hover:text-teal-600 dark:hover:text-teal-400">About</a></li>
-                      <li><a href="/security#security-policy" className="transition-colors hover:text-teal-600 dark:hover:text-teal-400">Security Policy</a></li>
-                      <li><a href="/security#privacy-architecture" className="transition-colors hover:text-teal-600 dark:hover:text-teal-400">Privacy Architecture</a></li>
-                      <li><a href="https://ko-fi.com/laser_loon" target="_blank" rel="noopener noreferrer" className="transition-colors hover:text-teal-600 dark:hover:text-teal-400">Ko-fi</a></li>
-                      <li><a href="https://github.com/fderuiter/QRCraftly" target="_blank" rel="noopener noreferrer" className="transition-colors hover:text-teal-600 dark:hover:text-teal-400">GitHub</a></li>
+                      <li><a href="/about" className="transition-colors hover:text-teal-700 dark:hover:text-teal-400">About</a></li>
+                      <li><a href="/security#security-policy" className="transition-colors hover:text-teal-700 dark:hover:text-teal-400">Security Policy</a></li>
+                      <li><a href="/security#privacy-architecture" className="transition-colors hover:text-teal-700 dark:hover:text-teal-400">Privacy Architecture</a></li>
+                      <li><a href="https://ko-fi.com/laser_loon" target="_blank" rel="noopener noreferrer" className="transition-colors hover:text-teal-700 dark:hover:text-teal-400">Ko-fi</a></li>
+                      <li><a href="https://github.com/fderuiter/QRCraftly" target="_blank" rel="noopener noreferrer" className="transition-colors hover:text-teal-700 dark:hover:text-teal-400">GitHub</a></li>
                     </ul>
                   </div>
                 </div>
@@ -426,7 +424,12 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
                        <div className="relative flex-1" ref={downloadMenuRef}>
                           <Button 
                               ref={downloadButtonRef}
-                              variant={scannabilityStatus === 'fail' || scannabilityStatus === 'digital-pass' || (health && health.score < 80) ? 'error' : 'primary'}
+                              variant={
+                                (config.templateStyle === TemplateStyle.NONE && config.socialFormat === SocialFormat.SQUARE_1_1) &&
+                                (scannabilityStatus === 'fail' || scannabilityStatus === 'digital-pass' || (health && health.score < 80))
+                                  ? 'error'
+                                  : 'primary'
+                              }
                               fullWidth
                               onClick={() => executeWithSafetyGate(() => setShowDownloadMenu(!showDownloadMenu))}
                               aria-expanded={showDownloadMenu}

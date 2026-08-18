@@ -126,8 +126,8 @@ test.describe('Isolated Web Worker Recovery & Export Bypass', () => {
     // Click the download command to trigger export flow
     const downloadButton = page.getByRole('button', { name: 'Download', exact: true });
     await expect(downloadButton).toBeVisible();
-    // Wait for the button to transition to the error variant style (bg-rose-50 or text-rose-700)
-    await expect(downloadButton).toHaveClass(/bg-rose-50|text-rose-700/);
+    // Wait for the button to transition to the error variant style (bg-rose-50, bg-rose-700, or text-rose-700)
+    await expect(downloadButton).toHaveClass(/bg-rose-50|bg-rose-700|text-rose-700/);
     await downloadButton.click();
 
     // Verify that the "Scan Safety Warning" warning dialog/modal is open

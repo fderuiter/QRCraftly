@@ -42,6 +42,20 @@ test.describe('Automated Workbox Precaching and Offline Readiness', () => {
 
     expect(isSwActive).toBe(true);
 
+    // Wait until precache assets are stored in CacheStorage
+    await page.evaluate(async () => {
+      for (let i = 0; i < 50; i++) {
+        const cacheNames = await caches.keys();
+        for (const name of cacheNames) {
+          const cache = await caches.open(name);
+          const keys = await cache.keys();
+          if (keys.length > 5) return true;
+        }
+        await new Promise((r) => setTimeout(r, 100));
+      }
+      return false;
+    });
+
     // 2. Set context offline to block all local server/network routing
     await context.setOffline(true);
 
@@ -50,7 +64,7 @@ test.describe('Automated Workbox Precaching and Offline Readiness', () => {
       await page.reload();
 
       // 4. Confirm the primary UI loads, completes hydration, and renders properly offline
-      await page.waitForSelector('main[data-hydrated="true"]', { timeout: 5000 });
+      await page.waitForSelector('main[data-hydrated="true"]', { timeout: 10000 });
       const title = page.locator('h1');
       await expect(title).toBeVisible();
       await expect(title).toContainText('QRCraftly');

@@ -51,7 +51,7 @@ These components capture specialized data structures required to construct disti
 - **LocationInput** (`LocationInput.tsx` / `LocationInput.test.tsx`): High-accuracy coordinate form requiring proper latitude and longitude decimals.
 - **MeetingInput** (`MeetingInput.tsx` / `MeetingInput.test.tsx`): Specialized input fields to enter URL links and meeting passwords.
 - **SocialInput** (`SocialInput.tsx` / `SocialInput.test.tsx`): Selectors for major platforms alongside handler name parsing.
-- **TypeSelector** (`TypeSelector.tsx` / `TypeSelector.test.tsx`): Accessible tabbed layout for switching between QR configurations, with arrow, Home, End, Enter, and Space keyboard controls while leaving Tab navigation to the browser's native focus order.
+- **TypeSelector** (`TypeSelector.tsx` / `TypeSelector.test.tsx`): Accessible tabbed layout for switching between QR configurations, with arrow, Home, End, Enter, and Space keyboard controls while leaving Tab navigation to the browser's native focus order and performing in-SPA type switching.
 
 ---
 

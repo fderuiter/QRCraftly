@@ -48,7 +48,7 @@ test.describe('Accessibility Suite', () => {
     await page.waitForSelector('text=Warning: The contrast ratio is low', { timeout: 5000 });
 
     // Trigger the warning modal
-    const downloadButton = page.locator('button:has-text("Download")');
+    const downloadButton = page.getByRole('button', { name: 'Download', exact: true });
     await downloadButton.click();
 
     // Wait for modal to appear

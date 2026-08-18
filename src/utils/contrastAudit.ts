@@ -48,15 +48,38 @@ function calculateSrgbLuminance(r: number, g: number, b: number): number {
  */
 export function auditModuleContrast(
   imageData: { data: Uint8ClampedArray; width: number; height: number },
-  moduleCount?: number
+  moduleCount?: number,
+  margin?: number
 ): ModuleContrastAuditResult {
   if (!moduleCount || moduleCount <= 0 || !imageData || !imageData.data || imageData.width <= 0 || imageData.height <= 0) {
     return { violations: 0, minContrast: 21, lowContrastCells: [] };
   }
 
   const { data, width, height } = imageData;
-  const cellWidth = width / moduleCount;
-  const cellHeight = height / moduleCount;
+
+  // Calculate layout bounds: determine if quiet zones exist or if a specific margin was provided
+  let drawX = 0;
+  let drawY = 0;
+  let drawWidth = width;
+  let drawHeight = height;
+
+  if (margin !== undefined && margin > 0) {
+    const borderPx = (margin * width) / (moduleCount + 2 * margin);
+    drawX = borderPx;
+    drawY = borderPx;
+    drawWidth = width - 2 * borderPx;
+    drawHeight = height - 2 * borderPx;
+  } else if (margin === undefined && (width % moduleCount !== 0 || width !== height)) {
+    // Default 4-module quiet zone floor used by calculateLayout in standard rendering
+    const borderPx = (4 * Math.min(width, height)) / (moduleCount + 8);
+    drawX = (width - (Math.min(width, height) - 2 * borderPx)) / 2;
+    drawY = (height - (Math.min(width, height) - 2 * borderPx)) / 2;
+    drawWidth = Math.min(width, height) - 2 * borderPx;
+    drawHeight = drawWidth;
+  }
+
+  const cellWidth = drawWidth / moduleCount;
+  const cellHeight = drawHeight / moduleCount;
 
   const cellLuminance = new Float64Array(moduleCount * moduleCount);
   const cellMinLum = new Float64Array(moduleCount * moduleCount);
@@ -64,12 +87,12 @@ export function auditModuleContrast(
 
   // 1. Calculate relative luminance per module cell
   for (let r = 0; r < moduleCount; r++) {
-    const y0 = Math.floor(r * cellHeight);
-    const y1 = Math.min(height, Math.floor((r + 1) * cellHeight));
+    const y0 = Math.floor(drawY + r * cellHeight);
+    const y1 = Math.min(height, Math.floor(drawY + (r + 1) * cellHeight));
 
     for (let c = 0; c < moduleCount; c++) {
-      const x0 = Math.floor(c * cellWidth);
-      const x1 = Math.min(width, Math.floor((c + 1) * cellWidth));
+      const x0 = Math.floor(drawX + c * cellWidth);
+      const x1 = Math.min(width, Math.floor(drawX + (c + 1) * cellWidth));
 
       let totalLum = 0;
       let count = 0;

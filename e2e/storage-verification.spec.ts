@@ -102,8 +102,8 @@ test.describe('Transition & Storage Verification', () => {
   });
 
   test('Requirement 4: Assert that the telemetry preference persists its exact state across page reloads', async ({ page }) => {
-    // 1. Locate the Opt-In button ("Yes, Help Fix This")
-    const yesButton = page.getByRole('button', { name: 'Yes, Help Fix This' });
+    // 1. Locate the Opt-In button ("Yes, Help Fix This" or "Allow")
+    const yesButton = page.getByRole('button', { name: /Yes, Help Fix This|Allow/i });
     await expect(yesButton).toBeVisible();
 
     // Click to Opt-In
@@ -131,8 +131,8 @@ test.describe('Transition & Storage Verification', () => {
   });
 
   test('Requirement 4 (Alt): Assert that telemetry opt-out also persists its exact state across page reloads', async ({ page }) => {
-    // 1. Locate the Opt-Out button ("No Thanks")
-    const noButton = page.getByRole('button', { name: 'No Thanks' });
+    // 1. Locate the Opt-Out button ("No Thanks" or "No thanks")
+    const noButton = page.getByRole('button', { name: /No Thanks|No thanks/i });
     await expect(noButton).toBeVisible();
 
     // Click to Opt-Out

@@ -22,7 +22,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
  *
  */
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className = '', variant = 'secondary', size = 'md', fullWidth = false, ...props }, ref) => {
+  ({ className = '', variant = 'secondary', size = 'md', fullWidth = false, type = 'button', ...props }, ref) => {
     
     let baseStyles = 'disabled:cursor-not-allowed disabled:opacity-50 font-medium inline-flex items-center justify-center transition-colors';
     
@@ -37,7 +37,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         variantStyles = 'bg-teal-50 border border-teal-200 dark:bg-slate-800 dark:border-slate-700 dark:hover:bg-slate-700 dark:text-teal-400 hover:bg-teal-100 text-teal-700';
         break;
       case 'error':
-        variantStyles = 'bg-rose-50 border border-rose-200 dark:bg-rose-900/20 dark:border-rose-800 dark:hover:bg-rose-900/40 dark:text-rose-400 hover:bg-rose-100 text-rose-700';
+        variantStyles = 'bg-rose-700 text-white hover:bg-rose-800 shadow-lg shadow-rose-900/10 dark:bg-rose-700 dark:hover:bg-rose-600 dark:shadow-rose-950/40';
         break;
       case 'outline':
         variantStyles = 'bg-white border border-slate-200 dark:bg-slate-800 dark:border-slate-700 dark:hover:bg-slate-700/50 dark:text-slate-200 hover:bg-slate-50 text-slate-700';
@@ -81,7 +81,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     const combinedClassName = `${baseStyles} ${variantStyles} ${sizeStyles} ${widthStyles} ${className}`.trim();
 
     return (
-      <button ref={ref} className={combinedClassName} {...props} />
+      <button ref={ref} type={type} className={combinedClassName} {...props} />
     );
   }
 );

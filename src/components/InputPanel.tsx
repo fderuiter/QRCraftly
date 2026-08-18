@@ -119,21 +119,6 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
         }}
       />
 
-      {/* Scanner Control Button */}
-      {!scannerActive && (
-        <div className="flex justify-end">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setScannerActive(true)}
-            className="flex items-center gap-2"
-          >
-            <Camera className="size-4" />
-            Scan QR Code
-          </Button>
-        </div>
-      )}
-
       {/* Inputs or Scanner Container */}
       <div 
         id={`panel-${config.type}`}
@@ -153,6 +138,21 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
           )
         )}
       </div>
+
+      {/* Scanner Control Button */}
+      {!scannerActive && (
+        <div className="flex justify-end">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setScannerActive(true)}
+            className="flex items-center gap-2"
+          >
+            <Camera className="size-4" />
+            Scan QR Code
+          </Button>
+        </div>
+      )}
     </div>
   );
 };
