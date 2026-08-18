@@ -165,9 +165,9 @@ self.onmessage = async (e: MessageEvent<unknown>) => {
       };
       assertWorkerResponse(response);
       if (recycledBuf) {
-        self.postMessage(response, [recycledBuf]);
+        (self as any).postMessage(response, [recycledBuf]);
       } else {
-        self.postMessage(response);
+        (self as any).postMessage(response);
       }
       return;
     }
@@ -184,9 +184,9 @@ self.onmessage = async (e: MessageEvent<unknown>) => {
       };
       assertWorkerResponse(response);
       if (recycledBuf) {
-        self.postMessage(response, [recycledBuf]);
+        (self as any).postMessage(response, [recycledBuf]);
       } else {
-        self.postMessage(response);
+        (self as any).postMessage(response);
       }
       return;
     }
@@ -242,9 +242,9 @@ self.onmessage = async (e: MessageEvent<unknown>) => {
     };
     assertWorkerResponse(response);
     if (recycledBuf) {
-      self.postMessage(response, [recycledBuf]);
+      (self as any).postMessage(response, [recycledBuf]);
     } else {
-      self.postMessage(response);
+      (self as any).postMessage(response);
     }
     
   } catch (_err) {
@@ -264,12 +264,12 @@ self.onmessage = async (e: MessageEvent<unknown>) => {
     try {
       assertWorkerResponse(response);
       if (recycledBuf) {
-        self.postMessage(response, [recycledBuf]);
+        (self as any).postMessage(response, [recycledBuf]);
       } else {
-        self.postMessage(response);
+        (self as any).postMessage(response);
       }
     } catch {
-      self.postMessage({ success: false, physicalReady: false, error: 'CRASH', configId, sequenceId });
+      (self as any).postMessage({ success: false, physicalReady: false, error: 'CRASH', configId, sequenceId });
     }
   }
 };
