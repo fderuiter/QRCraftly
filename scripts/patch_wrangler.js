@@ -27,27 +27,15 @@ try {
 const cp = require('child_process');
 const fs = require('fs');
 const path = require('path');
-const https = require('https');
 
 console.log('=== [Wrangler Wrapper] Intercepted Wrangler! ===');
 console.log('Arguments:', process.argv);
-
-let gitStatusBefore = '';
-console.log('=== [Wrangler Wrapper] Git status BEFORE wrangler runs ===');
-try {
-  gitStatusBefore = cp.execSync('git status --porcelain --ignored', { encoding: 'utf8' });
-  console.log(gitStatusBefore);
-} catch (err) {
-  console.error('Failed to run git status:', err);
-}
 
 const realWranglerPath = path.join(__dirname, 'wrangler-real.js');
 
 const hasCloudflareSecrets = !!(process.env.CLOUDFLARE_API_TOKEN && process.env.CLOUDFLARE_API_TOKEN.trim() && process.env.CLOUDFLARE_ACCOUNT_ID && process.env.CLOUDFLARE_ACCOUNT_ID.trim());
 
 let exitStatus = 0;
-let deployOutput = '';
-const outputPath = path.resolve(process.cwd(), 'deploy_output.txt');
 
 if (!hasCloudflareSecrets) {
   console.log('[Wrangler Wrapper] CLOUDFLARE_API_TOKEN or CLOUDFLARE_ACCOUNT_ID is empty/missing.');
@@ -65,8 +53,6 @@ if (!hasCloudflareSecrets) {
     
     console.log('Take a look at: http://localhost:3000');
     console.log('=== [Wrangler Wrapper] Local preview fallback ready! ===');
-    
-    deployOutput = 'Take a look at: http://localhost:3000\\n[Wrangler Wrapper] Local fallback active because Cloudflare secrets were missing.\\n';
     exitStatus = 0;
   } catch (err) {
     console.error('[Wrangler Wrapper] Failed to start local preview server fallback:', err);
@@ -80,103 +66,9 @@ if (!hasCloudflareSecrets) {
     
     console.log(\`=== [Wrangler Wrapper] Wrangler finished with exit code \${result.status} ===\`);
     exitStatus = result.status ?? 0;
-    
-    if (fs.existsSync(outputPath)) {
-      deployOutput = fs.readFileSync(outputPath, 'utf8');
-    }
   } catch (err) {
     console.error('=== [Wrangler Wrapper] Failed to execute real wrangler:', err);
     exitStatus = 1;
-  }
-}
-
-let gitStatusAfter = '';
-console.log('=== [Wrangler Wrapper] Git status AFTER wrangler finished ===');
-try {
-  gitStatusAfter = cp.execSync('git status --porcelain --ignored', { encoding: 'utf8' });
-  console.log(gitStatusAfter);
-} catch (err) {
-  console.error('Failed to run git status:', err);
-}
-
-// Under GHA, post a PR comment with detailed diagnostics
-if (process.env.GITHUB_ACTIONS || process.env.CI) {
-  let githubToken = process.env.GITHUB_TOKEN;
-  if (!githubToken) {
-    try {
-      const extraHeader = cp.execSync('git config --get http.https://github.com/.extraheader', { encoding: 'utf8' }).trim();
-      const tokenPart = extraHeader.split(/\\s+/).pop();
-      if (tokenPart) {
-        const decoded = Buffer.from(tokenPart, 'base64').toString('utf8');
-        const colonIndex = decoded.indexOf(':');
-        if (colonIndex !== -1) {
-          githubToken = decoded.slice(colonIndex + 1);
-        } else {
-          githubToken = decoded;
-        }
-      }
-    } catch (err) {
-      console.error('Failed to extract GITHUB_TOKEN:', err);
-    }
-  }
-
-  if (githubToken) {
-    const commentBody = [
-      '### 🔍 GHA Runner Wrangler Diagnostics',
-      \`**Wrangler Exit Code**: \\\`\${exitStatus}\\\`\`,
-      '\\n**Git Status BEFORE Wrangler**:',
-      '\\\`\\\`\\\`git',
-      gitStatusBefore || '(clean)',
-      '\\\`\\\`\\\`',
-      '\\n**Git Status AFTER Wrangler**:',
-      '\\\`\\\`\\\`git',
-      gitStatusAfter || '(clean)',
-      '\\\`\\\`\\\`',
-      '\\n**Wrangler Deploy Output (deploy_output.txt)**:',
-      '\\\`\\\`\\\`text',
-      deployOutput || '(empty)',
-      '\\\`\\\`\\\`'
-    ].join('\\n');
-
-    let prNumber = '682';
-    if (process.env.GITHUB_EVENT_PATH) {
-      try {
-        const event = JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH, 'utf8'));
-        if (event.pull_request && event.pull_request.number) {
-          prNumber = event.pull_request.number;
-        } else if (event.issue && event.issue.number) {
-          prNumber = event.issue.number;
-        } else if (event.number) {
-          prNumber = event.number;
-        }
-      } catch (e) {
-        console.error('[Wrangler Wrapper] Failed to parse event JSON:', e);
-      }
-    }
-    const repo = process.env.GITHUB_REPOSITORY || 'fderuiter/QRCraftly';
-    const postData = JSON.stringify({ body: commentBody });
-    const req = https.request({
-      hostname: 'api.github.com',
-      path: '/repos/' + repo + '/issues/' + prNumber + '/comments',
-      method: 'POST',
-      headers: {
-        'Authorization': \`Bearer \${githubToken.trim()}\`,
-        'User-Agent': 'NodeJS-Wrangler-Wrapper',
-        'Content-Type': 'application/json',
-        'Accept': 'application/vnd.github+json',
-        'Content-Length': Buffer.byteLength(postData)
-      }
-    }, (res) => {
-      console.log('[Wrangler Wrapper] Comment post status code:', res.statusCode);
-    });
-    
-    req.on('error', (e) => {
-      console.error('[Wrangler Wrapper] Failed to post diagnostics comment:', e);
-    });
-    req.write(postData);
-    req.end();
-  } else {
-    console.warn('[Wrangler Wrapper] Could not extract GITHUB_TOKEN. Diagnostics comment skipped.');
   }
 }
 

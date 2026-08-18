@@ -1,7 +1,32 @@
 import { Env } from "./_db";
 
-// In-memory cache to store timestamps of requests per IP
-const ipCache = new Map<string, number[]>();
+async function getKVCount(kv: any, key: string): Promise<number> {
+  let val: string | null = null;
+  const store = kv || (globalThis as any).__mockKV;
+  if (!store) return 0;
+
+  if (store instanceof Map) {
+    val = store.get(key) ?? null;
+  } else if (typeof store.get === "function") {
+    val = await store.get(key);
+  }
+
+  if (!val) return 0;
+  const parsed = parseInt(val, 10);
+  return isNaN(parsed) ? 0 : parsed;
+}
+
+async function putKVCount(kv: any, key: string, count: number): Promise<void> {
+  const strVal = String(count);
+  const store = kv || (globalThis as any).__mockKV;
+  if (!store) return;
+
+  if (store instanceof Map) {
+    store.set(key, strVal);
+  } else if (typeof store.put === "function") {
+    await store.put(key, strVal, { expirationTtl: 120 });
+  }
+}
 
 export const onRequest = async (context: {
   request: Request;
@@ -58,27 +83,32 @@ export const onRequest = async (context: {
       }
     }
 
-    // 2. IP-based Rate Limiting
-    const clientIP = request.headers.get("CF-Connecting-IP") || "127.0.0.1";
-    const now = Date.now();
-    const oneMinuteAgo = now - 60000;
+    // 2. IP-based Fixed-Window KV Rate Limiting
+    try {
+      const clientIP = request.headers.get("CF-Connecting-IP") || "127.0.0.1";
+      const currentMinuteBucket = Math.floor(Date.now() / 60000);
+      const bucketKey = `ratelimit:${clientIP}:${currentMinuteBucket}`;
+      const kv = context.env?.REDIRECTS_KV;
 
-    let timestamps = ipCache.get(clientIP) || [];
-    timestamps = timestamps.filter((ts) => ts > oneMinuteAgo);
+      const currentCount = await getKVCount(kv, bucketKey);
 
-    if (timestamps.length >= 10) {
-      return new Response(
-        JSON.stringify({ error: "Too Many Requests: Rate limit exceeded. Limit is 10 requests per minute." }),
-        {
-          status: 429,
-          headers: { "Content-Type": "application/json" }
-        }
-      );
+      if (currentCount >= 10) {
+        return new Response(
+          JSON.stringify({ error: "Too Many Requests: Rate limit exceeded. Limit is 10 requests per minute." }),
+          {
+            status: 429,
+            headers: { "Content-Type": "application/json" }
+          }
+        );
+      }
+
+      await putKVCount(kv, bucketKey, currentCount + 1);
+    } catch (err) {
+      // Fail-open protection: if KV interaction fails, allow request to proceed
+      console.error("[KV Rate Limiter Error] Failing open:", err);
     }
-
-    timestamps.push(now);
-    ipCache.set(clientIP, timestamps);
   }
 
   return await context.next();
 };
+

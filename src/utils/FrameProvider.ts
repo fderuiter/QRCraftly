@@ -341,21 +341,32 @@ export class FileFrameProvider implements FrameProvider {
       console.warn('Worker creation failed, falling back to main-thread decoding:');
       const jsQRModule = await import('jsqr');
       const jsQR = jsQRModule.default || jsQRModule;
-      const code = jsQR(new Uint8ClampedArray(imageData.data.buffer), dWidth, dHeight);
+      let code: { data: string } | null = null;
+      try {
+        code = jsQR(imageData.data, dWidth, dHeight);
+      } catch {
+        code = null;
+      }
       if (code && code.data) {
         this.onDecodedCallback?.({ status: 'pass', decodedData: code.data });
       } else {
-        // Full resolution main-thread decoding fallback
+        // Bounded resolution main-thread decoding fallback
+        const { width: fWidth, height: fHeight } = getDownscaledDimensions(img.width, img.height, 2048);
         const canvasFull = document.createElement('canvas');
-        canvasFull.width = img.width;
-        canvasFull.height = img.height;
+        canvasFull.width = fWidth;
+        canvasFull.height = fHeight;
         const ctxFull = canvasFull.getContext('2d');
         if (!ctxFull) {
           throw new Error('Failed to create canvas context.');
         }
-        ctxFull.drawImage(img, 0, 0);
-        const imageDataFull = ctxFull.getImageData(0, 0, img.width, img.height);
-        const codeFull = jsQR(imageDataFull.data, img.width, img.height);
+        ctxFull.drawImage(img, 0, 0, fWidth, fHeight);
+        const imageDataFull = ctxFull.getImageData(0, 0, fWidth, fHeight);
+        let codeFull: { data: string } | null = null;
+        try {
+          codeFull = jsQR(imageDataFull.data, fWidth, fHeight);
+        } catch {
+          codeFull = null;
+        }
         if (codeFull && codeFull.data) {
           this.onDecodedCallback?.({ status: 'pass', decodedData: codeFull.data });
         } else {
@@ -376,19 +387,20 @@ export class FileFrameProvider implements FrameProvider {
     if (result.decoded) {
       this.onDecodedCallback?.({ status: 'pass', decodedData: result.decoded });
     } else {
-      // Fall back to original full-resolution image scan via worker
+      // Fall back to bounded resolution image scan via worker
+      const { width: fWidth, height: fHeight } = getDownscaledDimensions(img.width, img.height, 2048);
       const canvasFull = document.createElement('canvas');
-      canvasFull.width = img.width;
-      canvasFull.height = img.height;
+      canvasFull.width = fWidth;
+      canvasFull.height = fHeight;
       const ctxFull = canvasFull.getContext('2d');
       if (!ctxFull) {
         throw new Error('Failed to create canvas context.');
       }
-      ctxFull.drawImage(img, 0, 0);
-      const imageDataFull = ctxFull.getImageData(0, 0, img.width, img.height);
+      ctxFull.drawImage(img, 0, 0, fWidth, fHeight);
+      const imageDataFull = ctxFull.getImageData(0, 0, fWidth, fHeight);
       const bufferFull = imageDataFull.data.buffer.slice(0);
       
-      const fullResult = await this.decodeFrameOffThreadImage(bufferFull, img.width, img.height, 2, imageDataFull);
+      const fullResult = await this.decodeFrameOffThreadImage(bufferFull, fWidth, fHeight, 2, imageDataFull);
       if (fullResult.decoded) {
         this.onDecodedCallback?.({ status: 'pass', decodedData: fullResult.decoded });
       } else {

@@ -318,9 +318,134 @@ class MockWorker {
           }
 
           if (this.url.toString().includes('fileReassemblyWorker') && message && typeof message === 'object') {
-            const { type, chunks, totalChunks } = message;
+            const { type } = message;
+
+            if (type === 'CLEAR' || type === 'RESET') {
+              (this as any)._reassemblyState = null;
+              return;
+            }
+
+            if (type === 'INIT' || type === 'ALLOCATE') {
+              (this as any)._reassemblyState = {
+                allocatedBuffer: message.fileSize ? new Uint8Array(message.fileSize) : null,
+                targetFileSize: message.fileSize || null,
+                totalChunksCount: message.totalChunks || null,
+                knownChunkSize: message.chunkSize || null,
+                receivedIndices: new Set<number>(),
+                handshakeMetadata: {
+                  fileName: message.fileName,
+                  fileSize: message.fileSize,
+                  mimeType: message.mimeType,
+                  sha256: message.sha256,
+                },
+              };
+              return;
+            }
+
+            if (type === 'CHUNK' || type === 'PROCESS_CHUNK') {
+              let state = (this as any)._reassemblyState;
+              if (!state) {
+                state = (this as any)._reassemblyState = {
+                  allocatedBuffer: null,
+                  targetFileSize: null,
+                  totalChunksCount: null,
+                  knownChunkSize: null,
+                  receivedIndices: new Set<number>(),
+                  handshakeMetadata: null,
+                };
+              }
+
+              const { index, base64 } = message;
+              const tot = message.totalChunks ?? message.total;
+              if (typeof tot === 'number' && tot > 0) {
+                state.totalChunksCount = tot;
+              }
+
+              if (state.receivedIndices.has(index)) {
+                return;
+              }
+
+              const binaryString = atob(base64);
+              const decodedBytes = new Uint8Array(binaryString.length);
+              for (let j = 0; j < binaryString.length; j++) {
+                decodedBytes[j] = binaryString.charCodeAt(j);
+              }
+
+              if (typeof message.chunkSize === 'number' && message.chunkSize > 0) {
+                state.knownChunkSize = message.chunkSize;
+              } else if (!state.knownChunkSize && state.totalChunksCount) {
+                if (index < state.totalChunksCount - 1 || state.totalChunksCount === 1) {
+                  state.knownChunkSize = decodedBytes.length;
+                }
+              }
+
+              if (!state.allocatedBuffer) {
+                if (state.targetFileSize && state.targetFileSize > 0) {
+                  state.allocatedBuffer = new Uint8Array(state.targetFileSize);
+                } else if (state.knownChunkSize && state.totalChunksCount) {
+                  if (index === state.totalChunksCount - 1) {
+                    state.targetFileSize = (state.totalChunksCount - 1) * state.knownChunkSize + decodedBytes.length;
+                  } else {
+                    state.targetFileSize = state.totalChunksCount * state.knownChunkSize;
+                  }
+                  state.allocatedBuffer = new Uint8Array(state.targetFileSize);
+                } else if (state.totalChunksCount === 1) {
+                  state.targetFileSize = decodedBytes.length;
+                  state.allocatedBuffer = new Uint8Array(state.targetFileSize);
+                }
+              }
+
+              let offset = 0;
+              if (state.knownChunkSize) {
+                offset = index * state.knownChunkSize;
+              } else if (state.totalChunksCount && index === state.totalChunksCount - 1 && state.targetFileSize) {
+                offset = state.targetFileSize - decodedBytes.length;
+              }
+
+              if (state.allocatedBuffer) {
+                if (state.allocatedBuffer.length < offset + decodedBytes.length) {
+                  const newLen = Math.max(state.allocatedBuffer.length, offset + decodedBytes.length);
+                  const expanded = new Uint8Array(newLen);
+                  expanded.set(state.allocatedBuffer, 0);
+                  state.allocatedBuffer = expanded;
+                  state.targetFileSize = newLen;
+                }
+                state.allocatedBuffer.set(decodedBytes, offset);
+              }
+
+              state.receivedIndices.add(index);
+              const total = state.totalChunksCount || 1;
+              const current = state.receivedIndices.size;
+              const progress = Math.round((current / total) * 100);
+
+              this.dispatchMessage({
+                type: 'PROGRESS',
+                progress,
+                current,
+                total,
+                index,
+              });
+
+              if (state.totalChunksCount && state.receivedIndices.size === state.totalChunksCount && state.allocatedBuffer) {
+                let finalBuffer = state.allocatedBuffer;
+                if (state.targetFileSize && state.allocatedBuffer.length > state.targetFileSize) {
+                  finalBuffer = state.allocatedBuffer.subarray(0, state.targetFileSize);
+                }
+                const buffer = finalBuffer.buffer;
+                const metadata = state.handshakeMetadata;
+                (this as any)._reassemblyState = null;
+                this.dispatchMessage({
+                  type: 'COMPLETE',
+                  buffer,
+                  handshake: metadata,
+                });
+              }
+              return;
+            }
+
             if (type === 'START_REASSEMBLY') {
               try {
+                const { chunks, totalChunks } = message;
                 if (!chunks || !Array.isArray(chunks)) {
                   throw new Error('Invalid or missing chunks array.');
                 }

@@ -9,15 +9,19 @@ import { MockD1Database } from "../functions/api/redirect/_db";
 class MockKV {
   store = new Map<string, string>();
   metadataStore = new Map<string, any>();
+  optionsStore = new Map<string, any>();
 
   async get(key: string) {
     return this.store.get(key) || null;
   }
 
-  async put(key: string, value: string, options?: { metadata?: any }) {
+  async put(key: string, value: string, options?: { metadata?: any; expirationTtl?: number }) {
     this.store.set(key, value);
     if (options?.metadata) {
       this.metadataStore.set(key, options.metadata);
+    }
+    if (options) {
+      this.optionsStore.set(key, options);
     }
   }
 
@@ -153,6 +157,130 @@ describe("Secure Dynamic Redirection API Suite", () => {
       });
       const otherRes = await runMiddleware(otherReq);
       expect(otherRes.status).toBe(200);
+    });
+
+    it("should use time-bucketed KV keys with expirationTtl when REDIRECTS_KV is provided", async () => {
+      const kv = new MockKV();
+      const ip = "203.0.113.42";
+      const req = new Request("https://qrcraftly.com/api/redirect/register", {
+        method: "POST",
+        headers: {
+          "Origin": "https://qrcraftly.com",
+          "CF-Connecting-IP": ip,
+        },
+      });
+
+      const res = await middlewareOnRequest({
+        request: req,
+        next: async () => new Response("next called", { status: 200 }),
+        env: { REDIRECTS_KV: kv },
+      });
+
+      expect(res.status).toBe(200);
+
+      const currentMinuteBucket = Math.floor(Date.now() / 60000);
+      const expectedBucketKey = `ratelimit:${ip}:${currentMinuteBucket}`;
+
+      const storedCount = await kv.get(expectedBucketKey);
+      expect(storedCount).toBe("1");
+
+      const options = kv.optionsStore.get(expectedBucketKey);
+      expect(options).toBeDefined();
+      expect(options.expirationTtl).toBe(120);
+    });
+
+    it("should reset request limits when time bucket advances to next minute window", async () => {
+      const kv = new MockKV();
+      const ip = "198.51.100.22";
+      const makeRequest = () => new Request("https://qrcraftly.com/api/redirect/register", {
+        method: "POST",
+        headers: {
+          "Origin": "https://qrcraftly.com",
+          "CF-Connecting-IP": ip,
+        },
+      });
+
+      const currentMinuteBucket = Math.floor(Date.now() / 60000);
+      const pastBucketKey = `ratelimit:${ip}:${currentMinuteBucket - 1}`;
+      
+      // Simulate that the client exhausted 10 requests in the previous minute bucket
+      await kv.put(pastBucketKey, "10");
+
+      // Request in current minute bucket should pass because it's a new time bucket
+      const res = await middlewareOnRequest({
+        request: makeRequest(),
+        next: async () => new Response("next called", { status: 200 }),
+        env: { REDIRECTS_KV: kv },
+      });
+
+      expect(res.status).toBe(200);
+
+      // Current bucket should now have count 1
+      const currentBucketKey = `ratelimit:${ip}:${currentMinuteBucket}`;
+      expect(await kv.get(currentBucketKey)).toBe("1");
+    });
+
+    it("should fail open when shared KV storage experiences a service error", async () => {
+      const faultyKV = {
+        get: async () => { throw new Error("KV database connection timeout"); },
+        put: async () => { throw new Error("KV database connection timeout"); },
+      };
+
+      const req = new Request("https://qrcraftly.com/api/redirect/register", {
+        method: "POST",
+        headers: {
+          "Origin": "https://qrcraftly.com",
+          "CF-Connecting-IP": "1.2.3.4",
+        },
+      });
+
+      const res = await middlewareOnRequest({
+        request: req,
+        next: async () => new Response("next called", { status: 200 }),
+        env: { REDIRECTS_KV: faultyKV },
+      });
+
+      // Must fail open and allow the request to proceed instead of returning 500 or crashing
+      expect(res.status).toBe(200);
+      expect(await res.text()).toBe("next called");
+    });
+
+    it("should exclude non-registration endpoints from rate limiting", async () => {
+      const ip = "10.0.0.1";
+      const kv = new MockKV();
+      const currentMinuteBucket = Math.floor(Date.now() / 60000);
+      const bucketKey = `ratelimit:${ip}:${currentMinuteBucket}`;
+
+      // Max out the rate limit counter for this IP
+      await kv.put(bucketKey, "10");
+
+      // Request to GET /api/redirect/some-id
+      const reqGet = new Request("https://qrcraftly.com/api/redirect/some-id", {
+        method: "GET",
+        headers: { "CF-Connecting-IP": ip },
+      });
+
+      const resGet = await middlewareOnRequest({
+        request: reqGet,
+        next: async () => new Response("next called", { status: 200 }),
+        env: { REDIRECTS_KV: kv },
+      });
+
+      expect(resGet.status).toBe(200);
+
+      // Request to POST /api/redirect/update
+      const reqUpdate = new Request("https://qrcraftly.com/api/redirect/update", {
+        method: "POST",
+        headers: { "CF-Connecting-IP": ip },
+      });
+
+      const resUpdate = await middlewareOnRequest({
+        request: reqUpdate,
+        next: async () => new Response("next called", { status: 200 }),
+        env: { REDIRECTS_KV: kv },
+      });
+
+      expect(resUpdate.status).toBe(200);
     });
   });
 

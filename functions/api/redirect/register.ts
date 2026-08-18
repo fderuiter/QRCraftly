@@ -1,4 +1,5 @@
 import { SafeUrlPipeline } from "../../../src/utils/url";
+import { isEncrypted } from "../../../src/utils/encryption";
 import { getDB, ensureTableExists, Env } from "./_db";
 import { validateTurnstileToken, checkUrlReputation, deobfuscateUrl } from "../../../src/utils/reputation";
 
@@ -14,6 +15,15 @@ export function validateUrl(url: string): { valid: boolean; error?: string } {
   const controlCharRegex = /[\x00-\x1F\x7F-\x9F\u200B-\u200D\uFEFF]/;
   if (controlCharRegex.test(url)) {
     return { valid: false, error: "URL contains invalid control characters or zero-width spaces" };
+  }
+
+  // If payload is encrypted ciphertext, validate its format without attempting URL parsing
+  if (isEncrypted(url)) {
+    const parts = url.split(":");
+    if (parts.length === 4 && /^[a-fA-F0-9]+$/.test(parts[2]) && /^[a-fA-F0-9]+$/.test(parts[3])) {
+      return { valid: true };
+    }
+    return { valid: false, error: "Invalid encrypted payload format" };
   }
 
   // Handle de-obfuscation if url is encoded
