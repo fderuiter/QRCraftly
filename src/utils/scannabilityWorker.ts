@@ -24,44 +24,6 @@ const releaseImageHandle = (handle: any) => {
   }
 };
 
-// Embedded WebAssembly bytecode binary for off-thread WASM decoding engine (<600 KB bundle limit compliance)
-const WASM_DECODER_BYTES = Uint8Array.from([
-  0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00, // Magic and version
-  0x01, 0x08, 0x01, 0x60, 0x03, 0x7f, 0x7f, 0x7f, 0x01, 0x7f, // Type section: (i32, i32, i32) -> i32
-  0x03, 0x03, 0x02, 0x00, 0x00, // Function section
-  0x05, 0x03, 0x01, 0x00, 0x01, // Memory section (1 page)
-  0x07, 0x25, 0x03, // Export section
-  0x06, 0x6d, 0x65, 0x6d, 0x6f, 0x72, 0x79, 0x02, 0x00, // export memory
-  0x0f, 0x61, 0x6e, 0x61, 0x6c, 0x79, 0x7a, 0x65, 0x50, 0x6f, 0x6c, 0x61, 0x72, 0x69, 0x74, 0x79, 0x00, 0x00, // export analyzePolarity
-  0x06, 0x64, 0x65, 0x63, 0x6f, 0x64, 0x65, 0x00, 0x01, // export decode
-  0x0a, 0x11, 0x02, // Code section
-  0x07, 0x00, 0x20, 0x02, 0x41, 0x01, 0x46, 0x0b, // func 0: returns pass == 1 ? 1 : 0
-  0x07, 0x00, 0x20, 0x00, 0x20, 0x01, 0x6a, 0x0b  // func 1: returns param0 + param1
-]);
-
-let wasmInstance: WebAssembly.Instance | null = null;
-let wasmInitAttempted = false;
-
-/**
- * Instantiates the off-thread WebAssembly decoding engine.
- * Falls back to null if WASM instantiation fails or is unsupported.
- * @returns The initialized WebAssembly instance or null on failure.
- */
-export async function initWasmDecoder(): Promise<WebAssembly.Instance | null> {
-  if (wasmInitAttempted) return wasmInstance;
-  wasmInitAttempted = true;
-  try {
-    if (typeof WebAssembly !== 'undefined' && typeof WebAssembly.instantiate === 'function') {
-      const result = await WebAssembly.instantiate(WASM_DECODER_BYTES);
-      wasmInstance = result.instance;
-    }
-  } catch (err) {
-    console.warn('WebAssembly module initialization failed, falling back to JS decoding:', err);
-    wasmInstance = null;
-  }
-  return wasmInstance;
-}
-
 /**
  * Handles incoming messages to process QR code scannability.
  * @param e - The message event containing worker data.
@@ -146,24 +108,17 @@ self.onmessage = async (e: MessageEvent<unknown>) => {
       minLocalContrast = audit.minContrast;
     }
 
-    // Attempt WebAssembly module initialization off-thread
-    const wasm = await initWasmDecoder();
-
-    // Helper to get recycled ArrayBuffer for zero-copy memory pool recycling
+// Helper to get recycled ArrayBuffer for zero-copy memory pool recycling
     const getRecycledBuffer = (): ArrayBuffer | undefined => {
       if (reqBuffer && reqBuffer.byteLength > 0) return reqBuffer;
       return undefined;
     };
 
-    // Step 1: Two-Pass Orientation & Polarity Analysis (WASM layer with JS fallback)
+    // Step 1: Two-Pass Orientation & Polarity Analysis (pure JavaScript logic)
     let digitalCheckOk = false;
     let decodedData = '';
 
     // Pass 1: Normal polarity & orientation pass
-    if (wasm && typeof (wasm.exports as any).analyzePolarity === 'function') {
-      (wasm.exports as any).analyzePolarity(width, height, 0);
-    }
-
     let code = jsQR(imageData.data, width, height, { inversionAttempts: "dontInvert" });
     if (code) {
       digitalCheckOk = true;
@@ -176,10 +131,6 @@ self.onmessage = async (e: MessageEvent<unknown>) => {
       }
 
       // Pass 2: Inverted polarity & orientation analysis pass
-      if (wasm && typeof (wasm.exports as any).analyzePolarity === 'function') {
-        (wasm.exports as any).analyzePolarity(width, height, 1);
-      }
-
       code = jsQR(imageData.data, width, height, { inversionAttempts: "onlyInvert" });
       if (code) {
         digitalCheckOk = true;
