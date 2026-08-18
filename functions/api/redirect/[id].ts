@@ -130,7 +130,7 @@ export const onRequestGet = async (context: {
     if (context.waitUntil) {
       context.waitUntil(updatePromise);
     } else {
-      updatePromise.catch(() => {});
+      await updatePromise;
     }
 
     return Response.redirect(targetUrl, 307);

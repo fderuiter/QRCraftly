@@ -226,11 +226,11 @@ export function useAnimatedQrSender({
       });
     }
 
-    frameBufferRef.current.delete(playIdx);
+    framePoolRef.current.delete(playIdx);
 
     if (playIdx + 1 >= totalFramesRef.current) {
       currentPlayIndexRef.current = 0;
-      frameBufferRef.current.clear();
+      framePoolRef.current.clear();
       if (workerRef.current && selectedFileRef.current) {
         workerRef.current.postMessage({
           type: 'START',

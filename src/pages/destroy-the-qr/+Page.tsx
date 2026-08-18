@@ -23,6 +23,7 @@ import QRCode from 'qrcode';
 import { Zap, Flame, Bomb, RotateCcw, ArrowLeft, ShieldAlert, ShieldCheck, Gamepad2, Settings } from 'lucide-react';
 import '@/layouts/index.css';
 import { applyOpticalSimulationMath } from '../../utils/opticalSimulation';
+import { isDangerousUrl } from '../../utils/security';
 import { assertWorkerRequest } from '../../utils/sharedContract';
 import { AdaptiveFrameScheduler } from '../../utils/AdaptiveFrameScheduler';
 
@@ -290,7 +291,6 @@ export default function Page() {
       // Check if native BarcodeDetector is available
       if (barcodeDetectorRef.current) {
         try {
-          const imgData = dctx.getImageData(0, 0, 256, 256);
           // Pass 1: Digital check
           const barcodes = await barcodeDetectorRef.current.detect(imgData);
           let success = false;
@@ -352,7 +352,6 @@ export default function Page() {
       const scheduler = schedulerRef.current;
       const seqId = scheduler ? scheduler.beginFrame() : null;
       const buffer = scheduler ? scheduler.pool.acquire() : new ArrayBuffer(256 * 256 * 4);
-      const imgData = dctx.getImageData(0, 0, 256, 256);
       const u8 = new Uint8ClampedArray(buffer);
       u8.set(imgData.data);
 

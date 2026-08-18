@@ -7,7 +7,7 @@ export function validateUrl(url: string): { valid: boolean; error?: string } {
   }
 
   if (SafeUrlPipeline.isDangerous(url)) {
-    return { valid: false, error: `Blocked dangerous URL scheme: "${url}"` };
+    return { valid: false, error: `Unsafe or dangerous redirect URL scheme detected (Blocked dangerous URL scheme: "${url}")` };
   }
 
   const controlCharRegex = /[\x00-\x1F\x7F-\x9F\u200B-\u200D\uFEFF]/;
@@ -26,7 +26,7 @@ export function validateUrl(url: string): { valid: boolean; error?: string } {
 
   const dangerousSchemes = ["javascript:", "data:", "file:", "vbscript:", "blob:"];
   if (dangerousSchemes.includes(scheme)) {
-    return { valid: false, error: `Blocked dangerous URL scheme: "${scheme}"` };
+    return { valid: false, error: `Unsafe or dangerous redirect URL scheme detected (Blocked dangerous URL scheme: "${scheme}")` };
   }
 
   if (scheme !== "http:" && scheme !== "https:") {
