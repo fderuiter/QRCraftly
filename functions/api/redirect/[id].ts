@@ -1,4 +1,5 @@
 import { validateUrl } from "./register";
+import { isEncrypted } from "../../../src/utils/encryption";
 import { getDB, ensureTableExists, Env } from "./_db";
 
 const globalMockKV = new Map<string, string>();
@@ -16,6 +17,9 @@ export const onRequestGet = async (context: {
 }) => {
   const { id } = context.params;
   const userAgent = context.request.headers.get('user-agent') || '';
+  const acceptHeader = context.request.headers.get('accept') || '';
+  const requestUrl = new URL(context.request.url);
+  const wantsJson = acceptHeader.includes('application/json') || requestUrl.searchParams.get('json') === '1';
 
   const resolveTargetUrl = (record: any): string => {
     const isIos = /iPhone|iPad|iPod/i.test(userAgent);
@@ -131,6 +135,22 @@ export const onRequestGet = async (context: {
       context.waitUntil(updatePromise);
     } else {
       await updatePromise;
+    }
+
+    // Return JSON payload if encrypted ciphertext or explicitly requested
+    if (wantsJson || isEncrypted(targetUrl)) {
+      return new Response(
+        JSON.stringify({
+          id: record.id,
+          redirectUrl: record.redirect_url || record.redirectUrl,
+          iosUrl: record.ios_url || record.iosUrl || undefined,
+          androidUrl: record.android_url || record.androidUrl || undefined,
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" }
+        }
+      );
     }
 
     return Response.redirect(targetUrl, 307);

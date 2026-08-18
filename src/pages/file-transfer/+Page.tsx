@@ -69,6 +69,8 @@ function FileTransferToolInner() {
     borderLogoImg,
   });
 
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+
   const handleDragOver = (event: React.DragEvent<HTMLLabelElement>) => {
     event.preventDefault();
     if (!isTransferring) {
@@ -88,6 +90,10 @@ function FileTransferToolInner() {
     setIsDraggingFile(false);
 
     if (isTransferring) return;
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
 
     const file = event.dataTransfer.files?.[0];
     if (file) {
@@ -159,6 +165,7 @@ function FileTransferToolInner() {
                     {selectedFile ? selectedFile.name : 'Choose file or drag & drop'}
                   </span>
                   <input
+                    ref={fileInputRef}
                     type="file"
                     className="hidden"
                     onChange={handleFileChange}

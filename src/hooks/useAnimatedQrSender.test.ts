@@ -243,4 +243,35 @@ describe('useAnimatedQrSender Hook', () => {
     expect(result.current.framePoolRef.current.hasFrame(0)).toBe(true);
     expect(result.current.framePoolRef.current.hasFrame(1)).toBe(true);
   });
+
+  it('unconditionally clears target value synchronously on every handleFileChange event', () => {
+    const { result } = renderHook(() =>
+      useAnimatedQrSender({
+        config: mockConfig,
+        logoImg: null,
+        borderLogoImg: null,
+      })
+    );
+
+    // Scenario 1: File selected
+    const dummyFile = new File(['content'], 'sample.txt', { type: 'text/plain' });
+    const mockTarget1 = { files: [dummyFile], value: 'C:\\fakepath\\sample.txt' };
+    
+    act(() => {
+      result.current.handleFileChange({ target: mockTarget1 } as any);
+    });
+
+    expect(result.current.selectedFile).toBe(dummyFile);
+    expect(mockTarget1.value).toBe('');
+
+    // Scenario 2: Selection canceled (empty files list)
+    const mockTarget2 = { files: [], value: 'C:\\fakepath\\sample2.txt' };
+    
+    act(() => {
+      result.current.handleFileChange({ target: mockTarget2 } as any);
+    });
+
+    // File selection should remain or not crash, target value must be cleared synchronously
+    expect(mockTarget2.value).toBe('');
+  });
 });

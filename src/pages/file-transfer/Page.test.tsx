@@ -218,4 +218,52 @@ describe('File Transfer Page & Pipeline', () => {
 
     expect(screen.queryByText('Memory use')).not.toBeInTheDocument();
   });
+
+  it('unconditionally clears the file input value on change to allow consecutive re-selections of the same file', async () => {
+    render(<Page />);
+
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+    expect(fileInput).not.toBeNull();
+
+    const file = new File(['consecutive payload'], 'same_file.txt', { type: 'text/plain' });
+
+    // First selection
+    await act(async () => {
+      fireEvent.change(fileInput, { target: { files: [file] } });
+    });
+
+    // Input value should be cleared synchronously to empty string
+    expect(fileInput.value).toBe('');
+
+    // Second consecutive selection of the exact same file
+    await act(async () => {
+      fireEvent.change(fileInput, { target: { files: [file] } });
+    });
+
+    expect(fileInput.value).toBe('');
+    expect(screen.getAllByText('same_file.txt')[0]).toBeInTheDocument();
+  });
+
+  it('clears file input value on drag-and-drop so subsequent manual picker selection works', async () => {
+    render(<Page />);
+
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const dropZone = screen.getByText('Choose file or drag & drop').closest('label');
+
+    expect(fileInput).not.toBeNull();
+    expect(dropZone).not.toBeNull();
+
+    // Manually set input value to simulate lingering input state before drop
+    Object.defineProperty(fileInput, 'value', { writable: true, value: 'C:\\fakepath\\old_file.txt' });
+    expect(fileInput.value).toBe('C:\\fakepath\\old_file.txt');
+
+    // Drag and drop a new file
+    const droppedFile = new File(['dropped payload'], 'dropped_file.txt', { type: 'text/plain' });
+    await act(async () => {
+      fireEvent.drop(dropZone!, { dataTransfer: { files: [droppedFile] } });
+    });
+
+    // File input value should be cleared synchronously
+    expect(fileInput.value).toBe('');
+  });
 });

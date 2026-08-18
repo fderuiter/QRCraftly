@@ -17,11 +17,12 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo, useSyncExternalStore } from 'react';
 import { QRConfig, QRErrorCorrectionLevel, QRStyle, SocialFormat, TemplateStyle } from '../types';
 import { drawQRInternal } from '../utils/qrRenderer';
 import { drawWithTemplate, SOCIAL_DIMENSIONS } from '../utils/templateRenderer';
 import { PreallocatedFramePool, shuffleInPlace } from '../utils/FrameMemoryPool';
+import { useOptionalQRStore } from '../context/QRContext';
 
 /**
  * Sanitizes visual configuration for high-density animated stream chunk frames.
@@ -249,6 +250,21 @@ export function useAnimatedQrSender({
     activeMemory: '0.00 MB'
   });
 
+  const store = useOptionalQRStore();
+
+  const isFallbackActive = useSyncExternalStore(
+    store ? store.subscribe : () => () => {},
+    () => (store ? store.getState().isScannabilityFallbackActive : false),
+    () => (store ? store.getState().isScannabilityFallbackActive : false)
+  );
+
+  const effectiveConfig = useMemo(() => {
+    if (isFallbackActive) {
+      return { ...config, isMazeBridgesEnabled: false };
+    }
+    return config;
+  }, [config, isFallbackActive]);
+
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const workerRef = useRef<Worker | null>(null);
   const framePoolRef = useRef<PreallocatedFramePool>(new PreallocatedFramePool());
@@ -256,7 +272,7 @@ export function useAnimatedQrSender({
   const shuffledOrderRef = useRef<number[]>([]);
 
   // Refs for background loop
-  const configRef = useRef(config);
+  const configRef = useRef(effectiveConfig);
   const logoImgRef = useRef(logoImg);
   const borderLogoImgRef = useRef(borderLogoImg);
   const isTransferringRef = useRef(false);
@@ -272,7 +288,7 @@ export function useAnimatedQrSender({
 
   // Sync refs
   useEffect(() => {
-    configRef.current = config;
+    configRef.current = effectiveConfig;
     logoImgRef.current = logoImg;
     borderLogoImgRef.current = borderLogoImg;
     isTransferringRef.current = isTransferring;
@@ -281,7 +297,7 @@ export function useAnimatedQrSender({
     totalFramesRef.current = totalFrames;
     selectedFileRef.current = selectedFile;
     chunkSizeRef.current = chunkSize;
-  }, [config, logoImg, borderLogoImg, isTransferring, isVerifyingHandshake, fps, totalFrames, selectedFile, chunkSize]);
+  }, [effectiveConfig, logoImg, borderLogoImg, isTransferring, isVerifyingHandshake, fps, totalFrames, selectedFile, chunkSize]);
 
   // Memory tracking loop
   useEffect(() => {
@@ -327,8 +343,6 @@ export function useAnimatedQrSender({
     setHandshakeVerified(false);
     if (workerRef.current) {
       workerRef.current.postMessage({ type: 'STOP' });
-      workerRef.current.terminate();
-      workerRef.current = null;
     }
     if (animationIdRef.current) {
       cancelAnimationFrame(animationIdRef.current);
@@ -607,68 +621,70 @@ export function useAnimatedQrSender({
       activeMemory: '24.50 MB'
     });
 
-    const worker = new Worker(new URL('../utils/fileSliceWorker.ts', import.meta.url), { type: 'module' });
-    workerRef.current = worker;
+    if (!workerRef.current) {
+      const worker = new Worker(new URL('../utils/fileSliceWorker.ts', import.meta.url), { type: 'module' });
+      workerRef.current = worker;
 
-    worker.onmessage = async (e: MessageEvent) => {
-      const { type, index, size, data, total, message } = e.data || {};
+      worker.onmessage = async (e: MessageEvent) => {
+        const { type, index, size, data, total, message } = e.data || {};
 
-      switch (type) {
-        case 'PROGRESS': {
-          if (total) {
-            setTotalFrames(total);
-            totalFramesRef.current = total;
+        switch (type) {
+          case 'PROGRESS': {
+            if (total) {
+              setTotalFrames(total);
+              totalFramesRef.current = total;
+            }
+            break;
           }
-          break;
-        }
 
-        case 'FRAME': {
-          framePoolRef.current.storeFrame(index, size, data);
+          case 'FRAME': {
+            framePoolRef.current.storeFrame(index, size, data);
 
-          if (index === 0 && isVerifyingHandshakeRef.current) {
-            isVerifyingHandshakeRef.current = false;
+            if (index === 0 && isVerifyingHandshakeRef.current) {
+              isVerifyingHandshakeRef.current = false;
 
-            const frame0 = { size, data };
-            const isScannable = await verifyHandshakeFrame(
-              frame0,
-              configRef.current,
-              logoImgRef.current,
-              borderLogoImgRef.current
-            );
+              const frame0 = { size, data };
+              const isScannable = await verifyHandshakeFrame(
+                frame0,
+                configRef.current,
+                logoImgRef.current,
+                borderLogoImgRef.current
+              );
 
-            setIsVerifyingHandshake(false);
+              setIsVerifyingHandshake(false);
 
-            if (isScannable) {
-              setHandshakeVerified(true);
-              setHandshakeError(null);
-              setIsTransferring(true);
-              isTransferringRef.current = true;
-              runAnimationLoop();
-            } else {
-              setHandshakeVerified(false);
-              setHandshakeError('Handshake QR frame failed scannability check. Transfer playback remains paused. Please increase contrast or reduce visual complexity.');
-              setIsTransferring(false);
-              isTransferringRef.current = false;
-              if (workerRef.current) {
-                workerRef.current.postMessage({ type: 'STOP' });
-                workerRef.current.terminate();
-                workerRef.current = null;
+              if (isScannable) {
+                setHandshakeVerified(true);
+                setHandshakeError(null);
+                setIsTransferring(true);
+                isTransferringRef.current = true;
+                runAnimationLoop();
+              } else {
+                setHandshakeVerified(false);
+                setHandshakeError('Handshake QR frame failed scannability check. Transfer playback remains paused. Please increase contrast or reduce visual complexity.');
+                setIsTransferring(false);
+                isTransferringRef.current = false;
+                if (workerRef.current) {
+                  workerRef.current.postMessage({ type: 'STOP' });
+                  workerRef.current.terminate();
+                  workerRef.current = null;
+                }
               }
             }
+            break;
           }
-          break;
-        }
 
-        case 'ERROR': {
-          console.error('[Worker Error]', message);
-          stopTransfer();
-          break;
-        }
+          case 'ERROR': {
+            console.error('[Worker Error]', message);
+            stopTransfer();
+            break;
+          }
 
-        default:
-          break;
-      }
-    };
+          default:
+            break;
+        }
+      };
+    }
 
     // Ensure visual density below 256 bytes per chunk and error correction level Q or H
     const effectiveChunkSize = chunkSize < 256 ? chunkSize : 180;
@@ -676,7 +692,7 @@ export function useAnimatedQrSender({
       ? config.errorCorrectionLevel
       : QRErrorCorrectionLevel.Q;
 
-    worker.postMessage({
+    workerRef.current.postMessage({
       type: 'START',
       payload: {
         file: selectedFile,
@@ -692,6 +708,8 @@ export function useAnimatedQrSender({
     if (fileList && fileList.length > 0) {
       setSelectedFile(fileList[0]);
       stopTransfer();
+    }
+    if (e.target) {
       e.target.value = '';
     }
   };

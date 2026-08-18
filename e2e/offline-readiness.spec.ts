@@ -25,7 +25,9 @@ test.describe('Automated Workbox Precaching and Offline Readiness', () => {
     await page.waitForSelector('main[data-hydrated="true"]');
   });
 
-  test('Requirement 3 & 4: Application successfully boots and renders offline from service worker cache', async ({ context, page }) => {
+  test('Requirement 3 & 4: Application successfully boots and renders offline from service worker cache', async ({ browserName, context, page }) => {
+    test.skip(browserName !== 'chromium', 'Service worker offline page reloads via context.setOffline are only supported in Chromium in Playwright');
+
     // 1. Wait for Service Worker to register, install, and become active
     const isSwActive = await page.evaluate(async () => {
       if (!('serviceWorker' in navigator)) return false;

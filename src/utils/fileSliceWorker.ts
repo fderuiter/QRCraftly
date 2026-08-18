@@ -26,7 +26,8 @@ let totalDataFrames = 0; // only data frames
 let nextIndexToGenerate = 0;
 let lastAckedIndex = -1;
 let errorCorrectionLevel = 'Q';
-let isGenerating = false;
+let currentSessionId = 0;
+let activeGeneratingSessionId = 0;
 let fileSHA256 = '';
 let lookaheadLimit = 3;
 
@@ -61,8 +62,8 @@ async function computeSHA256(blob: Blob): Promise<string> {
 /**
  * Slices a chunk from the file and generates a QR code matrix for it.
  */
-async function generateFrame(index: number) {
-  if (!file) return;
+async function generateFrame(index: number, sessionId: number) {
+  if (sessionId !== currentSessionId || !file) return;
 
   try {
     let textPayload = '';
@@ -77,16 +78,23 @@ async function generateFrame(index: number) {
       const end = Math.min(start + chunkSize, file.size);
       const sliceBlob = file.slice(start, end);
       const arrayBuffer = await sliceBlob.arrayBuffer();
+      
+      if (sessionId !== currentSessionId) return;
+
       const base64Data = arrayBufferToBase64(arrayBuffer);
       
       // Construct the standard frame format: F|<index>|<total>|<base64>
       textPayload = `F|${dataIndex}|${totalDataFrames}|${base64Data}`;
     }
     
+    if (sessionId !== currentSessionId) return;
+
     // Generate QR matrix asynchronously
     const qr = QRCode.create(textPayload, { errorCorrectionLevel: errorCorrectionLevel as any });
     const { size, data } = qr.modules; // data is a Uint8Array
     
+    if (sessionId !== currentSessionId) return;
+
     // Make a copy of the data buffer to transfer so we can safely postMessage
     const transferableData = new Uint8Array(data);
     const buffer = transferableData.buffer;
@@ -100,6 +108,7 @@ async function generateFrame(index: number) {
     }, [buffer]);
 
   } catch (err: any) {
+    if (sessionId !== currentSessionId) return;
     (self as any).postMessage({
       type: 'ERROR',
       message: `Failed to generate frame ${index}: ${err?.message || err}`
@@ -110,22 +119,27 @@ async function generateFrame(index: number) {
 /**
  * Evaluates lookahead and processes sequential frames up to lastAckedIndex + lookaheadLimit.
  */
-async function processPipeline() {
-  if (isGenerating || !file) return;
-  isGenerating = true;
+async function processPipeline(sessionId: number) {
+  if (sessionId !== currentSessionId || !file) return;
+  if (activeGeneratingSessionId === sessionId) return;
+
+  activeGeneratingSessionId = sessionId;
 
   try {
     // Generate frames as long as we don't exceed lookaheadLimit frames ahead of the last ACK
     while (
+      sessionId === currentSessionId &&
       nextIndexToGenerate < totalFrames &&
       nextIndexToGenerate <= lastAckedIndex + lookaheadLimit
     ) {
       const currentIndex = nextIndexToGenerate;
       nextIndexToGenerate++;
-      await generateFrame(currentIndex);
+      await generateFrame(currentIndex, sessionId);
     }
   } finally {
-    isGenerating = false;
+    if (activeGeneratingSessionId === sessionId) {
+      activeGeneratingSessionId = 0;
+    }
   }
 }
 
@@ -137,6 +151,9 @@ self.onmessage = async (e: MessageEvent) => {
 
   switch (type) {
     case 'START': {
+      currentSessionId++;
+      const sessionId = currentSessionId;
+
       file = payload.file;
       const requestedChunkSize = payload.chunkSize || 180;
       chunkSize = Math.min(requestedChunkSize < 256 ? requestedChunkSize : 180, 240);
@@ -147,7 +164,9 @@ self.onmessage = async (e: MessageEvent) => {
       lookaheadLimit = Math.min(16, Math.max(3, Math.ceil(fps * 0.2)));
       
       if (!file) {
-        (self as any).postMessage({ type: 'ERROR', message: 'No file provided' });
+        if (sessionId === currentSessionId) {
+          (self as any).postMessage({ type: 'ERROR', message: 'No file provided' });
+        }
         return;
       }
 
@@ -156,12 +175,16 @@ self.onmessage = async (e: MessageEvent) => {
       } else {
         try {
           fileSHA256 = await computeSHA256(file);
+          if (sessionId !== currentSessionId) return;
           hashCache.set(file, fileSHA256);
         } catch (err: any) {
+          if (sessionId !== currentSessionId) return;
           (self as any).postMessage({ type: 'ERROR', message: `Hashing failed: ${err?.message || err}` });
           return;
         }
       }
+
+      if (sessionId !== currentSessionId) return;
 
       totalDataFrames = Math.ceil(file.size / chunkSize);
       totalFrames = totalDataFrames + 1; // 1 handshake frame + totalDataFrames
@@ -177,13 +200,14 @@ self.onmessage = async (e: MessageEvent) => {
       });
 
       // Kick off generation
-      await processPipeline();
+      await processPipeline(sessionId);
       break;
     }
 
     case 'ACK': {
+      if (!file) break;
       const acked = payload.index;
-      if (acked > lastAckedIndex) {
+      if (acked > lastAckedIndex && acked < nextIndexToGenerate) {
         lastAckedIndex = acked;
         
         // Report progress to UI
@@ -197,28 +221,33 @@ self.onmessage = async (e: MessageEvent) => {
           (self as any).postMessage({ type: 'COMPLETE' });
         } else {
           // Trigger generation of more frames within our sliding window limit
-          await processPipeline();
+          await processPipeline(currentSessionId);
         }
       }
       break;
     }
 
     case 'HEAL': {
+      if (!file) break;
       if (payload && typeof payload.lastAckedIndex === 'number') {
-        lastAckedIndex = Math.max(lastAckedIndex, payload.lastAckedIndex);
+        const boundedAck = Math.min(payload.lastAckedIndex, nextIndexToGenerate - 1);
+        if (boundedAck >= -1) {
+          lastAckedIndex = Math.max(lastAckedIndex, boundedAck);
+        }
       }
-      await processPipeline();
+      await processPipeline(currentSessionId);
       break;
     }
 
     case 'STOP': {
+      currentSessionId++;
       file = null;
       totalFrames = 0;
       totalDataFrames = 0;
       nextIndexToGenerate = 0;
       lastAckedIndex = -1;
       fileSHA256 = '';
-      isGenerating = false;
+      activeGeneratingSessionId = 0;
       lookaheadLimit = 3;
       break;
     }
