@@ -45,6 +45,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
   const videoElementRef = useRef<HTMLVideoElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const activeWorkerRef = useRef<Worker | null>(null);
+  const fileAbortControllerRef = useRef<AbortController | null>(null);
 
   const setVideoRef = useCallback((node: HTMLVideoElement | null) => {
     videoRef.current = node;
@@ -130,6 +131,10 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
 
     return () => {
       controller.abort();
+      if (fileAbortControllerRef.current) {
+        fileAbortControllerRef.current.abort();
+        fileAbortControllerRef.current = null;
+      }
       flushVideoHardware();
       stopStream();
       stopScanning();
@@ -178,23 +183,37 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
 
   // Client-side QR decoding using the unified Polymorphic FrameProvider abstraction
   const processFile = async (file: File) => {
+    if (fileAbortControllerRef.current) {
+      fileAbortControllerRef.current.abort();
+      fileAbortControllerRef.current = null;
+    }
+
+    const controller = new AbortController();
+    fileAbortControllerRef.current = controller;
+
     setFileError(null);
     setFileProcessing(true);
 
     try {
-      const provider = new FileFrameProvider(file);
+      const provider = new FileFrameProvider(file, { signal: controller.signal });
       provider.onFrameDecoded(({ status, decodedData, error }) => {
+        if (controller.signal.aborted) return;
         if (status === 'pass' && decodedData) {
           onScanSuccess(decodedData);
         } else if (error) {
           setFileError(error);
         }
       });
-      await provider.start();
+      await provider.start(controller.signal);
     } catch (err: any) {
-      setFileError(err.message || 'Failed to parse file.');
+      if (!controller.signal.aborted) {
+        setFileError(err.message || 'Failed to parse file.');
+      }
     } finally {
-      setFileProcessing(false);
+      if (fileAbortControllerRef.current === controller) {
+        fileAbortControllerRef.current = null;
+        setFileProcessing(false);
+      }
     }
   };
 
@@ -362,9 +381,14 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
           <button
             type="button"
             onClick={() => {
+              if (fileAbortControllerRef.current) {
+                fileAbortControllerRef.current.abort();
+                fileAbortControllerRef.current = null;
+              }
               setMode('webcam');
               setIsWebcamActive(true);
               setFileError(null);
+              setFileProcessing(false);
             }}
             className={`rounded-md px-3 py-1.5 transition-all ${
               mode === 'webcam'
@@ -378,8 +402,14 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
           <button
             type="button"
             onClick={() => {
+              if (fileAbortControllerRef.current) {
+                fileAbortControllerRef.current.abort();
+                fileAbortControllerRef.current = null;
+              }
               setMode('file');
               setIsWebcamActive(false);
+              setFileError(null);
+              setFileProcessing(false);
             }}
             className={`rounded-md px-3 py-1.5 transition-all ${
               mode === 'file'

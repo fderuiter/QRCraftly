@@ -6,6 +6,7 @@ const yieldToEventLoop = () => new Promise<void>((resolve) => setTimeout(resolve
 let latestSequenceId = -1;
 let offscreenCanvas: OffscreenCanvas | null = null;
 let offscreenCtx: OffscreenCanvasRenderingContext2D | null = null;
+const canceledTaskIds = new Set<string>();
 
 /**
  * Extract frames from an EBML container (WebM/MKV).
@@ -120,9 +121,21 @@ self.onmessage = async (e: MessageEvent<any>) => {
   if (!payload) return;
   const epochId = payload.epochId;
 
+  if (payload.type === 'abort' && payload.taskId) {
+    canceledTaskIds.add(payload.taskId);
+    return;
+  }
+
   // 1. Check for Video Demuxing and Off-Thread Scanning Mode
   if (payload.fileBuffer || payload.type === 'demux') {
     const { fileBuffer, wasmBuffer, taskId } = payload;
+    const isAborted = () => taskId && canceledTaskIds.has(taskId);
+
+    if (isAborted()) {
+      canceledTaskIds.delete(taskId);
+      (self as any).postMessage({ type: 'done', taskId, canceled: true });
+      return;
+    }
 
     // Initialize WebAssembly if buffer is provided
     if (wasmBuffer) {
@@ -147,8 +160,14 @@ self.onmessage = async (e: MessageEvent<any>) => {
         const jsonStr = textDecoder.decode(u8Array.subarray(11));
         const mockFrames = JSON.parse(jsonStr);
         for (const frame of mockFrames) {
+          if (isAborted()) {
+            canceledTaskIds.delete(taskId);
+            (self as any).postMessage({ type: 'done', taskId, canceled: true });
+            return;
+          }
           (self as any).postMessage({ type: 'frame_decoded', taskId, data: frame });
         }
+        if (taskId) canceledTaskIds.delete(taskId);
         (self as any).postMessage({ type: 'done', taskId });
         return;
       } catch (err) {
@@ -165,11 +184,17 @@ self.onmessage = async (e: MessageEvent<any>) => {
       if (wholeText.includes('F|')) {
         const lines = wholeText.split(/[\r\n,]+/);
         for (const line of lines) {
+          if (isAborted()) {
+            canceledTaskIds.delete(taskId);
+            (self as any).postMessage({ type: 'done', taskId, canceled: true });
+            return;
+          }
           const trimmed = line.trim();
           if (trimmed.startsWith('F|')) {
             (self as any).postMessage({ type: 'frame_decoded', taskId, data: trimmed });
           }
         }
+        if (taskId) canceledTaskIds.delete(taskId);
         (self as any).postMessage({ type: 'done', taskId });
         return;
       }
@@ -177,6 +202,12 @@ self.onmessage = async (e: MessageEvent<any>) => {
 
     // Process frames sequentially
     for (const frameData of frames) {
+      if (isAborted()) {
+        canceledTaskIds.delete(taskId);
+        (self as any).postMessage({ type: 'done', taskId, canceled: true });
+        return;
+      }
+
       // If frame itself is a mock text frame
       try {
         const decodedStr = textDecoder.decode(frameData);
@@ -192,6 +223,10 @@ self.onmessage = async (e: MessageEvent<any>) => {
       if (typeof VideoDecoder !== 'undefined') {
         try {
           await decodeWebCodecsFrame(frameData, (imageBitmap) => {
+            if (isAborted()) {
+              imageBitmap.close();
+              return;
+            }
             // Apply proportional downscaling logic (cap at 1280px)
             const { width: dWidth, height: dHeight } = getDownscaledDimensions(imageBitmap.width, imageBitmap.height, 1280);
 
@@ -203,12 +238,16 @@ self.onmessage = async (e: MessageEvent<any>) => {
               const imageData = ctx.getImageData(0, 0, dWidth, dHeight);
               imageBitmap.close();
 
+              if (isAborted()) {
+                return;
+              }
+
               // Run scanner on the pixels with inverted fallback
               let code = jsQR(imageData.data, dWidth, dHeight, { inversionAttempts: 'dontInvert' });
               if (!code) {
                 code = jsQR(imageData.data, dWidth, dHeight, { inversionAttempts: 'onlyInvert' });
               }
-              if (code && code.data) {
+              if (code && code.data && !isAborted()) {
                 (self as any).postMessage({ type: 'frame_decoded', taskId, data: code.data });
               }
             } else {
@@ -221,6 +260,7 @@ self.onmessage = async (e: MessageEvent<any>) => {
       }
     }
 
+    if (taskId) canceledTaskIds.delete(taskId);
     (self as any).postMessage({ type: 'done', taskId });
     return;
   }
