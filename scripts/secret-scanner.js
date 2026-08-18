@@ -223,24 +223,17 @@ export function scanFile(filePath) {
   
   const relativePath = path.relative(process.cwd(), absolutePath);
   const normalizedPath = relativePath.replace(/\\/g, '/');
-  if (/\.(test|spec)\.[jt]sx?$/.test(normalizedPath)) {
+  if (
+    /\.(test|spec)\.[jt]sx?$/i.test(normalizedPath) ||
+    normalizedPath.includes('/fixtures/') ||
+    normalizedPath.startsWith('tests/fixtures/')
+  ) {
     return [];
   }
   if (EXCLUDE_FILES.some(f => relativePath === f || normalizedPath === f)) {
     return [];
   }
   if (EXCLUDE_DIRS.some(d => relativePath.startsWith(d) || normalizedPath.split('/').includes(d))) {
-    return [];
-  }
-
-  // Exclude test, spec, and fixture files
-  const normalizedPath = relativePath.replace(/\\/g, '/');
-  if (
-    /\.test\.[jt]sx?$/i.test(normalizedPath) ||
-    /\.spec\.[jt]sx?$/i.test(normalizedPath) ||
-    normalizedPath.includes('/fixtures/') ||
-    normalizedPath.startsWith('tests/fixtures/')
-  ) {
     return [];
   }
 
