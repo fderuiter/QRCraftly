@@ -17,11 +17,12 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo, useSyncExternalStore } from 'react';
 import { QRConfig, QRErrorCorrectionLevel } from '../types';
 import { drawQRInternal } from '../utils/qrRenderer';
 import { drawWithTemplate, SOCIAL_DIMENSIONS } from '../utils/templateRenderer';
 import { PreallocatedFramePool, shuffleInPlace } from '../utils/FrameMemoryPool';
+import { useOptionalQRStore } from '../context/QRContext';
 
 /**
  *
@@ -70,6 +71,21 @@ export function useAnimatedQrSender({
     activeMemory: '0.00 MB'
   });
 
+  const store = useOptionalQRStore();
+
+  const isFallbackActive = useSyncExternalStore(
+    store ? store.subscribe : () => () => {},
+    () => (store ? store.getState().isScannabilityFallbackActive : false),
+    () => (store ? store.getState().isScannabilityFallbackActive : false)
+  );
+
+  const effectiveConfig = useMemo(() => {
+    if (isFallbackActive) {
+      return { ...config, isMazeBridgesEnabled: false };
+    }
+    return config;
+  }, [config, isFallbackActive]);
+
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const workerRef = useRef<Worker | null>(null);
   const framePoolRef = useRef<PreallocatedFramePool>(new PreallocatedFramePool());
@@ -77,7 +93,7 @@ export function useAnimatedQrSender({
   const shuffledOrderRef = useRef<number[]>([]);
 
   // Refs for background loop
-  const configRef = useRef(config);
+  const configRef = useRef(effectiveConfig);
   const logoImgRef = useRef(logoImg);
   const borderLogoImgRef = useRef(borderLogoImg);
   const isTransferringRef = useRef(false);
@@ -92,7 +108,7 @@ export function useAnimatedQrSender({
 
   // Sync refs
   useEffect(() => {
-    configRef.current = config;
+    configRef.current = effectiveConfig;
     logoImgRef.current = logoImg;
     borderLogoImgRef.current = borderLogoImg;
     isTransferringRef.current = isTransferring;
@@ -100,7 +116,7 @@ export function useAnimatedQrSender({
     totalFramesRef.current = totalFrames;
     selectedFileRef.current = selectedFile;
     chunkSizeRef.current = chunkSize;
-  }, [config, logoImg, borderLogoImg, isTransferring, fps, totalFrames, selectedFile, chunkSize]);
+  }, [effectiveConfig, logoImg, borderLogoImg, isTransferring, fps, totalFrames, selectedFile, chunkSize]);
 
   // Memory tracking loop
   useEffect(() => {

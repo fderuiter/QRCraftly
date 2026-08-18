@@ -21,7 +21,11 @@ export interface MazeData {
 }
 
 // Global cache for computed mazes to ensure top performance and stability
-const mazeCache = new Map<string, MazeData>();
+export const mazeCache = new Map<string, MazeData>();
+
+export function clearMazeCache(): void {
+  mazeCache.clear();
+}
 
 /**
  * Checks if a grid coordinate lies inside a finder eye pattern or its adjacent safety zone.
@@ -108,8 +112,22 @@ export class DSU {
   }
 }
 
-export function getMazeCacheKey(config: QRConfig, size: number): string {
-  return `${config.value}_${config.errorCorrectionLevel}_${size}_${config.logoUrl}_${config.logoSize}_${config.logoPaddingStyle}_${config.logoPadding}_${config.isMazeBridgesEnabled !== false}`;
+export function getModulesFingerprint(modules: QRModules): string {
+  const size = modules.size;
+  let hash = size;
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) {
+      if (modules.get(r, c)) {
+        hash = (Math.imul(hash, 31) + r * size + c) | 0;
+      }
+    }
+  }
+  return hash.toString(36);
+}
+
+export function getMazeCacheKey(config: QRConfig, size: number, modules?: QRModules): string {
+  const modKey = modules ? `_${getModulesFingerprint(modules)}` : '';
+  return `${config.value}_${config.errorCorrectionLevel}_${size}_${config.logoUrl}_${config.logoSize}_${config.logoPaddingStyle}_${config.logoPadding}_${config.isMazeBridgesEnabled !== false}${modKey}`;
 }
 
 /**
@@ -117,9 +135,8 @@ export function getMazeCacheKey(config: QRConfig, size: number): string {
  * Restricted strictly to inner matrix dimensions [0, size-1].
  */
 export function generateMaze(modules: QRModules, config: QRConfig, size: number): MazeData {
-  const cacheKey = getMazeCacheKey(config, size);
-  const isTest = process.env.NODE_ENV === 'test';
-  if (!isTest && mazeCache.has(cacheKey)) {
+  const cacheKey = getMazeCacheKey(config, size, modules);
+  if (mazeCache.has(cacheKey)) {
     return mazeCache.get(cacheKey)!;
   }
 
@@ -396,7 +413,7 @@ export function renderMaze(
 ) {
   if (!config.isMazeEnabled) return;
 
-  const cacheKey = getMazeCacheKey(config, size);
+  const cacheKey = getMazeCacheKey(config, size, modules);
   let maze = mazeData || mazeCache.get(cacheKey);
 
   if (!maze) {
