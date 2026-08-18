@@ -104,6 +104,7 @@ class DSU {
 
 /**
  * Generates the maze structure deterministically based on configuration.
+ * Restricted strictly to inner matrix dimensions [0, size-1].
  */
 export function generateMaze(modules: QRModules, config: QRConfig, size: number): MazeData {
   const cacheKey = `${config.value}_${config.errorCorrectionLevel}_${size}_${config.logoUrl}_${config.logoSize}_${config.logoPaddingStyle}_${config.logoPadding}_${config.isMazeBridgesEnabled !== false}`;
@@ -121,10 +122,9 @@ export function generateMaze(modules: QRModules, config: QRConfig, size: number)
 
   const bridgesEnabled = config.isMazeBridgesEnabled !== false;
 
-  // Extract all traversable cells (light modules + 4-module quiet zone margin floor)
-  // Grid coordinates range from -4 to size + 3
-  for (let r = -4; r < size + 4; r++) {
-    for (let c = -4; c < size + 4; c++) {
+  // Extract traversable cells strictly inside inner matrix [0, size - 1]
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) {
       const isBridge = !!(bridgesEnabled && isBridgeCell(r, c, size));
       if (isFinderEyeZone(r, c, size)) {
         if (!isBridge) {
@@ -134,13 +134,11 @@ export function generateMaze(modules: QRModules, config: QRConfig, size: number)
       if (isAlignmentPatternZone(r, c, size)) {
         continue;
       }
-      if (r >= 0 && r < size && c >= 0 && c < size) {
-        if (isCoveredByLogo(r, c)) {
-          continue;
-        }
-        if (modules.get(r, c) === true && !isBridge) {
-          continue;
-        }
+      if (isCoveredByLogo(r, c)) {
+        continue;
+      }
+      if (modules.get(r, c) === true && !isBridge) {
+        continue;
       }
 
       const node: MazeNode = { r, c };
@@ -149,7 +147,89 @@ export function generateMaze(modules: QRModules, config: QRConfig, size: number)
     }
   }
 
-  // Build edges
+  // Handle potential maze fragmentation inside the inner matrix by adjusting cell connectivity.
+  // Check component connectivity using DSU.
+  const initialDsu = new DSU(nodes.map((n) => `${n.r},${n.c}`));
+  for (const node of nodes) {
+    const rightKey = `${node.r},${node.c + 1}`;
+    const downKey = `${node.r + 1},${node.c}`;
+    if (nodeMap.has(rightKey)) {
+      initialDsu.union(`${node.r},${node.c}`, rightKey);
+    }
+    if (nodeMap.has(downKey)) {
+      initialDsu.union(`${node.r},${node.c}`, downKey);
+    }
+  }
+
+  // Helper to count unique connected components
+  const getComponentCount = () => {
+    const roots = new Set<string>();
+    for (const node of nodes) {
+      roots.add(initialDsu.find(`${node.r},${node.c}`));
+    }
+    return roots.size;
+  };
+
+  // If fragmented (multiple components), adjust connectivity by adding bridge connector cells
+  if (nodes.length > 0 && getComponentCount() > 1) {
+    const dirs = [
+      [0, 1],
+      [1, 0],
+      [0, -1],
+      [-1, 0],
+    ];
+    let addedNewCell = true;
+
+    while (addedNewCell && getComponentCount() > 1) {
+      addedNewCell = false;
+      for (let r = 0; r < size; r++) {
+        for (let c = 0; c < size; c++) {
+          const key = `${r},${c}`;
+          if (nodeMap.has(key)) continue;
+          if (isCoveredByLogo(r, c)) continue;
+          // Avoid finder eye pattern inner core (0..6 x 0..6, etc.)
+          if (
+            (r >= 0 && r <= 6 && c >= 0 && c <= 6) ||
+            (r >= 0 && r <= 6 && c >= size - 7 && c <= size - 1) ||
+            (r >= size - 7 && r <= size - 1 && c >= 0 && c <= 6)
+          ) {
+            continue;
+          }
+
+          // Check adjacent neighbor components
+          const adjacentRoots = new Set<string>();
+          const validNeighbors: MazeNode[] = [];
+          for (const [dr, dc] of dirs) {
+            const nr = r + dr;
+            const nc = c + dc;
+            const nKey = `${nr},${nc}`;
+            if (nodeMap.has(nKey)) {
+              adjacentRoots.add(initialDsu.find(nKey));
+              validNeighbors.push(nodeMap.get(nKey)!);
+            }
+          }
+
+          if (adjacentRoots.size > 1) {
+            // This cell connects 2+ distinct components! Add it as a connector cell.
+            const newNode: MazeNode = { r, c };
+            nodes.push(newNode);
+            nodeMap.set(key, newNode);
+            initialDsu.add(key);
+
+            for (const neighbor of validNeighbors) {
+              initialDsu.union(key, `${neighbor.r},${neighbor.c}`);
+            }
+
+            addedNewCell = true;
+            if (getComponentCount() <= 1) break;
+          }
+        }
+        if (getComponentCount() <= 1) break;
+      }
+    }
+  }
+
+  // Build all potential edges between adjacent nodes
   const edges: MazeEdge[] = [];
   for (const node of nodes) {
     const rightKey = `${node.r},${node.c + 1}`;
@@ -173,7 +253,7 @@ export function generateMaze(modules: QRModules, config: QRConfig, size: number)
     shuffledEdges[j] = temp;
   }
 
-  // Spanning Forest
+  // Spanning Forest using Kruskal's
   const dsu = new DSU(nodes.map((n) => `${n.r},${n.c}`));
   const mazeEdges: MazeEdge[] = [];
   for (const edge of shuffledEdges) {
@@ -196,93 +276,83 @@ export function generateMaze(modules: QRModules, config: QRConfig, size: number)
     adj.get(vKey)!.push(edge.u);
   }
 
-  // Find solvable path
+  // Pathfinder algorithm with dynamic minimum step threshold
   let startNode: MazeNode | null = null;
   let endNode: MazeNode | null = null;
   let solution: MazeNode[] = [];
 
-  if (nodes.length > 0) {
-    const sortedByDist = [...nodes].sort((a, b) => a.r + a.c - (b.r + b.c));
-    let foundSolution = false;
-
-    for (const sCand of sortedByDist) {
-      if (foundSolution) break;
-      const sKey = `${sCand.r},${sCand.c}`;
-      const sRoot = dsu.find(sKey);
-
-      let bestEnd: MazeNode | null = null;
-      let maxRC = -Infinity;
-      for (const eCand of sortedByDist) {
-        if (eCand === sCand) continue;
-        const eKey = `${eCand.r},${eCand.c}`;
-        if (dsu.find(eKey) === sRoot) {
-          const val = eCand.r + eCand.c;
-          if (val > maxRC) {
-            maxRC = val;
-            bestEnd = eCand;
-          }
-        }
+  if (nodes.length > 1) {
+    // Group nodes by component root in the spanning forest
+    const componentMap = new Map<string, MazeNode[]>();
+    for (const node of nodes) {
+      const root = dsu.find(`${node.r},${node.c}`);
+      if (!componentMap.has(root)) {
+        componentMap.set(root, []);
       }
+      componentMap.get(root)!.push(node);
+    }
 
-      if (bestEnd) {
-        // Run A* pathfinder
-        const openSet: MazeNode[] = [sCand];
-        const visited = new Set<string>([sKey]);
-        const gScore = new Map<string, number>();
-        gScore.set(sKey, 0);
+    let overallBestPath: MazeNode[] = [];
 
-        const fScore = new Map<string, number>();
-        const h = (a: MazeNode, b: MazeNode) => Math.abs(a.r - b.r) + Math.abs(a.c - b.c);
-        fScore.set(sKey, h(sCand, bestEnd));
+    // For each component, find tree diameter (longest simple path)
+    for (const compNodes of componentMap.values()) {
+      if (compNodes.length < 2) continue;
 
-        const parentMap = new Map<string, MazeNode>();
+      // Helper function: BFS to find furthest node from source and path
+      const bfsFurthest = (start: MazeNode) => {
+        const queue: MazeNode[] = [start];
+        const visited = new Map<string, MazeNode | null>();
+        visited.set(`${start.r},${start.c}`, null);
 
-        const endKey = `${bestEnd.r},${bestEnd.c}`;
-        while (openSet.length > 0) {
-          let lowestIdx = 0;
-          for (let i = 1; i < openSet.length; i++) {
-            const nodeKey = `${openSet[i].r},${openSet[i].c}`;
-            const lowestKey = `${openSet[lowestIdx].r},${openSet[lowestIdx].c}`;
-            if (fScore.get(nodeKey)! < fScore.get(lowestKey)!) {
-              lowestIdx = i;
-            }
-          }
+        let furthestNode = start;
 
-          const curr = openSet.splice(lowestIdx, 1)[0];
+        while (queue.length > 0) {
+          const curr = queue.shift()!;
+          furthestNode = curr;
           const currKey = `${curr.r},${curr.c}`;
+          const neighbors = adj.get(currKey) || [];
 
-          if (currKey === endKey) {
-            const path: MazeNode[] = [];
-            let currNode: MazeNode | undefined = bestEnd;
-            while (currNode) {
-              path.push(currNode);
-              currNode = parentMap.get(`${currNode.r},${currNode.c}`);
-            }
-            path.reverse();
-
-            if (path.length > 10) {
-              startNode = sCand;
-              endNode = bestEnd;
-              solution = path;
-              foundSolution = true;
-            }
-            break;
-          }
-
-          const neighbors = adj.get(currKey)!;
           for (const n of neighbors) {
             const nKey = `${n.r},${n.c}`;
             if (!visited.has(nKey)) {
-              const tentativeGScore = gScore.get(currKey)! + 1;
-              parentMap.set(nKey, curr);
-              gScore.set(nKey, tentativeGScore);
-              fScore.set(nKey, tentativeGScore + h(n, bestEnd));
-              visited.add(nKey);
-              openSet.push(n);
+              visited.set(nKey, curr);
+              queue.push(n);
             }
           }
         }
+
+        // Reconstruct path to furthestNode
+        const path: MazeNode[] = [];
+        let curr: MazeNode | null = furthestNode;
+        while (curr) {
+          path.push(curr);
+          curr = visited.get(`${curr.r},${curr.c}`) || null;
+        }
+        path.reverse();
+
+        return { furthestNode, path };
+      };
+
+      // Pick seed node
+      const seedNode = compNodes[0];
+      // 1. First BFS from seedNode to find one extreme end A
+      const { furthestNode: endA } = bfsFurthest(seedNode);
+      // 2. Second BFS from endA to find opposite extreme end B and exact path
+      const { path: diameterPath } = bfsFurthest(endA);
+
+      if (diameterPath.length > overallBestPath.length) {
+        overallBestPath = diameterPath;
       }
+    }
+
+    // Dynamic step threshold check:
+    // If overallBestPath.length > 1, we set start, end, and solution.
+    // If overallBestPath.length >= 10, it satisfies target >= 10 steps.
+    // If overallBestPath.length < 10, threshold dynamically adjusts to overallBestPath.length.
+    if (overallBestPath.length > 1) {
+      startNode = overallBestPath[0];
+      endNode = overallBestPath[overallBestPath.length - 1];
+      solution = overallBestPath;
     }
   }
 
