@@ -255,4 +255,66 @@ describe('scannabilityWorker', () => {
       configId: '102',
     });
   });
+
+  it('releases transferred image handle immediately upon detecting cooperative cancellation', async () => {
+    const postMessageSpy = vi.fn();
+    globalThis.postMessage = postMessageSpy;
+    vi.mocked(jsQR).mockReturnValue({ data: 'https://safe.com' } as any);
+
+    const closeSpy1 = vi.fn();
+    const closeSpy2 = vi.fn();
+
+    const req1 = {
+      imageBitmap: { width: 10, height: 10, close: closeSpy1 },
+      width: 10,
+      height: 10,
+      configId: '201',
+      isTest: true,
+    };
+
+    const req2 = {
+      imageBitmap: { width: 10, height: 10, close: closeSpy2 },
+      width: 10,
+      height: 10,
+      configId: '202',
+      isTest: true,
+    };
+
+    const p1 = workerHandler({ data: req1 } as MessageEvent);
+    const p2 = workerHandler({ data: req2 } as MessageEvent);
+
+    await Promise.all([p1, p2]);
+
+    expect(closeSpy1).toHaveBeenCalledTimes(1);
+    expect(closeSpy2).toHaveBeenCalledTimes(1);
+  });
+
+  it('releases transferred image handle when context extraction or processing throws an exception', async () => {
+    const postMessageSpy = vi.fn();
+    globalThis.postMessage = postMessageSpy;
+
+    const closeSpy = vi.fn();
+    const req = {
+      imageBitmap: { width: 10, height: 10, close: closeSpy },
+      width: 10,
+      height: 10,
+      configId: '301',
+      isTest: true,
+    };
+
+    vi.mocked(jsQR).mockImplementationOnce(() => {
+      throw new Error('Context extraction failure');
+    });
+
+    await workerHandler({ data: req } as MessageEvent);
+
+    expect(closeSpy).toHaveBeenCalledTimes(1);
+    expect(postMessageSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: false,
+        error: 'CRASH',
+        configId: '301',
+      })
+    );
+  });
 });
