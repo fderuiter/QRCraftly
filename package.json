@@ -34,6 +34,12 @@
     "format:classes": "node scripts/sort_tailwind_classes.js",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "check-bundle-size": "node scripts/check-bundle-size.js",
+    "bundle-size": "node scripts/check-bundle-size.js",
+    "resource-quota-report": "node scripts/resource-quota-report.js",
+    "resource-quota": "node scripts/resource-quota-report.js",
+    "secret-scanner": "node scripts/secret-scanner.js",
+    "secret-scan": "node scripts/secret-scanner.js",
     "prepare": "simple-git-hooks",
     "pre-commit": "lint-staged && pnpm run validate:duplication"
   },
