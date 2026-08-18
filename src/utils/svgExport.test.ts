@@ -33,12 +33,12 @@ if (typeof globalThis.DOMParser === 'undefined') {
     globalThis.Image = dom.window.Image as any;
     
     // Attach canvas getContext mock for JSDOM canvas element in node environment
-    dom.window.HTMLCanvasElement.prototype.getContext = function (contextId: string) {
+    dom.window.HTMLCanvasElement.prototype.getContext = function (this: any, contextId: string) {
       if (contextId === '2d') {
-        if (!(this as any)._mockCtx) {
+        if (!this._mockCtx) {
           const width = this.width || 1000;
           const height = this.height || 1000;
-          (this as any)._mockCtx = {
+          this._mockCtx = {
             canvas: this,
             drawImage: vi.fn(),
             getImageData: vi.fn().mockImplementation((x: number, y: number, w: number, h: number) => {
@@ -65,7 +65,7 @@ if (typeof globalThis.DOMParser === 'undefined') {
             stroke: vi.fn(),
           };
         }
-        return (this as any)._mockCtx;
+        return this._mockCtx;
       }
       return null;
     } as any;
@@ -526,7 +526,7 @@ describe('generateQRSvg', () => {
     it('validateSvgScannability bypasses scannability check for non-NONE template style', async () => {
       const config = {
         ...(DEFAULT_CONFIG as QRConfig),
-        templateStyle: TemplateStyle.BADGE,
+        templateStyle: TemplateStyle.SOLID_FRAME,
       };
       const svgString = await generateQRSvg(config);
       const isScannable = await validateSvgScannability(svgString, config);
