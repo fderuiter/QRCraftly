@@ -46,11 +46,13 @@ export interface ToolContent {
   valueProposition: StrategicValueCategory;
 }
 
-interface AuxiliaryContent {
+export interface AuxiliaryContent {
   id: string;
   name: string;
   seoTitle: string;
   description: string;
+  personas: TargetPersona[];
+  valueProposition: StrategicValueCategory;
 }
 
 export const contentRegistry: Record<string, ToolContent> = {
@@ -549,48 +551,62 @@ export const contentRegistry: Record<string, ToolContent> = {
   }
 };
 
-const auxiliaryRegistry: Record<string, AuxiliaryContent> = {
+export const auxiliaryRegistry: Record<string, AuxiliaryContent> = {
   "dynamic-dashboard": {
     "id": "dynamic-dashboard",
     "name": "Dynamic Redirection Dashboard",
     "seoTitle": "Dynamic Redirection Dashboard - QRCraftly",
-    "description": "Manage your dynamic QR destinations, update target URLs, and view cumulative scan statistics in real-time."
+    "description": "Manage your dynamic QR destinations, update target URLs, and view cumulative scan statistics in real-time.",
+    "personas": [TargetPersona.SecurityConsciousEnterprise],
+    "valueProposition": StrategicValueCategory.ZeroTransitPrivacySovereignty
   },
   "audio-qr": {
     "id": "audio-qr",
     "name": "Audio QR & Acoustic Steganography",
     "seoTitle": "Acoustic Steganography & Audio QR | Convert Data to Sound - QRCraftly",
-    "description": "Convert data into audible sound chirps or generate a spectrogram audio file that visualizes as a scannable QR code using the Web Audio API."
+    "description": "Convert data into audible sound chirps or generate a spectrogram audio file that visualizes as a scannable QR code using the Web Audio API.",
+    "personas": [TargetPersona.SecurityConsciousEnterprise],
+    "valueProposition": StrategicValueCategory.AsynchronousWebWorkerDiagnostics
   },
   "destroy-the-qr": {
     "id": "destroy-the-qr",
     "name": "Destroy the QR!",
     "seoTitle": "Destroy the QR! - Interactive Mini-Game",
-    "description": "An interactive 60 FPS mini-game to test the durability of your QR codes in real-time with lasers and explosions."
+    "description": "An interactive 60 FPS mini-game to test the durability of your QR codes in real-time with lasers and explosions.",
+    "personas": [TargetPersona.SecurityConsciousEnterprise],
+    "valueProposition": StrategicValueCategory.AsynchronousWebWorkerDiagnostics
   },
   "game": {
     "id": "game",
     "name": "QR Damage Simulator Game",
     "seoTitle": "QR Damage Simulator Game | Interactive Gameplay - QRCraftly",
-    "description": "Play and damage QR codes in real-time. Map damage to coordinates and test error-correction health bars with smooth 60fps play."
+    "description": "Play and damage QR codes in real-time. Map damage to coordinates and test error-correction health bars with smooth 60fps play.",
+    "personas": [TargetPersona.SecurityConsciousEnterprise],
+    "valueProposition": StrategicValueCategory.AsynchronousWebWorkerDiagnostics
   },
   "security": {
     "id": "security",
     "name": "Security & Privacy",
     "seoTitle": "Security & Privacy - QRCraftly",
-    "description": "Detailed information on QRCraftly's security architecture, privacy-first processing, and HIPAA compliance alignment."
+    "description": "Detailed information on QRCraftly's security architecture, privacy-first processing, and HIPAA compliance alignment.",
+    "personas": [TargetPersona.HealthcareLegal, TargetPersona.SecurityConsciousEnterprise],
+    "valueProposition": StrategicValueCategory.ZeroTransitPrivacySovereignty
   },
   "file-transfer/receive": {
     "id": "file-transfer/receive",
     "name": "Offline Animated QR File Receiver",
     "seoTitle": "Offline Animated QR File Receiver | High-Performance - QRCraftly",
-    "description": "Receive files offline safely using multi-frame QR streams and camera capture. Optimized with lookahead packet recovery."
+    "description": "Receive files offline safely using multi-frame QR streams and camera capture. Optimized with lookahead packet recovery.",
+    "personas": [TargetPersona.HealthcareLegal, TargetPersona.SecurityConsciousEnterprise],
+    "valueProposition": StrategicValueCategory.ZeroTransitPrivacySovereignty
   },
   "_error": {
     "id": "_error",
     "name": "404 Page Not Found",
     "seoTitle": "404 Page Not Found - QRCraftly",
-    "description": "The page you are looking for does not exist."
+    "description": "The page you are looking for does not exist.",
+    "personas": [TargetPersona.HealthcareLegal],
+    "valueProposition": StrategicValueCategory.ZeroTransitPrivacySovereignty
   }
 };
 
