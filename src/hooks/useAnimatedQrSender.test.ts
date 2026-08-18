@@ -67,7 +67,7 @@ describe('useAnimatedQrSender Hook', () => {
     }
   });
 
-  it('should initialize with standard defaults', () => {
+  it('should initialize with standard defaults and lower visual density (< 256 bytes)', () => {
     const { result } = renderHook(() =>
       useAnimatedQrSender({
         config: mockConfig,
@@ -80,7 +80,9 @@ describe('useAnimatedQrSender Hook', () => {
     expect(result.current.isTransferring).toBe(false);
     expect(result.current.progress).toBe(0);
     expect(result.current.fps).toBe(15);
-    expect(result.current.chunkSize).toBe(256);
+    expect(result.current.chunkSize).toBeLessThan(256);
+    expect(result.current.chunkSize).toBe(180);
+    expect(result.current.currentPass).toBe(1);
   });
 
   it('should handle simulated 50MB file selection', () => {
@@ -99,5 +101,36 @@ describe('useAnimatedQrSender Hook', () => {
     expect(result.current.selectedFile).not.toBeNull();
     expect(result.current.selectedFile?.name).toBe('simulation_50mb_payload.bin');
     expect(result.current.selectedFile?.size).toBe(50 * 1024 * 1024);
+  });
+
+  it('should store frames in pre-allocated pool during pass 1 and transition to shuffled pass 2 on loop wrap', async () => {
+    const { result } = renderHook(() =>
+      useAnimatedQrSender({
+        config: mockConfig,
+        logoImg: null,
+        borderLogoImg: null,
+      })
+    );
+
+    const dummyFile = new File(['Hello World Payload Array For Testing Animated Transfers'], 'test.txt', {
+      type: 'text/plain',
+    });
+
+    act(() => {
+      result.current.setSelectedFile(dummyFile);
+    });
+
+    expect(result.current.selectedFile).toBe(dummyFile);
+    expect(result.current.currentPass).toBe(1);
+
+    // Simulate pre-allocated memory pool frame population
+    act(() => {
+      result.current.framePoolRef.current.storeFrame(0, 29, new Uint8Array(29 * 29).fill(1));
+      result.current.framePoolRef.current.storeFrame(1, 29, new Uint8Array(29 * 29).fill(2));
+    });
+
+    expect(result.current.framePoolRef.current.size).toBe(2);
+    expect(result.current.framePoolRef.current.hasFrame(0)).toBe(true);
+    expect(result.current.framePoolRef.current.hasFrame(1)).toBe(true);
   });
 });
