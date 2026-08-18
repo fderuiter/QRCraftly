@@ -284,6 +284,114 @@ describe("Secure Dynamic Redirection API Suite", () => {
     });
   });
 
+  describe("Response Header Standardization Policy", () => {
+    it("should inject X-Robots-Tag: noindex, follow on all responses passing through middleware", async () => {
+      const req = new Request("https://qrcraftly.com/api/redirect/register", {
+        method: "POST",
+        headers: { "Origin": "https://qrcraftly.com" },
+      });
+
+      const res = await middlewareOnRequest({
+        request: req,
+        next: async () => new Response("OK", { status: 200 }),
+        env: {},
+      });
+
+      expect(res.status).toBe(200);
+      expect(res.headers.get("X-Robots-Tag")).toBe("noindex, follow");
+    });
+
+    it("should inject Cache-Control: no-store, no-cache, must-revalidate on all responses passing through middleware", async () => {
+      const req = new Request("https://qrcraftly.com/api/redirect/register", {
+        method: "POST",
+        headers: { "Origin": "https://qrcraftly.com" },
+      });
+
+      const res = await middlewareOnRequest({
+        request: req,
+        next: async () => new Response("OK", { status: 200 }),
+        env: {},
+      });
+
+      expect(res.status).toBe(200);
+      expect(res.headers.get("Cache-Control")).toBe("no-store, no-cache, must-revalidate");
+    });
+
+    it("should inject standardized headers on 403 Forbidden responses generated directly by middleware", async () => {
+      const req = new Request("https://qrcraftly.com/api/redirect/register", {
+        method: "POST",
+        headers: { "Origin": "https://unauthorized-domain.com" },
+      });
+
+      const res = await middlewareOnRequest({
+        request: req,
+        next: async () => new Response("OK", { status: 200 }),
+        env: {},
+      });
+
+      expect(res.status).toBe(403);
+      expect(res.headers.get("X-Robots-Tag")).toBe("noindex, follow");
+      expect(res.headers.get("Cache-Control")).toBe("no-store, no-cache, must-revalidate");
+    });
+
+    it("should inject standardized headers on 429 Too Many Requests responses generated directly by middleware", async () => {
+      const kv = new MockKV();
+      const clientIP = "10.0.0.99";
+      const currentMinuteBucket = Math.floor(Date.now() / 60000);
+      await kv.put(`ratelimit:${clientIP}:${currentMinuteBucket}`, "10");
+
+      const req = new Request("https://qrcraftly.com/api/redirect/register", {
+        method: "POST",
+        headers: {
+          "Origin": "https://qrcraftly.com",
+          "CF-Connecting-IP": clientIP,
+        },
+      });
+
+      const res = await middlewareOnRequest({
+        request: req,
+        next: async () => new Response("OK", { status: 200 }),
+        env: { REDIRECTS_KV: kv },
+      });
+
+      expect(res.status).toBe(429);
+      expect(res.headers.get("X-Robots-Tag")).toBe("noindex, follow");
+      expect(res.headers.get("Cache-Control")).toBe("no-store, no-cache, must-revalidate");
+    });
+
+    it("should inject standardized headers into 307 dynamic redirection responses while preserving Location header", async () => {
+      const kv = new MockKV();
+      const redirectData = {
+        id: "hdr-test-id",
+        redirectUrl: "https://destination.example.com",
+        adminKey: "key-123",
+        createdAt: new Date().toISOString(),
+      };
+      await kv.put("redirect:hdr-test-id", JSON.stringify(redirectData));
+
+      const req = new Request("https://qrcraftly.com/api/redirect/hdr-test-id", {
+        method: "GET",
+      });
+
+      const context = {
+        request: req,
+        env: { REDIRECTS_KV: kv },
+        params: { id: "hdr-test-id" },
+      };
+
+      const res = await middlewareOnRequest({
+        request: req,
+        next: () => lookupOnRequestGet(context),
+        env: { REDIRECTS_KV: kv },
+      });
+
+      expect(res.status).toBe(307);
+      expect(res.headers.get("Location")).toContain("https://destination.example.com");
+      expect(res.headers.get("X-Robots-Tag")).toBe("noindex, follow");
+      expect(res.headers.get("Cache-Control")).toBe("no-store, no-cache, must-revalidate");
+    });
+  });
+
   describe("URL Safety & Scheme Validation", () => {
     const runRegister = async (url: string) => {
       const req = new Request("https://qrcraftly.com/api/redirect/register", {
