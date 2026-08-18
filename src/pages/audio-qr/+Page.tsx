@@ -36,6 +36,11 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { useTheme } from '@/hooks/useTheme';
 import { QRProvider } from '@/context/QRContext';
+import { JsonLdScript } from '@/components/ui/JsonLdScript';
+import { generateSchema } from '@/utils/schemaGenerator';
+import { resolveDomainForPath } from '@/utils/metadataEngine';
+import { usePageContext } from 'vike-react/usePageContext';
+import { contentRegistry } from '@/data/contentRegistry';
 
 // WAV header generation helper for client-side audio download
 function bufferToWav(buffer: AudioBuffer): Blob {
@@ -960,8 +965,14 @@ function AudioQRToolInner() {
  * @returns The rendered Page.
  */
 export default function Page() {
+  const pageContext = usePageContext();
+  const urlPathname = pageContext?.urlPathname ?? '/audio-qr';
+  const resolvedDomain = resolveDomainForPath(urlPathname);
+  const schemaData = generateSchema(contentRegistry['audio-qr'], resolvedDomain, urlPathname);
+
   return (
     <QRProvider>
+      <JsonLdScript data={schemaData} />
       <AudioQRToolInner />
     </QRProvider>
   );

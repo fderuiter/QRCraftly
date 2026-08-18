@@ -2,14 +2,25 @@ import { ArrowLeft, ShieldCheck, ShieldAlert, FileText } from 'lucide-react';
 import { SanitizedHtml } from '@/components/ui/SanitizedHtml';
 import docsManifest from '../../data/docs_manifest.json';
 import { ProductShell } from '@/components/ProductShell';
+import { JsonLdScript } from '@/components/ui/JsonLdScript';
+import { generateSchema } from '@/utils/schemaGenerator';
+import { resolveDomainForPath } from '@/utils/metadataEngine';
+import { usePageContext } from 'vike-react/usePageContext';
+import { contentRegistry } from '@/data/contentRegistry';
 
 /**
  *
  */
 export default function Page() {
+  const pageContext = usePageContext();
+  const urlPathname = pageContext?.urlPathname ?? '/security';
+  const resolvedDomain = resolveDomainForPath(urlPathname);
+  const schemaData = generateSchema(contentRegistry['security'], resolvedDomain, urlPathname);
+
   return (
     <ProductShell>
-    <div className="mx-auto max-w-7xl px-4 py-12">
+      <JsonLdScript data={schemaData} />
+      <div className="mx-auto max-w-7xl px-4 py-12">
       <nav className="mb-8">
         <a
           href="/"

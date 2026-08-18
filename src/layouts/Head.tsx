@@ -19,6 +19,7 @@
 import { usePageContext } from 'vike-react/usePageContext';
 import { JsonLdScript } from '@/components/ui/JsonLdScript';
 import { resolveDomainForPath, resolvePublicUrl, resolveImageUrl, compileBreadcrumbSchema, getSanitizedPath } from '@/utils/metadataEngine';
+import { getMetadataForPath } from '@/data/contentRegistry';
 
 /**
  * HeadDefault Component
@@ -45,18 +46,20 @@ export default function HeadDefault() {
     return result || fallback;
   };
 
-  const title = getString(config?.title ?? undefined, pageContext, "QRCraftly - Free Custom QR Code Generator");
-  const description = getString(config?.description ?? undefined, pageContext, "Generate beautiful, custom QR codes for free. No sign-up required.");
+  const pathMetadata = getMetadataForPath(pageContext.urlPathname);
+
+  const title = getString(config?.title ?? undefined, pageContext, pathMetadata.title || "QRCraftly - Free Custom QR Code Generator");
+  const description = getString(config?.description ?? undefined, pageContext, pathMetadata.description || "Generate beautiful, custom QR codes for free. No sign-up required.");
 
   const resolvedDomain = resolveDomainForPath(pageContext.urlPathname);
   const canonicalUrl = resolvePublicUrl(pageContext.urlPathname);
 
   // Resolve Open Graph Image
   // Allows pages to override the default OG image via config.image
-  const imageConfig = config?.image;
+  const imageConfig = config?.image || pathMetadata.image;
   const imageUrl = resolveImageUrl(imageConfig, pageContext.urlPathname);
 
-  const imageAlt = config?.imageAlt || "QRCraftly QR Code Example";
+  const imageAlt = config?.imageAlt || pathMetadata.imageAlt || "QRCraftly QR Code Example";
 
   const sanitizedPath = getSanitizedPath(pageContext.urlPathname);
   const isHomepage = sanitizedPath === '/' || sanitizedPath === '';

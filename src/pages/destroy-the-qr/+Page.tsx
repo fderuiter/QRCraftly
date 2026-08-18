@@ -26,6 +26,11 @@ import { applyOpticalSimulationMath } from '../../utils/opticalSimulation';
 import { isDangerousUrl } from '../../utils/security';
 import { assertWorkerRequest } from '../../utils/sharedContract';
 import { AdaptiveFrameScheduler } from '../../utils/AdaptiveFrameScheduler';
+import { JsonLdScript } from '@/components/ui/JsonLdScript';
+import { generateSchema } from '@/utils/schemaGenerator';
+import { resolveDomainForPath } from '@/utils/metadataEngine';
+import { usePageContext } from 'vike-react/usePageContext';
+import { contentRegistry } from '@/data/contentRegistry';
 
 /**
  * Interface representing active game projectile entities (bullets or bombs).
@@ -1176,8 +1181,15 @@ export default function Page() {
     setupQRMatrix(qrText, eccLevel);
   };
 
+  const pageContext = usePageContext();
+  const urlPathname = pageContext?.urlPathname ?? '/destroy-the-qr';
+  const resolvedDomain = resolveDomainForPath(urlPathname);
+  const schemaData = generateSchema(contentRegistry['destroy-the-qr'], resolvedDomain, urlPathname);
+
   return (
-    <div className="dark flex min-h-screen flex-col overflow-x-hidden bg-slate-950 font-sans text-slate-100 antialiased select-none">
+    <>
+      <JsonLdScript data={schemaData} />
+      <div className="dark flex min-h-screen flex-col overflow-x-hidden bg-slate-950 font-sans text-slate-100 antialiased select-none">
       {/* Upper Navigation Header */}
       <header className="z-10 flex items-center justify-between border-b border-slate-900 bg-slate-950/80 px-6 py-4 backdrop-blur-md">
         <div className="flex items-center gap-3">
@@ -1518,5 +1530,6 @@ export default function Page() {
         </div>
       </main>
     </div>
+    </>
   );
 }

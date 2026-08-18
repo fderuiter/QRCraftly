@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { contentRegistry, auxiliaryRegistry, SchemaType, SchemaCategory, TargetPersona, StrategicValueCategory } from './contentRegistry';
+import { contentRegistry, auxiliaryRegistry, SchemaType, SchemaCategory, TargetPersona, StrategicValueCategory, hasValidOgImage, isToolContent, getMetadataForPath } from './contentRegistry';
 import { ValidationEngine } from '../engine/ValidationEngine';
 
 describe('Content Registry Validation', () => {
@@ -80,9 +80,9 @@ describe('Content Registry Validation', () => {
     const validSchemaTypes = Object.values(SchemaType);
     const validSchemaCategories = Object.values(SchemaCategory);
 
-    // Verify exactly 14 registered tools exist and are fully populated
+    // Verify all registered tools exist and are fully populated
     const registryKeys = Object.keys(contentRegistry);
-    expect(registryKeys.length).toBe(14);
+    expect(registryKeys.length).toBe(19);
 
     registryKeys.forEach((key) => {
       const tool = contentRegistry[key];
@@ -141,6 +141,52 @@ describe('Content Registry Validation', () => {
       // 2. Value proposition validation
       expect(item.valueProposition, `Auxiliary route '${key}' must have a valid 'valueProposition'`).toBeDefined();
       expect(validValueProps, `Auxiliary route '${key}': Value proposition '${item.valueProposition}' is not a valid StrategicValueCategory enum value`).toContain(item.valueProposition);
+    });
+  });
+
+  it('should enforce mandatory Open Graph image attributes on all tool and auxiliary items', () => {
+    Object.entries(contentRegistry).forEach(([key, tool]) => {
+      expect(tool.image, `Tool '${key}' must have defined 'image'`).toBeTypeOf('string');
+      expect(tool.image.length, `Tool '${key}' image string cannot be empty`).toBeGreaterThan(0);
+      expect(tool.imageAlt, `Tool '${key}' must have defined 'imageAlt'`).toBeTypeOf('string');
+      expect(tool.imageAlt.length, `Tool '${key}' imageAlt string cannot be empty`).toBeGreaterThan(0);
+
+      expect(hasValidOgImage(tool), `Tool '${key}' failed hasValidOgImage type guard`).toBe(true);
+      expect(isToolContent(tool), `Tool '${key}' failed isToolContent type guard`).toBe(true);
+    });
+
+    Object.entries(auxiliaryRegistry).forEach(([key, item]) => {
+      expect(item.image, `Auxiliary '${key}' must have defined 'image'`).toBeTypeOf('string');
+      expect(item.image.length, `Auxiliary '${key}' image string cannot be empty`).toBeGreaterThan(0);
+      expect(item.imageAlt, `Auxiliary '${key}' must have defined 'imageAlt'`).toBeTypeOf('string');
+      expect(item.imageAlt.length, `Auxiliary '${key}' imageAlt string cannot be empty`).toBeGreaterThan(0);
+
+      expect(hasValidOgImage(item), `Auxiliary '${key}' failed hasValidOgImage type guard`).toBe(true);
+    });
+  });
+
+  it('should resolve complete path metadata including image parameters for all public routes', () => {
+    const testRoutes = [
+      '/audio-qr',
+      '/destroy-the-qr',
+      '/game',
+      '/dynamic-dashboard',
+      '/security',
+      '/file-transfer',
+      '/email-qr-code',
+      '/wifi-qr-code',
+      '/about',
+      '/'
+    ];
+
+    testRoutes.forEach((route) => {
+      const meta = getMetadataForPath(route);
+      expect(meta.title, `Route '${route}' missing title`).toBeTypeOf('string');
+      expect(meta.description, `Route '${route}' missing description`).toBeTypeOf('string');
+      expect(meta.image, `Route '${route}' missing image`).toBeTypeOf('string');
+      expect(meta.image.length, `Route '${route}' image empty`).toBeGreaterThan(0);
+      expect(meta.imageAlt, `Route '${route}' missing imageAlt`).toBeTypeOf('string');
+      expect(meta.imageAlt.length, `Route '${route}' imageAlt empty`).toBeGreaterThan(0);
     });
   });
 });
