@@ -46,6 +46,12 @@ const ECC_COEFFICIENTS = {
   H: 0.30, // ~30%
 };
 
+// Number of virtual error correction blocks for logical interleaving simulation
+const VIRTUAL_BLOCK_COUNT = 4;
+
+// Finder pattern damage tolerance ratio (20% of 7x7 finder modules damaged compromises alignment)
+const FINDER_DAMAGE_TOLERANCE = 0.20;
+
 /**
  * Represents a coordinate blast on the canvas.
  */
@@ -461,11 +467,100 @@ function GamePageInner() {
   }, [totalModules, eccLevel]);
 
   const damagedCount = damagedModules.size;
+
+  // Interleaved logical block and corner finder pattern damage analysis
+  const subsystemAnalysis = useMemo(() => {
+    let tlDamaged = 0;
+    let trDamaged = 0;
+    let blDamaged = 0;
+
+    const blockDamagedCounts = new Array(VIRTUAL_BLOCK_COUNT).fill(0);
+    const blockBudget = Math.floor(maxDamagedAllowed / VIRTUAL_BLOCK_COUNT);
+
+    for (const key of damagedModules) {
+      const [rStr, cStr] = key.split(',');
+      const r = parseInt(rStr, 10);
+      const c = parseInt(cStr, 10);
+
+      // Identify corner finder pattern modules (7x7 regions)
+      const isTL = r < 7 && c < 7;
+      const isTR = r < 7 && c >= size - 7;
+      const isBL = r >= size - 7 && c < 7;
+
+      if (isTL) {
+        tlDamaged++;
+      } else if (isTR) {
+        trDamaged++;
+      } else if (isBL) {
+        blDamaged++;
+      }
+
+      // Assign module to virtual block via modular interleaving
+      const linearIndex = r * size + c;
+      const blockId = linearIndex % VIRTUAL_BLOCK_COUNT;
+      blockDamagedCounts[blockId]++;
+    }
+
+    const FINDER_MODULE_COUNT = 49;
+    const isTLOffline = (tlDamaged / FINDER_MODULE_COUNT) > FINDER_DAMAGE_TOLERANCE;
+    const isTROffline = (trDamaged / FINDER_MODULE_COUNT) > FINDER_DAMAGE_TOLERANCE;
+    const isBLOffline = (blDamaged / FINDER_MODULE_COUNT) > FINDER_DAMAGE_TOLERANCE;
+    const isFinderOffline = isTLOffline || isTROffline || isBLOffline;
+
+    const maxBlockDamaged = Math.max(0, ...blockDamagedCounts);
+    const isBlockBudgetExceeded = blockBudget > 0 && maxBlockDamaged > blockBudget;
+    const isGlobalBudgetExhausted = damagedCount >= maxDamagedAllowed;
+
+    return {
+      tlDamaged,
+      trDamaged,
+      blDamaged,
+      isFinderOffline,
+      blockDamagedCounts,
+      blockBudget,
+      maxBlockDamaged,
+      isBlockBudgetExceeded,
+      isGlobalBudgetExhausted,
+    };
+  }, [damagedModules, size, maxDamagedAllowed, damagedCount]);
+
+  const {
+    isFinderOffline,
+    blockBudget,
+    maxBlockDamaged,
+    isBlockBudgetExceeded,
+    isGlobalBudgetExhausted
+  } = subsystemAnalysis;
+
   const healthRatio = useMemo(() => {
-    return Math.max(0, 1 - (damagedCount / maxDamagedAllowed));
-  }, [damagedCount, maxDamagedAllowed]);
+    // Override directly to 0 if any finder pattern is compromised or if any virtual block error limit is exceeded
+    if (isFinderOffline || isBlockBudgetExceeded || isGlobalBudgetExhausted) {
+      return 0;
+    }
+
+    const globalRatio = Math.max(0, 1 - (damagedCount / maxDamagedAllowed));
+    const worstBlockRatio = blockBudget > 0
+      ? Math.max(0, 1 - (maxBlockDamaged / blockBudget))
+      : globalRatio;
+
+    return Math.min(globalRatio, worstBlockRatio);
+  }, [damagedCount, maxDamagedAllowed, isFinderOffline, isBlockBudgetExceeded, isGlobalBudgetExhausted, maxBlockDamaged, blockBudget]);
 
   const healthPercent = Math.round(healthRatio * 100);
+
+  // Dynamic subsystem alert text
+  const alertText = useMemo(() => {
+    if (isFinderOffline) {
+      return 'Finder Subsystem Offline';
+    }
+    if (isBlockBudgetExceeded) {
+      return 'Block Budget Exceeded';
+    }
+    if (isGlobalBudgetExhausted) {
+      return 'Error Correction Budget Exhausted';
+    }
+    return null;
+  }, [isFinderOffline, isBlockBudgetExceeded, isGlobalBudgetExhausted]);
 
   // Health bar color gradients
   const healthBarColor = useMemo(() => {
@@ -675,6 +770,21 @@ function GamePageInner() {
               </div>
 
               {/* Warnings & Alarms */}
+              {healthPercent === 0 && alertText && (
+                <div className="mt-3 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-800 dark:border-red-900/30 dark:bg-red-950/20 dark:text-red-300" role="alert">
+                  <AlertTriangle className="size-4 shrink-0 text-red-500" />
+                  <span>
+                    <strong>Subsystem Failure:</strong> {alertText} — {
+                      isFinderOffline 
+                        ? 'Corner alignment pattern integrity compromised.' 
+                        : isBlockBudgetExceeded 
+                        ? 'Local block error threshold breached.' 
+                        : 'Error correction budget exhausted.'
+                    }
+                  </span>
+                </div>
+              )}
+
               {healthPercent <= 30 && healthPercent > 0 && (
                 <div className="mt-3 flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-900/30 dark:bg-amber-950/20 dark:text-amber-300">
                   <AlertTriangle className="size-4 shrink-0 text-amber-500" />
@@ -708,10 +818,24 @@ function GamePageInner() {
                     <ZapOff className="size-12" />
                   </div>
                   <h3 className="text-2xl font-black tracking-tight text-red-500 uppercase">
-                    QR Code Defeated!
+                    {alertText ? alertText : 'QR Code Defeated!'}
                   </h3>
                   <p className="mt-2 max-w-xs text-sm leading-relaxed text-slate-300">
-                    Cumulative damaged modules ({damagedCount}) has fully exhausted the error-correction budget. The QR code is now <strong>completely unscannable</strong>.
+                    {isFinderOffline && (
+                      <>
+                        <strong>Finder Subsystem Offline:</strong> Corner alignment mark destroyed. Scanner unable to establish alignment grid.
+                      </>
+                    )}
+                    {!isFinderOffline && isBlockBudgetExceeded && (
+                      <>
+                        <strong>Local Block Budget Exceeded:</strong> A virtual error block exceeded its local damage budget ({maxBlockDamaged} / {blockBudget} modules).
+                      </>
+                    )}
+                    {!isFinderOffline && !isBlockBudgetExceeded && (
+                      <>
+                        Cumulative damaged modules ({damagedCount}) has fully exhausted the error-correction budget. The QR code is now <strong>completely unscannable</strong>.
+                      </>
+                    )}
                   </p>
                   <button
                     onClick={handleReset}

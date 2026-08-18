@@ -93,4 +93,71 @@ describe('QR Damage Simulator Game Page', () => {
     fireEvent.click(resetBtn);
     expect(resetBtn).toBeDisabled();
   });
+
+  it('triggers Finder Subsystem Offline alert and 0% health when corner finder pattern is damaged', () => {
+    render(<Page />);
+
+    const canvas = screen.getByLabelText(/Interactive QR Code Game Board/i);
+    vi.spyOn(canvas, 'getBoundingClientRect').mockReturnValue({
+      left: 0,
+      top: 0,
+      width: 512,
+      height: 512,
+      right: 512,
+      bottom: 512,
+      x: 0,
+      y: 0,
+      toJSON: () => {}
+    });
+
+    // Select Thermonuclear Nuke to hit top-left corner finder pattern
+    const nukeBtn = screen.getByRole('radio', { name: /Thermonuclear Nuke/i });
+    fireEvent.click(nukeBtn);
+
+    // Initial scan health should be 100%
+    expect(screen.getByText(/100% Remaining/i)).toBeInTheDocument();
+
+    // Fire blast at top-left corner (x=10, y=10) targeting finder eye
+    fireEvent.mouseDown(canvas, { clientX: 10, clientY: 10 });
+
+    // HUD health should drop immediately to 0% Remaining
+    expect(screen.getByText(/0% Remaining/i)).toBeInTheDocument();
+
+    // HUD alert text should dynamically report Finder Subsystem Offline
+    expect(screen.getAllByText(/Finder Subsystem Offline/i).length).toBeGreaterThan(0);
+  });
+
+  it('triggers Block Budget Exceeded alert when localized virtual block error limit is breached', () => {
+    render(<Page />);
+
+    const canvas = screen.getByLabelText(/Interactive QR Code Game Board/i);
+    vi.spyOn(canvas, 'getBoundingClientRect').mockReturnValue({
+      left: 0,
+      top: 0,
+      width: 512,
+      height: 512,
+      right: 512,
+      bottom: 512,
+      x: 0,
+      y: 0,
+      toJSON: () => {}
+    });
+
+    // Select Level L error correction (budget ~7 modules per block)
+    const levelLBtn = screen.getByRole('button', { name: /Level L/i });
+    fireEvent.click(levelLBtn);
+
+    // Select Thermonuclear Nuke weapon (radius 4)
+    const nukeBtn = screen.getByRole('radio', { name: /Thermonuclear Nuke/i });
+    fireEvent.click(nukeBtn);
+
+    // Fire nuke blast at center data area (x=256, y=256, row=10, col=10)
+    fireEvent.mouseDown(canvas, { clientX: 256, clientY: 256 });
+
+    // Health should drop to 0% when local block budget is exceeded
+    expect(screen.getByText(/0% Remaining/i)).toBeInTheDocument();
+
+    // Alert should dynamically update to Block Budget Exceeded
+    expect(screen.getAllByText(/Block Budget Exceeded/i).length).toBeGreaterThan(0);
+  });
 });
