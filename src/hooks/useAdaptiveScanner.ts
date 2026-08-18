@@ -257,10 +257,11 @@ export function useAdaptiveScanner({
 
     const { status: resultStatus, sequenceId, decodedData, error, buffer } = payload;
 
-    // Reset consecutive restart attempts ONLY on a successful frame decode ('pass' status)
-    if (resultStatus === 'pass') {
+    // Any epoch-matched response proves the worker is alive. Reset the crash-retry budget
+    // and restore watchdog timeout for valid frame responses (pass or fail without stale error).
+    if (resultStatus === 'pass' || error !== 'STALE_FRAME') {
       consecutiveRestartAttemptsRef.current = 0;
-      schedulerRef.current?.setWatchdogTimeout(1500); // Reset timeout back to 1500 on success
+      schedulerRef.current?.setWatchdogTimeout(1500);
     }
 
     getScheduler().endFrame(sequenceId, resultStatus, decodedData, error, buffer);

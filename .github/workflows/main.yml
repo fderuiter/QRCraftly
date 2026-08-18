@@ -83,7 +83,9 @@ jobs:
 
       - name: Run Secret Scanning Guardrail
         if: steps.changed-files.outputs.any_changed == 'true'
-        run: node scripts/secret-scanner.js ${{ steps.changed-files.outputs.all_changed_files }}
+        env:
+          ALL_CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
+        run: node scripts/secret-scanner.js
 
       - name: Set up Python
         uses: actions/setup-python@v7

@@ -61,6 +61,7 @@ describe('useAnimatedQrSender Hook', () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.clearAllMocks();
     if (globalThis.mockWorkerControl) {
       globalThis.mockWorkerControl.reset();

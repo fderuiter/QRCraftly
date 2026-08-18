@@ -30,15 +30,9 @@ let isGenerating = false;
 let fileSHA256 = '';
 let lookaheadLimit = 3;
 
-const hashCache = new Map<string, string>();
-
-function getFileCacheKey(blob: Blob): string {
-  const name = (blob as any).name || 'file';
-  const size = blob.size;
-  const type = blob.type || '';
-  const lastModified = (blob as any).lastModified || '';
-  return `${name}:${size}:${type}:${lastModified}`;
-}
+// Keyed by the Blob/File instance so a cached hash can never be reused for
+// different content.
+const hashCache = new WeakMap<Blob, string>();
 
 /**
  * Converts an ArrayBuffer to a standard Base64 string in a worker-compatible way.
@@ -157,13 +151,12 @@ self.onmessage = async (e: MessageEvent) => {
         return;
       }
 
-      const cacheKey = getFileCacheKey(file);
-      if (hashCache.has(cacheKey)) {
-        fileSHA256 = hashCache.get(cacheKey)!;
+      if (hashCache.has(file)) {
+        fileSHA256 = hashCache.get(file)!;
       } else {
         try {
           fileSHA256 = await computeSHA256(file);
-          hashCache.set(cacheKey, fileSHA256);
+          hashCache.set(file, fileSHA256);
         } catch (err: any) {
           (self as any).postMessage({ type: 'ERROR', message: `Hashing failed: ${err?.message || err}` });
           return;

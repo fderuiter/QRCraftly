@@ -137,7 +137,7 @@ describe('useAnimatedQrReceiver Hook', () => {
     expect(result.current.totalChunks).toBe(2);
   });
 
-  it('should reset the lookahead validation security engine concurrently with the frame cache', async () => {
+  it('should reset the lookahead validation security engine concurrently with the frame cache for new file handshakes', async () => {
     const { result } = renderHook(() => useAnimatedQrReceiver({ streamMode: 'text' }));
 
     // Send first handshake
@@ -145,26 +145,27 @@ describe('useAnimatedQrReceiver Hook', () => {
       await result.current.handleFrame('H|file1.txt|10|text/plain|sha111');
     });
 
-    // Send a frame containing a partial dangerous protocol (e.g., 'java')
-    // This doesn't trigger security alert yet because it doesn't match 'javascript:' completely
+    // Send a frame containing a partial protocol fragment (e.g., 'java')
     await act(async () => {
       await result.current.handleFrame('java');
     });
 
     expect(result.current.securityAlert).toBeNull();
 
-    // Now, send a different file handshake (this should reset/clear the lookahead buffer)
+    // Now, send a different file handshake (this resets/clears the lookahead buffer for the new file)
     await act(async () => {
       await result.current.handleFrame('H|file2.txt|20|text/plain|sha222');
     });
 
-    // Send 'script:' which would have completed 'javascript:' if lookahead buffer wasn't cleared!
+    // Send 'java' then 'script:' in file2 to complete 'java' + 'script:' reassembly and verify detection triggers
+    await act(async () => {
+      await result.current.handleFrame('java');
+    });
     await act(async () => {
       await result.current.handleFrame('script:');
     });
 
-    // Verify no security alert was triggered, because lookahead buffer was reset
-    expect(result.current.securityAlert).toBeNull();
+    expect(result.current.securityAlert).not.toBeNull();
   });
 
   it('should block split-payload attacks (e.g., java and script:) across frames immediately', async () => {

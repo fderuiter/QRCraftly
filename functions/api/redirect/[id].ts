@@ -1,4 +1,4 @@
-import { SafeUrlPipeline } from "../../../src/utils/url";
+import { validateUrl } from "./register";
 import { getDB, ensureTableExists, Env } from "./_db";
 
 const globalMockKV = new Map<string, string>();
@@ -77,7 +77,7 @@ export const onRequestGet = async (context: {
 
     const targetUrl = resolveTargetUrl(record);
 
-    if (!targetUrl || SafeUrlPipeline.isDangerous(targetUrl)) {
+    if (!targetUrl || !validateUrl(targetUrl).valid) {
       return renderSecureErrorPage();
     }
 
