@@ -205,6 +205,11 @@ jobs:
               console.error('Failed to post or update PR status comment after retries:', err);
             }
 
+      - name: Restore Workspace Source Metadata
+        if: always()
+        run: |
+          git checkout -- .
+
   decommission-preview:
     name: Decommission Preview Staging
     if: github.event.action == 'closed' && github.event.pull_request.head.repo.full_name == github.repository
