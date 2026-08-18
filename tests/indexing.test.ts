@@ -28,5 +28,27 @@ describe('Search Engine Indexing Prevention', () => {
     expect(shouldExcludePath('dist/client/dev-sandbox/index.html')).toBe(true);
     expect(shouldExcludePath('dist/client/index.html')).toBe(false);
     expect(shouldExcludePath('dist/client/about.html')).toBe(false);
+    expect(shouldExcludePath('dist/client/game/index.html')).toBe(false);
+  });
+
+  it('should verify game page config enables static pre-rendering', async () => {
+    const gameConfig = (await import('../src/pages/game/+config')).default;
+    expect(gameConfig.prerender).not.toBe(false);
+  });
+
+  it('should verify generated static HTML files contain valid canonical tags and DOM content if build output exists', () => {
+    const distDir = join(__dirname, '../dist/client');
+    if (existsSync(distDir)) {
+      const publicRoutes = ['index.html', 'about/index.html', 'game/index.html', 'wifi-qr-code/index.html'];
+      for (const routeFile of publicRoutes) {
+        const filePath = join(distDir, routeFile);
+        if (existsSync(filePath)) {
+          const html = readFileSync(filePath, 'utf8');
+          expect(html).toContain('<link rel="canonical"');
+          expect(html).toContain('https://qrcraftly.com');
+          expect(html).toContain('<main');
+        }
+      }
+    }
   });
 });
