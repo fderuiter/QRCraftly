@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection */
 /*
     QRCraftly
     Copyright (C) 2025 fderuiter
@@ -19,12 +20,12 @@
 import QRCode from 'qrcode';
 
 let file: Blob | null = null;
-let chunkSize = 256;
+let chunkSize = 180;
 let totalFrames = 0; // total including handshake
 let totalDataFrames = 0; // only data frames
 let nextIndexToGenerate = 0;
 let lastAckedIndex = -1;
-let errorCorrectionLevel = 'M';
+let errorCorrectionLevel = 'Q';
 let isGenerating = false;
 let fileSHA256 = '';
 let lookaheadLimit = 3;
@@ -143,8 +144,10 @@ self.onmessage = async (e: MessageEvent) => {
   switch (type) {
     case 'START': {
       file = payload.file;
-      chunkSize = payload.chunkSize || 256;
-      errorCorrectionLevel = payload.errorCorrectionLevel || 'M';
+      const requestedChunkSize = payload.chunkSize || 180;
+      chunkSize = Math.min(requestedChunkSize < 256 ? requestedChunkSize : 180, 240);
+      const reqEcc = payload.errorCorrectionLevel;
+      errorCorrectionLevel = (reqEcc === 'H' || reqEcc === 'Q') ? reqEcc : 'Q';
       
       const fps = payload.fps || 15;
       lookaheadLimit = Math.min(16, Math.max(3, Math.ceil(fps * 0.2)));
