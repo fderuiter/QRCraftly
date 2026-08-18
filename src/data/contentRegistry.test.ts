@@ -80,9 +80,9 @@ describe('Content Registry Validation', () => {
     const validSchemaTypes = Object.values(SchemaType);
     const validSchemaCategories = Object.values(SchemaCategory);
 
-    // Verify exactly 14 registered tools exist and are fully populated
+    // Verify exactly 18 registered tools exist and are fully populated
     const registryKeys = Object.keys(contentRegistry);
-    expect(registryKeys.length).toBe(14);
+    expect(registryKeys.length).toBe(18);
 
     registryKeys.forEach((key) => {
       const tool = contentRegistry[key];
@@ -141,6 +141,32 @@ describe('Content Registry Validation', () => {
       // 2. Value proposition validation
       expect(item.valueProposition, `Auxiliary route '${key}' must have a valid 'valueProposition'`).toBeDefined();
       expect(validValueProps, `Auxiliary route '${key}': Value proposition '${item.valueProposition}' is not a valid StrategicValueCategory enum value`).toContain(item.valueProposition);
+    });
+  });
+
+  it('should generate valid WebApplication, HowTo, and FAQPage schemas for all promoted standalone public tools', async () => {
+    const { generateSchema } = await import('../utils/schemaGenerator');
+    const promotedTools = ['audio-qr', 'destroy-the-qr', 'game', 'security'];
+
+    promotedTools.forEach((toolId) => {
+      const tool = contentRegistry[toolId];
+      expect(tool, `Tool '${toolId}' must exist in contentRegistry`).toBeDefined();
+
+      const schema = generateSchema(tool, 'https://qrcraftly.com', `/${toolId}`);
+      expect(schema, `Schema for '${toolId}' must be generated`).toBeDefined();
+      expect(schema['@context']).toBe('https://schema.org');
+
+      const graph = schema['@graph'];
+      expect(Array.isArray(graph)).toBe(true);
+
+      const appEntity = graph.find((g: any) => Array.isArray(g['@type']) && g['@type'].includes('WebApplication'));
+      expect(appEntity, `Tool '${toolId}' must generate a WebApplication schema`).toBeDefined();
+
+      const howToEntity = graph.find((g: any) => g['@type'] === 'HowTo');
+      expect(howToEntity, `Tool '${toolId}' must generate a HowTo schema`).toBeDefined();
+
+      const faqEntity = graph.find((g: any) => g['@type'] === 'FAQPage');
+      expect(faqEntity, `Tool '${toolId}' must generate an FAQPage schema`).toBeDefined();
     });
   });
 });

@@ -68,7 +68,7 @@ describe('Destroy the QR Code! Arcade Page', () => {
   it('renders correctly with title, description, and status badges', () => {
     render(<Page />);
 
-    expect(screen.getByRole('heading', { name: /Destroy the QR!/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: /Destroy the QR!/i })).toBeInTheDocument();
     expect(screen.getByText('🎮 High-Performance Arcade Sandbox')).toBeInTheDocument();
     expect(screen.getByText('Durability Index')).toBeInTheDocument();
     expect(screen.getByText('Blaster Weapons')).toBeInTheDocument();

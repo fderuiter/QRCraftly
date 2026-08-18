@@ -37,6 +37,12 @@ import {
 } from 'lucide-react';
 import { useOptionalQRStoreSelector, QRProvider } from '@/context/QRContext';
 import { QRConfig, QRErrorCorrectionLevel, QRType, QRStyle, SocialFormat, TemplateStyle } from '@/types';
+import { JsonLdScript } from '@/components/ui/JsonLdScript';
+import { contentRegistry } from '@/data/contentRegistry';
+import { generateSchema } from '@/utils/schemaGenerator';
+import { resolveDomainForPath } from '@/utils/metadataEngine';
+import { SidebarContent } from '@/components/SidebarContent';
+import { usePageContext } from 'vike-react/usePageContext';
 
 // Standard Reed-Solomon QR budgets coefficients
 const ECC_COEFFICIENTS = {
@@ -887,9 +893,18 @@ function GamePageInner() {
  * @returns The rendered Page component wrapped in a QRProvider.
  */
 export default function Page() {
+  const pageContext = usePageContext();
+  const urlPathname = pageContext?.urlPathname ?? '/game';
+  const resolvedDomain = resolveDomainForPath(urlPathname);
+  const schemaData = generateSchema(contentRegistry['game'], resolvedDomain, urlPathname);
+
   return (
     <QRProvider>
+      <JsonLdScript data={schemaData} />
       <GamePageInner />
+      <div className="mx-auto max-w-3xl px-4 pb-12">
+        <SidebarContent toolId="game" />
+      </div>
     </QRProvider>
   );
 }

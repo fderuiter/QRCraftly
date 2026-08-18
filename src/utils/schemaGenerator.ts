@@ -2,14 +2,18 @@ import { ToolContent } from '../data/contentRegistry';
 import { resolveDomainForPath, resolvePublicUrl } from './metadataEngine';
 
 import aboutConfig from '../pages/about/+config';
+import audioConfig from '../pages/audio-qr/+config';
+import destroyTheQrConfig from '../pages/destroy-the-qr/+config';
 import emailConfig from '../pages/email-qr-code/+config';
 import eventConfig from '../pages/event-qr-code/+config';
 import fileTransferConfig from '../pages/file-transfer/+config';
+import gameConfig from '../pages/game/+config';
 import indexConfig from '../pages/index/+config';
 import locationConfig from '../pages/location-qr-code/+config';
 import meetingConfig from '../pages/meeting-qr-code/+config';
 import paymentConfig from '../pages/payment-qr-code/+config';
 import phoneConfig from '../pages/phone-qr-code/+config';
+import securityConfig from '../pages/security/+config';
 import smsConfig from '../pages/sms-qr-code/+config';
 import socialConfig from '../pages/social-qr-code/+config';
 import textConfig from '../pages/text-qr-code/+config';
@@ -18,14 +22,18 @@ import wifiConfig from '../pages/wifi-qr-code/+config';
 
 const configMap: Record<string, any> = {
   'about': aboutConfig,
+  'audio-qr': audioConfig,
+  'destroy-the-qr': destroyTheQrConfig,
   'email-qr-code': emailConfig,
   'event-qr-code': eventConfig,
   'file-transfer': fileTransferConfig,
+  'game': gameConfig,
   'index': indexConfig,
   'location-qr-code': locationConfig,
   'meeting-qr-code': meetingConfig,
   'payment-qr-code': paymentConfig,
   'phone-qr-code': phoneConfig,
+  'security': securityConfig,
   'sms-qr-code': smsConfig,
   'social-qr-code': socialConfig,
   'text-qr-code': textConfig,
