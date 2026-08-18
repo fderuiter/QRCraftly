@@ -3,6 +3,10 @@ interface Env {
 }
 
 export function validateUrl(url: string): { valid: boolean; error?: string } {
+  if (typeof url !== "string" || !url.trim()) {
+    return { valid: false, error: "Invalid URL format" };
+  }
+
   const controlCharRegex = /[\x00-\x1F\x7F-\x9F\u200B-\u200D\uFEFF]/;
   if (controlCharRegex.test(url)) {
     return { valid: false, error: "URL contains invalid control characters or zero-width spaces" };
@@ -15,14 +19,15 @@ export function validateUrl(url: string): { valid: boolean; error?: string } {
     return { valid: false, error: "Invalid URL format" };
   }
 
-  const scheme = parsedUrl.protocol;
-  if (scheme !== "http:" && scheme !== "https:") {
-    return { valid: false, error: `Invalid URL scheme: "${scheme}". Scheme must be http: or https:` };
-  }
+  const scheme = parsedUrl.protocol.toLowerCase();
 
   const dangerousSchemes = ["javascript:", "data:", "file:", "vbscript:", "blob:"];
-  if (dangerousSchemes.includes(scheme.toLowerCase())) {
+  if (dangerousSchemes.includes(scheme)) {
     return { valid: false, error: `Blocked dangerous URL scheme: "${scheme}"` };
+  }
+
+  if (scheme !== "http:" && scheme !== "https:") {
+    return { valid: false, error: `Invalid URL scheme: "${scheme}". Scheme must be http: or https:` };
   }
 
   return { valid: true };
