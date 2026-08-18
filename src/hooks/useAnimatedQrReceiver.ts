@@ -86,7 +86,7 @@ export interface UseAnimatedQrReceiverOptions {
  */
 export function useAnimatedQrReceiver({
   addToast,
-  handshakeRequired = false,
+  handshakeRequired = true,
   streamMode = 'text',
   autoDownload = true,
 }: UseAnimatedQrReceiverOptions = {}) {
@@ -109,6 +109,7 @@ export function useAnimatedQrReceiver({
   const lookaheadRef = useRef<StreamLookaheadReceiver | null>(null);
   const processedIndicesRef = useRef<Set<number>>(new Set());
   const handshakeRef = useRef<HandshakeInfo | null>(null);
+  const hasShownMissingHandshakeToastRef = useRef<boolean>(false);
 
   // Sync lookahead receiver configuration with streamMode option
   useEffect(() => {
@@ -166,6 +167,7 @@ export function useAnimatedQrReceiver({
     setTotalChunks(null);
     setHandshake(null);
     handshakeRef.current = null;
+    hasShownMissingHandshakeToastRef.current = false;
     setSecurityAlert(null);
     setReceiverError(null);
     setReceiverSuccess(false);
@@ -221,30 +223,28 @@ export function useAnimatedQrReceiver({
             setCompilationStatus('Finalizing download...');
             const reassembled = new Uint8Array(buffer);
 
-            if (activeHandshake) {
-              // Compute and verify SHA-256
-              const hashBuffer = await crypto.subtle.digest('SHA-256', reassembled.buffer);
-              const hashArray = Array.from(new Uint8Array(hashBuffer));
-              const actualSHA256 = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-
-              if (actualSHA256 !== activeHandshake.sha256) {
-                throw new Error(`Integrity validation failed! SHA-256 hash does not match handshake value.\nExpected: ${activeHandshake.sha256}\nActual: ${actualSHA256}`);
-              }
-
-              setReassembledData(reassembled);
-              setReceiverSuccess(true);
-              setReceiverError(null);
-
-              // Download
-              triggerFileDownload(reassembled, activeHandshake.fileName, activeHandshake.mimeType);
-            } else {
-              // Standard flow without handshake (e.g. receive page)
-              setReassembledData(reassembled);
-              setReceiverSuccess(true);
-              setReceiverError(null);
-
-              triggerFileDownload(reassembled, `received_file_${Date.now()}.bin`, 'application/octet-stream');
+            if (!activeHandshake) {
+              throw new Error('Transfer blocked: Missing handshake metadata. Cannot verify SHA-256 integrity hash.');
             }
+
+            // Compute and verify SHA-256
+            const hashBuffer = await crypto.subtle.digest(
+              'SHA-256',
+              reassembled.buffer.slice(reassembled.byteOffset, reassembled.byteOffset + reassembled.byteLength)
+            );
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            const actualSHA256 = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+            if (actualSHA256.toLowerCase() !== activeHandshake.sha256.toLowerCase()) {
+              throw new Error(`Integrity validation failed! SHA-256 hash does not match handshake value.\nExpected: ${activeHandshake.sha256}\nActual: ${actualSHA256}`);
+            }
+
+            setReassembledData(reassembled);
+            setReceiverSuccess(true);
+            setReceiverError(null);
+
+            // Download
+            triggerFileDownload(reassembled, activeHandshake.fileName, activeHandshake.mimeType);
 
             setDownloadTriggered(true);
 
@@ -256,13 +256,15 @@ export function useAnimatedQrReceiver({
               });
             }
           } catch (err: any) {
-            setReceiverError(err?.message || 'Verification or reassembly failed.');
+            const errMsg = err?.message || 'Verification or reassembly failed.';
+            setReceiverError(errMsg);
             setReceiverSuccess(false);
             setReassembledData(null);
+            setDownloadTriggered(false);
             if (addToast) {
               addToast({
                 type: 'error',
-                message: `Failed to compile binary content: ${err.message}`,
+                message: errMsg,
                 duration: 5000,
               });
             }
@@ -359,6 +361,19 @@ export function useAnimatedQrReceiver({
             }
             return;
           }
+          if (handshakeRequired && !handshakeRef.current) {
+            const errMsg = 'Handshake metadata required before processing data frames.';
+            setReceiverError(errMsg);
+            if (addToast && !hasShownMissingHandshakeToastRef.current) {
+              hasShownMissingHandshakeToastRef.current = true;
+              addToast({
+                type: 'error',
+                message: 'Transfer blocked: missing handshake metadata. Scan handshake QR first.',
+                duration: 5000,
+              });
+            }
+            return;
+          }
           if (processedIndicesRef.current.has(index)) {
             return; // Duplicate frame, discard synchronously
           }
@@ -431,6 +446,7 @@ export function useAnimatedQrReceiver({
         const isNewFile = !handshakeRef.current || handshakeRef.current.sha256 !== sha256;
         if (isNewFile) {
           processedIndicesRef.current.clear();
+          hasShownMissingHandshakeToastRef.current = false;
           lookaheadRef.current = new StreamLookaheadReceiver({ mode: streamMode });
           handshakeRef.current = { fileName, fileSize, mimeType, sha256 };
 
@@ -502,6 +518,7 @@ export function useAnimatedQrReceiver({
   const startCameraSession = useCallback(async () => {
     setSecurityAlert(null);
     processedIndicesRef.current.clear();
+    hasShownMissingHandshakeToastRef.current = false;
     initWorker();
     const activeStream = await startStream();
     if (activeStream) {
@@ -535,7 +552,7 @@ export function useAnimatedQrReceiver({
       if (autoDownload) {
         setDownloadTriggered(true);
         stopCameraSession();
-        reconstructAndValidateFile(chunks, totalChunks, handshake || undefined);
+        reconstructAndValidateFile(chunks, totalChunks, handshake || handshakeRef.current || undefined);
       } else {
         if (isScanning) {
           stopCameraSession();

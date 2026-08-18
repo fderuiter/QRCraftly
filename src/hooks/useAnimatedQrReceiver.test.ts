@@ -18,7 +18,7 @@
 
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import { renderHook, act, waitFor } from '@testing-library/react';
 import React from 'react';
 import { useAnimatedQrReceiver } from './useAnimatedQrReceiver';
 
@@ -60,8 +60,12 @@ describe('useAnimatedQrReceiver Hook', () => {
     expect(result.current.isScanning).toBe(false);
   });
 
-  it('should process simulated normal data frames', async () => {
+  it('should process simulated normal data frames when handshake is present', async () => {
     const { result } = renderHook(() => useAnimatedQrReceiver());
+
+    await act(async () => {
+      await result.current.handleFrame('H|test.txt|6|text/plain|c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2');
+    });
 
     await act(async () => {
       await result.current.handleFrame('F|0|2|Zm9v');
@@ -69,6 +73,22 @@ describe('useAnimatedQrReceiver Hook', () => {
 
     expect(result.current.totalChunks).toBe(2);
     expect(result.current.chunks.get(0)).toBe('Zm9v');
+  });
+
+  it('should ignore data frames when no handshake frame has been scanned', async () => {
+    const addToast = vi.fn();
+    const { result } = renderHook(() => useAnimatedQrReceiver({ addToast }));
+
+    await act(async () => {
+      await result.current.handleFrame('F|0|2|Zm9v');
+    });
+
+    expect(result.current.chunks.size).toBe(0);
+    expect(result.current.receiverError).toContain('Handshake metadata required');
+    expect(addToast).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'error',
+      message: expect.stringContaining('missing handshake metadata'),
+    }));
   });
 
   it('should intercept dangerous schemes immediately', async () => {
@@ -81,8 +101,13 @@ describe('useAnimatedQrReceiver Hook', () => {
     expect(result.current.securityAlert).toContain('Dangerous protocol detected and blocked');
   });
 
-  it('should compile and reassemble files via background worker', async () => {
-    const { result } = renderHook(() => useAnimatedQrReceiver());
+  it('should compile, verify SHA-256, and reassemble files via background worker', async () => {
+    const addToast = vi.fn();
+    const { result } = renderHook(() => useAnimatedQrReceiver({ addToast }));
+
+    await act(async () => {
+      await result.current.handleFrame('H|test.txt|6|text/plain|c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2');
+    });
 
     await act(async () => {
       await result.current.handleFrame('F|0|2|Zm9v');
@@ -98,6 +123,37 @@ describe('useAnimatedQrReceiver Hook', () => {
 
     expect(result.current.receiverSuccess).toBe(true);
     expect(global.URL.createObjectURL).toHaveBeenCalled();
+    expect(addToast).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'success',
+    }));
+  });
+
+  it('should abort download and emit toast error when computed SHA-256 hash does not match handshake hash', async () => {
+    const addToast = vi.fn();
+    const { result } = renderHook(() => useAnimatedQrReceiver({ addToast }));
+
+    await act(async () => {
+      await result.current.handleFrame('H|test.txt|6|text/plain|wrongsha256hashvalue');
+    });
+
+    await act(async () => {
+      await result.current.handleFrame('F|0|2|Zm9v');
+    });
+
+    await act(async () => {
+      await result.current.handleFrame('F|1|2|YmFy');
+    });
+
+    await waitFor(() => {
+      expect(result.current.receiverError).toContain('Integrity validation failed');
+    });
+
+    expect(result.current.receiverSuccess).toBe(false);
+    expect(global.URL.createObjectURL).not.toHaveBeenCalled();
+    expect(addToast).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'error',
+      message: expect.stringContaining('Integrity validation failed'),
+    }));
   });
 
   it('should synchronously and atomically reset state and frame-tracking memory when a new file handshake with a different SHA-256 is detected', async () => {
@@ -171,6 +227,10 @@ describe('useAnimatedQrReceiver Hook', () => {
   it('should block split-payload attacks (e.g., java and script:) across frames immediately', async () => {
     const { result } = renderHook(() => useAnimatedQrReceiver());
 
+    await act(async () => {
+      await result.current.handleFrame('H|test.txt|10|text/plain|sha256');
+    });
+
     // 'java' in base64 is 'amF2YQ=='
     await act(async () => {
       await result.current.handleFrame('F|0|2|amF2YQ==');
@@ -187,6 +247,10 @@ describe('useAnimatedQrReceiver Hook', () => {
 
   it('should not block legitimate QR codes containing standard data', async () => {
     const { result } = renderHook(() => useAnimatedQrReceiver());
+
+    await act(async () => {
+      await result.current.handleFrame('H|test.txt|10|text/plain|sha256');
+    });
 
     // 'hello' in base64 is 'aGVsbG8='
     await act(async () => {

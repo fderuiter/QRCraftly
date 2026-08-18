@@ -268,6 +268,11 @@ describe('File Transfer Receive Page & Pipeline', () => {
       // Verify callback was captured
       expect(scanSuccessCallback).toBeDefined();
 
+      // Scan initial handshake
+      await act(async () => {
+        scanSuccessCallback!("H|test.txt|100|text/plain|sha256");
+      });
+
       // Scan unique frame index 0
       await act(async () => {
         scanSuccessCallback!("F|0|3|Y2h1bmsw");
@@ -301,6 +306,11 @@ describe('File Transfer Receive Page & Pipeline', () => {
         </ToastProvider>
       );
 
+      // Scan initial handshake
+      await act(async () => {
+        scanSuccessCallback!("H|test.txt|100|text/plain|sha256");
+      });
+
       // Scan frame index 0
       await act(async () => {
         scanSuccessCallback!("F|0|3|Y2h1bmsw");
@@ -311,6 +321,11 @@ describe('File Transfer Receive Page & Pipeline', () => {
       const clearButton = screen.getByRole('button', { name: /clear transfer progress/i });
       await act(async () => {
         fireEvent.click(clearButton);
+      });
+
+      // Scan handshake again after reset
+      await act(async () => {
+        scanSuccessCallback!("H|test.txt|100|text/plain|sha256");
       });
 
       // Scan frame index 0 again - should be processed since cache was cleared
@@ -328,6 +343,11 @@ describe('File Transfer Receive Page & Pipeline', () => {
           <Page />
         </ToastProvider>
       );
+
+      // Scan initial handshake
+      await act(async () => {
+        scanSuccessCallback!("H|test.txt|100|text/plain|sha256");
+      });
 
       // Scan frame index 0
       await act(async () => {
@@ -349,6 +369,11 @@ describe('File Transfer Receive Page & Pipeline', () => {
       // Click Activate Camera Scanner again to start a new session
       await act(async () => {
         fireEvent.click(activateButton);
+      });
+
+      // Scan initial handshake
+      await act(async () => {
+        scanSuccessCallback!("H|test.txt|100|text/plain|sha256");
       });
 
       // Scan frame index 0 again - should be processed because starting a new session resets tracking cache
@@ -392,6 +417,10 @@ describe('File Transfer Receive Page & Pipeline', () => {
       expect(scanSuccessCallback).toBeDefined();
 
       await act(async () => {
+        scanSuccessCallback!("H|test.txt|1000|text/plain|sha256");
+      });
+
+      await act(async () => {
         scanSuccessCallback!("F|0|250|Zm9v");
       });
 
@@ -416,6 +445,10 @@ describe('File Transfer Receive Page & Pipeline', () => {
       );
 
       expect(scanSuccessCallback).toBeDefined();
+
+      await act(async () => {
+        scanSuccessCallback!("H|test.txt|1000|text/plain|sha256");
+      });
 
       await act(async () => {
         scanSuccessCallback!("F|0|150|Zm9v");

@@ -50,7 +50,7 @@ function FileTransferReceiveInner() {
     compilationStatus,
   } = useAnimatedQrReceiver({
     addToast,
-    handshakeRequired: false,
+    handshakeRequired: true,
     streamMode,
     autoDownload: false,
   });
@@ -69,6 +69,9 @@ function FileTransferReceiveInner() {
     const total = 10;
     const size = Math.ceil(message.length / total);
     const simulatedFrames: string[] = [];
+
+    const sha256 = "c67d1359e2dbf94943e81f0e0d9edbc3614e6bc3ec2bec04f527ed4c3f845886";
+    handleFrame(`H|simulated_file.txt|${message.length}|text/plain|${sha256}`);
 
     for (let i = 0; i < total; i++) {
       const chunkText = message.slice(i * size, (i + 1) * size);
