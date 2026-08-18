@@ -21,13 +21,58 @@ import { describe, it, expect, vi } from 'vitest';
 import { JSDOM } from 'jsdom';
 
 if (typeof globalThis.DOMParser === 'undefined') {
-  const dom = new JSDOM();
+  const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', {
+    url: 'http://localhost/',
+  });
   globalThis.DOMParser = dom.window.DOMParser;
   globalThis.XMLSerializer = dom.window.XMLSerializer;
   globalThis.Node = dom.window.Node;
+  if (typeof globalThis.document === 'undefined') {
+    globalThis.document = dom.window.document;
+    globalThis.window = dom.window as any;
+    globalThis.Image = dom.window.Image as any;
+    
+    // Attach canvas getContext mock for JSDOM canvas element in node environment
+    dom.window.HTMLCanvasElement.prototype.getContext = function (this: any, contextId: string) {
+      if (contextId === '2d') {
+        if (!this._mockCtx) {
+          const width = this.width || 1000;
+          const height = this.height || 1000;
+          this._mockCtx = {
+            canvas: this,
+            drawImage: vi.fn(),
+            getImageData: vi.fn().mockImplementation((x: number, y: number, w: number, h: number) => {
+              const data = new Uint8ClampedArray((w || width) * (h || height) * 4);
+              return { data, width: w || width, height: h || height };
+            }),
+            putImageData: vi.fn(),
+            createImageData: vi.fn(),
+            setTransform: vi.fn(),
+            transform: vi.fn(),
+            clip: vi.fn(),
+            save: vi.fn(),
+            restore: vi.fn(),
+            rect: vi.fn(),
+            fillRect: vi.fn(),
+            strokeRect: vi.fn(),
+            clearRect: vi.fn(),
+            beginPath: vi.fn(),
+            closePath: vi.fn(),
+            moveTo: vi.fn(),
+            lineTo: vi.fn(),
+            arc: vi.fn(),
+            fill: vi.fn(),
+            stroke: vi.fn(),
+          };
+        }
+        return this._mockCtx;
+      }
+      return null;
+    } as any;
+  }
 }
 
-import { generateQRSvg } from './svgExport';
+import { generateQRSvg, rasterizeSvgToCanvas, validateSvgScannability } from './svgExport';
 import { DEFAULT_CONFIG } from '../constants';
 import { QRStyle, QRConfig, SocialFormat, TemplateStyle, QRType } from '../types';
 
@@ -452,6 +497,54 @@ describe('generateQRSvg', () => {
       };
       const svg = await generateQRSvg(config);
       parseAndAssertValidSvg(svg);
+    });
+  });
+
+  describe('Offscreen SVG Raster Validation', () => {
+    it('rasterizeSvgToCanvas renders generated SVG XML string onto an offscreen canvas', async () => {
+      const svgString = await generateQRSvg(DEFAULT_CONFIG as QRConfig);
+      const canvas = await rasterizeSvgToCanvas(svgString, 1000, 1000);
+      expect(canvas).toBeDefined();
+      expect(canvas.width).toBe(1000);
+      expect(canvas.height).toBe(1000);
+      expect(canvas.getContext('2d')).not.toBeNull();
+    });
+
+    it('validateSvgScannability passes when offscreen raster decodes successfully', async () => {
+      const mockScannabilityChecker = await import('./scannabilityChecker');
+      const spy = vi.spyOn(mockScannabilityChecker, 'performScannabilityCheck').mockReturnValueOnce({
+        success: true,
+        physicalReady: true,
+      });
+
+      const svgString = await generateQRSvg(DEFAULT_CONFIG as QRConfig);
+      const isScannable = await validateSvgScannability(svgString, DEFAULT_CONFIG as QRConfig);
+      expect(isScannable).toBe(true);
+      expect(spy).toHaveBeenCalled();
+    });
+
+    it('validateSvgScannability bypasses scannability check for non-NONE template style', async () => {
+      const config = {
+        ...(DEFAULT_CONFIG as QRConfig),
+        templateStyle: TemplateStyle.SOLID_FRAME,
+      };
+      const svgString = await generateQRSvg(config);
+      const isScannable = await validateSvgScannability(svgString, config);
+      expect(isScannable).toBe(true);
+    });
+
+    it('validateSvgScannability returns false when pixel scannability check fails', async () => {
+      const mockScannabilityChecker = await import('./scannabilityChecker');
+      const spy = vi.spyOn(mockScannabilityChecker, 'performScannabilityCheck').mockReturnValueOnce({
+        success: false,
+        physicalReady: false,
+        error: 'NOT_FOUND',
+      });
+
+      const svgString = await generateQRSvg(DEFAULT_CONFIG as QRConfig);
+      const isScannable = await validateSvgScannability(svgString, DEFAULT_CONFIG as QRConfig);
+      expect(isScannable).toBe(false);
+      expect(spy).toHaveBeenCalled();
     });
   });
 });

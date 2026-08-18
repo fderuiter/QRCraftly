@@ -1,13 +1,7 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { generateSchema } from './schemaGenerator';
 import { ToolContent, SchemaType, SchemaCategory, TargetPersona, StrategicValueCategory } from '../data/contentRegistry';
-
-vi.mock('../pages/text-qr-code/+config', () => ({
-  default: {
-    image: 'no_dot_extension',
-    imageAlt: 'Test no dot extension'
-  }
-}));
+import { safeJsonLdStringify } from './security';
 
 describe('schemaGenerator', () => {
   const dummyContent: ToolContent = {
@@ -15,6 +9,8 @@ describe('schemaGenerator', () => {
     name: 'WiFi QR Code Generator',
     description: 'Generate free wifi qr code',
     url: 'https://qrcraftly.com/wifi',
+    image: '/og-image.png?type=wifi',
+    imageAlt: 'WiFi QR Code Generator',
     features: ['WPA', 'WPA2'],
     schemaType: [SchemaType.SoftwareApplication, SchemaType.WebApplication],
     schemaCategory: SchemaCategory.UtilitiesApplication,
@@ -40,6 +36,8 @@ describe('schemaGenerator', () => {
     name: 'About QRCraftly',
     description: 'We are a secure QR code generator',
     url: 'https://qrcraftly.com/about',
+    image: '/og-image.png?type=about',
+    imageAlt: 'About QRCraftly',
     features: [],
     schemaType: SchemaType.AboutPage,
     schemaCategory: SchemaCategory.UtilitiesApplication,
@@ -151,6 +149,8 @@ describe('schemaGenerator', () => {
       name: 'Event QR',
       description: 'Generate Event QR',
       url: 'https://qrcraftly.com/event-qr-code',
+      image: '/og-image.png?type=event',
+      imageAlt: 'Event QR',
       features: [],
       schemaType: [SchemaType.WebApplication],
       schemaCategory: SchemaCategory.UtilitiesApplication,
@@ -170,6 +170,8 @@ describe('schemaGenerator', () => {
       name: 'Location QR',
       description: 'Generate Location QR',
       url: 'https://qrcraftly.com/location-qr-code',
+      image: '/og-image.png?type=location',
+      imageAlt: 'Location QR',
       features: [],
       schemaType: [SchemaType.WebApplication],
       schemaCategory: SchemaCategory.UtilitiesApplication,
@@ -187,6 +189,8 @@ describe('schemaGenerator', () => {
       name: 'Meeting QR',
       description: 'Generate Meeting QR',
       url: 'https://qrcraftly.com/meeting-qr-code',
+      image: '/og-image.png?type=meeting',
+      imageAlt: 'Meeting QR',
       features: [],
       schemaType: [SchemaType.WebApplication],
       schemaCategory: SchemaCategory.UtilitiesApplication,
@@ -204,6 +208,8 @@ describe('schemaGenerator', () => {
       name: 'Social QR',
       description: 'Generate Social QR',
       url: 'https://qrcraftly.com/social-qr-code',
+      image: '/og-image.png?type=social',
+      imageAlt: 'Social QR',
       features: [],
       schemaType: [SchemaType.WebApplication],
       schemaCategory: SchemaCategory.SocialNetworkingApplication,
@@ -260,6 +266,8 @@ describe('schemaGenerator', () => {
       name: 'WiFi QR Code Generator',
       description: 'wifi desc',
       url: 'https://qrcraftly.com/wifi-qr-code',
+      image: '/og-image.png?type=wifi',
+      imageAlt: 'WiFi QR Code Generator',
       features: [],
       schemaType: SchemaType.WebApplication,
       schemaCategory: SchemaCategory.UtilitiesApplication,
@@ -310,6 +318,8 @@ describe('schemaGenerator', () => {
       name: 'Text QR Code Generator',
       description: 'text desc',
       url: 'https://qrcraftly.com/text-qr-code',
+      image: 'no_dot_extension',
+      imageAlt: 'Test no dot extension',
       features: [],
       schemaType: SchemaType.WebApplication,
       schemaCategory: SchemaCategory.UtilitiesApplication,
@@ -325,8 +335,34 @@ describe('schemaGenerator', () => {
     const schema = generateSchema(textToolContent);
     const howTo = schema['@graph'].find((g: any) => g['@type'] === 'HowTo');
     expect(howTo).toBeDefined();
-    // Since we mocked '../pages/text-qr-code/+config' to have image: 'no_dot_extension' (no dot),
-    // the resolved extension should fallback to 'png'
+    // Since image is 'no_dot_extension' (no dot), extension falls back to 'png'
     expect(howTo.image).toBe('https://qrcraftly.com/assets/images/completed/text-qr-code.png');
+  });
+
+  it('generates complete schema directly from route path strings for all public tool routes', () => {
+    const publicRoutes = [
+      'audio-qr',
+      'destroy-the-qr',
+      'game',
+      'dynamic-dashboard',
+      'security',
+      'file-transfer',
+      'email-qr-code',
+      'wifi-qr-code',
+      'about'
+    ];
+
+    publicRoutes.forEach((route) => {
+      const schema = generateSchema(route, 'https://qrcraftly.com', `/${route}`);
+      expect(schema).toBeDefined();
+      expect(schema['@context']).toBe('https://schema.org');
+      expect(Array.isArray(schema['@graph'])).toBe(true);
+      expect(schema['@graph'].length).toBeGreaterThan(0);
+
+      // Verify JSON-LD output sanitization with safeJsonLdStringify
+      const jsonString = safeJsonLdStringify(schema);
+      expect(jsonString).not.toContain('<script>');
+      expect(jsonString).not.toContain('</script>');
+    });
   });
 });

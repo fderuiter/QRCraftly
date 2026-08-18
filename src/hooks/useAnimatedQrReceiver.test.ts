@@ -18,7 +18,7 @@
 
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import { renderHook, act, waitFor } from '@testing-library/react';
 import React from 'react';
 import { useAnimatedQrReceiver } from './useAnimatedQrReceiver';
 
@@ -60,8 +60,12 @@ describe('useAnimatedQrReceiver Hook', () => {
     expect(result.current.isScanning).toBe(false);
   });
 
-  it('should process simulated normal data frames', async () => {
+  it('should process simulated normal data frames when handshake is present', async () => {
     const { result } = renderHook(() => useAnimatedQrReceiver());
+
+    await act(async () => {
+      await result.current.handleFrame('H|test.txt|6|text/plain|c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2');
+    });
 
     await act(async () => {
       await result.current.handleFrame('F|0|2|Zm9v');
@@ -69,6 +73,22 @@ describe('useAnimatedQrReceiver Hook', () => {
 
     expect(result.current.totalChunks).toBe(2);
     expect(result.current.chunks.has(0)).toBe(true);
+  });
+
+  it('should ignore data frames when no handshake frame has been scanned', async () => {
+    const addToast = vi.fn();
+    const { result } = renderHook(() => useAnimatedQrReceiver({ addToast }));
+
+    await act(async () => {
+      await result.current.handleFrame('F|0|2|Zm9v');
+    });
+
+    expect(result.current.chunks.size).toBe(0);
+    expect(result.current.receiverError).toContain('Handshake metadata required');
+    expect(addToast).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'error',
+      message: expect.stringContaining('missing handshake metadata'),
+    }));
   });
 
   it('should intercept dangerous schemes immediately', async () => {
@@ -81,8 +101,13 @@ describe('useAnimatedQrReceiver Hook', () => {
     expect(result.current.securityAlert).toContain('Dangerous protocol detected and blocked');
   });
 
-  it('should compile and reassemble files via background worker', async () => {
-    const { result } = renderHook(() => useAnimatedQrReceiver());
+  it('should compile, verify SHA-256, and reassemble files via background worker', async () => {
+    const addToast = vi.fn();
+    const { result } = renderHook(() => useAnimatedQrReceiver({ addToast }));
+
+    await act(async () => {
+      await result.current.handleFrame('H|test.txt|6|text/plain|c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2');
+    });
 
     await act(async () => {
       await result.current.handleFrame('F|0|2|Zm9v');
@@ -98,6 +123,37 @@ describe('useAnimatedQrReceiver Hook', () => {
 
     expect(result.current.receiverSuccess).toBe(true);
     expect(global.URL.createObjectURL).toHaveBeenCalled();
+    expect(addToast).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'success',
+    }));
+  });
+
+  it('should abort download and emit toast error when computed SHA-256 hash does not match handshake hash', async () => {
+    const addToast = vi.fn();
+    const { result } = renderHook(() => useAnimatedQrReceiver({ addToast }));
+
+    await act(async () => {
+      await result.current.handleFrame('H|test.txt|6|text/plain|wrongsha256hashvalue');
+    });
+
+    await act(async () => {
+      await result.current.handleFrame('F|0|2|Zm9v');
+    });
+
+    await act(async () => {
+      await result.current.handleFrame('F|1|2|YmFy');
+    });
+
+    await waitFor(() => {
+      expect(result.current.receiverError).toContain('Integrity validation failed');
+    });
+
+    expect(result.current.receiverSuccess).toBe(false);
+    expect(global.URL.createObjectURL).not.toHaveBeenCalled();
+    expect(addToast).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'error',
+      message: expect.stringContaining('Integrity validation failed'),
+    }));
   });
 
   it('should synchronously and atomically reset state and frame-tracking memory when a new file handshake with a different SHA-256 is detected', async () => {
@@ -171,6 +227,10 @@ describe('useAnimatedQrReceiver Hook', () => {
   it('should block split-payload attacks (e.g., java and script:) across frames immediately', async () => {
     const { result } = renderHook(() => useAnimatedQrReceiver());
 
+    await act(async () => {
+      await result.current.handleFrame('H|test.txt|10|text/plain|sha256');
+    });
+
     // 'java' in base64 is 'amF2YQ=='
     await act(async () => {
       await result.current.handleFrame('F|0|2|amF2YQ==');
@@ -187,6 +247,10 @@ describe('useAnimatedQrReceiver Hook', () => {
 
   it('should not block legitimate QR codes containing standard data', async () => {
     const { result } = renderHook(() => useAnimatedQrReceiver());
+
+    await act(async () => {
+      await result.current.handleFrame('H|test.txt|10|text/plain|sha256');
+    });
 
     // 'hello' in base64 is 'aGVsbG8='
     await act(async () => {
@@ -210,5 +274,128 @@ describe('useAnimatedQrReceiver Hook', () => {
 
     expect(result.current.receiverError).toBe('File transfer rejected: exceeds the maximum limit of 5000 chunks.');
     expect(result.current.isScanning).toBe(false);
+  });
+
+  describe('Dual-Mode Receiver & Object URL Management', () => {
+    it('should initialize in camera mode by default and allow mode toggling', () => {
+      const { result } = renderHook(() => useAnimatedQrReceiver());
+
+      expect(result.current.receiverMode).toBe('camera');
+      expect(result.current.videoFile).toBeNull();
+      expect(result.current.videoObjectUrl).toBeNull();
+
+      act(() => {
+        result.current.setReceiverMode('file');
+      });
+
+      expect(result.current.receiverMode).toBe('file');
+
+      act(() => {
+        result.current.setReceiverMode('camera');
+      });
+
+      expect(result.current.receiverMode).toBe('camera');
+    });
+
+    it('should load a valid video file, generate Object URL, and set scanning to true', () => {
+      const { result } = renderHook(() => useAnimatedQrReceiver({ initialMode: 'file' }));
+      const file = new File(['dummy video content'], 'test.mp4', { type: 'video/mp4' });
+
+      act(() => {
+        const success = result.current.handleFileUpload(file);
+        expect(success).toBe(true);
+      });
+
+      expect(result.current.videoFile).toBe(file);
+      expect(result.current.videoObjectUrl).toBe('mock-download-url');
+      expect(result.current.fileValidationError).toBeNull();
+      expect(result.current.isScanning).toBe(true);
+      expect(global.URL.createObjectURL).toHaveBeenCalledWith(file);
+    });
+
+    it('should reject invalid file types, set fileValidationError, and block Object URL creation', () => {
+      const { result } = renderHook(() => useAnimatedQrReceiver({ initialMode: 'file' }));
+      const file = new File(['plain text'], 'document.txt', { type: 'text/plain' });
+
+      act(() => {
+        const success = result.current.handleFileUpload(file);
+        expect(success).toBe(false);
+      });
+
+      expect(result.current.videoFile).toBeNull();
+      expect(result.current.videoObjectUrl).toBeNull();
+      expect(result.current.fileValidationError).toBe('Invalid file type. Please upload a supported video file (e.g. MP4, WebM).');
+      expect(result.current.isScanning).toBe(false);
+      expect(global.URL.createObjectURL).not.toHaveBeenCalled();
+    });
+
+    it('should revoke Object URL when replacing an uploaded video file', () => {
+      const { result } = renderHook(() => useAnimatedQrReceiver({ initialMode: 'file' }));
+      const file1 = new File(['vid1'], 'video1.mp4', { type: 'video/mp4' });
+      const file2 = new File(['vid2'], 'video2.webm', { type: 'video/webm' });
+
+      act(() => {
+        result.current.handleFileUpload(file1);
+      });
+
+      expect(result.current.videoObjectUrl).toBe('mock-download-url');
+
+      act(() => {
+        result.current.handleFileUpload(file2);
+      });
+
+      expect(global.URL.revokeObjectURL).toHaveBeenCalledWith('mock-download-url');
+      expect(result.current.videoFile).toBe(file2);
+    });
+
+    it('should revoke Object URL when toggling mode from file to camera', () => {
+      const { result } = renderHook(() => useAnimatedQrReceiver({ initialMode: 'file' }));
+      const file = new File(['vid'], 'video.mp4', { type: 'video/mp4' });
+
+      act(() => {
+        result.current.handleFileUpload(file);
+      });
+
+      expect(result.current.videoObjectUrl).toBe('mock-download-url');
+
+      act(() => {
+        result.current.setReceiverMode('camera');
+      });
+
+      expect(global.URL.revokeObjectURL).toHaveBeenCalledWith('mock-download-url');
+      expect(result.current.videoFile).toBeNull();
+      expect(result.current.videoObjectUrl).toBeNull();
+    });
+
+    it('should revoke Object URL when hook unmounts', () => {
+      const { result, unmount } = renderHook(() => useAnimatedQrReceiver({ initialMode: 'file' }));
+      const file = new File(['vid'], 'video.mp4', { type: 'video/mp4' });
+
+      act(() => {
+        result.current.handleFileUpload(file);
+      });
+
+      unmount();
+
+      expect(global.URL.revokeObjectURL).toHaveBeenCalledWith('mock-download-url');
+    });
+
+    it('should revoke Object URL when handleClear is called', () => {
+      const { result } = renderHook(() => useAnimatedQrReceiver({ initialMode: 'file' }));
+      const file = new File(['vid'], 'video.mp4', { type: 'video/mp4' });
+
+      act(() => {
+        result.current.handleFileUpload(file);
+      });
+
+      act(() => {
+        result.current.handleClear();
+      });
+
+      expect(global.URL.revokeObjectURL).toHaveBeenCalledWith('mock-download-url');
+      expect(result.current.videoFile).toBeNull();
+      expect(result.current.videoObjectUrl).toBeNull();
+      expect(result.current.fileValidationError).toBeNull();
+    });
   });
 });

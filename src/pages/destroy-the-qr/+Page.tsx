@@ -26,6 +26,12 @@ import { applyOpticalSimulationMath } from '../../utils/opticalSimulation';
 import { isDangerousUrl } from '../../utils/security';
 import { assertWorkerRequest } from '../../utils/sharedContract';
 import { AdaptiveFrameScheduler } from '../../utils/AdaptiveFrameScheduler';
+import { JsonLdScript } from '@/components/ui/JsonLdScript';
+import { contentRegistry } from '@/data/contentRegistry';
+import { generateSchema } from '@/utils/schemaGenerator';
+import { resolveDomainForPath } from '@/utils/metadataEngine';
+import { SidebarContent } from '@/components/SidebarContent';
+import { usePageContext } from 'vike-react/usePageContext';
 
 /**
  * Interface representing active game projectile entities (bullets or bombs).
@@ -109,6 +115,11 @@ const isFinderMicro = (mr: number, mc: number, size: number): boolean => {
  * @returns The rendered Page component.
  */
 export default function Page() {
+  const pageContext = usePageContext();
+  const urlPathname = pageContext?.urlPathname ?? '/destroy-the-qr';
+  const resolvedDomain = resolveDomainForPath(urlPathname);
+  const schemaData = generateSchema(contentRegistry['destroy-the-qr'], resolvedDomain, urlPathname);
+
   // Page state for reactive UI overlays
   const [qrText, setQrText] = useState('https://qrcraftly.com');
   const [eccLevel, setEccLevel] = useState<'L' | 'M' | 'Q' | 'H'>('H');
@@ -1177,7 +1188,9 @@ export default function Page() {
   };
 
   return (
-    <div className="dark flex min-h-screen flex-col overflow-x-hidden bg-slate-950 font-sans text-slate-100 antialiased select-none">
+    <>
+      <JsonLdScript data={schemaData} />
+      <div className="dark flex min-h-screen flex-col overflow-x-hidden bg-slate-950 font-sans text-slate-100 antialiased select-none">
       {/* Upper Navigation Header */}
       <header className="z-10 flex items-center justify-between border-b border-slate-900 bg-slate-950/80 px-6 py-4 backdrop-blur-md">
         <div className="flex items-center gap-3">
@@ -1517,6 +1530,10 @@ export default function Page() {
           </div>
         </div>
       </main>
+      <div className="mx-auto max-w-3xl px-4 pb-12">
+        <SidebarContent toolId="destroy-the-qr" />
+      </div>
     </div>
+    </>
   );
 }

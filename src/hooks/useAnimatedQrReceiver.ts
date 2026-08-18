@@ -69,32 +69,38 @@ export interface UseAnimatedQrReceiverOptions {
    * Whether data frames require a prior handshake frame before processing.
    */
   handshakeRequired?: boolean;
-  /**
-   * Stream format mode: either 'text' or 'binary'. Defaults to 'text'.
-   */
+  /** Stream format mode: either 'text' or 'binary'. Defaults to 'text'. */
   streamMode?: 'text' | 'binary';
-  /**
-   * Automatically trigger download when complete. Defaults to true.
-   */
+  /** Automatically trigger download when complete. Defaults to true. */
   autoDownload?: boolean;
+  /** Initial input mode: 'camera' or 'file'. Defaults to 'camera'. */
+  initialMode?: 'camera' | 'file';
 }
 
 /**
- * Unified React hook to handle camera streams, adaptive scanning, lightweight chunk index tracking,
- * and off-thread incremental Web Worker reassembly into a pre-allocated binary buffer.
- * @param root0
- * @param root0.addToast
- * @param root0.handshakeRequired
- * @param root0.streamMode
- * @param root0.autoDownload
+ * Unified React hook to handle camera streams, video file uploads, adaptive scanning, chunk tracking,
+ * and sequential data reassembly for receiving.
+ * @param options - Hook options.
+ * @param options.addToast
+ * @param options.handshakeRequired
+ * @param options.streamMode
+ * @param options.autoDownload
+ * @param options.initialMode
+ * @returns Animated QR receiver controls and state.
  */
 export function useAnimatedQrReceiver({
   addToast,
-  handshakeRequired = false,
+  handshakeRequired = true,
   streamMode = 'text',
   autoDownload = true,
+  initialMode = 'camera',
 }: UseAnimatedQrReceiverOptions = {}) {
   // Core states - chunks tracks completed chunk indices without storing raw Base64 strings
+  const [receiverMode, setReceiverModeState] = useState<'camera' | 'file'>(initialMode);
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [videoObjectUrl, setVideoObjectUrl] = useState<string | null>(null);
+  const [fileValidationError, setFileValidationError] = useState<string | null>(null);
+
   const [chunks, setChunks] = useState<Set<number>>(new Set());
   const [totalChunks, setTotalChunks] = useState<number | null>(null);
   const [handshake, setHandshake] = useState<HandshakeInfo | null>(null);
@@ -113,6 +119,8 @@ export function useAnimatedQrReceiver({
   const lookaheadRef = useRef<StreamLookaheadReceiver | null>(null);
   const processedIndicesRef = useRef<Set<number>>(new Set());
   const handshakeRef = useRef<HandshakeInfo | null>(null);
+  const videoObjectUrlRef = useRef<string | null>(null);
+  const hasShownMissingHandshakeToastRef = useRef<boolean>(false);
   const reassembledDataRef = useRef<Uint8Array | null>(null);
 
   const autoDownloadRef = useRef(autoDownload);
@@ -157,7 +165,7 @@ export function useAnimatedQrReceiver({
 
             if (activeHandshake) {
               // Compute and verify SHA-256
-              const hashBuffer = await crypto.subtle.digest('SHA-256', reassembled);
+              const hashBuffer = await crypto.subtle.digest('SHA-256', new Uint8Array(reassembled));
               const hashArray = Array.from(new Uint8Array(hashBuffer));
               const actualSHA256 = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 
@@ -186,10 +194,18 @@ export function useAnimatedQrReceiver({
               }
             }
           } catch (err: any) {
-            setReceiverError(err?.message || 'Verification or reassembly failed.');
+            const errMsg = err?.message || 'Verification or reassembly failed.';
+            setReceiverError(errMsg);
             setReceiverSuccess(false);
             setReassembledData(null);
             reassembledDataRef.current = null;
+            if (addToastRef.current) {
+              addToastRef.current({
+                type: 'error',
+                message: errMsg,
+                duration: 5000,
+              });
+            }
           } finally {
             setCompilationStatus(null);
             setIsVerifying(false);
@@ -256,6 +272,89 @@ export function useAnimatedQrReceiver({
     }
   }, []);
 
+  // Safely revoke any active video file Object URL
+  const revokeVideoUrl = useCallback(() => {
+    if (videoObjectUrlRef.current) {
+      try {
+        URL.revokeObjectURL(videoObjectUrlRef.current);
+      } catch {
+        // safe catch
+      }
+      videoObjectUrlRef.current = null;
+      setVideoObjectUrl(null);
+    }
+  }, []);
+
+  // Mode switcher handler
+  const setReceiverMode = useCallback((mode: 'camera' | 'file') => {
+    setReceiverModeState(mode);
+    setFileValidationError(null);
+    if (mode === 'camera') {
+      revokeVideoUrl();
+      setVideoFile(null);
+      stopStream();
+      setIsScanning(false);
+      if (videoRef.current) {
+        videoRef.current.srcObject = null;
+        if (typeof videoRef.current.removeAttribute === 'function') {
+          videoRef.current.removeAttribute('src');
+        }
+      }
+    } else if (mode === 'file') {
+      stopStream();
+      setIsScanning(false);
+      if (videoRef.current) {
+        videoRef.current.srcObject = null;
+        if (typeof videoRef.current.removeAttribute === 'function') {
+          videoRef.current.removeAttribute('src');
+        }
+      }
+    }
+  }, [revokeVideoUrl, stopStream]);
+
+  // Video file upload and MIME type validation handler
+  const handleFileUpload = useCallback((file: File) => {
+    if (!file) return false;
+
+    const isVideo = file.type
+      ? file.type.startsWith('video/')
+      : /\.(mp4|webm|ogg|mov|mkv|avi|3gp|m4v)$/i.test(file.name);
+
+    if (!isVideo) {
+      revokeVideoUrl();
+      setVideoFile(null);
+      const errorMsg = 'Invalid file type. Please upload a supported video file (e.g. MP4, WebM).';
+      setFileValidationError(errorMsg);
+      if (addToast) {
+        addToast({
+          type: 'error',
+          message: errorMsg,
+          duration: 5000,
+        });
+      }
+      return false;
+    }
+
+    setFileValidationError(null);
+    revokeVideoUrl(); // Revoke any previously generated Object URL
+
+    const url = URL.createObjectURL(file);
+    videoObjectUrlRef.current = url;
+    setVideoFile(file);
+    setVideoObjectUrl(url);
+    setIsScanning(true);
+
+    if (addToast) {
+      addToast({
+        type: 'info',
+        message: `Video file loaded: ${file.name}`,
+        duration: 3000,
+      });
+    }
+
+    return true;
+  }, [addToast, revokeVideoUrl]);
+
   // Reset/Clear state
   const handleClear = useCallback(() => {
     terminateWorker();
@@ -263,14 +362,18 @@ export function useAnimatedQrReceiver({
     setTotalChunks(null);
     setHandshake(null);
     handshakeRef.current = null;
+    hasShownMissingHandshakeToastRef.current = false;
     setSecurityAlert(null);
     setReceiverError(null);
+    setFileValidationError(null);
     setReceiverSuccess(false);
     setIsVerifying(false);
     setDownloadTriggered(false);
     setReassembledData(null);
     reassembledDataRef.current = null;
     setCompilationStatus(null);
+    revokeVideoUrl();
+    setVideoFile(null);
     processedIndicesRef.current.clear();
     lookaheadRef.current = new StreamLookaheadReceiver({ mode: streamMode });
     if (addToast) {
@@ -280,7 +383,7 @@ export function useAnimatedQrReceiver({
         duration: 3000,
       });
     }
-  }, [addToast, streamMode, terminateWorker]);
+  }, [addToast, streamMode, terminateWorker, revokeVideoUrl]);
 
   // Reassemble and validate file
   const reconstructAndValidateFile = useCallback(async (
@@ -296,13 +399,18 @@ export function useAnimatedQrReceiver({
 
       if (data) {
         if (hs) {
-          const hashBuffer = await crypto.subtle.digest('SHA-256', data.buffer);
+          const hashBuffer = await crypto.subtle.digest(
+            'SHA-256',
+            new Uint8Array(data)
+          );
           const hashArray = Array.from(new Uint8Array(hashBuffer));
           const actualSHA256 = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 
-          if (actualSHA256 !== hs.sha256) {
+          if (actualSHA256.toLowerCase() !== hs.sha256.toLowerCase()) {
             throw new Error(`Integrity validation failed! SHA-256 hash does not match handshake value.\nExpected: ${hs.sha256}\nActual: ${actualSHA256}`);
           }
+        } else if (handshakeRequired) {
+          throw new Error('Transfer blocked: missing handshake metadata. Cannot verify SHA-256 integrity hash.');
         }
 
         setReceiverSuccess(true);
@@ -343,8 +451,18 @@ export function useAnimatedQrReceiver({
         });
       }
     } catch (err: any) {
-      setReceiverError(err?.message || 'Verification or reassembly failed.');
+      const errMsg = err?.message || 'Verification or reassembly failed.';
+      setReceiverError(errMsg);
       setReceiverSuccess(false);
+      setReassembledData(null);
+      reassembledDataRef.current = null;
+      if (addToastRef.current) {
+        addToastRef.current({
+          type: 'error',
+          message: errMsg,
+          duration: 5000,
+        });
+      }
     } finally {
       setIsVerifying(false);
       setCompilationStatus(null);
@@ -375,6 +493,19 @@ export function useAnimatedQrReceiver({
               addToast({
                 type: 'error',
                 message: errMsg,
+                duration: 5000,
+              });
+            }
+            return;
+          }
+          if (handshakeRequired && !handshakeRef.current) {
+            const errMsg = 'Handshake metadata required before processing data frames.';
+            setReceiverError(errMsg);
+            if (addToast && !hasShownMissingHandshakeToastRef.current) {
+              hasShownMissingHandshakeToastRef.current = true;
+              addToast({
+                type: 'error',
+                message: 'Transfer blocked: missing handshake metadata. Scan handshake QR first.',
                 duration: 5000,
               });
             }
@@ -452,6 +583,7 @@ export function useAnimatedQrReceiver({
         const isNewFile = !handshakeRef.current || handshakeRef.current.sha256 !== sha256;
         if (isNewFile) {
           processedIndicesRef.current.clear();
+          hasShownMissingHandshakeToastRef.current = false;
           lookaheadRef.current = new StreamLookaheadReceiver({ mode: streamMode });
           handshakeRef.current = { fileName, fileSize, mimeType, sha256 };
 
@@ -524,25 +656,42 @@ export function useAnimatedQrReceiver({
     },
   });
 
-  // Sync camera stream to video ref
+  // Sync camera stream or video file to video ref
   useEffect(() => {
-    if (isScanning && stream && videoRef.current) {
-      videoRef.current.srcObject = stream;
-      const playPromise = videoRef.current.play();
-      if (playPromise !== undefined && typeof playPromise.catch === 'function') {
-        playPromise.catch(() => {});
+    if (isScanning) {
+      if (receiverMode === 'camera' && stream && videoRef.current) {
+        videoRef.current.srcObject = stream;
+        if (typeof videoRef.current.removeAttribute === 'function') {
+          videoRef.current.removeAttribute('src');
+        }
+        const playPromise = videoRef.current.play();
+        if (playPromise !== undefined && typeof playPromise.catch === 'function') {
+          playPromise.catch(() => {});
+        }
+        startScanning();
+      } else if (receiverMode === 'file' && videoObjectUrl && videoRef.current) {
+        videoRef.current.srcObject = null;
+        if (videoRef.current.src !== videoObjectUrl) {
+          videoRef.current.src = videoObjectUrl;
+        }
+        videoRef.current.loop = true;
+        const playPromise = videoRef.current.play();
+        if (playPromise !== undefined && typeof playPromise.catch === 'function') {
+          playPromise.catch(() => {});
+        }
+        startScanning();
       }
-      startScanning();
-    } else if (!isScanning) {
+    } else {
       stopScanning();
       flushVideoHardware();
     }
-  }, [isScanning, stream, startScanning, stopScanning, flushVideoHardware]);
+  }, [isScanning, stream, receiverMode, videoObjectUrl, startScanning, stopScanning, flushVideoHardware]);
 
   // Start / Stop sessions
   const startCameraSession = useCallback(async () => {
     setSecurityAlert(null);
     processedIndicesRef.current.clear();
+    hasShownMissingHandshakeToastRef.current = false;
     initWorker();
     const activeStream = await startStream();
     if (activeStream) {
@@ -573,15 +722,15 @@ export function useAnimatedQrReceiver({
   // Completion checking effect
   useEffect(() => {
     if (totalChunks !== null && chunks.size === totalChunks && !downloadTriggered) {
+      revokeVideoUrl();
       if (autoDownload) {
         setDownloadTriggered(true);
         stopCameraSession();
-        if (reassembledData) {
-          reconstructAndValidateFile(undefined, totalChunks, handshake || undefined);
-        }
+        reconstructAndValidateFile(chunks, totalChunks, handshake || handshakeRef.current || undefined);
       } else {
         if (isScanning) {
           stopCameraSession();
+          setIsScanning(false);
           if (addToast) {
             addToast({
               type: 'success',
@@ -592,7 +741,7 @@ export function useAnimatedQrReceiver({
         }
       }
     }
-  }, [chunks, totalChunks, downloadTriggered, handshake, reconstructAndValidateFile, stopCameraSession, autoDownload, isScanning, addToast, reassembledData]);
+  }, [chunks, totalChunks, downloadTriggered, handshake, reconstructAndValidateFile, stopCameraSession, autoDownload, isScanning, addToast, revokeVideoUrl, reassembledData]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -601,8 +750,9 @@ export function useAnimatedQrReceiver({
       stopStream();
       flushVideoHardware();
       terminateWorker();
+      revokeVideoUrl();
     };
-  }, [stopScanning, stopStream, terminateWorker, flushVideoHardware]);
+  }, [stopScanning, stopStream, terminateWorker, flushVideoHardware, revokeVideoUrl]);
 
   return {
     chunks,
@@ -625,5 +775,12 @@ export function useAnimatedQrReceiver({
     stopCameraSession,
     reconstructAndValidateFile,
     compilationStatus,
+    receiverMode,
+    setReceiverMode,
+    videoFile,
+    videoObjectUrl,
+    fileValidationError,
+    handleFileUpload,
+    revokeVideoUrl,
   };
 }

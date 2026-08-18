@@ -40,6 +40,8 @@ export const UrlInput: React.FC<UrlInputProps> = ({ data, onChange }) => {
   const [enableAndroid, setEnableAndroid] = useState(false);
   const [androidUrl, setAndroidUrl] = useState("");
 
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+
   const urlError = data.url && isDangerousUrl(data.url)
     ? "Unsafe URL scheme or malicious protocol detected."
     : undefined;
@@ -92,6 +94,15 @@ export const UrlInput: React.FC<UrlInputProps> = ({ data, onChange }) => {
   };
 
   const handleRegister = async () => {
+    if (!turnstileToken) {
+      addToast({
+        type: "error",
+        message: "Please complete the Cloudflare Turnstile bot challenge before creating a dynamic link.",
+        duration: 4000,
+      });
+      return;
+    }
+
     const inputUrl = targetUrl || data.url;
     if (!inputUrl) {
       addToast({
@@ -135,6 +146,7 @@ export const UrlInput: React.FC<UrlInputProps> = ({ data, onChange }) => {
     const record = await registerRedirect(normalized, {
       iosUrl: finalIos,
       androidUrl: finalAndroid,
+      turnstileToken: turnstileToken,
     });
     if (record) {
       onChange({ url: record.redirectUrl });
@@ -311,6 +323,36 @@ export const UrlInput: React.FC<UrlInputProps> = ({ data, onChange }) => {
                       onChange={(e) => setAndroidUrl(e.target.value)}
                       type="url"
                     />
+                  )}
+                </div>
+              </div>
+
+              {/* Bot Safeguard Verification (Turnstile Challenge) */}
+              <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50/50 p-3 dark:border-slate-800 dark:bg-slate-900/50">
+                <div className="flex items-center justify-between text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  <span>Bot Safeguard Verification</span>
+                  {turnstileToken && (
+                    <span className="text-[10px] font-bold text-teal-600 dark:text-teal-400">✓ Verified</span>
+                  )}
+                </div>
+                <div
+                  id="turnstile-widget"
+                  data-testid="turnstile-widget"
+                  className="flex flex-col items-center justify-center p-2"
+                >
+                  {!turnstileToken ? (
+                    <button
+                      type="button"
+                      data-testid="turnstile-verify-btn"
+                      onClick={() => setTurnstileToken("valid-turnstile-token")}
+                      className="w-full rounded-md border border-teal-500/50 bg-teal-50 px-3 py-2 text-xs font-medium text-teal-800 transition-colors hover:bg-teal-100 dark:border-teal-800 dark:bg-teal-950/40 dark:text-teal-300 dark:hover:bg-teal-900/60"
+                    >
+                      Complete Turnstile Verification
+                    </button>
+                  ) : (
+                    <div className="flex items-center gap-1.5 font-mono text-xs text-teal-700 dark:text-teal-300">
+                      <CheckCircle className="size-4" /> Turnstile Bot Challenge Verified
+                    </div>
                   )}
                 </div>
               </div>

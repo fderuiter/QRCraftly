@@ -75,7 +75,7 @@ export async function encryptUrl(plainText: string, keyHex: string): Promise<str
   const keyBuffer = hexToBuffer(keyHex);
   const cryptoKey = await cryptoObj.subtle.importKey(
     "raw",
-    keyBuffer,
+    new Uint8Array(keyBuffer),
     { name: "AES-GCM" },
     false,
     ["encrypt"]
@@ -130,7 +130,7 @@ export async function decryptUrl(encryptedStr: string, keyHex: string): Promise<
 
   const cryptoKey = await cryptoObj.subtle.importKey(
     "raw",
-    keyBuffer,
+    new Uint8Array(keyBuffer),
     { name: "AES-GCM" },
     false,
     ["decrypt"]
@@ -140,15 +140,17 @@ export async function decryptUrl(encryptedStr: string, keyHex: string): Promise<
     const decryptedBuffer = await cryptoObj.subtle.decrypt(
       {
         name: "AES-GCM",
-        iv,
+        iv: new Uint8Array(iv),
       },
       cryptoKey,
-      ciphertextBuffer
+      new Uint8Array(ciphertextBuffer)
     );
 
     return new TextDecoder().decode(decryptedBuffer);
   } catch (_err) {
-    throw new Error("Decryption failed: Invalid decryption key or corrupted ciphertext payload.", { cause: _err });
+    const err = new Error("Decryption failed: Invalid decryption key or corrupted ciphertext payload.");
+    (err as any).cause = _err;
+    throw err;
   }
 }
 

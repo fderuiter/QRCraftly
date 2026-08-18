@@ -109,6 +109,100 @@ export function updateCsp(baseCsp, hashes) {
   return updatedDirectives.join('; ') + ';';
 }
 
+export function pathToRoute(relativePath) {
+  let posixPath = relativePath.replace(/\\/g, '/');
+  if (posixPath.startsWith('/')) {
+    posixPath = posixPath.slice(1);
+  }
+  if (posixPath === 'index.html') {
+    return '/';
+  }
+  if (posixPath.endsWith('/index.html')) {
+    return '/' + posixPath.slice(0, -11);
+  }
+  if (posixPath.endsWith('.html')) {
+    return '/' + posixPath.slice(0, -5);
+  }
+  return '/' + posixPath;
+}
+
+/**
+ * Generate _headers file content with route-scoped Content-Security-Policy rules.
+ * @param {string} existingHeadersContent - Raw content of existing _headers file.
+ * @param {string} baseCsp - Base CSP string without route script hashes.
+ * @param {Map<string, { routeCsp: string, hashes: string[] }>} routeCspMap - Map of route -> { routeCsp, hashes }.
+ * @returns {string} Updated _headers file content.
+ */
+export function generateHeadersContent(existingHeadersContent, baseCsp, routeCspMap) {
+  const routesMap = new Map();
+  
+  if (existingHeadersContent) {
+    const lines = existingHeadersContent.split(/\r?\n/);
+    let currentRoute = null;
+    
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) continue;
+      
+      if (line.startsWith(' ') || line.startsWith('\t')) {
+        if (currentRoute) {
+          const colonIndex = trimmed.indexOf(':');
+          if (colonIndex !== -1) {
+            const name = trimmed.substring(0, colonIndex).trim();
+            const value = trimmed.substring(colonIndex + 1).trim();
+            if (name.toLowerCase() !== 'content-security-policy') {
+              if (!routesMap.has(currentRoute)) {
+                routesMap.set(currentRoute, []);
+              }
+              routesMap.get(currentRoute).push(`  ${name}: ${value}`);
+            }
+          }
+        }
+      } else {
+        currentRoute = trimmed;
+        if (!routesMap.has(currentRoute)) {
+          routesMap.set(currentRoute, []);
+        }
+      }
+    }
+  }
+
+  if (!routesMap.has('/*')) {
+    routesMap.set('/*', []);
+  }
+
+  const globalHeaders = routesMap.get('/*');
+  globalHeaders.unshift(`  Content-Security-Policy: ${baseCsp}`);
+
+  for (const [route, info] of routeCspMap.entries()) {
+    if (route === '/*') continue;
+    
+    if (!routesMap.has(route)) {
+      routesMap.set(route, []);
+    }
+    const routeHeaders = routesMap.get(route);
+    const filteredHeaders = routeHeaders.filter(h => !h.trim().toLowerCase().startsWith('content-security-policy:'));
+    filteredHeaders.unshift(`  Content-Security-Policy: ${info.routeCsp}`);
+    routesMap.set(route, filteredHeaders);
+  }
+
+  const sortedRoutes = Array.from(routesMap.keys()).sort((a, b) => {
+    if (a === '/*') return -1;
+    if (b === '/*') return 1;
+    return a.localeCompare(b);
+  });
+
+  const blocks = [];
+  for (const route of sortedRoutes) {
+    const headers = routesMap.get(route);
+    if (headers && headers.length > 0) {
+      blocks.push(`${route}\n${headers.join('\n')}`);
+    }
+  }
+
+  return blocks.join('\n\n') + '\n';
+}
+
 export function run() {
   console.log('[CSP Hash Injector] Starting build-time post-processing...');
   
@@ -121,86 +215,55 @@ export function run() {
   console.log(`[CSP Hash Injector] Found ${htmlFiles.length} HTML files.`);
   
   // Base CSP string to parse (matches original CSP in Head.tsx but can be parsed dynamically)
-  const baseCspPattern = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';";
+  const baseCspPattern = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';";
   
-  // Map to store files and their computed specific hashes
-  const fileHashesMap = new Map();
-  const allUniqueHashes = new Set();
+  const baseCsp = updateCsp(baseCspPattern, []);
+  const routeCspMap = new Map();
+  let totalHashesProcessed = 0;
   
   for (const filePath of htmlFiles) {
     const relativePath = path.relative(DIST_CLIENT_DIR, filePath);
+    const route = pathToRoute(relativePath);
     const html = fs.readFileSync(filePath, 'utf8');
     const inlineScripts = extractInlineScripts(html, true);
     
-    const fileHashes = inlineScripts.map(script => {
-      const hash = computeCspHash(script);
-      allUniqueHashes.add(hash);
-      return hash;
-    });
+    const fileHashes = inlineScripts.map(script => computeCspHash(script));
+    totalHashesProcessed += fileHashes.length;
     
-    fileHashesMap.set(filePath, fileHashes);
-    console.log(`[CSP Hash Injector] File: ${relativePath} - Found ${inlineScripts.length} inline scripts.`);
-  }
-  
-  console.log(`[CSP Hash Injector] Total unique hashes calculated: ${allUniqueHashes.size}`);
-  
-  // Format the global CSP string with all unique hashes
-  const sortedUniqueHashes = Array.from(allUniqueHashes).sort();
-  const globalCsp = updateCsp(baseCspPattern, sortedUniqueHashes);
-  
-  // Update HTML files with global CSP
-  for (const filePath of htmlFiles) {
-    const relativePath = path.relative(DIST_CLIENT_DIR, filePath);
-    const html = fs.readFileSync(filePath, 'utf8');
+    const routeCsp = updateCsp(baseCspPattern, fileHashes);
+    routeCspMap.set(route, { filePath, relativePath, hashes: fileHashes, routeCsp });
     
-    const updatedHtml = replaceMetaCSP(html, globalCsp);
-    
+    const updatedHtml = replaceMetaCSP(html, routeCsp);
     fs.writeFileSync(filePath, updatedHtml, 'utf8');
-    console.log(`[CSP Hash Injector] Updated meta CSP in ${relativePath}`);
+    console.log(`[CSP Hash Injector] Updated meta CSP in ${relativePath} for route "${route}"`);
   }
+  
+  console.log(`[CSP Hash Injector] Total inline script hashes processed across routes: ${totalHashesProcessed}`);
   
   // Update _headers file
   const headersPath = path.join(DIST_CLIENT_DIR, '_headers');
+  let existingHeadersContent = '';
   if (fs.existsSync(headersPath)) {
-    let headersContent = fs.readFileSync(headersPath, 'utf8');
-    const cspHeaderLine = `  Content-Security-Policy: ${globalCsp}`;
-    
-    if (headersContent.includes('Content-Security-Policy:')) {
-      // Replace existing
-      headersContent = headersContent.replace(/^[ \t]*Content-Security-Policy:.*$/m, cspHeaderLine);
-    } else {
-      // Append inside /* block
-      if (headersContent.includes('/*')) {
-        headersContent = headersContent.replace(/(\/\*\r?\n)/, `$1${cspHeaderLine}\n`);
-      } else {
-        headersContent += `\n/*\n${cspHeaderLine}\n`;
-      }
-    }
-    fs.writeFileSync(headersPath, headersContent, 'utf8');
-    console.log('[CSP Hash Injector] Appended Content-Security-Policy header to _headers');
-  } else {
-    // If _headers doesn't exist, create it
-    const newHeadersContent = `/*\n  Content-Security-Policy: ${globalCsp}\n`;
-    fs.writeFileSync(headersPath, newHeadersContent, 'utf8');
-    console.log('[CSP Hash Injector] Created _headers file with Content-Security-Policy');
+    existingHeadersContent = fs.readFileSync(headersPath, 'utf8');
   }
+  
+  const newHeadersContent = generateHeadersContent(existingHeadersContent, baseCsp, routeCspMap);
+  fs.writeFileSync(headersPath, newHeadersContent, 'utf8');
+  console.log('[CSP Hash Injector] Updated _headers file with route-scoped Content-Security-Policy rules');
 
   // --- VALIDATION GATE ---
   console.log('[CSP Hash Injector] Validating headers against Cloudflare limits...');
-  if (fs.existsSync(headersPath)) {
-    const finalHeadersContent = fs.readFileSync(headersPath, 'utf8');
-    try {
-      const results = validateHeaders(globalCsp, finalHeadersContent);
-      console.log(`[CSP Hash Injector] Generated CSP length: ${results.cspLength} characters.`);
-      console.log(`[CSP Hash Injector] Total _headers file size: ${results.totalHeadersSize} bytes.`);
-      for (const route of Object.keys(results.routeHeaders)) {
-        const routeSize = results.routeHeaders[route].reduce((sum, h) => sum + h.size, 0);
-        console.log(`[CSP Hash Injector] Route "${route}" total headers size: ${routeSize} bytes.`);
-      }
-    } catch (error) {
-      console.error(`[CSP Hash Injector] BUILD FAILURE: ${error.message}`);
-      process.exit(1);
+  try {
+    const results = validateHeaders(baseCsp, newHeadersContent);
+    console.log(`[CSP Hash Injector] Base CSP length: ${results.cspLength} characters.`);
+    console.log(`[CSP Hash Injector] Total _headers file size: ${results.totalHeadersSize} bytes.`);
+    for (const route of Object.keys(results.routeHeaders)) {
+      const routeSize = results.routeHeaders[route].reduce((sum, h) => sum + h.size, 0);
+      console.log(`[CSP Hash Injector] Route "${route}" total headers size: ${routeSize} bytes.`);
     }
+  } catch (error) {
+    console.error(`[CSP Hash Injector] BUILD FAILURE: ${error.message}`);
+    process.exit(1);
   }
 
   console.log('[CSP Hash Injector] Completed successfully.');
@@ -208,41 +271,46 @@ export function run() {
 
 /**
  * Validate that headers meet Cloudflare Pages limits.
- * @param {string} csp - The Content-Security-Policy header value.
- * @param {string} headersContent - The raw content of the _headers file.
+ * @param {string} csp - The Content-Security-Policy header value or headersContent if single param.
+ * @param {string} [headersContent] - The raw content of the _headers file.
  * @returns {object} results detailing the parsed and validated headers.
  * @throws {Error} if any limit is breached.
  */
 export function validateHeaders(csp, headersContent) {
-  // 1. Validate CSP individual header length
-  const cspLength = csp.length;
-  if (cspLength > 2000) {
-    throw new Error(`Content-Security-Policy header value size (${cspLength} chars) exceeds Cloudflare's individual header limit of 2,000 characters!`);
+  let headerContentToValidate = headersContent;
+  let cspToValidate = csp;
+  
+  if (headersContent === undefined && typeof csp === 'string') {
+    headerContentToValidate = csp;
+    cspToValidate = undefined;
   }
 
-  // 2. Validate route/page sizes
-  const totalHeadersSize = Buffer.byteLength(headersContent, 'utf8');
+  if (cspToValidate) {
+    const cspLength = cspToValidate.length;
+    if (cspLength > 2000) {
+      throw new Error(`Content-Security-Policy header value size (${cspLength} chars) exceeds Cloudflare's individual header limit of 2,000 characters!`);
+    }
+  }
+
+  const totalHeadersSize = Buffer.byteLength(headerContentToValidate, 'utf8');
   if (totalHeadersSize > 8192) {
     throw new Error(`Total _headers file size (${totalHeadersSize} bytes) exceeds Cloudflare's limit of 8,192 bytes (8KB)!`);
   }
 
-  // Parse routes and validate each route's headers
-  const lines = headersContent.split(/\r?\n/);
+  const lines = headerContentToValidate.split(/\r?\n/);
   let currentRoute = null;
   let currentRouteHeadersSize = 0;
   const routeHeaders = {};
 
   for (const line of lines) {
     const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith('#')) continue; // skip comments and empty lines
+    if (!trimmed || trimmed.startsWith('#')) continue;
     
-    // If it starts with a space/tab, it is a header for the current route
     if (line.startsWith(' ') || line.startsWith('\t')) {
       if (!currentRoute) {
         throw new Error(`Syntax error in _headers: header "${trimmed}" specified without a route.`);
       }
       
-      // Parse name and value
       const colonIndex = trimmed.indexOf(':');
       if (colonIndex === -1) {
         throw new Error(`Syntax error in _headers: header "${trimmed}" lacks a colon.`);
@@ -250,12 +318,10 @@ export function validateHeaders(csp, headersContent) {
       const name = trimmed.substring(0, colonIndex).trim();
       const value = trimmed.substring(colonIndex + 1).trim();
       
-      // Validate individual value size limit
       if (value.length > 2000) {
         throw new Error(`Header "${name}" value in route "${currentRoute}" exceeds 2,000 characters (length: ${value.length})!`);
       }
       
-      // Calculate size: name + ": " + value
       const headerSize = Buffer.byteLength(`${name}: ${value}`, 'utf8');
       currentRouteHeadersSize += headerSize;
       if (!routeHeaders[currentRoute]) {
@@ -263,7 +329,6 @@ export function validateHeaders(csp, headersContent) {
       }
       routeHeaders[currentRoute].push({ name, value, size: headerSize });
     } else {
-      // It's a route definition
       if (currentRoute) {
         if (currentRouteHeadersSize > 8192) {
           throw new Error(`Route "${currentRoute}" total headers size (${currentRouteHeadersSize} bytes) exceeds Cloudflare limit of 8,192 bytes!`);
@@ -275,7 +340,6 @@ export function validateHeaders(csp, headersContent) {
     }
   }
   
-  // Check the last route
   if (currentRoute) {
     if (currentRouteHeadersSize > 8192) {
       throw new Error(`Route "${currentRoute}" total headers size (${currentRouteHeadersSize} bytes) exceeds Cloudflare limit of 8,192 bytes!`);
@@ -283,7 +347,7 @@ export function validateHeaders(csp, headersContent) {
   }
 
   return {
-    cspLength,
+    cspLength: cspToValidate ? cspToValidate.length : 0,
     totalHeadersSize,
     routeHeaders
   };

@@ -24,7 +24,7 @@ describe('Zero-Knowledge Client-Encrypted Edge Dynamic Links Integration', () =>
     const request = new Request('https://domain.com/api/redirect/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ redirectUrl: ciphertext }),
+      body: JSON.stringify({ redirectUrl: ciphertext, turnstileToken: 'test-turnstile-token' }),
     });
 
     const response = await registerHandler({ request, env: {} });
@@ -53,7 +53,7 @@ describe('Zero-Knowledge Client-Encrypted Edge Dynamic Links Integration', () =>
     const regReq = new Request('https://domain.com/api/redirect/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ redirectUrl: ciphertext }),
+      body: JSON.stringify({ redirectUrl: ciphertext, turnstileToken: 'test-turnstile-token' }),
     });
     const regRes = await registerHandler({ request: regReq, env: {} });
     const regBody = await regRes.json() as any;
@@ -104,7 +104,7 @@ describe('Zero-Knowledge Client-Encrypted Edge Dynamic Links Integration', () =>
     const regReq = new Request('https://domain.com/api/redirect/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ redirectUrl: encInitial }),
+      body: JSON.stringify({ redirectUrl: encInitial, turnstileToken: 'test-turnstile-token' }),
     });
     const regRes = await registerHandler({ request: regReq, env: {} });
     const regBody = await regRes.json() as any;

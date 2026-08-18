@@ -37,6 +37,8 @@ export const onRequest = async (context: {
   const url = new URL(request.url);
   const pathname = url.pathname;
 
+  let response: Response | null = null;
+
   // Enforce middleware protection on registration endpoint
   if (request.method === "POST" && pathname === "/api/redirect/register") {
     // 1. Origin Verification
@@ -62,7 +64,7 @@ export const onRequest = async (context: {
       } catch (_) {}
 
       if (!isOfficial && !isLocalOrigin) {
-        return new Response(
+        response = new Response(
           JSON.stringify({ error: "Forbidden: Origin not allowed" }),
           {
             status: 403,
@@ -73,7 +75,7 @@ export const onRequest = async (context: {
     } else {
       // Reject empty Origin/Referer in non-local environments to prevent third-party access
       if (!isLocalRequest) {
-        return new Response(
+        response = new Response(
           JSON.stringify({ error: "Forbidden: Origin or Referer header required" }),
           {
             status: 403,
@@ -83,32 +85,46 @@ export const onRequest = async (context: {
       }
     }
 
-    // 2. IP-based Fixed-Window KV Rate Limiting
-    try {
-      const clientIP = request.headers.get("CF-Connecting-IP") || "127.0.0.1";
-      const currentMinuteBucket = Math.floor(Date.now() / 60000);
-      const bucketKey = `ratelimit:${clientIP}:${currentMinuteBucket}`;
-      const kv = context.env?.REDIRECTS_KV;
+    if (!response) {
+      // 2. IP-based Fixed-Window KV Rate Limiting
+      try {
+        const clientIP = request.headers.get("CF-Connecting-IP") || "127.0.0.1";
+        const currentMinuteBucket = Math.floor(Date.now() / 60000);
+        const bucketKey = `ratelimit:${clientIP}:${currentMinuteBucket}`;
+        const kv = context.env?.REDIRECTS_KV;
 
-      const currentCount = await getKVCount(kv, bucketKey);
+        const currentCount = await getKVCount(kv, bucketKey);
 
-      if (currentCount >= 10) {
-        return new Response(
-          JSON.stringify({ error: "Too Many Requests: Rate limit exceeded. Limit is 10 requests per minute." }),
-          {
-            status: 429,
-            headers: { "Content-Type": "application/json" }
-          }
-        );
+        if (currentCount >= 10) {
+          response = new Response(
+            JSON.stringify({ error: "Too Many Requests: Rate limit exceeded. Limit is 10 requests per minute." }),
+            {
+              status: 429,
+              headers: { "Content-Type": "application/json" }
+            }
+          );
+        } else {
+          await putKVCount(kv, bucketKey, currentCount + 1);
+        }
+      } catch (err) {
+        // Fail-open protection: if KV interaction fails, allow request to proceed
+        console.error("[KV Rate Limiter Error] Failing open:", err);
       }
-
-      await putKVCount(kv, bucketKey, currentCount + 1);
-    } catch (err) {
-      // Fail-open protection: if KV interaction fails, allow request to proceed
-      console.error("[KV Rate Limiter Error] Failing open:", err);
     }
   }
 
-  return await context.next();
+  if (!response) {
+    response = await context.next();
+  }
+
+  const headers = new Headers(response.headers);
+  headers.set("X-Robots-Tag", "noindex, follow");
+  headers.set("Cache-Control", "no-store, no-cache, must-revalidate");
+
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
 };
 

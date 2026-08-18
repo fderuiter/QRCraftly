@@ -22,5 +22,5 @@ import type { Config } from 'vike/types';
  * Page-specific configuration for the QR Damage Simulator Game page.
  */
 export default {
-  prerender: false,
+  prerender: true,
 } satisfies Config;

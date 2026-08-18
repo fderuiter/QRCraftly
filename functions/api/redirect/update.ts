@@ -1,5 +1,6 @@
 import { validateUrl } from "./register";
 import { getDB, ensureTableExists, Env } from "./_db";
+import { checkUrlReputation } from "../../../src/utils/reputation";
 
 export const onRequestPost = async (context: {
   request: Request;
@@ -50,6 +51,15 @@ export const onRequestPost = async (context: {
       }
     }
 
+    // Synchronous Reputation Check on updated URL
+    const reputationResult = await checkUrlReputation(targetNewUrl, context.env);
+    if (!reputationResult.safe) {
+      return new Response(JSON.stringify({ error: reputationResult.reason || "Update failed: Destination domain is flagged as malicious" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+
     const { db, isRealD1 } = getDB(context.env);
     if (isRealD1) {
       await ensureTableExists(db);
@@ -82,6 +92,37 @@ export const onRequestPost = async (context: {
       .prepare("UPDATE redirects SET redirect_url = ?, ios_url = ?, android_url = ? WHERE id = ?")
       .bind(targetNewUrl, finalIosUrl, finalAndroidUrl, id)
       .run();
+
+    if (context.env?.REDIRECTS_KV) {
+      const kvPayload = {
+        id,
+        redirectUrl: targetNewUrl,
+        adminKey: storedAdminKey,
+        scans: record.scans || 0,
+        createdAt: record.created_at || record.createdAt || new Date().toISOString(),
+        iosUrl: finalIosUrl || undefined,
+        androidUrl: finalAndroidUrl || undefined,
+      };
+      try {
+        await context.env.REDIRECTS_KV.put(`redirect:${id}`, JSON.stringify(kvPayload));
+      } catch (err) {
+        console.error("KV cache update failed on link edit:", err);
+      }
+    }
+
+    // Invalidate Edge Cache for the updated dynamic route
+    const cacheUrl = new URL(`/r/${id}`, context.request.url).href;
+    if (typeof caches !== 'undefined' && (caches as any).default) {
+      try {
+        await (caches as any).default.delete(new Request(cacheUrl));
+      } catch (_e) {
+        // Ignore cache delete errors
+      }
+    }
+    const activeMockCache = (globalThis as any).__edgeCache;
+    if (activeMockCache && activeMockCache.has(cacheUrl)) {
+      activeMockCache.delete(cacheUrl);
+    }
 
     return new Response(JSON.stringify({
       success: true,

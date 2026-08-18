@@ -685,6 +685,27 @@ describe('QRScanner Component', () => {
         expect(mockOnScanSuccess).toHaveBeenCalledWith('https://post-unmount-scan.com');
       });
     });
+
+    it('immediately aborts active file processing when switching modes from file to webcam', async () => {
+      render(<QRScanner onScanSuccess={mockOnScanSuccess} onClose={mockOnClose} />);
+
+      const fileTab = screen.getByRole('button', { name: /file upload/i });
+      fireEvent.click(fileTab);
+
+      vi.mocked(jsQR).mockReturnValue({ data: 'stale result' } as any);
+
+      const mockFile = new File(['dummy file'], 'test.png', { type: 'image/png' });
+      const fileInput = screen.getByLabelText(/upload qr code image or video file/i);
+
+      fireEvent.change(fileInput, { target: { files: [mockFile] } });
+
+      // Switch to webcam mode mid-processing
+      const webcamTab = screen.getByRole('button', { name: /webcam/i });
+      fireEvent.click(webcamTab);
+
+      // Verify scan success callback was not invoked with stale result
+      expect(mockOnScanSuccess).not.toHaveBeenCalledWith('stale result');
+    });
   });
 
   describe('Reactive Webcam Session State Machine', () => {
