@@ -3,14 +3,38 @@ import { onRequest as middlewareOnRequest } from "../functions/api/redirect/_mid
 import { onRequestPost as registerOnRequestPost } from "../functions/api/redirect/register";
 import { onRequestPost as updateOnRequestPost } from "../functions/api/redirect/update";
 import { onRequestGet as lookupOnRequestGet } from "../functions/api/redirect/[id]";
+import { onRequestGet as statsOnRequestGet } from "../functions/api/redirect/stats";
 
 class MockKV {
   store = new Map<string, string>();
+  metadataStore = new Map<string, any>();
+
   async get(key: string) {
     return this.store.get(key) || null;
   }
-  async put(key: string, value: string) {
+
+  async put(key: string, value: string, options?: { metadata?: any }) {
     this.store.set(key, value);
+    if (options?.metadata) {
+      this.metadataStore.set(key, options.metadata);
+    }
+  }
+
+  async list(options?: { prefix?: string; cursor?: string }) {
+    const prefix = options?.prefix || "";
+    const keys: Array<{ name: string; metadata?: any }> = [];
+    for (const [key] of this.store.entries()) {
+      if (key.startsWith(prefix)) {
+        keys.push({
+          name: key,
+          metadata: this.metadataStore.get(key),
+        });
+      }
+    }
+    return {
+      keys,
+      list_complete: true,
+    };
   }
 }
 
@@ -224,19 +248,20 @@ describe("Secure Dynamic Redirection API Suite", () => {
     });
   });
 
-  describe("Browser Redirection & Asynchronous Analytics", () => {
-    it("should redirect immediately and increment scan count asynchronously using context.waitUntil", async () => {
+  describe("Browser Redirection & Prefix-Based KV Event Logging", () => {
+    it("should redirect immediately and log a prefix event key without mutating the parent record", async () => {
       const kv = new MockKV();
       const redirectData = {
         id: "test-id",
         redirectUrl: "https://target-destination.com/event",
         adminKey: "admin-secret",
-        scans: 5,
         createdAt: new Date().toISOString()
       };
       await kv.put("redirect:test-id", JSON.stringify(redirectData));
 
-      const req = new Request("https://qrcraftly.com/api/redirect/test-id");
+      const req = new Request("https://qrcraftly.com/api/redirect/test-id", {
+        headers: { "user-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X)" }
+      });
       const promises: Promise<any>[] = [];
       const context = {
         request: req,
@@ -258,15 +283,144 @@ describe("Secure Dynamic Redirection API Suite", () => {
       expect(res.status).toBe(307);
       expect(res.headers.get("Location")).toBe("https://target-destination.com/event");
 
-      // Initially, the database write is running in background (via waitUntil)
-      // So let's wait for all tracked waitUntil promises to resolve
+      // Wait for background waitUntil promises
       await Promise.all(promises);
 
-      // Now the scans should be incremented
-      const updatedStr = await kv.get("redirect:test-id");
-      expect(updatedStr).not.toBeNull();
-      const updatedData = JSON.parse(updatedStr!);
-      expect(updatedData.scans).toBe(6);
+      // Parent record must remain immutable (redirectUrl same, no mutated scans count)
+      const parentStr = await kv.get("redirect:test-id");
+      expect(parentStr).toBe(JSON.stringify(redirectData));
+
+      // Event key prefixed with redirect ID must exist in KV
+      const listRes = await kv.list({ prefix: "event:test-id:" });
+      expect(listRes.keys.length).toBe(1);
+      expect(listRes.keys[0].name).toContain("event:test-id:");
+
+      const eventData = listRes.keys[0].metadata;
+      expect(eventData).toBeDefined();
+      expect(eventData.redirectId).toBe("test-id");
+      expect(eventData.device).toBe("mobile");
+      expect(eventData.timestamp).toBeDefined();
+    });
+
+    it("should query prefix event keys to dynamically calculate total scans and trend metrics on stats endpoint", async () => {
+      const kv = new MockKV();
+      const redirectData = {
+        id: "test-id-2",
+        redirectUrl: "https://example.com/dest",
+        adminKey: "admin-secret-2",
+        createdAt: new Date().toISOString()
+      };
+      await kv.put("redirect:test-id-2", JSON.stringify(redirectData));
+
+      // Simulate 3 scans on different devices
+      const scanDevices = ["Mozilla/5.0 (iPhone)", "Mozilla/5.0 (Windows NT 10.0)", "Mozilla/5.0 (iPad)"];
+      for (const ua of scanDevices) {
+        const req = new Request("https://qrcraftly.com/api/redirect/test-id-2", {
+          headers: { "user-agent": ua }
+        });
+        const promises: Promise<any>[] = [];
+        await lookupOnRequestGet({
+          request: req,
+          env: { REDIRECTS_KV: kv },
+          params: { id: "test-id-2" },
+          waitUntil: (p) => { promises.push(p); }
+        });
+        await Promise.all(promises);
+      }
+
+      // Query stats
+      const statsReq = new Request("https://qrcraftly.com/api/redirect/stats?id=test-id-2");
+      const statsRes = await statsOnRequestGet({ request: statsReq, env: { REDIRECTS_KV: kv } });
+      expect(statsRes.status).toBe(200);
+
+      const json = await statsRes.json() as any;
+      expect(json.id).toBe("test-id-2");
+      expect(json.scans).toBe(3);
+      expect(json.devices.mobile).toBe(1);
+      expect(json.devices.desktop).toBe(1);
+      expect(json.devices.tablet).toBe(1);
+      expect(json.hourly).toBeDefined();
+      expect(json.daily).toBeDefined();
+      expect(json.events.length).toBe(3);
+    });
+
+    it("should fall back to local in-memory mock database simulation when REDIRECTS_KV is unavailable", async () => {
+      (globalThis as any).__mockKV = new Map<string, string>();
+      const redirectData = {
+        id: "local-id",
+        redirectUrl: "https://local-target.com",
+        adminKey: "local-key",
+        createdAt: new Date().toISOString()
+      };
+      (globalThis as any).__mockKV.set("redirect:local-id", JSON.stringify(redirectData));
+
+      // Execute scan in dev mode
+      const req = new Request("http://localhost:3000/api/redirect/local-id", {
+        headers: { "user-agent": "Mozilla/5.0 (Android; Mobile)" }
+      });
+      const promises: Promise<any>[] = [];
+      const redirectRes = await lookupOnRequestGet({
+        request: req,
+        env: {},
+        params: { id: "local-id" },
+        waitUntil: (p) => { promises.push(p); }
+      });
+      await Promise.all(promises);
+
+      expect(redirectRes.status).toBe(307);
+
+      // Verify prefix key created in mock database
+      const mockKeys = Array.from((globalThis as any).__mockKV.keys() as Iterable<string>);
+      const eventKeys = mockKeys.filter(k => k.startsWith("event:local-id:"));
+      expect(eventKeys.length).toBe(1);
+
+      // Verify stats queries mock database prefix keys correctly
+      const statsReq = new Request("http://localhost:3000/api/redirect/stats?id=local-id");
+      const statsRes = await statsOnRequestGet({ request: statsReq, env: {} });
+      expect(statsRes.status).toBe(200);
+
+      const json = await statsRes.json() as any;
+      expect(json.scans).toBe(1);
+      expect(json.devices.mobile).toBe(1);
+    });
+
+    it("should preserve prefix scan events when editing target redirect URL", async () => {
+      const kv = new MockKV();
+      const redirectData = {
+        id: "edit-id",
+        redirectUrl: "https://old-target.com",
+        adminKey: "edit-key",
+        createdAt: new Date().toISOString()
+      };
+      await kv.put("redirect:edit-id", JSON.stringify(redirectData));
+
+      // Log a scan event
+      const req = new Request("https://qrcraftly.com/api/redirect/edit-id");
+      const promises: Promise<any>[] = [];
+      await lookupOnRequestGet({
+        request: req,
+        env: { REDIRECTS_KV: kv },
+        params: { id: "edit-id" },
+        waitUntil: (p) => { promises.push(p); }
+      });
+      await Promise.all(promises);
+
+      // Update destination URL
+      const updateReq = new Request("https://qrcraftly.com/api/redirect/update", {
+        method: "POST",
+        body: JSON.stringify({ id: "edit-id", adminKey: "edit-key", newUrl: "https://new-target.com" }),
+        headers: { "Content-Type": "application/json" }
+      });
+      const updateRes = await updateOnRequestPost({ request: updateReq, env: { REDIRECTS_KV: kv } });
+      expect(updateRes.status).toBe(200);
+
+      // Verify parent record updated
+      const updatedParentStr = await kv.get("redirect:edit-id");
+      expect(JSON.parse(updatedParentStr!).redirectUrl).toBe("https://new-target.com");
+
+      // Verify scan events were NOT deleted or altered
+      const listRes = await kv.list({ prefix: "event:edit-id:" });
+      expect(listRes.keys.length).toBe(1);
     });
   });
 });
