@@ -66,7 +66,6 @@ export const test = base.extend({
     console.log(`[Teardown] Blocked requests count: ${blockedRequests.length}`, blockedRequests);
     if (blockedRequests.length > 0) {
       const errorMsg = `Blocked unauthorized external request(s):\n${blockedRequests.map(r => `  - ${r}`).join('\n')}`;
-      testInfo.errors.push(new Error(errorMsg));
       throw new Error(errorMsg);
     }
   },
