@@ -5,6 +5,13 @@
   "assets": {
     "directory": "./dist/client",
   },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "qrcraftly-db",
+      "database_id": "qrcraftly-d1-id",
+    },
+  ],
   "build": {
     "command": "NODE_ENV=development npx pnpm install --production=false && SKIP_GIT_VALIDATION=1 npx pnpm run build",
   },

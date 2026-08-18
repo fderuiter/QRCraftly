@@ -1,6 +1,4 @@
-interface Env {
-  REDIRECTS_KV?: any;
-}
+import { getDB, ensureTableExists, Env } from "./_db";
 
 export const onRequestGet = async (context: {
   request: Request;
@@ -16,25 +14,24 @@ export const onRequestGet = async (context: {
       });
     }
 
-    const kv = context.env.REDIRECTS_KV;
-    let dataStr: string | null = null;
-
-    if (!kv) {
-      // Local/Dev Fallback
-      dataStr = (globalThis as any).__mockKV?.get(`redirect:${id}`) || null;
-    } else {
-      dataStr = await kv.get(`redirect:${id}`);
+    const { db, isRealD1 } = getDB(context.env);
+    if (isRealD1) {
+      await ensureTableExists(db);
     }
 
-    if (!dataStr) {
+    const record = await db
+      .prepare("SELECT id, redirect_url, scans FROM redirects WHERE id = ?")
+      .bind(id)
+      .first<{ id: string; redirect_url: string; scans: number }>();
+
+    if (!record) {
       return new Response(JSON.stringify({ error: "Not Found" }), {
         status: 404,
         headers: { "Content-Type": "application/json" }
       });
     }
 
-    const data = JSON.parse(dataStr);
-    return new Response(JSON.stringify({ id, scans: data.scans || 0, redirectUrl: data.redirectUrl }), {
+    return new Response(JSON.stringify({ id, scans: record.scans || 0, redirectUrl: record.redirect_url }), {
       status: 200,
       headers: { "Content-Type": "application/json" }
     });
@@ -45,3 +42,4 @@ export const onRequestGet = async (context: {
     });
   }
 };
+

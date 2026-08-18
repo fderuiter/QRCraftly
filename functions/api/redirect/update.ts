@@ -1,8 +1,5 @@
 import { validateUrl } from "./register";
-
-interface Env {
-  REDIRECTS_KV?: any;
-}
+import { getDB, ensureTableExists, Env } from "./_db";
 
 export const onRequestPost = async (context: {
   request: Request;
@@ -25,41 +22,34 @@ export const onRequestPost = async (context: {
       });
     }
 
-    const kv = context.env.REDIRECTS_KV;
-    let dataStr: string | null = null;
-
-    if (!kv) {
-      // Local/Dev Fallback
-      dataStr = (globalThis as any).__mockKV?.get(`redirect:${id}`) || null;
-    } else {
-      dataStr = await kv.get(`redirect:${id}`);
+    const { db, isRealD1 } = getDB(context.env);
+    if (isRealD1) {
+      await ensureTableExists(db);
     }
 
-    if (!dataStr) {
+    const record = await db
+      .prepare("SELECT admin_key FROM redirects WHERE id = ?")
+      .bind(id)
+      .first<{ admin_key: string }>();
+
+    if (!record) {
       return new Response(JSON.stringify({ error: "Not Found" }), {
         status: 404,
         headers: { "Content-Type": "application/json" }
       });
     }
 
-    const data = JSON.parse(dataStr);
-    if (data.adminKey !== adminKey) {
+    if (record.admin_key !== adminKey) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { "Content-Type": "application/json" }
       });
     }
 
-    data.redirectUrl = newUrl;
-
-    if (!kv) {
-      if (!(globalThis as any).__mockKV) {
-        (globalThis as any).__mockKV = new Map<string, string>();
-      }
-      (globalThis as any).__mockKV.set(`redirect:${id}`, JSON.stringify(data));
-    } else {
-      await kv.put(`redirect:${id}`, JSON.stringify(data));
-    }
+    await db
+      .prepare("UPDATE redirects SET redirect_url = ? WHERE id = ?")
+      .bind(newUrl, id)
+      .run();
 
     return new Response(JSON.stringify({ success: true, redirectUrl: newUrl }), {
       status: 200,
@@ -72,3 +62,4 @@ export const onRequestPost = async (context: {
     });
   }
 };
+

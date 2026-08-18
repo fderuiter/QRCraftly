@@ -1,6 +1,4 @@
-interface Env {
-  REDIRECTS_KV?: any;
-}
+import { getDB, ensureTableExists, Env } from "./_db";
 
 export function validateUrl(url: string): { valid: boolean; error?: string } {
   const controlCharRegex = /[\x00-\x1F\x7F-\x9F\u200B-\u200D\uFEFF]/;
@@ -51,24 +49,20 @@ export const onRequestPost = async (context: {
 
     const id = crypto.randomUUID();
     const adminKey = crypto.randomUUID().replace(/-/g, '');
-    const data = {
-      id,
-      redirectUrl,
-      adminKey,
-      scans: 0,
-      createdAt: new Date().toISOString()
-    };
+    const createdAt = new Date().toISOString();
 
-    const kv = context.env.REDIRECTS_KV;
-    if (!kv) {
-      // Local/Dev Fallback
-      if (!(globalThis as any).__mockKV) {
-        (globalThis as any).__mockKV = new Map<string, string>();
-      }
-      (globalThis as any).__mockKV.set(`redirect:${id}`, JSON.stringify(data));
-      console.log(`[Dev Redirector] Registered local mock dynamic redirect:`, data);
-    } else {
-      await kv.put(`redirect:${id}`, JSON.stringify(data));
+    const { db, isRealD1 } = getDB(context.env);
+    if (isRealD1) {
+      await ensureTableExists(db);
+    }
+
+    await db
+      .prepare("INSERT INTO redirects (id, redirect_url, admin_key, scans, created_at) VALUES (?, ?, ?, 0, ?)")
+      .bind(id, redirectUrl, adminKey, createdAt)
+      .run();
+
+    if (!isRealD1) {
+      console.log(`[Dev Redirector] Registered local mock dynamic redirect:`, { id, redirectUrl, adminKey, scans: 0, createdAt });
     }
 
     return new Response(JSON.stringify({ id, redirectUrl, adminKey }), {
@@ -82,3 +76,4 @@ export const onRequestPost = async (context: {
     });
   }
 };
+

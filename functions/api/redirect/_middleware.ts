@@ -1,6 +1,4 @@
-interface Env {
-  REDIRECTS_KV?: any;
-}
+import { Env } from "./_db";
 
 // In-memory cache to store timestamps of requests per IP
 const ipCache = new Map<string, number[]>();
