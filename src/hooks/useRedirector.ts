@@ -17,6 +17,90 @@ export interface DynamicQRRecord {
 }
 
 /**
+ * Represents detailed scan analytics for a dynamic tracking link.
+ */
+export interface ScanAnalytics {
+  /**
+   *
+   */
+  scans: number;
+  /**
+   *
+   */
+  hourly?: Array<{ /**
+                    *
+                    */
+  hour: string; /**
+                 *
+                 */
+  count: number }>;
+  /**
+   *
+   */
+  daily?: Array<{ /**
+                   *
+                   */
+  date: string; /**
+                 *
+                 */
+  count: number }>;
+  /**
+   *
+   */
+  devices?: { /**
+               *
+               */
+  mobile: number; /**
+                   *
+                   */
+  desktop: number; /**
+                    *
+                    */
+  tablet: number; /**
+                   *
+                   */
+  other: number };
+  /**
+   *
+   */
+  locations?: Record<string, number>;
+  /**
+   *
+   */
+  events?: Array<{
+    /**
+     *
+     */
+    id: string;
+    /**
+     *
+     */
+    timestamp: string;
+    /**
+     *
+     */
+    userAgent: string;
+    /**
+     *
+     */
+    device: string;
+    /**
+     *
+     */
+    location: { /**
+                 *
+                 */
+    country?: string; /**
+                       *
+                       */
+    region?: string; /**
+                      *
+                      */
+    city?: string };
+  }>;
+}
+
+/**
  * Hook to coordinate Cloudflare Pages Functions edge redirection API.
  * Leverages '/api/redirect' whitelisted endpoint routing and local storage tracking.
  * @returns An object containing dynamic redirect records, actions, and state flags.
@@ -132,7 +216,7 @@ export function useRedirector() {
     }
   };
 
-  const fetchStats = async (id: string): Promise<{ scans: number } | null> => {
+  const fetchStats = async (id: string): Promise<ScanAnalytics | null> => {
     setError(null);
     try {
       // Signature whitelist match: '/api/redirect'
@@ -140,8 +224,15 @@ export function useRedirector() {
       if (!response.ok) {
         throw new Error(`Failed to fetch redirect stats: ${response.statusText}`);
       }
-      const data = await response.json() as { scans: number };
-      return { scans: data.scans };
+      const data = await response.json() as ScanAnalytics;
+      return {
+        scans: data.scans ?? 0,
+        ...(data.hourly ? { hourly: data.hourly } : {}),
+        ...(data.daily ? { daily: data.daily } : {}),
+        ...(data.devices ? { devices: data.devices } : {}),
+        ...(data.locations ? { locations: data.locations } : {}),
+        ...(data.events ? { events: data.events } : {}),
+      };
     } catch (err: any) {
       console.error('[Redirector error]', err);
       return null;
