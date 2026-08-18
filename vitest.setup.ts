@@ -33,7 +33,6 @@ declare module 'vitest' {
 
 expect.extend(matchers);
 
-<<<<<<< HEAD
 function createMemoryStorage(): Storage {
   let store: Record<string, string> = {};
   const storageObj = {
