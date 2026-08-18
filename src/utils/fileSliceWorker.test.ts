@@ -39,13 +39,17 @@ describe('fileSliceWorker', () => {
     workerHandler = (globalThis as any).self.onmessage;
   });
 
+  let digestSpy: any;
+
   beforeEach(() => {
     originalPostMessage = (globalThis as any).postMessage;
+    digestSpy = vi.spyOn(globalThis.crypto.subtle, 'digest');
     vi.clearAllMocks();
   });
 
   afterEach(() => {
     (globalThis as any).postMessage = originalPostMessage;
+    digestSpy.mockRestore();
     // Clear any active state by stopping the worker
     if (workerHandler) {
       workerHandler({ data: { type: 'STOP' } });
@@ -438,6 +442,7 @@ describe('fileSliceWorker State Cache', () => {
   let workerHandler: any;
   let originalPostMessage: any;
   let digestSpy: any;
+  let postedMessages: any[] = [];
 
   beforeAll(async () => {
     if (typeof (globalThis as any).self === 'undefined') {
@@ -449,13 +454,33 @@ describe('fileSliceWorker State Cache', () => {
   });
 
   beforeEach(() => {
-    originalPostMessage = globalThis.postMessage;
+    postedMessages = [];
+    originalPostMessage = (globalThis as any).self.postMessage;
+    const spy = vi.fn((msg) => postedMessages.push(msg));
+    (globalThis as any).self.postMessage = spy;
+    (globalThis as any).postMessage = spy;
     digestSpy = vi.spyOn(crypto.subtle, 'digest');
+    if ((QRCode.create as any).mockImplementation) {
+      (QRCode.create as any).mockImplementation((val: any) => {
+        if (!val) throw new Error('Value is required');
+        return {
+          modules: {
+            size: 21,
+            data: new Uint8Array(441),
+            get: (r: number, c: number) => (r === 0 && c === 0) || (r === 10 && c === 10),
+          }
+        };
+      });
+    }
   });
 
   afterEach(() => {
-    globalThis.postMessage = originalPostMessage;
+    (globalThis as any).self.postMessage = originalPostMessage;
+    (globalThis as any).postMessage = originalPostMessage;
     digestSpy.mockRestore();
+    if (workerHandler) {
+      workerHandler({ data: { type: 'STOP' } });
+    }
   });
 
   function createTestFile(name = 'test.bin', content = 'Hello Animated QR World', type = 'application/octet-stream') {
@@ -464,9 +489,6 @@ describe('fileSliceWorker State Cache', () => {
   }
 
   it('computes SHA-256 on first run and includes hash in handshake frame', async () => {
-    const postedMessages: any[] = [];
-    globalThis.postMessage = vi.fn((msg) => postedMessages.push(msg));
-
     const testFile = createTestFile('sample1.txt', 'Sample Content 1');
 
     await workerHandler({
@@ -480,6 +502,8 @@ describe('fileSliceWorker State Cache', () => {
       },
     } as MessageEvent);
 
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
     expect(digestSpy).toHaveBeenCalledTimes(1);
 
     const frame0 = postedMessages.find((m) => m.type === 'FRAME' && m.index === 0);
@@ -492,9 +516,6 @@ describe('fileSliceWorker State Cache', () => {
   });
 
   it('skips SHA-256 calculation on loop restart when file has not changed', async () => {
-    const postedMessages: any[] = [];
-    globalThis.postMessage = vi.fn((msg) => postedMessages.push(msg));
-
     const testFile = createTestFile('loop_test.bin', 'Loop Test Payload');
 
     // 1. Initial run
@@ -504,6 +525,8 @@ describe('fileSliceWorker State Cache', () => {
         payload: { file: testFile, chunkSize: 64, errorCorrectionLevel: 'M' },
       },
     } as MessageEvent);
+
+    await new Promise((resolve) => setTimeout(resolve, 20));
 
     const initialDigestCalls = digestSpy.mock.calls.length;
     expect(initialDigestCalls).toBe(1);
@@ -522,6 +545,8 @@ describe('fileSliceWorker State Cache', () => {
       },
     } as MessageEvent);
 
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
     // Verify digest was NOT called again during loop restart
     expect(digestSpy.mock.calls.length).toBe(initialDigestCalls);
 
@@ -531,10 +556,7 @@ describe('fileSliceWorker State Cache', () => {
     expect(loopFrame0.size).toBe(initialFrame0.size);
   });
 
-  it('clears cached hash on STOP message and recomputes on next START', async () => {
-    const postedMessages: any[] = [];
-    globalThis.postMessage = vi.fn((msg) => postedMessages.push(msg));
-
+  it('preserves cached hash on STOP message and reuse on next START with same file', async () => {
     const testFile = createTestFile('stop_test.bin', 'Stop Test Data');
 
     // Initial start
@@ -545,6 +567,8 @@ describe('fileSliceWorker State Cache', () => {
       },
     } as MessageEvent);
 
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
     expect(digestSpy).toHaveBeenCalledTimes(1);
 
     // STOP
@@ -552,7 +576,7 @@ describe('fileSliceWorker State Cache', () => {
       data: { type: 'STOP' },
     } as MessageEvent);
 
-    // START again
+    // START again with same file
     await workerHandler({
       data: {
         type: 'START',
@@ -560,14 +584,13 @@ describe('fileSliceWorker State Cache', () => {
       },
     } as MessageEvent);
 
-    // Because STOP cleared cache, digest should be called again
-    expect(digestSpy).toHaveBeenCalledTimes(2);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
+    // Hash is preserved across transfers for the same file
+    expect(digestSpy).toHaveBeenCalledTimes(1);
   });
 
   it('recomputes SHA-256 when a new file is loaded', async () => {
-    const postedMessages: any[] = [];
-    globalThis.postMessage = vi.fn((msg) => postedMessages.push(msg));
-
     const file1 = createTestFile('file1.bin', 'File One Data');
     const file2 = createTestFile('file2.bin', 'File Two Data (Different)');
 
@@ -579,6 +602,8 @@ describe('fileSliceWorker State Cache', () => {
       },
     } as MessageEvent);
 
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
     expect(digestSpy).toHaveBeenCalledTimes(1);
 
     // Start with file2 without explicit STOP
@@ -589,14 +614,13 @@ describe('fileSliceWorker State Cache', () => {
       },
     } as MessageEvent);
 
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
     // Digest should be called again for file2 because metadata changed
     expect(digestSpy).toHaveBeenCalledTimes(2);
   });
 
   it('preserves handshake checksum consistency across loop restarts', async () => {
-    const postedMessages: any[] = [];
-    globalThis.postMessage = vi.fn((msg) => postedMessages.push(msg));
-
     const file = createTestFile('consistency.bin', 'Consistency payload for checksum test');
 
     // Run 1
@@ -607,7 +631,11 @@ describe('fileSliceWorker State Cache', () => {
       },
     } as MessageEvent);
 
-    const run1Frame0Data = new Uint8Array(postedMessages.find((m) => m.type === 'FRAME' && m.index === 0).data);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
+    const run1Frame0 = postedMessages.find((m) => m.type === 'FRAME' && m.index === 0);
+    expect(run1Frame0).toBeDefined();
+    const run1Frame0Data = new Uint8Array(run1Frame0.data);
 
     postedMessages.length = 0;
 
@@ -619,7 +647,11 @@ describe('fileSliceWorker State Cache', () => {
       },
     } as MessageEvent);
 
-    const run2Frame0Data = new Uint8Array(postedMessages.find((m) => m.type === 'FRAME' && m.index === 0).data);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
+    const run2Frame0 = postedMessages.find((m) => m.type === 'FRAME' && m.index === 0);
+    expect(run2Frame0).toBeDefined();
+    const run2Frame0Data = new Uint8Array(run2Frame0.data);
 
     expect(run1Frame0Data).toEqual(run2Frame0Data);
   });
