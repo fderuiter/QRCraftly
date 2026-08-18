@@ -113,6 +113,11 @@ export function auditModuleContrast(
   const p90Idx = Math.min(sorted.length - 1, Math.floor(sorted.length * 0.9));
   const refDark = sorted[p10Idx];
   const refLight = sorted[p90Idx];
+
+  if (refLight - refDark < 0.01) {
+    return { violations: 0, minContrast: 21, lowContrastCells: [] };
+  }
+
   const midLum = (refDark + refLight) / 2;
 
   let violations = 0;

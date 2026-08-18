@@ -86,4 +86,15 @@ describe('auditModuleContrast', () => {
     expect(emptyResult.minContrast).toBe(21);
     expect(emptyResult.lowContrastCells).toEqual([]);
   });
+
+  it('handles sub-pixel cell sizes where cell pixel count is zero', () => {
+    const width = 5;
+    const height = 5;
+    const moduleCount = 10;
+    const data = new Uint8ClampedArray(width * height * 4);
+    const result = auditModuleContrast({ data, width, height }, moduleCount);
+    expect(result.violations).toBe(0);
+    expect(result.minContrast).toBe(21);
+    expect(result.lowContrastCells).toHaveLength(0);
+  });
 });
