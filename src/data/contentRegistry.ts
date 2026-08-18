@@ -548,6 +548,186 @@ export const contentRegistry: Record<string, ToolContent> = {
         }
       ]
     }
+  },
+  "audio-qr": {
+    "id": "audio-qr",
+    "name": "Audio QR & Acoustic Steganography",
+    "url": getPublicDomain() + "/audio-qr",
+    "description": "Convert data into audible sound chirps or generate a spectrogram audio file that visualizes as a scannable QR code using the Web Audio API.",
+    "seoTitle": "Acoustic Steganography & Audio QR | Convert Data to Sound - QRCraftly",
+    "features": [
+      "Acoustic Modem & BFSK Chirp Transceiver",
+      "Spectrogram QR Sound Synthesis",
+      "Real-time Waterfall FFT Analyzer",
+      "Client-Side Web Audio Processing"
+    ],
+    "schemaType": [SchemaType.SoftwareApplication, SchemaType.WebApplication],
+    "schemaCategory": SchemaCategory.UtilitiesApplication,
+    "personas": [TargetPersona.SecurityConsciousEnterprise],
+    "valueProposition": StrategicValueCategory.AsynchronousWebWorkerDiagnostics,
+    "howTo": {
+      "name": "How to Transmit and Visualize Audio QR Codes",
+      "description": "Encode text or binary messages into acoustic chirp signals or synthesize audio spectrograms.",
+      "steps": [
+        {
+          "name": "Select Protocol",
+          "text": "Choose between the Acoustic Modem (Chirp Transceiver) or Spectrogram QR Art Generator."
+        },
+        {
+          "name": "Enter Text Payload",
+          "text": "Type the text message or payload you wish to encode into sound waves."
+        },
+        {
+          "name": "Transmit or Export",
+          "text": "Play acoustic chirps over your speaker or export a high-fidelity WAV file for spectrogram scanning."
+        }
+      ]
+    },
+    "faqs": [
+      {
+        "question": "How does acoustic QR transmission work?",
+        "answer": "Data is converted into binary frequency-shift keying (BFSK) sound chirps played via the Web Audio API and received using microphone FFT spectral analysis."
+      },
+      {
+        "question": "What is a spectrogram QR code?",
+        "answer": "A spectrogram QR code synthesizes sine wave harmonics corresponding to QR matrix rows, rendering a scannable visual QR code when viewed on an audio spectrum analyzer."
+      }
+    ]
+  },
+  "destroy-the-qr": {
+    "id": "destroy-the-qr",
+    "name": "Destroy the QR!",
+    "url": getPublicDomain() + "/destroy-the-qr",
+    "description": "An interactive 60 FPS mini-game to test the durability of your QR codes in real-time with lasers and explosions.",
+    "seoTitle": "Destroy the QR! - Interactive Mini-Game",
+    "features": [
+      "Interactive 60 FPS Arcade Gameplay",
+      "Subgrid Micro-Cell Damage Projection",
+      "Real-Time Error-Correction Stress Testing",
+      "Lasers, Bombs, and Explosive Particle Physics"
+    ],
+    "schemaType": [SchemaType.SoftwareApplication, SchemaType.WebApplication],
+    "schemaCategory": SchemaCategory.UtilitiesApplication,
+    "personas": [TargetPersona.SecurityConsciousEnterprise],
+    "valueProposition": StrategicValueCategory.AsynchronousWebWorkerDiagnostics,
+    "howTo": {
+      "name": "How to Test QR Durability with Destroy the QR!",
+      "description": "Play an interactive arcade game to shoot and damage QR codes in real-time while testing scannability limits.",
+      "steps": [
+        {
+          "name": "Configure Target QR",
+          "text": "Set your custom text, URL, or error correction level for the arcade target."
+        },
+        {
+          "name": "Aim Weapons",
+          "text": "Use lasers and bombs to blast modules across the QR code surface."
+        },
+        {
+          "name": "Verify Decoding",
+          "text": "Observe real-time error correction resilience and finder pattern damage alerts as you play."
+        }
+      ]
+    },
+    "faqs": [
+      {
+        "question": "How does Destroy the QR test error correction?",
+        "answer": "The game simulates physical subgrid damage to QR modules in real-time, testing Reed-Solomon error correction budgets under arcade conditions."
+      },
+      {
+        "question": "Can I test custom URLs in the game?",
+        "answer": "Yes, you can input custom URLs or text to generate target QR codes and test their damage limits."
+      }
+    ]
+  },
+  "game": {
+    "id": "game",
+    "name": "QR Damage Simulator Game",
+    "url": getPublicDomain() + "/game",
+    "description": "Play and damage QR codes in real-time. Map damage to coordinates and test error-correction health bars with smooth 60fps play.",
+    "seoTitle": "QR Damage Simulator Game | Interactive Gameplay - QRCraftly",
+    "features": [
+      "60 FPS Real-Time Damage Simulation",
+      "Interactive Weapon Selection (Laser, Plasma, Neutron, Artillery)",
+      "Visual Error Correction Health Bar Monitors",
+      "Finder Subsystem Offline Diagnostics"
+    ],
+    "schemaType": [SchemaType.SoftwareApplication, SchemaType.WebApplication],
+    "schemaCategory": SchemaCategory.UtilitiesApplication,
+    "personas": [TargetPersona.SecurityConsciousEnterprise],
+    "valueProposition": StrategicValueCategory.AsynchronousWebWorkerDiagnostics,
+    "howTo": {
+      "name": "How to Simulate QR Code Damage",
+      "description": "Test Reed-Solomon error correction boundaries by inflicting localized damage on QR codes.",
+      "steps": [
+        {
+          "name": "Select Weaponry",
+          "text": "Choose Pinpoint Laser, Plasma Charge, Neutron Blast, or Artillery Barrage."
+        },
+        {
+          "name": "Inflict Blast Damage",
+          "text": "Click anywhere on the target QR canvas to launch blasts and scorch modules."
+        },
+        {
+          "name": "Monitor Health",
+          "text": "Watch the virtual error correction block health bars to see when scannability fails."
+        }
+      ]
+    },
+    "faqs": [
+      {
+        "question": "What happens when finder patterns are damaged?",
+        "answer": "When corner finder patterns sustain over 20% damage, the finder subsystem goes offline, immediately rendering the QR unscannable regardless of remaining error correction budget."
+      },
+      {
+        "question": "How are error correction budgets calculated?",
+        "answer": "The simulator divides modules across virtual Reed-Solomon interleaving blocks, tracking localized block budget consumption according to selected EC levels (L, M, Q, H)."
+      }
+    ]
+  },
+  "security": {
+    "id": "security",
+    "name": "Security & Privacy",
+    "url": getPublicDomain() + "/security",
+    "description": "Detailed information on QRCraftly's security architecture, privacy-first processing, and HIPAA compliance alignment.",
+    "seoTitle": "Security & Privacy - QRCraftly",
+    "features": [
+      "Zero-Server Data Processing",
+      "Client-Side Web Crypto Encryption",
+      "HIPAA & GDPR Alignment Architecture",
+      "Vulnerability Disclosure Portal"
+    ],
+    "schemaType": [SchemaType.SoftwareApplication, SchemaType.WebApplication],
+    "schemaCategory": SchemaCategory.UtilitiesApplication,
+    "personas": [TargetPersona.HealthcareLegal, TargetPersona.SecurityConsciousEnterprise],
+    "valueProposition": StrategicValueCategory.ZeroTransitPrivacySovereignty,
+    "howTo": {
+      "name": "How to Verify Security and Privacy Settings",
+      "description": "Review security transparency guidelines and report vulnerabilities.",
+      "steps": [
+        {
+          "name": "Review Privacy Architecture",
+          "text": "Inspect our zero-transit privacy framework and local browser execution model."
+        },
+        {
+          "name": "Audit Open Source Code",
+          "text": "Verify security implementations directly in our open-source codebase."
+        },
+        {
+          "name": "Submit Vulnerability Reports",
+          "text": "Report security findings through our secure disclosure portal."
+        }
+      ]
+    },
+    "faqs": [
+      {
+        "question": "Does QRCraftly store my QR code data on a server?",
+        "answer": "No. Standard static QR codes are generated entirely client-side inside your browser without transmitting sensitive payload data to external servers."
+      },
+      {
+        "question": "Is QRCraftly compliant with HIPAA and GDPR?",
+        "answer": "Yes. Because data processing occurs locally on the client device without centralized data retention, QRCraftly aligns with strict GDPR and HIPAA privacy standards."
+      }
+    ]
   }
 };
 
@@ -558,38 +738,6 @@ export const auxiliaryRegistry: Record<string, AuxiliaryContent> = {
     "seoTitle": "Dynamic Redirection Dashboard - QRCraftly",
     "description": "Manage your dynamic QR destinations, update target URLs, and view cumulative scan statistics in real-time.",
     "personas": [TargetPersona.SecurityConsciousEnterprise],
-    "valueProposition": StrategicValueCategory.ZeroTransitPrivacySovereignty
-  },
-  "audio-qr": {
-    "id": "audio-qr",
-    "name": "Audio QR & Acoustic Steganography",
-    "seoTitle": "Acoustic Steganography & Audio QR | Convert Data to Sound - QRCraftly",
-    "description": "Convert data into audible sound chirps or generate a spectrogram audio file that visualizes as a scannable QR code using the Web Audio API.",
-    "personas": [TargetPersona.SecurityConsciousEnterprise],
-    "valueProposition": StrategicValueCategory.AsynchronousWebWorkerDiagnostics
-  },
-  "destroy-the-qr": {
-    "id": "destroy-the-qr",
-    "name": "Destroy the QR!",
-    "seoTitle": "Destroy the QR! - Interactive Mini-Game",
-    "description": "An interactive 60 FPS mini-game to test the durability of your QR codes in real-time with lasers and explosions.",
-    "personas": [TargetPersona.SecurityConsciousEnterprise],
-    "valueProposition": StrategicValueCategory.AsynchronousWebWorkerDiagnostics
-  },
-  "game": {
-    "id": "game",
-    "name": "QR Damage Simulator Game",
-    "seoTitle": "QR Damage Simulator Game | Interactive Gameplay - QRCraftly",
-    "description": "Play and damage QR codes in real-time. Map damage to coordinates and test error-correction health bars with smooth 60fps play.",
-    "personas": [TargetPersona.SecurityConsciousEnterprise],
-    "valueProposition": StrategicValueCategory.AsynchronousWebWorkerDiagnostics
-  },
-  "security": {
-    "id": "security",
-    "name": "Security & Privacy",
-    "seoTitle": "Security & Privacy - QRCraftly",
-    "description": "Detailed information on QRCraftly's security architecture, privacy-first processing, and HIPAA compliance alignment.",
-    "personas": [TargetPersona.HealthcareLegal, TargetPersona.SecurityConsciousEnterprise],
     "valueProposition": StrategicValueCategory.ZeroTransitPrivacySovereignty
   },
   "file-transfer/receive": {

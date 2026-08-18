@@ -140,6 +140,10 @@ export const formatPathName = (segment: string): string => {
   const overrides: Record<string, string> = {
     'wifi-qr-code': 'WiFi QR Code',
     'about': 'About',
+    'audio-qr': 'Audio QR',
+    'destroy-the-qr': 'Destroy the QR',
+    'game': 'QR Damage Simulator Game',
+    'security': 'Security & Privacy',
   };
 
   if (overrides[segment]) {
