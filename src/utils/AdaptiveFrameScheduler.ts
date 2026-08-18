@@ -96,6 +96,11 @@ export class AdaptiveFrameScheduler {
   private options: SchedulerOptions;
   private watchdogTimeout = 1500;
 
+  // Background tab visibility tracking state
+  private isPaused = false;
+  private pauseStartTime: number | null = null;
+  private handleVisibilityChange: (() => void) | null = null;
+
   constructor(options: SchedulerOptions = {}) {
     this.options = options;
     this.minSamplingDelay = options.minSamplingDelay ?? 16;
@@ -113,8 +118,8 @@ export class AdaptiveFrameScheduler {
     this.completedSequenceId = 0;
     this.startTimeMap.clear();
     this.latencyHistory = [];
-    this.samplingDelay = 33;
     this.watchdogTimeout = 1500;
+    this.setupVisibilityListener();
     this.startWatchdog();
   }
 
@@ -123,10 +128,88 @@ export class AdaptiveFrameScheduler {
    */
   public stop() {
     this.stopWatchdog();
+    this.removeVisibilityListener();
+    this.isPaused = false;
+    this.pauseStartTime = null;
     this.inFlight = false;
     this.inFlightStart = null;
     this.startTimeMap.clear();
     this.pool.clear();
+  }
+
+  private setupVisibilityListener() {
+    this.removeVisibilityListener();
+
+    if (typeof document !== 'undefined') {
+      this.handleVisibilityChange = () => {
+        if (document.hidden) {
+          this.pauseWatchdog();
+        } else {
+          this.resumeWatchdog();
+        }
+      };
+
+      document.addEventListener('visibilitychange', this.handleVisibilityChange);
+
+      if (document.hidden) {
+        this.pauseWatchdog();
+      } else {
+        this.isPaused = false;
+        this.pauseStartTime = null;
+      }
+    }
+  }
+
+  private removeVisibilityListener() {
+    if (typeof document !== 'undefined' && this.handleVisibilityChange) {
+      document.removeEventListener('visibilitychange', this.handleVisibilityChange);
+      this.handleVisibilityChange = null;
+    }
+  }
+
+  private pauseWatchdog() {
+    if (!this.isPaused) {
+      this.isPaused = true;
+      this.pauseStartTime = performance.now();
+    }
+  }
+
+  private resumeWatchdog() {
+    if (this.isPaused && this.pauseStartTime !== null) {
+      const now = performance.now();
+      const pauseStartTime = this.pauseStartTime;
+      const pauseDuration = now - pauseStartTime;
+
+      if (this.inFlightStart !== null) {
+        if (this.inFlightStart <= pauseStartTime) {
+          this.inFlightStart += pauseDuration;
+        } else {
+          this.inFlightStart = now;
+        }
+      }
+
+      for (const [seqId, startTime] of this.startTimeMap.entries()) {
+        if (startTime <= pauseStartTime) {
+          this.startTimeMap.set(seqId, startTime + pauseDuration);
+        } else {
+          this.startTimeMap.set(seqId, now);
+        }
+      }
+
+      this.isPaused = false;
+      this.pauseStartTime = null;
+    }
+  }
+
+  private getShiftedTimestamp(t: number, now = performance.now()): number {
+    if (!this.isPaused || this.pauseStartTime === null) {
+      return t;
+    }
+    if (t <= this.pauseStartTime) {
+      return t + (now - this.pauseStartTime);
+    } else {
+      return now;
+    }
   }
 
   /**
@@ -175,10 +258,11 @@ export class AdaptiveFrameScheduler {
       return;
     }
 
-    const startTime = this.startTimeMap.get(sequenceId);
-    if (startTime !== undefined) {
+    const rawStartTime = this.startTimeMap.get(sequenceId);
+    if (rawStartTime !== undefined) {
       this.startTimeMap.delete(sequenceId);
       const endTime = performance.now();
+      const startTime = this.isPaused ? this.getShiftedTimestamp(rawStartTime, endTime) : rawStartTime;
       const duration = endTime - startTime;
 
       if (sequenceId <= this.completedSequenceId) {
@@ -238,6 +322,9 @@ export class AdaptiveFrameScheduler {
    * Returns true if starvation was detected and handled, false otherwise.
    */
   public checkWatchdog(): boolean {
+    if (this.isPaused) {
+      return false;
+    }
     if (this.inFlight && this.inFlightStart !== null) {
       const elapsed = performance.now() - this.inFlightStart;
       if (elapsed > this.watchdogTimeout) {
@@ -255,6 +342,9 @@ export class AdaptiveFrameScheduler {
   private startWatchdog() {
     this.stopWatchdog();
     this.watchdogTimer = setInterval(() => {
+      if (this.isPaused) {
+        return;
+      }
       if (this.inFlight && this.inFlightStart !== null) {
         const elapsed = performance.now() - this.inFlightStart;
         if (elapsed > this.watchdogTimeout) {
@@ -294,5 +384,17 @@ export class AdaptiveFrameScheduler {
 
   public getInFlight(): boolean {
     return this.inFlight;
+  }
+
+  public getIsPaused(): boolean {
+    return this.isPaused;
+  }
+
+  public getInFlightStart(): number | null {
+    return this.inFlightStart;
+  }
+
+  public getStartTimeMap(): Map<number, number> {
+    return new Map(this.startTimeMap);
   }
 }

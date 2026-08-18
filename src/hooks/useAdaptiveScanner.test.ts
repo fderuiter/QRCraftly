@@ -1370,4 +1370,213 @@ describe('useAdaptiveScanner Hook with Bidirectional Buffer Recycling', () => {
     );
     expect(matches.length).toBe(1);
   });
+
+  describe('Background Tab Scanning Watchdog Calibration', () => {
+    it('should pause watchdog monitoring when browser tab is hidden and resume on visible without terminating worker', () => {
+      const videoRef = makeVideoRef();
+      const { result } = renderHook(() =>
+        useAdaptiveScanner({
+          videoRef,
+        })
+      );
+
+      let activeWorker: any = null;
+      let postMessageCalls: any[] = [];
+      globalThis.mockWorkerControl.setInterceptor((msg, worker) => {
+        activeWorker = worker;
+        postMessageCalls.push(msg);
+      });
+
+      act(() => {
+        result.current.startScanning();
+      });
+
+      // Advance 50ms to initiate a frame capture
+      act(() => {
+        vi.advanceTimersByTime(50);
+      });
+
+      expect(postMessageCalls).toHaveLength(1);
+      const initialWorker = activeWorker;
+      expect(initialWorker).not.toBeNull();
+
+      // Simulate tab going to background
+      Object.defineProperty(document, 'hidden', { value: true, configurable: true });
+      act(() => {
+        document.dispatchEvent(new Event('visibilitychange'));
+      });
+
+      // Advance time by 3000ms (greater than 1500ms watchdog threshold)
+      act(() => {
+        vi.advanceTimersByTime(3000);
+      });
+
+      // Worker should NOT have been terminated or recreated because watchdog is paused in background
+      expect(getActiveWorker()).toBe(initialWorker);
+      expect(initialWorker.terminate).not.toHaveBeenCalled();
+
+      // Simulate tab returning to foreground
+      Object.defineProperty(document, 'hidden', { value: false, configurable: true });
+      act(() => {
+        document.dispatchEvent(new Event('visibilitychange'));
+      });
+
+      // Advance timers by 50ms
+      act(() => {
+        vi.advanceTimersByTime(50);
+      });
+
+      // Worker should STILL be the initial worker (not recreated upon return)
+      expect(getActiveWorker()).toBe(initialWorker);
+      expect(initialWorker.terminate).not.toHaveBeenCalled();
+    });
+
+    it('should shift in-flight frame tracking timestamps by exact background pause duration upon reactivation', () => {
+      const videoRef = makeVideoRef();
+      const { result } = renderHook(() =>
+        useAdaptiveScanner({
+          videoRef,
+        })
+      );
+
+      let activeWorker: any = null;
+      let postMessageCalls: any[] = [];
+      globalThis.mockWorkerControl.setInterceptor((msg, worker) => {
+        activeWorker = worker;
+        postMessageCalls.push(msg);
+      });
+
+      act(() => {
+        result.current.startScanning();
+      });
+
+      // Start frame 1
+      act(() => {
+        vi.advanceTimersByTime(50);
+      });
+      expect(postMessageCalls).toHaveLength(1);
+
+      // Tab goes to background after active foreground execution
+      Object.defineProperty(document, 'hidden', { value: true, configurable: true });
+      act(() => {
+        document.dispatchEvent(new Event('visibilitychange'));
+      });
+
+      // Background for 5000ms
+      act(() => {
+        vi.advanceTimersByTime(5000);
+      });
+
+      // Tab returns to foreground
+      Object.defineProperty(document, 'hidden', { value: false, configurable: true });
+      act(() => {
+        document.dispatchEvent(new Event('visibilitychange'));
+      });
+
+      // Worker completes frame 1 after returning to foreground
+      act(() => {
+        vi.advanceTimersByTime(50);
+        activeWorker.dispatchMessage({
+          status: 'pass',
+          sequenceId: 1,
+          decodedData: 'https://reactivated.qr',
+        });
+      });
+
+      // Execution latency should reflect foreground duration excluding the 5000ms pause
+      expect(result.current.latencyHistory).toHaveLength(1);
+      expect(result.current.latencyHistory[0]).toBeLessThan(300);
+    });
+
+    it('should cleanly remove visibility change listeners on stop or unmount', () => {
+      const removeEventListenerSpy = vi.spyOn(document, 'removeEventListener');
+      const videoRef = makeVideoRef();
+      const { result, unmount } = renderHook(() =>
+        useAdaptiveScanner({
+          videoRef,
+        })
+      );
+
+      act(() => {
+        result.current.startScanning();
+      });
+
+      act(() => {
+        result.current.stopScanning();
+      });
+
+      expect(removeEventListenerSpy).toHaveBeenCalledWith('visibilitychange', expect.any(Function));
+
+      removeEventListenerSpy.mockClear();
+
+      act(() => {
+        result.current.startScanning();
+      });
+
+      unmount();
+
+      expect(removeEventListenerSpy).toHaveBeenCalledWith('visibilitychange', expect.any(Function));
+      removeEventListenerSpy.mockRestore();
+    });
+
+    it('should still trigger watchdog recovery if foreground stall exceeds 1500ms after tab reactivation', () => {
+      const videoRef = makeVideoRef();
+      const { result } = renderHook(() =>
+        useAdaptiveScanner({
+          videoRef,
+        })
+      );
+
+      let activeWorker: any = null;
+      let postMessageCalls: any[] = [];
+      globalThis.mockWorkerControl.setInterceptor((msg, worker) => {
+        activeWorker = worker;
+        postMessageCalls.push(msg);
+      });
+
+      act(() => {
+        result.current.startScanning();
+      });
+
+      // Initiate frame 1
+      act(() => {
+        vi.advanceTimersByTime(50);
+      });
+
+      const initialWorker = activeWorker;
+
+      // Background transition
+      Object.defineProperty(document, 'hidden', { value: true, configurable: true });
+      act(() => {
+        document.dispatchEvent(new Event('visibilitychange'));
+      });
+
+      act(() => {
+        vi.advanceTimersByTime(10000); // 10s in background
+      });
+
+      // Foreground transition
+      Object.defineProperty(document, 'hidden', { value: false, configurable: true });
+      act(() => {
+        document.dispatchEvent(new Event('visibilitychange'));
+      });
+
+      // Advance 500ms in foreground (total foreground time for frame < 1500ms)
+      act(() => {
+        vi.advanceTimersByTime(500);
+      });
+
+      // Still initial worker
+      expect(getActiveWorker()).toBe(initialWorker);
+
+      // Advance another 1100ms in foreground (total foreground time for frame > 1500ms)
+      act(() => {
+        vi.advanceTimersByTime(1100);
+      });
+
+      // Now watchdog should have detected actual foreground starvation and recreated worker!
+      expect(getActiveWorker()).not.toBe(initialWorker);
+      expect(initialWorker.terminate).toHaveBeenCalled();
+    });
+  });
 });
