@@ -33,6 +33,93 @@ declare module 'vitest' {
 
 expect.extend(matchers);
 
+function createMemoryStorage(): Storage {
+  let store: Record<string, string> = {};
+  const storageObj = {
+    get length() {
+      return Object.keys(store).length;
+    },
+    clear() {
+      store = {};
+    },
+    getItem(key: string) {
+      return Object.prototype.hasOwnProperty.call(store, key) ? store[key] : null;
+    },
+    key(index: number) {
+      const keys = Object.keys(store);
+      return keys[index] ?? null;
+    },
+    removeItem(key: string) {
+      delete store[key];
+    },
+    setItem(key: string, value: string) {
+      store[key] = String(value);
+    },
+  };
+
+  return new Proxy(storageObj as unknown as Storage, {
+    get(target, prop, receiver) {
+      if (prop in target || typeof prop === 'symbol') {
+        return Reflect.get(target, prop, receiver);
+      }
+      return target.getItem(String(prop));
+    },
+    set(target, prop, value, receiver) {
+      if (prop in target || typeof prop === 'symbol') {
+        return Reflect.set(target, prop, value, receiver);
+      }
+      target.setItem(String(prop), String(value));
+      return true;
+    },
+    deleteProperty(target, prop) {
+      if (typeof prop === 'string' && !(prop in target)) {
+        target.removeItem(prop);
+        return true;
+      }
+      return Reflect.deleteProperty(target, prop);
+    },
+    ownKeys() {
+      return Object.keys(store);
+    },
+    getOwnPropertyDescriptor(_target, prop) {
+      if (typeof prop === 'string' && Object.prototype.hasOwnProperty.call(store, prop)) {
+        return {
+          value: store[prop],
+          writable: true,
+          enumerable: true,
+          configurable: true,
+        };
+      }
+      return undefined;
+    },
+  });
+}
+
+if (typeof window !== 'undefined') {
+  const memLocal = createMemoryStorage();
+  const memSession = createMemoryStorage();
+  Object.defineProperty(window, 'localStorage', {
+    value: memLocal,
+    writable: true,
+    configurable: true,
+  });
+  Object.defineProperty(window, 'sessionStorage', {
+    value: memSession,
+    writable: true,
+    configurable: true,
+  });
+  Object.defineProperty(globalThis, 'localStorage', {
+    value: memLocal,
+    writable: true,
+    configurable: true,
+  });
+  Object.defineProperty(globalThis, 'sessionStorage', {
+    value: memSession,
+    writable: true,
+    configurable: true,
+  });
+}
+
 declare global {
   var mockWorkerControl: {
     setInterceptor: (fn: ((message: any, worker: any) => void) | null) => void;
