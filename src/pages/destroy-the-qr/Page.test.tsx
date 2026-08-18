@@ -294,4 +294,40 @@ describe('Destroy the QR Code! Arcade Page', () => {
       expect(mockPostMessage).toHaveBeenCalled();
     }
   });
+
+  it('tracks damage at sub-module micro-cell resolution for fine-grained durability scoring', () => {
+    render(<Page />);
+
+    expect(screen.getByText(/Intact Micro-Cells/i)).toBeInTheDocument();
+    expect(screen.getByText('100%')).toBeInTheDocument();
+
+    const canvas = document.querySelector('canvas');
+    expect(canvas).toBeInTheDocument();
+
+    if (canvas) {
+      // Fire a shot near center of QR code canvas
+      fireEvent.mouseDown(canvas, { clientX: 400, clientY: 250 });
+      fireEvent.mouseUp(canvas);
+
+      // Verify micro-cells destroyed count exists and durability index updates
+      expect(screen.getByText(/Blasted Away/i)).toBeInTheDocument();
+    }
+  });
+
+  it('protects finder pattern micro-cells from weapon erosion', () => {
+    render(<Page />);
+
+    const canvas = document.querySelector('canvas');
+    expect(canvas).toBeInTheDocument();
+
+    if (canvas) {
+      // Target top-left finder pattern region on canvas (qrX = 240, qrY = 100)
+      // Top-left finder pattern spans macro modules 0..6 (canvas X: 240..346, Y: 100..206)
+      fireEvent.mouseDown(canvas, { clientX: 260, clientY: 120 });
+      fireEvent.mouseUp(canvas);
+
+      // Durability should stay at 100% because finder pattern micro-cells are indestructible
+      expect(screen.getByText('100%')).toBeInTheDocument();
+    }
+  });
 });

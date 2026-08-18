@@ -72,6 +72,34 @@ interface Particle {
 }
 
 /**
+ * Configurable size of micro-grid subdivision per macro QR module dimension.
+ * E.g., MICRO_GRID_SIZE = 4 subdivides each macro module into a 4x4 grid of 16 sub-cells.
+ */
+const MICRO_GRID_SIZE = 4;
+
+/**
+ * Checks if a macro QR module coordinate (r, c) is part of a standard QR finder pattern.
+ * @param r
+ * @param c
+ * @param size
+ */
+const isFinderMacro = (r: number, c: number, size: number): boolean => {
+  return (r < 7 && c < 7) || (r < 7 && c >= size - 7) || (r >= size - 7 && c < 7);
+};
+
+/**
+ * Checks if a micro-cell coordinate (mr, mc) belongs to a finder pattern macro module.
+ * @param mr
+ * @param mc
+ * @param size
+ */
+const isFinderMicro = (mr: number, mc: number, size: number): boolean => {
+  const r = Math.floor(mr / MICRO_GRID_SIZE);
+  const c = Math.floor(mc / MICRO_GRID_SIZE);
+  return isFinderMacro(r, c, size);
+};
+
+/**
  * Interactive "Destroy the QR" isolated game view component.
  * Includes user controls to modify custom text to render as a QR code,
  * an arcade blaster cannon following mouse aiming, multiple weapon choices,
@@ -97,8 +125,9 @@ export default function Page() {
   const isMouseDownRef = useRef<boolean>(false);
   
   // Game state held in refs for the animation loop
-  const gameGridRef = useRef<boolean[][]>([]); // true = intact, false = destroyed
+  const gameGridRef = useRef<boolean[][]>([]); // true = intact, false = destroyed (micro-cell level)
   const originalGridRef = useRef<boolean[][]>([]);
+  const originalDarkCountRef = useRef<number>(0);
   const qrSizeRef = useRef<number>(21);
   const projectilesRef = useRef<Projectile[]>([]);
   const particlesRef = useRef<Particle[]>([]);
@@ -304,27 +333,30 @@ export default function Page() {
   }, [triggerWorkerCheck]);
 
   /**
-   * Constructs the QR code matrix from a text string and updates game loop data structures.
+   * Constructs the QR code micro-grid matrix from a text string and updates game loop data structures.
    */
   const setupQRMatrix = useCallback((textValue: string) => {
     try {
       const qr = QRCode.create(textValue, { errorCorrectionLevel: 'H' });
-      const size = qr.modules.size;
-      qrSizeRef.current = size;
+      const macroSize = qr.modules.size;
+      qrSizeRef.current = macroSize;
 
+      const totalMicroSize = macroSize * MICRO_GRID_SIZE;
       const grid: boolean[][] = [];
       const orig: boolean[][] = [];
-      let darkCount = 0;
+      let darkMicroCount = 0;
 
-      for (let r = 0; r < size; r++) {
+      for (let mr = 0; mr < totalMicroSize; mr++) {
         const rowGrid: boolean[] = [];
         const rowOrig: boolean[] = [];
-        for (let c = 0; c < size; c++) {
+        const r = Math.floor(mr / MICRO_GRID_SIZE);
+        for (let mc = 0; mc < totalMicroSize; mc++) {
+          const c = Math.floor(mc / MICRO_GRID_SIZE);
           const isDark = !!qr.modules.get(r, c);
           rowGrid.push(isDark);
           rowOrig.push(isDark);
           if (isDark) {
-            darkCount++;
+            darkMicroCount++;
           }
         }
         grid.push(rowGrid);
@@ -333,8 +365,9 @@ export default function Page() {
 
       gameGridRef.current = grid;
       originalGridRef.current = orig;
-      setOriginalDarkCount(darkCount);
-      setIntactDarkCount(darkCount);
+      originalDarkCountRef.current = darkMicroCount;
+      setOriginalDarkCount(darkMicroCount);
+      setIntactDarkCount(darkMicroCount);
       setBlocksDestroyed(0);
       setDurability(100);
       setIsScannable(true);
@@ -354,21 +387,22 @@ export default function Page() {
   }, [qrText, setupQRMatrix]);
 
   /**
-   * Triggers durability statistics calculations and background worker scannability checking.
+   * Triggers micro-grid durability statistics calculations and background worker scannability checking.
    */
   const scanQRState = useCallback(() => {
     const grid = gameGridRef.current;
-    const size = qrSizeRef.current;
+    const macroSize = qrSizeRef.current;
+    const totalMicroSize = macroSize * MICRO_GRID_SIZE;
     if (grid.length === 0) return;
 
-    // Calculate durability statistics synchronously on the main thread (lightweight matrix iteration)
+    // Calculate micro-cell durability statistics synchronously on the main thread (lightweight matrix iteration)
     const origGrid = originalGridRef.current;
     let currentIntact = 0;
     let destroyed = 0;
-    for (let r = 0; r < size; r++) {
-      for (let c = 0; c < size; c++) {
-        if (origGrid[r][c]) {
-          if (grid[r][c]) {
+    for (let mr = 0; mr < totalMicroSize; mr++) {
+      for (let mc = 0; mc < totalMicroSize; mc++) {
+        if (origGrid[mr][mc]) {
+          if (grid[mr][mc]) {
             currentIntact++;
           } else {
             destroyed++;
@@ -380,7 +414,7 @@ export default function Page() {
     setIntactDarkCount(currentIntact);
     setBlocksDestroyed(destroyed);
     
-    const origDarkTotal = originalGridRef.current.flat().filter(Boolean).length;
+    const origDarkTotal = originalDarkCountRef.current;
     const currentDurability = origDarkTotal > 0 ? (currentIntact / origDarkTotal) * 100 : 0;
     setDurability(Math.round(currentDurability));
 
@@ -531,8 +565,9 @@ export default function Page() {
       const qrDisplaySize = 320;
       const qrX = (canvas.width - qrDisplaySize) / 2;
       const qrY = 100;
-      const size = qrSizeRef.current;
-      const moduleScreenSize = qrDisplaySize / size;
+      const macroSize = qrSizeRef.current;
+      const totalMicroSize = macroSize * MICRO_GRID_SIZE;
+      const microCellScreenSize = qrDisplaySize / totalMicroSize;
 
       const grid = gameGridRef.current;
       const origGrid = originalGridRef.current;
@@ -545,38 +580,29 @@ export default function Page() {
       ctx.strokeRect(qrX - 10, qrY - 10, qrDisplaySize + 20, qrDisplaySize + 20);
       ctx.shadowBlur = 0; // reset glow
 
-      // 2. Draw QR code modules
+      // 2. Draw QR code micro-cells
       if (grid.length > 0) {
-        for (let r = 0; r < size; r++) {
-          for (let c = 0; c < size; c++) {
-            const mX = qrX + c * moduleScreenSize;
-            const mY = qrY + r * moduleScreenSize;
+        for (let mr = 0; mr < totalMicroSize; mr++) {
+          for (let mc = 0; mc < totalMicroSize; mc++) {
+            const mX = qrX + mc * microCellScreenSize;
+            const mY = qrY + mr * microCellScreenSize;
+            const isFinder = isFinderMicro(mr, mc, macroSize);
 
-            if (grid[r][c]) {
-              // Module is intact - make it glow if it's a finder pattern or standard
-              const isFinder = (r < 7 && c < 7) || (r < 7 && c >= size - 7) || (r >= size - 7 && c < 7);
-              
+            if (grid[mr][mc]) {
+              // Micro-cell is intact - make it glow if it's a finder pattern or standard
               if (isFinder) {
-                // High-glowing teal/gold style for critical scanner eyes
+                // High-glowing cyan style for critical scanner eyes
                 ctx.fillStyle = '#06b6d4'; // bright cyan
-                ctx.fillRect(mX, mY, moduleScreenSize, moduleScreenSize);
-                
-                ctx.strokeStyle = '#e2e8f0';
-                ctx.lineWidth = 0.5;
-                ctx.strokeRect(mX, mY, moduleScreenSize, moduleScreenSize);
+                ctx.fillRect(mX, mY, microCellScreenSize, microCellScreenSize);
               } else {
-                // Standard cyber module style
+                // Standard cyber micro-cell style
                 ctx.fillStyle = '#14b8a6'; // real teal
-                ctx.fillRect(mX + 0.5, mY + 0.5, moduleScreenSize - 1, moduleScreenSize - 1);
+                ctx.fillRect(mX, mY, microCellScreenSize, microCellScreenSize);
               }
-            } else if (origGrid[r][c]) {
-              // Originally dark module, now beautifully blasted away
+            } else if (origGrid[mr][mc]) {
+              // Originally dark micro-cell, now beautifully blasted away
               ctx.fillStyle = 'rgba(241, 245, 249, 0.05)';
-              ctx.fillRect(mX + 1, mY + 1, moduleScreenSize - 2, moduleScreenSize - 2);
-              
-              ctx.strokeStyle = 'rgba(226, 232, 240, 0.1)';
-              ctx.lineWidth = 0.5;
-              ctx.strokeRect(mX + 1, mY + 1, moduleScreenSize - 2, moduleScreenSize - 2);
+              ctx.fillRect(mX, mY, microCellScreenSize, microCellScreenSize);
             }
           }
         }
@@ -627,35 +653,37 @@ export default function Page() {
           }
         }
 
-        // Apply continuous laser damage to modules under cursor
-        const cCol = Math.floor((targetX - qrX) / moduleScreenSize);
-        const cRow = Math.floor((targetY - qrY) / moduleScreenSize);
+        // Apply continuous laser damage to micro-cells under cursor
+        const laserBurnRadius = 10; // pixels
+        const lMinCol = Math.max(0, Math.floor((targetX - laserBurnRadius - qrX) / microCellScreenSize));
+        const lMaxCol = Math.min(totalMicroSize - 1, Math.floor((targetX + laserBurnRadius - qrX) / microCellScreenSize));
+        const lMinRow = Math.max(0, Math.floor((targetY - laserBurnRadius - qrY) / microCellScreenSize));
+        const lMaxRow = Math.min(totalMicroSize - 1, Math.floor((targetY + laserBurnRadius - qrY) / microCellScreenSize));
+
         let updated = false;
 
-        // Create a small localized burn area (1-2 cells wide)
-        for (let dr = -1; dr <= 1; dr++) {
-          for (let dc = -1; dc <= 1; dc++) {
-            const tr = cRow + dr;
-            const tc = cCol + dc;
-            if (tr >= 0 && tr < size && tc >= 0 && tc < size) {
-              // Center module gets instantly destroyed, surrounding cells have a probability burn rate
-              const dist = Math.sqrt(dr*dr + dc*dc);
-              const burnChance = dist === 0 ? 1.0 : (dist < 1.1 ? 0.35 : 0.08);
+        for (let tr = lMinRow; tr <= lMaxRow; tr++) {
+          for (let tc = lMinCol; tc <= lMaxCol; tc++) {
+            if (grid[tr] && grid[tr][tc] && origGrid[tr][tc]) {
+              if (isFinderMicro(tr, tc, macroSize)) continue; // Finder pattern protection
 
-              if (grid[tr] && grid[tr][tc] && Math.random() < burnChance) {
+              const cellX = qrX + (tc + 0.5) * microCellScreenSize;
+              const cellY = qrY + (tr + 0.5) * microCellScreenSize;
+              const dX = targetX - cellX;
+              const dY = targetY - cellY;
+              const distSq = dX * dX + dY * dY;
+
+              if (distSq <= laserBurnRadius * laserBurnRadius) {
                 grid[tr][tc] = false;
                 updated = true;
 
-                // Explosion particles
-                const bX = qrX + tc * moduleScreenSize + moduleScreenSize / 2;
-                const bY = qrY + tr * moduleScreenSize + moduleScreenSize / 2;
-                for (let k = 0; k < 6; k++) {
+                for (let k = 0; k < 2; k++) {
                   particlesRef.current.push({
-                    x: bX,
-                    y: bY,
+                    x: cellX,
+                    y: cellY,
                     vx: (Math.random() - 0.5) * 5,
                     vy: (Math.random() - 0.5) * 5,
-                    radius: 1 + Math.random() * 2.5,
+                    radius: 1 + Math.random() * 2,
                     alpha: 1.0,
                     color: '#2dd4bf',
                     decay: 0.03 + Math.random() * 0.04,
@@ -726,36 +754,39 @@ export default function Page() {
           continue;
         }
 
-        // Module collision checking
+        // Micro-grid collision checking
         let projectileHit = false;
-        for (let r = 0; r < size; r++) {
-          for (let c = 0; c < size; c++) {
-            if (grid[r] && grid[r][c] && origGrid[r][c]) {
-              const mX = qrX + c * moduleScreenSize;
-              const mY = qrY + r * moduleScreenSize;
 
-              // Check circle vs box intersection
-              const closestX = Math.max(mX, Math.min(p.x, mX + moduleScreenSize));
-              const closestY = Math.max(mY, Math.min(p.y, mY + moduleScreenSize));
-              const distX = p.x - closestX;
-              const distY = p.y - closestY;
-              const distSq = distX * distX + distY * distY;
+        if (p.type === 'bullet') {
+          const minCol = Math.max(0, Math.floor((p.x - p.radius - qrX) / microCellScreenSize));
+          const maxCol = Math.min(totalMicroSize - 1, Math.floor((p.x + p.radius - qrX) / microCellScreenSize));
+          const minRow = Math.max(0, Math.floor((p.y - p.radius - qrY) / microCellScreenSize));
+          const maxRow = Math.min(totalMicroSize - 1, Math.floor((p.y + p.radius - qrY) / microCellScreenSize));
 
-              if (distSq < p.radius * p.radius) {
-                projectileHit = true;
+          for (let mr = minRow; mr <= maxRow; mr++) {
+            for (let mc = minCol; mc <= maxCol; mc++) {
+              if (grid[mr] && grid[mr][mc] && origGrid[mr][mc]) {
+                const mX = qrX + mc * microCellScreenSize;
+                const mY = qrY + mr * microCellScreenSize;
 
-                if (p.type === 'bullet') {
-                  // Direct single block damage
-                  grid[r][c] = false;
+                const closestX = Math.max(mX, Math.min(p.x, mX + microCellScreenSize));
+                const closestY = Math.max(mY, Math.min(p.y, mY + microCellScreenSize));
+                const distX = p.x - closestX;
+                const distY = p.y - closestY;
 
-                  // High speed neon sparks
-                  for (let k = 0; k < 12; k++) {
+                if (distX * distX + distY * distY < p.radius * p.radius) {
+                  projectileHit = true;
+                  if (!isFinderMicro(mr, mc, macroSize)) {
+                    grid[mr][mc] = false;
+                  }
+
+                  for (let k = 0; k < 6; k++) {
                     particlesRef.current.push({
                       x: p.x,
                       y: p.y,
                       vx: (Math.random() - 0.5) * 8 + p.vx * 0.25,
                       vy: (Math.random() - 0.5) * 8 + p.vy * 0.25,
-                      radius: 1 + Math.random() * 3,
+                      radius: 1 + Math.random() * 2.5,
                       alpha: 1.0,
                       color: '#2dd4bf',
                       decay: 0.03 + Math.random() * 0.03,
@@ -763,69 +794,97 @@ export default function Page() {
                     });
                   }
                   screenShakeRef.current = Math.min(screenShakeRef.current + 3.5, 9);
-                } else if (p.type === 'bomb') {
-                  // Massive radius explosive antimatter breach
-                  const blastRadius = 55; // pixels
-                  
-                  // Explode modules in area
-                  for (let br = 0; br < size; br++) {
-                    for (let bc = 0; bc < size; bc++) {
-                      if (grid[br] && grid[br][bc] && origGrid[br][bc]) {
-                        const cellX = qrX + bc * moduleScreenSize + moduleScreenSize / 2;
-                        const cellY = qrY + br * moduleScreenSize + moduleScreenSize / 2;
-                        
-                        const dX = p.x - cellX;
-                        const dY = p.y - cellY;
-                        if (dX*dX + dY*dY < blastRadius*blastRadius) {
-                          grid[br][bc] = false;
-
-                          // Fiery particles
-                          for (let s = 0; s < 3; s++) {
-                            particlesRef.current.push({
-                              x: cellX,
-                              y: cellY,
-                              vx: (Math.random() - 0.5) * 9,
-                              vy: (Math.random() - 0.5) * 9,
-                              radius: 1.5 + Math.random() * 4,
-                              alpha: 1.0,
-                              color: Math.random() > 0.4 ? '#f43f5e' : '#fb923c', // red to orange glow
-                              decay: 0.02 + Math.random() * 0.03,
-                              gravity: true
-                            });
-                          }
-                        }
-                      }
-                    }
-                  }
-
-                  // Super blast wave ring particle
-                  for (let angle = 0; angle < Math.PI * 2; angle += 0.15) {
-                    const speedMultiplier = 4 + Math.random() * 5;
-                    particlesRef.current.push({
-                      x: p.x,
-                      y: p.y,
-                      vx: Math.cos(angle) * speedMultiplier,
-                      vy: Math.sin(angle) * speedMultiplier,
-                      radius: 2 + Math.random() * 3,
-                      alpha: 1.0,
-                      color: '#fb7185',
-                      decay: 0.025,
-                      gravity: false
-                    });
-                  }
-
-                  screenShakeRef.current = Math.min(screenShakeRef.current + 18, 25);
                 }
-
-                scanQRState();
-                break;
               }
             }
           }
-          if (projectileHit) break;
+        } else if (p.type === 'bomb') {
+          // Check collision with any intact micro-cell first
+          const minCol = Math.max(0, Math.floor((p.x - p.radius - qrX) / microCellScreenSize));
+          const maxCol = Math.min(totalMicroSize - 1, Math.floor((p.x + p.radius - qrX) / microCellScreenSize));
+          const minRow = Math.max(0, Math.floor((p.y - p.radius - qrY) / microCellScreenSize));
+          const maxRow = Math.min(totalMicroSize - 1, Math.floor((p.y + p.radius - qrY) / microCellScreenSize));
+
+          for (let mr = minRow; mr <= maxRow; mr++) {
+            for (let mc = minCol; mc <= maxCol; mc++) {
+              if (grid[mr] && grid[mr][mc] && origGrid[mr][mc]) {
+                const mX = qrX + mc * microCellScreenSize;
+                const mY = qrY + mr * microCellScreenSize;
+
+                const closestX = Math.max(mX, Math.min(p.x, mX + microCellScreenSize));
+                const closestY = Math.max(mY, Math.min(p.y, mY + microCellScreenSize));
+                const distX = p.x - closestX;
+                const distY = p.y - closestY;
+
+                if (distX * distX + distY * distY < p.radius * p.radius) {
+                  projectileHit = true;
+                  break;
+                }
+              }
+            }
+            if (projectileHit) break;
+          }
+
+          if (projectileHit) {
+            // Massive radius explosive antimatter breach
+            const blastRadius = 55; // pixels
+            const bMinCol = Math.max(0, Math.floor((p.x - blastRadius - qrX) / microCellScreenSize));
+            const bMaxCol = Math.min(totalMicroSize - 1, Math.floor((p.x + blastRadius - qrX) / microCellScreenSize));
+            const bMinRow = Math.max(0, Math.floor((p.y - blastRadius - qrY) / microCellScreenSize));
+            const bMaxRow = Math.min(totalMicroSize - 1, Math.floor((p.y + blastRadius - qrY) / microCellScreenSize));
+
+            for (let br = bMinRow; br <= bMaxRow; br++) {
+              for (let bc = bMinCol; bc <= bMaxCol; bc++) {
+                if (grid[br] && grid[br][bc] && origGrid[br][bc]) {
+                  if (isFinderMicro(br, bc, macroSize)) continue; // Finder pattern protection!
+
+                  const cellX = qrX + (bc + 0.5) * microCellScreenSize;
+                  const cellY = qrY + (br + 0.5) * microCellScreenSize;
+
+                  const dX = p.x - cellX;
+                  const dY = p.y - cellY;
+                  if (dX * dX + dY * dY < blastRadius * blastRadius) {
+                    grid[br][bc] = false;
+
+                    for (let s = 0; s < 2; s++) {
+                      particlesRef.current.push({
+                        x: cellX,
+                        y: cellY,
+                        vx: (Math.random() - 0.5) * 9,
+                        vy: (Math.random() - 0.5) * 9,
+                        radius: 1.5 + Math.random() * 3,
+                        alpha: 1.0,
+                        color: Math.random() > 0.4 ? '#f43f5e' : '#fb923c',
+                        decay: 0.02 + Math.random() * 0.03,
+                        gravity: true
+                      });
+                    }
+                  }
+                }
+              }
+            }
+
+            for (let angle = 0; angle < Math.PI * 2; angle += 0.15) {
+              const speedMultiplier = 4 + Math.random() * 5;
+              particlesRef.current.push({
+                x: p.x,
+                y: p.y,
+                vx: Math.cos(angle) * speedMultiplier,
+                vy: Math.sin(angle) * speedMultiplier,
+                radius: 2 + Math.random() * 3,
+                alpha: 1.0,
+                color: '#fb7185',
+                decay: 0.025,
+                gravity: false
+              });
+            }
+
+            screenShakeRef.current = Math.min(screenShakeRef.current + 18, 25);
+          }
         }
 
         if (projectileHit) {
+          scanQRState();
           projectiles.splice(i, 1);
         }
       }
@@ -1290,7 +1349,7 @@ export default function Page() {
               {/* Counts */}
               <div className="mt-1.5 grid grid-cols-2 gap-3">
                 <div className="rounded-xl border border-slate-900 bg-slate-950 p-3 text-center">
-                  <span className="block text-[10px] font-bold text-slate-500 uppercase">Intact Blocks</span>
+                  <span className="block text-[10px] font-bold text-slate-500 uppercase">Intact Micro-Cells</span>
                   <span className="font-mono text-base font-extrabold text-slate-200">
                     {intactDarkCount} / {originalDarkCount}
                   </span>
