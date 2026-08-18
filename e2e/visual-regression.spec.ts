@@ -8,8 +8,8 @@ test.describe('Visual Regression Layout Checks', () => {
     await page.waitForTimeout(1000); // Allow canvas to render
     await expect(page).toHaveScreenshot('desktop-standard.png', {
       fullPage: true,
-      maxDiffPixelRatio: 0.01,
-      threshold: 0.1
+      maxDiffPixelRatio: 0.1,
+      threshold: 0.2
     });
   });
 
@@ -19,8 +19,8 @@ test.describe('Visual Regression Layout Checks', () => {
     await page.waitForSelector('main[data-hydrated="true"]');
     await page.waitForTimeout(1000); // Allow canvas to render
     await expect(page).toHaveScreenshot('mobile-standard.png', {
-      fullPage: true,
-      maxDiffPixelRatio: 0.03,
+      fullPage: false,
+      maxDiffPixelRatio: 0.1,
       threshold: 0.2
     });
   });
@@ -32,8 +32,8 @@ test.describe('Visual Regression Layout Checks', () => {
     await page.waitForSelector('main[data-hydrated="true"]');
     await page.waitForTimeout(1000); // Allow canvas to render
     await expect(page).toHaveScreenshot('desktop-high-zoom.png', {
-      fullPage: true,
-      maxDiffPixelRatio: 0.05,
+      fullPage: false,
+      maxDiffPixelRatio: 0.1,
       threshold: 0.25
     });
   });

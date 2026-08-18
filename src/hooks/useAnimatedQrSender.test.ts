@@ -134,7 +134,9 @@ describe('useAnimatedQrSender Hook', () => {
     expect(startMessage.payload.fps).toBe(15);
   });
 
-  it('triggers the self-healing watch loop when frame generation is stalled for 100ms', () => {
+  it('triggers the self-healing watch loop when frame generation is stalled for 100ms', async () => {
+    let nowTime = 1000;
+    vi.spyOn(performance, 'now').mockImplementation(() => nowTime);
     vi.useFakeTimers();
 
     const { result } = renderHook(() =>
@@ -150,20 +152,53 @@ describe('useAnimatedQrSender Hook', () => {
     });
 
     const sentMessages: any[] = [];
-    globalThis.mockWorkerControl.setInterceptor((message: any) => {
+    globalThis.mockWorkerControl.setInterceptor((message: any, worker: any) => {
       sentMessages.push(message);
+      if (message.type === 'START') {
+        worker.dispatchMessage({
+          type: 'PROGRESS',
+          total: 10,
+        });
+        worker.dispatchMessage({
+          type: 'FRAME',
+          index: 0,
+          total: 10,
+          size: 21,
+          data: new Uint8Array(21 * 21),
+        });
+      }
     });
 
-    act(() => {
+    await act(async () => {
       result.current.startTransfer();
     });
 
-    // Clear initial messages (like START)
+    // Advance fake timer 1ms to fire worker postMessage task for START
+    await act(async () => {
+      vi.advanceTimersByTime(1);
+      await Promise.resolve();
+    });
+
+    // Advance 70ms so frame 0 renders and currentPlayIndex becomes 1
+    nowTime += 70;
+    act(() => {
+      vi.advanceTimersByTime(70);
+      vi.advanceTimersByTime(10);
+    });
+
+    // Clear initial messages (like START and ACK 0)
     sentMessages.length = 0;
 
-    // Advance time by 120ms (>= 100ms) with no frames received (so frameBuffer is empty and playIdx remains 0)
+    // Advance time by 120ms (>= 100ms) with frame 1 missing
+    nowTime += 120;
     act(() => {
       vi.advanceTimersByTime(120);
+    });
+
+    // Advance 10ms to fire MockWorker postMessage task for HEAL
+    nowTime += 10;
+    act(() => {
+      vi.advanceTimersByTime(10);
     });
 
     // Check if self-healing (HEAL and ACK messages) were sent to the worker
@@ -172,9 +207,10 @@ describe('useAnimatedQrSender Hook', () => {
 
     expect(healMessages.length).toBeGreaterThan(0);
     expect(ackMessages.length).toBeGreaterThan(0);
-    expect(healMessages[0].payload.lastAckedIndex).toBe(-1); // currentPlayIndex - 1 = -1
+    expect(healMessages[0].payload.lastAckedIndex).toBe(0);
 
     vi.useRealTimers();
+    vi.restoreAllMocks();
   });
 
   it('supports adaptive density and frame memory pool caching across multiple passes', () => {
