@@ -428,4 +428,155 @@ describe('File Transfer Receive Page & Pipeline', () => {
       expect(screen.queryByTestId('fallback-progress-card')).not.toBeInTheDocument();
     });
   });
+
+  describe('Dual-Mode Receiver Pill Switcher and Video Dropzone', () => {
+    it('allows toggling between camera feed mode and video file mode via pill switcher', async () => {
+      render(
+        <ToastProvider>
+          <Page />
+        </ToastProvider>
+      );
+
+      // Camera mode is active by default
+      const cameraRadio = screen.getByRole('radio', { name: /camera feed/i });
+      const fileRadio = screen.getByRole('radio', { name: /video file/i });
+
+      expect(cameraRadio).toHaveAttribute('aria-checked', 'true');
+      expect(fileRadio).toHaveAttribute('aria-checked', 'false');
+      expect(screen.getByRole('button', { name: /activate camera scanner/i })).toBeInTheDocument();
+
+      // Switch to Video File mode
+      await act(async () => {
+        fireEvent.click(fileRadio);
+      });
+
+      expect(fileRadio).toHaveAttribute('aria-checked', 'true');
+      expect(cameraRadio).toHaveAttribute('aria-checked', 'false');
+      expect(screen.getByTestId('sidebar-dropzone')).toBeInTheDocument();
+      expect(screen.getByTestId('viewport-dropzone')).toBeInTheDocument();
+
+      // Switch back to Camera mode
+      await act(async () => {
+        fireEvent.click(cameraRadio);
+      });
+
+      expect(cameraRadio).toHaveAttribute('aria-checked', 'true');
+      expect(screen.getByRole('button', { name: /activate camera scanner/i })).toBeInTheDocument();
+    });
+
+    it('loads a valid video file when selected via file input and starts scanning', async () => {
+      render(
+        <ToastProvider>
+          <Page />
+        </ToastProvider>
+      );
+
+      const fileRadio = screen.getByRole('radio', { name: /video file/i });
+      await act(async () => {
+        fireEvent.click(fileRadio);
+      });
+
+      const fileInput = screen.getByTestId('video-file-input');
+      const validFile = new File(['fake video'], 'transfer_recording.mp4', { type: 'video/mp4' });
+
+      await act(async () => {
+        fireEvent.change(fileInput, { target: { files: [validFile] } });
+      });
+
+      expect(global.URL.createObjectURL).toHaveBeenCalledWith(validFile);
+      expect(screen.getByText('transfer_recording.mp4')).toBeInTheDocument();
+      expect(screen.getByText('Active Scanning')).toBeInTheDocument();
+    });
+
+    it('shows inline validation error alert when an unsupported file type is uploaded and blocks processing', async () => {
+      render(
+        <ToastProvider>
+          <Page />
+        </ToastProvider>
+      );
+
+      const fileRadio = screen.getByRole('radio', { name: /video file/i });
+      await act(async () => {
+        fireEvent.click(fileRadio);
+      });
+
+      const fileInput = screen.getByTestId('video-file-input');
+      const invalidFile = new File(['text content'], 'notes.txt', { type: 'text/plain' });
+
+      await act(async () => {
+        fireEvent.change(fileInput, { target: { files: [invalidFile] } });
+      });
+
+      expect(global.URL.createObjectURL).not.toHaveBeenCalled();
+      const errorAlert = screen.getByTestId('file-validation-error');
+      expect(errorAlert).toBeInTheDocument();
+      expect(errorAlert).toHaveTextContent('Invalid file type. Please upload a supported video file (e.g. MP4, WebM).');
+      expect(screen.getByText('Idle')).toBeInTheDocument();
+    });
+
+    it('revokes Object URLs when toggling mode back to camera mode', async () => {
+      render(
+        <ToastProvider>
+          <Page />
+        </ToastProvider>
+      );
+
+      const cameraRadio = screen.getByRole('radio', { name: /camera feed/i });
+      const fileRadio = screen.getByRole('radio', { name: /video file/i });
+
+      await act(async () => {
+        fireEvent.click(fileRadio);
+      });
+
+      const fileInput = screen.getByTestId('video-file-input');
+      const validFile = new File(['fake video'], 'transfer.mp4', { type: 'video/mp4' });
+
+      await act(async () => {
+        fireEvent.change(fileInput, { target: { files: [validFile] } });
+      });
+
+      expect(global.URL.createObjectURL).toHaveBeenCalled();
+
+      await act(async () => {
+        fireEvent.click(cameraRadio);
+      });
+
+      expect(global.URL.revokeObjectURL).toHaveBeenCalledWith('mock-download-url');
+    });
+
+    it('completes file transfer assembly when scanning frames from uploaded video file', async () => {
+      render(
+        <ToastProvider>
+          <Page />
+        </ToastProvider>
+      );
+
+      const fileRadio = screen.getByRole('radio', { name: /video file/i });
+      await act(async () => {
+        fireEvent.click(fileRadio);
+      });
+
+      const fileInput = screen.getByTestId('video-file-input');
+      const validFile = new File(['fake video'], 'recording.webm', { type: 'video/webm' });
+
+      await act(async () => {
+        fireEvent.change(fileInput, { target: { files: [validFile] } });
+      });
+
+      // Scan frame 0 and frame 1
+      await act(async () => {
+        scanSuccessCallback!('F|0|2|Zm9v');
+      });
+      await act(async () => {
+        scanSuccessCallback!('F|1|2|YmFy');
+      });
+
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      });
+
+      expect(screen.getByTestId('inline-complete-panel')).toBeInTheDocument();
+      expect(screen.getByText('Transfer Complete')).toBeInTheDocument();
+    });
+  });
 });
