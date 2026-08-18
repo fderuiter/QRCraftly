@@ -16,8 +16,8 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import React, { useState, useCallback } from 'react';
-import { Play, Square, Camera, AlertTriangle, Activity, Cpu, Sun, Moon, QrCode, ArrowLeft, Trash2, CheckCircle2 } from 'lucide-react';
+import React, { useState, useCallback, useRef } from 'react';
+import { Play, Square, Camera, AlertTriangle, Activity, Cpu, Sun, Moon, QrCode, ArrowLeft, Trash2, CheckCircle2, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Alert } from '@/components/ui/Alert';
@@ -32,6 +32,9 @@ function FileTransferReceiveInner() {
   const { addToast } = useToast();
 
   const [streamMode, setStreamMode] = useState<'text' | 'binary'>('text');
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
   // Use the unified animated QR receiver hook
   const {
     chunks,
@@ -48,6 +51,11 @@ function FileTransferReceiveInner() {
     reconstructAndValidateFile,
     handshake,
     compilationStatus,
+    receiverMode,
+    setReceiverMode,
+    videoFile,
+    fileValidationError,
+    handleFileUpload,
   } = useAnimatedQrReceiver({
     addToast,
     handshakeRequired: false,
@@ -56,6 +64,39 @@ function FileTransferReceiveInner() {
   });
 
   const isComplete = totalChunks !== null && chunks.size === totalChunks;
+
+  // Drag and drop handlers for video file upload
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      handleFileUpload(files[0]);
+    }
+  }, [handleFileUpload]);
+
+  const handleFileInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      handleFileUpload(files[0]);
+    }
+    if (e.target) {
+      e.target.value = '';
+    }
+  }, [handleFileUpload]);
 
   // Handle manual compile and download on user click
   const handleManualDownload = useCallback(() => {
@@ -150,6 +191,42 @@ function FileTransferReceiveInner() {
                 1. Scan Transfer QR
               </h2>
 
+              {/* Dual-Mode Pill Switcher */}
+              <div
+                className="flex rounded-xl bg-slate-100 p-1 dark:bg-slate-800/80"
+                role="radiogroup"
+                aria-label="Receiver Input Mode"
+              >
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={receiverMode === 'camera'}
+                  onClick={() => setReceiverMode('camera')}
+                  className={`flex flex-1 items-center justify-center gap-2 rounded-lg py-2 text-xs font-semibold transition-all ${
+                    receiverMode === 'camera'
+                      ? 'bg-white text-teal-700 shadow-sm dark:bg-slate-900 dark:text-teal-400'
+                      : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+                  }`}
+                >
+                  <Camera className="size-4" />
+                  Camera Feed
+                </button>
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={receiverMode === 'file'}
+                  onClick={() => setReceiverMode('file')}
+                  className={`flex flex-1 items-center justify-center gap-2 rounded-lg py-2 text-xs font-semibold transition-all ${
+                    receiverMode === 'file'
+                      ? 'bg-white text-teal-700 shadow-sm dark:bg-slate-900 dark:text-teal-400'
+                      : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+                  }`}
+                >
+                  <Upload className="size-4" />
+                  Video File
+                </button>
+              </div>
+
               <div className="flex flex-col gap-3">
                 {securityAlert && (
                   <div className="animate-bounce">
@@ -167,38 +244,108 @@ function FileTransferReceiveInner() {
                   </div>
                 )}
 
-                <div className="flex gap-3">
-                  {!isScanning ? (
+                {fileValidationError && (
+                  <div className="animate-bounce" data-testid="file-validation-error">
+                    <Alert variant="error" title="Invalid File">
+                      {fileValidationError}
+                    </Alert>
+                  </div>
+                )}
+
+                {receiverMode === 'camera' ? (
+                  <div className="flex gap-3">
+                    {!isScanning ? (
+                      <Button
+                        variant="primary"
+                        fullWidth
+                        onClick={startCameraSession}
+                        aria-label="Activate camera scanner"
+                      >
+                        <Play className="size-4" />
+                        Activate Camera Scanner
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="error"
+                        fullWidth
+                        onClick={stopCameraSession}
+                        aria-label="Deactivate camera scanner"
+                      >
+                        <Square className="size-4" />
+                        Deactivate Scanner
+                      </Button>
+                    )}
                     <Button
-                      variant="primary"
-                      fullWidth
-                      onClick={startCameraSession}
-                      aria-label="Activate camera scanner"
+                      variant="outline"
+                      onClick={handleClear}
+                      title="Clear transfer progress"
+                      aria-label="Clear transfer progress"
+                      className="px-3"
                     >
-                      <Play className="size-4" />
-                      Activate Camera Scanner
+                      <Trash2 className="size-4" />
                     </Button>
-                  ) : (
-                    <Button
-                      variant="error"
-                      fullWidth
-                      onClick={stopCameraSession}
-                      aria-label="Deactivate camera scanner"
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          fileInputRef.current?.click();
+                        }
+                      }}
+                      onDragOver={handleDragOver}
+                      onDragLeave={handleDragLeave}
+                      onDrop={handleDrop}
+                      onClick={() => fileInputRef.current?.click()}
+                      className={`flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-4 text-center transition-colors ${
+                        isDragging
+                          ? 'border-teal-500 bg-teal-50/50 dark:border-teal-400 dark:bg-teal-950/30'
+                          : 'border-slate-200 hover:border-teal-500 dark:border-slate-800 dark:hover:border-teal-400'
+                      }`}
+                      data-testid="sidebar-dropzone"
                     >
-                      <Square className="size-4" />
-                      Deactivate Scanner
-                    </Button>
-                  )}
-                  <Button
-                    variant="outline"
-                    onClick={handleClear}
-                    title="Clear transfer progress"
-                    aria-label="Clear transfer progress"
-                    className="px-3"
-                  >
-                    <Trash2 className="size-4" />
-                  </Button>
-                </div>
+                      <Upload className="mb-2 size-6 text-teal-600 dark:text-teal-400" />
+                      <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">
+                        {videoFile ? videoFile.name : 'Drop video file here or click to browse'}
+                      </p>
+                      <p className="text-2xs mt-1 text-slate-500 dark:text-slate-400">
+                        {videoFile ? `${(videoFile.size / (1024 * 1024)).toFixed(2)} MB` : 'MP4, WebM, MOV, etc.'}
+                      </p>
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        accept="video/*"
+                        onChange={handleFileInputChange}
+                        className="hidden"
+                        data-testid="video-file-input"
+                      />
+                    </div>
+
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        fullWidth
+                        onClick={() => fileInputRef.current?.click()}
+                        aria-label="Select Video File"
+                      >
+                        <Upload className="size-4" />
+                        {videoFile ? 'Replace Video' : 'Select Video File'}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={handleClear}
+                        title="Clear transfer progress"
+                        aria-label="Clear transfer progress"
+                        className="px-3"
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
 
                 {/* Stream Mode Selection Control */}
                 <div className="mt-2 rounded-xl border border-slate-100 bg-slate-50/50 p-4 dark:border-slate-800/60 dark:bg-slate-900/40">
@@ -371,7 +518,9 @@ function FileTransferReceiveInner() {
           <div className="relative z-10 w-full max-w-md">
             <Card className="hover:scale-1.01 transform overflow-hidden transition-all duration-300">
               <div className="mb-6 flex items-center justify-between">
-                <h2 className="font-semibold text-slate-700 dark:text-slate-200">Camera Viewport</h2>
+                <h2 className="font-semibold text-slate-700 dark:text-slate-200">
+                  {receiverMode === 'camera' ? 'Camera Viewport' : 'Video Viewport'}
+                </h2>
                 <div className="flex items-center gap-2">
                   <span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-xs font-bold ${
                     isScanning 
@@ -384,7 +533,7 @@ function FileTransferReceiveInner() {
                 </div>
               </div>
 
-              {/* Video frame box with targeting guide */}
+              {/* Video frame box with targeting guide or dropzone */}
               <div className="relative aspect-square w-full overflow-hidden rounded-2xl border border-slate-100 bg-slate-950 p-0 dark:border-slate-900">
                 {isComplete ? (
                   <div className="flex size-full flex-col items-center justify-center gap-4 bg-slate-900 p-6 text-center text-slate-100 dark:bg-slate-950" data-testid="inline-complete-panel">
@@ -406,13 +555,41 @@ function FileTransferReceiveInner() {
                       {downloadTriggered ? "Download Again" : "Download File"}
                     </Button>
                   </div>
-                ) : isScanning ? (
+                ) : isScanning || (receiverMode === 'file' && videoFile) ? (
                   <video
                     ref={videoRef}
                     className="size-full object-cover"
                     playsInline
                     muted
+                    loop
                   />
+                ) : receiverMode === 'file' ? (
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        fileInputRef.current?.click();
+                      }
+                    }}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                    onClick={() => fileInputRef.current?.click()}
+                    className={`flex size-full cursor-pointer flex-col items-center justify-center gap-3 border-2 border-dashed p-6 text-center transition-colors ${
+                      isDragging
+                        ? 'border-teal-500 bg-teal-950/40 text-teal-300'
+                        : 'border-slate-800 text-slate-400 hover:border-teal-500 hover:text-slate-300'
+                    }`}
+                    data-testid="viewport-dropzone"
+                  >
+                    <Upload className="size-12 text-teal-500 opacity-50" />
+                    <div>
+                      <p className="text-sm font-semibold text-slate-200">Drop pre-recorded video here</p>
+                      <p className="mt-1 text-xs text-slate-400">or click to browse video files (MP4, WebM)</p>
+                    </div>
+                  </div>
                 ) : (
                   <div className="flex size-full flex-col items-center justify-center gap-3 text-slate-400">
                     <Camera className="size-12 opacity-40" />

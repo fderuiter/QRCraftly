@@ -211,4 +211,127 @@ describe('useAnimatedQrReceiver Hook', () => {
     expect(result.current.receiverError).toBe('File transfer rejected: exceeds the maximum limit of 5000 chunks.');
     expect(result.current.isScanning).toBe(false);
   });
+
+  describe('Dual-Mode Receiver & Object URL Management', () => {
+    it('should initialize in camera mode by default and allow mode toggling', () => {
+      const { result } = renderHook(() => useAnimatedQrReceiver());
+
+      expect(result.current.receiverMode).toBe('camera');
+      expect(result.current.videoFile).toBeNull();
+      expect(result.current.videoObjectUrl).toBeNull();
+
+      act(() => {
+        result.current.setReceiverMode('file');
+      });
+
+      expect(result.current.receiverMode).toBe('file');
+
+      act(() => {
+        result.current.setReceiverMode('camera');
+      });
+
+      expect(result.current.receiverMode).toBe('camera');
+    });
+
+    it('should load a valid video file, generate Object URL, and set scanning to true', () => {
+      const { result } = renderHook(() => useAnimatedQrReceiver({ initialMode: 'file' }));
+      const file = new File(['dummy video content'], 'test.mp4', { type: 'video/mp4' });
+
+      act(() => {
+        const success = result.current.handleFileUpload(file);
+        expect(success).toBe(true);
+      });
+
+      expect(result.current.videoFile).toBe(file);
+      expect(result.current.videoObjectUrl).toBe('mock-download-url');
+      expect(result.current.fileValidationError).toBeNull();
+      expect(result.current.isScanning).toBe(true);
+      expect(global.URL.createObjectURL).toHaveBeenCalledWith(file);
+    });
+
+    it('should reject invalid file types, set fileValidationError, and block Object URL creation', () => {
+      const { result } = renderHook(() => useAnimatedQrReceiver({ initialMode: 'file' }));
+      const file = new File(['plain text'], 'document.txt', { type: 'text/plain' });
+
+      act(() => {
+        const success = result.current.handleFileUpload(file);
+        expect(success).toBe(false);
+      });
+
+      expect(result.current.videoFile).toBeNull();
+      expect(result.current.videoObjectUrl).toBeNull();
+      expect(result.current.fileValidationError).toBe('Invalid file type. Please upload a supported video file (e.g. MP4, WebM).');
+      expect(result.current.isScanning).toBe(false);
+      expect(global.URL.createObjectURL).not.toHaveBeenCalled();
+    });
+
+    it('should revoke Object URL when replacing an uploaded video file', () => {
+      const { result } = renderHook(() => useAnimatedQrReceiver({ initialMode: 'file' }));
+      const file1 = new File(['vid1'], 'video1.mp4', { type: 'video/mp4' });
+      const file2 = new File(['vid2'], 'video2.webm', { type: 'video/webm' });
+
+      act(() => {
+        result.current.handleFileUpload(file1);
+      });
+
+      expect(result.current.videoObjectUrl).toBe('mock-download-url');
+
+      act(() => {
+        result.current.handleFileUpload(file2);
+      });
+
+      expect(global.URL.revokeObjectURL).toHaveBeenCalledWith('mock-download-url');
+      expect(result.current.videoFile).toBe(file2);
+    });
+
+    it('should revoke Object URL when toggling mode from file to camera', () => {
+      const { result } = renderHook(() => useAnimatedQrReceiver({ initialMode: 'file' }));
+      const file = new File(['vid'], 'video.mp4', { type: 'video/mp4' });
+
+      act(() => {
+        result.current.handleFileUpload(file);
+      });
+
+      expect(result.current.videoObjectUrl).toBe('mock-download-url');
+
+      act(() => {
+        result.current.setReceiverMode('camera');
+      });
+
+      expect(global.URL.revokeObjectURL).toHaveBeenCalledWith('mock-download-url');
+      expect(result.current.videoFile).toBeNull();
+      expect(result.current.videoObjectUrl).toBeNull();
+    });
+
+    it('should revoke Object URL when hook unmounts', () => {
+      const { result, unmount } = renderHook(() => useAnimatedQrReceiver({ initialMode: 'file' }));
+      const file = new File(['vid'], 'video.mp4', { type: 'video/mp4' });
+
+      act(() => {
+        result.current.handleFileUpload(file);
+      });
+
+      unmount();
+
+      expect(global.URL.revokeObjectURL).toHaveBeenCalledWith('mock-download-url');
+    });
+
+    it('should revoke Object URL when handleClear is called', () => {
+      const { result } = renderHook(() => useAnimatedQrReceiver({ initialMode: 'file' }));
+      const file = new File(['vid'], 'video.mp4', { type: 'video/mp4' });
+
+      act(() => {
+        result.current.handleFileUpload(file);
+      });
+
+      act(() => {
+        result.current.handleClear();
+      });
+
+      expect(global.URL.revokeObjectURL).toHaveBeenCalledWith('mock-download-url');
+      expect(result.current.videoFile).toBeNull();
+      expect(result.current.videoObjectUrl).toBeNull();
+      expect(result.current.fileValidationError).toBeNull();
+    });
+  });
 });
