@@ -158,4 +158,41 @@ describe('Polymorphic FrameProvider Abstraction Tests', () => {
 
     window.removeEventListener('scanner-telemetry-dispatch', telemetrySpy);
   });
+
+  // 6. AbortSignal integration tests
+  it('should accept AbortSignal in FileFrameProvider constructor or start method and abort processing gracefully', async () => {
+    const controller = new AbortController();
+    const file = new File(['mock_image_data'], 'test.png', { type: 'image/png' });
+
+    const callback = vi.fn();
+    const fileProvider = new FileFrameProvider(file, { signal: controller.signal });
+    fileProvider.onFrameDecoded(callback);
+
+    controller.abort();
+    await fileProvider.start();
+
+    expect(callback).not.toHaveBeenCalled();
+  });
+
+  it('should release processing lock and suppress callbacks when signal is aborted mid-scan', async () => {
+    const controller = new AbortController();
+    const file = new File(['mock_video_data'], 'test.webm', { type: 'video/webm' });
+
+    const callback = vi.fn();
+    const fileProvider = new FileFrameProvider(file, controller.signal);
+    fileProvider.onFrameDecoded(callback);
+
+    const startPromise = fileProvider.start();
+    controller.abort();
+    await startPromise;
+
+    expect(callback).not.toHaveBeenCalled();
+
+    // Verify lock is released and another file can be processed
+    const file2 = new File(['mock_video_2'], 'test2.webm', { type: 'video/webm' });
+    const provider2 = new FileFrameProvider(file2);
+    const start2Promise = provider2.start();
+    provider2.stop();
+    await start2Promise;
+  });
 });

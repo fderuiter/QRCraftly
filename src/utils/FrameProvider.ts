@@ -257,17 +257,30 @@ export class CameraFrameProvider implements FrameProvider {
 
 export class FileFrameProvider implements FrameProvider {
   private file: File;
+  private signal?: AbortSignal;
   private onDecodedCallback?: (result: { status: 'pass' | 'fail'; decodedData: string | null; error?: string | null }) => void;
   private isScanning = false;
   private frameDropCount = 0;
   private latencyHistory: number[] = [];
   private lastLatency = 0;
+  private abortHandler?: () => void;
   
-  constructor(file: File) {
+  constructor(file: File, options?: { signal?: AbortSignal } | AbortSignal) {
     this.file = file;
+    if (options instanceof AbortSignal) {
+      this.signal = options;
+    } else if (options && typeof options === 'object' && 'signal' in options) {
+      this.signal = options.signal;
+    }
   }
   
-  public async start() {
+  public async start(signal?: AbortSignal) {
+    if (signal) {
+      this.signal = signal;
+    }
+    if (this.signal?.aborted) {
+      return;
+    }
     if (this.isScanning) return;
     if (isProcessingFileGlobal) {
       throw new Error('An uploaded file is already being processed.');
@@ -277,6 +290,12 @@ export class FileFrameProvider implements FrameProvider {
     this.frameDropCount = 0;
     this.latencyHistory = [];
     this.lastLatency = 0;
+
+    const onAbort = () => {
+      this.stop();
+    };
+    this.abortHandler = onAbort;
+    this.signal?.addEventListener('abort', onAbort);
     
     try {
       const isVideo = this.file.name.toLowerCase().endsWith('.webm') || this.file.name.toLowerCase().endsWith('.mkv') || this.file.type.startsWith('video/');
@@ -286,19 +305,26 @@ export class FileFrameProvider implements FrameProvider {
         await this.processImageFile();
       }
     } catch (err: any) {
-      this.onDecodedCallback?.({ status: 'fail', decodedData: null, error: err.message || 'File processing error' });
+      if (!this.signal?.aborted && err?.name !== 'AbortError' && err?.message !== 'Aborted') {
+        this.onDecodedCallback?.({ status: 'fail', decodedData: null, error: err.message || 'File processing error' });
+      }
     } finally {
+      if (this.abortHandler && this.signal) {
+        this.signal.removeEventListener('abort', this.abortHandler);
+        this.abortHandler = undefined;
+      }
       this.stop();
     }
   }
   
   public stop() {
-    if (!this.isScanning) return;
+    if (!this.isScanning && !isProcessingFileGlobal) return;
+    const wasScanning = this.isScanning;
     this.isScanning = false;
     isProcessingFileGlobal = false;
     
     // Dispatch telemetry (Requirement 8 / Acceptance Criteria)
-    if (typeof window !== 'undefined') {
+    if (wasScanning && typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('scanner-telemetry-dispatch', {
         detail: {
           latencyHistory: this.getMetrics().latencyHistory,
@@ -323,7 +349,10 @@ export class FileFrameProvider implements FrameProvider {
   }
   
   private async processImageFile() {
+    if (this.signal?.aborted || !this.isScanning) return;
     const img = await this.loadImage();
+    if (this.signal?.aborted || !this.isScanning) return;
+
     const { width: dWidth, height: dHeight } = getDownscaledDimensions(img.width, img.height, 1024);
     
     const canvas = document.createElement('canvas');
@@ -338,12 +367,16 @@ export class FileFrameProvider implements FrameProvider {
     
     const worker = getSharedScannerWorker();
     if (!worker) {
+      if (this.signal?.aborted || !this.isScanning) return;
       console.warn('Worker creation failed, falling back to main-thread decoding:');
       const jsQRModule = await import('jsqr');
       const jsQR = jsQRModule.default || jsQRModule;
       const code = jsQR(new Uint8ClampedArray(imageData.data.buffer), dWidth, dHeight);
+      if (this.signal?.aborted || !this.isScanning) return;
       if (code && code.data) {
-        this.onDecodedCallback?.({ status: 'pass', decodedData: code.data });
+        if (!this.signal?.aborted && this.isScanning) {
+          this.onDecodedCallback?.({ status: 'pass', decodedData: code.data });
+        }
       } else {
         // Full resolution main-thread decoding fallback
         const canvasFull = document.createElement('canvas');
@@ -356,8 +389,11 @@ export class FileFrameProvider implements FrameProvider {
         ctxFull.drawImage(img, 0, 0);
         const imageDataFull = ctxFull.getImageData(0, 0, img.width, img.height);
         const codeFull = jsQR(imageDataFull.data, img.width, img.height);
+        if (this.signal?.aborted || !this.isScanning) return;
         if (codeFull && codeFull.data) {
-          this.onDecodedCallback?.({ status: 'pass', decodedData: codeFull.data });
+          if (!this.signal?.aborted && this.isScanning) {
+            this.onDecodedCallback?.({ status: 'pass', decodedData: codeFull.data });
+          }
         } else {
           throw new Error('No QR code detected in this image. Try a clearer or higher-contrast QR code image.');
         }
@@ -369,12 +405,16 @@ export class FileFrameProvider implements FrameProvider {
     const start = performance.now();
     const result = await this.decodeFrameOffThreadImage(buffer1024, dWidth, dHeight, 1, imageData);
     const duration = performance.now() - start;
+
+    if (this.signal?.aborted || !this.isScanning) return;
     
     this.lastLatency = duration;
     this.latencyHistory.push(duration);
     
     if (result.decoded) {
-      this.onDecodedCallback?.({ status: 'pass', decodedData: result.decoded });
+      if (!this.signal?.aborted && this.isScanning) {
+        this.onDecodedCallback?.({ status: 'pass', decodedData: result.decoded });
+      }
     } else {
       // Fall back to original full-resolution image scan via worker
       const canvasFull = document.createElement('canvas');
@@ -389,8 +429,12 @@ export class FileFrameProvider implements FrameProvider {
       const bufferFull = imageDataFull.data.buffer.slice(0);
       
       const fullResult = await this.decodeFrameOffThreadImage(bufferFull, img.width, img.height, 2, imageDataFull);
+      if (this.signal?.aborted || !this.isScanning) return;
+
       if (fullResult.decoded) {
-        this.onDecodedCallback?.({ status: 'pass', decodedData: fullResult.decoded });
+        if (!this.signal?.aborted && this.isScanning) {
+          this.onDecodedCallback?.({ status: 'pass', decodedData: fullResult.decoded });
+        }
       } else {
         throw new Error('No QR code detected in this image. Try a clearer or higher-contrast QR code image.');
       }
@@ -401,6 +445,7 @@ export class FileFrameProvider implements FrameProvider {
     if (this.file.size > 50 * 1024 * 1024) {
       throw new Error('Video file exceeds 50MB limit.');
     }
+    if (this.signal?.aborted || !this.isScanning) return;
     
     const isNative = this.isContainerSupportedNatively();
     if (isNative) {
@@ -419,6 +464,8 @@ export class FileFrameProvider implements FrameProvider {
   }
   
   private async processVideoNatively(): Promise<void> {
+    if (this.signal?.aborted || !this.isScanning) return;
+
     return new Promise<void>((resolve, reject) => {
       const video = document.createElement('video');
       video.muted = true;
@@ -432,8 +479,11 @@ export class FileFrameProvider implements FrameProvider {
       
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
-      
+
+      let isCleanedUp = false;
       const cleanUp = () => {
+        if (isCleanedUp) return;
+        isCleanedUp = true;
         video.onloadedmetadata = null;
         video.onseeked = null;
         video.onerror = null;
@@ -443,8 +493,28 @@ export class FileFrameProvider implements FrameProvider {
         video.load();
         URL.revokeObjectURL(url);
       };
+
+      const handleAbort = () => {
+        cleanUp();
+        resolve();
+      };
+
+      if (this.signal?.aborted || !this.isScanning) {
+        cleanUp();
+        resolve();
+        return;
+      }
+
+      this.signal?.addEventListener('abort', handleAbort);
       
       video.onloadedmetadata = async () => {
+        if (!this.isScanning || this.signal?.aborted) {
+          this.signal?.removeEventListener('abort', handleAbort);
+          cleanUp();
+          resolve();
+          return;
+        }
+
         let width = video.videoWidth || 640;
         let height = video.videoHeight || 480;
         const { width: dWidth, height: dHeight } = getDownscaledDimensions(width, height, 1280);
@@ -452,6 +522,7 @@ export class FileFrameProvider implements FrameProvider {
         canvas.height = dHeight;
         
         if (!ctx) {
+          this.signal?.removeEventListener('abort', handleAbort);
           cleanUp();
           reject(new Error('Failed to create canvas context'));
           return;
@@ -459,12 +530,14 @@ export class FileFrameProvider implements FrameProvider {
         
         const duration = video.duration || 0;
         if (duration === 0) {
+          this.signal?.removeEventListener('abort', handleAbort);
           cleanUp();
           resolve();
           return;
         }
         
         if (duration > 10) {
+          this.signal?.removeEventListener('abort', handleAbort);
           cleanUp();
           reject(new Error('Video duration exceeds 10 seconds limit.'));
           return;
@@ -479,7 +552,8 @@ export class FileFrameProvider implements FrameProvider {
         sharedBufferPool.resize(dWidth, dHeight);
         
         const seekAndCapture = () => {
-          if (!this.isScanning || currentTime > duration || decodedQR) {
+          if (!this.isScanning || this.signal?.aborted || currentTime > duration || decodedQR) {
+            this.signal?.removeEventListener('abort', handleAbort);
             cleanUp();
             resolve();
             return;
@@ -488,7 +562,8 @@ export class FileFrameProvider implements FrameProvider {
         };
         
         video.onseeked = async () => {
-          if (decodedQR) {
+          if (!this.isScanning || this.signal?.aborted || decodedQR) {
+            this.signal?.removeEventListener('abort', handleAbort);
             cleanUp();
             resolve();
             return;
@@ -513,10 +588,20 @@ export class FileFrameProvider implements FrameProvider {
             if (recycledBuffer) {
               sharedBufferPool.release(recycledBuffer);
             }
+
+            if (this.signal?.aborted || !this.isScanning) {
+              this.signal?.removeEventListener('abort', handleAbort);
+              cleanUp();
+              resolve();
+              return;
+            }
             
             if (decoded) {
               decodedQR = decoded;
-              this.onDecodedCallback?.({ status: 'pass', decodedData: decoded });
+              if (!this.signal?.aborted && this.isScanning) {
+                this.onDecodedCallback?.({ status: 'pass', decodedData: decoded });
+              }
+              this.signal?.removeEventListener('abort', handleAbort);
               cleanUp();
               resolve();
               return;
@@ -529,24 +614,38 @@ export class FileFrameProvider implements FrameProvider {
         };
         
         video.onerror = () => {
+          this.signal?.removeEventListener('abort', handleAbort);
           cleanUp();
-          reject(new Error('Failed to load video natively'));
+          if (!this.signal?.aborted) {
+            reject(new Error('Failed to load video natively'));
+          } else {
+            resolve();
+          }
         };
         
         seekAndCapture();
       };
       
       video.onerror = () => {
+        this.signal?.removeEventListener('abort', handleAbort);
         cleanUp();
-        reject(new Error('Failed to load video metadata'));
+        if (!this.signal?.aborted) {
+          reject(new Error('Failed to load video metadata'));
+        } else {
+          resolve();
+        }
       };
     });
   }
   
   private async processVideoWithDemuxer(): Promise<void> {
+    if (this.signal?.aborted || !this.isScanning) return;
+
     const fetchWasmAsset = (await import('./assetCache')).fetchWasmAsset;
     const wasmBuffer = await fetchWasmAsset('/webm-demuxer.wasm');
     const fileBuffer = await this.file.arrayBuffer();
+
+    if (this.signal?.aborted || !this.isScanning) return;
     
     return new Promise<void>((resolve, reject) => {
       const worker = getSharedScannerWorker();
@@ -556,29 +655,59 @@ export class FileFrameProvider implements FrameProvider {
       }
       
       const taskId = `demux-${Date.now()}-${Math.random()}`;
+
+      const detachListeners = () => {
+        if (typeof worker.removeEventListener === 'function') {
+          worker.removeEventListener('message', handleMessage);
+          worker.removeEventListener('error', handleError);
+        } else {
+          (worker as any).onmessage = null;
+          (worker as any).onerror = null;
+        }
+      };
+
+      const handleAbort = () => {
+        worker.postMessage({ type: 'abort', taskId });
+        detachListeners();
+        resolve();
+      };
+
+      if (this.signal?.aborted || !this.isScanning) {
+        handleAbort();
+        return;
+      }
+
+      this.signal?.addEventListener('abort', handleAbort);
       
       const handleMessage = (event: MessageEvent) => {
         const msg = event.data;
         if (msg && msg.taskId && msg.taskId !== taskId) {
           return;
         }
+        if (this.signal?.aborted || !this.isScanning) {
+          this.signal?.removeEventListener('abort', handleAbort);
+          handleAbort();
+          return;
+        }
         if (msg && msg.type === 'frame_decoded') {
-          this.onDecodedCallback?.({ status: 'pass', decodedData: msg.data });
-        } else if (msg && msg.type === 'done') {
-          if (typeof worker.removeEventListener === 'function') {
-            worker.removeEventListener('message', handleMessage);
-            worker.removeEventListener('error', handleError);
+          if (!this.signal?.aborted && this.isScanning) {
+            this.onDecodedCallback?.({ status: 'pass', decodedData: msg.data });
           }
+        } else if (msg && msg.type === 'done') {
+          this.signal?.removeEventListener('abort', handleAbort);
+          detachListeners();
           resolve();
         }
       };
       
       const handleError = (err: any) => {
-        if (typeof worker.removeEventListener === 'function') {
-          worker.removeEventListener('message', handleMessage);
-          worker.removeEventListener('error', handleError);
+        this.signal?.removeEventListener('abort', handleAbort);
+        detachListeners();
+        if (!this.signal?.aborted) {
+          reject(err);
+        } else {
+          resolve();
         }
-        reject(err);
       };
       
       if (typeof worker.addEventListener === 'function') {
