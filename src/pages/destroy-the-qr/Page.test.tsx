@@ -191,9 +191,9 @@ describe('Destroy the QR Code! Arcade Page', () => {
 
     if (canvas) {
       fireEvent.mouseDown(canvas, { clientX: 200, clientY: 200 });
-      
+      await new Promise<void>(resolve => setTimeout(resolve, 10));
+
       expect(mockDrawImage).toHaveBeenCalled();
-      expect(mockGetImageData).toHaveBeenCalled();
 
       const lastDrawCall = mockDrawImage.mock.calls[0];
       expect(lastDrawCall[5]).toBe(0);
@@ -221,6 +221,8 @@ describe('Destroy the QR Code! Arcade Page', () => {
       fireEvent.mouseDown(canvas, { clientX: 200, clientY: 200 });
       fireEvent.mouseMove(canvas, { clientX: 210, clientY: 210 });
       fireEvent.mouseMove(canvas, { clientX: 220, clientY: 220 });
+
+      await new Promise<void>(resolve => setTimeout(resolve, 10));
 
       expect(mockPostMessage).toHaveBeenCalledTimes(1);
 
@@ -292,6 +294,99 @@ describe('Destroy the QR Code! Arcade Page', () => {
       expect(mockDetect).toHaveBeenCalled();
       // Should fall back to worker's postMessage!
       expect(mockPostMessage).toHaveBeenCalled();
+    }
+  });
+
+  it('uses createImageBitmap and transfers imageBitmap object when sending frames to background worker', async () => {
+    const mockPostMessage = vi.fn();
+    const mockCreateImageBitmap = vi.fn().mockResolvedValue({
+      width: 256,
+      height: 256,
+      close: vi.fn(),
+    });
+
+    vi.stubGlobal('createImageBitmap', mockCreateImageBitmap);
+    vi.stubGlobal('Worker', class MockWorker {
+      postMessage = mockPostMessage;
+      addEventListener = vi.fn();
+      removeEventListener = vi.fn();
+      terminate = vi.fn();
+    });
+
+    render(<Page />);
+
+    const canvas = document.querySelector('canvas');
+    expect(canvas).toBeInTheDocument();
+
+    if (canvas) {
+      fireEvent.mouseDown(canvas, { clientX: 200, clientY: 200 });
+      await new Promise<void>(resolve => setTimeout(resolve, 20));
+
+      expect(mockCreateImageBitmap).toHaveBeenCalled();
+      expect(mockPostMessage).toHaveBeenCalled();
+      const payload = mockPostMessage.mock.calls[0][0];
+      const transfer = mockPostMessage.mock.calls[0][1];
+      expect(payload).toHaveProperty('imageBitmap');
+      expect(payload.width).toBe(256);
+      expect(payload.height).toBe(256);
+      expect(transfer).toHaveLength(1);
+    }
+  });
+
+  it('falls back to synchronous getImageData if createImageBitmap is unsupported', async () => {
+    const mockPostMessage = vi.fn();
+    const mockGetImageData = vi.fn(() => ({
+      data: new Uint8ClampedArray(256 * 256 * 4),
+      width: 256,
+      height: 256,
+    }));
+
+    vi.stubGlobal('createImageBitmap', undefined as any);
+    vi.stubGlobal('Worker', class MockWorker {
+      postMessage = mockPostMessage;
+      addEventListener = vi.fn();
+      removeEventListener = vi.fn();
+      terminate = vi.fn();
+    });
+
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(function(this: HTMLCanvasElement) {
+      return {
+        clearRect: vi.fn(),
+        drawImage: vi.fn(),
+        getImageData: mockGetImageData,
+        fillStyle: '',
+        strokeStyle: '',
+        lineWidth: 0,
+        fillRect: vi.fn(),
+        strokeRect: vi.fn(),
+        beginPath: vi.fn(),
+        moveTo: vi.fn(),
+        lineTo: vi.fn(),
+        stroke: vi.fn(),
+        fill: vi.fn(),
+        arc: vi.fn(),
+        save: vi.fn(),
+        restore: vi.fn(),
+        translate: vi.fn(),
+        setLineDash: vi.fn(),
+        rotate: vi.fn(),
+        createLinearGradient: vi.fn(() => ({ addColorStop: vi.fn() })),
+      } as any;
+    });
+
+    render(<Page />);
+
+    const canvas = document.querySelector('canvas');
+    expect(canvas).toBeInTheDocument();
+
+    if (canvas) {
+      fireEvent.mouseDown(canvas, { clientX: 200, clientY: 200 });
+      await new Promise<void>(resolve => setTimeout(resolve, 20));
+
+      expect(mockGetImageData).toHaveBeenCalled();
+      expect(mockPostMessage).toHaveBeenCalled();
+      const payload = mockPostMessage.mock.calls[0][0];
+      expect(payload).toHaveProperty('imageData');
     }
   });
 });

@@ -45,18 +45,21 @@ self.onmessage = async (e: MessageEvent<unknown>) => {
     let imageData: { data: Uint8ClampedArray; width: number; height: number };
 
     if (imageBitmap) {
-      if (typeof OffscreenCanvas !== 'undefined') {
-        const canvas = new OffscreenCanvas(width, height);
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-          throw new Error('Failed to get 2d context on OffscreenCanvas');
+      try {
+        if (typeof OffscreenCanvas !== 'undefined') {
+          const canvas = new OffscreenCanvas(width, height);
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            throw new Error('Failed to get 2d context on OffscreenCanvas');
+          }
+          ctx.drawImage(imageBitmap, 0, 0);
+          const extracted = ctx.getImageData(0, 0, width, height);
+          imageData = { data: extracted.data, width, height };
+        } else {
+          throw new Error('OffscreenCanvas is not supported in this environment');
         }
-        ctx.drawImage(imageBitmap, 0, 0);
-        const extracted = ctx.getImageData(0, 0, width, height);
-        imageData = { data: extracted.data, width, height };
+      } finally {
         imageBitmap.close();
-      } else {
-        throw new Error('OffscreenCanvas is not supported in this environment');
       }
     } else if (reqImageData) {
       imageData = reqImageData as any;
