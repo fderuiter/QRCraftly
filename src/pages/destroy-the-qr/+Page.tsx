@@ -120,6 +120,11 @@ export default function Page() {
   const [intactDarkCount, setIntactDarkCount] = useState(0);
   const [blocksDestroyed, setBlocksDestroyed] = useState(0);
   const [decodedText, setDecodedText] = useState('https://qrcraftly.com');
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // References for non-reactive game loop mechanics to achieve full 60 FPS without React reconciliation lags
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -1226,7 +1231,7 @@ export default function Page() {
                 placeholder="Enter text to test..."
                 className="w-full rounded-xl border border-slate-800 bg-slate-950 px-4 py-2.5 text-sm font-medium text-slate-100 placeholder-slate-600 shadow-inner transition-colors focus:border-teal-500 focus:outline-none"
               />
-              <p className="mt-0.5 text-[10px] leading-relaxed text-slate-500">
+              <p className="mt-0.5 text-xs leading-relaxed text-slate-500">
                 Generates standard QR blocks dynamically. Longer strings raise QR version/complexity.
               </p>
             </div>
@@ -1256,7 +1261,7 @@ export default function Page() {
                   );
                 })}
               </div>
-              <p className="mt-0.5 text-[10px] leading-relaxed text-slate-500">
+              <p className="mt-0.5 text-xs leading-relaxed text-slate-500">
                 {eccLevel === 'L' && 'Tier L (~7% redundancy recovery)'}
                 {eccLevel === 'M' && 'Tier M (~15% redundancy recovery)'}
                 {eccLevel === 'Q' && 'Tier Q (~25% redundancy recovery)'}
@@ -1335,7 +1340,7 @@ export default function Page() {
                       <Icon className={`size-4 ${isActive ? '' : w.color}`} />
                       <span className="text-xs font-bold">{w.name}</span>
                     </div>
-                    <p className="text-[10px] leading-relaxed text-slate-500 transition-colors group-hover:text-slate-400">
+                    <p className="text-xs leading-relaxed text-slate-500 transition-colors group-hover:text-slate-400">
                       {w.desc}
                     </p>
                   </button>
@@ -1347,7 +1352,7 @@ export default function Page() {
             <div className="mt-1 flex items-center justify-between rounded-xl border border-slate-900 bg-slate-950 p-3.5">
               <div className="flex flex-col">
                 <span className="text-xs font-bold text-slate-300">Rapid Auto-Fire</span>
-                <span className="text-[10px] text-slate-500">Hold trigger for Bullet weapon</span>
+                <span className="text-xs text-slate-500">Hold trigger for Bullet weapon</span>
               </div>
               <button
                 role="switch"
@@ -1429,7 +1434,7 @@ export default function Page() {
                   <span className="text-sm font-black tracking-widest text-teal-400 drop-shadow-[0_0_8px_rgba(45,212,191,0.5)]">
                     SCANNABLE
                   </span>
-                  <span className="mt-1 text-[10px] font-semibold tracking-wider text-slate-500 uppercase">
+                  <span className="mt-1 text-xs font-semibold tracking-wider text-slate-500 uppercase">
                     Code Decoded Correctly
                   </span>
                 </>
@@ -1441,7 +1446,7 @@ export default function Page() {
                   <span className="text-sm font-black tracking-widest text-rose-400 drop-shadow-[0_0_8px_rgba(244,63,94,0.5)]">
                     CORRUPTED
                   </span>
-                  <span className="mt-1 text-[10px] font-semibold tracking-wider text-slate-500 uppercase">
+                  <span className="mt-1 text-xs font-semibold tracking-wider text-slate-500 uppercase">
                     Scan Broken / Unreadable
                   </span>
                 </>
@@ -1450,7 +1455,7 @@ export default function Page() {
 
             {/* Decoded Output Field */}
             <div className="flex flex-col gap-1 rounded-xl border border-slate-900 bg-slate-950 p-3.5">
-              <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">Live Readout</span>
+              <span className="text-xs font-bold tracking-wider text-slate-500 uppercase">Live Readout</span>
               <div className="truncate font-mono text-xs font-semibold text-slate-300">
                 {isScannable ? decodedText : <span className="text-rose-500/70 italic">[No data decoded]</span>}
               </div>
@@ -1476,7 +1481,7 @@ export default function Page() {
               {/* Progress bar */}
               <div className="h-3 w-full overflow-hidden rounded-full border border-slate-900 bg-slate-950 p-0.5 shadow-inner">
                 <div
-                  style={{ width: `${durability}%` }}
+                  style={isMounted ? { width: `${durability}%` } : undefined}
                   className={`h-full rounded-full transition-all duration-100 ${
                     durability > 70
                       ? 'bg-gradient-to-r from-teal-500 to-teal-400'
@@ -1490,13 +1495,13 @@ export default function Page() {
               {/* Counts */}
               <div className="mt-1.5 grid grid-cols-2 gap-3">
                 <div className="rounded-xl border border-slate-900 bg-slate-950 p-3 text-center">
-                  <span className="block text-[10px] font-bold text-slate-500 uppercase">Intact Micro-Cells</span>
+                  <span className="block text-xs font-bold text-slate-500 uppercase">Intact Micro-Cells</span>
                   <span className="font-mono text-base font-extrabold text-slate-200">
                     {intactDarkCount} / {originalDarkCount}
                   </span>
                 </div>
                 <div className="rounded-xl border border-slate-900 bg-slate-950 p-3 text-center">
-                  <span className="block text-[10px] font-bold text-slate-500 uppercase">Blasted Away</span>
+                  <span className="block text-xs font-bold text-slate-500 uppercase">Blasted Away</span>
                   <span className="font-mono text-base font-extrabold text-slate-200">
                     {blocksDestroyed}
                   </span>

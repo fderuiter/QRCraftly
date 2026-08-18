@@ -148,6 +148,11 @@ function GamePageInner() {
   // Game UI Configuration States
   const [inputValue, setInputValue] = useState(initialConfig.value || "https://qrcraftly.com");
   const [eccLevel, setEccLevel] = useState<QRErrorCorrectionLevel>(initialConfig.errorCorrectionLevel || QRErrorCorrectionLevel.Q);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
   
   // Keep active colors synced
   const fgColor = initialConfig.fgColor || "#0f766e";
@@ -765,7 +770,7 @@ function GamePageInner() {
               <div className="relative h-4 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
                 <div 
                   className={`h-full rounded-full transition-all duration-155 ${healthBarColor}`}
-                  style={{ width: `${healthPercent}%` }}
+                  style={isMounted ? { width: `${healthPercent}%` } : undefined}
                 />
               </div>
 

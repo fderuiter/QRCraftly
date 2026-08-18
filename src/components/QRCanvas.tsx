@@ -158,6 +158,11 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
 
   const onRenderedRef = useRef(onRendered);
   const sizeRef = useRef(size);
+  const [isMountedState, setIsMountedState] = useState(false);
+
+  useEffect(() => {
+    setIsMountedState(true);
+  }, []);
 
   useEffect(() => {
     configRef.current = activeConfig;
@@ -847,7 +852,8 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
         </div>
         <canvas
           ref={handleRef}
-          style={{ display: 'none' }}
+          className="hidden"
+          style={isMountedState ? { display: 'none' } : undefined}
           role="img"
           aria-label={ariaLabel}
         />

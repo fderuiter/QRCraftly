@@ -257,7 +257,7 @@ function FileTransferReceiveInner() {
                   </div>
                   
                   <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
-                    <div className="h-full bg-teal-600 transition-all duration-150" style={{ width: `${progressPercent}%` }} />
+                    <div className="h-full bg-teal-600 transition-all duration-150" style={progressPercent > 0 ? { width: `${progressPercent}%` } : undefined} />
                   </div>
 
                   <div className="grid grid-cols-2 gap-4 pt-2">

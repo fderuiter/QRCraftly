@@ -72,7 +72,7 @@ function TrendChart({ analytics, timeRange }: TrendChartProps) {
                 </div>
                 {/* Bar */}
                 <div
-                  style={{ height: `${barHeight}px` }}
+                  style={item.count > 0 ? { height: `${barHeight}px` } : undefined}
                   className={`w-full rounded-t transition-all ${
                     item.count > 0 ? 'bg-teal-500 hover:bg-teal-600 dark:bg-teal-400 dark:hover:bg-teal-300' : 'bg-slate-200 dark:bg-slate-800'
                   }`}
@@ -144,7 +144,7 @@ function AnalyticsView({ analytics }: { analytics: ScanAnalytics }) {
                 <span>{devices.mobile} ({mobilePct}%)</span>
               </div>
               <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
-                <div className="h-full rounded-full bg-teal-500" style={{ width: `${mobilePct}%` }} />
+                <div className="h-full rounded-full bg-teal-500" style={mobilePct > 0 ? { width: `${mobilePct}%` } : undefined} />
               </div>
             </div>
 
@@ -154,7 +154,7 @@ function AnalyticsView({ analytics }: { analytics: ScanAnalytics }) {
                 <span>{devices.desktop} ({desktopPct}%)</span>
               </div>
               <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
-                <div className="h-full rounded-full bg-indigo-500" style={{ width: `${desktopPct}%` }} />
+                <div className="h-full rounded-full bg-indigo-500" style={desktopPct > 0 ? { width: `${desktopPct}%` } : undefined} />
               </div>
             </div>
 
@@ -164,7 +164,7 @@ function AnalyticsView({ analytics }: { analytics: ScanAnalytics }) {
                 <span>{devices.tablet} ({tabletPct}%)</span>
               </div>
               <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
-                <div className="h-full rounded-full bg-amber-500" style={{ width: `${tabletPct}%` }} />
+                <div className="h-full rounded-full bg-amber-500" style={tabletPct > 0 ? { width: `${tabletPct}%` } : undefined} />
               </div>
             </div>
           </div>

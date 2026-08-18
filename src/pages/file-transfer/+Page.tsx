@@ -316,7 +316,7 @@ function FileTransferToolInner() {
                       </div>
                       
                       <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
-                        <div className="h-full bg-teal-600 transition-all duration-150" style={{ width: `${progress}%` }} />
+                        <div className="h-full bg-teal-600 transition-all duration-150" style={progress > 0 ? { width: `${progress}%` } : undefined} />
                       </div>
 
                       <div className="grid grid-cols-2 gap-4 pt-2">
