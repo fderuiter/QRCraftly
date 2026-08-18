@@ -131,6 +131,8 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
       return 'Open Windows Settings > Privacy & Security > Camera, and toggle "Let apps access your camera" and your browser to ON.';
     }
     return 'Click the padlock or site control icon next to the URL in your browser\'s address bar, and allow Camera permissions.';
+  };
+
   // Client-side QR decoding using the unified Polymorphic FrameProvider abstraction
   const processFile = async (file: File) => {
     setFileError(null);
