@@ -509,4 +509,101 @@ describe('QRScanner Component', () => {
       });
     });
   });
+
+  describe('Reactive Webcam Session State Machine', () => {
+    let capturedOnScanSuccess: ((data: string) => void) | undefined;
+
+    beforeEach(() => {
+      vi.mocked(useAdaptiveScanner).mockImplementation((options: any) => {
+        capturedOnScanSuccess = options.onScanSuccess;
+        return {
+          isScanning: false,
+          status: 'idle',
+          samplingDelay: 33,
+          latencyHistory: [],
+          startScanning: mockStartScanning,
+          stopScanning: mockStopScanning,
+        };
+      });
+    });
+
+    it('restarts camera stream when clicking active Webcam tab header after a successful scan', async () => {
+      render(<QRScanner onScanSuccess={mockOnScanSuccess} onClose={mockOnClose} />);
+
+      expect(mockStartStream).toHaveBeenCalledTimes(1);
+
+      // Simulate QR code detection in non-continuous mode
+      await act(async () => {
+        capturedOnScanSuccess?.('https://example.com/qr1');
+      });
+
+      expect(mockOnScanSuccess).toHaveBeenCalledWith('https://example.com/qr1');
+      expect(mockStopStream).toHaveBeenCalled();
+
+      mockStartStream.mockClear();
+
+      // Click the active 'Webcam' tab header
+      const webcamTab = screen.getByRole('button', { name: /webcam/i });
+      await act(async () => {
+        fireEvent.click(webcamTab);
+      });
+
+      // Stream should be restarted
+      expect(mockStartStream).toHaveBeenCalledTimes(1);
+    });
+
+    it('immediately stops camera hardware stream upon successful scan in non-continuous mode', async () => {
+      render(<QRScanner onScanSuccess={mockOnScanSuccess} continuous={false} />);
+
+      expect(mockStartStream).toHaveBeenCalledTimes(1);
+
+      await act(async () => {
+        capturedOnScanSuccess?.('https://example.com/qr2');
+      });
+
+      expect(mockStopStream).toHaveBeenCalled();
+      expect(mockStopScanning).toHaveBeenCalled();
+    });
+
+    it('stops webcam stream and frees system resources when navigating to file upload view', async () => {
+      render(<QRScanner onScanSuccess={mockOnScanSuccess} />);
+
+      expect(mockStartStream).toHaveBeenCalledTimes(1);
+
+      const fileTab = screen.getByRole('button', { name: /file upload/i });
+      await act(async () => {
+        fireEvent.click(fileTab);
+      });
+
+      expect(mockStopStream).toHaveBeenCalled();
+      expect(mockStopScanning).toHaveBeenCalled();
+    });
+
+    it('executes camera initialization effect exactly once per active session transition', async () => {
+      const { rerender } = render(<QRScanner onScanSuccess={mockOnScanSuccess} />);
+
+      expect(mockStartStream).toHaveBeenCalledTimes(1);
+
+      // Re-render with same props
+      rerender(<QRScanner onScanSuccess={mockOnScanSuccess} />);
+
+      // Should not call startStream again
+      expect(mockStartStream).toHaveBeenCalledTimes(1);
+    });
+
+    it('preserves active stream when continuous scanning is enabled', async () => {
+      render(<QRScanner onScanSuccess={mockOnScanSuccess} continuous={true} />);
+
+      expect(mockStartStream).toHaveBeenCalledTimes(1);
+
+      mockStopStream.mockClear();
+
+      await act(async () => {
+        capturedOnScanSuccess?.('https://example.com/qr3');
+      });
+
+      expect(mockOnScanSuccess).toHaveBeenCalledWith('https://example.com/qr3');
+      expect(mockStopStream).not.toHaveBeenCalled();
+    });
+  });
 });
