@@ -21,6 +21,7 @@ import { render, screen, fireEvent, act, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import React from 'react';
 import Page from './+Page';
+import * as senderModule from '@/hooks/useAnimatedQrSender';
 
 // Mock the crypto APIs if missing in test environment
 const mockSubtle = {
@@ -156,6 +157,7 @@ describe('File Transfer Page & Pipeline', () => {
   });
 
   it('simulates the 50MB high-load file and starts/stops transfer', async () => {
+    vi.spyOn(senderModule, 'verifyHandshakeFrame').mockResolvedValue(true);
     render(<Page />);
 
     // Select the simulated file
@@ -203,8 +205,10 @@ describe('File Transfer Page & Pipeline', () => {
 
     expect(startTriggered).toHaveBeenCalled();
 
-    // Check progress is rendered
-    expect(screen.getByText('Memory use')).toBeInTheDocument();
+    // Check progress is rendered after async handshake check completes
+    await waitFor(() => {
+      expect(screen.getByText('Memory use')).toBeInTheDocument();
+    });
 
     // Stop streaming
     const stopStreamButton = screen.getByRole('button', { name: /stop file transfer/i });
