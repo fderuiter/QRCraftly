@@ -121,7 +121,7 @@ export function run() {
   console.log(`[CSP Hash Injector] Found ${htmlFiles.length} HTML files.`);
   
   // Base CSP string to parse (matches original CSP in Head.tsx but can be parsed dynamically)
-  const baseCspPattern = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';";
+  const baseCspPattern = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';";
   
   // Map to store files and their computed specific hashes
   const fileHashesMap = new Map();
