@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { generateDecryptionKey, encryptUrl, extractKeyFromHash } from '../utils/encryption';
 
 /**
  * Represents a registered dynamic QR tracking record in local storage.
@@ -10,6 +11,8 @@ export interface DynamicQRRecord {
   originalUrl: string;
   /** Constructed redirection edge tracking URL. */
   redirectUrl: string;
+  /** Symmetric decryption key stored in local storage for re-encryption. */
+  key?: string;
   /** Optional Apple App Store destination URL for iOS scanners. */
   iosUrl?: string;
   /** Optional Google Play Store destination URL for Android scanners. */
@@ -138,6 +141,14 @@ export function useRedirector() {
     setIsLoading(true);
     setError(null);
     try {
+      // Generate symmetric encryption key locally using Web Crypto API
+      const keyHex = await generateDecryptionKey();
+
+      // Encrypt target URLs locally before dispatching payload storage requests
+      const encTargetUrl = await encryptUrl(targetUrl, keyHex);
+      const encIosUrl = options?.iosUrl ? await encryptUrl(options.iosUrl, keyHex) : undefined;
+      const encAndroidUrl = options?.androidUrl ? await encryptUrl(options.androidUrl, keyHex) : undefined;
+
       // Signature whitelist match: '/api/redirect'
       const response = await fetch('/api/redirect/register', {
         method: 'POST',
@@ -145,9 +156,9 @@ export function useRedirector() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          redirectUrl: targetUrl,
-          iosUrl: options?.iosUrl,
-          androidUrl: options?.androidUrl,
+          redirectUrl: encTargetUrl,
+          iosUrl: encIosUrl,
+          androidUrl: encAndroidUrl,
         }),
       });
 
@@ -169,15 +180,16 @@ export function useRedirector() {
         androidUrl?: string;
         adminKey: string;
       };
-      // Construct redirection URL pointing to our edge function router
-      const edgeRedirectUrl = `${window.location.origin}/api/redirect/${data.id}`;
+      // Construct tracking URL with decryption key embedded inside anchor hash fragment (#key=...)
+      const edgeRedirectUrl = `${window.location.origin}/r/${data.id}#key=${keyHex}`;
 
       const newRecord: DynamicQRRecord = {
         id: data.id,
         originalUrl: targetUrl,
         redirectUrl: edgeRedirectUrl,
-        iosUrl: data.iosUrl,
-        androidUrl: data.androidUrl,
+        key: keyHex,
+        iosUrl: options?.iosUrl,
+        androidUrl: options?.androidUrl,
         adminKey: data.adminKey,
         createdAt: new Date().toISOString(),
       };
@@ -203,6 +215,17 @@ export function useRedirector() {
     setIsLoading(true);
     setError(null);
     try {
+      const record = records.find(r => r.id === id);
+      let keyHex = record?.key || (record?.redirectUrl ? extractKeyFromHash(record.redirectUrl) : null);
+      if (!keyHex) {
+        keyHex = await generateDecryptionKey();
+      }
+
+      // Re-encrypt updated target URLs locally using Web Crypto API
+      const encNewUrl = await encryptUrl(newTargetUrl, keyHex);
+      const encIosUrl = options?.iosUrl ? await encryptUrl(options.iosUrl, keyHex) : undefined;
+      const encAndroidUrl = options?.androidUrl ? await encryptUrl(options.androidUrl, keyHex) : undefined;
+
       // Signature whitelist match: '/api/redirect'
       const response = await fetch('/api/redirect/update', {
         method: 'POST',
@@ -212,9 +235,9 @@ export function useRedirector() {
         body: JSON.stringify({
           id,
           adminKey,
-          newUrl: newTargetUrl,
-          iosUrl: options?.iosUrl,
-          androidUrl: options?.androidUrl,
+          newUrl: encNewUrl,
+          iosUrl: encIosUrl,
+          androidUrl: encAndroidUrl,
         }),
       });
 
@@ -229,23 +252,19 @@ export function useRedirector() {
         throw new Error(errorMsg);
       }
 
-      const data = await response.json() as {
-        success: boolean;
-        redirectUrl?: string;
-        iosUrl?: string;
-        androidUrl?: string;
-      };
+      await response.json();
 
-      const updatedRecords = records.map(record => {
-        if (record.id === id) {
+      const updatedRecords = records.map(r => {
+        if (r.id === id) {
           return {
-            ...record,
+            ...r,
             originalUrl: newTargetUrl,
-            iosUrl: data.iosUrl !== undefined ? data.iosUrl : (options?.iosUrl !== undefined ? options.iosUrl : record.iosUrl),
-            androidUrl: data.androidUrl !== undefined ? data.androidUrl : (options?.androidUrl !== undefined ? options.androidUrl : record.androidUrl),
+            key: keyHex,
+            iosUrl: options?.iosUrl !== undefined ? options.iosUrl : r.iosUrl,
+            androidUrl: options?.androidUrl !== undefined ? options.androidUrl : r.androidUrl,
           };
         }
-        return record;
+        return r;
       });
       saveRecords(updatedRecords);
       return true;

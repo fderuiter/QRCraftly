@@ -38,6 +38,10 @@ type QRState = {
    *
    */
   violations: string[];
+  /**
+   * Whether scannability fallback mode is active globally across components.
+   */
+  isScannabilityFallbackActive: boolean;
 };
 
 /**
@@ -60,6 +64,10 @@ export interface QRStore {
    *
    */
   setModuleCount: (count: number) => void;
+  /**
+   *
+   */
+  setScannabilityFallbackActive: (active: boolean) => void;
   /**
    *
    */
@@ -115,6 +123,7 @@ function createQRStore(initialConfig?: Partial<QRConfig>): QRStore {
       darkMode: false,
     },
     violations: [],
+    isScannabilityFallbackActive: false,
   };
 
   const listeners = new Set<() => void>();
@@ -135,8 +144,14 @@ function createQRStore(initialConfig?: Partial<QRConfig>): QRStore {
       const proposed = { ...state.config, ...updates };
       const violations = ValidationEngine.validateConfig(proposed);
       const sanitized = ValidationEngine.sanitizeConfig(proposed);
-      state = { ...state, config: sanitized, violations };
+      state = { ...state, config: sanitized, violations, isScannabilityFallbackActive: false };
       listeners.forEach(l => l());
+    },
+    setScannabilityFallbackActive: (active) => {
+      if (state.isScannabilityFallbackActive !== active) {
+        state = { ...state, isScannabilityFallbackActive: active };
+        listeners.forEach(l => l());
+      }
     },
     updatePreferences: (updates) => {
       state = { ...state, preferences: { ...state.preferences, ...updates } };
@@ -167,6 +182,11 @@ function createQRStore(initialConfig?: Partial<QRConfig>): QRStore {
     if (detail && detail.moduleCount !== undefined) {
       store.setModuleCount(detail.moduleCount);
     }
+  });
+
+  // Listen for scannability-fail to trigger central fallback mode
+  store.registerSignal('scannability-fail', () => {
+    store.setScannabilityFallbackActive(true);
   });
 
   return store;
@@ -218,6 +238,9 @@ export function useQRStoreSelector<T>(selector: (state: QRState) => T): T {
   );
 }
 
+/**
+ *
+ */
 export function useOptionalQRStore() {
   return useContext(QRStoreContext);
 }

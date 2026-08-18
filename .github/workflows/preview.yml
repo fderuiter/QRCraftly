@@ -33,6 +33,13 @@ jobs:
 
       - name: Debug Cloudflare Credentials Presence
         run: |
+          if [ "${{ github.event.pull_request.head.repo.full_name }}" = "${{ github.repository }}" ]; then
+            echo "Pull request origin: Internal branch (${{ github.event.pull_request.head.repo.full_name }})"
+            echo "Execution Mode: Live Cloud Deployment"
+          else
+            echo "Pull request origin: External fork (${{ github.event.pull_request.head.repo.full_name }})"
+            echo "Execution Mode: Local Mock Preview"
+          fi
           if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
             echo "CLOUDFLARE_API_TOKEN is empty"
           else
@@ -44,8 +51,8 @@ jobs:
             echo "CLOUDFLARE_ACCOUNT_ID is present (length: ${#CLOUDFLARE_ACCOUNT_ID})"
           fi
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ github.event.pull_request.head.repo.full_name == github.repository && secrets.CLOUDFLARE_API_TOKEN || '' }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ github.event.pull_request.head.repo.full_name == github.repository && secrets.CLOUDFLARE_ACCOUNT_ID || '' }}
 
       - name: Verify Package Manager and Toolchain Pins
         run: |
@@ -70,13 +77,17 @@ jobs:
       - name: Build Application
         run: pnpm run build
 
-      - name: Deploy Preview to Cloudflare Pages
+      - name: Deploy Preview / Local Mock Execution
         id: cloudflare_deploy
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ github.event.pull_request.head.repo.full_name == github.repository && secrets.CLOUDFLARE_API_TOKEN || '' }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ github.event.pull_request.head.repo.full_name == github.repository && secrets.CLOUDFLARE_ACCOUNT_ID || '' }}
         run: |
-          echo "Deploying preview to Cloudflare Pages..."
+          if [ "${{ github.event.pull_request.head.repo.full_name }}" = "${{ github.repository }}" ]; then
+            echo "Deploying preview to Cloudflare Pages (Live Cloud Deployment)..."
+          else
+            echo "External fork detected. Running in Local Mock Preview mode without cloud credentials..."
+          fi
           pnpm exec wrangler pages deploy dist/client --project-name=qrcraftly --branch=pr-${{ github.event.pull_request.number }} --commit-dirty > deploy_output.txt 2>&1 || { cat deploy_output.txt && exit 1; }
           cat deploy_output.txt
           DEPLOYMENT_URL=$(grep -oE "https://[a-zA-Z0-9.-]+\.pages\.dev" deploy_output.txt | tail -n 1)
@@ -126,6 +137,11 @@ jobs:
               const smokeStatus = smokeOutcome === 'success' ? '✅ Passed' : (smokeOutcome === 'skipped' ? '⏭️ Skipped' : '❌ Failed');
               const deploymentUrl = "${{ steps.cloudflare_deploy.outputs.deployment-url }}";
 
+              const headRepo = context.payload.pull_request.head.repo.full_name;
+              const baseRepo = context.repo.owner + '/' + context.repo.repo;
+              const isInternal = headRepo === baseRepo;
+              const executionMode = isInternal ? 'Live Cloud Deployment' : 'Local Mock Preview';
+
               // List existing comments to find previous bot comments
               const { data: comments } = await withRetry(() => github.rest.issues.listComments({
                 owner,
@@ -136,8 +152,13 @@ jobs:
               const botComment = comments.find(c => c.body && c.body.includes('🚀 Cloudflare Pages Preview Deployment'));
 
               let body = `### 🚀 Cloudflare Pages Preview Deployment\n\n`;
+              body += `- **Execution Mode**: ${executionMode}\n`;
               if (deployOutcome === 'success') {
-                body += `- **Staging URL**: [${deploymentUrl}](${deploymentUrl})\n`;
+                if (isInternal && deploymentUrl.startsWith('https://')) {
+                  body += `- **Staging URL**: [${deploymentUrl}](${deploymentUrl})\n`;
+                } else {
+                  body += `- **Local Preview URL**: ${deploymentUrl}\n`;
+                }
               } else {
                 body += `- **Staging URL**: *Unavailable*\n`;
               }
@@ -183,6 +204,11 @@ jobs:
             } catch (err) {
               console.error('Failed to post or update PR status comment after retries:', err);
             }
+
+      - name: Restore Workspace Source Metadata
+        if: always()
+        run: |
+          git checkout -- .
 
   decommission-preview:
     name: Decommission Preview Staging
