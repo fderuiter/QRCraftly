@@ -177,4 +177,45 @@ describe('High-Fidelity Worker Concurrency & Serialization Tests', () => {
     expect(responses).toHaveLength(3);
     expect(responses[2].configId).toBe('task-3');
   });
+
+  // Requirement 1, 2, 4 & Acceptance Criteria 1, 2: Two-pass sequence of dontInvert followed by onlyInvert
+  it('should execute standard decoding (dontInvert) followed by inverted-only decoding (onlyInvert) without attemptBoth', async () => {
+    const worker = new Worker('mock-url');
+    let receivedResponse: any = null;
+    worker.onmessage = (e: any) => {
+      receivedResponse = e.data;
+    };
+
+    const optionsPassed: any[] = [];
+    vi.mocked(jsQR).mockImplementation((data: any, width: number, height: number, options?: any) => {
+      optionsPassed.push(options?.inversionAttempts);
+      if (options?.inversionAttempts === 'onlyInvert') {
+        return { data: 'https://inverted-qr.com' } as any;
+      }
+      return null;
+    });
+
+    worker.postMessage({
+      imageData: {
+        data: new Uint8ClampedArray(400),
+        width: 10,
+        height: 10,
+      },
+      width: 10,
+      height: 10,
+      isTest: true,
+      configId: 'inverted-test',
+    });
+
+    await new Promise<void>(resolve => setTimeout(resolve, 50));
+
+    // Verify two-pass sequence (digital check followed by physical check) was followed with onlyInvert fallback
+    expect(optionsPassed).toEqual(['dontInvert', 'onlyInvert', 'dontInvert', 'onlyInvert']);
+    expect(optionsPassed).not.toContain('attemptBoth');
+    expect(receivedResponse).toEqual({
+      success: true,
+      physicalReady: true,
+      configId: 'inverted-test',
+    });
+  });
 });

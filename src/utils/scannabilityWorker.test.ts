@@ -80,7 +80,7 @@ describe('scannabilityWorker', () => {
 
     vi.mocked(jsQR).mockReturnValueOnce({ data: 'https://safe.com' } as any) // digital
                   .mockReturnValueOnce(null); // physical fails (dontInvert)
-    vi.mocked(jsQR).mockReturnValueOnce(null); // physical fails (attemptBoth)
+    vi.mocked(jsQR).mockReturnValueOnce(null); // physical fails (onlyInvert)
 
     await workerHandler({ data: createDummyRequest() } as MessageEvent);
 
@@ -107,7 +107,7 @@ describe('scannabilityWorker', () => {
     });
   });
 
-  it('handles case where first digital scan fails but second (attemptBoth) passes', async () => {
+  it('handles case where first digital scan fails but second (onlyInvert) passes', async () => {
     const postMessageSpy = vi.fn();
     globalThis.postMessage = postMessageSpy;
 
