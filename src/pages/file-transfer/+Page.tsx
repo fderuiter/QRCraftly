@@ -53,6 +53,7 @@ function FileTransferToolInner() {
     setChunkSize,
     fps,
     setFps,
+    currentPass,
     transferStats,
     canvasRef,
     startTransfer,
@@ -213,8 +214,8 @@ function FileTransferToolInner() {
                 id="chunk-slider"
                 label="Data per QR"
                 min={64}
-                max={512}
-                step={32}
+                max={240}
+                step={16}
                 value={chunkSize}
                 onChange={(val) => {
                   setChunkSize(val);
@@ -294,8 +295,13 @@ function FileTransferToolInner() {
 
                       <div className="grid grid-cols-2 gap-4 pt-2">
                         <div>
-                          <div className="text-slate-400">Current QR</div>
-                          <div className="font-mono text-sm font-semibold text-slate-700 dark:text-slate-300">{currentFrameIndex} / {totalFrames}</div>
+                          <div className="text-slate-400">Current QR (Pass {currentPass})</div>
+                          <div className="font-mono text-sm font-semibold text-slate-700 dark:text-slate-300">
+                            {currentFrameIndex} / {totalFrames}
+                            <span className="ml-1 text-[10px] text-teal-600 dark:text-teal-400">
+                              {currentPass === 1 ? '(Seq)' : '(Shuffled)'}
+                            </span>
+                          </div>
                         </div>
                         <div>
                           <div className="flex items-center gap-1 text-slate-400">
