@@ -225,9 +225,15 @@ export const ValidationEngine = {
   /**
    * Analyzes a QR configuration profile and returns a scannability score and recommendations.
    * @param config - The QR code generation configuration.
+   * @param localMetrics - Optional localized module contrast audit metrics.
+   * @param localMetrics.violations - Count of local contrast violations.
+   * @param localMetrics.minContrast - Minimum local contrast ratio.
    * @returns An object containing the rating score and an array of scannability warning messages.
    */
-  calculateScannability(config: QRConfig): { score: number; warnings: string[] } {
+  calculateScannability(
+    config: QRConfig,
+    localMetrics?: { violations?: number; minContrast?: number }
+  ): { score: number; warnings: string[] } {
     let score = 100;
     const warnings: string[] = [];
 
@@ -241,6 +247,12 @@ export const ValidationEngine = {
     } else if (worstContrast < 4.5) {
       score -= 20;
       warnings.push("Contrast ratio is low");
+    }
+
+    if (localMetrics && typeof localMetrics.violations === 'number' && localMetrics.violations > 0) {
+      const deduction = Math.min(35, 15 + Math.floor(localMetrics.violations / 2));
+      score -= deduction;
+      warnings.push(`Local contrast drop detected across ${localMetrics.violations} module zone${localMetrics.violations > 1 ? 's' : ''}`);
     }
 
     const isComplex = LOW_RELIABILITY_PATTERNS.includes(config.style as any);

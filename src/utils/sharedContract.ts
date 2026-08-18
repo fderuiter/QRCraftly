@@ -15,6 +15,7 @@ export function isWorkerRequest(data: unknown): data is {
   height: number;
   configId?: string | null;
   isTest?: boolean;
+  moduleCount?: number;
 } {
   if (typeof data !== 'object' || data === null) return false;
   const d = data as any;
@@ -30,6 +31,7 @@ export function isWorkerRequest(data: unknown): data is {
   if (typeof d.height !== 'number' || isNaN(d.height) || d.height <= 0) return false;
   if (d.configId !== undefined && d.configId !== null && typeof d.configId !== 'string') return false;
   if (d.isTest !== undefined && typeof d.isTest !== 'boolean') return false;
+  if (d.moduleCount !== undefined && d.moduleCount !== null && (typeof d.moduleCount !== 'number' || isNaN(d.moduleCount) || d.moduleCount <= 0)) return false;
   return true;
 }
 
@@ -70,6 +72,9 @@ export function assertWorkerRequest(data: unknown): asserts data is WorkerReques
   if (d.isTest !== undefined && typeof d.isTest !== 'boolean') {
     throw new Error('Worker request isTest must be a boolean');
   }
+  if (d.moduleCount !== undefined && d.moduleCount !== null && (typeof d.moduleCount !== 'number' || isNaN(d.moduleCount) || d.moduleCount <= 0)) {
+    throw new Error('Worker request moduleCount must be a positive number');
+  }
 }
 
 /**
@@ -80,6 +85,8 @@ export function isWorkerResponse(data: unknown): data is {
   physicalReady: boolean;
   error?: string | null;
   configId?: string | null;
+  localContrastViolations?: number;
+  minLocalContrast?: number;
 } {
   if (typeof data !== 'object' || data === null) return false;
   const d = data as any;
@@ -87,6 +94,8 @@ export function isWorkerResponse(data: unknown): data is {
   if (typeof d.physicalReady !== 'boolean') return false;
   if (d.error !== undefined && d.error !== null && typeof d.error !== 'string') return false;
   if (d.configId !== undefined && d.configId !== null && typeof d.configId !== 'string') return false;
+  if (d.localContrastViolations !== undefined && d.localContrastViolations !== null && (typeof d.localContrastViolations !== 'number' || isNaN(d.localContrastViolations))) return false;
+  if (d.minLocalContrast !== undefined && d.minLocalContrast !== null && (typeof d.minLocalContrast !== 'number' || isNaN(d.minLocalContrast))) return false;
   return true;
 }
 
@@ -111,5 +120,11 @@ export function assertWorkerResponse(data: unknown): asserts data is WorkerRespo
   }
   if (d.configId !== undefined && d.configId !== null && typeof d.configId !== 'string') {
     throw new Error('Worker response configId must be a string');
+  }
+  if (d.localContrastViolations !== undefined && d.localContrastViolations !== null && (typeof d.localContrastViolations !== 'number' || isNaN(d.localContrastViolations))) {
+    throw new Error('Worker response localContrastViolations must be a number');
+  }
+  if (d.minLocalContrast !== undefined && d.minLocalContrast !== null && (typeof d.minLocalContrast !== 'number' || isNaN(d.minLocalContrast))) {
+    throw new Error('Worker response minLocalContrast must be a number');
   }
 }

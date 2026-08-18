@@ -485,7 +485,7 @@ describe('useScannability - changed behavior: uses useQRStore instead of useQRCo
         await new Promise((resolve) => setTimeout(resolve, 150));
       });
 
-      expect(spyCheck).toHaveBeenCalledWith(mockImageData, 10, 10, !!navigator.webdriver);
+      expect(spyCheck).toHaveBeenCalledWith(mockImageData, 10, 10, !!navigator.webdriver, undefined);
       expect(result.current.status).toBe('physical-pass');
     });
 
