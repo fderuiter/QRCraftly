@@ -183,13 +183,6 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-<<<<<<< HEAD
-            const prNumber = context.payload.pull_request.number;
-            const { owner, repo } = context.repo;
-            
-            try {
-              await github.rest.issues.createComment({
-=======
             async function withRetry(fn, maxRetries = 3, delayMs = 2000) {
               for (let i = 0; i < maxRetries; i++) {
                 try {
@@ -208,18 +201,11 @@ jobs:
               const { owner, repo } = context.repo;
               
               await withRetry(() => github.rest.issues.createComment({
->>>>>>> 768ea19 (fix(ci): resolve transient GitHub API failures in deploy-preview workflow with backoff retry and try-catch)
                 owner,
                 repo,
                 issue_number: prNumber,
                 body: `🧹 **Preview Environment Decommissioned**\nThe dynamic staging environment for this pull request has been automatically torn down on Cloudflare Pages.`
-<<<<<<< HEAD
-              });
-            } catch (error) {
-              console.error("Warning: Failed to post decommission comment due to a GitHub API error:", error);
-=======
               }));
             } catch (err) {
               console.error('Failed to post decommission comment after retries:', err);
->>>>>>> 768ea19 (fix(ci): resolve transient GitHub API failures in deploy-preview workflow with backoff retry and try-catch)
             }

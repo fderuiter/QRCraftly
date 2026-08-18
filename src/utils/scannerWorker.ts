@@ -206,7 +206,7 @@ self.onmessage = async (e: MessageEvent<any>) => {
               // Run scanner on the pixels with inverted fallback
               let code = jsQR(imageData.data, dWidth, dHeight, { inversionAttempts: 'dontInvert' });
               if (!code) {
-                code = jsQR(imageData.data, dWidth, dHeight, { inversionAttempts: 'attemptBoth' });
+                code = jsQR(imageData.data, dWidth, dHeight, { inversionAttempts: 'onlyInvert' });
               }
               if (code && code.data) {
                 (self as any).postMessage({ type: 'frame_decoded', taskId, data: code.data });
@@ -245,7 +245,7 @@ self.onmessage = async (e: MessageEvent<any>) => {
     // Decode QR code off-thread using jsQR with inverted fallback
     let code = jsQR(data, width, height, { inversionAttempts: 'dontInvert' });
     if (!code) {
-      code = jsQR(data, width, height, { inversionAttempts: 'attemptBoth' });
+      code = jsQR(data, width, height, { inversionAttempts: 'onlyInvert' });
     }
 
     const response = {
@@ -361,7 +361,7 @@ self.onmessage = async (e: MessageEvent<any>) => {
     // Decode QR code off-thread using jsQR with inverted fallback
     let code = jsQR(imageData.data, width, height, { inversionAttempts: 'dontInvert' });
     if (!code) {
-      code = jsQR(imageData.data, width, height, { inversionAttempts: 'attemptBoth' });
+      code = jsQR(imageData.data, width, height, { inversionAttempts: 'onlyInvert' });
     }
 
     const response = {
