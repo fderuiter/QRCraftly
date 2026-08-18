@@ -81,6 +81,7 @@ interface Particle {
 export default function Page() {
   // Page state for reactive UI overlays
   const [qrText, setQrText] = useState('https://qrcraftly.com');
+  const [eccLevel, setEccLevel] = useState<'L' | 'M' | 'Q' | 'H'>('H');
   const [weapon, setWeapon] = useState<'bullet' | 'laser' | 'bomb'>('bullet');
   const [autoFire, setAutoFire] = useState(false);
   const [isScannable, setIsScannable] = useState(true);
@@ -352,11 +353,11 @@ export default function Page() {
   }, [triggerWorkerCheck]);
 
   /**
-   * Constructs the QR code matrix from a text string and updates game loop data structures.
+   * Constructs the QR code matrix from a text string and error correction tier, updating game loop data structures.
    */
-  const setupQRMatrix = useCallback((textValue: string) => {
+  const setupQRMatrix = useCallback((textValue: string, level: 'L' | 'M' | 'Q' | 'H' = eccLevel) => {
     try {
-      const qr = QRCode.create(textValue, { errorCorrectionLevel: 'H' });
+      const qr = QRCode.create(textValue, { errorCorrectionLevel: level });
       const size = qr.modules.size;
       qrSizeRef.current = size;
 
@@ -394,12 +395,12 @@ export default function Page() {
     } catch (err) {
       console.error('Failed to generate QR Code:', err);
     }
-  }, []);
+  }, [eccLevel]);
 
-  // Set up QR Code on Mount or text change
+  // Set up QR Code on Mount, text change, or error correction level change
   useEffect(() => {
-    setupQRMatrix(qrText);
-  }, [qrText, setupQRMatrix]);
+    setupQRMatrix(qrText, eccLevel);
+  }, [qrText, eccLevel, setupQRMatrix]);
 
   /**
    * Triggers durability statistics calculations and background worker scannability checking.
@@ -1091,7 +1092,7 @@ export default function Page() {
    * Restores intact state of all generated blocks.
    */
   const handleReset = () => {
-    setupQRMatrix(qrText);
+    setupQRMatrix(qrText, eccLevel);
   };
 
   return (
@@ -1146,6 +1147,39 @@ export default function Page() {
               />
               <p className="mt-0.5 text-[10px] leading-relaxed text-slate-500">
                 Generates standard QR blocks dynamically. Longer strings raise QR version/complexity.
+              </p>
+            </div>
+
+            {/* Reed-Solomon Error Correction Selector */}
+            <div className="flex flex-col gap-1.5">
+              <span id="ecc-level-label" className="text-xs font-semibold text-slate-400">
+                Error Correction Level
+              </span>
+              <div role="group" aria-labelledby="ecc-level-label" className="grid grid-cols-4 gap-2">
+                {(['L', 'M', 'Q', 'H'] as const).map((level) => {
+                  const isActive = eccLevel === level;
+                  return (
+                    <button
+                      key={level}
+                      type="button"
+                      aria-pressed={isActive}
+                      onClick={() => setEccLevel(level)}
+                      className={`rounded-xl border py-2 text-center text-xs font-bold transition-all ${
+                        isActive
+                          ? 'border-teal-500 bg-teal-950/60 text-teal-300 shadow-md ring-1 ring-teal-500/30'
+                          : 'border-slate-800 bg-slate-950 text-slate-400 hover:border-slate-700 hover:bg-slate-900 hover:text-slate-200'
+                      }`}
+                    >
+                      {level}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="mt-0.5 text-[10px] leading-relaxed text-slate-500">
+                {eccLevel === 'L' && 'Tier L (~7% redundancy recovery)'}
+                {eccLevel === 'M' && 'Tier M (~15% redundancy recovery)'}
+                {eccLevel === 'Q' && 'Tier Q (~25% redundancy recovery)'}
+                {eccLevel === 'H' && 'Tier H (~30% redundancy recovery)'}
               </p>
             </div>
 
