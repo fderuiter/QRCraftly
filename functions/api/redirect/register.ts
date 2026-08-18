@@ -5,8 +5,12 @@ interface Env {
 }
 
 export function validateUrl(url: string): { valid: boolean; error?: string } {
+  if (typeof url !== "string" || !url.trim()) {
+    return { valid: false, error: "Invalid URL format" };
+  }
+
   if (SafeUrlPipeline.isDangerous(url)) {
-    return { valid: false, error: "Unsafe or dangerous redirect URL scheme detected" };
+    return { valid: false, error: `Blocked dangerous URL scheme: "${url}"` };
   }
 
   const controlCharRegex = /[\x00-\x1F\x7F-\x9F\u200B-\u200D\uFEFF]/;
@@ -21,10 +25,11 @@ export function validateUrl(url: string): { valid: boolean; error?: string } {
     return { valid: false, error: "Invalid URL format" };
   }
 
-  const scheme = parsedUrl.protocol;
+  const scheme = parsedUrl.protocol.toLowerCase();
+
   const dangerousSchemes = ["javascript:", "data:", "file:", "vbscript:", "blob:"];
-  if (dangerousSchemes.includes(scheme.toLowerCase())) {
-    return { valid: false, error: `Unsafe or dangerous redirect URL scheme detected: "${scheme}"` };
+  if (dangerousSchemes.includes(scheme)) {
+    return { valid: false, error: `Blocked dangerous URL scheme: "${scheme}"` };
   }
 
   if (scheme !== "http:" && scheme !== "https:") {
