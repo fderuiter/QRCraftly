@@ -83,6 +83,20 @@ export const onRequestPost = async (context: {
       .bind(targetNewUrl, finalIosUrl, finalAndroidUrl, id)
       .run();
 
+    // Invalidate Edge Cache for the updated dynamic route
+    const cacheUrl = new URL(`/r/${id}`, context.request.url).href;
+    if (typeof caches !== 'undefined' && caches.default) {
+      try {
+        await caches.default.delete(new Request(cacheUrl));
+      } catch (_e) {
+        // Ignore cache delete errors
+      }
+    }
+    const activeMockCache = (globalThis as any).__edgeCache;
+    if (activeMockCache && activeMockCache.has(cacheUrl)) {
+      activeMockCache.delete(cacheUrl);
+    }
+
     return new Response(JSON.stringify({
       success: true,
       redirectUrl: targetNewUrl,

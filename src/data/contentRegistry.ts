@@ -624,6 +624,14 @@ const getRegistryKeyForPath = (path: string): string => {
 
 export function getMetadataForPath(path: string): { title: string; description: string } {
   const pathLookup = getRegistryKeyForPath(path);
+
+  if (pathLookup.startsWith("r/")) {
+    const id = pathLookup.slice(2);
+    return {
+      title: id ? `Dynamic Redirect (${id}) | QRCraftly` : "Zero-Knowledge Dynamic Link | QRCraftly",
+      description: id ? `Secure client-side decrypted redirect for dynamic link ${id}.` : "Secure zero-knowledge encrypted dynamic link redirection portal.",
+    };
+  }
   
   if (contentRegistry[pathLookup]) {
     return {
