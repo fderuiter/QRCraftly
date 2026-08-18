@@ -30,12 +30,14 @@ export interface QRScannerProps {
 export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, continuous = false }) => {
   const {
     permissionState,
+    stream,
     isInitializing,
     startStream,
     stopStream,
   } = useCamera();
 
   const [mode, setMode] = useState<'webcam' | 'file'>('webcam');
+  const [isWebcamActive, setIsWebcamActive] = useState<boolean>(true);
   const [fileError, setFileError] = useState<string | null>(null);
   const [fileProcessing, setFileProcessing] = useState(false);
   const [dragOver, setDragOver] = useState(false);
@@ -79,6 +81,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
     onScanSuccess: (data) => {
       onScanSuccess(data);
       if (!continuous) {
+        setIsWebcamActive(false);
         stopStream();
         stopScanning();
         flushVideoHardware();
@@ -100,19 +103,26 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
     }
   };
 
-  // Start webcam stream when in webcam mode
+  // Start webcam stream when in webcam mode and webcam session is active
   useEffect(() => {
     const controller = new AbortController();
 
-    if (mode === 'webcam') {
-      startStream(controller.signal).then((activeStream) => {
-        if (controller.signal.aborted) return;
+    if (mode === 'webcam' && isWebcamActive) {
+      const initCamera = async () => {
+        const activeStream = await startStream();
+        if (controller.signal.aborted) {
+          stopStream();
+          flushVideoHardware();
+          return;
+        }
         if (activeStream && videoRef.current) {
           videoRef.current.srcObject = activeStream;
           safePlay(videoRef.current);
           startScanning();
         }
-      });
+      };
+
+      initCamera();
     } else {
       flushVideoHardware();
       stopStream();
@@ -128,10 +138,11 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
         activeWorkerRef.current = null;
       }
     };
-  }, [mode, startStream, stopStream, startScanning, stopScanning, flushVideoHardware]);
+  }, [mode, isWebcamActive, startStream, stopStream, startScanning, stopScanning, flushVideoHardware]);
 
   // Handle manual retry for camera permission/access
   const handleRetryCamera = async () => {
+    setIsWebcamActive(true);
     const activeStream = await startStream();
     if (activeStream && videoRef.current) {
       videoRef.current.srcObject = activeStream;
@@ -245,7 +256,15 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
                 Retry Permission
               </Button>
             )}
-            <Button variant="primary" size="sm" onClick={() => setMode('file')} fullWidth>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => {
+                setMode('file');
+                setIsWebcamActive(false);
+              }}
+              fullWidth
+            >
               <Upload className="mr-1.5 size-3.5" />
               Switch to File Mode
             </Button>
@@ -345,6 +364,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
             type="button"
             onClick={() => {
               setMode('webcam');
+              setIsWebcamActive(true);
               setFileError(null);
             }}
             className={`rounded-md px-3 py-1.5 transition-all ${
@@ -358,7 +378,10 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
           </button>
           <button
             type="button"
-            onClick={() => setMode('file')}
+            onClick={() => {
+              setMode('file');
+              setIsWebcamActive(false);
+            }}
             className={`rounded-md px-3 py-1.5 transition-all ${
               mode === 'file'
                 ? 'bg-white text-slate-800 shadow-sm dark:bg-slate-700 dark:text-slate-100'
