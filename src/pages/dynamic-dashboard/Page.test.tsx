@@ -33,7 +33,7 @@ describe('DynamicDashboardPage', () => {
     expect(screen.getByRole('button', { name: /Create dynamic QR code/i })).toBeInTheDocument();
   });
 
-  it('renders records and updates stats with interactive analytics breakdowns', async () => {
+  it('renders records and updates stats with zero-transit aggregate scan metrics', async () => {
     const mockRecord = {
       id: 'id-123',
       originalUrl: 'https://dest.com',
@@ -44,13 +44,6 @@ describe('DynamicDashboardPage', () => {
 
     const mockAnalytics = {
       scans: 15,
-      devices: { mobile: 10, desktop: 5, tablet: 0, other: 0 },
-      locations: { US: 12, CA: 3 },
-      hourly: [{ hour: '2026-08-17T21:00', count: 5 }],
-      daily: [{ date: '2026-08-17', count: 15 }],
-      events: [
-        { id: 'e1', timestamp: new Date().toISOString(), userAgent: 'iPhone', device: 'mobile', location: { country: 'US' } }
-      ]
     };
 
     (useRedirector as any).mockReturnValue({
@@ -66,13 +59,11 @@ describe('DynamicDashboardPage', () => {
     expect(screen.getByText('https://dest.com')).toBeInTheDocument();
     expect(screen.getByText('https://qrcraftly.com/api/redirect/id-123')).toBeInTheDocument();
 
-    // Scans and analytics elements should render
+    // Scans and zero-transit privacy elements should render
     await waitFor(() => {
       expect(screen.getByText('15')).toBeInTheDocument();
-      expect(screen.getByText(/Interactive Scan Analytics/i)).toBeInTheDocument();
-      expect(screen.getByText(/Device Breakdown/i)).toBeInTheDocument();
-      expect(screen.getByText(/Top Locations/i)).toBeInTheDocument();
-      expect(screen.getAllByText('US').length).toBeGreaterThan(0);
+      expect(screen.getByText(/Aggregate Scan Metrics/i)).toBeInTheDocument();
+      expect(screen.getByText(/Zero-Transit Privacy Enforcement Active/i)).toBeInTheDocument();
     });
   });
 });

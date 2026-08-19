@@ -176,55 +176,16 @@ export const onRequestGet = async (context: {
     return renderSecureErrorPage();
   }
 
-  const timestamp = new Date().toISOString();
-  const eventId = crypto.randomUUID();
-
-  let device: 'mobile' | 'desktop' | 'tablet' | 'other' = 'desktop';
-  if (/ipad|tablet/i.test(userAgent)) {
-    device = 'tablet';
-  } else if (/mobile|android|iphone|ipod|blackberry|iemobile|opera mini/i.test(userAgent)) {
-    device = 'mobile';
-  }
-
-  const cf = (context.request as any).cf;
-  const country = cf?.country || context.request.headers.get("cf-ipcountry") || "Unknown";
-  const region = cf?.region || context.request.headers.get("cf-region") || "Unknown";
-  const city = cf?.city || context.request.headers.get("cf-ipcity") || "Unknown";
-
-  const event = {
-    id: eventId,
-    redirectId: id,
-    timestamp,
-    userAgent: userAgent || "Unknown",
-    device,
-    location: { country, region, city }
-  };
-
-  const eventKey = `event:${id}:${timestamp}:${eventId}`;
-
-  // Requirement 6: Non-blocking background telemetry & scan count processing
+  // Zero-Transit Direct Enforcement: Non-blocking background aggregate scan count increment
   const updatePromise = (async () => {
     try {
-      try {
-        const { db } = getDB(context.env);
-        await db
-          .prepare("UPDATE redirects SET scans = scans + 1 WHERE id = ?")
-          .bind(id)
-          .run();
-      } catch (d1Err) {
-        console.error("Asynchronous D1 scan count update failed (fail-open):", d1Err);
-      }
-
-      const kv = context.env.REDIRECTS_KV;
-      if (kv) {
-        await kv.put(eventKey, JSON.stringify(event), { metadata: event });
-      } else if ((globalThis as any).__mockKV) {
-        (globalThis as any).__mockKV.set(eventKey, JSON.stringify(event));
-      } else {
-        globalMockKV.set(eventKey, JSON.stringify(event));
-      }
-    } catch (err) {
-      console.error("Asynchronous scan tracking failed:", err);
+      const { db } = getDB(context.env);
+      await db
+        .prepare("UPDATE redirects SET scans = scans + 1 WHERE id = ?")
+        .bind(id)
+        .run();
+    } catch (d1Err) {
+      console.error("Asynchronous D1 scan count update failed (fail-open):", d1Err);
     }
   })();
 
