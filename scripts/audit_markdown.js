@@ -137,6 +137,47 @@ export function buildFileHeadings(file, content) {
   return headings;
 }
 
+export function existsSyncCaseSensitive(targetPath) {
+  if (!fs.existsSync(targetPath)) {
+    return false;
+  }
+
+  const resolvedPath = path.resolve(targetPath);
+  let current = repoRoot;
+  let relative = path.relative(repoRoot, resolvedPath);
+
+  if (relative.startsWith('..') || path.isAbsolute(relative)) {
+    const parsed = path.parse(resolvedPath);
+    current = parsed.root;
+    relative = path.relative(current, resolvedPath);
+  }
+
+  if (!relative) return true;
+
+  const parts = relative.split(/[/\\]/).filter(Boolean);
+
+  for (const part of parts) {
+    try {
+      if (!fs.existsSync(current)) break;
+      const entries = fs.readdirSync(current);
+      if (entries.includes(part)) {
+        current = path.join(current, part);
+        continue;
+      }
+      const partLower = part.toLowerCase();
+      const hasCaseInsensitiveMatch = entries.some(e => e.toLowerCase() === partLower);
+      if (hasCaseInsensitiveMatch) {
+        return false;
+      }
+      current = path.join(current, part);
+    } catch {
+      break;
+    }
+  }
+
+  return true;
+}
+
 export function verifyLinks(file, content, fileHeadings) {
   if (isQuarantined(file)) {
     return false;
@@ -183,7 +224,7 @@ export function verifyLinks(file, content, fileHeadings) {
       // Verify file exists
       if (targetFile) {
         const targetFilePath = path.join(repoRoot, targetFile);
-        if (!fs.existsSync(targetFilePath)) {
+        if (!existsSyncCaseSensitive(targetFilePath)) {
           console.error(`Error in ${file}: Broken link references missing file '${targetFile}' (href: '${href}')`);
           localHasErrors = true;
           hasErrors = true;
@@ -207,7 +248,8 @@ export function verifyLinks(file, content, fileHeadings) {
             fileHeadings[targetFile] = headingsToSearch;
           }
           
-          if (!headingsToSearch.has(targetHash)) {
+          const targetSlug = slugify(targetHash);
+          if (!headingsToSearch.has(targetSlug) && !headingsToSearch.has(targetHash)) {
             console.error(`Error in ${file}: Broken link references missing anchor '#${targetHash}' in '${targetFile}' (href: '${href}')`);
             localHasErrors = true;
             hasErrors = true;

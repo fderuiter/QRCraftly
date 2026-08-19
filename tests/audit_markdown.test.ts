@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import fs from 'fs';
-import { slugify, checkPlaceholders, buildFileHeadings, verifyLinks, validateTelemetryCompliance, resetErrors, checkCodeSnippets } from '../scripts/audit_markdown.js';
+import path from 'path';
+import { slugify, checkPlaceholders, buildFileHeadings, verifyLinks, validateTelemetryCompliance, resetErrors, checkCodeSnippets, existsSyncCaseSensitive, checkPublishApproved } from '../scripts/audit_markdown.js';
 
 describe('audit_markdown', () => {
   beforeEach(() => {
@@ -243,13 +244,57 @@ No private info.
     });
 
     it('should completely bypass checking placeholders and return false for quarantined files', () => {
-      const { checkPublishApproved, checkPlaceholders } = require('../scripts/audit_markdown.js');
       const content = `TODO: this contains a placeholder but is quarantined.`;
       const hasPlaceholderErrors = checkPlaceholders('docs/internal/note.md', content);
       expect(hasPlaceholderErrors).toBe(false);
 
       const hasApproveErrors = checkPublishApproved('docs/internal/note.md', content);
       expect(hasApproveErrors).toBe(false);
+    });
+
+    it('should ignore uppercase or mixed-case quarantine folder variations', () => {
+      const content = `TODO: this is a draft in uppercase quarantine folder.`;
+      expect(checkPlaceholders('docs/Internal/note.md', content)).toBe(false);
+      expect(checkPlaceholders('docs/QUARANTINE/note.md', content)).toBe(false);
+      expect(checkPlaceholders('docs/Quarantined/note.md', content)).toBe(false);
+    });
+  });
+
+  describe('existsSyncCaseSensitive & Targeted Case Safety', () => {
+    it('should accurately validate exact case existence on disk', () => {
+      const readmePath = path.join(process.cwd(), 'README.md');
+      const lowerReadmePath = path.join(process.cwd(), 'readme.md');
+
+      if (fs.existsSync(readmePath)) {
+        expect(existsSyncCaseSensitive(readmePath)).toBe(true);
+        expect(existsSyncCaseSensitive(lowerReadmePath)).toBe(false);
+      }
+    });
+
+    it('should flag relative file links pointing to files with mismatched casing on disk', () => {
+      // SECURITY.md exists in repo root or docs/SECURITY.md
+      const secPath = path.join(process.cwd(), 'docs', 'SECURITY.md');
+      if (fs.existsSync(secPath)) {
+        const content = '[Security Notice](security.md)';
+        const fileHeadings = {};
+        const hasErrors = verifyLinks('docs/public/guide.md', content, fileHeadings);
+        expect(hasErrors).toBe(true);
+      }
+    });
+
+    it('should pass mixed-case heading anchor fragment links successfully', () => {
+      const existsSpy = vi.spyOn(fs, 'existsSync').mockReturnValue(true);
+      try {
+        const content = '[Anchor Link](#My-Mixed-Case-Heading)';
+        const fileHeadings = {
+          'test.md': new Set(['my-mixed-case-heading'])
+        };
+
+        const hasLinkErrors = verifyLinks('test.md', content, fileHeadings);
+        expect(hasLinkErrors).toBe(false);
+      } finally {
+        existsSpy.mockRestore();
+      }
     });
   });
 });

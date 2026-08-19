@@ -13,8 +13,11 @@ export function isQuarantined(fileOrPath) {
   if (!fileOrPath) return false;
   const absolutePath = path.isAbsolute(fileOrPath) ? fileOrPath : path.resolve(repoRoot, fileOrPath);
   const relativeFromRoot = path.relative(repoRoot, absolutePath);
-  const pathParts = relativeFromRoot.split(path.sep);
-  return pathParts.some(part => part === 'internal' || part === 'quarantine' || part === 'quarantined');
+  const pathParts = relativeFromRoot.split(/[/\\]/);
+  return pathParts.some(part => {
+    const lower = part.toLowerCase();
+    return lower === 'internal' || lower === 'quarantine' || lower === 'quarantined';
+  });
 }
 
 function slugify(text) {
@@ -205,17 +208,17 @@ export function compileManifest(inputDir = docsPublicDir, outputPath = outputMan
           if (href.startsWith('#')) {
             const fragment = href.slice(1);
             if (fragment) {
-              token.href = `#${doc.id}-${fragment}`;
+              token.href = `#${doc.id}-${slugify(fragment)}`;
             }
           } else {
             const parts = href.split('#');
             const file = parts[0];
             const hash = parts[1];
             const baseName = file.split('/').pop() || file;
-            const targetDoc = manifest.find(d => d.filename === baseName);
+            const targetDoc = manifest.find(d => d.filename && d.filename.toLowerCase() === baseName.toLowerCase());
             if (targetDoc) {
               if (hash) {
-                token.href = `#${targetDoc.id}-${hash}`;
+                token.href = `#${targetDoc.id}-${slugify(hash)}`;
               } else {
                 token.href = `#${targetDoc.id}`;
               }
