@@ -26,6 +26,8 @@ import { getCachedAsset } from './assetCache';
 import { sanitizeSvg } from './security';
 import { performScannabilityCheck } from './scannabilityChecker';
 
+import { ModuleRenderOptions } from './qr-renderers/modules';
+
 /**
  * Converts an image URL to a base64 data-URL so it can be embedded inline in
  * the SVG, making the output file self-contained (no external HTTP requests).
@@ -136,7 +138,7 @@ function makeImgProxy(src: string | null): HTMLImageElement | null {
  */
 export async function generateQRSvg(
   config: QRConfig,
-  options?: { onLogoOmitted?: () => void }
+  options?: { onLogoOmitted?: () => void; renderOptions?: ModuleRenderOptions }
 ): Promise<string> {
   // Dynamically import qrcode to match the pattern used elsewhere in the project
   const QRCode = await import('qrcode');
@@ -189,7 +191,9 @@ export async function generateQRSvg(
       svgWidth,
       svgHeight,
       moduleCount,
-      true
+      true,
+      null,
+      options?.renderOptions
     );
   } catch (err) {
     console.warn('SVG QR generation failed:', err);

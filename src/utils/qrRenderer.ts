@@ -1,7 +1,7 @@
 import { QRConfig, QRModules } from '../types';
 import { calculateLayout, getLogoMetrics } from './qr-renderers/utils';
 import { renderBorder, renderBorderDecoration } from './qr-renderers/border';
-import { renderModules } from './qr-renderers/modules';
+import { renderModules, ModuleRenderOptions } from './qr-renderers/modules';
 import { renderEyes } from './qr-renderers/eyes';
 import { renderLogo } from './qr-renderers/logo';
 import { renderMaze } from './qr-renderers/maze';
@@ -17,7 +17,8 @@ export const drawQR = (
   logoImg: HTMLImageElement | null,
   borderLogoImg: HTMLImageElement | null,
   size: number,
-  mazeData?: any | null
+  mazeData?: any | null,
+  options?: ModuleRenderOptions
 ) => {
   const canvas = ctx.canvas;
 
@@ -47,7 +48,8 @@ export const drawQR = (
       displaySize,
       moduleCount,
       false,
-      mazeData
+      mazeData,
+      options
     );
 
   } catch (err) {
@@ -76,7 +78,8 @@ export const drawQRInternal = (
   displaySize: number,
   moduleCount: number,
   isVirtual: boolean = false,
-  mazeData?: any | null
+  mazeData?: any | null,
+  options?: ModuleRenderOptions
 ) => {
   const canFill = ctx && typeof (ctx as any).fillRect === 'function';
   if (!canFill) {
@@ -90,25 +93,28 @@ export const drawQRInternal = (
   const logoMetrics = getLogoMetrics(config, moduleCount, cellSize);
 
   // 3. Render Backgrounds & Border
+  const isBackgroundFilled = config.bgColor !== 'transparent' && !config.isLuminanceMaskingEnabled;
   if (config.isBorderEnabled && config.borderSize > 0) {
     renderBorder(ctx, config, displaySize, borderPx);
     // Fill background for QR code area
-    ctx.fillStyle = config.bgColor;
-    ctx.fillRect(drawX, drawY, drawSize, drawSize);
-  } else {
+    if (isBackgroundFilled) {
+      ctx.fillStyle = config.bgColor;
+      ctx.fillRect(drawX, drawY, drawSize, drawSize);
+    }
+  } else if (isBackgroundFilled) {
     // Fill Full Background
     ctx.fillStyle = config.bgColor;
     ctx.fillRect(0, 0, displaySize, displaySize);
   }
 
   // 4. Render Modules
-  renderModules(ctx, modules, config, drawX, drawY, cellSize, moduleCount, logoMetrics, isVirtual);
+  renderModules(ctx, modules, config, drawX, drawY, cellSize, moduleCount, logoMetrics, isVirtual, options);
 
   // 4b. Render Maze (if enabled)
   renderMaze(ctx, modules, config, drawX, drawY, cellSize, moduleCount, mazeData);
 
   // 5. Render Eyes
-  renderEyes(ctx, config, drawX, drawY, cellSize, moduleCount);
+  renderEyes(ctx, config, drawX, drawY, cellSize, moduleCount, options);
 
   // 6. Render Center Logo
   renderLogo(ctx, config, logoImg, displaySize, logoMetrics);
