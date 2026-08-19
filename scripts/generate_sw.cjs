@@ -112,6 +112,12 @@ self.addEventListener('fetch', (event) => {
   const request = event.request;
   const url = new URL(request.url);
 
+  // Requests targeting API routes must bypass local service worker fetch interception
+  // and pass directly to the network across all HTTP methods.
+  if (url.pathname.startsWith('/api/') || url.pathname === '/api') {
+    return;
+  }
+
   // Only handle same-origin GET requests
   if (request.method !== 'GET' || url.origin !== self.location.origin) {
     return;
