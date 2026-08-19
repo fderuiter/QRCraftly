@@ -1,7 +1,10 @@
 ---
 name: setup-matt-pocock-skills
 description: "Configure this repo for the engineering skills: set up its issue tracker, triage label vocabulary, and domain doc layout. Run once before first use of the other engineering skills."
-disable-model-invocation: true
+license: MIT
+metadata:
+  author: Matt Pocock
+  version: "1.0"
 ---
 
 # Setup Matt Pocock's Skills
@@ -103,11 +106,11 @@ Include the `### Triage labels` sub-block, and write `docs/agents/triage-labels.
 
 Then write the docs files using the seed templates in this skill folder as a starting point:
 
-- [issue-tracker-github.md](./issue-tracker-github.md): GitHub issue tracker
-- [issue-tracker-gitlab.md](./issue-tracker-gitlab.md): GitLab issue tracker
-- [issue-tracker-local.md](./issue-tracker-local.md): local-markdown issue tracker
-- [triage-labels.md](./triage-labels.md): label mapping (only if `triage` is installed)
-- [domain.md](./domain.md): domain doc consumer rules + layout
+- [issue-tracker-github.md](./references/issue-tracker-github.md): GitHub issue tracker
+- [issue-tracker-gitlab.md](./references/issue-tracker-gitlab.md): GitLab issue tracker
+- [issue-tracker-local.md](./references/issue-tracker-local.md): local-markdown issue tracker
+- [triage-labels.md](./references/triage-labels.md): label mapping (only if `triage` is installed)
+- [domain.md](./references/domain.md): domain doc consumer rules + layout
 
 For "other" issue trackers, write `docs/agents/issue-tracker.md` from scratch using the user's description.
 

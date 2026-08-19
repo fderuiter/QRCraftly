@@ -1,7 +1,10 @@
 ---
 name: triage
-description: Move issues and external PRs through a state machine of triage roles, categorise, verify, grill if needed, and write agent-ready briefs.
-disable-model-invocation: true
+description: "Move issues and external PRs through a state machine of triage roles, categorise, verify, grill if needed, and write agent-ready briefs."
+license: MIT
+metadata:
+  author: Matt Pocock
+  version: "1.0"
 ---
 
 # Triage
