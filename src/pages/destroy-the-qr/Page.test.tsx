@@ -23,6 +23,10 @@ import Page from './+Page';
 
 describe('Destroy the QR Code! Arcade Page', () => {
   beforeEach(() => {
+    Element.prototype.setPointerCapture = vi.fn();
+    Element.prototype.releasePointerCapture = vi.fn();
+    Element.prototype.hasPointerCapture = vi.fn().mockReturnValue(true);
+
     // Mock HTMLCanvasElement.prototype.getContext
     vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({
       fillStyle: '',
@@ -128,16 +132,33 @@ describe('Destroy the QR Code! Arcade Page', () => {
     expect(screen.getByText('100%')).toBeInTheDocument();
   });
 
-  it('does not throw any errors when simulation triggers clicks on the canvas', () => {
+  it('does not throw any errors when simulation triggers pointer events on the canvas', () => {
     render(<Page />);
 
     const canvas = document.querySelector('canvas');
     expect(canvas).toBeInTheDocument();
 
     if (canvas) {
-      fireEvent.mouseDown(canvas, { clientX: 200, clientY: 200 });
-      fireEvent.mouseMove(canvas, { clientX: 210, clientY: 210 });
-      fireEvent.mouseUp(canvas);
+      fireEvent.pointerDown(canvas, { clientX: 200, clientY: 200, pointerId: 1 });
+      fireEvent.pointerMove(canvas, { clientX: 210, clientY: 210, pointerId: 1 });
+      fireEvent.pointerUp(canvas, { pointerId: 1 });
+    }
+  });
+
+  it('applies CSS gesture lock and setPointerCapture to prevent page scrolling during touch interaction', () => {
+    render(<Page />);
+
+    const canvas = document.querySelector('canvas');
+    expect(canvas).toBeInTheDocument();
+    expect(canvas).toHaveClass('touch-none');
+    expect(canvas).toHaveStyle({ touchAction: 'none' });
+
+    if (canvas) {
+      fireEvent.pointerDown(canvas, { clientX: 300, clientY: 300, pointerId: 1, pointerType: 'touch' });
+      expect(Element.prototype.setPointerCapture).toHaveBeenCalledWith(1);
+
+      fireEvent.pointerUp(canvas, { pointerId: 1, pointerType: 'touch' });
+      expect(Element.prototype.releasePointerCapture).toHaveBeenCalledWith(1);
     }
   });
 
@@ -156,7 +177,7 @@ describe('Destroy the QR Code! Arcade Page', () => {
     expect(canvas).toBeInTheDocument();
 
     if (canvas) {
-      fireEvent.mouseDown(canvas, { clientX: 200, clientY: 200 });
+      fireEvent.pointerDown(canvas, { clientX: 200, clientY: 200, pointerId: 1 });
       await new Promise<void>(resolve => setTimeout(resolve, 10));
 
       expect(mockPostMessage).toHaveBeenCalled();
@@ -182,15 +203,15 @@ describe('Destroy the QR Code! Arcade Page', () => {
     expect(canvas).toBeInTheDocument();
 
     if (canvas) {
-      fireEvent.mouseDown(canvas, { clientX: 200, clientY: 200 });
-      fireEvent.mouseMove(canvas, { clientX: 210, clientY: 210 });
-      fireEvent.mouseMove(canvas, { clientX: 220, clientY: 220 });
+      fireEvent.pointerDown(canvas, { clientX: 200, clientY: 200, pointerId: 1 });
+      fireEvent.pointerMove(canvas, { clientX: 210, clientY: 210, pointerId: 1 });
+      fireEvent.pointerMove(canvas, { clientX: 220, clientY: 220, pointerId: 1 });
 
       await new Promise<void>(resolve => setTimeout(resolve, 10));
 
       expect(mockPostMessage).toHaveBeenCalledTimes(1);
 
-      fireEvent.mouseUp(canvas);
+      fireEvent.pointerUp(canvas, { pointerId: 1 });
       
       await new Promise<void>(resolve => setTimeout(resolve, 50));
 
@@ -220,7 +241,7 @@ describe('Destroy the QR Code! Arcade Page', () => {
     expect(canvas).toBeInTheDocument();
 
     if (canvas) {
-      fireEvent.mouseDown(canvas, { clientX: 200, clientY: 200 });
+      fireEvent.pointerDown(canvas, { clientX: 200, clientY: 200, pointerId: 1 });
       await new Promise<void>(resolve => setTimeout(resolve, 50));
 
       expect(mockDetect).toHaveBeenCalled();
@@ -250,7 +271,7 @@ describe('Destroy the QR Code! Arcade Page', () => {
     expect(canvas).toBeInTheDocument();
 
     if (canvas) {
-      fireEvent.mouseDown(canvas, { clientX: 200, clientY: 200 });
+      fireEvent.pointerDown(canvas, { clientX: 200, clientY: 200, pointerId: 1 });
       // Wait for async detect failure and fallback to run
       await new Promise<void>(resolve => setTimeout(resolve, 50));
 
@@ -275,10 +296,10 @@ describe('Destroy the QR Code! Arcade Page', () => {
         left: 0, top: 0, width: 600, height: 600, right: 600, bottom: 600, x: 0, y: 0, toJSON: () => {}
       });
 
-      // Move mouse to target position and fire a bomb
-      fireEvent.mouseMove(canvas, { clientX: 200, clientY: 200 });
-      fireEvent.mouseDown(canvas);
-      fireEvent.mouseUp(canvas);
+      // Move mouse/pointer to target position and fire a bomb
+      fireEvent.pointerMove(canvas, { clientX: 200, clientY: 200, pointerId: 1 });
+      fireEvent.pointerDown(canvas, { clientX: 200, clientY: 200, pointerId: 1 });
+      fireEvent.pointerUp(canvas, { pointerId: 1 });
       
       await new Promise<void>(resolve => setTimeout(resolve, 100));
     }
@@ -288,9 +309,9 @@ describe('Destroy the QR Code! Arcade Page', () => {
     fireEvent.click(blasterBtn);
 
     if (canvas) {
-      fireEvent.mouseMove(canvas, { clientX: 200, clientY: 200 });
-      fireEvent.mouseDown(canvas);
-      fireEvent.mouseUp(canvas);
+      fireEvent.pointerMove(canvas, { clientX: 200, clientY: 200, pointerId: 1 });
+      fireEvent.pointerDown(canvas, { clientX: 200, clientY: 200, pointerId: 1 });
+      fireEvent.pointerUp(canvas, { pointerId: 1 });
       
       await new Promise<void>(resolve => setTimeout(resolve, 100));
     }
@@ -310,14 +331,14 @@ describe('Destroy the QR Code! Arcade Page', () => {
       });
 
       // Fire at top-left edge
-      fireEvent.mouseMove(canvas, { clientX: 0, clientY: 0 });
-      fireEvent.mouseDown(canvas);
-      fireEvent.mouseUp(canvas);
+      fireEvent.pointerMove(canvas, { clientX: 0, clientY: 0, pointerId: 1 });
+      fireEvent.pointerDown(canvas, { clientX: 0, clientY: 0, pointerId: 1 });
+      fireEvent.pointerUp(canvas, { pointerId: 1 });
 
       // Fire at bottom-right edge
-      fireEvent.mouseMove(canvas, { clientX: 600, clientY: 600 });
-      fireEvent.mouseDown(canvas);
-      fireEvent.mouseUp(canvas);
+      fireEvent.pointerMove(canvas, { clientX: 600, clientY: 600, pointerId: 1 });
+      fireEvent.pointerDown(canvas, { clientX: 600, clientY: 600, pointerId: 1 });
+      fireEvent.pointerUp(canvas, { pointerId: 1 });
 
       await new Promise<void>(resolve => setTimeout(resolve, 100));
     }
@@ -430,7 +451,7 @@ describe('Destroy the QR Code! Arcade Page', () => {
     expect(canvas).toBeInTheDocument();
 
     if (canvas) {
-      fireEvent.mouseDown(canvas, { clientX: 200, clientY: 200 });
+      fireEvent.pointerDown(canvas, { clientX: 200, clientY: 200, pointerId: 1 });
       await new Promise<void>(resolve => setTimeout(resolve, 20));
 
       expect(mockCreateImageBitmap).toHaveBeenCalled();
@@ -491,7 +512,7 @@ describe('Destroy the QR Code! Arcade Page', () => {
     expect(canvas).toBeInTheDocument();
 
     if (canvas) {
-      fireEvent.mouseDown(canvas, { clientX: 200, clientY: 200 });
+      fireEvent.pointerDown(canvas, { clientX: 200, clientY: 200, pointerId: 1 });
       await new Promise<void>(resolve => setTimeout(resolve, 20));
 
       expect(mockGetImageData).toHaveBeenCalled();
