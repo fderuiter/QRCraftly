@@ -19,3 +19,5 @@ dist/
 .github/
 playwright-report/
 quota-report.md
+.agents/
+.jules/
