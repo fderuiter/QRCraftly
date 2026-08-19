@@ -21,7 +21,7 @@ type DrawModuleFn = (r: number, c: number, x: number, y: number, cx: number, cy:
 /**
  * Calculates WCAG relative luminance for normalized sRGB components (0..1).
  */
-export function calculateComponentLuminance(r: number, g: number, b: number): number {
+function calculateComponentLuminance(r: number, g: number, b: number): number {
   const rLin = r <= 0.03928 ? r / 12.92 : Math.pow((r + 0.055) / 1.055, 2.4);
   const gLin = g <= 0.03928 ? g / 12.92 : Math.pow((g + 0.055) / 1.055, 2.4);
   const bLin = b <= 0.03928 ? b / 12.92 : Math.pow((b + 0.055) / 1.055, 2.4);
