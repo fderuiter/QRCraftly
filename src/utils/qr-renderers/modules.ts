@@ -1,8 +1,82 @@
 import { QRConfig, QRStyle, QRModules } from '../../types';
 import { drawRoundRect, drawRoughRect, drawPoly, drawStar, drawCircularModule, drawCircuitModule, drawStandardModule } from '../canvasHelpers';
 import { getIsCoveredByLogo, LogoMetrics, iterateMatrix } from './utils';
+import { getLuminance } from '../colorUtils';
+
+export interface ModuleRenderOptions {
+  /** Optional pre-sampled cell background relative luminance array (length = moduleCount * moduleCount). */
+  cellLuminance?: Float64Array | number[];
+  /** Optional background ImageData to sample cell relative luminance from. */
+  bgImageData?: { data: Uint8ClampedArray; width: number; height: number };
+  /** Explicit foreground color for dark module group (over bright background cells). */
+  fgColorDark?: string;
+  /** Explicit foreground color for light module group (over dark background cells). */
+  fgColorLight?: string;
+  /** Relative luminance threshold separating bright and dark background cells (0..1). Default: 0.25. */
+  luminanceThreshold?: number;
+}
 
 type DrawModuleFn = (r: number, c: number, x: number, y: number, cx: number, cy: number) => void;
+
+/**
+ * Calculates WCAG relative luminance for normalized sRGB components (0..1).
+ */
+export function calculateComponentLuminance(r: number, g: number, b: number): number {
+  const rLin = r <= 0.03928 ? r / 12.92 : Math.pow((r + 0.055) / 1.055, 2.4);
+  const gLin = g <= 0.03928 ? g / 12.92 : Math.pow((g + 0.055) / 1.055, 2.4);
+  const bLin = b <= 0.03928 ? b / 12.92 : Math.pow((b + 0.055) / 1.055, 2.4);
+  return 0.2126 * rLin + 0.7152 * gLin + 0.0722 * bLin;
+}
+
+/**
+ * Samples relative luminance across each logical QR code matrix cell coordinate (r, c)
+ * from provided background image pixel data.
+ */
+export function sampleCellLuminances(
+  imageData: { data: Uint8ClampedArray; width: number; height: number },
+  moduleCount: number,
+  drawX: number,
+  drawY: number,
+  cellSize: number
+): Float64Array {
+  const cellLuminance = new Float64Array(moduleCount * moduleCount);
+  const { data, width, height } = imageData;
+
+  for (let r = 0; r < moduleCount; r++) {
+    const y0 = Math.max(0, Math.floor(drawY + r * cellSize));
+    const y1 = Math.min(height, Math.ceil(drawY + (r + 1) * cellSize));
+
+    for (let c = 0; c < moduleCount; c++) {
+      const x0 = Math.max(0, Math.floor(drawX + c * cellSize));
+      const x1 = Math.min(width, Math.ceil(drawX + (c + 1) * cellSize));
+
+      let totalLum = 0;
+      let count = 0;
+
+      const stepY = Math.max(1, Math.floor((y1 - y0) / 4));
+      const stepX = Math.max(1, Math.floor((x1 - x0) / 4));
+
+      for (let y = y0; y < y1; y += stepY) {
+        for (let x = x0; x < x1; x += stepX) {
+          const idx = (y * width + x) * 4;
+          const alpha = data[idx + 3] / 255;
+
+          const rNorm = (data[idx] * alpha + 255 * (1 - alpha)) / 255;
+          const gNorm = (data[idx + 1] * alpha + 255 * (1 - alpha)) / 255;
+          const bNorm = (data[idx + 2] * alpha + 255 * (1 - alpha)) / 255;
+
+          totalLum += calculateComponentLuminance(rNorm, gNorm, bNorm);
+          count++;
+        }
+      }
+
+      const idx = r * moduleCount + c;
+      cellLuminance[idx] = count > 0 ? totalLum / count : 1.0;
+    }
+  }
+
+  return cellLuminance;
+}
 
 const getModuleDrawer = (
     style: QRStyle,
@@ -70,12 +144,10 @@ export const renderModules = (
   cellSize: number,
   moduleCount: number,
   logoMetrics: LogoMetrics,
-  isVirtual: boolean = false
+  isVirtual: boolean = false,
+  options?: ModuleRenderOptions
 ) => {
-    ctx.fillStyle = config.fgColor;
     const isCoveredByLogo = getIsCoveredByLogo(config, moduleCount, logoMetrics);
-    
-    ctx.beginPath();
     const drawModuleFn = getModuleDrawer(config.style, ctx, cellSize, modules, moduleCount, isCoveredByLogo, isVirtual);
 
     const cellSizeHalf = cellSize / 2;
@@ -93,18 +165,93 @@ export const renderModules = (
         cys[r] = ys[r] + cellSizeHalf;
     }
 
-    iterateMatrix(moduleCount, (r, c) => {
-        if (modules.get(r, c)) {
-            if (isCoveredByLogo(r, c)) return;
-
-            const x = xs[c];
-            const y = ys[r];
-            const cx = cxs[c];
-            const cy = cys[r];
-
-            drawModuleFn(r, c, x, y, cx, cy);
+    // 1. Resolve background luminance per cell
+    let cellLuminance: Float64Array | number[] | null = options?.cellLuminance || null;
+    if (!cellLuminance && options?.bgImageData) {
+        cellLuminance = sampleCellLuminances(options.bgImageData, moduleCount, drawX, drawY, cellSize);
+    } else if (!cellLuminance && (config.isLuminanceMaskingEnabled || config.backgroundImageUrl) && typeof (ctx as any).getImageData === 'function') {
+        try {
+            const displaySize = Math.ceil(drawX + moduleCount * cellSize);
+            const imgData = ctx.getImageData(0, 0, displaySize, displaySize);
+            cellLuminance = sampleCellLuminances(imgData, moduleCount, drawX, drawY, cellSize);
+        } catch {
+            // Fallback if canvas is tainted or context does not support reading pixels
         }
-    });
+    }
 
-    ctx.fill();
+    const threshold = options?.luminanceThreshold ?? config.luminanceThreshold ?? 0.25;
+
+    // 2. Select contrast-optimized foreground colors for dark and light contrast groups
+    let fgColorDark = options?.fgColorDark || config.fgColorDark || config.fgColor;
+    let fgColorLight = options?.fgColorLight || config.fgColorLight || '#ffffff';
+
+    if (!options?.fgColorDark && !config.fgColorDark) {
+        const defaultDarkLum = getLuminance(fgColorDark);
+        if ((1.0 + 0.05) / (defaultDarkLum + 0.05) < 3.0) {
+            fgColorDark = '#000000';
+        }
+    }
+
+    if (!options?.fgColorLight && !config.fgColorLight) {
+        const defaultLightLum = getLuminance(fgColorLight);
+        if ((defaultLightLum + 0.05) / (0.0 + 0.05) < 3.0) {
+            fgColorLight = '#ffffff';
+        }
+    }
+
+    // 3. Partition modules into Group 0 (bright background cells -> dark fg) and Group 1 (dark background cells -> light fg)
+    const total = moduleCount * moduleCount;
+    const group0Rows = new Int16Array(total);
+    const group0Cols = new Int16Array(total);
+    let group0Count = 0;
+
+    const group1Rows = new Int16Array(total);
+    const group1Cols = new Int16Array(total);
+    let group1Count = 0;
+
+    for (let r = 0; r < moduleCount; r++) {
+        for (let c = 0; c < moduleCount; c++) {
+            if (modules.get(r, c)) {
+                if (isCoveredByLogo(r, c)) continue;
+
+                const idx = r * moduleCount + c;
+                const bgLum = cellLuminance ? cellLuminance[idx] : (config.bgColor ? getLuminance(config.bgColor) : 1.0);
+
+                if (bgLum >= threshold) {
+                    group0Rows[group0Count] = r;
+                    group0Cols[group0Count] = c;
+                    group0Count++;
+                } else {
+                    group1Rows[group1Count] = r;
+                    group1Cols[group1Count] = c;
+                    group1Count++;
+                }
+            }
+        }
+    }
+
+    // 4. Two-Pass Batched Vector Path Execution
+    // Pass 0: High-luminance cell background group -> Dark module fill
+    if (group0Count > 0) {
+        ctx.fillStyle = fgColorDark;
+        ctx.beginPath();
+        for (let i = 0; i < group0Count; i++) {
+            const r = group0Rows[i];
+            const c = group0Cols[i];
+            drawModuleFn(r, c, xs[c], ys[r], cxs[c], cys[r]);
+        }
+        ctx.fill();
+    }
+
+    // Pass 1: Low-luminance cell background group -> Light module fill
+    if (group1Count > 0) {
+        ctx.fillStyle = fgColorLight;
+        ctx.beginPath();
+        for (let i = 0; i < group1Count; i++) {
+            const r = group1Rows[i];
+            const c = group1Cols[i];
+            drawModuleFn(r, c, xs[c], ys[r], cxs[c], cys[r]);
+        }
+        ctx.fill();
+    }
 };

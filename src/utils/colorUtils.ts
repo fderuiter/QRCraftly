@@ -47,7 +47,7 @@ export const normalizeHex = (val: string): string | null => {
  * @param hex - The hex color code (e.g. #RRGGBB or #RGB).
  * @returns The relative luminance value.
  */
-const getLuminance = (hex: string) => {
+export const getLuminance = (hex: string) => {
   let normalizedHex = hex;
   if (hex.length === 4) {
     normalizedHex = '#' + hex[1] + hex[1] + hex[2] + hex[2] + hex[3] + hex[3];

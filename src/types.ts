@@ -172,6 +172,16 @@ export interface QRConfig {
   mazePathWidth?: number;
   /** Whether to show the solved maze path. */
   showMazeSolution?: boolean;
+  /** Optional background photo image URL. */
+  backgroundImageUrl?: string | null;
+  /** Whether module-group batched luminance masking is enabled. */
+  isLuminanceMaskingEnabled?: boolean;
+  /** Custom dark module color for batched luminance masking. */
+  fgColorDark?: string;
+  /** Custom light module color for batched luminance masking. */
+  fgColorLight?: string;
+  /** Relative luminance threshold separating light and dark background cells (0..1). */
+  luminanceThreshold?: number;
 }
 
 /**
