@@ -175,8 +175,8 @@ describe('Metadata-Driven Frontmatter Filtering', () => {
       // Verify content has frontmatter stripped for explicit-public-doc
       const explicitPub = compiledData.find((doc: { id: string }) => doc.id === 'explicit-public-doc');
       expect(explicitPub.title).toBe('Explicit Public Document');
-      expect(explicitPub.content).not.toContain('draft: false');
-      expect(explicitPub.content).toContain('# Explicit Public Document');
+      expect(explicitPub.html).not.toContain('draft: false');
+      expect(explicitPub.html).toContain('This is a public document.');
     });
   });
 

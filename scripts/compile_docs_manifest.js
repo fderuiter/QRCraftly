@@ -226,6 +226,7 @@ export function compileManifest(inputDir = docsPublicDir, outputPath = outputMan
     });
 
     doc.html = scopedMarked.parse(contentWithoutH1);
+    delete doc.content;
   }
 
   fs.writeFileSync(outputPath, JSON.stringify(manifest, null, 2) + '\n', 'utf-8');
