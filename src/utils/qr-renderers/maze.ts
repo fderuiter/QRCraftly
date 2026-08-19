@@ -476,7 +476,6 @@ function drawModuleHaloPath(
     }
 
     case QRStyle.CIRCUIT: {
-      const idx = r * moduleCount + c;
       const hasTop = r > 0 && modules.get(r - 1, c) && !isCoveredByLogo(r - 1, c);
       const hasBottom = r < moduleCount - 1 && modules.get(r + 1, c) && !isCoveredByLogo(r + 1, c);
       const hasLeft = c > 0 && modules.get(r, c - 1) && !isCoveredByLogo(r, c - 1);
