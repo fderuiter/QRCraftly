@@ -156,7 +156,7 @@ export default function HeadDefault() {
       <meta name="theme-color" content="#0f766e" />
       <link rel="manifest" href="/manifest.json" />
       <link rel="icon" type="image/png" href="/favicon.png" />
-      <link rel="apple-touch-icon" href="/favicon.png" />
+      <link rel="apple-touch-icon" href="/icon-192x192.png" />
       <link rel="preconnect" href="https://fonts.googleapis.com" />
       <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
 
