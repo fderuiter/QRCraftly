@@ -17,10 +17,16 @@
 */
 
 import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import Page from './+Page';
 
 describe('QR Damage Simulator Game Page', () => {
+  beforeEach(() => {
+    Element.prototype.setPointerCapture = vi.fn();
+    Element.prototype.releasePointerCapture = vi.fn();
+    Element.prototype.hasPointerCapture = vi.fn().mockReturnValue(true);
+  });
+
   it('renders the game page layout and headers', () => {
     render(<Page />);
 
@@ -118,7 +124,7 @@ describe('QR Damage Simulator Game Page', () => {
     expect(screen.getByText(/100% Remaining/i)).toBeInTheDocument();
 
     // Fire blast at top-left corner (x=10, y=10) targeting finder eye
-    fireEvent.mouseDown(canvas, { clientX: 10, clientY: 10 });
+    fireEvent.pointerDown(canvas, { clientX: 10, clientY: 10, pointerId: 1 });
 
     // HUD health should drop immediately to 0% Remaining
     expect(screen.getByText(/0% Remaining/i)).toBeInTheDocument();
@@ -152,12 +158,43 @@ describe('QR Damage Simulator Game Page', () => {
     fireEvent.click(nukeBtn);
 
     // Fire nuke blast at center data area (x=256, y=256, row=10, col=10)
-    fireEvent.mouseDown(canvas, { clientX: 256, clientY: 256 });
+    fireEvent.pointerDown(canvas, { clientX: 256, clientY: 256, pointerId: 1 });
 
     // Health should drop to 0% when local block budget is exceeded
     expect(screen.getByText(/0% Remaining/i)).toBeInTheDocument();
 
     // Alert should dynamically update to Block Budget Exceeded
     expect(screen.getAllByText(/Block Budget Exceeded/i).length).toBeGreaterThan(0);
+  });
+
+  it('enforces CSS gesture lock and captures touch pointer events during drag targeting', () => {
+    render(<Page />);
+
+    const canvas = screen.getByLabelText(/Interactive QR Code Game Board/i);
+    expect(canvas).toHaveClass('touch-none');
+    expect(canvas).toHaveStyle({ touchAction: 'none' });
+
+    vi.spyOn(canvas, 'getBoundingClientRect').mockReturnValue({
+      left: 0,
+      top: 0,
+      width: 512,
+      height: 512,
+      right: 512,
+      bottom: 512,
+      x: 0,
+      y: 0,
+      toJSON: () => {}
+    });
+
+    // Touch pointer down
+    fireEvent.pointerDown(canvas, { clientX: 256, clientY: 256, pointerId: 2, pointerType: 'touch' });
+    expect(Element.prototype.setPointerCapture).toHaveBeenCalledWith(2);
+
+    // Touch pointer move (dragging crosshair)
+    fireEvent.pointerMove(canvas, { clientX: 260, clientY: 260, pointerId: 2, pointerType: 'touch' });
+
+    // Touch pointer up / release
+    fireEvent.pointerUp(canvas, { pointerId: 2, pointerType: 'touch' });
+    expect(Element.prototype.releasePointerCapture).toHaveBeenCalledWith(2);
   });
 });

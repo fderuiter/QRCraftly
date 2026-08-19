@@ -275,36 +275,49 @@ function GamePageInner() {
     setLatency(Number(duration.toFixed(2)));
   }, [size, selectedWeapon, damagedModules]);
 
-  // Mouse & Touch Interactivity Event Handlers
-  const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  // Unified Pointer Interactivity Event Handlers
+  const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    if (typeof e.currentTarget.setPointerCapture === 'function') {
+      try {
+        e.currentTarget.setPointerCapture(e.pointerId);
+      } catch (_) {}
+    }
     setIsDrawing(true);
     fireBlast(e.clientX, e.clientY);
   };
 
-  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (!isDrawing) return;
     fireBlast(e.clientX, e.clientY);
   };
 
-  const handleMouseUp = () => {
+  const handlePointerUp = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (typeof e.currentTarget.releasePointerCapture === 'function') {
+      try {
+        if (typeof e.currentTarget.hasPointerCapture !== 'function' || e.currentTarget.hasPointerCapture(e.pointerId)) {
+          e.currentTarget.releasePointerCapture(e.pointerId);
+        }
+      } catch (_) {}
+    }
     setIsDrawing(false);
   };
 
-  const handleTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
-    setIsDrawing(true);
-    if (e.touches[0]) {
-      fireBlast(e.touches[0].clientX, e.touches[0].clientY);
+  const handlePointerCancel = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (typeof e.currentTarget.releasePointerCapture === 'function') {
+      try {
+        if (typeof e.currentTarget.hasPointerCapture !== 'function' || e.currentTarget.hasPointerCapture(e.pointerId)) {
+          e.currentTarget.releasePointerCapture(e.pointerId);
+        }
+      } catch (_) {}
     }
+    setIsDrawing(false);
   };
 
-  const handleTouchMove = (e: React.TouchEvent<HTMLCanvasElement>) => {
-    if (!isDrawing) return;
-    if (e.touches[0]) {
-      fireBlast(e.touches[0].clientX, e.touches[0].clientY);
+  const handlePointerLeave = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (typeof e.currentTarget.hasPointerCapture === 'function' && e.currentTarget.hasPointerCapture(e.pointerId)) {
+      return;
     }
-  };
-
-  const handleTouchEnd = () => {
     setIsDrawing(false);
   };
 
@@ -806,14 +819,13 @@ function GamePageInner() {
                 ref={canvasRef}
                 width={512}
                 height={512}
-                onMouseDown={handleMouseDown}
-                onMouseMove={handleMouseMove}
-                onMouseUp={handleMouseUp}
-                onMouseLeave={handleMouseUp}
-                onTouchStart={handleTouchStart}
-                onTouchMove={handleTouchMove}
-                onTouchEnd={handleTouchEnd}
-                className="size-full cursor-crosshair rounded-lg object-contain"
+                onPointerDown={handlePointerDown}
+                onPointerMove={handlePointerMove}
+                onPointerUp={handlePointerUp}
+                onPointerCancel={handlePointerCancel}
+                onPointerLeave={handlePointerLeave}
+                className="size-full cursor-crosshair touch-none rounded-lg object-contain"
+                style={{ touchAction: 'none' }}
                 aria-label="Interactive QR Code Game Board. Click or drag to execute weapon blast attacks."
               />
 

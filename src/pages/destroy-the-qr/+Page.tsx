@@ -1134,10 +1134,10 @@ export default function Page() {
   }, [handleShoot]);
 
   /**
-   * Updates coordinates of the mouse on move relative to canvas size.
-   * @param e The mouse event object.
+   * Updates coordinates of the pointer on move relative to canvas size.
+   * @param e The pointer event object.
    */
-  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -1156,27 +1156,72 @@ export default function Page() {
   };
 
   /**
-   * Tracks mouse triggers to active shot bursts.
-   * @param e The mouse event object.
+   * Tracks pointer triggers to active shot bursts.
+   * @param e The pointer event object.
    */
-  const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (e.button !== 0) return; // Left click only
+  const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return; // Non-primary mouse clicks ignored
+    if (typeof e.currentTarget.setPointerCapture === 'function') {
+      try {
+        e.currentTarget.setPointerCapture(e.pointerId);
+      } catch (_) {}
+    }
+
+    const canvas = canvasRef.current;
+    if (canvas) {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+
+      mousePosRef.current = {
+        x: (e.clientX - rect.left) * scaleX,
+        y: (e.clientY - rect.top) * scaleY
+      };
+    }
+
     isMouseDownRef.current = true;
     handleShoot();
     scanQRState();
   };
 
   /**
-   * Release triggers on mouse release.
+   * Release triggers on pointer release.
+   * @param e The pointer event object.
    */
-  const handleMouseUp = () => {
+  const handlePointerUp = (e: React.PointerEvent<HTMLCanvasElement>) => {
     isMouseDownRef.current = false;
+    if (typeof e.currentTarget.releasePointerCapture === 'function') {
+      try {
+        if (typeof e.currentTarget.hasPointerCapture !== 'function' || e.currentTarget.hasPointerCapture(e.pointerId)) {
+          e.currentTarget.releasePointerCapture(e.pointerId);
+        }
+      } catch (_) {}
+    }
   };
 
   /**
-   * Handle mouse escape from bounds.
+   * Release triggers on pointer cancel.
+   * @param e The pointer event object.
    */
-  const handleMouseLeave = () => {
+  const handlePointerCancel = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    isMouseDownRef.current = false;
+    if (typeof e.currentTarget.releasePointerCapture === 'function') {
+      try {
+        if (typeof e.currentTarget.hasPointerCapture !== 'function' || e.currentTarget.hasPointerCapture(e.pointerId)) {
+          e.currentTarget.releasePointerCapture(e.pointerId);
+        }
+      } catch (_) {}
+    }
+  };
+
+  /**
+   * Handle pointer escape from bounds.
+   * @param e The pointer event object.
+   */
+  const handlePointerLeave = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (typeof e.currentTarget.hasPointerCapture === 'function' && e.currentTarget.hasPointerCapture(e.pointerId)) {
+      return;
+    }
     isMouseDownRef.current = false;
   };
 
@@ -1396,11 +1441,13 @@ export default function Page() {
               ref={canvasRef}
               width={800}
               height={600}
-              onMouseMove={handleMouseMove}
-              onMouseDown={handleMouseDown}
-              onMouseUp={handleMouseUp}
-              onMouseLeave={handleMouseLeave}
-              className="block max-w-full cursor-none rounded-lg border border-slate-900 bg-[#0b1329] shadow-inner"
+              onPointerDown={handlePointerDown}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
+              onPointerCancel={handlePointerCancel}
+              onPointerLeave={handlePointerLeave}
+              className="block max-w-full cursor-none touch-none rounded-lg border border-slate-900 bg-[#0b1329] shadow-inner"
+              style={{ touchAction: 'none' }}
             />
           </div>
 
