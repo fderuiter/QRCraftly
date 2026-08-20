@@ -153,6 +153,76 @@ describe('Acoustic Steganography & Audio QR Page', () => {
     expect(screen.queryByText('LISTENING')).not.toBeInTheDocument();
   });
 
+  it('stops all microphone tracks and closes AudioContext when component unmounts', async () => {
+    const stopTrackMock = vi.fn();
+    const mockMediaDevices = {
+      getUserMedia: vi.fn().mockResolvedValue({
+        getTracks: () => [{ stop: stopTrackMock }],
+      }),
+    };
+    vi.stubGlobal('navigator', {
+      ...navigator,
+      mediaDevices: mockMediaDevices,
+    });
+
+    const { unmount } = render(<Page />);
+
+    const listenBtn = screen.getByRole('button', { name: /Listen\/Receive/i });
+    await act(async () => {
+      fireEvent.click(listenBtn);
+    });
+
+    expect(screen.getByText('LISTENING')).toBeInTheDocument();
+
+    // User navigates away / unmounts component
+    unmount();
+
+    // Verify microphone track was stopped
+    expect(stopTrackMock).toHaveBeenCalled();
+  });
+
+  it('rejects microphone stream if user toggles listening off before permission prompt resolves', async () => {
+    const stopTrackMock = vi.fn();
+    let resolveGetUserMedia: (stream: any) => void = () => {};
+
+    const pendingPromise = new Promise((resolve) => {
+      resolveGetUserMedia = resolve;
+    });
+
+    vi.stubGlobal('navigator', {
+      ...navigator,
+      mediaDevices: {
+        getUserMedia: vi.fn().mockReturnValue(pendingPromise),
+      },
+    });
+
+    render(<Page />);
+
+    const listenBtn = screen.getByRole('button', { name: /Listen\/Receive/i });
+    act(() => {
+      fireEvent.click(listenBtn);
+    });
+
+    expect(screen.getByText('LISTENING')).toBeInTheDocument();
+
+    // User toggles recording off BEFORE prompt resolves
+    const stopListenBtn = screen.getByRole('button', { name: /Stop Listening/i });
+    fireEvent.click(stopListenBtn);
+
+    expect(screen.queryByText('LISTENING')).not.toBeInTheDocument();
+
+    // Now permission prompt resolves
+    await act(async () => {
+      resolveGetUserMedia({
+        getTracks: () => [{ stop: stopTrackMock }],
+      });
+      await pendingPromise;
+    });
+
+    // Microphone stream tracks must be stopped immediately
+    expect(stopTrackMock).toHaveBeenCalled();
+  });
+
   it('can switch tabs and use the Spectrogram QR Art features', async () => {
     render(<Page />);
 

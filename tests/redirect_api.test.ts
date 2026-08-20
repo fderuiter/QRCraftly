@@ -539,13 +539,14 @@ describe("Secure Dynamic Redirection API Suite", () => {
     });
   });
 
-  describe("Browser Redirection & Prefix-Based KV Event Logging", () => {
-    it("should redirect immediately and log a prefix event key without mutating the parent record", async () => {
+  describe("Browser Redirection & Zero-Transit Counter-Only Enforcement", () => {
+    it("should redirect immediately and increment scan count without writing per-event KV records", async () => {
       const kv = new MockKV();
       const redirectData = {
         id: "test-id",
         redirectUrl: "https://target-destination.com/event",
         adminKey: "admin-secret",
+        scans: 0,
         createdAt: new Date().toISOString()
       };
       await kv.put("redirect:test-id", JSON.stringify(redirectData));
@@ -577,28 +578,18 @@ describe("Secure Dynamic Redirection API Suite", () => {
       // Wait for background waitUntil promises
       await Promise.all(promises);
 
-      // Parent record must remain immutable (redirectUrl same, no mutated scans count)
-      const parentStr = await kv.get("redirect:test-id");
-      expect(parentStr).toBe(JSON.stringify(redirectData));
-
-      // Event key prefixed with redirect ID must exist in KV
+      // Zero per-event KV records must be written
       const listRes = await kv.list({ prefix: "event:test-id:" });
-      expect(listRes.keys.length).toBe(1);
-      expect(listRes.keys[0].name).toContain("event:test-id:");
-
-      const eventData = listRes.keys[0].metadata;
-      expect(eventData).toBeDefined();
-      expect(eventData.redirectId).toBe("test-id");
-      expect(eventData.device).toBe("mobile");
-      expect(eventData.timestamp).toBeDefined();
+      expect(listRes.keys.length).toBe(0);
     });
 
-    it("should query prefix event keys to dynamically calculate total scans and trend metrics on stats endpoint", async () => {
+    it("should return aggregate scan totals without device or location breakdowns on stats endpoint", async () => {
       const kv = new MockKV();
       const redirectData = {
         id: "test-id-2",
         redirectUrl: "https://example.com/dest",
         adminKey: "admin-secret-2",
+        scans: 0,
         createdAt: new Date().toISOString()
       };
       await kv.put("redirect:test-id-2", JSON.stringify(redirectData));
@@ -627,12 +618,15 @@ describe("Secure Dynamic Redirection API Suite", () => {
       const json = await statsRes.json() as any;
       expect(json.id).toBe("test-id-2");
       expect(json.scans).toBe(3);
-      expect(json.devices.mobile).toBe(1);
-      expect(json.devices.desktop).toBe(1);
-      expect(json.devices.tablet).toBe(1);
-      expect(json.hourly).toBeDefined();
-      expect(json.daily).toBeDefined();
-      expect(json.events.length).toBe(3);
+      expect(json.devices).toBeUndefined();
+      expect(json.locations).toBeUndefined();
+      expect(json.hourly).toBeUndefined();
+      expect(json.daily).toBeUndefined();
+      expect(json.events).toBeUndefined();
+
+      // Ensure zero event keys in KV
+      const listRes = await kv.list({ prefix: "event:test-id-2:" });
+      expect(listRes.keys.length).toBe(0);
     });
 
     it("should fall back to local in-memory mock database simulation when REDIRECTS_KV is unavailable", async () => {
@@ -641,6 +635,7 @@ describe("Secure Dynamic Redirection API Suite", () => {
         id: "local-id",
         redirectUrl: "https://local-target.com",
         adminKey: "local-key",
+        scans: 0,
         createdAt: new Date().toISOString()
       };
       (globalThis as any).__mockKV.set("redirect:local-id", JSON.stringify(redirectData));
@@ -660,27 +655,28 @@ describe("Secure Dynamic Redirection API Suite", () => {
 
       expect(redirectRes.status).toBe(307);
 
-      // Verify prefix key created in mock database
+      // Verify NO event prefix key created in mock database
       const mockKeys = Array.from((globalThis as any).__mockKV.keys() as Iterable<string>);
       const eventKeys = mockKeys.filter(k => k.startsWith("event:local-id:"));
-      expect(eventKeys.length).toBe(1);
+      expect(eventKeys.length).toBe(0);
 
-      // Verify stats queries mock database prefix keys correctly
+      // Verify stats returns simple aggregate scans count
       const statsReq = new Request("http://localhost:3000/api/redirect/stats?id=local-id");
       const statsRes = await statsOnRequestGet({ request: statsReq, env: {} });
       expect(statsRes.status).toBe(200);
 
       const json = await statsRes.json() as any;
       expect(json.scans).toBe(1);
-      expect(json.devices.mobile).toBe(1);
+      expect(json.devices).toBeUndefined();
     });
 
-    it("should preserve prefix scan events when editing target redirect URL", async () => {
+    it("should preserve total aggregate scan count when editing target redirect URL", async () => {
       const kv = new MockKV();
       const redirectData = {
         id: "edit-id",
         redirectUrl: "https://old-target.com",
         adminKey: "edit-key",
+        scans: 0,
         createdAt: new Date().toISOString()
       };
       await kv.put("redirect:edit-id", JSON.stringify(redirectData));
@@ -709,9 +705,9 @@ describe("Secure Dynamic Redirection API Suite", () => {
       const updatedParentStr = await kv.get("redirect:edit-id");
       expect(JSON.parse(updatedParentStr!).redirectUrl).toBe("https://new-target.com");
 
-      // Verify scan events were NOT deleted or altered
+      // Verify zero event keys exist
       const listRes = await kv.list({ prefix: "event:edit-id:" });
-      expect(listRes.keys.length).toBe(1);
+      expect(listRes.keys.length).toBe(0);
     });
 
     it("should route iOS device to Apple App Store URL with 307 status", async () => {
@@ -1131,7 +1127,7 @@ describe("Secure Dynamic Redirection API Suite", () => {
       expect(headerJson.redirectUrl).toBe("https://example.com/main");
     });
 
-    it("should execute telemetry and scan counting as non-blocking tasks that fail open on D1 error", async () => {
+    it("should execute scan counting as non-blocking tasks that fail open on D1 error", async () => {
       const kv = new MockKV();
       const record = {
         id: "fail-open-telemetry-id",
@@ -1166,12 +1162,12 @@ describe("Secure Dynamic Redirection API Suite", () => {
       expect(res.status).toBe(307);
       expect(res.headers.get("Location")).toBe("https://target.com/fail-open");
 
-      // Non-blocking telemetry background task runs and catches D1 error without unhandled rejection
+      // Non-blocking background task runs and catches D1 error without unhandled rejection
       await expect(Promise.all(promises)).resolves.toBeDefined();
 
-      // Telemetry event key is still written to KV
+      // Zero event keys written to KV
       const events = await kv.list({ prefix: "event:fail-open-telemetry-id:" });
-      expect(events.keys.length).toBe(1);
+      expect(events.keys.length).toBe(0);
     });
   });
 });

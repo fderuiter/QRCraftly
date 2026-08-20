@@ -1,0 +1,316 @@
+/*
+    QRCraftly
+    Copyright (C) 2025 fderuiter
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
+import { useState, useRef, useEffect, useCallback } from 'react';
+
+// Frequency mapping parameters
+const SYNC_FREQ = 1500;
+const ZERO_FREQ = 1200;
+const ONE_FREQ = 2200;
+const BIT_DURATION = 0.10; // 100ms per bit
+const GAP_DURATION = 0.03; // 30ms silent gap
+
+/**
+ * Custom hook to manage acoustic modem (chirp transmission and receiving) lifecycle and hardware cleanup.
+ * @param getAudioContext Function to retrieve or initialize the active AudioContext.
+ * @returns State and control handlers for chirp transceiver.
+ */
+export function useChirpTransceiver(getAudioContext: () => AudioContext) {
+  const [chirpText, setChirpText] = useState('HI');
+  const [isTransmitting, setIsTransmitting] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [decodedMessage, setDecodedMessage] = useState('');
+  const [receiverLog, setReceiverLog] = useState<string[]>([]);
+  const [currentSymbol, setCurrentSymbol] = useState<string>('Idle');
+
+  const activeOscillatorsRef = useRef<OscillatorNode[]>([]);
+  const micStreamRef = useRef<MediaStream | null>(null);
+  const micSourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
+  const micAnalyserRef = useRef<AnalyserNode | null>(null);
+  const rxAnimationRef = useRef<number | null>(null);
+
+  const isListeningRef = useRef(false);
+  const isMountedRef = useRef(true);
+
+  const logMessage = useCallback((msg: string) => {
+    setReceiverLog((prev) => [msg, ...prev].slice(0, 50));
+  }, []);
+
+  const stopChirpTransmission = useCallback(() => {
+    activeOscillatorsRef.current.forEach((osc) => {
+      try {
+        osc.stop();
+      } catch {}
+    });
+    activeOscillatorsRef.current = [];
+    setIsTransmitting(false);
+    logMessage('Acoustic transmission stopped manually.');
+  }, [logMessage]);
+
+  const stopChirpListening = useCallback(() => {
+    isListeningRef.current = false;
+    setIsListening(false);
+    setCurrentSymbol('Idle');
+
+    if (rxAnimationRef.current !== null) {
+      cancelAnimationFrame(rxAnimationRef.current);
+      rxAnimationRef.current = null;
+    }
+
+    if (micStreamRef.current) {
+      micStreamRef.current.getTracks().forEach((track) => track.stop());
+      micStreamRef.current = null;
+    }
+
+    if (micSourceRef.current) {
+      micSourceRef.current.disconnect();
+      micSourceRef.current = null;
+    }
+
+    micAnalyserRef.current = null;
+    logMessage('Receiver deactivated.');
+  }, [logMessage]);
+
+  const startChirpTransmission = useCallback(() => {
+    try {
+      const ctx = getAudioContext();
+      setIsTransmitting(true);
+      logMessage('Starting acoustic transmission...');
+
+      let binaryString = '';
+      for (let i = 0; i < chirpText.length; i++) {
+        const charCode = chirpText.charCodeAt(i);
+        const bin = charCode.toString(2).padStart(8, '0');
+        binaryString += bin;
+      }
+
+      logMessage(`Payload: "${chirpText}" -> Binary: ${binaryString}`);
+
+      let time = ctx.currentTime + 0.1;
+
+      // 1. Play Sync Tone
+      const syncOsc = ctx.createOscillator();
+      const syncGain = ctx.createGain();
+      syncOsc.frequency.setValueAtTime(SYNC_FREQ, time);
+      syncGain.gain.setValueAtTime(0, time);
+      syncGain.gain.linearRampToValueAtTime(0.15, time + 0.02);
+      syncGain.gain.setValueAtTime(0.15, time + 0.28);
+      syncGain.gain.linearRampToValueAtTime(0, time + 0.30);
+
+      syncOsc.connect(syncGain);
+      syncGain.connect(ctx.destination);
+      syncOsc.start(time);
+      syncOsc.stop(time + 0.30);
+      activeOscillatorsRef.current.push(syncOsc);
+
+      time += 0.30;
+
+      // 2. Play Bits with guard gaps
+      for (let i = 0; i < binaryString.length; i++) {
+        const bit = binaryString[i];
+        const freq = bit === '1' ? ONE_FREQ : ZERO_FREQ;
+
+        time += GAP_DURATION;
+
+        const bitOsc = ctx.createOscillator();
+        const bitGain = ctx.createGain();
+        bitOsc.frequency.setValueAtTime(freq, time);
+
+        bitGain.gain.setValueAtTime(0, time);
+        bitGain.gain.linearRampToValueAtTime(0.15, time + 0.01);
+        bitGain.gain.setValueAtTime(0.15, time + BIT_DURATION - 0.01);
+        bitGain.gain.linearRampToValueAtTime(0, time + BIT_DURATION);
+
+        bitOsc.connect(bitGain);
+        bitGain.connect(ctx.destination);
+        bitOsc.start(time);
+        bitOsc.stop(time + BIT_DURATION);
+        activeOscillatorsRef.current.push(bitOsc);
+
+        time += BIT_DURATION;
+      }
+
+      const totalDurationMs = (time - ctx.currentTime) * 1000;
+      setTimeout(() => {
+        if (isMountedRef.current) {
+          setIsTransmitting(false);
+          logMessage('Acoustic transmission finished successfully.');
+        }
+      }, totalDurationMs + 100);
+    } catch (err: any) {
+      logMessage(`Transmission Error: ${err.message}`);
+      setIsTransmitting(false);
+    }
+  }, [chirpText, getAudioContext, logMessage]);
+
+  const startChirpListening = useCallback(async () => {
+    try {
+      isListeningRef.current = true;
+      setIsListening(true);
+      setDecodedMessage('');
+      setReceiverLog([]);
+      logMessage('Microphone active. Listening for sync tone...');
+
+      const ctx = getAudioContext();
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+      // Async Permission Prompt Race Condition Guard:
+      // If listening was toggled off or component unmounted while prompt was open, reject and stop tracks immediately.
+      if (!isListeningRef.current || !isMountedRef.current) {
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
+
+      micStreamRef.current = stream;
+
+      const source = ctx.createMediaStreamSource(stream);
+      micSourceRef.current = source;
+
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 2048;
+      analyser.smoothingTimeConstant = 0.4;
+      source.connect(analyser);
+      micAnalyserRef.current = analyser;
+
+      let isReceiving = false;
+      let bitBuffer: string[] = [];
+      let currentBitStream = '';
+      let expectingBit = true;
+      let lastDecodedTime = 0;
+
+      const binWidth = ctx.sampleRate / analyser.fftSize;
+      const syncBin = Math.round(SYNC_FREQ / binWidth);
+      const zeroBin = Math.round(ZERO_FREQ / binWidth);
+      const oneBin = Math.round(ONE_FREQ / binWidth);
+
+      const minSearchBin = Math.round(900 / binWidth);
+      const maxSearchBin = Math.round(2500 / binWidth);
+
+      const bufferLength = analyser.frequencyBinCount;
+      const dataArray = new Uint8Array(bufferLength);
+
+      const decodeLoop = () => {
+        if (!micAnalyserRef.current || !isListeningRef.current || !isMountedRef.current) {
+          return;
+        }
+        analyser.getByteFrequencyData(dataArray);
+
+        let maxVal = 0;
+        let peakBin = -1;
+        for (let b = minSearchBin; b <= maxSearchBin; b++) {
+          if (dataArray[b] > maxVal) {
+            maxVal = dataArray[b];
+            peakBin = b;
+          }
+        }
+
+        const now = Date.now();
+        const amplitudeThreshold = 135;
+
+        if (maxVal > amplitudeThreshold && peakBin !== -1) {
+          const distSync = Math.abs(peakBin - syncBin);
+          const distZero = Math.abs(peakBin - zeroBin);
+          const distOne = Math.abs(peakBin - oneBin);
+
+          const minDistance = Math.min(distSync, distZero, distOne);
+          const tolerance = 4;
+
+          if (minDistance <= tolerance) {
+            if (minDistance === distSync) {
+              setCurrentSymbol('SYNC TONE');
+              if (!isReceiving && now - lastDecodedTime > 1000) {
+                isReceiving = true;
+                bitBuffer = [];
+                currentBitStream = '';
+                expectingBit = true;
+                lastDecodedTime = now;
+                logMessage('⚡ Sync tone detected! Initializing receiver matrix...');
+              }
+            } else if (isReceiving && expectingBit && now - lastDecodedTime > 80) {
+              if (minDistance === distZero) {
+                setCurrentSymbol('BIT 0');
+                bitBuffer.push('0');
+                lastDecodedTime = now;
+                expectingBit = false;
+                logMessage('Decoded bit: 0');
+              } else if (minDistance === distOne) {
+                setCurrentSymbol('BIT 1');
+                bitBuffer.push('1');
+                lastDecodedTime = now;
+                expectingBit = false;
+                logMessage('Decoded bit: 1');
+              }
+
+              if (bitBuffer.length >= 8) {
+                const byteString = bitBuffer.join('');
+                const charCode = parseInt(byteString, 2);
+                const char = String.fromCharCode(charCode);
+                currentBitStream += char;
+                setDecodedMessage(currentBitStream);
+                logMessage(`📥 Decoded Character: '${char}' (Hex: ${charCode.toString(16).toUpperCase()})`);
+                bitBuffer = [];
+              }
+            }
+          } else {
+            setCurrentSymbol('Noise / Unrecognized');
+          }
+        } else {
+          setCurrentSymbol('Silence / Gap');
+          if (!expectingBit && now - lastDecodedTime > 40) {
+            expectingBit = true;
+          }
+        }
+
+        if (isListeningRef.current && isMountedRef.current) {
+          rxAnimationRef.current = requestAnimationFrame(decodeLoop);
+        }
+      };
+
+      rxAnimationRef.current = requestAnimationFrame(decodeLoop);
+    } catch (err: any) {
+      logMessage(`Microphone Access Denied/Error: ${err.message}`);
+      isListeningRef.current = false;
+      setIsListening(false);
+    }
+  }, [getAudioContext, logMessage]);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      isListeningRef.current = false;
+      stopChirpTransmission();
+      stopChirpListening();
+    };
+  }, [stopChirpTransmission, stopChirpListening]);
+
+  return {
+    chirpText,
+    setChirpText,
+    isTransmitting,
+    isListening,
+    decodedMessage,
+    receiverLog,
+    currentSymbol,
+    startChirpTransmission,
+    stopChirpTransmission,
+    startChirpListening,
+    stopChirpListening,
+    micStreamRef,
+  };
+}

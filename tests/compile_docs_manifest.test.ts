@@ -175,15 +175,15 @@ describe('Metadata-Driven Frontmatter Filtering', () => {
       // Verify content has frontmatter stripped for explicit-public-doc
       const explicitPub = compiledData.find((doc: { id: string }) => doc.id === 'explicit-public-doc');
       expect(explicitPub.title).toBe('Explicit Public Document');
-      expect(explicitPub.content).not.toContain('draft: false');
-      expect(explicitPub.content).toContain('# Explicit Public Document');
+      expect(explicitPub.html).not.toContain('draft: false');
+      expect(explicitPub.html).toContain('This is a public document.');
     });
   });
 
   describe('Strict Opt-In and Quarantine Isolation Pass', () => {
-    it('should ignore all markdown files inside a quarantine or internal folder', () => {
-      const quarantineDir = path.join(tempDir, 'quarantine');
-      const internalDir = path.join(tempDir, 'internal');
+    it('should ignore all markdown files inside a quarantine or internal folder regardless of folder casing', () => {
+      const quarantineDir = path.join(tempDir, 'Quarantine');
+      const internalDir = path.join(tempDir, 'Internal');
       if (!fs.existsSync(quarantineDir)) fs.mkdirSync(quarantineDir, { recursive: true });
       if (!fs.existsSync(internalDir)) fs.mkdirSync(internalDir, { recursive: true });
 
@@ -205,6 +205,31 @@ describe('Metadata-Driven Frontmatter Filtering', () => {
       const ids = compiledData.map((doc: { id: string }) => doc.id);
       expect(ids).not.toContain('quarantined-note');
       expect(ids).not.toContain('internal-note');
+    });
+
+    it('should resolve inter-document links case-insensitively with slugified hash fragments', () => {
+      const sourceDir = path.join(tempDir, 'link_test');
+      if (!fs.existsSync(sourceDir)) fs.mkdirSync(sourceDir, { recursive: true });
+
+      fs.writeFileSync(
+        path.join(sourceDir, 'TARGET_DOC.md'),
+        `# Target Document\n\n## Section One\n\nTarget content.`,
+        'utf-8'
+      );
+
+      fs.writeFileSync(
+        path.join(sourceDir, 'REFERENCER_DOC.md'),
+        `# Referencing Document\n\nSee [Target Link](target_doc.md#Section-One) for details.`,
+        'utf-8'
+      );
+
+      const linkManifestPath = path.join(sourceDir, 'manifest.json');
+      compileManifest(sourceDir, linkManifestPath);
+
+      const compiledData = JSON.parse(fs.readFileSync(linkManifestPath, 'utf-8'));
+      const refDoc = compiledData.find((d: { id: string }) => d.id === 'referencer_doc');
+      expect(refDoc).toBeDefined();
+      expect(refDoc.html).toContain('href="#target_doc-section-one"');
     });
 
     it('should successfully parse publish-approved property', () => {

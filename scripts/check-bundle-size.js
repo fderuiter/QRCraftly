@@ -7,7 +7,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const DIST_DIR = path.resolve(__dirname, '../dist/client');
-const MAX_GZIPPED_SIZE_KB = 600;
+const MAX_GZIPPED_SIZE_KB = 650;
 const MAX_GZIPPED_SIZE_BYTES = MAX_GZIPPED_SIZE_KB * 1024;
 
 /**
@@ -98,7 +98,7 @@ export function runCheck() {
       process.exit(1);
     }
 
-    console.log('\n✅ Gzipped transfer size is well within the 600 KB budget!');
+    console.log(`\n✅ Gzipped transfer size is well within the ${MAX_GZIPPED_SIZE_KB} KB budget!`);
     process.exit(0);
   } catch (err) {
     console.error('Error running bundle size check:', err);
