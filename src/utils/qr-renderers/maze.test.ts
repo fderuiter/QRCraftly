@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { generateMaze, renderMaze, isFinderEyeZone, isBridgeCell, DSU } from './maze';
+import { generateMaze, renderMaze, isFinderEyeZone, isBridgeCell, DSU, getStyleAdaptiveMazePathWidth } from './maze';
 import { QRStyle, QRType, QRErrorCorrectionLevel } from '../../types';
 
 describe('isFinderEyeZone', () => {
@@ -529,5 +529,75 @@ describe('DSU', () => {
     // Test add for existing key
     dsu.add('a');
     expect(dsu.find('a')).toBe('c');
+  });
+});
+
+describe('getStyleAdaptiveMazePathWidth & Style-Adaptive Clearance', () => {
+  it('returns style-adaptive defaults for custom stylized modules', () => {
+    expect(getStyleAdaptiveMazePathWidth(QRStyle.STARBURST)).toBe(0.12);
+    expect(getStyleAdaptiveMazePathWidth(QRStyle.HIVE)).toBe(0.15);
+    expect(getStyleAdaptiveMazePathWidth(QRStyle.FLUID)).toBe(0.18);
+    expect(getStyleAdaptiveMazePathWidth(QRStyle.CIRCUIT)).toBe(0.18);
+    expect(getStyleAdaptiveMazePathWidth(QRStyle.SWISS)).toBe(0.20);
+    expect(getStyleAdaptiveMazePathWidth(QRStyle.STANDARD)).toBe(0.25);
+    expect(getStyleAdaptiveMazePathWidth(QRStyle.MODERN)).toBe(0.25);
+    expect(getStyleAdaptiveMazePathWidth(QRStyle.GRUNGE)).toBe(0.25);
+  });
+
+  it('respects manual path width overrides within 0.10 to 0.50 range', () => {
+    expect(getStyleAdaptiveMazePathWidth(QRStyle.STARBURST, 0.35)).toBe(0.35);
+    expect(getStyleAdaptiveMazePathWidth(QRStyle.HIVE, 0.45)).toBe(0.45);
+  });
+
+  it('enforces guardrail min limit (0.10) and max limit (0.50)', () => {
+    expect(getStyleAdaptiveMazePathWidth(QRStyle.STARBURST, 0.02)).toBe(0.10);
+    expect(getStyleAdaptiveMazePathWidth(QRStyle.FLUID, 0.80)).toBe(0.50);
+  });
+});
+
+describe('applyMazeHaloMask & Canvas Clearance', () => {
+  it('applies destination-out composite masking to clear maze paths overlapping styled modules', () => {
+    const size = 21;
+    const darkMap: Record<string, boolean> = { '10,10': true };
+    const modules = {
+      size,
+      get: (r: number, c: number) => !!darkMap[`${r},${c}`],
+    };
+
+    const ctx = {
+      beginPath: vi.fn(),
+      closePath: vi.fn(),
+      arc: vi.fn(),
+      fill: vi.fn(),
+      moveTo: vi.fn(),
+      lineTo: vi.fn(),
+      stroke: vi.fn(),
+      save: vi.fn(),
+      restore: vi.fn(),
+      rect: vi.fn(),
+      fillRect: vi.fn(),
+      fillStyle: '',
+      strokeStyle: '',
+      lineWidth: 1,
+      lineCap: 'butt',
+      lineJoin: 'miter',
+      globalCompositeOperation: 'source-over',
+    } as unknown as CanvasRenderingContext2D;
+
+    const starburstConfig = {
+      value: 'https://qrcraftly.com',
+      type: QRType.URL,
+      fgColor: '#000000',
+      bgColor: '#ffffff',
+      style: QRStyle.STARBURST,
+      isMazeEnabled: true,
+      mazeColor: '#3b82f6',
+    } as any;
+
+    renderMaze(ctx, modules, starburstConfig, 0, 0, 10, size);
+
+    expect(ctx.save).toHaveBeenCalled();
+    expect(ctx.fill).toHaveBeenCalled();
+    expect(ctx.restore).toHaveBeenCalled();
   });
 });

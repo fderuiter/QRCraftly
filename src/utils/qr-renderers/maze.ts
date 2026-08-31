@@ -1,5 +1,14 @@
-import { QRConfig, QRModules } from '../../types';
+import { QRConfig, QRModules, QRStyle } from '../../types';
 import { getLogoMetrics, getIsCoveredByLogo, isAlignmentPatternZone } from './utils';
+import { renderModules } from './modules';
+import {
+  drawRoundRect,
+  drawRoughRect,
+  drawPoly,
+  drawStar,
+  drawCircularModule,
+  drawCircuitModule,
+} from '../canvasHelpers';
 
 interface MazeNode {
   r: number;
@@ -399,6 +408,155 @@ export function generateMaze(modules: QRModules, config: QRConfig, size: number)
 }
 
 /**
+ * Calculates the style-adaptive default maze path width clearance limit.
+ * Standard range: 0.10 to 0.50 (10% to 50% of cell size).
+ */
+export function getStyleAdaptiveMazePathWidth(style?: QRStyle, configPathWidth?: number): number {
+  if (typeof configPathWidth === 'number' && !isNaN(configPathWidth)) {
+    return Math.max(0.10, Math.min(0.50, configPathWidth));
+  }
+  switch (style) {
+    case QRStyle.STARBURST:
+      return 0.12;
+    case QRStyle.HIVE:
+      return 0.15;
+    case QRStyle.FLUID:
+    case QRStyle.CIRCUIT:
+      return 0.18;
+    case QRStyle.SWISS:
+      return 0.20;
+    case QRStyle.STANDARD:
+    case QRStyle.MODERN:
+    case QRStyle.GRUNGE:
+    default:
+      return 0.25;
+  }
+}
+
+/**
+ * Draws the clearance halo shape for a specific module cell.
+ * Applied during canvas halo masking pass to erase overlapping maze paths.
+ */
+function drawModuleHaloPath(
+  ctx: CanvasRenderingContext2D,
+  style: QRStyle,
+  x: number,
+  y: number,
+  cx: number,
+  cy: number,
+  cellSize: number,
+  modules: QRModules,
+  moduleCount: number,
+  r: number,
+  c: number,
+  isCoveredByLogo: (r: number, c: number) => boolean
+): void {
+  const haloBuffer = cellSize * 0.08;
+
+  switch (style) {
+    case QRStyle.SWISS:
+      drawCircularModule(ctx, cx, cy, cellSize, 1.15);
+      break;
+
+    case QRStyle.FLUID:
+      drawCircularModule(ctx, cx, cy, cellSize, 1.22);
+      break;
+
+    case QRStyle.HIVE: {
+      const rHiveHalo = cellSize / 1.40;
+      drawPoly(ctx, cx, cy, rHiveHalo, 6, 0, false, true);
+      break;
+    }
+
+    case QRStyle.STARBURST: {
+      const outerRHalo = cellSize / 1.35;
+      const innerRHalo = cellSize / 2.0;
+      drawStar(ctx, cx, cy, outerRHalo, innerRHalo, 5, false, true);
+      break;
+    }
+
+    case QRStyle.CIRCUIT: {
+      const hasTop = r > 0 && modules.get(r - 1, c) && !isCoveredByLogo(r - 1, c);
+      const hasBottom = r < moduleCount - 1 && modules.get(r + 1, c) && !isCoveredByLogo(r + 1, c);
+      const hasLeft = c > 0 && modules.get(r, c - 1) && !isCoveredByLogo(r, c - 1);
+      const hasRight = c < moduleCount - 1 && modules.get(r, c + 1) && !isCoveredByLogo(r, c + 1);
+
+      drawCircuitModule(ctx, x, y, cx, cy, cellSize, hasTop, hasBottom, hasLeft, hasRight);
+      drawRoundRect(ctx, x - haloBuffer, y - haloBuffer, cellSize + 2 * haloBuffer, cellSize + 2 * haloBuffer, cellSize * 0.35);
+      break;
+    }
+
+    case QRStyle.MODERN: {
+      const rModern = cellSize * 0.3;
+      drawRoundRect(ctx, x - haloBuffer, y - haloBuffer, cellSize + 2 * haloBuffer, cellSize + 2 * haloBuffer, rModern + haloBuffer);
+      break;
+    }
+
+    case QRStyle.GRUNGE: {
+      drawRoughRect(ctx, x - haloBuffer, y - haloBuffer, cellSize + 2 * haloBuffer, cellSize + 2 * haloBuffer, true);
+      break;
+    }
+
+    case QRStyle.STANDARD:
+    default: {
+      ctx.rect(x - haloBuffer, y - haloBuffer, cellSize + 2 * haloBuffer, cellSize + 2 * haloBuffer);
+      break;
+    }
+  }
+}
+
+/**
+ * Applies a visual canvas halo mask to actively clear any maze paths overlapping styled modules,
+ * and re-renders active modules in foreground color.
+ * Preserves finder pattern eyes, quiet zones, and logo cutout bounds.
+ */
+export function applyMazeHaloMask(
+  ctx: CanvasRenderingContext2D,
+  modules: QRModules,
+  config: QRConfig,
+  drawX: number,
+  drawY: number,
+  cellSize: number,
+  size: number
+): void {
+  const logoMetrics = getLogoMetrics(config, size, cellSize);
+  const isCoveredByLogo = getIsCoveredByLogo(config, size, logoMetrics);
+  const bridgesEnabled = config.isMazeBridgesEnabled !== false;
+
+  ctx.save();
+
+  // 1. Clear overlapping maze path pixels over module halo areas
+  ctx.globalCompositeOperation = 'destination-out';
+  ctx.fillStyle = '#000000';
+  ctx.strokeStyle = '#000000';
+
+  ctx.beginPath();
+
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) {
+      if (!modules.get(r, c)) continue;
+      if (isCoveredByLogo(r, c)) continue;
+      if (bridgesEnabled && isBridgeCell(r, c, size)) continue;
+
+      const x = drawX + c * cellSize;
+      const y = drawY + r * cellSize;
+      const cx = x + cellSize / 2;
+      const cy = y + cellSize / 2;
+
+      drawModuleHaloPath(ctx, config.style, x, y, cx, cy, cellSize, modules, size, r, c, isCoveredByLogo);
+    }
+  }
+
+  ctx.fill();
+
+  // 2. Restore normal composite operation and re-render active modules cleanly on top
+  ctx.globalCompositeOperation = 'source-over';
+  renderModules(ctx, modules, config, drawX, drawY, cellSize, size, logoMetrics);
+
+  ctx.restore();
+}
+
+/**
  * Renders the maze overlay directly on the canvas context.
  */
 export function renderMaze(
@@ -424,7 +582,8 @@ export function renderMaze(
     }
   }
 
-  const pathWidth = cellSize * (config.mazePathWidth || 0.25);
+  const effectivePathWidth = getStyleAdaptiveMazePathWidth(config.style, config.mazePathWidth);
+  const pathWidth = cellSize * Math.max(0.10, Math.min(0.50, effectivePathWidth));
 
   ctx.save();
 
@@ -512,6 +671,9 @@ export function renderMaze(
     ctx.fillStyle = '#ef4444'; // solid red inner dot
     ctx.fill();
   }
+
+  // 4. Apply Canvas Halo Masking to clear any maze paths overlapping styled modules
+  applyMazeHaloMask(ctx, modules, config, drawX, drawY, cellSize, size);
 
   ctx.restore();
 }

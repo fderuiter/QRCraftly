@@ -4,6 +4,8 @@ import { QRConfig, QRErrorCorrectionLevel } from '../../types';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { ToggleSwitch } from '../ui/ToggleSwitch';
 import { ColorInput } from '../ui/ColorInput';
+import { RangeInput } from '../ui/RangeInput';
+import { getStyleAdaptiveMazePathWidth } from '../../utils/qr-renderers/maze';
 
 /**
  *
@@ -121,6 +123,17 @@ export const AdvancedControls: React.FC<AdvancedControlsProps> = ({ config, onCh
                   label="Finder Pattern Bridges"
                   checked={config.isMazeBridgesEnabled !== false}
                   onChange={(checked) => onChange({ isMazeBridgesEnabled: checked })}
+                />
+
+                <RangeInput
+                  id="maze-path-width"
+                  label="Maze Path Width"
+                  value={getStyleAdaptiveMazePathWidth(config.style, config.mazePathWidth)}
+                  min={0.10}
+                  max={0.50}
+                  step={0.01}
+                  formatValue={(val) => `${Math.round(val * 100)}%`}
+                  onChange={(val) => onChange({ mazePathWidth: val })}
                 />
 
                 <ColorInput
