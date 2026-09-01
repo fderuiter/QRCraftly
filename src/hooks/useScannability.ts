@@ -143,7 +143,7 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
 
         const { success, physicalReady, error, configId, localContrastViolations, minLocalContrast } = e.data;
 
-        // Sequence ID check: discard if configId does not match current sequence ID
+        // Sequence ID check: discard late results if configId does not match current sequence ID
         if (configId !== String(sequenceRef.current)) {
           return;
         }

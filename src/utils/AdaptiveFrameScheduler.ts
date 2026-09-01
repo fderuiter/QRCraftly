@@ -8,8 +8,10 @@ export class DoubleBufferPool {
   private buffers: ArrayBuffer[] = [];
   private width = 0;
   private height = 0;
+  private maxBuffers = 4;
 
-  constructor(width = 0, height = 0) {
+  constructor(width = 0, height = 0, maxBuffers = 4) {
+    this.maxBuffers = maxBuffers;
     if (width > 0 && height > 0) {
       this.resize(width, height);
     }
@@ -26,7 +28,7 @@ export class DoubleBufferPool {
     this.height = height;
     this.buffers = [];
     const size = width * height * 4;
-    // Capacity: Restricts memory usage to exactly two pre-allocated buffers matching the target scan resolution
+    // Capacity: Restricts memory usage to pre-allocated buffers matching target scan resolution
     for (let i = 0; i < 2; i++) {
       this.buffers.push(new ArrayBuffer(size));
     }
@@ -34,22 +36,25 @@ export class DoubleBufferPool {
 
   /**
    * Acquires a buffer from the pool.
+   * Dynamically detects missing zero-copy frame buffers and allocates replacement buffers to prevent starvation.
    */
   public acquire(): ArrayBuffer {
     if (this.buffers.length > 0) {
       return this.buffers.pop()!;
     }
-    // Fallback if empty, though backpressure should ensure a buffer is available
-    return new ArrayBuffer(this.width * this.height * 4);
+    // Dynamic buffer replenishment: allocate replacement buffer when pool is empty without throwing starvation exceptions
+    const targetSize = this.width > 0 && this.height > 0 ? this.width * this.height * 4 : 0;
+    return new ArrayBuffer(targetSize);
   }
 
   /**
    * Releases a recycled buffer back to the pool.
+   * Enforces total buffer allocation memory cap to prevent unconstrained memory usage.
    */
   public release(buffer: ArrayBuffer) {
     const targetSize = this.width * this.height * 4;
     if (buffer && buffer.byteLength === targetSize) {
-      if (this.buffers.length < 2 && !this.buffers.includes(buffer)) {
+      if (this.buffers.length < this.maxBuffers && !this.buffers.includes(buffer)) {
         this.buffers.push(buffer);
       }
     }
@@ -67,6 +72,13 @@ export class DoubleBufferPool {
    */
   public getPoolSize(): number {
     return this.buffers.length;
+  }
+
+  /**
+   * Returns maximum allowed pool capacity.
+   */
+  public getMaxBuffers(): number {
+    return this.maxBuffers;
   }
 }
 

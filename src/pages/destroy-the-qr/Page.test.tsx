@@ -215,7 +215,8 @@ describe('Destroy the QR Code! Arcade Page', () => {
       
       await new Promise<void>(resolve => setTimeout(resolve, 50));
 
-      expect(mockPostMessage).toHaveBeenCalledTimes(1);
+      // Catch-up check executes reliably when painting ceases
+      expect(mockPostMessage).toHaveBeenCalledTimes(2);
     }
   });
 
@@ -519,6 +520,114 @@ describe('Destroy the QR Code! Arcade Page', () => {
       expect(mockPostMessage).toHaveBeenCalled();
       const payload = mockPostMessage.mock.calls[0][0];
       expect(payload).toHaveProperty('imageData');
+    }
+  });
+
+  it('Requirement 1 & 2: Rapid pointer drag interactions automatically overwrite task tokens and unlock on subsequent paint ticks', async () => {
+    let workerOnMessage: ((e: MessageEvent) => void) | null = null;
+    const mockPostMessage = vi.fn();
+
+    vi.stubGlobal('Worker', class MockWorker {
+      postMessage = mockPostMessage;
+      set onmessage(fn: (e: MessageEvent) => void) {
+        workerOnMessage = fn;
+      }
+      addEventListener = vi.fn();
+      removeEventListener = vi.fn();
+      terminate = vi.fn();
+    });
+
+    render(<Page />);
+
+    const canvas = document.querySelector('canvas');
+    expect(canvas).toBeInTheDocument();
+
+    if (canvas) {
+      // First paint action
+      fireEvent.pointerDown(canvas, { clientX: 200, clientY: 200, pointerId: 1 });
+      await new Promise<void>(resolve => setTimeout(resolve, 10));
+
+      // Subsequent paint tick during pointer drag
+      fireEvent.pointerMove(canvas, { clientX: 210, clientY: 210, pointerId: 1 });
+      await new Promise<void>(resolve => setTimeout(resolve, 10));
+
+      // Pointer up triggers final post-interaction check
+      fireEvent.pointerUp(canvas, { pointerId: 1 });
+      await new Promise<void>(resolve => setTimeout(resolve, 20));
+
+      // Main thread tokens advance with paint ticks without permanently freezing
+      expect(mockPostMessage.mock.calls.length).toBeGreaterThan(1);
+      const firstCallToken = mockPostMessage.mock.calls[0][0].configId;
+      const lastCallToken = mockPostMessage.mock.calls[mockPostMessage.mock.calls.length - 1][0].configId;
+      expect(Number(lastCallToken)).toBeGreaterThan(Number(firstCallToken));
+    }
+  });
+
+  it('Requirement 4: Late background worker results with outdated tokens are discarded without updating current UI state', async () => {
+    let workerOnMessage: ((e: MessageEvent) => void) | null = null;
+
+    vi.stubGlobal('Worker', class MockWorker {
+      postMessage = vi.fn();
+      set onmessage(fn: (e: MessageEvent) => void) {
+        workerOnMessage = fn;
+      }
+      addEventListener = vi.fn();
+      removeEventListener = vi.fn();
+      terminate = vi.fn();
+    });
+
+    render(<Page />);
+
+    const canvas = document.querySelector('canvas');
+    if (canvas && workerOnMessage) {
+      // Initiate check
+      fireEvent.pointerDown(canvas, { clientX: 200, clientY: 200, pointerId: 1 });
+      fireEvent.pointerMove(canvas, { clientX: 250, clientY: 250, pointerId: 1 });
+
+      await new Promise<void>(resolve => setTimeout(resolve, 20));
+
+      // Send worker response with outdated configId token ("0")
+      (workerOnMessage as any)({
+        data: {
+          success: false,
+          configId: "0",
+          sequenceId: 0,
+          buffer: new ArrayBuffer(256 * 256 * 4)
+        }
+      });
+
+      // UI state should NOT be overridden to false by the outdated token response
+      expect(screen.getByText('100%')).toBeInTheDocument();
+    }
+  });
+
+  it('Requirement 5: Final game board scannability checks trigger reliably after user input stops', async () => {
+    const mockPostMessage = vi.fn();
+
+    vi.stubGlobal('Worker', class MockWorker {
+      postMessage = mockPostMessage;
+      set onmessage(fn: (e: MessageEvent) => void) {}
+      addEventListener = vi.fn();
+      removeEventListener = vi.fn();
+      terminate = vi.fn();
+    });
+
+    render(<Page />);
+
+    const canvas = document.querySelector('canvas');
+    if (canvas) {
+      fireEvent.pointerDown(canvas, { clientX: 200, clientY: 200, pointerId: 1 });
+      fireEvent.pointerMove(canvas, { clientX: 220, clientY: 220, pointerId: 1 });
+
+      const callsDuringDrag = mockPostMessage.mock.calls.length;
+
+      // User releases pointer (input stops)
+      fireEvent.pointerUp(canvas, { pointerId: 1 });
+
+      await new Promise<void>(resolve => setTimeout(resolve, 20));
+
+      // Verification check is triggered upon pointerUp
+      expect(mockPostMessage.mock.calls.length).toBeGreaterThan(callsDuringDrag);
     }
   });
 });

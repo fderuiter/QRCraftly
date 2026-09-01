@@ -250,6 +250,7 @@ export default function Page() {
         // Abort if a newer check has been triggered
         if (currentSequence !== String(sequenceRef.current)) {
           imageBitmap.close();
+          isWorkerBusyRef.current = false;
           return;
         }
 
@@ -412,7 +413,14 @@ export default function Page() {
             schedulerRef.current.pool.release(recycledBuffer);
           }
           
+          // Always release the worker lock when a response arrives
+          isWorkerBusyRef.current = false;
+
+          // Outdated scannability evaluation results that finish late are safely ignored based on token matching
           if (configId !== undefined && configId !== String(sequenceRef.current)) {
+            if (isCheckBlockedRef.current && !isMouseDownRef.current && !autoFireRef.current) {
+              triggerWorkerCheck();
+            }
             return;
           }
 
@@ -422,9 +430,6 @@ export default function Page() {
           } else {
             setIsScannable(false);
           }
-
-          // Release the worker lock
-          isWorkerBusyRef.current = false;
 
           // Perform a final "catch-up" check if paint inputs ceased and a check was blocked
           if (isCheckBlockedRef.current && !isMouseDownRef.current && !autoFireRef.current) {
@@ -527,10 +532,10 @@ export default function Page() {
     const currentDurability = origDarkTotal > 0 ? (currentIntact / origDarkTotal) * 100 : 0;
     setDurability(Math.round(currentDurability));
 
-    // Lock scannability evaluations if a worker job is already active
+    // Automatically unlock scannability processing on newer frame ticks when superseded by user action
     if (isWorkerBusyRef.current) {
       isCheckBlockedRef.current = true;
-      return;
+      isWorkerBusyRef.current = false;
     }
 
     // Trigger the background worker-locked offscreen downscaling pipeline
@@ -1197,6 +1202,8 @@ export default function Page() {
         }
       } catch (_) {}
     }
+    // Post-interaction state verification: trigger final board check when active input stops
+    scanQRState();
   };
 
   /**
@@ -1212,6 +1219,7 @@ export default function Page() {
         }
       } catch (_) {}
     }
+    scanQRState();
   };
 
   /**
@@ -1223,6 +1231,7 @@ export default function Page() {
       return;
     }
     isMouseDownRef.current = false;
+    scanQRState();
   };
 
   /**
