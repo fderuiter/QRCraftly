@@ -26,7 +26,7 @@ import { getCachedAsset } from './assetCache';
 import { sanitizeSvg } from './security';
 import { performScannabilityCheck } from './scannabilityChecker';
 
-import { ModuleRenderOptions } from './qr-renderers/modules';
+import { ModuleRenderOptions } from '@/packages/qr-matrix';
 
 /**
  * Converts an image URL to a base64 data-URL so it can be embedded inline in
@@ -172,7 +172,7 @@ export async function generateQRSvg(
   }
 
   // Determine output dimensions from the social format (canonical resolution)
-  const { width: svgWidth, height: svgHeight } = SOCIAL_DIMENSIONS[config.socialFormat];
+  const { width: svgWidth, height: svgHeight } = SOCIAL_DIMENSIONS[config.socialFormat] || { width: 1080, height: 1080 };
 
   // Resolve metadata for accessibility
   const title = `${getQrTypeLabel(config.type)} QR Code`;

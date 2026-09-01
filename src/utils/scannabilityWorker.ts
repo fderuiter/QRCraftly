@@ -135,11 +135,12 @@ self.onmessage = async (e: MessageEvent<unknown>) => {
     };
 
     // Step 1: Two-Pass Orientation & Polarity Analysis (pure JavaScript logic)
+    const decodeQR: typeof jsQR = typeof jsQR === 'function' ? jsQR : (jsQR as any)?.default;
     let digitalCheckOk = false;
     let decodedData = '';
 
     // Pass 1: Normal polarity & orientation pass
-    let code = jsQR(imageData.data, width, height, { inversionAttempts: "dontInvert" });
+    let code = decodeQR ? decodeQR(imageData.data, width, height, { inversionAttempts: "dontInvert" }) : null;
     if (code) {
       digitalCheckOk = true;
       decodedData = code.data;
@@ -152,7 +153,7 @@ self.onmessage = async (e: MessageEvent<unknown>) => {
       }
 
       // Pass 2: Inverted polarity & orientation analysis pass
-      code = jsQR(imageData.data, width, height, { inversionAttempts: "onlyInvert" });
+      code = decodeQR ? decodeQR(imageData.data, width, height, { inversionAttempts: "onlyInvert" }) : null;
       if (code) {
         digitalCheckOk = true;
         decodedData = code.data;
@@ -234,7 +235,7 @@ self.onmessage = async (e: MessageEvent<unknown>) => {
       return;
     }
 
-    let codeSim = jsQR(simulatedData.data, width, height, { inversionAttempts: "dontInvert" });
+    let codeSim = decodeQR ? decodeQR(simulatedData.data, width, height, { inversionAttempts: "dontInvert" }) : null;
     if (codeSim) {
       physicalCheckOk = true;
     } else {
@@ -245,7 +246,7 @@ self.onmessage = async (e: MessageEvent<unknown>) => {
         return;
       }
       
-      codeSim = jsQR(simulatedData.data, width, height, { inversionAttempts: "onlyInvert" });
+      codeSim = decodeQR ? decodeQR(simulatedData.data, width, height, { inversionAttempts: "onlyInvert" }) : null;
       if (codeSim) physicalCheckOk = true;
     }
 
@@ -272,6 +273,7 @@ self.onmessage = async (e: MessageEvent<unknown>) => {
     }
     
   } catch (_err) {
+    console.error('[DEBUG scannabilityWorker error]', _err);
     releaseImageHandle(imageBitmap);
     imageBitmap = undefined;
 

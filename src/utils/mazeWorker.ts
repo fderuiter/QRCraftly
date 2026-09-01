@@ -1,4 +1,4 @@
-import { generateMaze } from './qr-renderers/maze';
+import { generateMaze } from '@/packages/qr-matrix/maze';
 import {
   isMazeWorkerRequest,
   assertMazeWorkerRequest,

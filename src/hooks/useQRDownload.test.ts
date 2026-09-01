@@ -42,6 +42,14 @@ describe('useQRDownload', () => {
     mockCanvas.height = 100;
     mockCanvas.toDataURL = vi.fn(() => 'data:image/png;base64,mock');
     mockCanvas.toBlob = vi.fn((callback) => callback(new Blob(['mock']), 'image/png'));
+    const mockCtx = {
+      getImageData: vi.fn(() => ({
+        data: new Uint8ClampedArray(40000),
+        width: 100,
+        height: 100,
+      })),
+    };
+    mockCanvas.getContext = vi.fn(() => mockCtx as any);
 
     // Setup mock ref
     mockQrRef = {
@@ -53,6 +61,21 @@ describe('useQRDownload', () => {
     // Mock URL methods
     global.URL.createObjectURL = vi.fn(() => 'mock-url');
     global.URL.revokeObjectURL = vi.fn();
+
+    HTMLCanvasElement.prototype.getContext = function (this: any, contextId: string) {
+      if (contextId === '2d') {
+        return {
+          canvas: this,
+          drawImage: vi.fn(),
+          getImageData: vi.fn().mockImplementation((x: number, y: number, w: number, h: number) => {
+            const width = w || this.width || 100;
+            const height = h || this.height || 100;
+            return { data: new Uint8ClampedArray(width * height * 4), width, height };
+          }),
+        };
+      }
+      return null;
+    } as any;
 
     // Store original globals
     originalShowSaveFilePicker = (global as any).showSaveFilePicker;
@@ -138,7 +161,13 @@ describe('useQRDownload', () => {
 
   it('downloadToDevice catches toDataURL error', async () => {
     const errorCanvas = {
-      getContext: HTMLCanvasElement.prototype.getContext,
+      getContext: vi.fn(() => ({
+        getImageData: vi.fn(() => ({
+          data: new Uint8ClampedArray(40000),
+          width: 100,
+          height: 100,
+        })),
+      })),
       width: 100,
       height: 100,
       toDataURL: vi.fn().mockImplementation(() => {

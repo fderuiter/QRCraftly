@@ -1,9 +1,8 @@
 import { QRConfig, QRType } from '../types';
-import { LOW_RELIABILITY_PATTERNS, SYSTEM_LIMITS } from '../constants';
-import { getContrastRatio } from '../utils/colorUtils';
 import { parseProtocol, PROTOCOL_PREFIXES, SOCIAL_DOMAINS } from '../utils/protocol';
 import { REGEX_STRICT_CONTROL_CHARS, REGEX_PRESERVE_FORMAT_CONTROL_CHARS } from '../utils/security';
 import { SafeUrlPipeline } from '../utils/url';
+import { calculateScannabilityHealth, type HealthScore } from '@/packages/scannability';
 
 /**
  * Core validation and sanitization engine for QR code generation.
@@ -233,50 +232,7 @@ export const ValidationEngine = {
   calculateScannability(
     config: QRConfig,
     localMetrics?: { violations?: number; minContrast?: number }
-  ): { score: number; warnings: string[]; criticalWarnings: string[] } {
-    let score = 100;
-    const warnings: string[] = [];
-    const criticalWarnings: string[] = [];
-
-    const fgContrast = getContrastRatio(config.fgColor, config.bgColor);
-    const eyeContrast = getContrastRatio(config.eyeColor, config.bgColor);
-    const worstContrast = Math.min(fgContrast, eyeContrast);
-
-    if (worstContrast < 3.0) {
-      score -= 40;
-      warnings.push("Contrast ratio is critically low");
-      criticalWarnings.push('critical-contrast');
-    } else if (worstContrast < 4.5) {
-      score -= 20;
-      warnings.push("Contrast ratio is low");
-    }
-
-    if (localMetrics && typeof localMetrics.violations === 'number' && localMetrics.violations > 0) {
-      const deduction = Math.min(35, 15 + Math.floor(localMetrics.violations / 2));
-      score -= deduction;
-      warnings.push(`Local contrast drop detected across ${localMetrics.violations} module zone${localMetrics.violations > 1 ? 's' : ''}`);
-    }
-
-    const isComplex = LOW_RELIABILITY_PATTERNS.includes(config.style as any);
-    if (isComplex) {
-      score -= 10;
-      if (worstContrast < 7.0) {
-        score -= 20;
-        warnings.push("Pattern complexity too high for current contrast");
-      }
-    }
-
-    if (config.logoUrl) {
-      if (config.logoSize > SYSTEM_LIMITS.MAX_LOGO_SIZE) {
-        score -= 15;
-        warnings.push("Logo size might obscure too much data");
-      }
-      if (config.errorCorrectionLevel === 'L') {
-        score -= 15;
-        warnings.push("Low error correction with logo");
-      }
-    }
-
-    return { score: Math.max(0, Math.min(100, score)), warnings, criticalWarnings };
+  ): HealthScore {
+    return calculateScannabilityHealth(config, localMetrics);
   }
 };

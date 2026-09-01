@@ -3,6 +3,8 @@
     "src/pages/**/+*.ts",
     "src/pages/**/+*.tsx",
     "src/layouts/**/*.tsx",
+    "src/packages/*/*.ts",
+    "src/packages/*/lib/worker.ts",
     "src/**/*.test.ts",
     "src/**/*.test.tsx",
     "tests/**/*.test.ts",

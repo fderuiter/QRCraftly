@@ -468,7 +468,7 @@ describe('useScannability - changed behavior: uses useQRStore instead of useQRCo
       );
 
       // Spy on performScannabilityCheck
-      const scannabilityCheckerModule = await import('../utils/scannabilityChecker');
+      const scannabilityCheckerModule = await import('@/packages/scannability');
       const spyCheck = vi.spyOn(scannabilityCheckerModule, 'performScannabilityCheck').mockReturnValue({
         success: true,
         physicalReady: true,
@@ -513,7 +513,7 @@ describe('useScannability - changed behavior: uses useQRStore instead of useQRCo
       });
 
       // Spy on performScannabilityCheck to return a failure
-      const scannabilityCheckerModule = await import('../utils/scannabilityChecker');
+      const scannabilityCheckerModule = await import('@/packages/scannability');
       vi.spyOn(scannabilityCheckerModule, 'performScannabilityCheck').mockReturnValue({
         success: false,
         physicalReady: false,
@@ -541,7 +541,7 @@ describe('useScannability - changed behavior: uses useQRStore instead of useQRCo
   describe('Self-Healing Worker Recovery on crash and subsequent retry', () => {
     it('falls back on the main thread when a worker is unresponsive for 1500ms', async () => {
       vi.useFakeTimers();
-      const scannabilityCheckerModule = await import('../utils/scannabilityChecker');
+      const scannabilityCheckerModule = await import('@/packages/scannability');
       const fallbackSpy = vi.spyOn(scannabilityCheckerModule, 'performScannabilityCheck').mockReturnValue({
         success: true,
         physicalReady: true,
@@ -574,7 +574,7 @@ describe('useScannability - changed behavior: uses useQRStore instead of useQRCo
 
     it('recreates a worker after consecutive watchdog timeouts', async () => {
       vi.useFakeTimers();
-      const scannabilityCheckerModule = await import('../utils/scannabilityChecker');
+      const scannabilityCheckerModule = await import('@/packages/scannability');
       vi.spyOn(scannabilityCheckerModule, 'performScannabilityCheck').mockReturnValue({
         success: true,
         physicalReady: true,

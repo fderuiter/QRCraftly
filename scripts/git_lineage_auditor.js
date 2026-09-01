@@ -152,7 +152,7 @@ export function decodeGitPath(filePath) {
 
 export function parseGitStatus(stdout) {
   const modifiedFiles = new Set();
-  const lines = stdout.split('\n');
+  const lines = stdout.split(/\r?\n/);
   for (const line of lines) {
     if (line.length < 3) continue;
     let rawPath = line.substring(3).trim();
@@ -202,7 +202,7 @@ export function parseArgs(args) {
 export function parseGitDiff(stdout) {
   const modifiedFiles = new Set();
   if (!stdout) return modifiedFiles;
-  const lines = stdout.split('\n');
+  const lines = stdout.split(/\r?\n/);
   for (const line of lines) {
     const trimmed = line.trim();
     if (!trimmed) continue;

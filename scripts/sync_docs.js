@@ -27,7 +27,7 @@ export function extractJsDocDescription(sourceCode) {
   const jsdocMatch = sourceCode.match(/\/\*\*([^*]|\*(?!\/))*\*\/\s*(?:export\s+)?(?:default\s+)?(?:const|function|class)\s+([A-Za-z0-9_]+)/);
   if (jsdocMatch) {
     const rawComment = jsdocMatch[0].match(/\/\*\*([\s\S]*?)\*\//)[1];
-    const rawLines = rawComment.split('\n');
+    const rawLines = rawComment.split(/\r?\n/);
     const cleanedLines = rawLines
       .map(line => line.replace(/^\s*\* ?/, '').trim())
       .filter(line => line.length > 0 && !line.startsWith('@') && !line.startsWith('/'));
@@ -42,8 +42,7 @@ export function extractJsDocDescription(sourceCode) {
  * Parses markdown sections from UI_CATALOG.md.
  */
 function parseCatalogSections(catalogContent) {
-  const normalized = catalogContent.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-  const lines = normalized.split('\n');
+  const lines = catalogContent.split(/\r?\n/);
   const sections = [];
   let currentSection = { heading: null, lines: [], before: true };
 

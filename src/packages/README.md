@@ -1,21 +1,34 @@
 # Deep modules
 
-Use this copy-me layout for packages:
+This directory contains standalone deep modules adhering to strict structural encapsulation boundaries.
 
 ```text
 src/packages/<name>/
-  index.ts       # entry point (public interface)
-  client.ts      # optional additional entry point
-  lib/           # private implementation
-  tests/         # co-located tests and fixtures
+  index.ts       # Primary root entry point (public interface)
+  <entry>.ts     # Optional secondary entry points (e.g., maze.ts)
+  lib/           # Private implementation (forbidden to external importers)
+  tests/         # Co-located tests and fixtures (importing strictly through root entry points)
 ```
 
-**Entry-point seam.** Import a package only through its entry points: the files at the package root. Every file in a subfolder is private implementation. Avoid barrel files that re-export an entire subtree; expose several small root entry points instead.
+## Architectural Invariants
 
-**Intra-package freedom.** Files in a package's implementation may import one another freely. This keeps complexity local while the package presents a small interface to its callers.
+- **Entry-Point Seam**: External application code and tests may only import through root entry-point files (`src/packages/<pkg>/<entrypoint>.ts` or `@/packages/<pkg>`). Files inside `lib/` are strictly private implementation.
+- **Intra-Package Freedom**: Implementation files within a package's `lib/` directory can freely cross-import one another.
+- **Tests Through Entry Points**: Test suites in `tests/` import only public symbols through root entry points (`../index` or `@/packages/<pkg>`).
+- **Acyclic Dependency Graph**: No cyclical dependencies between packages.
+- **Automated Verification**: Enforced on every build via `pnpm run lint:boundaries` (`dependency-cruiser`).
 
-**Tests through entry points.** Tests import the package under test through root entry points, just like production callers. A package's tests may share fixtures from their own `tests/` folder, but may not deep-import any package implementation.
+## Registered Packages
 
-**No cycles.** Package dependencies must remain acyclic. Layering rules—which packages may depend on which—are a separate concern and can be added when those seams are established.
+### `scannability` (`@/packages/scannability`)
 
-Run `pnpm run lint:boundaries` to check these rules. The `example/` package is a starter template to copy or delete.
+- **Purpose**: Zero-copy off-thread Web Worker scannability audits, contrast checks, and optical simulation.
+- **Entry Points**:
+  - `index.ts`: Worker runners, optical blur/contrast math, `auditModuleContrast`, `calculateBlurRadius`, `applyOpticalSimulationMath`, and telemetry tracking.
+
+### `qr-matrix` (`@/packages/qr-matrix`)
+
+- **Purpose**: Full QR code matrix visual orchestration, styles, locator eyes, logo cutouts, alignment pattern zones, and playable maze generation.
+- **Entry Points**:
+  - `index.ts`: `drawQR`, `drawQRInternal`, `renderBorder`, `renderEyes`, `renderModules`, `renderFluidModules`, `renderLogo`, `renderMaze`, layout and logo math.
+  - `maze.ts`: `generateMaze`, `getMazeCacheKey`, `mazeCache`, `clearMazeCache`, `getStyleAdaptiveMazePathWidth`, `renderMaze`, `applyMazeHaloMask`, and bridge validation helpers.

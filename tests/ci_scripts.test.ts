@@ -21,7 +21,7 @@ describe('CI Modular Shell Scripts Validation', () => {
     for (const file of files) {
       const filePath = path.join(ciScriptsDir, file);
       const content = fs.readFileSync(filePath, 'utf8');
-      const lines = content.split('\n').map(l => l.trim());
+      const lines = content.split(/\r?\n/).map(l => l.trim());
 
       expect(lines[0], `${file} shebang`).toMatch(/^#!\/usr\/bin\/(env )?bash$/);
       const hasStrictFlags = lines.slice(1, 5).some(l => l.includes('set -euo pipefail') || l.includes('set -e'));
