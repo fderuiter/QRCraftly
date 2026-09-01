@@ -446,9 +446,7 @@ export const sanitizeHtml = (html: string | undefined): string => {
   if (!html) return '';
 
   if (typeof DOMParser === 'undefined') {
-    return html
-      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-      .replace(/ on\w+=(?:'[^']*'|"[^"]*"|[^\s>]+)/gi, '');
+    return escapeHtml(html);
   }
 
   try {
