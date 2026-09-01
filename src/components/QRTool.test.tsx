@@ -20,10 +20,10 @@ import { ToastProvider } from "./ui/Toast";
 import { render, screen, fireEvent, waitFor, cleanup, within } from '@testing-library/react';
 import QRTool from './QRTool';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import jsQR from 'jsqr';
+import { decodeQrWasm } from '../utils/wasmDecoder';
 
-vi.mock('jsqr', () => ({
-  default: vi.fn(),
+vi.mock('../utils/wasmDecoder', () => ({
+  decodeQrWasm: vi.fn(),
 }));
 
 // Mock QRCanvas because it uses canvas which is hard to test in jsdom,
@@ -40,7 +40,7 @@ describe('QRTool Component', () => {
   const originalShowSaveFilePicker = (global as any).showSaveFilePicker;
 
   beforeEach(() => {
-    vi.mocked(jsQR).mockReturnValue({ data: 'https://qrcraftly.com' } as any);
+    vi.mocked(decodeQrWasm).mockReturnValue({ data: 'https://qrcraftly.com' } as any);
 
     // Mock URL.createObjectURL and URL.revokeObjectURL
     global.URL.createObjectURL = vi.fn(() => 'mock-url');

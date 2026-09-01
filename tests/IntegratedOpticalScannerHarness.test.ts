@@ -1,13 +1,11 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { OpticalScannerHarness, HarnessFrameResult } from '../src/engine/OpticalScannerHarness';
-import jsQR from 'jsqr';
+import { decodeQrWasm } from '../src/utils/wasmDecoder';
 
-vi.mock('jsqr', () => {
-  return {
-    default: vi.fn(),
-  };
-});
+vi.mock('../src/utils/wasmDecoder', () => ({
+  decodeQrWasm: vi.fn(),
+}));
 
 describe('Integrated Optical Scanner Test Harness - Integration Suite', () => {
   let harness: OpticalScannerHarness;
@@ -26,7 +24,7 @@ describe('Integrated Optical Scanner Test Harness - Integration Suite', () => {
   });
 
   it('Acceptance Criteria 1: Harness executes automated integration runs combining frame scheduling, worker queues, and optical blur evaluations', () => {
-    vi.mocked(jsQR).mockReturnValue({ data: 'https://qrcraftly.com/e2e-pass' } as any);
+    vi.mocked(decodeQrWasm).mockReturnValue({ data: 'https://qrcraftly.com/e2e-pass' } as any);
 
     const frameResults: HarnessFrameResult[] = [];
     harness = new OpticalScannerHarness({
@@ -64,7 +62,7 @@ describe('Integrated Optical Scanner Test Harness - Integration Suite', () => {
   });
 
   it('Acceptance Criteria 2: Harness verifies scheduler backpressure locks reject excess incoming frame requests during worker latency spikes', () => {
-    vi.mocked(jsQR).mockReturnValue({ data: 'https://qrcraftly.com/latency-spike' } as any);
+    vi.mocked(decodeQrWasm).mockReturnValue({ data: 'https://qrcraftly.com/latency-spike' } as any);
 
     const droppedSeqIds: (number | null)[] = [];
     harness = new OpticalScannerHarness({
@@ -100,7 +98,7 @@ describe('Integrated Optical Scanner Test Harness - Integration Suite', () => {
   });
 
   it('Acceptance Criteria 3: System verifies simulated worker stalls trigger starvation watchdog to recreate worker instances', () => {
-    vi.mocked(jsQR).mockReturnValue({ data: 'https://qrcraftly.com/watchdog-test' } as any);
+    vi.mocked(decodeQrWasm).mockReturnValue({ data: 'https://qrcraftly.com/watchdog-test' } as any);
 
     let watchdogFired = false;
     let workerRecreated = false;
@@ -142,7 +140,7 @@ describe('Integrated Optical Scanner Test Harness - Integration Suite', () => {
   });
 
   it('Acceptance Criteria 4: Harness asserts out-of-order execution responses with outdated sequence identifiers are discarded', () => {
-    vi.mocked(jsQR).mockReturnValue({ data: 'https://qrcraftly.com/out-of-order' } as any);
+    vi.mocked(decodeQrWasm).mockReturnValue({ data: 'https://qrcraftly.com/out-of-order' } as any);
 
     const discardedSeqIds: number[] = [];
     harness = new OpticalScannerHarness({
@@ -178,12 +176,12 @@ describe('Integrated Optical Scanner Test Harness - Integration Suite', () => {
     harness.start();
 
     // 1. Scannable (pass digital, pass optical)
-    vi.mocked(jsQR).mockReturnValue({ data: 'https://qrcraftly.com/valid' } as any);
+    vi.mocked(decodeQrWasm).mockReturnValue({ data: 'https://qrcraftly.com/valid' } as any);
     const eval1 = harness.evaluateScannability(mockPixels, 10, 10);
     expect(eval1.scannabilityClassification).toBe('scannable');
 
     // 2. Degraded (pass digital, fail optical)
-    vi.mocked(jsQR)
+    vi.mocked(decodeQrWasm)
       .mockReturnValueOnce({ data: 'https://qrcraftly.com/valid' } as any) // digital
       .mockReturnValueOnce(null) // optical (dontInvert)
       .mockReturnValueOnce(null); // optical (attemptBoth)
@@ -192,7 +190,7 @@ describe('Integrated Optical Scanner Test Harness - Integration Suite', () => {
     expect(eval2.scannabilityClassification).toBe('degraded');
 
     // 3. Unscannable (fail digital)
-    vi.mocked(jsQR).mockReturnValue(null);
+    vi.mocked(decodeQrWasm).mockReturnValue(null);
     const eval3 = harness.evaluateScannability(mockPixels, 10, 10);
     expect(eval3.scannabilityClassification).toBe('unscannable');
   });

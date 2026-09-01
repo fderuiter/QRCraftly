@@ -1,4 +1,4 @@
-import jsQR from 'jsqr';
+import { decodeQrWasm } from './wasmDecoder';
 import { isDangerousUrl } from './security';
 import { applyOpticalSimulationMath } from './opticalSimulation';
 import { auditModuleContrast } from './contrastAudit';
@@ -35,12 +35,12 @@ export function performScannabilityCheck(
   // 1. Digital-only check
   let digitalPass = false;
   let decodedData = '';
-  let code = jsQR(imageData.data, width, height, { inversionAttempts: "dontInvert" });
+  let code = decodeQrWasm(imageData.data, width, height, { inversionAttempts: "dontInvert" });
   if (code) {
     digitalPass = true;
     decodedData = code.data;
   } else {
-    code = jsQR(imageData.data, width, height, { inversionAttempts: "onlyInvert" });
+    code = decodeQrWasm(imageData.data, width, height, { inversionAttempts: "onlyInvert" });
     if (code) {
       digitalPass = true;
       decodedData = code.data;
@@ -79,11 +79,11 @@ export function performScannabilityCheck(
     simulatedData = { data: dst, width, height };
   }
 
-  let codeSim = jsQR(simulatedData.data, width, height, { inversionAttempts: "dontInvert" });
+  let codeSim = decodeQrWasm(simulatedData.data, width, height, { inversionAttempts: "dontInvert" });
   if (codeSim) {
     physicalPass = true;
   } else {
-    codeSim = jsQR(simulatedData.data, width, height, { inversionAttempts: "onlyInvert" });
+    codeSim = decodeQrWasm(simulatedData.data, width, height, { inversionAttempts: "onlyInvert" });
     if (codeSim) physicalPass = true;
   }
 

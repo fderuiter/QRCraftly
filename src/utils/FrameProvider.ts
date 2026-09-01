@@ -1,6 +1,7 @@
 import { DoubleBufferPool, AdaptiveFrameScheduler } from './AdaptiveFrameScheduler';
 import { getDownscaledDimensions, isValidScannerResponse } from './scannerContract';
 import { getSharedScannerWorker, terminateSharedScannerWorker } from './sharedScannerWorker';
+import { decodeQrWasm } from './wasmDecoder';
 
 export interface FrameMetrics {
   latencyHistory: number[];
@@ -369,11 +370,9 @@ export class FileFrameProvider implements FrameProvider {
     if (!worker) {
       if (this.signal?.aborted || !this.isScanning) return;
       console.warn('Worker creation failed, falling back to main-thread decoding:');
-      const jsQRModule = await import('jsqr');
-      const jsQR = jsQRModule.default || jsQRModule;
       let code: { data: string } | null = null;
       try {
-        code = jsQR(imageData.data, dWidth, dHeight);
+        code = decodeQrWasm(imageData.data, dWidth, dHeight);
       } catch {
         code = null;
       }
@@ -396,7 +395,7 @@ export class FileFrameProvider implements FrameProvider {
         const imageDataFull = ctxFull.getImageData(0, 0, fWidth, fHeight);
         let codeFull: { data: string } | null = null;
         try {
-          codeFull = jsQR(imageDataFull.data, fWidth, fHeight);
+          codeFull = decodeQrWasm(imageDataFull.data, fWidth, fHeight);
         } catch {
           codeFull = null;
         }
@@ -759,14 +758,9 @@ export class FileFrameProvider implements FrameProvider {
           } else if (payload.success) {
             // Under tests where jsQR is mocked, we can simulate the jsQR call directly in test mode if the worker is a mock
             if (typeof globalThis !== 'undefined' && (globalThis as any).mockWorkerControl) {
-              import('jsqr').then((mod) => {
-                const jsQRfn = mod.default || mod;
-                const u8 = new Uint8ClampedArray(buffer);
-                const code = jsQRfn(u8, width, height);
-                resolve({ decoded: code ? code.data : null, buffer: payload.buffer });
-              }).catch(() => {
-                resolve({ decoded: null, buffer: payload.buffer });
-              });
+              const u8 = new Uint8ClampedArray(buffer);
+              const code = decodeQrWasm(u8, width, height);
+              resolve({ decoded: code ? code.data : null, buffer: payload.buffer });
             } else {
               resolve({ decoded: null, buffer: payload.buffer });
             }
