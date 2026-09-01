@@ -74,8 +74,10 @@ describe('Sitemap Environment-Level Variable Resolution', () => {
   });
 
   it('should use fallback domain under native tsx when import.meta.env and VITE_DOMAIN are unavailable', () => {
+    const npxCmd = process.platform === 'win32' ? 'npx.cmd' : 'npx';
     // Run the sitemap script with empty environment for VITE_DOMAIN
-    execFileSync('npx', ['tsx', sitemapScriptPath], {
+    execFileSync(npxCmd, ['tsx', sitemapScriptPath], {
+      shell: process.platform === 'win32',
       env: {
         ...process.env,
         VITE_DOMAIN: '',
@@ -90,8 +92,10 @@ describe('Sitemap Environment-Level Variable Resolution', () => {
   });
 
   it('should resolve and apply a custom staging domain via process.env', () => {
+    const npxCmd = process.platform === 'win32' ? 'npx.cmd' : 'npx';
     // Run the sitemap script with VITE_DOMAIN set in env
-    execFileSync('npx', ['tsx', sitemapScriptPath], {
+    execFileSync(npxCmd, ['tsx', sitemapScriptPath], {
+      shell: process.platform === 'win32',
       env: {
         ...process.env,
         VITE_DOMAIN: 'https://staging.qrcraftly.net',
@@ -107,8 +111,10 @@ describe('Sitemap Environment-Level Variable Resolution', () => {
   });
 
   it('should sanitize and strip any trailing slashes from the resolved VITE_DOMAIN', () => {
+    const npxCmd = process.platform === 'win32' ? 'npx.cmd' : 'npx';
     // Run with trailing slashes in VITE_DOMAIN
-    execFileSync('npx', ['tsx', sitemapScriptPath], {
+    execFileSync(npxCmd, ['tsx', sitemapScriptPath], {
+      shell: process.platform === 'win32',
       env: {
         ...process.env,
         VITE_DOMAIN: 'https://staging-trailing.qrcraftly.net////',
@@ -124,6 +130,7 @@ describe('Sitemap Environment-Level Variable Resolution', () => {
   });
 
   it('should support loading custom domain from a .env file loaded via Vite loadEnv', () => {
+    const npxCmd = process.platform === 'win32' ? 'npx.cmd' : 'npx';
     const envFilePath = join(__dirname, '../.env.production');
     const hasExistingEnv = existsSync(envFilePath);
     let originalEnvContent = '';
@@ -139,7 +146,8 @@ describe('Sitemap Environment-Level Variable Resolution', () => {
       const cleanedEnv = { ...process.env };
       delete cleanedEnv.VITE_DOMAIN;
 
-      execFileSync('npx', ['tsx', sitemapScriptPath], {
+      execFileSync(npxCmd, ['tsx', sitemapScriptPath], {
+        shell: process.platform === 'win32',
         env: {
           ...cleanedEnv,
           NODE_ENV: 'production'

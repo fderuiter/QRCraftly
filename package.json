@@ -45,6 +45,11 @@
     "typecheck": "tsc --noEmit",
     "prepare": "husky"
   },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,json,css,md}": [
+      "prettier --write"
+    ]
+  },
   "dependencies": {
     "jsqr": "^1.4.0",
     "lucide-react": "^1.31.0",
