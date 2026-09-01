@@ -2,11 +2,12 @@ import React, { createContext, useContext, useState, useSyncExternalStore } from
 import { QRConfig } from '@/types';
 import { DEFAULT_CONFIG } from '@/constants';
 import { ValidationEngine } from '@/engine/ValidationEngine';
+import { SignalBus, globalSignalBus } from '@/services/SignalBus';
 
 /**
  *
  */
-type SignalName = 'scannability-fail' | 'render-complete';
+type SignalName = 'scannability-fail' | 'render-complete' | string;
 /**
  *
  */
@@ -124,10 +125,7 @@ function createQRStore(initialConfig?: Partial<QRConfig>): QRStore {
   };
 
   const listeners = new Set<() => void>();
-  const signals: Record<SignalName, Set<SignalCallback>> = {
-    'scannability-fail': new Set(),
-    'render-complete': new Set(),
-  };
+  const signalBus = new SignalBus();
 
   const store: QRStore = {
     getState: () => state,
@@ -164,13 +162,11 @@ function createQRStore(initialConfig?: Partial<QRConfig>): QRStore {
       }
     },
     emitSignal: (name, detail) => {
-      signals[name].forEach(cb => cb(detail));
+      signalBus.emitSignal(name, detail);
+      globalSignalBus.emitSignal(name, detail);
     },
     registerSignal: (name, callback) => {
-      signals[name].add(callback);
-      return () => {
-        signals[name].delete(callback);
-      };
+      return signalBus.registerSignal(name, callback);
     }
   };
 

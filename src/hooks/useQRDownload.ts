@@ -17,10 +17,10 @@
 */
 
 import { RefObject, useCallback } from 'react';
-import { QRConfig, TemplateStyle, SocialFormat } from '../types';
-import { generateQRSvg, validateSvgScannability } from '../utils/svgExport';
+import { QRConfig } from '../types';
+import { generateQRSvg } from '../utils/svgExport';
 import { useCapabilities } from './useCapabilities';
-import { performScannabilityCheck } from '../utils/scannabilityChecker';
+import { exportSafetyService } from '../services/ExportSafetyService';
 
 /**
  * Return type for the useQRDownload hook.
@@ -72,20 +72,8 @@ export function useQRDownload(
    * Social templates and decorative poster frames bypass full-canvas matrix decode.
    */
   const validateScannability = useCallback((canvas: HTMLCanvasElement): boolean => {
-    if (config.templateStyle !== TemplateStyle.NONE || config.socialFormat !== SocialFormat.SQUARE_1_1) {
-      return true;
-    }
-    try {
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return false;
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const result = performScannabilityCheck(imageData, canvas.width, canvas.height, true);
-      return result.success;
-    } catch (err) {
-      console.error('Scannability validation failed:', err);
-      return false;
-    }
-  }, [config.templateStyle, config.socialFormat]);
+    return exportSafetyService.validateCanvasScannability(canvas, config);
+  }, [config]);
 
   /**
    * Helper function to normalize file extensions.
@@ -273,8 +261,8 @@ export function useQRDownload(
         },
       });
 
-      const isScannable = await validateSvgScannability(svgString, config);
-      if (!isScannable) {
+      const evaluation = await exportSafetyService.evaluateExportSafety(config, { svgString, format: 'svg' });
+      if (!evaluation.isScannable) {
         return { success: false, format: 'svg', error: new Error('SCAN_VALIDATION_FAILED') };
       }
 

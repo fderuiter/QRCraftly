@@ -1,27 +1,8 @@
 import { useState, useEffect } from 'react';
-import { generateDecryptionKey, encryptUrl, extractKeyFromHash } from '../utils/encryption';
+import { edgeRedirectService, DynamicQRRecord } from '../services/EdgeRedirectService';
+import { extractKeyFromHash, generateDecryptionKey } from '../utils/encryption';
 
-/**
- * Represents a registered dynamic QR tracking record in local storage.
- */
-export interface DynamicQRRecord {
-  /** Uniquely generated identifier. */
-  id: string;
-  /** Original/target destination URL. */
-  originalUrl: string;
-  /** Constructed redirection edge tracking URL. */
-  redirectUrl: string;
-  /** Symmetric decryption key stored in local storage for re-encryption. */
-  key?: string;
-  /** Optional Apple App Store destination URL for iOS scanners. */
-  iosUrl?: string;
-  /** Optional Google Play Store destination URL for Android scanners. */
-  androidUrl?: string;
-  /** Administrative key to allow updating destination. */
-  adminKey: string;
-  /** Creation timestamp in ISO format. */
-  createdAt: string;
-}
+export type { DynamicQRRecord };
 
 /**
  * Represents detailed scan analytics for a dynamic tracking link.
@@ -141,62 +122,11 @@ export function useRedirector() {
     setIsLoading(true);
     setError(null);
     try {
-      // Generate symmetric encryption key locally using Web Crypto API
-      const keyHex = await generateDecryptionKey();
-
-      // Encrypt target URLs locally before dispatching payload storage requests
-      const encTargetUrl = await encryptUrl(targetUrl, keyHex);
-      const encIosUrl = options?.iosUrl ? await encryptUrl(options.iosUrl, keyHex) : undefined;
-      const encAndroidUrl = options?.androidUrl ? await encryptUrl(options.androidUrl, keyHex) : undefined;
-
-      // Signature whitelist match: '/api/redirect'
-      const response = await fetch('/api/redirect/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          redirectUrl: encTargetUrl,
-          iosUrl: encIosUrl,
-          androidUrl: encAndroidUrl,
-          turnstileToken: options?.turnstileToken,
-        }),
-      });
-
-      if (!response.ok) {
-        let errorMsg = `Failed to register redirect: ${response.statusText}`;
-        try {
-          const errData = await response.json() as { error?: string };
-          if (errData && errData.error) {
-            errorMsg = errData.error;
-          }
-        } catch {}
-        throw new Error(errorMsg);
+      const newRecord = await edgeRedirectService.registerRedirect(targetUrl, options);
+      if (newRecord) {
+        const updated = [newRecord, ...records];
+        saveRecords(updated);
       }
-
-      const data = await response.json() as {
-        id: string;
-        redirectUrl: string;
-        iosUrl?: string;
-        androidUrl?: string;
-        adminKey: string;
-      };
-      // Construct tracking URL with decryption key embedded inside anchor hash fragment (#key=...)
-      const edgeRedirectUrl = `${window.location.origin}/r/${data.id}#key=${keyHex}`;
-
-      const newRecord: DynamicQRRecord = {
-        id: data.id,
-        originalUrl: targetUrl,
-        redirectUrl: edgeRedirectUrl,
-        key: keyHex,
-        iosUrl: options?.iosUrl,
-        androidUrl: options?.androidUrl,
-        adminKey: data.adminKey,
-        createdAt: new Date().toISOString(),
-      };
-
-      const updated = [newRecord, ...records];
-      saveRecords(updated);
       return newRecord;
     } catch (err: any) {
       console.error('[Redirector error]', err);
@@ -222,53 +152,24 @@ export function useRedirector() {
         keyHex = await generateDecryptionKey();
       }
 
-      // Re-encrypt updated target URLs locally using Web Crypto API
-      const encNewUrl = await encryptUrl(newTargetUrl, keyHex);
-      const encIosUrl = options?.iosUrl ? await encryptUrl(options.iosUrl, keyHex) : undefined;
-      const encAndroidUrl = options?.androidUrl ? await encryptUrl(options.androidUrl, keyHex) : undefined;
+      const success = await edgeRedirectService.updateRedirect(id, adminKey, newTargetUrl, options, record);
 
-      // Signature whitelist match: '/api/redirect'
-      const response = await fetch('/api/redirect/update', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          id,
-          adminKey,
-          newUrl: encNewUrl,
-          iosUrl: encIosUrl,
-          androidUrl: encAndroidUrl,
-        }),
-      });
-
-      if (!response.ok) {
-        let errorMsg = `Failed to update destination: ${response.statusText}`;
-        try {
-          const errData = await response.json() as { error?: string };
-          if (errData && errData.error) {
-            errorMsg = errData.error;
+      if (success) {
+        const updatedRecords = records.map(r => {
+          if (r.id === id) {
+            return {
+              ...r,
+              originalUrl: newTargetUrl,
+              key: keyHex,
+              iosUrl: options?.iosUrl !== undefined ? options.iosUrl : r.iosUrl,
+              androidUrl: options?.androidUrl !== undefined ? options.androidUrl : r.androidUrl,
+            };
           }
-        } catch {}
-        throw new Error(errorMsg);
+          return r;
+        });
+        saveRecords(updatedRecords);
       }
-
-      await response.json();
-
-      const updatedRecords = records.map(r => {
-        if (r.id === id) {
-          return {
-            ...r,
-            originalUrl: newTargetUrl,
-            key: keyHex,
-            iosUrl: options?.iosUrl !== undefined ? options.iosUrl : r.iosUrl,
-            androidUrl: options?.androidUrl !== undefined ? options.androidUrl : r.androidUrl,
-          };
-        }
-        return r;
-      });
-      saveRecords(updatedRecords);
-      return true;
+      return success;
     } catch (err: any) {
       console.error('[Redirector error]', err);
       setError(err.message || 'An error occurred during update.');
