@@ -233,9 +233,10 @@ export const ValidationEngine = {
   calculateScannability(
     config: QRConfig,
     localMetrics?: { violations?: number; minContrast?: number }
-  ): { score: number; warnings: string[] } {
+  ): { score: number; warnings: string[]; criticalWarnings: string[] } {
     let score = 100;
     const warnings: string[] = [];
+    const criticalWarnings: string[] = [];
 
     const fgContrast = getContrastRatio(config.fgColor, config.bgColor);
     const eyeContrast = getContrastRatio(config.eyeColor, config.bgColor);
@@ -244,6 +245,7 @@ export const ValidationEngine = {
     if (worstContrast < 3.0) {
       score -= 40;
       warnings.push("Contrast ratio is critically low");
+      criticalWarnings.push('critical-contrast');
     } else if (worstContrast < 4.5) {
       score -= 20;
       warnings.push("Contrast ratio is low");
@@ -275,6 +277,6 @@ export const ValidationEngine = {
       }
     }
 
-    return { score: Math.max(0, Math.min(100, score)), warnings };
+    return { score: Math.max(0, Math.min(100, score)), warnings, criticalWarnings };
   }
 };

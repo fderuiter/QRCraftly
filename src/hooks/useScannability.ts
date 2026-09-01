@@ -36,6 +36,8 @@ export interface HealthScore {
    *
    */
   warnings: string[];
+  /** Machine-readable conditions that require export confirmation. */
+  criticalWarnings?: string[];
 }
 
 /**

@@ -28,7 +28,8 @@
     "test": "vitest",
     "test:e2e": "playwright test",
     "test:e2e:dev": "playwright test --config playwright.dev.config.ts",
-    "lint": "node scripts/dependency_compliance.js && node scripts/git_lineage_auditor.js && node scripts/storage_privacy_ast_auditor.js && node scripts/validate_ui_catalog.js && node scripts/audit_markdown.js && node scripts/static-path-tracker.js && node scripts/compile_docs_manifest.js && tsc --noEmit && eslint . && knip && node scripts/contrast_check.js && prettier --check . && node scripts/check-duplication.js",
+    "lint": "node scripts/dependency_compliance.js && node scripts/git_lineage_auditor.js && node scripts/storage_privacy_ast_auditor.js && node scripts/validate_ui_catalog.js && node scripts/audit_markdown.js && node scripts/static-path-tracker.js && node scripts/compile_docs_manifest.js && tsc --noEmit && pnpm run lint:boundaries && eslint . && knip && node scripts/contrast_check.js && prettier --check . && node scripts/check-duplication.js",
+    "lint:boundaries": "depcruise src/packages",
     "validate:ui-catalog": "node scripts/validate_ui_catalog.js",
     "validate:duplication": "node scripts/check-duplication.js",
     "docs:sync": "node scripts/sync_docs.js",
@@ -41,8 +42,8 @@
     "resource-quota": "node scripts/resource-quota-report.js",
     "secret-scanner": "node scripts/secret-scanner.js",
     "secret-scan": "node scripts/secret-scanner.js",
-    "prepare": "simple-git-hooks",
-    "pre-commit": "lint-staged && pnpm run validate:duplication"
+    "typecheck": "tsc --noEmit",
+    "prepare": "husky"
   },
   "dependencies": {
     "jsqr": "^1.4.0",
@@ -67,6 +68,7 @@
     "@types/react-dom": "^19.2.4",
     "@vitejs/plugin-react": "^5.0.0",
     "@vitest/coverage-v8": "^4.1.9",
+    "dependency-cruiser": "^18.2.0",
     "eslint": "^9.39.4",
     "eslint-plugin-jsdoc": "^64.1.0",
     "eslint-plugin-jsx-a11y": "^6.10.2",
@@ -74,6 +76,7 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-security": "^4.0.1",
     "eslint-plugin-tailwindcss": "^4.2.0",
+    "husky": "^9.1.7",
     "jscpd": "^5.0.15",
     "jsdom": "^30.0.1",
     "knip": "^6.32.2",
@@ -81,7 +84,6 @@
     "marked": "^18.0.9",
     "postcss": "^8.5.26",
     "prettier": "^3.9.6",
-    "simple-git-hooks": "^2.13.1",
     "tailwindcss": "^4.3.3",
     "tsx": "^4.23.12",
     "typescript": "~5.8.2",
@@ -90,13 +92,5 @@
     "vitest": "^4.1.9",
     "vitest-axe": "^0.1.0",
     "wrangler": "^4.123.0"
-  },
-  "simple-git-hooks": {
-    "pre-commit": "pnpm run pre-commit"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "simple-git-hooks"
-    ]
   }
 }

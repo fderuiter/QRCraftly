@@ -27,6 +27,8 @@ Canonical five-role vocabulary (`needs-triage`, `needs-info`, `ready-for-agent`,
 
 Single-context layout (`CONTEXT.md` and `docs/adr/` at repo root). Always consult `CONTEXT.md` for canonical domain terminology (avoiding listed `_Avoid_` synonyms) and `docs/adr/` for established architectural decisions. See `docs/agents/domain.md`.
 
+Packages are deep modules: see [src/packages/README.md](./src/packages/README.md) before adding or importing one.
+
 ## Architecture & Deep Topic Pointers
 
 - **Dynamic Edge Redirection & SSR**: Cloudflare Pages Functions (`functions/[[path]].ts`), D1 SQL database, KV edge caching, and zero-knowledge anchor hash encryption (`#key=...`). Read `docs/public/EDGE_ARCHITECTURE.md`.

@@ -27,6 +27,7 @@ import { Modal } from './ui/Modal';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useOnClickOutside } from '@/hooks/useOnClickOutside';
 import { useQRDownload, ExportStatus } from '@/hooks/useQRDownload';
+import { getExportRiskPolicy } from '@/utils/exportRiskPolicy';
 import { useToast } from './ui/Toast';
 import { useScannability } from '@/hooks/useScannability';
 import { ScannabilityIndicator } from '@/components/ScannabilityIndicator';
@@ -172,9 +173,7 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
   };
 
   const executeWithSafetyGate = (action: () => void | Promise<void>) => {
-    const isTemplateOrSocial = config.templateStyle !== TemplateStyle.NONE || config.socialFormat !== SocialFormat.SQUARE_1_1;
-    const isUnsafe = !isTemplateOrSocial && (scannabilityStatus === 'fail' || scannabilityStatus === 'digital-pass' || (health && health.score < 80));
-    if (isUnsafe) {
+    if (getExportRiskPolicy({ status: scannabilityStatus, health }) === 'unsafe') {
       setGateAction(() => action);
       setShowSafetyGate(true);
     } else {
@@ -414,14 +413,9 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
                        <div className="relative flex-1" ref={downloadMenuRef}>
                           <Button 
                               ref={downloadButtonRef}
-                              variant={
-                                (config.templateStyle === TemplateStyle.NONE && config.socialFormat === SocialFormat.SQUARE_1_1) &&
-                                (scannabilityStatus === 'fail' || scannabilityStatus === 'digital-pass' || (health && health.score < 80))
-                                  ? 'error'
-                                  : 'primary'
-                              }
+                              variant={getExportRiskPolicy({ status: scannabilityStatus, health }) === 'unsafe' ? 'error' : 'primary'}
                               fullWidth
-                              onClick={() => executeWithSafetyGate(() => setShowDownloadMenu(!showDownloadMenu))}
+                              onClick={() => setShowDownloadMenu(!showDownloadMenu)}
                               aria-expanded={showDownloadMenu}
                               aria-haspopup="true"
                           >
@@ -432,17 +426,17 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
                           
                           {showDownloadMenu && (
                               <div className="animate-in fade-in zoom-in-95 absolute inset-x-0 top-full z-50 mt-2 overflow-hidden rounded-xl border border-slate-100 bg-white py-1 shadow-xl duration-100 dark:border-slate-700 dark:bg-slate-800" role="menu">
-                                  <Button onClick={() => handleSaveAsFlow('png')} role="menuitem" variant="menuitem">
+                                  <Button onClick={() => executeWithSafetyGate(() => handleSaveAsFlow('png'))} role="menuitem" variant="menuitem">
                                       <div className="size-1.5 rounded-full bg-teal-500"></div> PNG (High Quality)
                                   </Button>
-                                  <Button onClick={() => handleSaveAsFlow('jpeg')} role="menuitem" variant="menuitem">
+                                  <Button onClick={() => executeWithSafetyGate(() => handleSaveAsFlow('jpeg'))} role="menuitem" variant="menuitem">
                                       <div className="size-1.5 rounded-full bg-blue-500"></div> JPEG (Compact)
                                   </Button>
-                                  <Button onClick={() => handleSaveAsFlow('webp')} role="menuitem" variant="menuitem">
+                                  <Button onClick={() => executeWithSafetyGate(() => handleSaveAsFlow('webp'))} role="menuitem" variant="menuitem">
                                       <div className="size-1.5 rounded-full bg-purple-500"></div> WebP (Modern)
                                   </Button>
                                   <div className="my-1 h-px bg-slate-100 dark:bg-slate-700" role="separator" />
-                                  <Button onClick={handleSaveSvgFlow} role="menuitem" variant="menuitem">
+                                  <Button onClick={() => executeWithSafetyGate(handleSaveSvgFlow)} role="menuitem" variant="menuitem">
                                       <div className="size-1.5 rounded-full bg-orange-500"></div> SVG (Vector)
                                   </Button>
                               </div>
@@ -479,7 +473,7 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
                       ref={photosButtonRef}
                       variant="outline"
                       fullWidth
-                      onClick={() => downloadToDeviceFlow('png', photosButtonRef)}
+                      onClick={() => executeWithSafetyGate(() => downloadToDeviceFlow('png', photosButtonRef))}
                       aria-label="Download QR code as PNG"
                    >
                       <Download className="size-4" />

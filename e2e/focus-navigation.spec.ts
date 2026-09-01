@@ -51,9 +51,14 @@ test.describe('Focus Management & Keyboard Navigation', () => {
     const warningAlert = page.getByText(/The contrast ratio is low/i).first();
     await expect(warningAlert).toBeVisible();
 
-    // Click "Download" button to trigger the safety gate Modal
+    // Opening the format menu is never gated, even for an unsafe QR.
     const downloadBtn = page.getByRole('button', { name: 'Download', exact: true });
     await downloadBtn.click();
+    await expect(page.getByText('PNG (High Quality)')).toBeVisible();
+    await expect(page.getByText('Scan Safety Warning')).not.toBeVisible();
+
+    // Choosing a concrete format triggers the safety gate Modal.
+    await page.getByText('PNG (High Quality)').click();
 
     // The modal should appear
     const modalTitle = page.getByText('Scan Safety Warning');

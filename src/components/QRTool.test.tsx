@@ -136,12 +136,51 @@ describe('QRTool Component', () => {
 
   it('shows download menu when download button is clicked', () => {
     render(<ToastProvider><QRTool /></ToastProvider>);
-    const downloadBtns = screen.getAllByText('Download');
-    fireEvent.click(downloadBtns[0]);
+    const downloadButton = screen.getByRole('button', { name: /^Download$/ });
+    fireEvent.click(downloadButton);
 
     expect(screen.getByText('PNG (High Quality)')).toBeInTheDocument();
     expect(screen.getByText('JPEG (Compact)')).toBeInTheDocument();
     expect(screen.getByText('WebP (Modern)')).toBeInTheDocument();
+    expect(screen.queryByText('Scan Safety Warning')).not.toBeInTheDocument();
+    expect(downloadButton).toHaveClass('bg-teal-700');
+  });
+
+  it.each([
+    'PNG (High Quality)',
+    'JPEG (Compact)',
+    'WebP (Modern)',
+    'SVG (Vector)',
+  ])('waits until unsafe %s export is selected before showing the safety warning', (format) => {
+    render(
+      <ToastProvider>
+        <QRTool initialConfig={{ fgColor: '#eeeeee', eyeColor: '#eeeeee', bgColor: '#ffffff' }} />
+      </ToastProvider>
+    );
+
+    const downloadButton = screen.getByRole('button', { name: /^Download$/ });
+    expect(downloadButton).toHaveClass('bg-rose-700');
+
+    fireEvent.click(downloadButton);
+    expect(screen.queryByText('Scan Safety Warning')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByText(format));
+    expect(screen.getByText('Scan Safety Warning')).toBeInTheDocument();
+  });
+
+  it.each([
+    'Copy QR code to clipboard',
+    'Download QR code as PNG',
+  ])('uses the unsafe export policy for %s', (name) => {
+    render(
+      <ToastProvider>
+        <QRTool initialConfig={{ fgColor: '#eeeeee', eyeColor: '#eeeeee', bgColor: '#ffffff' }} />
+      </ToastProvider>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name }));
+
+    expect(screen.getByText('Scan Safety Warning')).toBeInTheDocument();
   });
 
   it('handles the quick PNG download', () => {
@@ -277,6 +316,29 @@ describe('QRTool Component', () => {
       await waitFor(() => {
           expect(mockShare).toHaveBeenCalled();
       });
+  });
+
+  it('uses the unsafe export policy for Web Share', () => {
+      Object.defineProperty(global.navigator, 'share', {
+          value: vi.fn().mockResolvedValue(undefined),
+          writable: true,
+          configurable: true
+      });
+      Object.defineProperty(global.navigator, 'canShare', {
+          value: vi.fn().mockReturnValue(true),
+          writable: true,
+          configurable: true
+      });
+
+      render(
+        <ToastProvider>
+          <QRTool initialConfig={{ fgColor: '#eeeeee', eyeColor: '#eeeeee', bgColor: '#ffffff' }} />
+        </ToastProvider>
+      );
+
+      fireEvent.click(screen.getByRole('button', { name: 'Share QR code' }));
+
+      expect(screen.getByText('Scan Safety Warning')).toBeInTheDocument();
   });
 
   it('does not render share button if Web Share API is not supported', async () => {
