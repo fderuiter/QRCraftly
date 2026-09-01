@@ -3,7 +3,7 @@ import {
   assertWorkerResponse,
   isWorkerRequest,
 } from './sharedContract';
-import jsQR from 'jsqr';
+import { decodeQrWasm } from './wasmDecoder';
 import { isDangerousUrl } from './security';
 import { applyOpticalSimulationMath } from './opticalSimulation';
 import { auditModuleContrast } from './contrastAudit';
@@ -114,12 +114,12 @@ self.onmessage = async (e: MessageEvent<unknown>) => {
       return undefined;
     };
 
-    // Step 1: Two-Pass Orientation & Polarity Analysis (pure JavaScript logic)
+    // Step 1: Two-Pass Orientation & Polarity Analysis (WebAssembly engine)
     let digitalCheckOk = false;
     let decodedData = '';
 
     // Pass 1: Normal polarity & orientation pass
-    let code = jsQR(imageData.data, width, height, { inversionAttempts: "dontInvert" });
+    let code = decodeQrWasm(imageData.data, width, height, { inversionAttempts: "dontInvert" });
     if (code) {
       digitalCheckOk = true;
       decodedData = code.data;
@@ -131,7 +131,7 @@ self.onmessage = async (e: MessageEvent<unknown>) => {
       }
 
       // Pass 2: Inverted polarity & orientation analysis pass
-      code = jsQR(imageData.data, width, height, { inversionAttempts: "onlyInvert" });
+      code = decodeQrWasm(imageData.data, width, height, { inversionAttempts: "onlyInvert" });
       if (code) {
         digitalCheckOk = true;
         decodedData = code.data;
@@ -211,7 +211,7 @@ self.onmessage = async (e: MessageEvent<unknown>) => {
       return;
     }
 
-    let codeSim = jsQR(simulatedData.data, width, height, { inversionAttempts: "dontInvert" });
+    let codeSim = decodeQrWasm(simulatedData.data, width, height, { inversionAttempts: "dontInvert" });
     if (codeSim) {
       physicalCheckOk = true;
     } else {
@@ -221,7 +221,7 @@ self.onmessage = async (e: MessageEvent<unknown>) => {
         return;
       }
       
-      codeSim = jsQR(simulatedData.data, width, height, { inversionAttempts: "onlyInvert" });
+      codeSim = decodeQrWasm(simulatedData.data, width, height, { inversionAttempts: "onlyInvert" });
       if (codeSim) physicalCheckOk = true;
     }
 

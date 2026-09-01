@@ -22,10 +22,10 @@ import { useQRDownload } from './useQRDownload';
 import { DEFAULT_CONFIG } from '../constants';
 import { QRConfig } from '../types';
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
-import jsQR from 'jsqr';
+import { decodeQrWasm } from '../utils/wasmDecoder';
 
-vi.mock('jsqr', () => ({
-  default: vi.fn(),
+vi.mock('../utils/wasmDecoder', () => ({
+  decodeQrWasm: vi.fn(),
 }));
 
 describe('useQRDownload', () => {
@@ -34,7 +34,7 @@ describe('useQRDownload', () => {
   let originalShowSaveFilePicker: any;
 
   beforeEach(() => {
-    vi.mocked(jsQR).mockReturnValue({ data: 'https://qrcraftly.com' } as any);
+    vi.mocked(decodeQrWasm).mockReturnValue({ data: 'https://qrcraftly.com' } as any);
 
     // Setup mock canvas
     mockCanvas = document.createElement('canvas');
@@ -428,7 +428,7 @@ describe('useQRDownload', () => {
 
   describe('scannability validation before asset export', () => {
     it('blocks downloadToDevice if scannability validation fails', async () => {
-      vi.mocked(jsQR).mockReturnValue(null);
+      vi.mocked(decodeQrWasm).mockReturnValue(null);
 
       const { result } = renderHook(() => useQRDownload(mockQrRef, DEFAULT_CONFIG as QRConfig), { wrapper: ToastProvider });
 
@@ -438,7 +438,7 @@ describe('useQRDownload', () => {
     });
 
     it('blocks handleSaveAs if scannability validation fails', async () => {
-      vi.mocked(jsQR).mockReturnValue(null);
+      vi.mocked(decodeQrWasm).mockReturnValue(null);
 
       const { result } = renderHook(() => useQRDownload(mockQrRef, DEFAULT_CONFIG as QRConfig), { wrapper: ToastProvider });
 
@@ -448,7 +448,7 @@ describe('useQRDownload', () => {
     });
 
     it('blocks handleCopy if scannability validation fails', async () => {
-      vi.mocked(jsQR).mockReturnValue(null);
+      vi.mocked(decodeQrWasm).mockReturnValue(null);
 
       const { result } = renderHook(() => useQRDownload(mockQrRef, DEFAULT_CONFIG as QRConfig), { wrapper: ToastProvider });
 
@@ -458,7 +458,7 @@ describe('useQRDownload', () => {
     });
 
     it('blocks handleShare if scannability validation fails', async () => {
-      vi.mocked(jsQR).mockReturnValue(null);
+      vi.mocked(decodeQrWasm).mockReturnValue(null);
 
       const { result } = renderHook(() => useQRDownload(mockQrRef, DEFAULT_CONFIG as QRConfig), { wrapper: ToastProvider });
 
@@ -468,7 +468,7 @@ describe('useQRDownload', () => {
     });
 
     it('blocks handleSaveSvg if scannability validation fails', async () => {
-      vi.mocked(jsQR).mockReturnValue(null);
+      vi.mocked(decodeQrWasm).mockReturnValue(null);
 
       const { result } = renderHook(() => useQRDownload(mockQrRef, DEFAULT_CONFIG as QRConfig), { wrapper: ToastProvider });
 

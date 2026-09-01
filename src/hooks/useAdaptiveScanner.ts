@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import jsQR from 'jsqr';
+import { decodeQrWasm } from '../utils/wasmDecoder';
 import { isValidScannerResponse, getDownscaledDimensions } from '../utils/scannerContract';
 import { getSharedScannerWorker, terminateSharedScannerWorker } from '../utils/sharedScannerWorker';
 import { AdaptiveFrameScheduler } from '../utils/AdaptiveFrameScheduler';
@@ -371,9 +371,9 @@ export function useAdaptiveScanner({
 
               const performMainThreadDecode = () => {
                 try {
-                  let code = jsQR(imageData.data, dWidth, dHeight, { inversionAttempts: 'dontInvert' });
+                  let code = decodeQrWasm(imageData.data, dWidth, dHeight, { inversionAttempts: 'dontInvert' });
                   if (!code) {
-                    code = jsQR(imageData.data, dWidth, dHeight, { inversionAttempts: 'attemptBoth' });
+                    code = decodeQrWasm(imageData.data, dWidth, dHeight, { inversionAttempts: 'attemptBoth' });
                   }
                   if (code && code.data) {
                     consecutiveRestartAttemptsRef.current = 0;

@@ -302,11 +302,11 @@ class MockWorker {
           if (this.url.toString().includes('imageDecoderWorker')) {
             const { buffer, width, height } = message;
             if (buffer && typeof width === 'number' && typeof height === 'number') {
-              const { default: jsQR } = await import('jsqr');
+              const { decodeQrWasm } = await import('./src/utils/wasmDecoder');
               const data = new Uint8ClampedArray(buffer);
-              let code = jsQR(data, width, height, { inversionAttempts: 'dontInvert' });
+              let code = decodeQrWasm(data, width, height, { inversionAttempts: 'dontInvert' });
               if (!code) {
-                code = jsQR(data, width, height, { inversionAttempts: 'onlyInvert' });
+                code = decodeQrWasm(data, width, height, { inversionAttempts: 'onlyInvert' });
               }
               if (code && code.data) {
                 this.dispatchMessage({ success: true, data: code.data });
@@ -499,11 +499,11 @@ class MockWorker {
           if (this.url.toString().includes('scannerWorker') && message && typeof message === 'object' && typeof message.sequenceId === 'number') {
             const { image, width, height, epochId } = message;
             if (image && typeof width === 'number' && typeof height === 'number') {
-              const { default: jsQR } = await import('jsqr');
+              const { decodeQrWasm } = await import('./src/utils/wasmDecoder');
               const data = (image as any)._data || new Uint8ClampedArray(width * height * 4);
-              let code = jsQR(data, width, height, { inversionAttempts: 'dontInvert' });
+              let code = decodeQrWasm(data, width, height, { inversionAttempts: 'dontInvert' });
               if (!code) {
-                code = jsQR(data, width, height, { inversionAttempts: 'onlyInvert' });
+                code = decodeQrWasm(data, width, height, { inversionAttempts: 'onlyInvert' });
               }
               if (code && code.data) {
                 this.dispatchMessage({ status: 'pass', decodedData: code.data, sequenceId: message.sequenceId, epochId });
@@ -517,17 +517,17 @@ class MockWorker {
           if (message && typeof message === 'object') {
             const { imageData, width, height, isTest, configId } = message;
             if (imageData && typeof width === 'number' && typeof height === 'number') {
-              const { default: jsQR } = await import('jsqr');
+              const { decodeQrWasm } = await import('./src/utils/wasmDecoder');
 
               // 1. Digital pass check
               let digitalCheckSuccess = false;
               let decodedData = '';
-              let code = jsQR(imageData.data, width, height, { inversionAttempts: "dontInvert" });
+              let code = decodeQrWasm(imageData.data, width, height, { inversionAttempts: "dontInvert" });
               if (code) {
                 digitalCheckSuccess = true;
                 decodedData = code.data;
               } else {
-                code = jsQR(imageData.data, width, height, { inversionAttempts: "onlyInvert" });
+                code = decodeQrWasm(imageData.data, width, height, { inversionAttempts: "onlyInvert" });
                 if (code) {
                   digitalCheckSuccess = true;
                   decodedData = code.data;
@@ -550,11 +550,11 @@ class MockWorker {
               // 3. Physical check (Optical Simulation math)
               let physicalCheckSuccess = false;
               const simulatedData = isTest ? imageData : new ImageData(applyOpticalSimulationMath(imageData.data, width, height), width, height);
-              let codeSim = jsQR(simulatedData.data, width, height, { inversionAttempts: "dontInvert" });
+              let codeSim = decodeQrWasm(simulatedData.data, width, height, { inversionAttempts: "dontInvert" });
               if (codeSim) {
                 physicalCheckSuccess = true;
               } else {
-                codeSim = jsQR(simulatedData.data, width, height, { inversionAttempts: "onlyInvert" });
+                codeSim = decodeQrWasm(simulatedData.data, width, height, { inversionAttempts: "onlyInvert" });
                 if (codeSim) physicalCheckSuccess = true;
               }
 

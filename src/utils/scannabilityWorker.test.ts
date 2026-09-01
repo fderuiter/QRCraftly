@@ -1,11 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach, beforeAll } from 'vitest';
-import jsQR from 'jsqr';
+import { decodeQrWasm } from './wasmDecoder';
 
-vi.mock('jsqr', () => {
-  return {
-    default: vi.fn(),
-  };
-});
+vi.mock('./wasmDecoder', () => ({
+  decodeQrWasm: vi.fn(),
+}));
 
 describe('scannabilityWorker', () => {
   let workerHandler: any;
@@ -60,7 +58,7 @@ describe('scannabilityWorker', () => {
     globalThis.postMessage = postMessageSpy;
 
     // Control mocks
-    vi.mocked(jsQR).mockReturnValueOnce({ data: 'https://safe.com' } as any) // digital
+    vi.mocked(decodeQrWasm).mockReturnValueOnce({ data: 'https://safe.com' } as any) // digital
                   .mockReturnValueOnce({ data: 'https://safe.com' } as any); // physical
 
     expect(workerHandler).toBeDefined();
@@ -81,9 +79,9 @@ describe('scannabilityWorker', () => {
     const postMessageSpy = vi.fn();
     globalThis.postMessage = postMessageSpy;
 
-    vi.mocked(jsQR).mockReturnValueOnce({ data: 'https://safe.com' } as any) // digital
+    vi.mocked(decodeQrWasm).mockReturnValueOnce({ data: 'https://safe.com' } as any) // digital
                   .mockReturnValueOnce(null); // physical fails (dontInvert)
-    vi.mocked(jsQR).mockReturnValueOnce(null); // physical fails (onlyInvert)
+    vi.mocked(decodeQrWasm).mockReturnValueOnce(null); // physical fails (onlyInvert)
 
     await workerHandler({ data: createDummyRequest() } as MessageEvent);
 
@@ -100,7 +98,7 @@ describe('scannabilityWorker', () => {
     const postMessageSpy = vi.fn();
     globalThis.postMessage = postMessageSpy;
 
-    vi.mocked(jsQR).mockReturnValueOnce({ data: 'javascript:alert(1)' } as any);
+    vi.mocked(decodeQrWasm).mockReturnValueOnce({ data: 'javascript:alert(1)' } as any);
 
     await workerHandler({ data: createDummyRequest() } as MessageEvent);
 
@@ -116,7 +114,7 @@ describe('scannabilityWorker', () => {
     const postMessageSpy = vi.fn();
     globalThis.postMessage = postMessageSpy;
 
-    vi.mocked(jsQR).mockReturnValueOnce(null) // digital 1 fails
+    vi.mocked(decodeQrWasm).mockReturnValueOnce(null) // digital 1 fails
                   .mockReturnValueOnce({ data: 'https://safe.com' } as any) // digital 2 passes
                   .mockReturnValueOnce({ data: 'https://safe.com' } as any); // physical passes
 
@@ -133,7 +131,7 @@ describe('scannabilityWorker', () => {
     const postMessageSpy = vi.fn();
     globalThis.postMessage = postMessageSpy;
 
-    vi.mocked(jsQR).mockReturnValueOnce(null) // digital 1 fails
+    vi.mocked(decodeQrWasm).mockReturnValueOnce(null) // digital 1 fails
                   .mockReturnValueOnce(null); // digital 2 fails
 
     await workerHandler({ data: createDummyRequest() } as MessageEvent);
@@ -150,7 +148,7 @@ describe('scannabilityWorker', () => {
     const postMessageSpy = vi.fn();
     globalThis.postMessage = postMessageSpy;
 
-    vi.mocked(jsQR).mockReturnValueOnce({ data: 'https://safe.com' } as any) // digital
+    vi.mocked(decodeQrWasm).mockReturnValueOnce({ data: 'https://safe.com' } as any) // digital
                   .mockReturnValueOnce({ data: 'https://safe.com' } as any); // physical
 
     await workerHandler({ data: createDummyRequest('123', false) } as MessageEvent);
@@ -181,7 +179,7 @@ describe('scannabilityWorker', () => {
     const postMessageSpy = vi.fn();
     globalThis.postMessage = postMessageSpy;
 
-    vi.mocked(jsQR).mockImplementation(() => {
+    vi.mocked(decodeQrWasm).mockImplementation(() => {
       throw new Error('Simulation crash');
     });
 
@@ -226,7 +224,7 @@ describe('scannabilityWorker', () => {
     const postMessageSpy = vi.fn();
     globalThis.postMessage = postMessageSpy;
 
-    vi.mocked(jsQR).mockReturnValueOnce({ data: 'https://safe.com' } as any) // digital passes
+    vi.mocked(decodeQrWasm).mockReturnValueOnce({ data: 'https://safe.com' } as any) // digital passes
                   .mockReturnValueOnce(null) // physical 1 fails
                   .mockReturnValueOnce({ data: 'https://safe.com' } as any); // physical 2 passes
 
@@ -244,7 +242,7 @@ describe('scannabilityWorker', () => {
     globalThis.postMessage = postMessageSpy;
 
     // Mock responses
-    vi.mocked(jsQR).mockReturnValue({ data: 'https://safe.com' } as any);
+    vi.mocked(decodeQrWasm).mockReturnValue({ data: 'https://safe.com' } as any);
 
     // Dispatch two requests: '101' and then '102'
     const firstPromise = workerHandler({ data: createDummyRequest('101') } as MessageEvent);
@@ -264,10 +262,9 @@ describe('scannabilityWorker', () => {
   it('releases transferred image handle immediately upon detecting cooperative cancellation', async () => {
     const postMessageSpy = vi.fn();
     globalThis.postMessage = postMessageSpy;
-    vi.mocked(jsQR).mockReturnValue({ data: 'https://safe.com' } as any);
-
     const closeSpy1 = vi.fn();
     const closeSpy2 = vi.fn();
+    vi.mocked(decodeQrWasm).mockReturnValue({ data: 'https://safe.com' } as any);
 
     const req1 = {
       imageBitmap: { width: 10, height: 10, close: closeSpy1 },
@@ -307,7 +304,7 @@ describe('scannabilityWorker', () => {
       isTest: true,
     };
 
-    vi.mocked(jsQR).mockImplementationOnce(() => {
+    vi.mocked(decodeQrWasm).mockImplementationOnce(() => {
       throw new Error('Context extraction failure');
     });
 
@@ -327,7 +324,7 @@ describe('scannabilityWorker', () => {
     const postMessageSpy = vi.fn();
     globalThis.postMessage = postMessageSpy;
 
-    vi.mocked(jsQR).mockReturnValueOnce({ data: 'https://safe.com' } as any)
+    vi.mocked(decodeQrWasm).mockReturnValueOnce({ data: 'https://safe.com' } as any)
                   .mockReturnValueOnce({ data: 'https://safe.com' } as any);
 
     const buffer = new ArrayBuffer(400);
@@ -359,13 +356,13 @@ describe('scannabilityWorker', () => {
     );
   });
 
-  it('executes frame evaluation using pure JavaScript logic without WebAssembly instantiation or stubs', async () => {
+  it('executes frame evaluation using WebAssembly matrix decoder without native errors', async () => {
     const postMessageSpy = vi.fn();
     globalThis.postMessage = postMessageSpy;
 
     const instantiateSpy = vi.spyOn(globalThis.WebAssembly, 'instantiate');
 
-    vi.mocked(jsQR).mockReturnValueOnce({ data: 'https://pure-js.com' } as any)
+    vi.mocked(decodeQrWasm).mockReturnValueOnce({ data: 'https://pure-js.com' } as any)
                   .mockReturnValueOnce({ data: 'https://pure-js.com' } as any);
 
     await workerHandler({ data: createDummyRequest('pure-js-1') } as MessageEvent);

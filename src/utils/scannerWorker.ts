@@ -1,4 +1,4 @@
-import jsQR from 'jsqr';
+import { decodeQrWasm } from './wasmDecoder';
 import { isValidScannerRequest, assertScannerResponse, getDownscaledDimensions } from './scannerContract';
 
 const yieldToEventLoop = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
@@ -243,9 +243,9 @@ self.onmessage = async (e: MessageEvent<any>) => {
               }
 
               // Run scanner on the pixels with inverted fallback
-              let code = jsQR(imageData.data, dWidth, dHeight, { inversionAttempts: 'dontInvert' });
+              let code = decodeQrWasm(imageData.data, dWidth, dHeight, { inversionAttempts: 'dontInvert' });
               if (!code) {
-                code = jsQR(imageData.data, dWidth, dHeight, { inversionAttempts: 'onlyInvert' });
+                code = decodeQrWasm(imageData.data, dWidth, dHeight, { inversionAttempts: 'onlyInvert' });
               }
               if (code && code.data && !isAborted()) {
                 (self as any).postMessage({ type: 'frame_decoded', taskId, data: code.data });
@@ -282,10 +282,10 @@ self.onmessage = async (e: MessageEvent<any>) => {
       data = imgData.data instanceof Uint8ClampedArray ? imgData.data : new Uint8ClampedArray(imgData.data);
     }
 
-    // Decode QR code off-thread using jsQR with inverted fallback
-    let code = jsQR(data, width, height, { inversionAttempts: 'dontInvert' });
+    // Decode QR code off-thread using WebAssembly matrix decoder with inverted fallback
+    let code = decodeQrWasm(data, width, height, { inversionAttempts: 'dontInvert' });
     if (!code) {
-      code = jsQR(data, width, height, { inversionAttempts: 'onlyInvert' });
+      code = decodeQrWasm(data, width, height, { inversionAttempts: 'onlyInvert' });
     }
 
     const response = {
@@ -398,10 +398,10 @@ self.onmessage = async (e: MessageEvent<any>) => {
       console.error('Failed to close image after drawing:', err);
     }
 
-    // Decode QR code off-thread using jsQR with inverted fallback
-    let code = jsQR(imageData.data, width, height, { inversionAttempts: 'dontInvert' });
+    // Decode QR code off-thread using WebAssembly matrix decoder with inverted fallback
+    let code = decodeQrWasm(imageData.data, width, height, { inversionAttempts: 'dontInvert' });
     if (!code) {
-      code = jsQR(imageData.data, width, height, { inversionAttempts: 'onlyInvert' });
+      code = decodeQrWasm(imageData.data, width, height, { inversionAttempts: 'onlyInvert' });
     }
 
     const response = {

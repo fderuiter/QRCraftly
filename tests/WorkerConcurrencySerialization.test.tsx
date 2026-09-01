@@ -1,12 +1,10 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import jsQR from 'jsqr';
+import { decodeQrWasm } from '../src/utils/wasmDecoder';
 
-vi.mock('jsqr', () => {
-  return {
-    default: vi.fn(),
-  };
-});
+vi.mock('../src/utils/wasmDecoder', () => ({
+  decodeQrWasm: vi.fn(),
+}));
 
 describe('High-Fidelity Worker Concurrency & Serialization Tests', () => {
   beforeEach(() => {
@@ -71,7 +69,7 @@ describe('High-Fidelity Worker Concurrency & Serialization Tests', () => {
     };
 
     // Use mockImplementation to isolate mock data specifically to this test's parameters
-    vi.mocked(jsQR).mockImplementation((data: any) => {
+    vi.mocked(decodeQrWasm).mockImplementation((data: any) => {
       if (data && data.length === 400) {
         return { data: 'javascript:alert(1)' } as any;
       }
@@ -101,7 +99,7 @@ describe('High-Fidelity Worker Concurrency & Serialization Tests', () => {
     });
 
     // 2. Let's test a safe payload
-    vi.mocked(jsQR).mockImplementation((data: any) => {
+    vi.mocked(decodeQrWasm).mockImplementation((data: any) => {
       if (data && data.length === 400) {
         return { data: 'https://safe.com' } as any;
       }
@@ -141,7 +139,7 @@ describe('High-Fidelity Worker Concurrency & Serialization Tests', () => {
       responses.push(e.data);
     };
 
-    vi.mocked(jsQR).mockReturnValue({ data: 'https://safe.com' } as any);
+    vi.mocked(decodeQrWasm).mockReturnValue({ data: 'https://safe.com' } as any);
 
     // Send three requests rapidly.
     // Due to concurrency limit = 1 and delay = 30ms, they should queue up and finish in order at t=30ms, t=60ms, t=90ms
@@ -187,7 +185,7 @@ describe('High-Fidelity Worker Concurrency & Serialization Tests', () => {
     };
 
     const optionsPassed: any[] = [];
-    vi.mocked(jsQR).mockImplementation((data: any, width: number, height: number, options?: any) => {
+    vi.mocked(decodeQrWasm).mockImplementation((data: any, width: number, height: number, options?: any) => {
       optionsPassed.push(options?.inversionAttempts);
       if (options?.inversionAttempts === 'onlyInvert') {
         return { data: 'https://inverted-qr.com' } as any;

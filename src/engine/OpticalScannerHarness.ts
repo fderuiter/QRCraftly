@@ -1,6 +1,6 @@
 import { AdaptiveFrameScheduler } from '../utils/AdaptiveFrameScheduler';
 import { applyOpticalSimulationMath } from '../utils/opticalSimulation';
-import jsQR from 'jsqr';
+import { decodeQrWasm } from '../utils/wasmDecoder';
 
 /**
  * Optical degradation profile options for simulated scannability checks.
@@ -342,9 +342,9 @@ export class OpticalScannerHarness {
         : new Uint8ClampedArray(pixels.buffer, pixels.byteOffset, pixels.byteLength);
 
     // 1. Digital Check
-    let digitalCode = jsQR(clampedPixels, width, height, { inversionAttempts: 'dontInvert' });
+    let digitalCode = decodeQrWasm(clampedPixels, width, height, { inversionAttempts: 'dontInvert' });
     if (!digitalCode) {
-      digitalCode = jsQR(clampedPixels, width, height, { inversionAttempts: 'attemptBoth' });
+      digitalCode = decodeQrWasm(clampedPixels, width, height, { inversionAttempts: 'attemptBoth' });
     }
     const digitalScannable = !!digitalCode;
     const decodedData = digitalCode ? digitalCode.data : null;
@@ -371,9 +371,9 @@ export class OpticalScannerHarness {
     const noiseLevel = this.opticalProfile.noiseLevel ?? 10;
     const degradedPixels = applyOpticalSimulationMath(pixels, width, height, noiseLevel);
 
-    let opticalCode = jsQR(degradedPixels, width, height, { inversionAttempts: 'dontInvert' });
+    let opticalCode = decodeQrWasm(degradedPixels, width, height, { inversionAttempts: 'dontInvert' });
     if (!opticalCode) {
-      opticalCode = jsQR(degradedPixels, width, height, { inversionAttempts: 'attemptBoth' });
+      opticalCode = decodeQrWasm(degradedPixels, width, height, { inversionAttempts: 'attemptBoth' });
     }
     const opticalScannable = !!opticalCode;
 

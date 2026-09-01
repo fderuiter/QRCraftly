@@ -5,7 +5,7 @@ import React from 'react';
 import { QRScanner } from './QRScanner';
 import { useCamera } from '../hooks/useCamera';
 import { useAdaptiveScanner } from '../hooks/useAdaptiveScanner';
-import jsQR from 'jsqr';
+import { decodeQrWasm } from '../utils/wasmDecoder';
 
 // Mock hooks and external libraries
 vi.mock('../hooks/useCamera', () => ({
@@ -16,8 +16,8 @@ vi.mock('../hooks/useAdaptiveScanner', () => ({
   useAdaptiveScanner: vi.fn(),
 }));
 
-vi.mock('jsqr', () => ({
-  default: vi.fn(),
+vi.mock('../utils/wasmDecoder', () => ({
+  decodeQrWasm: vi.fn(),
 }));
 
 describe('QRScanner Component', () => {
@@ -180,8 +180,8 @@ describe('QRScanner Component', () => {
 
     expect(screen.getByText(/drag & drop qr image or video/i)).toBeInTheDocument();
 
-    // Mock successful jsQR decoding
-    vi.mocked(jsQR).mockReturnValue({ data: 'https://qrcraftly.com' } as any);
+    // Mock successful WASM decoding
+    vi.mocked(decodeQrWasm).mockReturnValue({ data: 'https://qrcraftly.com' } as any);
 
     // Mock FileReader and Image loading
     const mockFile = new File(['dummy content'], 'test.png', { type: 'image/png' });
@@ -212,8 +212,8 @@ describe('QRScanner Component', () => {
     const fileTab = screen.getByRole('button', { name: /file upload/i });
     fireEvent.click(fileTab);
 
-    // Mock jsQR returning null (no QR code found)
-    vi.mocked(jsQR).mockReturnValue(null);
+    // Mock decodeQrWasm returning null (no QR code found)
+    vi.mocked(decodeQrWasm).mockReturnValue(null);
 
     const mockFile = new File(['dummy content'], 'test.png', { type: 'image/png' });
     const fileInput = screen.getByLabelText(/upload qr code image or video file/i);
@@ -264,7 +264,7 @@ describe('QRScanner Component', () => {
 
     // Mock first upload as successful, second as failure, and third as success
     let callCount = 0;
-    vi.mocked(jsQR).mockImplementation((data, width, height, options) => {
+    vi.mocked(decodeQrWasm).mockImplementation((data, width, height, options) => {
       if (!options || options.inversionAttempts === 'dontInvert') {
         callCount++;
       }
@@ -312,8 +312,8 @@ describe('QRScanner Component', () => {
       expect(mockOnScanSuccess).toHaveBeenCalledWith('scan 2');
     });
 
-    // Reset jsQR mock implementation
-    vi.mocked(jsQR).mockReset();
+    // Reset decodeQrWasm mock implementation
+    vi.mocked(decodeQrWasm).mockReset();
   });
 
   describe('WebM & MKV Video Importing and Decoding', () => {
@@ -365,8 +365,8 @@ describe('QRScanner Component', () => {
       const fileTab = screen.getByRole('button', { name: /file upload/i });
       fireEvent.click(fileTab);
 
-      // Mock successful jsQR decoding
-      vi.mocked(jsQR).mockReturnValue({ data: 'F|0|1|native' } as any);
+      // Mock successful WASM decoding
+      vi.mocked(decodeQrWasm).mockReturnValue({ data: 'F|0|1|native' } as any);
 
       const mockFile = new File(['dummy video data'], 'test.webm', { type: 'video/webm' });
       mockFile.arrayBuffer = () => Promise.resolve(new ArrayBuffer(41));
@@ -433,8 +433,8 @@ describe('QRScanner Component', () => {
       const fileTab = screen.getByRole('button', { name: /file upload/i });
       fireEvent.click(fileTab);
 
-      // Mock successful jsQR decoding
-      vi.mocked(jsQR).mockReturnValue({ data: 'F|0|1|disposed' } as any);
+      // Mock successful WASM decoding
+      vi.mocked(decodeQrWasm).mockReturnValue({ data: 'F|0|1|disposed' } as any);
 
       const mockFile = new File(['dummy video data for disposal'], 'test.webm', { type: 'video/webm' });
       mockFile.arrayBuffer = () => Promise.resolve(new ArrayBuffer(41));
@@ -675,7 +675,7 @@ describe('QRScanner Component', () => {
       const fileTab = screen.getByRole('button', { name: /file upload/i });
       fireEvent.click(fileTab);
 
-      vi.mocked(jsQR).mockReturnValue({ data: 'https://post-unmount-scan.com' } as any);
+      vi.mocked(decodeQrWasm).mockReturnValue({ data: 'https://post-unmount-scan.com' } as any);
       const mockFile = new File(['dummy content'], 'test.png', { type: 'image/png' });
       const fileInput = screen.getByLabelText(/upload qr code image or video file/i);
 
@@ -692,7 +692,7 @@ describe('QRScanner Component', () => {
       const fileTab = screen.getByRole('button', { name: /file upload/i });
       fireEvent.click(fileTab);
 
-      vi.mocked(jsQR).mockReturnValue({ data: 'stale result' } as any);
+      vi.mocked(decodeQrWasm).mockReturnValue({ data: 'stale result' } as any);
 
       const mockFile = new File(['dummy file'], 'test.png', { type: 'image/png' });
       const fileInput = screen.getByLabelText(/upload qr code image or video file/i);
