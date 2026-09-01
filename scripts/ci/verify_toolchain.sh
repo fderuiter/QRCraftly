@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Verify pnpm version matches package.json's packageManager field
+PNPM_VERSION=$(pnpm --version)
+EXPECTED_PNPM="11.1.3"
+echo "Current pnpm version: $PNPM_VERSION"
+if [ "$PNPM_VERSION" != "$EXPECTED_PNPM" ]; then
+  echo "Error: pnpm version $PNPM_VERSION does not match pinned version $EXPECTED_PNPM"
+  exit 1
+fi
+
+# Verify Node.js version matches pinned setup configuration
+NODE_VERSION=$(node --version)
+EXPECTED_NODE="v22.14.0"
+EXPECTED_NODE_PREFIX="v22."
+echo "Current Node.js version: $NODE_VERSION"
+if [[ "$NODE_VERSION" != "$EXPECTED_NODE_PREFIX"* ]]; then
+  echo "Error: Node.js version $NODE_VERSION does not match expected prefix $EXPECTED_NODE_PREFIX"
+  exit 1
+fi
