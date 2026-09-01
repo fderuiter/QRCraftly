@@ -39,19 +39,19 @@ These low-level, primitive UI elements are designed to be extremely customizable
 
 These components capture specialized data structures required to construct distinct QR code types. They rely entirely on primitive UI inputs.
 
-- **TextInput** (`TextInput.tsx`): Minimalist form component capturing standard unformatted text.
-- **UrlInput** (`UrlInput.tsx` / `UrlInput.test.tsx`): Text input with automatic verification and correction of URL protocol schemes, featuring Cloudflare Turnstile bot verification safeguards, an integrated opt-in toggle, and explicit consent modal for dynamic tracking and edge redirection with dual-platform App Store destinations for iOS and Android.
 - **EmailInput** (`EmailInput.tsx`): Standard email layout supporting recipient, subject, and body message fields.
-- **PhoneInput** (`PhoneInput.tsx`): Clean, accessible phone dial code layout.
-- **SmsInput** (`SmsInput.tsx`): SMS composer form holding receiver number and predefined message.
-- **WifiInput** (`WifiInput.tsx`): Wireless network panel specifying SSID, passwords, and security type.
-- **VCardInput** (`VCardInput.tsx`): Extensive contact form detailing names, organization, email, phone, and address.
 - **EventInput** (`EventInput.tsx`): Calendar appointment configuration form specifying title, times, description, and venue.
-- **PaymentInput** (`PaymentInput.tsx`): Cryptocurrency checkout fields validating address formats and value sizes.
 - **LocationInput** (`LocationInput.tsx` / `LocationInput.test.tsx`): High-accuracy coordinate form requiring proper latitude and longitude decimals.
 - **MeetingInput** (`MeetingInput.tsx` / `MeetingInput.test.tsx`): Specialized input fields to enter URL links and meeting passwords.
+- **PaymentInput** (`PaymentInput.tsx`): Cryptocurrency checkout fields validating address formats and value sizes.
+- **PhoneInput** (`PhoneInput.tsx`): Clean, accessible phone dial code layout.
+- **SmsInput** (`SmsInput.tsx`): SMS composer form holding receiver number and predefined message.
 - **SocialInput** (`SocialInput.tsx` / `SocialInput.test.tsx`): Selectors for major platforms alongside handler name parsing.
+- **TextInput** (`TextInput.tsx`): Minimalist form component capturing standard unformatted text.
 - **TypeSelector** (`TypeSelector.tsx` / `TypeSelector.test.tsx`): Accessible tabbed layout for switching between QR configurations, with arrow, Home, End, Enter, and Space keyboard controls while leaving Tab navigation to the browser's native focus order and performing in-SPA type switching.
+- **UrlInput** (`UrlInput.tsx` / `UrlInput.test.tsx`): Text input with automatic verification and correction of URL protocol schemes, featuring Cloudflare Turnstile bot verification safeguards, an integrated opt-in toggle, and explicit consent modal for dynamic tracking and edge redirection with dual-platform App Store destinations for iOS and Android.
+- **VCardInput** (`VCardInput.tsx`): Extensive contact form detailing names, organization, email, phone, and address.
+- **WifiInput** (`WifiInput.tsx`): Wireless network panel specifying SSID, passwords, and security type.
 
 ---
 
@@ -59,13 +59,13 @@ These components capture specialized data structures required to construct disti
 
 Unified appearance control modules that manage and present customization options in a modular side navigation menu.
 
-- **PatternControls** (`PatternControls.tsx`): Pattern-style selector that conditionally displays one assertive scannability warning for low-reliability patterns, avoiding duplicate screen-reader announcements.
-- **ColorControls** (`ColorControls.tsx`): Consolidates pickers and preset buttons for foreground, background, and corner eye accents.
-- **LogoControls** (`LogoControls.tsx`): Coordinates uploading custom logos, configuring scaling boundaries, and adjusting background-mask thresholds.
-- **BorderControls** (`BorderControls.tsx` / `BorderControls.test.tsx`): Controls options for border thickness, padding, and corner radius around outputs.
-- **LayoutControls** (`LayoutControls.tsx` / `LayoutControls.test.tsx`): Controls size, padding, margin, and output format.
 - **AdvancedControls** (`AdvancedControls.tsx`): Advanced visual overrides such as grid density, scannability modifiers, and playable maze overlay settings including scannability-audited finder pattern bridges and style-adaptive path width range controls.
+- **BorderControls** (`BorderControls.tsx` / `BorderControls.test.tsx`): Controls options for border thickness, padding, and corner radius around outputs.
+- **ColorControls** (`ColorControls.tsx`): Consolidates pickers and preset buttons for foreground, background, and corner eye accents.
 - **ContrastWarning** (`ContrastWarning.tsx`): Dynamic accessibility banner that displays contrast warnings if combinations fall below WCAG parameters.
+- **LayoutControls** (`LayoutControls.tsx` / `LayoutControls.test.tsx`): Controls size, padding, margin, and output format.
+- **LogoControls** (`LogoControls.tsx`): Coordinates uploading custom logos, configuring scaling boundaries, and adjusting background-mask thresholds.
+- **PatternControls** (`PatternControls.tsx`): Pattern-style selector that conditionally displays one assertive scannability warning for low-reliability patterns, avoiding duplicate screen-reader announcements.
 
 ---
 

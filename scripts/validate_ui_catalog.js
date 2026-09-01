@@ -2,6 +2,7 @@ import { execFileSync } from 'child_process';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+import { syncUICatalog } from './sync_docs.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -402,6 +403,17 @@ function runValidator() {
   const startTime = Date.now();
 
   try {
+    // 0. Optional Auto-Fix Flag (--fix)
+    const hasFixFlag = process.argv.includes('--fix');
+    if (hasFixFlag) {
+      console.log('🛠️ Auto-fix flag (--fix) detected. Synchronizing UI catalog entries...');
+      syncUICatalog(
+        TRACKED_DIRS.map(dir => path.join(repoRoot, dir)),
+        DEFAULT_CATALOG_PATH,
+        repoRoot
+      );
+    }
+
     // 1. Run Catalog Integrity Verification
     const validationErrors = validateCatalog(DEFAULT_UI_DIR, DEFAULT_CATALOG_PATH);
     if (validationErrors.length > 0) {
