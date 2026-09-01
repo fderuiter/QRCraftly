@@ -15,13 +15,10 @@ try {
     process.exit(1);
   }
 
-  if (fs.existsSync(wranglerRealJs)) {
-    console.log('[Patch Wrangler] wrangler.js is already patched.');
-    process.exit(0);
+  if (!fs.existsSync(wranglerRealJs)) {
+    // Rename original wrangler.js to wrangler-real.js
+    fs.renameSync(wranglerJs, wranglerRealJs);
   }
-
-  // Rename original wrangler.js to wrangler-real.js
-  fs.renameSync(wranglerJs, wranglerRealJs);
 
   const wrapperContent = `#!/usr/bin/env node
 const cp = require('child_process');
@@ -47,10 +44,8 @@ const hasCloudflareSecrets = !!(process.env.CLOUDFLARE_API_TOKEN && process.env.
 
 let exitStatus = 0;
 
-if (!hasCloudflareSecrets) {
-  console.log('[Wrangler Wrapper] CLOUDFLARE_API_TOKEN or CLOUDFLARE_ACCOUNT_ID is empty/missing.');
+function runLocalPreviewFallback() {
   console.log('[Wrangler Wrapper] Falling back to starting local preview server on port 3000...');
-  
   try {
     const serverProcess = cp.spawn('pnpm', ['run', 'preview'], {
       detached: true,
@@ -63,11 +58,16 @@ if (!hasCloudflareSecrets) {
     
     console.log('Take a look at: http://localhost:3000');
     console.log('=== [Wrangler Wrapper] Local preview fallback ready! ===');
-    exitStatus = 0;
+    return 0;
   } catch (err) {
     console.error('[Wrangler Wrapper] Failed to start local preview server fallback:', err);
-    exitStatus = 1;
+    return 1;
   }
+}
+
+if (!hasCloudflareSecrets) {
+  console.log('[Wrangler Wrapper] CLOUDFLARE_API_TOKEN or CLOUDFLARE_ACCOUNT_ID is empty/missing.');
+  exitStatus = runLocalPreviewFallback();
 } else {
   try {
     const result = cp.spawnSync(process.execPath, [realWranglerPath, ...process.argv.slice(2)], {
@@ -76,33 +76,15 @@ if (!hasCloudflareSecrets) {
     });
     
     console.log(\`=== [Wrangler Wrapper] Wrangler finished with exit code \${result.status} ===\`);
-    if (result.status === 0) {
-      exitStatus = 0;
-    } else {
-      console.warn(\`[Wrangler Wrapper] Real wrangler failed with exit code \${result.status}.\`);
-      console.log('[Wrangler Wrapper] Falling back to starting local preview server on port 3000...');
-      
-      try {
-        const serverProcess = cp.spawn('pnpm', ['run', 'preview'], {
-          detached: true,
-          stdio: 'ignore'
-        });
-        serverProcess.unref();
-        
-        console.log('[Wrangler Wrapper] Waiting for local preview server to start...');
-        cp.execSync('sleep 3');
-        
-        console.log('Take a look at: http://localhost:3000');
-        console.log('=== [Wrangler Wrapper] Local preview fallback ready! ===');
-        exitStatus = 0;
-      } catch (err) {
-        console.error('[Wrangler Wrapper] Failed to start local preview server fallback:', err);
-        exitStatus = result.status ?? 1;
-      }
+    exitStatus = result.status ?? 0;
+
+    if (exitStatus !== 0) {
+      console.log(\`[Wrangler Wrapper] Real wrangler failed with exit code \${exitStatus}.\`);
+      exitStatus = runLocalPreviewFallback();
     }
   } catch (err) {
     console.error('=== [Wrangler Wrapper] Failed to execute real wrangler:', err);
-    exitStatus = 1;
+    exitStatus = runLocalPreviewFallback();
   }
 }
 
