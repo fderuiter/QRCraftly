@@ -41,11 +41,12 @@ function AnalyticsView({ analytics }: { analytics: ScanAnalytics }) {
 }
 
 /**
- * Dynamic Redirection Dashboard Component.
- * Enables listing, tracking stats, and updating target destinations for dynamic QR codes from local storage.
- * @returns The rendered DynamicDashboardPage component.
+ * Feature flag to temporarily suppress dynamic dashboard until Cloudflare edge infrastructure
+ * and mock Vite proxies are fully provisioned (#917 / #928).
  */
-export default function DynamicDashboardPage() {
+const ENABLE_DYNAMIC_DASHBOARD = false;
+
+function DashboardContent() {
   const { records, updateRedirect, fetchStats, deleteRecord } = useRedirector();
   const { addToast } = useToast();
 
@@ -349,5 +350,38 @@ export default function DynamicDashboardPage() {
     </div>
     </>
   );
+}
+
+/**
+ * Dynamic Redirection Dashboard Page Component.
+ * Direct visits are gracefully redirected to the home page during temporary suppression (#917).
+ * @returns The rendered DynamicDashboardPage component.
+ */
+export default function DynamicDashboardPage() {
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.location.replace('/');
+    }
+  }, []);
+
+  const pageContext = usePageContext();
+  const urlPathname = pageContext?.urlPathname ?? '/dynamic-dashboard';
+  const resolvedDomain = resolveDomainForPath(urlPathname);
+  const schemaData = generateSchema(contentRegistry['dynamic-dashboard'], resolvedDomain, urlPathname);
+
+  if (!ENABLE_DYNAMIC_DASHBOARD) {
+    return (
+      <>
+        <JsonLdScript data={schemaData} />
+        <div className="flex min-h-[60vh] flex-col items-center justify-center p-4 text-center">
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            Redirecting to home...
+          </p>
+        </div>
+      </>
+    );
+  }
+
+  return <DashboardContent />;
 }
 

@@ -21,6 +21,12 @@ interface UrlInputProps {
 }
 
 /**
+ * Feature flag to temporarily suppress dynamic QR code UI until Cloudflare edge infrastructure
+ * and mock Vite proxies are fully provisioned (#917 / #928).
+ */
+const ENABLE_DYNAMIC_TRACKING = false;
+
+/**
  * Website URL Input Component with Opt-In Dynamic Tracking.
  * Handles the standard static URL generation alongside the opt-in dynamic redirector registration flow.
  * @param props - Component properties.
@@ -54,7 +60,7 @@ export const UrlInput: React.FC<UrlInputProps> = ({ data, onChange }) => {
 
   // Sync isDynamicMode when we are viewing a tracking URL
   useEffect(() => {
-    if (isCurrentlyTracking) {
+    if (ENABLE_DYNAMIC_TRACKING && isCurrentlyTracking) {
       setIsDynamicMode(true);
     }
   }, [isCurrentlyTracking]);
@@ -166,38 +172,40 @@ export const UrlInput: React.FC<UrlInputProps> = ({ data, onChange }) => {
 
   return (
     <div className="space-y-4">
-      <Modal
-        isOpen={showConsentModal}
-        onClose={() => setShowConsentModal(false)}
-        title="Privacy Opt-In: Dynamic Tracking Redirect"
-      >
-        <div className="space-y-4">
-          <div className="flex justify-center">
-            <Shield className="size-12 text-teal-600" />
+      {ENABLE_DYNAMIC_TRACKING && (
+        <Modal
+          isOpen={showConsentModal}
+          onClose={() => setShowConsentModal(false)}
+          title="Privacy Opt-In: Dynamic Tracking Redirect"
+        >
+          <div className="space-y-4">
+            <div className="flex justify-center">
+              <Shield className="size-12 text-teal-600" />
+            </div>
+            <p className="text-sm leading-relaxed text-slate-700 dark:text-slate-300">
+              Standard QRCraftly codes are strictly local and offline. However, by enabling <strong>Dynamic Tracking</strong>, you opt into the following edge capabilities:
+            </p>
+            <ul className="list-disc space-y-1 pl-5 text-xs text-slate-600 dark:text-slate-400">
+              <li>Your destination URL is stored in our Cloudflare Pages Edge Key-Value (KV) database.</li>
+              <li> Cumulative scan counts are tracked anonymously (zero sensitive personal logs are collected).</li>
+              <li>You can change the target destination at any time without reprinting the QR pattern.</li>
+            </ul>
+            <p className="text-xs font-medium text-amber-600 dark:text-amber-400">
+              ⚠️ Note: This waives the standard zero-transit privacy boundary for this specific QR code.
+            </p>
+            <div className="flex gap-3 pt-2">
+              <Button variant="outline" fullWidth onClick={() => setShowConsentModal(false)}>
+                Cancel
+              </Button>
+              <Button variant="primary" fullWidth onClick={handleAcceptConsent}>
+                I Agree & Enable
+              </Button>
+            </div>
           </div>
-          <p className="text-sm leading-relaxed text-slate-700 dark:text-slate-300">
-            Standard QRCraftly codes are strictly local and offline. However, by enabling <strong>Dynamic Tracking</strong>, you opt into the following edge capabilities:
-          </p>
-          <ul className="list-disc space-y-1 pl-5 text-xs text-slate-600 dark:text-slate-400">
-            <li>Your destination URL is stored in our Cloudflare Pages Edge Key-Value (KV) database.</li>
-            <li> Cumulative scan counts are tracked anonymously (zero sensitive personal logs are collected).</li>
-            <li>You can change the target destination at any time without reprinting the QR pattern.</li>
-          </ul>
-          <p className="text-xs font-medium text-amber-600 dark:text-amber-400">
-            ⚠️ Note: This waives the standard zero-transit privacy boundary for this specific QR code.
-          </p>
-          <div className="flex gap-3 pt-2">
-            <Button variant="outline" fullWidth onClick={() => setShowConsentModal(false)}>
-              Cancel
-            </Button>
-            <Button variant="primary" fullWidth onClick={handleAcceptConsent}>
-              I Agree & Enable
-            </Button>
-          </div>
-        </div>
-      </Modal>
+        </Modal>
+      )}
 
-      {!isDynamicMode ? (
+      {!isDynamicMode || !ENABLE_DYNAMIC_TRACKING ? (
         // Standard Static Mode URL Field
         <div>
           <TextField
@@ -377,18 +385,20 @@ export const UrlInput: React.FC<UrlInputProps> = ({ data, onChange }) => {
       )}
 
       {/* Toggle switch for dynamic trackability */}
-      <div className="pt-2">
-        <ToggleSwitch
-          id="toggle-dynamic-redirect"
-          label="Dynamic QR (Trackable Redirect)"
-          checked={isDynamicMode}
-          onChange={handleToggleChange}
-          labelClassName="text-sm font-semibold text-slate-700 dark:text-slate-300"
-        />
-        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-          Allows updating the destination later and tracking anonymous scan statistics.
-        </p>
-      </div>
+      {ENABLE_DYNAMIC_TRACKING && (
+        <div className="pt-2">
+          <ToggleSwitch
+            id="toggle-dynamic-redirect"
+            label="Dynamic QR (Trackable Redirect)"
+            checked={isDynamicMode}
+            onChange={handleToggleChange}
+            labelClassName="text-sm font-semibold text-slate-700 dark:text-slate-300"
+          />
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+            Allows updating the destination later and tracking anonymous scan statistics.
+          </p>
+        </div>
+      )}
     </div>
   );
 };

@@ -1,6 +1,6 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import Page from './+Page';
 import { useRedirector } from '@/hooks/useRedirector';
 
@@ -10,60 +10,34 @@ vi.mock('@/hooks/useRedirector', () => ({
 }));
 
 describe('DynamicDashboardPage', () => {
-  const mockUpdateRedirect = vi.fn();
-  const mockFetchStats = vi.fn();
-  const mockDeleteRecord = vi.fn();
+  const originalLocation = window.location;
 
   beforeEach(() => {
     vi.clearAllMocks();
+    delete (window as any).location;
+    (window as any).location = {
+      ...originalLocation,
+      hash: '',
+      replace: vi.fn(),
+      origin: 'http://localhost:3000',
+    };
   });
 
-  it('renders empty state when there are no records', () => {
-    (useRedirector as any).mockReturnValue({
-      records: [],
-      updateRedirect: mockUpdateRedirect,
-      fetchStats: mockFetchStats,
-      deleteRecord: mockDeleteRecord,
-      isLoading: false,
-    });
-
-    render(<Page />);
-
-    expect(screen.getByText(/No Dynamic QR Codes Found/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Create dynamic QR code/i })).toBeInTheDocument();
+  afterEach(() => {
+    (window as any).location = originalLocation;
   });
 
-  it('renders records and updates stats with zero-transit aggregate scan metrics', async () => {
-    const mockRecord = {
-      id: 'id-123',
-      originalUrl: 'https://dest.com',
-      redirectUrl: 'https://qrcraftly.com/api/redirect/id-123',
-      adminKey: 'key-abc',
-      createdAt: new Date().toISOString(),
-    };
-
-    const mockAnalytics = {
-      scans: 15,
-    };
-
-    (useRedirector as any).mockReturnValue({
-      records: [mockRecord],
-      updateRedirect: mockUpdateRedirect,
-      fetchStats: mockFetchStats.mockResolvedValue(mockAnalytics),
-      deleteRecord: mockDeleteRecord,
-      isLoading: false,
-    });
-
+  it('gracefully redirects direct visits to the home page on mount', () => {
     render(<Page />);
 
-    expect(screen.getByText('https://dest.com')).toBeInTheDocument();
-    expect(screen.getByText('https://qrcraftly.com/api/redirect/id-123')).toBeInTheDocument();
+    expect(window.location.replace).toHaveBeenCalledWith('/');
+    expect(screen.getByText(/Redirecting to home.../i)).toBeInTheDocument();
+  });
 
-    // Scans and zero-transit privacy elements should render
-    await waitFor(() => {
-      expect(screen.getByText('15')).toBeInTheDocument();
-      expect(screen.getByText(/Aggregate Scan Metrics/i)).toBeInTheDocument();
-      expect(screen.getByText(/Zero-Transit Privacy Enforcement Active/i)).toBeInTheDocument();
-    });
+  it('does not display any active dynamic dashboard controls or cards while suppressed', () => {
+    render(<Page />);
+
+    expect(screen.queryByText(/No Dynamic QR Codes Found/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Dynamic Redirection Dashboard/i)).not.toBeInTheDocument();
   });
 });
