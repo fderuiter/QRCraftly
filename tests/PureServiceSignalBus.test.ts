@@ -1,10 +1,10 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { globalSignalBus, SignalBus } from '../src/services/SignalBus';
-import { formPayloadService } from '../src/services/FormPayloadService';
-import { scannabilityService } from '../src/services/ScannabilityService';
-import { exportSafetyService } from '../src/services/ExportSafetyService';
-import { edgeRedirectService } from '../src/services/EdgeRedirectService';
+import { globalSignalBus, SignalBus, type CoreSignalName, type SignalName } from '../src/services/SignalBus';
+import { formPayloadService, FormPayloadService, type FormValidationResult, type ProcessPayloadResult } from '../src/services/FormPayloadService';
+import { scannabilityService, ScannabilityService, type ScannabilityStatus, type HealthScore, type CheckScannabilityOptions } from '../src/services/ScannabilityService';
+import { exportSafetyService, ExportSafetyService, type ExportSafetyEvaluation } from '../src/services/ExportSafetyService';
+import { edgeRedirectService, EdgeRedirectService, type RegisterRedirectOptions, type UpdateRedirectOptions } from '../src/services/EdgeRedirectService';
 import { QRType, QRConfig, QRErrorCorrectionLevel, TemplateStyle, SocialFormat } from '../src/types';
 
 describe('Pure Service Architecture & Signal Bus Integration', () => {
@@ -17,6 +17,39 @@ describe('Pure Service Architecture & Signal Bus Integration', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  describe('Service Initialization & Class Instances', () => {
+    it('instantiates pure service classes correctly', () => {
+      expect(formPayloadService).toBeInstanceOf(FormPayloadService);
+      expect(scannabilityService).toBeInstanceOf(ScannabilityService);
+      expect(exportSafetyService).toBeInstanceOf(ExportSafetyService);
+      expect(edgeRedirectService).toBeInstanceOf(EdgeRedirectService);
+
+      const testCoreSignal: CoreSignalName = 'form-payload-update';
+      const testSignal: SignalName = testCoreSignal;
+      expect(testSignal).toBe('form-payload-update');
+
+      const valResult: FormValidationResult = { isValid: true, violations: [] };
+      const procResult: ProcessPayloadResult = { isValid: true, violations: [], serializedValue: '' };
+      expect(valResult.isValid).toBe(true);
+      expect(procResult.isValid).toBe(true);
+
+      const scanStatus: ScannabilityStatus = 'HEALTHY';
+      const healthScore: HealthScore = { score: 100, warnings: [] };
+      const scanOpts: CheckScannabilityOptions = { config: {} as any };
+      expect(scanStatus).toBe('HEALTHY');
+      expect(healthScore.score).toBe(100);
+      expect(scanOpts.config).toBeDefined();
+
+      const safetyEval: ExportSafetyEvaluation = { score: 100, isSafe: true, warnings: [] };
+      expect(safetyEval.isSafe).toBe(true);
+
+      const regOpts: RegisterRedirectOptions = { turnstileToken: 'test' };
+      const updOpts: UpdateRedirectOptions = { iosUrl: 'https://apple.com' };
+      expect(regOpts.turnstileToken).toBe('test');
+      expect(updOpts.iosUrl).toBe('https://apple.com');
+    });
   });
 
   describe('SignalBus Latency & Pub/Sub Isolation', () => {
