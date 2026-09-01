@@ -72,3 +72,13 @@ To prevent DOM-based Cross-Site Scripting (DOM-XSS) via dynamic anchors and `hre
 
 - **Anchor Link Sanitization (`sanitizeHref`)**: Dynamic values destined for anchor `href` attributes are passed through `sanitizeHref` to ensure they only use safe, permitted schemes. This forces all URLs to start with safe, whitelisted prefixes: `http://`, `https://`, or relative paths starting with `/`. Any unsafe schemes (such as `javascript:`, `data:`, or `vbscript:`) are neutralized and fallback to `#`.
 - **HTML Meta-Character Escaping (`escapeHtml`)**: In addition to scheme enforcement, values rendered as text nodes or embedded inside anchor tag `href` links are escaped. This safely converts characters like `&`, `<`, `>`, `"`, and `'` into their respective HTML entity equivalents (`&amp;`, `&lt;`, `&gt;`, `&quot;`, `&#39;`), entirely neutralizing DOM reinterpretation risks and ensuring robust DOM-XSS protection.
+
+## Native DOMParser Allowlist HTML Sanitization (`sanitizeHtml`)
+
+To safely render rich HTML text content across dynamic pages (such as `/security`) without relying on external npm runtime dependencies or risking DOM-XSS, QRCraftly incorporates browser-native synchronous HTML sanitization:
+
+- **Browser-Native `DOMParser` Architecture**: Operates synchronously using `new DOMParser().parseFromString(html, 'text/html')` to construct a document tree for safe in-memory inspection and sanitization before DOM insertion.
+- **Strict Tag Allowlist**: Only permits safe structural and rich-text formatting tags (`h1`-`h6`, `p`, `div`, `span`, `ul`, `ol`, `li`, `b`, `i`, `strong`, `em`, `a`, `table`, `thead`, `tbody`, `tr`, `th`, `td`, `blockquote`, `code`, `pre`, `br`, `hr`, etc.). Prohibited elements (such as `<script>`, `<iframe>`, `<object>`, `<embed>`, `<form>`, `<input>`, `<button>`) are completely removed from the tree.
+- **Attribute Whitelisting & Event Handler Stripping**: Enforces an attribute allowlist (`id`, `class`, `role`, `aria-*`, `data-*`, `href`, `src`, `target`, `rel`, `title`, `alt`, etc.). Any inline event handlers (attributes starting with `on`) are immediately stripped.
+- **URL & Style Defense**: Neutralizes dangerous schemes (`javascript:`, `vbscript:`, `file:`, unapproved `data:` URIs) on `href` and `src` attributes. Enforces `rel="noopener noreferrer"` for `target="_blank"` links, and strips `style` attributes containing dangerous script execution triggers.
+- **Wrapper & Component Integration**: Exposed via the `<SanitizedHtml>` UI component which supports custom semantic container element overrides (`section`, `article`, `div`, `span`) and `className` styling while guaranteeing synchronous sanitization during rendering.

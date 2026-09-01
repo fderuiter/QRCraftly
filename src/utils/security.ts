@@ -396,3 +396,188 @@ export const sanitizeSvg = (svgText: string): string => {
   }
 };
 
+/**
+ * Allowlist sets for safe HTML elements and attributes.
+ */
+const SAFE_HTML_TAGS = new Set([
+  // Headings
+  'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+  // Text blocks & Structure
+  'p', 'div', 'span', 'blockquote', 'pre', 'code', 'hr', 'br',
+  // Lists
+  'ul', 'ol', 'li', 'dl', 'dt', 'dd',
+  // Formatting
+  'b', 'i', 'strong', 'em', 'u', 's', 'strike', 'del', 'ins',
+  'sub', 'sup', 'small', 'mark', 'abbr', 'cite', 'q', 'kbd', 'samp', 'var',
+  // Links & Media
+  'a', 'img',
+  // Tables
+  'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td', 'caption', 'colgroup', 'col',
+  // Layout & Details
+  'section', 'article', 'header', 'footer', 'aside', 'nav', 'main',
+  'details', 'summary', 'figure', 'figcaption'
+]);
+
+const GLOBAL_ALLOWED_ATTRS = new Set([
+  'class', 'id', 'title', 'lang', 'dir', 'role'
+]);
+
+const TAG_ALLOWED_ATTRS: Record<string, Set<string>> = {
+  a: new Set(['href', 'target', 'rel', 'download']),
+  img: new Set(['src', 'alt', 'width', 'height', 'loading']),
+  td: new Set(['colspan', 'rowspan', 'headers', 'scope', 'align']),
+  th: new Set(['colspan', 'rowspan', 'headers', 'scope', 'align']),
+  ol: new Set(['start', 'type', 'reversed']),
+  li: new Set(['value']),
+  blockquote: new Set(['cite']),
+  q: new Set(['cite']),
+  code: new Set(['data-language']),
+  pre: new Set(['data-language'])
+};
+
+/**
+ * Sanitizes an incoming HTML string using browser-native DOMParser and a strict tag/attribute allowlist.
+ * Removes script elements, inline event handlers, and unauthorized URL schemes synchronously.
+ *
+ * @param html The raw HTML string to sanitize.
+ * @returns The sanitized HTML string, or empty string if input is empty/falsy.
+ */
+export const sanitizeHtml = (html: string | undefined): string => {
+  if (!html) return '';
+
+  if (typeof DOMParser === 'undefined') {
+    return html
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+      .replace(/ on\w+=(?:'[^']*'|"[^"]*"|[^\s>]+)/gi, '');
+  }
+
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+
+    if (!doc || !doc.body) {
+      return escapeHtml(html);
+    }
+
+    const cleanNode = (node: Node) => {
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        const element = node as Element;
+        const tagName = element.tagName.toLowerCase();
+
+        // Do not remove container html or body tags
+        if (tagName !== 'html' && tagName !== 'body') {
+          // 1. Remove elements not in the safe HTML tag allowlist
+          if (!SAFE_HTML_TAGS.has(tagName)) {
+            if (element.parentNode) {
+              element.parentNode.removeChild(element);
+            } else {
+              element.remove?.();
+            }
+            return; // Node and its children are discarded completely
+          }
+        }
+
+        // 2. Sanitize attributes
+        const attrs = Array.from(element.attributes);
+        const tagAllowed = TAG_ALLOWED_ATTRS[tagName];
+
+        for (const attr of attrs) {
+          const attrName = attr.name.toLowerCase();
+          const attrVal = attr.value;
+
+          // 2a. Remove inline event handlers (attributes starting with "on")
+          if (attrName.startsWith('on')) {
+            element.removeAttribute(attr.name);
+            continue;
+          }
+
+          // 2b. Validate URL attributes (href, src, cite)
+          if (attrName === 'href' || attrName === 'src' || attrName === 'cite') {
+            const trimmed = attrVal.trim();
+            const lower = trimmed.toLowerCase();
+
+            // Check for dangerous schemes
+            if (
+              lower.startsWith('javascript:') ||
+              lower.startsWith('vbscript:') ||
+              lower.startsWith('file:') ||
+              isDangerousUrl(trimmed)
+            ) {
+              if (attrName === 'href') {
+                element.setAttribute(attr.name, '#');
+              } else {
+                element.removeAttribute(attr.name);
+              }
+              continue;
+            }
+
+            // For data: URIs, only allow safe image data URIs
+            if (lower.startsWith('data:')) {
+              if (!isSafeDataUri(trimmed)) {
+                if (attrName === 'href') {
+                  element.setAttribute(attr.name, '#');
+                } else {
+                  element.removeAttribute(attr.name);
+                }
+                continue;
+              }
+            }
+          }
+
+          // 2c. Enforce allowed attributes whitelist
+          const isGlobalAllowed =
+            GLOBAL_ALLOWED_ATTRS.has(attrName) ||
+            attrName.startsWith('aria-') ||
+            attrName.startsWith('data-');
+          const isTagAllowed = tagAllowed ? tagAllowed.has(attrName) : false;
+
+          // Special handling for style attribute if sanitized
+          if (attrName === 'style') {
+            const lowerStyle = attrVal.toLowerCase();
+            if (
+              lowerStyle.includes('javascript:') ||
+              lowerStyle.includes('expression') ||
+              lowerStyle.includes('behavior') ||
+              lowerStyle.includes('@import') ||
+              lowerStyle.includes('binding')
+            ) {
+              element.removeAttribute(attr.name);
+            }
+            continue;
+          }
+
+          if (!isGlobalAllowed && !isTagAllowed) {
+            element.removeAttribute(attr.name);
+          }
+        }
+
+        // 2d. Enforce rel="noopener noreferrer" for target="_blank" links
+        if (tagName === 'a' && element.getAttribute('target') === '_blank') {
+          const rel = element.getAttribute('rel') || '';
+          const parts = new Set(rel.split(/\s+/).filter(Boolean));
+          parts.add('noopener');
+          parts.add('noreferrer');
+          element.setAttribute('rel', Array.from(parts).join(' '));
+        }
+      }
+
+      // Recursively sanitize children
+      const children = Array.from(node.childNodes);
+      for (const child of children) {
+        cleanNode(child);
+      }
+    };
+
+    const children = Array.from(doc.body.childNodes);
+    for (const child of children) {
+      cleanNode(child);
+    }
+
+    return doc.body.innerHTML;
+  } catch (error) {
+    console.error('HTML sanitization failed:', error);
+    return escapeHtml(html);
+  }
+};
+
+

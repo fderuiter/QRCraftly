@@ -27,7 +27,7 @@ if (typeof globalThis.DOMParser === 'undefined') {
   globalThis.Node = dom.window.Node;
 }
 
-import { isDangerousUrl, sanitizeHref, safeJsonLdStringify, cleanPhoneNumber, sanitizeInput, validateImageUpload, sanitizeSvg, escapeHtml } from './security';
+import { isDangerousUrl, sanitizeHref, safeJsonLdStringify, cleanPhoneNumber, sanitizeInput, validateImageUpload, sanitizeSvg, escapeHtml, sanitizeHtml } from './security';
 
 describe('Security Utils', () => {
   describe('isDangerousUrl', () => {
@@ -331,3 +331,88 @@ describe('Security Utils', () => {
       });
   });
 
+  describe('sanitizeHtml', () => {
+    it('returns empty string for undefined, null, or empty string input', () => {
+      expect(sanitizeHtml(undefined)).toBe('');
+      expect(sanitizeHtml('')).toBe('');
+    });
+
+    it('strips script tags and their contents completely', () => {
+      const raw = '<div><h1>Title</h1><script>alert("XSS")</script><p>Paragraph</p></div>';
+      const clean = sanitizeHtml(raw);
+      expect(clean).not.toContain('<script>');
+      expect(clean).not.toContain('alert("XSS")');
+      expect(clean).toContain('<h1>Title</h1>');
+      expect(clean).toContain('<p>Paragraph</p>');
+    });
+
+    it('strips inline event handlers (e.g., onclick, onerror, onload)', () => {
+      const raw = '<button onclick="alert(1)" ONERROR="alert(2)" class="btn">Click me</button><h2 onload="doEvil()">Header</h2>';
+      const clean = sanitizeHtml(raw);
+      expect(clean).not.toContain('onclick');
+      expect(clean).not.toContain('ONERROR');
+      expect(clean).not.toContain('onload');
+      expect(clean).toContain('<h2>Header</h2>');
+    });
+
+    it('neutralizes javascript: URLs in href and src attributes', () => {
+      const raw = '<a href="javascript:alert(1)" class="link">Link</a><img src="JAVASCRIPT:void(0)" alt="Image" />';
+      const clean = sanitizeHtml(raw);
+      expect(clean).not.toContain('javascript:alert(1)');
+      expect(clean).not.toContain('JAVASCRIPT:void(0)');
+      expect(clean).toContain('href="#"');
+      expect(clean).toContain('alt="Image"');
+      expect(clean).not.toContain('src=');
+    });
+
+    it('preserves safe formatting tags, headers, lists, tables, and valid links', () => {
+      const raw = `
+        <h1 class="header">Main Title</h1>
+        <p>This is <strong>bold</strong> and <em>italic</em> text with a <a href="https://qrcraftly.com" target="_blank">valid link</a>.</p>
+        <ul>
+          <li>Item 1</li>
+          <li>Item 2</li>
+        </ul>
+        <table>
+          <thead><tr><th>Col 1</th></tr></thead>
+          <tbody><tr><td>Data 1</td></tr></tbody>
+        </table>
+      `;
+      const clean = sanitizeHtml(raw);
+      expect(clean).toContain('<h1 class="header">Main Title</h1>');
+      expect(clean).toContain('<strong>bold</strong>');
+      expect(clean).toContain('<em>italic</em>');
+      expect(clean).toContain('href="https://qrcraftly.com"');
+      expect(clean).toContain('rel="noopener noreferrer"');
+      expect(clean).toContain('<ul>');
+      expect(clean).toContain('<li>Item 1</li>');
+      expect(clean).toContain('<table>');
+    });
+
+    it('discards unauthorized tags (like iframe, object, embed, form, input)', () => {
+      const raw = `<div><iframe src="https://evil.com"></iframe><object data="evil.swf"></object><input type="text" value="secret" /><p>Safe</p></div>`;
+      const clean = sanitizeHtml(raw);
+      expect(clean).not.toContain('iframe');
+      expect(clean).not.toContain('object');
+      expect(clean).not.toContain('input');
+      expect(clean).toContain('<p>Safe</p>');
+    });
+
+    it('removes non-whitelisted attributes while preserving global allowed attributes', () => {
+      const raw = '<div id="main-div" class="container" role="main" aria-label="Section" style="color: red" align="left" foo="bar"><p>Text</p></div>';
+      const clean = sanitizeHtml(raw);
+      expect(clean).toContain('id="main-div"');
+      expect(clean).toContain('class="container"');
+      expect(clean).toContain('role="main"');
+      expect(clean).toContain('aria-label="Section"');
+      expect(clean).not.toContain('foo="bar"');
+      expect(clean).not.toContain('align="left"');
+    });
+
+    it('strips inline styles containing dangerous payloads like expression or javascript:', () => {
+      const raw = '<div style="color: expression(alert(1)); background: url(javascript:alert(1))">Test</div>';
+      const clean = sanitizeHtml(raw);
+      expect(clean).not.toContain('style=');
+      expect(clean).toContain('Test');
+    });
+  });

@@ -18,7 +18,8 @@
 
  
 
-import React from 'react';
+import React, { useMemo } from 'react';
+import { sanitizeHtml } from '@/utils/security';
 
 /**
  * Props for the SanitizedHtml component.
@@ -34,7 +35,7 @@ export interface SanitizedHtmlProps {
 
 /**
  * A dedicated, centralized component for rendering generic dynamic HTML content.
- * This isolates the usage of raw dynamic HTML attributes to a single component.
+ * Automatically sanitizes incoming markup via DOMParser to prevent XSS.
  * @param props - The component props.
  * @param props.html - The raw HTML string.
  * @param props.className - CSS class name for styling.
@@ -46,10 +47,12 @@ export const SanitizedHtml: React.FC<SanitizedHtmlProps> = ({
   className,
   as: Component = 'div',
 }) => {
+  const sanitizedHtml = useMemo(() => sanitizeHtml(html), [html]);
+
   return (
     <Component
       className={className}
-      dangerouslySetInnerHTML={{ __html: html }}
+      dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
     />
   );
 };
