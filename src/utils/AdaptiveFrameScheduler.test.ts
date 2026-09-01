@@ -15,12 +15,12 @@ describe('DoubleBufferPool', () => {
   });
 
   it('should acquire and release buffers', () => {
-    const pool = new DoubleBufferPool(10, 10);
+    const pool = new DoubleBufferPool(10, 10, 4);
     const buf1 = pool.acquire();
     const buf2 = pool.acquire();
     expect(pool.getPoolSize()).toBe(0);
 
-    const buf3 = pool.acquire(); // Fallback buffer allocation
+    const buf3 = pool.acquire(); // Dynamic replenishment allocation
     expect(buf3.byteLength).toBe(10 * 10 * 4);
 
     pool.release(buf1);
@@ -36,6 +36,33 @@ describe('DoubleBufferPool', () => {
 
     pool.clear();
     expect(pool.getPoolSize()).toBe(0);
+  });
+
+  it('should dynamically replenish missing buffers and enforce maxBuffers capacity cap', () => {
+    const pool = new DoubleBufferPool(10, 10, 3); // Max cap 3
+    expect(pool.getPoolSize()).toBe(2);
+    expect(pool.getMaxBuffers()).toBe(3);
+
+    // Acquire all pre-allocated buffers
+    const b1 = pool.acquire();
+    const b2 = pool.acquire();
+    expect(pool.getPoolSize()).toBe(0);
+
+    // Acquire when pool is empty (simulating dropped zero-copy transfers)
+    const b3 = pool.acquire();
+    const b4 = pool.acquire();
+    expect(b3.byteLength).toBe(400);
+    expect(b4.byteLength).toBe(400);
+
+    // Release buffers back up to maxBuffers cap (3)
+    pool.release(b1);
+    pool.release(b2);
+    pool.release(b3);
+    expect(pool.getPoolSize()).toBe(3);
+
+    // Releasing beyond maxBuffers capacity cap is ignored to prevent unconstrained memory usage
+    pool.release(b4);
+    expect(pool.getPoolSize()).toBe(3);
   });
 });
 
