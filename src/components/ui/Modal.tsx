@@ -66,7 +66,8 @@ export const Modal: React.FC<ModalProps> = ({
     return () => document.removeEventListener('keydown', handleEscape);
   }, [isOpen, onClose]);
 
-  // Sibling elements of the active modal must dynamically receive aria-hidden="true" when open
+  // Sibling elements of the active modal must dynamically receive aria-hidden="true" when open,
+  // excluding live region announcers and toast containers so screen readers receive notifications.
   useEffect(() => {
     if (!isOpen || !mounted) return;
 
@@ -74,8 +75,16 @@ export const Modal: React.FC<ModalProps> = ({
     if (!modalElement) return;
 
     const originalStates = new Map<Element, string | null>();
+
+    const isLiveOrNotification = (el: Element): boolean => {
+      if (el.id === 'dynamic-focus-live-region' || el.id === 'dynamic-focus-live-region-assertive') return true;
+      if (el.getAttribute('data-toast-container') === 'true') return true;
+      if (el.getAttribute('aria-live') || el.getAttribute('role') === 'status' || el.getAttribute('role') === 'alert') return true;
+      return false;
+    };
+
     const siblings = Array.from(document.body.children).filter(
-      (child) => child !== modalElement && !['SCRIPT', 'STYLE', 'LINK'].includes(child.tagName)
+      (child) => child !== modalElement && !['SCRIPT', 'STYLE', 'LINK'].includes(child.tagName) && !isLiveOrNotification(child)
     );
 
     siblings.forEach((sibling) => {

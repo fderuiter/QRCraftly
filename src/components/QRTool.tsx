@@ -26,6 +26,7 @@ import { Download, Share2, QrCode, ChevronDown, Moon, Sun, Info, Copy, Check, Al
 import { Modal } from './ui/Modal';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useOnClickOutside } from '@/hooks/useOnClickOutside';
+import { useDropdownMenu } from '@/hooks/useDropdownMenu';
 import { useQRDownload, ExportStatus } from '@/hooks/useQRDownload';
 import { useToast } from './ui/Toast';
 import { useScannability } from '@/hooks/useScannability';
@@ -87,6 +88,13 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
   // Close download menu when clicking outside
   const closeDownloadMenu = useCallback(() => setShowDownloadMenu(false), []);
   useOnClickOutside(downloadMenuRef, closeDownloadMenu, showDownloadMenu);
+  useDropdownMenu({
+    isOpen: showDownloadMenu,
+    onClose: closeDownloadMenu,
+    menuRef: downloadMenuRef,
+    triggerRef: downloadButtonRef,
+  });
+
   const closeMobileNav = useCallback(() => setShowMobileNav(false), []);
   useOnClickOutside(mobileNavRef, closeMobileNav, showMobileNav);
 

@@ -3,7 +3,36 @@ import { useEffect, RefObject } from 'react';
 const FOCUSABLE_SELECTOR = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 /**
- * Hook to trap keyboard focus within a container element.
+ * Checks if a focusable element is visible in the layout tree.
+ * @param el Element to check
+ */
+function isElementVisible(el: HTMLElement): boolean {
+  if (el.getAttribute('aria-hidden') === 'true' || el.hasAttribute('hidden')) {
+    return false;
+  }
+  if (typeof window !== 'undefined') {
+    const style = window.getComputedStyle(el);
+    if (style.display === 'none' || style.visibility === 'hidden') {
+      return false;
+    }
+  }
+  if (el.style.display === 'none' || el.style.visibility === 'hidden') {
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Retrieves all visible focusable elements within a container.
+ * @param container Container element
+ */
+function getVisibleFocusables(container: HTMLElement): HTMLElement[] {
+  const elements = Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR));
+  return elements.filter(isElementVisible);
+}
+
+/**
+ * Hook to trap keyboard focus strictly within a container element.
  * Handles auto-focusing the first interactive element upon opening,
  * trapping focus during Tab / Shift+Tab navigation, and
  * restoring focus to the initiating element upon dismissal.
@@ -19,11 +48,11 @@ export function useFocusTrap(containerRef: RefObject<HTMLElement | null>, isActi
 
     const previouslyFocused = document.activeElement as HTMLElement;
 
-    // Direct keyboard focus to the first interactive element inside the modal upon opening
+    // Direct keyboard focus to the first visible interactive element inside the modal upon opening
     const focusFirst = () => {
       const currentContainer = containerRef.current;
       if (!currentContainer) return;
-      const focusables = Array.from(currentContainer.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR));
+      const focusables = getVisibleFocusables(currentContainer);
       if (focusables.length > 0) {
         focusables[0].focus();
       }
@@ -38,7 +67,7 @@ export function useFocusTrap(containerRef: RefObject<HTMLElement | null>, isActi
       const currentContainer = containerRef.current;
       if (!currentContainer) return;
 
-      const currentFocusables = Array.from(currentContainer.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR));
+      const currentFocusables = getVisibleFocusables(currentContainer);
       if (currentFocusables.length === 0) return;
 
       const firstEl = currentFocusables[0];
@@ -77,10 +106,10 @@ export function useFocusTrap(containerRef: RefObject<HTMLElement | null>, isActi
     return () => {
       cancelAnimationFrame(rafId);
       document.removeEventListener('keydown', handleKeyDown);
-      if (previouslyFocused && typeof previouslyFocused.focus === 'function') {
+      if (previouslyFocused && typeof previouslyFocused.focus === 'function' && document.body.contains(previouslyFocused)) {
         previouslyFocused.focus();
         requestAnimationFrame(() => {
-          if (previouslyFocused && typeof previouslyFocused.focus === 'function') {
+          if (previouslyFocused && typeof previouslyFocused.focus === 'function' && document.body.contains(previouslyFocused)) {
             previouslyFocused.focus();
           }
         });

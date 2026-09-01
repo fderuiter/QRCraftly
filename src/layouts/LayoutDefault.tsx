@@ -96,10 +96,21 @@ export default function LayoutDefault({ children }: { children: React.ReactNode 
     }
   }, []);
 
+  const handleSkipToContent = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    const mainEl = document.getElementById('main-content');
+    if (mainEl) {
+      mainEl.setAttribute('tabindex', '-1');
+      mainEl.focus();
+      mainEl.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   return (
     <ToastProvider>
       <a
         href="#main-content"
+        onClick={handleSkipToContent}
         className="sr-only transition-all focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:rounded-lg focus:border-2 focus:border-teal-700 focus:bg-white focus:px-4 focus:py-2 focus:text-teal-700 focus:shadow-lg focus:outline-none dark:focus:bg-slate-800 dark:focus:text-teal-400"
       >
         Skip to main content

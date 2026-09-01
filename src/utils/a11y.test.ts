@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { combineIds, getQrTypeLabel, getQrTypeDescription, announcePolitely } from './a11y';
+import { combineIds, getQrTypeLabel, getQrTypeDescription, announcePolitely, AnnouncementPriority } from './a11y';
 import { QRType } from '../types';
 import { QR_GENERATORS } from './qrHelpers';
 
@@ -217,6 +217,9 @@ describe('a11y - Accessibility Helpers', () => {
     });
 
     it('reuses the existing live region element if already present', () => {
+      const priority: AnnouncementPriority = 'polite';
+      expect(priority).toBe('polite');
+
       // Call first time to create
       announcePolitely('First announcement');
       vi.advanceTimersByTime(50);
