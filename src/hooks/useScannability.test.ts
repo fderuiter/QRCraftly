@@ -52,6 +52,7 @@ describe('useScannability - changed behavior: uses useQRStore instead of useQRCo
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.restoreAllMocks();
     window.localStorage.clear();
   });
@@ -571,6 +572,33 @@ describe('useScannability - changed behavior: uses useQRStore instead of useQRCo
       vi.useRealTimers();
     });
 
+    it('recreates a worker after consecutive watchdog timeouts', async () => {
+      vi.useFakeTimers();
+      const scannabilityCheckerModule = await import('../utils/scannabilityChecker');
+      vi.spyOn(scannabilityCheckerModule, 'performScannabilityCheck').mockReturnValue({
+        success: true,
+        physicalReady: true,
+      });
+      const { result } = renderHook(
+        () => useScannability(makeCanvasRef(), defaultConfig),
+        { wrapper }
+      );
+      const worker = getActiveWorker()!;
+      const imageData = {
+        data: new Uint8ClampedArray(400),
+        width: 10,
+        height: 10,
+      } as ImageData;
+
+      act(() => result.current.checkScannability(imageData));
+      await act(async () => vi.advanceTimersByTimeAsync(1500));
+      act(() => result.current.checkScannability(imageData));
+      await act(async () => vi.advanceTimersByTimeAsync(1500));
+
+      expect(worker.terminate).toHaveBeenCalledTimes(1);
+      expect(getActiveWorker()).not.toBe(worker);
+    });
+
     it('resolves the active checking state when the worker acknowledges a dropped request', () => {
       const { result } = renderHook(
         () => useScannability(makeCanvasRef(), defaultConfig),
@@ -606,7 +634,7 @@ describe('useScannability - changed behavior: uses useQRStore instead of useQRCo
           width: 10,
           height: 10,
           close: vi.fn(),
-        } as unknown as ImageBitmap);
+        } as unknown as ImageBitmap, 21);
       });
 
       act(() => {
@@ -616,6 +644,7 @@ describe('useScannability - changed behavior: uses useQRStore instead of useQRCo
       expect(worker.postMessage).toHaveBeenLastCalledWith(expect.objectContaining({
         configId: '1',
         imageData: expect.objectContaining({ width: 100, height: 100 }),
+        moduleCount: 21,
       }));
     });
 

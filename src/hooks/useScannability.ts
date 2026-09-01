@@ -9,6 +9,7 @@ import {
   isWorkerResponse,
 } from '../utils/sharedContract';
 
+const SCANNABILITY_WATCHDOG_MS = 1500;
 
 const releaseImageHandle = (handle: any) => {
   if (handle && typeof handle.close === 'function') {
@@ -56,7 +57,9 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
   const startTimeRef = useRef<number | null>(null);
   const isWorkerBusyRef = useRef<boolean>(false);
   const watchdogRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const watchdogFallbackRef = useRef<(() => void) | null>(null);
   const consecutiveTimeoutsRef = useRef(0);
+  const pendingModuleCountRef = useRef<number | undefined>(undefined);
 
   const [localMetrics, setLocalMetrics] = useState<{ violations?: number; minContrast?: number } | undefined>();
 
@@ -177,14 +180,9 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
             height: imageData.height,
             isTest: !!navigator.webdriver,
             configId,
+            moduleCount: pendingModuleCountRef.current,
           });
-          watchdogRef.current = setTimeout(() => {
-            if (configId === String(sequenceRef.current)) {
-              isWorkerBusyRef.current = false;
-              startTimeRef.current = null;
-              setStatus('fail');
-            }
-          }, 1500);
+          watchdogRef.current = setTimeout(() => watchdogFallbackRef.current?.(), SCANNABILITY_WATCHDOG_MS);
           return;
         }
 
@@ -250,6 +248,7 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
         workerRef.current = null;
       }
       clearWatchdog();
+      watchdogFallbackRef.current = null;
       isWorkerBusyRef.current = false;
       startTimeRef.current = null;
     };
@@ -273,6 +272,7 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
 
     const storeModuleCount = store ? store.getState().moduleCount : undefined;
     const moduleCountToUse = (overrideModuleCount && overrideModuleCount > 0) ? overrideModuleCount : (storeModuleCount && storeModuleCount > 0 ? storeModuleCount : undefined);
+    pendingModuleCountRef.current = moduleCountToUse;
 
     if (!worker) {
       // Worker failed or isn't supported, run on the main thread!
@@ -408,7 +408,7 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
 
     const startWatchdog = () => {
       clearWatchdog();
-      watchdogRef.current = setTimeout(async () => {
+      const runFallback = async () => {
         if (currentSequence !== String(sequenceRef.current) || !isWorkerBusyRef.current) return;
 
         watchdogRef.current = null;
@@ -454,7 +454,9 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
           console.error('Scannability worker watchdog fallback failed:', error);
           if (currentSequence === String(sequenceRef.current)) setStatus('fail');
         }
-      }, 1500);
+      };
+      watchdogFallbackRef.current = () => void runFallback();
+      watchdogRef.current = setTimeout(watchdogFallbackRef.current, SCANNABILITY_WATCHDOG_MS);
     };
 
     // If virtual renderer provided deterministic ImageBitmap, use it directly
