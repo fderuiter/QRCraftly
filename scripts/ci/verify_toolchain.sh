@@ -14,8 +14,8 @@ fi
 NODE_VERSION=$(node --version)
 EXPECTED_NODE="v22.14.0"
 EXPECTED_NODE_PREFIX="v22."
-echo "Current Node.js version: $NODE_VERSION"
+echo "Current Node.js version: $NODE_VERSION (target pinned: $EXPECTED_NODE)"
 if [[ "$NODE_VERSION" != "$EXPECTED_NODE_PREFIX"* ]]; then
-  echo "Error: Node.js version $NODE_VERSION does not match expected prefix $EXPECTED_NODE_PREFIX"
+  echo "Error: Node.js version $NODE_VERSION does not match expected prefix $EXPECTED_NODE_PREFIX (expected $EXPECTED_NODE)"
   exit 1
 fi
