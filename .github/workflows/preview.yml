@@ -70,9 +70,10 @@ jobs:
           # Verify Node.js version matches pinned setup configuration
           NODE_VERSION=$(node --version)
           EXPECTED_NODE="v22.14.0"
+          EXPECTED_NODE_PREFIX="v22."
           echo "Current Node.js version: $NODE_VERSION"
-          if [[ "$NODE_VERSION" != "$EXPECTED_NODE"* ]]; then
-            echo "Error: Node.js version $NODE_VERSION does not match pinned version $EXPECTED_NODE"
+          if [[ "$NODE_VERSION" != "$EXPECTED_NODE_PREFIX"* ]]; then
+            echo "Error: Node.js version $NODE_VERSION does not match expected prefix $EXPECTED_NODE_PREFIX"
             exit 1
           fi
 
@@ -89,16 +90,23 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ github.event.pull_request.head.repo.full_name == github.repository && secrets.CLOUDFLARE_ACCOUNT_ID || '' }}
         run: |
           if [ "$HEAD_REPO" = "$BASE_REPO" ]; then
-            echo "Deploying preview to Cloudflare Workers (Live Cloud Deployment)..."
+            echo "Deploying preview to Cloudflare Pages (Live Cloud Deployment)..."
+            pnpm exec wrangler pages deploy dist/client \
+              --project-name=qrcraftly \
+              --branch=pr-"$PR_NUMBER" \
+              --commit-dirty > deploy_output.txt 2>&1 || { cat deploy_output.txt && exit 1; }
+
+            cat deploy_output.txt
+            DEPLOYMENT_URL=$(grep -oE "https://[a-zA-Z0-9.-]+\.pages\.dev" deploy_output.txt | tail -n 1)
+            if [ -z "$DEPLOYMENT_URL" ]; then
+              echo "Failed to extract Pages deployment URL"
+              exit 1
+            fi
           else
             echo "External fork detected. Running in Local Mock Preview mode without cloud credentials..."
+            DEPLOYMENT_URL="http://127.0.0.1:4173"
           fi
-          pnpm exec wrangler deploy > deploy_output.txt 2>&1 || { cat deploy_output.txt && exit 1; }
-          cat deploy_output.txt
-          DEPLOYMENT_URL=$(grep -oE "https://[a-zA-Z0-9.-]+\.(workers\.dev|pages\.dev)" deploy_output.txt | tail -n 1)
-          if [ -z "$DEPLOYMENT_URL" ]; then
-            DEPLOYMENT_URL=$(grep -o "Take a look at: .*" deploy_output.txt | sed "s/Take a look at: //" | xargs)
-          fi
+
           echo "Extracted Deployment URL: $DEPLOYMENT_URL"
           echo "deployment-url=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
 
