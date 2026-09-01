@@ -85,7 +85,7 @@ export const constructVCardString = (data: VCardData): string => {
   const firstName = escapeVCardEvent(data.firstName);
   // Normalize URL first to handle spaces/protocols
   const normalizedWebsite = normalizeUrl(data.website);
-  const website = escapeVCardEvent(normalizedWebsite);
+  const website = normalizedWebsite;
 
   const parts = [
     'BEGIN:VCARD',
@@ -101,7 +101,7 @@ export const constructVCardString = (data: VCardData): string => {
     'END:VCARD',
   ];
 
-  return foldString(parts.join('\n'));
+  return foldString(parts.join('\r\n'));
 };
 
 export const VCardContract: QRGeneratorContract<VCardData> = {

@@ -16,31 +16,65 @@ describe('RFC Helper utilities', () => {
       expect(foldString(short, 20)).toBe('Short line');
     });
 
-    it('folds long lines by inserting a space at the beginning of folded lines', () => {
+    it('folds long lines by inserting a space at the beginning of folded lines with CRLF', () => {
       const long = 'This is a very long line that should definitely be folded by our utility';
-      // fold at max 30 characters
+      // fold at max 30 octets
       const folded = foldString(long, 30);
-      expect(folded).toContain('\n ');
+      expect(folded).toContain('\r\n ');
       const unfolded = unfoldString(folded);
       expect(unfolded).toBe(long);
     });
 
     it('preserves multi-line entries character-for-character after folding and unfolding', () => {
-      const original = 'BEGIN:VCARD\nVERSION:3.0\nNOTE:This is an extremely long note field in the vCard that contains extensive details and formatted address lines and notes, and should fold across multiple lines safely per the RFC standard guidelines.\nEND:VCARD';
+      const original = 'BEGIN:VCARD\r\nVERSION:3.0\r\nNOTE:This is an extremely long note field in the vCard that contains extensive details and formatted address lines and notes, and should fold across multiple lines safely per the RFC standard guidelines.\r\nEND:VCARD';
       const folded = foldString(original, 75);
       const unfolded = unfoldString(folded);
       expect(unfolded).toBe(original);
     });
 
-    it('detects and uses LF and CRLF line endings accordingly', () => {
-      const lfText = 'TITLE:An extremely long title that has more than seventy five characters to test folding';
-      const foldedLf = foldString(lfText, 50);
-      expect(foldedLf).toContain('\n ');
-      expect(foldedLf).not.toContain('\r\n');
+    it('enforces CRLF line endings exclusively for line folding', () => {
+      const text = 'TITLE:An extremely long title that has more than seventy five characters to test folding';
+      const folded = foldString(text, 50);
+      expect(folded).toContain('\r\n ');
 
       const crlfText = 'TITLE:An extremely long title that has more than seventy five characters to test folding\r\nNOTE:Another long field';
       const foldedCrlf = foldString(crlfText, 50);
       expect(foldedCrlf).toContain('\r\n ');
+    });
+
+    it('strictly respects the 75-octet RFC byte limit per folded line using UTF-8 byte counting', () => {
+      const encoder = new TextEncoder();
+      const multiByteField = 'NOTE:' + 'こんにちは世界'.repeat(10);
+      const folded = foldString(multiByteField, 75);
+      const lines = folded.split('\r\n');
+
+      for (const line of lines) {
+        expect(encoder.encode(line).byteLength).toBeLessThanOrEqual(75);
+      }
+
+      const unfolded = unfoldString(folded);
+      expect(unfolded).toBe(multiByteField);
+    });
+
+    it('preserves multi-byte Unicode characters and emoji surrogate pairs without splitting across folds', () => {
+      const encoder = new TextEncoder();
+      // "NOTE:" (5 bytes) + 68 'a's (68 bytes) = 73 bytes.
+      // Adding 🔥 (4 bytes) would make 77 bytes, exceeding 75 bytes limit.
+      // So 🔥 must be placed on the continuation line without splitting its surrogate pair.
+      const emojiText = 'NOTE:' + 'a'.repeat(68) + '🔥';
+      const folded = foldString(emojiText, 75);
+      const lines = folded.split('\r\n');
+
+      expect(lines.length).toBe(2);
+      expect(lines[0]).toBe('NOTE:' + 'a'.repeat(68));
+      expect(lines[1]).toBe(' 🔥');
+
+      for (const line of lines) {
+        expect(encoder.encode(line).byteLength).toBeLessThanOrEqual(75);
+      }
+
+      const unfolded = unfoldString(folded);
+      expect(unfolded).toBe(emojiText);
     });
   });
 
