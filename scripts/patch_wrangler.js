@@ -10,16 +10,14 @@ const wranglerJs = path.join(wranglerBinDir, 'wrangler.js');
 const wranglerRealJs = path.join(wranglerBinDir, 'wrangler-real.js');
 
 try {
-  if (!fs.existsSync(wranglerJs)) {
-    console.error(`[Patch Wrangler] wrangler.js not found at ${wranglerJs}`);
-    process.exit(1);
-  }
-
   if (!fs.existsSync(wranglerRealJs)) {
+    if (!fs.existsSync(wranglerJs)) {
+      console.error(`[Patch Wrangler] wrangler.js not found at ${wranglerJs}`);
+      process.exit(1);
+    }
     // Rename original wrangler.js to wrangler-real.js
     fs.renameSync(wranglerJs, wranglerRealJs);
   }
-
   const wrapperContent = `#!/usr/bin/env node
 const cp = require('child_process');
 const fs = require('fs');
@@ -70,7 +68,12 @@ if (!hasCloudflareSecrets) {
   exitStatus = runLocalPreviewFallback();
 } else {
   try {
-    const result = cp.spawnSync(process.execPath, [realWranglerPath, ...process.argv.slice(2)], {
+    let args = process.argv.slice(2);
+    if (args[0] === 'pages' && args[1] === 'deploy') {
+      console.log('[Wrangler Wrapper] Translating "pages deploy" to "deploy" for Workers project compatibility...');
+      args = ['deploy'];
+    }
+    const result = cp.spawnSync(process.execPath, [realWranglerPath, ...args], {
       stdio: 'inherit',
       env: { ...process.env, WRANGLER_WRAPPER_RUNNING: '1' }
     });
