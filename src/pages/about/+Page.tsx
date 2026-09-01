@@ -143,8 +143,8 @@ export default function Page() {
       </section>
 
       <section className="relative mb-16 overflow-hidden rounded-2xl border border-rose-100 bg-gradient-to-br from-rose-50 to-orange-50 p-8 text-center md:p-12 dark:border-rose-800/30 dark:from-rose-900/20 dark:to-orange-900/20">
-        <div className="pointer-events-none absolute top-0 right-0 -mt-16 -mr-16 size-64 rounded-full bg-rose-300/20 blur-3xl dark:bg-rose-500/10"></div>
-        <div className="pointer-events-none absolute bottom-0 left-0 -mb-16 -ml-16 size-64 rounded-full bg-orange-300/20 blur-3xl dark:bg-orange-500/10"></div>
+        <div className="pointer-events-none absolute top-0 right-0 -mt-16 -mr-16 size-64 rounded-full bg-rose-200/20 dark:bg-rose-500/10"></div>
+        <div className="pointer-events-none absolute bottom-0 left-0 -mb-16 -ml-16 size-64 rounded-full bg-orange-200/20 dark:bg-orange-500/10"></div>
 
         <div className="relative z-10">
           <div className="mx-auto mb-6 flex size-16 rotate-3 items-center justify-center rounded-2xl border border-rose-100 bg-white shadow-sm transition-transform duration-300 hover:rotate-12 dark:border-rose-700/50 dark:bg-slate-800">

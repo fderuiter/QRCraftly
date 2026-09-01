@@ -85,6 +85,10 @@ function generateLhciManifest() {
   if (!lhciConfig.ci.collect) lhciConfig.ci.collect = {};
   
   lhciConfig.ci.collect.url = urls;
+  lhciConfig.ci.collect.numberOfRuns = 1;
+  lhciConfig.ci.collect.settings = {
+    chromeFlags: '--no-sandbox --disable-dev-shm-usage',
+  };
 
   // Ensure strict SEO threshold of 0.95
   if (!lhciConfig.ci.assert) lhciConfig.ci.assert = {};
