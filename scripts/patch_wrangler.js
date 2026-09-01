@@ -25,10 +25,20 @@ const cp = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
+const realWranglerPath = path.join(__dirname, 'wrangler-real.js');
+
+if (process.env.WRANGLER_WRAPPER_RUNNING) {
+  if (fs.existsSync(realWranglerPath)) {
+    require(realWranglerPath);
+  } else {
+    console.error('Real wrangler not found during recursive execution:', realWranglerPath);
+    process.exit(1);
+  }
+  return;
+}
+
 console.log('=== [Wrangler Wrapper] Intercepted Wrangler! ===');
 console.log('Arguments:', process.argv);
-
-const realWranglerPath = path.join(__dirname, 'wrangler-real.js');
 
 const hasCloudflareSecrets = !!(process.env.CLOUDFLARE_API_TOKEN && process.env.CLOUDFLARE_API_TOKEN.trim() && process.env.CLOUDFLARE_ACCOUNT_ID && process.env.CLOUDFLARE_ACCOUNT_ID.trim());
 
@@ -61,7 +71,8 @@ if (!hasCloudflareSecrets) {
 } else {
   try {
     const result = cp.spawnSync(process.execPath, [realWranglerPath, ...process.argv.slice(2)], {
-      stdio: 'inherit'
+      stdio: 'inherit',
+      env: { ...process.env, WRANGLER_WRAPPER_RUNNING: '1' }
     });
     
     console.log(\`=== [Wrangler Wrapper] Wrangler finished with exit code \${result.status} ===\`);

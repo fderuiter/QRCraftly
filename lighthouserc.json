@@ -1,6 +1,10 @@
 {
   "ci": {
     "collect": {
+      "numberOfRuns": 1,
+      "settings": {
+        "chromeFlags": "--no-sandbox --disable-dev-shm-usage"
+      },
       "staticDistDir": "./dist/client",
       "url": [
         "http://localhost/about",

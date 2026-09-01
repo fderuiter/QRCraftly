@@ -930,7 +930,7 @@ describe('useAdaptiveScanner Hook with Bidirectional Buffer Recycling', () => {
     expect(result.current.isScanning).toBe(true);
   });
 
-  it('should terminate the currently active (recreated) worker when the hook unmounts', () => {
+  it('should cleanly detach worker listeners without terminating the shared worker when the hook unmounts', () => {
     const videoRef = makeVideoRef();
     const { unmount } = renderHook(() =>
       useAdaptiveScanner({
@@ -955,8 +955,130 @@ describe('useAdaptiveScanner Hook with Bidirectional Buffer Recycling', () => {
     // Unmount the hook
     unmount();
 
-    // The recreated worker should have been terminated
-    expect(recreatedWorker.terminate).toHaveBeenCalled();
+    // The recreated shared worker should NOT be terminated, but listeners should be detached
+    expect(recreatedWorker.terminate).not.toHaveBeenCalled();
+    expect(recreatedWorker.removeEventListener).toHaveBeenCalledWith('message', expect.any(Function));
+  });
+
+  describe('Targeted Listener Detachment & Shared Singleton Safeguards (Acceptance Criteria)', () => {
+    it('AC1 & AC2: closing a scanning view removes all event listeners and leaves shared background worker running', () => {
+      const videoRef = makeVideoRef();
+      const { unmount } = renderHook(() =>
+        useAdaptiveScanner({
+          videoRef,
+        })
+      );
+
+      const worker = getActiveWorker();
+      expect(worker).not.toBeNull();
+
+      // Unmount the scanning hook
+      unmount();
+
+      // Listeners should be cleanly removed
+      expect(worker.removeEventListener).toHaveBeenCalledWith('message', expect.any(Function));
+      expect(worker.removeEventListener).toHaveBeenCalledWith('error', expect.any(Function));
+      expect(worker.removeEventListener).toHaveBeenCalledWith('messageerror', expect.any(Function));
+
+      // Shared worker must remain running (not terminated)
+      expect(worker.terminate).not.toHaveBeenCalled();
+    });
+
+    it('AC3: re-opening the scanning interface twice produces exactly one message callback per processed frame', () => {
+      const onScanSuccess1 = vi.fn();
+      const videoRef1 = makeVideoRef();
+
+      // Set up interceptor to reply to posted frames
+      globalThis.mockWorkerControl.setInterceptor((msg, worker) => {
+        worker.dispatchMessage({
+          status: 'pass',
+          sequenceId: msg.sequenceId,
+          decodedData: 'https://qrcraftly.com',
+          epochId: msg.epochId,
+        });
+      });
+
+      // Session 1
+      const session1 = renderHook(() =>
+        useAdaptiveScanner({
+          videoRef: videoRef1,
+          onScanSuccess: onScanSuccess1,
+        })
+      );
+
+      act(() => {
+        session1.result.current.startScanning();
+      });
+
+      act(() => {
+        vi.advanceTimersByTime(50);
+      });
+
+      expect(onScanSuccess1).toHaveBeenCalledTimes(1);
+      expect(onScanSuccess1).toHaveBeenCalledWith('https://qrcraftly.com');
+
+      // Close Session 1
+      session1.unmount();
+      onScanSuccess1.mockClear();
+
+      // Session 2
+      const onScanSuccess2 = vi.fn();
+      const videoRef2 = makeVideoRef();
+      const session2 = renderHook(() =>
+        useAdaptiveScanner({
+          videoRef: videoRef2,
+          onScanSuccess: onScanSuccess2,
+        })
+      );
+
+      act(() => {
+        session2.result.current.startScanning();
+      });
+
+      act(() => {
+        vi.advanceTimersByTime(50);
+      });
+
+      // Session 1 callback MUST NOT be invoked (0 calls after unmount)
+      expect(onScanSuccess1).not.toHaveBeenCalled();
+
+      // Session 2 callback MUST be invoked exactly once
+      expect(onScanSuccess2).toHaveBeenCalledTimes(1);
+      expect(onScanSuccess2).toHaveBeenCalledWith('https://qrcraftly.com');
+
+      session2.unmount();
+    });
+
+    it('AC4: changing worker instances during active scanning detaches listeners from previous instance before attaching to new instance', () => {
+      const videoRef = makeVideoRef();
+      renderHook(() =>
+        useAdaptiveScanner({
+          videoRef,
+        })
+      );
+
+      const initialWorker = getActiveWorker();
+      expect(initialWorker).not.toBeNull();
+
+      // Simulate worker recreation (changing worker instance)
+      act(() => {
+        initialWorker.dispatchError(new Error('Simulated worker crash'));
+      });
+
+      const newWorker = getActiveWorker();
+      expect(newWorker).not.toBeNull();
+      expect(newWorker).not.toBe(initialWorker);
+
+      // Initial worker listeners should have been detached before switching to new worker
+      expect(initialWorker.removeEventListener).toHaveBeenCalledWith('message', expect.any(Function));
+      expect(initialWorker.removeEventListener).toHaveBeenCalledWith('error', expect.any(Function));
+      expect(initialWorker.removeEventListener).toHaveBeenCalledWith('messageerror', expect.any(Function));
+
+      // New worker should have listeners attached
+      expect(newWorker.addEventListener).toHaveBeenCalledWith('message', expect.any(Function));
+      expect(newWorker.addEventListener).toHaveBeenCalledWith('error', expect.any(Function));
+      expect(newWorker.addEventListener).toHaveBeenCalledWith('messageerror', expect.any(Function));
+    });
   });
 
   it('should batch and throttle updates to 250ms when running in production environment', () => {
