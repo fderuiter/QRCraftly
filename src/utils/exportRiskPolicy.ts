@@ -25,4 +25,9 @@ export function getExportRiskPolicy({ status, health }: ExportRiskPolicyInput): 
     return 'safe';
   }
 
-  if (status === 'idle' || status === 'checking' || !health
+  if (status === 'idle' || status === 'checking' || !health || health.score < 80) {
+    return 'caution';
+  }
+
+  return 'safe';
+}

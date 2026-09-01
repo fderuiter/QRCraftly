@@ -20,7 +20,7 @@ import React, { useState, useRef, useCallback } from 'react';
 import { Button } from "./ui/Button";
 import { Card } from "./ui/Card";
 import { Alert } from "./ui/Alert";
-import { QRConfig, TemplateStyle, SocialFormat } from '@/types';
+import { QRConfig } from '@/types';
 import QRCanvas from '@/components/QRCanvas';
 import { Download, Share2, QrCode, ChevronDown, Moon, Sun, Info, Copy, Check, AlertTriangle, Menu } from 'lucide-react';
 import { Modal } from './ui/Modal';

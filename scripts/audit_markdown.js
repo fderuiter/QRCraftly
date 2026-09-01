@@ -1,9 +1,13 @@
 import fs from 'fs';
 import path from 'path';
-import { marked } from 'marked';
+import { createRequire } from 'module';
 import { fileURLToPath } from 'url';
-import ts from 'typescript';
 import { parseFrontmatter, isQuarantined } from './compile_docs_manifest.js';
+
+const require = createRequire(import.meta.url);
+// marked and typescript ship as CJS; use createRequire so pnpm hoisting works.
+const { marked } = require('marked');
+const ts = require('typescript');
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
