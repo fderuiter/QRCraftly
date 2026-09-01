@@ -18,6 +18,7 @@
 
 import { SYSTEM_LIMITS } from '../constants';
 import { SafeUrlPipeline } from './url';
+import { serializeJsonLd } from './edgeSecurity';
 
 const jsonLdCache = new Map<string, string>();
 
@@ -29,16 +30,14 @@ const jsonLdCache = new Map<string, string>();
  * @returns A safe, escaped JSON string representation of the data, or '{}' if undefined/invalid.
  */
 export const safeJsonLdStringify = (data: any): string => {
-  const str = JSON.stringify(data);
+  const str = typeof data === 'string' ? data : JSON.stringify(data);
   if (!str) return '{}';
 
   if (jsonLdCache.has(str)) {
     return jsonLdCache.get(str)!;
   }
 
-  const escaped = str.replace(/</g, '\\u003c')
-                    .replace(/>/g, '\\u003e')
-                    .replace(/&/g, '\\u0026');
+  const escaped = serializeJsonLd(data);
 
   jsonLdCache.set(str, escaped);
   return escaped;
