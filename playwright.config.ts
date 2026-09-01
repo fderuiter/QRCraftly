@@ -17,6 +17,11 @@
 */
 
 import { defineConfig, devices } from '@playwright/test';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export default defineConfig({
   testDir: './e2e',
@@ -60,6 +65,7 @@ export default defineConfig({
   /* Run your local dev server before starting the tests */
   webServer: process.env.PLAYWRIGHT_TEST_BASE_URL ? undefined : {
     command: 'pnpm run build && pnpm run preview',
+    cwd: __dirname,
     url: 'http://127.0.0.1:3000',
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
