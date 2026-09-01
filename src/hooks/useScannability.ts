@@ -195,6 +195,7 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
           return;
         }
 
+        if (!('success' in e.data)) return;
         const { success, physicalReady, error, localContrastViolations, minLocalContrast } = e.data;
 
         if (startTimeRef.current !== null) {
