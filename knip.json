@@ -12,6 +12,8 @@
   "paths": {
     "@/*": ["./src/*"]
   },
+  "ignoreBinaries": ["shellcheck"],
+  "ignoreDependencies": ["wrangler"],
   "rules": {
     "files": "error",
     "dependencies": "error",
