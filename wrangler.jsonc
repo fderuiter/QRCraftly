@@ -6,7 +6,7 @@
     {
       "binding": "DB",
       "database_name": "qrcraftly-db",
-      "database_id": "qrcraftly-d1-id"
-    }
-  ]
+      "database_id": "qrcraftly-d1-id",
+    },
+  ],
 }
