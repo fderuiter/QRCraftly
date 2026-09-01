@@ -45,15 +45,17 @@ jobs:
             echo "Pull request origin: External fork ($HEAD_REPO)"
             echo "Execution Mode: Local Mock Preview"
           fi
-          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+          TOKEN_LEN=$(printf '%s' "$CLOUDFLARE_API_TOKEN" | wc -c | xargs)
+          ACCOUNT_LEN=$(printf '%s' "$CLOUDFLARE_ACCOUNT_ID" | wc -c | xargs)
+          if [ "$TOKEN_LEN" -eq 0 ]; then
             echo "CLOUDFLARE_API_TOKEN is empty"
           else
-            echo "CLOUDFLARE_API_TOKEN is present (length: ${#CLOUDFLARE_API_TOKEN})"
+            echo "CLOUDFLARE_API_TOKEN is present (length: $TOKEN_LEN)"
           fi
-          if [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+          if [ "$ACCOUNT_LEN" -eq 0 ]; then
             echo "CLOUDFLARE_ACCOUNT_ID is empty"
           else
-            echo "CLOUDFLARE_ACCOUNT_ID is present (length: ${#CLOUDFLARE_ACCOUNT_ID})"
+            echo "CLOUDFLARE_ACCOUNT_ID is present (length: $ACCOUNT_LEN)"
           fi
 
       - name: Verify Package Manager and Toolchain Pins
