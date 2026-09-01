@@ -35,6 +35,12 @@ describe('secret-scanner', () => {
       expect(isFalsePositive('smtp_password', 'smtp_password')).toBe(true);
     });
 
+    it('should identify code evaluation terms as false positives', () => {
+      expect(isFalsePositive('evaluateExpression', 'key')).toBe(true);
+      expect(isFalsePositive('resolveExpression', 'cf_token')).toBe(true);
+      expect(isFalsePositive('evaluateNode', 'api_key')).toBe(true);
+    });
+
     it('should identify extremely short strings as false positives', () => {
       expect(isFalsePositive('123')).toBe(true);
       expect(isFalsePositive('   ')).toBe(true);
