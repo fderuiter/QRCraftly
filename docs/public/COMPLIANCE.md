@@ -39,6 +39,7 @@ To maintain security, performance, and legal accountability, we collect basic ac
 
 - **HTTPS:** All connections are secured via HTTPS.
 - **State Isolation:** The application does not store user input in URL query parameters (e.g., `?data=...`), ensuring that sensitive data does not leak into browser history, proxy logs, or server access logs.
+- **Pre-Build Storage Privacy AST Auditor:** Automated static analysis (`scripts/storage_privacy_ast_auditor.js`) inspects all browser persistent storage calls prior to compilation. Detected storage operations are validated against an explicit allowlist of authorized preference and consent identifiers (`qr-telemetry-opt-in`, `qrcraftly:dynamic-redirects`, `qrcraftly:dynamic-consent-accepted`, `__test__`), preventing unapproved storage patterns or transient QR payload data from reaching persistent storage.
 
 ## Certification Note
 
