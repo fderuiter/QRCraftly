@@ -145,8 +145,6 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
 
         // Sequence ID check: discard late results if configId does not match current sequence ID
         if (configId !== String(sequenceRef.current)) {
-          isWorkerBusyRef.current = false;
-          startTimeRef.current = null;
           return;
         }
 

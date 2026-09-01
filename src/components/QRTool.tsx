@@ -80,8 +80,6 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
       checkScannability(undefined, info.virtualImageBitmap, info.moduleCount);
     } else if (info.virtualImageData) {
       checkScannability(info.virtualImageData, undefined, info.moduleCount);
-    } else {
-      checkScannability(undefined, undefined, info.moduleCount);
     }
   }, [emitSignal, checkScannability]);
   const { showTelemetryPrompt, handleOptIn } = useTelemetry(scannabilityStatus);
