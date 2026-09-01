@@ -1,6 +1,6 @@
 export const FIXTURES = {
   vCard: {
-    johnDoe: `BEGIN:VCARD\nVERSION:3.0\nN:Doe;John;;;\nFN:John Doe\nORG:Acme Corp\nTITLE:Engineer\nTEL:555-0199\nEMAIL:john@example.com\nURL:https://example.com/\nADR:;;123 Main St;Metropolis;;;USA\nEND:VCARD`,
+    johnDoe: `BEGIN:VCARD\r\nVERSION:3.0\r\nN:Doe;John;;;\r\nFN:John Doe\r\nORG:Acme Corp\r\nTITLE:Engineer\r\nTEL:555-0199\r\nEMAIL:john@example.com\r\nURL:https://example.com/\r\nADR:;;123 Main St;Metropolis;;;USA\r\nEND:VCARD`,
     baseData: {
       firstName: 'John',
       lastName: 'Doe',
@@ -14,7 +14,7 @@ export const FIXTURES = {
       zip: '12345',
       country: 'USA'
     },
-    baseString: `BEGIN:VCARD\nVERSION:3.0\nN:Doe;John;;;\nFN:John Doe\nORG:Acme Corp\nTITLE:Engineer\nTEL:1234567890\nEMAIL:john@example.com\nURL:https://example.com\nADR:;;123 Main St;Metropolis;;12345;USA\nEND:VCARD`
+    baseString: `BEGIN:VCARD\r\nVERSION:3.0\r\nN:Doe;John;;;\r\nFN:John Doe\r\nORG:Acme Corp\r\nTITLE:Engineer\r\nTEL:1234567890\r\nEMAIL:john@example.com\r\nURL:https://example.com\r\nADR:;;123 Main St;Metropolis;;12345;USA\r\nEND:VCARD`
   },
   coordinates: {
     newYork: { latitude: '40.7128', longitude: '-74.0060' },

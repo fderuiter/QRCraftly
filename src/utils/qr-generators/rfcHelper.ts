@@ -45,32 +45,53 @@ export const unescapeVCardEvent = (str: string | undefined): string => {
     .replace(/\\\\/g, '\\');
 };
 
+const encoder = new TextEncoder();
+
 /**
- * Folds long lines to a safe maximum length (typically 75 characters) per RFC 5545 / RFC 6350.
+ * Folds long lines to a safe maximum length (typically 75 octets) per RFC 5545 / RFC 6350.
  * Long lines are folded by inserting a carriage return-line feed (CRLF) sequence immediately followed by a single space.
  * @param str - The unfolded string payload.
- * @param maxLength - The maximum character length before folding (default 75).
- * @returns The folded string payload.
+ * @param maxLength - The maximum octet length before folding (default 75).
+ * @returns The folded string payload with standard CRLF line endings.
  */
 export const foldString = (str: string, maxLength: number = 75): string => {
   if (!str) return '';
-  const isCrlf = str.includes('\r\n');
-  const lineEnding = isCrlf ? '\r\n' : '\n';
-  const lines = str.split(/\r\n|\n|\r/);
-  const foldedLines = lines.map(line => {
-    if (line.length <= maxLength) return line;
-    let result = line.substring(0, maxLength);
-    let remaining = line.substring(maxLength);
-    while (remaining.length > 0) {
-      // Each folded line MUST begin with a single space or tab
-      const chunkSize = maxLength - 1;
-      const chunk = remaining.substring(0, chunkSize);
-      result += lineEnding + ' ' + chunk;
-      remaining = remaining.substring(chunkSize);
+  const rawLines = str.split(/\r\n|\n|\r/);
+  const foldedLines: string[] = [];
+
+  for (const line of rawLines) {
+    if (encoder.encode(line).byteLength <= maxLength) {
+      foldedLines.push(line);
+      continue;
     }
-    return result;
-  });
-  return foldedLines.join(lineEnding);
+
+    let currentLine = '';
+    let currentBytes = 0;
+    let isFirstChunk = true;
+
+    for (const symbol of line) {
+      const symbolBytes = encoder.encode(symbol).byteLength;
+      const maxAllowed = isFirstChunk ? maxLength : Math.max(1, maxLength - 1);
+
+      if (currentBytes + symbolBytes > maxAllowed) {
+        if (currentLine.length > 0) {
+          foldedLines.push(currentLine);
+        }
+        currentLine = ' ' + symbol;
+        currentBytes = 1 + symbolBytes;
+        isFirstChunk = false;
+      } else {
+        currentLine += symbol;
+        currentBytes += symbolBytes;
+      }
+    }
+
+    if (currentLine.length > 0) {
+      foldedLines.push(currentLine);
+    }
+  }
+
+  return foldedLines.join('\r\n');
 };
 
 /**

@@ -432,7 +432,7 @@ describe('InputPanel Component', () => {
       'DESCRIPTION:Line 1\\nLine 2',
       'END:VEVENT',
       'END:VCALENDAR'
-    ].join('\n');
+    ].join('\r\n');
 
     expect(mockOnChange).toHaveBeenLastCalledWith({ value: expected });
   });
