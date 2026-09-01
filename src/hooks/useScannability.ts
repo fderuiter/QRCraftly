@@ -55,8 +55,17 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
   const lastLatencyRef = useRef<number>(0);
   const startTimeRef = useRef<number | null>(null);
   const isWorkerBusyRef = useRef<boolean>(false);
+  const watchdogRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const consecutiveTimeoutsRef = useRef(0);
 
   const [localMetrics, setLocalMetrics] = useState<{ violations?: number; minContrast?: number } | undefined>();
+
+  const clearWatchdog = useCallback(() => {
+    if (watchdogRef.current !== null) {
+      clearTimeout(watchdogRef.current);
+      watchdogRef.current = null;
+    }
+  }, []);
 
   const health = useMemo<HealthScore>(() => {
     return ValidationEngine.calculateScannability(config, localMetrics);
@@ -91,9 +100,10 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
       workerRef.current = null;
     }
     setActiveWorker(null);
+    clearWatchdog();
     startTimeRef.current = null;
     isWorkerBusyRef.current = false;
-  }, [store, engine]);
+  }, [store, engine, clearWatchdog]);
 
   const getOrInitWorker = useCallback(() => {
     if (workerUnsupportedRef.current) return null;
@@ -141,18 +151,30 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
           assertWorkerResponse(e.data);
         }
 
-        const { success, physicalReady, error, configId, localContrastViolations, minLocalContrast } = e.data;
+        const { configId } = e.data;
 
         // Sequence ID check: discard late results if configId does not match current sequence ID
         if (configId !== String(sequenceRef.current)) {
           return;
         }
 
+        clearWatchdog();
+
+        if ('dropped' in e.data && e.data.dropped) {
+          startTimeRef.current = null;
+          isWorkerBusyRef.current = false;
+          setStatus('idle');
+          return;
+        }
+
+        const { success, physicalReady, error, localContrastViolations, minLocalContrast } = e.data;
+
         if (startTimeRef.current !== null) {
           lastLatencyRef.current = performance.now() - startTimeRef.current;
           startTimeRef.current = null;
         }
         isWorkerBusyRef.current = false;
+        consecutiveTimeoutsRef.current = 0;
 
         if (localContrastViolations !== undefined) {
           setLocalMetrics({ violations: localContrastViolations, minContrast: minLocalContrast });
@@ -180,6 +202,7 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
         });
         startTimeRef.current = null;
         isWorkerBusyRef.current = false;
+        clearWatchdog();
       }
     };
 
@@ -188,7 +211,7 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
     return () => {
       worker.removeEventListener('message', handleMessage);
     };
-  }, [config, store, engine, getOrInitWorker, activeWorker]);
+  }, [config, store, engine, getOrInitWorker, activeWorker, clearWatchdog]);
 
   // Handle worker cleanup on full unmount
   useEffect(() => {
@@ -197,10 +220,11 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
         workerRef.current.terminate();
         workerRef.current = null;
       }
+      clearWatchdog();
       isWorkerBusyRef.current = false;
       startTimeRef.current = null;
     };
-  }, []);
+  }, [clearWatchdog]);
 
   // Expose a function to trigger check
   const checkScannability = useCallback((overrideImageData?: ImageData, overrideImageBitmap?: ImageBitmap, overrideModuleCount?: number) => {
@@ -353,6 +377,57 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
     isWorkerBusyRef.current = true;
     startTimeRef.current = performance.now();
 
+    const startWatchdog = () => {
+      clearWatchdog();
+      watchdogRef.current = setTimeout(async () => {
+        if (currentSequence !== String(sequenceRef.current) || !isWorkerBusyRef.current) return;
+
+        watchdogRef.current = null;
+        isWorkerBusyRef.current = false;
+        startTimeRef.current = null;
+        consecutiveTimeoutsRef.current += 1;
+        setWorkerRecoveryActive(true);
+
+        if (consecutiveTimeoutsRef.current > 1 && workerRef.current) {
+          workerRef.current.terminate();
+          workerRef.current = null;
+          setActiveWorker(null);
+        }
+
+        try {
+          const { performScannabilityCheck } = await import('../utils/scannabilityChecker');
+          let imageData = overrideImageData;
+          if (!imageData) {
+            const canvas = canvasRef.current;
+            const context = canvas?.getContext('2d');
+            if (canvas && context && canvas.width > 0 && canvas.height > 0) {
+              imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+            }
+          }
+          if (!imageData || currentSequence !== String(sequenceRef.current)) return;
+
+          const result = performScannabilityCheck(
+            imageData,
+            imageData.width,
+            imageData.height,
+            !!navigator.webdriver,
+            moduleCountToUse,
+          );
+          if (currentSequence !== String(sequenceRef.current)) return;
+          if (result.localContrastViolations !== undefined) {
+            setLocalMetrics({
+              violations: result.localContrastViolations,
+              minContrast: result.minLocalContrast,
+            });
+          }
+          setStatus(result.success ? (result.physicalReady ? 'physical-pass' : 'digital-pass') : 'fail');
+        } catch (error) {
+          console.error('Scannability worker watchdog fallback failed:', error);
+          if (currentSequence === String(sequenceRef.current)) setStatus('fail');
+        }
+      }, 1500);
+    };
+
     // If virtual renderer provided deterministic ImageBitmap, use it directly
     if (overrideImageBitmap) {
       if (currentSequence !== String(sequenceRef.current)) {
@@ -373,6 +448,7 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
       try {
         assertWorkerRequest(payload);
         worker.postMessage(payload, [payload.imageBitmap]);
+        startWatchdog();
       } catch (err) {
         console.error("Outgoing worker request validation failed:", err);
         setStatus('fail');
@@ -397,6 +473,7 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
         assertWorkerRequest(payload);
         // Do not transfer the raw TypedArray directly to prevent memory neutering and re-allocation loops
         worker.postMessage(payload, []);
+        startWatchdog();
       } catch (err) {
         console.error("Outgoing worker request validation failed:", err);
         setStatus('fail');
@@ -443,6 +520,7 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
           try {
             assertWorkerRequest(payload);
             worker.postMessage(payload, [payload.imageBitmap]);
+            startWatchdog();
           } catch (err) {
             console.error("Outgoing worker request validation failed:", err);
             setStatus('fail');
@@ -489,6 +567,7 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
         assertWorkerRequest(payload);
         // Do not transfer the raw TypedArray directly to prevent memory neutering and re-allocation loops
         worker.postMessage(payload, []);
+        startWatchdog();
       } catch (err) {
         console.error("Failed to read canvas data or validation failed", err);
         setStatus('fail');
@@ -502,7 +581,7 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
     } else {
       setTimeout(runCaptureAndSend, 100);
     }
-  }, [canvasRef, getOrInitWorker, config, store, engine]);
+  }, [canvasRef, getOrInitWorker, config, store, engine, clearWatchdog]);
 
   return { status, checkScannability, health, workerRecoveryActive };
 }

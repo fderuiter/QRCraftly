@@ -538,6 +538,60 @@ describe('useScannability - changed behavior: uses useQRStore instead of useQRCo
   });
 
   describe('Self-Healing Worker Recovery on crash and subsequent retry', () => {
+    it('falls back on the main thread when a worker is unresponsive for 1500ms', async () => {
+      vi.useFakeTimers();
+      const scannabilityCheckerModule = await import('../utils/scannabilityChecker');
+      const fallbackSpy = vi.spyOn(scannabilityCheckerModule, 'performScannabilityCheck').mockReturnValue({
+        success: true,
+        physicalReady: true,
+      });
+
+      const { result } = renderHook(
+        () => useScannability(makeCanvasRef(), defaultConfig),
+        { wrapper }
+      );
+      const imageData = {
+        data: new Uint8ClampedArray(400),
+        width: 10,
+        height: 10,
+      } as ImageData;
+
+      act(() => {
+        result.current.checkScannability(imageData);
+      });
+      expect(result.current.status).toBe('checking');
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(1500);
+      });
+
+      expect(fallbackSpy).toHaveBeenCalledWith(imageData, 10, 10, !!navigator.webdriver, expect.any(Number));
+      expect(result.current.status).toBe('physical-pass');
+      expect(result.current.workerRecoveryActive).toBe(true);
+      vi.useRealTimers();
+    });
+
+    it('resolves the active checking state when the worker acknowledges a dropped request', () => {
+      const { result } = renderHook(
+        () => useScannability(makeCanvasRef(), defaultConfig),
+        { wrapper }
+      );
+
+      act(() => {
+        result.current.checkScannability({
+          data: new Uint8ClampedArray(4),
+          width: 1,
+          height: 1,
+        } as ImageData);
+      });
+
+      act(() => {
+        getActiveWorker()!.dispatchMessage({ configId: '1', dropped: true });
+      });
+
+      expect(result.current.status).toBe('idle');
+    });
+
     it('handles worker runtime crash, transitions to fail, shows recovery warning, and then heals on next check', async () => {
       const { result } = renderHook(
         () => ({

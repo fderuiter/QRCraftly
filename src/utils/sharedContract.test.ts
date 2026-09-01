@@ -175,6 +175,13 @@ describe('sharedContract runtime assertion logic', () => {
       expect(() => assertWorkerResponse(valid)).not.toThrow();
     });
 
+    it('should validate dropped worker acknowledgments', () => {
+      const dropped = { configId: 'stale-config', dropped: true };
+
+      expect(isWorkerResponse(dropped)).toBe(true);
+      expect(() => assertWorkerResponse(dropped)).not.toThrow();
+    });
+
     it('should validate with optional fields as undefined or null', () => {
       const validUndefined = {
         success: true,

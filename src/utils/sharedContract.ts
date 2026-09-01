@@ -91,9 +91,12 @@ export function assertWorkerRequest(data: unknown): asserts data is WorkerReques
  * Type-guard function for validating the Worker Response structure.
  */
 export function isWorkerResponse(data: unknown): data is {
-  success?: boolean;
-  physicalReady?: boolean;
-  dropped?: boolean;
+  dropped: true;
+  configId: string;
+} | {
+  success: boolean;
+  physicalReady: boolean;
+  dropped?: false;
   error?: string | null;
   configId?: string | null;
   localContrastViolations?: number;
