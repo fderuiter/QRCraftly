@@ -328,6 +328,31 @@ describe('scannabilityWorker', () => {
     );
   });
 
+  it('requests image data when worker canvas extraction is unavailable', async () => {
+    const postMessageSpy = vi.fn();
+    globalThis.postMessage = postMessageSpy;
+    const originalOffscreenCanvas = globalThis.OffscreenCanvas;
+    delete (globalThis as { OffscreenCanvas?: typeof OffscreenCanvas }).OffscreenCanvas;
+
+    const closeSpy = vi.fn();
+    await workerHandler({
+      data: {
+        imageBitmap: { width: 10, height: 10, close: closeSpy },
+        width: 10,
+        height: 10,
+        configId: 'needs-image-data',
+        isTest: true,
+      },
+    } as MessageEvent);
+
+    expect(closeSpy).toHaveBeenCalledTimes(1);
+    expect(postMessageSpy).toHaveBeenCalledWith({
+      configId: 'needs-image-data',
+      retryWithImageData: true,
+    });
+    globalThis.OffscreenCanvas = originalOffscreenCanvas;
+  });
+
   it('recycles pre-allocated double-buffer ArrayBuffer back to main thread in postMessage transfer list', async () => {
     const postMessageSpy = vi.fn();
     globalThis.postMessage = postMessageSpy;

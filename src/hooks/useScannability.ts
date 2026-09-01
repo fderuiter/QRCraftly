@@ -160,6 +160,34 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
 
         clearWatchdog();
 
+        if ('retryWithImageData' in e.data && e.data.retryWithImageData) {
+          const canvas = canvasRef.current;
+          const context = canvas?.getContext('2d');
+          if (!canvas || !context || canvas.width <= 0 || canvas.height <= 0) {
+            isWorkerBusyRef.current = false;
+            startTimeRef.current = null;
+            setStatus('fail');
+            return;
+          }
+
+          const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+          worker.postMessage({
+            imageData,
+            width: imageData.width,
+            height: imageData.height,
+            isTest: !!navigator.webdriver,
+            configId,
+          });
+          watchdogRef.current = setTimeout(() => {
+            if (configId === String(sequenceRef.current)) {
+              isWorkerBusyRef.current = false;
+              startTimeRef.current = null;
+              setStatus('fail');
+            }
+          }, 1500);
+          return;
+        }
+
         if ('dropped' in e.data && e.data.dropped) {
           startTimeRef.current = null;
           isWorkerBusyRef.current = false;
@@ -211,7 +239,7 @@ export function useScannability(canvasRef: React.RefObject<HTMLCanvasElement | n
     return () => {
       worker.removeEventListener('message', handleMessage);
     };
-  }, [config, store, engine, getOrInitWorker, activeWorker, clearWatchdog]);
+  }, [config, store, engine, getOrInitWorker, activeWorker, clearWatchdog, canvasRef]);
 
   // Handle worker cleanup on full unmount
   useEffect(() => {

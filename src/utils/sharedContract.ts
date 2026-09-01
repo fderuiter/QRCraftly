@@ -94,6 +94,9 @@ export function isWorkerResponse(data: unknown): data is {
   dropped: true;
   configId: string;
 } | {
+  retryWithImageData: true;
+  configId: string;
+} | {
   success: boolean;
   physicalReady: boolean;
   dropped?: false;
@@ -107,6 +110,9 @@ export function isWorkerResponse(data: unknown): data is {
   if (typeof data !== 'object' || data === null) return false;
   const d = data as any;
   if (d.dropped === true) {
+    return typeof d.configId === 'string';
+  }
+  if (d.retryWithImageData === true) {
     return typeof d.configId === 'string';
   }
   if (typeof d.success !== 'boolean') return false;
@@ -133,6 +139,12 @@ export function assertWorkerResponse(data: unknown): asserts data is WorkerRespo
   if (d.dropped === true) {
     if (typeof d.configId !== 'string') {
       throw new Error('Dropped worker response configId must be a string');
+    }
+    return;
+  }
+  if (d.retryWithImageData === true) {
+    if (typeof d.configId !== 'string') {
+      throw new Error('Image-data retry response configId must be a string');
     }
     return;
   }

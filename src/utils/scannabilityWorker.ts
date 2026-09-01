@@ -22,6 +22,12 @@ const acknowledgeDroppedRequest = (configId: string) => {
   self.postMessage(response);
 };
 
+const requestImageDataRetry = (configId: string) => {
+  const response = { configId, retryWithImageData: true as const };
+  assertWorkerResponse(response);
+  self.postMessage(response);
+};
+
 const releaseImageHandle = (handle: any) => {
   if (handle && typeof handle.close === 'function') {
     try {
@@ -91,6 +97,12 @@ self.onmessage = async (e: MessageEvent<unknown>) => {
         } else {
           throw new Error('OffscreenCanvas is not supported in this environment');
         }
+      } catch {
+        if (configId !== undefined) {
+          requestImageDataRetry(configId);
+          return;
+        }
+        throw new Error('Worker image extraction failed');
       } finally {
         releaseImageHandle(imageBitmap);
         imageBitmap = undefined;

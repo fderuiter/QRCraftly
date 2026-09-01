@@ -592,6 +592,33 @@ describe('useScannability - changed behavior: uses useQRStore instead of useQRCo
       expect(result.current.status).toBe('idle');
     });
 
+    it('retries with main-thread image data when worker canvas extraction is unavailable', () => {
+      const canvasRef = makeCanvasRef();
+      const { result } = renderHook(
+        () => useScannability(canvasRef, defaultConfig),
+        { wrapper }
+      );
+      const worker = getActiveWorker()!;
+      worker.postMessage = vi.fn();
+
+      act(() => {
+        result.current.checkScannability(undefined, {
+          width: 10,
+          height: 10,
+          close: vi.fn(),
+        } as unknown as ImageBitmap);
+      });
+
+      act(() => {
+        worker.dispatchMessage({ configId: '1', retryWithImageData: true });
+      });
+
+      expect(worker.postMessage).toHaveBeenLastCalledWith(expect.objectContaining({
+        configId: '1',
+        imageData: expect.objectContaining({ width: 100, height: 100 }),
+      }));
+    });
+
     it('handles worker runtime crash, transitions to fail, shows recovery warning, and then heals on next check', async () => {
       const { result } = renderHook(
         () => ({
