@@ -1,15 +1,23 @@
-# 5. Centralized UI Catalog and AST-Enforced Component Reuse
+---
+status: accepted
+---
+
+# Centralized UI Catalog and AST-Enforced Component Reuse
 
 ## Context
 
-In an expanding codebase worked on by multiple engineers and autonomous AI agents, ad-hoc range sliders, custom color pickers, and redundant button elements naturally proliferate. This causes design drift, inconsistent focus states, WCAG non-text contrast failures (SC 1.4.11), and unnecessary bundle weight.
+Independent UI implementations of slider inputs, color pickers, and button elements lead to visual fragmentation, inconsistent focus rings, WCAG accessibility violations (SC 1.4.11), and unnecessary bundle growth.
 
 ## Decision
 
-We establish `docs/public/UI_CATALOG.md` as the mandatory central registry for all reusable UI components (`src/components/ui/`), form inputs (`src/components/inputs/`), and style controls (`src/components/style-controls/`). Developers and agents must reuse existing primitives (`RangeInput`, `ColorInput`, `Button`, `TextField`) and shared color utilities (`normalizeHex`, `getContrastRatio`) rather than creating isolated implementations. Compliance is enforced via an AST validation script (`scripts/validate_ui_catalog.js`) and git lineage check in pre-commit and CI.
+We establish `docs/public/UI_CATALOG.md` as the authoritative registry for all reusable UI elements (`src/components/ui/`), form inputs (`src/components/inputs/`), and style controls (`src/components/style-controls/`). Developers and agents must reuse established components (`RangeInput`, `ColorInput`, `Button`) and shared color utilities (`normalizeHex`, `getContrastRatio`).
+
+## Rationale
+
+Centralizing visual primitives ensures accessible, keyboard-navigable UI components across the application. AST-based lineage checks in pre-commit and CI prevent component proliferation and code duplication.
 
 ## Consequences
 
-- Strict visual consistency, unified keyboard navigation, and WCAG accessibility conformance across all tools.
-- Prevents component sprawl and duplicate utility algorithms.
-- Any modification to UI components requires a concurrent update to `docs/public/UI_CATALOG.md`, which is enforced by automated pre-commit and CI gates.
+- Consistent design language and verified WCAG contrast compliance across all generator panels.
+- Prevents redundant controls from entering the codebase.
+- Modifying UI components requires a concurrent update to `docs/public/UI_CATALOG.md`.

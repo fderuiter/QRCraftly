@@ -2,6 +2,7 @@ import { QRConfig, QRStyle, QRModules } from '../../types';
 import { drawRoundRect, drawRoughRect, drawPoly, drawStar, drawCircularModule, drawCircuitModule, drawStandardModule } from '../canvasHelpers';
 import { getIsCoveredByLogo, LogoMetrics, iterateMatrix } from './utils';
 import { getLuminance } from '../colorUtils';
+import { renderFluidModules, isFinderEyeZone } from './fluid';
 
 export interface ModuleRenderOptions {
   /** Optional pre-sampled cell background relative luminance array (length = moduleCount * moduleCount). */
@@ -135,6 +136,16 @@ const getModuleDrawer = (
     }
 };
 
+let sharedFluidGrid: Uint8Array | null = null;
+function getSharedFluidGrid(total: number): Uint8Array {
+    if (!sharedFluidGrid || sharedFluidGrid.length < total) {
+        sharedFluidGrid = new Uint8Array(total);
+    } else {
+        sharedFluidGrid.fill(0, 0, total);
+    }
+    return sharedFluidGrid;
+}
+
 export const renderModules = (
   ctx: CanvasRenderingContext2D,
   modules: QRModules,
@@ -231,6 +242,39 @@ export const renderModules = (
     }
 
     // 4. Two-Pass Batched Vector Path Execution
+    if (config.style === QRStyle.FLUID) {
+        if (group0Count > 0) {
+            const grid0 = getSharedFluidGrid(total);
+            for (let i = 0; i < group0Count; i++) {
+                const r = group0Rows[i];
+                const c = group0Cols[i];
+                if (!isFinderEyeZone(r, c, moduleCount)) {
+                    grid0[r * moduleCount + c] = 1;
+                }
+            }
+            ctx.fillStyle = fgColorDark;
+            ctx.beginPath();
+            renderFluidModules(ctx, grid0, drawX, drawY, cellSize, moduleCount);
+            ctx.fill();
+        }
+
+        if (group1Count > 0) {
+            const grid1 = getSharedFluidGrid(total);
+            for (let i = 0; i < group1Count; i++) {
+                const r = group1Rows[i];
+                const c = group1Cols[i];
+                if (!isFinderEyeZone(r, c, moduleCount)) {
+                    grid1[r * moduleCount + c] = 1;
+                }
+            }
+            ctx.fillStyle = fgColorLight;
+            ctx.beginPath();
+            renderFluidModules(ctx, grid1, drawX, drawY, cellSize, moduleCount);
+            ctx.fill();
+        }
+        return;
+    }
+
     // Pass 0: High-luminance cell background group -> Dark module fill
     if (group0Count > 0) {
         ctx.fillStyle = fgColorDark;

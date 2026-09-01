@@ -46,6 +46,9 @@ import { resolveDomainForPath } from '@/utils/metadataEngine';
 import { SidebarContent } from '@/components/SidebarContent';
 import { usePageContext } from 'vike-react/usePageContext';
 
+/**
+ *
+ */
 export { bufferToWav };
 
 /**

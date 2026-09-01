@@ -97,8 +97,9 @@ describe('renderModules', () => {
     const modules = createMockModules(21, [[10, 10]]);
     renderModules(ctx, modules, { ...baseConfig, style: QRStyle.FLUID }, 0, 0, 10, 21, mockLogoMetrics, false);
 
-    expect(ctx.arc).toHaveBeenCalled();
+    expect(ctx.quadraticCurveTo).toHaveBeenCalled();
     expect(ctx.moveTo).toHaveBeenCalled();
+    expect(ctx.fill).toHaveBeenCalled();
   });
 
   it('renders hive style modules', () => {

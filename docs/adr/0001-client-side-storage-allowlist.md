@@ -1,16 +1,23 @@
-# 1. Client-Side Only QR Generation and Storage Allowlist
+---
+status: accepted
+---
+
+# Client-Side Generation and Storage Allowlist
 
 ## Context
 
-QR code payloads frequently contain sensitive personal data, such as Wi-Fi network passwords, vCard contact information, healthcare/medical URLs, and cryptocurrency credentials. Transmitting these payloads across external networks or persisting them indefinitely in browser storage presents severe privacy risks and regulatory compliance liabilities (including HIPAA and GDPR).
+QR code payloads frequently contain sensitive personal data, such as Wi-Fi passwords, contact cards, healthcare identifiers, and authentication tokens. Storing user payloads on remote servers or unencrypted in browser storage creates severe HIPAA/GDPR compliance liabilities.
 
 ## Decision
 
-We require all core QR code generation, canvas matrix rendering, and scannability evaluation to execute 100% client-side in volatile browser memory. Persistent browser storage (`localStorage`, `sessionStorage`, `IndexedDB`) is prohibited for user payloads and restricted via an AST build auditor (`scripts/storage_privacy_ast_auditor.js`) to an explicit allowlist of non-sensitive preference keys (`qr-telemetry-opt-in`, `qrcraftly:dynamic-redirects`, `qrcraftly:dynamic-consent-accepted`, `__test__`).
+We execute all QR code generation, canvas rendering, and scannability evaluation strictly client-side in volatile browser memory. Persistent browser storage (`localStorage`, `sessionStorage`, `IndexedDB`) is restricted to an explicit allowlist of non-sensitive preference keys verified by an AST build auditor (`scripts/storage_privacy_ast_auditor.js`).
+
+## Rationale
+
+Client-side execution eliminates data transit across external networks and ensures zero server-side data retention liability. An automated AST auditor prevents accidental persistence of user payloads during development.
 
 ## Consequences
 
-- User data never traverses the network during generation, ensuring strict compliance with zero-trust privacy guarantees.
-- Zero server storage infrastructure or backend database liability for standard QR codes.
-- Batch generation or server-side headless generation cannot be supported without client-side rendering capabilities.
-- Any attempt to introduce unapproved persistent keys fails automated build checks closed.
+- Zero backend database liability or exposure to transit intercept attacks for static QR codes.
+- Batch or headless generation cannot be performed server-side without a client rendering context.
+- Unapproved persistent storage keys fail the automated build pipeline closed.

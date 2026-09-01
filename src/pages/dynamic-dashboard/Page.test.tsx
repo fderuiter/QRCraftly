@@ -14,17 +14,24 @@ describe('DynamicDashboardPage', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    delete (window as any).location;
-    (window as any).location = {
-      ...originalLocation,
-      hash: '',
-      replace: vi.fn(),
-      origin: 'http://localhost:3000',
-    };
+    Object.defineProperty(window, 'location', {
+      writable: true,
+      configurable: true,
+      value: {
+        ...originalLocation,
+        hash: '',
+        replace: vi.fn(),
+        origin: 'http://localhost:3000',
+      },
+    });
   });
 
   afterEach(() => {
-    (window as any).location = originalLocation;
+    Object.defineProperty(window, 'location', {
+      writable: true,
+      configurable: true,
+      value: originalLocation,
+    });
   });
 
   it('gracefully redirects direct visits to the home page on mount', () => {

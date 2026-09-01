@@ -1,67 +1,51 @@
 # QRCraftly
 
-A client-side, privacy-first QR code generation suite with zero-knowledge dynamic edge redirection and off-thread scannability analysis.
+A client-side QR code studio and zero-knowledge dynamic edge routing platform designed to generate customized, scannable QR codes without transmitting user payloads across the network.
 
 ## Language
 
-### QR Geometry & Rendering
+### QR Geometry
 
 **Matrix**:
-The two-dimensional grid of binary square modules representing encoded data, error correction codewords, and timing/alignment patterns.
+The two-dimensional grid of binary square modules representing encoded data, error correction codewords, and timing patterns.
 _Avoid_: Grid, table, bitmap
 
 **Module**:
-An individual binary dark or light data cell situated at coordinate (x, y) within the QR matrix.
+An individual binary data cell situated at coordinate (x, y) within the QR matrix.
 _Avoid_: Pixel, dot, block, unit
 
-**Pattern Module**:
-A user-selectable styling preset that determines the visual geometric render algorithm (such as standard squares, rounded rectangles, fluid ink droplets, or circles) used to draw dark modules.
-_Avoid_: Style preset, theme, dot shape, skin
-
 **Finder Pattern**:
-One of the three 7x7 concentric square detection eyes positioned at the top-left, top-right, and bottom-left corners of the QR matrix used by barcode scanners to locate and orient the code.
+The three concentric square detection eyes positioned at the corners of the QR matrix used by barcode scanners for orientation.
 _Avoid_: Corner eye, alignment marker, target, anchor box
 
 **Quiet Zone**:
-The mandatory blank, unprinted margin of at least four modules wide surrounding the exterior perimeter of the QR matrix required for optical detection.
+The blank, unprinted margin of at least four modules wide surrounding the exterior perimeter of the QR matrix required for optical detection.
 _Avoid_: Margin, padding, border, white space
 
 **Fluid Ink**:
-A dynamic visual render style where adjacent dark modules merge with smooth bezier curves and fluid droplet bridges while preserving module readability.
+A visual render aesthetic where contiguous dark modules connect via continuous curves while preserving module optical contrast.
 _Avoid_: Liquid ink, blob style, melted QR, connected dots
-
-**Scannability Health**:
-An empirical optical scan score and safety classification (High, Medium, Low, Critical) derived from background jsQR decoding passes and module contrast audits.
-_Avoid_: Readability rate, success score, scan rating, reliability index
 
 ### Privacy & Compliance
 
 **Zero-Knowledge Redirection**:
-A dynamic URL routing mechanism where target destination payloads are encrypted client-side, with the decryption key isolated exclusively in the URL anchor hash fragment (`#key=...`) and never sent to edge servers.
+A dynamic routing architecture where target destinations are encrypted client-side and the decryption key resides only in the client anchor hash fragment.
 _Avoid_: Private redirect, secure forwarding, server-side masking
 
-**Anchor Hash Fragment**:
-The URI component following `#` containing client-held cryptographic parameters that browsers never transmit across HTTP request headers.
-_Avoid_: Hash tag, URL parameter, query fragment, bookmark
-
 **Storage Allowlist**:
-The strict AST-audited set of persistent browser storage keys (`localStorage`, `sessionStorage`, `IndexedDB`) permitted to exist in the application.
+The explicit set of persistent browser storage keys permitted in client memory.
 _Avoid_: Storage whitelist, cookie list, saved state keys
 
 **Volatile Memory Guarantee**:
-The architectural invariant guaranteeing that user payloads, contact details, and generated matrix data reside purely in transient browser memory and are discarded immediately upon navigation or reset.
+The privacy invariant ensuring user payloads reside exclusively in ephemeral browser memory and clear upon session end.
 _Avoid_: Stateless mode, incognito processing, memory wipe
 
-### Off-Thread Compute & Performance
+### Off-Thread Performance
+
+**Scannability Health**:
+An empirical classification of code readability derived from automated contrast checks and barcode detector evaluation.
+_Avoid_: Readability rate, success score, scan rating, reliability index
 
 **Scannability Worker**:
-A dedicated background Web Worker executing off-thread relative luminance contrast audits and dual-pass orientation decoding without blocking main-thread UI frames.
+A dedicated background process performing real-time contrast auditing and optical decoding off the main user interface thread.
 _Avoid_: Background scanner, validation thread, scannability thread
-
-**DoubleBufferPool**:
-A pre-allocated pool of zero-copy transferable `ArrayBuffer` instances swapped between the main UI thread and background workers to eliminate garbage collection pauses.
-_Avoid_: Memory cache, buffer array, frame queue
-
-**SvgContext**:
-A client-side vector graphics rendering engine implementing Canvas 2D context drawing commands directly into resolution-independent SVG XML markup.
-_Avoid_: Canvas-to-SVG converter, vector exporter, SVG renderer

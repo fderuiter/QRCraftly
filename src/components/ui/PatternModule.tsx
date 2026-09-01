@@ -18,7 +18,13 @@ const patternRenderers: Record<QRStyle, React.ReactNode> = {
   ),
   [QRStyle.SWISS]: <div className="rounded-full bg-current" />,
   [QRStyle.MODERN]: <div className="rounded-sm bg-current" />,
-  [QRStyle.FLUID]: <div className="rounded-full bg-current" />,
+  [QRStyle.FLUID]: (
+    <div className="flex items-center justify-center">
+      <svg viewBox="0 0 24 24" fill="currentColor" className="size-full">
+        <path d="M12 3a4 4 0 0 0-4 4c0 1.2.5 2.3 1.3 3.1-.8.8-1.3 1.9-1.3 3.1a5 5 0 1 0 8 0c0-1.2-.5-2.3-1.3-3.1.8-.8 1.3-1.9 1.3-3.1a4 4 0 0 0-4-4z" />
+      </svg>
+    </div>
+  ),
   [QRStyle.CIRCUIT]: (
     <div className="relative flex size-full items-center justify-center bg-transparent">
       <div className="size-1.5 rounded-full bg-current" />

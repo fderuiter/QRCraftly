@@ -359,7 +359,7 @@ function DashboardContent() {
  */
 export default function DynamicDashboardPage() {
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (!ENABLE_DYNAMIC_DASHBOARD && typeof window !== 'undefined') {
       window.location.replace('/');
     }
   }, []);

@@ -62,5 +62,6 @@ describe('Performance Benchmark: renderModules', () => {
   test('Benchmark MODERN execution time', () => runBenchmark(QRStyle.MODERN, 'MODERN'), 10000);
   test('Benchmark CIRCUIT execution time', () => runBenchmark(QRStyle.CIRCUIT, 'CIRCUIT'), 10000);
   test('Benchmark SWISS execution time', () => runBenchmark(QRStyle.SWISS, 'SWISS'), 10000);
+  test('Benchmark FLUID execution time', () => runBenchmark(QRStyle.FLUID, 'FLUID'), 10000);
   test('Benchmark STANDARD execution time', () => runBenchmark(QRStyle.STANDARD, 'STANDARD'), 10000);
 });
