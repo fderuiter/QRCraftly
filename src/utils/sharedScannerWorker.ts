@@ -5,11 +5,10 @@ export function getSharedScannerWorker(): Worker {
     throw new Error('Web Worker can only be instantiated in browser environment');
   }
   if (!sharedWorker) {
-    const WorkerConstructor = typeof Worker !== 'undefined' ? Worker : ((globalThis as any).Worker || (window as any).Worker);
-    if (!WorkerConstructor) {
+    if (typeof Worker === 'undefined' && typeof (globalThis as any).Worker === 'undefined') {
       throw new Error('Worker constructor is unavailable in this environment');
     }
-    sharedWorker = new WorkerConstructor(new URL('./scannerWorker.ts', import.meta.url), { type: 'module' }) as Worker;
+    sharedWorker = new Worker(new URL('./scannerWorker.ts', import.meta.url), { type: 'module' });
   }
   return sharedWorker;
 }
