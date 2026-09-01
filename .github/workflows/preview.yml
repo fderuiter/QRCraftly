@@ -89,13 +89,13 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ github.event.pull_request.head.repo.full_name == github.repository && secrets.CLOUDFLARE_ACCOUNT_ID || '' }}
         run: |
           if [ "$HEAD_REPO" = "$BASE_REPO" ]; then
-            echo "Deploying preview to Cloudflare Pages (Live Cloud Deployment)..."
+            echo "Deploying preview to Cloudflare Workers (Live Cloud Deployment)..."
           else
             echo "External fork detected. Running in Local Mock Preview mode without cloud credentials..."
           fi
-          pnpm exec wrangler pages deploy dist/client --project-name=qrcraftly --branch=pr-"$PR_NUMBER" --commit-dirty > deploy_output.txt 2>&1 || { cat deploy_output.txt && exit 1; }
+          pnpm exec wrangler deploy > deploy_output.txt 2>&1 || { cat deploy_output.txt && exit 1; }
           cat deploy_output.txt
-          DEPLOYMENT_URL=$(grep -oE "https://[a-zA-Z0-9.-]+\.pages\.dev" deploy_output.txt | tail -n 1)
+          DEPLOYMENT_URL=$(grep -oE "https://[a-zA-Z0-9.-]+\.(pages\.dev|workers\.dev)" deploy_output.txt | tail -n 1)
           if [ -z "$DEPLOYMENT_URL" ]; then
             DEPLOYMENT_URL=$(grep -o "Take a look at: .*" deploy_output.txt | sed "s/Take a look at: //" | xargs)
           fi
