@@ -66,9 +66,11 @@ Maze overlay configurations in `types.ts` (e.g., `isMazeEnabled`, `isMazeBridges
 
 To prevent performance bottlenecks during client-side hydration and SPA navigation, the application caches serialized and escaped JSON-LD schema strings. Since JSON-LD requires synchronous regex replacement of unsafe characters (such as `<` and `>`), caching the computed string primitives protects the main thread from CPU-heavy operations while keeping cache keys lightweight and clean of memory leaks.
 
-## URL Sanitization & DOM-XSS Protection
+## Modular Edge Security Helper & Route Sanitization
 
-To prevent DOM-based Cross-Site Scripting (DOM-XSS) via dynamic anchors and `href` bindings of user-controlled or edge proxy URLs, we enforce strict URL sanitization:
+To secure Cloudflare Pages and Workers edge worker routes (`functions/[[path]].ts`, redirect endpoints) against dynamic HTML script injection and `</script>` tag breakout, the application employs a centralized edge security helper (`src/utils/edgeSecurity.ts`):
 
-- **Anchor Link Sanitization (`sanitizeHref`)**: Dynamic values destined for anchor `href` attributes are passed through `sanitizeHref` to ensure they only use safe, permitted schemes. This forces all URLs to start with safe, whitelisted prefixes: `http://`, `https://`, or relative paths starting with `/`. Any unsafe schemes (such as `javascript:`, `data:`, or `vbscript:`) are neutralized and fallback to `#`.
-- **HTML Meta-Character Escaping (`escapeHtml`)**: In addition to scheme enforcement, values rendered as text nodes or embedded inside anchor tag `href` links are escaped. This safely converts characters like `&`, `<`, `>`, `"`, and `'` into their respective HTML entity equivalents (`&amp;`, `&lt;`, `&gt;`, `&quot;`, `&#39;`), entirely neutralizing DOM reinterpretation risks and ensuring robust DOM-XSS protection.
+- **Head Metadata Escaping (`escapeMetadata`)**: All dynamic strings interpolated into server-rendered fallback HTML head elements (`<title>`, `<meta>`, `<link rel="canonical">`) are passed through `escapeMetadata`, converting `&`, `<`, `>`, `"`, and `'` into standard HTML entities (`&amp;`, `&lt;`, `&gt;`, `&quot;`, `&#39;`).
+- **Structured Data Unicode Serialization (`serializeJsonLd`)**: Structured JSON-LD script blocks are serialized using Unicode escape sequences (`<` -> `\u003c`, `>` -> `\u003e`, `&` -> `\u0026`). This neutralizes closing `</script>` tags without breaking strict JSON syntax parsing (`JSON.parse`).
+- **Canonical URL & Origin Validation (`validateAndSanitizeUrl`, `validateAndSanitizeOrigin`, `sanitizeCanonicalUrl`)**: Dynamic request URLs and origins are validated against `http:` and `https:` schemes, stripping control characters and converting unsafe or malformed URLs to a safe canonical fallback.
+- **Edge Isolate Compatibility**: All edge sanitization functions rely exclusively on lightweight JavaScript string and URL parsing operations with zero DOM API dependencies (e.g., no `document` or `DOMParser`), ensuring full compatibility with Cloudflare edge isolate runtimes.

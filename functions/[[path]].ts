@@ -101,27 +101,9 @@ export const onRequest = async (context: {
     if (!httpResponse || httpResponse.statusCode >= 400 || (pageContext as any).is404) {
       // Fallback HTML generation for non-built / test environments where Vike prod entry is unavailable
       const { getMetadataForPath } = await import('../src/data/contentRegistry');
+      const { renderEdgeFallbackHtml } = await import('../src/utils/edgeSecurity');
       const meta = getMetadataForPath(url.pathname);
-      const fullUrl = url.origin + url.pathname;
-      const fallbackHtml = `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>${meta.title}</title>
-  <meta name="description" content="${meta.description}"/>
-  <link rel="canonical" href="${fullUrl}"/>
-  <meta property="og:title" content="${meta.title}"/>
-  <meta property="og:description" content="${meta.description}"/>
-  <meta property="og:url" content="${fullUrl}"/>
-  <script type="application/ld+json">
-    {"@context":"https://schema.org","@type":"Organization","name":"QRCraftly","url":"${url.origin}"}
-  </script>
-</head>
-<body>
-  <div id="root"></div>
-</body>
-</html>`;
+      const fallbackHtml = renderEdgeFallbackHtml({ pathname: url.pathname, url, meta });
 
       const responseHeaders = new Headers();
       responseHeaders.set('Content-Type', 'text/html; charset=utf-8');
@@ -220,27 +202,9 @@ export const onRequest = async (context: {
     console.error('[Universal Edge SSR Engine Error]', err);
     try {
       const { getMetadataForPath } = await import('../src/data/contentRegistry');
+      const { renderEdgeFallbackHtml } = await import('../src/utils/edgeSecurity');
       const meta = getMetadataForPath(url.pathname);
-      const fullUrl = url.origin + url.pathname;
-      const fallbackHtml = `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>${meta.title}</title>
-  <meta name="description" content="${meta.description}"/>
-  <link rel="canonical" href="${fullUrl}"/>
-  <meta property="og:title" content="${meta.title}"/>
-  <meta property="og:description" content="${meta.description}"/>
-  <meta property="og:url" content="${fullUrl}"/>
-  <script type="application/ld+json">
-    {"@context":"https://schema.org","@type":"Organization","name":"QRCraftly","url":"${url.origin}"}
-  </script>
-</head>
-<body>
-  <div id="root"></div>
-</body>
-</html>`;
+      const fallbackHtml = renderEdgeFallbackHtml({ pathname: url.pathname, url, meta });
 
       const responseHeaders = new Headers();
       responseHeaders.set('Content-Type', 'text/html; charset=utf-8');

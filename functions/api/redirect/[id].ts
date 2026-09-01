@@ -1,6 +1,7 @@
 import { validateUrl } from "./register";
 import { isEncrypted } from "../../../src/utils/encryption";
 import { getDB, ensureTableExists, Env } from "./_db";
+import { escapeMetadata } from "../../../src/utils/edgeSecurity";
 
 const globalMockKV = new Map<string, string>();
 
@@ -110,7 +111,10 @@ export const onRequestGet = async (context: {
     return redirectUrl;
   };
 
-  const renderSecureErrorPage = () => {
+  const renderSecureErrorPage = (reason?: string) => {
+    const safeReason = escapeMetadata(
+      reason || "This redirect has been blocked because the destination URL contains an unsafe or dangerous protocol scheme."
+    );
     return new Response(
       `<!DOCTYPE html>
 <html>
@@ -126,7 +130,7 @@ export const onRequestGet = async (context: {
 <body>
   <div class="card">
     <h1>Security Warning</h1>
-    <p>This redirect has been blocked because the destination URL contains an unsafe or dangerous protocol scheme.</p>
+    <p>${safeReason}</p>
   </div>
 </body>
 </html>`,
