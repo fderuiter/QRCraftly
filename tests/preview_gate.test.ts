@@ -25,9 +25,12 @@ describe('Same-Repo Gate & Local Mock Preview Workflow Integration', () => {
   });
 
   it('enforces exact toolchain version requirements (pnpm and Node.js)', () => {
-    const content = fs.readFileSync(workflowPath, 'utf8');
-    expect(content).toContain('EXPECTED_PNPM="11.1.3"');
-    expect(content).toContain('EXPECTED_NODE="v22.14.0"');
+    const workflowContent = fs.readFileSync(workflowPath, 'utf8');
+    const scriptPath = path.resolve(process.cwd(), 'scripts/ci/verify_toolchain.sh');
+    const scriptContent = fs.existsSync(scriptPath) ? fs.readFileSync(scriptPath, 'utf8') : '';
+    const combinedContent = workflowContent + '\n' + scriptContent;
+    expect(combinedContent).toContain('EXPECTED_PNPM="11.1.3"');
+    expect(combinedContent).toContain('EXPECTED_NODE="v22.14.0"');
   });
 
   it('configures git checkout with fetch-depth: 0 for lineage validation', () => {
