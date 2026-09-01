@@ -72,3 +72,7 @@ To prevent DOM-based Cross-Site Scripting (DOM-XSS) via dynamic anchors and `hre
 
 - **Anchor Link Sanitization (`sanitizeHref`)**: Dynamic values destined for anchor `href` attributes are passed through `sanitizeHref` to ensure they only use safe, permitted schemes. This forces all URLs to start with safe, whitelisted prefixes: `http://`, `https://`, or relative paths starting with `/`. Any unsafe schemes (such as `javascript:`, `data:`, or `vbscript:`) are neutralized and fallback to `#`.
 - **HTML Meta-Character Escaping (`escapeHtml`)**: In addition to scheme enforcement, values rendered as text nodes or embedded inside anchor tag `href` links are escaped. This safely converts characters like `&`, `<`, `>`, `"`, and `'` into their respective HTML entity equivalents (`&amp;`, `&lt;`, `&gt;`, `&quot;`, `&#39;`), entirely neutralizing DOM reinterpretation risks and ensuring robust DOM-XSS protection.
+
+## Bot Protection & Edge Anti-Abuse (Cloudflare Turnstile)
+
+Dynamic redirect link generation (`/r/[id]`) incorporates Cloudflare Turnstile bot verification to defend against automated abuse, denial-of-wallet attacks, and unauthorized database writes. Client-acquired verification tokens are validated prior to committing new dynamic routes to Cloudflare D1.

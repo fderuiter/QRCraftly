@@ -11,7 +11,7 @@
 - **Multiple Data Types**: Generate QR codes for URLs, plain text, WiFi networks (WPA/WEP/EAP/Open), Email, vCard contacts, Phone numbers, SMS, Cryptocurrency payments, Calendar Events, GPS Location Coordinates, Video Meetings (Zoom, Google Meet), and Social Profiles (Bluesky, GitHub, Instagram, LinkedIn, Mastodon, X, YouTube, Threads).
 - **Visual Customization**:
   - **Patterns**: Choose from Standard Industrial, Modern Soft, Swiss Dot, Fluid Ink, Cyber Circuit, The Hive, Grunge, and Starburst styles.
-  - **Colors**: Customize foreground, background, and corner eye colors. Includes accessibility-checked preset themes.
+  - **Colors**: Customize foreground, background, and finder pattern colors. Includes accessibility-checked preset themes.
   - **Logos**: Upload and embed custom logos with configurable padding, sizes, and border styles (Square, Circle, None). Maximum logo size is 30% to maintain scannability.
   - **Upload Limits**: Supported custom logo formats are image/jpeg, image/png, image/webp, image/svg+xml. Maximum file size is 2MB.
 - **Privacy First & Zero-Knowledge**: Client-side architecture. All sensitive data processing happens locally in your browser. Dynamic links feature zero-knowledge client encryption via Web Crypto AES-GCM with decryption keys held exclusively in URL anchor hash fragments (`#key=...`).
@@ -182,7 +182,7 @@ pnpm install --prod
 
 - `CONTEXT.md`: Root domain glossary defining canonical project terminology.
 - `docs/`: Architectural specifications and system documentation.
-  - `adr/`: Architectural Decision Records (`0001` through `0005`).
+  - `adr/`: Architectural Decision Records.
   - `public/`: Public guides, UI component catalog, edge architecture, scaling, and compliance specifications.
   - `SECURITY.md`: Security policy, Content Security Policy, and vulnerability reporting.
 - `src/`: Source code.
