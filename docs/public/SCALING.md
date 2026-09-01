@@ -41,6 +41,7 @@ The application leverages Cloudflare's distributed edge infrastructure. System l
 - **Cloudflare Workers Execution Quotas:** Serverless Workers enforce a 10ms CPU time limit per request on the Free Tier (and 30s wall-clock CPU time on Paid Tiers). Because heavy cryptographic and matrix operations are offloaded to client browser Web Workers, edge function CPU time per redirect remains under 2ms.
 - **D1 Relational Storage Behaviors:** Dynamic redirect mappings (`id`, `redirect_url`, `ios_url`, `android_url`, `scans`, `created_at`) are stored in Cloudflare D1 SQLite database tables. Database read queries are cached at the edge via Cloudflare KV (`redirect:<id>`), minimizing D1 read row count overhead.
 - **Scan Aggregation & Telemetry Pipeline:** Scan analytics updates are executed asynchronously using non-blocking edge invocation handlers (`context.waitUntil()`). This ensures that database write operations (`UPDATE redirects SET scans = scans + 1 WHERE id = ?`) do not block client redirect latency or cause request queue bottlenecks under high concurrency.
+- **Turnstile Bot Mitigation & Write Quota Defense:** Dynamic link creation endpoints incorporate Cloudflare Turnstile bot verification. Verifying tokens at edge ingress protects the 100,000 daily D1 write quota against automated brute-force attempts and synthetic traffic exhaustion.
 
 ### 4. Client-Side Performance Optimizations
 

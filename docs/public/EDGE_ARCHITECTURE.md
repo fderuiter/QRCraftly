@@ -79,6 +79,10 @@ When a user scans a dynamic QR code pointing to `/r/[id]`:
    - The edge worker executes an atomic SQL increment (`UPDATE redirects SET scans = scans + 1 WHERE id = ?`) and persists event logs to KV.
    - Because telemetry processing runs in the background, client redirect latency is completely decoupled from database write overhead.
 
+### Bot Verification & Abuse Mitigation (Cloudflare Turnstile)
+
+Dynamic redirection record creation requires client-side Cloudflare Turnstile bot verification. Prior to committing a new redirect mapping to Cloudflare D1, the edge creation handler validates the Turnstile response token against Cloudflare's verification API. This blocks automated scrapers, denial-of-wallet attempts, and unauthorized edge write exhaustion while preserving seamless user experience for humans.
+
 ---
 
 ## Caching Tiers & Cache Invalidation Rules

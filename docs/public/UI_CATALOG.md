@@ -69,14 +69,18 @@ Unified appearance control modules that manage and present customization options
 
 ---
 
-## 4. Color & Contrast Utilities (`src/utils/colorUtils.ts` & `src/utils/a11y.ts`)
+## 4. Shared Utilities & Renderers (`src/utils/colorUtils.ts`, `src/utils/a11y.ts`, & `src/utils/qr-renderers/`)
 
-These utility functions handle hex conversion, relative luminance, contrast checks, and general formatting. **Do not write custom math or hex formatting logic under any circumstances.**
+These utility functions handle hex conversion, relative luminance, contrast checks, and specialized QR module canvas drawing routines. **Do not write custom math, hex formatting, or bespoke path-drawing logic under any circumstances.**
 
-- `normalizeHex(val: string): string | null`
+- `normalizeHex(val: string): string | null` (`src/utils/colorUtils.ts`)
   - **Description:** Normalizes custom hex inputs (supports shorthand `#abc`, converts to `#aabbcc`, formats casing, and appends a `#` prefix if absent).
-- `getContrastRatio(fg: string, bg: string): number`
+- `getContrastRatio(fg: string, bg: string): number` (`src/utils/colorUtils.ts`)
   - **Description:** Computes the contrast ratio between foreground and background sRGB colors based on WCAG 2.0 relative luminance formulas.
+- `renderModules` (`src/utils/qr-renderers/modules.ts`)
+  - **Description:** Central vector module drawing orchestrator executing batched two-pass drawing across standard, geometric, and artistic styles.
+- `renderFluidModules` (`src/utils/qr-renderers/fluid.ts`)
+  - **Description:** High-performance fluid vector renderer evaluating 4-neighbor matrix module connectivity to draw continuous bezier curve bridges for the Fluid Ink style without impacting corner finder patterns.
 
 ---
 

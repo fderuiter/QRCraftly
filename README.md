@@ -14,10 +14,8 @@
   - **Colors**: Customize foreground, background, and finder pattern colors. Includes accessibility-checked preset themes.
   - **Logos**: Upload and embed custom logos with configurable padding, sizes, and border styles (Square, Circle, None). Maximum logo size is 30% to maintain scannability.
   - **Upload Limits**: Supported custom logo formats are image/jpeg, image/png, image/webp, image/svg+xml. Maximum file size is 2MB.
-- **Privacy First & Zero-Knowledge**: Client-side architecture. All sensitive data processing happens locally in your browser. Dynamic links feature zero-knowledge client encryption via Web Crypto AES-GCM with decryption keys held exclusively in URL anchor hash fragments (`#key=...`).
-- **Interactive Labs & Modes**:
-  - **Playable Maze**: Generates an interactive, scannable maze overlay directly on the QR matrix.
-  - **QR Arcade & Durability Lab (`/arcade`)**: Stress-test error correction resilience and scannability under simulated physical damage in real time.
+- **Privacy First**: Client-side architecture. All sensitive data processing happens locally in your browser with volatile in-memory guarantees; no user payloads are sent to external servers.
+- **Dynamic Redirection (Architecture)**: Cloudflare edge redirection with zero-knowledge AES-GCM client encryption where decryption keys reside exclusively in URL anchor hash fragments (`#key=...`) (undergoing active stabilization).
 - **Advanced Architecture**:
   - **Scannability Web Workers**: Real-time QR code scannability, module-aligned relative luminance audits, and orientation decoding run off-thread with transferable `ArrayBuffer` double buffering (`DoubleBufferPool`), keeping the UI fluid at 60 FPS.
   - **Client-Side SVG Export**: Features a custom `SvgContext` that mimics the Canvas 2D API to generate high-quality, resolution-independent vector graphics directly in the browser.
