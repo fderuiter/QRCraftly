@@ -12,13 +12,10 @@ else
   echo "External fork detected. Running in Local Mock Preview mode without cloud credentials..."
 fi
 
-if ! pnpm exec wrangler pages deploy dist/client --project-name=qrcraftly --branch="pr-${PR_NUMBER}" --commit-dirty > deploy_output.txt 2>&1; then
-  echo "Wrangler Pages deploy failed. Falling back to Wrangler Worker deploy..."
-  pnpm exec wrangler deploy > deploy_output.txt 2>&1 || { cat deploy_output.txt && exit 1; }
-fi
+pnpm exec wrangler pages deploy dist/client --project-name=qrcraftly --branch="pr-${PR_NUMBER}" --commit-dirty > deploy_output.txt 2>&1 || { cat deploy_output.txt && exit 1; }
 cat deploy_output.txt
 
-DEPLOYMENT_URL=$( (grep -oE "https://[a-zA-Z0-9.-]+\.(pages\.dev|workers\.dev)" deploy_output.txt || true) | tail -n 1)
+DEPLOYMENT_URL=$( (grep -oE "https://[a-zA-Z0-9.-]+\.pages\.dev" deploy_output.txt || true) | tail -n 1)
 if [ -z "$DEPLOYMENT_URL" ]; then
   DEPLOYMENT_URL=$( (grep -o "Take a look at: .*" deploy_output.txt || true) | sed "s/Take a look at: //" | xargs || true)
 fi
