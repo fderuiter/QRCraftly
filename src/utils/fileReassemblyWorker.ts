@@ -174,6 +174,15 @@ self.onmessage = async (e: MessageEvent<FileReassemblyIncomingMessage>) => {
           targetFileSize = newLen;
         }
         allocatedBuffer.set(decodedBytes, offset);
+
+        const currentEnd = offset + decodedBytes.length;
+        if (handshakeMetadata?.fileSize && currentEnd > handshakeMetadata.fileSize) {
+          handshakeMetadata.fileSize = currentEnd;
+        }
+
+        if (!handshakeMetadata?.fileSize && totalChunksCount && index === totalChunksCount - 1) {
+          targetFileSize = currentEnd;
+        }
       }
 
       receivedIndices.add(index);
@@ -191,12 +200,15 @@ self.onmessage = async (e: MessageEvent<FileReassemblyIncomingMessage>) => {
       });
 
       if (totalChunksCount && receivedIndices.size === totalChunksCount && allocatedBuffer) {
-        let finalBuffer = allocatedBuffer;
-        if (targetFileSize && allocatedBuffer.length > targetFileSize) {
-          finalBuffer = allocatedBuffer.subarray(0, targetFileSize);
+        let exactSize = allocatedBuffer.length;
+        if (typeof handshakeMetadata?.fileSize === 'number' && handshakeMetadata.fileSize > 0) {
+          exactSize = handshakeMetadata.fileSize;
+        } else if (typeof targetFileSize === 'number' && targetFileSize > 0) {
+          exactSize = targetFileSize;
         }
 
-        const buffer = finalBuffer.buffer;
+        const finalUint8 = allocatedBuffer.slice(0, exactSize);
+        const buffer = finalUint8.buffer;
         const metadata = handshakeMetadata;
 
         resetWorkerState();
