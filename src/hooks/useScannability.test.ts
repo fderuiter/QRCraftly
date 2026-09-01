@@ -565,7 +565,7 @@ describe('useScannability - changed behavior: uses useQRStore instead of useQRCo
         await vi.advanceTimersByTimeAsync(1500);
       });
 
-      expect(fallbackSpy).toHaveBeenCalledWith(imageData, 10, 10, !!navigator.webdriver, expect.any(Number));
+      expect(fallbackSpy).toHaveBeenCalledWith(imageData, 10, 10, !!navigator.webdriver, undefined);
       expect(result.current.status).toBe('physical-pass');
       expect(result.current.workerRecoveryActive).toBe(true);
       vi.useRealTimers();
