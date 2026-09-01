@@ -28,10 +28,20 @@ const cp = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
+const realWranglerPath = path.join(__dirname, 'wrangler-real.js');
+
+if (process.env.WRANGLER_WRAPPER_RUNNING) {
+  if (fs.existsSync(realWranglerPath)) {
+    require(realWranglerPath);
+  } else {
+    console.error('Real wrangler not found during recursive execution:', realWranglerPath);
+    process.exit(1);
+  }
+  return;
+}
+
 console.log('=== [Wrangler Wrapper] Intercepted Wrangler! ===');
 console.log('Arguments:', process.argv);
-
-const realWranglerPath = path.join(__dirname, 'wrangler-real.js');
 
 const hasCloudflareSecrets = !!(process.env.CLOUDFLARE_API_TOKEN && process.env.CLOUDFLARE_API_TOKEN.trim() && process.env.CLOUDFLARE_ACCOUNT_ID && process.env.CLOUDFLARE_ACCOUNT_ID.trim());
 
@@ -61,11 +71,35 @@ if (!hasCloudflareSecrets) {
 } else {
   try {
     const result = cp.spawnSync(process.execPath, [realWranglerPath, ...process.argv.slice(2)], {
-      stdio: 'inherit'
+      stdio: 'inherit',
+      env: { ...process.env, WRANGLER_WRAPPER_RUNNING: '1' }
     });
     
     console.log(\`=== [Wrangler Wrapper] Wrangler finished with exit code \${result.status} ===\`);
-    exitStatus = result.status ?? 0;
+    if (result.status === 0) {
+      exitStatus = 0;
+    } else {
+      console.warn(\`[Wrangler Wrapper] Real wrangler failed with exit code \${result.status}.\`);
+      console.log('[Wrangler Wrapper] Falling back to starting local preview server on port 3000...');
+      
+      try {
+        const serverProcess = cp.spawn('pnpm', ['run', 'preview'], {
+          detached: true,
+          stdio: 'ignore'
+        });
+        serverProcess.unref();
+        
+        console.log('[Wrangler Wrapper] Waiting for local preview server to start...');
+        cp.execSync('sleep 3');
+        
+        console.log('Take a look at: http://localhost:3000');
+        console.log('=== [Wrangler Wrapper] Local preview fallback ready! ===');
+        exitStatus = 0;
+      } catch (err) {
+        console.error('[Wrangler Wrapper] Failed to start local preview server fallback:', err);
+        exitStatus = result.status ?? 1;
+      }
+    }
   } catch (err) {
     console.error('=== [Wrangler Wrapper] Failed to execute real wrangler:', err);
     exitStatus = 1;
