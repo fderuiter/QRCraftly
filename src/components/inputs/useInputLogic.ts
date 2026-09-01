@@ -74,6 +74,10 @@ export function useInputLogic(
     const prevType = prevTypeRef.current;
     prevTypeRef.current = config.type;
 
+    if (prevType === null) {
+      return;
+    }
+
     const currentLocalState = latestInputStates.current[config.type];
     const currentConstructed = entry.constructFn ? entry.constructFn(currentLocalState as never) : '';
 
