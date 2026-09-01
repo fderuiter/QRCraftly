@@ -2,12 +2,20 @@
  * Type-guard and assertion functions for the isolated QR scanner worker boundaries.
  */
 
+export interface CropBounds {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 export interface ScannerRequest {
   image: ImageBitmap;
   width: number;
   height: number;
   sequenceId: number;
   epochId?: number;
+  crop?: CropBounds;
 }
 
 export interface ScannerResponse {
@@ -25,11 +33,20 @@ export interface ScannerResponse {
 export function isValidScannerRequest(data: unknown): data is ScannerRequest {
   if (typeof data !== 'object' || data === null) return false;
   const d = data as any;
-  if (typeof ImageBitmap === 'undefined' || !(d.image instanceof ImageBitmap)) return false;
+  const isBitmap = (typeof ImageBitmap !== 'undefined' && d.image instanceof ImageBitmap) ||
+                   (d.image && typeof d.image === 'object' && (d.image.constructor?.name === 'ImageBitmap' || typeof d.image.close === 'function'));
+  if (!isBitmap) return false;
   if (typeof d.width !== 'number' || !Number.isFinite(d.width) || d.width <= 0) return false;
   if (typeof d.height !== 'number' || !Number.isFinite(d.height) || d.height <= 0) return false;
   if (typeof d.sequenceId !== 'number' || !Number.isFinite(d.sequenceId)) return false;
   if (d.epochId !== undefined && (typeof d.epochId !== 'number' || !Number.isFinite(d.epochId))) return false;
+  if (d.crop !== undefined && d.crop !== null) {
+    if (typeof d.crop !== 'object') return false;
+    if (typeof d.crop.x !== 'number' || !Number.isFinite(d.crop.x)) return false;
+    if (typeof d.crop.y !== 'number' || !Number.isFinite(d.crop.y)) return false;
+    if (typeof d.crop.width !== 'number' || !Number.isFinite(d.crop.width) || d.crop.width <= 0) return false;
+    if (typeof d.crop.height !== 'number' || !Number.isFinite(d.crop.height) || d.crop.height <= 0) return false;
+  }
   return true;
 }
 
@@ -41,7 +58,9 @@ export function assertScannerRequest(data: unknown): asserts data is ScannerRequ
     throw new Error('Scanner request must be a non-null object');
   }
   const d = data as any;
-  if (typeof ImageBitmap === 'undefined' || !(d.image instanceof ImageBitmap)) {
+  const isBitmap = (typeof ImageBitmap !== 'undefined' && d.image instanceof ImageBitmap) ||
+                   (d.image && typeof d.image === 'object' && (d.image.constructor?.name === 'ImageBitmap' || typeof d.image.close === 'function'));
+  if (!isBitmap) {
     throw new Error('Scanner request must contain a valid ImageBitmap');
   }
   if (typeof d.width !== 'number' || !Number.isFinite(d.width) || d.width <= 0) {
@@ -55,6 +74,23 @@ export function assertScannerRequest(data: unknown): asserts data is ScannerRequ
   }
   if (d.epochId !== undefined && (typeof d.epochId !== 'number' || !Number.isFinite(d.epochId))) {
     throw new Error('Scanner request epochId must be a valid number');
+  }
+  if (d.crop !== undefined && d.crop !== null) {
+    if (typeof d.crop !== 'object') {
+      throw new Error('Scanner request crop must be an object');
+    }
+    if (typeof d.crop.x !== 'number' || !Number.isFinite(d.crop.x)) {
+      throw new Error('Scanner request crop x must be a number');
+    }
+    if (typeof d.crop.y !== 'number' || !Number.isFinite(d.crop.y)) {
+      throw new Error('Scanner request crop y must be a number');
+    }
+    if (typeof d.crop.width !== 'number' || !Number.isFinite(d.crop.width) || d.crop.width <= 0) {
+      throw new Error('Scanner request crop width must be a positive number');
+    }
+    if (typeof d.crop.height !== 'number' || !Number.isFinite(d.crop.height) || d.crop.height <= 0) {
+      throw new Error('Scanner request crop height must be a positive number');
+    }
   }
 }
 
@@ -113,5 +149,33 @@ export function getDownscaledDimensions(width: number, height: number, maxLimit 
     };
   }
   return { width, height };
+}
+
+export interface AspectFitResult {
+  width: number;
+  height: number;
+  crop: CropBounds;
+}
+
+/**
+ * Computes uniform aspect-fit dimensions and source crop metadata before frame extraction.
+ * Reuses getDownscaledDimensions for uniform aspect calculation and source boundary preservation.
+ */
+export function computeAspectFit(
+  srcWidth: number,
+  srcHeight: number,
+  maxLimit = 1280
+): AspectFitResult {
+  const { width, height } = getDownscaledDimensions(srcWidth, srcHeight, maxLimit);
+  return {
+    width,
+    height,
+    crop: {
+      x: 0,
+      y: 0,
+      width: srcWidth,
+      height: srcHeight,
+    },
+  };
 }
 

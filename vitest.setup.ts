@@ -611,7 +611,9 @@ if (typeof globalThis.ImageBitmap === 'undefined') {
 }
 
 if (typeof globalThis.createImageBitmap === 'undefined') {
-  globalThis.createImageBitmap = vi.fn().mockImplementation((source, options) => {
+  globalThis.createImageBitmap = vi.fn().mockImplementation((...args: any[]) => {
+    const source = args[0];
+    const options = args.length >= 6 ? args[5] : args[1];
     let width = 100;
     let height = 100;
     if (options && typeof options.resizeWidth === 'number') {

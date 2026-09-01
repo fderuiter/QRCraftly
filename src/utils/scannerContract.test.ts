@@ -4,6 +4,8 @@ import {
   assertScannerRequest,
   isValidScannerResponse,
   assertScannerResponse,
+  getDownscaledDimensions,
+  computeAspectFit,
 } from './scannerContract';
 
 if (typeof (globalThis as any).ImageBitmap === 'undefined') {
@@ -91,6 +93,21 @@ describe('Scanner Contract Payload Validation', () => {
       expect(isValidScannerResponse(invalidStatus)).toBe(false);
 
       expect(() => assertScannerResponse(missingStatus)).toThrow();
+    });
+  });
+
+  describe('Aspect Ratio Utilities', () => {
+    it('getDownscaledDimensions scales dimensions within max limits', () => {
+      const scaled = getDownscaledDimensions(1920, 1080, 1280);
+      expect(scaled.width).toBe(1280);
+      expect(scaled.height).toBe(720);
+    });
+
+    it('computeAspectFit calculates crop and fit bounds', () => {
+      const fit = computeAspectFit(1920, 1080, 1280);
+      expect(fit.width).toBe(1280);
+      expect(fit.height).toBe(720);
+      expect(fit.crop).toEqual({ x: 0, y: 0, width: 1920, height: 1080 });
     });
   });
 });

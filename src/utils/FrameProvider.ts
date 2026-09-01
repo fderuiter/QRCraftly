@@ -1,5 +1,5 @@
 import { DoubleBufferPool, AdaptiveFrameScheduler } from './AdaptiveFrameScheduler';
-import { getDownscaledDimensions, isValidScannerResponse } from './scannerContract';
+import { computeAspectFit, isValidScannerResponse } from './scannerContract';
 import { getSharedScannerWorker, terminateSharedScannerWorker } from './sharedScannerWorker';
 
 export interface FrameMetrics {
@@ -223,18 +223,18 @@ export class CameraFrameProvider implements FrameProvider {
   
   private captureFrame() {
     const video = this.video;
-    let width = video.videoWidth || 640;
-    let height = video.videoHeight || 480;
-    if (width === 0 || height === 0) return;
+    const srcWidth = video.videoWidth || 640;
+    const srcHeight = video.videoHeight || 480;
+    if (srcWidth === 0 || srcHeight === 0) return;
     
-    const { width: dWidth, height: dHeight } = getDownscaledDimensions(width, height, 1280);
+    const { width: dWidth, height: dHeight, crop } = computeAspectFit(srcWidth, srcHeight, 1280);
     const seqId = this.scheduler.beginFrame();
     if (seqId === null) {
       this.frameDropCount++;
       return;
     }
     
-    createImageBitmap(video, {
+    createImageBitmap(video, crop.x, crop.y, crop.width, crop.height, {
       resizeWidth: dWidth,
       resizeHeight: dHeight,
       resizeQuality: 'low'
@@ -244,7 +244,8 @@ export class CameraFrameProvider implements FrameProvider {
           image,
           width: dWidth,
           height: dHeight,
-          sequenceId: seqId
+          sequenceId: seqId,
+          crop,
         },
         [image]
       );
@@ -353,7 +354,7 @@ export class FileFrameProvider implements FrameProvider {
     const img = await this.loadImage();
     if (this.signal?.aborted || !this.isScanning) return;
 
-    const { width: dWidth, height: dHeight } = getDownscaledDimensions(img.width, img.height, 1024);
+    const { width: dWidth, height: dHeight, crop } = computeAspectFit(img.width, img.height, 1024);
     
     const canvas = document.createElement('canvas');
     canvas.width = dWidth;
@@ -362,7 +363,7 @@ export class FileFrameProvider implements FrameProvider {
     if (!ctx) {
       throw new Error('Failed to create canvas context.');
     }
-    ctx.drawImage(img, 0, 0, dWidth, dHeight);
+    ctx.drawImage(img, crop.x, crop.y, crop.width, crop.height, 0, 0, dWidth, dHeight);
     const imageData = ctx.getImageData(0, 0, dWidth, dHeight);
     
     const worker = getSharedScannerWorker();
@@ -384,7 +385,7 @@ export class FileFrameProvider implements FrameProvider {
         }
       } else {
         // Bounded resolution main-thread decoding fallback
-        const { width: fWidth, height: fHeight } = getDownscaledDimensions(img.width, img.height, 2048);
+        const { width: fWidth, height: fHeight, crop: fCrop } = computeAspectFit(img.width, img.height, 2048);
         const canvasFull = document.createElement('canvas');
         canvasFull.width = fWidth;
         canvasFull.height = fHeight;
@@ -392,7 +393,7 @@ export class FileFrameProvider implements FrameProvider {
         if (!ctxFull) {
           throw new Error('Failed to create canvas context.');
         }
-        ctxFull.drawImage(img, 0, 0, fWidth, fHeight);
+        ctxFull.drawImage(img, fCrop.x, fCrop.y, fCrop.width, fCrop.height, 0, 0, fWidth, fHeight);
         const imageDataFull = ctxFull.getImageData(0, 0, fWidth, fHeight);
         let codeFull: { data: string } | null = null;
         try {
@@ -428,7 +429,7 @@ export class FileFrameProvider implements FrameProvider {
       }
     } else {
       // Fall back to bounded resolution image scan via worker
-      const { width: fWidth, height: fHeight } = getDownscaledDimensions(img.width, img.height, 2048);
+      const { width: fWidth, height: fHeight, crop: fCrop } = computeAspectFit(img.width, img.height, 2048);
       const canvasFull = document.createElement('canvas');
       canvasFull.width = fWidth;
       canvasFull.height = fHeight;
@@ -436,7 +437,7 @@ export class FileFrameProvider implements FrameProvider {
       if (!ctxFull) {
         throw new Error('Failed to create canvas context.');
       }
-      ctxFull.drawImage(img, 0, 0, fWidth, fHeight);
+      ctxFull.drawImage(img, fCrop.x, fCrop.y, fCrop.width, fCrop.height, 0, 0, fWidth, fHeight);
       const imageDataFull = ctxFull.getImageData(0, 0, fWidth, fHeight);
       const bufferFull = imageDataFull.data.buffer.slice(0);
       
@@ -526,9 +527,9 @@ export class FileFrameProvider implements FrameProvider {
           return;
         }
 
-        let width = video.videoWidth || 640;
-        let height = video.videoHeight || 480;
-        const { width: dWidth, height: dHeight } = getDownscaledDimensions(width, height, 1280);
+        const srcWidth = video.videoWidth || 640;
+        const srcHeight = video.videoHeight || 480;
+        const { width: dWidth, height: dHeight, crop } = computeAspectFit(srcWidth, srcHeight, 1280);
         canvas.width = dWidth;
         canvas.height = dHeight;
         
@@ -581,7 +582,7 @@ export class FileFrameProvider implements FrameProvider {
           }
           
           try {
-            ctx.drawImage(video, 0, 0, dWidth, dHeight);
+            ctx.drawImage(video, crop.x, crop.y, crop.width, crop.height, 0, 0, dWidth, dHeight);
             const imageData = ctx.getImageData(0, 0, dWidth, dHeight);
             
             const pooledBuffer = sharedBufferPool.acquire();

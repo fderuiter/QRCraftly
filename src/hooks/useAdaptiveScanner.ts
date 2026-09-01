@@ -1,6 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import jsQR from 'jsqr';
-import { isValidScannerResponse, getDownscaledDimensions } from '../utils/scannerContract';
+import {
+  isValidScannerResponse,
+  computeAspectFit,
+  type CropBounds,
+} from '../utils/scannerContract';
 import { getSharedScannerWorker, terminateSharedScannerWorker } from '../utils/sharedScannerWorker';
 import { AdaptiveFrameScheduler } from '../utils/AdaptiveFrameScheduler';
 
@@ -340,9 +344,9 @@ export function useAdaptiveScanner({
     }
 
     try {
-      let width = video.videoWidth || 640;
-      let height = video.videoHeight || 480;
-      if (width === 0 || height === 0) {
+      const srcWidth = video.videoWidth || 640;
+      const srcHeight = video.videoHeight || 480;
+      if (srcWidth === 0 || srcHeight === 0) {
         return false;
       }
 
@@ -356,7 +360,7 @@ export function useAdaptiveScanner({
           fallbackCanvasRef.current = document.createElement('canvas');
         }
         const canvas = fallbackCanvasRef.current;
-        const { width: dWidth, height: dHeight } = getDownscaledDimensions(width, height, 800);
+        const { width: dWidth, height: dHeight, crop: fallbackCrop } = computeAspectFit(srcWidth, srcHeight, 800);
 
         if (canvas) {
           if (canvas.width !== dWidth || canvas.height !== dHeight) {
@@ -366,7 +370,7 @@ export function useAdaptiveScanner({
           const ctx = canvas.getContext('2d');
           if (ctx) {
             try {
-              ctx.drawImage(video, 0, 0, dWidth, dHeight);
+              ctx.drawImage(video, fallbackCrop.x, fallbackCrop.y, fallbackCrop.width, fallbackCrop.height, 0, 0, dWidth, dHeight);
               const imageData = ctx.getImageData(0, 0, dWidth, dHeight);
 
               const performMainThreadDecode = () => {
@@ -405,17 +409,12 @@ export function useAdaptiveScanner({
         return true;
       }
 
-      const maxDim = Math.max(width, height);
-      if (maxDim > 1280) {
-        const scale = 1280 / maxDim;
-        width = Math.round(width * scale);
-        height = Math.round(height * scale);
-      }
+      const { width: fitWidth, height: fitHeight, crop }: { width: number; height: number; crop: CropBounds } = computeAspectFit(srcWidth, srcHeight, 1280);
 
       // Capture video frame as non-blocking image bitmap resource on the main thread
-      createImageBitmap(video, {
-        resizeWidth: width,
-        resizeHeight: height,
+      createImageBitmap(video, crop.x, crop.y, crop.width, crop.height, {
+        resizeWidth: fitWidth,
+        resizeHeight: fitHeight,
         resizeQuality: 'low',
       }).then((image) => {
         if (!workerRef.current) {
@@ -423,14 +422,15 @@ export function useAdaptiveScanner({
           scheduler.endFrame(seqId, 'fail', null, 'WORKER_UNAVAILABLE');
           return;
         }
-        // Transfer captured image resource directly to the background Web Worker
+        // Transfer captured image resource directly to the background Web Worker alongside crop metadata
         workerRef.current.postMessage(
           {
             image,
-            width,
-            height,
+            width: fitWidth,
+            height: fitHeight,
             sequenceId: seqId,
             epochId: epochRef.current,
+            crop,
           },
           [image]
         );

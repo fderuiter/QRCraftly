@@ -1,5 +1,5 @@
 import jsQR from 'jsqr';
-import { isValidScannerRequest, assertScannerResponse, getDownscaledDimensions } from './scannerContract';
+import { isValidScannerRequest, assertScannerResponse, computeAspectFit } from './scannerContract';
 
 const yieldToEventLoop = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 
@@ -228,13 +228,13 @@ self.onmessage = async (e: MessageEvent<any>) => {
               return;
             }
             // Apply proportional downscaling logic (cap at 1280px)
-            const { width: dWidth, height: dHeight } = getDownscaledDimensions(imageBitmap.width, imageBitmap.height, 1280);
+            const { width: dWidth, height: dHeight, crop } = computeAspectFit(imageBitmap.width, imageBitmap.height, 1280);
 
             // Extract pixels using OffscreenCanvas
             const canvas = new OffscreenCanvas(dWidth, dHeight);
             const ctx = canvas.getContext('2d');
             if (ctx) {
-              ctx.drawImage(imageBitmap, 0, 0, dWidth, dHeight);
+              ctx.drawImage(imageBitmap, crop.x, crop.y, crop.width, crop.height, 0, 0, dWidth, dHeight);
               const imageData = ctx.getImageData(0, 0, dWidth, dHeight);
               imageBitmap.close();
 
