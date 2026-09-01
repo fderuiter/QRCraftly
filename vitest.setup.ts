@@ -411,6 +411,15 @@ class MockWorker {
                   state.targetFileSize = newLen;
                 }
                 state.allocatedBuffer.set(decodedBytes, offset);
+
+                const currentEnd = offset + decodedBytes.length;
+                if (state.handshakeMetadata?.fileSize && currentEnd > state.handshakeMetadata.fileSize) {
+                  state.handshakeMetadata.fileSize = currentEnd;
+                }
+
+                if (!state.handshakeMetadata?.fileSize && state.totalChunksCount && index === state.totalChunksCount - 1) {
+                  state.targetFileSize = currentEnd;
+                }
               }
 
               state.receivedIndices.add(index);
@@ -427,11 +436,15 @@ class MockWorker {
               });
 
               if (state.totalChunksCount && state.receivedIndices.size === state.totalChunksCount && state.allocatedBuffer) {
-                let finalBuffer = state.allocatedBuffer;
-                if (state.targetFileSize && state.allocatedBuffer.length > state.targetFileSize) {
-                  finalBuffer = state.allocatedBuffer.subarray(0, state.targetFileSize);
+                let exactSize = state.allocatedBuffer.length;
+                if (typeof state.handshakeMetadata?.fileSize === 'number' && state.handshakeMetadata.fileSize > 0) {
+                  exactSize = state.handshakeMetadata.fileSize;
+                } else if (typeof state.targetFileSize === 'number' && state.targetFileSize > 0) {
+                  exactSize = state.targetFileSize;
                 }
-                const buffer = finalBuffer.buffer;
+
+                const finalUint8 = state.allocatedBuffer.slice(0, exactSize);
+                const buffer = finalUint8.buffer;
                 const metadata = state.handshakeMetadata;
                 (this as any)._reassemblyState = null;
                 this.dispatchMessage({

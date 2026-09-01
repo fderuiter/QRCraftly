@@ -149,6 +149,59 @@ export function useAdaptiveScanner({
   const handleErrorRef = useRef<((err: any) => void) | null>(null);
   const handleMessageErrorRef = useRef<((err: any) => void) | null>(null);
 
+  const attachedListenersRef = useRef<{
+    worker: Worker;
+    onMsg: (e: MessageEvent) => void;
+    onErr: (err: any) => void;
+    onMsgErr: (err: any) => void;
+  } | null>(null);
+
+  const detachWorkerListeners = useCallback(() => {
+    if (attachedListenersRef.current) {
+      const { worker, onMsg, onErr, onMsgErr } = attachedListenersRef.current;
+      try {
+        if (typeof worker.removeEventListener === 'function') {
+          worker.removeEventListener('message', onMsg);
+          worker.removeEventListener('error', onErr);
+          worker.removeEventListener('messageerror', onMsgErr);
+        } else {
+          (worker as any).onmessage = null;
+          (worker as any).onerror = null;
+        }
+      } catch (e) {
+        console.error('Failed to detach worker listeners:', e);
+      }
+      attachedListenersRef.current = null;
+    }
+  }, []);
+
+  const attachWorkerListeners = useCallback((worker: Worker) => {
+    detachWorkerListeners();
+
+    const onMsg = (e: MessageEvent) => handleMessageRef.current?.(e);
+    const onErr = (err: any) => handleErrorRef.current?.(err);
+    const onMsgErr = (err: any) => handleMessageErrorRef.current?.(err);
+
+    try {
+      if (typeof worker.addEventListener === 'function') {
+        worker.addEventListener('message', onMsg);
+        worker.addEventListener('error', onErr);
+        worker.addEventListener('messageerror', onMsgErr);
+      } else {
+        (worker as any).onmessage = onMsg;
+        (worker as any).onerror = onErr;
+      }
+      attachedListenersRef.current = {
+        worker,
+        onMsg,
+        onErr,
+        onMsgErr,
+      };
+    } catch (err) {
+      console.warn('Failed to attach worker listeners:', err);
+    }
+  }, [detachWorkerListeners]);
+
   // Sync ref with option functions to avoid re-triggering effects on callbacks change
   const onScanSuccessRef = useRef(onScanSuccess);
   const onScanFailRef = useRef(onScanFail);
@@ -165,6 +218,7 @@ export function useAdaptiveScanner({
     if (consecutiveRestartAttemptsRef.current > 3) {
       console.warn("Scanner background worker crashed repeatedly. Activating main-thread fallback.");
       useMainThreadFallbackRef.current = true;
+      detachWorkerListeners();
       terminateSharedScannerWorker();
       workerRef.current = null;
       schedulerRef.current?.triggerRecovery(1500, false);
@@ -180,7 +234,8 @@ export function useAdaptiveScanner({
     const nextTimeout = Math.min(6000, 1500 * Math.pow(2, consecutiveRestartAttemptsRef.current));
     schedulerRef.current?.setWatchdogTimeout(nextTimeout);
 
-    // 2. Terminate the active worker instance safely
+    // 2. Detach listeners and terminate the active worker instance safely for worker thread recreation
+    detachWorkerListeners();
     terminateSharedScannerWorker();
     workerRef.current = null;
 
@@ -194,24 +249,13 @@ export function useAdaptiveScanner({
       workerRef.current = worker;
 
       // 5. Re-attach listeners via delegating wrappers
-      const onMsg = (e: MessageEvent) => handleMessageRef.current?.(e);
-      const onErr = (err: any) => handleErrorRef.current?.(err);
-      const onMsgErr = (err: any) => handleMessageErrorRef.current?.(err);
-
-      if (typeof worker.addEventListener === 'function') {
-        worker.addEventListener('message', onMsg);
-        worker.addEventListener('error', onErr);
-        worker.addEventListener('messageerror', onMsgErr);
-      } else {
-        (worker as any).onmessage = onMsg;
-        (worker as any).onerror = onErr;
-      }
+      attachWorkerListeners(worker);
     } catch (err) {
       console.warn('Failed to recreate worker, activating main-thread fallback:', err);
       useMainThreadFallbackRef.current = true;
       workerRef.current = null;
     }
-  }, []);
+  }, [detachWorkerListeners, attachWorkerListeners]);
 
   // Instantiate the decoupled AdaptiveFrameScheduler lazily inside callback helper to avoid useRef render access
   const getScheduler = useCallback(() => {
@@ -288,22 +332,11 @@ export function useAdaptiveScanner({
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    const onMsg = (e: MessageEvent) => handleMessageRef.current?.(e);
-    const onErr = (err: any) => handleErrorRef.current?.(err);
-    const onMsgErr = (err: any) => handleMessageErrorRef.current?.(err);
-
     try {
       const worker = getSharedScannerWorker();
       workerRef.current = worker;
 
-      if (typeof worker.addEventListener === 'function') {
-        worker.addEventListener('message', onMsg);
-        worker.addEventListener('error', onErr);
-        worker.addEventListener('messageerror', onMsgErr);
-      } else {
-        (worker as any).onmessage = onMsg;
-        (worker as any).onerror = onErr;
-      }
+      attachWorkerListeners(worker);
     } catch (err) {
       console.warn('Failed to initialize background scanner worker, activating main-thread fallback:', err);
       useMainThreadFallbackRef.current = true;
@@ -312,21 +345,10 @@ export function useAdaptiveScanner({
 
     return () => {
       schedulerRef.current?.stop();
-      const activeWorker = workerRef.current;
-      if (activeWorker) {
-        if (typeof activeWorker.removeEventListener === 'function') {
-          activeWorker.removeEventListener('message', onMsg);
-          activeWorker.removeEventListener('error', onErr);
-          activeWorker.removeEventListener('messageerror', onMsgErr);
-        } else {
-          (activeWorker as any).onmessage = null;
-          (activeWorker as any).onerror = null;
-        }
-      }
-      terminateSharedScannerWorker();
+      detachWorkerListeners();
       workerRef.current = null;
     };
-  }, []);
+  }, [attachWorkerListeners, detachWorkerListeners]);
 
   const captureFrame = useCallback((force = false) => {
     const video = videoRef.current;
