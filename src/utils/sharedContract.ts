@@ -91,8 +91,9 @@ export function assertWorkerRequest(data: unknown): asserts data is WorkerReques
  * Type-guard function for validating the Worker Response structure.
  */
 export function isWorkerResponse(data: unknown): data is {
-  success: boolean;
-  physicalReady: boolean;
+  success?: boolean;
+  physicalReady?: boolean;
+  dropped?: boolean;
   error?: string | null;
   configId?: string | null;
   localContrastViolations?: number;
@@ -102,6 +103,9 @@ export function isWorkerResponse(data: unknown): data is {
 } {
   if (typeof data !== 'object' || data === null) return false;
   const d = data as any;
+  if (d.dropped === true) {
+    return typeof d.configId === 'string';
+  }
   if (typeof d.success !== 'boolean') return false;
   if (typeof d.physicalReady !== 'boolean') return false;
   if (d.error !== undefined && d.error !== null && typeof d.error !== 'string') return false;
@@ -123,6 +127,12 @@ export function assertWorkerResponse(data: unknown): asserts data is WorkerRespo
     throw new Error('Worker response must be a non-null object');
   }
   const d = data as any;
+  if (d.dropped === true) {
+    if (typeof d.configId !== 'string') {
+      throw new Error('Dropped worker response configId must be a string');
+    }
+    return;
+  }
   if (typeof d.success !== 'boolean') {
     throw new Error('Worker response success must be a boolean');
   }
