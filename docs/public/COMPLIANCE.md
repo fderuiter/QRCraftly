@@ -26,7 +26,7 @@ To maintain security, performance, and legal accountability, we collect basic ac
   - Request Path (e.g., `/`, `/about` - which are static).
   - Timestamp.
 - **Opt-In Telemetry:**
-  - If you encounter a scannability issue and opt-in to telemetry, we transmit limited diagnostic data to help us improve the application. This data consists only of the following parameters: `engine`, `styleId`, `errorType`, `fgColor`, `bgColor`, `eyeColor`, `errorCorrectionLevel`, `isBorderEnabled`, `borderSize`, `borderColor`, `borderStyle`, `templateStyle`.
+  - If you encounter a scannability issue and opt-in to telemetry, we transmit limited diagnostic data to help us improve the application. This data consists only of the following parameters: `engine` (browser engine), `styleId` (the QR pattern style used), `errorType` (the scannability error type), `fgColor` (foreground color), `bgColor` (background color), `eyeColor` (eye frame and eyeball color), `errorCorrectionLevel` (error correction level), `isBorderEnabled` (whether a border is enabled), `borderSize` (thickness of the border), `borderColor` (color of the border), `borderStyle` (style of the border), and `templateStyle` (the template layout style).
   - **Telemetry Schema Contract (source of truth):**
     - Diagnostic telemetry is strictly allowlisted in `src/types.ts` via ALLOWED_TELEMETRY_KEYS.
     - Accepted keys are: `engine`, `styleId`, `errorType`, `fgColor`, `bgColor`, `eyeColor`, `errorCorrectionLevel`, `isBorderEnabled`, `borderSize`, `borderColor`, `borderStyle`, `templateStyle`.
