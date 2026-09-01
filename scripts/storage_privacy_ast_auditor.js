@@ -180,20 +180,20 @@ export function auditStorageFile(filePath) {
             // clear() has no key argument
           } else if (node.arguments.length > 0) {
             const keyArg = node.arguments[0];
-            const evaluatedKey = evaluateExpression(keyArg);
+            const evaluatedStorageKey = evaluateExpression(keyArg);
 
-            if (evaluatedKey === null) {
+            if (evaluatedStorageKey === null) {
               addViolation(
                 node,
                 'Unresolvable Dynamic Storage Key',
                 `Storage call '${method}' uses an unresolvable or dynamic storage key. All persistent storage keys must be statically allowlisted.`
               );
-            } else if (!ALLOWED_STORAGE_KEYS.has(evaluatedKey)) {
+            } else if (!ALLOWED_STORAGE_KEYS.has(evaluatedStorageKey)) {
               addViolation(
                 node,
                 'Unauthorized Persistent Storage Key',
-                `Storage call '${method}' uses unauthorized key '${evaluatedKey}'. Sensitive QR payload data must remain in volatile runtime memory.`,
-                evaluatedKey
+                `Storage call '${method}' uses unauthorized key '${evaluatedStorageKey}'. Sensitive QR payload data must remain in volatile runtime memory.`,
+                evaluatedStorageKey
               );
             }
           }
@@ -205,20 +205,20 @@ export function auditStorageFile(filePath) {
     if (ts.isElementAccessExpression(node)) {
       if (isLocalStorageObject(node.expression)) {
         const arg = node.argumentExpression;
-        const evaluatedKey = evaluateExpression(arg);
+        const evaluatedStorageKey = evaluateExpression(arg);
 
-        if (evaluatedKey === null) {
+        if (evaluatedStorageKey === null) {
           addViolation(
             node,
             'Unresolvable Dynamic Storage Key',
             `Element access on localStorage uses an unresolvable dynamic key. All persistent storage keys must be statically allowlisted.`
           );
-        } else if (!ALLOWED_STORAGE_KEYS.has(evaluatedKey)) {
+        } else if (!ALLOWED_STORAGE_KEYS.has(evaluatedStorageKey)) {
           addViolation(
             node,
             'Unauthorized Persistent Storage Key',
-            `Element access on localStorage uses unauthorized key '${evaluatedKey}'.`,
-            evaluatedKey
+            `Element access on localStorage uses unauthorized key '${evaluatedStorageKey}'.`,
+            evaluatedStorageKey
           );
         }
       }
