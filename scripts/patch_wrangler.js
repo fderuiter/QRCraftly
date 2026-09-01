@@ -40,6 +40,56 @@ if (process.env.WRANGLER_WRAPPER_RUNNING) {
 console.log('=== [Wrangler Wrapper] Intercepted Wrangler! ===');
 console.log('Arguments:', process.argv);
 
+const isPagesDeploy = process.argv.includes('pages') && process.argv.includes('deploy');
+const wranglerJsoncPath = path.resolve(process.cwd(), 'wrangler.jsonc');
+let backupContent = null;
+
+if (isPagesDeploy && fs.existsSync(wranglerJsoncPath)) {
+  try {
+    const raw = fs.readFileSync(wranglerJsoncPath, 'utf8');
+    backupContent = raw;
+
+    const removeTopLevelKeys = (jsoncStr, keysToRemove) => {
+      let result = jsoncStr;
+      for (const key of keysToRemove) {
+        const keyPattern = new RegExp('\"' + key + '\"\\\\s*:\\\\s*', 'g');
+        let match;
+        while ((match = keyPattern.exec(result)) !== null) {
+          const startIdx = match.index;
+          let depth = 0;
+          let endIdx = match.index + match[0].length;
+          let startedBrace = false;
+          for (let i = endIdx; i < result.length; i++) {
+            const char = result[i];
+            if (char === '{') {
+              depth++;
+              startedBrace = true;
+            } else if (char === '}') {
+              depth--;
+            }
+            if (startedBrace && depth === 0) {
+              endIdx = i + 1;
+              break;
+            }
+          }
+          if (result[endIdx] === ',') endIdx++;
+          if (result[endIdx] === '\\r') endIdx++;
+          if (result[endIdx] === '\\n') endIdx++;
+          result = result.substring(0, startIdx) + result.substring(endIdx);
+          keyPattern.lastIndex = 0;
+        }
+      }
+      return result;
+    };
+
+    const sanitized = removeTopLevelKeys(raw, ['assets', 'build', 'observability']);
+    fs.writeFileSync(wranglerJsoncPath, sanitized, 'utf8');
+    console.log('[Wrangler Wrapper] Temporarily sanitized wrangler.jsonc for Cloudflare Pages deployment.');
+  } catch (err) {
+    console.warn('[Wrangler Wrapper] Failed to sanitize wrangler.jsonc for Pages:', err.message);
+  }
+}
+
 const hasCloudflareSecrets = !!(process.env.CLOUDFLARE_API_TOKEN && process.env.CLOUDFLARE_API_TOKEN.trim() && process.env.CLOUDFLARE_ACCOUNT_ID && process.env.CLOUDFLARE_ACCOUNT_ID.trim());
 
 let exitStatus = 0;
@@ -65,26 +115,37 @@ function runLocalPreviewFallback() {
   }
 }
 
-if (!hasCloudflareSecrets) {
-  console.log('[Wrangler Wrapper] CLOUDFLARE_API_TOKEN or CLOUDFLARE_ACCOUNT_ID is empty/missing.');
-  exitStatus = runLocalPreviewFallback();
-} else {
-  try {
-    const result = cp.spawnSync(process.execPath, [realWranglerPath, ...process.argv.slice(2)], {
-      stdio: 'inherit',
-      env: { ...process.env, WRANGLER_WRAPPER_RUNNING: '1' }
-    });
-    
-    console.log(\`=== [Wrangler Wrapper] Wrangler finished with exit code \${result.status} ===\`);
-    exitStatus = result.status ?? 0;
+try {
+  if (!hasCloudflareSecrets) {
+    console.log('[Wrangler Wrapper] CLOUDFLARE_API_TOKEN or CLOUDFLARE_ACCOUNT_ID is empty/missing.');
+    exitStatus = runLocalPreviewFallback();
+  } else {
+    try {
+      const result = cp.spawnSync(process.execPath, [realWranglerPath, ...process.argv.slice(2)], {
+        stdio: 'inherit',
+        env: { ...process.env, WRANGLER_WRAPPER_RUNNING: '1' }
+      });
+      
+      console.log(\`=== [Wrangler Wrapper] Wrangler finished with exit code \${result.status} ===\`);
+      exitStatus = result.status ?? 0;
 
-    if (exitStatus !== 0) {
-      console.log(\`[Wrangler Wrapper] Real wrangler failed with exit code \${exitStatus}.\`);
+      if (exitStatus !== 0) {
+        console.log(\`[Wrangler Wrapper] Real wrangler failed with exit code \${exitStatus}.\`);
+        exitStatus = runLocalPreviewFallback();
+      }
+    } catch (err) {
+      console.error('=== [Wrangler Wrapper] Failed to execute real wrangler:', err);
       exitStatus = runLocalPreviewFallback();
     }
-  } catch (err) {
-    console.error('=== [Wrangler Wrapper] Failed to execute real wrangler:', err);
-    exitStatus = runLocalPreviewFallback();
+  }
+} finally {
+  if (backupContent !== null && fs.existsSync(wranglerJsoncPath)) {
+    try {
+      fs.writeFileSync(wranglerJsoncPath, backupContent, 'utf8');
+      console.log('[Wrangler Wrapper] Restored original wrangler.jsonc.');
+    } catch (err) {
+      console.error('[Wrangler Wrapper] Failed to restore wrangler.jsonc:', err);
+    }
   }
 }
 
