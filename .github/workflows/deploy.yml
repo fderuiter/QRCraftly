@@ -47,8 +47,10 @@ jobs:
           path: dist
 
       - name: Setup Rollback flag
+        env:
+          IS_ROLLBACK: ${{ inputs.is_rollback }}
         run: |
-          if [ "${{ inputs.is_rollback }}" = "true" ]; then
+          if [ "$IS_ROLLBACK" = "true" ]; then
             echo "ROLLBACK=true" >> $GITHUB_ENV
           else
             echo "ROLLBACK=false" >> $GITHUB_ENV
@@ -56,30 +58,38 @@ jobs:
 
       - name: Version Bump for Release
         if: inputs.version_bump != ''
+        env:
+          VERSION_BUMP: ${{ inputs.version_bump }}
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          pnpm version ${{ inputs.version_bump }} --no-git-tag-version
+          pnpm version "$VERSION_BUMP" --no-git-tag-version
 
       - name: Determine Release Information
         id: release_info
+        env:
+          COMMIT_SHA: ${{ github.sha }}
         run: |
           VERSION=$(node -p "require('./package.json').version")
           if [ "$ROLLBACK" = "true" ]; then
-            VERSION="${VERSION}-rollback-${{ github.sha }}"
+            VERSION="${VERSION}-rollback-${COMMIT_SHA}"
           fi
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
       - name: Generate Deployment Manifest
+        env:
+          RELEASE_VERSION: ${{ env.VERSION }}
+          COMMIT_SHA: ${{ github.sha }}
+          EVENT_NAME: ${{ github.event_name }}
         run: |
           mkdir -p releases
           DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-          cat <<MANIFEST > releases/manifest-${{ env.VERSION }}.json
+          cat <<MANIFEST > releases/manifest-${RELEASE_VERSION}.json
           {
-            "version": "${{ env.VERSION }}",
-            "commit": "${{ github.sha }}",
+            "version": "$RELEASE_VERSION",
+            "commit": "$COMMIT_SHA",
             "date": "$DATE",
-            "trigger": "${{ github.event_name }}",
+            "trigger": "$EVENT_NAME",
             "rollback": ${ROLLBACK:-false},
             "infrastructure": {
               "provider": "Cloudflare Pages",
@@ -102,20 +112,25 @@ jobs:
       - name: Verify Attestations (Integrity Gate)
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_VERSION: ${{ env.VERSION }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
           # Verify the attestation of the deployment manifest
-          gh attestation verify releases/manifest-${{ env.VERSION }}.json --repo ${{ github.repository }}
+          gh attestation verify releases/manifest-${RELEASE_VERSION}.json --repo "$GITHUB_REPOSITORY"
           # Verify attestation for a primary web build asset as a proxy for the whole directory
-          gh attestation verify dist/client/index.html --repo ${{ github.repository }}
+          gh attestation verify dist/client/index.html --repo "$GITHUB_REPOSITORY"
 
       - name: Commit Release Manifest
         timeout-minutes: 5
+        env:
+          RELEASE_VERSION: ${{ env.VERSION }}
+          GITHUB_REF_NAME: ${{ github.ref_name }}
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add package.json releases/
           if ! git diff --cached --quiet; then
-            git commit -m "chore(release): version ${{ env.VERSION }} [skip ci]"
+            git commit -m "chore(release): version $RELEASE_VERSION [skip ci]"
           else
             echo "No changes to commit"
             exit 0
@@ -127,7 +142,7 @@ jobs:
             BRANCH=$(git branch --show-current)
           fi
           if [ -z "$BRANCH" ] || [ "$BRANCH" = "HEAD" ]; then
-            BRANCH="${{ github.ref_name }}"
+            BRANCH="$GITHUB_REF_NAME"
           fi
           if [ -z "$BRANCH" ]; then
             BRANCH="main"
