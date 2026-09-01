@@ -496,6 +496,20 @@ class MockWorker {
             }
           }
 
+          if (this.url.toString().includes('fskDemodulatorWorker') && message && typeof message === 'object') {
+            if (message.type === 'init' || message.type === 'reset') {
+              return;
+            }
+            if (message.type === 'process') {
+              this.dispatchMessage({
+                type: 'fsk_response',
+                symbol: 'Silence / Gap',
+                buffer: message.buffer,
+              });
+              return;
+            }
+          }
+
           if (this.url.toString().includes('scannerWorker') && message && typeof message === 'object' && typeof message.sequenceId === 'number') {
             const { image, width, height, epochId } = message;
             if (image && typeof width === 'number' && typeof height === 'number') {

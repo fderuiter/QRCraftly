@@ -225,6 +225,52 @@ describe('Custom Audio Hooks', () => {
 
       expect(stopTrackMock).toHaveBeenCalled();
     });
+
+    it('processes messages received from fskDemodulatorWorker to update symbol and decoded message', async () => {
+      const stopTrackMock = vi.fn();
+      const mockStream = {
+        getTracks: () => [{ stop: stopTrackMock }],
+      };
+
+      vi.stubGlobal('navigator', {
+        ...navigator,
+        mediaDevices: {
+          getUserMedia: vi.fn().mockResolvedValue(mockStream),
+        },
+      });
+
+      const audioCtx = new MockAudioContext() as any;
+      const { result } = renderHook(() => useChirpTransceiver(() => audioCtx));
+
+      await act(async () => {
+        await result.current.startChirpListening();
+      });
+
+      expect(result.current.isListening).toBe(true);
+
+      const activeWorker = (globalThis as any).mockWorkerControl.activeWorker;
+      expect(activeWorker).not.toBeNull();
+
+      // Dispatch a worker response message
+      act(() => {
+        activeWorker.dispatchMessage({
+          type: 'fsk_response',
+          symbol: 'BIT 1',
+          decodedMessage: 'HI',
+          logs: ["Decoded Character: 'I'"],
+          buffer: new ArrayBuffer(1024),
+        });
+      });
+
+      expect(result.current.currentSymbol).toBe('BIT 1');
+      expect(result.current.decodedMessage).toBe('HI');
+      expect(result.current.receiverLog).toContain("Decoded Character: 'I'");
+
+      act(() => {
+        result.current.stopChirpListening();
+      });
+      expect(result.current.isListening).toBe(false);
+    });
   });
 
   describe('useSpectrogramQR', () => {

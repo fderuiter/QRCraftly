@@ -44,6 +44,10 @@ export function useChirpTransceiver(getAudioContext: () => AudioContext) {
   const micAnalyserRef = useRef<AnalyserNode | null>(null);
   const rxAnimationRef = useRef<number | null>(null);
 
+  const fskWorkerRef = useRef<Worker | null>(null);
+  const bufferPoolRef = useRef<ArrayBuffer[]>([]);
+  const isWorkerBusyRef = useRef<boolean>(false);
+
   const isListeningRef = useRef(false);
   const isMountedRef = useRef(true);
 
@@ -71,6 +75,13 @@ export function useChirpTransceiver(getAudioContext: () => AudioContext) {
       cancelAnimationFrame(rxAnimationRef.current);
       rxAnimationRef.current = null;
     }
+
+    if (fskWorkerRef.current) {
+      fskWorkerRef.current.terminate();
+      fskWorkerRef.current = null;
+    }
+    bufferPoolRef.current = [];
+    isWorkerBusyRef.current = false;
 
     if (micStreamRef.current) {
       micStreamRef.current.getTracks().forEach((track) => track.stop());
@@ -187,93 +198,69 @@ export function useChirpTransceiver(getAudioContext: () => AudioContext) {
       source.connect(analyser);
       micAnalyserRef.current = analyser;
 
-      let isReceiving = false;
-      let bitBuffer: string[] = [];
-      let currentBitStream = '';
-      let expectingBit = true;
-      let lastDecodedTime = 0;
+      if (fskWorkerRef.current) {
+        fskWorkerRef.current.terminate();
+      }
 
-      const binWidth = ctx.sampleRate / analyser.fftSize;
-      const syncBin = Math.round(SYNC_FREQ / binWidth);
-      const zeroBin = Math.round(ZERO_FREQ / binWidth);
-      const oneBin = Math.round(ONE_FREQ / binWidth);
+      const worker = new Worker(
+        new URL('../utils/fskDemodulatorWorker.ts', import.meta.url),
+        { type: 'module' }
+      );
+      fskWorkerRef.current = worker;
+      bufferPoolRef.current = [];
+      isWorkerBusyRef.current = false;
 
-      const minSearchBin = Math.round(900 / binWidth);
-      const maxSearchBin = Math.round(2500 / binWidth);
+      worker.postMessage({
+        type: 'init',
+        sampleRate: ctx.sampleRate,
+        fftSize: analyser.fftSize,
+      });
+
+      worker.onmessage = (e: MessageEvent) => {
+        if (!isListeningRef.current || !isMountedRef.current) return;
+        const data = e.data;
+        if (data && data.type === 'fsk_response') {
+          if (data.symbol) {
+            setCurrentSymbol(data.symbol);
+          }
+          if (data.decodedMessage !== undefined) {
+            setDecodedMessage(data.decodedMessage);
+          }
+          if (data.logs && Array.isArray(data.logs) && data.logs.length > 0) {
+            setReceiverLog((prev) => [...data.logs.slice().reverse(), ...prev].slice(0, 50));
+          }
+          if (data.buffer instanceof ArrayBuffer) {
+            bufferPoolRef.current.push(data.buffer);
+          }
+          isWorkerBusyRef.current = false;
+        }
+      };
 
       const bufferLength = analyser.frequencyBinCount;
-      const dataArray = new Uint8Array(bufferLength);
 
       const decodeLoop = () => {
-        if (!micAnalyserRef.current || !isListeningRef.current || !isMountedRef.current) {
+        if (!micAnalyserRef.current || !isListeningRef.current || !isMountedRef.current || !fskWorkerRef.current) {
           return;
         }
-        analyser.getByteFrequencyData(dataArray);
 
-        let maxVal = 0;
-        let peakBin = -1;
-        for (let b = minSearchBin; b <= maxSearchBin; b++) {
-          if (dataArray[b] > maxVal) {
-            maxVal = dataArray[b];
-            peakBin = b;
+        if (!isWorkerBusyRef.current) {
+          let buffer = bufferPoolRef.current.pop();
+          if (!buffer || buffer.byteLength !== bufferLength) {
+            buffer = new ArrayBuffer(bufferLength);
           }
-        }
 
-        const now = Date.now();
-        const amplitudeThreshold = 135;
+          const dataArray = new Uint8Array(buffer);
+          analyser.getByteFrequencyData(dataArray);
 
-        if (maxVal > amplitudeThreshold && peakBin !== -1) {
-          const distSync = Math.abs(peakBin - syncBin);
-          const distZero = Math.abs(peakBin - zeroBin);
-          const distOne = Math.abs(peakBin - oneBin);
+          isWorkerBusyRef.current = true;
 
-          const minDistance = Math.min(distSync, distZero, distOne);
-          const tolerance = 4;
-
-          if (minDistance <= tolerance) {
-            if (minDistance === distSync) {
-              setCurrentSymbol('SYNC TONE');
-              if (!isReceiving && now - lastDecodedTime > 1000) {
-                isReceiving = true;
-                bitBuffer = [];
-                currentBitStream = '';
-                expectingBit = true;
-                lastDecodedTime = now;
-                logMessage('⚡ Sync tone detected! Initializing receiver matrix...');
-              }
-            } else if (isReceiving && expectingBit && now - lastDecodedTime > 80) {
-              if (minDistance === distZero) {
-                setCurrentSymbol('BIT 0');
-                bitBuffer.push('0');
-                lastDecodedTime = now;
-                expectingBit = false;
-                logMessage('Decoded bit: 0');
-              } else if (minDistance === distOne) {
-                setCurrentSymbol('BIT 1');
-                bitBuffer.push('1');
-                lastDecodedTime = now;
-                expectingBit = false;
-                logMessage('Decoded bit: 1');
-              }
-
-              if (bitBuffer.length >= 8) {
-                const byteString = bitBuffer.join('');
-                const charCode = parseInt(byteString, 2);
-                const char = String.fromCharCode(charCode);
-                currentBitStream += char;
-                setDecodedMessage(currentBitStream);
-                logMessage(`📥 Decoded Character: '${char}' (Hex: ${charCode.toString(16).toUpperCase()})`);
-                bitBuffer = [];
-              }
-            }
-          } else {
-            setCurrentSymbol('Noise / Unrecognized');
-          }
-        } else {
-          setCurrentSymbol('Silence / Gap');
-          if (!expectingBit && now - lastDecodedTime > 40) {
-            expectingBit = true;
-          }
+          fskWorkerRef.current.postMessage(
+            {
+              type: 'process',
+              buffer: dataArray.buffer,
+            },
+            [dataArray.buffer]
+          );
         }
 
         if (isListeningRef.current && isMountedRef.current) {
