@@ -63,13 +63,16 @@ export function auditModuleContrast(
     drawY = borderPx;
     drawWidth = width - 2 * borderPx;
     drawHeight = height - 2 * borderPx;
-  } else if (margin === undefined && (width % moduleCount !== 0 || width !== height)) {
-    // Default 4-module quiet zone floor used by calculateLayout in standard rendering
-    const borderPx = (4 * Math.min(width, height)) / (moduleCount + 8);
-    drawX = (width - (Math.min(width, height) - 2 * borderPx)) / 2;
-    drawY = (height - (Math.min(width, height) - 2 * borderPx)) / 2;
-    drawWidth = Math.min(width, height) - 2 * borderPx;
-    drawHeight = drawWidth;
+  } else if (margin === undefined && width > moduleCount) {
+    const isTightMatrix = width % moduleCount === 0 && width % (moduleCount + 8) !== 0;
+    if (!isTightMatrix) {
+      // Default 4-module quiet zone floor used by calculateLayout in standard rendering
+      const borderPx = (4 * Math.min(width, height)) / (moduleCount + 8);
+      drawX = (width - (Math.min(width, height) - 2 * borderPx)) / 2;
+      drawY = (height - (Math.min(width, height) - 2 * borderPx)) / 2;
+      drawWidth = Math.min(width, height) - 2 * borderPx;
+      drawHeight = drawWidth;
+    }
   }
 
   const cellWidth = drawWidth / moduleCount;

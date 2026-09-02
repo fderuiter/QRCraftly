@@ -65,7 +65,7 @@ export function performScannabilityCheck(
     decodedData = code.data;
   } else {
     try {
-      code = jsQR(imageData.data, width, height, { inversionAttempts: 'onlyInvert' });
+      code = jsQR(imageData.data, width, height, { inversionAttempts: 'attemptBoth' });
     } catch {}
     if (code) {
       digitalPass = true;
@@ -114,7 +114,7 @@ export function performScannabilityCheck(
     physicalPass = true;
   } else {
     try {
-      codeSim = jsQR(simulatedData.data, width, height, { inversionAttempts: 'onlyInvert' });
+      codeSim = jsQR(simulatedData.data, width, height, { inversionAttempts: 'attemptBoth' });
     } catch {}
     if (codeSim) physicalPass = true;
   }
