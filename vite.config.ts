@@ -153,6 +153,8 @@ export default defineConfig(() => {
             'src/utils/security.ts',
             'src/utils/sharedContract.ts',
             'src/utils/sharedScannerWorker.ts',
+            'src/utils/fskDemodulatorWorker.ts',
+            'src/utils/reputation.ts',
             'src/utils/contrastAudit.ts',
             'src/utils/exportRiskPolicy.ts',
             'src/utils/opticalSimulation.ts',

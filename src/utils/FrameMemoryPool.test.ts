@@ -85,6 +85,13 @@ describe('PreallocatedFramePool', () => {
     expect(pool.hasFrame(1)).toBe(false);
     expect(pool.size).toBe(0);
   });
+
+  it('wipes underlying memory pool', () => {
+    const pool = new PreallocatedFramePool(5, 10 * 10);
+    pool.storeFrame(0, 10, new Uint8Array(100).fill(5));
+    pool.wipe();
+    expect(pool.size).toBe(0);
+  });
 });
 
 describe('shuffleInPlace', () => {
