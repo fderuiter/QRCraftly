@@ -321,9 +321,52 @@ export function useAnimatedQrSender({
     return () => clearInterval(interval);
   }, [isTransferring, chunkSize]);
 
-  // Terminate background worker on unmount
+  // Terminate background worker on unmount and page lifecycle events
   useEffect(() => {
+    const wipeSenderBuffers = () => {
+      framePoolRef.current.wipe();
+      if (workerRef.current) {
+        try {
+          workerRef.current.postMessage({ type: 'STOP' });
+        } catch {
+          // Safe catch
+        }
+      }
+    };
+
+    const handleUnload = () => {
+      wipeSenderBuffers();
+      if (workerRef.current) {
+        workerRef.current.terminate();
+        workerRef.current = null;
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        wipeSenderBuffers();
+      }
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('beforeunload', handleUnload);
+      window.addEventListener('pagehide', handleUnload);
+    }
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+    }
+
     return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('beforeunload', handleUnload);
+        window.removeEventListener('pagehide', handleUnload);
+      }
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+      }
+
+      wipeSenderBuffers();
+
       if (workerRef.current) {
         workerRef.current.terminate();
         workerRef.current = null;
@@ -333,6 +376,7 @@ export function useAnimatedQrSender({
       }
     };
   }, []);
+
 
   const stopTransfer = useCallback(() => {
     setIsTransferring(false);

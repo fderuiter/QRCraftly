@@ -26,8 +26,12 @@ export class DoubleBufferPool {
     }
     this.width = width;
     this.height = height;
+    for (const buf of this.buffers) {
+      try { new Uint8Array(buf).fill(0); } catch {}
+    }
     this.buffers = [];
     const size = width * height * 4;
+
     // Capacity: Restricts memory usage to pre-allocated buffers matching target scan resolution
     for (let i = 0; i < 2; i++) {
       this.buffers.push(new ArrayBuffer(size));
@@ -61,11 +65,15 @@ export class DoubleBufferPool {
   }
 
   /**
-   * Clears the pool.
+   * Clears the pool and zero-fills cached ArrayBuffers.
    */
   public clear() {
+    for (const buf of this.buffers) {
+      try { new Uint8Array(buf).fill(0); } catch {}
+    }
     this.buffers = [];
   }
+
 
   /**
    * Returns current pool size.

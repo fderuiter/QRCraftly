@@ -396,3 +396,25 @@ export const sanitizeSvg = (svgText: string): string => {
   }
 };
 
+/**
+ * Synchronously zero-fills binary buffers (Uint8Array, ArrayBuffer, Uint8ClampedArray, Float32Array, etc.)
+ * to sanitize residual binary payload data from process memory.
+ *
+ * @param buffer - The buffer or array buffer view to overwrite with zero bytes.
+ */
+export function wipeMemoryBuffer(
+  buffer: Uint8Array | Float32Array | Uint8ClampedArray | Int8Array | Int16Array | Uint16Array | Int32Array | Uint32Array | Float64Array | ArrayBuffer | DataView | null | undefined
+): void {
+  if (!buffer) return;
+  try {
+    if (buffer instanceof ArrayBuffer) {
+      new Uint8Array(buffer).fill(0);
+    } else if (ArrayBuffer.isView(buffer)) {
+      new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength).fill(0);
+    }
+  } catch {
+    // Safe catch if buffer is detached or transferred
+  }
+}
+
+

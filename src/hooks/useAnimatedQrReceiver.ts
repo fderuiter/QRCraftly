@@ -21,6 +21,8 @@ import { useCamera } from './useCamera';
 import { useAdaptiveScanner } from './useAdaptiveScanner';
 import { StreamLookaheadReceiver, DANGEROUS_SCHEMES } from '../engine/StreamLookahead';
 import { triggerFileDownload } from '../utils/downloadManager';
+import { wipeMemoryBuffer } from '../utils/security';
+
 
 /**
  * Handshake information sent at the beginning of a file transfer session.
@@ -184,6 +186,8 @@ export function useAnimatedQrReceiver({
                 activeHandshake?.fileName || `received_file_${Date.now()}.bin`,
                 activeHandshake?.mimeType || 'application/octet-stream'
               );
+              reassembledDataRef.current = null;
+              setReassembledData(null);
 
               if (addToastRef.current) {
                 addToastRef.current({
@@ -197,9 +201,13 @@ export function useAnimatedQrReceiver({
             const errMsg = err?.message || 'Verification or reassembly failed.';
             setReceiverError(errMsg);
             setReceiverSuccess(false);
+            if (reassembledDataRef.current) {
+              wipeMemoryBuffer(reassembledDataRef.current);
+              reassembledDataRef.current = null;
+            }
             setReassembledData(null);
-            reassembledDataRef.current = null;
             if (addToastRef.current) {
+
               addToastRef.current({
                 type: 'error',
                 message: errMsg,
@@ -357,6 +365,10 @@ export function useAnimatedQrReceiver({
 
   // Reset/Clear state
   const handleClear = useCallback(() => {
+    if (reassembledDataRef.current) {
+      wipeMemoryBuffer(reassembledDataRef.current);
+      reassembledDataRef.current = null;
+    }
     terminateWorker();
     setChunks(new Set());
     setTotalChunks(null);
@@ -370,7 +382,6 @@ export function useAnimatedQrReceiver({
     setIsVerifying(false);
     setDownloadTriggered(false);
     setReassembledData(null);
-    reassembledDataRef.current = null;
     setCompilationStatus(null);
     revokeVideoUrl();
     setVideoFile(null);
@@ -384,6 +395,7 @@ export function useAnimatedQrReceiver({
       });
     }
   }, [addToast, streamMode, terminateWorker, revokeVideoUrl]);
+
 
   // Reassemble and validate file
   const reconstructAndValidateFile = useCallback(async (
@@ -421,6 +433,8 @@ export function useAnimatedQrReceiver({
           hs?.fileName || `received_file_${Date.now()}.bin`,
           hs?.mimeType || 'application/octet-stream'
         );
+        reassembledDataRef.current = null;
+        setReassembledData(null);
 
         if (addToastRef.current) {
           addToastRef.current({
@@ -454,8 +468,12 @@ export function useAnimatedQrReceiver({
       const errMsg = err?.message || 'Verification or reassembly failed.';
       setReceiverError(errMsg);
       setReceiverSuccess(false);
+      if (reassembledDataRef.current) {
+        wipeMemoryBuffer(reassembledDataRef.current);
+        reassembledDataRef.current = null;
+      }
       setReassembledData(null);
-      reassembledDataRef.current = null;
+
       if (addToastRef.current) {
         addToastRef.current({
           type: 'error',
@@ -743,9 +761,54 @@ export function useAnimatedQrReceiver({
     }
   }, [chunks, totalChunks, downloadTriggered, handshake, reconstructAndValidateFile, stopCameraSession, autoDownload, isScanning, addToast, revokeVideoUrl, reassembledData]);
 
-  // Cleanup on unmount
+  // Cleanup on unmount & page unload/visibility change
   useEffect(() => {
+    const wipeActiveBuffers = () => {
+      if (reassembledDataRef.current) {
+        wipeMemoryBuffer(reassembledDataRef.current);
+        reassembledDataRef.current = null;
+      }
+      if (workerRef.current) {
+        try {
+          workerRef.current.postMessage({ type: 'CLEAR' });
+        } catch {
+          // Safe catch if detached
+        }
+      }
+    };
+
+    const handleUnload = () => {
+      wipeActiveBuffers();
+      terminateWorker();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        wipeActiveBuffers();
+        setReassembledData(null);
+      }
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('beforeunload', handleUnload);
+      window.addEventListener('pagehide', handleUnload);
+    }
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+    }
+
     return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('beforeunload', handleUnload);
+        window.removeEventListener('pagehide', handleUnload);
+      }
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+      }
+
+      wipeActiveBuffers();
+      setReassembledData(null);
+
       stopScanning();
       stopStream();
       flushVideoHardware();
@@ -753,6 +816,7 @@ export function useAnimatedQrReceiver({
       revokeVideoUrl();
     };
   }, [stopScanning, stopStream, terminateWorker, flushVideoHardware, revokeVideoUrl]);
+
 
   return {
     chunks,

@@ -63,13 +63,17 @@ let receivedIndices: Set<number> = new Set();
 let handshakeMetadata: HandshakeMetadata | null = null;
 
 function resetWorkerState(): void {
-  allocatedBuffer = null;
+  if (allocatedBuffer) {
+    allocatedBuffer.fill(0);
+    allocatedBuffer = null;
+  }
   totalChunksCount = null;
   targetFileSize = null;
   knownChunkSize = null;
   receivedIndices = new Set();
   handshakeMetadata = null;
 }
+
 
 function decodeBase64ToBytes(base64Str: string): Uint8Array {
   const binaryString = atob(base64Str);
@@ -170,12 +174,15 @@ self.onmessage = async (e: MessageEvent<FileReassemblyIncomingMessage>) => {
           const newLen = Math.max(allocatedBuffer.length, offset + decodedBytes.length);
           const expanded = new Uint8Array(newLen);
           expanded.set(allocatedBuffer, 0);
+          allocatedBuffer.fill(0);
           allocatedBuffer = expanded;
           targetFileSize = newLen;
         }
         allocatedBuffer.set(decodedBytes, offset);
+        decodedBytes.fill(0);
 
         const currentEnd = offset + decodedBytes.length;
+
         if (handshakeMetadata?.fileSize && currentEnd > handshakeMetadata.fileSize) {
           handshakeMetadata.fileSize = currentEnd;
         }
@@ -281,6 +288,7 @@ self.onmessage = async (e: MessageEvent<FileReassemblyIncomingMessage>) => {
       return;
     }
   } catch (err: any) {
+    resetWorkerState();
     (self as any).postMessage({
       type: 'ERROR',
       error: err?.message || 'Unknown reassembly error',

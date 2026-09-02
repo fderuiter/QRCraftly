@@ -50,9 +50,20 @@ export class PreallocatedFramePool {
       const newCapacity = Math.max(index + 1, this.capacity * 2);
       const newPool = new Uint8Array(newCapacity * this.maxModulesPerFrame);
       newPool.set(this.pool);
+
+      // Re-bind all existing cached frame data slices to subarrays of newPool
+      for (const [idx, frame] of this.frameMap.entries()) {
+        const offset = idx * this.maxModulesPerFrame;
+        const len = frame.size * frame.size;
+        frame.data = newPool.subarray(offset, offset + len);
+      }
+
+      this.pool.fill(0);
       this.pool = newPool;
       this.capacity = newCapacity;
     }
+
+
 
     const offset = index * this.maxModulesPerFrame;
     const len = size * size;
@@ -104,11 +115,20 @@ export class PreallocatedFramePool {
   }
 
   /**
-   * Clears frame mappings while keeping the allocated underlying memory pool intact for reuse.
+   * Overwrites the underlying pool memory with zero bytes and clears frame mappings.
    */
-  public clear(): void {
+  public wipe(): void {
+    this.pool.fill(0);
     this.frameMap.clear();
   }
+
+  /**
+   * Clears frame mappings and zero-fills allocated memory pool for security.
+   */
+  public clear(): void {
+    this.wipe();
+  }
+
 }
 
 /**

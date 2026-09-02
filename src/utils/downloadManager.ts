@@ -16,6 +16,8 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { wipeMemoryBuffer } from './security';
+
 /**
  * Shared file download manager that triggers browser file saving
  * while safely destroying temporary data object URLs immediately afterward.
@@ -37,4 +39,6 @@ export function triggerFileDownload(
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+  wipeMemoryBuffer(data);
 }
+
