@@ -88,6 +88,9 @@ self.onmessage = (e: MessageEvent) => {
 
   if (data.type === 'process') {
     const { buffer } = data;
+    if (!buffer || !(buffer instanceof ArrayBuffer) || buffer.byteLength === 0) {
+      return;
+    }
     const dataArray = new Uint8Array(buffer);
 
     let maxVal = 0;

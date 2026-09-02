@@ -233,5 +233,49 @@ describe('fskDemodulatorContract & fskDemodulatorWorker', () => {
       expect(lastCall.decodedMessage).toBe('A');
       expect(lastCall.logs).toEqual(expect.arrayContaining([expect.stringContaining("Decoded Character: 'A'")]));
     });
+
+    it('ignores zero-length or detached buffer process requests without throwing or posting message', () => {
+      const postMessageSpy = vi.fn();
+      globalThis.postMessage = postMessageSpy;
+
+      const detachedBuffer = new ArrayBuffer(0);
+      expect(() => {
+        workerHandler({
+          data: {
+            type: 'process',
+            buffer: detachedBuffer,
+          },
+        } as MessageEvent);
+      }).not.toThrow();
+
+      expect(postMessageSpy).not.toHaveBeenCalled();
+    });
+
+    it('continues processing valid frames after encountering an invalid zero-length buffer', () => {
+      const postMessageSpy = vi.fn();
+      globalThis.postMessage = postMessageSpy;
+
+      // 1. Send zero-length buffer
+      workerHandler({
+        data: {
+          type: 'process',
+          buffer: new ArrayBuffer(0),
+        },
+      } as MessageEvent);
+
+      expect(postMessageSpy).not.toHaveBeenCalled();
+
+      // 2. Send valid frame
+      const validBuffer = new ArrayBuffer(1024);
+      workerHandler({
+        data: {
+          type: 'process',
+          buffer: validBuffer,
+        },
+      } as MessageEvent);
+
+      expect(postMessageSpy).toHaveBeenCalledTimes(1);
+      expect(postMessageSpy.mock.calls[0][0].symbol).toBe('Silence / Gap');
+    });
   });
 });

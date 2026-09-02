@@ -200,15 +200,16 @@ export function useChirpTransceiver(getAudioContext: () => AudioContext) {
 
       if (fskWorkerRef.current) {
         fskWorkerRef.current.terminate();
+        fskWorkerRef.current = null;
       }
+      bufferPoolRef.current = [];
+      isWorkerBusyRef.current = false;
 
       const worker = new Worker(
         new URL('../utils/fskDemodulatorWorker.ts', import.meta.url),
         { type: 'module' }
       );
       fskWorkerRef.current = worker;
-      bufferPoolRef.current = [];
-      isWorkerBusyRef.current = false;
 
       worker.postMessage({
         type: 'init',
@@ -216,8 +217,21 @@ export function useChirpTransceiver(getAudioContext: () => AudioContext) {
         fftSize: analyser.fftSize,
       });
 
+      worker.onerror = () => {
+        bufferPoolRef.current = [];
+        isWorkerBusyRef.current = false;
+      };
+
+      worker.onmessageerror = () => {
+        bufferPoolRef.current = [];
+        isWorkerBusyRef.current = false;
+      };
+
       worker.onmessage = (e: MessageEvent) => {
-        if (!isListeningRef.current || !isMountedRef.current) return;
+        if (!isListeningRef.current || !isMountedRef.current) {
+          bufferPoolRef.current = [];
+          return;
+        }
         const data = e.data;
         if (data && data.type === 'fsk_response') {
           if (data.symbol) {
@@ -229,7 +243,7 @@ export function useChirpTransceiver(getAudioContext: () => AudioContext) {
           if (data.logs && Array.isArray(data.logs) && data.logs.length > 0) {
             setReceiverLog((prev) => [...data.logs.slice().reverse(), ...prev].slice(0, 50));
           }
-          if (data.buffer instanceof ArrayBuffer) {
+          if (data.buffer instanceof ArrayBuffer && data.buffer.byteLength > 0) {
             bufferPoolRef.current.push(data.buffer);
           }
           isWorkerBusyRef.current = false;
@@ -244,8 +258,26 @@ export function useChirpTransceiver(getAudioContext: () => AudioContext) {
         }
 
         if (!isWorkerBusyRef.current) {
-          let buffer = bufferPoolRef.current.pop();
-          if (!buffer || buffer.byteLength !== bufferLength) {
+          let buffer: ArrayBuffer | undefined;
+          while (bufferPoolRef.current.length > 0) {
+            const candidate = bufferPoolRef.current.pop();
+            if (
+              candidate &&
+              candidate instanceof ArrayBuffer &&
+              candidate.byteLength === bufferLength &&
+              candidate.byteLength > 0
+            ) {
+              buffer = candidate;
+              break;
+            }
+          }
+
+          if (
+            !buffer ||
+            !(buffer instanceof ArrayBuffer) ||
+            buffer.byteLength !== bufferLength ||
+            buffer.byteLength === 0
+          ) {
             buffer = new ArrayBuffer(bufferLength);
           }
 

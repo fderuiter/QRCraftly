@@ -271,6 +271,126 @@ describe('Custom Audio Hooks', () => {
       });
       expect(result.current.isListening).toBe(false);
     });
+
+    it('handles rapid toggling with 10 start and stop actions without throwing errors or crashing', async () => {
+      const stopTrackMock = vi.fn();
+      const mockStream = {
+        getTracks: () => [{ stop: stopTrackMock }],
+      };
+
+      vi.stubGlobal('navigator', {
+        ...navigator,
+        mediaDevices: {
+          getUserMedia: vi.fn().mockResolvedValue(mockStream),
+        },
+      });
+
+      const audioCtx = new MockAudioContext() as any;
+      const { result } = renderHook(() => useChirpTransceiver(() => audioCtx));
+
+      // Perform 10 start and stop actions in rapid succession
+      for (let i = 0; i < 10; i++) {
+        await act(async () => {
+          await result.current.startChirpListening();
+        });
+        expect(result.current.isListening).toBe(true);
+
+        act(() => {
+          result.current.stopChirpListening();
+        });
+        expect(result.current.isListening).toBe(false);
+      }
+    });
+
+    it('ignores zero-length buffers received from worker without pushing to recycling pool', async () => {
+      const stopTrackMock = vi.fn();
+      const mockStream = {
+        getTracks: () => [{ stop: stopTrackMock }],
+      };
+
+      vi.stubGlobal('navigator', {
+        ...navigator,
+        mediaDevices: {
+          getUserMedia: vi.fn().mockResolvedValue(mockStream),
+        },
+      });
+
+      const audioCtx = new MockAudioContext() as any;
+      const { result } = renderHook(() => useChirpTransceiver(() => audioCtx));
+
+      await act(async () => {
+        await result.current.startChirpListening();
+      });
+
+      const activeWorker = (globalThis as any).mockWorkerControl.activeWorker;
+      expect(activeWorker).not.toBeNull();
+
+      // Dispatch worker response with 0-length detached ArrayBuffer
+      expect(() => {
+        act(() => {
+          activeWorker.dispatchMessage({
+            type: 'fsk_response',
+            symbol: 'Silence / Gap',
+            buffer: new ArrayBuffer(0),
+          });
+        });
+      }).not.toThrow();
+
+      act(() => {
+        result.current.stopChirpListening();
+      });
+    });
+
+    it('successfully parses audio frequency payloads after worker re-initialization', async () => {
+      const stopTrackMock = vi.fn();
+      const mockStream = {
+        getTracks: () => [{ stop: stopTrackMock }],
+      };
+
+      vi.stubGlobal('navigator', {
+        ...navigator,
+        mediaDevices: {
+          getUserMedia: vi.fn().mockResolvedValue(mockStream),
+        },
+      });
+
+      const audioCtx = new MockAudioContext() as any;
+      const { result } = renderHook(() => useChirpTransceiver(() => audioCtx));
+
+      // First run
+      await act(async () => {
+        await result.current.startChirpListening();
+      });
+      act(() => {
+        result.current.stopChirpListening();
+      });
+
+      // Second run (re-initialization)
+      await act(async () => {
+        await result.current.startChirpListening();
+      });
+
+      const activeWorker = (globalThis as any).mockWorkerControl.activeWorker;
+      expect(activeWorker).not.toBeNull();
+
+      act(() => {
+        activeWorker.dispatchMessage({
+          type: 'fsk_response',
+          symbol: 'SYNC TONE',
+          decodedMessage: 'RESTART_OK',
+          logs: ['Sync tone detected after restart'],
+          buffer: new ArrayBuffer(1024),
+        });
+      });
+
+      expect(result.current.currentSymbol).toBe('SYNC TONE');
+      expect(result.current.decodedMessage).toBe('RESTART_OK');
+      expect(result.current.receiverLog).toContain('Sync tone detected after restart');
+
+      act(() => {
+        result.current.stopChirpListening();
+      });
+    });
   });
 
   describe('useSpectrogramQR', () => {
