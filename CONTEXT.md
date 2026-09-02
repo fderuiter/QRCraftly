@@ -26,6 +26,14 @@ _Avoid_: Margin, padding, border, white space
 A visual render aesthetic where contiguous dark modules connect via continuous curves while preserving module optical contrast.
 _Avoid_: Liquid ink, blob style, melted QR, connected dots
 
+**Diagonal Neck Bridge**:
+A calibrated diagonal corridor connecting diagonally adjacent modules across 2x2 matrix intersections in fluid rendering.
+_Avoid_: Diagonal bleed, corner bleed, diagonal connector
+
+**Perimeter Contour Loop**:
+A closed polygon formed by directed boundary segments outlining contiguous module clusters for smooth vector rendering.
+_Avoid_: Outline, border path, trace line
+
 ### Privacy & Compliance
 
 **Zero-Knowledge Redirection**:
