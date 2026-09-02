@@ -101,5 +101,17 @@ A cross-platform launcher ensuring interactive bash wizards execute consistently
 _Avoid_: Bash bridge, script invoker, shell wrapper
 
 **Git Guardrails**:
-Automated client-side hooks combining Husky with lint-staged to enforce code formatting, syntax rules, and duplication constraints before commit creation.
+The automated client-side hooks combining Husky with lint-staged to enforce code formatting, syntax rules, and duplication constraints before commit creation.
 _Avoid_: Commit hooks, git checks, pre-commit scripts, git filters
+
+**Authoritative Deployment Orchestrator**:
+The single source of truth (GitHub Actions) executing quality gates, security audits, build provenance attestations, and edge deployments, preventing duplicate or unverified builds from external git integrations.
+_Avoid_: Build trigger, dual deploy, cloud build runner, auto-deployment app
+
+**Staged Promotion**:
+The lifecycle discipline where all feature and fix branches merge into the default integration branch (`dev`), deploying to an active preview environment (`qrcraftly.fpderuiter.workers.dev`) before production release promotion to `main`.
+_Avoid_: Dev-to-main copy, branch sync, direct push release, cherry-pick release
+
+**Ephemeral Preview Environment**:
+An isolated, on-demand edge staging deployment created per pull request to enable automated end-to-end smoke verification and visual review prior to merge.
+_Avoid_: Test deploy, PR sandbox, temp site, branch build
