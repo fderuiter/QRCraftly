@@ -76,3 +76,13 @@ To prevent DOM-based Cross-Site Scripting (DOM-XSS) via dynamic anchors and `hre
 ## Bot Protection & Edge Anti-Abuse (Cloudflare Turnstile)
 
 Dynamic redirect link generation (`/r/[id]`) incorporates Cloudflare Turnstile bot verification to defend against automated abuse, denial-of-wallet attacks, and unauthorized database writes. Client-acquired verification tokens are validated prior to committing new dynamic routes to Cloudflare D1.
+
+## Lifecycle-Aware Memory Zeroing (`wipeMemoryBuffer`)
+
+To prevent residual sensitive binary payload bytes and active QR matrix frame structures from lingering in client process memory or web worker state, QRCraftly enforces synchronous lifecycle memory zeroing:
+
+- **Centralized Wiping Utility (`wipeMemoryBuffer`)**: The `wipeMemoryBuffer` helper function in `src/utils/security.ts` zero-fills typed arrays (`Uint8Array`, `Float32Array`, `Uint8ClampedArray`, etc.), `ArrayBuffer` instances, and `DataView` structures using `.fill(0)`. Detached or transferred buffers are safely handled via try-catch guards.
+- **Immediate File Download Sanitization**: In `triggerFileDownload` (`src/utils/downloadManager.ts`), active binary buffers are zero-filled immediately following URL object creation and download triggering to prevent decrypted file fragments from persisting in browser memory.
+- **Worker State Zeroing**: Background workers (such as `src/utils/fileReassemblyWorker.ts`) zero-fill chunk byte buffers on reset, reassembly completion, buffer allocation/expansion, and error conditions.
+- **Memory & Frame Pools**: Frame buffers in preallocated pools (`src/utils/FrameMemoryPool.ts` and `src/utils/AdaptiveFrameScheduler.ts`) are wiped upon release or reset to sanitize matrix structures prior to reuse or garbage collection.
+- **Lifecycle Event Hooks**: Component hooks (`useAnimatedQrReceiver` and `useAnimatedQrSender`) listen to browser lifecycle events (`beforeunload`, `pagehide`, `visibilitychange`) and component unmounting to synchronously wipe active payload buffers and terminate worker state.
