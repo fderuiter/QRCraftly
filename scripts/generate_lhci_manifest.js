@@ -1,6 +1,8 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { walkDir } from './utils/fileWalker.js';
+import { isDirectExecution } from './utils/cliHelper.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -8,20 +10,8 @@ const __dirname = path.dirname(__filename);
 const DIST_DIR = path.resolve(__dirname, '../dist/client');
 const LIGHTHOUSE_RC_FILE = path.resolve(__dirname, '../lighthouserc.json');
 
-function findHtmlFiles(dir, fileList = []) {
-  if (!fs.existsSync(dir)) return fileList;
-  
-  const files = fs.readdirSync(dir);
-  for (const file of files) {
-    const filePath = path.join(dir, file);
-    const stat = fs.statSync(filePath);
-    if (stat.isDirectory()) {
-      findHtmlFiles(filePath, fileList);
-    } else if (filePath.endsWith('.html')) {
-      fileList.push(filePath);
-    }
-  }
-  return fileList;
+function findHtmlFiles(dir) {
+  return walkDir(dir, { extensions: ['.html'] });
 }
 
 function generateLhciManifest() {
@@ -99,4 +89,8 @@ function generateLhciManifest() {
   console.log(`[LHCI Manifest] Successfully wrote ${urls.length} audit URLs and updated SEO threshold in ${LIGHTHOUSE_RC_FILE}`);
 }
 
-generateLhciManifest();
+export { generateLhciManifest };
+
+if (isDirectExecution(import.meta.url)) {
+  generateLhciManifest();
+}

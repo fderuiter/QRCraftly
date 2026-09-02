@@ -2,10 +2,13 @@ import fs from 'fs';
 import path from 'path';
 import { createRequire } from 'module';
 import { fileURLToPath } from 'url';
+import { evaluateExpression, parseSourceFile } from './utils/astHelper.js';
+import { walkDir } from './utils/fileWalker.js';
+import { isDirectExecution, parseCliArgs } from './utils/cliHelper.js';
+
+export { evaluateExpression };
 
 const require = createRequire(import.meta.url);
-// typescript ships as CJS without an `exports` field; use createRequire so the
-// CJS resolver can find it even when pnpm hoists it to a parent node_modules.
 const ts = require('typescript');
 
 const __filename = fileURLToPath(import.meta.url);
@@ -58,32 +61,7 @@ export function isExcludedFile(filePath) {
   return false;
 }
 
-/**
- * Statically evaluates a string node expression.
- */
-export function evaluateExpression(node) {
-  if (!node) return null;
-  if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) {
-    return node.text;
-  }
-  if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.PlusToken) {
-    const left = evaluateExpression(node.left);
-    const right = evaluateExpression(node.right);
-    if (left !== null && right !== null) {
-      return left + right;
-    }
-  }
-  if (ts.isTemplateExpression(node)) {
-    let text = node.head.text;
-    for (const span of node.templateSpans) {
-      const expr = evaluateExpression(span.expression);
-      if (expr === null) return null;
-      text += expr + span.literal.text;
-    }
-    return text;
-  }
-  return null;
-}
+
 
 /**
  * Helper to check if an expression node refers to localStorage.
@@ -245,25 +223,8 @@ export function runStorageAudit() {
   if (process.argv.length > 2) {
     filesToScan = process.argv.slice(2).map(f => path.resolve(f));
   } else {
-    const walk = (dir) => {
-      let results = [];
-      const list = fs.readdirSync(dir);
-      list.forEach(file => {
-        const fullPath = path.join(dir, file);
-        const stat = fs.statSync(fullPath);
-        const relPath = path.relative(repoRoot, fullPath).replace(/\\/g, '/');
-        if (EXCLUDE_DIRS.some(d => relPath.split('/').includes(d))) return;
-        if (stat && stat.isDirectory()) {
-          results = results.concat(walk(fullPath));
-        } else {
-          results.push(fullPath);
-        }
-      });
-      return results;
-    };
-
     try {
-      filesToScan = walk(path.join(repoRoot, 'src'));
+      filesToScan = walkDir(path.join(repoRoot, 'src'), { excludeDirs: EXCLUDE_DIRS });
     } catch (err) {
       console.error('❌ [Pre-Build Storage Privacy AST Auditor] Error scanning directory:', err.message);
       process.exit(1);
@@ -306,6 +267,6 @@ export function runStorageAudit() {
   process.exit(0);
 }
 
-if (process.argv[1] && (process.argv[1] === fileURLToPath(import.meta.url) || process.argv[1].endsWith('storage_privacy_ast_auditor.js'))) {
+if (isDirectExecution(import.meta.url)) {
   runStorageAudit();
 }

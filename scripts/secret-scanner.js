@@ -2,6 +2,8 @@ import fs from 'fs';
 import path from 'path';
 import { execSync } from 'child_process';
 import { fileURLToPath } from 'url';
+import { walkDir } from './utils/fileWalker.js';
+import { isDirectExecution } from './utils/cliHelper.js';
 
 // Excluded files or directories
 export const EXCLUDE_DIRS = [
@@ -429,25 +431,8 @@ function main() {
     } catch (err) {
       // Fallback: search directory recursively if not in a git repo
       console.warn('⚠️  Could not run git ls-files. Falling back to simple file scan.');
-      function walk(dir) {
-        let results = [];
-        const list = fs.readdirSync(dir);
-        list.forEach(file => {
-          const fullPath = path.join(dir, file);
-          const stat = fs.statSync(fullPath);
-          const relPath = path.relative(process.cwd(), fullPath);
-          const segments = relPath.replace(/\\/g, '/').split('/');
-          if (EXCLUDE_DIRS.some(d => segments.includes(d))) return;
-          if (stat && stat.isDirectory()) {
-            results = results.concat(walk(fullPath));
-          } else {
-            results.push(relPath);
-          }
-        });
-        return results;
-      }
       try {
-        filesToScan = walk(process.cwd());
+        filesToScan = walkDir(process.cwd(), { excludeDirs: EXCLUDE_DIRS, relative: true });
       } catch (walkErr) {
         console.error('Error walking directory:', walkErr);
         process.exit(1);
@@ -492,10 +477,6 @@ function main() {
   process.exit(0);
 }
 
-if (process.argv[1]) {
-  const realScriptPath = fs.realpathSync(fileURLToPath(import.meta.url));
-  const realExecutedPath = fs.realpathSync(process.argv[1]);
-  if (realScriptPath === realExecutedPath) {
-    main();
-  }
+if (isDirectExecution(import.meta.url)) {
+  main();
 }

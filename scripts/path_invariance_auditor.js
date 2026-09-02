@@ -1,6 +1,8 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { walkDir } from './utils/fileWalker.js';
+import { isDirectExecution } from './utils/cliHelper.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -141,23 +143,10 @@ export function scanFileForPathInvariants(filePath) {
  * Walks directory recursively to collect candidate source files.
  */
 function walk(dir) {
-  let results = [];
-  if (!fs.existsSync(dir)) return results;
-  const list = fs.readdirSync(dir);
-  for (const item of list) {
-    if (EXCLUDE_DIRS.includes(item)) continue;
-    const fullPath = path.join(dir, item);
-    const stat = fs.statSync(fullPath);
-    if (stat.isDirectory()) {
-      results = results.concat(walk(fullPath));
-    } else {
-      const ext = path.extname(item).toLowerCase();
-      if (['.js', '.ts', '.tsx', '.cjs', '.mjs', '.json', '.md'].includes(ext)) {
-        results.push(fullPath);
-      }
-    }
-  }
-  return results;
+  return walkDir(dir, {
+    extensions: ['.js', '.ts', '.tsx', '.cjs', '.mjs', '.json', '.md'],
+    excludeDirs: EXCLUDE_DIRS
+  });
 }
 
 /**
@@ -218,10 +207,6 @@ export function runPathInvarianceAudit() {
   process.exit(0);
 }
 
-if (process.argv[1]) {
-  const realScriptPath = fs.realpathSync(fileURLToPath(import.meta.url));
-  const realExecutedPath = fs.realpathSync(process.argv[1]);
-  if (realScriptPath === realExecutedPath) {
-    runPathInvarianceAudit();
-  }
+if (isDirectExecution(import.meta.url)) {
+  runPathInvarianceAudit();
 }

@@ -2,6 +2,8 @@ import fs from 'fs';
 import path from 'path';
 import zlib from 'zlib';
 import { fileURLToPath } from 'url';
+import { walkDir } from './utils/fileWalker.js';
+import { isDirectExecution } from './utils/cliHelper.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -16,19 +18,7 @@ const MAX_GZIPPED_SIZE_BYTES = MAX_GZIPPED_SIZE_KB * 1024;
  * @returns {string[]}
  */
 export function getFiles(dir) {
-  let results = [];
-  if (!fs.existsSync(dir)) return results;
-  const list = fs.readdirSync(dir);
-  for (const file of list) {
-    const fullPath = path.join(dir, file);
-    const stat = fs.statSync(fullPath);
-    if (stat.isDirectory()) {
-      results = results.concat(getFiles(fullPath));
-    } else if (stat.isFile()) {
-      results.push(fullPath);
-    }
-  }
-  return results;
+  return walkDir(dir);
 }
 
 /**
@@ -106,7 +96,6 @@ export function runCheck() {
   }
 }
 
-const isDirectRun = process.argv[1] && (fs.realpathSync(process.argv[1]) === fileURLToPath(import.meta.url));
-if (isDirectRun) {
+if (isDirectExecution(import.meta.url)) {
   runCheck();
 }

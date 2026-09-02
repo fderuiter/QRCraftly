@@ -1,6 +1,7 @@
 // Script to check WCAG contrast ratios for various UI elements in QRCraftly.
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+import { isDirectExecution } from './utils/cliHelper.js';
 
 export function hexToRgb(hexColor) {
     hexColor = hexColor.replace(/^#/, '');
@@ -188,6 +189,6 @@ export function runCheck() {
 }
 
 // Only run automatically if executed directly
-if (process.argv[1] && (process.argv[1] === fileURLToPath(import.meta.url) || process.argv[1].endsWith('contrast_check.js'))) {
+if (isDirectExecution(import.meta.url)) {
     runCheck();
 }

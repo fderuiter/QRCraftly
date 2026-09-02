@@ -5,21 +5,6 @@ const crypto = require('crypto');
 const DIST_DIR = path.join(__dirname, '../dist/client');
 const OUTPUT_FILE = path.join(DIST_DIR, 'sw.js');
 
-function getFilesRecursively(dir) {
-  let results = [];
-  const list = fs.readdirSync(dir);
-  list.forEach(file => {
-    const fullPath = path.join(dir, file);
-    const stat = fs.statSync(fullPath);
-    if (stat && stat.isDirectory()) {
-      results = results.concat(getFilesRecursively(fullPath));
-    } else {
-      results.push(fullPath);
-    }
-  });
-  return results;
-}
-
 function computeHash(filePath) {
   const fileBuffer = fs.readFileSync(filePath);
   const hashSum = crypto.createHash('sha256');
@@ -27,13 +12,14 @@ function computeHash(filePath) {
   return hashSum.digest('hex').substring(0, 8);
 }
 
-function generateSW() {
+async function generateSW() {
   if (!fs.existsSync(DIST_DIR)) {
     console.error('dist/client directory does not exist. Run build first.');
     process.exit(1);
   }
 
-  const allFiles = getFilesRecursively(DIST_DIR);
+  const { walkDir } = await import('./utils/fileWalker.js');
+  const allFiles = walkDir(DIST_DIR);
   const precacheManifest = [];
 
   allFiles.forEach(file => {
@@ -177,4 +163,7 @@ self.addEventListener('fetch', (event) => {
   console.log('✅ Compiled vanilla service worker written to ' + OUTPUT_FILE + ' with ' + precacheManifest.length + ' assets mapped (Build Hash: ' + buildHash + ').');
 }
 
-generateSW();
+generateSW().catch(err => {
+  console.error(err);
+  process.exit(1);
+});

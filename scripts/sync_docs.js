@@ -2,6 +2,8 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { compileManifest, docsPublicDir as defaultDocsPublicDir, outputManifestPath as defaultOutputManifestPath } from './compile_docs_manifest.js';
+import { walkDir } from './utils/fileWalker.js';
+import { isDirectExecution } from './utils/cliHelper.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -121,7 +123,7 @@ export function syncUICatalog(
     }
 
     // Read component files from disk
-    const diskFiles = fs.readdirSync(targetDir);
+    const diskFiles = walkDir(targetDir, { relative: true }).map(f => path.basename(f));
     const componentFiles = diskFiles
       .filter(f => f.endsWith('.tsx') && !f.endsWith('.test.tsx'))
       .sort((a, b) => a.localeCompare(b));
@@ -362,6 +364,6 @@ export function syncAll(options = {}) {
 }
 
 // Run CLI if invoked directly
-if (process.argv[1] && (process.argv[1] === fileURLToPath(import.meta.url) || process.argv[1].endsWith('sync_docs.js'))) {
+if (isDirectExecution(import.meta.url)) {
   syncAll();
 }

@@ -2,6 +2,8 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { loadEnv } from 'vite';
+import { walkDir } from './utils/fileWalker.js';
+import { isDirectExecution } from './utils/cliHelper.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -26,20 +28,8 @@ const DIST_DIR = path.resolve(__dirname, '../dist/client');
 const OUTPUT_FILE = process.env.SITEMAP_OUTPUT_PATH || path.join(DIST_DIR, 'sitemap.xml');
 
 
-function findHtmlFiles(dir: string, fileList: string[] = []): string[] {
-  if (!fs.existsSync(dir)) return fileList;
-  
-  const files = fs.readdirSync(dir);
-  for (const file of files) {
-    const filePath = path.join(dir, file);
-    const stat = fs.statSync(filePath);
-    if (stat.isDirectory()) {
-      findHtmlFiles(filePath, fileList);
-    } else if (filePath.endsWith('.html')) {
-      fileList.push(filePath);
-    }
-  }
-  return fileList;
+function findHtmlFiles(dir: string): string[] {
+  return walkDir(dir, { extensions: ['.html'] });
 }
 
 /**
@@ -207,8 +197,6 @@ ${urls.join('\n')}
 }
 
 // Only execute if run directly
-const isMain = process.argv[1] ? (path.resolve(process.argv[1]) === path.resolve(__filename)) : false;
-
-if (isMain) {
+if (isDirectExecution(import.meta.url)) {
   generateSitemap();
 }

@@ -1,5 +1,6 @@
 import { execFileSync, execSync } from 'child_process';
 import fs from 'fs';
+import { isDirectExecution } from './cliHelper.js';
 
 const WINDOWS_CMD_EXECUTABLES = new Set(['npx', 'npm', 'pnpm', 'yarn', 'tsc', 'wrangler', 'depcruise']);
 let cachedBash = null;
@@ -98,4 +99,9 @@ export function resolveBash() {
 
   cachedBash = 'bash';
   return 'bash';
+}
+
+if (isDirectExecution(import.meta.url)) {
+  console.log('[execHelper] Direct execution check passed.');
+  console.log('[execHelper] Resolved bash executable:', resolveBash());
 }

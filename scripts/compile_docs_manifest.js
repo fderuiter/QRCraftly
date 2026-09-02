@@ -2,6 +2,8 @@ import fs from 'fs';
 import path from 'path';
 import { createRequire } from 'module';
 import { fileURLToPath } from 'url';
+import { walkDir } from './utils/fileWalker.js';
+import { isDirectExecution } from './utils/cliHelper.js';
 
 const require = createRequire(import.meta.url);
 // marked ships as CJS; use createRequire so pnpm hoisting works.
@@ -134,7 +136,7 @@ export function compileManifest(inputDir = docsPublicDir, outputPath = outputMan
     process.exit(1);
   }
 
-  const files = fs.readdirSync(inputDir).filter(file => file.endsWith('.md'));
+  const files = walkDir(inputDir, { extensions: ['.md'], relative: true });
   const manifest = [];
 
   for (const file of files) {
@@ -241,6 +243,6 @@ export function compileManifest(inputDir = docsPublicDir, outputPath = outputMan
 }
 
 // Only run automatically if executed directly
-if (process.argv[1] && (process.argv[1] === fileURLToPath(import.meta.url) || process.argv[1].endsWith('compile_docs_manifest.js'))) {
+if (isDirectExecution(import.meta.url)) {
   compileManifest();
 }

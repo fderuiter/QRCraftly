@@ -2,10 +2,11 @@ import fs from 'fs';
 import path from 'path';
 import { createRequire } from 'module';
 import { fileURLToPath } from 'url';
+import { walkDir } from './utils/fileWalker.js';
+import { evaluateExpression, parseSourceFile } from './utils/astHelper.js';
+import { isDirectExecution } from './utils/cliHelper.js';
 
 const require = createRequire(import.meta.url);
-// typescript ships as CJS without an `exports` field; use createRequire so the
-// CJS resolver can find it even when pnpm hoists it to a parent node_modules.
 const ts = require('typescript');
 
 const __filename = fileURLToPath(import.meta.url);
@@ -34,51 +35,6 @@ const AUTHORIZED_SIGNATURES = [
   '/api/redirect',
   'optInRedirector'
 ];
-
-/**
- * Recursively list all .js and .mjs files under a directory.
- */
-function findJsFiles(dir) {
-  let results = [];
-  if (!fs.existsSync(dir)) return results;
-  const list = fs.readdirSync(dir);
-  list.forEach(file => {
-    const fullPath = path.join(dir, file);
-    const stat = fs.statSync(fullPath);
-    if (stat && stat.isDirectory()) {
-      results = results.concat(findJsFiles(fullPath));
-    } else if (file.endsWith('.js') || file.endsWith('.mjs')) {
-      results.push(fullPath);
-    }
-  });
-  return results;
-}
-
-/**
- * Evaluates a string node, including constant binary concatenation and template strings.
- */
-function evaluateExpression(node) {
-  if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) {
-    return node.text;
-  }
-  if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.PlusToken) {
-    const left = evaluateExpression(node.left);
-    const right = evaluateExpression(node.right);
-    if (left !== null && right !== null) {
-      return left + right;
-    }
-  }
-  if (ts.isTemplateExpression(node)) {
-    let text = node.head.text;
-    for (const span of node.templateSpans) {
-      const expr = evaluateExpression(span.expression);
-      if (expr === null) return null;
-      text += expr + span.literal.text;
-    }
-    return text;
-  }
-  return null;
-}
 
 /**
  * Check if a file's raw content contains any authorized signature.
@@ -188,7 +144,7 @@ export function runBundleComplianceAudit() {
     return;
   }
 
-  const jsFiles = findJsFiles(distDir);
+  const jsFiles = walkDir(distDir, { extensions: ['.js', '.mjs'] });
   console.log(`[Bundle Compliance AST Audit] Found ${jsFiles.length} compiled bundle file(s) to scan.`);
 
   let allViolations = [];
@@ -225,6 +181,6 @@ export function runBundleComplianceAudit() {
   console.log('✅ Compiled production bundles compliance AST audit passed successfully!\n');
 }
 
-if (process.argv[1] && (process.argv[1] === fileURLToPath(import.meta.url) || process.argv[1].endsWith('bundle_ast_audit.js'))) {
+if (isDirectExecution(import.meta.url)) {
   runBundleComplianceAudit();
 }

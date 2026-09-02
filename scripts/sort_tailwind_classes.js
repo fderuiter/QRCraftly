@@ -2,6 +2,8 @@ import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { walkDir } from './utils/fileWalker.js';
+import { isDirectExecution } from './utils/cliHelper.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -82,24 +84,11 @@ export function sortClassesInContent(content) {
  * @returns {string[]} Paths of all matching files.
  */
 export function getFiles(dir) {
-  let results = [];
-  const list = fs.readdirSync(dir);
-  list.forEach(file => {
-    const filePath = path.join(dir, file);
-    const stat = fs.statSync(filePath);
-    if (stat && stat.isDirectory()) {
-      results = results.concat(getFiles(filePath));
-    } else {
-      if (filePath.endsWith('.tsx') || filePath.endsWith('.ts')) {
-        results.push(filePath);
-      }
-    }
-  });
-  return results;
+  return walkDir(dir, { extensions: ['.ts', '.tsx'] });
 }
 
 // Only run automatically if executed directly
-if (process.argv[1] && (process.argv[1] === fileURLToPath(import.meta.url) || process.argv[1].endsWith('sort_tailwind_classes.js'))) {
+if (isDirectExecution(import.meta.url)) {
   const checkOnly = process.argv.includes('--check');
 
   // Extract arguments, filtering out option flags

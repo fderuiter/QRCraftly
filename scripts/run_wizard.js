@@ -5,6 +5,8 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { spawnSync } from 'child_process';
 import { resolveBash } from './utils/execHelper.js';
+import { walkDir } from './utils/fileWalker.js';
+import { isDirectExecution } from './utils/cliHelper.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -33,10 +35,8 @@ function getAvailableWizards() {
   if (!fs.existsSync(wizardsDir)) {
     return [];
   }
-  return fs
-    .readdirSync(wizardsDir)
-    .filter(file => file.endsWith('.sh'))
-    .map(file => file.replace(/\.sh$/, ''));
+  return walkDir(wizardsDir, { extensions: ['.sh'], relative: true })
+    .map(file => path.basename(file).replace(/\.sh$/, ''));
 }
 
 /**
@@ -97,5 +97,7 @@ function main() {
   process.exit(result.status ?? 0);
 }
 
-main();
+if (isDirectExecution(import.meta.url)) {
+  main();
+}
 

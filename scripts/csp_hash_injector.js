@@ -2,6 +2,8 @@ import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
+import { walkDir } from './utils/fileWalker.js';
+import { isDirectExecution } from './utils/cliHelper.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -14,19 +16,7 @@ const DIST_CLIENT_DIR = path.join(__dirname, '../dist/client');
  * @returns {string[]} List of HTML file paths.
  */
 export function getHtmlFiles(dir) {
-  let results = [];
-  if (!fs.existsSync(dir)) return results;
-  const list = fs.readdirSync(dir);
-  for (const file of list) {
-    const filePath = path.join(dir, file);
-    const stat = fs.statSync(filePath);
-    if (stat && stat.isDirectory()) {
-      results = results.concat(getHtmlFiles(filePath));
-    } else if (file.endsWith('.html')) {
-      results.push(filePath);
-    }
-  }
-  return results;
+  return walkDir(dir, { extensions: ['.html'] });
 }
 
 /**
@@ -354,6 +344,6 @@ export function validateHeaders(csp, headersContent) {
 }
 
 // Only run automatically if executed directly
-if (process.argv[1] && (process.argv[1] === fileURLToPath(import.meta.url) || process.argv[1].endsWith('csp_hash_injector.js'))) {
+if (isDirectExecution(import.meta.url)) {
   run();
 }

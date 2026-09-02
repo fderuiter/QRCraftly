@@ -3,6 +3,11 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { syncUICatalog } from './sync_docs.js';
+import { walkDir } from './utils/fileWalker.js';
+import { decodeGitPath, parseGitStatus, parseGitDiff } from './utils/gitHelper.js';
+import { isDirectExecution, parseCliArgs } from './utils/cliHelper.js';
+
+export { decodeGitPath, parseGitStatus, parseGitDiff };
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -186,8 +191,11 @@ export function validateCatalog(uiDir = DEFAULT_UI_DIR, catalogPath = DEFAULT_CA
     }
 
     // Discover all UI components (.tsx files) and exclude test files (.test.tsx)
-    const files = fs.readdirSync(dir);
-    const componentFiles = files.filter(file => file.endsWith('.tsx') && !file.endsWith('.test.tsx'));
+    const componentFiles = walkDir(dir, {
+      extensions: ['.tsx'],
+      filter: f => !f.endsWith('.test.tsx'),
+      relative: true
+    }).map(f => path.basename(f));
 
     // Verify each discovered component
     for (const componentFile of componentFiles) {
@@ -269,105 +277,6 @@ export function checkLineage(modifiedFiles) {
   return missingUpdates;
 }
 
-/**
- * Decodes octal and other backslash escape sequences from git output.
- */
-export function decodeGitPath(filePath) {
-  if (filePath.startsWith('"') && filePath.endsWith('"')) {
-    filePath = filePath.slice(1, -1);
-  }
-
-  const bytes = [];
-  let i = 0;
-  while (i < filePath.length) {
-    if (filePath[i] === '\\') {
-      if (i + 1 < filePath.length) {
-        const nextChar = filePath[i + 1];
-        if (/[0-7]/.test(nextChar)) {
-          let octalStr = '';
-          for (let j = 0; j < 3; j++) {
-            if (i + 1 + j < filePath.length && /[0-7]/.test(filePath[i + 1 + j])) {
-              octalStr += filePath[i + 1 + j];
-            } else {
-              break;
-            }
-          }
-          const byteVal = parseInt(octalStr, 8);
-          if (byteVal > 255) {
-            bytes.push('\\'.charCodeAt(0));
-            for (let c = 0; c < octalStr.length; c++) {
-              bytes.push(octalStr.charCodeAt(c));
-            }
-          } else {
-            bytes.push(byteVal);
-          }
-          i += 1 + octalStr.length;
-        } else {
-          if (nextChar === 'n') bytes.push(10);
-          else if (nextChar === 't') bytes.push(9);
-          else if (nextChar === 'r') bytes.push(13);
-          else if (nextChar === 'b') bytes.push(8);
-          else if (nextChar === 'f') bytes.push(12);
-          else if (nextChar === 'v') bytes.push(11);
-          else if (nextChar === 'a') bytes.push(7);
-          else if (nextChar === '"' || nextChar === '\\' || nextChar === ' ' || nextChar === '/' || nextChar === '\'') {
-            bytes.push(nextChar.charCodeAt(0));
-          } else {
-            bytes.push('\\'.charCodeAt(0));
-            bytes.push(nextChar.charCodeAt(0));
-          }
-          i += 2;
-        }
-      } else {
-        bytes.push('\\'.charCodeAt(0));
-        i += 1;
-      }
-    } else {
-      bytes.push(filePath.charCodeAt(i));
-      i += 1;
-    }
-  }
-
-  let decoded;
-  try {
-    const uint8Array = new Uint8Array(bytes);
-    decoded = new TextDecoder('utf-8', { fatal: true }).decode(uint8Array);
-  } catch (err) {
-    try {
-      const uint8Array = new Uint8Array(bytes);
-      decoded = new TextDecoder('utf-8', { fatal: false }).decode(uint8Array);
-    } catch (_) {
-      decoded = filePath;
-    }
-  }
-
-  return decoded;
-}
-
-/**
- * Parses git status porcelain output.
- */
-export function parseGitStatus(stdout) {
-  const modifiedFiles = new Set();
-  const lines = stdout.split(/\r?\n/);
-  for (const line of lines) {
-    if (line.length < 3) continue;
-    let rawPath = line.substring(3).trim();
-
-    if (rawPath.includes(' -> ')) {
-      rawPath = rawPath.split(' -> ')[1].trim();
-    }
-
-    const decoded = decodeGitPath(rawPath);
-    const normalized = decoded.replace(/\\/g, '/');
-    modifiedFiles.add(normalized);
-  }
-  return modifiedFiles;
-}
-
-/**
- * Parses command line arguments into clean relative file paths.
- */
 export function parseArgs(args) {
   const files = [];
   const positionalArgs = args.filter(arg => !arg.startsWith('-'));
@@ -503,6 +412,6 @@ function runValidator() {
 }
 
 // Only run automatically if executed directly from node CLI
-if (process.argv[1] && (process.argv[1] === fileURLToPath(import.meta.url) || process.argv[1].endsWith('validate_ui_catalog.js'))) {
+if (isDirectExecution(import.meta.url)) {
   runValidator();
 }

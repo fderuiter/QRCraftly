@@ -1,6 +1,8 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { walkDir } from './utils/fileWalker.js';
+import { isDirectExecution } from './utils/cliHelper.js';
 
 const EXCLUDE_DIRS = ['node_modules', '.git', 'dist', 'build', 'coverage'];
 const EXCLUDE_FILES = ['scripts/static-path-tracker.js', 'tests/static-path-tracker.test.ts'];
@@ -49,25 +51,8 @@ function main() {
   if (process.argv.length > 2) {
     filesToScan = process.argv.slice(2).map(f => path.resolve(f));
   } else {
-    // Walk through src directory recursively
-    const walk = (dir) => {
-      let results = [];
-      const list = fs.readdirSync(dir);
-      list.forEach(file => {
-        const fullPath = path.join(dir, file);
-        const stat = fs.statSync(fullPath);
-        const relPath = path.relative(process.cwd(), fullPath);
-        if (EXCLUDE_DIRS.some(d => relPath.split(path.sep).includes(d))) return;
-        if (stat && stat.isDirectory()) {
-          results = results.concat(walk(fullPath));
-        } else {
-          results.push(fullPath);
-        }
-      });
-      return results;
-    };
     try {
-      filesToScan = walk(path.join(process.cwd(), 'src'));
+      filesToScan = walkDir(path.join(process.cwd(), 'src'), { excludeDirs: EXCLUDE_DIRS });
     } catch (err) {
       console.error('Error walking src directory:', err);
       process.exit(1);
@@ -103,10 +88,6 @@ function main() {
   process.exit(0);
 }
 
-if (process.argv[1]) {
-  const realScriptPath = fs.realpathSync(fileURLToPath(import.meta.url));
-  const realExecutedPath = fs.realpathSync(process.argv[1]);
-  if (realScriptPath === realExecutedPath) {
-    main();
-  }
+if (isDirectExecution(import.meta.url)) {
+  main();
 }

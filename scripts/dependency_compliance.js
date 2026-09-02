@@ -1,6 +1,8 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { walkDir } from './utils/fileWalker.js';
+import { isDirectExecution } from './utils/cliHelper.js';
 import { execSync } from 'child_process';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -179,24 +181,6 @@ export function scanFileForCompliance(filePath) {
   return violations;
 }
 
-/**
- * Recursively find files to audit under src/
- */
-function findSourceFiles(dir) {
-  let results = [];
-  const list = fs.readdirSync(dir);
-  list.forEach(file => {
-    const fullPath = path.join(dir, file);
-    const stat = fs.statSync(fullPath);
-    if (stat && stat.isDirectory()) {
-      results = results.concat(findSourceFiles(fullPath));
-    } else if (file.endsWith('.ts') || file.endsWith('.tsx') || file.endsWith('.js') || file.endsWith('.jsx')) {
-      results.push(fullPath);
-    }
-  });
-  return results;
-}
-
 export function runComplianceAudit() {
   console.log('[Dependency Compliance] Auditing production dependencies and network/client-side boundaries...');
 
@@ -209,7 +193,7 @@ export function runComplianceAudit() {
   }
 
   const srcDir = path.join(repoRoot, 'src');
-  const sourceFiles = findSourceFiles(srcDir);
+  const sourceFiles = walkDir(srcDir, { extensions: ['.ts', '.tsx', '.js', '.jsx'] });
   let codeViolations = [];
 
   for (const file of sourceFiles) {
@@ -251,6 +235,6 @@ export function runComplianceAudit() {
   process.exit(0);
 }
 
-if (process.argv[1] && (process.argv[1] === fileURLToPath(import.meta.url) || process.argv[1].endsWith('dependency_compliance.js'))) {
+if (isDirectExecution(import.meta.url)) {
   runComplianceAudit();
 }

@@ -3,6 +3,8 @@ import path from 'path';
 import { createRequire } from 'module';
 import { fileURLToPath } from 'url';
 import { parseFrontmatter, isQuarantined } from './compile_docs_manifest.js';
+import { walkDir } from './utils/fileWalker.js';
+import { isDirectExecution } from './utils/cliHelper.js';
 
 const require = createRequire(import.meta.url);
 // marked and typescript ship as CJS; use createRequire so pnpm hoisting works.
@@ -42,8 +44,7 @@ export const docsPublicDir = path.join(repoRoot, 'docs', 'public');
 
 export function getFilesToAudit() {
   const docsPublicFiles = fs.existsSync(docsPublicDir)
-    ? fs.readdirSync(docsPublicDir)
-        .filter(file => file.endsWith('.md'))
+    ? walkDir(docsPublicDir, { extensions: ['.md'], relative: true })
         .map(file => path.join('docs', 'public', file))
     : [];
 
@@ -540,6 +541,6 @@ export function runAudit() {
 }
 
 // Only run automatically if executed directly
-if (process.argv[1] && (process.argv[1] === fileURLToPath(import.meta.url) || process.argv[1].endsWith('audit_markdown.js'))) {
+if (isDirectExecution(import.meta.url)) {
   runAudit();
 }
