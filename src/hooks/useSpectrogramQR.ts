@@ -52,6 +52,14 @@ export function useSpectrogramQR(getAudioContext: () => AudioContext) {
       try {
         osc.stop();
       } catch {}
+      try {
+        osc.disconnect();
+      } catch {}
+    });
+    specGainNodesRef.current.forEach((gain) => {
+      try {
+        gain.disconnect();
+      } catch {}
     });
     specOscillatorsRef.current = [];
     specGainNodesRef.current = [];

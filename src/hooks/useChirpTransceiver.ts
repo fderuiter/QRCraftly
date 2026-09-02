@@ -39,6 +39,7 @@ export function useChirpTransceiver(getAudioContext: () => AudioContext) {
   const [currentSymbol, setCurrentSymbol] = useState<string>('Idle');
 
   const activeOscillatorsRef = useRef<OscillatorNode[]>([]);
+  const activeGainNodesRef = useRef<GainNode[]>([]);
   const micStreamRef = useRef<MediaStream | null>(null);
   const micSourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const micAnalyserRef = useRef<AnalyserNode | null>(null);
@@ -55,16 +56,29 @@ export function useChirpTransceiver(getAudioContext: () => AudioContext) {
     setReceiverLog((prev) => [msg, ...prev].slice(0, 50));
   }, []);
 
-  const stopChirpTransmission = useCallback(() => {
+  const cleanupTransmissionNodes = useCallback(() => {
     activeOscillatorsRef.current.forEach((osc) => {
       try {
         osc.stop();
       } catch {}
+      try {
+        osc.disconnect();
+      } catch {}
+    });
+    activeGainNodesRef.current.forEach((gain) => {
+      try {
+        gain.disconnect();
+      } catch {}
     });
     activeOscillatorsRef.current = [];
+    activeGainNodesRef.current = [];
+  }, []);
+
+  const stopChirpTransmission = useCallback(() => {
+    cleanupTransmissionNodes();
     setIsTransmitting(false);
     logMessage('Acoustic transmission stopped manually.');
-  }, [logMessage]);
+  }, [cleanupTransmissionNodes, logMessage]);
 
   const stopChirpListening = useCallback(() => {
     isListeningRef.current = false;
@@ -128,6 +142,7 @@ export function useChirpTransceiver(getAudioContext: () => AudioContext) {
       syncOsc.start(time);
       syncOsc.stop(time + 0.30);
       activeOscillatorsRef.current.push(syncOsc);
+      activeGainNodesRef.current.push(syncGain);
 
       time += 0.30;
 
@@ -152,6 +167,7 @@ export function useChirpTransceiver(getAudioContext: () => AudioContext) {
         bitOsc.start(time);
         bitOsc.stop(time + BIT_DURATION);
         activeOscillatorsRef.current.push(bitOsc);
+        activeGainNodesRef.current.push(bitGain);
 
         time += BIT_DURATION;
       }
@@ -159,6 +175,7 @@ export function useChirpTransceiver(getAudioContext: () => AudioContext) {
       const totalDurationMs = (time - ctx.currentTime) * 1000;
       setTimeout(() => {
         if (isMountedRef.current) {
+          cleanupTransmissionNodes();
           setIsTransmitting(false);
           logMessage('Acoustic transmission finished successfully.');
         }
@@ -167,7 +184,7 @@ export function useChirpTransceiver(getAudioContext: () => AudioContext) {
       logMessage(`Transmission Error: ${err.message}`);
       setIsTransmitting(false);
     }
-  }, [chirpText, getAudioContext, logMessage]);
+  }, [chirpText, cleanupTransmissionNodes, getAudioContext, logMessage]);
 
   const startChirpListening = useCallback(async () => {
     try {

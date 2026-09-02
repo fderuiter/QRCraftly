@@ -271,6 +271,129 @@ describe('Custom Audio Hooks', () => {
       });
       expect(result.current.isListening).toBe(false);
     });
+
+    it('registers all created oscillator and gain nodes and disconnects them when stopChirpTransmission is called', () => {
+      const audioCtx = new MockAudioContext() as any;
+      const createdOscs: MockOscillatorNode[] = [];
+      const createdGains: MockGainNode[] = [];
+
+      audioCtx.createOscillator = vi.fn(() => {
+        const osc = new MockOscillatorNode();
+        createdOscs.push(osc);
+        return osc;
+      });
+      audioCtx.createGain = vi.fn(() => {
+        const gain = new MockGainNode();
+        createdGains.push(gain);
+        return gain;
+      });
+
+      const { result } = renderHook(() => useChirpTransceiver(() => audioCtx));
+
+      act(() => {
+        result.current.setChirpText('HI');
+        result.current.startChirpTransmission();
+      });
+
+      expect(result.current.isTransmitting).toBe(true);
+      // 'HI' is 2 characters = 16 bits + 1 sync tone = 17 tones -> 17 oscillators and 17 gain nodes
+      expect(createdOscs.length).toBe(17);
+      expect(createdGains.length).toBe(17);
+
+      act(() => {
+        result.current.stopChirpTransmission();
+      });
+
+      expect(result.current.isTransmitting).toBe(false);
+      createdOscs.forEach((osc) => {
+        expect(osc.stop).toHaveBeenCalled();
+        expect(osc.disconnect).toHaveBeenCalled();
+      });
+      createdGains.forEach((gain) => {
+        expect(gain.disconnect).toHaveBeenCalled();
+      });
+    });
+
+    it('disconnects all active oscillator and gain nodes on component unmount during transmission', () => {
+      const audioCtx = new MockAudioContext() as any;
+      const createdOscs: MockOscillatorNode[] = [];
+      const createdGains: MockGainNode[] = [];
+
+      audioCtx.createOscillator = vi.fn(() => {
+        const osc = new MockOscillatorNode();
+        createdOscs.push(osc);
+        return osc;
+      });
+      audioCtx.createGain = vi.fn(() => {
+        const gain = new MockGainNode();
+        createdGains.push(gain);
+        return gain;
+      });
+
+      const { result, unmount } = renderHook(() => useChirpTransceiver(() => audioCtx));
+
+      act(() => {
+        result.current.setChirpText('A');
+        result.current.startChirpTransmission();
+      });
+
+      expect(result.current.isTransmitting).toBe(true);
+      expect(createdOscs.length).toBeGreaterThan(0);
+      expect(createdGains.length).toBeGreaterThan(0);
+
+      unmount();
+
+      createdOscs.forEach((osc) => {
+        expect(osc.stop).toHaveBeenCalled();
+        expect(osc.disconnect).toHaveBeenCalled();
+      });
+      createdGains.forEach((gain) => {
+        expect(gain.disconnect).toHaveBeenCalled();
+      });
+    });
+
+    it('disconnects all active oscillator and gain nodes when transmission completes automatically', () => {
+      vi.useFakeTimers();
+      try {
+        const audioCtx = new MockAudioContext() as any;
+        const createdOscs: MockOscillatorNode[] = [];
+        const createdGains: MockGainNode[] = [];
+
+        audioCtx.createOscillator = vi.fn(() => {
+          const osc = new MockOscillatorNode();
+          createdOscs.push(osc);
+          return osc;
+        });
+        audioCtx.createGain = vi.fn(() => {
+          const gain = new MockGainNode();
+          createdGains.push(gain);
+          return gain;
+        });
+
+        const { result } = renderHook(() => useChirpTransceiver(() => audioCtx));
+
+        act(() => {
+          result.current.setChirpText('OK');
+          result.current.startChirpTransmission();
+        });
+
+        expect(result.current.isTransmitting).toBe(true);
+
+        act(() => {
+          vi.advanceTimersByTime(5000);
+        });
+
+        expect(result.current.isTransmitting).toBe(false);
+        createdOscs.forEach((osc) => {
+          expect(osc.disconnect).toHaveBeenCalled();
+        });
+        createdGains.forEach((gain) => {
+          expect(gain.disconnect).toHaveBeenCalled();
+        });
+      } finally {
+        vi.useRealTimers();
+      }
+    });
   });
 
   describe('useSpectrogramQR', () => {
