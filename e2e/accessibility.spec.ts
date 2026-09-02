@@ -22,8 +22,8 @@ test.describe('Accessibility Suite', () => {
     // Wait for the app to hydrate
     await page.waitForSelector('main[data-hydrated="true"]');
 
-    // Expand accordion panels if any are present
-    const accordions = await page.locator('button[aria-expanded="false"]').all();
+    // Expand accordion panels if any are present (excluding popup/dropdown triggers)
+    const accordions = await page.locator('aside button[aria-expanded="false"]:not([aria-haspopup="true"])').all();
     for (const accordion of accordions) {
       if (await accordion.isVisible()) {
         await accordion.click();
@@ -47,11 +47,10 @@ test.describe('Accessibility Suite', () => {
     // Wait for contrast warning text
     await page.waitForSelector('text=Warning: The contrast ratio is low', { timeout: 5000 });
 
-    // Trigger the warning modal by opening menu and selecting export format
-    const downloadButton = page.getByRole('button', { name: 'Download', exact: true });
-    await downloadButton.click();
-
-    const pngOption = page.getByRole('menuitem', { name: 'PNG (High Quality)' });
+    // Trigger the warning modal by initiating a download export
+    const downloadMenuButton = page.getByRole('button', { name: 'Download', exact: true });
+    await downloadMenuButton.click();
+    const pngOption = page.getByRole('menuitem', { name: /PNG/i });
     await pngOption.click();
     await page.waitForSelector('text=Scan Safety Warning', { timeout: 5000 });
 

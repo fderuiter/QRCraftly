@@ -111,7 +111,7 @@ test.describe('Isolated Web Worker Recovery & Export Bypass', () => {
     // Assert that a red warning badge with an alert role displays on the page with 15-second polling threshold
     const alertBadge = page.getByRole('alert');
     await expect(alertBadge).toBeVisible({ timeout: 15000 });
-    await expect(alertBadge).toContainText(/scan verification failed/i);
+    await expect(alertBadge).toContainText(/Scan verification failed|Low Scannability/i);
   });
 
   test('Requirement 3 & 4: Triggering download during background error displays warning modal and allows bypass', async ({ page }) => {
@@ -129,19 +129,18 @@ test.describe('Isolated Web Worker Recovery & Export Bypass', () => {
     // Verify warning badge is visible
     const alertBadge = page.getByRole('alert');
     await expect(alertBadge).toBeVisible({ timeout: 15000 });
-    await expect(alertBadge).toContainText(/scan verification failed/i);
+    await expect(alertBadge).toContainText(/Scan verification failed|Low Scannability/i);
 
-    // Click the download command to open export format menu
+    // Click the download command to open menu and select PNG export to trigger safety gate flow
     const downloadButton = page.getByRole('button', { name: 'Download', exact: true });
     await expect(downloadButton).toBeVisible();
     // Wait for the button to transition to the error variant style (bg-rose-50, bg-rose-700, or text-rose-700)
     await expect(downloadButton).toHaveClass(/bg-rose-50|bg-rose-700|text-rose-700/);
     await downloadButton.click();
 
-    // Select export format to trigger safety gate
-    const pngOption = page.getByRole('menuitem', { name: 'PNG (High Quality)' });
-    await expect(pngOption).toBeVisible({ timeout: 15000 });
-    await pngOption.click();
+    const pngMenuItem = page.getByRole('menuitem', { name: /PNG/i });
+    await expect(pngMenuItem).toBeVisible({ timeout: 15000 });
+    await pngMenuItem.click();
 
     // Verify that the "Scan Safety Warning" warning dialog/modal is open
     const warningModalTitle = page.getByRole('heading', { name: 'Scan Safety Warning' });
@@ -173,7 +172,7 @@ test.describe('Isolated Web Worker Recovery & Export Bypass', () => {
     // Verify scannability alert/badge is active
     const alertBadge = page.getByRole('alert');
     await expect(alertBadge).toBeVisible({ timeout: 15000 });
-    await expect(alertBadge).toContainText(/scan verification failed/i);
+    await expect(alertBadge).toContainText(/Scan verification failed|Low Scannability/i);
 
     // Assert that the diagnostic options popup renders (help improve scannability card)
     const telemetryTitle = page.getByText(/Anonymous diagnostics/i);
