@@ -49,6 +49,8 @@ test.describe('Isolated Web Worker Recovery & Export Bypass', () => {
           if (isScannabilityWorker) {
             (window as any).activeWorker = this;
           }
+            (window as any).activeWorker = this;
+          }
         }
 
         postMessage(message: any, transfer?: any) {
@@ -109,7 +111,7 @@ test.describe('Isolated Web Worker Recovery & Export Bypass', () => {
     });
 
     // Assert that a red warning badge with an alert role displays on the page with 15-second polling threshold
-    const alertBadge = page.getByRole('alert');
+    const alertBadge = page.getByRole('alert').first();
     await expect(alertBadge).toBeVisible({ timeout: 15000 });
     await expect(alertBadge).toContainText(/scan verification failed/i);
   });
@@ -127,7 +129,7 @@ test.describe('Isolated Web Worker Recovery & Export Bypass', () => {
     });
 
     // Verify warning badge is visible
-    const alertBadge = page.getByRole('alert');
+    const alertBadge = page.getByRole('alert').first();
     await expect(alertBadge).toBeVisible({ timeout: 15000 });
     await expect(alertBadge).toContainText(/scan verification failed/i);
 
@@ -171,7 +173,7 @@ test.describe('Isolated Web Worker Recovery & Export Bypass', () => {
     });
 
     // Verify scannability alert/badge is active
-    const alertBadge = page.getByRole('alert');
+    const alertBadge = page.getByRole('alert').first();
     await expect(alertBadge).toBeVisible({ timeout: 15000 });
     await expect(alertBadge).toContainText(/scan verification failed/i);
 

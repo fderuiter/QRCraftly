@@ -50,6 +50,8 @@ test.describe('Accessibility Suite', () => {
     // Trigger the warning modal by opening menu and selecting export format
     const downloadButton = page.getByRole('button', { name: 'Download', exact: true });
     await downloadButton.click();
+    const pngOption = page.getByRole('menuitem', { name: 'PNG (High Quality)' });
+    await pngOption.click();
 
     const pngOption = page.getByRole('menuitem', { name: 'PNG (High Quality)' });
     await pngOption.click();
