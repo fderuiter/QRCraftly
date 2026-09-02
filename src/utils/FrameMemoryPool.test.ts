@@ -70,6 +70,18 @@ describe('PreallocatedFramePool', () => {
     expect(pool.size).toBe(0);
     expect(pool.hasFrame(0)).toBe(false);
   });
+
+  it('deletes and releases frames accurately', () => {
+    const pool = new PreallocatedFramePool(5, 10 * 10);
+    pool.storeFrame(0, 10, new Uint8Array(100).fill(5));
+    pool.storeFrame(1, 10, new Uint8Array(100).fill(6));
+    expect(pool.size).toBe(2);
+
+    expect(pool.delete(0)).toBe(true);
+    expect(pool.hasFrame(0)).toBe(false);
+    expect(pool.releaseFrame(1)).toBe(true);
+    expect(pool.hasFrame(1)).toBe(false);
+  });
 });
 
 describe('shuffleInPlace', () => {
