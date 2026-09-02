@@ -74,7 +74,7 @@ describe('Zero-Knowledge Client Encryption Utilities', () => {
     expect(extractKeyFromHash('#shortkey')).toBeNull();
   });
 
-  it('converts buffers and hex strings accurately', () => {
+  it('converts buffers and hex strings accurately and throws on invalid hex length', () => {
     const hex = '0102030405060708090af0ff';
     const buffer = hexToBuffer(hex);
     expect(buffer).toBeInstanceOf(Uint8Array);
@@ -82,6 +82,19 @@ describe('Zero-Knowledge Client Encryption Utilities', () => {
 
     const convertedHex = bufferToHex(buffer);
     expect(convertedHex).toBe(hex);
+
+    expect(() => hexToBuffer('123')).toThrow('Invalid hex string length');
+  });
+
+  it('handles empty strings and invalid formats gracefully', async () => {
+    const key = await generateDecryptionKey();
+    expect(await encryptUrl('', key)).toBe('');
+    expect(await decryptUrl('', key)).toBe('');
+    expect(isEncrypted(null)).toBe(false);
+    expect(isEncrypted(undefined)).toBe(false);
+    expect(isEncrypted(123 as any)).toBe(false);
+
+    await expect(decryptUrl('enc:v1:invalidparts', key)).rejects.toThrow('Invalid encrypted ciphertext format.');
   });
 
   it('validates hex string length and handles invalid input', () => {

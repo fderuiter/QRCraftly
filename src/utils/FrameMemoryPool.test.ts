@@ -64,7 +64,12 @@ describe('PreallocatedFramePool', () => {
   it('clears frame mappings while leaving memory pool structure available for reuse', () => {
     const pool = new PreallocatedFramePool(5, 10 * 10);
     pool.storeFrame(0, 10, new Uint8Array(100).fill(5));
-    expect(pool.size).toBe(1);
+    pool.storeFrame(1, 10, new Uint8Array(100).fill(6));
+    expect(pool.size).toBe(2);
+
+    expect(pool.delete(0)).toBe(true);
+    expect(pool.releaseFrame(1)).toBe(true);
+    expect(pool.size).toBe(0);
 
     pool.clear();
     expect(pool.size).toBe(0);
