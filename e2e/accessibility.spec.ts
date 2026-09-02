@@ -50,7 +50,6 @@ test.describe('Accessibility Suite', () => {
     // Trigger the warning modal by opening menu and selecting export format
     const downloadButton = page.getByRole('button', { name: 'Download', exact: true });
     await downloadButton.click();
-
     const pngOption = page.getByRole('menuitem', { name: 'PNG (High Quality)' });
     await pngOption.click();
     await page.waitForSelector('text=Scan Safety Warning', { timeout: 5000 });
