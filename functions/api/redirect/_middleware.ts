@@ -119,7 +119,9 @@ export const onRequest = async (context: {
 
   const headers = new Headers(response.headers);
   headers.set("X-Robots-Tag", "noindex, follow");
-  headers.set("Cache-Control", "no-store, no-cache, must-revalidate");
+  if (!headers.has("Cache-Control")) {
+    headers.set("Cache-Control", "no-store, no-cache, must-revalidate");
+  }
 
   return new Response(response.body, {
     status: response.status,
