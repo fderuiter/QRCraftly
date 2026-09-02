@@ -14,7 +14,12 @@ fi
 NODE_VERSION=$(node --version)
 EXPECTED_NODE="v22.14.0"
 echo "Current Node.js version: $NODE_VERSION"
-if [[ "$NODE_VERSION" != "$EXPECTED_NODE"* ]]; then
-  echo "Error: Node.js version $NODE_VERSION does not match pinned version $EXPECTED_NODE"
+
+CLEAN_NODE="${NODE_VERSION#v}"
+MAJOR_NODE=$(echo "$CLEAN_NODE" | cut -d. -f1)
+MINOR_NODE=$(echo "$CLEAN_NODE" | cut -d. -f2)
+
+if [ "$MAJOR_NODE" -lt 22 ] || { [ "$MAJOR_NODE" -eq 22 ] && [ "$MINOR_NODE" -lt 14 ]; }; then
+  echo "Error: Node.js version $NODE_VERSION does not match required minimum $EXPECTED_NODE"
   exit 1
 fi

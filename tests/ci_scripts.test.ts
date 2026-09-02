@@ -69,4 +69,35 @@ describe('CI Modular Shell Scripts Validation', () => {
       execSync(testCommand, { stdio: 'pipe' });
     }).toThrow();
   });
+
+  it('should validate toolchain Node version minimum requirement in verify_toolchain.sh', () => {
+    if (process.platform === 'win32') return;
+    const verifyScript = path.join(ciScriptsDir, 'verify_toolchain.sh');
+    const mockBinDir = path.join(repoRoot, 'node_modules', '.tmp-bin-test');
+
+    fs.mkdirSync(mockBinDir, { recursive: true });
+    fs.writeFileSync(path.join(mockBinDir, 'pnpm'), '#!/bin/sh\necho "11.1.3"\n', { mode: 0o755 });
+
+    try {
+      // Test passing Node version >= 22.14.0
+      fs.writeFileSync(path.join(mockBinDir, 'node'), '#!/bin/sh\necho "v22.22.3"\n', { mode: 0o755 });
+      expect(() => {
+        execSync(`bash "${verifyScript}"`, {
+          env: { ...process.env, PATH: `${mockBinDir}:${process.env.PATH}` },
+          stdio: 'pipe',
+        });
+      }).not.toThrow();
+
+      // Test failing Node version < 22.14.0
+      fs.writeFileSync(path.join(mockBinDir, 'node'), '#!/bin/sh\necho "v20.10.0"\n', { mode: 0o755 });
+      expect(() => {
+        execSync(`bash "${verifyScript}"`, {
+          env: { ...process.env, PATH: `${mockBinDir}:${process.env.PATH}` },
+          stdio: 'pipe',
+        });
+      }).toThrow();
+    } finally {
+      fs.rmSync(mockBinDir, { recursive: true, force: true });
+    }
+  });
 });
