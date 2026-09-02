@@ -64,7 +64,7 @@ export const test = base.extend({
 
     // Enforce strict client-side data privacy boundaries by failing the test if any request was blocked
     console.log(`[Teardown] Blocked requests count: ${blockedRequests.length}`, blockedRequests);
-    if (blockedRequests.length > 0 && testInfo.expectedStatus !== 'failed') {
+    if (blockedRequests.length > 0) {
       const errorMsg = `Blocked unauthorized external request(s):\n${blockedRequests.map(r => `  - ${r}`).join('\n')}`;
       throw new Error(errorMsg);
     }
