@@ -124,7 +124,6 @@ describe('spectrogramDspEngine', () => {
     // Check duration computation: 0.30s (sync) + 3 * (0.03s gap + 0.10s bit) = 0.30 + 0.39 = 0.69s = 690ms
     expect(scheduled.totalDurationMs).toBeCloseTo(690, 1);
   });
-  });
 
   it('generates a valid 16-bit PCM WAV blob with 44-byte RIFF header', async () => {
     const channelData = new Float32Array(100);
@@ -194,5 +193,38 @@ describe('spectrogramDspEngine', () => {
       view.getUint8(39)
     );
     expect(dataChunk).toBe('data');
+  });
+
+  it('uses default DSP options when options parameter is omitted or empty', () => {
+    const ctx = new MockContext() as any;
+    const destination = new MockAudioNode() as any;
+    const mockMatrix = {
+      size: 2,
+      get: () => true,
+    };
+
+    const scheduledSpec = scheduleSpectrogramQR(ctx, mockMatrix, destination);
+    expect(scheduledSpec.oscillators).toHaveLength(2);
+
+    const scheduledChirp = scheduleChirpTones(ctx, '10', destination);
+    expect(scheduledChirp.oscillators).toHaveLength(3);
+    expect(scheduledChirp.totalDurationMs).toBeGreaterThan(0);
+  });
+
+  it('handles multi-channel stereo buffer with negative and positive samples in bufferToWav', async () => {
+    const leftChannel = new Float32Array([-0.8, 0.5]);
+    const rightChannel = new Float32Array([0.8, -0.5]);
+
+    const mockStereoBuffer = {
+      numberOfChannels: 2,
+      length: 2,
+      sampleRate: 48000,
+      getChannelData: (ch: number) => (ch === 0 ? leftChannel : rightChannel),
+    } as unknown as AudioBuffer;
+
+    const wavBlob = bufferToWav(mockStereoBuffer);
+    expect(wavBlob.type).toBe('audio/wav');
+    // Header 44 bytes + 2 samples * 2 channels * 2 bytes = 52 bytes
+    expect(wavBlob.size).toBe(52);
   });
 });
