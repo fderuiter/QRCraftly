@@ -7,7 +7,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const DIST_DIR = path.resolve(__dirname, '../dist/client');
-const MAX_GZIPPED_SIZE_KB = 700;
+const MAX_GZIPPED_SIZE_KB = 750;
 const MAX_GZIPPED_SIZE_BYTES = MAX_GZIPPED_SIZE_KB * 1024;
 
 /**

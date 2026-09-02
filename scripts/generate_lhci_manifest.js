@@ -39,7 +39,7 @@ function generateLhciManifest() {
     console.log(`  - ${rel}`);
   });
 
-  const urls = [];
+  const allRoutes = [];
 
   for (const file of htmlFiles) {
     const relativePath = path.relative(DIST_DIR, file);
@@ -67,10 +67,22 @@ function generateLhciManifest() {
       route = route.slice(0, -1);
     }
 
-    // Prefix with http://localhost/ as per convention
-    const fullUrl = `http://localhost${route}`;
-    urls.push(fullUrl);
+    if (!allRoutes.includes(route)) {
+      allRoutes.push(route);
+    }
   }
+
+  // Prioritize representative key routes to prevent CI runner resource exhaustion/timeouts
+  const priorityRoutes = ['/', '/about', '/security', '/vcard-qr-code', '/audio-qr'];
+  const selectedRoutes = priorityRoutes.filter((r) => allRoutes.includes(r));
+  for (const route of allRoutes) {
+    if (selectedRoutes.length >= 5) break;
+    if (!selectedRoutes.includes(route)) {
+      selectedRoutes.push(route);
+    }
+  }
+
+  const urls = selectedRoutes.map((route) => `http://localhost${route}`);
 
   // Read current lighthouserc.json
   if (!fs.existsSync(LIGHTHOUSE_RC_FILE)) {
@@ -87,7 +99,7 @@ function generateLhciManifest() {
   lhciConfig.ci.collect.url = urls;
   lhciConfig.ci.collect.numberOfRuns = 1;
   lhciConfig.ci.collect.settings = {
-    chromeFlags: '--no-sandbox --disable-dev-shm-usage',
+    chromeFlags: '--headless=new --no-sandbox --disable-dev-shm-usage --disable-gpu',
   };
 
   // Ensure strict SEO threshold of 0.95

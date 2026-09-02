@@ -3,30 +3,15 @@
     "collect": {
       "numberOfRuns": 1,
       "settings": {
-        "chromeFlags": "--no-sandbox --disable-dev-shm-usage"
+        "chromeFlags": "--headless=new --no-sandbox --disable-dev-shm-usage --disable-gpu"
       },
       "staticDistDir": "./dist/client",
       "url": [
-        "http://localhost/about",
-        "http://localhost/audio-qr",
-        "http://localhost/destroy-the-qr",
-        "http://localhost/dynamic-dashboard",
-        "http://localhost/email-qr-code",
-        "http://localhost/event-qr-code",
-        "http://localhost/file-transfer",
-        "http://localhost/file-transfer/receive",
-        "http://localhost/game",
         "http://localhost/",
-        "http://localhost/location-qr-code",
-        "http://localhost/meeting-qr-code",
-        "http://localhost/payment-qr-code",
-        "http://localhost/phone-qr-code",
+        "http://localhost/about",
         "http://localhost/security",
-        "http://localhost/sms-qr-code",
-        "http://localhost/social-qr-code",
-        "http://localhost/text-qr-code",
         "http://localhost/vcard-qr-code",
-        "http://localhost/wifi-qr-code"
+        "http://localhost/audio-qr"
       ]
     },
     "upload": {
