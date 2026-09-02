@@ -31,6 +31,7 @@ test.describe('Isolated Web Worker Recovery & Export Bypass', () => {
     // Overwrite globalThis.Worker directly in the browser environment to intercept thread creation.
     // This allows simulating background exceptions in an isolated test context.
     await page.addInitScript(() => {
+      delete (window as any).showSaveFilePicker;
       const OriginalWorker = globalThis.Worker;
       class MockWorker extends OriginalWorker {
         lastConfigId: any;
@@ -151,11 +152,17 @@ test.describe('Isolated Web Worker Recovery & Export Bypass', () => {
     const exportAnywayButton = page.getByRole('button', { name: 'Export Anyway' });
     await expect(exportAnywayButton).toBeVisible();
 
-    // Click the active bypass trigger to ignore error and proceed
-    await exportAnywayButton.click();
+    // Click the active bypass trigger to ignore error and proceed with download
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),
+      exportAnywayButton.click(),
+    ]);
 
     // Assert that the warning modal closes
     await expect(warningModalTitle).not.toBeVisible({ timeout: 15000 });
+
+    // Assert that the file download succeeded with .png extension
+    expect(download.suggestedFilename()).toMatch(/\.png$/i);
   });
 
   test('Requirement 5: Display diagnostic preferences options popup during failure state and dismiss on choice declaration', async ({ page }) => {

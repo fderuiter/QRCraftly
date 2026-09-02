@@ -5,6 +5,7 @@ test.describe('Visual Regression Layout Checks', () => {
     await page.setViewportSize({ width: 1280, height: 720 });
     await page.goto('/');
     await page.waitForSelector('main[data-hydrated="true"]');
+    await page.getByText('Export Layout').waitFor({ state: 'visible' });
     await page.waitForTimeout(1000); // Allow canvas to render
     await expect(page).toHaveScreenshot('desktop-standard.png', {
       fullPage: false,
