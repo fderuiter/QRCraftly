@@ -60,12 +60,7 @@ export const hydrateWifiData = (raw: string): WifiData => {
 
   if (!raw.startsWith('WIFI:')) return result;
 
-  let content = raw.substring(5);
-  if (content.endsWith(';;')) {
-    content = content.slice(0, -2);
-  } else if (content.endsWith(';')) {
-    content = content.slice(0, -1);
-  }
+  const content = raw.substring(5);
   
   const parts: string[] = [];
   let currentPart = '';
@@ -86,7 +81,9 @@ export const hydrateWifiData = (raw: string): WifiData => {
       currentPart += char;
     }
   }
-  parts.push(currentPart);
+  if (currentPart.length > 0) {
+    parts.push(currentPart);
+  }
 
   parts.forEach(part => {
     const splitIndex = part.indexOf(':');
