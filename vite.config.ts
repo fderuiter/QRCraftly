@@ -157,6 +157,8 @@ export default defineConfig(() => {
             'src/utils/exportRiskPolicy.ts',
             'src/utils/opticalSimulation.ts',
             'src/utils/qrRenderer.ts',
+            'src/utils/FrameProvider.ts',
+            'src/utils/reputation.ts',
             'src/utils/qr-generators/email.ts',
             'src/utils/qr-generators/event.ts',
             'src/utils/qr-generators/sms.ts',
