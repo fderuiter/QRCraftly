@@ -66,4 +66,27 @@ test.describe('QR Code Scannability via Headless Browser', () => {
         }).toBe(testUrl);
     }
   });
+
+  test('verifies scannability feedback indicator for Fluid Ink across default and dense payloads', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForSelector('main[data-hydrated="true"]');
+
+    const fluidRadio = page.locator('input[type="radio"][value="fluid"]');
+    await fluidRadio.check({ force: true });
+
+    const feedbackWrapper = page.locator('[data-testid="scannability-feedback-wrapper"]');
+    await expect.poll(async () => {
+      const text = await feedbackWrapper.textContent().catch(() => '');
+      return text.includes('verified');
+    }, { timeout: 15000, intervals: [500] }).toBe(true);
+
+    const longUrl = 'https://example.com/very/long/url/with/lots/of/parameters?foo=bar&baz=qux&utm_source=test&utm_medium=email&utm_campaign=winter_sale_2026_qrcraftly_verification';
+    const input = page.locator('#url-input');
+    await input.fill(longUrl);
+
+    await expect.poll(async () => {
+      const text = await feedbackWrapper.textContent().catch(() => '');
+      return text.includes('verified');
+    }, { timeout: 15000, intervals: [500] }).toBe(true);
+  });
 });
