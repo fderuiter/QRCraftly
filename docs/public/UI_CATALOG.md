@@ -17,7 +17,6 @@ To eliminate logical UI redundancy, prevent design drift, and maintain robust WC
 These low-level, primitive UI elements are designed to be extremely customizable, fully accessible, and unified in appearance.
 
 - **Accordion** (`Accordion.tsx` / `Accordion.test.tsx`): A collapsible vertical disclosure component ideal for FAQs or grouped menus.
-- **Alert** (`Alert.tsx` / `Alert.test.tsx`): Displays warning, error, or informational banners to the user with standard status states.
 - **Alert** (`Alert.tsx` / `Alert.test.tsx`): Displays warning, error, or informational banners with standard status states, an accessible dismiss action, and full WCAG contrast compliance.
 - **Button** (`Button.tsx`): High-reusability button supporting multiple visual variants (primary, secondary, outline, danger, ghost), sizes, and loading states.
 - **Card** (`Card.tsx` / `Card.test.tsx`): Container box styled consistently with modern borders, background transitions, and padding rules.
@@ -60,13 +59,13 @@ These components capture specialized data structures required to construct disti
 
 Unified appearance control modules that manage and present customization options in a modular side navigation menu.
 
-- **AdvancedControls** (`AdvancedControls.tsx`): Advanced visual overrides such as grid density, scannability modifiers, and playable maze overlay settings including scannability-audited finder pattern bridges and style-adaptive path width range controls with WCAG compliant sliders.
+- **AdvancedControls** (`AdvancedControls.tsx` / `AdvancedControls.test.tsx`): Advanced visual overrides such as grid density, scannability modifiers, and playable maze overlay settings including scannability-audited finder pattern bridges and style-adaptive path width range controls with WCAG compliant sliders.
 - **BorderControls** (`BorderControls.tsx` / `BorderControls.test.tsx`): Controls options for border thickness, padding, and corner radius around outputs.
-- **ColorControls** (`ColorControls.tsx`): Consolidates pickers and preset buttons for foreground, background, and corner eye accents.
-- **ContrastWarning** (`ContrastWarning.tsx`): Dynamic accessibility banner that displays contrast warnings if combinations fall below WCAG parameters.
+- **ColorControls** (`ColorControls.tsx` / `ColorControls.test.tsx`): Consolidates pickers and preset buttons for foreground, background, and corner eye accents.
+- **ContrastWarning** (`ContrastWarning.tsx` / `ContrastWarning.test.tsx`): Dynamic accessibility banner that displays contrast warnings if combinations fall below WCAG parameters.
 - **LayoutControls** (`LayoutControls.tsx` / `LayoutControls.test.tsx`): Controls size, padding, margin, and output format.
-- **LogoControls** (`LogoControls.tsx`): Coordinates uploading custom logos, configuring scaling boundaries, and adjusting background-mask thresholds.
-- **PatternControls** (`PatternControls.tsx`): Pattern-style selector that conditionally displays one assertive scannability warning for low-reliability patterns, avoiding duplicate screen-reader announcements.
+- **LogoControls** (`LogoControls.tsx` / `LogoControls.test.tsx`): Coordinates uploading custom logos, configuring scaling boundaries, and adjusting background-mask thresholds.
+- **PatternControls** (`PatternControls.tsx` / `PatternControls.test.tsx`): Pattern-style selector that conditionally displays one assertive scannability warning for low-reliability patterns, avoiding duplicate screen-reader announcements.
 
 ---
 
