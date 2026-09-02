@@ -179,4 +179,36 @@ describe('Wifi generator', () => {
     expect(hydrated.ssid).toBe('My\nNet\t');
     expect(hydrated.password).toBe('sec\ret');
   });
+
+  it('hydrates passwords containing escaped semicolons without truncation', () => {
+    const raw = 'WIFI:S:MyNet;P:p@ss\\;word\\;;T:WPA;;';
+    const hydrated = hydrateWifiData(raw);
+    expect(hydrated.ssid).toBe('MyNet');
+    expect(hydrated.password).toBe('p@ss;word;');
+  });
+
+  it('performs accurate roundtrip generation and hydration for special characters \\, ;, ,, ", and :', () => {
+    const data = {
+      ssid: 'SSID\\;,":Test',
+      password: 'Pass\\;,":Word',
+      encryption: WifiEncryption.WPA2_EAP,
+      hidden: false,
+      eapIdentity: 'ID\\;,":User',
+    };
+    const generatedStr = constructWifiString(data);
+    const hydrated = hydrateWifiData(generatedStr);
+    expect(hydrated.ssid).toBe(data.ssid);
+    expect(hydrated.password).toBe(data.password);
+    expect(hydrated.eapIdentity).toBe(data.eapIdentity);
+  });
+
+  it('preserves escaped semicolons at parameter boundaries and payload ends', () => {
+    const raw1 = 'WIFI:S:Net;P:secret\\;;';
+    const hydrated1 = hydrateWifiData(raw1);
+    expect(hydrated1.password).toBe('secret;');
+
+    const raw2 = 'WIFI:S:Net;P:secret\\;';
+    const hydrated2 = hydrateWifiData(raw2);
+    expect(hydrated2.password).toBe('secret;');
+  });
 });
