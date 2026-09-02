@@ -23,9 +23,9 @@ import { drawWithTemplate, SOCIAL_DIMENSIONS } from '../utils/templateRenderer';
 import { useImage } from '../hooks/useImage';
 import { ValidationEngine } from '../engine/ValidationEngine';
 import { Alert } from './ui/Alert';
-import { normalizeUrl, shouldNormalizeUrl } from '../utils/url';
 import { useOptionalQRStore } from '../context/QRContext';
-import { getMazeCacheKey, mazeCache } from '../utils/qr-renderers/maze';
+import { getMazeCacheKey, mazeCache } from '@/packages/qr-matrix/maze';
+import { normalizeUrl, shouldNormalizeUrl } from '../utils/url';
 import {
   isMazeWorkerRequest,
   isMazeWorkerResponse,
@@ -424,7 +424,7 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
       mazeWorkerRef.current.postMessage(requestPayload);
     } else {
       // Dynamic import fallback running pathfinding on main thread during idle time
-      import('../utils/qr-renderers/maze').then((module) => {
+      import('@/packages/qr-matrix/maze').then((module) => {
         if (currentSeqId !== mazeSequenceIdRef.current) return;
 
         const runner = () => {

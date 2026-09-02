@@ -5,11 +5,11 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// We want to find the _actions directory
-// Under GHA, workspace is at /home/runner/work/QRCraftly/QRCraftly
-// Sibling is /home/runner/work/_actions
 const repoRoot = path.resolve(__dirname, '..');
-const actionsDir = path.resolve(repoRoot, '../../_actions');
+// Under GitHub Actions, _actions lives sibling to workspace
+const actionsDir = process.env.RUNNER_WORKSPACE
+  ? path.resolve(process.env.RUNNER_WORKSPACE, '../_actions')
+  : path.resolve(repoRoot, '../../_actions');
 
 console.log(`[Patch GitHub Action] Scanning for actions in: ${actionsDir}`);
 
@@ -51,40 +51,17 @@ JSON.stringify = function(value, replacer, space) {
       const fs = require('fs');
       const path = require('path');
       
-      let deployOutputPath = '';
+      const workspaceRoot = process.env.GITHUB_WORKSPACE || process.cwd();
       const potentialPaths = [
-        path.resolve(process.cwd(), 'deploy_output.txt'),
-        '/home/runner/work/QRCraftly/QRCraftly/deploy_output.txt'
+        path.resolve(workspaceRoot, 'deploy_output.txt'),
+        path.resolve(process.cwd(), 'deploy_output.txt')
       ];
+      let deployOutputPath = '';
       for (const p of potentialPaths) {
         if (fs.existsSync(p)) {
           deployOutputPath = p;
           break;
         }
-      }
-      
-      if (!deployOutputPath) {
-        // Fallback: search recursively in work dir
-        try {
-          const root = '/home/runner/work/';
-          if (fs.existsSync(root)) {
-            const files = fs.readdirSync(root);
-            for (const f of files) {
-              const sub = path.join(root, f);
-              if (fs.statSync(sub).isDirectory()) {
-                const subFiles = fs.readdirSync(sub);
-                for (const sf of subFiles) {
-                  const p = path.join(sub, sf, 'deploy_output.txt');
-                  if (fs.existsSync(p)) {
-                    deployOutputPath = p;
-                    break;
-                  }
-                }
-              }
-              if (deployOutputPath) break;
-            }
-          }
-        } catch (e) {}
       }
       
       if (deployOutputPath && fs.existsSync(deployOutputPath)) {

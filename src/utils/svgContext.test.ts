@@ -267,7 +267,7 @@ describe('SvgContext', () => {
       expect(svg).toContain('<desc>Test Description</desc>');
 
       // Verify they are positioned directly after the opening svg tag
-      const lines = svg.split('\n');
+      const lines = svg.split(/\r?\n/);
       const svgOpenTagIndex = lines.findIndex(line => line.startsWith('<svg'));
       expect(svgOpenTagIndex).toBeGreaterThanOrEqual(0);
       expect(lines[svgOpenTagIndex + 3]).toBe('  <title>Test Title</title>');

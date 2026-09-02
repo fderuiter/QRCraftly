@@ -78,10 +78,12 @@ describe('Modular Accessibility Test Helpers & Full Panel Sweep', () => {
     const downloadBtn = screen.getAllByText('Download')[0];
     expect(downloadBtn).toBeInTheDocument();
 
-    // Focus and click the download button, which immediately triggers safety gate because of the unsafe state
-    downloadBtn.focus();
-    expect(document.activeElement).toBe(downloadBtn);
+    // Open download menu and click export format to trigger safety gate
     fireEvent.click(downloadBtn);
+    const pngOption = screen.getByText(/PNG \(High Quality\)/i);
+    pngOption.focus();
+    expect(document.activeElement).toBe(pngOption);
+    fireEvent.click(pngOption);
 
     // Verify warning dialog is open
     expect(screen.getByText('Scan Safety Warning')).toBeInTheDocument();
@@ -95,8 +97,8 @@ describe('Modular Accessibility Test Helpers & Full Panel Sweep', () => {
       expect(screen.queryByText('Scan Safety Warning')).not.toBeInTheDocument();
     });
 
-    // Verify focus is safely and seamlessly restored to the triggering download button
-    expect(document.activeElement).toBe(downloadBtn);
+    // Verify focus is safely and seamlessly restored to the triggering element
+    expect(document.activeElement).toBe(pngOption);
   });
 
   // Requirement 2 / AC 2: Bidirectional & Boundary Keyboard Navigation

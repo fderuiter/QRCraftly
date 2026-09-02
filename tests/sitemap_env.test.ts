@@ -1,8 +1,8 @@
-import { execFileSync } from 'child_process';
-import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync, unlinkSync, rmSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { execBinary } from './utils/execHelper';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -40,7 +40,6 @@ describe('Sitemap Environment-Level Variable Resolution', () => {
     // Clean up dummy HTML file
     if (existsSync(dummyHtmlFile)) {
       try {
-        const { unlinkSync } = require('fs');
         unlinkSync(dummyHtmlFile);
       } catch {
         // Safe fallback if unlink fails
@@ -49,14 +48,12 @@ describe('Sitemap Environment-Level Variable Resolution', () => {
 
     if (createdIndexHtml && existsSync(indexHtmlFile)) {
       try {
-        const { unlinkSync } = require('fs');
         unlinkSync(indexHtmlFile);
       } catch {}
     }
 
     if (createdDistDir && existsSync(distDir)) {
       try {
-        const { rmSync } = require('fs');
         rmSync(distDir, { recursive: true, force: true });
       } catch {}
     }
@@ -65,7 +62,6 @@ describe('Sitemap Environment-Level Variable Resolution', () => {
     if (existsSync(backupPath)) {
       if (existsSync(sitemapPath)) {
         try {
-          const { unlinkSync } = require('fs');
           unlinkSync(sitemapPath);
         } catch {}
       }
@@ -74,13 +70,12 @@ describe('Sitemap Environment-Level Variable Resolution', () => {
   });
 
   it('should use fallback domain under native tsx when import.meta.env and VITE_DOMAIN are unavailable', () => {
-    // Run the sitemap script with empty environment for VITE_DOMAIN
-    execFileSync('npx', ['tsx', sitemapScriptPath], {
+    execBinary('npx', ['tsx', sitemapScriptPath], {
       env: {
         ...process.env,
         VITE_DOMAIN: '',
-        NODE_ENV: 'production'
-      }
+        NODE_ENV: 'production',
+      },
     });
 
     expect(existsSync(sitemapPath)).toBe(true);
@@ -90,13 +85,12 @@ describe('Sitemap Environment-Level Variable Resolution', () => {
   });
 
   it('should resolve and apply a custom staging domain via process.env', () => {
-    // Run the sitemap script with VITE_DOMAIN set in env
-    execFileSync('npx', ['tsx', sitemapScriptPath], {
+    execBinary('npx', ['tsx', sitemapScriptPath], {
       env: {
         ...process.env,
         VITE_DOMAIN: 'https://staging.qrcraftly.net',
-        NODE_ENV: 'production'
-      }
+        NODE_ENV: 'production',
+      },
     });
 
     expect(existsSync(sitemapPath)).toBe(true);
@@ -107,13 +101,12 @@ describe('Sitemap Environment-Level Variable Resolution', () => {
   });
 
   it('should sanitize and strip any trailing slashes from the resolved VITE_DOMAIN', () => {
-    // Run with trailing slashes in VITE_DOMAIN
-    execFileSync('npx', ['tsx', sitemapScriptPath], {
+    execBinary('npx', ['tsx', sitemapScriptPath], {
       env: {
         ...process.env,
         VITE_DOMAIN: 'https://staging-trailing.qrcraftly.net////',
-        NODE_ENV: 'production'
-      }
+        NODE_ENV: 'production',
+      },
     });
 
     expect(existsSync(sitemapPath)).toBe(true);
@@ -139,11 +132,11 @@ describe('Sitemap Environment-Level Variable Resolution', () => {
       const cleanedEnv = { ...process.env };
       delete cleanedEnv.VITE_DOMAIN;
 
-      execFileSync('npx', ['tsx', sitemapScriptPath], {
+      execBinary('npx', ['tsx', sitemapScriptPath], {
         env: {
           ...cleanedEnv,
-          NODE_ENV: 'production'
-        }
+          NODE_ENV: 'production',
+        },
       });
 
       expect(existsSync(sitemapPath)).toBe(true);
@@ -156,7 +149,6 @@ describe('Sitemap Environment-Level Variable Resolution', () => {
         writeFileSync(envFilePath, originalEnvContent, 'utf8');
       } else if (existsSync(envFilePath)) {
         try {
-          const { unlinkSync } = require('fs');
           unlinkSync(envFilePath);
         } catch {}
       }

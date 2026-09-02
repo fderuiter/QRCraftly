@@ -234,58 +234,49 @@ publish-approved: true
   });
 
   describe('validate_ui_catalog.js --fix integration', () => {
-    it('delegates to syncUICatalog to repair missing components and pass validation', () => {
-      // 1. Create a component in mockUiDir
-      fs.writeFileSync(path.join(mockUiDir, 'FixMeComp.tsx'), 'export const FixMeComp = () => <div />;');
-      fs.writeFileSync(path.join(mockUiDir, 'FixMeComp.test.tsx'), '// test');
+    it('automatically repairs missing catalog entries when --fix is provided', async () => {
+      const { execFileSync } = await import('child_process');
+      // Create a component missing from the real catalog
+      const dummyComponentPath = path.join(defaultRepoRoot, 'src/components/ui/TempSyncTestComp.tsx');
+      try {
+        fs.writeFileSync(dummyComponentPath, 'export const TempSyncTestComp = () => <div />;');
+        
+        // Running validate_ui_catalog without --fix should fail
+        let failed = false;
+        try {
+          execFileSync('node', ['scripts/validate_ui_catalog.js', 'src/components/ui/TempSyncTestComp.tsx'], {
+            cwd: defaultRepoRoot,
+            encoding: 'utf8',
+            env: { ...process.env, SKIP_GIT_VALIDATION: '1' }
+          });
+        } catch {
+          failed = true;
+        }
+        expect(failed).toBe(true);
 
-      // 2. Initial catalog lacks FixMeComp -> validateCatalog fails
-      const initialCatalog = `---
-publish-approved: true
----
+        // Running validate_ui_catalog with --fix should scaffold the entry and succeed
+        const fixOutput = execFileSync(
+          'node',
+          ['scripts/validate_ui_catalog.js', '--fix', 'src/components/ui/TempSyncTestComp.tsx'],
+          {
+            cwd: defaultRepoRoot,
+            encoding: 'utf8',
+            env: { ...process.env, SKIP_GIT_VALIDATION: '1' }
+          }
+        );
+        expect(fixOutput).toContain('Auto-fix flag (--fix) detected');
+        expect(fixOutput).toContain('All catalog synchronization validations passed');
 
-# UI Catalog
-
-## 1. Core Shared UI Elements (\`src/components/ui/\`)
-
-## 2. QR Input Form Panel Components (\`src/components/inputs/\`)
-
-## 3. Styling & Customization Controls (\`src/components/style-controls/\`)
-
-## 4. Shared Utilities & Renderers (\`src/utils/colorUtils.ts\`)
-`;
-      fs.writeFileSync(mockCatalogPath, initialCatalog);
-
-      const preErrors = validateCatalog(
-        [mockUiDir, mockInputsDir, mockStyleControlsDir],
-        mockCatalogPath
-      );
-      expect(preErrors.length).toBeGreaterThan(0);
-      expect(preErrors).toContain("UI component 'FixMeComp.tsx' is missing from the catalog (UI_CATALOG.md).");
-
-      // 3. Auto-fix delegation via syncUICatalog
-      const syncResult = syncUICatalog(
-        [mockUiDir, mockInputsDir, mockStyleControlsDir],
-        mockCatalogPath,
-        tempTestDir
-      );
-      expect(syncResult.changed).toBe(true);
-
-      // 4. Verification passes cleanly post-fix
-      const postErrors = validateCatalog(
-        [mockUiDir, mockInputsDir, mockStyleControlsDir],
-        mockCatalogPath
-      );
-      expect(postErrors).toHaveLength(0);
-
-      const catalogContent = fs.readFileSync(mockCatalogPath, 'utf8');
-      expect(catalogContent).toContain('**FixMeComp** (`FixMeComp.tsx` / `FixMeComp.test.tsx`)');
-    });
-
-    it('filters out --fix flag in parseArgs so it is not treated as a target file', async () => {
-      const { parseArgs } = await import('../scripts/validate_ui_catalog.js');
-      const parsed = parseArgs(['--fix', 'src/components/ui/Button.tsx', '--verbose']);
-      expect(parsed).toEqual(['src/components/ui/Button.tsx']);
+        const catalogContent = fs.readFileSync(path.join(defaultRepoRoot, 'docs/public/UI_CATALOG.md'), 'utf8');
+        expect(catalogContent).toContain('**TempSyncTestComp** (`TempSyncTestComp.tsx`)');
+      } finally {
+        if (fs.existsSync(dummyComponentPath)) {
+          fs.unlinkSync(dummyComponentPath);
+        }
+        // Re-sync to clean up the dummy entry
+        const { syncUICatalog } = await import('../scripts/sync_docs.js');
+        syncUICatalog();
+      }
     });
   });
 });

@@ -570,8 +570,7 @@ describe('QRCanvas Component', () => {
           mazeColor: '#00ff00',
         };
 
-        const spyGenerateMaze = vi.spyOn(await import('../utils/qr-renderers/maze'), 'generateMaze');
-
+        const spyGenerateMaze = vi.spyOn(await import('@/packages/qr-matrix/maze'), 'generateMaze');
         render(<QRCanvas config={mazeConfig} size={100} />);
 
         await waitFor(() => {
@@ -589,9 +588,8 @@ describe('QRCanvas Component', () => {
         isMazeBridgesEnabled: true,
       };
 
-      const spyGenerateMaze = vi.spyOn(await import('../utils/qr-renderers/maze'), 'generateMaze');
+      const spyGenerateMaze = vi.spyOn(await import('@/packages/qr-matrix/maze'), 'generateMaze');
 
-      // We need a custom store to emit the signal
       const { QRProvider, useQRStore } = await import('../context/QRContext');
       let storeRef: any;
 

@@ -14,7 +14,7 @@ describe('GitHub Actions Workflow Hardening Audit', () => {
     for (const file of files) {
       const filePath = path.join(workflowsDir, file);
       const content = fs.readFileSync(filePath, 'utf8');
-      const lines = content.split('\n');
+      const lines = content.split(/\r?\n/);
 
       let inRunOrScriptBlock = false;
       let blockIndent = 0;

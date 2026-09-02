@@ -1,5 +1,3 @@
-#!/usr/bin/env node
-
 import fs from 'fs';
 import path from 'path';
 import { execSync } from 'child_process';
@@ -423,8 +421,7 @@ function main() {
     // No arguments, list files tracked by git
     try {
       const gitFiles = execSync('git ls-files', { encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore'] })
-        .split('\n')
-        .map(f => f.trim())
+        .split(/\r?\n/)
         .filter(Boolean);
       filesToScan = gitFiles;
     } catch (err) {

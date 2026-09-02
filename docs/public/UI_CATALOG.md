@@ -59,7 +59,7 @@ These components capture specialized data structures required to construct disti
 
 Unified appearance control modules that manage and present customization options in a modular side navigation menu.
 
-- **AdvancedControls** (`AdvancedControls.tsx`): Advanced visual overrides such as grid density, scannability modifiers, and playable maze overlay settings including scannability-audited finder pattern bridges and style-adaptive path width range controls.
+- **AdvancedControls** (`AdvancedControls.tsx`): Advanced visual overrides such as grid density, scannability modifiers, and playable maze overlay settings including scannability-audited finder pattern bridges and style-adaptive path width range controls with WCAG compliant sliders.
 - **BorderControls** (`BorderControls.tsx` / `BorderControls.test.tsx`): Controls options for border thickness, padding, and corner radius around outputs.
 - **ColorControls** (`ColorControls.tsx`): Consolidates pickers and preset buttons for foreground, background, and corner eye accents.
 - **ContrastWarning** (`ContrastWarning.tsx`): Dynamic accessibility banner that displays contrast warnings if combinations fall below WCAG parameters.

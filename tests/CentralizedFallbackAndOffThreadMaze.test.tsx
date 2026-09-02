@@ -10,7 +10,7 @@ import React from 'react';
 import { QRProvider, useQRStore } from '@/context/QRContext';
 import { useAnimatedQrSender } from '@/hooks/useAnimatedQrSender';
 import QRCanvas from '@/components/QRCanvas';
-import { generateMaze, mazeCache, clearMazeCache, getMazeCacheKey } from '@/utils/qr-renderers/maze';
+import { generateMaze, mazeCache, clearMazeCache, getMazeCacheKey } from '@/packages/qr-matrix/maze';
 import { DEFAULT_CONFIG } from '@/constants';
 import { QRConfig } from '@/types';
 

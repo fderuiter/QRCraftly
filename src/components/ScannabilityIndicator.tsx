@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ShieldCheck, Loader2, ShieldX } from 'lucide-react';
 import { ScannabilityStatus, HealthScore } from '../hooks/useScannability';
+import { getExportRiskPolicy } from '../utils/exportRiskPolicy';
 
 /**
  *
@@ -28,18 +29,18 @@ const getAnnouncementText = (status: ScannabilityStatus, health?: HealthScore): 
   }
   if (status === 'physical-pass') {
     const scorePart = health ? ` Health score: ${health.score}.` : '';
-    return `Scannability status: Physical-Ready.${scorePart}`;
+    return `Scannability status: Print simulation verified.${scorePart}`;
   }
   if (status === 'digital-pass') {
     const scorePart = health ? ` Health score: ${health.score}.` : '';
-    return `Scannability status: Digital-Only Pass.${scorePart}`;
+    return `Scannability status: Screen scan verified.${scorePart} Test with a physical camera before large print runs.`;
   }
   if (status === 'fail') {
     const scorePart = health ? ` Health score: ${health.score}.` : '';
     const warningPart = health && health.warnings && health.warnings.length > 0
       ? ` Warning: ${health.warnings[0]}.`
       : '';
-    return `Scannability status: Low Scannability.${scorePart}${warningPart}`;
+    return `Scannability status: Scan verification failed.${scorePart}${warningPart}`;
   }
   return '';
 };
@@ -95,6 +96,7 @@ export const ScannabilityIndicator: React.FC<Props> = ({ status, health }) => {
   }
 
   const showHealth = health && health.score < 100;
+  const exportRisk = getExportRiskPolicy({ status, health });
 
   /* eslint-disable jsx-a11y/no-noninteractive-tabindex */
   return (
@@ -142,33 +144,38 @@ export const ScannabilityIndicator: React.FC<Props> = ({ status, health }) => {
         {status === 'physical-pass' && (
           <>
             <ShieldCheck className="size-3.5 text-emerald-500" />
-            <span className="text-emerald-700 dark:text-emerald-400">Physical-Ready</span>
+            <span className="text-emerald-700 dark:text-emerald-400">Print simulation verified</span>
           </>
         )}
         {status === 'digital-pass' && (
           <>
             <ShieldCheck className="size-3.5 text-amber-500" />
-            <span className="text-amber-700 dark:text-amber-400">Digital-Only Pass</span>
+            <span className="text-emerald-700 dark:text-emerald-400">Screen scan verified</span>
           </>
         )}
         {status === 'fail' && (
           <>
             <ShieldX className="size-3.5 text-rose-500" />
-            <span className="text-rose-700 dark:text-rose-400">Low Scannability</span>
+            <span className="text-rose-700 dark:text-rose-400">Scan verification failed</span>
           </>
         )}
         {health && (
-          <span className={`ml-1 rounded-full px-1.5 text-[10px] ${health.score > 80 ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300' : health.score > 50 ? 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300' : 'bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-300'}`}>
+          <span className={`ml-1 rounded-full px-1.5 text-[10px] ${exportRisk === 'safe' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300' : exportRisk === 'caution' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300' : 'bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-300'}`}>
             Health: {health.score}
           </span>
         )}
       </div>
       <div className="mt-1 flex h-5 w-full items-center justify-end">
+        {status === 'digital-pass' && (!showHealth || health.warnings.length === 0) && (
+          <div className="max-w-xs text-right text-xs text-amber-700 dark:text-amber-400">
+            Test with a physical camera before large print runs.
+          </div>
+        )}
         {showHealth && health.warnings.length > 0 && (
           <div
             role="alert"
             aria-live="off"
-            className="animate-in fade-in slide-in-from-top-1 max-w-xs text-right text-xs text-rose-700 dark:text-rose-400"
+            className={`animate-in fade-in slide-in-from-top-1 max-w-xs text-right text-xs ${exportRisk === 'unsafe' ? 'text-rose-700 dark:text-rose-400' : 'text-amber-700 dark:text-amber-400'}`}
           >
             {health.warnings[0]}
           </div>

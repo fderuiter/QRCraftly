@@ -52,6 +52,7 @@ describe('useScannability - changed behavior: uses useQRStore instead of useQRCo
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.restoreAllMocks();
     window.localStorage.clear();
   });
@@ -467,7 +468,7 @@ describe('useScannability - changed behavior: uses useQRStore instead of useQRCo
       );
 
       // Spy on performScannabilityCheck
-      const scannabilityCheckerModule = await import('../utils/scannabilityChecker');
+      const scannabilityCheckerModule = await import('@/packages/scannability');
       const spyCheck = vi.spyOn(scannabilityCheckerModule, 'performScannabilityCheck').mockReturnValue({
         success: true,
         physicalReady: true,
@@ -512,7 +513,7 @@ describe('useScannability - changed behavior: uses useQRStore instead of useQRCo
       });
 
       // Spy on performScannabilityCheck to return a failure
-      const scannabilityCheckerModule = await import('../utils/scannabilityChecker');
+      const scannabilityCheckerModule = await import('@/packages/scannability');
       vi.spyOn(scannabilityCheckerModule, 'performScannabilityCheck').mockReturnValue({
         success: false,
         physicalReady: false,
@@ -538,6 +539,115 @@ describe('useScannability - changed behavior: uses useQRStore instead of useQRCo
   });
 
   describe('Self-Healing Worker Recovery on crash and subsequent retry', () => {
+    it('falls back on the main thread when a worker is unresponsive for 1500ms', async () => {
+      vi.useFakeTimers();
+      const scannabilityCheckerModule = await import('@/packages/scannability');
+      const fallbackSpy = vi.spyOn(scannabilityCheckerModule, 'performScannabilityCheck').mockReturnValue({
+        success: true,
+        physicalReady: true,
+      });
+
+      const { result } = renderHook(
+        () => useScannability(makeCanvasRef(), defaultConfig),
+        { wrapper }
+      );
+      const imageData = {
+        data: new Uint8ClampedArray(400),
+        width: 10,
+        height: 10,
+      } as ImageData;
+
+      act(() => {
+        result.current.checkScannability(imageData);
+      });
+      expect(result.current.status).toBe('checking');
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(1500);
+      });
+
+      expect(fallbackSpy).toHaveBeenCalledWith(imageData, 10, 10, !!navigator.webdriver, undefined);
+      expect(result.current.status).toBe('physical-pass');
+      expect(result.current.workerRecoveryActive).toBe(true);
+      vi.useRealTimers();
+    });
+
+    it('recreates a worker after consecutive watchdog timeouts', async () => {
+      vi.useFakeTimers();
+      const scannabilityCheckerModule = await import('@/packages/scannability');
+      vi.spyOn(scannabilityCheckerModule, 'performScannabilityCheck').mockReturnValue({
+        success: true,
+        physicalReady: true,
+      });
+      const { result } = renderHook(
+        () => useScannability(makeCanvasRef(), defaultConfig),
+        { wrapper }
+      );
+      const worker = getActiveWorker()!;
+      const imageData = {
+        data: new Uint8ClampedArray(400),
+        width: 10,
+        height: 10,
+      } as ImageData;
+
+      act(() => result.current.checkScannability(imageData));
+      await act(async () => vi.advanceTimersByTimeAsync(1500));
+      act(() => result.current.checkScannability(imageData));
+      await act(async () => vi.advanceTimersByTimeAsync(1500));
+
+      expect(worker.terminate).toHaveBeenCalledTimes(1);
+      expect(getActiveWorker()).not.toBe(worker);
+    });
+
+    it('resolves the active checking state when the worker acknowledges a dropped request', () => {
+      const { result } = renderHook(
+        () => useScannability(makeCanvasRef(), defaultConfig),
+        { wrapper }
+      );
+
+      act(() => {
+        result.current.checkScannability({
+          data: new Uint8ClampedArray(4),
+          width: 1,
+          height: 1,
+        } as ImageData);
+      });
+
+      act(() => {
+        getActiveWorker()!.dispatchMessage({ configId: '1', dropped: true });
+      });
+
+      expect(result.current.status).toBe('idle');
+    });
+
+    it('retries with main-thread image data when worker canvas extraction is unavailable', () => {
+      const canvasRef = makeCanvasRef();
+      const { result } = renderHook(
+        () => useScannability(canvasRef, defaultConfig),
+        { wrapper }
+      );
+      const worker = getActiveWorker()!;
+      worker.postMessage = vi.fn();
+
+      act(() => {
+        result.current.checkScannability(undefined, {
+          width: 10,
+          height: 10,
+          close: vi.fn(),
+        } as unknown as ImageBitmap, 21);
+      });
+
+      act(() => {
+        worker.dispatchMessage({ configId: '1', retryWithImageData: true });
+      });
+
+      expect(worker.postMessage).toHaveBeenLastCalledWith(expect.objectContaining({
+        configId: '1',
+        imageData: expect.objectContaining({ width: 100, height: 100 }),
+        moduleCount: 21,
+      }));
+    });
+
     it('handles worker runtime crash, transitions to fail, shows recovery warning, and then heals on next check', async () => {
       const { result } = renderHook(
         () => ({

@@ -21,7 +21,7 @@ describe('CI Modular Shell Scripts Validation', () => {
     for (const file of files) {
       const filePath = path.join(ciScriptsDir, file);
       const content = fs.readFileSync(filePath, 'utf8');
-      const lines = content.split('\n').map(l => l.trim());
+      const lines = content.split(/\r?\n/).map(l => l.trim());
 
       expect(lines[0], `${file} shebang`).toMatch(/^#!\/usr\/bin\/(env )?bash$/);
       const hasStrictFlags = lines.slice(1, 5).some(l => l.includes('set -euo pipefail') || l.includes('set -e'));
@@ -42,7 +42,15 @@ describe('CI Modular Shell Scripts Validation', () => {
     } catch (err: any) {
       const stdout = err.stdout ? err.stdout.toString() : '';
       const stderr = err.stderr ? err.stderr.toString() : '';
-      if (err.code === 'ENOENT' || err.code === 127 || stderr.includes('not found') || err.message.includes('not found')) {
+      const message = err.message || '';
+      if (
+        err.code === 'ENOENT' ||
+        err.code === 127 ||
+        stderr.includes('not found') ||
+        message.includes('not found') ||
+        stderr.includes('not recognized') ||
+        message.includes('not recognized')
+      ) {
         console.warn('[CI Scripts Test] shellcheck binary not found in local environment, skipping static analysis pass');
         return;
       }
@@ -51,6 +59,10 @@ describe('CI Modular Shell Scripts Validation', () => {
   });
 
   it('should halt immediately with non-zero exit code on simulated intermediate piped failures', () => {
+    if (process.platform === 'win32') {
+      // Windows cmd does not support bash pipefail semantics natively
+      return;
+    }
     // Test that set -euo pipefail properly catches intermediate pipe failures
     const testCommand = `bash -c 'set -euo pipefail; false | echo "should not mask failure"; echo "unreachable"'`;
     expect(() => {

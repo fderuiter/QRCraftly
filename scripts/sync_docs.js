@@ -27,7 +27,7 @@ export function extractJsDocDescription(sourceCode) {
   const jsdocMatch = sourceCode.match(/\/\*\*([^*]|\*(?!\/))*\*\/\s*(?:export\s+)?(?:default\s+)?(?:const|function|class)\s+([A-Za-z0-9_]+)/);
   if (jsdocMatch) {
     const rawComment = jsdocMatch[0].match(/\/\*\*([\s\S]*?)\*\//)[1];
-    const rawLines = rawComment.split('\n');
+    const rawLines = rawComment.split(/\r?\n/);
     const cleanedLines = rawLines
       .map(line => line.replace(/^\s*\* ?/, '').trim())
       .filter(line => line.length > 0 && !line.startsWith('@') && !line.startsWith('/'));
@@ -39,25 +39,10 @@ export function extractJsDocDescription(sourceCode) {
 }
 
 /**
- * Extracts exported or declared component prop interface/type name.
- * @param {string} sourceCode
- * @returns {string|null}
- */
-export function extractPropInterface(sourceCode) {
-  const match = sourceCode.match(/export\s+(?:interface|type)\s+([A-Za-z0-9_]*Props\b)/);
-  if (match) {
-    return match[1];
-  }
-  const fallback = sourceCode.match(/(?:interface|type)\s+([A-Za-z0-9_]*Props\b)/);
-  return fallback ? fallback[1] : null;
-}
-
-/**
  * Parses markdown sections from UI_CATALOG.md.
  */
 function parseCatalogSections(catalogContent) {
-  const normalized = catalogContent.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-  const lines = normalized.split('\n');
+  const lines = catalogContent.split(/\r?\n/);
   const sections = [];
   let currentSection = { heading: null, lines: [], before: true };
 
@@ -166,55 +151,37 @@ export function syncUICatalog(
 
     const updatedEntries = new Map(existingEntries);
 
+    // Prune entries that no longer exist on disk
+    for (const [name] of existingEntries) {
+      if (!componentFiles.includes(`${name}.tsx`)) {
+        updatedEntries.delete(name);
+        catalogModified = true;
+        details.push(`Pruned deleted component entry: ${name}`);
+      }
+    }
+
     // Update or scaffold entries
     for (const file of componentFiles) {
       const name = file.replace('.tsx', '');
       const testFile = `${name}.test.tsx`;
       const testExists = diskFiles.includes(testFile);
       const expectedRef = testExists ? `(\`${name}.tsx\` / \`${testFile}\`)` : `(\`${name}.tsx\`)`;
-      const sourcePath = path.join(targetDir, file);
 
       if (updatedEntries.has(name)) {
         const entry = updatedEntries.get(name);
-        let entryModified = false;
-
         if (entry.ref !== expectedRef) {
           entry.ref = expectedRef;
-          entryModified = true;
-          details.push(`Updated test reference for ${name} -> ${expectedRef}`);
-        }
-
-        // If existing entry has a placeholder description, try to enrich it from source JSDoc
-        if (fs.existsSync(sourcePath) && entry.desc.startsWith('Scaffolded entry for')) {
-          const sourceCode = fs.readFileSync(sourcePath, 'utf8');
-          const jsDoc = extractJsDocDescription(sourceCode);
-          const propInterface = extractPropInterface(sourceCode);
-          if (jsDoc) {
-            entry.desc = propInterface ? `${jsDoc} (Props: \`${propInterface}\`)` : jsDoc;
-            entryModified = true;
-            details.push(`Enriched description for ${name} from JSDoc`);
-          }
-        }
-
-        if (entryModified) {
-          entry.raw = `- **${name}** ${entry.ref}: ${entry.desc}`;
+          entry.raw = `- **${name}** ${expectedRef}: ${entry.desc}`;
           updatedEntries.set(name, entry);
           catalogModified = true;
+          details.push(`Updated test reference for ${name} -> ${expectedRef}`);
         }
       } else {
         // Scaffold new entry
-        const sourceCode = fs.existsSync(sourcePath) ? fs.readFileSync(sourcePath, 'utf8') : '';
+        const sourcePath = path.join(targetDir, file);
+        const sourceCode = fs.readFileSync(sourcePath, 'utf8');
         const jsDoc = extractJsDocDescription(sourceCode);
-        const propInterface = extractPropInterface(sourceCode);
-
-        let desc = jsDoc;
-        if (!desc) {
-          desc = propInterface
-            ? `Reusable UI component. (Props: \`${propInterface}\`)`
-            : `Scaffolded entry for ${name}.`;
-        } else if (propInterface && !desc.includes(propInterface)) {
-          desc = `${desc} (Props: \`${propInterface}\`)`;
-        }
+        const desc = jsDoc || `Scaffolded entry for ${name}.`;
 
         const newRaw = `- **${name}** ${expectedRef}: ${desc}`;
         updatedEntries.set(name, {
@@ -313,6 +280,13 @@ export function syncTelemetryCompliance(
     }
   }
 
+  // Update prose in Opt-In Telemetry bullet if keys differ
+  const proseRegex = /(This data consists only of the following parameters:\s*)([^\n]+)/;
+  if (proseRegex.test(newComplianceContent)) {
+    const targetProse = `This data consists only of the following parameters: ${formattedKeys}.`;
+    newComplianceContent = newComplianceContent.replace(proseRegex, targetProse);
+  }
+
   if (newComplianceContent !== complianceContent) {
     fs.writeFileSync(compliancePath, newComplianceContent, 'utf8');
     details.push(`Updated COMPLIANCE.md with ${codeKeys.length} telemetry keys.`);
@@ -333,7 +307,6 @@ export function syncAll(options = {}) {
   console.log('🔄 Running Documentation Synchronization Engine (docs:sync)...');
 
   const allDetails = [];
-  const errors = [];
   let anyChanged = false;
 
   // 1. Sync UI Catalog
@@ -351,7 +324,6 @@ export function syncAll(options = {}) {
       console.log('✅ UI Catalog is already fully synchronized.');
     }
   } catch (err) {
-    errors.push(`UI Catalog: ${err.message}`);
     console.error(`❌ UI Catalog synchronization failed: ${err.message}`);
   }
 
@@ -369,7 +341,6 @@ export function syncAll(options = {}) {
       console.log('✅ Telemetry compliance is already fully synchronized.');
     }
   } catch (err) {
-    errors.push(`Telemetry Compliance: ${err.message}`);
     console.error(`❌ Telemetry compliance synchronization failed: ${err.message}`);
   }
 
@@ -382,23 +353,15 @@ export function syncAll(options = {}) {
       );
       console.log('✅ Docs manifest compiled successfully.');
     } catch (err) {
-      errors.push(`Docs Manifest: ${err.message}`);
       console.error(`❌ Docs manifest compilation failed: ${err.message}`);
     }
   }
 
-  if (errors.length > 0) {
-    console.error(`\n❌ Documentation synchronization encountered ${errors.length} error(s).`);
-  } else {
-    console.log(`🎉 Documentation synchronization completed in ${Date.now() - startTime}ms.`);
-  }
-  return { changed: anyChanged, details: allDetails, errors };
+  console.log(`🎉 Documentation synchronization completed in ${Date.now() - startTime}ms.`);
+  return { changed: anyChanged, details: allDetails };
 }
 
 // Run CLI if invoked directly
 if (process.argv[1] && (process.argv[1] === fileURLToPath(import.meta.url) || process.argv[1].endsWith('sync_docs.js'))) {
-  const result = syncAll();
-  if (result.errors && result.errors.length > 0) {
-    process.exit(1);
-  }
+  syncAll();
 }

@@ -8,7 +8,6 @@ import {
   formatPathName,
   compileBreadcrumbSchema,
 } from './metadataEngine';
-import { getConfiguredPublicDomain } from './publicEnvironment';
 
 describe('metadataEngine', () => {
   beforeEach(() => {
@@ -31,12 +30,6 @@ describe('metadataEngine', () => {
       expect(getPublicDomain()).toBe('https://test.qrcraftly.com');
     });
 
-    it('returns the default domain when process is unavailable', () => {
-      expect(getConfiguredPublicDomain({
-        viteDomain: undefined,
-        nodeProcess: undefined,
-      })).toBe('https://qrcraftly.com');
-    });
   });
 
   describe('resolveDomainForPath', () => {

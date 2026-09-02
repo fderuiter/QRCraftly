@@ -16,6 +16,18 @@ let cachedTempBuffer: Uint8ClampedArray | null = null;
 
 const yieldToEventLoop = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 
+const acknowledgeDroppedRequest = (configId: string) => {
+  const response = { configId, dropped: true as const };
+  assertWorkerResponse(response);
+  self.postMessage(response);
+};
+
+const requestImageDataRetry = (configId: string) => {
+  const response = { configId, retryWithImageData: true as const };
+  assertWorkerResponse(response);
+  self.postMessage(response);
+};
+
 const releaseImageHandle = (handle: any) => {
   if (handle && typeof handle.close === 'function') {
     try {
@@ -52,6 +64,7 @@ self.onmessage = async (e: MessageEvent<unknown>) => {
     if (configId !== undefined && latestConfigId !== configId) {
       releaseImageHandle(imageBitmap);
       imageBitmap = undefined;
+      acknowledgeDroppedRequest(configId);
       return;
     }
 
@@ -84,6 +97,12 @@ self.onmessage = async (e: MessageEvent<unknown>) => {
         } else {
           throw new Error('OffscreenCanvas is not supported in this environment');
         }
+      } catch {
+        if (configId !== undefined) {
+          requestImageDataRetry(configId);
+          return;
+        }
+        throw new Error('Worker image extraction failed');
       } finally {
         releaseImageHandle(imageBitmap);
         imageBitmap = undefined;
@@ -95,6 +114,7 @@ self.onmessage = async (e: MessageEvent<unknown>) => {
     }
 
     if (configId !== undefined && latestConfigId !== configId) {
+      acknowledgeDroppedRequest(configId);
       return;
     }
 
@@ -115,11 +135,12 @@ self.onmessage = async (e: MessageEvent<unknown>) => {
     };
 
     // Step 1: Two-Pass Orientation & Polarity Analysis (pure JavaScript logic)
+    const decodeQR: typeof jsQR = typeof jsQR === 'function' ? jsQR : (jsQR as any)?.default;
     let digitalCheckOk = false;
     let decodedData = '';
 
     // Pass 1: Normal polarity & orientation pass
-    let code = jsQR(imageData.data, width, height, { inversionAttempts: "dontInvert" });
+    let code = decodeQR ? decodeQR(imageData.data, width, height, { inversionAttempts: "dontInvert" }) : null;
     if (code) {
       digitalCheckOk = true;
       decodedData = code.data;
@@ -127,11 +148,12 @@ self.onmessage = async (e: MessageEvent<unknown>) => {
       // Yield to let any newer message cancel this stale task
       await yieldToEventLoop();
       if (configId !== undefined && latestConfigId !== configId) {
+        acknowledgeDroppedRequest(configId);
         return;
       }
 
       // Pass 2: Inverted polarity & orientation analysis pass
-      code = jsQR(imageData.data, width, height, { inversionAttempts: "onlyInvert" });
+      code = decodeQR ? decodeQR(imageData.data, width, height, { inversionAttempts: "onlyInvert" }) : null;
       if (code) {
         digitalCheckOk = true;
         decodedData = code.data;
@@ -184,6 +206,7 @@ self.onmessage = async (e: MessageEvent<unknown>) => {
     // Yield to let any newer message cancel this
     await yieldToEventLoop();
     if (configId !== undefined && latestConfigId !== configId) {
+      acknowledgeDroppedRequest(configId);
       return;
     }
 
@@ -208,24 +231,27 @@ self.onmessage = async (e: MessageEvent<unknown>) => {
     // Yield to let any newer message cancel this
     await yieldToEventLoop();
     if (configId !== undefined && latestConfigId !== configId) {
+      acknowledgeDroppedRequest(configId);
       return;
     }
 
-    let codeSim = jsQR(simulatedData.data, width, height, { inversionAttempts: "dontInvert" });
+    let codeSim = decodeQR ? decodeQR(simulatedData.data, width, height, { inversionAttempts: "dontInvert" }) : null;
     if (codeSim) {
       physicalCheckOk = true;
     } else {
       // Yield to let any newer message cancel this
       await yieldToEventLoop();
       if (configId !== undefined && latestConfigId !== configId) {
+        acknowledgeDroppedRequest(configId);
         return;
       }
       
-      codeSim = jsQR(simulatedData.data, width, height, { inversionAttempts: "onlyInvert" });
+      codeSim = decodeQR ? decodeQR(simulatedData.data, width, height, { inversionAttempts: "onlyInvert" }) : null;
       if (codeSim) physicalCheckOk = true;
     }
 
     if (configId !== undefined && latestConfigId !== configId) {
+      acknowledgeDroppedRequest(configId);
       return;
     }
 
@@ -251,6 +277,7 @@ self.onmessage = async (e: MessageEvent<unknown>) => {
     imageBitmap = undefined;
 
     if (configId !== undefined && latestConfigId !== configId) {
+      acknowledgeDroppedRequest(configId);
       return;
     }
     const isValidationError = _err instanceof Error && (_err.message.includes('Worker request') || _err.message.includes('Worker response'));

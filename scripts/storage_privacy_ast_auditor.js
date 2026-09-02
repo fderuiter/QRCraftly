@@ -1,9 +1,12 @@
-#!/usr/bin/env node
-
 import fs from 'fs';
 import path from 'path';
+import { createRequire } from 'module';
 import { fileURLToPath } from 'url';
-import ts from 'typescript';
+
+const require = createRequire(import.meta.url);
+// typescript ships as CJS without an `exports` field; use createRequire so the
+// CJS resolver can find it even when pnpm hoists it to a parent node_modules.
+const ts = require('typescript');
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

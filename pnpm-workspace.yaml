@@ -3,7 +3,6 @@ packages:
 allowBuilds:
   esbuild: true
   sharp: false
-  simple-git-hooks: true
   workerd: true
 
 minimumReleaseAgeExclude:

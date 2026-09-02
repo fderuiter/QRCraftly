@@ -16,15 +16,29 @@ describe('ScannabilityIndicator Component', () => {
     render(<ScannabilityIndicator status="physical-pass" health={{ score: 100, warnings: [] }} />);
     
     // Visual indicators are present immediately
-    expect(screen.getByText('Physical-Ready')).toBeInTheDocument();
+    expect(screen.getByText('Print simulation verified')).toBeInTheDocument();
     expect(screen.getByText('Health: 100')).toBeInTheDocument();
+  });
+
+  it('explains screen verification without presenting it as an export failure', () => {
+    render(<ScannabilityIndicator status="digital-pass" health={{ score: 100, warnings: [] }} />);
+
+    expect(screen.getByText('Screen scan verified')).toBeInTheDocument();
+    expect(screen.getByText('Test with a physical camera before large print runs.')).toBeInTheDocument();
+  });
+
+  it('aligns the score badge with the safe threshold at exactly 80', () => {
+    render(<ScannabilityIndicator status="digital-pass" health={{ score: 80, warnings: ['Review before printing'] }} />);
+
+    expect(screen.getByText('Health: 80')).toHaveClass('bg-emerald-100');
+    expect(screen.getByText('Review before printing')).toHaveClass('text-amber-700');
   });
 
   it('renders immediate visual elements for fail status with warning text', () => {
     const health = { score: 40, warnings: ['Low contrast'] };
     render(<ScannabilityIndicator status="fail" health={health} />);
 
-    expect(screen.getByText('Low Scannability')).toBeInTheDocument();
+    expect(screen.getByText('Scan verification failed')).toBeInTheDocument();
     expect(screen.getByText('Health: 40')).toBeInTheDocument();
     expect(screen.getByText('Low contrast')).toBeInTheDocument();
   });
@@ -58,7 +72,7 @@ describe('ScannabilityIndicator Component', () => {
     act(() => {
       vi.advanceTimersByTime(1000);
     });
-    expect(liveRegion.textContent).toBe('Scannability status: Physical-Ready. Health score: 95.');
+    expect(liveRegion.textContent).toBe('Scannability status: Print simulation verified. Health score: 95.');
   });
 
   it('focuses the scannability card container when Alt + S is pressed', () => {
