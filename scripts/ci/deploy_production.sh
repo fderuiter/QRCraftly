@@ -2,19 +2,8 @@
 set -euo pipefail
 
 GITHUB_OUTPUT="${GITHUB_OUTPUT:-/dev/null}"
+DEPLOYMENT_URL="https://qrcraftly.fpderuiter.workers.dev"
 
-echo "Ensuring Cloudflare Pages project exists..."
-pnpm exec wrangler pages project create qrcraftly --production-branch=main || true
-
-echo "Deploying to Cloudflare Pages..."
-pnpm exec wrangler pages deploy dist/client --project-name=qrcraftly --branch=main --commit-dirty > deploy_output.txt 2>&1 || { cat deploy_output.txt && exit 1; }
-cat deploy_output.txt
-
-DEPLOYMENT_URL=$( (grep -oE "https://[a-zA-Z0-9.-]+\.pages\.dev" deploy_output.txt || true) | tail -n 1)
-if [ -z "$DEPLOYMENT_URL" ]; then
-  echo "ERROR: Failed to extract Cloudflare Pages production deployment URL." >&2
-  exit 1
-fi
-
-echo "Extracted Deployment URL: $DEPLOYMENT_URL"
+echo "Production Environment is managed by Cloudflare Workers Builds."
+echo "Active Production URL: $DEPLOYMENT_URL"
 echo "deployment-url=$DEPLOYMENT_URL" >> "$GITHUB_OUTPUT"
