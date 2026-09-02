@@ -50,6 +50,26 @@ _Avoid_: Readability rate, success score, scan rating, reliability index
 A dedicated background process performing real-time contrast auditing and optical decoding off the main user interface thread.
 _Avoid_: Background scanner, validation thread, scannability thread
 
+**Print Simulation Verified**:
+The optimal scannability grade indicating optical clarity under simulated physical print conditions and localized contrast audits.
+_Avoid_: Physical-Ready, print pass, physical scan ok
+
+**Screen Scan Verified**:
+A passing scannability grade indicating reliable digital screen readability with an advisory to verify physical prints prior to mass distribution.
+_Avoid_: Digital-Only Pass, screen pass, digital ok
+
+**Scan Verification Failed**:
+A degraded scannability grade indicating the QR matrix cannot be reliably resolved due to contrast or complexity violations.
+_Avoid_: Low Scannability, bad scan, scan fail
+
+**Worker Degradation Cache**:
+A client-side state flag indicating that background Web Worker execution lacks OffscreenCanvas 2D rendering capabilities in the current browser environment, routing subsequent scannability evaluations to direct zero-copy ImageData buffer transfers without retry overhead.
+_Avoid_: Canvas fallback flag, broken worker cache, degradation state
+
+**Superseded ACK**:
+An off-thread Web Worker acknowledgement confirming a stale scan frame was dropped, used by the main-thread scheduler to release backpressure without overwriting active diagnostic status.
+_Avoid_: Stale frame response, dropped signal, busy unlock event
+
 ### Environment & Tooling Invariants
 
 **Platform Invariance Guarantee**:
@@ -79,3 +99,7 @@ _Avoid_: Setup helper, interactive guide, prompt script, install cli
 **Wizard Runner**:
 A cross-platform launcher ensuring interactive bash wizards execute consistently across Windows, macOS, and Linux without platform branching or manual shell navigation.
 _Avoid_: Bash bridge, script invoker, shell wrapper
+
+**Git Guardrails**:
+Automated client-side hooks combining Husky with lint-staged to enforce code formatting, syntax rules, and duplication constraints before commit creation.
+_Avoid_: Commit hooks, git checks, pre-commit scripts, git filters

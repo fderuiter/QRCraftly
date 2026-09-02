@@ -7,6 +7,7 @@ import jsQR from 'jsqr';
 import { isDangerousUrl } from '@/utils/security';
 import { applyOpticalSimulationMath } from './opticalSimulation';
 import { auditModuleContrast } from './contrastAudit';
+import { releaseImageHandle } from './imageHandle';
 
 let latestConfigId: string | undefined | null = undefined;
 let cachedCanvas: OffscreenCanvas | null = null;
@@ -16,24 +17,29 @@ let cachedTempBuffer: Uint8ClampedArray | null = null;
 
 const yieldToEventLoop = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 
+declare const self: {
+  onmessage: ((e: MessageEvent<unknown>) => void | Promise<void>) | null;
+  postMessage: (message: unknown, transfer?: Transferable[]) => void;
+};
+
+const postWorkerMessage = (message: unknown, transfer?: Transferable[]) => {
+  if (transfer) {
+    self.postMessage(message, transfer);
+  } else {
+    self.postMessage(message);
+  }
+};
+
 const acknowledgeDroppedRequest = (configId: string) => {
   const response = { configId, dropped: true as const };
   assertWorkerResponse(response);
-  self.postMessage(response);
+  postWorkerMessage(response);
 };
 
 const requestImageDataRetry = (configId: string) => {
   const response = { configId, retryWithImageData: true as const };
   assertWorkerResponse(response);
-  self.postMessage(response);
-};
-
-const releaseImageHandle = (handle: any) => {
-  if (handle && typeof handle.close === 'function') {
-    try {
-      handle.close();
-    } catch {}
-  }
+  postWorkerMessage(response);
 };
 
 /**
@@ -42,21 +48,23 @@ const releaseImageHandle = (handle: any) => {
  */
 self.onmessage = async (e: MessageEvent<unknown>) => {
   let configId: string | undefined;
-  let imageBitmap: any = undefined;
+  let imageBitmap: ImageBitmap | undefined = undefined;
   let sequenceId: number | undefined;
   let reqBuffer: ArrayBuffer | undefined;
 
   try {
     if (e.data && typeof e.data === 'object') {
-      configId = (e.data as any).configId;
-      imageBitmap = (e.data as any).imageBitmap;
-      sequenceId = (e.data as any).sequenceId;
-      reqBuffer = (e.data as any).buffer;
+      const d = e.data as Record<string, unknown>;
+      configId = typeof d.configId === 'string' ? d.configId : undefined;
+      imageBitmap = d.imageBitmap && typeof d.imageBitmap === 'object' ? (d.imageBitmap as ImageBitmap) : undefined;
+      sequenceId = typeof d.sequenceId === 'number' ? d.sequenceId : undefined;
+      reqBuffer = d.buffer instanceof ArrayBuffer ? d.buffer : undefined;
     }
 
     if (configId !== undefined) {
       latestConfigId = configId;
     }
+
 
     // Yield immediately to let incoming messages register and cancel stale requests
     await yieldToEventLoop();
@@ -272,11 +280,7 @@ self.onmessage = async (e: MessageEvent<unknown>) => {
       buffer: recycledBuf,
     };
     assertWorkerResponse(response);
-    if (recycledBuf) {
-      (self as any).postMessage(response, [recycledBuf]);
-    } else {
-      (self as any).postMessage(response);
-    }
+    postWorkerMessage(response, recycledBuf ? [recycledBuf] : undefined);
   } catch (_err) {
     releaseImageHandle(imageBitmap);
     imageBitmap = undefined;
@@ -299,13 +303,9 @@ self.onmessage = async (e: MessageEvent<unknown>) => {
     };
     try {
       assertWorkerResponse(response);
-      if (recycledBuf) {
-        (self as any).postMessage(response, [recycledBuf]);
-      } else {
-        (self as any).postMessage(response);
-      }
+      postWorkerMessage(response, recycledBuf ? [recycledBuf] : undefined);
     } catch {
-      (self as any).postMessage({
+      postWorkerMessage({
         success: false,
         physicalReady: false,
         error: 'CRASH',

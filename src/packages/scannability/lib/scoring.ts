@@ -63,7 +63,7 @@ export function calculateScannabilityHealth(
     );
   }
 
-  const isComplex = LOW_RELIABILITY_PATTERNS.includes(config.style as any);
+  const isComplex = LOW_RELIABILITY_PATTERNS.includes(config.style);
   if (isComplex) {
     score -= 10;
     if (worstContrast < 7.0) {

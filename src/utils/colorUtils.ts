@@ -33,6 +33,21 @@ export const normalizeHex = (val: string): string | null => {
 };
 
 /**
+ * Calculates WCAG relative luminance from raw sRGB channels (0..1).
+ *
+ * @param r - Red channel normalized (0..1).
+ * @param g - Green channel normalized (0..1).
+ * @param b - Blue channel normalized (0..1).
+ * @returns Relative luminance value (0..1).
+ */
+export const getLuminanceFromRgb = (r: number, g: number, b: number): number => {
+  const rLin = r <= 0.03928 ? r / 12.92 : Math.pow((r + 0.055) / 1.055, 2.4);
+  const gLin = g <= 0.03928 ? g / 12.92 : Math.pow((g + 0.055) / 1.055, 2.4);
+  const bLin = b <= 0.03928 ? b / 12.92 : Math.pow((b + 0.055) / 1.055, 2.4);
+  return 0.2126 * rLin + 0.7152 * gLin + 0.0722 * bLin;
+};
+
+/**
  * Utility to calculate relative luminance of a color based on the WCAG 2.0 formula.
  * Used for contrast ratio calculation.
  *
@@ -47,7 +62,7 @@ export const normalizeHex = (val: string): string | null => {
  * @param hex - The hex color code (e.g. #RRGGBB or #RGB).
  * @returns The relative luminance value.
  */
-export const getLuminance = (hex: string) => {
+export const getLuminance = (hex: string): number => {
   let normalizedHex = hex;
   if (hex.length === 4) {
     normalizedHex = '#' + hex[1] + hex[1] + hex[2] + hex[2] + hex[3] + hex[3];
@@ -58,10 +73,7 @@ export const getLuminance = (hex: string) => {
   const g = ((rgb >> 8) & 0xff) / 255;
   const b = (rgb & 0xff) / 255;
 
-  const a = [r, g, b].map((v) => {
-    return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
-  });
-  return a[0] * 0.2126 + a[1] * 0.7152 + a[2] * 0.0722;
+  return getLuminanceFromRgb(r, g, b);
 };
 
 /**

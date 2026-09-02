@@ -16,9 +16,16 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-export {
-  isWorkerRequest,
-  assertWorkerRequest,
-  isWorkerResponse,
-  assertWorkerResponse,
-} from '@/packages/scannability';
+/**
+ * Safely closes and releases native browser memory allocated for an ImageBitmap handle.
+ *
+ * @param handle - Optional ImageBitmap instance to release.
+ */
+export function releaseImageHandle(handle?: ImageBitmap | null): void {
+  if (handle && typeof handle.close === 'function') {
+    try {
+      handle.close();
+    } catch {}
+  }
+}
+

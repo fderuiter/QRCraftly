@@ -49,10 +49,23 @@ export function execShell(command: string, options: ExecSyncOptions = {}): strin
   return typeof output === 'string' ? output.replace(/\r\n/g, '\n') : (output as unknown as string);
 }
 
+let cachedBash: string | null = null;
+
 /**
- * Resolves the bash executable for the current platform.
+ * Resolves the bash executable for the current platform with caching and defensive path quoting.
  */
 export function resolveBash(): string {
+  if (cachedBash) {
+    return cachedBash;
+  }
+
+  // Check PATH first
+  try {
+    execSync('bash --version', { stdio: 'ignore' });
+    cachedBash = 'bash';
+    return 'bash';
+  } catch (_e) {}
+
   if (process.platform === 'win32') {
     const sysDrive = process.env.SystemDrive || '';
     const progFiles = process.env.ProgramFiles || (sysDrive ? `${sysDrive}\\Program Files` : '');
@@ -60,8 +73,6 @@ export function resolveBash(): string {
     const localAppData = process.env.LOCALAPPDATA || '';
 
     const candidatePaths = [
-      'bash',
-      'bash.exe',
       progFiles ? `${progFiles}\\Git\\bin\\bash.exe` : '',
       progFiles ? `${progFiles}\\Git\\usr\\bin\\bash.exe` : '',
       progFilesX86 ? `${progFilesX86}\\Git\\bin\\bash.exe` : '',
@@ -69,20 +80,16 @@ export function resolveBash(): string {
     ].filter(Boolean);
 
     for (const candidate of candidatePaths) {
-      if (candidate === 'bash' || candidate === 'bash.exe') {
-        try {
-          execSync(`${candidate} --version`, { stdio: 'ignore' });
-          return candidate;
-        } catch (_e) {}
-      } else {
-        try {
-          if (fs.existsSync(candidate)) {
-            return candidate;
-          }
-        } catch (_e) {}
-      }
+      try {
+        if (fs.existsSync(candidate)) {
+          cachedBash = candidate.includes(' ') ? `"${candidate}"` : candidate;
+          return cachedBash;
+        }
+      } catch (_e) {}
     }
   }
+
+  cachedBash = 'bash';
   return 'bash';
 }
 
