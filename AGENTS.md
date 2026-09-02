@@ -13,6 +13,8 @@ Operating instructions and core invariants for AI agents working in this reposit
   - Color & contrast math: Never write custom luminance, hex normalization, or contrast formulas. Always import from `src/utils/colorUtils.ts` or `src/utils/a11y.ts`.
 - **Tailwind CSS v4 (CSS-First)**: Theme variables, tokens, and dark mode variants live exclusively in `src/layouts/index.css` via `@theme` and `@variant`. There is no `tailwind.config.js`.
 - **Platform Invariance & Path Canonicalization**: All repository tooling, AST auditors, scripts, tests, and build steps must be completely environment-agnostic (Windows, macOS, Linux). Never hardcode OS drive paths, platform-specific binaries (`npx.cmd`), or raw `split('\n')`. Always canonicalize relative paths using POSIX forward slashes (`/`), standardize line endings to `LF` with defensive regex splitting (`/\r?\n/`), and use `scripts/utils/execHelper.js` or `tests/utils/execHelper.ts` for process execution. Verified by `scripts/path_invariance_auditor.js`.
+- **Deployment Integrity & Edge Hosting**: All deployments to Cloudflare Pages must fail honestly if credentials or cloud resources are missing. Never introduce local server fallbacks (`localhost:3000`) or monkey-patch the Wrangler CLI in build or postbuild scripts. Preview and non-production branches (`dev`) deploy online to authentic Cloudflare Pages environments and auto-provision the project if necessary via `pnpm exec wrangler pages project create qrcraftly --production-branch=main || true`.
+- **Deep Module Architecture & Duplication Limit**: Core domain features and background workers belong inside deep modules (`src/packages/<module>/`). Utility files outside package boundaries (such as `src/utils/scannabilityWorker.ts` and `src/utils/sharedContract.ts`) must act strictly as minimal re-export shims to maintain the repository duplicate code threshold below `3.0` (`.jscpd.json`).
 
 ## Agent skills
 
@@ -33,7 +35,7 @@ Packages are deep modules: see [src/packages/README.md](./src/packages/README.md
 ## Architecture & Deep Topic Pointers
 
 - **Dynamic Edge Redirection & SSR**: Cloudflare Pages Functions (`functions/[[path]].ts`), D1 SQL database, KV edge caching, and zero-knowledge anchor hash encryption (`#key=...`). Read `docs/public/EDGE_ARCHITECTURE.md`.
-- **Worker Concurrency & Scannability**: Off-thread Web Workers (`scannabilityWorker.ts`, `scannerWorker.ts`), zero-copy `ArrayBuffer` double-buffering, and client-side SVG generation via `SvgContext`. Read `docs/public/SCALING.md`.
+- **Worker Concurrency & Scannability**: Off-thread Web Workers (`scannabilityWorker.ts`, `scannerWorker.ts`), zero-copy `ArrayBuffer` double-buffering, degradation state caching, immediate 1500ms watchdog fault-tolerance, non-blocking superseded dropped ACK backpressure handling, and client-side SVG generation via `SvgContext`. Read `docs/public/SCALING.md`.
 - **Security & Sanitization**: SVG element allowlists (`sanitizeSvg`), phone/SMS sanitization, anchor link sanitization (`sanitizeHref`), and inline-script CSP hashing. Read `docs/SECURITY.md`.
 - **HIPAA Compliance Guidelines**: Client-side volatile memory guarantees and telemetry schema rules. Read `docs/public/COMPLIANCE.md`.
 
@@ -42,6 +44,8 @@ Packages are deep modules: see [src/packages/README.md](./src/packages/README.md
 - **TypeScript**: Strict typing across all files. Proactively avoid `any` or loose type assertions (`as`).
 - **Accessibility (a11y)**: Validate WCAG 2.1 SC 1.4.11 contrast compliance for UI states and generated QR codes. Test components with `vitest-axe` and screen-reader accessible labels.
 - **Tailwind Formatting**: Run `pnpm run format:classes` to enforce standardized utility class ordering.
+- **Git Guardrails**: Husky v9 and lint-staged enforce pre-commit validation (formatting, typechecking, duplication audits, and tests) before every commit. Read `docs/adr/0010-husky-and-lint-staged-git-guardrails.md`.
+- **Test Concurrency & File Isolation**: Tests interacting with build artifacts or script outputs (e.g. sitemaps) must isolate output paths via environment variables (such as `SITEMAP_OUTPUT_PATH`) to avoid race conditions and file collisions during parallel Vitest executions.
 
 ## Verification & Definition of Done
 
