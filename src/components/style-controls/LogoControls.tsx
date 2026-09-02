@@ -170,6 +170,7 @@ export const LogoControls: React.FC<LogoControlsProps> = ({ config, onChange }) 
         accept={SYSTEM_LIMITS.SUPPORTED_IMAGE_FORMATS.join(',')}
         className="hidden"
         onChange={handleLogoUpload}
+        aria-label="Upload logo file"
       />
     </div>
   );
