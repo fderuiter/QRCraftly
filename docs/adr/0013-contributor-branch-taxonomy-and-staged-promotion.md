@@ -13,8 +13,8 @@ With multiple autonomous AI coding agents and human contributors interacting wit
 We establish a **Two-Tier Staged Promotion Model** with an enforced **Semantic Branch Prefix Taxonomy**:
 
 1. **Repository Branch Hierarchy**:
-   - **`dev` (Default Integration Branch)**: The canonical branch for all active development. All feature branches, bug fixes, refactors, and external PRs branch from and target `dev`. Commits merged into `dev` automatically deploy to the live preview staging environment (`https://qrcraftly.fpderuiter.workers.dev/`).
-   - **`main` (Production Release Branch)**: The protected production branch. Direct pushes are prohibited. Code moves to `main` exclusively via promotional pull requests originating from `dev` (or hotfix rollbacks). Commits merged into `main` trigger production releases to `https://qrcraftly.com` with SLSA provenance attestations and version manifests.
+   - **`dev` (Default Integration Branch)**: The canonical branch for all active development. All feature branches, bug fixes, refactors, and external PRs branch from and target `dev`. Commits merged into `dev` automatically deploy to the live preview staging environment (`https://dev-qrcraftly.fpderuiter.workers.dev/`).
+   - **`main` (Production Release Branch)**: The protected production branch. Direct pushes are prohibited. Code moves to `main` exclusively via promotional pull requests originating from `dev` (or hotfix rollbacks). Commits merged into `main` trigger production releases to `https://qrcraftly.fpderuiter.workers.dev/` and `https://qrcraftly.com` with version manifests.
 
 2. **Standardized Semantic Branch Prefixes**:
    All working branches must use one of the following prefixes:
@@ -30,7 +30,7 @@ We establish a **Two-Tier Staged Promotion Model** with an enforced **Semantic B
    - PRs targeting `dev` spin up ephemeral previews to run smoke tests before merge.
 
 4. **Staged Promotion Lifecycle**:
-   - When a batch of changes on `dev` is verified on `https://qrcraftly.fpderuiter.workers.dev/`, a promotional PR from `dev` into `main` is created (e.g. `release: vX.Y.Z`).
+   - When a batch of changes on `dev` is verified on `https://dev-qrcraftly.fpderuiter.workers.dev/`, a promotional PR from `dev` into `main` is created (e.g. `release: vX.Y.Z`).
    - Merging the promotion PR executes the production release workflow.
 
 ## Rationale

@@ -2,51 +2,54 @@
 status: accepted
 ---
 
-# Authoritative Deployment Orchestration and Branch Strategy
+# Authoritative Quality Gatekeeping and Edge Branch Deployment
 
 ## Context
 
-Previously, deployment to Cloudflare was split between Cloudflare's native GitHub App (triggering automatic builds on pushes to `main`) and GitHub Actions workflows (`main.yml`, `deploy.yml`, `preview.yml`). This created duplication, potential race conditions, and divergent build outputs. Furthermore, Cloudflare's native builder bypassed repository-specific security and integrity verification steps, including:
+Previously, deployment to Cloudflare was caught between two conflicting mechanisms:
 
-- Client-side storage privacy AST auditing (`scripts/storage_privacy_ast_auditor.js`)
-- Content Security Policy inline script hash injection (`scripts/csp_hash_injector.js`)
-- Client-side service worker generation (`scripts/generate_sw.cjs`)
-- Resource quota and bundle size boundary verification (`scripts/check-bundle-size.js`)
-- SLSA Level 3 build provenance attestations (`actions/attest-build-provenance`)
-- Automated Playwright end-to-end and Vitest unit testing suites
+1. Cloudflare's native GitHub App (Workers Builds) which automatically builds connected branches on push.
+2. Legacy GitHub Actions workflows (`deploy.yml`, `preview.yml`, `main.yml`) attempting to run `wrangler pages deploy` via shell scripts.
 
-Additionally, external contributors and autonomous AI agents frequently default to creating forks and branches from the repository's default branch. With `main` historically serving as both the production release branch and the default Git branch, unvetted work could inadvertently target production.
+This duality caused broken CI pipeline runs because the project was configured as a Cloudflare Worker (`qrcraftly.fpderuiter.workers.dev`), not a Cloudflare Pages project. Furthermore, running naive CLI deployment commands from GitHub Actions on the `dev` branch risked deploying to the root worker name, potentially overwriting production (`qrcraftly.fpderuiter.workers.dev`).
+
+In Cloudflare Workers Builds, Cloudflare provides native wildcard domain routing:
+
+- **Production**: `qrcraftly.fpderuiter.workers.dev` (bound strictly to the production branch, `main`)
+- **Preview Staging**: `dev-qrcraftly.fpderuiter.workers.dev` (bound to `dev` with `X-Robots-Tag: noindex`)
+- **Ephemeral Previews**: `*-qrcraftly.fpderuiter.workers.dev` (dynamically provisioned per pull request)
 
 ## Decision
 
-We establish **GitHub Actions as the single Authoritative Deployment Orchestrator** and transition to a **Two-Tier Staged Promotion Branch Strategy**:
+We establish a clear division of responsibility between **GitHub Actions** and **Cloudflare Workers Builds**:
 
-1. **GitHub Actions as Authoritative Deployment Orchestrator**:
-   - Cloudflare native Git auto-builds are disabled.
-   - GitHub Actions is the sole system authorized to deploy artifacts to Cloudflare Workers via `wrangler deploy`.
-   - All deployments must pass static validation, linting, unit tests, Playwright e2e tests, postbuild security injectors, and provenance attestations.
+1. **GitHub Actions as the Authoritative Quality Gatekeeper**:
+   - GitHub Actions is the mandatory, unyielding gatekeeper for code quality and security.
+   - All pull requests targeting `dev` or `main` must pass the full verification matrix before merge permissions are granted:
+     - Static validation (`pnpm run lint`): AST storage privacy auditor, UI catalog auditor, markdown compliance, TypeScript typecheck, depcruise boundary validation, ESLint, Knip, and code duplication checks.
+     - ShellCheck static analysis and secret scanning.
+     - Vitest unit tests with strict coverage thresholds (`pnpm test`).
+     - Playwright cross-browser end-to-end tests (`pnpm run test:e2e`).
+     - Production application compilation (`pnpm run build`) including postbuild CSP hash injection, service worker generation, and bundle size budget checks.
+   - Broken CLI deployment commands (`wrangler pages deploy`) inside GitHub Actions are decommissioned.
 
-2. **Branch Topology (`dev` as Default Integration Branch)**:
-   - `dev` is designated as the repository's default branch. All feature branches, bug fixes, refactors, and AI agent contributions branch from and target `dev`.
-   - Merging into `dev` automatically triggers deployment to the shared preview staging environment at `https://qrcraftly.fpderuiter.workers.dev/`.
-   - `main` is reserved strictly for production releases (`https://qrcraftly.com`). Code reaches `main` solely via promotional pull requests from `dev` into `main` (or emergency rollback workflows).
-
-3. **Cloudflare Runtime Target**:
-   - The deployment target is standardized on **Cloudflare Workers with Static Assets** (`wrangler deploy`) matching the live endpoint `qrcraftly.fpderuiter.workers.dev`.
-   - Obsolete `wrangler pages deploy` commands targeting nonexistent Pages projects are eliminated.
-
-4. **Ephemeral PR Preview Deployments**:
-   - Pull requests targeting `dev` generate isolated preview environments, running Playwright smoke tests before changes are merged into the shared `dev` branch.
+2. **Cloudflare Workers Builds for Edge Branch Routing**:
+   - Cloudflare's native Git integration handles artifact deployment and edge DNS routing.
+   - Pushes to `main` deploy exclusively to production (`qrcraftly.fpderuiter.workers.dev` and `qrcraftly.com`).
+   - Pushes to `dev` deploy exclusively to the preview staging environment (`dev-qrcraftly.fpderuiter.workers.dev`).
+   - Pull requests trigger ephemeral preview builds at `https://<branch>-qrcraftly.fpderuiter.workers.dev/`.
+   - Because domain routing is strictly bound to Git branch names by Cloudflare's edge router, it is impossible for `dev` to overwrite `main`.
 
 ## Rationale
 
-Decoupling Cloudflare's build app in favor of GitHub Actions ensures strict compliance with QRCraftly's zero-knowledge security and privacy invariants. No code reaches edge networks without passing the pre-build AST storage auditor and post-build CSP hash injection.
+This decoupled architecture provides the best of both worlds:
 
-Designating `dev` as the default branch isolates ongoing developer and agent velocity from production, providing a continuous edge staging ground on `workers.dev` while protecting the stability of `main`.
+- Zero credential overhead and zero CLI deployment failure modes in GitHub Actions.
+- Complete domain isolation between preview and production, eliminating any possibility of accidental production overwrites.
+- Uncompromising quality gates: no code reaches either `dev` or `main` without passing all automated tests and privacy/security audits.
 
 ## Consequences
 
-- Direct pushes to `main` are restricted to release promotions and rollbacks.
-- PR workflows (`main.yml` and `preview.yml`) must listen to pull requests targeting `dev` as well as `main`.
-- Cloudflare deployment secrets (`CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`) are managed securely within GitHub Actions repository secrets.
-- CI deployment scripts (`deploy_dev.sh`, `deploy_production.sh`, `deploy_preview.sh`) are updated from `wrangler pages deploy` to `wrangler deploy`.
+- GitHub repository settings enforce Required Status Checks from GitHub Actions on both `dev` and `main`.
+- In `main.yml`, redundant deployment jobs calling failing shell scripts are replaced with build validation and gatekeeping.
+- Developers and autonomous agents verify features on `https://dev-qrcraftly.fpderuiter.workers.dev/` before cutting promotion PRs to `main`.

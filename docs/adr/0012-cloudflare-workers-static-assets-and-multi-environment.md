@@ -2,36 +2,40 @@
 status: accepted
 ---
 
-# Cloudflare Workers Static Assets and Multi-Environment Architecture
+# Cloudflare Workers Static Assets and Edge Branch Routing
 
 ## Context
 
-Historically, QRCraftly's CI deployment scripts attempted to execute `wrangler pages deploy` targeting a Cloudflare Pages project. However, the active deployment runtime and live preview endpoint (`https://qrcraftly.fpderuiter.workers.dev/`) run on Cloudflare Workers, causing CI pipeline failures due to the absence of a Pages-managed project. Furthermore, Cloudflare has unified Pages into Workers with Static Assets, making Workers the modern, first-class deployment model for full-stack edge applications with static frontends.
+Historically, QRCraftly's CI scripts attempted to execute `wrangler pages deploy` targeting a Cloudflare Pages project. However, the active deployment runtime and live endpoints run on Cloudflare Workers (`*.workers.dev`), resulting in CI failures due to the absence of a Pages project. Furthermore, Cloudflare has unified Pages into Workers with Static Assets, making Workers the modern deployment standard for full-stack applications with static frontends.
 
-Additionally, deployment needs to strictly isolate staging verification (the `dev` branch deploying to `qrcraftly.fpderuiter.workers.dev`) from production releases (the `main` branch serving custom production domains like `qrcraftly.com`).
+Additionally, we must ensure complete domain and branch isolation between preview staging (`dev`) and production (`main`) to guarantee that development builds never overwrite production.
 
 ## Decision
 
-We migrate QRCraftly's edge runtime and deployment tooling to **Cloudflare Workers with Static Assets** and declare distinct deployment environments within `wrangler.jsonc`:
+We standardize QRCraftly's edge architecture on **Cloudflare Workers with Static Assets** coupled with Cloudflare's **Wildcard Branch Routing**:
 
-1. **Workers with Static Assets**:
-   - The deployment manifest `wrangler.jsonc` configures static asset serving via `"assets": { "directory": "dist/client", "binding": "ASSETS" }`.
-   - The build output in `dist/client` (including pre-rendered Vike SSG pages, hashed client assets, service worker, and security headers) is served directly via Cloudflare's edge asset pipeline.
+1. **Workers with Static Assets (`wrangler.jsonc`)**:
+   - The deployment manifest `wrangler.jsonc` configures static asset delivery via `"assets": { "directory": "dist/client" }`.
+   - All build outputs in `dist/client` (pre-rendered Vike SSG pages, static assets, service worker, and CSP headers) are served directly by Cloudflare's edge asset pipeline.
+   - Shared edge resources (Cloudflare D1 database `qrcraftly-db` and KV caching namespaces) are bound directly within `wrangler.jsonc`.
 
-2. **Multi-Environment Declaration in `wrangler.jsonc`**:
-   - **Default/Staging Environment**: Targets the worker deployment serving `qrcraftly.fpderuiter.workers.dev`, utilized by automated CI runs on the `dev` branch.
-   - **Production Environment (`[env.production]`)**: Targets the production domain (`qrcraftly.com`), executed exclusively when releases are promoted to `main`.
-   - Shared edge resources (Cloudflare D1 SQL database `qrcraftly-db` and KV caching namespaces) are bound systematically per environment.
+2. **Native Edge Branch Routing**:
+   - **Production (`main` branch)**: Routes to `https://qrcraftly.fpderuiter.workers.dev/` (and production custom domains like `qrcraftly.com`).
+   - **Preview Staging (`dev` branch)**: Routes to `https://dev-qrcraftly.fpderuiter.workers.dev/` with automatic `X-Robots-Tag: noindex` protection.
+   - **Pull Requests**: Provisioned as ephemeral branch previews matching `https://<branch>-qrcraftly.fpderuiter.workers.dev/`.
+   - Domain routing is handled at Cloudflare's edge based on Git branch lineage, making branch collision or production overwrite impossible.
 
-3. **CI Pipeline Migration**:
-   - Replaced all invocations of `wrangler pages deploy` in CI shell scripts (`deploy_dev.sh`, `deploy_production.sh`, `deploy_preview.sh`) with `wrangler deploy`.
+3. **Retirement of Broken CLI Deployment Scripts**:
+   - Decommissioned obsolete `wrangler pages deploy` calls in CI workflows and shell scripts.
+   - GitHub Actions focuses strictly on quality gatekeeping (linting, tests, security audits, build quotas) rather than managing fragile CLI deployment credentials.
 
 ## Rationale
 
-Migrating to Workers with Static Assets standardizes our infrastructure on Cloudflare's current platform architecture. Leveraging Wrangler's multi-environment declarations within a single `wrangler.jsonc` eliminates project duplication in the Cloudflare dashboard while maintaining an airtight boundary between staging and production.
+Cloudflare Workers with Static Assets provides first-class performance and eliminates the distinction between Pages and Workers. Utilizing Cloudflare's native wildcard branch routing guarantees absolute separation between staging and production without manual environment juggling or risk of overwriting production.
 
 ## Consequences
 
-- CI scripts invoke `pnpm exec wrangler deploy` instead of Pages deployment subcommands.
-- `wrangler.jsonc` serves as the single source of truth for edge asset routing, D1 bindings, and environment overrides.
-- Automated smoke tests validate edge deployments against `qrcraftly.fpderuiter.workers.dev` on `dev` commits prior to production promotion.
+- `wrangler.jsonc` specifies `"assets": { "directory": "dist/client", "binding": "ASSETS" }`.
+- The preview staging URL is canonically documented as `https://dev-qrcraftly.fpderuiter.workers.dev/`.
+- The production URL is canonically documented as `https://qrcraftly.fpderuiter.workers.dev/` and `https://qrcraftly.com`.
+- Redundant and failing `wrangler pages deploy` shell scripts are retired from the repository.
