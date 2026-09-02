@@ -28,15 +28,10 @@ import {
 import { calculateScannabilityHealth, HealthScore } from './scoring';
 import { ScannabilityStatus } from './exportRiskPolicy';
 
+import { releaseImageHandle } from './imageHandle';
+
 const SCANNABILITY_WATCHDOG_MS = 1500;
 
-const releaseImageHandle = (handle: any) => {
-  if (handle && typeof handle.close === 'function') {
-    try {
-      handle.close();
-    } catch {}
-  }
-};
 
 export interface UseScannabilityReturn {
   status: ScannabilityStatus;
@@ -48,6 +43,15 @@ export interface UseScannabilityReturn {
   health: HealthScore;
   workerRecoveryActive: boolean;
 }
+
+const scheduleIdleTask = (cb: () => void, timeout = 100): void => {
+  const win = typeof window !== 'undefined' ? (window as Window & { requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number }) : undefined;
+  if (win && typeof win.requestIdleCallback === 'function') {
+    win.requestIdleCallback(cb, { timeout });
+  } else {
+    setTimeout(cb, timeout);
+  }
+};
 
 /**
  * Deep hook managing off-thread worker concurrency, watchdog fault-tolerance,
@@ -77,6 +81,7 @@ export function useScannabilityRunner(
   const watchdogFallbackRef = useRef<(() => void) | null>(null);
   const consecutiveTimeoutsRef = useRef(0);
   const pendingModuleCountRef = useRef<number | undefined>(undefined);
+  const hasWorkerOffscreenDegradationRef = useRef<boolean>(false);
 
   const [localMetrics, setLocalMetrics] = useState<
     { violations?: number; minContrast?: number } | undefined
@@ -136,7 +141,7 @@ export function useScannabilityRunner(
     if (typeof window === 'undefined') return null;
 
     try {
-      const worker = new Worker(new URL('../../../utils/scannabilityWorker.ts', import.meta.url), {
+      const worker = new Worker(new URL('../worker.ts', import.meta.url), {
         type: 'module',
       });
       workerRef.current = worker;
@@ -180,6 +185,17 @@ export function useScannabilityRunner(
 
         const { configId } = e.data;
 
+        // Handle superseded dropped ACKs before sequence checks to release backpressure deadlock
+        if ('dropped' in e.data && e.data.dropped) {
+          startTimeRef.current = null;
+          isWorkerBusyRef.current = false;
+          if (configId === String(sequenceRef.current)) {
+            clearWatchdog();
+            setStatus('idle');
+          }
+          return;
+        }
+
         // Sequence ID check: discard late results if configId does not match current sequence ID
         if (configId !== String(sequenceRef.current)) {
           return;
@@ -188,6 +204,7 @@ export function useScannabilityRunner(
         clearWatchdog();
 
         if ('retryWithImageData' in e.data && e.data.retryWithImageData) {
+          hasWorkerOffscreenDegradationRef.current = true;
           const canvas = canvasRef.current;
           const context = canvas?.getContext('2d');
           if (!canvas || !context || canvas.width <= 0 || canvas.height <= 0) {
@@ -198,25 +215,20 @@ export function useScannabilityRunner(
           }
 
           const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-          worker.postMessage({
+          const payload = {
             imageData,
             width: imageData.width,
             height: imageData.height,
             isTest: !!navigator.webdriver,
             configId,
             moduleCount: pendingModuleCountRef.current,
-          });
+          };
+          assertWorkerRequest(payload);
+          worker.postMessage(payload, [imageData.data.buffer]);
           watchdogRef.current = setTimeout(
             () => watchdogFallbackRef.current?.(),
             SCANNABILITY_WATCHDOG_MS
           );
-          return;
-        }
-
-        if ('dropped' in e.data && e.data.dropped) {
-          startTimeRef.current = null;
-          isWorkerBusyRef.current = false;
-          setStatus('idle');
           return;
         }
 
@@ -460,11 +472,7 @@ export function useScannabilityRunner(
           }
         };
 
-        if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-          (window as any).requestIdleCallback(runMainThreadCheck, { timeout: 100 });
-        } else {
-          setTimeout(runMainThreadCheck, 100);
-        }
+        scheduleIdleTask(runMainThreadCheck, 100);
         return;
       }
 
@@ -492,6 +500,27 @@ export function useScannabilityRunner(
           try {
             const { performScannabilityCheck } = await import('@/packages/scannability');
             let imageData = overrideImageData;
+            if (!imageData && overrideImageBitmap) {
+              try {
+                if (typeof OffscreenCanvas !== 'undefined') {
+                  const oc = new OffscreenCanvas(overrideImageBitmap.width || 1, overrideImageBitmap.height || 1);
+                  const octx = oc.getContext('2d');
+                  if (octx) {
+                    octx.drawImage(overrideImageBitmap, 0, 0);
+                    imageData = octx.getImageData(0, 0, oc.width, oc.height);
+                  }
+                } else if (typeof document !== 'undefined') {
+                  const dc = document.createElement('canvas');
+                  dc.width = overrideImageBitmap.width || 1;
+                  dc.height = overrideImageBitmap.height || 1;
+                  const dctx = dc.getContext('2d');
+                  if (dctx) {
+                    dctx.drawImage(overrideImageBitmap, 0, 0);
+                    imageData = dctx.getImageData(0, 0, dc.width, dc.height);
+                  }
+                }
+              } catch {}
+            }
             if (!imageData) {
               const canvas = canvasRef.current;
               const context = canvas?.getContext('2d');
@@ -531,12 +560,16 @@ export function useScannabilityRunner(
         watchdogRef.current = setTimeout(watchdogFallbackRef.current, SCANNABILITY_WATCHDOG_MS);
       };
 
+      // Start watchdog immediately on checkScannability to catch canvas capture stalls
+      startWatchdog();
+
       // If virtual renderer provided deterministic ImageBitmap, use it directly
       if (overrideImageBitmap) {
         if (currentSequence !== String(sequenceRef.current)) {
           releaseImageHandle(overrideImageBitmap);
           isWorkerBusyRef.current = false;
           startTimeRef.current = null;
+          clearWatchdog();
           return;
         }
 
@@ -551,12 +584,12 @@ export function useScannabilityRunner(
         try {
           assertWorkerRequest(payload);
           worker.postMessage(payload, [payload.imageBitmap]);
-          startWatchdog();
         } catch (err) {
           console.error('Outgoing worker request validation failed:', err);
           setStatus('fail');
           isWorkerBusyRef.current = false;
           startTimeRef.current = null;
+          clearWatchdog();
           releaseImageHandle(overrideImageBitmap);
         }
         return;
@@ -574,14 +607,13 @@ export function useScannabilityRunner(
         };
         try {
           assertWorkerRequest(payload);
-          // Do not transfer the raw TypedArray directly to prevent memory neutering and re-allocation loops
-          worker.postMessage(payload, []);
-          startWatchdog();
+          worker.postMessage(payload, [payload.imageData.data.buffer]);
         } catch (err) {
           console.error('Outgoing worker request validation failed:', err);
           setStatus('fail');
           isWorkerBusyRef.current = false;
           startTimeRef.current = null;
+          clearWatchdog();
         }
         return;
       }
@@ -603,52 +635,55 @@ export function useScannabilityRunner(
           return;
         }
 
-        // Check if createImageBitmap is supported
-        if (typeof globalThis.createImageBitmap === 'function') {
-          createImageBitmap(canvas)
-            .then((imageBitmap) => {
-              if (currentSequence !== String(sequenceRef.current)) {
-                imageBitmap.close();
-                isWorkerBusyRef.current = false;
-                startTimeRef.current = null;
-                return;
-              }
-              const payload = {
-                imageBitmap,
-                width: canvas.width,
-                height: canvas.height,
-                isTest: !!navigator.webdriver,
-                configId: currentSequence,
-                moduleCount: moduleCountToUse,
-              };
-              try {
-                assertWorkerRequest(payload);
-                worker.postMessage(payload, [payload.imageBitmap]);
-                startWatchdog();
-              } catch (err) {
-                console.error('Outgoing worker request validation failed:', err);
-                setStatus('fail');
-                isWorkerBusyRef.current = false;
-                startTimeRef.current = null;
-                imageBitmap.close();
-              }
-            })
-            .catch((err) => {
-              console.error('createImageBitmap failed, falling back to synchronous read:', err);
-              readAndSendFallback();
-            });
-        } else {
+        // Check if worker is degraded or createImageBitmap is not supported
+        if (hasWorkerOffscreenDegradationRef.current || typeof globalThis.createImageBitmap !== 'function') {
           readAndSendFallback();
+          return;
         }
+
+        createImageBitmap(canvas)
+          .then((imageBitmap) => {
+            if (currentSequence !== String(sequenceRef.current)) {
+              imageBitmap.close();
+              isWorkerBusyRef.current = false;
+              startTimeRef.current = null;
+              clearWatchdog();
+              return;
+            }
+            const payload = {
+              imageBitmap,
+              width: canvas.width,
+              height: canvas.height,
+              isTest: !!navigator.webdriver,
+              configId: currentSequence,
+              moduleCount: moduleCountToUse,
+            };
+            try {
+              assertWorkerRequest(payload);
+              worker.postMessage(payload, [payload.imageBitmap]);
+            } catch (err) {
+              console.error('Outgoing worker request validation failed:', err);
+              setStatus('fail');
+              isWorkerBusyRef.current = false;
+              startTimeRef.current = null;
+              clearWatchdog();
+              imageBitmap.close();
+            }
+          })
+          .catch((err) => {
+            console.error('createImageBitmap failed, falling back to synchronous read:', err);
+            readAndSendFallback();
+          });
       };
 
-      // Fallback synchronous canvas read
+      // Fallback synchronous canvas read with zero-copy buffer transfer
       const readAndSendFallback = () => {
         const canvas = canvasRef.current;
         if (!canvas) {
           setStatus('idle');
           isWorkerBusyRef.current = false;
           startTimeRef.current = null;
+          clearWatchdog();
           return;
         }
         try {
@@ -657,6 +692,7 @@ export function useScannabilityRunner(
             setStatus('fail');
             isWorkerBusyRef.current = false;
             startTimeRef.current = null;
+            clearWatchdog();
             return;
           }
 
@@ -670,22 +706,17 @@ export function useScannabilityRunner(
             moduleCount: moduleCountToUse,
           };
           assertWorkerRequest(payload);
-          // Do not transfer the raw TypedArray directly to prevent memory neutering and re-allocation loops
-          worker.postMessage(payload, []);
-          startWatchdog();
+          worker.postMessage(payload, [imageData.data.buffer]);
         } catch (err) {
           console.error('Failed to read canvas data or validation failed', err);
           setStatus('fail');
           isWorkerBusyRef.current = false;
           startTimeRef.current = null;
+          clearWatchdog();
         }
       };
 
-      if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-        (window as any).requestIdleCallback(runCaptureAndSend, { timeout: 100 });
-      } else {
-        setTimeout(runCaptureAndSend, 100);
-      }
+      scheduleIdleTask(runCaptureAndSend, 100);
     },
     [canvasRef, getOrInitWorker, config, store, engine, clearWatchdog]
   );

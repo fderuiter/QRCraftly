@@ -1,5 +1,5 @@
 // Helper type to extract guarded type from a guard function
-type GuardedType<T> = T extends (x: any) => x is infer U ? U : never;
+type GuardedType<T> = T extends (x: unknown) => x is infer U ? U : never;
 
 /**
  * Type-guard function for validating the Worker Request structure.
@@ -20,10 +20,11 @@ export function isWorkerRequest(data: unknown): data is {
   moduleCount?: number;
 } {
   if (typeof data !== 'object' || data === null) return false;
-  const d = data as any;
+  const d = data as Record<string, unknown>;
   if (d.imageData !== undefined) {
     if (typeof d.imageData !== 'object' || d.imageData === null) return false;
-    if (!d.imageData.data || !(d.imageData.data instanceof Uint8ClampedArray)) return false;
+    const imgData = d.imageData as { data?: unknown };
+    if (!imgData.data || !(imgData.data instanceof Uint8ClampedArray)) return false;
   } else if (d.imageBitmap !== undefined) {
     if (typeof d.imageBitmap !== 'object' || d.imageBitmap === null) return false;
   } else {
@@ -48,7 +49,7 @@ export function assertWorkerRequest(data: unknown): asserts data is WorkerReques
   if (typeof data !== 'object' || data === null) {
     throw new Error('Worker request must be a non-null object');
   }
-  const d = data as any;
+  const d = data as Record<string, unknown>;
   if (d.imageData === undefined && d.imageBitmap === undefined) {
     throw new Error('Worker request must contain an imageData object');
   }
@@ -56,7 +57,8 @@ export function assertWorkerRequest(data: unknown): asserts data is WorkerReques
     if (typeof d.imageData !== 'object' || d.imageData === null) {
       throw new Error('Worker request must contain an imageData object');
     }
-    if (!d.imageData.data || !(d.imageData.data instanceof Uint8ClampedArray)) {
+    const imgData = d.imageData as { data?: unknown };
+    if (!imgData.data || !(imgData.data instanceof Uint8ClampedArray)) {
       throw new Error('Worker request imageData.data must be a Uint8ClampedArray');
     }
   } else if (d.imageBitmap !== undefined) {
@@ -108,7 +110,7 @@ export function isWorkerResponse(data: unknown): data is {
   buffer?: ArrayBuffer;
 } {
   if (typeof data !== 'object' || data === null) return false;
-  const d = data as any;
+  const d = data as Record<string, unknown>;
   if (d.dropped === true) {
     return typeof d.configId === 'string';
   }
@@ -135,7 +137,7 @@ export function assertWorkerResponse(data: unknown): asserts data is WorkerRespo
   if (typeof data !== 'object' || data === null) {
     throw new Error('Worker response must be a non-null object');
   }
-  const d = data as any;
+  const d = data as Record<string, unknown>;
   if (d.dropped === true) {
     if (typeof d.configId !== 'string') {
       throw new Error('Dropped worker response configId must be a string');

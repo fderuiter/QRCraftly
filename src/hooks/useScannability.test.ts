@@ -641,11 +641,14 @@ describe('useScannability - changed behavior: uses useQRStore instead of useQRCo
         worker.dispatchMessage({ configId: '1', retryWithImageData: true });
       });
 
-      expect(worker.postMessage).toHaveBeenLastCalledWith(expect.objectContaining({
-        configId: '1',
-        imageData: expect.objectContaining({ width: 100, height: 100 }),
-        moduleCount: 21,
-      }));
+      expect(worker.postMessage).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          configId: '1',
+          imageData: expect.objectContaining({ width: 100, height: 100 }),
+          moduleCount: 21,
+        }),
+        [expect.any(ArrayBuffer)]
+      );
     });
 
     it('handles worker runtime crash, transitions to fail, shows recovery warning, and then heals on next check', async () => {
@@ -925,6 +928,90 @@ describe('useScannability - changed behavior: uses useQRStore instead of useQRCo
       const transferredCount = (worker.postMessage as any).mock.calls.length;
 
       expect(closedCount + transferredCount).toBe(1000);
+    });
+
+    it('releases busy lock on superseded dropped ACK without resetting active checking status to idle', async () => {
+      const { result } = renderHook(
+        () => useScannability(makeCanvasRef(), defaultConfig),
+        { wrapper }
+      );
+      const worker = getActiveWorker()!;
+      worker.postMessage = vi.fn();
+
+      // First check (sequence 1)
+      act(() => {
+        result.current.checkScannability(undefined, {
+          width: 10,
+          height: 10,
+          close: vi.fn(),
+        } as unknown as ImageBitmap);
+      });
+      expect(result.current.status).toBe('checking');
+
+      // Second check (sequence 2) superseding sequence 1
+      act(() => {
+        result.current.checkScannability(undefined, {
+          width: 10,
+          height: 10,
+          close: vi.fn(),
+        } as unknown as ImageBitmap);
+      });
+      expect(result.current.status).toBe('checking');
+
+      // Worker sends dropped ACK for sequence 1 (where configId 1 < sequence 2)
+      act(() => {
+        worker.dispatchMessage({ configId: '1', dropped: true });
+      });
+
+      // Status must remain 'checking' because sequence 2 is still actively in flight!
+      expect(result.current.status).toBe('checking');
+
+      // Worker sends success response for sequence 2
+      act(() => {
+        worker.dispatchMessage({
+          configId: '2',
+          success: true,
+          physicalReady: true,
+        });
+      });
+
+      expect(result.current.status).toBe('physical-pass');
+    });
+
+    it('executes watchdog fallback extracting ImageData from overrideImageBitmap when overrideImageData is omitted', async () => {
+      vi.useFakeTimers();
+      const scannabilityCheckerModule = await import('@/packages/scannability');
+      const fallbackSpy = vi.spyOn(scannabilityCheckerModule, 'performScannabilityCheck').mockReturnValue({
+        success: true,
+        physicalReady: true,
+      });
+
+      const { result } = renderHook(
+        () => useScannability(makeCanvasRef(), defaultConfig),
+        { wrapper }
+      );
+      const worker = getActiveWorker()!;
+      worker.postMessage = vi.fn();
+
+      const mockImageBitmap = {
+        width: 20,
+        height: 20,
+        close: vi.fn(),
+      } as unknown as ImageBitmap;
+
+      act(() => {
+        result.current.checkScannability(undefined, mockImageBitmap, 25);
+      });
+      expect(result.current.status).toBe('checking');
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(1500);
+      });
+
+      expect(fallbackSpy).toHaveBeenCalled();
+      expect(result.current.status).toBe('physical-pass');
+      expect(result.current.workerRecoveryActive).toBe(true);
+      vi.useRealTimers();
     });
   });
 });

@@ -198,7 +198,7 @@ export const renderModules = (
   let cellLuminance: Float64Array | number[] | null = options?.cellLuminance || null;
   if (!cellLuminance && options?.bgImageData) {
     cellLuminance = sampleCellLuminances(options.bgImageData, moduleCount, drawX, drawY, cellSize);
-  } else if (!cellLuminance && (config.isLuminanceMaskingEnabled || config.backgroundImageUrl) && typeof (ctx as any).getImageData === 'function') {
+  } else if (!cellLuminance && (config.isLuminanceMaskingEnabled || config.backgroundImageUrl) && 'getImageData' in ctx && typeof ctx.getImageData === 'function') {
     try {
       const displaySize = Math.ceil(drawX + moduleCount * cellSize);
       const imgData = ctx.getImageData(0, 0, displaySize, displaySize);

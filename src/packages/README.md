@@ -24,7 +24,9 @@ src/packages/<name>/
 
 - **Purpose**: Zero-copy off-thread Web Worker scannability audits, contrast checks, and optical simulation.
 - **Entry Points**:
-  - `index.ts`: Worker runners, optical blur/contrast math, `auditModuleContrast`, `calculateBlurRadius`, `applyOpticalSimulationMath`, and telemetry tracking.
+  - `index.ts`: Public API, contracts, optical blur/contrast math, `auditModuleContrast`, `calculateBlurRadius`, `applyOpticalSimulationMath`, and telemetry tracking.
+  - `client.ts`: Headless React hook (`useScannability`) and UI state types.
+  - `worker.ts`: Dedicated background Web Worker performing real-time contrast auditing and optical decoding.
 
 ### `qr-matrix` (`@/packages/qr-matrix`)
 

@@ -23,7 +23,8 @@ const { resolvePublicUrl, getSanitizedPath } = await import('../src/utils/metada
 const { contentRegistry, auxiliaryRegistry } = await import('../src/data/contentRegistry');
 
 const DIST_DIR = path.resolve(__dirname, '../dist/client');
-const OUTPUT_FILE = path.join(DIST_DIR, 'sitemap.xml');
+const OUTPUT_FILE = process.env.SITEMAP_OUTPUT_PATH || path.join(DIST_DIR, 'sitemap.xml');
+
 
 function findHtmlFiles(dir: string, fileList: string[] = []): string[] {
   if (!fs.existsSync(dir)) return fileList;

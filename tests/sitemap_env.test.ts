@@ -9,8 +9,7 @@ const __dirname = dirname(__filename);
 
 const sitemapScriptPath = join(__dirname, '../scripts/generate_sitemap.ts');
 const distDir = join(__dirname, '../dist/client');
-const sitemapPath = join(distDir, 'sitemap.xml');
-const backupPath = join(distDir, 'sitemap.xml.bak');
+const sitemapPath = join(distDir, 'sitemap_env_test.xml');
 const dummyHtmlFile = join(distDir, 'dummy-sample-route.html');
 const indexHtmlFile = join(distDir, 'index.html');
 
@@ -30,9 +29,10 @@ describe('Sitemap Environment-Level Variable Resolution', () => {
     }
     writeFileSync(dummyHtmlFile, '<html></html>', 'utf8');
 
-    // Backup original sitemap if it exists
     if (existsSync(sitemapPath)) {
-      renameSync(sitemapPath, backupPath);
+      try {
+        unlinkSync(sitemapPath);
+      } catch {}
     }
   });
 
@@ -58,14 +58,10 @@ describe('Sitemap Environment-Level Variable Resolution', () => {
       } catch {}
     }
 
-    // Restore original sitemap if backed up
-    if (existsSync(backupPath)) {
-      if (existsSync(sitemapPath)) {
-        try {
-          unlinkSync(sitemapPath);
-        } catch {}
-      }
-      renameSync(backupPath, sitemapPath);
+    if (existsSync(sitemapPath)) {
+      try {
+        unlinkSync(sitemapPath);
+      } catch {}
     }
   });
 
@@ -75,6 +71,7 @@ describe('Sitemap Environment-Level Variable Resolution', () => {
         ...process.env,
         VITE_DOMAIN: '',
         NODE_ENV: 'production',
+        SITEMAP_OUTPUT_PATH: sitemapPath,
       },
     });
 
@@ -90,6 +87,7 @@ describe('Sitemap Environment-Level Variable Resolution', () => {
         ...process.env,
         VITE_DOMAIN: 'https://staging.qrcraftly.net',
         NODE_ENV: 'production',
+        SITEMAP_OUTPUT_PATH: sitemapPath,
       },
     });
 
@@ -106,6 +104,7 @@ describe('Sitemap Environment-Level Variable Resolution', () => {
         ...process.env,
         VITE_DOMAIN: 'https://staging-trailing.qrcraftly.net////',
         NODE_ENV: 'production',
+        SITEMAP_OUTPUT_PATH: sitemapPath,
       },
     });
 
@@ -136,6 +135,7 @@ describe('Sitemap Environment-Level Variable Resolution', () => {
         env: {
           ...cleanedEnv,
           NODE_ENV: 'production',
+          SITEMAP_OUTPUT_PATH: sitemapPath,
         },
       });
 

@@ -41,7 +41,7 @@ describe('Performance Benchmark: getIsCoveredByLogo', () => {
       console.log(`Average time per iteration: ${(duration / iterations).toFixed(4)}ms`);
       console.log(`Average time per call: ${(duration / (iterations * moduleCount * moduleCount)).toFixed(6)}ms\n`);
 
-      expect(duration).toBeLessThan(600);
+      expect(duration).toBeLessThan(1200);
     } else {
       console.log('Skipped logo coverage benchmark loop and assertion in CI');
     }

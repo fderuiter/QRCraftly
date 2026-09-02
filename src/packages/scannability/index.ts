@@ -31,6 +31,16 @@ export { getExportRiskPolicy } from './lib/exportRiskPolicy';
 export { performScannabilityCheck } from './lib/checker';
 export { auditModuleContrast } from './lib/contrastAudit';
 export { calculateBlurRadius, applyOpticalSimulationMath } from './lib/opticalSimulation';
+export {
+  isWorkerRequest,
+  assertWorkerRequest,
+  isWorkerResponse,
+  assertWorkerResponse,
+  type WorkerRequest,
+  type WorkerResponse,
+} from './lib/sharedContract';
+export { releaseImageHandle } from './lib/imageHandle';
+
 
 export interface ScannabilityEvaluation {
   status: ScannabilityStatus;

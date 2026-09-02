@@ -28,15 +28,8 @@ export interface ModuleContrastAuditResult {
   lowContrastCells: LowContrastCell[];
 }
 
-/**
- * Calculates WCAG relative luminance for an sRGB component (0..1).
- */
-function calculateSrgbLuminance(r: number, g: number, b: number): number {
-  const rLin = r <= 0.03928 ? r / 12.92 : Math.pow((r + 0.055) / 1.055, 2.4);
-  const gLin = g <= 0.03928 ? g / 12.92 : Math.pow((g + 0.055) / 1.055, 2.4);
-  const bLin = b <= 0.03928 ? b / 12.92 : Math.pow((b + 0.055) / 1.055, 2.4);
-  return 0.2126 * rLin + 0.7152 * gLin + 0.0722 * bLin;
-}
+import { getLuminanceFromRgb } from '@/utils/colorUtils';
+
 
 /**
  * Audits a rendered QR canvas image for localized relative luminance drops
@@ -109,7 +102,7 @@ export function auditModuleContrast(
           const gNorm = (data[idx + 1] * alpha + 255 * (1 - alpha)) / 255;
           const bNorm = (data[idx + 2] * alpha + 255 * (1 - alpha)) / 255;
 
-          const lum = calculateSrgbLuminance(rNorm, gNorm, bNorm);
+          const lum = getLuminanceFromRgb(rNorm, gNorm, bNorm);
           totalLum += lum;
           count++;
 
