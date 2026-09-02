@@ -21,7 +21,7 @@
  * @param width - The width of the image.
  * @returns The calculated blur radius (minimum of 1).
  */
-function calculateBlurRadius(width: number): number {
+export function calculateBlurRadius(width: number): number {
   return Math.max(1, Math.floor(width * 0.05));
 }
 

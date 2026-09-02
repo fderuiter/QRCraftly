@@ -273,7 +273,6 @@ self.onmessage = async (e: MessageEvent<unknown>) => {
     }
     
   } catch (_err) {
-    console.error('[DEBUG scannabilityWorker error]', _err);
     releaseImageHandle(imageBitmap);
     imageBitmap = undefined;
 

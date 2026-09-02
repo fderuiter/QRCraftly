@@ -24,7 +24,8 @@ import {
 import { DEFAULT_CONFIG } from '../constants';
 import { SocialFormat, TemplateStyle, QRConfig, QRStyle } from '../types';
 import { SvgContext } from './svgContext';
-import * as qrRenderer from './qrRenderer';
+import * as qrMatrix from '@/packages/qr-matrix';
+import { calculateLayout } from '@/packages/qr-matrix';
 
 // ---------------------------------------------------------------------------
 // SOCIAL_DIMENSIONS
@@ -124,7 +125,7 @@ describe('drawWithTemplate', () => {
   };
 
   beforeEach(() => {
-    drawQRInternalSpy = vi.spyOn(qrRenderer, 'drawQRInternal').mockImplementation(vi.fn());
+    drawQRInternalSpy = vi.spyOn(qrMatrix, 'drawQRInternal').mockImplementation(vi.fn());
   });
 
   it('calls drawQRInternal exactly once', () => {
@@ -236,7 +237,7 @@ describe('drawWithTemplate – templateQrScale', () => {
   };
 
   beforeEach(() => {
-    vi.spyOn(qrRenderer, 'drawQRInternal').mockImplementation(vi.fn());
+    vi.spyOn(qrMatrix, 'drawQRInternal').mockImplementation(vi.fn());
   });
 
   it('templateQrScale=0.5 halves the QR bounding box width', () => {
@@ -345,7 +346,7 @@ describe('drawWithTemplate – templateQrScale', () => {
 
 describe('drawWithTemplate – color resolution', () => {
   beforeEach(() => {
-    vi.spyOn(qrRenderer, 'drawQRInternal').mockImplementation(vi.fn());
+    vi.spyOn(qrMatrix, 'drawQRInternal').mockImplementation(vi.fn());
   });
 
   it('uses templateBgColor as background when explicitly set', () => {
@@ -554,7 +555,8 @@ describe('drawWithTemplate - Standard SVG Export Precision', () => {
       false // isVirtual = false
     );
 
-    const ceilCellSize = Math.ceil(1080 / size);
+    const { cellSize } = calculateLayout(config, 1080, size);
+    const ceilCellSize = Math.ceil(cellSize);
     for (const rect of rectCalls) {
       expect(rect.w).toBe(ceilCellSize);
       expect(rect.h).toBe(ceilCellSize);

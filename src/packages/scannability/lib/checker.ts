@@ -55,12 +55,18 @@ export function performScannabilityCheck(
   // 1. Digital-only check (Pass 1: Normal polarity, Pass 2: Inverted polarity)
   let digitalPass = false;
   let decodedData = '';
-  let code = jsQR(imageData.data, width, height, { inversionAttempts: 'dontInvert' });
+  let code = null;
+  try {
+    code = jsQR(imageData.data, width, height, { inversionAttempts: 'dontInvert' });
+  } catch {}
+
   if (code) {
     digitalPass = true;
     decodedData = code.data;
   } else {
-    code = jsQR(imageData.data, width, height, { inversionAttempts: 'onlyInvert' });
+    try {
+      code = jsQR(imageData.data, width, height, { inversionAttempts: 'onlyInvert' });
+    } catch {}
     if (code) {
       digitalPass = true;
       decodedData = code.data;
@@ -99,11 +105,17 @@ export function performScannabilityCheck(
     simulatedData = { data: dst, width, height };
   }
 
-  let codeSim = jsQR(simulatedData.data, width, height, { inversionAttempts: 'dontInvert' });
+  let codeSim = null;
+  try {
+    codeSim = jsQR(simulatedData.data, width, height, { inversionAttempts: 'dontInvert' });
+  } catch {}
+
   if (codeSim) {
     physicalPass = true;
   } else {
-    codeSim = jsQR(simulatedData.data, width, height, { inversionAttempts: 'onlyInvert' });
+    try {
+      codeSim = jsQR(simulatedData.data, width, height, { inversionAttempts: 'onlyInvert' });
+    } catch {}
     if (codeSim) physicalPass = true;
   }
 

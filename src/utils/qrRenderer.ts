@@ -19,16 +19,4 @@
 export {
   drawQR,
   drawQRInternal,
-  calculateLayout,
-  getLogoMetrics,
-  getIsCoveredByLogo,
-  renderBorder,
-  renderBorderDecoration,
-  renderModules,
-  renderEyes,
-  renderLogo,
-  renderMaze,
-  type ModuleRenderOptions,
-  type LogoMetrics,
-  type LayoutMetrics,
 } from '@/packages/qr-matrix';

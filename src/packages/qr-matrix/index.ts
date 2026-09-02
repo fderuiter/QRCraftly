@@ -36,6 +36,7 @@ export {
   clearFluidCache,
   extractFluidContours,
   drawFluidContours,
+  isFinderEyeZone,
   isFinderEyeZone as isFluidFinderEyeZone,
   isFinderSeparatorZone,
   isFinderProtected,
@@ -49,5 +50,6 @@ export {
   mazeCache,
   clearMazeCache,
   getStyleAdaptiveMazePathWidth,
+  DSU,
   type MazeData,
 } from './lib/maze';

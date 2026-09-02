@@ -24,6 +24,7 @@ import { vi, afterEach, expect } from 'vitest';
 import { isDangerousUrl } from './src/utils/security';
 import { applyOpticalSimulationMath } from './src/utils/opticalSimulation';
 
+
 declare module 'vitest' {
   // eslint-disable-next-line @typescript-eslint/no-empty-object-type, @typescript-eslint/no-unused-vars
   export interface Assertion<T = any> extends matchers.AxeMatchers {}

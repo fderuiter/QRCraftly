@@ -28,4 +28,3 @@ Interactive wizards dramatically reduce onboarding time and configuration mistak
 - Infrastructure provisioning and CI secret configuration become guided, repeatable procedures.
 - Developers on Windows, macOS, and Linux run wizards via identical `pnpm run wizard:<target>` commands.
 - All wizard scripts are subjected to automated template structure and syntax checks in the test suite.
-

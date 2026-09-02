@@ -19,5 +19,5 @@
 export {
   calculateBlurRadius,
   applyOpticalSimulationMath,
-} from '@/packages/scannability';
+} from '@/packages/scannability/opticalSimulation';
 

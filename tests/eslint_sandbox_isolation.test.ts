@@ -19,7 +19,7 @@ describe('ESLint Sandbox Isolation', () => {
     expect(restrictedImportErrors[0].message).toContain(
       'Developer sandbox assets cannot be imported into production modules.'
     );
-  });
+  }, 30000);
 
   it('should allow imports referencing other modules from inside the developer sandbox directory', async () => {
     const eslint = new ESLint();

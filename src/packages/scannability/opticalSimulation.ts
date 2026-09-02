@@ -17,15 +17,7 @@
 */
 
 export {
-  renderMaze,
-  generateMaze,
-  getMazeCacheKey,
-  mazeCache,
-  clearMazeCache,
-  getStyleAdaptiveMazePathWidth,
-  DSU,
-  isBridgeCell,
-  isFinderEyeZone,
-  type MazeData,
-} from './lib/maze';
+  calculateBlurRadius,
+  applyOpticalSimulationMath,
+} from './lib/opticalSimulation';
 

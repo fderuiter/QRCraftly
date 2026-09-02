@@ -54,6 +54,11 @@ export default defineConfig(() => {
       test: {
         globals: true,
         testTimeout: 15000,
+        server: {
+          deps: {
+            inline: ['jsqr'],
+          },
+        },
         projects: [
           {
             extends: true,
@@ -85,6 +90,11 @@ export default defineConfig(() => {
               name: 'browser-ui',
               environment: 'jsdom',
               setupFiles: ['./vitest.setup.ts'],
+              server: {
+                deps: {
+                  inline: ['jsqr'],
+                },
+              },
               include: [
                 '**/*.test.tsx',
                 'src/hooks/**/*.test.ts',

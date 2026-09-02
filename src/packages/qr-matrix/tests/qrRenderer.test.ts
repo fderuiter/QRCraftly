@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { drawQR } from '../index';
 import { DEFAULT_CONFIG } from '@/constants';
