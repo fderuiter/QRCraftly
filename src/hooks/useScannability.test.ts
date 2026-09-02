@@ -337,6 +337,16 @@ describe('useScannability - changed behavior: uses useQRStore instead of useQRCo
       expect.any(Array)
     );
 
+    // Complete sequence 1 so strict single-flight lock clears
+    act(() => {
+      getActiveWorker()!.dispatchMessage({
+        success: true,
+        physicalReady: true,
+        error: null,
+        configId: '1',
+      });
+    });
+
     act(() => {
       result.current.checkScannability(mockImageData);
     });
@@ -360,17 +370,33 @@ describe('useScannability - changed behavior: uses useQRStore instead of useQRCo
       result.current.store.registerSignal('scannability-fail', signalCallback);
     });
 
+    const mockImageData = {
+      data: new Uint8ClampedArray(4),
+      width: 1,
+      height: 1,
+    } as unknown as ImageData;
+
     // Send first request (gets ID '1')
     act(() => {
-      result.current.scan.checkScannability();
+      result.current.scan.checkScannability(mockImageData);
+    });
+
+    // Complete sequence 1
+    act(() => {
+      getActiveWorker()!.dispatchMessage({
+        success: true,
+        physicalReady: true,
+        error: null,
+        configId: '1',
+      });
     });
 
     // Send second request (gets ID '2')
     act(() => {
-      result.current.scan.checkScannability();
+      result.current.scan.checkScannability(mockImageData);
     });
 
-    // Simulate worker returning a message for ID '1' (stale)
+    // Simulate worker returning a late/stale message for ID '1'
     act(() => {
       getActiveWorker()!.dispatchMessage({
         success: false,
@@ -938,32 +964,33 @@ describe('useScannability - changed behavior: uses useQRStore instead of useQRCo
       const worker = getActiveWorker()!;
       worker.postMessage = vi.fn();
 
+      const bitmap1 = {
+        width: 10,
+        height: 10,
+        close: vi.fn(),
+      } as unknown as ImageBitmap;
+
       // First check (sequence 1)
       act(() => {
-        result.current.checkScannability(undefined, {
-          width: 10,
-          height: 10,
-          close: vi.fn(),
-        } as unknown as ImageBitmap);
+        result.current.checkScannability(undefined, bitmap1);
       });
       expect(result.current.status).toBe('checking');
 
-      // Second check (sequence 2) superseding sequence 1
-      act(() => {
-        result.current.checkScannability(undefined, {
-          width: 10,
-          height: 10,
-          close: vi.fn(),
-        } as unknown as ImageBitmap);
-      });
-      expect(result.current.status).toBe('checking');
-
-      // Worker sends dropped ACK for sequence 1 (where configId 1 < sequence 2)
+      // Worker sends dropped ACK for sequence 1
       act(() => {
         worker.dispatchMessage({ configId: '1', dropped: true });
       });
 
-      // Status must remain 'checking' because sequence 2 is still actively in flight!
+      // Second check (sequence 2) now can be dispatched since sequence 1 completed
+      const bitmap2 = {
+        width: 10,
+        height: 10,
+        close: vi.fn(),
+      } as unknown as ImageBitmap;
+
+      act(() => {
+        result.current.checkScannability(undefined, bitmap2);
+      });
       expect(result.current.status).toBe('checking');
 
       // Worker sends success response for sequence 2
@@ -1012,6 +1039,114 @@ describe('useScannability - changed behavior: uses useQRStore instead of useQRCo
       expect(result.current.status).toBe('physical-pass');
       expect(result.current.workerRecoveryActive).toBe(true);
       vi.useRealTimers();
+    });
+  });
+
+  describe('Active Streaming Bypass & In-Flight Audit Gate', () => {
+    it('suppresses background scannability checks when isStreaming option is true', () => {
+      const { result, rerender } = renderHook(
+        ({ options }: { options: { isStreaming: boolean } }) =>
+          useScannability(makeCanvasRef(), defaultConfig, options),
+        {
+          wrapper,
+          initialProps: { options: { isStreaming: true } },
+        }
+      );
+
+      const worker = getActiveWorker()!;
+      worker.postMessage = vi.fn();
+
+      const mockImageBitmap = { width: 10, height: 10, close: vi.fn() } as unknown as ImageBitmap;
+
+      act(() => {
+        result.current.checkScannability(undefined, mockImageBitmap);
+      });
+
+      // Verification: Worker postMessage must NOT be called while streaming is active
+      expect(worker.postMessage).not.toHaveBeenCalled();
+      // Handle bitmap must be released immediately
+      expect(mockImageBitmap.close).toHaveBeenCalledTimes(1);
+
+      // Transition streaming to false and verify auditing resumes
+      rerender({ options: { isStreaming: false } });
+
+      const secondBitmap = { width: 10, height: 10, close: vi.fn() } as unknown as ImageBitmap;
+      act(() => {
+        result.current.checkScannability(undefined, secondBitmap);
+      });
+
+      expect(worker.postMessage).toHaveBeenCalledTimes(1);
+    });
+
+    it('suppresses background scannability checks when store.isStreaming is true and resumes when store.isStreaming is false', () => {
+      const { result } = renderHook(
+        () => {
+          const store = useQRStore();
+          const scan = useScannability(makeCanvasRef(), defaultConfig);
+          return { store, scan };
+        },
+        { wrapper }
+      );
+
+      const worker = getActiveWorker()!;
+      worker.postMessage = vi.fn();
+
+      const mockImageData = {
+        data: new Uint8ClampedArray(4),
+        width: 1,
+        height: 1,
+      } as unknown as ImageData;
+
+      act(() => {
+        result.current.store.setIsStreaming(true);
+      });
+
+      act(() => {
+        result.current.scan.checkScannability(mockImageData);
+      });
+
+      expect(worker.postMessage).not.toHaveBeenCalled();
+
+      act(() => {
+        result.current.store.setIsStreaming(false);
+      });
+
+      act(() => {
+        result.current.scan.checkScannability(mockImageData);
+      });
+
+      expect(worker.postMessage).toHaveBeenCalledTimes(1);
+    });
+
+    it('enforces strict single-flight gate blocking concurrent requests while check is in progress even with zero historical latency', () => {
+      const { result } = renderHook(
+        () => useScannability(makeCanvasRef(), defaultConfig),
+        { wrapper }
+      );
+
+      const worker = getActiveWorker()!;
+      worker.postMessage = vi.fn();
+
+      const mockImageData = {
+        data: new Uint8ClampedArray(4),
+        width: 1,
+        height: 1,
+      } as unknown as ImageData;
+
+      // Start initial check (historical latency is 0ms)
+      act(() => {
+        result.current.checkScannability(mockImageData);
+      });
+
+      expect(worker.postMessage).toHaveBeenCalledTimes(1);
+
+      // Attempt second check while first is still in progress (in flight)
+      act(() => {
+        result.current.checkScannability(mockImageData);
+      });
+
+      // Strict single-flight gate MUST block second request even with 0ms historical latency
+      expect(worker.postMessage).toHaveBeenCalledTimes(1);
     });
   });
 });

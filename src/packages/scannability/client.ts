@@ -17,9 +17,9 @@
 */
 
 import { QRConfig } from '@/types';
-import { useScannabilityRunner, UseScannabilityReturn } from './lib/workerRunner';
+import { useScannabilityRunner, UseScannabilityReturn, UseScannabilityOptions } from './lib/workerRunner';
 
-export type { UseScannabilityReturn } from './lib/workerRunner';
+export type { UseScannabilityReturn, UseScannabilityOptions } from './lib/workerRunner';
 export type { ScannabilityStatus, ExportRisk, ExportRiskPolicyInput } from './lib/exportRiskPolicy';
 export type { HealthScore } from './lib/scoring';
 
@@ -29,12 +29,14 @@ export type { HealthScore } from './lib/scoring';
  *
  * @param canvasRef - Ref to the preview canvas element.
  * @param config - Current QR code configuration profile.
+ * @param options - Optional configuration options including isStreaming flag.
  * @returns Scannability Health state, trigger callback, and recovery indicators.
  */
 export function useScannability(
   canvasRef: React.RefObject<HTMLCanvasElement | null>,
-  config: QRConfig
+  config: QRConfig,
+  options?: UseScannabilityOptions
 ): UseScannabilityReturn {
-  return useScannabilityRunner(canvasRef, config);
+  return useScannabilityRunner(canvasRef, config, options);
 }
 

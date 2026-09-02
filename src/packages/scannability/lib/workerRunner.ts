@@ -33,6 +33,11 @@ import { releaseImageHandle } from './imageHandle';
 const SCANNABILITY_WATCHDOG_MS = 1500;
 
 
+export interface UseScannabilityOptions {
+  isStreaming?: boolean;
+  paused?: boolean;
+}
+
 export interface UseScannabilityReturn {
   status: ScannabilityStatus;
   checkScannability: (
@@ -59,11 +64,13 @@ const scheduleIdleTask = (cb: () => void, timeout = 100): void => {
  *
  * @param canvasRef - Ref to the preview canvas element.
  * @param config - Current QR code configuration profile.
+ * @param options - Optional configuration options including isStreaming flag.
  * @returns Scannability Health state and trigger method.
  */
 export function useScannabilityRunner(
   canvasRef: React.RefObject<HTMLCanvasElement | null>,
-  config: QRConfig
+  config: QRConfig,
+  options?: UseScannabilityOptions
 ): UseScannabilityReturn {
   const [status, setStatus] = useState<ScannabilityStatus>('idle');
   const [workerRecoveryActive, setWorkerRecoveryActive] = useState(false);
@@ -73,6 +80,11 @@ export function useScannabilityRunner(
   const store = useQRStore();
   const { engine } = useCapabilities();
   const workerUnsupportedRef = useRef(false);
+
+  const optionsRef = useRef(options);
+  useEffect(() => {
+    optionsRef.current = options;
+  }, [options]);
 
   const lastLatencyRef = useRef<number>(0);
   const startTimeRef = useRef<number | null>(null);
@@ -302,8 +314,20 @@ export function useScannabilityRunner(
     ) => {
       const worker = getOrInitWorker();
 
-      // Backpressure guard: drops/skips frames when background worker is busy and latency is high
-      if (worker && isWorkerBusyRef.current && lastLatencyRef.current > 16.6) {
+      const isStreamingActive =
+        optionsRef.current?.isStreaming ||
+        optionsRef.current?.paused ||
+        (store ? store.getState().isStreaming : false);
+
+      if (isStreamingActive) {
+        if (overrideImageBitmap) {
+          releaseImageHandle(overrideImageBitmap);
+        }
+        return;
+      }
+
+      // Single-flight audit gate: block new requests while a scannability check is currently in progress, regardless of historical latency measurements
+      if (isWorkerBusyRef.current) {
         if (overrideImageBitmap) {
           releaseImageHandle(overrideImageBitmap);
         }
@@ -324,151 +348,156 @@ export function useScannabilityRunner(
       pendingModuleCountRef.current = moduleCountToUse;
 
       if (!worker) {
+        isWorkerBusyRef.current = true;
         // Worker failed or isn't supported, run on the main thread!
         const runMainThreadCheck = async () => {
-          if (overrideImageBitmap) {
-            try {
-              if (currentSequence === String(sequenceRef.current)) {
-                let imageData: ImageData | null = null;
+          try {
+            if (overrideImageBitmap) {
+              try {
+                if (currentSequence === String(sequenceRef.current)) {
+                  let imageData: ImageData | null = null;
 
-                if (typeof OffscreenCanvas !== 'undefined') {
-                  const canvas = new OffscreenCanvas(
-                    overrideImageBitmap.width || 1,
-                    overrideImageBitmap.height || 1
-                  );
-                  const ctx = canvas.getContext('2d');
-                  if (ctx) {
-                    ctx.drawImage(overrideImageBitmap, 0, 0);
-                    imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                  }
-                } else if (typeof document !== 'undefined') {
-                  const canvas = document.createElement('canvas');
-                  canvas.width = overrideImageBitmap.width || 1;
-                  canvas.height = overrideImageBitmap.height || 1;
-                  const ctx = canvas.getContext('2d');
-                  if (ctx) {
-                    ctx.drawImage(overrideImageBitmap, 0, 0);
-                    imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                  }
-                }
-
-                if (imageData && currentSequence === String(sequenceRef.current)) {
-                  try {
-                    const { performScannabilityCheck } = await import('@/packages/scannability');
-                    const isTest = !!navigator.webdriver;
-                    const result = performScannabilityCheck(
-                      imageData,
-                      imageData.width,
-                      imageData.height,
-                      isTest
+                  if (typeof OffscreenCanvas !== 'undefined') {
+                    const canvas = new OffscreenCanvas(
+                      overrideImageBitmap.width || 1,
+                      overrideImageBitmap.height || 1
                     );
-                    if (currentSequence === String(sequenceRef.current)) {
-                      setStatus(
-                        result.success
-                          ? result.physicalReady
-                            ? 'physical-pass'
-                            : 'digital-pass'
-                          : 'fail'
+                    const ctx = canvas.getContext('2d');
+                    if (ctx) {
+                      ctx.drawImage(overrideImageBitmap, 0, 0);
+                      imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    }
+                  } else if (typeof document !== 'undefined') {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = overrideImageBitmap.width || 1;
+                    canvas.height = overrideImageBitmap.height || 1;
+                    const ctx = canvas.getContext('2d');
+                    if (ctx) {
+                      ctx.drawImage(overrideImageBitmap, 0, 0);
+                      imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    }
+                  }
+
+                  if (imageData && currentSequence === String(sequenceRef.current)) {
+                    try {
+                      const { performScannabilityCheck } = await import('@/packages/scannability');
+                      const isTest = !!navigator.webdriver;
+                      const result = performScannabilityCheck(
+                        imageData,
+                        imageData.width,
+                        imageData.height,
+                        isTest
                       );
-                      if (!result.success && result.error) {
+                      if (currentSequence === String(sequenceRef.current)) {
+                        setStatus(
+                          result.success
+                            ? result.physicalReady
+                              ? 'physical-pass'
+                              : 'digital-pass'
+                            : 'fail'
+                        );
+                        if (!result.success && result.error) {
+                          store.emitSignal('scannability-fail', {
+                            engine,
+                            styleId: config.style || 'default',
+                            errorType: result.error,
+                          });
+                        }
+                      }
+                    } catch (err) {
+                      console.error('Main-thread fallback processing failed:', err);
+                      if (currentSequence === String(sequenceRef.current)) {
+                        setStatus('fail');
                         store.emitSignal('scannability-fail', {
                           engine,
                           styleId: config.style || 'default',
-                          errorType: result.error,
+                          errorType: 'VALIDATION_ERROR',
                         });
                       }
                     }
-                  } catch (err) {
-                    console.error('Main-thread fallback processing failed:', err);
-                    if (currentSequence === String(sequenceRef.current)) {
-                      setStatus('fail');
-                      store.emitSignal('scannability-fail', {
-                        engine,
-                        styleId: config.style || 'default',
-                        errorType: 'VALIDATION_ERROR',
-                      });
-                    }
                   }
                 }
+              } finally {
+                releaseImageHandle(overrideImageBitmap);
               }
-            } finally {
-              releaseImageHandle(overrideImageBitmap);
+              return;
             }
-            return;
-          }
 
-          const { performScannabilityCheck } = await import('@/packages/scannability');
-          const performValidation = (imgData: ImageData) => {
-            try {
-              const isTest = !!navigator.webdriver;
-              const result = performScannabilityCheck(
-                imgData,
-                imgData.width,
-                imgData.height,
-                isTest,
-                moduleCountToUse
-              );
-              if (currentSequence !== String(sequenceRef.current)) return;
-              if (result.localContrastViolations !== undefined) {
-                setLocalMetrics({
-                  violations: result.localContrastViolations,
-                  minContrast: result.minLocalContrast,
-                });
-              }
-              setStatus(
-                result.success
-                  ? result.physicalReady
-                    ? 'physical-pass'
-                    : 'digital-pass'
-                  : 'fail'
-              );
-              if (!result.success && result.error) {
+            const { performScannabilityCheck } = await import('@/packages/scannability');
+            const performValidation = (imgData: ImageData) => {
+              try {
+                const isTest = !!navigator.webdriver;
+                const result = performScannabilityCheck(
+                  imgData,
+                  imgData.width,
+                  imgData.height,
+                  isTest,
+                  moduleCountToUse
+                );
+                if (currentSequence !== String(sequenceRef.current)) return;
+                if (result.localContrastViolations !== undefined) {
+                  setLocalMetrics({
+                    violations: result.localContrastViolations,
+                    minContrast: result.minLocalContrast,
+                  });
+                }
+                setStatus(
+                  result.success
+                    ? result.physicalReady
+                      ? 'physical-pass'
+                      : 'digital-pass'
+                    : 'fail'
+                );
+                if (!result.success && result.error) {
+                  store.emitSignal('scannability-fail', {
+                    engine,
+                    styleId: config.style || 'default',
+                    errorType: result.error,
+                  });
+                }
+              } catch (err) {
+                console.error('Main-thread fallback processing failed:', err);
+                if (currentSequence !== String(sequenceRef.current)) return;
+                setStatus('fail');
                 store.emitSignal('scannability-fail', {
                   engine,
                   styleId: config.style || 'default',
-                  errorType: result.error,
+                  errorType: 'VALIDATION_ERROR',
                 });
               }
-            } catch (err) {
-              console.error('Main-thread fallback processing failed:', err);
-              if (currentSequence !== String(sequenceRef.current)) return;
-              setStatus('fail');
-              store.emitSignal('scannability-fail', {
-                engine,
-                styleId: config.style || 'default',
-                errorType: 'VALIDATION_ERROR',
-              });
-            }
-          };
+            };
 
-          if (overrideImageData) {
-            performValidation(overrideImageData);
-            return;
-          }
-
-          const canvas = canvasRef.current;
-          if (!canvas) {
-            setStatus('idle');
-            return;
-          }
-
-          // Make sure canvas actually has dimensions
-          if (canvas.width === 0 || canvas.height === 0) {
-            setStatus('idle');
-            return;
-          }
-
-          try {
-            const ctx = canvas.getContext('2d');
-            if (!ctx) {
-              setStatus('fail');
+            if (overrideImageData) {
+              performValidation(overrideImageData);
               return;
             }
-            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            performValidation(imageData);
-          } catch (err) {
-            console.error('Failed to read canvas data for fallback validation', err);
-            setStatus('fail');
+
+            const canvas = canvasRef.current;
+            if (!canvas) {
+              setStatus('idle');
+              return;
+            }
+
+            // Make sure canvas actually has dimensions
+            if (canvas.width === 0 || canvas.height === 0) {
+              setStatus('idle');
+              return;
+            }
+
+            try {
+              const ctx = canvas.getContext('2d');
+              if (!ctx) {
+                setStatus('fail');
+                return;
+              }
+              const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+              performValidation(imageData);
+            } catch (err) {
+              console.error('Failed to read canvas data for fallback validation', err);
+              setStatus('fail');
+            }
+          } finally {
+            isWorkerBusyRef.current = false;
           }
         };
 

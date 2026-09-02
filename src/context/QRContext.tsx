@@ -42,6 +42,10 @@ type QRState = {
    * Whether scannability fallback mode is active globally across components.
    */
   isScannabilityFallbackActive: boolean;
+  /**
+   * Whether active animated QR streaming playback is currently running.
+   */
+  isStreaming: boolean;
 };
 
 /**
@@ -68,6 +72,10 @@ export interface QRStore {
    *
    */
   setScannabilityFallbackActive: (active: boolean) => void;
+  /**
+   *
+   */
+  setIsStreaming: (isStreaming: boolean) => void;
   /**
    *
    */
@@ -121,6 +129,7 @@ function createQRStore(initialConfig?: Partial<QRConfig>): QRStore {
     },
     violations: [],
     isScannabilityFallbackActive: false,
+    isStreaming: false,
   };
 
   const listeners = new Set<() => void>();
@@ -147,6 +156,12 @@ function createQRStore(initialConfig?: Partial<QRConfig>): QRStore {
     setScannabilityFallbackActive: (active) => {
       if (state.isScannabilityFallbackActive !== active) {
         state = { ...state, isScannabilityFallbackActive: active };
+        listeners.forEach(l => l());
+      }
+    },
+    setIsStreaming: (isStreaming) => {
+      if (state.isStreaming !== isStreaming) {
+        state = { ...state, isStreaming };
         listeners.forEach(l => l());
       }
     },

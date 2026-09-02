@@ -324,6 +324,7 @@ export function useAnimatedQrSender({
   // Terminate background worker on unmount
   useEffect(() => {
     return () => {
+      store?.setIsStreaming(false);
       if (workerRef.current) {
         workerRef.current.terminate();
         workerRef.current = null;
@@ -332,11 +333,12 @@ export function useAnimatedQrSender({
         cancelAnimationFrame(animationIdRef.current);
       }
     };
-  }, []);
+  }, [store]);
 
   const stopTransfer = useCallback(() => {
     setIsTransferring(false);
     isTransferringRef.current = false;
+    store?.setIsStreaming(false);
     setIsVerifyingHandshake(false);
     isVerifyingHandshakeRef.current = false;
     setHandshakeError(null);
@@ -355,7 +357,7 @@ export function useAnimatedQrSender({
     currentPlayIndexRef.current = 0;
     setCurrentFrameIndex(0);
     setProgress(0);
-  }, []);
+  }, [store]);
 
   const renderFrame = useCallback((playIdx: number, frame: { size: number; data: Uint8Array }) => {
     const modules = {
@@ -658,12 +660,14 @@ export function useAnimatedQrSender({
                 setHandshakeError(null);
                 setIsTransferring(true);
                 isTransferringRef.current = true;
+                store?.setIsStreaming(true);
                 runAnimationLoop();
               } else {
                 setHandshakeVerified(false);
                 setHandshakeError('Handshake QR frame failed scannability check. Transfer playback remains paused. Please increase contrast or reduce visual complexity.');
                 setIsTransferring(false);
                 isTransferringRef.current = false;
+                store?.setIsStreaming(false);
                 if (workerRef.current) {
                   workerRef.current.postMessage({ type: 'STOP' });
                   workerRef.current.terminate();
