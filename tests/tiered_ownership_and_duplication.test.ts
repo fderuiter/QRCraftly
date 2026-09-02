@@ -8,7 +8,7 @@ describe('Tiered Ownership and Selective Duplication Audits configuration tests'
     expect(fs.existsSync(codeownersPath)).toBe(true);
 
     const content = fs.readFileSync(codeownersPath, 'utf8');
-    const lines = content.split('\n').map(line => line.trim()).filter(line => line && !line.startsWith('#'));
+    const lines = content.split(/\r?\n/).map(line => line.trim()).filter(line => line && !line.startsWith('#'));
 
     // Check that there is a rule for /src/pages/dev-sandbox/ that is open (no owner assigned)
     const sandboxRuleIndex = lines.findIndex(line => line.startsWith('/src/pages/dev-sandbox/'));

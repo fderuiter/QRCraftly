@@ -126,5 +126,13 @@ describe('ValidationEngine', () => {
       expect(result.score).toBeLessThan(100);
       expect(result.warnings.some(w => w.includes('Local contrast drop detected'))).toBe(true);
     });
+
+    it('identifies critical contrast separately from display copy', () => {
+      const config = { ...getBaseConfig(), fgColor: '#eeeeee', eyeColor: '#eeeeee', bgColor: '#ffffff' };
+
+      const result = ValidationEngine.calculateScannability(config);
+
+      expect(result.criticalWarnings).toContain('critical-contrast');
+    });
   });
 });

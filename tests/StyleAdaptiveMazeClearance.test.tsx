@@ -2,7 +2,7 @@ import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { render, fireEvent, screen } from '@testing-library/react';
 import { QRConfig, QRStyle, QRType, QRErrorCorrectionLevel } from '../src/types';
-import { getStyleAdaptiveMazePathWidth, getMazeCacheKey, renderMaze } from '../src/utils/qr-renderers/maze';
+import { getStyleAdaptiveMazePathWidth, getMazeCacheKey, renderMaze } from '../src/packages/qr-matrix/maze';
 import { AdvancedControls } from '../src/components/style-controls/AdvancedControls';
 import { drawQRInternal } from '../src/utils/qrRenderer';
 import * as scannabilityChecker from '../src/utils/scannabilityChecker';

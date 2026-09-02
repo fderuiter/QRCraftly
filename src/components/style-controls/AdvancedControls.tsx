@@ -5,7 +5,7 @@ import { ChevronDown, ChevronUp } from 'lucide-react';
 import { ToggleSwitch } from '../ui/ToggleSwitch';
 import { ColorInput } from '../ui/ColorInput';
 import { RangeInput } from '../ui/RangeInput';
-import { getStyleAdaptiveMazePathWidth } from '../../utils/qr-renderers/maze';
+import { getStyleAdaptiveMazePathWidth } from '@/packages/qr-matrix/maze';
 
 /**
  *

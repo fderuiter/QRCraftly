@@ -17,8 +17,7 @@
 */
 
 import { QRConfig, QRModules, SocialFormat, TemplateStyle } from '../types';
-import { drawQRInternal } from './qrRenderer';
-import { ModuleRenderOptions } from './qr-renderers/modules';
+import { drawQRInternal, ModuleRenderOptions } from '@/packages/qr-matrix';
 import { drawRoundRect } from './canvasHelpers';
 
 /**

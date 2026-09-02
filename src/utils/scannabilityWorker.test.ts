@@ -252,8 +252,13 @@ describe('scannabilityWorker', () => {
 
     await Promise.all([firstPromise, secondPromise]);
 
-    // Only '102' should have successfully called postMessage; '101' should have cooperatively aborted without posting.
-    expect(postMessageSpy).toHaveBeenCalledTimes(1);
+    // The stale request must acknowledge cancellation so the caller can release
+    // its busy state, while the latest request still returns its result.
+    expect(postMessageSpy).toHaveBeenCalledTimes(2);
+    expect(postMessageSpy).toHaveBeenCalledWith({
+      configId: '101',
+      dropped: true,
+    });
     expect(postMessageSpy).toHaveBeenCalledWith(expect.objectContaining({
       success: true,
       physicalReady: true,
@@ -321,6 +326,31 @@ describe('scannabilityWorker', () => {
         configId: '301',
       })
     );
+  });
+
+  it('requests image data when worker canvas extraction is unavailable', async () => {
+    const postMessageSpy = vi.fn();
+    globalThis.postMessage = postMessageSpy;
+    const originalOffscreenCanvas = globalThis.OffscreenCanvas;
+    delete (globalThis as { OffscreenCanvas?: typeof OffscreenCanvas }).OffscreenCanvas;
+
+    const closeSpy = vi.fn();
+    await workerHandler({
+      data: {
+        imageBitmap: { width: 10, height: 10, close: closeSpy },
+        width: 10,
+        height: 10,
+        configId: 'needs-image-data',
+        isTest: true,
+      },
+    } as MessageEvent);
+
+    expect(closeSpy).toHaveBeenCalledTimes(1);
+    expect(postMessageSpy).toHaveBeenCalledWith({
+      configId: 'needs-image-data',
+      retryWithImageData: true,
+    });
+    globalThis.OffscreenCanvas = originalOffscreenCanvas;
   });
 
   it('recycles pre-allocated double-buffer ArrayBuffer back to main thread in postMessage transfer list', async () => {

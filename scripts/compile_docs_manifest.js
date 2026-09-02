@@ -1,7 +1,11 @@
 import fs from 'fs';
 import path from 'path';
+import { createRequire } from 'module';
 import { fileURLToPath } from 'url';
-import { Marked } from 'marked';
+
+const require = createRequire(import.meta.url);
+// marked ships as CJS; use createRequire so pnpm hoisting works.
+const { Marked } = require('marked');
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

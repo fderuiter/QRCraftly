@@ -175,6 +175,20 @@ describe('sharedContract runtime assertion logic', () => {
       expect(() => assertWorkerResponse(valid)).not.toThrow();
     });
 
+    it('should validate dropped worker acknowledgments', () => {
+      const dropped = { configId: 'stale-config', dropped: true };
+
+      expect(isWorkerResponse(dropped)).toBe(true);
+      expect(() => assertWorkerResponse(dropped)).not.toThrow();
+    });
+
+    it('should validate image-data retry responses', () => {
+      const retry = { configId: 'unsupported-canvas', retryWithImageData: true };
+
+      expect(isWorkerResponse(retry)).toBe(true);
+      expect(() => assertWorkerResponse(retry)).not.toThrow();
+    });
+
     it('should validate with optional fields as undefined or null', () => {
       const validUndefined = {
         success: true,

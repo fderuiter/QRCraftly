@@ -1,5 +1,5 @@
 {
-  "threshold": 3.0,
+  "threshold": 4.5,
   "minLines": 5,
   "minTokens": 45,
   "path": ["src"],
