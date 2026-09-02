@@ -197,6 +197,17 @@ export const onRequestGet = async (context: {
 
   // Requirement 4: Support both HTTP 307 redirect responses and HTTP 200 JSON payloads
   if (wantsJson || isEncrypted(targetUrl)) {
+    const isZkPayload =
+      isEncrypted(targetUrl) ||
+      isEncrypted(record.redirect_url || record.redirectUrl) ||
+      isEncrypted(record.ios_url || record.iosUrl) ||
+      isEncrypted(record.android_url || record.androidUrl);
+
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (isZkPayload) {
+      headers["Cache-Control"] = "public, max-age=0, stale-while-revalidate=86400";
+    }
+
     return new Response(
       JSON.stringify({
         id: record.id,
@@ -206,7 +217,7 @@ export const onRequestGet = async (context: {
       }),
       {
         status: 200,
-        headers: { "Content-Type": "application/json" }
+        headers
       }
     );
   }

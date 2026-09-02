@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+import { onRequest as middlewareHandler } from '../functions/api/redirect/_middleware';
 import { onRequestPost as registerHandler } from '../functions/api/redirect/register';
 import { onRequestPost as updateHandler } from '../functions/api/redirect/update';
 import { onRequestGet as getHandler } from '../functions/api/redirect/[id]';
@@ -134,5 +135,93 @@ describe('Zero-Knowledge Client-Encrypted Edge Dynamic Links Integration', () =>
     // Client decrypts updated payload
     const decryptedUpdated = await decryptUrl(stored.redirectUrl, key);
     expect(decryptedUpdated).toBe(updatedTarget);
+  });
+
+  it('Requirement 1 & Acceptance Criteria 1: Attaches Cache-Control headers with stale-while-revalidate directives exclusively to Zero-Knowledge JSON responses', async () => {
+    const targetUrl = 'https://confidential-portal.com/data';
+    const key = await generateDecryptionKey();
+    const ciphertext = await encryptUrl(targetUrl, key);
+
+    // Register ZK link
+    const regReq = new Request('https://domain.com/api/redirect/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ redirectUrl: ciphertext, turnstileToken: 'test-turnstile-token' }),
+    });
+    const regRes = await registerHandler({ request: regReq, env: {} });
+    const regBody = await regRes.json() as any;
+
+    // Fetch ZK payload through middleware
+    const getReq = new Request(`https://domain.com/api/redirect/${regBody.id}`, {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' },
+    });
+
+    const getRes = await middlewareHandler({
+      request: getReq,
+      env: {},
+      next: () => getHandler({
+        request: getReq,
+        env: {},
+        params: { id: regBody.id },
+      }),
+    });
+
+    expect(getRes.status).toBe(200);
+    const cacheControl = getRes.headers.get('Cache-Control');
+    expect(cacheControl).toBeDefined();
+    expect(cacheControl).toContain('stale-while-revalidate');
+
+    // Decrypt payload to ensure zero security regressions
+    const body = await getRes.json() as any;
+    expect(body.redirectUrl).toBe(ciphertext);
+    const decrypted = await decryptUrl(body.redirectUrl, key);
+    expect(decrypted).toBe(targetUrl);
+  });
+
+  it('Requirement 2 & Acceptance Criteria 2: Non-zero-knowledge responses and standard HTTP redirects retain strict no-store and no-cache headers', async () => {
+    // 1. Plain text unencrypted redirect link
+    const plainUrl = 'https://public-website.com/landing';
+    const regReq = new Request('https://domain.com/api/redirect/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ redirectUrl: plainUrl, turnstileToken: 'test-turnstile-token' }),
+    });
+    const regRes = await registerHandler({ request: regReq, env: {} });
+    const regBody = await regRes.json() as any;
+
+    // 2. Direct HTTP 307 redirect request
+    const redirectReq = new Request(`https://domain.com/api/redirect/${regBody.id}`, { method: 'GET' });
+    const redirectRes = await middlewareHandler({
+      request: redirectReq,
+      env: {},
+      next: () => getHandler({
+        request: redirectReq,
+        env: {},
+        params: { id: regBody.id },
+      }),
+    });
+
+    expect(redirectRes.status).toBe(307);
+    expect(redirectRes.headers.get('Cache-Control')).toBe('no-store, no-cache, must-revalidate');
+
+    // 3. Plain text JSON request (non-ZK)
+    const jsonReq = new Request(`https://domain.com/api/redirect/${regBody.id}`, {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' },
+    });
+    const jsonRes = await middlewareHandler({
+      request: jsonReq,
+      env: {},
+      next: () => getHandler({
+        request: jsonReq,
+        env: {},
+        params: { id: regBody.id },
+      }),
+    });
+
+    expect(jsonRes.status).toBe(200);
+    expect(jsonRes.headers.get('Cache-Control')).toBe('no-store, no-cache, must-revalidate');
+    expect(jsonRes.headers.get('Cache-Control')).not.toContain('stale-while-revalidate');
   });
 });
