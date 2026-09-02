@@ -67,6 +67,20 @@ function generateLhciManifest() {
       route = route.slice(0, -1);
     }
 
+    // Exclude redundant form generator variants to prevent runner resource exhaustion (keep 11 representative routes)
+    const redundantGenerators = [
+      '/email-qr-code',
+      '/location-qr-code',
+      '/meeting-qr-code',
+      '/payment-qr-code',
+      '/phone-qr-code',
+      '/sms-qr-code',
+      '/social-qr-code',
+      '/text-qr-code',
+      '/file-transfer/receive',
+    ];
+    if (redundantGenerators.includes(route)) continue;
+
     // Prefix with http://localhost/ as per convention
     const fullUrl = `http://localhost${route}`;
     urls.push(fullUrl);
