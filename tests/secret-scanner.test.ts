@@ -27,6 +27,8 @@ describe('secret-scanner', () => {
       expect(isFalsePositive('your_smtp_password')).toBe(true);
       expect(isFalsePositive('placeholder-token')).toBe(true);
       expect(isFalsePositive('dummy-value')).toBe(true);
+      expect(isFalsePositive('setup-cloudflare', 'cloudflare')).toBe(true);
+      expect(isFalsePositive('setup-github-ci', 'github')).toBe(true);
     });
 
     it('should identify self-assignments as false positives', () => {

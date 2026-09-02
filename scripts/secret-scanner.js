@@ -131,6 +131,9 @@ export function isFalsePositive(secret, varName = '') {
     'john.doe',
     'mailtrap',
     'nopass',
+    'setup-',
+    'setup_',
+    'setup',
   ];
 
   if (placeholders.some(p => lowerSecret.includes(p))) {
