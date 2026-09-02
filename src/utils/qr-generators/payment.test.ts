@@ -66,7 +66,26 @@ describe('Payment generator', () => {
     // Safe validation
     expect(PaymentContract.validate?.('bitcoin:1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa')).toEqual([]);
 
+    // Solana valid address
+    expect(PaymentContract.validate?.('solana:4uQeVj5tqViQh7yWWGStvkEG1Zmhx6uas54G2M4G5Lya')).toEqual([]);
+
+    // Solana invalid address
+    expect(PaymentContract.validate?.('solana:invalid-solana-0')).toEqual(['SOLANA_ADDRESS_INVALID']);
+
     // Dangerous validation
     expect(PaymentContract.validate?.('javascript:alert(1)')).toEqual(['URI_INJECTION_VIOLATION']);
+  });
+
+  it('constructs and hydrates Solana payment strings with amount and label parameters', () => {
+    const data = {
+      network: CryptoNetwork.SOLANA,
+      address: '4uQeVj5tqViQh7yWWGStvkEG1Zmhx6uas54G2M4G5Lya',
+      amount: '2.5',
+      label: 'Coffee'
+    };
+    const str = constructPaymentString(data);
+    expect(str).toBe('solana:4uQeVj5tqViQh7yWWGStvkEG1Zmhx6uas54G2M4G5Lya?amount=2.5&label=Coffee');
+    const hydrated = hydratePaymentData(str);
+    expect(hydrated).toEqual(data);
   });
 });

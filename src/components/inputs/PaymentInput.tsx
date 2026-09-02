@@ -2,6 +2,7 @@ import React from "react";
 import { PaymentData, CryptoNetwork } from "../../types";
 import { TextField, SelectField } from "../ui/FormFields";
 import { isDangerousUrl } from "../../utils/security";
+import { validateSolanaAddress } from "../../utils/base58";
 import { FormBlock } from "../ui/FormBlock";
 
 /**
@@ -28,9 +29,18 @@ export const PaymentInput: React.FC<PaymentInputProps> = ({
   data,
   onChange,
 }) => {
-  const addressError = data.address && isDangerousUrl(data.address)
-    ? "Unsafe URL scheme or malicious protocol detected."
-    : undefined;
+  let addressError: string | undefined;
+
+  if (data.address) {
+    if (isDangerousUrl(data.address)) {
+      addressError = "Unsafe URL scheme or malicious protocol detected.";
+    } else if (data.network === CryptoNetwork.SOLANA) {
+      const err = validateSolanaAddress(data.address);
+      if (err) {
+        addressError = err;
+      }
+    }
+  }
 
   return (
     <FormBlock legend="Crypto Payment">

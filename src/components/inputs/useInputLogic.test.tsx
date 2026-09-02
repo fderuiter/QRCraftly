@@ -1,7 +1,7 @@
 import { renderHook, act } from "@testing-library/react";
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import { useInputLogic } from "./useInputLogic";
-import { QRConfig, QRType, QRStyle, QRErrorCorrectionLevel, SocialFormat, TemplateStyle } from "../../types";
+import { QRConfig, QRType, QRStyle, QRErrorCorrectionLevel, SocialFormat, TemplateStyle, CryptoNetwork } from "../../types";
 
 const createMockConfig = (type: QRType, value: string): QRConfig => ({
   value,
@@ -156,6 +156,58 @@ describe("useInputLogic", () => {
 
     // Validation should fail and prevent the onChange callback from propagating
     expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("should validate Solana payment address locally and block onChange propagation if address is invalid", () => {
+    const config = createMockConfig(QRType.PAYMENT, "solana:");
+    const onChange = vi.fn();
+
+    const { result } = renderHook(
+      ({ cfg }) => useInputLogic(cfg, onChange),
+      { initialProps: { cfg: config } }
+    );
+
+    // Update state to Solana network and invalid address
+    act(() => {
+      result.current.inputProps.onChange({
+        network: CryptoNetwork.SOLANA,
+        address: "invalid-character-0",
+      });
+    });
+
+    act(() => {
+      vi.advanceTimersByTime(200);
+    });
+
+    // Validation should fail and block update
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("should validate Solana payment address locally and call onChange if valid 32-byte Base58 address", () => {
+    const config = createMockConfig(QRType.PAYMENT, "solana:");
+    const onChange = vi.fn();
+
+    const { result } = renderHook(
+      ({ cfg }) => useInputLogic(cfg, onChange),
+      { initialProps: { cfg: config } }
+    );
+
+    // Update state to Solana network and valid 32-byte address
+    const validSolanaAddr = "4uQeVj5tqViQh7yWWGStvkEG1Zmhx6uas54G2M4G5Lya";
+    act(() => {
+      result.current.inputProps.onChange({
+        network: CryptoNetwork.SOLANA,
+        address: validSolanaAddr,
+      });
+    });
+
+    act(() => {
+      vi.advanceTimersByTime(200);
+    });
+
+    expect(onChange).toHaveBeenCalledWith({
+      value: `solana:${validSolanaAddr}`,
+    });
   });
 
   it("should preserve newly normalized URL state and push constructed value when swapping tabs", () => {

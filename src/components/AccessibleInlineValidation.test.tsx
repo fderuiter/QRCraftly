@@ -94,4 +94,45 @@ describe('Accessible Inline Validation and Accessible Fields', () => {
     const errorAlert = screen.getByRole('alert');
     expect(errorAlert).toHaveTextContent('Unsafe URL scheme or malicious protocol detected.');
   });
+
+  it('Payment input displays invalid Base58 character error for invalid Solana address', () => {
+    const mockData = {
+      network: CryptoNetwork.SOLANA,
+      address: '0uQeVj5tqViQh7yWWGStvkEG1Zmhx6uas54G2M4G5Lya',
+      amount: '',
+      label: '',
+    };
+
+    render(<PaymentInput data={mockData} onChange={() => {}} />);
+
+    const errorAlert = screen.getByRole('alert');
+    expect(errorAlert).toHaveTextContent('Base58');
+  });
+
+  it('Payment input displays length validation error for non-32-byte Solana address', () => {
+    const mockData = {
+      network: CryptoNetwork.SOLANA,
+      address: '4uQeVj5tqViQh7yWWGStvkEG1Zmhx6uas54G2M4G5Ly', // 31 bytes
+      amount: '',
+      label: '',
+    };
+
+    render(<PaymentInput data={mockData} onChange={() => {}} />);
+
+    const errorAlert = screen.getByRole('alert');
+    expect(errorAlert).toHaveTextContent('32 bytes');
+  });
+
+  it('Payment input clears error when a valid 32-byte Base58 Solana address is input', () => {
+    const mockData = {
+      network: CryptoNetwork.SOLANA,
+      address: '4uQeVj5tqViQh7yWWGStvkEG1Zmhx6uas54G2M4G5Lya', // valid 32 bytes
+      amount: '',
+      label: '',
+    };
+
+    render(<PaymentInput data={mockData} onChange={() => {}} />);
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
 });

@@ -19,6 +19,7 @@
 import { PaymentData, CryptoNetwork, QRType, QRGeneratorContract } from '../../types';
 import { isDangerousUrl, sanitizeInput } from '../security';
 import { ValidationEngine } from '../../engine/ValidationEngine';
+import { validateSolanaAddress } from '../base58';
 
 /**
  * Constructs the crypto payment URI string.
@@ -131,6 +132,14 @@ export const PaymentContract: QRGeneratorContract<PaymentData> = {
     const violations: string[] = [];
     if (raw && isDangerousUrl(raw)) {
       violations.push('URI_INJECTION_VIOLATION');
+    }
+    if (raw) {
+      const hydrated = hydratePaymentData(raw);
+      if (hydrated.network === CryptoNetwork.SOLANA && hydrated.address) {
+        if (validateSolanaAddress(hydrated.address) !== null) {
+          violations.push('SOLANA_ADDRESS_INVALID');
+        }
+      }
     }
     return violations;
   },

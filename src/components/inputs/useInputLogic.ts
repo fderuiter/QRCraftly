@@ -17,9 +17,10 @@
 */
 
 import { useState, useRef, useEffect, ElementType } from "react";
-import { QRConfig, QRType } from "../../types";
+import { QRConfig, QRType, CryptoNetwork } from "../../types";
 import { INPUT_REGISTRY, InputDataMap } from "./InputRegistry";
 import { isDangerousUrl } from "../../utils/security";
+import { validateSolanaAddress } from "../../utils/base58";
 import { ValidationEngine } from "../../engine/ValidationEngine";
 
 const isInputDataValid = (type: QRType, data: any): boolean => {
@@ -38,8 +39,13 @@ const isInputDataValid = (type: QRType, data: any): boolean => {
       return false;
     }
   } else if (type === QRType.PAYMENT) {
-    if (data.address && isDangerousUrl(data.address)) {
-      return false;
+    if (data.address) {
+      if (isDangerousUrl(data.address)) {
+        return false;
+      }
+      if (data.network === CryptoNetwork.SOLANA && validateSolanaAddress(data.address) !== null) {
+        return false;
+      }
     }
   } else if (type === QRType.URL) {
     if (data.url && isDangerousUrl(data.url)) {
