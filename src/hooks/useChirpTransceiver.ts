@@ -17,6 +17,7 @@
 */
 
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { scheduleChirpTones } from '@/utils/spectrogramDspEngine';
 
 // Frequency mapping parameters
 const SYNC_FREQ = 1500;
@@ -39,6 +40,9 @@ export function useChirpTransceiver(getAudioContext: () => AudioContext) {
   const [currentSymbol, setCurrentSymbol] = useState<string>('Idle');
 
   const activeOscillatorsRef = useRef<OscillatorNode[]>([]);
+  const activeGainNodesRef = useRef<GainNode[]>([]);
+  const transmissionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const micStreamRef = useRef<MediaStream | null>(null);
   const micSourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const micAnalyserRef = useRef<AnalyserNode | null>(null);
@@ -56,12 +60,28 @@ export function useChirpTransceiver(getAudioContext: () => AudioContext) {
   }, []);
 
   const stopChirpTransmission = useCallback(() => {
+    if (transmissionTimerRef.current !== null) {
+      clearTimeout(transmissionTimerRef.current);
+      transmissionTimerRef.current = null;
+    }
+
     activeOscillatorsRef.current.forEach((osc) => {
       try {
         osc.stop();
       } catch {}
+      try {
+        osc.disconnect();
+      } catch {}
     });
     activeOscillatorsRef.current = [];
+
+    activeGainNodesRef.current.forEach((gainNode) => {
+      try {
+        gainNode.disconnect();
+      } catch {}
+    });
+    activeGainNodesRef.current = [];
+
     setIsTransmitting(false);
     logMessage('Acoustic transmission stopped manually.');
   }, [logMessage]);
@@ -100,6 +120,29 @@ export function useChirpTransceiver(getAudioContext: () => AudioContext) {
   const startChirpTransmission = useCallback(() => {
     try {
       const ctx = getAudioContext();
+
+      if (transmissionTimerRef.current !== null) {
+        clearTimeout(transmissionTimerRef.current);
+        transmissionTimerRef.current = null;
+      }
+
+      activeOscillatorsRef.current.forEach((osc) => {
+        try {
+          osc.stop();
+        } catch {}
+        try {
+          osc.disconnect();
+        } catch {}
+      });
+      activeOscillatorsRef.current = [];
+
+      activeGainNodesRef.current.forEach((gainNode) => {
+        try {
+          gainNode.disconnect();
+        } catch {}
+      });
+      activeGainNodesRef.current = [];
+
       setIsTransmitting(true);
       logMessage('Starting acoustic transmission...');
 
@@ -112,57 +155,42 @@ export function useChirpTransceiver(getAudioContext: () => AudioContext) {
 
       logMessage(`Payload: "${chirpText}" -> Binary: ${binaryString}`);
 
-      let time = ctx.currentTime + 0.1;
+      const scheduled = scheduleChirpTones(ctx, binaryString, ctx.destination, {
+        syncFreq: SYNC_FREQ,
+        zeroFreq: ZERO_FREQ,
+        oneFreq: ONE_FREQ,
+        bitDuration: BIT_DURATION,
+        gapDuration: GAP_DURATION,
+      });
 
-      // 1. Play Sync Tone
-      const syncOsc = ctx.createOscillator();
-      const syncGain = ctx.createGain();
-      syncOsc.frequency.setValueAtTime(SYNC_FREQ, time);
-      syncGain.gain.setValueAtTime(0, time);
-      syncGain.gain.linearRampToValueAtTime(0.15, time + 0.02);
-      syncGain.gain.setValueAtTime(0.15, time + 0.28);
-      syncGain.gain.linearRampToValueAtTime(0, time + 0.30);
+      activeOscillatorsRef.current = scheduled.oscillators;
+      activeGainNodesRef.current = scheduled.gainNodes;
 
-      syncOsc.connect(syncGain);
-      syncGain.connect(ctx.destination);
-      syncOsc.start(time);
-      syncOsc.stop(time + 0.30);
-      activeOscillatorsRef.current.push(syncOsc);
+      transmissionTimerRef.current = setTimeout(() => {
+        transmissionTimerRef.current = null;
 
-      time += 0.30;
+        activeOscillatorsRef.current.forEach((osc) => {
+          try {
+            osc.stop();
+          } catch {}
+          try {
+            osc.disconnect();
+          } catch {}
+        });
+        activeOscillatorsRef.current = [];
 
-      // 2. Play Bits with guard gaps
-      for (let i = 0; i < binaryString.length; i++) {
-        const bit = binaryString[i];
-        const freq = bit === '1' ? ONE_FREQ : ZERO_FREQ;
+        activeGainNodesRef.current.forEach((gainNode) => {
+          try {
+            gainNode.disconnect();
+          } catch {}
+        });
+        activeGainNodesRef.current = [];
 
-        time += GAP_DURATION;
-
-        const bitOsc = ctx.createOscillator();
-        const bitGain = ctx.createGain();
-        bitOsc.frequency.setValueAtTime(freq, time);
-
-        bitGain.gain.setValueAtTime(0, time);
-        bitGain.gain.linearRampToValueAtTime(0.15, time + 0.01);
-        bitGain.gain.setValueAtTime(0.15, time + BIT_DURATION - 0.01);
-        bitGain.gain.linearRampToValueAtTime(0, time + BIT_DURATION);
-
-        bitOsc.connect(bitGain);
-        bitGain.connect(ctx.destination);
-        bitOsc.start(time);
-        bitOsc.stop(time + BIT_DURATION);
-        activeOscillatorsRef.current.push(bitOsc);
-
-        time += BIT_DURATION;
-      }
-
-      const totalDurationMs = (time - ctx.currentTime) * 1000;
-      setTimeout(() => {
         if (isMountedRef.current) {
           setIsTransmitting(false);
           logMessage('Acoustic transmission finished successfully.');
         }
-      }, totalDurationMs + 100);
+      }, scheduled.totalDurationMs + 100);
     } catch (err: any) {
       logMessage(`Transmission Error: ${err.message}`);
       setIsTransmitting(false);

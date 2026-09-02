@@ -17,7 +17,7 @@
 */
 
 import { describe, it, expect, vi } from 'vitest';
-import { scheduleSpectrogramQR, bufferToWav } from './spectrogramDspEngine';
+import { scheduleSpectrogramQR, scheduleChirpTones, bufferToWav } from './spectrogramDspEngine';
 
 class MockAudioParam {
   value = 0;
@@ -88,6 +88,42 @@ describe('spectrogramDspEngine', () => {
     const scheduled = scheduleSpectrogramQR(ctx, mockMatrix, destination);
     expect(scheduled.oscillators).toHaveLength(2);
     expect(scheduled.gainNodes).toHaveLength(2);
+  });
+
+  it('schedules chirp tones with sync prefix and BFSK bit frequencies', () => {
+    const ctx = new MockContext() as any;
+    const destination = new MockAudioNode() as any;
+
+    const binaryString = '101';
+    const scheduled = scheduleChirpTones(ctx, binaryString, destination, {
+      syncFreq: 1500,
+      zeroFreq: 1200,
+      oneFreq: 2200,
+      bitDuration: 0.10,
+      gapDuration: 0.03,
+      startTime: 0.1,
+    });
+
+    // 1 sync tone + 3 bit tones = 4 oscillators and 4 gain nodes
+    expect(scheduled.oscillators).toHaveLength(4);
+    expect(scheduled.gainNodes).toHaveLength(4);
+
+    // Sync tone freq check
+    const syncOsc = scheduled.oscillators[0] as unknown as MockOscillatorNode;
+    expect(syncOsc.frequency.setValueAtTime).toHaveBeenCalledWith(1500, 0.1);
+
+    // Bit 1 (2200Hz), Bit 0 (1200Hz), Bit 1 (2200Hz)
+    const bit1Osc = scheduled.oscillators[1] as unknown as MockOscillatorNode;
+    const bit2Osc = scheduled.oscillators[2] as unknown as MockOscillatorNode;
+    const bit3Osc = scheduled.oscillators[3] as unknown as MockOscillatorNode;
+
+    expect(bit1Osc.frequency.setValueAtTime).toHaveBeenCalledWith(2200, expect.any(Number));
+    expect(bit2Osc.frequency.setValueAtTime).toHaveBeenCalledWith(1200, expect.any(Number));
+    expect(bit3Osc.frequency.setValueAtTime).toHaveBeenCalledWith(2200, expect.any(Number));
+
+    // Check duration computation: 0.30s (sync) + 3 * (0.03s gap + 0.10s bit) = 0.30 + 0.39 = 0.69s = 690ms
+    expect(scheduled.totalDurationMs).toBeCloseTo(690, 1);
+  });
   });
 
   it('generates a valid 16-bit PCM WAV blob with 44-byte RIFF header', async () => {

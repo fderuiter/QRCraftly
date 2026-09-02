@@ -40,6 +40,7 @@ export function useSpectrogramQR(getAudioContext: () => AudioContext) {
   const specAnimationRef = useRef<number | null>(null);
   const specOscillatorsRef = useRef<OscillatorNode[]>([]);
   const specGainNodesRef = useRef<GainNode[]>([]);
+  const spectrogramTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isPlayingRef = useRef(false);
   const isMountedRef = useRef(true);
@@ -48,13 +49,34 @@ export function useSpectrogramQR(getAudioContext: () => AudioContext) {
     isPlayingRef.current = false;
     setIsPlayingSpectrogram(false);
 
+    if (spectrogramTimerRef.current !== null) {
+      clearTimeout(spectrogramTimerRef.current);
+      spectrogramTimerRef.current = null;
+    }
+
     specOscillatorsRef.current.forEach((osc) => {
       try {
         osc.stop();
       } catch {}
+      try {
+        osc.disconnect();
+      } catch {}
     });
     specOscillatorsRef.current = [];
+
+    specGainNodesRef.current.forEach((gainNode) => {
+      try {
+        gainNode.disconnect();
+      } catch {}
+    });
     specGainNodesRef.current = [];
+
+    if (specAnalyserRef.current) {
+      try {
+        specAnalyserRef.current.disconnect();
+      } catch {}
+      specAnalyserRef.current = null;
+    }
 
     if (specAnimationRef.current !== null) {
       cancelAnimationFrame(specAnimationRef.current);
@@ -70,6 +92,9 @@ export function useSpectrogramQR(getAudioContext: () => AudioContext) {
 
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
+
+      const audioCtx = getAudioContext();
+      const cachedBinWidth = audioCtx.sampleRate / analyser.fftSize;
 
       const width = canvas.width;
       const height = canvas.height;
@@ -97,16 +122,13 @@ export function useSpectrogramQR(getAudioContext: () => AudioContext) {
           ctx.drawImage(tempCanvas, -1.5, 0);
         }
 
-        const audioCtx = getAudioContext();
-        const binWidth = audioCtx.sampleRate / analyser.fftSize;
-
         const yMinFreq = specMinFreq - 100;
         const yMaxFreq = specMinFreq + sizeParam * specFreqSpacing + 100;
 
         for (let y = 0; y < height; y++) {
           const percent = 1 - y / height;
           const freq = yMinFreq + percent * (yMaxFreq - yMinFreq);
-          const binIndex = Math.round(freq / binWidth);
+          const binIndex = Math.round(freq / cachedBinWidth);
 
           const intensity = dataArray[binIndex] || 0;
 
@@ -131,6 +153,8 @@ export function useSpectrogramQR(getAudioContext: () => AudioContext) {
 
   const playSpectrogramQR = useCallback(async () => {
     try {
+      stopSpectrogramQR();
+
       const ctx = getAudioContext();
       isPlayingRef.current = true;
       setIsPlayingSpectrogram(true);
@@ -165,7 +189,8 @@ export function useSpectrogramQR(getAudioContext: () => AudioContext) {
       startSpectrogramVisualizer(size);
 
       const totalDurationMs = (size * specColDuration + 0.3) * 1000;
-      setTimeout(() => {
+      spectrogramTimerRef.current = setTimeout(() => {
+        spectrogramTimerRef.current = null;
         if (isPlayingRef.current) {
           stopSpectrogramQR();
         }

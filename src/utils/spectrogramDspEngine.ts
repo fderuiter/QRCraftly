@@ -35,11 +35,107 @@ export interface SpectrogramModuleMatrix {
 }
 
 /**
+ * Options for scheduling chirp tone synthesis.
+ */
+export interface ChirpDspOptions {
+  syncFreq?: number;
+  zeroFreq?: number;
+  oneFreq?: number;
+  bitDuration?: number;
+  gapDuration?: number;
+  startTime?: number;
+}
+
+/**
  * Handle containing scheduled Web Audio nodes for spectrogram playback.
  */
 export interface ScheduledNodes {
   oscillators: OscillatorNode[];
   gainNodes: GainNode[];
+}
+
+/**
+ * Handle containing scheduled Web Audio nodes and metadata for chirp playback.
+ */
+export interface ScheduledChirpNodes extends ScheduledNodes {
+  totalDurationMs: number;
+}
+
+/**
+ * Schedules acoustic modem chirp synthesis (sync tone prefix + BFSK binary tones) on any BaseAudioContext.
+ * @param ctx The AudioContext or OfflineAudioContext.
+ * @param binaryString String of '0' and '1' characters to encode.
+ * @param destination Target AudioNode to connect the generated signal.
+ * @param options Optional DSP parameters (frequencies, durations, start offsets).
+ * @returns Object containing arrays of created OscillatorNodes and GainNodes and total duration in ms.
+ */
+export function scheduleChirpTones(
+  ctx: BaseAudioContext,
+  binaryString: string,
+  destination: AudioNode,
+  options: ChirpDspOptions = {}
+): ScheduledChirpNodes {
+  const syncFreq = options.syncFreq ?? 1500;
+  const zeroFreq = options.zeroFreq ?? 1200;
+  const oneFreq = options.oneFreq ?? 2200;
+  const bitDuration = options.bitDuration ?? 0.10;
+  const gapDuration = options.gapDuration ?? 0.03;
+  const initialStartTime = options.startTime ?? (ctx.currentTime + 0.1);
+
+  const oscillators: OscillatorNode[] = [];
+  const gainNodes: GainNode[] = [];
+
+  let time = initialStartTime;
+
+  // 1. Play Sync Tone
+  const syncOsc = ctx.createOscillator();
+  const syncGain = ctx.createGain();
+  syncOsc.frequency.setValueAtTime(syncFreq, time);
+  syncGain.gain.setValueAtTime(0, time);
+  syncGain.gain.linearRampToValueAtTime(0.15, time + 0.02);
+  syncGain.gain.setValueAtTime(0.15, time + 0.28);
+  syncGain.gain.linearRampToValueAtTime(0, time + 0.30);
+
+  syncOsc.connect(syncGain);
+  syncGain.connect(destination);
+  syncOsc.start(time);
+  syncOsc.stop(time + 0.30);
+
+  oscillators.push(syncOsc);
+  gainNodes.push(syncGain);
+
+  time += 0.30;
+
+  // 2. Play Bits with guard gaps
+  for (let i = 0; i < binaryString.length; i++) {
+    const bit = binaryString[i];
+    const freq = bit === '1' ? oneFreq : zeroFreq;
+
+    time += gapDuration;
+
+    const bitOsc = ctx.createOscillator();
+    const bitGain = ctx.createGain();
+    bitOsc.frequency.setValueAtTime(freq, time);
+
+    bitGain.gain.setValueAtTime(0, time);
+    bitGain.gain.linearRampToValueAtTime(0.15, time + 0.01);
+    bitGain.gain.setValueAtTime(0.15, time + bitDuration - 0.01);
+    bitGain.gain.linearRampToValueAtTime(0, time + bitDuration);
+
+    bitOsc.connect(bitGain);
+    bitGain.connect(destination);
+    bitOsc.start(time);
+    bitOsc.stop(time + bitDuration);
+
+    oscillators.push(bitOsc);
+    gainNodes.push(bitGain);
+
+    time += bitDuration;
+  }
+
+  const totalDurationMs = (time - initialStartTime) * 1000;
+
+  return { oscillators, gainNodes, totalDurationMs };
 }
 
 /**

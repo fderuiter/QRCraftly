@@ -271,6 +271,59 @@ describe('Custom Audio Hooks', () => {
       });
       expect(result.current.isListening).toBe(false);
     });
+
+    it('disconnects all oscillator and gain nodes and cancels timers when chirp transmission finishes or stops', async () => {
+      vi.useFakeTimers();
+      const audioCtx = new MockAudioContext() as any;
+      const { result } = renderHook(() => useChirpTransceiver(() => audioCtx));
+
+      act(() => {
+        result.current.startChirpTransmission();
+      });
+
+      expect(result.current.isTransmitting).toBe(true);
+
+      expect(audioCtx.createOscillator).toHaveBeenCalled();
+      expect(audioCtx.createGain).toHaveBeenCalled();
+
+      const createdOsc = audioCtx.createOscillator.mock.results[0].value;
+      const createdGain = audioCtx.createGain.mock.results[0].value;
+
+      act(() => {
+        result.current.stopChirpTransmission();
+      });
+
+      expect(result.current.isTransmitting).toBe(false);
+      expect(createdOsc.disconnect).toHaveBeenCalled();
+      expect(createdGain.disconnect).toHaveBeenCalled();
+
+      vi.useRealTimers();
+    });
+
+    it('automatically cleans up nodes and timers upon transmission auto-completion', async () => {
+      vi.useFakeTimers();
+      const audioCtx = new MockAudioContext() as any;
+      const { result } = renderHook(() => useChirpTransceiver(() => audioCtx));
+
+      act(() => {
+        result.current.startChirpTransmission();
+      });
+
+      expect(result.current.isTransmitting).toBe(true);
+
+      const createdOsc = audioCtx.createOscillator.mock.results[0].value;
+      const createdGain = audioCtx.createGain.mock.results[0].value;
+
+      act(() => {
+        vi.advanceTimersByTime(5000);
+      });
+
+      expect(result.current.isTransmitting).toBe(false);
+      expect(createdOsc.disconnect).toHaveBeenCalled();
+      expect(createdGain.disconnect).toHaveBeenCalled();
+
+      vi.useRealTimers();
+    });
   });
 
   describe('useSpectrogramQR', () => {
@@ -283,6 +336,53 @@ describe('Custom Audio Hooks', () => {
       });
 
       expect(result.current.isPlayingSpectrogram).toBe(true);
+
+      act(() => {
+        result.current.stopSpectrogramQR();
+      });
+
+      expect(result.current.isPlayingSpectrogram).toBe(false);
+    });
+
+    it('plays spectrogram QR art, disconnects nodes on stop, and caches context properties outside draw loop', async () => {
+      const getAudioContextSpy = vi.fn().mockImplementation(() => new MockAudioContext());
+      const { result } = renderHook(() => useSpectrogramQR(getAudioContextSpy));
+
+      const mockCanvas = document.createElement('canvas');
+      mockCanvas.width = 512;
+      mockCanvas.height = 320;
+      vi.spyOn(mockCanvas, 'getContext').mockReturnValue({
+        fillStyle: '',
+        fillRect: vi.fn(),
+        drawImage: vi.fn(),
+      } as any);
+
+      (result.current.specCanvasRef as any).current = mockCanvas;
+
+      let rafCallback: FrameRequestCallback | null = null;
+      vi.stubGlobal('requestAnimationFrame', vi.fn((cb: FrameRequestCallback) => {
+        rafCallback = cb;
+        return 1;
+      }));
+
+      await act(async () => {
+        await result.current.playSpectrogramQR();
+      });
+
+      expect(result.current.isPlayingSpectrogram).toBe(true);
+
+      // Reset spy counts before executing draw loop frame
+      getAudioContextSpy.mockClear();
+
+      // Trigger animation frame callback
+      if (rafCallback) {
+        act(() => {
+          (rafCallback as FrameRequestCallback)(performance.now());
+        });
+      }
+
+      // getAudioContext MUST NOT be called inside the frame draw loop!
+      expect(getAudioContextSpy).not.toHaveBeenCalled();
 
       act(() => {
         result.current.stopSpectrogramQR();
