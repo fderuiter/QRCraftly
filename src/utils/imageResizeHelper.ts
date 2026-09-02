@@ -16,6 +16,8 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { createTrackedObjectURL, revokeTrackedObjectURL, calculateAspectBounds } from './imageLoaderUtils';
+
 // Persistent module-level cached canvas and context for main thread fallback to prevent GC/memory allocation churn
 let mainThreadCachedCanvas: HTMLCanvasElement | null = null;
 let mainThreadCachedCtx: CanvasRenderingContext2D | null = null;
@@ -121,20 +123,14 @@ export const processImageOffThread = (file: File | Blob, maxDim: number): Promis
 export const processImageOnMainThread = (file: File | Blob, maxDim: number): Promise<string> => {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    const objectUrl = URL.createObjectURL(file);
+    const objectUrl = createTrackedObjectURL(file) || (typeof URL !== 'undefined' ? URL.createObjectURL(file) : '');
 
     img.onload = () => {
-      URL.revokeObjectURL(objectUrl);
+      revokeTrackedObjectURL(objectUrl);
       const originalWidth = img.naturalWidth || img.width;
       const originalHeight = img.naturalHeight || img.height;
 
-      let width = originalWidth;
-      let height = originalHeight;
-      if (width > maxDim || height > maxDim) {
-        const ratio = Math.min(maxDim / width, maxDim / height);
-        width = Math.round(width * ratio);
-        height = Math.round(height * ratio);
-      }
+      const { width, height } = calculateAspectBounds(originalWidth, originalHeight, maxDim);
 
       try {
         const { canvas, ctx } = getRecycledMainThreadCanvas(width, height);
@@ -153,7 +149,7 @@ export const processImageOnMainThread = (file: File | Blob, maxDim: number): Pro
     };
 
     img.onerror = (err) => {
-      URL.revokeObjectURL(objectUrl);
+      revokeTrackedObjectURL(objectUrl);
       reject(err);
     };
 

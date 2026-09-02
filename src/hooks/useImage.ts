@@ -16,56 +16,16 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { useState, useEffect } from 'react';
-import { setCachedAsset, convertImageToBase64 } from '../utils/assetCache';
+import { useImageLoader } from './useImageLoader';
 
 /**
  * Hook to load an image asynchronously.
+ * Delegates to useImageLoader to provide centralized image loading and memory lifecycle management.
  * Returns the HTMLImageElement once loaded, or null.
- * @param url
+ * @param url - The image URL string or null.
+ * @returns The HTMLImageElement once loaded, or null.
  */
-export const useImage = (url: string | null) => {
-  const [image, setImage] = useState<HTMLImageElement | null>(null);
-
-  useEffect(() => {
-    if (!url) {
-      setImage(null);
-      return;
-    }
-
-    const img = new Image();
-    img.crossOrigin = 'Anonymous';
-    img.src = url;
-
-    const tryCache = (loadedImg: HTMLImageElement) => {
-      if (url.startsWith('data:')) {
-        setCachedAsset(url, url);
-      } else {
-        const base64 = convertImageToBase64(loadedImg);
-        if (base64) {
-          setCachedAsset(url, base64);
-        }
-      }
-    };
-
-    // If image is already cached and loaded immediately
-    if (img.complete && img.naturalHeight !== 0) {
-        setImage(img);
-        tryCache(img);
-        return;
-    }
-
-    img.onload = () => {
-      setImage(img);
-      tryCache(img);
-    };
-    img.onerror = () => setImage(null);
-
-    return () => {
-      img.onload = null;
-      img.onerror = null;
-    };
-  }, [url]);
-
+export const useImage = (url: string | null): HTMLImageElement | null => {
+  const { image } = useImageLoader(url);
   return image;
 };

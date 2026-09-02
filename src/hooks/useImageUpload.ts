@@ -26,26 +26,21 @@ import {
 } from '../utils/imageResizeHelper';
 
 /**
- *
+ * Interface representing the return object of the useImageUpload hook.
  */
-interface UseImageUploadReturn {
-  /**
-   *
-   */
+export interface UseImageUploadReturn {
+  /** Error message string if upload or validation failed, or null. */
   error: string | null;
-  /**
-   *
-   */
+  /** Event handler for processing file uploads from input elements. */
   handleUpload: (e: React.ChangeEvent<HTMLInputElement>, onSuccess: (dataUrl: string) => void) => void;
-  /**
-   *
-   */
+  /** Function to manually update or clear error state. */
   setError: (error: string | null) => void;
 }
 
 /**
  * Checks whether the FileReader constructor has been mocked/overridden (e.g. in tests).
  * Test mocks usually lack standard FileReader prototype methods like readAsArrayBuffer or readAsText.
+ * @returns True if FileReader is mocked in the current environment.
  */
 const isFileReaderMocked = (): boolean => {
   if (typeof FileReader === 'undefined') return false;
@@ -57,8 +52,9 @@ const isFileReaderMocked = (): boolean => {
 };
 
 /**
- * Hook to handle image uploading and validation.
+ * Hook to handle image uploading, dimension probing, and validation.
  * Used for logo and border logo uploads to keep components DRY.
+ * @returns Object containing error state, upload handler, and error setter.
  */
 export function useImageUpload(): UseImageUploadReturn {
   const [error, setError] = useState<string | null>(null);
