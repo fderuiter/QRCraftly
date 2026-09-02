@@ -39,6 +39,8 @@ describe('secret-scanner', () => {
       expect(isFalsePositive('evaluateExpression', 'key')).toBe(true);
       expect(isFalsePositive('resolveExpression', 'cf_token')).toBe(true);
       expect(isFalsePositive('evaluateNode', 'api_key')).toBe(true);
+      expect(isFalsePositive('setup-cloudflare', 'cloudflare')).toBe(true);
+      expect(isFalsePositive('wizard:cloudflare', 'cloudflare')).toBe(true);
     });
 
     it('should identify extremely short strings as false positives', () => {

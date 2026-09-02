@@ -182,6 +182,8 @@ export function isFalsePositive(secret, varName = '') {
     'evaluate',
     'eval',
     'resolve',
+    'setup',
+    'wizard',
   ];
 
   if (codeSubstrings.some(s => lowerSecret.includes(s))) {
