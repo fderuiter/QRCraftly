@@ -148,7 +148,7 @@ pnpm run release:promote
 
 This:
 
-1. Fast-forwards `origin/main` to `dev` HEAD (`git push origin dev:main --ff-only`).
+1. Fast-forwards `origin/main` to `dev` HEAD (`git push origin dev:main`).
 2. Creates an annotated Git tag `vX.Y.Z` and pushes it to `origin`.
 
 **Step 4: Automated post-promotion pipeline**

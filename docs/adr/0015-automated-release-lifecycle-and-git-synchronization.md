@@ -35,7 +35,7 @@ the force-push is a lineage repair, not a data loss event.
 
 Remove `"type": "required_linear_history"` from `.github/rulesets/main.json`.
 Replace GitHub-enforced rebase with **workflow-enforced fast-forward only** in `scripts/release_engine.js`
-(`git push origin dev:main --ff-only`). This:
+(`git push origin dev:main`). This:
 
 - Preserves exact commit SHAs from `dev` on `main`.
 - Guarantees `git log main` and `git log dev` are always identical after promotion.

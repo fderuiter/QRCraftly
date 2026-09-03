@@ -31,7 +31,7 @@ QRCraftly employs a **Two-Tier Staged Promotion Model** designed for client-side
 2. **`main` is Advanced Exclusively by Fast-Forward Promotion**:
    - **NEVER** open a GitHub Pull Request from `dev` to `main`. GitHub PR merges (including "Rebase and merge" and "Squash and merge") rewrite commit SHAs on `main`.
    - Rewriting commit SHAs causes `dev` and `main` to permanently diverge, breaking lineage auditors and creating duplicate commit histories.
-   - Promotion to `main` is performed using `git push origin dev:main --ff-only`. This ensures that `main` and `dev` point to the **exact same commit SHA** with zero history divergence.
+   - Promotion to `main` is performed using standard fast-forward push: `git push origin dev:main`. This ensures that `main` and `dev` point to the **exact same commit SHA** with zero history divergence.
 
 3. **Conventional Commits & Automated SemVer 2.0.0**:
    - Releases are governed by Conventional Commit prefixes:
@@ -111,7 +111,7 @@ This single command executes the following operations atomically:
 2. Prepends the formatted markdown section to `CHANGELOG.md`.
 3. Commits the release changes: `chore(release): vX.Y.Z`.
 4. Pushes `dev` to `origin dev`.
-5. Fast-forward pushes `dev` into `main`: `git push origin dev:main --ff-only`.
+5. Fast-forward pushes `dev` into `main`: `git push origin dev:main`.
 6. Creates an annotated Git tag `vX.Y.Z` and pushes it to `origin`.
 
 #### Step 4: Monitor Post-Promotion CI/CD via CLI
@@ -219,7 +219,7 @@ If a critical bug reaches production:
 
 ## 5. Troubleshooting & FAQ
 
-### Q: Why did `git push origin dev:main --ff-only` fail with "non-fast-forward"?
+### Q: Why did `git push origin dev:main` fail with "non-fast-forward"?
 
 **Cause**: Someone committed directly to `main`, or an emergency hotfix was applied to `main` and has not yet been merged back into `dev`.  
 **Resolution**:

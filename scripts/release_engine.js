@@ -366,7 +366,7 @@ if (isMain) {
 
     // 3. Push to origin/dev, then fast-forward origin/main
     execBinary('git', ['push', 'origin', 'dev']);
-    execBinary('git', ['push', 'origin', 'dev:main', '--ff-only']);
+    execBinary('git', ['push', 'origin', 'dev:main']);
 
     // 4. Tag
     const tagName = `v${targetVersion}`;
