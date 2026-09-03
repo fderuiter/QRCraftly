@@ -78,6 +78,28 @@ _Avoid_: Canvas fallback flag, broken worker cache, degradation state
 An off-thread Web Worker acknowledgement confirming a stale scan frame was dropped, used by the main-thread scheduler to release backpressure without overwriting active diagnostic status.
 _Avoid_: Stale frame response, dropped signal, busy unlock event
 
+### Air-Gapped Optical Transfer
+
+**Air-Gapped Optical Transfer**:
+A client-side screen-to-camera communication pipeline transmitting arbitrary files across physical air gaps via animated QR code streams without local network or Bluetooth dependencies.
+_Avoid_: Dynamic QR transfer, animated scanner, QR streaming file
+
+**Asynchronous Optical Erasure Channel**:
+The physical-layer model of the screen-to-camera optical link where camera rolling shutter, ambient reflections, and uncoordinated display refresh rates turn transmission defects into packet erasures.
+_Avoid_: Bad camera link, scan drop channel, broken scan link
+
+**Rateless Fountain Stream**:
+A continuous broadcast of pseudo-randomly combined droplet frames encoded using Luby Transform codes, allowing any receiver to reconstruct the source payload from any K + ε frames regardless of arrival order.
+_Avoid_: Shuffled loop, infinite carousel, frame deck
+
+**Two-Tier Optical Error Correction**:
+A dual-layer error mitigation scheme combining intra-frame Reed-Solomon codewords over GF(2^8) to correct localized spatial blemishes with inter-frame rateless fountain coding over GF(2) to absorb temporal frame drops.
+_Avoid_: Double ECC, dual error recovery, two-way ECC
+
+**Stateless Stream Entry**:
+The receiver capability to start capturing and decoding an optical stream at an arbitrary point in time without an explicit preparatory handshake phase.
+_Avoid_: Mid-stream scan, instant sync, handshake-free mode
+
 ### Environment & Tooling Invariants
 
 **Platform Invariance Guarantee**:
