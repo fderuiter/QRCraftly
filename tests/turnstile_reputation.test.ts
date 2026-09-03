@@ -305,5 +305,26 @@ describe("Synchronous Reputation API & Turnstile Bot Safeguards", () => {
       expect(res.status).toBe(200);
       expect(duration).toBeLessThan(800);
     });
+
+    it("should handle live network call for validateTurnstileToken", async () => {
+      const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ success: true }),
+      } as any);
+
+      const res = await validateTurnstileToken("custom-turnstile-token", { TURNSTILE_SECRET_KEY: "secret-key" }, "1.2.3.4");
+      expect(res.success).toBe(true);
+      fetchSpy.mockRestore();
+    });
+
+    it("should handle failed live network response for validateTurnstileToken", async () => {
+      const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce({
+        ok: false,
+      } as any);
+
+      const res = await validateTurnstileToken("custom-turnstile-token-fail", { TURNSTILE_SECRET_KEY: "secret-key" }, "1.2.3.4");
+      expect(res.success).toBe(true);
+      fetchSpy.mockRestore();
+    });
   });
 });
