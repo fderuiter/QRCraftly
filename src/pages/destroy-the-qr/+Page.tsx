@@ -395,7 +395,7 @@ export default function Page() {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       try {
-        const worker = new Worker(new URL('../../utils/scannabilityWorker.ts', import.meta.url), { type: 'module' });
+        const worker = new Worker(new URL('../../packages/scannability/worker.ts', import.meta.url), { type: 'module' });
         workerRef.current = worker;
 
         worker.onmessage = (e) => {

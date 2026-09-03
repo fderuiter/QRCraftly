@@ -83,4 +83,16 @@ describe('Zero-Knowledge Client Encryption Utilities', () => {
     const convertedHex = bufferToHex(buffer);
     expect(convertedHex).toBe(hex);
   });
+
+  it('validates hex string length and handles invalid input', () => {
+    expect(() => hexToBuffer('abc')).toThrow('Invalid hex string length');
+    expect(isEncrypted(null)).toBe(false);
+    expect(isEncrypted(undefined)).toBe(false);
+    expect(isEncrypted(123 as any)).toBe(false);
+  });
+
+  it('throws on malformed encrypted ciphertext payloads', async () => {
+    const key = await generateDecryptionKey();
+    await expect(decryptUrl('enc:v1:onlyonepart', key)).rejects.toThrow('Invalid encrypted ciphertext format.');
+  });
 });
