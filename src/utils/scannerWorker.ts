@@ -243,10 +243,13 @@ self.onmessage = async (e: MessageEvent<any>) => {
               }
 
               // Run scanner on the pixels with inverted fallback
-              let code = jsQR(imageData.data, dWidth, dHeight, { inversionAttempts: 'dontInvert' });
-              if (!code) {
-                code = jsQR(imageData.data, dWidth, dHeight, { inversionAttempts: 'onlyInvert' });
-              }
+              let code = null;
+              try {
+                code = jsQR(imageData.data, dWidth, dHeight, { inversionAttempts: 'dontInvert' });
+                if (!code) {
+                  code = jsQR(imageData.data, dWidth, dHeight, { inversionAttempts: 'attemptBoth' });
+                }
+              } catch {}
               if (code && code.data && !isAborted()) {
                 (self as any).postMessage({ type: 'frame_decoded', taskId, data: code.data });
               }
@@ -283,10 +286,13 @@ self.onmessage = async (e: MessageEvent<any>) => {
     }
 
     // Decode QR code off-thread using jsQR with inverted fallback
-    let code = jsQR(data, width, height, { inversionAttempts: 'dontInvert' });
-    if (!code) {
-      code = jsQR(data, width, height, { inversionAttempts: 'onlyInvert' });
-    }
+    let code = null;
+    try {
+      code = jsQR(data, width, height, { inversionAttempts: 'dontInvert' });
+      if (!code) {
+        code = jsQR(data, width, height, { inversionAttempts: 'attemptBoth' });
+      }
+    } catch {}
 
     const response = {
       status: code ? ('pass' as const) : ('fail' as const),
@@ -399,10 +405,13 @@ self.onmessage = async (e: MessageEvent<any>) => {
     }
 
     // Decode QR code off-thread using jsQR with inverted fallback
-    let code = jsQR(imageData.data, width, height, { inversionAttempts: 'dontInvert' });
-    if (!code) {
-      code = jsQR(imageData.data, width, height, { inversionAttempts: 'onlyInvert' });
-    }
+    let code = null;
+    try {
+      code = jsQR(imageData.data, width, height, { inversionAttempts: 'dontInvert' });
+      if (!code) {
+        code = jsQR(imageData.data, width, height, { inversionAttempts: 'attemptBoth' });
+      }
+    } catch {}
 
     const response = {
       status: code ? ('pass' as const) : ('fail' as const),

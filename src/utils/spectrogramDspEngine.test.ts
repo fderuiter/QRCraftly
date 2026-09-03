@@ -78,6 +78,18 @@ describe('spectrogramDspEngine', () => {
     expect(firstOsc.stop).toHaveBeenCalledWith(0.2 + 3 * 0.25 + 0.1);
   });
 
+  it('schedules with default options when none are provided', () => {
+    const ctx = new MockContext() as any;
+    const destination = new MockAudioNode() as any;
+    const mockMatrix = {
+      size: 2,
+      get: () => true,
+    };
+    const scheduled = scheduleSpectrogramQR(ctx, mockMatrix, destination);
+    expect(scheduled.oscillators).toHaveLength(2);
+    expect(scheduled.gainNodes).toHaveLength(2);
+  });
+
   it('generates a valid 16-bit PCM WAV blob with 44-byte RIFF header', async () => {
     const channelData = new Float32Array(100);
     for (let i = 0; i < 100; i++) {

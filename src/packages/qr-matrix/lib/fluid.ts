@@ -238,16 +238,16 @@ export function extractFluidContours(
         let xStart = c + 1;
         let xEnd = c;
 
-        // If at (c + 1, r + 1) this is the TR cell of a TR_BL bridge, Bottom edge starts at c + 1 - 0.5
+        // If at (c + 1, r + 1) this is the TL cell of a TL_BR bridge, Bottom edge starts at c + 0.5
         const bStart = diagonalBridges.get(`${c + 1},${r + 1}`);
-        if (bStart?.type === 'TR_BL') {
-          xStart = c + 1 - 0.5;
+        if (bStart?.type === 'TL_BR') {
+          xStart = c + 0.5;
         }
 
-        // If at (c, r + 1) this is the TL cell of a TL_BR bridge, Bottom edge starts at c + 1 - 0.5
-        const bStartTl = diagonalBridges.get(`${c + 1},${r + 1}`);
-        if (bStartTl?.type === 'TL_BR') {
-          xStart = c + 1 - 0.5;
+        // If at (c, r + 1) this is the TR cell of a TR_BL bridge, Bottom edge ends at c + 0.5
+        const bEnd = diagonalBridges.get(`${c},${r + 1}`);
+        if (bEnd?.type === 'TR_BL') {
+          xEnd = c + 0.5;
         }
 
         segments.push({ p1: toPx(xStart, r + 1), p2: toPx(xEnd, r + 1) });
@@ -300,7 +300,7 @@ export function extractFluidContours(
     }
   }
 
-  // 3. Assemble segments into closed loops
+  // 4. Assemble segments into closed loops
   if (segments.length === 0) return [];
 
   const ptKey = (p: Point): string => `${Math.round(p.x * 100)},${Math.round(p.y * 100)}`;
@@ -322,9 +322,11 @@ export function extractFluidContours(
 
       const loop: Point[] = [];
       let currentItem: { segment: Segment; used: boolean } | null = item;
+      let lastSeg: Segment | null = null;
 
       while (currentItem && !currentItem.used) {
         currentItem.used = true;
+        lastSeg = currentItem.segment;
         loop.push(currentItem.segment.p1);
 
         const nextKey = ptKey(currentItem.segment.p2);
@@ -332,16 +334,41 @@ export function extractFluidContours(
         currentItem = null;
 
         if (candidates) {
+          let bestCand: { segment: Segment; used: boolean } | null = null;
+          let bestAngle = Infinity;
+
+          const inDx = lastSeg.p2.x - lastSeg.p1.x;
+          const inDy = lastSeg.p2.y - lastSeg.p1.y;
+          const inAngle = Math.atan2(inDy, inDx);
+
           for (const cand of candidates) {
-            if (!cand.used) {
-              currentItem = cand;
+            if (cand.used) continue;
+            if (candidates.length === 1) {
+              bestCand = cand;
               break;
             }
+            const outDx = cand.segment.p2.x - cand.segment.p1.x;
+            const outDy = cand.segment.p2.y - cand.segment.p1.y;
+            const outAngle = Math.atan2(outDy, outDx);
+
+            let diff = outAngle - inAngle;
+            let turnAngle = diff % (2 * Math.PI);
+            if (turnAngle <= 0) turnAngle += 2 * Math.PI;
+
+            if (turnAngle < bestAngle) {
+              bestAngle = turnAngle;
+              bestCand = cand;
+            }
           }
+          currentItem = bestCand;
         }
       }
 
-      if (loop.length >= 3) {
+      // Assert loop closure: the last segment's p2 must cycle back to loop[0]
+      const isClosed =
+        lastSeg !== null && loop.length >= 3 && ptKey(lastSeg.p2) === ptKey(loop[0]);
+
+      if (isClosed) {
         // Simplify consecutive collinear points along straight lines
         const simplified: Point[] = [];
         const n = loop.length;

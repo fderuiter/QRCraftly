@@ -47,12 +47,13 @@ test.describe('Accessibility Suite', () => {
     // Wait for contrast warning text
     await page.waitForSelector('text=Warning: The contrast ratio is low', { timeout: 5000 });
 
-    // Trigger the warning modal
+    // Trigger the warning modal by opening menu and selecting export format
     const downloadButton = page.getByRole('button', { name: 'Download', exact: true });
     await downloadButton.click();
     await page.getByText('PNG (High Quality)').click();
 
-    // Wait for modal to appear
+    const pngOption = page.getByRole('menuitem', { name: 'PNG (High Quality)' });
+    await pngOption.click();
     await page.waitForSelector('text=Scan Safety Warning', { timeout: 5000 });
 
     // Run scan on warning state

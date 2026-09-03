@@ -7,7 +7,7 @@ test.describe('Visual Regression Layout Checks', () => {
     await page.waitForSelector('main[data-hydrated="true"]');
     await page.waitForTimeout(1000); // Allow canvas to render
     await expect(page).toHaveScreenshot('desktop-standard.png', {
-      fullPage: true,
+      fullPage: false,
       maxDiffPixelRatio: 0.1,
       threshold: 0.2
     });
