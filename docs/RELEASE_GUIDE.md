@@ -61,97 +61,129 @@ QRCraftly employs a **Two-Tier Staged Promotion Model** designed for client-side
 
 ## 3. Step-by-Step Instructions: Cutting a Release
 
-### Standard Flow: One-Command Promotion (Recommended)
+### Method 1: Comprehensive Release via CLI
 
-This is the standard, automated method for project maintainers and autonomous agents.
+This is the standard, atomic release procedure for maintainers and agents working in a local terminal or SSH environment.
 
-#### Step 1: Ensure `dev` is Clean and Up to Date
+#### Step 1: Pre-Flight Cleanliness & Staging Sync
+
+Ensure your local clone is clean and on the latest `dev` branch:
 
 ```bash
 git checkout dev
 git pull origin dev
 ```
 
-Verify that all unit tests and static validation checks pass locally:
+Run the test and static quality suite to ensure zero regressions:
 
 ```bash
 pnpm run lint
 pnpm test run
 ```
 
-#### Step 2: Preview the Release (Dry Run)
+#### Step 2: Release Preview & Dry Run
+
+Execute the release engine in `--dry-run` mode:
 
 ```bash
 pnpm run release:dry-run
 ```
 
-Inspect the output in your terminal:
+Inspect the output:
 
-- Verify the **Bump type** (`patch`, `minor`, `major`).
-- Verify the **Next version** (e.g. `v0.8.0`).
-- Review the grouped changelog (Features, Bug Fixes, Maintenance).
+- **Latest tag**: The last released tag (e.g. `v0.7.0.3` or `v0.8.0`).
+- **Current version**: The normalized SemVer baseline.
+- **Bump type**: The computed version increment (`patch`, `minor`, or `major`) based on conventional commits.
+- **Next version**: The target version about to be released (e.g. `v0.8.0`).
+- **Changelog**: The formatted Keep-a-Changelog section showing categorized entries (`### Features`, `### Bug Fixes`, `### Maintenance`).
 
-#### Step 3: Promote to Production
+#### Step 3: Atomic Promotion & Tagging
+
+Run the promotional engine:
 
 ```bash
 pnpm run release:promote
 ```
 
-This command automatically and atomically:
+This single command executes the following operations atomically:
 
-1. Updates `"version"` in `package.json`.
-2. Prepends the formatted release notes to `CHANGELOG.md`.
-3. Commits the release: `chore(release): vX.Y.Z`.
+1. Updates `"version"` in `package.json` to the target SemVer.
+2. Prepends the formatted markdown section to `CHANGELOG.md`.
+3. Commits the release changes: `chore(release): vX.Y.Z`.
 4. Pushes `dev` to `origin dev`.
-5. Fast-forward pushes `dev` to `origin main` (`git push origin dev:main --ff-only`).
+5. Fast-forward pushes `dev` into `main`: `git push origin dev:main --ff-only`.
 6. Creates an annotated Git tag `vX.Y.Z` and pushes it to `origin`.
 
-#### Step 4: Verify Automated Post-Promotion Pipeline
+#### Step 4: Monitor Post-Promotion CI/CD via CLI
 
-Once `main` is updated:
+You can monitor the automated deployment and verification pipeline directly from the command line using the GitHub CLI (`gh`):
 
-1. **Edge Deployment**: Cloudflare Workers Builds automatically builds `main` and deploys to `https://qrcraftly.com`.
-2. **GitHub Actions**: `.github/workflows/release.yml` runs automatically:
+```bash
+# Watch the release workflow run in real-time
+gh run list --workflow=release.yml --limit 1
+gh run watch
+
+# Verify the official GitHub Release and release notes
+gh release view
+```
+
+Cloudflare Workers Builds automatically detects the push to `main` and deploys to production. The GitHub Actions release workflow publishes the official GitHub Release and executes end-to-end smoke tests against both `https://qrcraftly.fpderuiter.workers.dev` and `https://qrcraftly.com`.
+
+---
+
+### Method 2: Comprehensive Release via GitHub Webpage UI
+
+Maintainers can cut a release entirely from a web browser without needing a local terminal or SSH access.
+
+#### Step 1: Verify Staging in Your Browser
+
+Before promoting, navigate to the **Preview Staging Environment**:
+
+- URL: `https://dev-qrcraftly.fpderuiter.workers.dev/`
+- Confirm that recently merged features and fixes render as expected.
+
+#### Step 2: Navigate to the Release Action in GitHub
+
+1. Open the repository in your browser: `https://github.com/fderuiter/QRCraftly`
+2. In the top navigation bar, click the **Actions** tab.
+3. In the left-hand sidebar under **All workflows**, click **Release**.
+   - Direct URL: `https://github.com/fderuiter/QRCraftly/actions/workflows/release.yml`
+
+#### Step 3: Trigger the Promotional Workflow
+
+1. Look for the blue banner at the top of the workflow list:  
+   _"This workflow has a workflow_dispatch event trigger."_
+2. Click the **Run workflow** dropdown button on the right.
+3. In the modal:
+   - **Use workflow from**: Select **Branch: dev**. _(Always trigger from `dev` because `dev` contains the code to promote)._
+   - **SemVer bump type**: Keep `auto` (the engine will automatically deduce `patch`, `minor`, or `major` from conventional commits).
+4. Click the green **Run workflow** button.
+
+#### Step 4: Track the Automated Execution
+
+After clicking **Run workflow**, refresh the page after a few seconds to see the new workflow run:
+
+1. **Job 1: Fast-Forward Promote dev to main**:
+   - Checks out `dev`.
+   - Runs `scripts/release_engine.js --promote`.
+   - Generates changelog and updates `package.json`.
+   - Commits `chore(release): vX.Y.Z`.
+   - Pushes `dev` and fast-forwards `main` (`--ff-only`) using the repository admin bypass.
+2. **Job 2: Tag & Create GitHub Release** _(triggered by push to `main`)_:
+   - Creates the annotated Git tag `vX.Y.Z`.
    - Publishes the official **GitHub Release** with markdown release notes.
-   - Executes Playwright smoke tests against `https://qrcraftly.fpderuiter.workers.dev` and `https://qrcraftly.com`.
+3. **Job 3: Production Smoke Tests**:
+   - Spins up Playwright in Chromium.
+   - Executes live smoke tests against `https://qrcraftly.fpderuiter.workers.dev` and `https://qrcraftly.com`.
 
----
+#### Step 5: Verify Production Deployment
 
-### Alternative Flow: Two-Step Review (Changelog PR)
-
-If team policy requires a formal pull request to review release notes before cutting a release:
-
-1. **Generate Changelog on a release branch**:
-   ```bash
-   git checkout dev
-   git pull origin dev
-   git checkout -b chore/prepare-release-v0.8.0
-   pnpm run release:changelog
-   git add CHANGELOG.md package.json
-   git commit -m "chore(release): v0.8.0"
-   git push origin chore/prepare-release-v0.8.0
-   ```
-2. **Open PR targeting `dev`** (e.g. `chore: release v0.8.0`).
-3. **Merge PR into `dev`** once approved and CI passes.
-4. **Fast-forward promote to `main`**:
-   ```bash
-   git checkout dev
-   git pull origin dev
-   pnpm run release:promote
-   ```
-   _Note: `release:promote` detects that `package.json` and `CHANGELOG.md` are already updated and will skip duplicate changelog insertion, proceeding directly to fast-forward and tagging._
-
----
-
-### Browser Flow: Promotion via GitHub Actions UI
-
-If maintainers need to trigger promotion directly from the GitHub web interface:
-
-1. Navigate to **Actions** $\rightarrow$ **Release** workflow.
-2. Click **Run workflow**.
-3. Select **Branch: dev**.
-4. In the inputs, select `promote_from_dev`.
-5. The workflow executes `node scripts/release_engine.js --promote` using the bot's credentials, fast-forwards `main`, and triggers the production release pipeline.
+1. **GitHub Releases Tab**:
+   - Go to `https://github.com/fderuiter/QRCraftly/releases`
+   - Verify that tag `vX.Y.Z` has been published with "Latest" badge and complete release notes.
+2. **Production URL**:
+   - Visit `https://qrcraftly.com`
+   - Test generating a QR code to confirm production edge deployment is live and healthy.
 
 ---
 

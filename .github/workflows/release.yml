@@ -25,19 +25,11 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # ─── Tag & GitHub Release ────────────────────────────────────────────────
-  release:
-    name: Tag & Create GitHub Release
+  # ─── 1. Promote dev to main (Triggered via GitHub UI workflow_dispatch) ──
+  promote:
+    name: Fast-Forward Promote dev to main
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-    # Only run on push to main (post fast-forward promotion) or manual dispatch
-    if: |
-      github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'push' && github.ref == 'refs/heads/main')
-    outputs:
-      version: ${{ steps.engine.outputs.version }}
-      tag: ${{ steps.engine.outputs.tag }}
-
+    if: github.event_name == 'workflow_dispatch'
     steps:
       - name: Checkout Repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -53,11 +45,35 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Promote from dev (if manual dispatch requested)
-        if: github.event_name == 'workflow_dispatch' && inputs.bump != ''
+      - name: Run Release Engine (Promote)
         run: |
           git checkout dev
           node scripts/release_engine.js --promote
+
+  # ─── 2. Tag & GitHub Release (Triggered on push to main) ──────────────────
+  release:
+    name: Tag & Create GitHub Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Environment
+        uses: ./.github/actions/setup
+
+      - name: Configure git identity
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Read release version from package.json
         id: version
