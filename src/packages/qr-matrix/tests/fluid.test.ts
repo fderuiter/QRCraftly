@@ -187,6 +187,56 @@ describe('fluid renderer', () => {
       expect(contours).toHaveLength(1);
     });
 
+    it('bridges diagonally adjacent modules in TR_BL orientation with a calibrated fluid neck', () => {
+      const grid = new Uint8Array(moduleCount * moduleCount);
+      grid[10 * moduleCount + 11] = 1;
+      grid[11 * moduleCount + 10] = 1;
+
+      const cellSize = 10;
+      const contours = extractFluidContours(grid, moduleCount, 0, 0, cellSize);
+
+      expect(contours).toHaveLength(1);
+    });
+
+    it('extracts strictly closed contour loops without cross-matrix jumps for full QR code matrices', async () => {
+      const QRCode = (await import('qrcode')).default;
+      const qr = QRCode.create('https://qrcraftly.com', { errorCorrectionLevel: 'M' });
+      const mc = qr.modules.size;
+      const grid = new Uint8Array(mc * mc);
+      for (let r = 0; r < mc; r++) {
+        for (let c = 0; c < mc; c++) {
+          const isFinder =
+            (r < 7 && c < 7) ||
+            (r < 7 && c >= mc - 7) ||
+            (r >= mc - 7 && c < 7);
+          if (qr.modules.get(r, c) && !isFinder) {
+            grid[r * mc + c] = 1;
+          }
+        }
+      }
+
+      const cellSize = 10;
+      const contours = extractFluidContours(grid, mc, 0, 0, cellSize);
+
+      expect(contours.length).toBeGreaterThan(0);
+      for (let i = 0; i < contours.length; i++) {
+        const loop = contours[i];
+        expect(loop.length).toBeGreaterThanOrEqual(3);
+        for (let j = 0; j < loop.length; j++) {
+          const p1 = loop[j];
+          const p2 = loop[(j + 1) % loop.length];
+          const isH = Math.abs(p1.y - p2.y) < 1e-3;
+          const isV = Math.abs(p1.x - p2.x) < 1e-3;
+          const dx = Math.abs(p2.x - p1.x);
+          const dy = Math.abs(p2.y - p1.y);
+          const isBridgeNeck = dx <= cellSize && dy <= cellSize;
+
+          // Every segment must be an orthogonal wall or a local diagonal neck crossover, never a cross-matrix chord cut
+          expect(isH || isV || isBridgeNeck).toBe(true);
+        }
+      }
+    });
+
     it('suppresses diagonal bridges across finder separator boundaries', () => {
       const grid = new Uint8Array(moduleCount * moduleCount);
       grid[7 * moduleCount + 8] = 1;

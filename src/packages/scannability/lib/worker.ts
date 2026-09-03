@@ -160,7 +160,7 @@ self.onmessage = async (e: MessageEvent<unknown>) => {
       }
 
       // Pass 2: Inverted polarity & orientation analysis pass
-      code = decodeQR ? decodeQR(imageData.data, width, height, { inversionAttempts: 'onlyInvert' }) : null;
+      code = decodeQR ? decodeQR(imageData.data, width, height, { inversionAttempts: 'attemptBoth' }) : null;
       if (code) {
         digitalCheckOk = true;
         decodedData = code.data;
@@ -260,7 +260,7 @@ self.onmessage = async (e: MessageEvent<unknown>) => {
         return;
       }
 
-      codeSim = decodeQR ? decodeQR(simulatedData.data, width, height, { inversionAttempts: 'onlyInvert' }) : null;
+      codeSim = decodeQR ? decodeQR(simulatedData.data, width, height, { inversionAttempts: 'attemptBoth' }) : null;
       if (codeSim) physicalCheckOk = true;
     }
 

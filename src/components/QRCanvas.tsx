@@ -536,7 +536,7 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
 
       const runVirtualRender = () => {
         try {
-          const virtualSize = 256;
+          const virtualSize = Math.max(512, Math.min(1024, (modules.size + 8) * 10));
           let vCanvas: HTMLCanvasElement | OffscreenCanvas;
 
           if (typeof OffscreenCanvas !== 'undefined') {
@@ -568,18 +568,10 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
           if (typeof globalThis.createImageBitmap === 'function') {
             createImageBitmap(vCanvas).then((imageBitmap) => {
               currentOnRendered({ moduleCount: modules.size, virtualImageBitmap: imageBitmap });
-              if (vCanvas) {
-                vCanvas.width = 0;
-                vCanvas.height = 0;
-              }
             }).catch((err) => {
               console.error("createImageBitmap failed in virtual render:", err);
               const imageData = vCtx.getImageData(0, 0, virtualSize, virtualSize);
               currentOnRendered({ moduleCount: modules.size, virtualImageData: imageData });
-              if (vCanvas) {
-                vCanvas.width = 0;
-                vCanvas.height = 0;
-              }
             });
           } else {
             const imageData = vCtx.getImageData(0, 0, virtualSize, virtualSize);

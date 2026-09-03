@@ -79,8 +79,11 @@ describe('PreallocatedFramePool', () => {
 
     expect(pool.delete(0)).toBe(true);
     expect(pool.hasFrame(0)).toBe(false);
+    expect(pool.size).toBe(1);
+
     expect(pool.releaseFrame(1)).toBe(true);
     expect(pool.hasFrame(1)).toBe(false);
+    expect(pool.size).toBe(0);
   });
 });
 
