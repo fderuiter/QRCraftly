@@ -256,15 +256,21 @@ function updatePackageJsonVersion(version) {
 }
 
 /**
- * Prepend a new version section to CHANGELOG.md.
+ * Prepend a new version section to CHANGELOG.md (idempotent).
  *
  * @param {string} section
+ * @param {string} [version]
  */
-function prependChangelog(section) {
+export function prependChangelog(section, version) {
   const changelogPath = path.join(repoRoot, 'CHANGELOG.md');
   const existing = fs.existsSync(changelogPath)
     ? fs.readFileSync(changelogPath, 'utf8')
     : '';
+
+  if (version && existing.includes(`## [${version}]`)) {
+    // Already contains an entry for this version
+    return;
+  }
 
   const HEADER_END_RE = /^(# .+?(?:\n.*)*?)(?=\n## \[)/m;
   const match = HEADER_END_RE.exec(existing);
@@ -287,7 +293,8 @@ function prependChangelog(section) {
 // CLI entry point — only executes when run directly (not when imported by tests)
 // ---------------------------------------------------------------------------
 
-const isMain = process.argv[1] &&
+const isMain =
+  process.argv[1] &&
   fileURLToPath(import.meta.url).replace(/\\/g, '/') === process.argv[1].replace(/\\/g, '/');
 
 if (isMain) {
@@ -322,7 +329,7 @@ if (isMain) {
 
   if (isGenerateChangelog) {
     updatePackageJsonVersion(release.nextVersion);
-    prependChangelog(section);
+    prependChangelog(section, release.nextVersion);
     console.log(`\nUpdated package.json -> ${release.nextVersion}`);
     console.log('Prepended CHANGELOG.md\n');
     process.exit(0);
@@ -335,24 +342,44 @@ if (isMain) {
       process.exit(1);
     }
 
-    // 1. Bump version + write changelog
-    updatePackageJsonVersion(release.nextVersion);
-    prependChangelog(section);
+    const pkgPath = path.join(repoRoot, 'package.json');
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+    const changelogPath = path.join(repoRoot, 'CHANGELOG.md');
+    const changelog = fs.existsSync(changelogPath) ? fs.readFileSync(changelogPath, 'utf8') : '';
 
-    // 2. Commit
-    execBinary('git', ['add', 'CHANGELOG.md', 'package.json']);
-    execBinary('git', ['commit', '-m', `chore(release): v${release.nextVersion}`]);
+    const alreadyPrepared =
+      pkg.version !== '0.0.0' && changelog.includes(`## [${pkg.version}]`);
+    const targetVersion = alreadyPrepared ? pkg.version : release.nextVersion;
 
-    // 3. Fast-forward main
+    // 1. Bump version + write changelog if not already prepared
+    if (!alreadyPrepared) {
+      updatePackageJsonVersion(targetVersion);
+      prependChangelog(section, targetVersion);
+    }
+
+    // 2. Commit if there are changes to changelog or package.json
+    const status = execBinary('git', ['status', '--porcelain']).trim();
+    if (status.includes('CHANGELOG.md') || status.includes('package.json')) {
+      execBinary('git', ['add', 'CHANGELOG.md', 'package.json']);
+      execBinary('git', ['commit', '-m', `chore(release): v${targetVersion}`]);
+    }
+
+    // 3. Push to origin/dev, then fast-forward origin/main
+    execBinary('git', ['push', 'origin', 'dev']);
     execBinary('git', ['push', 'origin', 'dev:main', '--ff-only']);
 
     // 4. Tag
-    const tagName = `v${release.nextVersion}`;
-    execBinary('git', ['tag', '-a', tagName, '-m', `Release ${tagName}`]);
-    execBinary('git', ['push', 'origin', tagName]);
+    const tagName = `v${targetVersion}`;
+    try {
+      execBinary('git', ['tag', '-a', tagName, '-m', `Release ${tagName}`]);
+      execBinary('git', ['push', 'origin', tagName]);
+      console.log(`Created and pushed tag ${tagName}`);
+    } catch {
+      console.log(`Tag ${tagName} already exists or was previously pushed.`);
+    }
 
     console.log(`\nFast-forwarded origin/main to dev HEAD`);
-    console.log(`Created and pushed tag ${tagName}\n`);
+    console.log(`Release v${targetVersion} successfully promoted!\n`);
     process.exit(0);
   }
 }

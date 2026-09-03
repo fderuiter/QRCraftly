@@ -53,46 +53,26 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Run Release Engine (dry-run)
-        id: engine
-        env:
-          BUMP_OVERRIDE: ${{ inputs.bump != 'auto' && inputs.bump || '' }}
+      - name: Promote from dev (if manual dispatch requested)
+        if: github.event_name == 'workflow_dispatch' && inputs.bump != ''
         run: |
-          node scripts/release_engine.js --dry-run
-          # Capture computed version for downstream steps
-          VERSION=$(node -p "
-            import('./scripts/release_engine.js').then(m => {
-              // Re-export for shell capture is handled in generate-changelog mode;
-              // for now we read from package.json after the engine run.
-            });
-          " 2>/dev/null || node -p "require('./package.json').version")
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+          git checkout dev
+          node scripts/release_engine.js --promote
 
-      - name: Generate Changelog & Bump Version
-        run: node scripts/release_engine.js --generate-changelog
-
-      - name: Read updated version
+      - name: Read release version from package.json
         id: version
         run: |
           VERSION=$(node -p "JSON.parse(require('fs').readFileSync('package.json','utf8')).version")
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
 
-      - name: Commit changelog and version bump
-        env:
-          RELEASE_VERSION: ${{ steps.version.outputs.version }}
-        run: |
-          git add CHANGELOG.md package.json
-          git diff --cached --quiet || git commit -m "chore(release): v$RELEASE_VERSION"
-
-      - name: Create annotated tag
+      - name: Ensure annotated tag exists
         env:
           RELEASE_TAG: ${{ steps.version.outputs.tag }}
         run: |
           TAG="$RELEASE_TAG"
-          git tag -a "$TAG" -m "Release $TAG" || echo "Tag $TAG already exists, skipping."
-          git push origin "$TAG" || echo "Tag already pushed, skipping."
+          git tag -a "$TAG" -m "Release $TAG" 2>/dev/null || echo "Tag $TAG already exists locally."
+          git push origin "$TAG" 2>/dev/null || echo "Tag $TAG already pushed to origin."
 
       - name: Extract changelog section for release notes
         id: notes
@@ -100,18 +80,18 @@ jobs:
           RELEASE_VERSION: ${{ steps.version.outputs.version }}
         run: |
           VERSION="$RELEASE_VERSION"
-          # Extract the section for this version from CHANGELOG.md
           node -e "
             const fs = require('fs');
             const changelog = fs.readFileSync('CHANGELOG.md', 'utf8');
-            const versionEscaped = process.env.RELEASE_VERSION.replace(/[.*+?^\${}()|[\]\\\\]/g, '\\\\\\$&');
+            const version = process.env.RELEASE_VERSION;
+            const versionEscaped = version.replace(/[.*+?^\${}()|[\]\\\\]/g, '\\\\\\$&');
             const sectionRE = new RegExp('(## \\\\[' + versionEscaped + '\\\\][\\\\s\\\\S]*?)(?=\\n## \\\\[|$)');
             const match = sectionRE.exec(changelog);
-            const notes = match ? match[1].trim() : 'Release v' + process.env.RELEASE_VERSION;
+            const notes = match ? match[1].trim() : 'Release v' + version;
             fs.writeFileSync('/tmp/release_notes.md', notes);
           "
 
-      - name: Create GitHub Release
+      - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_TAG: ${{ steps.version.outputs.tag }}
@@ -121,7 +101,7 @@ jobs:
             --title "Release $TAG" \
             --notes-file /tmp/release_notes.md \
             --latest \
-            || echo "Release $TAG already exists, skipping."
+            || gh release edit "$TAG" --notes-file /tmp/release_notes.md --latest || echo "Release already published."
 
   # ─── Production Smoke Tests ──────────────────────────────────────────────
   smoke-tests:

@@ -105,6 +105,9 @@ Once all CI checks pass and reviews are complete, merge into `dev`. Cloudflare a
 
 ## 4. Staged Production Promotion (`dev` $\rightarrow$ `main`)
 
+> [!TIP]
+> For the comprehensive release runbook, architectural details, and troubleshooting, see [RELEASE_GUIDE.md](./RELEASE_GUIDE.md).
+
 When a batch of features and fixes on `dev` has been verified in staging and is ready for production,
 use the automated release engine to promote. **Never use a standard GitHub PR merge to promote `dev`
 into `main`** — this would trigger a rebase-and-merge that rewrites commit SHAs and causes permanent
