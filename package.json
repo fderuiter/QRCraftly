@@ -3,7 +3,7 @@
   "description": "A powerful, privacy-focused, and user-friendly React application for generating customized QR codes.",
   "private": true,
   "packageManager": "pnpm@11.1.3",
-  "version": "0.0.0",
+  "version": "0.8.0",
   "license": "AGPL-3.0-or-later",
   "type": "module",
   "homepage": "https://qrcraftly.com",
@@ -47,6 +47,9 @@
     "wizard:cloudflare": "node scripts/run_wizard.js setup-cloudflare",
     "wizard:github": "node scripts/run_wizard.js setup-github-ci",
     "wizard:dev": "node scripts/run_wizard.js setup-local-dev",
+    "release:dry-run": "node scripts/release_engine.js --dry-run",
+    "release:changelog": "node scripts/release_engine.js --generate-changelog",
+    "release:promote": "node scripts/release_engine.js --promote",
     "prepare": "husky"
   },
   "lint-staged": {

@@ -145,3 +145,15 @@ _Avoid_: Dev-to-main copy, branch sync, direct push release, cherry-pick release
 **Ephemeral Preview Environment**:
 An isolated, on-demand edge staging deployment created per pull request to enable automated end-to-end smoke verification and visual review prior to merge.
 _Avoid_: Test deploy, PR sandbox, temp site, branch build
+
+**Fast-Forward Promotion**:
+The exclusive, SHA-preserving method by which `dev` is advanced into `main` during a production release (`git push origin dev:main --ff-only`), guaranteeing that both branches share identical commit SHAs and preventing history divergence.
+_Avoid_: PR merge to main, rebase-and-merge release, squash promotion, cherry-pick release
+
+**Conventional Commit**:
+A structured commit message following the `<type>(<scope>): <description>` format (e.g. `feat(qr): add logo embedding`), used by the release engine to automatically determine the next SemVer bump and generate the changelog.
+_Avoid_: Tagged message, semantic commit, versioned commit, prefix commit
+
+**Release Engine**:
+The cross-platform Node.js utility (`scripts/release_engine.js`) that reads conventional commits since the latest git tag, computes the next SemVer version, generates a grouped Keep-a-Changelog section, and can fast-forward promote `main` in a single atomic operation.
+_Avoid_: Version bumper, changelog writer, deploy script, tag creator

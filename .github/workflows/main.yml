@@ -22,16 +22,8 @@ on:
   pull_request:
     branches: [main, dev]
   workflow_dispatch:
-    inputs:
-      version_bump:
-        description: 'Version bump type (patch, minor, major)'
-        required: true
-        default: 'patch'
-        type: choice
-        options:
-          - patch
-          - minor
-          - major
+    # Use .github/workflows/release.yml for version bumps and release tagging.
+    # This manual trigger is reserved for forcing a CI re-run without a code push.
 
 permissions:
   contents: read
@@ -303,9 +295,11 @@ jobs:
           git checkout -- .
 
   deploy:
-    name: Deploy
+    name: Deploy (Rollback Only)
     needs: [static-validation, test, e2e, build]
-    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && startsWith(github.event.head_commit.message, 'Revert'))
+    # Restricted to emergency rollback: revert commits pushed to main.
+    # Normal releases are handled by .github/workflows/release.yml.
+    if: github.event_name == 'push' && startsWith(github.event.head_commit.message, 'Revert')
     permissions:
       attestations: write
       contents: write
@@ -316,8 +310,8 @@ jobs:
       cancel-in-progress: false
     uses: ./.github/workflows/deploy.yml
     with:
-      version_bump: ${{ github.event.inputs.version_bump || '' }}
-      is_rollback: ${{ github.event_name == 'push' && startsWith(github.event.head_commit.message, 'Revert') }}
+      version_bump: ''
+      is_rollback: true
     secrets: inherit
 
   verify-staging:

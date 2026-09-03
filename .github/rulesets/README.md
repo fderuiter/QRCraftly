@@ -22,7 +22,7 @@ The following status checks must pass successfully before a pull request can be 
 - **Dismiss Stale Reviews:** Active (dismisses previous approvals when a new commit is pushed).
 - **Require Code Owner Review:** Active (requires reviews from designated code owners).
 - **Required Review Thread Resolution:** Active (all conversations and review threads must be resolved).
-- **Linear History:** Active (requires a linear history for merge commits or squash merges).
+- **Linear History:** Enforced architecturally (not via this ruleset). All `dev → main` promotions must use fast-forward only (`--ff-only`), executed by the `release.yml` workflow. This approach preserves exact commit SHAs from `dev` without rewriting history, permanently preventing branch divergence. The `required_linear_history` GitHub ruleset rule was intentionally removed because it forces "Rebase and merge" which rewrites commit SHAs on `main`, causing inevitable divergence after every release.
 
 ### 3. Bypass Configurations
 The ruleset defines bypass options for specific roles and automated systems to ensure critical operations are not blocked. The following roles/actors can bypass these rules under appropriate conditions:

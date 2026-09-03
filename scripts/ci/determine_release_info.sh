@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
+# DEPRECATED: Release version determination is now performed by scripts/release_engine.js.
+# This script is retained for the rollback pipeline (deploy.yml is_rollback=true) only.
+# For standard releases, use `pnpm run release:dry-run` or `pnpm run release:changelog`.
 
 ROLLBACK="${ROLLBACK:-false}"
 GITHUB_SHA="${GITHUB_SHA:-}"

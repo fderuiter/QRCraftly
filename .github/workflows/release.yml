@@ -1,0 +1,153 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: 'SemVer bump type (auto = derive from conventional commits)'
+        required: false
+        default: 'auto'
+        type: choice
+        options:
+          - auto
+          - patch
+          - minor
+          - major
+
+permissions:
+  contents: write
+  id-token: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  # ─── Tag & GitHub Release ────────────────────────────────────────────────
+  release:
+    name: Tag & Create GitHub Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Only run on push to main (post fast-forward promotion) or manual dispatch
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    outputs:
+      version: ${{ steps.engine.outputs.version }}
+      tag: ${{ steps.engine.outputs.tag }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Environment
+        uses: ./.github/actions/setup
+
+      - name: Configure git identity
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Run Release Engine (dry-run)
+        id: engine
+        env:
+          BUMP_OVERRIDE: ${{ inputs.bump != 'auto' && inputs.bump || '' }}
+        run: |
+          node scripts/release_engine.js --dry-run
+          # Capture computed version for downstream steps
+          VERSION=$(node -p "
+            import('./scripts/release_engine.js').then(m => {
+              // Re-export for shell capture is handled in generate-changelog mode;
+              // for now we read from package.json after the engine run.
+            });
+          " 2>/dev/null || node -p "require('./package.json').version")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Generate Changelog & Bump Version
+        run: node scripts/release_engine.js --generate-changelog
+
+      - name: Read updated version
+        id: version
+        run: |
+          VERSION=$(node -p "JSON.parse(require('fs').readFileSync('package.json','utf8')).version")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Commit changelog and version bump
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          git add CHANGELOG.md package.json
+          git diff --cached --quiet || git commit -m "chore(release): v$RELEASE_VERSION"
+
+      - name: Create annotated tag
+        env:
+          RELEASE_TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          TAG="$RELEASE_TAG"
+          git tag -a "$TAG" -m "Release $TAG" || echo "Tag $TAG already exists, skipping."
+          git push origin "$TAG" || echo "Tag already pushed, skipping."
+
+      - name: Extract changelog section for release notes
+        id: notes
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          VERSION="$RELEASE_VERSION"
+          # Extract the section for this version from CHANGELOG.md
+          node -e "
+            const fs = require('fs');
+            const changelog = fs.readFileSync('CHANGELOG.md', 'utf8');
+            const versionEscaped = process.env.RELEASE_VERSION.replace(/[.*+?^\${}()|[\]\\\\]/g, '\\\\\\$&');
+            const sectionRE = new RegExp('(## \\\\[' + versionEscaped + '\\\\][\\\\s\\\\S]*?)(?=\\n## \\\\[|$)');
+            const match = sectionRE.exec(changelog);
+            const notes = match ? match[1].trim() : 'Release v' + process.env.RELEASE_VERSION;
+            fs.writeFileSync('/tmp/release_notes.md', notes);
+          "
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          TAG="$RELEASE_TAG"
+          gh release create "$TAG" \
+            --title "Release $TAG" \
+            --notes-file /tmp/release_notes.md \
+            --latest \
+            || echo "Release $TAG already exists, skipping."
+
+  # ─── Production Smoke Tests ──────────────────────────────────────────────
+  smoke-tests:
+    name: Production Smoke Tests
+    needs: release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Only run after a real push-to-main release (not on workflow_dispatch dry run)
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Environment
+        uses: ./.github/actions/setup
+
+      - name: Install Playwright Browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run Smoke Tests against Workers.dev
+        env:
+          PLAYWRIGHT_TEST_BASE_URL: "https://qrcraftly.fpderuiter.workers.dev"
+        run: bash scripts/ci/run_smoke_tests.sh
+
+      - name: Run Smoke Tests against Custom Domain
+        env:
+          PLAYWRIGHT_TEST_BASE_URL: "https://qrcraftly.com"
+        run: bash scripts/ci/run_smoke_tests.sh

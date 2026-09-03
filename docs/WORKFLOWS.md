@@ -105,22 +105,57 @@ Once all CI checks pass and reviews are complete, merge into `dev`. Cloudflare a
 
 ## 4. Staged Production Promotion (`dev` $\rightarrow$ `main`)
 
-When a batch of features and fixes on `dev` has been verified in staging and is ready for production:
+When a batch of features and fixes on `dev` has been verified in staging and is ready for production,
+use the automated release engine to promote. **Never use a standard GitHub PR merge to promote `dev`
+into `main`** — this would trigger a rebase-and-merge that rewrites commit SHAs and causes permanent
+branch divergence.
 
-1. **Open Promotional PR**:
-   - Source branch: `dev`
-   - Target branch: `main`
-   - Title: `release: vX.Y.Z` (or summary of promotional changes)
-2. **Execute Full CI Gate**:
-   - GitHub Actions runs the entire validation suite against the promotion PR.
-3. **Merge Promotional PR**:
-   - Merge `dev` into `main`.
-4. **Production Deployment**:
-   - Cloudflare Workers Builds automatically builds `main` and deploys to production:
-     - `https://qrcraftly.fpderuiter.workers.dev/`
-     - `https://qrcraftly.com`
-5. **Release Tagging (Optional)**:
-   - Tag the release commit: `git tag -a vX.Y.Z -m "Release vX.Y.Z"` and push to `origin`.
+### Fast-Forward Promotion Steps
+
+**Step 1: Preview the next release**
+
+```bash
+git checkout dev
+git pull origin dev
+pnpm run release:dry-run
+```
+
+Verify the computed next version and grouped changelog. No files are modified.
+
+**Step 2: Generate changelog and bump version**
+
+```bash
+pnpm run release:changelog
+```
+
+This writes the new section to `CHANGELOG.md` and updates `"version"` in `package.json`. Review the
+changes, then commit:
+
+```bash
+git add CHANGELOG.md package.json
+git commit -m "chore(release): vX.Y.Z"
+git push origin dev
+```
+
+**Step 3: Fast-forward promote and tag**
+
+```bash
+pnpm run release:promote
+```
+
+This:
+
+1. Fast-forwards `origin/main` to `dev` HEAD (`git push origin dev:main --ff-only`).
+2. Creates an annotated Git tag `vX.Y.Z` and pushes it to `origin`.
+
+**Step 4: Automated post-promotion pipeline**
+
+The `push` to `main` triggers `.github/workflows/release.yml`, which:
+
+1. Creates an official GitHub Release with the changelog as release notes.
+2. Runs production smoke tests against `https://qrcraftly.fpderuiter.workers.dev` and `https://qrcraftly.com`.
+
+Cloudflare Workers Builds deploys from `main` independently.
 
 ---
 
@@ -134,14 +169,43 @@ When a batch of features and fixes on `dev` has been verified in staging and is 
 
 ---
 
-## 6. Emergency Hotfix and Rollback Procedure
+## 6. Release Lifecycle
+
+QRCraftly uses [Conventional Commits](https://www.conventionalcommits.org/) and automated SemVer
+versioning via `scripts/release_engine.js`.
+
+### Versioning Rules (SemVer 2.0.0)
+
+| Commit type                                         | Version bump      |
+| --------------------------------------------------- | ----------------- |
+| `BREAKING CHANGE:` or `feat!:` / `fix!:`            | **major** (X.0.0) |
+| `feat:`                                             | **minor** (0.X.0) |
+| `fix:` / `perf:` / `refactor:` / `docs:` / `chore:` | **patch** (0.0.X) |
+
+### Release Scripts
+
+| Script                       | Description                                                        |
+| ---------------------------- | ------------------------------------------------------------------ |
+| `pnpm run release:dry-run`   | Preview next version and changelog. No side effects.               |
+| `pnpm run release:changelog` | Write `CHANGELOG.md` + update `package.json`.                      |
+| `pnpm run release:promote`   | Changelog + version bump commit, ff-push to `main`, annotated tag. |
+
+### Changelog Format
+
+`CHANGELOG.md` follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Sections are grouped
+as: **Breaking Changes**, **Features**, **Bug Fixes**, **Performance**, **Maintenance**.
+
+---
+
+## 7. Emergency Hotfix and Rollback Procedure
 
 In the rare event that a critical defect reaches production:
 
 1. Revert the offending commit on `main` via `git revert <commit-sha>`.
-2. Push the revert commit directly to `main` (or via fast-tracked emergency PR).
-3. Cloudflare immediately builds and deploys the reverted state to production.
-4. Backport the revert into `dev` to keep staging synchronized:
+2. Push the revert commit directly to `main` (using the admin bypass if protected).
+3. The `push` to `main` with a `Revert` commit message triggers the rollback path in `main.yml` → `deploy.yml`.
+4. Cloudflare immediately builds and deploys the reverted state to production.
+5. Backport the revert into `dev` to keep staging synchronized:
    ```bash
    git checkout dev
    git pull origin dev
