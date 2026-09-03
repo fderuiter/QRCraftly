@@ -49,8 +49,6 @@ test.describe('Isolated Web Worker Recovery & Export Bypass', () => {
           if (isScannabilityWorker) {
             (window as any).activeWorker = this;
           }
-            (window as any).activeWorker = this;
-          }
         }
 
         postMessage(message: any, transfer?: any) {

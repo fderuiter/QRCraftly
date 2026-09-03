@@ -52,9 +52,6 @@ test.describe('Accessibility Suite', () => {
     await downloadButton.click();
     const pngOption = page.getByRole('menuitem', { name: 'PNG (High Quality)' });
     await pngOption.click();
-
-    const pngOption = page.getByRole('menuitem', { name: 'PNG (High Quality)' });
-    await pngOption.click();
     await page.waitForSelector('text=Scan Safety Warning', { timeout: 5000 });
 
     // Run scan on warning state
