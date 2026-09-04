@@ -137,7 +137,7 @@ export async function verifyHandshakeFrame(
         return;
       }
 
-      const worker = new Worker(new URL('../scannability/worker.ts', import.meta.url), { type: 'module' });
+      const worker = new Worker(new URL('../../scannability/worker.ts', import.meta.url), { type: 'module' });
 
       worker.onmessage = (e: MessageEvent) => {
         clearTimeout(timeoutTimer);
