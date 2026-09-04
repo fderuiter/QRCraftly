@@ -78,6 +78,14 @@ _Avoid_: Canvas fallback flag, broken worker cache, degradation state
 An off-thread Web Worker acknowledgement confirming a stale scan frame was dropped, used by the main-thread scheduler to release backpressure without overwriting active diagnostic status.
 _Avoid_: Stale frame response, dropped signal, busy unlock event
 
+**Optical Detection Engine**:
+A consolidated deep module encapsulating real-time webcam frame acquisition, multi-format media decoding (images, WebM, MKV), transferable buffer recycling, and off-thread Web Worker barcode decoding behind a unified entry-point seam.
+_Avoid_: Camera frame provider, QR scanner helper, scanner utility
+
+**Adaptive Frame Scheduler**:
+A backpressure and pacing controller managing dynamic sleep intervals, in-flight frame sequencing, execution latency histories, and starvation watchdog recovery during continuous video capture.
+_Avoid_: Frame timer, scanner loop, camera ticker
+
 ### Air-Gapped Optical Transfer
 
 **Air-Gapped Optical Transfer**:
@@ -99,6 +107,22 @@ _Avoid_: Double ECC, dual error recovery, two-way ECC
 **Stateless Stream Entry**:
 The receiver capability to start capturing and decoding an optical stream at an arbitrary point in time without an explicit preparatory handshake phase.
 _Avoid_: Mid-stream scan, instant sync, handshake-free mode
+
+**Droplet Symbol**:
+An individual rateless fountain packet produced by XOR-combining a pseudo-random subset of source blocks according to a degree distribution.
+_Avoid_: Packet chunk, fountain slice, stream bit
+
+**Fountain Block Slicer**:
+The partitioning subsystem dividing source file binaries into fixed-size input blocks and generating rateless fountain droplet symbols.
+_Avoid_: File cutter, chunk generator, packet slicer
+
+**Degree Distribution**:
+The discrete probability distribution governing how many source blocks are XOR-combined into each emitted droplet symbol to guarantee low-overhead peeling decoding.
+_Avoid_: Block weight, degree spread, combination ratio
+
+**Optical Transfer Engine**:
+A consolidated deep module encapsulating rateless fountain coding, contiguous frame memory pooling, stream lookahead security validation, and off-thread slicing and reassembly behind unified entry-point seams.
+_Avoid_: Transfer helper, animated QR manager, file transfer utility
 
 ### Environment & Tooling Invariants
 

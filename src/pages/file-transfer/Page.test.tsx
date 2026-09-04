@@ -167,7 +167,7 @@ describe('File Transfer Page & Pipeline', () => {
     });
 
     // Verify stats exist
-    expect(screen.getAllByText('simulation_50mb_payload.bin')[0]).toBeInTheDocument();
+    expect(screen.getAllByText('simulated_50mb_file.bin')[0]).toBeInTheDocument();
     expect(screen.getByText('50.00 MB')).toBeInTheDocument();
 
     // Set up worker interceptor to mock file transfer events

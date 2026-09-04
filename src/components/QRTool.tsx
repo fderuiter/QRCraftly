@@ -258,34 +258,40 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
                   >
                     <a
                       href="/file-transfer"
-                      className="block rounded-lg px-3 py-2 text-sm font-semibold text-teal-700 transition-colors hover:bg-slate-100 dark:text-teal-400 dark:hover:bg-slate-800"
+                      aria-label="Send File"
+                      className="flex items-center justify-between rounded-lg px-3 py-2 text-sm font-semibold text-teal-700 transition-colors hover:bg-slate-100 dark:text-teal-400 dark:hover:bg-slate-800"
                     >
-                      Send File
+                      <span>Send File</span>
+                      <span aria-hidden="true" className="rounded-full bg-teal-100 px-1.5 py-0.5 text-[10px] font-semibold text-teal-800 dark:bg-teal-900/60 dark:text-teal-300">Beta</span>
                     </a>
                     <a
                       href="/file-transfer/receive"
-                      className="block rounded-lg px-3 py-2 text-sm font-semibold text-teal-700 transition-colors hover:bg-slate-100 dark:text-teal-400 dark:hover:bg-slate-800"
+                      aria-label="Receive File"
+                      className="flex items-center justify-between rounded-lg px-3 py-2 text-sm font-semibold text-teal-700 transition-colors hover:bg-slate-100 dark:text-teal-400 dark:hover:bg-slate-800"
                     >
-                      Receive File
+                      <span>Receive File</span>
+                      <span aria-hidden="true" className="rounded-full bg-teal-100 px-1.5 py-0.5 text-[10px] font-semibold text-teal-800 dark:bg-teal-900/60 dark:text-teal-300">Beta</span>
                     </a>
                   </nav>
                 )}
               </div>
               <a
                 href="/file-transfer"
-                className="hidden items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold text-teal-700 transition-colors hover:bg-slate-100 sm:flex dark:text-teal-400 dark:hover:bg-slate-800"
+                className="hidden items-center gap-1.5 rounded-full px-2 py-1 text-xs font-semibold text-teal-700 transition-colors hover:bg-slate-100 sm:flex dark:text-teal-400 dark:hover:bg-slate-800"
                 title="Send File"
                 aria-label="Send Offline File"
               >
-                Send File
+                <span>Send File</span>
+                <span className="rounded-full bg-teal-100 px-1.5 py-0.5 text-[10px] font-semibold text-teal-800 dark:bg-teal-900/60 dark:text-teal-300">Beta</span>
               </a>
               <a
                 href="/file-transfer/receive"
-                className="hidden items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold text-teal-700 transition-colors hover:bg-slate-100 sm:flex dark:text-teal-400 dark:hover:bg-slate-800"
+                className="hidden items-center gap-1.5 rounded-full px-2 py-1 text-xs font-semibold text-teal-700 transition-colors hover:bg-slate-100 sm:flex dark:text-teal-400 dark:hover:bg-slate-800"
                 title="Receive File"
                 aria-label="Receive Offline File"
               >
-                Receive File
+                <span>Receive File</span>
+                <span className="rounded-full bg-teal-100 px-1.5 py-0.5 text-[10px] font-semibold text-teal-800 dark:bg-teal-900/60 dark:text-teal-300">Beta</span>
               </a>
               <a
                 href="#content-section"
@@ -358,6 +364,18 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
                       <li><a href="/social-qr-code" className="transition-colors hover:text-teal-700 dark:hover:text-teal-400">Social QR Code</a></li>
                       <li><a href="/file-transfer" className="font-semibold text-teal-700 transition-colors hover:text-teal-800 dark:text-teal-300 dark:hover:text-teal-200">File Share (Send)</a></li>
                       <li><a href="/file-transfer/receive" className="font-semibold text-teal-700 transition-colors hover:text-teal-800 dark:text-teal-300 dark:hover:text-teal-200">File Share (Receive)</a></li>
+                      <li>
+                        <a href="/file-transfer" className="inline-flex items-center gap-1.5 font-semibold text-teal-700 transition-colors hover:text-teal-800 dark:text-teal-300 dark:hover:text-teal-200">
+                          <span>File Share (Send)</span>
+                          <span className="rounded-full bg-teal-100 px-1.5 py-0.5 text-[10px] font-semibold text-teal-800 dark:bg-teal-900/60 dark:text-teal-300">Beta</span>
+                        </a>
+                      </li>
+                      <li>
+                        <a href="/file-transfer/receive" className="inline-flex items-center gap-1.5 font-semibold text-teal-700 transition-colors hover:text-teal-800 dark:text-teal-300 dark:hover:text-teal-200">
+                          <span>File Share (Receive)</span>
+                          <span className="rounded-full bg-teal-100 px-1.5 py-0.5 text-[10px] font-semibold text-teal-800 dark:bg-teal-900/60 dark:text-teal-300">Beta</span>
+                        </a>
+                      </li>
                     </ul>
                   </div>
                   <div>

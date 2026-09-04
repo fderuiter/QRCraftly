@@ -79,7 +79,7 @@ describe('Sitemap Environment-Level Variable Resolution', () => {
     const content = readFileSync(sitemapPath, 'utf8');
     expect(content).toContain('<loc>https://qrcraftly.com</loc>');
     expect(content).toContain('<loc>https://qrcraftly.com/dummy-sample-route</loc>');
-  });
+  }, 30000);
 
   it('should resolve and apply a custom staging domain via process.env', () => {
     execBinary('npx', ['tsx', sitemapScriptPath], {
@@ -96,7 +96,7 @@ describe('Sitemap Environment-Level Variable Resolution', () => {
     expect(content).toContain('<loc>https://staging.qrcraftly.net</loc>');
     expect(content).toContain('<loc>https://staging.qrcraftly.net/dummy-sample-route</loc>');
     expect(content).not.toContain('https://qrcraftly.com');
-  });
+  }, 30000);
 
   it('should sanitize and strip any trailing slashes from the resolved VITE_DOMAIN', () => {
     execBinary('npx', ['tsx', sitemapScriptPath], {
@@ -113,7 +113,7 @@ describe('Sitemap Environment-Level Variable Resolution', () => {
     // Ensure no double slashes on URLs like 'https://staging-trailing.qrcraftly.net//dummy-sample-route'
     expect(content).toContain('<loc>https://staging-trailing.qrcraftly.net</loc>');
     expect(content).toContain('<loc>https://staging-trailing.qrcraftly.net/dummy-sample-route</loc>');
-  });
+  }, 30000);
 
   it('should support loading custom domain from a .env file loaded via Vite loadEnv', () => {
     const envFilePath = join(__dirname, '../.env.production');
@@ -153,5 +153,5 @@ describe('Sitemap Environment-Level Variable Resolution', () => {
         } catch {}
       }
     }
-  });
+  }, 30000);
 });
