@@ -44,21 +44,29 @@ describe('PreallocatedFramePool', () => {
     expect(frame1?.data[0]).toBe(2);
   });
 
-  it('expands memory pool capacity dynamically without losing existing frames', () => {
+  it('expands memory pool capacity dynamically without losing existing frames and re-binds subarray views', () => {
     const pool = new PreallocatedFramePool(2, 10 * 10);
     const data0 = new Uint8Array(10 * 10).fill(10);
     const data1 = new Uint8Array(10 * 10).fill(20);
     const data2 = new Uint8Array(10 * 10).fill(30);
 
-    pool.storeFrame(0, 10, data0);
-    pool.storeFrame(1, 10, data1);
-    // Exceed initial capacity of 2
+    const frame0 = pool.storeFrame(0, 10, data0);
+    const frame1 = pool.storeFrame(1, 10, data1);
+    const oldBuffer = frame0.data.buffer;
+
+    // Exceed initial capacity of 2 - triggers reallocation and view re-binding
     pool.storeFrame(2, 10, data2);
 
     expect(pool.size).toBe(3);
+    // Data values must remain intact
     expect(pool.getFrame(0)?.data[0]).toBe(10);
     expect(pool.getFrame(1)?.data[0]).toBe(20);
     expect(pool.getFrame(2)?.data[0]).toBe(30);
+
+    // Active frame views must now point to the new underlying ArrayBuffer
+    expect(frame0.data.buffer).not.toBe(oldBuffer);
+    expect(frame0.data.buffer).toBe(pool.getFrame(2)?.data.buffer);
+    expect(frame1.data.buffer).toBe(pool.getFrame(2)?.data.buffer);
   });
 
   it('clears frame mappings while leaving memory pool structure available for reuse', () => {

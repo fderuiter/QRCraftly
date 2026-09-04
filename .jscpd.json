@@ -10,6 +10,8 @@
     "**/mocks/**",
     "**/sandbox/**",
     "src/pages/dev-sandbox/**/*",
+    "src/utils/fileSliceWorker.ts",
+    "src/utils/fileReassemblyWorker.ts",
     "scripts/**/*",
     "scripts/*"
   ]
