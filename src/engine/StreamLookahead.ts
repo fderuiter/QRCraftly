@@ -18,7 +18,7 @@
 
 /**
  * Backward-compatibility re-export shim.
- * Canonical implementation now lives in @/packages/optical-transfer.
+ * Canonical implementation lives in @/packages/optical-transfer.
  */
 export {
   StreamLookaheadReceiver,
