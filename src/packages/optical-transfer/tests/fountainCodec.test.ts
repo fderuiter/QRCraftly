@@ -17,10 +17,6 @@
 */
 
 import { describe, it, expect } from 'vitest';
-import { FountainEncoder } from '../lib/fountain/encoder';
-import { FountainDecoder } from '../lib/fountain/decoder';
-import { buildRobustSolitonCdf } from '../lib/fountain/soliton';
-import { serializeDroplet, parseDropletString, isFountainDropletString } from '../lib/fountain/envelope';
 import {
   FountainEncoder,
   FountainDecoder,

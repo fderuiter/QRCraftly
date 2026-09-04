@@ -85,7 +85,7 @@ describe('Optical Transfer Client Hooks', () => {
       });
 
       expect(result.current.selectedFile).not.toBeNull();
-      expect(result.current.selectedFile?.name).toBe('simulated_50mb_file.bin');
+      expect(result.current.selectedFile?.name).toBe('simulation_50mb_payload.bin');
       expect(result.current.selectedFile?.size).toBe(50 * 1024 * 1024);
     });
   });

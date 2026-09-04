@@ -318,7 +318,6 @@ class MockWorker {
             }
           }
 
-          if (this.url.toString().includes('fileReassemblyWorker') && message && typeof message === 'object') {
           if (
             (this.url.toString().includes('fileReassemblyWorker') ||
               this.url.toString().includes('worker-reassembly')) &&
