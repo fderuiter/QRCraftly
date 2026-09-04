@@ -24,6 +24,8 @@ import { triggerFileDownload } from '../utils/downloadManager';
 
 /**
  * Handshake information sent at the beginning of a file transfer session.
+ * Backward-compatibility re-export shim.
+ * Canonical hook implementation now lives in @/packages/optical-transfer/client.
  */
 export interface HandshakeInfo {
   /**
@@ -784,3 +786,8 @@ export function useAnimatedQrReceiver({
     revokeVideoUrl,
   };
 }
+export {
+  useOpticalReceiver as useAnimatedQrReceiver,
+  type UseOpticalReceiverOptions as UseAnimatedQrReceiverOptions,
+  type HandshakeInfo,
+} from '@/packages/optical-transfer/client';

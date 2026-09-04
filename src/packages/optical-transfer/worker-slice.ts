@@ -18,6 +18,7 @@
 */
 
 import QRCode from 'qrcode';
+import { FountainEncoder } from './lib/fountain/encoder';
 
 let file: Blob | null = null;
 let chunkSize = 180;
@@ -30,15 +31,14 @@ let currentSessionId = 0;
 let activeGeneratingSessionId = 0;
 let fileSHA256 = '';
 let lookaheadLimit = 3;
+let isFountainMode = false;
+let fountainEncoder: FountainEncoder | null = null;
 
-// Keyed by the Blob/File instance so a cached hash can never be reused for
-// different content.
+// Keyed by the Blob/File instance so a cached hash can never be reused for different content.
 const hashCache = new WeakMap<Blob, string>();
 
 /**
  * Converts an ArrayBuffer to a standard Base64 string in a worker-compatible way.
- * Backward-compatibility re-export shim.
- * Canonical worker implementation now lives in @/packages/optical-transfer/worker-slice.
  */
 function arrayBufferToBase64(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer);
@@ -69,7 +69,10 @@ async function generateFrame(index: number, sessionId: number) {
 
   try {
     let textPayload = '';
-    if (index === 0) {
+
+    if (isFountainMode && fountainEncoder) {
+      textPayload = fountainEncoder.nextDropletString();
+    } else if (index === 0) {
       const fileName = (file as any).name || 'file';
       const fileSize = file.size;
       const mimeType = file.type || 'application/octet-stream';
@@ -80,40 +83,39 @@ async function generateFrame(index: number, sessionId: number) {
       const end = Math.min(start + chunkSize, file.size);
       const sliceBlob = file.slice(start, end);
       const arrayBuffer = await sliceBlob.arrayBuffer();
-      
+
       if (sessionId !== currentSessionId) return;
 
       const base64Data = arrayBufferToBase64(arrayBuffer);
-      
-      // Construct the standard frame format: F|<index>|<total>|<base64>
       textPayload = `F|${dataIndex}|${totalDataFrames}|${base64Data}`;
     }
-    
+
     if (sessionId !== currentSessionId) return;
 
     // Generate QR matrix asynchronously
     const qr = QRCode.create(textPayload, { errorCorrectionLevel: errorCorrectionLevel as any });
-    const { size, data } = qr.modules; // data is a Uint8Array
-    
+    const { size, data } = qr.modules;
+
     if (sessionId !== currentSessionId) return;
 
-    // Make a copy of the data buffer to transfer so we can safely postMessage
     const transferableData = new Uint8Array(data);
     const buffer = transferableData.buffer;
 
-    (self as any).postMessage({
-      type: 'FRAME',
-      index,
-      total: totalFrames,
-      size,
-      data: transferableData
-    }, [buffer]);
-
+    (self as any).postMessage(
+      {
+        type: 'FRAME',
+        index,
+        total: totalFrames,
+        size,
+        data: transferableData,
+      },
+      [buffer]
+    );
   } catch (err: any) {
     if (sessionId !== currentSessionId) return;
     (self as any).postMessage({
       type: 'ERROR',
-      message: `Failed to generate frame ${index}: ${err?.message || err}`
+      message: `Failed to generate frame ${index}: ${err?.message || err}`,
     });
   }
 }
@@ -128,7 +130,6 @@ async function processPipeline(sessionId: number) {
   activeGeneratingSessionId = sessionId;
 
   try {
-    // Generate frames as long as we don't exceed lookaheadLimit frames ahead of the last ACK
     while (
       sessionId === currentSessionId &&
       nextIndexToGenerate < totalFrames &&
@@ -145,9 +146,6 @@ async function processPipeline(sessionId: number) {
   }
 }
 
-/**
- * Main Web Worker message router.
- */
 self.onmessage = async (e: MessageEvent) => {
   const { type, payload } = e.data || {};
 
@@ -156,15 +154,16 @@ self.onmessage = async (e: MessageEvent) => {
       currentSessionId++;
       const sessionId = currentSessionId;
 
-      file = payload.file;
-      const requestedChunkSize = payload.chunkSize || 180;
+      file = payload?.file;
+      isFountainMode = !!payload?.fountainMode;
+      const requestedChunkSize = payload?.chunkSize || 180;
       chunkSize = Math.min(requestedChunkSize < 256 ? requestedChunkSize : 180, 240);
-      const reqEcc = payload.errorCorrectionLevel;
-      errorCorrectionLevel = (reqEcc === 'H' || reqEcc === 'Q') ? reqEcc : 'Q';
-      
-      const fps = payload.fps || 15;
+      const reqEcc = payload?.errorCorrectionLevel;
+      errorCorrectionLevel = reqEcc === 'H' || reqEcc === 'Q' ? reqEcc : 'Q';
+
+      const fps = payload?.fps || 15;
       lookaheadLimit = Math.min(16, Math.max(3, Math.ceil(fps * 0.2)));
-      
+
       if (!file) {
         if (sessionId === currentSessionId) {
           (self as any).postMessage({ type: 'ERROR', message: 'No file provided' });
@@ -188,41 +187,56 @@ self.onmessage = async (e: MessageEvent) => {
 
       if (sessionId !== currentSessionId) return;
 
-      totalDataFrames = Math.ceil(file.size / chunkSize);
-      totalFrames = totalDataFrames + 1; // 1 handshake frame + totalDataFrames
+      if (isFountainMode) {
+        const fileBuffer = await file.arrayBuffer();
+        if (sessionId !== currentSessionId) return;
+        fountainEncoder = new FountainEncoder(new Uint8Array(fileBuffer), { blockSize: chunkSize });
+        totalDataFrames = fountainEncoder.k;
+        totalFrames = fountainEncoder.k;
+      } else {
+        fountainEncoder = null;
+        totalDataFrames = Math.ceil(file.size / chunkSize);
+        totalFrames = totalDataFrames + 1; // 1 handshake frame + totalDataFrames
+      }
+
       nextIndexToGenerate = 0;
       lastAckedIndex = -1;
-      
+
       (self as any).postMessage({
         type: 'PROGRESS',
         index: 0,
         total: totalFrames,
         fileName: (file as any).name || 'file',
-        fileSize: file.size
+        fileSize: file.size,
       });
 
-      // Kick off generation
+      // For transferSession callers
+      (self as any).postMessage({
+        type: 'INITIALIZED',
+        totalFrames,
+        chunkSize,
+        sha256: fileSHA256,
+      });
+
       await processPipeline(sessionId);
       break;
     }
 
     case 'ACK': {
       if (!file) break;
-      const acked = payload.index;
-      if (acked > lastAckedIndex && acked < nextIndexToGenerate) {
+      const acked = payload?.index;
+      if (typeof acked === 'number' && acked > lastAckedIndex && acked < nextIndexToGenerate) {
         lastAckedIndex = acked;
-        
-        // Report progress to UI
+
         (self as any).postMessage({
           type: 'PROGRESS',
           index: lastAckedIndex + 1,
-          total: totalFrames
+          total: totalFrames,
         });
 
         if (lastAckedIndex + 1 >= totalFrames) {
           (self as any).postMessage({ type: 'COMPLETE' });
         } else {
-          // Trigger generation of more frames within our sliding window limit
           await processPipeline(currentSessionId);
         }
       }
@@ -244,10 +258,11 @@ self.onmessage = async (e: MessageEvent) => {
     case 'STOP': {
       currentSessionId++;
       file = null;
-      totalFrames = 0;
-      totalDataFrames = 0;
+      fountainEncoder = null;
       nextIndexToGenerate = 0;
       lastAckedIndex = -1;
+      totalFrames = 0;
+      totalDataFrames = 0;
       fileSHA256 = '';
       activeGeneratingSessionId = 0;
       lookaheadLimit = 3;
@@ -258,4 +273,4 @@ self.onmessage = async (e: MessageEvent) => {
       break;
   }
 };
-import '@/packages/optical-transfer/worker-slice';
+

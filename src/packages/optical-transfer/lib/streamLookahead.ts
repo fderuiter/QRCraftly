@@ -1,32 +1,24 @@
-/**
- * Stateful Incremental Stream Lookahead processor
- * Reassembles streaming QR code inputs and validates them in real-time
- * to prevent multi-frame protocol injection attacks.
- */
 /*
     QRCraftly
     Copyright (C) 2025 fderuiter
 
-/**
- * Registry of eleven dangerous protocol schemes that are blocked on stream lookahead.
- */
-export const DANGEROUS_SCHEMES = [
-  'javascript:',
-  'vbscript:',
-  'file:',
-  'data:',
-  'mk:',
-  'blob:',
-  'filesystem:',
-  'jscript:',
-  'wscript:',
-  'mocha:',
-  'about:',
-];
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as published
     by the Free Software Foundation, either version 3 of the License, or
     (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
+import { DANGEROUS_SCHEMES, decodeHtmlEntities, recursiveDecode } from '@/utils/url';
+
+export { DANGEROUS_SCHEMES, decodeHtmlEntities, recursiveDecode };
 
 /**
  * Configuration options for the StreamLookaheadReceiver.
@@ -40,80 +32,6 @@ export interface StreamLookaheadConfig {
   onSuccess?: (finalPayload: string) => void;
   /** Stream format mode: either 'text' or 'binary'. Defaults to 'text'. */
   mode?: 'text' | 'binary';
-}
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Affero General Public License for more details.
-
-const NAMED_ENTITIES: Record<string, string> = {
-  'colon': ':',
-  'tab': '\t',
-  'newline': '\n',
-  'quot': '"',
-  'amp': '&',
-  'lt': '<',
-  'gt': '>',
-};
-    You should have received a copy of the GNU Affero General Public License
-    along with this program.  If not, see <https://www.gnu.org/licenses/>.
-*/
-
-/**
- * Decodes hexadecimal, decimal, and named HTML entities.
- * @param str - The input string containing HTML entities.
- * @returns The decoded plain text string.
- * Backward-compatibility re-export shim.
- * Canonical implementation now lives in @/packages/optical-transfer.
- */
-export function decodeHtmlEntities(str: string): string {
-  // 1. Hex and Decimal entities (e.g., &#x3a; or &#58; with optional semicolon)
-  let result = str.replace(/&#(?:[xX]([0-9a-fA-F]+)|([0-9]+));?/g, (_match, hex, dec) => {
-    return String.fromCharCode(hex ? parseInt(hex, 16) : parseInt(dec, 10));
-  });
-
-  // 2. Named entities (e.g., &colon; with optional semicolon)
-  result = result.replace(/&([a-zA-Z0-9]+);?/g, (match, name) => {
-    return NAMED_ENTITIES[name.toLowerCase()] || match;
-  });
-
-  return result;
-}
-
-/**
- * Recursively decodes percent-encoded characters and HTML entities up to 10 levels deep.
- * @param input - The obfuscated string to decode.
- * @param maxDepth - The maximum recursion depth limit.
- * @returns The recursively decoded plain text string.
- */
-export function recursiveDecode(input: string, maxDepth: number = 10): string {
-  let prev = '';
-  let curr = input;
-  let depth = 0;
-
-  while (curr !== prev && depth < maxDepth) {
-    prev = curr;
-
-    // Try percent decoding
-    try {
-      curr = decodeURIComponent(curr);
-    } catch {
-      // Fallback: decode only valid percent-encoded hex sequences (%HH)
-      curr = curr.replace(/%([0-9a-fA-F]{2})/g, (match, hex) => {
-        try {
-          return decodeURIComponent(match);
-        } catch {
-          return String.fromCharCode(parseInt(hex, 16));
-        }
-      });
-    }
-
-    // Try HTML entity decoding
-    curr = decodeHtmlEntities(curr);
-    depth++;
-  }
-
-  return curr;
 }
 
 /**
@@ -175,12 +93,11 @@ export class StreamLookaheadReceiver {
     const decoded = recursiveDecode(this.buffer, 10);
 
     // 2. Strip control chars and spaces to prevent obfuscation/bypass
-    // Note: Do not execute native browser URL parsing on incomplete streams.
     const cleaned = decoded
       .replace(/[\x00-\x1F\x7F-\x9F\s\u200B-\u200D\uFEFF]+/g, '')
       .toLowerCase();
 
-    // 3. Match against the 11 dangerous schemes
+    // 3. Match against the dangerous schemes
     const dangerousMatch = DANGEROUS_SCHEMES.find(scheme => cleaned.startsWith(scheme));
 
     if (dangerousMatch) {
@@ -225,10 +142,4 @@ export class StreamLookaheadReceiver {
     }
   }
 }
-export {
-  StreamLookaheadReceiver,
-  type StreamLookaheadConfig,
-  DANGEROUS_SCHEMES,
-  decodeHtmlEntities,
-  recursiveDecode,
-} from '@/packages/optical-transfer';
+

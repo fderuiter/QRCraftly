@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { Alert } from './Alert';
 
 describe('Alert Component', () => {
@@ -42,4 +43,23 @@ describe('Alert Component', () => {
     expect(alertEl.className).not.toContain('border-amber-200my-custom-class');
     expect(alertEl.className).not.toContain('text-amber-400my-custom-class');
   });
+
+  it('renders info variant with correct colors and dismiss button', () => {
+    const onDismiss = vi.fn();
+    render(
+      <Alert variant="info" onDismiss={onDismiss}>
+        Informational notice
+      </Alert>
+    );
+
+    const alertEl = screen.getByRole('alert');
+    expect(alertEl.className).toContain('bg-blue-50');
+    expect(alertEl.className).toContain('border-blue-200');
+
+    const dismissBtn = screen.getByRole('button', { name: 'Dismiss alert' });
+    expect(dismissBtn).toBeInTheDocument();
+    dismissBtn.click();
+    expect(onDismiss).toHaveBeenCalledTimes(1);
+  });
 });
+

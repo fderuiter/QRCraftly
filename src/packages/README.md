@@ -43,3 +43,14 @@ src/packages/<name>/
   - `client.ts`: Headless React hook (`useQrScanner`) with integrated camera streaming and file drag-and-drop.
   - `scheduler.ts`: Secondary entry point exposing `AdaptiveFrameScheduler`, `DoubleBufferPool`, and worker recovery testing hooks.
   - `worker.ts`: Dedicated background Web Worker performing WebCodecs demuxing, EBML parsing, and jsQR optical decoding.
+
+### `optical-transfer` (`@/packages/optical-transfer`)
+
+- **Purpose**: Air-gapped unidirectional optical data transmission via animated QR code streams, utilizing pure TypeScript Luby Transform rateless fountain codes over $\text{GF}(2)$, bounded preallocated frame pools, security stream lookahead sanitization, and dedicated Web Workers.
+- **Entry Points**:
+  - `index.ts`: Primary public API, high-level `createOpticalSender`, `createOpticalReceiver`, handshake protocols, fountain codec primitives (`LTEncoder`, `LTDecoder`, `RobustSolitonDistribution`), and contracts.
+  - `sender.ts`: Sender engine abstraction orchestrating file slicing, RAF loop scheduling, dynamic FPS pacing, and fountain droplet generation.
+  - `receiver.ts`: Receiver engine abstraction orchestrating worker-driven reassembly, deduplication, stream lookahead security validation, and complete file extraction.
+  - `client.ts`: Headless React hooks (`useOpticalSender`, `useOpticalReceiver`) and UI state types.
+  - `worker-slice.ts`: Background Web Worker handling non-blocking file slicing, checksum calculation, and droplet encoding.
+  - `worker-reassembly.ts`: Dedicated background Web Worker handling chunk tracking, XOR fountain graph decoding, integrity verification, and blob assembly.

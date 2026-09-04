@@ -33,6 +33,7 @@ function FileTransferReceiveInner() {
 
   const [streamMode, setStreamMode] = useState<'text' | 'binary'>('text');
   const [isDragging, setIsDragging] = useState(false);
+  const [showBetaAlert, setShowBetaAlert] = useState(true);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Use the unified animated QR receiver hook
@@ -162,6 +163,10 @@ function FileTransferReceiveInner() {
                 <h1 className="text-xl font-bold tracking-tight text-slate-700 dark:text-slate-100">QRCraftly</h1>
               </a>
               <p className="text-sm text-slate-600 dark:text-slate-400">Receive a File by QR Code</p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm text-slate-600 dark:text-slate-400">Receive a File by QR Code</p>
+                <span className="rounded-full bg-teal-100 px-2 py-0.5 text-xs font-semibold text-teal-800 dark:bg-teal-900/60 dark:text-teal-300">Beta</span>
+              </div>
             </div>
             <div className="flex gap-2">
               <a
@@ -187,6 +192,14 @@ function FileTransferReceiveInner() {
 
           <div className="space-y-8 p-6 pb-24">
             
+            {showBetaAlert && (
+              <Alert
+                variant="info"
+                onDismiss={() => setShowBetaAlert(false)}
+              >
+                <span className="font-semibold">Beta Feature:</span> Air-gapped file transfer streams binary data across screen and camera. For optimal transmission, ensure consistent lighting, minimize display glare, and keep devices steady.
+              </Alert>
+            )}
             {/* Connection / Status Section */}
             <section className="space-y-4">
               <h2 className="flex items-center gap-2 text-xs font-bold tracking-wider text-slate-600 uppercase dark:text-slate-400">

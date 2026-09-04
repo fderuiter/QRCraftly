@@ -26,8 +26,6 @@ export interface CachedFrame {
 /**
  * Pre-allocated contiguous memory pool for caching pre-rendered QR code frame matrices.
  * Prevents garbage collection pauses, allocations, and CPU spikes during active animation playback and loop wraps.
- * Backward-compatibility re-export shim.
- * Canonical implementation now lives in @/packages/optical-transfer/sender.
  */
 export class PreallocatedFramePool {
   private capacity: number;
@@ -124,8 +122,4 @@ export function shuffleInPlace<T>(arr: T[]): void {
     arr[j] = temp;
   }
 }
-export {
-  PreallocatedFramePool,
-  type CachedFrame,
-  shuffleInPlace,
-} from '@/packages/optical-transfer/sender';
+

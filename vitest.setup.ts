@@ -319,6 +319,12 @@ class MockWorker {
           }
 
           if (this.url.toString().includes('fileReassemblyWorker') && message && typeof message === 'object') {
+          if (
+            (this.url.toString().includes('fileReassemblyWorker') ||
+              this.url.toString().includes('worker-reassembly')) &&
+            message &&
+            typeof message === 'object'
+          ) {
             const { type } = message;
 
             if (type === 'CLEAR' || type === 'RESET') {

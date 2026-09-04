@@ -16,6 +16,8 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { FountainDecoder } from './lib/fountain/decoder';
+
 export interface HandshakeMetadata {
   fileName?: string;
   fileSize?: number;
@@ -39,6 +41,11 @@ export interface ChunkWorkerMessage {
   chunkSize?: number;
 }
 
+export interface FountainWorkerMessage {
+  type: 'FOUNTAIN_DROPLET' | 'DROPLET';
+  droplet: string;
+}
+
 export interface LegacyReassemblyMessage {
   type: 'START_REASSEMBLY';
   chunks: Array<{ index: number; base64: string }>;
@@ -52,6 +59,7 @@ export interface ClearWorkerMessage {
 export type FileReassemblyIncomingMessage =
   | InitWorkerMessage
   | ChunkWorkerMessage
+  | FountainWorkerMessage
   | LegacyReassemblyMessage
   | ClearWorkerMessage;
 
@@ -61,6 +69,7 @@ let targetFileSize: number | null = null;
 let knownChunkSize: number | null = null;
 let receivedIndices: Set<number> = new Set();
 let handshakeMetadata: HandshakeMetadata | null = null;
+let fountainDecoder: FountainDecoder | null = null;
 
 function resetWorkerState(): void {
   allocatedBuffer = null;
@@ -69,6 +78,10 @@ function resetWorkerState(): void {
   knownChunkSize = null;
   receivedIndices = new Set();
   handshakeMetadata = null;
+  if (fountainDecoder) {
+    fountainDecoder.reset();
+    fountainDecoder = null;
+  }
 }
 
 function decodeBase64ToBytes(base64Str: string): Uint8Array {
@@ -93,6 +106,53 @@ self.onmessage = async (e: MessageEvent<FileReassemblyIncomingMessage>) => {
       return;
     }
 
+    // --- Fountain Droplet Ingestion ---
+    if (type === 'FOUNTAIN_DROPLET' || type === 'DROPLET') {
+      const msg = data as FountainWorkerMessage;
+      if (!fountainDecoder) {
+        fountainDecoder = new FountainDecoder();
+      }
+
+      const madeProgress = fountainDecoder.ingestString(msg.droplet);
+      if (madeProgress) {
+        const total = fountainDecoder.k || 1;
+        const current = fountainDecoder.resolvedBlockCount;
+        const progress = fountainDecoder.progress;
+
+        (self as any).postMessage({
+          type: 'PROGRESS',
+          progress,
+          current,
+          total,
+          isFountain: true,
+        });
+
+        if (fountainDecoder.isComplete) {
+          const finalBuffer = fountainDecoder.finalize();
+          if (finalBuffer) {
+            const bufCopy = new Uint8Array(finalBuffer);
+            (self as any).postMessage(
+              {
+                type: 'COMPLETE',
+                buffer: bufCopy.buffer,
+                handshake: {
+                  fileName: `received_file_${Date.now()}.bin`,
+                  fileSize: finalBuffer.length,
+                  mimeType: 'application/octet-stream',
+                  sha256: '',
+                },
+                isFountain: true,
+              },
+              [bufCopy.buffer]
+            );
+            resetWorkerState();
+          }
+        }
+      }
+      return;
+    }
+
+    // --- Legacy Chunking Ingestion ---
     if (type === 'INIT' || type === 'ALLOCATE') {
       resetWorkerState();
       const msg = data as InitWorkerMessage;
@@ -126,7 +186,6 @@ self.onmessage = async (e: MessageEvent<FileReassemblyIncomingMessage>) => {
       }
 
       if (receivedIndices.has(index)) {
-        // Duplicate chunk already processed in buffer
         return;
       }
 
@@ -140,7 +199,6 @@ self.onmessage = async (e: MessageEvent<FileReassemblyIncomingMessage>) => {
         }
       }
 
-      // Pre-allocate buffer if not yet allocated
       if (!allocatedBuffer) {
         if (targetFileSize && targetFileSize > 0) {
           allocatedBuffer = new Uint8Array(targetFileSize);
@@ -157,7 +215,6 @@ self.onmessage = async (e: MessageEvent<FileReassemblyIncomingMessage>) => {
         }
       }
 
-      // Calculate byte offset for this chunk index
       let offset = 0;
       if (knownChunkSize) {
         offset = index * knownChunkSize;
@@ -199,28 +256,26 @@ self.onmessage = async (e: MessageEvent<FileReassemblyIncomingMessage>) => {
         index,
       });
 
-      if (totalChunksCount && receivedIndices.size === totalChunksCount && allocatedBuffer) {
-        let exactSize = allocatedBuffer.length;
-        if (typeof handshakeMetadata?.fileSize === 'number' && handshakeMetadata.fileSize > 0) {
-          exactSize = handshakeMetadata.fileSize;
-        } else if (typeof targetFileSize === 'number' && targetFileSize > 0) {
-          exactSize = targetFileSize;
+      if (totalChunksCount && receivedIndices.size >= totalChunksCount) {
+        if (!allocatedBuffer) {
+          throw new Error('Reassembly failed: No buffer allocated.');
         }
 
-        const finalUint8 = allocatedBuffer.slice(0, exactSize);
-        const buffer = finalUint8.buffer;
-        const metadata = handshakeMetadata;
-
-        resetWorkerState();
+        const exactLength = handshakeMetadata?.fileSize || targetFileSize || allocatedBuffer.length;
+        const finalBuffer = allocatedBuffer.subarray(0, exactLength);
+        const transferableData = new Uint8Array(finalBuffer);
+        const bufferToTransfer = transferableData.buffer;
 
         (self as any).postMessage(
           {
             type: 'COMPLETE',
-            buffer,
-            handshake: metadata,
+            buffer: bufferToTransfer,
+            handshake: handshakeMetadata,
           },
-          [buffer]
+          [bufferToTransfer]
         );
+
+        resetWorkerState();
       }
       return;
     }
@@ -229,29 +284,23 @@ self.onmessage = async (e: MessageEvent<FileReassemblyIncomingMessage>) => {
       const msg = data as LegacyReassemblyMessage;
       const { chunks, totalChunks } = msg;
 
-      if (!chunks || !Array.isArray(chunks)) {
-        throw new Error('Invalid or missing chunks array.');
+      if (!chunks || chunks.length !== totalChunks) {
+        (self as any).postMessage({
+          type: 'ERROR',
+          error: `Incomplete chunk set: received ${chunks?.length || 0} of ${totalChunks}`,
+        });
+        return;
       }
 
-      const sortedChunks = [...chunks].sort((a, b) => a.index - b.index);
+      chunks.sort((a, b) => a.index - b.index);
 
-      if (sortedChunks.length !== totalChunks) {
-        throw new Error(`Chunk count mismatch. Expected ${totalChunks}, got ${sortedChunks.length}`);
-      }
+      const byteChunks: Uint8Array[] = [];
+      let totalBytes = 0;
 
-      for (let i = 0; i < totalChunks; i++) {
-        if (sortedChunks[i].index !== i) {
-          throw new Error(`Missing chunk at index ${i}`);
-        }
-      }
-
-      const decodedChunks: Uint8Array[] = [];
-      let totalLength = 0;
-
-      for (let i = 0; i < totalChunks; i++) {
-        const bytes = decodeBase64ToBytes(sortedChunks[i].base64);
-        decodedChunks.push(bytes);
-        totalLength += bytes.length;
+      for (let i = 0; i < chunks.length; i++) {
+        const bytes = decodeBase64ToBytes(chunks[i].base64);
+        byteChunks.push(bytes);
+        totalBytes += bytes.length;
 
         const progress = Math.round(((i + 1) / totalChunks) * 100);
         (self as any).postMessage({
@@ -262,23 +311,22 @@ self.onmessage = async (e: MessageEvent<FileReassemblyIncomingMessage>) => {
         });
       }
 
-      const mergedArray = new Uint8Array(totalLength);
+      const combined = new Uint8Array(totalBytes);
       let offset = 0;
-      for (let i = 0; i < totalChunks; i++) {
-        mergedArray.set(decodedChunks[i], offset);
-        offset += decodedChunks[i].length;
+      for (const chunk of byteChunks) {
+        combined.set(chunk, offset);
+        offset += chunk.length;
       }
-
-      const buffer = mergedArray.buffer;
 
       (self as any).postMessage(
         {
           type: 'COMPLETE',
-          buffer,
+          buffer: combined.buffer,
         },
-        [buffer]
+        [combined.buffer]
       );
-      return;
+
+      resetWorkerState();
     }
   } catch (err: any) {
     (self as any).postMessage({
@@ -287,9 +335,4 @@ self.onmessage = async (e: MessageEvent<FileReassemblyIncomingMessage>) => {
     });
   }
 };
-/**
- * Backward-compatibility re-export shim.
- * Canonical worker implementation now lives in @/packages/optical-transfer/worker-reassembly.
- */
-export * from '@/packages/optical-transfer/worker-reassembly';
-import '@/packages/optical-transfer/worker-reassembly';
+

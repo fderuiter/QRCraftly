@@ -29,6 +29,8 @@ import { useOptionalQRStore } from '../context/QRContext';
  * Automatically strips center logos, border overlays, templates, and complex module geometries.
  * @param config The input QR code configuration.
  * @returns Streamlined QR code configuration.
+ * Backward-compatibility re-export shim.
+ * Canonical hook implementation now lives in @/packages/optical-transfer/client.
  */
 export function sanitizeStreamConfig(config: QRConfig): QRConfig {
   return {
@@ -745,3 +747,9 @@ export function useAnimatedQrSender({
     simulate50MBFile,
   };
 }
+export {
+  useOpticalSender as useAnimatedQrSender,
+  type UseOpticalSenderOptions as UseAnimatedQrSenderOptions,
+  sanitizeStreamConfig,
+  verifyHandshakeFrame,
+} from '@/packages/optical-transfer/client';

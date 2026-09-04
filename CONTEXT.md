@@ -108,6 +108,22 @@ _Avoid_: Double ECC, dual error recovery, two-way ECC
 The receiver capability to start capturing and decoding an optical stream at an arbitrary point in time without an explicit preparatory handshake phase.
 _Avoid_: Mid-stream scan, instant sync, handshake-free mode
 
+**Droplet Symbol**:
+An individual rateless fountain packet produced by XOR-combining a pseudo-random subset of source blocks according to a degree distribution.
+_Avoid_: Packet chunk, fountain slice, stream bit
+
+**Fountain Block Slicer**:
+The partitioning subsystem dividing source file binaries into fixed-size input blocks and generating rateless fountain droplet symbols.
+_Avoid_: File cutter, chunk generator, packet slicer
+
+**Degree Distribution**:
+The discrete probability distribution governing how many source blocks are XOR-combined into each emitted droplet symbol to guarantee low-overhead peeling decoding.
+_Avoid_: Block weight, degree spread, combination ratio
+
+**Optical Transfer Engine**:
+A consolidated deep module encapsulating rateless fountain coding, contiguous frame memory pooling, stream lookahead security validation, and off-thread slicing and reassembly behind unified entry-point seams.
+_Avoid_: Transfer helper, animated QR manager, file transfer utility
+
 ### Environment & Tooling Invariants
 
 **Platform Invariance Guarantee**:
