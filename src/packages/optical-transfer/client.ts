@@ -529,7 +529,7 @@ export function useOpticalSender({
 
   const simulate50MBFile = () => {
     const dummyBlob = new Blob([new Uint8Array(50 * 1024 * 1024)], { type: 'application/octet-stream' });
-    const dummyFile = new File([dummyBlob], 'simulation_50mb_payload.bin', { type: 'application/octet-stream' });
+    const dummyFile = new File([dummyBlob], 'simulated_50mb_file.bin', { type: 'application/octet-stream' });
     setSelectedFile(dummyFile);
     stopTransfer();
   };

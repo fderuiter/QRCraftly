@@ -17,6 +17,7 @@
 */
 
 import { FountainDecoder } from './lib/fountain/decoder';
+import { base64ToBytes as decodeBase64ToBytes } from './lib/base64';
 
 export interface HandshakeMetadata {
   fileName?: string;
@@ -84,15 +85,7 @@ function resetWorkerState(): void {
   }
 }
 
-function decodeBase64ToBytes(base64Str: string): Uint8Array {
-  const binaryString = atob(base64Str);
-  const len = binaryString.length;
-  const bytes = new Uint8Array(len);
-  for (let j = 0; j < len; j++) {
-    bytes[j] = binaryString.charCodeAt(j);
-  }
-  return bytes;
-}
+
 
 self.onmessage = async (e: MessageEvent<FileReassemblyIncomingMessage>) => {
   const data = e.data;

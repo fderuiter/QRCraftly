@@ -65,3 +65,12 @@ export {
   decodeHtmlEntities,
   recursiveDecode,
 } from './lib/streamLookahead';
+
+export {
+  SequentialReassembler,
+} from './lib/chunking/sequential';
+
+export {
+  bytesToBase64,
+  base64ToBytes,
+} from './lib/base64';

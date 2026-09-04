@@ -17,6 +17,7 @@
 */
 
 import { DropletMetadata, FountainDroplet } from './contracts';
+import { bytesToBase64, base64ToBytes } from '../base64';
 
 // Precomputed CRC32 lookup table for fast 32-bit checksumming
 const CRC_TABLE = new Uint32Array(256);
@@ -38,38 +39,6 @@ export function computeCrc32Hex(bytes: Uint8Array): string {
     crc = (crc >>> 8) ^ CRC_TABLE[(crc ^ bytes[i]) & 0xff];
   }
   return ((crc ^ 0xffffffff) >>> 0).toString(16).padStart(8, '0');
-}
-
-/**
- * Converts a Uint8Array buffer to a Base64 string.
- */
-export function bytesToBase64(bytes: Uint8Array): string {
-  if (typeof Buffer !== 'undefined') {
-    return Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength).toString('base64');
-  }
-  let binary = '';
-  const len = bytes.byteLength;
-  for (let i = 0; i < len; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return btoa(binary);
-}
-
-/**
- * Converts a Base64 string to a Uint8Array buffer.
- */
-export function base64ToBytes(base64: string): Uint8Array {
-  if (typeof Buffer !== 'undefined') {
-    const buf = Buffer.from(base64, 'base64');
-    return new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength);
-  }
-  const binary = atob(base64);
-  const len = binary.length;
-  const bytes = new Uint8Array(len);
-  for (let i = 0; i < len; i++) {
-    bytes[i] = binary.charCodeAt(i);
-  }
-  return bytes;
 }
 
 export const FOUNTAIN_URI_PREFIX = 'ur:bytes/';

@@ -111,6 +111,25 @@ export function useQrScanner({
 
   const schedulerRef = useRef<AdaptiveFrameScheduler | null>(null);
 
+  const recreateWorkerRef = useRef<() => void>(() => {});
+  const handleWorkerMessageRef = useRef<(e: MessageEvent) => void>(() => {});
+
+  const {
+    workerRef,
+    epochRef,
+    useMainThreadFallbackRef,
+    recreateWorker,
+    resetRestartCounter,
+    detachWorkerListeners,
+  } = useWorkerRecovery({
+    onMessage: (e: MessageEvent) => handleWorkerMessageRef.current(e),
+    getScheduler: () => getScheduler(),
+  });
+
+  useEffect(() => {
+    recreateWorkerRef.current = recreateWorker;
+  }, [recreateWorker]);
+
   const getScheduler = useCallback(() => {
     if (schedulerRef.current === null) {
       schedulerRef.current = new AdaptiveFrameScheduler({
@@ -126,7 +145,7 @@ export function useQrScanner({
           onScanFailRef.current?.(error ?? undefined);
         },
         onWatchdogTriggered: (_elapsed: number) => {
-          recreateWorker();
+          recreateWorkerRef.current();
         },
       });
     }
@@ -158,20 +177,12 @@ export function useQrScanner({
 
       getScheduler().endFrame(sequenceId, resultStatus, decodedData, error, buffer);
     },
-    [getScheduler]
+    [getScheduler, epochRef, resetRestartCounter]
   );
 
-  const {
-    workerRef,
-    epochRef,
-    useMainThreadFallbackRef,
-    recreateWorker,
-    resetRestartCounter,
-    detachWorkerListeners,
-  } = useWorkerRecovery({
-    onMessage: handleWorkerMessage,
-    getScheduler,
-  });
+  useEffect(() => {
+    handleWorkerMessageRef.current = handleWorkerMessage;
+  }, [handleWorkerMessage]);
 
   const { attachVideoListeners, detachVideoListeners } = useVideoBinding();
 
@@ -409,7 +420,7 @@ export function useQrScanner({
     const scheduler = getScheduler();
     scheduler.setWatchdogTimeout(1500);
     scheduler.start();
-  }, [getScheduler, resetRestartCounter, epochRef]);
+  }, [getScheduler, resetRestartCounter]);
 
   const stopScanning = useCallback(() => {
     const wasScanning = isScanningRef.current || isScanning;

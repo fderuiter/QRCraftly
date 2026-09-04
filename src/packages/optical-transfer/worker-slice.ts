@@ -19,6 +19,7 @@
 
 import QRCode from 'qrcode';
 import { FountainEncoder } from './lib/fountain/encoder';
+import { bytesToBase64 as arrayBufferToBase64 } from './lib/base64';
 
 let file: Blob | null = null;
 let chunkSize = 180;
@@ -37,18 +38,7 @@ let fountainEncoder: FountainEncoder | null = null;
 // Keyed by the Blob/File instance so a cached hash can never be reused for different content.
 const hashCache = new WeakMap<Blob, string>();
 
-/**
- * Converts an ArrayBuffer to a standard Base64 string in a worker-compatible way.
- */
-function arrayBufferToBase64(buffer: ArrayBuffer): string {
-  const bytes = new Uint8Array(buffer);
-  let binary = '';
-  const len = bytes.byteLength;
-  for (let i = 0; i < len; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return btoa(binary);
-}
+
 
 /**
  * Computes the SHA-256 hash of a Blob off-thread.
