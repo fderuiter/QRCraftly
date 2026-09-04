@@ -1,7 +1,7 @@
-import jsQR from 'jsqr';
 import { ScanSource, ScanResult, ScanOptions, getDownscaledDimensions } from './contracts';
 import { sharedBufferPool } from './bufferPool';
-import { getScannerWorker } from './workerRunner';
+import { getScannerWorker, dispatchWorkerFrame } from './workerRunner';
+import { decodeImageDataSync } from './decodeSync';
 
 // Global lock to prevent parallel uploaded file processing (Constraint)
 let isProcessingFileGlobal = false;
@@ -20,141 +20,6 @@ function loadImageFromFile(file: Blob): Promise<HTMLImageElement> {
     };
     reader.onerror = () => reject(new Error('Failed to read file.'));
     reader.readAsDataURL(file);
-  });
-}
-
-/**
- * Runs single-frame decoding on raw image data using jsQR with both inversion modes.
- */
-function decodeImageDataSync(imageData: ImageData, width: number, height: number): string | null {
-  try {
-    let code = jsQR(imageData.data, width, height, { inversionAttempts: 'dontInvert' });
-    if (!code) {
-      code = jsQR(imageData.data, width, height, { inversionAttempts: 'attemptBoth' });
-    }
-    return code?.data ?? null;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Dispatches an ArrayBuffer from video frames to the shared worker for off-thread decoding.
- */
-function decodeFrameOffThread(
-  buffer: ArrayBuffer,
-  width: number,
-  height: number,
-  seqId: number
-): Promise<{ decoded: string | null; buffer?: ArrayBuffer }> {
-  return new Promise((resolve) => {
-    let worker: Worker | null = null;
-    try {
-      worker = getScannerWorker();
-    } catch {
-      worker = null;
-    }
-
-    if (!worker) {
-      resolve({ decoded: null, buffer });
-      return;
-    }
-
-    const handleMessage = (e: MessageEvent) => {
-      const payload = e.data;
-      if (payload && (payload.sequenceId === seqId || payload.success !== undefined)) {
-        if (typeof worker.removeEventListener === 'function') {
-          worker.removeEventListener('message', handleMessage);
-        } else {
-          (worker as any).onmessage = null;
-        }
-        if (payload.status === 'pass' && payload.decodedData) {
-          resolve({ decoded: payload.decodedData, buffer: payload.buffer });
-        } else if (payload.success) {
-          if (typeof globalThis !== 'undefined' && (globalThis as any).mockWorkerControl) {
-            import('jsqr')
-              .then((mod) => {
-                const jsQRfn = mod.default || mod;
-                const u8 = new Uint8ClampedArray(buffer);
-                const code = jsQRfn(u8, width, height);
-                resolve({ decoded: code ? code.data : null, buffer: payload.buffer });
-              })
-              .catch(() => {
-                resolve({ decoded: null, buffer: payload.buffer });
-              });
-          } else {
-            resolve({ decoded: null, buffer: payload.buffer });
-          }
-        } else {
-          resolve({ decoded: null, buffer: payload.buffer });
-        }
-      }
-    };
-
-    if (typeof worker.addEventListener === 'function') {
-      worker.addEventListener('message', handleMessage);
-    } else {
-      (worker as any).onmessage = handleMessage;
-    }
-    worker.postMessage({ buffer, width, height, sequenceId: seqId }, [buffer]);
-  });
-}
-
-/**
- * Dispatches an image file buffer to the worker for off-thread decoding.
- */
-function decodeFrameOffThreadImage(
-  buffer: ArrayBuffer,
-  width: number,
-  height: number,
-  seqId: number,
-  imageData: ImageData
-): Promise<{ decoded: string | null; buffer?: ArrayBuffer }> {
-  return new Promise((resolve) => {
-    let worker: Worker | null = null;
-    try {
-      worker = getScannerWorker();
-    } catch {
-      worker = null;
-    }
-
-    if (!worker) {
-      resolve({ decoded: null, buffer });
-      return;
-    }
-
-    const handleMessage = (e: MessageEvent) => {
-      const response = e.data;
-      if (response && (response.sequenceId === seqId || response.success !== undefined)) {
-        if (typeof worker.removeEventListener === 'function') {
-          worker.removeEventListener('message', handleMessage);
-        } else {
-          (worker as any).onmessage = null;
-        }
-        if (response.status === 'pass' || (response.success && response.decodedData)) {
-          resolve({ decoded: response.decodedData || '', buffer: response.buffer });
-        } else {
-          resolve({ decoded: null, buffer: response.buffer });
-        }
-      }
-    };
-
-    if (typeof worker.addEventListener === 'function') {
-      worker.addEventListener('message', handleMessage);
-    } else {
-      (worker as any).onmessage = handleMessage;
-    }
-
-    worker.postMessage(
-      {
-        buffer,
-        width,
-        height,
-        sequenceId: seqId,
-        imageData,
-      },
-      [buffer]
-    );
   });
 }
 
@@ -286,7 +151,13 @@ async function processVideoNatively(
 
           const seqId = fileSequenceId++;
           const start = performance.now();
-          const { decoded, buffer: recycledBuffer } = await decodeFrameOffThread(pooledBuffer, dWidth, dHeight, seqId);
+          const { decoded, buffer: recycledBuffer } = await dispatchWorkerFrame(
+            pooledBuffer,
+            dWidth,
+            dHeight,
+            seqId,
+            { signal, timeoutMs: 1500 }
+          );
           const runDuration = performance.now() - start;
 
           lastLatency = runDuration;
@@ -365,18 +236,33 @@ async function processVideoWithDemuxer(file: File, signal?: AbortSignal): Promis
     }
 
     const taskId = `demux-${Date.now()}-${Math.random()}`;
+    let isDone = false;
+    let watchdogTimer: any = null;
 
     const detachListeners = () => {
-      if (typeof worker.removeEventListener === 'function') {
-        worker.removeEventListener('message', handleMessage);
-        worker.removeEventListener('error', handleError);
-      } else {
-        (worker as any).onmessage = null;
-        (worker as any).onerror = null;
+      if (watchdogTimer) {
+        clearTimeout(watchdogTimer);
+        watchdogTimer = null;
+      }
+      signal?.removeEventListener('abort', handleAbort);
+      if (worker) {
+        try {
+          if (typeof worker.removeEventListener === 'function') {
+            worker.removeEventListener('message', handleMessage);
+            worker.removeEventListener('error', handleError);
+          } else {
+            (worker as any).onmessage = null;
+            (worker as any).onerror = null;
+          }
+        } catch {
+          // Ignore listener detachment errors
+        }
       }
     };
 
     const handleAbort = () => {
+      if (isDone) return;
+      isDone = true;
       worker?.postMessage({ type: 'abort', taskId });
       detachListeners();
       resolve(null);
@@ -389,6 +275,17 @@ async function processVideoWithDemuxer(file: File, signal?: AbortSignal): Promis
 
     signal?.addEventListener('abort', handleAbort);
 
+    // Watchdog: 10s maximum timeout for 10s video demuxing
+    watchdogTimer = setTimeout(() => {
+      if (!isDone) {
+        isDone = true;
+        console.warn(`Watchdog: Demuxer task ${taskId} timed out.`);
+        worker?.postMessage({ type: 'abort', taskId });
+        detachListeners();
+        resolve(decodedResult);
+      }
+    }, 10000);
+
     let decodedResult: string | null = null;
 
     const handleMessage = (event: MessageEvent) => {
@@ -397,7 +294,6 @@ async function processVideoWithDemuxer(file: File, signal?: AbortSignal): Promis
         return;
       }
       if (signal?.aborted) {
-        signal?.removeEventListener('abort', handleAbort);
         handleAbort();
         return;
       }
@@ -406,19 +302,23 @@ async function processVideoWithDemuxer(file: File, signal?: AbortSignal): Promis
           decodedResult = msg.data;
         }
       } else if (msg && msg.type === 'done') {
-        signal?.removeEventListener('abort', handleAbort);
-        detachListeners();
-        resolve(decodedResult);
+        if (!isDone) {
+          isDone = true;
+          detachListeners();
+          resolve(decodedResult);
+        }
       }
     };
 
     const handleError = (err: any) => {
-      signal?.removeEventListener('abort', handleAbort);
-      detachListeners();
-      if (!signal?.aborted) {
-        reject(err);
-      } else {
-        resolve(null);
+      if (!isDone) {
+        isDone = true;
+        detachListeners();
+        if (!signal?.aborted) {
+          reject(err);
+        } else {
+          resolve(null);
+        }
       }
     };
 
@@ -588,49 +488,46 @@ export async function scanSource(source: ScanSource, options: ScanOptions = {}):
         ctx.drawImage(img, 0, 0, dWidth, dHeight);
         const imageData = ctx.getImageData(0, 0, dWidth, dHeight);
 
-        let worker: Worker | null = null;
-        try {
-          worker = getScannerWorker();
-        } catch {
-          worker = null;
-        }
-
         let decodedResult: string | null = null;
 
-        if (!worker) {
-          // Main-thread fallback
+        // Try off-thread worker decoding with bounded timeout
+        const buffer1024 = imageData.data.buffer.slice(0);
+        const runStart = performance.now();
+        const result = await dispatchWorkerFrame(buffer1024, dWidth, dHeight, 1, {
+          imageData,
+          signal,
+          timeoutMs: 1500,
+        });
+        const duration = performance.now() - runStart;
+        lastLatency = duration;
+        latencyHistory.push(duration);
+
+        if (result.decoded) {
+          decodedResult = result.decoded;
+        } else if (result.error === 'WATCHDOG_TIMEOUT' || result.error === 'WORKER_ERROR' || result.error === 'WORKER_UNAVAILABLE') {
+          // Automatic main-thread fallback if worker timed out or crashed
           decodedResult = decodeImageDataSync(imageData, dWidth, dHeight);
-          if (!decodedResult && !signal?.aborted) {
-            const { width: fWidth, height: fHeight } = getDownscaledDimensions(img.width, img.height, 2048);
-            canvas.width = fWidth;
-            canvas.height = fHeight;
-            ctx.drawImage(img, 0, 0, fWidth, fHeight);
-            const imageDataFull = ctx.getImageData(0, 0, fWidth, fHeight);
+        }
+
+        // Higher-resolution second pass if first pass produced no code
+        if (!decodedResult && !signal?.aborted) {
+          const { width: fWidth, height: fHeight } = getDownscaledDimensions(img.width, img.height, 2048);
+          canvas.width = fWidth;
+          canvas.height = fHeight;
+          ctx.drawImage(img, 0, 0, fWidth, fHeight);
+          const imageDataFull = ctx.getImageData(0, 0, fWidth, fHeight);
+          const bufferFull = imageDataFull.data.buffer.slice(0);
+
+          const fullResult = await dispatchWorkerFrame(bufferFull, fWidth, fHeight, 2, {
+            imageData: imageDataFull,
+            signal,
+            timeoutMs: 1500,
+          });
+
+          if (fullResult.decoded) {
+            decodedResult = fullResult.decoded;
+          } else if (fullResult.error === 'WATCHDOG_TIMEOUT' || fullResult.error === 'WORKER_ERROR' || fullResult.error === 'WORKER_UNAVAILABLE') {
             decodedResult = decodeImageDataSync(imageDataFull, fWidth, fHeight);
-          }
-        } else {
-          // Off-thread worker decoding
-          const buffer1024 = imageData.data.buffer.slice(0);
-          const runStart = performance.now();
-          const result = await decodeFrameOffThreadImage(buffer1024, dWidth, dHeight, 1, imageData);
-          const duration = performance.now() - runStart;
-          lastLatency = duration;
-          latencyHistory.push(duration);
-
-          if (result.decoded) {
-            decodedResult = result.decoded;
-          } else if (!signal?.aborted) {
-            const { width: fWidth, height: fHeight } = getDownscaledDimensions(img.width, img.height, 2048);
-            canvas.width = fWidth;
-            canvas.height = fHeight;
-            ctx.drawImage(img, 0, 0, fWidth, fHeight);
-            const imageDataFull = ctx.getImageData(0, 0, fWidth, fHeight);
-            const bufferFull = imageDataFull.data.buffer.slice(0);
-
-            const fullResult = await decodeFrameOffThreadImage(bufferFull, fWidth, fHeight, 2, imageDataFull);
-            if (fullResult.decoded) {
-              decodedResult = fullResult.decoded;
-            }
           }
         }
 

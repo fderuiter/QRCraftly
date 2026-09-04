@@ -524,19 +524,19 @@ class MockWorker {
             }
           }
 
-          if ((this.url.toString().includes('scannerWorker') || this.url.toString().includes('optical-scanner')) && message && typeof message === 'object' && typeof message.sequenceId === 'number') {
-            const { image, width, height, epochId } = message;
-            if (image && typeof width === 'number' && typeof height === 'number') {
+          if ((this.url.toString().includes('scannerWorker') || this.url.toString().includes('optical-scanner') || this.url.toString().includes('worker.ts')) && message && typeof message === 'object' && typeof message.sequenceId === 'number') {
+            const { image, buffer, width, height, epochId } = message;
+            if ((image || buffer) && typeof width === 'number' && typeof height === 'number') {
               const { default: jsQR } = await import('jsqr');
-              const data = (image as any)._data || new Uint8ClampedArray(width * height * 4);
+              const data = (image as any)?._data || (buffer ? new Uint8ClampedArray(buffer) : new Uint8ClampedArray(width * height * 4));
               let code = jsQR(data, width, height, { inversionAttempts: 'dontInvert' });
               if (!code) {
                 code = jsQR(data, width, height, { inversionAttempts: 'onlyInvert' });
               }
               if (code && code.data) {
-                this.dispatchMessage({ status: 'pass', decodedData: code.data, sequenceId: message.sequenceId, epochId });
+                this.dispatchMessage({ status: 'pass', decodedData: code.data, sequenceId: message.sequenceId, epochId, buffer });
               } else {
-                this.dispatchMessage({ status: 'fail', error: 'No QR code detected in this image. Try a clearer or higher-contrast QR code image.', sequenceId: message.sequenceId, epochId });
+                this.dispatchMessage({ status: 'fail', error: 'No QR code detected in this image. Try a clearer or higher-contrast QR code image.', sequenceId: message.sequenceId, epochId, buffer });
               }
               return;
             }

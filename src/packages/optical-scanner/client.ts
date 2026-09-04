@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import jsQR from 'jsqr';
 import {
   isValidScannerResponse,
   getDownscaledDimensions,
@@ -7,9 +6,12 @@ import {
   ScanOptions,
   ScannerStatus,
 } from './lib/contracts';
-import { getScannerWorker, terminateScannerWorker } from './lib/workerRunner';
 import { AdaptiveFrameScheduler } from './lib/scheduler';
 import { scanSource } from './lib/sourceExtractor';
+import { decodeImageDataSync } from './lib/decodeSync';
+import { useBatchScannerState } from './lib/useBatchScannerState';
+import { useWorkerRecovery } from './lib/useWorkerRecovery';
+import { useVideoBinding } from './lib/useVideoBinding';
 
 /**
  * Configuration options for the useQrScanner hook.
@@ -36,7 +38,6 @@ export interface UseQrScannerOptions {
    */
   maxSamplingDelay?: number;
 }
-
 
 /**
  * Result object returned by the useQrScanner hook.
@@ -76,7 +77,6 @@ export interface UseQrScannerResult {
   workerRef?: React.MutableRefObject<Worker | null>;
 }
 
-
 /**
  * A custom React hook that coordinates off-thread Web Worker QR code decoding on camera stream frames,
  * tracking execution latency, implementing an adaptive backpressure-based sampling throttling loop,
@@ -91,128 +91,16 @@ export function useQrScanner({
 }: UseQrScannerOptions = {}): UseQrScannerResult {
   const [isScanning, setIsScanning] = useState<boolean>(false);
   const isScanningRef = useRef<boolean>(false);
-  const [status, setStatus] = useState<'idle' | 'checking' | 'pass' | 'fail'>('idle');
-  const [samplingDelay, setSamplingDelay] = useState<number>(33);
-  const [latencyHistory, setLatencyHistory] = useState<number[]>([]);
 
-  const isTestEnv =
-    typeof process !== 'undefined' &&
-    (process.env.NODE_ENV === 'test' || process.env.VITEST === 'true');
-
-  const internalStatusRef = useRef<'idle' | 'checking' | 'pass' | 'fail'>('idle');
-  const samplingDelayRef = useRef<number>(33);
-  const internalLatencyHistoryRef = useRef<number[]>([]);
-  const isDirtyRef = useRef<boolean>(false);
-
-  const updateScannerState = useCallback(
-    (updates: {
-      status?: 'idle' | 'checking' | 'pass' | 'fail';
-      samplingDelay?: number;
-      latencyHistory?: number[];
-    }) => {
-      if (updates.status !== undefined) {
-        internalStatusRef.current = updates.status;
-      }
-      if (updates.samplingDelay !== undefined) {
-        samplingDelayRef.current = updates.samplingDelay;
-      }
-      if (updates.latencyHistory !== undefined) {
-        internalLatencyHistoryRef.current = updates.latencyHistory;
-      }
-
-      if (isTestEnv) {
-        if (updates.status !== undefined) setStatus(updates.status);
-        if (updates.samplingDelay !== undefined) setSamplingDelay(updates.samplingDelay);
-        if (updates.latencyHistory !== undefined) setLatencyHistory(updates.latencyHistory);
-      } else {
-        isDirtyRef.current = true;
-      }
-    },
-    [isTestEnv]
-  );
-
-  useEffect(() => {
-    if (!isScanning || isTestEnv) return;
-
-    const intervalId = setInterval(() => {
-      if (isDirtyRef.current) {
-        setStatus(internalStatusRef.current);
-        setSamplingDelay(samplingDelayRef.current);
-        setLatencyHistory(internalLatencyHistoryRef.current);
-        isDirtyRef.current = false;
-      }
-    }, 250);
-
-    return () => {
-      clearInterval(intervalId);
-    };
-  }, [isScanning, isTestEnv]);
-
-  const workerRef = useRef<Worker | null>(null);
-  const consecutiveRestartAttemptsRef = useRef<number>(0);
-  const epochRef = useRef<number>(1);
-  const useMainThreadFallbackRef = useRef<boolean>(false);
-  const fallbackCanvasRef = useRef<HTMLCanvasElement | null>(null);
-
-  const handleMessageRef = useRef<((e: MessageEvent) => void) | null>(null);
-  const handleErrorRef = useRef<((err: any) => void) | null>(null);
-  const handleMessageErrorRef = useRef<((err: any) => void) | null>(null);
-
-  const attachedListenersRef = useRef<{
-    worker: Worker;
-    onMsg: (e: MessageEvent) => void;
-    onErr: (err: any) => void;
-    onMsgErr: (err: any) => void;
-  } | null>(null);
-
-  const detachWorkerListeners = useCallback(() => {
-    if (attachedListenersRef.current) {
-      const { worker, onMsg, onErr, onMsgErr } = attachedListenersRef.current;
-      try {
-        if (typeof worker.removeEventListener === 'function') {
-          worker.removeEventListener('message', onMsg);
-          worker.removeEventListener('error', onErr);
-          worker.removeEventListener('messageerror', onMsgErr);
-        } else {
-          (worker as any).onmessage = null;
-          (worker as any).onerror = null;
-        }
-      } catch (e) {
-        console.error('Failed to detach worker listeners:', e);
-      }
-      attachedListenersRef.current = null;
-    }
-  }, []);
-
-  const attachWorkerListeners = useCallback(
-    (worker: Worker) => {
-      detachWorkerListeners();
-
-      const onMsg = (e: MessageEvent) => handleMessageRef.current?.(e);
-      const onErr = (err: any) => handleErrorRef.current?.(err);
-      const onMsgErr = (err: any) => handleMessageErrorRef.current?.(err);
-
-      try {
-        if (typeof worker.addEventListener === 'function') {
-          worker.addEventListener('message', onMsg);
-          worker.addEventListener('error', onErr);
-          worker.addEventListener('messageerror', onMsgErr);
-        } else {
-          (worker as any).onmessage = onMsg;
-          (worker as any).onerror = onErr;
-        }
-        attachedListenersRef.current = {
-          worker,
-          onMsg,
-          onErr,
-          onMsgErr,
-        };
-      } catch (err) {
-        console.warn('Failed to attach worker listeners:', err);
-      }
-    },
-    [detachWorkerListeners]
-  );
+  const {
+    status,
+    samplingDelay,
+    latencyHistory,
+    samplingDelayRef,
+    latencyHistoryRef,
+    updateState,
+    resetState,
+  } = useBatchScannerState(isScanning);
 
   const onScanSuccessRef = useRef(onScanSuccess);
   const onScanFailRef = useRef(onScanFail);
@@ -223,61 +111,19 @@ export function useQrScanner({
 
   const schedulerRef = useRef<AdaptiveFrameScheduler | null>(null);
 
-  const recreateWorker = useCallback(() => {
-    consecutiveRestartAttemptsRef.current += 1;
-    if (consecutiveRestartAttemptsRef.current > 3) {
-      console.warn('Scanner background worker crashed repeatedly. Activating main-thread fallback.');
-      useMainThreadFallbackRef.current = true;
-      detachWorkerListeners();
-      terminateScannerWorker();
-      workerRef.current = null;
-      schedulerRef.current?.triggerRecovery(1500, false);
-      return;
-    }
-
-    console.warn(
-      `Watchdog: Recreating worker. Attempt ${consecutiveRestartAttemptsRef.current} of 3 consecutive retries.`
-    );
-
-    epochRef.current += 1;
-    const nextTimeout = Math.min(6000, 1500 * Math.pow(2, consecutiveRestartAttemptsRef.current));
-    schedulerRef.current?.setWatchdogTimeout(nextTimeout);
-
-    detachWorkerListeners();
-    terminateScannerWorker();
-    workerRef.current = null;
-
-    schedulerRef.current?.triggerRecovery(nextTimeout, false);
-
-    if (typeof window === 'undefined') return;
-    try {
-      const worker = getScannerWorker();
-      workerRef.current = worker;
-      attachWorkerListeners(worker);
-    } catch (err) {
-      console.warn('Failed to recreate worker, activating main-thread fallback:', err);
-      useMainThreadFallbackRef.current = true;
-      workerRef.current = null;
-    }
-  }, [detachWorkerListeners, attachWorkerListeners]);
-
   const getScheduler = useCallback(() => {
     if (schedulerRef.current === null) {
       schedulerRef.current = new AdaptiveFrameScheduler({
         minSamplingDelay,
         maxSamplingDelay,
-        onStatusChange: (s: ScannerStatus) => updateScannerState({ status: s }),
-        onDelayChange: (delay: number) => updateScannerState({ samplingDelay: delay }),
-        onLatencyHistoryChange: (history: number[]) => updateScannerState({ latencyHistory: history }),
+        onStatusChange: (s: ScannerStatus) => updateState({ status: s }),
+        onDelayChange: (delay: number) => updateState({ samplingDelay: delay }),
+        onLatencyHistoryChange: (history: number[]) => updateState({ latencyHistory: history }),
         onScanSuccess: (data: string) => {
-          if (onScanSuccessRef.current) {
-            onScanSuccessRef.current(data);
-          }
+          onScanSuccessRef.current?.(data);
         },
         onScanFail: (error?: string | null) => {
-          if (onScanFailRef.current) {
-            onScanFailRef.current(error ?? undefined);
-          }
+          onScanFailRef.current?.(error ?? undefined);
         },
         onWatchdogTriggered: (_elapsed: number) => {
           recreateWorker();
@@ -285,9 +131,9 @@ export function useQrScanner({
       });
     }
     return schedulerRef.current;
-  }, [minSamplingDelay, maxSamplingDelay, updateScannerState, recreateWorker]);
+  }, [minSamplingDelay, maxSamplingDelay, updateState]);
 
-  const handleMessage = useCallback(
+  const handleWorkerMessage = useCallback(
     (e: MessageEvent) => {
       const payload = e.data;
 
@@ -306,7 +152,7 @@ export function useQrScanner({
       const { status: resultStatus, sequenceId, decodedData, error, buffer } = payload;
 
       if (resultStatus === 'pass' || error !== 'STALE_FRAME') {
-        consecutiveRestartAttemptsRef.current = 0;
+        resetRestartCounter();
         schedulerRef.current?.setWatchdogTimeout(1500);
       }
 
@@ -315,47 +161,21 @@ export function useQrScanner({
     [getScheduler]
   );
 
-  const handleError = useCallback(
-    (err: any) => {
-      console.error('Worker thread-level runtime boundary error:', err);
-      recreateWorker();
-    },
-    [recreateWorker]
-  );
+  const {
+    workerRef,
+    epochRef,
+    useMainThreadFallbackRef,
+    recreateWorker,
+    resetRestartCounter,
+    detachWorkerListeners,
+  } = useWorkerRecovery({
+    onMessage: handleWorkerMessage,
+    getScheduler,
+  });
 
-  const handleMessageError = useCallback(
-    (err: any) => {
-      console.error('Worker thread-level message data transfer error:', err);
-      recreateWorker();
-    },
-    [recreateWorker]
-  );
+  const { attachVideoListeners, detachVideoListeners } = useVideoBinding();
 
-  useEffect(() => {
-    handleMessageRef.current = handleMessage;
-    handleErrorRef.current = handleError;
-    handleMessageErrorRef.current = handleMessageError;
-  }, [handleMessage, handleError, handleMessageError]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    try {
-      const worker = getScannerWorker();
-      workerRef.current = worker;
-      attachWorkerListeners(worker);
-    } catch (err) {
-      console.warn('Failed to initialize background scanner worker, activating main-thread fallback:', err);
-      useMainThreadFallbackRef.current = true;
-      workerRef.current = null;
-    }
-
-    return () => {
-      schedulerRef.current?.stop();
-      detachWorkerListeners();
-      workerRef.current = null;
-    };
-  }, [attachWorkerListeners, detachWorkerListeners]);
+  const fallbackCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const captureFrame = useCallback(
     (force = false) => {
@@ -400,13 +220,10 @@ export function useQrScanner({
 
                 const performMainThreadDecode = () => {
                   try {
-                    let code = jsQR(imageData.data, dWidth, dHeight, { inversionAttempts: 'dontInvert' });
-                    if (!code) {
-                      code = jsQR(imageData.data, dWidth, dHeight, { inversionAttempts: 'attemptBoth' });
-                    }
-                    if (code && code.data) {
-                      consecutiveRestartAttemptsRef.current = 0;
-                      scheduler.endFrame(seqId, 'pass', code.data, null);
+                    const decoded = decodeImageDataSync(imageData, dWidth, dHeight);
+                    if (decoded) {
+                      resetRestartCounter();
+                      scheduler.endFrame(seqId, 'pass', decoded, null);
                     } else {
                       scheduler.endFrame(seqId, 'fail', null, null);
                     }
@@ -473,85 +290,12 @@ export function useQrScanner({
         return false;
       }
     },
-    [videoRef, getScheduler]
-  );
-
-  const listenersAttachedRef = useRef<{
-    video: HTMLVideoElement;
-    onPause: () => void;
-    onSeeked: () => void;
-    onPlay: () => void;
-    onLoadedData: () => void;
-  } | null>(null);
-
-  const detachVideoListeners = useCallback(() => {
-    if (listenersAttachedRef.current) {
-      const { video, onPause, onSeeked, onPlay, onLoadedData } = listenersAttachedRef.current;
-      try {
-        video.removeEventListener('pause', onPause);
-        video.removeEventListener('seeked', onSeeked);
-        video.removeEventListener('play', onPlay);
-        video.removeEventListener('playing', onPlay);
-        video.removeEventListener('loadeddata', onLoadedData);
-      } catch (e) {
-        console.error('Failed to detach video listeners:', e);
-      }
-      listenersAttachedRef.current = null;
-    }
-  }, []);
-
-  const attachVideoListeners = useCallback(
-    (video: HTMLVideoElement, triggerPlay: () => void) => {
-      if (listenersAttachedRef.current && listenersAttachedRef.current.video === video) {
-        return;
-      }
-
-      if (listenersAttachedRef.current) {
-        detachVideoListeners();
-      }
-
-      const onPause = () => {
-        captureFrame(true);
-      };
-
-      const onSeeked = () => {
-        captureFrame(true);
-      };
-
-      const onPlay = () => {
-        triggerPlay();
-      };
-
-      const onLoadedData = () => {
-        captureFrame(true);
-      };
-
-      video.addEventListener('pause', onPause);
-      video.addEventListener('seeked', onSeeked);
-      video.addEventListener('play', onPlay);
-      video.addEventListener('playing', onPlay);
-      video.addEventListener('loadeddata', onLoadedData);
-
-      listenersAttachedRef.current = {
-        video,
-        onPause,
-        onSeeked,
-        onPlay,
-        onLoadedData,
-      };
-    },
-    [captureFrame, detachVideoListeners]
+    [videoRef, getScheduler, resetRestartCounter, useMainThreadFallbackRef, workerRef, epochRef]
   );
 
   useEffect(() => {
     if (!isScanning) {
-      updateScannerState({ status: 'idle' });
-      if (!isTestEnv) {
-        setStatus(internalStatusRef.current);
-        setSamplingDelay(samplingDelayRef.current);
-        setLatencyHistory(internalLatencyHistoryRef.current);
-        isDirtyRef.current = false;
-      }
+      resetState();
       return;
     }
 
@@ -576,14 +320,18 @@ export function useQrScanner({
         const isVideoFile = !video.srcObject && (!!video.src || !!video.currentSrc);
 
         if (isVideoFile) {
-          attachVideoListeners(video, () => {
-            if (!isLoopRunning && active) {
-              isLoopRunning = true;
-              if (timerId) clearTimeout(timerId);
-              if (rafId) cancelAnimationFrame(rafId);
-              rafId = requestAnimationFrame(runLoop);
-            }
-          });
+          attachVideoListeners(
+            video,
+            () => {
+              if (!isLoopRunning && active) {
+                isLoopRunning = true;
+                if (timerId) clearTimeout(timerId);
+                if (rafId) cancelAnimationFrame(rafId);
+                rafId = requestAnimationFrame(runLoop);
+              }
+            },
+            captureFrame
+          );
 
           if (video.paused || video.ended) {
             captureFrame(true);
@@ -650,26 +398,25 @@ export function useQrScanner({
     captureFrame,
     attachVideoListeners,
     detachVideoListeners,
-    isTestEnv,
-    updateScannerState,
     getScheduler,
   ]);
 
   const startScanning = useCallback(() => {
     isScanningRef.current = true;
     setIsScanning(true);
-    consecutiveRestartAttemptsRef.current = 0;
+    resetRestartCounter();
     epochRef.current += 1;
     const scheduler = getScheduler();
     scheduler.setWatchdogTimeout(1500);
     scheduler.start();
-  }, [getScheduler]);
+  }, [getScheduler, resetRestartCounter, epochRef]);
 
   const stopScanning = useCallback(() => {
     const wasScanning = isScanningRef.current || isScanning;
     isScanningRef.current = false;
     setIsScanning(false);
-    consecutiveRestartAttemptsRef.current = 0;
+    resetRestartCounter();
+    resetState();
     const scheduler = getScheduler();
     scheduler.setWatchdogTimeout(1500);
     scheduler.stop();
@@ -678,7 +425,7 @@ export function useQrScanner({
       window.dispatchEvent(
         new CustomEvent('scanner-telemetry-dispatch', {
           detail: {
-            latencyHistory: internalLatencyHistoryRef.current,
+            latencyHistory: latencyHistoryRef.current,
             frameDropCount: 0,
             processingLatency: samplingDelayRef.current,
             sessionType: 'camera',
@@ -686,11 +433,18 @@ export function useQrScanner({
         })
       );
     }
-  }, [getScheduler, isScanning]);
+  }, [getScheduler, isScanning, resetRestartCounter, resetState, latencyHistoryRef, samplingDelayRef]);
 
   const scanFile = useCallback(async (file: File, options?: ScanOptions): Promise<ScanResult> => {
     return scanSource(file, options);
   }, []);
+
+  useEffect(() => {
+    return () => {
+      schedulerRef.current?.stop();
+      detachWorkerListeners();
+    };
+  }, [detachWorkerListeners]);
 
   return {
     isScanning,
