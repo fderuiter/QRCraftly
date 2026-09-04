@@ -1,5 +1,4 @@
 import { render, screen } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
 import { describe, it, expect, vi } from 'vitest';
 import { Alert } from './Alert';
 
@@ -62,4 +61,3 @@ describe('Alert Component', () => {
     expect(onDismiss).toHaveBeenCalledTimes(1);
   });
 });
-

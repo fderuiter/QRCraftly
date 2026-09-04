@@ -109,6 +109,14 @@ export function useQrScanner({
     onScanFailRef.current = onScanFail;
   }, [onScanSuccess, onScanFail]);
 
+  const recreateWorkerRef = useRef<() => void>(() => {});
+  const resetRestartCounterRef = useRef<() => void>(() => {});
+
+  const handleWorkerMessageRef = useRef<(e: MessageEvent) => void>(() => {});
+  const handleWorkerMessage = useCallback((e: MessageEvent) => {
+    handleWorkerMessageRef.current(e);
+  }, []);
+
   const schedulerRef = useRef<AdaptiveFrameScheduler | null>(null);
 
   const getScheduler = useCallback(() => {
@@ -126,15 +134,32 @@ export function useQrScanner({
           onScanFailRef.current?.(error ?? undefined);
         },
         onWatchdogTriggered: (_elapsed: number) => {
-          recreateWorker();
+          recreateWorkerRef.current();
         },
       });
     }
     return schedulerRef.current;
   }, [minSamplingDelay, maxSamplingDelay, updateState]);
 
-  const handleWorkerMessage = useCallback(
-    (e: MessageEvent) => {
+  const {
+    workerRef,
+    epochRef,
+    useMainThreadFallbackRef,
+    recreateWorker,
+    resetRestartCounter,
+    detachWorkerListeners,
+  } = useWorkerRecovery({
+    onMessage: handleWorkerMessage,
+    getScheduler,
+  });
+
+  useEffect(() => {
+    recreateWorkerRef.current = recreateWorker;
+    resetRestartCounterRef.current = resetRestartCounter;
+  }, [recreateWorker, resetRestartCounter]);
+
+  useEffect(() => {
+    handleWorkerMessageRef.current = (e: MessageEvent) => {
       const payload = e.data;
 
       if (!isValidScannerResponse(payload)) {
@@ -152,26 +177,13 @@ export function useQrScanner({
       const { status: resultStatus, sequenceId, decodedData, error, buffer } = payload;
 
       if (resultStatus === 'pass' || error !== 'STALE_FRAME') {
-        resetRestartCounter();
+        resetRestartCounterRef.current();
         schedulerRef.current?.setWatchdogTimeout(1500);
       }
 
       getScheduler().endFrame(sequenceId, resultStatus, decodedData, error, buffer);
-    },
-    [getScheduler]
-  );
-
-  const {
-    workerRef,
-    epochRef,
-    useMainThreadFallbackRef,
-    recreateWorker,
-    resetRestartCounter,
-    detachWorkerListeners,
-  } = useWorkerRecovery({
-    onMessage: handleWorkerMessage,
-    getScheduler,
-  });
+    };
+  }, [epochRef, getScheduler]);
 
   const { attachVideoListeners, detachVideoListeners } = useVideoBinding();
 
@@ -409,7 +421,7 @@ export function useQrScanner({
     const scheduler = getScheduler();
     scheduler.setWatchdogTimeout(1500);
     scheduler.start();
-  }, [getScheduler, resetRestartCounter, epochRef]);
+  }, [getScheduler, resetRestartCounter]);
 
   const stopScanning = useCallback(() => {
     const wasScanning = isScanningRef.current || isScanning;

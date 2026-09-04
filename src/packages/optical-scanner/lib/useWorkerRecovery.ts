@@ -22,6 +22,11 @@ export function useWorkerRecovery({ onMessage, getScheduler }: UseWorkerRecovery
     onMessageRef.current = onMessage;
   }, [onMessage]);
 
+  const getSchedulerRef = useRef(getScheduler);
+  useEffect(() => {
+    getSchedulerRef.current = getScheduler;
+  }, [getScheduler]);
+
   const attachedListenersRef = useRef<{
     worker: Worker;
     onMsg: (e: MessageEvent) => void;
@@ -48,43 +53,7 @@ export function useWorkerRecovery({ onMessage, getScheduler }: UseWorkerRecovery
     }
   }, []);
 
-  const recreateWorker = useCallback(() => {
-    consecutiveRestartAttemptsRef.current += 1;
-    if (consecutiveRestartAttemptsRef.current > 3) {
-      console.warn('Scanner background worker crashed repeatedly. Activating main-thread fallback.');
-      useMainThreadFallbackRef.current = true;
-      detachWorkerListeners();
-      terminateScannerWorker();
-      workerRef.current = null;
-      getScheduler().triggerRecovery(1500, false);
-      return;
-    }
-
-    console.warn(
-      `Watchdog: Recreating worker. Attempt ${consecutiveRestartAttemptsRef.current} of 3 consecutive retries.`
-    );
-
-    epochRef.current += 1;
-    const nextTimeout = Math.min(6000, 1500 * Math.pow(2, consecutiveRestartAttemptsRef.current));
-    getScheduler().setWatchdogTimeout(nextTimeout);
-
-    detachWorkerListeners();
-    terminateScannerWorker();
-    workerRef.current = null;
-
-    getScheduler().triggerRecovery(nextTimeout, false);
-
-    if (typeof window === 'undefined') return;
-    try {
-      const worker = getScannerWorker();
-      workerRef.current = worker;
-      attachWorkerListeners(worker);
-    } catch (err) {
-      console.warn('Failed to recreate worker, activating main-thread fallback:', err);
-      useMainThreadFallbackRef.current = true;
-      workerRef.current = null;
-    }
-  }, [detachWorkerListeners, getScheduler]);
+  const recreateWorkerRef = useRef<() => void>(() => {});
 
   const attachWorkerListeners = useCallback(
     (worker: Worker) => {
@@ -93,11 +62,11 @@ export function useWorkerRecovery({ onMessage, getScheduler }: UseWorkerRecovery
       const onMsg = (e: MessageEvent) => onMessageRef.current(e);
       const onErr = (err: any) => {
         console.error('Worker thread-level runtime boundary error:', err);
-        recreateWorker();
+        recreateWorkerRef.current();
       };
       const onMsgErr = (err: any) => {
         console.error('Worker thread-level message data transfer error:', err);
-        recreateWorker();
+        recreateWorkerRef.current();
       };
 
       try {
@@ -119,8 +88,50 @@ export function useWorkerRecovery({ onMessage, getScheduler }: UseWorkerRecovery
         console.warn('Failed to attach worker listeners:', err);
       }
     },
-    [detachWorkerListeners, recreateWorker]
+    [detachWorkerListeners]
   );
+
+  const recreateWorker = useCallback(() => {
+    consecutiveRestartAttemptsRef.current += 1;
+    if (consecutiveRestartAttemptsRef.current > 3) {
+      console.warn('Scanner background worker crashed repeatedly. Activating main-thread fallback.');
+      useMainThreadFallbackRef.current = true;
+      detachWorkerListeners();
+      terminateScannerWorker();
+      workerRef.current = null;
+      getSchedulerRef.current().triggerRecovery(1500, false);
+      return;
+    }
+
+    console.warn(
+      `Watchdog: Recreating worker. Attempt ${consecutiveRestartAttemptsRef.current} of 3 consecutive retries.`
+    );
+
+    epochRef.current += 1;
+    const nextTimeout = Math.min(6000, 1500 * Math.pow(2, consecutiveRestartAttemptsRef.current));
+    getSchedulerRef.current().setWatchdogTimeout(nextTimeout);
+
+    detachWorkerListeners();
+    terminateScannerWorker();
+    workerRef.current = null;
+
+    getSchedulerRef.current().triggerRecovery(nextTimeout, false);
+
+    if (typeof window === 'undefined') return;
+    try {
+      const worker = getScannerWorker();
+      workerRef.current = worker;
+      attachWorkerListeners(worker);
+    } catch (err) {
+      console.warn('Failed to recreate worker, activating main-thread fallback:', err);
+      useMainThreadFallbackRef.current = true;
+      workerRef.current = null;
+    }
+  }, [attachWorkerListeners, detachWorkerListeners]);
+
+  useEffect(() => {
+    recreateWorkerRef.current = recreateWorker;
+  }, [recreateWorker]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -154,4 +165,3 @@ export function useWorkerRecovery({ onMessage, getScheduler }: UseWorkerRecovery
     detachWorkerListeners,
   };
 }
-

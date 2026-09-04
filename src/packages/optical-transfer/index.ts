@@ -56,7 +56,11 @@ export {
   parseDropletString,
   isFountainDropletString,
   FOUNTAIN_URI_PREFIX,
+  bytesToBase64,
+  base64ToBytes,
 } from './lib/fountain/envelope';
+
+export { SequentialReassembler } from './lib/chunking/sequential';
 
 export {
   StreamLookaheadReceiver,
