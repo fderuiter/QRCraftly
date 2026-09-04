@@ -22,7 +22,6 @@
  */
 export {
   StreamLookaheadReceiver,
-  type StreamLookaheadConfig,
   DANGEROUS_SCHEMES,
   decodeHtmlEntities,
   recursiveDecode,
