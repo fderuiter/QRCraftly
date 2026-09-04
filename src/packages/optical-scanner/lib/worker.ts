@@ -1,5 +1,5 @@
 import jsQR from 'jsqr';
-import { isValidScannerRequest, assertScannerResponse, getDownscaledDimensions } from './scannerContract';
+import { isValidScannerRequest, assertScannerResponse, getDownscaledDimensions } from './contracts';
 
 const yieldToEventLoop = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 
@@ -16,7 +16,6 @@ export function extractFramesFromEBML(fileBuffer: Uint8Array): Uint8Array[] {
   let offset = 0;
 
   while (offset < fileBuffer.length) {
-    // Read ID (VINT)
     const idFirstByte = fileBuffer[offset];
     let idLength = 1;
     while (idLength <= 4 && !(idFirstByte & (1 << (8 - idLength)))) {
@@ -29,7 +28,6 @@ export function extractFramesFromEBML(fileBuffer: Uint8Array): Uint8Array[] {
     }
     offset += idLength;
 
-    // Read Size (VINT)
     if (offset >= fileBuffer.length) break;
     const sizeFirstByte = fileBuffer[offset];
     let sizeLength = 1;
@@ -43,7 +41,6 @@ export function extractFramesFromEBML(fileBuffer: Uint8Array): Uint8Array[] {
     }
     offset += sizeLength;
 
-    // SimpleBlock (0xA3) or Block (0xA1)
     if (idValue === 0xA3 || idValue === 0xA1) {
       if (offset < fileBuffer.length) {
         const trackFirstByte = fileBuffer[offset];
@@ -51,7 +48,7 @@ export function extractFramesFromEBML(fileBuffer: Uint8Array): Uint8Array[] {
         while (trackLength <= 8 && !(trackFirstByte & (1 << (8 - trackLength)))) {
           trackLength++;
         }
-        const headerSize = trackLength + 2 + 1; // track number + 2 bytes timecode + 1 byte flags
+        const headerSize = trackLength + 2 + 1;
         if (offset + headerSize <= offset + sizeValue) {
           const frameData = fileBuffer.subarray(offset + headerSize, offset + sizeValue);
           frames.push(frameData);
@@ -59,15 +56,13 @@ export function extractFramesFromEBML(fileBuffer: Uint8Array): Uint8Array[] {
       }
       offset += sizeValue;
     } else if (
-      idValue === 0x18538067 || // Segment
-      idValue === 0x1F43B675 || // Cluster
-      idValue === 0xA0 ||       // BlockGroup
-      idValue === 0x1654AE6B    // Tracks
+      idValue === 0x18538067 ||
+      idValue === 0x1F43B675 ||
+      idValue === 0xA0 ||
+      idValue === 0x1654AE6B
     ) {
-      // Container element: descend into it, do not skip
       continue;
     } else {
-      // Normal element, skip its data
       offset += sizeValue;
     }
   }
@@ -137,13 +132,12 @@ self.onmessage = async (e: MessageEvent<any>) => {
       return;
     }
 
-    // Initialize WebAssembly if buffer is provided
     if (wasmBuffer) {
       try {
         const wasmInstance = await WebAssembly.instantiate(wasmBuffer);
         const addFn = wasmInstance.instance.exports.add as ((a: number, b: number) => number) | undefined;
         if (addFn) {
-          addFn(1, 2); // Verifies WASM functionality
+          addFn(1, 2);
         }
       } catch (err) {
         console.error('Failed to initialize WebAssembly inside worker:', err);
@@ -153,7 +147,6 @@ self.onmessage = async (e: MessageEvent<any>) => {
     const u8Array = new Uint8Array(fileBuffer);
     const textDecoder = new TextDecoder();
 
-    // Try decoding as a mock file
     const headerStr = textDecoder.decode(u8Array.subarray(0, 50));
     if (headerStr.startsWith('MOCK_VIDEO:')) {
       try {
@@ -175,10 +168,8 @@ self.onmessage = async (e: MessageEvent<any>) => {
       }
     }
 
-    // Parse EBML frames
     const frames = extractFramesFromEBML(u8Array);
 
-    // If no frames were found, but the file is a text mock, extract F| lines
     if (frames.length === 0) {
       const wholeText = textDecoder.decode(u8Array);
       if (wholeText.includes('F|')) {
@@ -200,7 +191,6 @@ self.onmessage = async (e: MessageEvent<any>) => {
       }
     }
 
-    // Process frames sequentially
     for (const frameData of frames) {
       if (isAborted()) {
         canceledTaskIds.delete(taskId);
@@ -208,7 +198,6 @@ self.onmessage = async (e: MessageEvent<any>) => {
         return;
       }
 
-      // If frame itself is a mock text frame
       try {
         const decodedStr = textDecoder.decode(frameData);
         if (decodedStr.startsWith('F|')) {
@@ -219,7 +208,6 @@ self.onmessage = async (e: MessageEvent<any>) => {
         // Ignore
       }
 
-      // Decode VP8/VP9 frame using WebCodecs if supported
       if (typeof VideoDecoder !== 'undefined') {
         try {
           await decodeWebCodecsFrame(frameData, (imageBitmap) => {
@@ -227,10 +215,8 @@ self.onmessage = async (e: MessageEvent<any>) => {
               imageBitmap.close();
               return;
             }
-            // Apply proportional downscaling logic (cap at 1280px)
             const { width: dWidth, height: dHeight } = getDownscaledDimensions(imageBitmap.width, imageBitmap.height, 1280);
 
-            // Extract pixels using OffscreenCanvas
             const canvas = new OffscreenCanvas(dWidth, dHeight);
             const ctx = canvas.getContext('2d');
             if (ctx) {
@@ -242,7 +228,6 @@ self.onmessage = async (e: MessageEvent<any>) => {
                 return;
               }
 
-              // Run scanner on the pixels with inverted fallback
               let code = null;
               try {
                 code = jsQR(imageData.data, dWidth, dHeight, { inversionAttempts: 'dontInvert' });
@@ -268,7 +253,7 @@ self.onmessage = async (e: MessageEvent<any>) => {
     return;
   }
 
-  // 2. Check for image file upload or fallback canvas-based scan payloads (buffer or imageData)
+  // 2. Check for image file upload or fallback canvas-based scan payloads
   const isBufferRequest = payload.buffer instanceof ArrayBuffer && typeof payload.width === 'number' && typeof payload.height === 'number';
   const isImageDataRequest = payload.imageData && typeof payload.width === 'number' && typeof payload.height === 'number';
 
@@ -285,7 +270,6 @@ self.onmessage = async (e: MessageEvent<any>) => {
       data = imgData.data instanceof Uint8ClampedArray ? imgData.data : new Uint8ClampedArray(imgData.data);
     }
 
-    // Decode QR code off-thread using jsQR with inverted fallback
     let code = null;
     try {
       code = jsQR(data, width, height, { inversionAttempts: 'dontInvert' });
@@ -311,7 +295,6 @@ self.onmessage = async (e: MessageEvent<any>) => {
   }
 
   // 3. Camera scanning mode (ImageBitmap)
-  // Perform strict runtime schema validation
   if (!isValidScannerRequest(payload)) {
     const hasImage = payload && payload.image instanceof ImageBitmap;
     if (hasImage) {
@@ -338,7 +321,6 @@ self.onmessage = async (e: MessageEvent<any>) => {
 
   const { image, width, height, sequenceId } = payload;
 
-  // Cooperative stale frame check before yielding
   if (sequenceId < latestSequenceId) {
     try {
       image.close();
@@ -357,10 +339,8 @@ self.onmessage = async (e: MessageEvent<any>) => {
   }
   latestSequenceId = sequenceId;
 
-  // Cooperative yielding to remain responsive and allow canceling/stale handling
   await yieldToEventLoop();
 
-  // Cooperative stale frame check after yielding
   if (sequenceId < latestSequenceId) {
     try {
       image.close();
@@ -379,7 +359,6 @@ self.onmessage = async (e: MessageEvent<any>) => {
   }
 
   try {
-    // Maintain offscreen canvas container to render the transferred bitmap and extract pixels
     if (!offscreenCanvas) {
       offscreenCanvas = new OffscreenCanvas(width, height);
       offscreenCtx = offscreenCanvas.getContext('2d');
@@ -393,18 +372,15 @@ self.onmessage = async (e: MessageEvent<any>) => {
       throw new Error('OFFSCREEN_CONTEXT_UNAVAILABLE');
     }
 
-    // Render image and extract pixels
     offscreenCtx.drawImage(image, 0, 0, width, height);
     const imageData = offscreenCtx.getImageData(0, 0, width, height);
 
-    // Explicitly close the transferred bitmap immediately after decoding/extraction to prevent memory leaks
     try {
       image.close();
     } catch (err) {
       console.error('Failed to close image after drawing:', err);
     }
 
-    // Decode QR code off-thread using jsQR with inverted fallback
     let code = null;
     try {
       code = jsQR(imageData.data, width, height, { inversionAttempts: 'dontInvert' });
@@ -422,7 +398,6 @@ self.onmessage = async (e: MessageEvent<any>) => {
     assertScannerResponse(response);
     (self as any).postMessage(response);
   } catch (error: any) {
-    // Ensure image is closed even on error
     try {
       image.close();
     } catch {
@@ -438,3 +413,4 @@ self.onmessage = async (e: MessageEvent<any>) => {
     (self as any).postMessage(response);
   }
 };
+

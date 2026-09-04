@@ -148,7 +148,6 @@ export default defineConfig(() => {
             'src/utils/scannabilityChecker.ts',
             'src/utils/scannabilityWorker.ts',
             'src/utils/scannerContract.ts',
-            'src/utils/scannerWorker.ts',
             'src/utils/schemaGenerator.ts',
             'src/utils/security.ts',
             'src/utils/sharedContract.ts',
