@@ -28,6 +28,8 @@ export {
   sanitizeStreamConfig,
   verifyHandshakeFrame,
   PreallocatedFramePool,
+  shuffleInPlace,
+  type CachedFrame,
 } from './sender';
 
 export {

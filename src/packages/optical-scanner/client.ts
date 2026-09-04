@@ -109,6 +109,10 @@ export function useQrScanner({
     onScanFailRef.current = onScanFail;
   }, [onScanSuccess, onScanFail]);
 
+  const epochRef = useRef<number>(1);
+  const recreateWorkerRef = useRef<() => void>(() => {});
+  const resetRestartCounterRef = useRef<() => void>(() => {});
+
   const schedulerRef = useRef<AdaptiveFrameScheduler | null>(null);
 
   const getScheduler = useCallback(() => {
@@ -126,7 +130,7 @@ export function useQrScanner({
           onScanFailRef.current?.(error ?? undefined);
         },
         onWatchdogTriggered: (_elapsed: number) => {
-          recreateWorker();
+          recreateWorkerRef.current();
         },
       });
     }
@@ -152,7 +156,7 @@ export function useQrScanner({
       const { status: resultStatus, sequenceId, decodedData, error, buffer } = payload;
 
       if (resultStatus === 'pass' || error !== 'STALE_FRAME') {
-        resetRestartCounter();
+        resetRestartCounterRef.current();
         schedulerRef.current?.setWatchdogTimeout(1500);
       }
 
@@ -161,9 +165,12 @@ export function useQrScanner({
     [getScheduler]
   );
 
+  const incrementEpoch = useCallback(() => {
+    epochRef.current += 1;
+  }, []);
+
   const {
     workerRef,
-    epochRef,
     useMainThreadFallbackRef,
     recreateWorker,
     resetRestartCounter,
@@ -171,7 +178,14 @@ export function useQrScanner({
   } = useWorkerRecovery({
     onMessage: handleWorkerMessage,
     getScheduler,
+    epochRef,
+    incrementEpoch,
   });
+
+  useEffect(() => {
+    recreateWorkerRef.current = recreateWorker;
+    resetRestartCounterRef.current = resetRestartCounter;
+  }, [recreateWorker, resetRestartCounter]);
 
   const { attachVideoListeners, detachVideoListeners } = useVideoBinding();
 
@@ -409,7 +423,7 @@ export function useQrScanner({
     const scheduler = getScheduler();
     scheduler.setWatchdogTimeout(1500);
     scheduler.start();
-  }, [getScheduler, resetRestartCounter, epochRef]);
+  }, [getScheduler, resetRestartCounter]);
 
   const stopScanning = useCallback(() => {
     const wasScanning = isScanningRef.current || isScanning;
