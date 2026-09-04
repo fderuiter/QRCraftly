@@ -78,6 +78,14 @@ _Avoid_: Canvas fallback flag, broken worker cache, degradation state
 An off-thread Web Worker acknowledgement confirming a stale scan frame was dropped, used by the main-thread scheduler to release backpressure without overwriting active diagnostic status.
 _Avoid_: Stale frame response, dropped signal, busy unlock event
 
+**Optical Detection Engine**:
+A consolidated deep module encapsulating real-time webcam frame acquisition, multi-format media decoding (images, WebM, MKV), transferable buffer recycling, and off-thread Web Worker barcode decoding behind a unified entry-point seam.
+_Avoid_: Camera frame provider, QR scanner helper, scanner utility
+
+**Adaptive Frame Scheduler**:
+A backpressure and pacing controller managing dynamic sleep intervals, in-flight frame sequencing, execution latency histories, and starvation watchdog recovery during continuous video capture.
+_Avoid_: Frame timer, scanner loop, camera ticker
+
 ### Air-Gapped Optical Transfer
 
 **Air-Gapped Optical Transfer**:

@@ -524,7 +524,7 @@ class MockWorker {
             }
           }
 
-          if (this.url.toString().includes('scannerWorker') && message && typeof message === 'object' && typeof message.sequenceId === 'number') {
+          if ((this.url.toString().includes('scannerWorker') || this.url.toString().includes('optical-scanner')) && message && typeof message === 'object' && typeof message.sequenceId === 'number') {
             const { image, width, height, epochId } = message;
             if (image && typeof width === 'number' && typeof height === 'number') {
               const { default: jsQR } = await import('jsqr');

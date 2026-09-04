@@ -34,3 +34,11 @@ src/packages/<name>/
 - **Entry Points**:
   - `index.ts`: `drawQR`, `drawQRInternal`, `renderBorder`, `renderEyes`, `renderModules`, `renderFluidModules`, `renderLogo`, `renderMaze`, layout and logo math.
   - `maze.ts`: `generateMaze`, `getMazeCacheKey`, `mazeCache`, `clearMazeCache`, `getStyleAdaptiveMazePathWidth`, `renderMaze`, `applyMazeHaloMask`, and bridge validation helpers.
+
+### `optical-scanner` (`@/packages/optical-scanner`)
+
+- **Purpose**: Consolidated off-thread barcode decoding for live camera video streams, static images, and video files with adaptive backpressure throttling and watchdog fault recovery.
+- **Entry Points**:
+  - `index.ts`: Public API, polymorphic `scan(source, options)` for files/images, scanner contracts, downscaling math, and telemetry contracts.
+  - `client.ts`: Headless React hook (`useQrScanner` / `useAdaptiveScanner`) with integrated camera streaming and file drag-and-drop.
+  - `worker.ts`: Dedicated background Web Worker performing WebCodecs demuxing, EBML parsing, and jsQR optical decoding.
