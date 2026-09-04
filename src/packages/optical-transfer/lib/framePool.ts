@@ -50,6 +50,14 @@ export class PreallocatedFramePool {
       const newCapacity = Math.max(index + 1, this.capacity * 2);
       const newPool = new Uint8Array(newCapacity * this.maxModulesPerFrame);
       newPool.set(this.pool);
+
+      // Re-bind all active frame view references to point to byte ranges in newPool
+      for (const cached of this.frameMap.values()) {
+        const cachedOffset = cached.index * this.maxModulesPerFrame;
+        const cachedLen = cached.size * cached.size;
+        cached.data = newPool.subarray(cachedOffset, cachedOffset + cachedLen);
+      }
+
       this.pool = newPool;
       this.capacity = newCapacity;
     }
