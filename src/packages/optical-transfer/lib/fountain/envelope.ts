@@ -43,22 +43,22 @@ export function computeCrc32Hex(bytes: Uint8Array): string {
 /**
  * Converts a Uint8Array buffer to a Base64 string.
  */
-export function bytesToBase64(bytes: Uint8Array): string {
+function bytesToBase64(bytes: Uint8Array): string {
   if (typeof Buffer !== 'undefined') {
     return Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength).toString('base64');
   }
-  let binary = '';
-  const len = bytes.byteLength;
-  for (let i = 0; i < len; i++) {
-    binary += String.fromCharCode(bytes[i]);
+  const chunks: string[] = [];
+  const chunkSize = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    chunks.push(String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + chunkSize))));
   }
-  return btoa(binary);
+  return btoa(chunks.join(''));
 }
 
 /**
  * Converts a Base64 string to a Uint8Array buffer.
  */
-export function base64ToBytes(base64: string): Uint8Array {
+function base64ToBytes(base64: string): Uint8Array {
   if (typeof Buffer !== 'undefined') {
     const buf = Buffer.from(base64, 'base64');
     return new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength);

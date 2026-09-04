@@ -25,6 +25,5 @@
  */
 export {
   PreallocatedFramePool,
-  type CachedFrame,
   shuffleInPlace,
 } from '@/packages/optical-transfer/sender';

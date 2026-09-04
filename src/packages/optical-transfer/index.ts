@@ -35,6 +35,8 @@ export {
   ReceiverSession,
 } from './receiver';
 
+export { SequentialReassembler } from './lib/chunking/sequential';
+
 export {
   type HandshakeInfo,
   type TransferStats,
