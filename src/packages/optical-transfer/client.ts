@@ -1254,5 +1254,3 @@ export function useOpticalReceiver({
   };
 }
 
-export const useAnimatedQrSender = useOpticalSender;
-export const useAnimatedQrReceiver = useOpticalReceiver;

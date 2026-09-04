@@ -162,7 +162,6 @@ function FileTransferReceiveInner() {
                 <QrCode className="size-6" />
                 <h1 className="text-xl font-bold tracking-tight text-slate-700 dark:text-slate-100">QRCraftly</h1>
               </a>
-              <p className="text-sm text-slate-600 dark:text-slate-400">Receive a File by QR Code</p>
               <div className="flex items-center gap-2">
                 <p className="text-sm text-slate-600 dark:text-slate-400">Receive a File by QR Code</p>
                 <span className="rounded-full bg-teal-100 px-2 py-0.5 text-xs font-semibold text-teal-800 dark:bg-teal-900/60 dark:text-teal-300">Beta</span>

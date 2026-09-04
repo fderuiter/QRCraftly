@@ -52,9 +52,16 @@ export {
   createPrng,
 } from './lib/fountain/soliton';
 export {
+  SequentialReassembler,
+  parseSequentialFrame,
+} from './lib/chunking/sequential';
+
+export {
   serializeDroplet,
   parseDropletString,
   isFountainDropletString,
+  bytesToBase64,
+  base64ToBytes,
   FOUNTAIN_URI_PREFIX,
 } from './lib/fountain/envelope';
 
