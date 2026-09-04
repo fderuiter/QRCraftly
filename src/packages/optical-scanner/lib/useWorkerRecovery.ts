@@ -48,6 +48,44 @@ export function useWorkerRecovery({ onMessage, getScheduler }: UseWorkerRecovery
     }
   }, []);
 
+  const recreateWorkerRef = useRef<() => void>(() => {});
+
+  const attachWorkerListeners = useCallback(
+    (worker: Worker) => {
+      detachWorkerListeners();
+
+      const onMsg = (e: MessageEvent) => onMessageRef.current(e);
+      const onErr = (err: any) => {
+        console.error('Worker thread-level runtime boundary error:', err);
+        recreateWorkerRef.current();
+      };
+      const onMsgErr = (err: any) => {
+        console.error('Worker thread-level message data transfer error:', err);
+        recreateWorkerRef.current();
+      };
+
+      try {
+        if (typeof worker.addEventListener === 'function') {
+          worker.addEventListener('message', onMsg);
+          worker.addEventListener('error', onErr);
+          worker.addEventListener('messageerror', onMsgErr);
+        } else {
+          (worker as any).onmessage = onMsg;
+          (worker as any).onerror = onErr;
+        }
+        attachedListenersRef.current = {
+          worker,
+          onMsg,
+          onErr,
+          onMsgErr,
+        };
+      } catch (err) {
+        console.warn('Failed to attach worker listeners:', err);
+      }
+    },
+    [detachWorkerListeners]
+  );
+
   const recreateWorker = useCallback(() => {
     consecutiveRestartAttemptsRef.current += 1;
     if (consecutiveRestartAttemptsRef.current > 3) {
@@ -84,43 +122,11 @@ export function useWorkerRecovery({ onMessage, getScheduler }: UseWorkerRecovery
       useMainThreadFallbackRef.current = true;
       workerRef.current = null;
     }
-  }, [detachWorkerListeners, getScheduler]);
+  }, [attachWorkerListeners, detachWorkerListeners, getScheduler]);
 
-  const attachWorkerListeners = useCallback(
-    (worker: Worker) => {
-      detachWorkerListeners();
-
-      const onMsg = (e: MessageEvent) => onMessageRef.current(e);
-      const onErr = (err: any) => {
-        console.error('Worker thread-level runtime boundary error:', err);
-        recreateWorker();
-      };
-      const onMsgErr = (err: any) => {
-        console.error('Worker thread-level message data transfer error:', err);
-        recreateWorker();
-      };
-
-      try {
-        if (typeof worker.addEventListener === 'function') {
-          worker.addEventListener('message', onMsg);
-          worker.addEventListener('error', onErr);
-          worker.addEventListener('messageerror', onMsgErr);
-        } else {
-          (worker as any).onmessage = onMsg;
-          (worker as any).onerror = onErr;
-        }
-        attachedListenersRef.current = {
-          worker,
-          onMsg,
-          onErr,
-          onMsgErr,
-        };
-      } catch (err) {
-        console.warn('Failed to attach worker listeners:', err);
-      }
-    },
-    [detachWorkerListeners, recreateWorker]
-  );
+  useEffect(() => {
+    recreateWorkerRef.current = recreateWorker;
+  }, [recreateWorker]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -145,12 +151,17 @@ export function useWorkerRecovery({ onMessage, getScheduler }: UseWorkerRecovery
     consecutiveRestartAttemptsRef.current = 0;
   }, []);
 
+  const incrementEpoch = useCallback(() => {
+    epochRef.current += 1;
+  }, []);
+
   return {
     workerRef,
     epochRef,
     useMainThreadFallbackRef,
     recreateWorker,
     resetRestartCounter,
+    incrementEpoch,
     detachWorkerListeners,
   };
 }

@@ -109,6 +109,22 @@ export function useQrScanner({
     onScanFailRef.current = onScanFail;
   }, [onScanSuccess, onScanFail]);
 
+  const handleWorkerMessageRef = useRef<(e: MessageEvent) => void>(() => {});
+  const getSchedulerRef = useRef<() => AdaptiveFrameScheduler>(() => ({} as any));
+
+  const {
+    workerRef,
+    epochRef,
+    useMainThreadFallbackRef,
+    recreateWorker,
+    resetRestartCounter,
+    incrementEpoch,
+    detachWorkerListeners,
+  } = useWorkerRecovery({
+    onMessage: (e) => handleWorkerMessageRef.current(e),
+    getScheduler: () => getSchedulerRef.current(),
+  });
+
   const schedulerRef = useRef<AdaptiveFrameScheduler | null>(null);
 
   const getScheduler = useCallback(() => {
@@ -131,7 +147,11 @@ export function useQrScanner({
       });
     }
     return schedulerRef.current;
-  }, [minSamplingDelay, maxSamplingDelay, updateState]);
+  }, [minSamplingDelay, maxSamplingDelay, updateState, recreateWorker]);
+
+  useEffect(() => {
+    getSchedulerRef.current = getScheduler;
+  }, [getScheduler]);
 
   const handleWorkerMessage = useCallback(
     (e: MessageEvent) => {
@@ -158,20 +178,12 @@ export function useQrScanner({
 
       getScheduler().endFrame(sequenceId, resultStatus, decodedData, error, buffer);
     },
-    [getScheduler]
+    [getScheduler, epochRef, resetRestartCounter]
   );
 
-  const {
-    workerRef,
-    epochRef,
-    useMainThreadFallbackRef,
-    recreateWorker,
-    resetRestartCounter,
-    detachWorkerListeners,
-  } = useWorkerRecovery({
-    onMessage: handleWorkerMessage,
-    getScheduler,
-  });
+  useEffect(() => {
+    handleWorkerMessageRef.current = handleWorkerMessage;
+  }, [handleWorkerMessage]);
 
   const { attachVideoListeners, detachVideoListeners } = useVideoBinding();
 
@@ -405,11 +417,11 @@ export function useQrScanner({
     isScanningRef.current = true;
     setIsScanning(true);
     resetRestartCounter();
-    epochRef.current += 1;
+    incrementEpoch();
     const scheduler = getScheduler();
     scheduler.setWatchdogTimeout(1500);
     scheduler.start();
-  }, [getScheduler, resetRestartCounter, epochRef]);
+  }, [getScheduler, resetRestartCounter, incrementEpoch]);
 
   const stopScanning = useCallback(() => {
     const wasScanning = isScanningRef.current || isScanning;

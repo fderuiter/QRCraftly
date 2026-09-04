@@ -51,11 +51,9 @@ export const SafeUrlPipeline = {
     });
   },
 
-  decodeObfuscation(url: string): string {
   decodeObfuscation(url: string, maxDepth = 10): string {
     let prev = '';
     let curr = url;
-    let maxDepth = 10;
     
 
     while (prev !== curr && maxDepth > 0) {
