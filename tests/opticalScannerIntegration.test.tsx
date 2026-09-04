@@ -1,12 +1,12 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
+import { scan } from '@/packages/optical-scanner';
 import {
-  scan,
   sharedBufferPool,
   AdaptiveFrameScheduler,
   resetScannerWorker,
-} from '@/packages/optical-scanner';
+} from '@/packages/optical-scanner/scheduler';
 import { useQrScanner } from '@/packages/optical-scanner/client';
 
 function makeVideoRef() {

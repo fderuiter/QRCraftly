@@ -34,6 +34,43 @@ export interface ScanOptions {
   maxDimension?: number;
 }
 
+/**
+ * Type-guard function for validating ScanOptions.
+ */
+export function isValidScanOptions(options: unknown): options is ScanOptions {
+  if (options === undefined || options === null) return true;
+  if (typeof options !== 'object') return false;
+  const o = options as Record<string, unknown>;
+  if (o.signal !== undefined && !(o.signal instanceof AbortSignal)) return false;
+  if (
+    o.maxDimension !== undefined &&
+    (typeof o.maxDimension !== 'number' || !Number.isFinite(o.maxDimension) || o.maxDimension <= 0)
+  ) {
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Assertion function for ScanOptions.
+ */
+export function assertScanOptions(options: unknown): asserts options is ScanOptions {
+  if (options === undefined || options === null) return;
+  if (typeof options !== 'object') {
+    throw new Error('ScanOptions must be an object');
+  }
+  const o = options as Record<string, unknown>;
+  if (o.signal !== undefined && !(o.signal instanceof AbortSignal)) {
+    throw new Error('ScanOptions signal must be an AbortSignal instance');
+  }
+  if (
+    o.maxDimension !== undefined &&
+    (typeof o.maxDimension !== 'number' || !Number.isFinite(o.maxDimension) || o.maxDimension <= 0)
+  ) {
+    throw new Error('ScanOptions maxDimension must be a positive finite number');
+  }
+}
+
 export interface ScannerMetrics {
   latencyHistory: number[];
   frameDropCount: number;

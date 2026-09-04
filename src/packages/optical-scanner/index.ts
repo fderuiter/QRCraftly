@@ -1,7 +1,7 @@
 /**
  * Optical Detection Engine — Root Entry Point
- * Encapsulates off-thread Web Worker barcode decoding, adaptive frame scheduling,
- * and polymorphic source extraction behind a clean entry-point seam.
+ * Encapsulates off-thread Web Worker barcode decoding and polymorphic source extraction
+ * behind a clean, high-level entry-point seam.
  */
 
 export { scanSource as scan } from './lib/sourceExtractor';
@@ -19,21 +19,6 @@ export {
   assertScannerRequest,
   isValidScannerResponse,
   assertScannerResponse,
+  isValidScanOptions,
+  assertScanOptions,
 } from './lib/contracts';
-
-export {
-  DoubleBufferPool,
-  sharedBufferPool,
-} from './lib/bufferPool';
-
-export {
-  AdaptiveFrameScheduler,
-  type SchedulerOptions,
-} from './lib/scheduler';
-
-export {
-  getScannerWorker,
-  terminateScannerWorker,
-  resetScannerWorker,
-} from './lib/workerRunner';
-

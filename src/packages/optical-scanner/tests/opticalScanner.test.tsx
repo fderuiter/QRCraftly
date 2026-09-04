@@ -7,10 +7,14 @@ import {
   isValidScannerResponse,
   assertScannerRequest,
   assertScannerResponse,
+  isValidScanOptions,
+  assertScanOptions,
+} from '../index';
+import {
   DoubleBufferPool,
   AdaptiveFrameScheduler,
   resetScannerWorker,
-} from '../index';
+} from '../scheduler';
 
 describe('Optical Detection Engine — Deep Module Seam Tests', () => {
   beforeEach(() => {
@@ -91,6 +95,18 @@ describe('Optical Detection Engine — Deep Module Seam Tests', () => {
     it('should reject invalid scanner requests', () => {
       expect(isValidScannerRequest({})).toBe(false);
       expect(() => assertScannerRequest({})).toThrow();
+    });
+
+    it('should validate and assert scan options correctly', () => {
+      expect(isValidScanOptions(undefined)).toBe(true);
+      expect(isValidScanOptions({})).toBe(true);
+      expect(isValidScanOptions({ maxDimension: 800 })).toBe(true);
+      expect(isValidScanOptions({ maxDimension: -10 })).toBe(false);
+      expect(isValidScanOptions({ signal: 'not-a-signal' as any })).toBe(false);
+
+      expect(() => assertScanOptions({ maxDimension: 800 })).not.toThrow();
+      expect(() => assertScanOptions({ maxDimension: -5 })).toThrow();
+      expect(() => assertScanOptions({ signal: 'invalid' as any })).toThrow();
     });
   });
 

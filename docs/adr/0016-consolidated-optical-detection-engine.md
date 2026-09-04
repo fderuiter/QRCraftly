@@ -21,9 +21,9 @@ We consolidate the entire optical detection pipeline into a unified deep module 
 
 ### 1. Unified Entry-Point Seams
 
-The package exposes three minimal, orthogonal public seams:
+The package exposes minimal, orthogonal public seams:
 
-- **`index.ts` (Headless Entry Point)**: Exposes polymorphic `scan(source, options)` supporting `ImageData`, `HTMLCanvasElement`, `ImageBitmap`, and `File`/`Blob` (static images and WebM/MKV video files). Also exports runtime validation contracts, downscaling math, and scheduler primitives for integration test harnesses.
+- **`index.ts` (Headless Entry Point)**: Exposes polymorphic `scan(source, options)` supporting `ImageData`, `HTMLCanvasElement`, `ImageBitmap`, and `File`/`Blob` (static images and WebM/MKV video files), alongside public type definitions and runtime validation contracts.
 - **`client.ts` (React Hook Seam)**: Exposes `useQrScanner`, a headless React hook that coordinates off-thread Web Worker QR code decoding on camera stream frames, manages dynamic backpressure-based sampling throttling (16ms–1000ms), handles video seeking/playback events, and provides a unified `scanFile(file)` method.
 - **`worker.ts` (Web Worker Seam)**: The dedicated off-thread Web Worker entry point consolidating WebCodecs video demuxing, EBML parsing, and pure JavaScript jsQR optical decoding (`attemptBoth`).
 
@@ -34,12 +34,11 @@ All complex internal mechanics are strictly hidden inside `lib/` and are inacces
 - **`lib/sourceExtractor.ts`**: Unified extraction pipeline for all `ScanSource` types. Handles native HTML5 video frame stepping (24 FPS), WASM WebM demuxer fallback, global file concurrency locking, and client-side telemetry dispatches.
 - **`lib/scheduler.ts`**: `AdaptiveFrameScheduler` managing in-flight frame tracking, round-trip execution latency histories, dynamic sleep interval pacing, and immediate 1500ms starvation watchdog triggers.
 - **`lib/bufferPool.ts`**: `DoubleBufferPool` managing transferable zero-copy `ArrayBuffer` instances to prevent runtime garbage collection pauses.
-- **`lib/workerRunner.ts`**: Lazy singleton worker instantiation, listener boundary management, and thread teardown.
-- **`lib/contracts.ts`**: Strict Zod schemas, type assertions, and dimension downscaling math.
+- **`lib/workerRunner.ts`**: Lazy singleton worker instantiation, listener boundary management, watchdog recovery, and thread teardown.
+- **`lib/contracts.ts`**: Strict TypeScript runtime validation contracts, type assertion guards, and dimension downscaling math.
 
 ### 3. Deletion of Dead Machinery & Legacy Shims
 
-- Permanently deleted `src/utils/FrameProvider.ts` (retiring over 850 lines of duplicate camera and file provider machinery).
 - Deleted `src/utils/scannerWorker.ts` in favor of `src/packages/optical-scanner/worker.ts`.
 - Converted legacy utility files (`useAdaptiveScanner.ts`, `AdaptiveFrameScheduler.ts`, `scannerContract.ts`, `sharedScannerWorker.ts`) into minimal, single-line backwards-compatibility re-export shims.
 

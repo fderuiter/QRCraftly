@@ -39,6 +39,7 @@ src/packages/<name>/
 
 - **Purpose**: Consolidated off-thread barcode decoding for live camera video streams, static images, and video files with adaptive backpressure throttling and watchdog fault recovery.
 - **Entry Points**:
-  - `index.ts`: Public API, polymorphic `scan(source, options)` for files/images, scanner contracts, downscaling math, and telemetry contracts.
-  - `client.ts`: Headless React hook (`useQrScanner` / `useAdaptiveScanner`) with integrated camera streaming and file drag-and-drop.
+  - `index.ts`: Public API, polymorphic `scan(source, options)` for files/images, scanner contracts, and downscaling math.
+  - `client.ts`: Headless React hook (`useQrScanner`) with integrated camera streaming and file drag-and-drop.
+  - `scheduler.ts`: Secondary entry point exposing `AdaptiveFrameScheduler`, `DoubleBufferPool`, and worker recovery testing hooks.
   - `worker.ts`: Dedicated background Web Worker performing WebCodecs demuxing, EBML parsing, and jsQR optical decoding.
