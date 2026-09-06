@@ -117,7 +117,7 @@ jobs:
 
       - name: "Report Coverage"
         if: github.event_name == 'pull_request'
-        uses: davelosert/vitest-coverage-report-action@02f3c2e641286b7fa308cd3e430783103ce6103b # v2
+        uses: davelosert/vitest-coverage-report-action@c4bbc33a89b7ace0e63d35f1f7d4bcee31155a73 # v2
 
   # JOB E2E: Playwright Cross-Browser Tests
   e2e:
