@@ -572,6 +572,45 @@ describe('useScannability - changed behavior: uses useQRStore instead of useQRCo
       vi.useRealTimers();
     });
 
+    it('transitions to fail state when watchdog fallback runs and image data is unavailable', async () => {
+      vi.useFakeTimers();
+      const canvas = document.createElement('canvas');
+      canvas.width = 100;
+      canvas.height = 100;
+      const canvasRef = { current: canvas };
+      const { result } = renderHook(
+        () => useScannability(canvasRef, defaultConfig),
+        { wrapper }
+      );
+
+      const worker = getActiveWorker()!;
+      worker.postMessage = vi.fn();
+
+      const mockImageBitmap = {
+        width: 10,
+        height: 10,
+        close: vi.fn(),
+      } as unknown as ImageBitmap;
+
+      act(() => {
+        result.current.checkScannability(undefined, mockImageBitmap);
+      });
+      expect(result.current.status).toBe('checking');
+
+      // Make canvas and image bitmap unavailable for fallback extraction (simulating closed ImageBitmap)
+      (mockImageBitmap as any).width = 0;
+      (mockImageBitmap as any).height = 0;
+      canvas.width = 0;
+      canvas.height = 0;
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(1500);
+      });
+
+      expect(result.current.status).toBe('fail');
+      vi.useRealTimers();
+    });
+
     it('recreates a worker after consecutive watchdog timeouts', async () => {
       vi.useFakeTimers();
       const scannabilityCheckerModule = await import('@/packages/scannability');
@@ -718,6 +757,36 @@ describe('useScannability - changed behavior: uses useQRStore instead of useQRCo
       expect(result.current.scan.status).toBe('physical-pass');
       // Worker recovery active is reset to false since the worker is now healthy and successfully processed the check
       expect(result.current.scan.workerRecoveryActive).toBe(false);
+    });
+
+    it('resets workerRecoveryActive when check completes even if QR scan fails', () => {
+      const { result } = renderHook(
+        () => useScannability(makeCanvasRef(), defaultConfig),
+        { wrapper }
+      );
+
+      const worker = getActiveWorker()!;
+      act(() => {
+        worker.dispatchError(new Error('crash'));
+      });
+      expect(result.current.workerRecoveryActive).toBe(true);
+
+      act(() => {
+        result.current.checkScannability();
+      });
+
+      const worker2 = getActiveWorker()!;
+      act(() => {
+        worker2.dispatchMessage({
+          success: false,
+          physicalReady: false,
+          error: 'LOW_CONTRAST',
+          configId: '1',
+        });
+      });
+
+      expect(result.current.status).toBe('fail');
+      expect(result.current.workerRecoveryActive).toBe(false);
     });
   });
 

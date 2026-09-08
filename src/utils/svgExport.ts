@@ -294,12 +294,18 @@ export function rasterizeSvgToCanvas(
  *
  * @param svgString - The generated SVG XML payload string.
  * @param config - The QR code configuration.
- * @returns A promise resolving to true if the SVG offscreen raster is scannable, false otherwise.
+ * @param options - Optional export options, such as allowUnsafe to bypass scannability checks.
+ * @returns A promise resolving to true if the SVG offscreen raster is scannable or bypass is allowed, false otherwise.
  */
 export async function validateSvgScannability(
   svgString: string,
-  config: QRConfig
+  config: QRConfig,
+  options?: { allowUnsafe?: boolean }
 ): Promise<boolean> {
+  if (options?.allowUnsafe) {
+    return true;
+  }
+
   if (config.templateStyle !== TemplateStyle.NONE || config.socialFormat !== SocialFormat.SQUARE_1_1) {
     return true;
   }

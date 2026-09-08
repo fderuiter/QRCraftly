@@ -26,7 +26,7 @@ import { Download, Share2, QrCode, ChevronDown, Moon, Sun, Info, Copy, Check, Al
 import { Modal } from './ui/Modal';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useOnClickOutside } from '@/hooks/useOnClickOutside';
-import { useQRDownload, ExportStatus } from '@/hooks/useQRDownload';
+import { useQRDownload, ExportStatus, ExportOptions } from '@/hooks/useQRDownload';
 import { getExportRiskPolicy } from '@/utils/exportRiskPolicy';
 import { useToast } from './ui/Toast';
 import { useScannability } from '@/hooks/useScannability';
@@ -66,8 +66,7 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
   const copyButtonRef = useRef<HTMLButtonElement>(null);
   const shareButtonRef = useRef<HTMLButtonElement>(null);
   const photosButtonRef = useRef<HTMLButtonElement>(null);
-
-  const { downloadToDevice: hookDownload, handleSaveAs: hookSaveAs, handleSaveSvg: hookSaveSvg, handleShare, handleCopy } = useQRDownload(qrRef, config);
+  const { exportAsset } = useQRDownload(qrRef, config);
   const [copied, setCopied] = useState(false);
   const { canShare } = useCapabilities();
 
@@ -76,7 +75,7 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
 
   
   const handleRendered = useCallback((info: { moduleCount: number, virtualImageData?: ImageData, virtualImageBitmap?: ImageBitmap } = { moduleCount: 0 }) => {
-    if (info.moduleCount && !info.virtualImageData && !info.virtualImageBitmap) emitSignal('render-complete', info);
+    if (info.moduleCount) emitSignal('render-complete', info);
     if (info.virtualImageBitmap) {
       checkScannability(undefined, info.virtualImageBitmap, info.moduleCount);
     } else if (info.virtualImageData) {
@@ -161,8 +160,8 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
   }, [addToast]);
 
   const onCopy = async () => {
-    const action = async () => {
-      const result = await handleCopy();
+    const action = async (options?: ExportOptions) => {
+      const result = await exportAsset('clipboard', options);
       if (result.success) {
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
@@ -172,36 +171,36 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
     executeWithSafetyGate(action);
   };
 
-  const executeWithSafetyGate = (action: () => void | Promise<void>) => {
+  const executeWithSafetyGate = (action: (options?: ExportOptions) => void | Promise<void>) => {
     if (getExportRiskPolicy({ status: scannabilityStatus, health }) === 'unsafe') {
-      setGateAction(() => action);
+      setGateAction(() => () => action({ allowUnsafe: true }));
       setShowSafetyGate(true);
     } else {
       action();
     }
   };
 
-  const handleSaveAsFlow = async (format: 'png' | 'jpeg' | 'webp') => {
+  const handleSaveAsFlow = async (format: 'png' | 'jpeg' | 'webp', options?: ExportOptions) => {
     setShowDownloadMenu(false);
-    const result = await hookSaveAs(format);
+    const result = await exportAsset(format, options);
     handleExportResult(result, downloadButtonRef);
   };
 
-  const handleSaveSvgFlow = async () => {
+  const handleSaveSvgFlow = async (options?: ExportOptions) => {
     setShowDownloadMenu(false);
-    const result = await hookSaveSvg();
+    const result = await exportAsset('svg', options);
     handleExportResult(result, downloadButtonRef);
   };
 
-  const downloadToDeviceFlow = async (format: 'png' | 'jpeg' | 'webp', buttonRef: React.RefObject<HTMLButtonElement | null>) => {
+  const downloadToDeviceFlow = async (format: 'png' | 'jpeg' | 'webp', buttonRef: React.RefObject<HTMLButtonElement | null>, options?: ExportOptions) => {
     setShowDownloadMenu(false);
-    const result = await hookDownload(format);
+    const result = await exportAsset(format, { ...options, directDownload: true });
     handleExportResult(result, buttonRef);
   };
 
   const onShare = async () => {
-    const action = async () => {
-      const result = await handleShare();
+    const action = async (options?: ExportOptions) => {
+      const result = await exportAsset('share', options);
       handleExportResult(result, shareButtonRef);
     };
     executeWithSafetyGate(action);
@@ -444,17 +443,17 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
                           
                           {showDownloadMenu && (
                               <div className="animate-in fade-in zoom-in-95 absolute inset-x-0 top-full z-50 mt-2 overflow-hidden rounded-xl border border-slate-100 bg-white py-1 shadow-xl duration-100 dark:border-slate-700 dark:bg-slate-800" role="menu">
-                                  <Button onClick={() => executeWithSafetyGate(() => handleSaveAsFlow('png'))} role="menuitem" variant="menuitem">
+                                  <Button onClick={() => executeWithSafetyGate((opts) => handleSaveAsFlow('png', opts))} role="menuitem" variant="menuitem">
                                       <div className="size-1.5 rounded-full bg-teal-500"></div> PNG (High Quality)
                                   </Button>
-                                  <Button onClick={() => executeWithSafetyGate(() => handleSaveAsFlow('jpeg'))} role="menuitem" variant="menuitem">
+                                  <Button onClick={() => executeWithSafetyGate((opts) => handleSaveAsFlow('jpeg', opts))} role="menuitem" variant="menuitem">
                                       <div className="size-1.5 rounded-full bg-blue-500"></div> JPEG (Compact)
                                   </Button>
-                                  <Button onClick={() => executeWithSafetyGate(() => handleSaveAsFlow('webp'))} role="menuitem" variant="menuitem">
+                                  <Button onClick={() => executeWithSafetyGate((opts) => handleSaveAsFlow('webp', opts))} role="menuitem" variant="menuitem">
                                       <div className="size-1.5 rounded-full bg-purple-500"></div> WebP (Modern)
                                   </Button>
                                   <div className="my-1 h-px bg-slate-100 dark:bg-slate-700" role="separator" />
-                                  <Button onClick={() => executeWithSafetyGate(handleSaveSvgFlow)} role="menuitem" variant="menuitem">
+                                  <Button onClick={() => executeWithSafetyGate((opts) => handleSaveSvgFlow(opts))} role="menuitem" variant="menuitem">
                                       <div className="size-1.5 rounded-full bg-orange-500"></div> SVG (Vector)
                                   </Button>
                               </div>
@@ -491,7 +490,7 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
                       ref={photosButtonRef}
                       variant="outline"
                       fullWidth
-                      onClick={() => executeWithSafetyGate(() => downloadToDeviceFlow('png', photosButtonRef))}
+                      onClick={() => executeWithSafetyGate((opts) => downloadToDeviceFlow('png', photosButtonRef, opts))}
                       aria-label="Download QR code as PNG"
                    >
                       <Download className="size-4" />

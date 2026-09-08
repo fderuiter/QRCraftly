@@ -21,7 +21,7 @@ import { performScannabilityCheck, ScannabilityResult } from './lib/checker';
 import { calculateScannabilityHealth, HealthScore } from './lib/scoring';
 import { getExportRiskPolicy, ExportRisk, ScannabilityStatus } from './lib/exportRiskPolicy';
 
-export type { ScannabilityStatus, ExportRisk, ExportRiskPolicyInput } from './lib/exportRiskPolicy';
+export type { ScannabilityStatus, ExportRisk, ExportRiskPolicyInput, ExportOptions } from './lib/exportRiskPolicy';
 export type { HealthScore } from './lib/scoring';
 export type { ScannabilityResult } from './lib/checker';
 export type { ModuleContrastAuditResult, LowContrastCell } from './lib/contrastAudit';
