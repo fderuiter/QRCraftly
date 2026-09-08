@@ -51,14 +51,12 @@ export const SafeUrlPipeline = {
     });
   },
 
-  decodeObfuscation(url: string): string {
   decodeObfuscation(url: string, maxDepth = 10): string {
     let prev = '';
     let curr = url;
-    let maxDepth = 10;
-    
+    let depth = maxDepth;
 
-    while (prev !== curr && maxDepth > 0) {
+    while (prev !== curr && depth > 0) {
       prev = curr;
       try {
         curr = decodeURIComponent(curr);
@@ -66,7 +64,7 @@ export const SafeUrlPipeline = {
         // Ignored malformed
       }
       curr = this.decodeHtmlEntities(curr);
-      maxDepth--;
+      depth--;
     }
     return curr;
   },
