@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Camera, Upload, AlertTriangle, X, RefreshCw, FileImage } from 'lucide-react';
 import { useCamera } from '../hooks/useCamera';
-import { useAdaptiveScanner } from '../hooks/useAdaptiveScanner';
+import { useQrScanner } from '@/packages/optical-scanner/client';
 import { Button } from './ui/Button';
-import { FileFrameProvider } from '../utils/FrameProvider';
 
 /**
  * QRScannerProps definition.
@@ -75,8 +74,8 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
     }
   }, []);
 
-  // Initialize Adaptive Scanner hook
-  const { startScanning, stopScanning } = useAdaptiveScanner({
+  // Initialize Adaptive Scanner hook from deep module
+  const { startScanning, stopScanning, scanFile } = useQrScanner({
     videoRef,
     onScanSuccess: (data) => {
       onScanSuccess(data);
@@ -181,7 +180,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
     return 'Click the padlock or site control icon next to the URL in your browser\'s address bar, and allow Camera permissions.';
   };
 
-  // Client-side QR decoding using the unified Polymorphic FrameProvider abstraction
+  // Client-side QR decoding using the unified deep module scanFile method
   const processFile = async (file: File) => {
     if (fileAbortControllerRef.current) {
       fileAbortControllerRef.current.abort();
@@ -195,18 +194,15 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
     setFileProcessing(true);
 
     try {
-      const provider = new FileFrameProvider(file, { signal: controller.signal });
-      provider.onFrameDecoded(({ status, decodedData, error }) => {
-        if (controller.signal.aborted) return;
-        if (status === 'pass' && decodedData) {
-          onScanSuccess(decodedData);
-        } else if (error) {
-          setFileError(error);
-        }
-      });
-      await provider.start(controller.signal);
+      const result = await scanFile(file, { signal: controller.signal });
+      if (controller.signal.aborted) return;
+      if (result.status === 'pass' && result.data) {
+        onScanSuccess(result.data);
+      } else if (result.error) {
+        setFileError(result.error);
+      }
     } catch (err: any) {
-      if (!controller.signal.aborted) {
+      if (!controller.signal.aborted && err?.name !== 'AbortError') {
         setFileError(err.message || 'Failed to parse file.');
       }
     } finally {

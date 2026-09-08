@@ -4,7 +4,8 @@ import { act, render, screen, fireEvent, waitFor } from '@testing-library/react'
 import React from 'react';
 import { QRScanner } from './QRScanner';
 import { useCamera } from '../hooks/useCamera';
-import { useAdaptiveScanner } from '../hooks/useAdaptiveScanner';
+import { useQrScanner } from '@/packages/optical-scanner/client';
+import { scan } from '@/packages/optical-scanner';
 import jsQR from 'jsqr';
 
 // Mock hooks and external libraries
@@ -12,7 +13,8 @@ vi.mock('../hooks/useCamera', () => ({
   useCamera: vi.fn(),
 }));
 
-vi.mock('../hooks/useAdaptiveScanner', () => ({
+vi.mock('@/packages/optical-scanner/client', () => ({
+  useQrScanner: vi.fn(),
   useAdaptiveScanner: vi.fn(),
 }));
 
@@ -27,6 +29,7 @@ describe('QRScanner Component', () => {
   const mockStopStream = vi.fn();
   const mockStartScanning = vi.fn();
   const mockStopScanning = vi.fn();
+  const mockScanFile = vi.fn().mockImplementation((file: File, options?: any) => scan(file, options));
   let originalImage: any;
 
   beforeEach(() => {
@@ -69,13 +72,14 @@ describe('QRScanner Component', () => {
       stopStream: mockStopStream,
     });
 
-    vi.mocked(useAdaptiveScanner).mockReturnValue({
+    vi.mocked(useQrScanner).mockReturnValue({
       isScanning: false,
       status: 'idle',
       samplingDelay: 33,
       latencyHistory: [],
       startScanning: mockStartScanning,
       stopScanning: mockStopScanning,
+      scanFile: mockScanFile,
     });
 
     mockStartStream.mockResolvedValue({ getTracks: () => [] } as any);
@@ -580,7 +584,7 @@ describe('QRScanner Component', () => {
       vi.spyOn(HTMLVideoElement.prototype, 'removeAttribute').mockImplementation(mockRemoveAttribute);
 
       let capturedOnScanSuccess: ((data: string) => void) | undefined;
-      vi.mocked(useAdaptiveScanner).mockImplementation((options: any) => {
+      vi.mocked(useQrScanner).mockImplementation((options: any) => {
         capturedOnScanSuccess = options.onScanSuccess;
         return {
           isScanning: true,
@@ -589,6 +593,7 @@ describe('QRScanner Component', () => {
           latencyHistory: [],
           startScanning: mockStartScanning,
           stopScanning: mockStopScanning,
+          scanFile: mockScanFile,
         };
       });
 
@@ -712,7 +717,7 @@ describe('QRScanner Component', () => {
     let capturedOnScanSuccess: ((data: string) => void) | undefined;
 
     beforeEach(() => {
-      vi.mocked(useAdaptiveScanner).mockImplementation((options: any) => {
+      vi.mocked(useQrScanner).mockImplementation((options: any) => {
         capturedOnScanSuccess = options.onScanSuccess;
         return {
           isScanning: false,
@@ -721,6 +726,7 @@ describe('QRScanner Component', () => {
           latencyHistory: [],
           startScanning: mockStartScanning,
           stopScanning: mockStopScanning,
+          scanFile: mockScanFile,
         };
       });
     });

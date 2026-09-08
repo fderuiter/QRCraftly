@@ -17,7 +17,7 @@
 */
 
 import { describe, it, expect } from 'vitest';
-import { constructPaymentString } from '../utils/qr-generators/payment';
+import { constructPaymentString } from '@/packages/qr-payload';
 import { CryptoNetwork } from '../types';
 
 describe('Payment String Construction - Injection Risks', () => {

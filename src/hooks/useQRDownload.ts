@@ -21,6 +21,9 @@ import { QRConfig, TemplateStyle, SocialFormat } from '../types';
 import { generateQRSvg, validateSvgScannability } from '../utils/svgExport';
 import { useCapabilities } from './useCapabilities';
 import { performScannabilityCheck } from '../utils/scannabilityChecker';
+import { ExportOptions } from '../utils/exportRiskPolicy';
+
+export type { ExportOptions };
 
 /**
  * Return type for the useQRDownload hook.
@@ -41,17 +44,22 @@ export interface ExportStatus {
 /**
  * Return type for the useQRDownload hook.
  */
-interface UseQRDownloadReturn {
+export interface UseQRDownloadReturn {
+  /** Unified seam for all asset exports. */
+  exportAsset: (
+    format: 'png' | 'jpeg' | 'webp' | 'svg' | 'clipboard' | 'share',
+    options?: ExportOptions
+  ) => Promise<ExportStatus>;
   /** Downloads the canvas image to local device storage. */
-  downloadToDevice: (format: 'png' | 'jpeg' | 'webp') => Promise<ExportStatus>;
+  downloadToDevice: (format: 'png' | 'jpeg' | 'webp', options?: ExportOptions) => Promise<ExportStatus>;
   /** Opens native Save-As file picker if supported, with direct download fallback. */
-  handleSaveAs: (format: 'png' | 'jpeg' | 'webp') => Promise<ExportStatus>;
+  handleSaveAs: (format: 'png' | 'jpeg' | 'webp', options?: ExportOptions) => Promise<ExportStatus>;
   /** Generates and downloads vector SVG QR code. */
-  handleSaveSvg: () => Promise<ExportStatus>;
+  handleSaveSvg: (options?: ExportOptions) => Promise<ExportStatus>;
   /** Shares QR code image via Web Share API. */
-  handleShare: () => Promise<ExportStatus>;
+  handleShare: (options?: ExportOptions) => Promise<ExportStatus>;
   /** Copies QR code image to system clipboard. */
-  handleCopy: () => Promise<ExportStatus>;
+  handleCopy: (options?: ExportOptions) => Promise<ExportStatus>;
 }
 
 /**
@@ -111,11 +119,12 @@ export function useQRDownload(
    * Downloads the current QR code canvas content to the user's device.
    * Used as a fallback or direct action for saving to photos.
    * @param format - The desired image format.
+   * @param options - Optional export options (e.g. allowUnsafe to bypass scannability pre-flight checks).
    */
-  const downloadToDevice = useCallback(async (format: 'png' | 'jpeg' | 'webp'): Promise<ExportStatus> => {
+  const downloadToDevice = useCallback(async (format: 'png' | 'jpeg' | 'webp', options?: ExportOptions): Promise<ExportStatus> => {
     const canvas = qrRef.current?.querySelector('canvas');
     if (canvas) {
-      if (!validateScannability(canvas)) {
+      if (!options?.allowUnsafe && !validateScannability(canvas)) {
         return { success: false, format, error: new Error('SCAN_VALIDATION_FAILED') };
       }
       try {
@@ -139,12 +148,13 @@ export function useQRDownload(
    * Handles saving the QR code image, attempting to use the File System Access API
    * for a native "Save As" experience, falling back to direct download if unsupported.
    * @param format - The desired image format.
+   * @param options - Optional export options (e.g. allowUnsafe to bypass scannability pre-flight checks).
    */
-  const handleSaveAs = useCallback(async (format: 'png' | 'jpeg' | 'webp'): Promise<ExportStatus> => {
+  const handleSaveAs = useCallback(async (format: 'png' | 'jpeg' | 'webp', options?: ExportOptions): Promise<ExportStatus> => {
     const canvas = qrRef.current?.querySelector('canvas');
     if (!canvas) return { success: false, format, error: new Error('Canvas not found') };
 
-    if (!validateScannability(canvas)) {
+    if (!options?.allowUnsafe && !validateScannability(canvas)) {
       return { success: false, format, error: new Error('SCAN_VALIDATION_FAILED') };
     }
 
@@ -178,23 +188,24 @@ export function useQRDownload(
         }
 
         console.warn('File System Access API failed, falling back to standard download:', err);
-        return downloadToDevice(format);
+        return downloadToDevice(format, options);
       }
     } else {
       // Fallback for browsers that don't support showSaveFilePicker (Safari, Firefox, Mobile)
-      return downloadToDevice(format);
+      return downloadToDevice(format, options);
     }
   }, [qrRef, getFilename, downloadToDevice, canSaveFilePicker, validateScannability]);
 
   /**
    * Copies the QR code image directly to the clipboard.
+   * @param options - Optional export options (e.g. allowUnsafe to bypass scannability pre-flight checks).
    * @returns A boolean indicating if the copy operation was successful.
    */
-  const handleCopy = useCallback(async (): Promise<ExportStatus> => {
+  const handleCopy = useCallback(async (options?: ExportOptions): Promise<ExportStatus> => {
     const canvas = qrRef.current?.querySelector('canvas');
     if (!canvas) return { success: false, format: 'clipboard', error: new Error('Canvas not found') };
 
-    if (!validateScannability(canvas)) {
+    if (!options?.allowUnsafe && !validateScannability(canvas)) {
       return { success: false, format: 'clipboard', error: new Error('SCAN_VALIDATION_FAILED') };
     }
 
@@ -219,12 +230,13 @@ export function useQRDownload(
   /**
    * Uses the Web Share API to share the QR code image directly to other apps.
    * Falls back to downloading if sharing is not supported.
+   * @param options - Optional export options (e.g. allowUnsafe to bypass scannability pre-flight checks).
    */
-  const handleShare = useCallback(async (): Promise<ExportStatus> => {
+  const handleShare = useCallback(async (options?: ExportOptions): Promise<ExportStatus> => {
     const canvas = qrRef.current?.querySelector('canvas');
     if (!canvas) return { success: false, format: 'share', error: new Error('Canvas not found') };
 
-    if (!validateScannability(canvas)) {
+    if (!options?.allowUnsafe && !validateScannability(canvas)) {
       return { success: false, format: 'share', error: new Error('SCAN_VALIDATION_FAILED') };
     }
 
@@ -251,8 +263,8 @@ export function useQRDownload(
           }
         } else {
           // Fallback for devices that don't support sharing files
-          await downloadToDevice('png');
-          resolve({ success: true, format: 'share', fallbackTriggered: true });
+          const fallbackRes = await downloadToDevice('png', options);
+          resolve({ ...fallbackRes, format: 'share', fallbackTriggered: true });
         }
       }, 'image/png');
     });
@@ -263,8 +275,9 @@ export function useQRDownload(
    * a download. The SVG embeds logos as inline base64 data-URLs for portability.
    * Before saving, the generated SVG XML is rendered to an offscreen canvas and
    * verified for scannability.
+   * @param options - Optional export options (e.g. allowUnsafe to bypass scannability pre-flight checks).
    */
-  const handleSaveSvg = useCallback(async (): Promise<ExportStatus> => {
+  const handleSaveSvg = useCallback(async (options?: ExportOptions): Promise<ExportStatus> => {
     try {
       let logoOmitted = false;
       const svgString = await generateQRSvg(config, {
@@ -273,9 +286,11 @@ export function useQRDownload(
         },
       });
 
-      const isScannable = await validateSvgScannability(svgString, config);
-      if (!isScannable) {
-        return { success: false, format: 'svg', error: new Error('SCAN_VALIDATION_FAILED') };
+      if (!options?.allowUnsafe) {
+        const isScannable = await validateSvgScannability(svgString, config, options);
+        if (!isScannable) {
+          return { success: false, format: 'svg', error: new Error('SCAN_VALIDATION_FAILED') };
+        }
       }
 
       const blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
@@ -294,5 +309,37 @@ export function useQRDownload(
     }
   }, [config, getFilename]);
 
-  return { downloadToDevice, handleSaveAs, handleSaveSvg, handleShare, handleCopy };
+  /**
+   * Unified QR export engine seam that coordinates all asset exports.
+   * Evaluates scannability bypass policies, formats files, handles fallbacks,
+   * and dispatches downloads/shares behind a single interface.
+   * @param format - The target export format or sharing mechanism.
+   * @param options - Optional export options (e.g. allowUnsafe to bypass scannability pre-flight checks).
+   */
+  const exportAsset = useCallback(
+    async (
+      format: 'png' | 'jpeg' | 'webp' | 'svg' | 'clipboard' | 'share',
+      options?: ExportOptions
+    ): Promise<ExportStatus> => {
+      switch (format) {
+        case 'png':
+        case 'jpeg':
+        case 'webp':
+          return options?.directDownload
+            ? downloadToDevice(format, options)
+            : handleSaveAs(format, options);
+        case 'svg':
+          return handleSaveSvg(options);
+        case 'clipboard':
+          return handleCopy(options);
+        case 'share':
+          return handleShare(options);
+        default:
+          return { success: false, format, error: new Error(`Unsupported export format: ${format}`) };
+      }
+    },
+    [downloadToDevice, handleSaveAs, handleSaveSvg, handleCopy, handleShare]
+  );
+
+  return { exportAsset, downloadToDevice, handleSaveAs, handleSaveSvg, handleShare, handleCopy };
 }

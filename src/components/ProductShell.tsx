@@ -27,6 +27,10 @@ export function ProductShell({ children }: { children: ReactNode }) {
           <nav aria-label="Primary navigation" className="flex items-center gap-1 text-sm font-semibold sm:gap-2">
             <a href="/" className="rounded-lg px-3 py-2 text-slate-600 transition-colors hover:bg-slate-100 hover:text-teal-700 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-teal-400">Create QR</a>
             <a href="/file-transfer" className="hidden rounded-lg px-3 py-2 text-slate-600 transition-colors hover:bg-slate-100 hover:text-teal-700 sm:block dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-teal-400">Send File</a>
+            <a href="/file-transfer" className="hidden items-center gap-1.5 rounded-lg px-3 py-2 text-slate-600 transition-colors hover:bg-slate-100 hover:text-teal-700 sm:inline-flex dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-teal-400">
+              <span>Send File</span>
+              <span className="rounded-full bg-teal-100 px-1.5 py-0.5 text-[10px] font-semibold text-teal-800 dark:bg-teal-900/60 dark:text-teal-300">Beta</span>
+            </a>
             <a href="/about" className="rounded-lg px-3 py-2 text-slate-600 transition-colors hover:bg-slate-100 hover:text-teal-700 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-teal-400">About</a>
             <a href="/security" className="hidden rounded-lg px-3 py-2 text-slate-600 transition-colors hover:bg-slate-100 hover:text-teal-700 md:block dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-teal-400">Security</a>
           </nav>

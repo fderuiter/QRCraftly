@@ -124,7 +124,6 @@ export default defineConfig(() => {
           },
           include: [
             'src/utils/*.ts',
-            'src/utils/qr-generators/*.ts',
             'src/utils/qr-renderers/*.ts'
           ],
           exclude: [
@@ -148,7 +147,6 @@ export default defineConfig(() => {
             'src/utils/scannabilityChecker.ts',
             'src/utils/scannabilityWorker.ts',
             'src/utils/scannerContract.ts',
-            'src/utils/scannerWorker.ts',
             'src/utils/schemaGenerator.ts',
             'src/utils/security.ts',
             'src/utils/sharedContract.ts',
@@ -157,9 +155,6 @@ export default defineConfig(() => {
             'src/utils/exportRiskPolicy.ts',
             'src/utils/opticalSimulation.ts',
             'src/utils/qrRenderer.ts',
-            'src/utils/qr-generators/email.ts',
-            'src/utils/qr-generators/event.ts',
-            'src/utils/qr-generators/sms.ts',
           ],
         }
       },

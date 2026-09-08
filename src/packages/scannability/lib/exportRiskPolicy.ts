@@ -20,6 +20,13 @@ export type ScannabilityStatus = 'idle' | 'checking' | 'digital-pass' | 'physica
 
 export type ExportRisk = 'safe' | 'caution' | 'unsafe';
 
+export interface ExportOptions {
+  /** When true, bypasses scannability pre-flight validation gates. */
+  allowUnsafe?: boolean;
+  /** When true, forces direct file download to local device instead of invoking Save-As picker. */
+  directDownload?: boolean;
+}
+
 export interface ExportRiskPolicyInput {
   status: ScannabilityStatus;
   health?: {
