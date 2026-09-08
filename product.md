@@ -1,0 +1,259 @@
+# QRCraftly — Product Specification
+
+> **Version**: aligned with `v0.8.0`
+> **Status**: Living document — update alongside every minor release.
+> **Audience**: Engineering team, stakeholders, and open-source contributors.
+
+---
+
+## 1. Vision
+
+**QRCraftly is the professional QR code studio — the most customizable, beautiful QR generator on the web.**
+
+It delivers studio-grade visual output while upholding an uncompromising privacy-first architecture: all QR payloads are generated, rendered, and exported entirely inside the user's browser. No user input ever crosses the network. No account required. No tracking.
+
+---
+
+## 2. Mission Statement
+
+Make beautiful, accessible, privacy-safe QR codes trivially easy to produce — for a single marketer crafting a campaign asset, a healthcare team distributing compliant patient materials, or a developer transmitting files across an air gap.
+
+---
+
+## 3. Positioning
+
+| Dimension           | QRCraftly                                                                  |
+| ------------------- | -------------------------------------------------------------------------- |
+| **Category**        | Client-side QR code studio                                                 |
+| **Differentiation** | Studio-grade visual customization + zero-knowledge privacy architecture    |
+| **License**         | AGPL-3.0 open-source; open-core with a paid self-hosted / white-label tier |
+| **Deployment**      | Progressive web app on Cloudflare''s global edge network (`qrcraftly.com`) |
+| **Maturity**        | Pre-release (`v0.x`); actively approaching `v1.0` stable                   |
+
+---
+
+## 4. Product Principles
+
+Ordered by priority. When principles conflict, the earlier one wins.
+
+### P1 — Privacy is non-negotiable
+
+User payloads **never** leave the browser. This is a hard architectural invariant, not a marketing claim. The [Storage Allowlist](docs/adr/0001-client-side-storage-allowlist.md), [volatile memory guarantee](docs/public/COMPLIANCE.md), and [pre-build storage AST auditor](scripts/storage_privacy_ast_auditor.js) enforce this at build time and runtime. No feature may be shipped that weakens this guarantee.
+
+### P2 — Visual quality is a competitive advantage
+
+QRCraftly's output must be objectively the most polished in class. Scannability and aesthetics are jointly maximized — neither is sacrificed for the other. The [Scannability Worker](docs/public/SCALING.md) enforces optical health automatically; engineers must ensure new pattern styles pass **Print Simulation Verified** before release.
+
+### P3 — Simplicity wins for the core flow
+
+The path from landing to downloading a customized QR code must require zero account creation, zero configuration, and zero learning. Advanced features (Dynamic Redirection, Air-Gapped Transfer) are opt-in surfaces that do not interrupt the primary flow.
+
+### P4 — Accessibility and compliance are first-class
+
+WCAG 2.1 SC 1.4.11 contrast compliance is validated for every generated code and all UI states. HIPAA Technical Safeguard alignment (transmission security, data integrity, volatile memory) is maintained across all feature additions. See [`docs/public/COMPLIANCE.md`](docs/public/COMPLIANCE.md).
+
+### P5 — Platform invariance
+
+The product runs identically on every modern browser across desktop and mobile. The engineering toolchain runs identically on Windows, macOS, and Linux. No platform is a second-class citizen.
+
+---
+
+## 5. Target Personas
+
+### 5.1 — The Brand Designer / Marketer
+
+**Needs**: On-brand QR codes for campaigns, packaging, print, and event materials. Wants fine-grained color, pattern, and logo control. Exports to print-quality SVG or PNG.
+
+**Success**: Generates a beautiful, on-brand code in under two minutes without reading documentation.
+
+### 5.2 — The Healthcare / Compliance Professional
+
+**Needs**: A QR generator that never transmits PHI to a server. Must be usable within a HIPAA-aligned environment. Needs confidence that nothing is stored, logged, or tracked.
+
+**Success**: Can point to [`docs/public/COMPLIANCE.md`](docs/public/COMPLIANCE.md) as evidence of technical safeguards and use QRCraftly in a compliant workflow with confidence.
+
+### 5.3 — The Developer / Technical Power User
+
+**Needs**: Advanced QR data types (vCard RFC 6350, cryptocurrency, calendar events, GPS), fine-grained error-correction control, SVG export for programmatic manipulation, and access to experimental features (zero-knowledge dynamic links, air-gapped optical transfer).
+
+**Success**: QRCraftly handles every data type they need and exposes the raw architectural capability of the platform.
+
+### 5.4 — The Event Organizer / Small Business Owner
+
+**Needs**: Quick generation of WiFi, URL, or contact QR codes for physical spaces. Needs it to work on mobile, look great, and be downloadable immediately.
+
+**Success**: Opens the site on a phone, generates a scannable WiFi code with a logo, and saves it in under 60 seconds.
+
+---
+
+## 6. Feature Inventory
+
+Features are tagged with a maturity tier:
+
+| Tag          | Meaning                                                  |
+| ------------ | -------------------------------------------------------- |
+| `[STABLE]`   | Production-ready, fully supported                        |
+| `[BETA]`     | Available but with known rough edges; use with awareness |
+| `[INTERNAL]` | Architecture exists; not yet user-facing                 |
+| `[PLANNED]`  | On the roadmap, not yet implemented                      |
+
+### 6.1 Core QR Generation `[STABLE]`
+
+- **Data types**: URL, plain text, WiFi (WPA/WEP/EAP/Open), email, vCard (RFC 6350 CRLF + UTF-8 line folding), phone, SMS, cryptocurrency payments, calendar events (iCal), GPS coordinates, video meeting links (Zoom, Google Meet), social profiles (Bluesky, GitHub, Instagram, LinkedIn, Mastodon, X, YouTube, Threads).
+- **Error correction levels**: L / M / Q / H (user-selectable).
+- **Live preview**: QR matrix re-renders in real time with every input change.
+- **Off-thread rendering**: All scannability auditing and barcode decoding runs in the [Scannability Worker](src/packages/) via transferable `ArrayBuffer` double-buffering, keeping the UI at 60 FPS.
+
+### 6.2 Visual Customization `[STABLE]`
+
+- **Pattern styles**: Standard Industrial, Modern Soft, Swiss Dot, Fluid Ink, Cyber Circuit, The Hive, Grunge, Starburst.
+- **Color control**: Independent foreground, background, and finder pattern (eye) colors. Accessibility-checked preset themes included. WCAG contrast enforcement with live warnings.
+- **Logo embedding**: Upload JPEG, PNG, WebP, SVG (max 2 MB). Configurable size (max 30% of matrix to preserve scannability), padding, and border style (Square, Circle, None).
+- **Scannability Health indicator**: Real-time badge showing **Print Simulation Verified**, **Screen Scan Verified**, or **Scan Verification Failed** with explanatory guidance.
+
+### 6.3 Export & Share `[STABLE]`
+
+- **Formats**: PNG (high-quality), JPEG, WebP, vector SVG (via custom `SvgContext` Canvas 2D emulation).
+- **File System Access API**: Native "Save As" dialog on supported browsers.
+- **Web Share API**: One-tap mobile sharing to any installed app.
+
+### 6.4 Air-Gapped Optical Transfer `[INTERNAL]`
+
+Architecture is implemented and tested; the feature is not yet user-facing.
+
+- **Mechanism**: Transmits arbitrary binary files across physical air gaps as animated QR streams — no network, Bluetooth, or USB required.
+- **Reliability**: Two-tier optical error correction — intra-frame Reed-Solomon (GF(2^8)) for spatial blemishes + inter-frame rateless fountain coding (Luby Transform over GF(2)) for temporal frame drops.
+- **Stateless entry**: Receiver can begin capturing a stream at any point without a handshake.
+- **Near-term roadmap**: Making this feature user-facing and discoverable is the current #1 priority (see Section 8).
+
+### 6.5 Accessibility `[STABLE]`
+
+- WCAG 2.1 SC 1.4.11 Non-Text Contrast enforcement on all generated codes and UI states.
+- Full keyboard navigation and screen reader support.
+- Vitest-axe automated accessibility assertions on all components.
+
+### 6.6 Progressive Web App `[STABLE]`
+
+- Fully responsive — desktop and mobile.
+- Dark mode supported.
+- Core generation works offline once static assets are cached.
+
+---
+
+## 7. Privacy & Compliance Architecture
+
+This section is **non-negotiable**. Any feature proposal must be evaluated against these invariants before planning begins.
+
+| Invariant                                 | Enforcement Mechanism                                                                                 |
+| ----------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| User payloads never transmitted to server | Client-side Canvas / Web Worker generation only                                                       |
+| No QR content stored server-side          | Volatile browser memory; cleared on tab close                                                         |
+| No user input in URL query parameters     | Architectural constraint; prevents history/proxy leakage                                              |
+| Storage keys explicitly allowlisted       | Pre-build AST auditor (`scripts/storage_privacy_ast_auditor.js`) blocks unapproved keys at build time |
+| Opt-in telemetry schema allowlisted       | `ALLOWED_TELEMETRY_KEYS` in `src/types.ts`; no payload-adjacent fields permitted                      |
+
+HIPAA Technical Safeguard alignment is documented in [`docs/public/COMPLIANCE.md`](docs/public/COMPLIANCE.md). This is a _technical_ safeguard; organizational HIPAA certification remains the responsibility of the deploying organization.
+
+---
+
+## 8. Roadmap
+
+### Now — Current Sprint
+
+- **Graduate Air-Gapped Optical Transfer to user-facing**: Design and build the UI surface that makes the Optical Transfer Engine discoverable and usable by non-technical users. This is the #1 priority.
+
+### Next — Near-Term (next 1–3 minor releases)
+
+- **SEO & content marketing**: Targeted landing pages (e.g., `/wifi-qr-code`) to grow organic acquisition; Lighthouse CI scores must remain green.
+
+### Later — Medium-Term
+
+- **Open-core paid tier launch**: Self-hosted or white-label license offering for organizations. Gate advanced features (Air-Gapped Transfer, future team workspaces) behind this tier.
+- **Expand QR data types**: Additional social platforms, structured data types, and AR marker support as demand warrants.
+- **v1.0 stable release**: Graduate from `v0.x` pre-release when Air-Gapped Optical Transfer is user-facing and the core studio feature set is considered complete.
+
+### Icebox — Under Evaluation
+
+- Team workspaces / collaborative QR management.
+- Programmatic API (CLI or REST) for power users.
+
+---
+
+## 9. Non-Goals
+
+The following are explicitly **out of scope** and should not be planned, specced, or built without a deliberate product decision to revise this list:
+
+| Non-Goal                                               | Rationale                                                                                                                                                                              |
+| ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Dynamic / trackable QR redirection                     | Any server-side redirection requires storing a destination URL server-side and logging scan events, which cannot be reconciled with the privacy-first invariant. Removed as a feature. |
+| Server-side QR generation                              | Violates the privacy-first invariant; payloads must never leave the client                                                                                                             |
+| Native mobile apps (iOS / Android)                     | Web-first strategy; responsive PWA is sufficient                                                                                                                                       |
+| Batch / bulk QR generation via API or CSV upload       | Adds infrastructure complexity without a clear user persona match today                                                                                                                |
+| External analytics or telemetry tracking QR content    | Violates privacy-first invariant; only opt-in, schema-controlled diagnostic telemetry is permitted                                                                                     |
+| Server-side storage of user QR codes or cloud accounts | Violates volatile memory guarantee                                                                                                                                                     |
+
+---
+
+## 10. Success Metrics
+
+QRCraftly is healthy and growing when all of the following trend in the right direction:
+
+### Technical Quality
+
+| Metric                                             | Target                                                   |
+| -------------------------------------------------- | -------------------------------------------------------- |
+| Lighthouse Performance                             | >= 90                                                    |
+| Lighthouse Accessibility                           | >= 95                                                    |
+| Lighthouse SEO                                     | >= 90                                                    |
+| Lighthouse Best Practices                          | >= 90                                                    |
+| Client bundle size                                 | <= 3 MB                                                  |
+| Scannability pass rate (Print Simulation Verified) | >= 95% across all pattern styles in CI visual regression |
+
+### Product Engagement
+
+| Metric                         | Cadence |
+| ------------------------------ | ------- |
+| Unique weekly active users     | Weekly  |
+| QR codes generated per day     | Daily   |
+| Session duration on the studio | Weekly  |
+| Mobile vs. desktop split       | Monthly |
+
+### Community & Repository Health
+
+| Metric                                 | Cadence      |
+| -------------------------------------- | ------------ |
+| GitHub stars                           | Monthly      |
+| Open issues resolved (time-to-close)   | Monthly      |
+| Contributor count                      | Quarterly    |
+| CI green rate (no flaky test failures) | Continuously |
+
+---
+
+## 11. Monetization Model
+
+QRCraftly is **open-source under AGPL-3.0**. The base product is free forever for individuals and non-commercial use.
+
+The planned commercial tier is **open-core**:
+
+- **Free (open-source)**: Full QR generation studio, all data types, all visual customization, Air-Gapped Transfer — all features that run entirely in-browser.
+- **Paid (self-hosted / white-label license)**: Organizations that want to self-host QRCraftly, remove attribution, use a custom domain, access the Dynamic Redirection backend with their own Cloudflare D1/KV infrastructure, and receive commercial support.
+
+> No SaaS subscription or per-code pricing is planned at this stage. Revisit at `v1.0`.
+
+---
+
+## 12. Related Documents
+
+| Document                                                 | Purpose                                                                  |
+| -------------------------------------------------------- | ------------------------------------------------------------------------ |
+| [`CONTEXT.md`](CONTEXT.md)                               | Canonical domain glossary — use correct terminology                      |
+| [`AGENTS.md`](AGENTS.md)                                 | Engineering operating instructions and hard invariants for AI agents     |
+| [`docs/public/COMPLIANCE.md`](docs/public/COMPLIANCE.md) | HIPAA technical safeguard documentation                                  |
+| [`docs/public/SCALING.md`](docs/public/SCALING.md)       | Scannability Worker, Web Workers, and performance architecture           |
+| [`docs/public/UI_CATALOG.md`](docs/public/UI_CATALOG.md) | Canonical UI component catalog                                           |
+| [`docs/adr/`](docs/adr/)                                 | Architectural Decision Records — rationale for every major design choice |
+| [`CHANGELOG.md`](CHANGELOG.md)                           | Release history                                                          |
+
+---
+
+_This document is the single source of truth for QRCraftly''s product direction. Update it as a required step in the release process whenever scope, priorities, or principles change._
