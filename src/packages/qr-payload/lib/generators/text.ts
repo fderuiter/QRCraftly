@@ -16,8 +16,28 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-// Re-export generic URL utility
-export * from './url';
+import { TextData, QRType, QRGeneratorContract } from '@/types';
+import { identifyProtocol } from '../protocol';
 
-// Re-export QR Payload and Generator Engine
-export * from '@/packages/qr-payload';
+/**
+ * Constructs the plain text QR code string.
+ */
+export const constructTextString = (data: TextData): string => {
+  if (!data) return '';
+  return data.text || '';
+};
+
+/**
+ * Hydrates TextData from a raw string.
+ */
+export const hydrateTextData = (raw: string): TextData => {
+  return { text: raw || '' };
+};
+
+export const TextContract: QRGeneratorContract<TextData> = {
+  type: QRType.TEXT,
+  construct: constructTextString,
+  hydrate: hydrateTextData,
+  matches: (raw: string) => identifyProtocol(raw) === QRType.TEXT,
+  validate: () => [],
+};

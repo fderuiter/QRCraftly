@@ -1,6 +1,6 @@
 /*
     QRCraftly
-    Copyright (C) 2025-2026 fderuiter
+    Copyright (C) 2025 fderuiter
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as published
@@ -16,8 +16,17 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-// Re-export generic URL utility
-export * from './url';
+import { computeExampleMetric } from "./lib/impl";
 
-// Re-export QR Payload and Generator Engine
-export * from '@/packages/qr-payload';
+/**
+ * Starter template entry point illustrating deep module encapsulation.
+ *
+ * External callers and package test suites import exclusively through root entry points.
+ * Implementation subfolders (like `lib/`) remain strictly private.
+ *
+ * @param input - Numeric input parameter.
+ * @returns Transformed metric computed by private implementation.
+ */
+export function exampleFeature(input: number): number {
+  return computeExampleMetric(input);
+}

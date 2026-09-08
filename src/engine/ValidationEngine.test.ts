@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { ValidationEngine } from './ValidationEngine';
 import { QRConfig, QRType, QRErrorCorrectionLevel, SocialFormat, TemplateStyle, QRStyle } from '../types';
-import '../utils/qrHelpers';
 
 const getBaseConfig = (): QRConfig => ({
   type: QRType.TEXT,
@@ -109,6 +108,30 @@ describe('ValidationEngine', () => {
         const violations = ValidationEngine.validateConfig(config);
         expect(violations).toBeDefined();
       }).not.toThrow();
+    });
+  });
+
+  describe('validatePayload', () => {
+    it('validates payloads and runs custom registered validators', () => {
+      const customValidator = (val: string) =>
+        val.includes('forbidden') ? ['CUSTOM_FORBIDDEN_KEYWORD'] : [];
+      ValidationEngine.registerValidator(QRType.URL, customValidator);
+
+      try {
+        const violations = ValidationEngine.validatePayload(
+          'https://example.com/forbidden-path',
+          QRType.URL
+        );
+        expect(violations).toContain('CUSTOM_FORBIDDEN_KEYWORD');
+
+        const cleanViolations = ValidationEngine.validatePayload(
+          'https://example.com/allowed-path',
+          QRType.URL
+        );
+        expect(cleanViolations).not.toContain('CUSTOM_FORBIDDEN_KEYWORD');
+      } finally {
+        delete ValidationEngine.typeValidators[QRType.URL];
+      }
     });
   });
 

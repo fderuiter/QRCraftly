@@ -16,8 +16,22 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-// Re-export generic URL utility
-export * from './url';
+import { describe, it, expect } from 'vitest';
+import { constructLocationString, hydrateLocationData } from '../index';
 
-// Re-export QR Payload and Generator Engine
-export * from '@/packages/qr-payload';
+describe('Location generator', () => {
+  it('constructs and hydrates successfully', () => {
+    const data = {
+      latitude: '37.7749',
+      longitude: '-122.4194',
+    };
+    const str = constructLocationString(data);
+    const hydrated = hydrateLocationData(str);
+    expect(hydrated).toEqual(data);
+  });
+
+  it('handles missing or malformed data', () => {
+    expect(hydrateLocationData('random').latitude).toBe('');
+    expect(hydrateLocationData('geo:123').latitude).toBe('');
+  });
+});

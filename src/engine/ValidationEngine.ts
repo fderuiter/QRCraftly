@@ -1,5 +1,12 @@
 import { QRConfig, QRType } from '../types';
-import { parseProtocol, PROTOCOL_PREFIXES, SOCIAL_DOMAINS } from '../utils/protocol';
+import {
+  CONTAINMENT_PROFILES,
+  identifyProtocol,
+  canHydrate,
+  validateConfig,
+  sanitizeConfig,
+  validatePayload,
+} from '@/packages/qr-payload';
 import { REGEX_STRICT_CONTROL_CHARS, REGEX_PRESERVE_FORMAT_CONTROL_CHARS } from '../utils/security';
 import { SafeUrlPipeline } from '../utils/url';
 import { calculateScannabilityHealth, type HealthScore } from '@/packages/scannability';
@@ -8,15 +15,18 @@ import { calculateScannabilityHealth, type HealthScore } from '@/packages/scanna
  * Core validation and sanitization engine for QR code generation.
  * Handles containment profiles, regex validation, protocol identification,
  * payload sanitization, and scannability heuristics.
+ *
+ * Delegates payload validation, sanitization, and containment profiles to @/packages/qr-payload.
  */
 export const ValidationEngine = {
   /**
-   * Registry for type-specific validator functions to avoid tight coupling.
+   * Registry for type-specific validator functions to preserve backwards compatibility.
    */
   typeValidators: Object.create(null) as Record<string, (value: string) => string[]>,
 
   /**
    * Registers a validator function for a specific QRType.
+   * Kept for backwards compatibility.
    * @param type - The QR code type to register.
    * @param validator - The validation function for the QRType.
    */
@@ -27,22 +37,18 @@ export const ValidationEngine = {
   /**
    * Formal containment profiles for validating structured text and emails.
    */
-  CONTAINMENT_PROFILES: {
-    URL: /^(?:https?|ftp):\/\/[^\s\x00-\x1F\x7F-\x9F\u200B-\u200D\uFEFF]+$/i,
-    EMAIL: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
-    PLAIN_TEXT: /^[^\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F\u200B-\u200D\uFEFF]*$/,
-    // General check for zero-width and control characters in text fields
-    STRICT_NO_CONTROL: /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F\u200B-\u200D\uFEFF]/
-  },
+  CONTAINMENT_PROFILES,
 
   /**
    * Regular expression pattern to match strict control and zero-width characters.
    */
-  REGEX_STRICT_CONTROL_CHARS: REGEX_STRICT_CONTROL_CHARS,
+  REGEX_STRICT_CONTROL_CHARS,
+
   /**
    * Regular expression pattern to match format-preserving control characters.
    */
-  REGEX_PRESERVE_FORMAT_CONTROL_CHARS: REGEX_PRESERVE_FORMAT_CONTROL_CHARS,
+  REGEX_PRESERVE_FORMAT_CONTROL_CHARS,
+
   /**
    * Regular expression pattern to match characters unsafe in a URL structure.
    */
@@ -59,46 +65,7 @@ export const ValidationEngine = {
    * @returns The identified QRType, or null if empty.
    */
   identifyProtocol(raw: string): QRType | null {
-    if (!raw) return null;
-    
-    if (raw.toLowerCase().startsWith('geo:')) return QRType.LOCATION;
-    if (raw.startsWith('WIFI:')) return QRType.WIFI;
-    if (raw.includes('BEGIN:VCARD')) return QRType.VCARD;
-    if (raw.includes('BEGIN:VEVENT') || raw.includes('BEGIN:VCALENDAR')) return QRType.EVENT;
-    if (/^(bitcoin|ethereum|litecoin|solana):/i.test(raw)) return QRType.PAYMENT;
-
-    const parsed = parseProtocol(raw);
-    
-    if (parsed) {
-      if (PROTOCOL_PREFIXES.MAIL.includes(parsed.scheme + ':')) return QRType.EMAIL;
-      if (parsed.scheme === 'matmsg') return QRType.EMAIL;
-      if (PROTOCOL_PREFIXES.TEL.includes(parsed.scheme + ':')) return QRType.PHONE;
-      if (PROTOCOL_PREFIXES.SMS.includes(parsed.scheme + ':')) return QRType.SMS;
-      if (parsed.scheme === 'geo') return QRType.LOCATION;
-
-      if (parsed.scheme === 'http' || parsed.scheme === 'https') {
-        const pathParts = parsed.path.split('/');
-        let domain = pathParts[0].toLowerCase();
-        if (domain.startsWith('www.')) {
-          domain = domain.substring(4);
-        }
-        
-        // Find if any known domain is a suffix of the current domain
-        const knownSocial = Object.keys(SOCIAL_DOMAINS).find(d => domain === d || domain.endsWith(`.${d}`));
-        if (knownSocial) {
-          return QRType.SOCIAL;
-        }
-
-        const isDomain = (d: string) => domain === d || domain.endsWith(`.${d}`);
-        if (isDomain('zoom.us') || isDomain('teams.microsoft.com') || isDomain('meet.google.com')) {
-          return QRType.MEETING;
-        }
-
-        return QRType.URL;
-      }
-    }
-
-    return QRType.TEXT;
+    return identifyProtocol(raw);
   },
 
   /**
@@ -108,10 +75,7 @@ export const ValidationEngine = {
    * @returns True if the payload can be hydrated, false otherwise.
    */
   canHydrate(raw: string, type: QRType): boolean {
-    const identified = this.identifyProtocol(raw);
-    if (identified === type) return true;
-    if (type === QRType.TEXT) return true;
-    return false;
+    return canHydrate(raw, type);
   },
 
   /**
@@ -120,78 +84,33 @@ export const ValidationEngine = {
    * @returns An array of security or structure violations.
    */
   validateConfig(config: QRConfig): string[] {
-    const violations: string[] = [];
-
-    // 1. Mandatory validation step for rendering sinks (borders, templates)
-    const checkTextSink = (str: string | undefined, field: string) => {
-      if (str && this.CONTAINMENT_PROFILES.STRICT_NO_CONTROL.test(str)) {
-        violations.push(`${field} contains invalid control or zero-width characters`);
-      }
-    };
-
-    checkTextSink(config.borderText, 'Border Text');
-    checkTextSink(config.templateHeadline, 'Template Headline');
-    checkTextSink(config.templateSubtext, 'Template Subtext');
-
-    // 2. Validate QR payload against containment profiles
-    if (config.value) {
-      if (this.CONTAINMENT_PROFILES.STRICT_NO_CONTROL.test(config.value)) {
-        violations.push('Payload contains invalid control or zero-width characters');
-      }
-
-      // Determine the effective type. Prefer explicit config.type, otherwise try to identify it.
-      const type = config.type || this.identifyProtocol(config.value);
-
-      if (type) {
-        let validator: ((value: string) => string[]) | undefined = undefined;
-        switch (type) {
-          case QRType.URL:
-            validator = this.typeValidators[QRType.URL];
-            break;
-          case QRType.TEXT:
-            validator = this.typeValidators[QRType.TEXT];
-            break;
-          case QRType.WIFI:
-            validator = this.typeValidators[QRType.WIFI];
-            break;
-          case QRType.EVENT:
-            validator = this.typeValidators[QRType.EVENT];
-            break;
-          case QRType.EMAIL:
-            validator = this.typeValidators[QRType.EMAIL];
-            break;
-          case QRType.VCARD:
-            validator = this.typeValidators[QRType.VCARD];
-            break;
-          case QRType.PHONE:
-            validator = this.typeValidators[QRType.PHONE];
-            break;
-          case QRType.SMS:
-            validator = this.typeValidators[QRType.SMS];
-            break;
-          case QRType.PAYMENT:
-            validator = this.typeValidators[QRType.PAYMENT];
-            break;
-          case QRType.LOCATION:
-            validator = this.typeValidators[QRType.LOCATION];
-            break;
-          case QRType.MEETING:
-            validator = this.typeValidators[QRType.MEETING];
-            break;
-          case QRType.SOCIAL:
-            validator = this.typeValidators[QRType.SOCIAL];
-            break;
-          default:
-            break;
-        }
-
-        if (validator && typeof validator === 'function') {
-          violations.push(...validator(config.value));
-        }
+    const violations = validateConfig(config);
+    // If any custom validators were registered on typeValidators, run them as well
+    if (config.value && config.type && this.typeValidators[config.type]) {
+      const customViolations = this.typeValidators[config.type](config.value);
+      if (customViolations && customViolations.length > 0) {
+        violations.push(...customViolations);
       }
     }
-
     return violations;
+  },
+
+  /**
+   * Validates an individual payload string against containment profiles and type-specific rules.
+   * @param value - The raw QR payload string.
+   * @param type - Optional known QRType.
+   * @returns An array of security or structure violations.
+   */
+  validatePayload(value: string, type?: QRType): string[] {
+    const violations = validatePayload(value, type);
+    const effectiveType = type || identifyProtocol(value);
+    if (effectiveType && this.typeValidators[effectiveType]) {
+      const customViolations = this.typeValidators[effectiveType](value);
+      if (customViolations && customViolations.length > 0) {
+        violations.push(...customViolations);
+      }
+    }
+    return Array.from(new Set(violations));
   },
 
   /**
@@ -200,25 +119,7 @@ export const ValidationEngine = {
    * @returns A sanitized clone of the QR configuration.
    */
   sanitizeConfig(config: QRConfig): QRConfig {
-    const clean = { ...config };
-    if (clean.borderText) {
-      clean.borderText = clean.borderText.replace(this.REGEX_STRICT_CONTROL_CHARS, '');
-    }
-    if (clean.templateHeadline) {
-      clean.templateHeadline = clean.templateHeadline.replace(this.REGEX_STRICT_CONTROL_CHARS, '');
-    }
-    if (clean.templateSubtext) {
-      clean.templateSubtext = clean.templateSubtext.replace(this.REGEX_STRICT_CONTROL_CHARS, '');
-    }
-    if (clean.value) {
-      const type = clean.type || this.identifyProtocol(clean.value);
-      if (type === QRType.VCARD || type === QRType.EVENT) {
-        clean.value = clean.value.replace(this.REGEX_PRESERVE_FORMAT_CONTROL_CHARS, '');
-      } else {
-        clean.value = clean.value.replace(this.REGEX_STRICT_CONTROL_CHARS, '');
-      }
-    }
-    return clean;
+    return sanitizeConfig(config);
   },
 
   /**
@@ -234,5 +135,5 @@ export const ValidationEngine = {
     localMetrics?: { violations?: number; minContrast?: number }
   ): HealthScore {
     return calculateScannabilityHealth(config, localMetrics);
-  }
+  },
 };

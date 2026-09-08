@@ -1,6 +1,6 @@
 /*
     QRCraftly
-    Copyright (C) 2025-2026 fderuiter
+    Copyright (C) 2025 fderuiter
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as published
@@ -16,8 +16,11 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-// Re-export generic URL utility
-export * from './url';
+import { describe, it, expect } from "vitest";
+import { exampleFeature } from "../index";
 
-// Re-export QR Payload and Generator Engine
-export * from '@/packages/qr-payload';
+describe("example deep module template", () => {
+  it("exercises behaviour strictly through root entry point", () => {
+    expect(exampleFeature(21)).toBe(42);
+  });
+});

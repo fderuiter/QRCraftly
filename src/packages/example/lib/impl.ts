@@ -1,6 +1,6 @@
 /*
     QRCraftly
-    Copyright (C) 2025-2026 fderuiter
+    Copyright (C) 2025 fderuiter
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as published
@@ -16,8 +16,14 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-// Re-export generic URL utility
-export * from './url';
-
-// Re-export QR Payload and Generator Engine
-export * from '@/packages/qr-payload';
+/**
+ * Internal private implementation hidden in the subfolder.
+ *
+ * Hidden from outside callers and tests by dependency-cruiser boundary rules.
+ *
+ * @param input - Numeric value to process.
+ * @returns Multiplied value representing hidden internal business logic.
+ */
+export function computeExampleMetric(input: number): number {
+  return input * 2;
+}
