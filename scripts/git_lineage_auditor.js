@@ -8,37 +8,16 @@ const __dirname = path.dirname(__filename);
 const repoRoot = path.join(__dirname, '..');
 
 export const MAPPING = {
-  'src/utils/sharedContract.ts': 'docs/public/SCALING.md',
+  'src/packages/scannability/lib/sharedContract.ts': 'docs/public/SCALING.md',
   'src/components/InputPanel.tsx': 'src/components/inputs/README.md',
   'src/types.ts': ['docs/SECURITY.md', 'docs/public/COMPLIANCE.md', 'src/components/inputs/README.md'],
   'semgrep.yml': ['docs/SECURITY.md', 'docs/public/COMPLIANCE.md'],
   'src/colors.json': ['docs/public/STYLE_GUIDE.md', 'docs/SECURITY.md', 'docs/public/COMPLIANCE.md'],
-  'src/utils/scannabilityWorker.ts': 'docs/public/SCALING.md',
+  'src/packages/scannability/worker.ts': 'docs/public/SCALING.md',
   'src/hooks/useTelemetry.ts': 'docs/public/COMPLIANCE.md',
   'src/utils/security.ts': 'docs/SECURITY.md',
   '.github/rulesets/main.json': '.github/rulesets/README.md'
 };
-
-/**
- * Determines whether the auditor is currently running in an original unit test suite context.
- * @returns {boolean} True if inside an original test case
- */
-function isOriginalTest() {
-  if (typeof expect !== 'undefined' && typeof expect.getState === 'function') {
-    const testName = expect.getState().currentTestName;
-    if (testName) {
-      const originalTestNames = [
-        'should maintain the correct core mappings',
-        'should parse git status --porcelain correctly',
-        'should fail validation when a mapped contract is modified without its paired doc',
-        'should pass validation when a mapped contract is modified with its paired doc',
-        'should pass validation when no mapped contracts are modified'
-      ];
-      return originalTestNames.some(name => testName.includes(name));
-    }
-  }
-  return false;
-}
 
 /**
  * Checks for missing documentation updates given a set of modified files.
@@ -48,15 +27,7 @@ function isOriginalTest() {
 export function checkLineage(modifiedFiles) {
   const missingUpdates = [];
   
-  let mappingsToCheck = MAPPING;
-  if (isOriginalTest()) {
-    mappingsToCheck = {
-      'src/utils/sharedContract.ts': 'docs/public/SCALING.md',
-      'src/components/InputPanel.tsx': 'src/components/inputs/README.md'
-    };
-  }
-
-  for (const [codeFile, targets] of Object.entries(mappingsToCheck)) {
+  for (const [codeFile, targets] of Object.entries(MAPPING)) {
     if (modifiedFiles.has(codeFile)) {
       const docFiles = Array.isArray(targets) ? targets : [targets];
       for (const docFile of docFiles) {

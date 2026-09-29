@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { parseProtocol } from './protocol';
+import { parseProtocol } from '../index';
 
 describe('protocol parser', () => {
   it('returns null for falsy, empty, or whitespace-only input', () => {

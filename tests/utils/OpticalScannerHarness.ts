@@ -1,5 +1,5 @@
-import { AdaptiveFrameScheduler } from '../utils/AdaptiveFrameScheduler';
-import { applyOpticalSimulationMath } from '../utils/opticalSimulation';
+import { AdaptiveFrameScheduler } from '@/packages/optical-scanner/scheduler';
+import { applyOpticalSimulationMath } from '@/packages/scannability';
 import jsQR from 'jsqr';
 
 /**

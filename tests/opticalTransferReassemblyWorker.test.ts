@@ -41,7 +41,7 @@ describe('fileReassemblyWorker ArrayBuffer Slicing & Payload Integrity', () => {
 
   async function loadWorkerHandler() {
     // Import worker to attach onmessage event listener
-    await import('./fileReassemblyWorker');
+    await import('@/packages/optical-transfer/worker-reassembly');
     return (globalThis as any).self.onmessage;
   }
 

@@ -17,7 +17,7 @@
 */
 
 import QRCode from 'qrcode';
-import { isFinderEyeZone } from '@/packages/qr-matrix';
+import { isFinderPattern } from '@/packages/qr-matrix';
 
 /** Reed-Solomon error correction tier. */
 export type EccLevel = 'L' | 'M' | 'Q' | 'H';
@@ -91,14 +91,14 @@ export type FinderId = 'topLeft' | 'topRight' | 'bottomLeft';
 
 /**
  * Which corner finder pattern a module belongs to. Uses the finder geometry shared with the
- * renderer (`isFinderEyeZone` from `@/packages/qr-matrix`).
+ * renderer (`isFinderPattern` from `@/packages/qr-matrix`).
  * @param r - Row.
  * @param c - Column.
  * @param size - Modules along one side.
  * @returns The finder, or null outside the finder patterns.
  */
 export function finderAt(r: number, c: number, size: number): FinderId | null {
-  if (!isFinderEyeZone(r, c, size)) return null;
+  if (!isFinderPattern(r, c, size)) return null;
   if (r < 7) return c < 7 ? 'topLeft' : 'topRight';
   return 'bottomLeft';
 }

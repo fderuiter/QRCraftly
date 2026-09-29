@@ -18,7 +18,7 @@
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import QRCode from 'qrcode';
-import { isFinderEyeZone } from '@/packages/qr-matrix';
+import { isFinderPattern } from '@/packages/qr-matrix';
 import {
   analyzeDamage,
   applyBlast,
@@ -65,7 +65,7 @@ describe('target matrix', () => {
     const size = 25;
     for (let r = 0; r < size; r++) {
       for (let c = 0; c < size; c++) {
-        expect(finderAt(r, c, size) !== null).toBe(isFinderEyeZone(r, c, size));
+        expect(finderAt(r, c, size) !== null).toBe(isFinderPattern(r, c, size));
       }
     }
     expect(finderAt(0, 0, size)).toBe('topLeft');

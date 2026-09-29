@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { OpticalScannerHarness, HarnessFrameResult } from './OpticalScannerHarness';
+import { OpticalScannerHarness, HarnessFrameResult } from './utils/OpticalScannerHarness';
 import jsQR from 'jsqr';
 
 vi.mock('jsqr', () => {

@@ -22,6 +22,10 @@ import QRCanvas from './QRCanvas';
 import { DEFAULT_CONFIG } from '../constants';
 import { QRStyle } from '../types';
 import QRCode from 'qrcode';
+import { useQrcodeAsCanvasEncoder } from '../../tests/fixtures/fakeQrcode';
+
+vi.mock('qrcode', async () => (await import('../../tests/fixtures/fakeQrcode')).createFakeQrcodeModule());
+useQrcodeAsCanvasEncoder(QRCode);
 
 // Mock qrcode module
 

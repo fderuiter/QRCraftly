@@ -28,7 +28,7 @@
     "test": "vitest",
     "test:e2e": "playwright test",
     "test:e2e:dev": "playwright test --config playwright.dev.config.ts",
-    "lint": "node scripts/dependency_compliance.js && node scripts/git_lineage_auditor.js && node scripts/storage_privacy_ast_auditor.js && node scripts/path_invariance_auditor.js && node scripts/validate_ui_catalog.js && node scripts/audit_markdown.js && node scripts/static-path-tracker.js && node scripts/compile_docs_manifest.js && tsc --noEmit && pnpm run lint:boundaries && eslint . && knip && node scripts/contrast_check.js && prettier --check . && node scripts/check-duplication.js",
+    "lint": "node scripts/dependency_compliance.js && node scripts/git_lineage_auditor.js && node scripts/storage_privacy_ast_auditor.js && node scripts/path_invariance_auditor.js && node scripts/validate_ui_catalog.js && node scripts/audit_markdown.js && node scripts/static-path-tracker.js && node scripts/compile_docs_manifest.js && tsc --noEmit && pnpm run lint:boundaries && eslint . && knip && knip --production --include files && node scripts/contrast_check.js && prettier --check . && node scripts/check-duplication.js",
     "lint:boundaries": "depcruise src",
     "audit:paths": "node scripts/path_invariance_auditor.js",
     "validate:ui-catalog": "node scripts/validate_ui_catalog.js",

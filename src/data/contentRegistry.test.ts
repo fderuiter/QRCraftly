@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { contentRegistry, auxiliaryRegistry, SchemaType, SchemaCategory, TargetPersona, StrategicValueCategory, hasValidOgImage, isToolContent, getMetadataForPath, legacyRouteRegistry } from './contentRegistry';
-import { ValidationEngine } from '../engine/ValidationEngine';
+import { CONTAINMENT_PROFILES } from '@/packages/qr-payload';
 
 describe('Content Registry Validation', () => {
-  const STRICT_NO_CONTROL = ValidationEngine.CONTAINMENT_PROFILES.STRICT_NO_CONTROL;
+  const STRICT_NO_CONTROL = CONTAINMENT_PROFILES.STRICT_NO_CONTROL;
 
   it('should conform to ToolContent schema and have no control characters', () => {
     Object.entries(contentRegistry).forEach(([key, tool]) => {

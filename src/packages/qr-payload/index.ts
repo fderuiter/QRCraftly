@@ -35,12 +35,7 @@ export {
   identifyProtocol,
   canHydrate,
   parseProtocol,
-  splitByUnescapedSemicolons,
-  unescapeMatmsgValue,
   CONTAINMENT_PROFILES,
-  PROTOCOL_PREFIXES,
-  SOCIAL_DOMAINS,
-  type ParsedProtocol,
 } from './lib/protocol';
 
 // RFC escaping & datetime utilities
@@ -52,21 +47,18 @@ export {
   splitCompoundField,
   formatEventDateTime,
   parseEventDateTime,
-  parseRFCProperties,
-  type FormattedDateTime,
-  type RFCProperty,
 } from './lib/rfcHelper';
 
 // Concrete generator contracts & individual helpers
 export { WifiContract, constructWifiString, hydrateWifiData } from './lib/generators/wifi';
 export { EmailContract, constructEmailString, hydrateEmailData } from './lib/generators/email';
 export { VCardContract, constructVCardString, hydrateVCardData } from './lib/generators/vcard';
-export { PhoneContract, constructPhoneString, hydratePhoneData } from './lib/generators/phone';
+export { constructPhoneString, hydratePhoneData } from './lib/generators/phone';
 export { SmsContract, constructSmsString, hydrateSmsData } from './lib/generators/sms';
 export { PaymentContract, constructPaymentString, hydratePaymentData } from './lib/generators/payment';
 export { EventContract, constructEventString, hydrateEventData } from './lib/generators/event';
-export { UrlContract, constructUrlString, hydrateUrlData } from './lib/generators/url';
-export { TextContract, constructTextString, hydrateTextData } from './lib/generators/text';
-export { LocationContract, constructLocationString, hydrateLocationData } from './lib/generators/location';
+export { UrlContract, constructUrlString } from './lib/generators/url';
+export { constructTextString, hydrateTextData } from './lib/generators/text';
+export { constructLocationString, hydrateLocationData } from './lib/generators/location';
 export { MeetingContract, constructMeetingString, hydrateMeetingData } from './lib/generators/meeting';
-export { SocialContract, constructSocialString, hydrateSocialData } from './lib/generators/social';
+export { constructSocialString, hydrateSocialData } from './lib/generators/social';
