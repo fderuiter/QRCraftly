@@ -22,18 +22,23 @@ import { resolveDomainForPath, resolvePublicUrl, resolveImageUrl, compileBreadcr
 import { getMetadataForPath } from '@/data/contentRegistry';
 
 /**
+ * Content Security Policy rendered as a meta tag on every page.
+ * Kept byte-identical to `BASE_CSP_PATTERN` in `scripts/csp_hash_injector.js`.
+ */
+const CONTENT_SECURITY_POLICY = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';";
+
+/**
  * HeadDefault Component
  *
  * Renders the default `<head>` meta tags and link elements for the application.
- * This includes viewport settings, description, favicon, font preconnections,
- * and global structured data (JSON-LD) for SEO.
+ * This includes the Content Security Policy, canonical/social metadata, favicon,
+ * PWA links and global structured data (JSON-LD) for SEO.
  *
- * Optimized to load Google Fonts non-blockingly to improve First Contentful Paint.
+ * Text uses the system font stack (Tailwind `font-sans` / `font-mono`), so the head
+ * makes no third-party font requests (#970).
  * @returns The fragment containing meta and link tags.
  */
 export default function HeadDefault() {
-  const fontUrl = "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap";
-
   const pageContext = usePageContext();
   // Vike-react exposes the resolved config in pageContext.config
   // Cast to any to access is404 which might not be in the default type definition
@@ -110,12 +115,19 @@ export default function HeadDefault() {
   return (
     <>
       {/*
-        Content Security Policy (CSP)
-        - script-src 'unsafe-inline': Required for JSON-LD scripts and Vike hydration in SSG.
-        - style-src: Removed 'unsafe-inline' by refactoring font loading and dynamic preview styles.
+        Content Security Policy (CSP). Must match BASE_CSP_PATTERN in
+        scripts/csp_hash_injector.js, which rewrites it at build time (replacing
+        script-src 'unsafe-inline' with per-page SHA-256 hashes).
+        - script-src 'unsafe-inline': Required for JSON-LD scripts and Vike hydration in SSG;
+          removed by the build-time hash injector.
+        - style-src 'unsafe-inline': Still required for React inline style attributes
+          (dynamic preview styles). No third-party style hosts.
+        - font-src 'self': No web-font CDN; the app renders with the system font stack.
+        - img-src/media-src blob:: SVG export rasterizes a blob: object URL, the logo
+          resize fallback decodes blob: uploads and video-file scanning plays blob: media.
         - object-src 'none': Prevents Flash/Java applets.
       */}
-      <meta httpEquiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';" />
+      <meta httpEquiv="Content-Security-Policy" content={CONTENT_SECURITY_POLICY} />
 
       {/*
         Note: 'viewport' and 'description' are handled by Vike/Config to avoid duplicates.
@@ -157,15 +169,6 @@ export default function HeadDefault() {
       <link rel="manifest" href="/manifest.json" />
       <link rel="icon" type="image/png" href="/favicon.png" />
       <link rel="apple-touch-icon" href="/icon-192x192.png" />
-      <link rel="preconnect" href="https://fonts.googleapis.com" />
-      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-
-      {/*
-         Load fonts synchronously to prevent Layout Shifts (CLS).
-         Standard link tag is render-blocking which ensures fonts are ready
-         before first paint, avoiding layout shifts.
-      */}
-      <link rel="stylesheet" href={fontUrl} />
     </>
   );
 }
