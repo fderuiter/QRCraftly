@@ -18,25 +18,38 @@ function sanitizeTelemetryPayload(payload: any): TelemetryPayload {
 }
 
 /**
- *
- * @param status
+ * Collection endpoint for opt-in scannability telemetry. No endpoint is deployed
+ * (the edge Worker serves only `/api/redirect/*`), so this is `null` and
+ * telemetry is a no-op: the opt-in choice is still recorded, but nothing is sent
+ * (previously this posted to a nonexistent `/api/telemetry/scannability` route).
+ * See docs/public/COMPLIANCE.md.
  */
-export function useTelemetry(status: ScannabilityStatus) {
+export const TELEMETRY_ENDPOINT: string | null = null;
+
+/**
+ * Opt-in scannability telemetry: sends the allowlisted diagnostic payload to
+ * `endpoint` when the user opted in, and does nothing when there is no endpoint.
+ * @param status - Current scannability status.
+ * @param endpoint - Collection endpoint (defaults to {@link TELEMETRY_ENDPOINT}).
+ * @returns Whether to show the opt-in prompt, and the opt-in handler.
+ */
+export function useTelemetry(status: ScannabilityStatus, endpoint: string | null = TELEMETRY_ENDPOINT) {
   const store = useQRStore();
   const telemetryOptIn = useQRStoreSelector(state => state.preferences.telemetryOptIn);
   const { engine } = useCapabilities();
 
   const sendTelemetryPing = useCallback((detail: any) => {
+    if (!endpoint) return;
     try {
       const sanitized = sanitizeTelemetryPayload(detail);
-      fetch('/api/telemetry/scannability', {
+      fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(sanitized),
         keepalive: true
       }).catch(() => {});
     } catch {}
-  }, []);
+  }, [endpoint]);
 
   useEffect(() => {
     return store.registerSignal('scannability-fail', (detail) => {

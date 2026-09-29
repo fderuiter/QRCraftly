@@ -49,7 +49,7 @@ These components capture specialized data structures required to construct disti
 - **SocialInput** (`SocialInput.tsx` / `SocialInput.test.tsx`): Selectors for major platforms alongside handler name parsing.
 - **TextInput** (`TextInput.tsx`): Minimalist form component capturing standard unformatted text.
 - **TypeSelector** (`TypeSelector.tsx` / `TypeSelector.test.tsx`): Accessible tabbed layout for switching between QR configurations, with arrow, Home, End, Enter, and Space keyboard controls while leaving Tab navigation to the browser's native focus order and performing in-SPA type switching.
-- **UrlInput** (`UrlInput.tsx` / `UrlInput.test.tsx`): Text input with automatic verification and correction of URL protocol schemes, featuring Cloudflare Turnstile bot verification safeguards, an integrated opt-in toggle, and explicit consent modal for dynamic tracking and edge redirection with dual-platform App Store destinations for iOS and Android.
+- **UrlInput** (`UrlInput.tsx` / `UrlInput.test.tsx`): Text input with automatic verification and correction of URL protocol schemes, featuring the real Cloudflare Turnstile widget (via the `useTurnstile` hook, rendered only while dynamic mode is on and `VITE_TURNSTILE_SITE_KEY` is set), error toasts that surface the edge API's status and message, an integrated opt-in toggle, and explicit consent modal for dynamic tracking and edge redirection with dual-platform App Store destinations for iOS and Android.
 - **VCardInput** (`VCardInput.tsx`): Extensive contact form detailing names, organization, email, phone, and address.
 - **WifiInput** (`WifiInput.tsx`): Wireless network panel specifying SSID, passwords, and security type.
 
