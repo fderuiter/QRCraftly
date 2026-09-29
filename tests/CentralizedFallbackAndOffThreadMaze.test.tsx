@@ -63,9 +63,15 @@ describe('Centralized Fallback Store & Off-Thread Maze Execution Suite', () => {
     // Global store state immediately updates to fallback active
     expect(storeInstance.getState().isScannabilityFallbackActive).toBe(true);
 
-    // Updating config resets fallback active
+    // Appearance-only changes keep the fallback decision
     act(() => {
       storeInstance.updateConfig({ fgColor: '#123456' });
+    });
+    expect(storeInstance.getState().isScannabilityFallbackActive).toBe(true);
+
+    // Content changes reset fallback active
+    act(() => {
+      storeInstance.updateConfig({ value: 'https://example.com/changed' });
     });
 
     expect(storeInstance.getState().isScannabilityFallbackActive).toBe(false);

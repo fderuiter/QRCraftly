@@ -74,18 +74,34 @@ describe('QRTool Component', () => {
     expect(screen.queryByText('Active')).not.toBeInTheDocument();
   });
 
-  it('exposes file transfer routes from the mobile navigation menu', () => {
+  it('exposes every primary destination from the site menu', () => {
     render(<ToastProvider><QRTool /></ToastProvider>);
 
-    const menuButton = screen.getByRole('button', { name: 'File transfer menu' });
+    const menuButton = screen.getByRole('button', { name: 'Site menu' });
     expect(menuButton).toHaveAttribute('aria-expanded', 'false');
 
     fireEvent.click(menuButton);
 
     expect(menuButton).toHaveAttribute('aria-expanded', 'true');
-    const mobileNav = screen.getByRole('navigation', { name: 'File transfer' });
-    expect(within(mobileNav).getByRole('link', { name: 'Send File' })).toHaveAttribute('href', '/file-transfer');
-    expect(within(mobileNav).getByRole('link', { name: 'Receive File' })).toHaveAttribute('href', '/file-transfer/receive');
+    const nav = screen.getByRole('navigation', { name: 'Primary navigation' });
+    expect(within(nav).getByRole('link', { name: /Create QR/ })).toHaveAttribute('href', '/');
+    expect(within(nav).getByRole('link', { name: /Send File/ })).toHaveAttribute('href', '/file-transfer');
+    expect(within(nav).getByRole('link', { name: /Receive File/ })).toHaveAttribute('href', '/file-transfer/receive');
+    expect(within(nav).getByRole('link', { name: 'About' })).toHaveAttribute('href', '/about');
+    expect(within(nav).getByRole('link', { name: 'Security' })).toHaveAttribute('href', '/security');
+  });
+
+  it('labels the help link by its in-page destination', () => {
+    render(<ToastProvider><QRTool /></ToastProvider>);
+    expect(screen.queryByRole('link', { name: 'About QRCraftly' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'How to use' })).toHaveAttribute('href', '#content-section');
+  });
+
+  it('lists each file transfer route only once in the footer site map', () => {
+    render(<ToastProvider><QRTool /></ToastProvider>);
+    const siteMap = screen.getByRole('navigation', { name: 'Site Map' });
+    expect(within(siteMap).getAllByRole('link', { name: /File Share \(Send\)/ })).toHaveLength(1);
+    expect(within(siteMap).getAllByRole('link', { name: /File Share \(Receive\)/ })).toHaveLength(1);
   });
 
   it('applies initial config if provided', () => {
@@ -97,22 +113,11 @@ describe('QRTool Component', () => {
       expect(urlInput).toBeInTheDocument();
   });
 
-  it('toggles dark mode', () => {
-    // We can also check the class on the container
+  it('renders the shared theme toggle and no page-local dark wrapper', () => {
     const { container } = render(<ToastProvider><QRTool /></ToastProvider>);
-
-    // Initially light mode (no 'dark' class on top div)
-    // The top div is the first child of the container
     const appDiv = container.firstChild as HTMLElement;
     expect(appDiv).not.toHaveClass('dark');
-
-    const toggleButtons = screen.getAllByTitle('Switch to Dark Mode');
-    expect(toggleButtons[0]).toBeInTheDocument();
-
-    fireEvent.click(toggleButtons[0]);
-
-    expect(screen.getByTitle('Switch to Light Mode')).toBeInTheDocument();
-    expect(appDiv).toHaveClass('dark');
+    expect(screen.getByRole('button', { name: /^Theme: / })).toBeInTheDocument();
   });
 
   it('renders InputPanel and StyleControls', () => {

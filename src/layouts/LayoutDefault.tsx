@@ -20,6 +20,7 @@ import React, { useEffect, useState } from 'react';
 import './index.css';
 import { ToastProvider } from '../components/ui/Toast';
 import { ErrorBoundary } from '../components/ErrorBoundary';
+import { ThemeProvider } from '../context/ThemeContext';
 
 /**
  * Helper to check if the application is currently running inside an E2E or unit/integration test environment.
@@ -97,6 +98,7 @@ export default function LayoutDefault({ children }: { children: React.ReactNode 
   }, []);
 
   return (
+    <ThemeProvider>
     <ToastProvider>
       <a
         href="#main-content"
@@ -116,5 +118,6 @@ export default function LayoutDefault({ children }: { children: React.ReactNode 
         </ErrorBoundary>
       </main>
     </ToastProvider>
+    </ThemeProvider>
   );
 }

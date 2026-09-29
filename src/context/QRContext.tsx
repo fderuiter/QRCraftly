@@ -4,95 +4,110 @@ import { DEFAULT_CONFIG } from '@/constants';
 import { ValidationEngine } from '@/engine/ValidationEngine';
 
 /**
- *
+ * Payload of the `scannability-fail` signal. Only allowlisted, non-sensitive diagnostic
+ * fields travel with it (see `ALLOWED_TELEMETRY_KEYS`).
  */
-type SignalName = 'scannability-fail' | 'render-complete';
+interface ScannabilityFailDetail {
+  /** Decoder engine that reported the failure. */
+  engine?: string;
+  /** QR style in use. */
+  styleId?: string;
+  /** Failure classification. */
+  errorType?: string;
+}
+
 /**
- *
+ * Signal names mapped to their payload types.
  */
-type SignalCallback = (detail: any) => void;
+interface SignalPayloads {
+  /**
+   *
+   */
+  'scannability-fail': ScannabilityFailDetail;
+}
 
 /**
  *
  */
-type QRState = {
-  /**
-   *
-   */
+type SignalName = keyof SignalPayloads;
+/**
+ *
+ */
+type SignalCallback<N extends SignalName> = (detail: SignalPayloads[N]) => void;
+
+/**
+ * User preferences that belong to the QR domain. The colour theme is not here: it is
+ * owned by the global `ThemeProvider` (`src/context/ThemeContext.tsx`).
+ */
+interface QRPreferences {
+  /** Anonymous diagnostics consent; null until the visitor answers. */
+  telemetryOptIn: boolean | null;
+}
+
+/**
+ * Snapshot held by a QR store.
+ */
+export type QRState = {
+  /** Sanitised QR configuration. */
   config: QRConfig;
-  /**
-   *
-   */
+  /** Module count of the last rendered matrix. */
   moduleCount: number;
+  /** Domain preferences. */
+  preferences: QRPreferences;
   /**
-   *
-   */
-  preferences: { /**
-                  *
-                  */
-  telemetryOptIn: boolean | null; /**
-                                   *
-                                   */
-  darkMode: boolean };
-  /**
-   *
-   */
-  violations: string[];
-  /**
-   * Whether scannability fallback mode is active globally across components.
+   * Whether scannability fallback mode is active. The store is its single owner: it is set
+   * by the `scannability-fail` signal and reset only when content (type/value) or the
+   * error correction level changes.
    */
   isScannabilityFallbackActive: boolean;
 };
 
 /**
- *
+ * External store API for one generator instance.
  */
 export interface QRStore {
-  /**
-   *
-   */
+  /** Returns the current snapshot. */
   getState: () => QRState;
-  /**
-   *
-   */
+  /** Subscribes to changes; returns an unsubscribe function. */
   subscribe: (listener: () => void) => () => void;
-  /**
-   *
-   */
+  /** Merges, sanitises and applies config updates. No-op updates do not notify. */
   updateConfig: (updates: Partial<QRConfig>) => void;
-  /**
-   *
-   */
+  /** Records the rendered matrix module count. */
   setModuleCount: (count: number) => void;
-  /**
-   *
-   */
+  /** Sets the scannability fallback flag. */
   setScannabilityFallbackActive: (active: boolean) => void;
-  /**
-   *
-   */
-  updatePreferences: (updates: Partial<{/**
-                                         *
-                                         */
-  telemetryOptIn: boolean | null, /**
-                                   *
-                                   */
-  darkMode: boolean}>) => void;
-  /**
-   *
-   */
-  emitSignal: (name: SignalName, detail?: any) => void;
-  /**
-   *
-   */
-  registerSignal: (name: SignalName, callback: SignalCallback) => () => void;
+  /** Updates domain preferences, persisting telemetry consent. */
+  updatePreferences: (updates: Partial<QRPreferences>) => void;
+  /** Emits a typed signal. */
+  emitSignal: <N extends SignalName>(name: N, detail: SignalPayloads[N]) => void;
+  /** Registers a typed signal callback; returns an unregister function. */
+  registerSignal: <N extends SignalName>(name: N, callback: SignalCallback<N>) => () => void;
 }
 
 const QRStoreContext = createContext<QRStore | undefined>(undefined);
 
 const fallbackMemoryStore = new Map<string, string>();
 
-const getSafeLocalStorage = () => {
+/**
+ * Minimal storage surface used by the store.
+ */
+interface PreferenceStorage {
+  /**
+   *
+   */
+  getItem: (key: string) => string | null;
+  /**
+   *
+   */
+  setItem: (key: string, value: string) => void;
+}
+
+/**
+ * Probes localStorage once and returns it, or an in-memory fallback when it is unavailable.
+ * Callers keep the result so the write/remove probe does not run on every update.
+ * @returns A usable storage object.
+ */
+const getSafeLocalStorage = (): PreferenceStorage => {
   if (typeof window !== 'undefined' && window.localStorage && typeof window.localStorage.getItem === 'function') {
     try {
       window.localStorage.setItem('__test__', '1');
@@ -108,25 +123,78 @@ const getSafeLocalStorage = () => {
   };
 };
 
-function createQRStore(initialConfig?: Partial<QRConfig>): QRStore {
+/** Config fields whose change invalidates a scannability fallback decision. */
+const FALLBACK_RESET_FIELDS: ReadonlyArray<keyof QRConfig> = ['type', 'value', 'errorCorrectionLevel'];
+
+function shallowEqualConfig(a: QRConfig, b: QRConfig): boolean {
+  if (a === b) return true;
+  const keys = new Set([...Object.keys(a), ...Object.keys(b)] as (keyof QRConfig)[]);
+  for (const key of keys) {
+    // eslint-disable-next-line security/detect-object-injection
+    if (!Object.is(a[key], b[key])) return false;
+  }
+  return true;
+}
+
+/**
+ * Fields that carry QR content or free text a visitor typed. They are never retained
+ * across routes; each generator route starts with its own content.
+ */
+const NON_RETAINED_FIELDS: ReadonlySet<keyof QRConfig> = new Set<keyof QRConfig>([
+  'type',
+  'value',
+  'animationValues',
+  'isAnimating',
+  'borderText',
+  'templateHeadline',
+  'templateSubtext',
+]);
+
+/**
+ * Appearance-only settings kept in volatile module memory so they survive client-side
+ * navigation between generator routes. Never persisted: a reload or new tab starts fresh.
+ */
+let retainedAppearance: Partial<QRConfig> | null = null;
+
+function pickAppearance(config: QRConfig): Partial<QRConfig> {
+  const appearance: Partial<QRConfig> = {};
+  for (const key of Object.keys(config) as (keyof QRConfig)[]) {
+    if (!NON_RETAINED_FIELDS.has(key)) {
+      // eslint-disable-next-line security/detect-object-injection
+      (appearance as Record<string, unknown>)[key] = config[key];
+    }
+  }
+  return appearance;
+}
+
+/**
+ * Forgets appearance retained from earlier generator routes.
+ */
+export function clearRetainedAppearance(): void {
+  retainedAppearance = null;
+}
+
+function createQRStore(initialConfig?: Partial<QRConfig>, retainAppearance = false): QRStore {
   const storage = getSafeLocalStorage();
   const savedOptIn = storage.getItem('qr-telemetry-opt-in');
-  
+
   let state: QRState = {
-    config: { ...DEFAULT_CONFIG, ...initialConfig },
+    config: { ...DEFAULT_CONFIG, ...initialConfig, ...(retainAppearance ? retainedAppearance : null) },
     moduleCount: 0,
     preferences: {
       telemetryOptIn: savedOptIn === 'true' ? true : savedOptIn === 'false' ? false : null,
-      darkMode: false,
     },
-    violations: [],
     isScannabilityFallbackActive: false,
   };
 
   const listeners = new Set<() => void>();
-  const signals: Record<SignalName, Set<SignalCallback>> = {
+  const signals: { [N in SignalName]: Set<SignalCallback<N>> } = {
     'scannability-fail': new Set(),
-    'render-complete': new Set(),
+  };
+
+  const setState = (next: QRState) => {
+    state = next;
+    listeners.forEach(l => l());
   };
 
   const store: QRStore = {
@@ -138,50 +206,49 @@ function createQRStore(initialConfig?: Partial<QRConfig>): QRStore {
       };
     },
     updateConfig: (updates) => {
-      const proposed = { ...state.config, ...updates };
-      const violations = ValidationEngine.validateConfig(proposed);
-      const sanitized = ValidationEngine.sanitizeConfig(proposed);
-      state = { ...state, config: sanitized, violations, isScannabilityFallbackActive: false };
-      listeners.forEach(l => l());
+      const sanitized = ValidationEngine.sanitizeConfig({ ...state.config, ...updates });
+      if (shallowEqualConfig(sanitized, state.config)) return;
+      if (retainAppearance) retainedAppearance = pickAppearance(sanitized);
+      // eslint-disable-next-line security/detect-object-injection
+      const resetsFallback = FALLBACK_RESET_FIELDS.some(key => !Object.is(sanitized[key], state.config[key]));
+      setState({
+        ...state,
+        config: sanitized,
+        isScannabilityFallbackActive: resetsFallback ? false : state.isScannabilityFallbackActive,
+      });
     },
     setScannabilityFallbackActive: (active) => {
       if (state.isScannabilityFallbackActive !== active) {
-        state = { ...state, isScannabilityFallbackActive: active };
-        listeners.forEach(l => l());
+        setState({ ...state, isScannabilityFallbackActive: active });
       }
     },
     updatePreferences: (updates) => {
-      state = { ...state, preferences: { ...state.preferences, ...updates } };
-      if (updates.telemetryOptIn !== undefined && updates.telemetryOptIn !== null) {
-        getSafeLocalStorage().setItem('qr-telemetry-opt-in', String(updates.telemetryOptIn));
+      if (updates.telemetryOptIn === undefined || updates.telemetryOptIn === state.preferences.telemetryOptIn) return;
+      if (updates.telemetryOptIn !== null) {
+        storage.setItem('qr-telemetry-opt-in', String(updates.telemetryOptIn));
       }
-      listeners.forEach(l => l());
+      setState({ ...state, preferences: { ...state.preferences, ...updates } });
     },
     setModuleCount: (count) => {
       if (state.moduleCount !== count) {
-        state = { ...state, moduleCount: count };
-        listeners.forEach(l => l());
+        setState({ ...state, moduleCount: count });
       }
     },
     emitSignal: (name, detail) => {
+      // eslint-disable-next-line security/detect-object-injection
       signals[name].forEach(cb => cb(detail));
     },
     registerSignal: (name, callback) => {
-      signals[name].add(callback);
+      // eslint-disable-next-line security/detect-object-injection
+      const set = signals[name];
+      set.add(callback);
       return () => {
-        signals[name].delete(callback);
+        set.delete(callback);
       };
     }
   };
 
-  // Listen for render-complete to update moduleCount internally
-  store.registerSignal('render-complete', (detail) => {
-    if (detail && detail.moduleCount !== undefined) {
-      store.setModuleCount(detail.moduleCount);
-    }
-  });
-
-  // Listen for scannability-fail to trigger central fallback mode
+  // Scannability failures switch the store (the single owner) into fallback mode.
   store.registerSignal('scannability-fail', () => {
     store.setScannabilityFallbackActive(true);
   });
@@ -190,13 +257,16 @@ function createQRStore(initialConfig?: Partial<QRConfig>): QRStore {
 }
 
 /**
- *
- * @param root0
- * @param root0.children
- * @param root0.initialConfig
+ * Provides one QR store to a generator instance.
+ * @param root0 - Component properties.
+ * @param root0.children - The generator tree.
+ * @param root0.initialConfig - Route-specific initial configuration (for example the QR type).
+ * @param root0.retainAppearance - Carry appearance-only settings (never content) over from the
+ *   previous generator route, in memory only.
+ * @returns The provider element.
  */
-export const QRProvider = ({ children, initialConfig }: { children: React.ReactNode, initialConfig?: Partial<QRConfig> }) => {
-  const [store] = useState(() => createQRStore(initialConfig));
+export const QRProvider = ({ children, initialConfig, retainAppearance = false }: { children: React.ReactNode, initialConfig?: Partial<QRConfig>, retainAppearance?: boolean }) => {
+  const [store] = useState(() => createQRStore(initialConfig, retainAppearance));
 
   return (
     <QRStoreContext.Provider value={store}>
@@ -205,14 +275,18 @@ export const QRProvider = ({ children, initialConfig }: { children: React.ReactN
   );
 };
 
+const noopSubscribe = () => () => {};
+
 /**
- *
- * @param selector
+ * Selects a slice of the nearest QR store, or undefined outside a `QRProvider`.
+ * Selectors should return primitives or stable references to avoid extra renders.
+ * @param selector - Picks the slice a consumer needs.
+ * @returns The selected slice, or undefined without a provider.
  */
 export function useOptionalQRStoreSelector<T>(selector: (state: QRState) => T): T | undefined {
   const store = useContext(QRStoreContext);
   
-  const subscribe = store ? store.subscribe : () => () => {};
+  const subscribe = store ? store.subscribe : noopSubscribe;
   const getSnapshot = () => store ? selector(store.getState()) : undefined;
   
   return useSyncExternalStore(
@@ -223,8 +297,9 @@ export function useOptionalQRStoreSelector<T>(selector: (state: QRState) => T): 
 }
 
 /**
- *
- * @param selector
+ * Selects a slice of the nearest QR store. Throws outside a `QRProvider`.
+ * @param selector - Picks the slice a consumer needs.
+ * @returns The selected slice.
  */
 export function useQRStoreSelector<T>(selector: (state: QRState) => T): T {
   const store = useQRStore();
@@ -236,14 +311,8 @@ export function useQRStoreSelector<T>(selector: (state: QRState) => T): T {
 }
 
 /**
- *
- */
-export function useOptionalQRStore() {
-  return useContext(QRStoreContext);
-}
-
-/**
- *
+ * Returns the nearest QR store. Throws outside a `QRProvider`.
+ * @returns The store.
  */
 export function useQRStore() {
   const store = useContext(QRStoreContext);
