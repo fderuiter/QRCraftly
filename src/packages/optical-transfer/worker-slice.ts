@@ -17,122 +17,112 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import QRCode from 'qrcode';
+import QRCode, { type QRCodeErrorCorrectionLevel } from 'qrcode';
 import { FountainEncoder } from './lib/fountain/encoder';
+import { createFountainSession, sha256Hex } from './lib/fountain/session';
+import type {
+  FountainInitInfo,
+  SliceStartPayload,
+  SliceWorkerIncomingMessage,
+  SliceWorkerOutgoingMessage,
+} from './lib/contracts';
+
+const DEFAULT_CHUNK_SIZE = 180;
 
 let file: Blob | null = null;
-let chunkSize = 180;
-let totalFrames = 0; // total including handshake
-let totalDataFrames = 0; // only data frames
+let chunkSize = DEFAULT_CHUNK_SIZE;
+let totalFrames = 0; // legacy: handshake + data frames; fountain: K
+let totalDataFrames = 0;
 let nextIndexToGenerate = 0;
 let lastAckedIndex = -1;
-let errorCorrectionLevel = 'Q';
+let errorCorrectionLevel: QRCodeErrorCorrectionLevel = 'Q';
 let currentSessionId = 0;
 let activeGeneratingSessionId = 0;
 let fileSHA256 = '';
 let lookaheadLimit = 3;
-let isFountainMode = false;
 let fountainEncoder: FountainEncoder | null = null;
 
 // Keyed by the Blob/File instance so a cached hash can never be reused for different content.
 const hashCache = new WeakMap<Blob, string>();
 
+function post(message: SliceWorkerOutgoingMessage, transfer: Transferable[] = []): void {
+  self.postMessage(message, { transfer });
+}
+
+function errorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}
+
+function fileNameOf(blob: Blob): string {
+  return blob instanceof File && blob.name ? blob.name : 'file';
+}
+
 /**
- * Converts an ArrayBuffer to a standard Base64 string in a worker-compatible way.
+ * Converts bytes to standard Base64 in a worker-compatible way.
  */
-function arrayBufferToBase64(buffer: ArrayBuffer): string {
-  const bytes = new Uint8Array(buffer);
+function bytesToBase64(bytes: Uint8Array): string {
   let binary = '';
-  const len = bytes.byteLength;
-  for (let i = 0; i < len; i++) {
+  for (let i = 0; i < bytes.byteLength; i++) {
     binary += String.fromCharCode(bytes[i]);
   }
   return btoa(binary);
 }
 
 /**
- * Computes the SHA-256 hash of a Blob off-thread.
+ * Builds the text payload for a frame index: a BC-UR droplet in fountain mode,
+ * or the legacy `H|`/`F|` carousel frames otherwise.
  */
-async function computeSHA256(blob: Blob): Promise<string> {
-  const arrayBuffer = await blob.arrayBuffer();
-  const hashBuffer = await crypto.subtle.digest('SHA-256', new Uint8Array(arrayBuffer));
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-  return hashHex;
+async function buildPayload(index: number, sessionId: number, source: Blob): Promise<string | null> {
+  if (fountainEncoder) {
+    return fountainEncoder.dropletStringForIndex(index);
+  }
+  if (index === 0) {
+    const mimeType = source.type || 'application/octet-stream';
+    return `H|${fileNameOf(source)}|${source.size}|${mimeType}|${fileSHA256}`;
+  }
+  const dataIndex = index - 1;
+  const start = dataIndex * chunkSize;
+  const arrayBuffer = await source.slice(start, Math.min(start + chunkSize, source.size)).arrayBuffer();
+  if (sessionId !== currentSessionId) return null;
+  return `F|${dataIndex}|${totalDataFrames}|${bytesToBase64(new Uint8Array(arrayBuffer))}`;
 }
 
 /**
- * Slices a chunk from the file and generates a QR code matrix for it.
+ * Generates the QR module matrix for one frame and posts it (zero-copy).
  */
-async function generateFrame(index: number, sessionId: number) {
-  if (sessionId !== currentSessionId || !file) return;
+async function generateFrame(index: number, sessionId: number): Promise<void> {
+  const source = file;
+  if (sessionId !== currentSessionId || !source) return;
 
   try {
-    let textPayload = '';
+    const textPayload = await buildPayload(index, sessionId, source);
+    if (textPayload === null || sessionId !== currentSessionId) return;
 
-    if (isFountainMode && fountainEncoder) {
-      textPayload = fountainEncoder.nextDropletString();
-    } else if (index === 0) {
-      const fileName = (file as any).name || 'file';
-      const fileSize = file.size;
-      const mimeType = file.type || 'application/octet-stream';
-      textPayload = `H|${fileName}|${fileSize}|${mimeType}|${fileSHA256}`;
-    } else {
-      const dataIndex = index - 1;
-      const start = dataIndex * chunkSize;
-      const end = Math.min(start + chunkSize, file.size);
-      const sliceBlob = file.slice(start, end);
-      const arrayBuffer = await sliceBlob.arrayBuffer();
-
-      if (sessionId !== currentSessionId) return;
-
-      const base64Data = arrayBufferToBase64(arrayBuffer);
-      textPayload = `F|${dataIndex}|${totalDataFrames}|${base64Data}`;
-    }
-
-    if (sessionId !== currentSessionId) return;
-
-    // Generate QR matrix asynchronously
-    const qr = QRCode.create(textPayload, { errorCorrectionLevel: errorCorrectionLevel as any });
+    const qr = QRCode.create(textPayload, { errorCorrectionLevel });
     const { size, data } = qr.modules;
-
     if (sessionId !== currentSessionId) return;
 
     const transferableData = new Uint8Array(data);
-    const buffer = transferableData.buffer;
-
-    (self as any).postMessage(
-      {
-        type: 'FRAME',
-        index,
-        total: totalFrames,
-        size,
-        data: transferableData,
-      },
-      [buffer]
-    );
-  } catch (err: any) {
+    post({ type: 'FRAME', index, total: totalFrames, size, data: transferableData }, [transferableData.buffer]);
+  } catch (err: unknown) {
     if (sessionId !== currentSessionId) return;
-    (self as any).postMessage({
-      type: 'ERROR',
-      message: `Failed to generate frame ${index}: ${err?.message || err}`,
-    });
+    post({ type: 'ERROR', message: `Failed to generate frame ${index}: ${errorMessage(err)}` });
   }
 }
 
 /**
- * Evaluates lookahead and processes sequential frames up to lastAckedIndex + lookaheadLimit.
+ * Generates frames up to lastAckedIndex + lookaheadLimit. Fountain streams are
+ * unbounded; legacy streams stop at totalFrames.
  */
-async function processPipeline(sessionId: number) {
+async function processPipeline(sessionId: number): Promise<void> {
   if (sessionId !== currentSessionId || !file) return;
   if (activeGeneratingSessionId === sessionId) return;
 
   activeGeneratingSessionId = sessionId;
-
   try {
     while (
       sessionId === currentSessionId &&
-      nextIndexToGenerate < totalFrames &&
+      (fountainEncoder !== null || nextIndexToGenerate < totalFrames) &&
       nextIndexToGenerate <= lastAckedIndex + lookaheadLimit
     ) {
       const currentIndex = nextIndexToGenerate;
@@ -146,107 +136,131 @@ async function processPipeline(sessionId: number) {
   }
 }
 
-self.onmessage = async (e: MessageEvent) => {
-  const { type, payload } = e.data || {};
+async function handleStart(payload: SliceStartPayload | undefined): Promise<void> {
+  currentSessionId++;
+  const sessionId = currentSessionId;
 
-  switch (type) {
-    case 'START': {
-      currentSessionId++;
-      const sessionId = currentSessionId;
+  const source = payload?.file ?? null;
+  file = source;
+  fountainEncoder = null;
+  const isFountainMode = payload?.fountainMode === true;
+  const requestedChunkSize = payload?.chunkSize || DEFAULT_CHUNK_SIZE;
+  chunkSize = Math.min(requestedChunkSize < 256 ? requestedChunkSize : DEFAULT_CHUNK_SIZE, 240);
+  const reqEcc = payload?.errorCorrectionLevel;
+  errorCorrectionLevel = reqEcc === 'H' || reqEcc === 'Q' ? reqEcc : 'Q';
 
-      file = payload?.file;
-      isFountainMode = !!payload?.fountainMode;
-      const requestedChunkSize = payload?.chunkSize || 180;
-      chunkSize = Math.min(requestedChunkSize < 256 ? requestedChunkSize : 180, 240);
-      const reqEcc = payload?.errorCorrectionLevel;
-      errorCorrectionLevel = reqEcc === 'H' || reqEcc === 'Q' ? reqEcc : 'Q';
+  const fps = payload?.fps || 15;
+  lookaheadLimit = Math.min(16, Math.max(3, Math.ceil(fps * 0.2)));
 
-      const fps = payload?.fps || 15;
-      lookaheadLimit = Math.min(16, Math.max(3, Math.ceil(fps * 0.2)));
+  if (!source) {
+    post({ type: 'ERROR', message: 'No file provided' });
+    return;
+  }
 
-      if (!file) {
-        if (sessionId === currentSessionId) {
-          (self as any).postMessage({ type: 'ERROR', message: 'No file provided' });
-        }
-        return;
-      }
-
-      if (hashCache.has(file)) {
-        fileSHA256 = hashCache.get(file)!;
-      } else {
-        try {
-          fileSHA256 = await computeSHA256(file);
-          if (sessionId !== currentSessionId) return;
-          hashCache.set(file, fileSHA256);
-        } catch (err: any) {
-          if (sessionId !== currentSessionId) return;
-          (self as any).postMessage({ type: 'ERROR', message: `Hashing failed: ${err?.message || err}` });
-          return;
-        }
-      }
-
+  let fileBytes: Uint8Array | null = null;
+  const cachedHash = hashCache.get(source);
+  if (cachedHash !== undefined) {
+    fileSHA256 = cachedHash;
+  } else {
+    try {
+      fileBytes = new Uint8Array(await source.arrayBuffer());
       if (sessionId !== currentSessionId) return;
+      fileSHA256 = await sha256Hex(fileBytes);
+      if (sessionId !== currentSessionId) return;
+      hashCache.set(source, fileSHA256);
+    } catch (err: unknown) {
+      if (sessionId !== currentSessionId) return;
+      post({ type: 'ERROR', message: `Hashing failed: ${errorMessage(err)}` });
+      return;
+    }
+  }
+  if (sessionId !== currentSessionId) return;
 
-      if (isFountainMode) {
-        const fileBuffer = await file.arrayBuffer();
-        if (sessionId !== currentSessionId) return;
-        fountainEncoder = new FountainEncoder(new Uint8Array(fileBuffer), { blockSize: chunkSize });
-        totalDataFrames = fountainEncoder.k;
-        totalFrames = fountainEncoder.k;
-      } else {
-        fountainEncoder = null;
-        totalDataFrames = Math.ceil(file.size / chunkSize);
-        totalFrames = totalDataFrames + 1; // 1 handshake frame + totalDataFrames
-      }
-
-      nextIndexToGenerate = 0;
-      lastAckedIndex = -1;
-
-      (self as any).postMessage({
-        type: 'PROGRESS',
-        index: 0,
-        total: totalFrames,
-        fileName: (file as any).name || 'file',
-        fileSize: file.size,
-      });
-
-      // For transferSession callers
-      (self as any).postMessage({
-        type: 'INITIALIZED',
-        totalFrames,
-        chunkSize,
+  let fountainInfo: FountainInitInfo | null = null;
+  if (isFountainMode) {
+    try {
+      const bytes = fileBytes ?? new Uint8Array(await source.arrayBuffer());
+      if (sessionId !== currentSessionId) return;
+      const session = await createFountainSession(bytes, {
+        fileName: fileNameOf(source),
+        mimeType: source.type,
+        errorCorrectionLevel,
+        requestedSymbolSize: payload?.chunkSize,
         sha256: fileSHA256,
       });
-
-      await processPipeline(sessionId);
-      break;
+      if (sessionId !== currentSessionId) return;
+      fountainEncoder = session.encoder;
+      chunkSize = session.symbolSize;
+      totalDataFrames = session.encoder.k;
+      totalFrames = session.encoder.k;
+      fountainInfo = {
+        k: session.encoder.k,
+        symbolSize: session.symbolSize,
+        compression: session.header.compression,
+        messageLength: session.encoder.messageLength,
+      };
+    } catch (err: unknown) {
+      if (sessionId !== currentSessionId) return;
+      post({ type: 'ERROR', message: `Fountain encoding failed: ${errorMessage(err)}` });
+      return;
     }
+  } else {
+    totalDataFrames = Math.ceil(source.size / chunkSize);
+    totalFrames = totalDataFrames + 1; // 1 handshake frame + totalDataFrames
+  }
 
-    case 'ACK': {
-      if (!file) break;
-      const acked = payload?.index;
-      if (typeof acked === 'number' && acked > lastAckedIndex && acked < nextIndexToGenerate) {
-        lastAckedIndex = acked;
+  nextIndexToGenerate = 0;
+  lastAckedIndex = -1;
 
-        (self as any).postMessage({
-          type: 'PROGRESS',
-          index: lastAckedIndex + 1,
-          total: totalFrames,
-        });
+  post({ type: 'PROGRESS', index: 0, total: totalFrames, fileName: fileNameOf(source), fileSize: source.size });
+  post({ type: 'INITIALIZED', totalFrames, chunkSize, sha256: fileSHA256, fountain: fountainInfo });
 
-        if (lastAckedIndex + 1 >= totalFrames) {
-          (self as any).postMessage({ type: 'COMPLETE' });
-        } else {
-          await processPipeline(currentSessionId);
-        }
-      }
+  await processPipeline(sessionId);
+}
+
+async function handleAck(index: number | undefined): Promise<void> {
+  if (!file) return;
+  if (typeof index !== 'number' || index <= lastAckedIndex || index >= nextIndexToGenerate) return;
+  lastAckedIndex = index;
+  post({ type: 'PROGRESS', index: lastAckedIndex + 1, total: totalFrames });
+
+  // A rateless stream never completes on the sender side; it runs until STOP.
+  if (!fountainEncoder && lastAckedIndex + 1 >= totalFrames) {
+    post({ type: 'COMPLETE' });
+  } else {
+    await processPipeline(currentSessionId);
+  }
+}
+
+function handleStop(): void {
+  currentSessionId++;
+  file = null;
+  fountainEncoder = null;
+  nextIndexToGenerate = 0;
+  lastAckedIndex = -1;
+  totalFrames = 0;
+  totalDataFrames = 0;
+  fileSHA256 = '';
+  activeGeneratingSessionId = 0;
+  lookaheadLimit = 3;
+}
+
+self.onmessage = async (e: MessageEvent<SliceWorkerIncomingMessage | null>) => {
+  const message = e.data;
+  if (!message) return;
+
+  switch (message.type) {
+    case 'START':
+      await handleStart(message.payload);
       break;
-    }
-
+    case 'ACK':
+      await handleAck(message.payload?.index);
+      break;
     case 'HEAL': {
       if (!file) break;
-      if (payload && typeof payload.lastAckedIndex === 'number') {
-        const boundedAck = Math.min(payload.lastAckedIndex, nextIndexToGenerate - 1);
+      const requested = message.payload?.lastAckedIndex;
+      if (typeof requested === 'number') {
+        const boundedAck = Math.min(requested, nextIndexToGenerate - 1);
         if (boundedAck >= -1) {
           lastAckedIndex = Math.max(lastAckedIndex, boundedAck);
         }
@@ -254,23 +268,10 @@ self.onmessage = async (e: MessageEvent) => {
       await processPipeline(currentSessionId);
       break;
     }
-
-    case 'STOP': {
-      currentSessionId++;
-      file = null;
-      fountainEncoder = null;
-      nextIndexToGenerate = 0;
-      lastAckedIndex = -1;
-      totalFrames = 0;
-      totalDataFrames = 0;
-      fileSHA256 = '';
-      activeGeneratingSessionId = 0;
-      lookaheadLimit = 3;
+    case 'STOP':
+      handleStop();
       break;
-    }
-
     default:
       break;
   }
 };
-

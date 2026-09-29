@@ -50,6 +50,7 @@ export {
 
 export { FountainEncoder } from './lib/fountain/encoder';
 export { FountainDecoder } from './lib/fountain/decoder';
+export { solveGF2, type GF2Equation, type GF2Solution } from './lib/fountain/gf2';
 export {
   buildRobustSolitonCdf,
   sampleDegreeFromCdf,
@@ -62,6 +63,38 @@ export {
   isFountainDropletString,
   FOUNTAIN_URI_PREFIX,
 } from './lib/fountain/envelope';
+export { cborEncode, cborDecode, type CborValue } from './lib/fountain/cbor';
+export { encodeBytewordsMinimal, decodeBytewordsMinimal } from './lib/fountain/bytewords';
+export { crc32, crc32Hex } from './lib/fountain/crc32';
+export {
+  type DropletMetadata,
+  type FountainDroplet,
+  type FountainEncoderOptions,
+} from './lib/fountain/contracts';
+export {
+  createFountainSession,
+  openFountainSession,
+  encodeSessionMessage,
+  decodeSessionMessage,
+  compressForTransfer,
+  decompressTransferPayload,
+  resolveFountainSymbolSize,
+  maxDropletStringLength,
+  sha256Hex,
+  MAX_QR_VERSION,
+  MAX_SYMBOL_SIZE,
+  MIN_SYMBOL_SIZE,
+  MIN_COMPRESSION_SAVING,
+  type FountainSessionHeader,
+  type FountainSessionOptions,
+  type TransferCompression,
+} from './lib/fountain/session';
+export {
+  FountainReassembler,
+  FountainRateTracker,
+  type FountainProgress,
+  type FountainTelemetry,
+} from './lib/fountain/reassembler';
 
 export {
   StreamLookaheadReceiver,

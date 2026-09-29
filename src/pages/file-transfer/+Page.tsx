@@ -63,6 +63,7 @@ function FileTransferToolInner() {
     fps,
     setFps,
     currentPass,
+    fountainInfo,
     transferStats,
     canvasRef,
     startTransfer,
@@ -239,10 +240,10 @@ function FileTransferToolInner() {
 
               <RangeInput
                 id="chunk-slider"
-                label="Data per QR"
-                min={64}
-                max={240}
-                step={16}
+                label="Max data per QR"
+                min={16}
+                max={100}
+                step={4}
                 value={chunkSize}
                 onChange={(val) => {
                   setChunkSize(val);
@@ -250,6 +251,11 @@ function FileTransferToolInner() {
                 }}
                 formatValue={(v) => `${v} bytes`}
               />
+              <p className="text-xs text-slate-500 dark:text-slate-400" data-testid="fountain-symbol-info">
+                {fountainInfo
+                  ? `Sending ${fountainInfo.symbolSize} bytes per QR (${fountainInfo.compression === 'deflate-raw' ? 'compressed' : 'uncompressed'}), ${fountainInfo.k} source blocks. Sizes are capped so every QR stays at version 7 or lower.`
+                  : 'Each QR is sized to stay at version 7 or lower for reliable camera scanning.'}
+              </p>
             </section>
 
             <div className="h-px bg-slate-100 dark:bg-slate-800" />
@@ -338,12 +344,14 @@ function FileTransferToolInner() {
 
                       <div className="grid grid-cols-2 gap-4 pt-2">
                         <div>
-                          <div className="text-slate-400">Current QR (Pass {currentPass})</div>
+                          <div className="text-slate-400">{fountainInfo ? 'Droplets sent' : `Current QR (Pass ${currentPass})`}</div>
                           <div className="font-mono text-sm font-semibold text-slate-700 dark:text-slate-300">
-                            {currentFrameIndex} / {totalFrames}
-                            <span className="ml-1 text-[10px] text-teal-600 dark:text-teal-400">
-                              {currentPass === 1 ? '(Seq)' : '(Shuffled)'}
-                            </span>
+                            {fountainInfo ? `${currentFrameIndex} (K = ${totalFrames})` : `${currentFrameIndex} / ${totalFrames}`}
+                            {!fountainInfo && (
+                              <span className="ml-1 text-[10px] text-teal-600 dark:text-teal-400">
+                                {currentPass === 1 ? '(Seq)' : '(Shuffled)'}
+                              </span>
+                            )}
                           </div>
                         </div>
                         <div>
@@ -366,7 +374,7 @@ function FileTransferToolInner() {
                         aria-label="Start file transfer"
                       >
                         <Play className="size-4" />
-                        {isVerifyingHandshake ? 'Verifying Handshake...' : 'Start Transfer'}
+                        {isVerifyingHandshake ? 'Checking QR…' : 'Start Transfer'}
                       </Button>
                     ) : (
                       <Button
