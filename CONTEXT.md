@@ -163,19 +163,19 @@ The automated client-side hooks combining Husky with lint-staged to enforce code
 _Avoid_: Commit hooks, git checks, pre-commit scripts, git filters
 
 **Authoritative Deployment Orchestrator**:
-The single source of truth (GitHub Actions) executing quality gates, security audits, build provenance attestations, and edge deployments, preventing duplicate or unverified builds from external git integrations.
+The division of responsibility in which GitHub Actions is the quality gate (the required `CI` check, audits, smoke tests) and Cloudflare Workers Builds is the only system that deploys, building each pushed branch from Git.
 _Avoid_: Build trigger, dual deploy, cloud build runner, auto-deployment app
 
 **Staged Promotion**:
-The lifecycle discipline where all feature and fix branches merge into the default integration branch (`dev`), deploying to an active preview environment (`qrcraftly.fpderuiter.workers.dev`) before production release promotion to `main`.
+The lifecycle discipline where all feature and fix branches merge into the default integration branch (`dev`), deploying to the preview staging environment (`dev-qrcraftly.fpderuiter.workers.dev`) before production release promotion to `main`.
 _Avoid_: Dev-to-main copy, branch sync, direct push release, cherry-pick release
 
 **Ephemeral Preview Environment**:
-An isolated, on-demand edge staging deployment created per pull request to enable automated end-to-end smoke verification and visual review prior to merge.
+An isolated edge preview version that Cloudflare Workers Builds uploads for each pushed branch, served at `https://<branch>-qrcraftly.fpderuiter.workers.dev`, for visual review prior to merge.
 _Avoid_: Test deploy, PR sandbox, temp site, branch build
 
 **Fast-Forward Promotion**:
-The exclusive, SHA-preserving method by which `dev` is advanced into `main` during a production release (`git push origin dev:main --ff-only`), guaranteeing that both branches share identical commit SHAs and preventing history divergence.
+The exclusive, SHA-preserving method by which `main` is advanced to a reviewed release commit on `dev` during a production release (`pnpm run release:promote`, an atomic push of `main` and the `vX.Y.Z` tag with no force), guaranteeing that both branches share identical commit SHAs and preventing history divergence.
 _Avoid_: PR merge to main, rebase-and-merge release, squash promotion, cherry-pick release
 
 **Conventional Commit**:
@@ -183,5 +183,5 @@ A structured commit message following the `<type>(<scope>): <description>` forma
 _Avoid_: Tagged message, semantic commit, versioned commit, prefix commit
 
 **Release Engine**:
-The cross-platform Node.js utility (`scripts/release_engine.js`) that reads conventional commits since the latest git tag, computes the next SemVer version, generates a grouped Keep-a-Changelog section, and can fast-forward promote `main` in a single atomic operation.
+The cross-platform Node.js utility (`scripts/release_engine.js`) that reads conventional commits since the latest git tag, computes the next SemVer version, generates a grouped Keep-a-Changelog section, prepares the release PR (`--prepare`), and fast-forward promotes `main` with its tag in a single atomic push (`--promote`).
 _Avoid_: Version bumper, changelog writer, deploy script, tag creator
