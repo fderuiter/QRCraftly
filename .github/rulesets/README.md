@@ -11,11 +11,11 @@ This directory contains the standardized, consolidated branch protection ruleset
 ## Scope and Rules
 
 ### 1. Mandated Quality Gateways (CI Status Checks)
-The following status checks must pass successfully before a pull request can be merged into any of the target branches:
-- **Quality Checks**
+The following status checks must pass successfully before a pull request can be merged into any of the target branches. Each name must match a job `name:` in `.github/workflows/main.yml` exactly, otherwise GitHub waits forever for a check that never reports:
+- **Consolidated Static Validation** (lint, typecheck, audits, ShellCheck, secret scan, Semgrep)
 - **Unit Tests**
 - **E2E Tests**
-- **Docs Audit & Verification**
+- **Build & Artifact** (production build, bundle size, Lighthouse)
 
 ### 2. Pull Request Requirements
 - **Required Approving Reviews:** At least `1` approving review is mandatory before merging.

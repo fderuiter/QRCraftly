@@ -1,0 +1,51 @@
+name: Bug report
+description: Something in QRCraftly is broken or behaves unexpectedly.
+labels: ['needs-triage']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. Please do not paste real personal data (WiFi passwords, contact details, payment info) into this issue; use placeholder values instead.
+        Security vulnerabilities should be reported privately through a GitHub Security Advisory (see docs/SECURITY.md), not here.
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+      description: A clear description of the problem.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open the WiFi QR code page
+        2. Enter ...
+        3. Click Download
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Where did you see it?
+      options:
+        - Production (qrcraftly.com)
+        - Preview staging (dev)
+        - Local development
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and OS
+      placeholder: e.g. Chrome 140 on macOS 16, Safari on iOS 19
+  - type: textarea
+    id: extra
+    attributes:
+      label: Screenshots, console output, or anything else

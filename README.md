@@ -41,23 +41,7 @@ Follow these instructions to get a copy of the project up and running on your lo
 Ensure you have the following installed on your machine:
 
 - [Node.js](https://nodejs.org/) (version 22.14.0 or higher required)
-- [pnpm](https://pnpm.io/) (strictly mandated, do not use `npm` or `yarn`)
-
-**System Dependencies (Linux/WSL/macOS):**
-
-This project uses `node-canvas` for testing (via JSDOM). Because `pnpm install` installs development dependencies by default, **you must install these system libraries before running `pnpm install`** or the installation will fail.
-
-- **Ubuntu/Debian:**
-
-  ```bash
-  sudo apt-get update
-  sudo apt-get install build-essential libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev
-  ```
-
-- **macOS:**
-  ```bash
-  brew install pkg-config cairo pango libpng jpeg giflib librsvg
-  ```
+- [pnpm](https://pnpm.io/) (strictly mandated, do not use `npm` or `yarn`). The exact version is pinned in `package.json` under `packageManager`; running `corepack enable` once makes the pinned version available automatically.
 
 ### Installation
 
@@ -101,7 +85,7 @@ pnpm preview
 
 ### Running Tests
 
-To run the unit test suite (Vitest):
+To run the unit test suite (Vitest, watch mode by default; use `pnpm exec vitest run` for a single pass):
 
 ```bash
 pnpm test
@@ -110,7 +94,7 @@ pnpm test
 To run coverage reports:
 
 ```bash
-pnpm test -- run --coverage
+pnpm exec vitest run --coverage
 ```
 
 To run End-to-End (E2E) tests (Playwright):
@@ -141,23 +125,6 @@ du -sh dist/client
 
 **Performance & SEO:**
 Lighthouse CI runs on every Pull Request to audit performance, accessibility, best practices, and SEO.
-
-## Troubleshooting
-
-### `pnpm install` fails with `gyp ERR!` or `Package cairo was not found`
-
-This usually happens because `node-canvas` (a development dependency used for testing) requires system-level libraries to be installed.
-
-**Solution:**
-
-1. Install the system dependencies listed in the [Prerequisites](#prerequisites) section for your operating system.
-2. Run `pnpm install` again.
-
-Alternatively, if you only want to run the application without running tests, you can skip installing development dependencies:
-
-```bash
-pnpm install --prod
-```
 
 ## Usage Guide
 
@@ -204,6 +171,14 @@ pnpm install --prod
   - `contrast_check.js`: Checks WCAG contrast compliance for UI elements.
 - `public/`: Static assets (favicon, etc.).
 
+## Contributing
+
+- **Branch from `dev`.** `dev` is the default and integration branch. Name branches with a standard prefix (`feat/`, `fix/`, `docs/`, `refactor/`, `chore/`, `agent/`) and open pull requests against `dev`. Never open a pull request against `main`; `main` only advances by fast-forward promotion (see [RELEASE_GUIDE.md](docs/RELEASE_GUIDE.md) and ADR 0015).
+- **Use [Conventional Commits](https://www.conventionalcommits.org/)** (`feat:`, `fix:`, `docs:`, `chore:`, ...). The release engine derives the next SemVer version and the changelog from them.
+- **Run the checks before pushing.** Husky runs formatting, typechecking, duplication audits and tests on commit. CI additionally runs `pnpm run lint`, `pnpm exec vitest run --coverage`, `pnpm test:e2e` and `pnpm build`.
+- **Read the guardrails.** [AGENTS.md](AGENTS.md) lists the project invariants (client-side only generation, storage allowlist, UI component reuse, workflow hardening), and [CONTEXT.md](CONTEXT.md) defines the domain vocabulary.
+- **Report bugs and ideas** through the GitHub issue forms; report security issues privately as described in [SECURITY.md](docs/SECURITY.md).
+
 ## Contributor Guide for Dependencies
 
 To maintain security and reduce repository noise, QRCraftly uses **Dependabot** to manage third-party dependencies.
@@ -211,7 +186,7 @@ To maintain security and reduce repository noise, QRCraftly uses **Dependabot** 
 - **Automated Scanning**: Dependabot checks for outdated packages daily and monitors for security vulnerabilities.
 - **Grouped Updates**: Non-security routine updates are consolidated into logical groups (e.g., `dev-dependencies`, `production-dependencies`) to minimize PR volume.
 - **Security Priority**: Critical security patches bypass routine grouping and are issued as isolated PRs for immediate visibility.
-- **Review Process**: All dependency update PRs require human review. Before merging, ensure the CI pipeline (`test`, `e2e`, `quality`, and bundle size checks) has passed successfully.
+- **Review Process**: All dependency update PRs require human review. Before merging, ensure the CI pipeline (Unit Tests, E2E Tests, Consolidated Static Validation, and Build & Artifact with its bundle size check) has passed successfully.
 - **Package Manager**: QRCraftly strictly mandates **pnpm**. Dependabot is configured to respect `pnpm-lock.yaml`. Never use `npm install` or `yarn` when manually updating dependencies.
 
 ## Technologies Used

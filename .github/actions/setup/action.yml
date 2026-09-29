@@ -9,11 +9,6 @@ inputs:
     description: "Whether to install dependencies"
     required: false
     default: "true"
-outputs:
-  cache-hit:
-    description: "Whether the node_modules cache was successfully restored"
-    value: "true"
-
 runs:
   using: "composite"
   steps:
