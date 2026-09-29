@@ -20,7 +20,7 @@ process.env.VITE_DOMAIN = resolvedDomain;
 
 // Now import the shared business logic dynamically
 const { resolvePublicUrl, getSanitizedPath } = await import('../src/utils/metadataEngine');
-const { contentRegistry, auxiliaryRegistry } = await import('../src/data/contentRegistry');
+const { contentRegistry, auxiliaryRegistry, getLegacyRedirect } = await import('../src/data/contentRegistry');
 
 const DIST_DIR = path.resolve(__dirname, '../dist/client');
 const OUTPUT_FILE = process.env.SITEMAP_OUTPUT_PATH || path.join(DIST_DIR, 'sitemap.xml');
@@ -49,6 +49,10 @@ function findHtmlFiles(dir: string, fileList: string[] = []): string[] {
  */
 export function shouldExcludePath(posixPath: string): boolean {
   const clean = posixPath.toLowerCase();
+  // Retired routes (such as /game) only redirect to their replacement.
+  if (getLegacyRedirect(clean.replace(/(\/index)?\.html$/, ''))) {
+    return true;
+  }
   if (
     clean.includes('404.html') ||
     clean.endsWith('404') ||

@@ -22,7 +22,7 @@ export const ValidationEngine = {
   /**
    * Registry for type-specific validator functions to preserve backwards compatibility.
    */
-  typeValidators: Object.create(null) as Record<string, (value: string) => string[]>,
+  typeValidators: new Map<string, (value: string) => string[]>(),
 
   /**
    * Registers a validator function for a specific QRType.
@@ -31,7 +31,19 @@ export const ValidationEngine = {
    * @param validator - The validation function for the QRType.
    */
   registerValidator(type: QRType, validator: (value: string) => string[]) {
-    this.typeValidators[type] = validator;
+    this.typeValidators.set(type, validator);
+  },
+
+  /**
+   * Runs the custom validator registered for a type, if any.
+   * Only validators registered via registerValidator are dispatched.
+   * @param type - The QR code type whose validator should run.
+   * @param value - The raw QR payload string.
+   * @returns Violations reported by the custom validator, or an empty array.
+   */
+  runCustomValidator(type: string, value: string): string[] {
+    const validator = this.typeValidators.get(type);
+    return typeof validator === 'function' ? validator(value) : [];
   },
 
   /**
@@ -86,8 +98,8 @@ export const ValidationEngine = {
   validateConfig(config: QRConfig): string[] {
     const violations = validateConfig(config);
     // If any custom validators were registered on typeValidators, run them as well
-    if (config.value && config.type && this.typeValidators[config.type]) {
-      const customViolations = this.typeValidators[config.type](config.value);
+    if (config.value && config.type) {
+      const customViolations = this.runCustomValidator(config.type, config.value);
       if (customViolations && customViolations.length > 0) {
         violations.push(...customViolations);
       }
@@ -104,8 +116,8 @@ export const ValidationEngine = {
   validatePayload(value: string, type?: QRType): string[] {
     const violations = validatePayload(value, type);
     const effectiveType = type || identifyProtocol(value);
-    if (effectiveType && this.typeValidators[effectiveType]) {
-      const customViolations = this.typeValidators[effectiveType](value);
+    if (effectiveType) {
+      const customViolations = this.runCustomValidator(effectiveType, value);
       if (customViolations && customViolations.length > 0) {
         violations.push(...customViolations);
       }

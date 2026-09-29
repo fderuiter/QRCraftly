@@ -1,4 +1,5 @@
 import { DoubleBufferPool } from './bufferPool';
+import { systemClock, type ScannerClock } from './clock';
 
 export interface SchedulerOptions {
   minSamplingDelay?: number;
@@ -9,7 +10,11 @@ export interface SchedulerOptions {
   onScanSuccess?: (data: string) => void;
   onScanFail?: (error?: string) => void;
   onWatchdogTriggered?: (elapsed: number) => void;
+  /** Time source; defaults to the system clock. Tests inject a fake clock. */
+  clock?: Pick<ScannerClock, 'now' | 'setTimeout' | 'clearTimeout'>;
 }
+
+const WATCHDOG_POLL_MS = 100;
 
 /**
  * Backpressure-driven adaptive sampling controller.
@@ -23,7 +28,8 @@ export class AdaptiveFrameScheduler {
   private latencyHistory: number[] = [];
   private inFlight = false;
   private inFlightStart: number | null = null;
-  private watchdogTimer: any = null;
+  private watchdogTimer: number | null = null;
+  private readonly clock: Pick<ScannerClock, 'now' | 'setTimeout' | 'clearTimeout'>;
   private sequenceId = 0;
   private completedSequenceId = 0;
   private startTimeMap = new Map<number, number>();
@@ -37,6 +43,7 @@ export class AdaptiveFrameScheduler {
 
   constructor(options: SchedulerOptions = {}) {
     this.options = options;
+    this.clock = options.clock ?? systemClock;
     this.minSamplingDelay = options.minSamplingDelay ?? 16;
     this.maxSamplingDelay = options.maxSamplingDelay ?? 1000;
     this.pool = new DoubleBufferPool();
@@ -104,13 +111,13 @@ export class AdaptiveFrameScheduler {
   private pauseWatchdog() {
     if (!this.isPaused) {
       this.isPaused = true;
-      this.pauseStartTime = performance.now();
+      this.pauseStartTime = this.clock.now();
     }
   }
 
   private resumeWatchdog() {
     if (this.isPaused && this.pauseStartTime !== null) {
-      const now = performance.now();
+      const now = this.clock.now();
       const pauseStartTime = this.pauseStartTime;
       const pauseDuration = now - pauseStartTime;
 
@@ -135,7 +142,7 @@ export class AdaptiveFrameScheduler {
     }
   }
 
-  private getShiftedTimestamp(t: number, now = performance.now()): number {
+  private getShiftedTimestamp(t: number, now = this.clock.now()): number {
     if (!this.isPaused || this.pauseStartTime === null) {
       return t;
     }
@@ -159,8 +166,8 @@ export class AdaptiveFrameScheduler {
     const seqId = this.sequenceId;
 
     this.inFlight = true;
-    this.inFlightStart = performance.now();
-    this.startTimeMap.set(seqId, performance.now());
+    this.inFlightStart = this.clock.now();
+    this.startTimeMap.set(seqId, this.clock.now());
     this.options.onStatusChange?.('checking');
 
     return seqId;
@@ -193,7 +200,7 @@ export class AdaptiveFrameScheduler {
     const rawStartTime = this.startTimeMap.get(sequenceId);
     if (rawStartTime !== undefined) {
       this.startTimeMap.delete(sequenceId);
-      const endTime = performance.now();
+      const endTime = this.clock.now();
       const startTime = this.isPaused ? this.getShiftedTimestamp(rawStartTime, endTime) : rawStartTime;
       const duration = endTime - startTime;
 
@@ -249,6 +256,14 @@ export class AdaptiveFrameScheduler {
     }
   }
 
+  /**
+   * Updates the adaptive sampling bounds without resetting in-flight state.
+   */
+  public setSamplingBounds(minSamplingDelay: number, maxSamplingDelay: number) {
+    this.minSamplingDelay = minSamplingDelay;
+    this.maxSamplingDelay = maxSamplingDelay;
+  }
+
   public setWatchdogTimeout(timeout: number) {
     this.watchdogTimeout = timeout;
   }
@@ -262,7 +277,7 @@ export class AdaptiveFrameScheduler {
       return false;
     }
     if (this.inFlight && this.inFlightStart !== null) {
-      const elapsed = performance.now() - this.inFlightStart;
+      const elapsed = this.clock.now() - this.inFlightStart;
       if (elapsed > this.watchdogTimeout) {
         console.warn(`Watchdog: Worker starvation detected (${elapsed.toFixed(0)}ms > ${this.watchdogTimeout}ms). Recreating worker.`);
         this.triggerRecovery(elapsed);
@@ -274,23 +289,16 @@ export class AdaptiveFrameScheduler {
 
   private startWatchdog() {
     this.stopWatchdog();
-    this.watchdogTimer = setInterval(() => {
-      if (this.isPaused) {
-        return;
-      }
-      if (this.inFlight && this.inFlightStart !== null) {
-        const elapsed = performance.now() - this.inFlightStart;
-        if (elapsed > this.watchdogTimeout) {
-          console.warn(`Watchdog: Worker starvation detected (${elapsed.toFixed(0)}ms > ${this.watchdogTimeout}ms). Recreating worker.`);
-          this.triggerRecovery(elapsed);
-        }
-      }
-    }, 100);
+    const poll = () => {
+      this.watchdogTimer = this.clock.setTimeout(poll, WATCHDOG_POLL_MS);
+      this.checkWatchdog();
+    };
+    this.watchdogTimer = this.clock.setTimeout(poll, WATCHDOG_POLL_MS);
   }
 
   private stopWatchdog() {
-    if (this.watchdogTimer) {
-      clearInterval(this.watchdogTimer);
+    if (this.watchdogTimer !== null) {
+      this.clock.clearTimeout(this.watchdogTimer);
       this.watchdogTimer = null;
     }
   }

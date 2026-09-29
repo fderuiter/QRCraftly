@@ -12,9 +12,20 @@ interface SidebarContentProps {
 }
 
 /**
- *
- * @param root0
- * @param root0.toolId
+ * Builds the overview heading for a registry entry without doubling a leading "About"
+ * (for example "About QRCraftly" stays as is instead of becoming "About About QRCraftly").
+ * @param name - Registry display name.
+ * @returns The section heading.
+ */
+export function getAboutHeading(name: string): string {
+  return /^about\b/i.test(name.trim()) ? name.trim() : `About ${name}`;
+}
+
+/**
+ * Renders the overview, how-to and FAQ sections for a tool's registry entry.
+ * @param root0 - Component properties.
+ * @param root0.toolId - Content registry id.
+ * @returns The content sections, or null for unknown ids.
  */
 export function SidebarContent({ toolId }: SidebarContentProps) {
   const content = contentRegistry[toolId];
@@ -30,7 +41,7 @@ export function SidebarContent({ toolId }: SidebarContentProps) {
       
       {content.name && content.name !== 'QRCraftly' && (
         <section className="mb-10">
-          <h2 className="mb-3 text-2xl font-bold text-slate-800 dark:text-slate-100">About {content.name}</h2>
+          <h2 className="mb-3 text-2xl font-bold text-slate-800 dark:text-slate-100">{getAboutHeading(content.name)}</h2>
           {content.description && <p className="mb-4 text-sm leading-relaxed">{content.description}</p>}
           {content.features && content.features.length > 0 && (
             <>

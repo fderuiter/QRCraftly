@@ -17,7 +17,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import React, { useState, useEffect, useRef, useCallback, useMemo, useSyncExternalStore } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { QRConfig, QRErrorCorrectionLevel, SocialFormat, TemplateStyle } from '@/types';
 import { drawQRInternal } from '@/utils/qrRenderer';
 import { drawWithTemplate, SOCIAL_DIMENSIONS } from '@/utils/templateRenderer';
@@ -27,7 +27,7 @@ import { StreamLookaheadReceiver, DANGEROUS_SCHEMES } from './lib/streamLookahea
 import { triggerFileDownload } from '@/utils/downloadManager';
 import { useCamera } from '@/hooks/useCamera';
 import { useAdaptiveScanner } from '@/hooks/useAdaptiveScanner';
-import { useOptionalQRStore } from '@/context/QRContext';
+import { useOptionalQRStoreSelector } from '@/context/QRContext';
 import { HandshakeInfo, type SliceWorkerOutgoingMessage } from './lib/contracts';
 import { MAX_SYMBOL_SIZE, type TransferCompression } from './lib/fountain/session';
 import { isFountainDropletString } from './lib/fountain/envelope';
@@ -131,13 +131,7 @@ export function useOpticalSender({
     activeMemory: '0.00 MB',
   });
 
-  const store = useOptionalQRStore();
-
-  const isFallbackActive = useSyncExternalStore(
-    store ? store.subscribe : () => () => {},
-    () => (store ? store.getState().isScannabilityFallbackActive : false),
-    () => (store ? store.getState().isScannabilityFallbackActive : false)
-  );
+  const isFallbackActive = useOptionalQRStoreSelector(state => state.isScannabilityFallbackActive) ?? false;
 
   const effectiveConfig = useMemo(() => {
     if (isFallbackActive) {
