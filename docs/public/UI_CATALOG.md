@@ -33,7 +33,7 @@ These low-level, primitive UI elements are designed to be extremely customizable
 - **SanitizedHtml** (`SanitizedHtml.tsx`): Safe, sanitized HTML injection system to avoid cross-site scripting (XSS) issues in dynamically parsed rich content.
 - **TextField** (`TextField.tsx`): Standard form text input primitive with full validation styles and focus rings.
 - **ThemeToggle** (`ThemeToggle.tsx` / `ThemeToggle.test.tsx`): The single colour-theme control used on every page. Cycles System, Light and Dark through the global `ThemeProvider` (from `@/context/ThemeContext`) with a consistent accessible label.
-- **Toast** (`Toast.tsx` / `Toast.test.tsx`): Auto-dismissing alerts that slide into view to acknowledge user actions without interrupting their workflow, with a safe fallback mock context when running outside a provider (e.g., in unit tests).
+- **Toast** (`Toast.tsx` / `Toast.test.tsx`): Auto-dismissing alerts that slide into view to acknowledge user actions without interrupting their workflow, with a safe fallback mock context when running outside a provider (e.g., in unit tests). Pass `persistent: true` to keep a toast open until dismissed, and `action: { label, onClick }` to add a button that runs the action and closes the toast (used by the service worker "new version available" prompt).
 - **ToggleSwitch** (`ToggleSwitch.tsx` / `ToggleSwitch.test.tsx`): Accessible sliding checkbox switch used for toggle-only options with 3:1 non-text contrast tracks in both active and inactive states.
 
 ---

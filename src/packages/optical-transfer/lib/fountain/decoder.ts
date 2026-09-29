@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection */
 /*
     QRCraftly
     Copyright (C) 2025 fderuiter
@@ -17,43 +18,54 @@
 */
 
 import { DropletMetadata } from './contracts';
-import { getNeighborsForSeq } from './soliton';
-import { computeCrc32Hex, parseDropletString } from './envelope';
+import { buildRobustSolitonCdf, getNeighborsForSeq } from './soliton';
+import { crc32 } from './crc32';
+import { parseDropletString } from './envelope';
+import { solveGF2 } from './gf2';
 
-interface PendingDroplet {
+interface PendingEquation {
   neighbors: Set<number>;
   data: Uint8Array;
+  /** True once Gaussian elimination proved this row independent of the rest. */
+  independent: boolean;
 }
 
+function firstOf(set: Set<number>): number {
+  for (const value of set) return value;
+  return -1;
+}
+
+/** Elimination is skipped above this many unknowns to bound worst-case CPU time. */
+const MAX_ELIMINATION_UNKNOWNS = 4096;
+
 /**
- * Rateless fountain peeling elimination graph solver over GF(2).
- * Enables stateless stream entry where receiving can start at any arbitrary droplet.
+ * Rateless fountain decoder over GF(2).
+ *
+ * Droplets are first resolved by belief-propagation peeling (O(degree) per
+ * droplet). When peeling stalls on a stopping set and there are at least as
+ * many pending equations as unknown blocks, the decoder falls back to
+ * Gauss-Jordan elimination ({@link solveGF2}) and feeds any recovered blocks
+ * back into the peeling ripple. Any droplet can be the first one, which
+ * enables stateless stream entry.
  */
 export class FountainDecoder {
   public k: number | null = null;
-  public fileSize: number | null = null;
-  public checksum: string | null = null;
+  public messageLength: number | null = null;
+  public checksum: number | null = null;
   public blockSize: number | null = null;
 
+  private cdf: Float64Array | null = null;
   private solvedBlocks: Array<Uint8Array | null> = [];
-  private solvedCount: number = 0;
-  private pendingDroplets: PendingDroplet[] = [];
-  private receivedSeqNumbers: Set<number> = new Set();
+  private solvedCount = 0;
+  private pending: PendingEquation[] = [];
+  private receivedSeqNumbers = new Set<number>();
+  private droplets = 0;
+  private equationsSinceElimination = 0;
+  private eliminationRuns = 0;
 
   /**
-   * Initializes or updates metadata from the first received droplet.
-   */
-  public init(meta: DropletMetadata, blockSize: number): void {
-    if (this.k !== null) return;
-    this.k = meta.k;
-    this.fileSize = meta.fileSize;
-    this.checksum = meta.checksum;
-    this.blockSize = blockSize;
-    this.solvedBlocks = new Array(this.k).fill(null);
-  }
-
-  /**
-   * Returns current decoding progress percentage (0 - 100).
+   * Returns current decoding progress percentage (0 - 100) based on solved blocks.
+   * @returns Percentage of solved source blocks.
    */
   public get progress(): number {
     if (!this.k) return 0;
@@ -61,22 +73,78 @@ export class FountainDecoder {
   }
 
   /**
-   * Returns true if all K source blocks have been resolved.
+   * True once all K source blocks have been resolved.
+   * @returns Whether decoding is complete.
    */
   public get isComplete(): boolean {
     return this.k !== null && this.solvedCount >= this.k;
   }
 
   /**
-   * Returns the count of solved blocks so far.
+   * Number of source blocks resolved so far.
+   * @returns Solved block count.
    */
   public get resolvedBlockCount(): number {
     return this.solvedCount;
   }
 
   /**
-   * Ingests a raw droplet string (e.g. `ur:bytes/...`).
-   * Returns true if the droplet advanced progress or completed the file, false otherwise.
+   * Number of unique droplets accepted for the current session.
+   * @returns Accepted droplet count.
+   */
+  public get dropletsReceived(): number {
+    return this.droplets;
+  }
+
+  /**
+   * Known rank of the received equation system: solved blocks plus pending rows
+   * proven independent by the last elimination pass. It is a lower bound between
+   * elimination passes and equals K on completion.
+   * @returns Rank lower bound.
+   */
+  public get rank(): number {
+    let independent = 0;
+    for (const eq of this.pending) if (eq.independent) independent++;
+    return Math.min(this.k ?? 0, this.solvedCount + independent);
+  }
+
+  /**
+   * Number of Gaussian elimination passes run for this session.
+   * @returns Elimination pass count.
+   */
+  public get eliminationPasses(): number {
+    return this.eliminationRuns;
+  }
+
+  private init(meta: DropletMetadata, blockSize: number): void {
+    this.k = meta.k;
+    this.messageLength = meta.messageLength;
+    this.checksum = meta.checksum;
+    this.blockSize = blockSize;
+    this.cdf = buildRobustSolitonCdf(meta.k);
+    this.solvedBlocks = new Array<Uint8Array | null>(meta.k).fill(null);
+  }
+
+  /**
+   * Returns true if the metadata belongs to the session this decoder is locked to.
+   * @param meta Droplet metadata.
+   * @param blockSize Fragment length.
+   * @returns Whether the droplet is compatible.
+   */
+  public matchesSession(meta: DropletMetadata, blockSize: number): boolean {
+    return (
+      this.k === null ||
+      (this.k === meta.k &&
+        this.messageLength === meta.messageLength &&
+        this.checksum === meta.checksum &&
+        this.blockSize === blockSize)
+    );
+  }
+
+  /**
+   * Ingests a raw droplet string (`ur:bytes/...`).
+   * @param str Decoded QR text.
+   * @returns True if the droplet advanced decoding.
    */
   public ingestString(str: string): boolean {
     const parsed = parseDropletString(str);
@@ -85,148 +153,161 @@ export class FountainDecoder {
   }
 
   /**
-   * Ingests a parsed droplet symbol into the peeling elimination graph.
+   * Ingests a parsed droplet.
+   * @param meta Droplet metadata.
+   * @param data Fragment bytes.
+   * @returns True if the droplet advanced decoding.
    */
   public ingest(meta: DropletMetadata, data: Uint8Array): boolean {
     if (this.isComplete) return false;
+    if (!this.matchesSession(meta, data.length)) return false;
+    if (this.receivedSeqNumbers.has(meta.seq)) return false;
+    if (this.k === null) this.init(meta, data.length);
 
-    // Reject duplicates of already processed sequence seeds
-    if (this.receivedSeqNumbers.has(meta.seq)) {
-      return false;
-    }
     this.receivedSeqNumbers.add(meta.seq);
-
-    // Initialize solver upon receiving first droplet
-    if (this.k === null) {
-      this.init(meta, data.length);
-    } else if (this.k !== meta.k || this.fileSize !== meta.fileSize || this.checksum !== meta.checksum) {
-      // Incompatible session metadata; discard
-      return false;
-    }
-
-    const k = this.k!;
-    const blockSize = this.blockSize!;
-    const { indices } = getNeighborsForSeq(meta.seq, k);
-
-    // Copy payload data to allow mutating during peeling
-    const dropletPayload = new Uint8Array(blockSize);
-    dropletPayload.set(data.subarray(0, blockSize));
-
-    const remainingNeighbors = new Set<number>();
-
-    // 1. XOR out all already-solved blocks
-    for (const idx of indices) {
-      const solved = this.solvedBlocks[idx];
-      if (solved) {
-        for (let b = 0; b < blockSize; b++) {
-          dropletPayload[b] ^= solved[b];
-        }
-      } else {
-        remainingNeighbors.add(idx);
-      }
-    }
-
-    // Droplet is already redundant
-    if (remainingNeighbors.size === 0) {
-      return false;
-    }
-
-    // Peeling ripple queue
-    const queue: Array<{ index: number; data: Uint8Array }> = [];
-
-    if (remainingNeighbors.size === 1) {
-      const singleIdx = remainingNeighbors.values().next().value!;
-      queue.push({ index: singleIdx, data: dropletPayload });
-    } else {
-      this.pendingDroplets.push({
-        neighbors: remainingNeighbors,
-        data: dropletPayload,
-      });
-    }
-
-    let madeProgress = false;
-
-    // 2. Cascade peeling elimination ripple
-    while (queue.length > 0) {
-      const { index, data: blockData } = queue.shift()!;
-
-      if (this.solvedBlocks[index] !== null) {
-        continue;
-      }
-
-      this.solvedBlocks[index] = blockData;
-      this.solvedCount += 1;
-      madeProgress = true;
-
-      // Update remaining pending droplets
-      const nextPending: PendingDroplet[] = [];
-
-      for (const pending of this.pendingDroplets) {
-        if (pending.neighbors.has(index)) {
-          // XOR out this newly resolved block
-          for (let b = 0; b < blockSize; b++) {
-            pending.data[b] ^= blockData[b];
-          }
-          pending.neighbors.delete(index);
-
-          if (pending.neighbors.size === 1) {
-            const nextIdx = pending.neighbors.values().next().value!;
-            queue.push({ index: nextIdx, data: pending.data });
-          } else if (pending.neighbors.size > 1) {
-            nextPending.push(pending);
-          }
-        } else {
-          nextPending.push(pending);
-        }
-      }
-
-      this.pendingDroplets = nextPending;
-    }
-
-    return madeProgress;
+    this.droplets += 1;
+    const { indices } = getNeighborsForSeq(meta.seq, meta.k, this.cdf ?? undefined);
+    return this.ingestEquation(indices, data);
   }
 
   /**
-   * Reconstructs the complete original binary once all K blocks are solved.
-   * Returns null if reassembly is incomplete or checksum validation fails.
+   * Adds one XOR equation (the XOR of `indices` equals `data`) to the system.
+   * Exposed so callers and tests can drive the solver with explicit neighbour sets.
+   * @param indices Source block indices combined in the equation.
+   * @param data Equation payload (one block).
+   * @returns True if at least one new block was resolved.
    */
-  public finalize(): Uint8Array | null {
-    if (!this.isComplete || !this.k || !this.fileSize || !this.blockSize) {
-      return null;
+  public ingestEquation(indices: number[], data: Uint8Array): boolean {
+    if (this.k === null || this.blockSize === null || this.isComplete) return false;
+    const blockSize = this.blockSize;
+    const payload = new Uint8Array(blockSize);
+    payload.set(data.subarray(0, blockSize));
+
+    const remaining = new Set<number>();
+    for (const idx of indices) {
+      if (idx < 0 || idx >= this.k) return false;
+      const solved = this.solvedBlocks[idx];
+      if (solved) {
+        for (let b = 0; b < blockSize; b++) payload[b] ^= solved[b];
+      } else if (remaining.has(idx)) {
+        remaining.delete(idx);
+      } else {
+        remaining.add(idx);
+      }
+    }
+    if (remaining.size === 0) return false;
+
+    const before = this.solvedCount;
+    if (remaining.size === 1) {
+      this.ripple([[firstOf(remaining), payload]]);
+    } else {
+      this.pending.push({ neighbors: remaining, data: payload, independent: false });
+      this.equationsSinceElimination += 1;
     }
 
-    const totalLen = this.k * this.blockSize;
-    const fullBuffer = new Uint8Array(totalLen);
+    if (!this.isComplete) this.maybeEliminate();
+    return this.solvedCount > before;
+  }
 
+  /**
+   * Belief-propagation ripple: records solved blocks and substitutes them
+   * into pending equations, cascading any that drop to degree one.
+   */
+  private ripple(queue: Array<[number, Uint8Array]>): void {
+    const blockSize = this.blockSize ?? 0;
+    while (queue.length > 0) {
+      const next = queue.shift();
+      if (!next) break;
+      const [index, blockData] = next;
+      if (this.solvedBlocks[index] !== null) continue;
+      this.solvedBlocks[index] = blockData;
+      this.solvedCount += 1;
+
+      const stillPending: PendingEquation[] = [];
+      for (const eq of this.pending) {
+        if (!eq.neighbors.has(index)) {
+          stillPending.push(eq);
+          continue;
+        }
+        for (let b = 0; b < blockSize; b++) eq.data[b] ^= blockData[b];
+        eq.neighbors.delete(index);
+        if (eq.neighbors.size === 1) {
+          queue.push([firstOf(eq.neighbors), eq.data]);
+        } else if (eq.neighbors.size > 1) {
+          stillPending.push(eq);
+        }
+      }
+      this.pending = stillPending;
+    }
+  }
+
+  /**
+   * Runs Gaussian elimination when peeling has stalled and the pending system
+   * could be full rank. Re-runs are throttled to every ~1/16th of the unknowns.
+   */
+  private maybeEliminate(): void {
+    if (this.k === null || this.blockSize === null) return;
+    const unknownCount = this.k - this.solvedCount;
+    if (unknownCount > MAX_ELIMINATION_UNKNOWNS) return;
+    if (this.pending.length < unknownCount) return;
+    if (this.equationsSinceElimination < Math.max(1, Math.ceil(unknownCount / 16))) return;
+
+    this.equationsSinceElimination = 0;
+    this.eliminationRuns += 1;
+
+    const unknowns: number[] = [];
+    for (let i = 0; i < this.k; i++) if (this.solvedBlocks[i] === null) unknowns.push(i);
+
+    const { solved, residual } = solveGF2(
+      this.pending.map(eq => ({ columns: Array.from(eq.neighbors), data: eq.data })),
+      unknowns,
+      this.blockSize
+    );
+
+    this.pending = residual.map(eq => ({ neighbors: new Set(eq.columns), data: eq.data, independent: true }));
+    this.ripple(Array.from(solved.entries()));
+  }
+
+  /**
+   * Reconstructs the message once all K blocks are solved.
+   * @returns The message bytes, or null while incomplete.
+   * @throws Error when the reassembled message fails the CRC-32 check.
+   */
+  public finalize(): Uint8Array | null {
+    if (!this.isComplete || this.k === null || this.blockSize === null || this.messageLength === null) {
+      return null;
+    }
+    const full = new Uint8Array(this.k * this.blockSize);
     for (let i = 0; i < this.k; i++) {
       const block = this.solvedBlocks[i];
       if (!block) return null;
-      fullBuffer.set(block, i * this.blockSize);
+      full.set(block, i * this.blockSize);
     }
-
-    const result = fullBuffer.subarray(0, this.fileSize);
-
-    // Verify CRC32 checksum
-    const actualCrc = computeCrc32Hex(result);
-    if (actualCrc !== this.checksum) {
-      throw new Error(`Fountain integrity error: checksum mismatch (expected ${this.checksum}, got ${actualCrc})`);
+    const result = full.slice(0, this.messageLength);
+    const actual = crc32(result);
+    if (actual !== this.checksum) {
+      throw new Error(
+        `Fountain integrity error: checksum mismatch (expected ${(this.checksum ?? 0).toString(16)}, got ${actual.toString(16)})`
+      );
     }
-
     return result;
   }
 
   /**
-   * Resets the decoder state to accept a new stream session.
+   * Resets the decoder to accept a new stream session.
    */
   public reset(): void {
     this.k = null;
-    this.fileSize = null;
+    this.messageLength = null;
     this.checksum = null;
     this.blockSize = null;
+    this.cdf = null;
     this.solvedBlocks = [];
     this.solvedCount = 0;
-    this.pendingDroplets = [];
+    this.pending = [];
     this.receivedSeqNumbers.clear();
+    this.droplets = 0;
+    this.equationsSinceElimination = 0;
+    this.eliminationRuns = 0;
   }
 }
-

@@ -82,6 +82,46 @@ describe('HeadDefault', () => {
     expect(children[themeIndex]).not.toHaveAttribute('type');
   });
 
+  describe('Content Security Policy directives', () => {
+    const renderCspDirectives = (): Map<string, string[]> => {
+      const { container } = render(<HeadDefault />, { container: document.head });
+      const content = container.querySelector('meta[http-equiv="Content-Security-Policy"]')?.getAttribute('content') ?? '';
+      const directives = new Map<string, string[]>();
+      for (const directive of content.split(';').map(d => d.trim()).filter(Boolean)) {
+        const [name, ...sources] = directive.split(/\s+/);
+        directives.set(name, sources);
+      }
+      return directives;
+    };
+
+    it('allows blob: images so SVG export can rasterize its object URL (#969)', () => {
+      expect(renderCspDirectives().get('img-src')).toEqual(["'self'", 'data:', 'blob:']);
+    });
+
+    it('allows blob: media so uploaded video files can be scanned (#969)', () => {
+      expect(renderCspDirectives().get('media-src')).toEqual(["'self'", 'blob:']);
+    });
+
+    it('allows no third-party font or style hosts (#970)', () => {
+      const directives = renderCspDirectives();
+      expect(directives.get('font-src')).toEqual(["'self'"]);
+      expect(directives.get('style-src')).toEqual(["'self'", "'unsafe-inline'"]);
+      const allSources = Array.from(directives.values()).flat();
+      expect(allSources.filter(source => /^https?:/.test(source))).toEqual([]);
+    });
+  });
+
+  it('makes no Google Fonts requests and emits no third-party preconnect hints (#970)', () => {
+    render(<HeadDefault />, { container: document.head });
+
+    const externalLinks = Array.from(document.head.querySelectorAll('link')).filter(link => {
+      const href = link.getAttribute('href') ?? '';
+      return /^https?:\/\//.test(href) && link.getAttribute('rel') !== 'canonical';
+    });
+    expect(externalLinks).toEqual([]);
+    expect(document.head.innerHTML).not.toMatch(/fonts\.(googleapis|gstatic)\.com/);
+  });
+
   it('includes complete global organization schema metadata', () => {
     render(<HeadDefault />, { container: document.head });
 

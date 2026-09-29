@@ -28,7 +28,10 @@ import { triggerFileDownload } from '@/utils/downloadManager';
 import { useCamera } from '@/hooks/useCamera';
 import { useAdaptiveScanner } from '@/hooks/useAdaptiveScanner';
 import { useOptionalQRStoreSelector } from '@/context/QRContext';
-import { HandshakeInfo } from './lib/contracts';
+import { HandshakeInfo, type SliceWorkerOutgoingMessage } from './lib/contracts';
+import { MAX_SYMBOL_SIZE, type TransferCompression } from './lib/fountain/session';
+import { isFountainDropletString } from './lib/fountain/envelope';
+import { FountainRateTracker, type FountainTelemetry } from './lib/fountain/reassembler';
 
 export { sanitizeStreamConfig, verifyHandshakeFrame, type HandshakeInfo };
 
@@ -36,6 +39,67 @@ export interface UseOpticalSenderOptions {
   config: QRConfig;
   logoImg: HTMLImageElement | null;
   borderLogoImg: HTMLImageElement | null;
+  /**
+   * Broadcast a rateless BC-UR fountain stream (default). Every frame is a
+   * self-describing droplet, so there is no handshake frame and receivers can
+   * join at any point. Set to false for the legacy `H|`/`F|` carousel.
+   */
+  fountainMode?: boolean;
+}
+
+/** Fountain session details reported by the slice worker. */
+export interface SenderFountainInfo {
+  /** Source block count K. */
+  k: number;
+  /** Effective bytes per droplet after the QR version ≤ 7 clamp. */
+  symbolSize: number;
+  /** Whether the payload was deflate-raw compressed or sent verbatim. */
+  compression: TransferCompression;
+}
+
+/**
+ * Paints one QR module matrix onto the transfer canvas.
+ * @param canvas Target canvas (no-op when null).
+ * @param frame Module matrix.
+ * @param config Active QR configuration.
+ * @param logoImg Optional centre logo.
+ * @param borderLogoImg Optional border logo.
+ */
+function paintFrame(
+  canvas: HTMLCanvasElement | null,
+  frame: { size: number; data: Uint8Array },
+  config: QRConfig,
+  logoImg: HTMLImageElement | null,
+  borderLogoImg: HTMLImageElement | null
+): void {
+  const ctx = canvas?.getContext('2d');
+  if (!canvas || !ctx) return;
+  const modules = {
+    size: frame.size,
+    get: (r: number, c: number) => !!frame.data[r * frame.size + c],
+  };
+  const displaySize = 512;
+  const pixelRatio = window.devicePixelRatio || 1;
+  const useTemplate = config.templateStyle !== TemplateStyle.NONE || config.socialFormat !== SocialFormat.SQUARE_1_1;
+
+  if (useTemplate) {
+    const { width: fw, height: fh } = SOCIAL_DIMENSIONS[config.socialFormat];
+    const displayHeight = Math.round((displaySize * fh) / fw);
+    canvas.width = displaySize * pixelRatio;
+    canvas.height = displayHeight * pixelRatio;
+    ctx.save();
+    ctx.scale(pixelRatio, pixelRatio);
+    drawWithTemplate(ctx, modules, config, logoImg, borderLogoImg, displaySize, displayHeight, modules.size);
+    ctx.restore();
+  } else {
+    canvas.width = displaySize * pixelRatio;
+    canvas.height = displaySize * pixelRatio;
+    ctx.save();
+    ctx.scale(pixelRatio, pixelRatio);
+    ctx.clearRect(0, 0, displaySize, displaySize);
+    drawQRInternal(ctx, modules, config, logoImg, borderLogoImg, displaySize, modules.size);
+    ctx.restore();
+  }
 }
 
 /**
@@ -46,6 +110,7 @@ export function useOpticalSender({
   config,
   logoImg,
   borderLogoImg,
+  fountainMode = true,
 }: UseOpticalSenderOptions) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isTransferring, setIsTransferring] = useState(false);
@@ -55,7 +120,8 @@ export function useOpticalSender({
   const [progress, setProgress] = useState(0);
   const [currentFrameIndex, setCurrentFrameIndex] = useState(0);
   const [totalFrames, setTotalFrames] = useState(0);
-  const [chunkSize, setChunkSize] = useState(180);
+  const [chunkSize, setChunkSize] = useState(fountainMode ? MAX_SYMBOL_SIZE : 180);
+  const [fountainInfo, setFountainInfo] = useState<SenderFountainInfo | null>(null);
   const [fps, setFps] = useState(15);
   const [currentPass, setCurrentPass] = useState(1);
   const [transferStats, setTransferStats] = useState({
@@ -76,7 +142,8 @@ export function useOpticalSender({
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const workerRef = useRef<Worker | null>(null);
-  const framePoolRef = useRef<PreallocatedFramePool>(new PreallocatedFramePool());
+  const framePoolRef = useRef<PreallocatedFramePool>(new PreallocatedFramePool(64));
+  const fountainModeRef = useRef(fountainMode);
   const passCountRef = useRef<number>(1);
   const shuffledOrderRef = useRef<number[]>([]);
 
@@ -105,7 +172,8 @@ export function useOpticalSender({
     totalFramesRef.current = totalFrames;
     selectedFileRef.current = selectedFile;
     chunkSizeRef.current = chunkSize;
-  }, [effectiveConfig, logoImg, borderLogoImg, isTransferring, isVerifyingHandshake, fps, totalFrames, selectedFile, chunkSize]);
+    fountainModeRef.current = fountainMode;
+  }, [fountainMode, effectiveConfig, logoImg, borderLogoImg, isTransferring, isVerifyingHandshake, fps, totalFrames, selectedFile, chunkSize]);
 
   // Memory tracking loop
   useEffect(() => {
@@ -166,70 +234,17 @@ export function useOpticalSender({
   }, []);
 
   const renderFrame = useCallback((playIdx: number, frame: { size: number; data: Uint8Array }) => {
-    const modules = {
-      size: frame.size,
-      get: (r: number, c: number) => !!frame.data[r * frame.size + c],
-    };
-
-    const canvas = canvasRef.current;
-    if (canvas) {
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        const displaySize = 512;
-        const pixelRatio = window.devicePixelRatio || 1;
-        const activeConfig = playIdx === 0
-          ? configRef.current
-          : sanitizeStreamConfig(configRef.current);
-
-        const effectiveLogoImg = playIdx === 0 ? logoImgRef.current : null;
-        const effectiveBorderLogoImg = playIdx === 0 ? borderLogoImgRef.current : null;
-
-        const useTemplate =
-          activeConfig.templateStyle !== TemplateStyle.NONE ||
-          activeConfig.socialFormat !== SocialFormat.SQUARE_1_1;
-
-        if (useTemplate) {
-          const { width: fw, height: fh } = SOCIAL_DIMENSIONS[activeConfig.socialFormat];
-          const displayHeight = Math.round(displaySize * fh / fw);
-          canvas.width = displaySize * pixelRatio;
-          canvas.height = displayHeight * pixelRatio;
-
-          ctx.save();
-          ctx.scale(pixelRatio, pixelRatio);
-          drawWithTemplate(
-            ctx as unknown as CanvasRenderingContext2D,
-            modules,
-            activeConfig,
-            effectiveLogoImg,
-            effectiveBorderLogoImg,
-            displaySize,
-            displayHeight,
-            modules.size
-          );
-          ctx.restore();
-        } else {
-          canvas.width = displaySize * pixelRatio;
-          canvas.height = displaySize * pixelRatio;
-
-          ctx.save();
-          ctx.scale(pixelRatio, pixelRatio);
-          ctx.clearRect(0, 0, displaySize, displaySize);
-          drawQRInternal(
-            ctx as unknown as CanvasRenderingContext2D,
-            modules,
-            activeConfig,
-            effectiveLogoImg,
-            effectiveBorderLogoImg,
-            displaySize,
-            modules.size
-          );
-          ctx.restore();
-        }
-      }
-    }
+    const styled = playIdx === 0 && !fountainModeRef.current;
+    paintFrame(
+      canvasRef.current,
+      frame,
+      styled ? configRef.current : sanitizeStreamConfig(configRef.current),
+      styled ? logoImgRef.current : null,
+      styled ? borderLogoImgRef.current : null
+    );
 
     setCurrentFrameIndex(playIdx + 1);
-    setProgress(Math.round(((playIdx + 1) / totalFramesRef.current) * 100));
+    setProgress(Math.min(100, Math.round(((playIdx + 1) / totalFramesRef.current) * 100)));
 
     if (workerRef.current) {
       workerRef.current.postMessage({
@@ -240,7 +255,7 @@ export function useOpticalSender({
 
     framePoolRef.current.delete(playIdx);
 
-    if (playIdx + 1 >= totalFramesRef.current) {
+    if (!fountainModeRef.current && playIdx + 1 >= totalFramesRef.current) {
       currentPlayIndexRef.current = 0;
       framePoolRef.current.clear();
       if (workerRef.current && selectedFileRef.current) {
@@ -292,79 +307,26 @@ export function useOpticalSender({
 
         const playIdx = currentPlayIndexRef.current;
         const pool = framePoolRef.current;
-        const isPass1 = passCountRef.current === 1;
+        const isFountain = fountainModeRef.current;
+        const isPass1 = isFountain || passCountRef.current === 1;
 
         const targetFrameIndex = isPass1
           ? playIdx
           : (shuffledOrderRef.current[playIdx] ?? playIdx);
 
-        if (pool.hasFrame(targetFrameIndex)) {
-          const frame = pool.getFrame(targetFrameIndex)!;
+        const frame = pool.getFrame(targetFrameIndex);
+        if (frame) {
+          const styled = targetFrameIndex === 0 && !isFountain;
+          paintFrame(
+            canvasRef.current,
+            frame,
+            styled ? configRef.current : sanitizeStreamConfig(configRef.current),
+            styled ? logoImgRef.current : null,
+            styled ? borderLogoImgRef.current : null
+          );
 
-          const modules = {
-            size: frame.size,
-            get: (r: number, c: number) => !!frame.data[r * frame.size + c],
-          };
-
-          const canvas = canvasRef.current;
-          if (canvas) {
-            const ctx = canvas.getContext('2d');
-            if (ctx) {
-              const displaySize = 512;
-              const pixelRatio = window.devicePixelRatio || 1;
-              const activeConfig = targetFrameIndex === 0
-                ? configRef.current
-                : sanitizeStreamConfig(configRef.current);
-
-              const effectiveLogoImg = targetFrameIndex === 0 ? logoImgRef.current : null;
-              const effectiveBorderLogoImg = targetFrameIndex === 0 ? borderLogoImgRef.current : null;
-
-              const useTemplate =
-                activeConfig.templateStyle !== TemplateStyle.NONE ||
-                activeConfig.socialFormat !== SocialFormat.SQUARE_1_1;
-
-              if (useTemplate) {
-                const { width: fw, height: fh } = SOCIAL_DIMENSIONS[activeConfig.socialFormat];
-                const displayHeight = Math.round(displaySize * fh / fw);
-                canvas.width = displaySize * pixelRatio;
-                canvas.height = displayHeight * pixelRatio;
-
-                ctx.save();
-                ctx.scale(pixelRatio, pixelRatio);
-                drawWithTemplate(
-                  ctx as unknown as CanvasRenderingContext2D,
-                  modules,
-                  activeConfig,
-                  effectiveLogoImg,
-                  effectiveBorderLogoImg,
-                  displaySize,
-                  displayHeight,
-                  modules.size
-                );
-                ctx.restore();
-              } else {
-                canvas.width = displaySize * pixelRatio;
-                canvas.height = displaySize * pixelRatio;
-
-                ctx.save();
-                ctx.scale(pixelRatio, pixelRatio);
-                ctx.clearRect(0, 0, displaySize, displaySize);
-                drawQRInternal(
-                  ctx as unknown as CanvasRenderingContext2D,
-                  modules,
-                  activeConfig,
-                  effectiveLogoImg,
-                  effectiveBorderLogoImg,
-                  displaySize,
-                  modules.size
-                );
-                ctx.restore();
-              }
-            }
-          }
-
+          const total = totalFramesRef.current || 1;
           setCurrentFrameIndex(targetFrameIndex + 1);
-          setProgress(Math.round(((playIdx + 1) / totalFramesRef.current) * 100));
 
           if (isPass1 && workerRef.current) {
             workerRef.current.postMessage({
@@ -373,23 +335,35 @@ export function useOpticalSender({
             });
           }
 
-          const total = totalFramesRef.current || 1;
-          const nextPlayIdx = playIdx + 1;
-          if (nextPlayIdx >= total) {
-            if (passCountRef.current === 1) {
-              passCountRef.current = 2;
-              setCurrentPass(2);
-              const order = Array.from({ length: total }, (_, i) => i);
-              shuffleInPlace(order);
-              shuffledOrderRef.current = order;
-            } else {
-              passCountRef.current += 1;
-              setCurrentPass(passCountRef.current);
-              shuffleInPlace(shuffledOrderRef.current);
+          if (isFountain) {
+            // Rateless: droplets play once in order and their pool slot is recycled.
+            pool.delete(targetFrameIndex);
+            setProgress(Math.min(100, Math.round(((playIdx + 1) / total) * 100)));
+            const passNumber = Math.floor(playIdx / total) + 1;
+            if (passNumber !== passCountRef.current) {
+              passCountRef.current = passNumber;
+              setCurrentPass(passNumber);
             }
-            currentPlayIndexRef.current = 0;
+            currentPlayIndexRef.current = playIdx + 1;
           } else {
-            currentPlayIndexRef.current = nextPlayIdx;
+            setProgress(Math.round(((playIdx + 1) / total) * 100));
+            const nextPlayIdx = playIdx + 1;
+            if (nextPlayIdx >= total) {
+              if (passCountRef.current === 1) {
+                passCountRef.current = 2;
+                setCurrentPass(2);
+                const order = Array.from({ length: total }, (_, i) => i);
+                shuffleInPlace(order);
+                shuffledOrderRef.current = order;
+              } else {
+                passCountRef.current += 1;
+                setCurrentPass(passCountRef.current);
+                shuffleInPlace(shuffledOrderRef.current);
+              }
+              currentPlayIndexRef.current = 0;
+            } else {
+              currentPlayIndexRef.current = nextPlayIdx;
+            }
           }
 
           lastRenderSuccessTimeRef.current = now;
@@ -431,30 +405,43 @@ export function useOpticalSender({
       const worker = new Worker(new URL('./worker-slice.ts', import.meta.url), { type: 'module' });
       workerRef.current = worker;
 
-      worker.onmessage = async (e: MessageEvent) => {
-        const { type, index, size, data, total } = e.data || {};
+      worker.onmessage = async (e: MessageEvent<SliceWorkerOutgoingMessage | null>) => {
+        const message = e.data;
+        if (!message) return;
 
-        switch (type) {
+        switch (message.type) {
           case 'PROGRESS': {
-            if (total) {
-              setTotalFrames(total);
-              totalFramesRef.current = total;
+            if (message.total) {
+              setTotalFrames(message.total);
+              totalFramesRef.current = message.total;
             }
             break;
           }
 
+          case 'INITIALIZED': {
+            setFountainInfo(
+              message.fountain
+                ? { k: message.fountain.k, symbolSize: message.fountain.symbolSize, compression: message.fountain.compression }
+                : null
+            );
+            break;
+          }
+
           case 'FRAME': {
+            const { index, size, data } = message;
             framePoolRef.current.storeFrame(index, size, data);
 
             if (index === 0 && isVerifyingHandshakeRef.current) {
               isVerifyingHandshakeRef.current = false;
 
-              const frame0 = { size, data };
+              // Legacy streams gate on the styled handshake frame; fountain streams
+              // have no handshake, so the first droplet is checked as it will be shown.
+              const isFountain = fountainModeRef.current;
               const isScannable = await verifyHandshakeFrame(
-                frame0,
-                configRef.current,
-                logoImgRef.current,
-                borderLogoImgRef.current
+                { size, data },
+                isFountain ? sanitizeStreamConfig(configRef.current) : configRef.current,
+                isFountain ? null : logoImgRef.current,
+                isFountain ? null : borderLogoImgRef.current
               );
 
               setIsVerifyingHandshake(false);
@@ -468,7 +455,9 @@ export function useOpticalSender({
               } else {
                 setHandshakeVerified(false);
                 setHandshakeError(
-                  'Handshake QR frame failed scannability check. Transfer playback remains paused. Please increase contrast or reduce visual complexity.'
+                  isFountain
+                    ? 'Transfer QR frame failed scannability check. Transfer playback remains paused. Please increase contrast or reduce visual complexity.'
+                    : 'Handshake QR frame failed scannability check. Transfer playback remains paused. Please increase contrast or reduce visual complexity.'
                 );
                 setIsTransferring(false);
                 isTransferringRef.current = false;
@@ -484,6 +473,7 @@ export function useOpticalSender({
 
           case 'ERROR': {
             stopTransfer();
+            setHandshakeError(message.message);
             break;
           }
 
@@ -493,7 +483,7 @@ export function useOpticalSender({
       };
     }
 
-    const effectiveChunkSize = chunkSize < 256 ? chunkSize : 180;
+    const effectiveChunkSize = fountainMode ? Math.min(chunkSize, MAX_SYMBOL_SIZE) : chunkSize < 256 ? chunkSize : 180;
     const effectiveEcc =
       config.errorCorrectionLevel === QRErrorCorrectionLevel.H || config.errorCorrectionLevel === QRErrorCorrectionLevel.Q
         ? config.errorCorrectionLevel
@@ -506,9 +496,10 @@ export function useOpticalSender({
         chunkSize: effectiveChunkSize,
         errorCorrectionLevel: effectiveEcc,
         fps: fpsRef.current,
+        fountainMode,
       },
     });
-  }, [selectedFile, chunkSize, config.errorCorrectionLevel, stopTransfer, runAnimationLoop]);
+  }, [selectedFile, chunkSize, config.errorCorrectionLevel, stopTransfer, runAnimationLoop, fountainMode]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const fileList = e.target.files;
@@ -543,6 +534,8 @@ export function useOpticalSender({
     fps,
     setFps,
     currentPass,
+    fountainMode,
+    fountainInfo,
     framePoolRef,
     transferStats,
     canvasRef,
@@ -560,6 +553,12 @@ export interface UseOpticalReceiverOptions {
     message: string;
     duration?: number;
   }) => void;
+  /**
+   * Require an `H|` handshake before accepting legacy `F|` chunk frames.
+   * Fountain (`ur:bytes/`) streams are always accepted from any point: their
+   * session header (file name, SHA-256, compression flag) travels inside the
+   * fountain message and is verified before download.
+   */
   handshakeRequired?: boolean;
   streamMode?: 'text' | 'binary';
   autoDownload?: boolean;
@@ -593,6 +592,8 @@ export function useOpticalReceiver({
   const [isScanning, setIsScanning] = useState<boolean>(false);
   const [reassembledData, setReassembledData] = useState<Uint8Array | null>(null);
   const [compilationStatus, setCompilationStatus] = useState<string | null>(null);
+  const [fountainStats, setFountainStats] = useState<FountainTelemetry | null>(null);
+  const rateTrackerRef = useRef(new FountainRateTracker());
 
   const workerRef = useRef<Worker | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -626,11 +627,26 @@ export function useOpticalReceiver({
       const worker = new Worker(new URL('./worker-reassembly.ts', import.meta.url), { type: 'module' });
 
       worker.onmessage = async (e: MessageEvent) => {
-        const { type, progress, current, total: tot, buffer, error, handshake: workerHandshake } = e.data;
+        const { type, progress, current, total: tot, buffer, error, handshake: workerHandshake, isFountain, rank, dropletsReceived } = e.data;
 
-        if (type === 'PROGRESS') {
+        if (type === 'PROGRESS' && isFountain) {
+          setFountainStats(
+            rateTrackerRef.current.telemetry(
+              { k: tot, rank, resolved: current, dropletsReceived, progress },
+              performance.now()
+            )
+          );
+        } else if (type === 'PROGRESS') {
           setCompilationStatus(`Compiling file: ${current}/${tot} chunks decoded (${progress}%)`);
         } else if (type === 'COMPLETE') {
+          if (isFountain && workerHandshake) {
+            // Stateless entry: the session header replaces the handshake frame.
+            handshakeRef.current = workerHandshake;
+            setHandshake(workerHandshake);
+            setFountainStats(prev => (prev ? { ...prev, rank: prev.k, resolved: prev.k, progress: 100, etaSeconds: 0 } : prev));
+            setIsScanning(false);
+            stopStream();
+          }
           try {
             setCompilationStatus('Finalizing download...');
             const reassembled = new Uint8Array(buffer);
@@ -814,6 +830,8 @@ export function useOpticalReceiver({
 
   const handleClear = useCallback(() => {
     terminateWorker();
+    setFountainStats(null);
+    rateTrackerRef.current.reset();
     setChunks(new Set());
     setTotalChunks(null);
     setHandshake(null);
@@ -926,7 +944,8 @@ export function useOpticalReceiver({
     if (!decodedText || receiverSuccess || isVerifying) return;
     if (receiverError && !decodedText.startsWith('H|')) return;
 
-    if (decodedText.startsWith('ur:bytes/')) {
+    if (isFountainDropletString(decodedText)) {
+      rateTrackerRef.current.record(performance.now());
       const worker = initWorker();
       worker.postMessage({
         type: 'FOUNTAIN_DROPLET',
@@ -1222,6 +1241,7 @@ export function useOpticalReceiver({
     stopCameraSession,
     reconstructAndValidateFile,
     compilationStatus,
+    fountainStats,
     receiverMode,
     setReceiverMode,
     videoFile,

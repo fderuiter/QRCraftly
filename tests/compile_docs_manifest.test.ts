@@ -239,3 +239,43 @@ describe('Metadata-Driven Frontmatter Filtering', () => {
     });
   });
 });
+
+describe('compileManifest check mode', () => {
+  const checkDir = path.join(repoRoot, 'tests', 'temp_compile_check_dir');
+  const checkManifest = path.join(checkDir, 'out', 'manifest.json');
+
+  beforeAll(() => {
+    fs.rmSync(checkDir, { recursive: true, force: true });
+    fs.mkdirSync(checkDir, { recursive: true });
+    fs.writeFileSync(path.join(checkDir, 'page.md'), '# Page\n\nBody.\n', 'utf-8');
+  });
+
+  afterAll(() => {
+    fs.rmSync(checkDir, { recursive: true, force: true });
+  });
+
+  it('reports a missing manifest as stale without writing it', () => {
+    const result = compileManifest(checkDir, checkManifest, { check: true });
+    expect(result).toEqual({ upToDate: false, written: false });
+    expect(fs.existsSync(checkManifest)).toBe(false);
+  });
+
+  it('writes once, then leaves an up-to-date manifest untouched', () => {
+    expect(compileManifest(checkDir, checkManifest)).toEqual({ upToDate: false, written: true });
+    const mtime = fs.statSync(checkManifest).mtimeMs;
+    expect(compileManifest(checkDir, checkManifest)).toEqual({ upToDate: true, written: false });
+    expect(fs.statSync(checkManifest).mtimeMs).toBe(mtime);
+    expect(compileManifest(checkDir, checkManifest, { check: true }).upToDate).toBe(true);
+  });
+
+  it('detects a source change in check mode without rewriting the manifest', () => {
+    const before = fs.readFileSync(checkManifest, 'utf-8');
+    fs.writeFileSync(path.join(checkDir, 'page.md'), '# Page\n\nChanged body.\n', 'utf-8');
+    expect(compileManifest(checkDir, checkManifest, { check: true }).upToDate).toBe(false);
+    expect(fs.readFileSync(checkManifest, 'utf-8')).toBe(before);
+  });
+
+  it('keeps the committed src/data/docs_manifest.json in sync with docs/public', () => {
+    expect(compileManifest(undefined, undefined, { check: true }).upToDate).toBe(true);
+  });
+});

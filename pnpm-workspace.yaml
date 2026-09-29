@@ -45,3 +45,5 @@ overrides:
   nanoid: "^3.3.18"
   sharp: "^0.35.4"
   "@eslint/config-array": "0.23.5"
+  browserslist: "^4.28.7"
+  "@babel/core": "^7.29.1"

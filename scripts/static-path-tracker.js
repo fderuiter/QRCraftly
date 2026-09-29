@@ -1,16 +1,51 @@
 import fs from 'fs';
 import path from 'path';
+import { createRequire } from 'module';
 import { fileURLToPath } from 'url';
+
+const require = createRequire(import.meta.url);
+// typescript ships as CJS; use createRequire so pnpm hoisting works.
+const ts = require('typescript');
 
 const EXCLUDE_DIRS = ['node_modules', '.git', 'dist', 'build', 'coverage'];
 const EXCLUDE_FILES = ['scripts/static-path-tracker.js', 'tests/static-path-tracker.test.ts'];
+
+/**
+ * Returns true when the source actually calls sanitizeSvg, or hands it to another
+ * function as a callback (e.g. `.then(sanitizeSvg)`). Only real code counts: a
+ * mention in a comment, a string or an import that is never used does not.
+ *
+ * @param {string} content Source text of a .ts/.tsx file.
+ * @param {string} fileName File name, used to pick the TS/TSX parser.
+ * @returns {boolean}
+ */
+export function callsSanitizeSvg(content, fileName) {
+  const scriptKind = fileName.endsWith('.tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS;
+  const sourceFile = ts.createSourceFile(fileName, content, ts.ScriptTarget.Latest, true, scriptKind);
+  const isSanitizeRef = node =>
+    (ts.isIdentifier(node) && node.text === 'sanitizeSvg') ||
+    (ts.isPropertyAccessExpression(node) && node.name.text === 'sanitizeSvg');
+
+  let found = false;
+  (function visit(node) {
+    if (found) return;
+    if (ts.isCallExpression(node)) {
+      if (isSanitizeRef(node.expression) || node.arguments.some(isSanitizeRef)) {
+        found = true;
+        return;
+      }
+    }
+    ts.forEachChild(node, visit);
+  })(sourceFile);
+  return found;
+}
 
 /**
  * Scans a file for unvalidated SVG source-to-sink data flows.
  * 
  * Sources: FileReader, readAsText, readAsDataURL, fetch of logos/images.
  * Sinks: onSuccess, logoUrl, borderLogoUrl, return statement, dangerouslySetInnerHTML.
- * Validation: sanitizeSvg.
+ * Validation: a real call to sanitizeSvg() (comments and strings do not count).
  * 
  * @param {string} filePath - Absolute path to the file to scan.
  * @returns {Array<object>} List of findings.
@@ -27,7 +62,7 @@ export function scanFileForPaths(filePath) {
   
   const hasSource = content.includes('FileReader') || content.includes('readAsText') || content.includes('readAsDataURL') || (content.includes('fetch(') && content.includes('logoUrl'));
   const hasSink = content.includes('onSuccess') || content.includes('logoUrl') || content.includes('borderLogoUrl') || content.includes('dangerouslySetInnerHTML');
-  const hasSanitization = content.includes('sanitizeSvg');
+  const hasSanitization = callsSanitizeSvg(content, filePath);
 
   const findings = [];
 

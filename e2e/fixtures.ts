@@ -38,22 +38,10 @@ export const test = base.extend({
         const errorMsg = `Blocked unauthorized external request: ${url} (type: ${type})`;
         console.warn(errorMsg);
         
-        if (type === 'fetch' || type === 'websocket' || type === 'xmlhttprequest') {
-          // Do not fail tests on blocked external font requests
-          let isFontUrl = false;
-          try {
-            const parsed = new URL(url);
-            const hostname = parsed.hostname.toLowerCase();
-            if (hostname === 'fonts.googleapis.com' || hostname === 'fonts.gstatic.com') {
-              isFontUrl = true;
-            }
-          } catch {
-            // Treat as not a font URL if it fails to parse
-          }
-
-          if (!isFontUrl) {
-            blockedRequests.push(url);
-          }
+        // The app loads no web fonts or stylesheets from other origins (#970), so any such
+        // request is a privacy regression and fails the test like any other data request.
+        if (['fetch', 'websocket', 'xmlhttprequest', 'font', 'stylesheet'].includes(type)) {
+          blockedRequests.push(url);
         }
         
         route.abort('failed');

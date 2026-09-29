@@ -66,7 +66,7 @@ describe('Sitemap Environment-Level Variable Resolution', () => {
   });
 
   it('should use fallback domain under native tsx when import.meta.env and VITE_DOMAIN are unavailable', () => {
-    execBinary('npx', ['tsx', sitemapScriptPath], {
+    execBinary('pnpm', ['exec', 'tsx', sitemapScriptPath], {
       env: {
         ...process.env,
         VITE_DOMAIN: '',
@@ -82,7 +82,7 @@ describe('Sitemap Environment-Level Variable Resolution', () => {
   }, 30000);
 
   it('should resolve and apply a custom staging domain via process.env', () => {
-    execBinary('npx', ['tsx', sitemapScriptPath], {
+    execBinary('pnpm', ['exec', 'tsx', sitemapScriptPath], {
       env: {
         ...process.env,
         VITE_DOMAIN: 'https://staging.qrcraftly.net',
@@ -99,7 +99,7 @@ describe('Sitemap Environment-Level Variable Resolution', () => {
   }, 30000);
 
   it('should sanitize and strip any trailing slashes from the resolved VITE_DOMAIN', () => {
-    execBinary('npx', ['tsx', sitemapScriptPath], {
+    execBinary('pnpm', ['exec', 'tsx', sitemapScriptPath], {
       env: {
         ...process.env,
         VITE_DOMAIN: 'https://staging-trailing.qrcraftly.net////',
@@ -131,7 +131,7 @@ describe('Sitemap Environment-Level Variable Resolution', () => {
       const cleanedEnv = { ...process.env };
       delete cleanedEnv.VITE_DOMAIN;
 
-      execBinary('npx', ['tsx', sitemapScriptPath], {
+      execBinary('pnpm', ['exec', 'tsx', sitemapScriptPath], {
         env: {
           ...cleanedEnv,
           NODE_ENV: 'production',

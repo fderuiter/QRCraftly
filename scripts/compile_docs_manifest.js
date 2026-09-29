@@ -128,7 +128,17 @@ export function parseFrontmatter(content) {
   return { frontmatter, body };
 }
 
-export function compileManifest(inputDir = docsPublicDir, outputPath = outputManifestPath) {
+/**
+ * Compiles the public docs into the manifest consumed by the /security page.
+ *
+ * @param {string} [inputDir] Folder of Markdown sources.
+ * @param {string} [outputPath] Manifest JSON path.
+ * @param {{ check?: boolean }} [options] With `check: true` nothing is written; the
+ *   result only reports whether the file on disk already matches the sources.
+ * @returns {{ upToDate: boolean, written: boolean }}
+ */
+export function compileManifest(inputDir = docsPublicDir, outputPath = outputManifestPath, options = {}) {
+  const { check = false } = options;
   if (!fs.existsSync(inputDir)) {
     console.error(`Error: Directory ${inputDir} does not exist.`);
     process.exit(1);
@@ -168,12 +178,6 @@ export function compileManifest(inputDir = docsPublicDir, outputPath = outputMan
       title,
       content: body
     });
-  }
-
-  // Ensure output directory exists
-  const outputDir = path.dirname(outputPath);
-  if (!fs.existsSync(outputDir)) {
-    fs.mkdirSync(outputDir, { recursive: true });
   }
 
   // If we are compiling the standard docs folder, explicitly include docs/SECURITY.md
@@ -236,11 +240,35 @@ export function compileManifest(inputDir = docsPublicDir, outputPath = outputMan
     delete doc.content;
   }
 
-  fs.writeFileSync(outputPath, JSON.stringify(manifest, null, 2) + '\n', 'utf-8');
+  const serialized = JSON.stringify(manifest, null, 2) + '\n';
+  const existing = fs.existsSync(outputPath) ? fs.readFileSync(outputPath, 'utf-8').replace(/\r\n/g, '\n') : null;
+  const upToDate = existing === serialized;
+
+  if (check || upToDate) {
+    return { upToDate, written: false };
+  }
+
+  const outputDir = path.dirname(outputPath);
+  if (!fs.existsSync(outputDir)) {
+    fs.mkdirSync(outputDir, { recursive: true });
+  }
+  fs.writeFileSync(outputPath, serialized, 'utf-8');
   console.log(`Docs manifest successfully compiled to ${outputPath}`);
+  return { upToDate: false, written: true };
 }
 
 // Only run automatically if executed directly
 if (process.argv[1] && (process.argv[1] === fileURLToPath(import.meta.url) || process.argv[1].endsWith('compile_docs_manifest.js'))) {
-  compileManifest();
+  if (process.argv.includes('--check')) {
+    const { upToDate } = compileManifest(docsPublicDir, outputManifestPath, { check: true });
+    if (!upToDate) {
+      const relativeOutput = path.relative(repoRoot, outputManifestPath).split(path.sep).join('/');
+      console.error(`Error in ${relativeOutput}: the docs manifest is out of date with docs/public/ and docs/SECURITY.md.`);
+      console.error('  Fix: run `pnpm run docs:sync` (or `node scripts/compile_docs_manifest.js`) and commit the regenerated file.');
+      process.exit(1);
+    }
+    console.log('Docs manifest is up to date.');
+  } else {
+    compileManifest();
+  }
 }
