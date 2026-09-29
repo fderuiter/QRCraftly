@@ -17,12 +17,12 @@
 */
 
 import React from 'react';
-import { LegacyArcadeRedirect } from '@/components/arcade/LegacyArcadeRedirect';
+import { LegacyArcadeRedirectHead } from '@/components/arcade/LegacyArcadeRedirect';
 
 /**
- * Retired /game route: redirects to the QR Arcade (simulator mode).
- * @returns The redirect page.
+ * Head tags for the retired /game route.
+ * @returns Meta refresh and noindex tags.
  */
-export default function Page() {
-  return <LegacyArcadeRedirect to="/arcade?mode=simulator" />;
+export default function Head() {
+  return <LegacyArcadeRedirectHead to="/arcade?mode=simulator" />;
 }

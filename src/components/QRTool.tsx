@@ -37,6 +37,7 @@ import { Menu } from './ui/Menu';
 import { useTelemetry } from '@/hooks/useTelemetry';
 import { useCapabilities } from '@/hooks/useCapabilities';
 import { sidebarControls } from '@/registry';
+import { StressTestButton } from './arcade/StressTestButton';
 
 /**
  * Renders the QR code generator interface with configuration controls, preview, and export actions.
@@ -331,6 +332,7 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
                     <h2 className="font-semibold text-slate-700 dark:text-slate-200">Live Preview</h2>
                     <ScannabilityIndicator status={scannabilityStatus} health={health} />
                 </div>
+                <StressTestButton />
                 
                 {workerRecoveryActive && (
                    <div className="mb-4">

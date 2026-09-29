@@ -3,11 +3,12 @@ import { PRIMARY_NAV_ITEMS, QR_TYPE_ROUTES, getCurrentPrimaryNavId, normalizePat
 import { QRType } from '@/types';
 
 describe('primary navigation model', () => {
-  it('contains the five primary destinations in order', () => {
+  it('contains the six primary destinations in order', () => {
     expect(PRIMARY_NAV_ITEMS.map((item) => item.label)).toEqual([
       'Create QR',
       'Send File',
       'Receive File',
+      'Arcade',
       'About',
       'Security',
     ]);
@@ -26,6 +27,7 @@ describe('primary navigation model', () => {
     expect(getCurrentPrimaryNavId('/file-transfer/receive')).toBe('receive');
     expect(getCurrentPrimaryNavId('/about?x=1')).toBe('about');
     expect(getCurrentPrimaryNavId('/security#privacy')).toBe('security');
+    expect(getCurrentPrimaryNavId('/arcade')).toBe('arcade');
     expect(getCurrentPrimaryNavId('/game')).toBeUndefined();
   });
 

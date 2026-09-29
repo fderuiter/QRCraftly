@@ -16,13 +16,12 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import React from 'react';
-import { LegacyArcadeRedirect } from '@/components/arcade/LegacyArcadeRedirect';
+import type { Config } from 'vike/types';
 
 /**
- * Retired /game route: redirects to the QR Arcade (simulator mode).
- * @returns The redirect page.
+ * QR Arcade route. Title, description and Open Graph image come from the `arcade` content
+ * registry entry.
  */
-export default function Page() {
-  return <LegacyArcadeRedirect to="/arcade?mode=simulator" />;
-}
+export default {
+  prerender: true,
+} satisfies Config;

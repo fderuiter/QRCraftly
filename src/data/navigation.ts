@@ -23,7 +23,7 @@ import { QRType } from '@/types';
  */
 export interface PrimaryNavItem {
   /** Stable identifier. */
-  id: 'create' | 'send' | 'receive' | 'about' | 'security';
+  id: 'create' | 'send' | 'receive' | 'arcade' | 'about' | 'security';
   /** Visible label, identical on every route family. */
   label: string;
   /** Destination path. */
@@ -53,12 +53,14 @@ export const QR_TYPE_ROUTES: Record<QRType, string> = {
 
 /**
  * The single primary-navigation data model shared by the product shell, the generator
- * and the file-transfer sender and receiver.
+ * and the file-transfer sender and receiver. It feeds both the inline desktop links and the
+ * narrow-layout drawer.
  */
 export const PRIMARY_NAV_ITEMS: readonly PrimaryNavItem[] = [
   { id: 'create', label: 'Create QR', href: '/' },
   { id: 'send', label: 'Send File', href: '/file-transfer', beta: true },
   { id: 'receive', label: 'Receive File', href: '/file-transfer/receive', beta: true },
+  { id: 'arcade', label: 'Arcade', href: '/arcade' },
   { id: 'about', label: 'About', href: '/about' },
   { id: 'security', label: 'Security', href: '/security' },
 ];

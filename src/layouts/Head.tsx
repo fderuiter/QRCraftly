@@ -19,7 +19,7 @@
 import { usePageContext } from 'vike-react/usePageContext';
 import { JsonLdScript } from '@/components/ui/JsonLdScript';
 import { resolveDomainForPath, resolvePublicUrl, resolveImageUrl, compileBreadcrumbSchema, getSanitizedPath } from '@/utils/metadataEngine';
-import { getMetadataForPath } from '@/data/contentRegistry';
+import { getLegacyRedirect, getMetadataForPath } from '@/data/contentRegistry';
 import { THEME_INIT_SCRIPT } from '@/utils/theme';
 
 /**
@@ -53,7 +53,8 @@ export default function HeadDefault() {
   const description = getString(config?.description ?? undefined, pageContext, pathMetadata.description || "Generate beautiful, custom QR codes for free. No sign-up required.");
 
   const resolvedDomain = resolveDomainForPath(pageContext.urlPathname);
-  const canonicalUrl = resolvePublicUrl(pageContext.urlPathname);
+  // Retired routes redirect elsewhere; their canonical link points at the replacement.
+  const canonicalUrl = resolvePublicUrl(getLegacyRedirect(pageContext.urlPathname)?.canonicalPath ?? pageContext.urlPathname);
 
   // Resolve Open Graph Image
   // Allows pages to override the default OG image via config.image

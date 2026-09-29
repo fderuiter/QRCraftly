@@ -658,97 +658,64 @@ export const contentRegistry: Record<string, ToolContent> = {
       }
     ]
   },
-  "destroy-the-qr": {
-    "id": "destroy-the-qr",
-    "name": "Destroy the QR!",
-    "url": getPublicDomain() + "/destroy-the-qr",
-    "description": "An interactive 60 FPS mini-game to test the durability of your QR codes in real-time with lasers and explosions.",
-    "seoTitle": "Destroy the QR! - Interactive Mini-Game",
-    "image": "/og-image.png?type=destroy-the-qr",
-    "imageAlt": "Preview of the Destroy the QR! Arcade Game",
+  "arcade": {
+    "id": "arcade",
+    "name": "QR Arcade & Durability Lab",
+    "url": getPublicDomain() + "/arcade",
+    "description": "Stress-test your QR design in the browser: blast it in the Arcade Blaster or strike modules in the Damage Simulator while Reed-Solomon analytics and a real scanner report whether it still decodes.",
+    "seoTitle": "QR Arcade & Durability Lab | Stress-Test QR Error Correction - QRCraftly",
+    "image": "/og-image.png?type=arcade",
+    "imageAlt": "QR Arcade & Durability Lab: blasting a QR code while a live scanner checks it",
     "features": [
-      "Interactive 60 FPS Arcade Gameplay",
-      "Subgrid Micro-Cell Damage Projection",
-      "Real-Time Error-Correction Stress Testing",
-      "Lasers, Bombs, and Explosive Particle Physics"
+      "Arcade Blaster with plasma bolts, a thermal laser and antimatter rockets",
+      "Damage Simulator with precision strikes and artillery barrages",
+      "4x4 micro-cell damage, particles and screen shake (calmed under reduced motion)",
+      "Live Reed-Solomon health across interleaved blocks with a 20% finder damage alarm",
+      "Real scanner verdict from BarcodeDetector or an off-thread Web Worker",
+      "Tests your own generator design without sending it anywhere"
     ],
     "schemaType": [SchemaType.SoftwareApplication, SchemaType.WebApplication],
     "schemaCategory": SchemaCategory.UtilitiesApplication,
     "personas": [TargetPersona.SecurityConsciousEnterprise],
     "valueProposition": StrategicValueCategory.AsynchronousWebWorkerDiagnostics,
     "howTo": {
-      "name": "How to Test QR Durability with Destroy the QR!",
-      "description": "Play an interactive arcade game to shoot and damage QR codes in real-time while testing scannability limits.",
+      "name": "How to Stress-Test a QR Code in the QR Arcade",
+      "description": "Damage a QR code on purpose and see how much it can lose before scanners fail.",
       "steps": [
         {
-          "name": "Configure Target QR",
-          "text": "Set your custom text, URL, or error correction level for the arcade target."
+          "name": "Bring your design",
+          "text": "Select Stress Test in Arcade under the generator preview, or open the Arcade and enter any text or URL."
         },
         {
-          "name": "Aim Weapons",
-          "text": "Use lasers and bombs to blast modules across the QR code surface."
+          "name": "Choose a mode",
+          "text": "Use Arcade Blaster to shoot the code apart, or Damage Simulator to strike exact modules and launch barrages."
         },
         {
-          "name": "Verify Decoding",
-          "text": "Observe real-time error correction resilience and finder pattern damage alerts as you play."
+          "name": "Watch both verdicts",
+          "text": "The health bar tracks the Reed-Solomon budget and finder patterns; the live scanner shows whether a real decoder can still read the code."
+        },
+        {
+          "name": "Rebuild and compare",
+          "text": "Rebuild or heal the code, change the error correction level, and try again to compare how much damage each level survives."
         }
       ]
     },
     "faqs": [
       {
-        "question": "How does Destroy the QR test error correction?",
-        "answer": "The game simulates physical subgrid damage to QR modules in real-time, testing Reed-Solomon error correction budgets under arcade conditions."
+        "question": "Why does the code fail when a corner square is hit, even with budget left?",
+        "answer": "Scanners use the three 7x7 finder patterns to locate the grid. Once more than 20% of one is destroyed, alignment fails regardless of the remaining error correction budget."
       },
       {
-        "question": "Can I test custom URLs in the game?",
-        "answer": "Yes, you can input custom URLs or text to generate target QR codes and test their damage limits."
-      }
-    ]
-  },
-  "game": {
-    "id": "game",
-    "name": "QR Damage Simulator Game",
-    "url": getPublicDomain() + "/game",
-    "description": "Play and damage QR codes in real-time. Map damage to coordinates and test error-correction health bars with smooth 60fps play.",
-    "seoTitle": "QR Damage Simulator Game | Interactive Gameplay - QRCraftly",
-    "image": "/og-image.png?type=game",
-    "imageAlt": "Preview of the QR Damage Simulator Game",
-    "features": [
-      "60 FPS Real-Time Damage Simulation",
-      "Interactive Weapon Selection (Laser, Plasma, Neutron, Artillery)",
-      "Visual Error Correction Health Bar Monitors",
-      "Finder Subsystem Offline Diagnostics"
-    ],
-    "schemaType": [SchemaType.SoftwareApplication, SchemaType.WebApplication],
-    "schemaCategory": SchemaCategory.UtilitiesApplication,
-    "personas": [TargetPersona.SecurityConsciousEnterprise],
-    "valueProposition": StrategicValueCategory.AsynchronousWebWorkerDiagnostics,
-    "howTo": {
-      "name": "How to Simulate QR Code Damage",
-      "description": "Test Reed-Solomon error correction boundaries by inflicting localized damage on QR codes.",
-      "steps": [
-        {
-          "name": "Select Weaponry",
-          "text": "Choose Pinpoint Laser, Plasma Charge, Neutron Blast, or Artillery Barrage."
-        },
-        {
-          "name": "Inflict Blast Damage",
-          "text": "Click anywhere on the target QR canvas to launch blasts and scorch modules."
-        },
-        {
-          "name": "Monitor Health",
-          "text": "Watch the virtual error correction block health bars to see when scannability fails."
-        }
-      ]
-    },
-    "faqs": [
-      {
-        "question": "What happens when finder patterns are damaged?",
-        "answer": "When corner finder patterns sustain over 20% damage, the finder subsystem goes offline, immediately rendering the QR unscannable regardless of remaining error correction budget."
+        "question": "What is the difference between the health bar and the live scanner?",
+        "answer": "The health bar is an instant mathematical model of Reed-Solomon capacity across interleaved blocks. The live scanner actually decodes the damaged image with BarcodeDetector or a Web Worker, so it is empirical proof of readability."
       },
       {
-        "question": "How are error correction budgets calculated?",
-        "answer": "The simulator divides modules across virtual Reed-Solomon interleaving blocks, tracking localized block budget consumption according to selected EC levels (L, M, Q, H)."
+        "question": "Is my QR content uploaded?",
+        "answer": "No. The design is passed from the generator in memory only and every scan runs on your device. Nothing is stored, placed in the URL or sent over the network."
+      },
+      {
+        "question": "What happened to Destroy the QR and the Damage Simulator game?",
+        "answer": "Both games are now modes of the QR Arcade. The old /destroy-the-qr and /game addresses redirect to Arcade Blaster and Damage Simulator."
       }
     ]
   },
@@ -834,6 +801,47 @@ export const auxiliaryRegistry: Record<string, AuxiliaryContent> = {
   }
 };
 
+/**
+ * A retired route kept only as a redirect to its canonical replacement.
+ */
+export interface LegacyRouteContent extends AuxiliaryContent {
+  /** Where visitors are redirected (path and query only, never payload content). */
+  redirectTo: string;
+  /** Canonical path search engines should index instead. */
+  canonicalPath: string;
+}
+
+/**
+ * Retired routes. They are excluded from the sitemap and audits, marked noindex, and point
+ * their canonical link at the replacement.
+ */
+export const legacyRouteRegistry: Record<string, LegacyRouteContent> = {
+  "destroy-the-qr": {
+    "id": "destroy-the-qr",
+    "name": "Destroy the QR (moved to QR Arcade)",
+    "seoTitle": "Destroy the QR is now QR Arcade Blaster - QRCraftly",
+    "description": "Destroy the QR is now the Arcade Blaster mode of the QR Arcade & Durability Lab.",
+    "image": "/og-image.png?type=arcade",
+    "imageAlt": "QR Arcade & Durability Lab",
+    "personas": [TargetPersona.SecurityConsciousEnterprise],
+    "valueProposition": StrategicValueCategory.AsynchronousWebWorkerDiagnostics,
+    "redirectTo": "/arcade?mode=blaster",
+    "canonicalPath": "/arcade"
+  },
+  "game": {
+    "id": "game",
+    "name": "QR Damage Simulator (moved to QR Arcade)",
+    "seoTitle": "The QR Damage Simulator is now part of QR Arcade - QRCraftly",
+    "description": "The QR Damage Simulator game is now the Damage Simulator mode of the QR Arcade & Durability Lab.",
+    "image": "/og-image.png?type=arcade",
+    "imageAlt": "QR Arcade & Durability Lab",
+    "personas": [TargetPersona.SecurityConsciousEnterprise],
+    "valueProposition": StrategicValueCategory.AsynchronousWebWorkerDiagnostics,
+    "redirectTo": "/arcade?mode=simulator",
+    "canonicalPath": "/arcade"
+  }
+};
+
 const getRegistryKeyForPath = (path: string): string => {
   let cleanPath = getSanitizedPath(path);
   if (cleanPath !== "/" && cleanPath.endsWith("/")) {
@@ -847,12 +855,21 @@ const getRegistryKeyForPath = (path: string): string => {
 };
 
 export function getContentById(id: string): ToolContent | AuxiliaryContent | undefined {
-  return contentRegistry[id] || auxiliaryRegistry[id];
+  return contentRegistry[id] || auxiliaryRegistry[id] || legacyRouteRegistry[id];
 }
 
 export function getContentForPath(path: string): ToolContent | AuxiliaryContent | undefined {
   const key = getRegistryKeyForPath(path);
-  return contentRegistry[key] || auxiliaryRegistry[key];
+  return contentRegistry[key] || auxiliaryRegistry[key] || legacyRouteRegistry[key];
+}
+
+/**
+ * Looks up a retired route.
+ * @param path - A pathname.
+ * @returns Its redirect entry, or undefined for live routes.
+ */
+export function getLegacyRedirect(path: string): LegacyRouteContent | undefined {
+  return legacyRouteRegistry[getRegistryKeyForPath(path)];
 }
 
 export function getMetadataForPath(path: string): { title: string; description: string; image: string; imageAlt: string } {
@@ -878,8 +895,8 @@ export function getMetadataForPath(path: string): { title: string; description: 
     };
   }
   
-  if (auxiliaryRegistry[pathLookup]) {
-    const item = auxiliaryRegistry[pathLookup];
+  if (auxiliaryRegistry[pathLookup] || legacyRouteRegistry[pathLookup]) {
+    const item = auxiliaryRegistry[pathLookup] || legacyRouteRegistry[pathLookup];
     return {
       title: item.seoTitle,
       description: item.description,

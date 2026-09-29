@@ -16,13 +16,18 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import React from 'react';
-import { LegacyArcadeRedirect } from '@/components/arcade/LegacyArcadeRedirect';
-
 /**
- * Retired /game route: redirects to the QR Arcade (simulator mode).
- * @returns The redirect page.
+ * Spawns a dedicated Scannability Worker. This is the only place the worker script is
+ * referenced by path, so other packages and pages never reach into this package's files.
+ * Requests must satisfy `assertWorkerRequest`; responses satisfy `isWorkerResponse`.
+ * @returns The worker, or null where Web Workers are unavailable (SSR, old browsers).
  */
-export default function Page() {
-  return <LegacyArcadeRedirect to="/arcade?mode=simulator" />;
+export function createScannabilityWorker(): Worker | null {
+  if (typeof Worker === 'undefined') return null;
+  try {
+    return new Worker(new URL('../worker.ts', import.meta.url), { type: 'module' });
+  } catch (err) {
+    console.error('Failed to spawn the Scannability Worker:', err);
+    return null;
+  }
 }

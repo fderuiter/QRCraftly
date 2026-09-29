@@ -17,12 +17,12 @@
 */
 
 import React from 'react';
+import { LegacyArcadeRedirectHead } from '@/components/arcade/LegacyArcadeRedirect';
 
 /**
- * Blank layout wrapper for the Destroy the QR game to isolate it from professional UI shell layouts.
- * @param root0 Component properties
- * @param root0.children Content inside the blank layout
+ * Head tags for the retired /destroy-the-qr route.
+ * @returns Meta refresh and noindex tags.
  */
-export default function Layout({ children }: { children: React.ReactNode }) {
-  return React.createElement(React.Fragment, null, children);
+export default function Head() {
+  return <LegacyArcadeRedirectHead to="/arcade?mode=blaster" />;
 }
