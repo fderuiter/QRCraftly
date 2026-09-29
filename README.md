@@ -44,7 +44,7 @@ Follow these instructions to get a copy of the project up and running on your lo
 
 Ensure you have the following installed on your machine:
 
-- [Node.js](https://nodejs.org/) (version 22.14.0 or higher required)
+- [Node.js](https://nodejs.org/) 22.22.2 or a later 22.x release, or 24.15.0 or later (the lockfile's dependencies require it; `.nvmrc` pins the version CI uses)
 - [pnpm](https://pnpm.io/) (strictly mandated, do not use `npm` or `yarn`). The exact version is pinned in `package.json` under `packageManager`; running `corepack enable` once makes the pinned version available automatically.
 
 ### Installation

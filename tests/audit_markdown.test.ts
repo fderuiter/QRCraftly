@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import fs from 'fs';
 import path from 'path';
-import { slugify, checkPlaceholders, buildFileHeadings, verifyLinks, validateTelemetryCompliance, resetErrors, checkCodeSnippets, existsSyncCaseSensitive, checkPublishApproved } from '../scripts/audit_markdown.js';
+import { getFilesToAudit, reportError, REMEDIATION_HINTS, slugify, checkPlaceholders, buildFileHeadings, verifyLinks, validateTelemetryCompliance, resetErrors, checkCodeSnippets, existsSyncCaseSensitive, checkPublishApproved } from '../scripts/audit_markdown.js';
 
 describe('audit_markdown', () => {
   beforeEach(() => {
@@ -294,6 +294,64 @@ No private info.
         expect(hasLinkErrors).toBe(false);
       } finally {
         existsSpy.mockRestore();
+      }
+    });
+  });
+
+  describe('audited file set', () => {
+    it('covers CONTEXT.md, AGENTS.md, ADRs and agent docs as well as the public docs', () => {
+      const files = getFilesToAudit();
+      expect(files).toEqual(expect.arrayContaining([
+        'README.md',
+        'CONTEXT.md',
+        'AGENTS.md',
+        'docs/SECURITY.md',
+        'docs/public/COMPLIANCE.md',
+        'docs/agents/domain.md',
+        'docs/adr/0001-client-side-storage-allowlist.md'
+      ]));
+      expect(new Set(files).size).toBe(files.length);
+      for (const file of files) {
+        expect(file).not.toContain('\\');
+      }
+    });
+  });
+
+  describe('remediation hints', () => {
+    it('prints a Fix: hint with every error', () => {
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      try {
+        checkPlaceholders('doc.md', 'A TODO marker');
+        verifyLinks('docs/doc.md', '[x](./nope-missing.md)', {});
+        verifyLinks('doc.md', '[x](#absent)', { 'doc.md': new Set(['present']) });
+        validateTelemetryCompliance('Opt-In Telemetry `a` What is NOT Logged', "export const ALLOWED_TELEMETRY_KEYS = ['b'];");
+        const messages = errorSpy.mock.calls.map(call => String(call[0]));
+        expect(messages.length).toBeGreaterThanOrEqual(5);
+        for (const message of messages) {
+          expect(message).toMatch(/\n {2}Fix: \S/);
+        }
+      } finally {
+        errorSpy.mockRestore();
+      }
+    });
+
+    it('has a hint for every error kind', () => {
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      try {
+        const kinds: Array<keyof typeof REMEDIATION_HINTS> = [
+          'missingFile', 'publishApproved', 'placeholder', 'outsideRoot',
+          'brokenFile', 'brokenAnchor', 'snippet', 'telemetry'
+        ];
+        expect([...kinds].sort()).toEqual(Object.keys(REMEDIATION_HINTS).sort());
+        for (const kind of kinds) {
+          reportError('x.md', 'problem', kind);
+        }
+        expect(errorSpy).toHaveBeenCalledTimes(kinds.length);
+        for (const call of errorSpy.mock.calls) {
+          expect(String(call[0])).toContain('Fix: ');
+        }
+      } finally {
+        errorSpy.mockRestore();
       }
     });
   });

@@ -29,6 +29,23 @@ interface ToastMessage {
    * Time in ms before automatically closing.
    */
   duration?: number;
+  /**
+   * Keeps the toast open until the user dismisses it or runs its action.
+   */
+  persistent?: boolean;
+  /**
+   * Optional action button shown next to the message.
+   */
+  action?: {
+    /**
+     * Visible button label.
+     */
+    label: string;
+    /**
+     * Runs when the button is pressed; the toast closes afterwards.
+     */
+    onClick: () => void;
+  };
 }
 
 /**
@@ -106,7 +123,7 @@ const ToastItem = (props: { toast: ToastMessage; onRemove: (id: string) => void 
   const [isFocused, setIsFocused] = useState(false);
 
   useEffect(() => {
-    if (isHovered || isFocused) {
+    if (toast.persistent || isHovered || isFocused) {
       return;
     }
 
@@ -135,6 +152,18 @@ const ToastItem = (props: { toast: ToastMessage; onRemove: (id: string) => void 
     >
       {React.createElement(getNotificationIcon(toast.type), { className: "size-5 flex-shrink-0" })}
       <p className="flex-1 text-sm font-medium">{toast.message}</p>
+      {toast.action && (
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => {
+            toast.action?.onClick();
+            onRemove(toast.id);
+          }}
+        >
+          {toast.action.label}
+        </Button>
+      )}
       <Button
         variant="ghost"
         size="icon" 

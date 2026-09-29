@@ -40,22 +40,62 @@ export function getParsedFile(file) {
 
 export const docsPublicDir = path.join(repoRoot, 'docs', 'public');
 
+/**
+ * Directories whose Markdown files are audited in full (non-recursive).
+ * Paths are repository-relative POSIX paths.
+ */
+export const AUDITED_DOC_DIRS = ['docs', 'docs/public', 'docs/adr', 'docs/agents'];
+
+/**
+ * Individual Markdown files audited outside the directories above.
+ */
+export const AUDITED_DOC_FILES = [
+  'README.md',
+  'CONTEXT.md',
+  'AGENTS.md',
+  'src/components/inputs/README.md',
+  'src/packages/README.md',
+  '.github/rulesets/README.md'
+];
+
+/**
+ * Remediation hints printed with every audit error, keyed by error kind.
+ */
+export const REMEDIATION_HINTS = {
+  missingFile: 'Restore the file, or remove it from AUDITED_DOC_FILES in scripts/audit_markdown.js.',
+  publishApproved: "Add 'publish-approved: true' to the frontmatter once the page is reviewed for public release, or move it out of docs/public/.",
+  placeholder: "Resolve the placeholder, or set 'draft: true' in the frontmatter while the page is unfinished.",
+  outsideRoot: 'Link to a file inside the repository, or use an absolute https:// URL for external resources.',
+  brokenFile: "Fix the relative path (it resolves from the linking file's folder and is case-sensitive), or restore the target file.",
+  brokenAnchor: "Point the fragment at an existing heading slug in the target file (lowercase, spaces become '-', punctuation dropped).",
+  snippet: 'Make the snippet type-check against tsconfig.json, or fence it as ```text if it is only illustrative.',
+  telemetry: "Keep ALLOWED_TELEMETRY_KEYS in src/types.ts and the backticked keys under 'Opt-In Telemetry' in docs/public/COMPLIANCE.md identical."
+};
+
+/**
+ * Prints an audit error together with the matching remediation hint and flags the run as failed.
+ * @param {string|null} file Repository-relative file the error belongs to (null for global errors).
+ * @param {string} message Description of the problem.
+ * @param {keyof typeof REMEDIATION_HINTS} hintKey Which remediation hint to print.
+ */
+export function reportError(file, message, hintKey) {
+  const prefix = file ? `Error in ${file}: ` : 'Error: ';
+  console.error(`${prefix}${message}\n  Fix: ${REMEDIATION_HINTS[hintKey]}`);
+  hasErrors = true;
+}
+
+function listMarkdown(relativeDir) {
+  const absoluteDir = path.join(repoRoot, relativeDir);
+  if (!fs.existsSync(absoluteDir)) return [];
+  return fs.readdirSync(absoluteDir, { withFileTypes: true })
+    .filter(entry => entry.isFile() && entry.name.endsWith('.md'))
+    .map(entry => `${relativeDir}/${entry.name}`)
+    .sort();
+}
+
 export function getFilesToAudit() {
-  const docsPublicFiles = fs.existsSync(docsPublicDir)
-    ? fs.readdirSync(docsPublicDir)
-        .filter(file => file.endsWith('.md'))
-        .map(file => path.join('docs', 'public', file))
-    : [];
-
-  const rawList = [
-    ...docsPublicFiles,
-    'docs/SECURITY.md',
-    'README.md',
-    'src/components/inputs/README.md',
-    '.github/rulesets/README.md'
-  ];
-
-  return rawList.filter(file => !isQuarantined(file));
+  const rawList = [...AUDITED_DOC_DIRS.flatMap(listMarkdown), ...AUDITED_DOC_FILES];
+  return [...new Set(rawList)].filter(file => !isQuarantined(file));
 }
 
 export let hasErrors = false;
@@ -98,8 +138,7 @@ export function checkPublishApproved(file, content) {
   
   const { frontmatter } = parseFrontmatter(content);
   if (frontmatter['publish-approved'] !== true) {
-    console.error(`Error in ${file}: Public document is missing the required 'publish-approved: true' metadata attribute.`);
-    hasErrors = true;
+    reportError(file, "Public document is missing the required 'publish-approved: true' metadata attribute.", 'publishApproved');
     return true;
   }
   return false;
@@ -117,9 +156,8 @@ export function checkPlaceholders(file, content) {
   const placeholderRegex = /(TODO|FIXME)/g;
   let match;
   while ((match = placeholderRegex.exec(body)) !== null) {
-    console.error(`Error in ${file}: Found placeholder string '${match[0]}'`);
+    reportError(file, `Found placeholder string '${match[0]}'`, 'placeholder');
     localHasErrors = true;
-    hasErrors = true;
   }
   return localHasErrors;
 }
@@ -213,9 +251,8 @@ export function verifyLinks(file, content, fileHeadings) {
         // Block path traversal and any link outside repository root
         const relativeFromRoot = path.relative(repoRoot, targetFilePathAbs);
         if (relativeFromRoot.startsWith('..') || path.isAbsolute(relativeFromRoot)) {
-          console.error(`Error in ${file}: Relative link '${href}' resolves to a path outside the repository root.`);
+          reportError(file, `Relative link '${href}' resolves to a path outside the repository root.`, 'outsideRoot');
           localHasErrors = true;
-          hasErrors = true;
           return;
         }
 
@@ -229,9 +266,8 @@ export function verifyLinks(file, content, fileHeadings) {
       if (targetFile) {
         const targetFilePath = path.join(repoRoot, targetFile);
         if (!existsSyncCaseSensitive(targetFilePath)) {
-          console.error(`Error in ${file}: Broken link references missing file '${targetFile}' (href: '${href}')`);
+          reportError(file, `Broken link references missing file '${targetFile}' (href: '${href}')`, 'brokenFile');
           localHasErrors = true;
-          hasErrors = true;
           return;
         }
         
@@ -254,9 +290,8 @@ export function verifyLinks(file, content, fileHeadings) {
           
           const targetSlug = slugify(targetHash);
           if (!headingsToSearch.has(targetSlug) && !headingsToSearch.has(targetHash)) {
-            console.error(`Error in ${file}: Broken link references missing anchor '#${targetHash}' in '${targetFile}' (href: '${href}')`);
+            reportError(file, `Broken link references missing anchor '#${targetHash}' in '${targetFile}' (href: '${href}')`, 'brokenAnchor');
             localHasErrors = true;
-            hasErrors = true;
           }
         }
       }
@@ -301,9 +336,8 @@ export function checkCodeSnippets(filesList) {
       const tsconfigPath = path.join(repoRoot, 'tsconfig.json');
       const readResult = ts.readConfigFile(tsconfigPath, ts.sys.readFile);
       if (readResult.error) {
-        console.error('Error reading tsconfig.json:', ts.flattenDiagnosticMessageText(readResult.error.messageText, '\n'));
+        reportError('tsconfig.json', `Could not read tsconfig.json: ${ts.flattenDiagnosticMessageText(readResult.error.messageText, '\n')}`, 'snippet');
         localHasErrors = true;
-        hasErrors = true;
       } else {
         const parsedConfig = ts.parseJsonConfigFileContent(
           readResult.config,
@@ -388,21 +422,20 @@ export function checkCodeSnippets(filesList) {
               const fileName = path.resolve(diagnostic.file.fileName);
               const tempFileInfo = virtualFiles.get(fileName);
               if (tempFileInfo) {
-                console.error(`Error in ${tempFileInfo.file}: TS type check error in snippet on line ${line + 1}, col ${character + 1}: ${message}`);
+                reportError(tempFileInfo.file, `TS type check error in snippet on line ${line + 1}, col ${character + 1}: ${message}`, 'snippet');
               } else {
-                console.error(`TS Error in ${diagnostic.file.fileName} (${line + 1},${character + 1}): ${message}`);
+                reportError(null, `TS error in ${diagnostic.file.fileName} (${line + 1},${character + 1}): ${message}`, 'snippet');
               }
             } else {
-              console.error(`TS Error: ${ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n')}`);
+              reportError(null, `TS error: ${ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n')}`, 'snippet');
             }
           }
         }
       }
     }
   } catch (err) {
-    console.error('Error during TS snippet extraction or compilation:', err);
+    reportError(null, `TS snippet extraction or compilation failed: ${err instanceof Error ? err.message : String(err)}`, 'snippet');
     localHasErrors = true;
-    hasErrors = true;
   }
   return localHasErrors;
 }
@@ -413,9 +446,8 @@ export function validateTelemetryCompliance(complianceContent, typesContent) {
   if (complianceContent === undefined) {
     const compliancePath = path.join(repoRoot, 'docs', 'public', 'COMPLIANCE.md');
     if (!fs.existsSync(compliancePath)) {
-      console.error(`Error: Compliance file not found at ${compliancePath}`);
+      reportError(null, `Compliance file not found at ${compliancePath}`, 'telemetry');
       localHasErrors = true;
-      hasErrors = true;
       return localHasErrors;
     }
     complianceContent = fs.readFileSync(compliancePath, 'utf-8');
@@ -424,9 +456,8 @@ export function validateTelemetryCompliance(complianceContent, typesContent) {
   if (typesContent === undefined) {
     const typesPath = path.join(repoRoot, 'src', 'types.ts');
     if (!fs.existsSync(typesPath)) {
-      console.error(`Error: Core types file not found at ${typesPath}`);
+      reportError(null, `Core types file not found at ${typesPath}`, 'telemetry');
       localHasErrors = true;
-      hasErrors = true;
       return localHasErrors;
     }
     typesContent = fs.readFileSync(typesPath, 'utf-8');
@@ -435,9 +466,8 @@ export function validateTelemetryCompliance(complianceContent, typesContent) {
   // 1. Extract keys from src/types.ts
   const arrayMatch = typesContent.match(/export const ALLOWED_TELEMETRY_KEYS\s*=\s*\[([\s\S]*?)\]/);
   if (!arrayMatch) {
-    console.error("Error: Could not find ALLOWED_TELEMETRY_KEYS in src/types.ts");
+    reportError(null, "Could not find ALLOWED_TELEMETRY_KEYS in src/types.ts", 'telemetry');
     localHasErrors = true;
-    hasErrors = true;
     return localHasErrors;
   }
   const codeKeys = arrayMatch[1]
@@ -446,9 +476,8 @@ export function validateTelemetryCompliance(complianceContent, typesContent) {
     .filter(k => k.length > 0);
     
   if (codeKeys.length === 0) {
-    console.error("Error: Telemetry keys array in src/types.ts is empty.");
+    reportError(null, "Telemetry keys array in src/types.ts is empty.", 'telemetry');
     localHasErrors = true;
-    hasErrors = true;
     return localHasErrors;
   }
   
@@ -456,9 +485,8 @@ export function validateTelemetryCompliance(complianceContent, typesContent) {
   const optInIndex = complianceContent.indexOf('Opt-In Telemetry');
   const nextSectionIndex = complianceContent.indexOf('What is NOT Logged');
   if (optInIndex === -1 || nextSectionIndex === -1 || nextSectionIndex <= optInIndex) {
-    console.error("Error: Could not find correct 'Opt-In Telemetry' or 'What is NOT Logged' boundary in COMPLIANCE.md");
+    reportError(null, "Could not find correct 'Opt-In Telemetry' or 'What is NOT Logged' boundary in COMPLIANCE.md", 'telemetry');
     localHasErrors = true;
-    hasErrors = true;
     return localHasErrors;
   }
   
@@ -481,14 +509,12 @@ export function validateTelemetryCompliance(complianceContent, typesContent) {
   const undocumentedInCode = docKeys.filter(k => !codeKeysSet.has(k));
   
   if (missingInDocs.length > 0) {
-    console.error(`Error: Code telemetry keys [${missingInDocs.join(', ')}] are not documented in COMPLIANCE.md under 'Opt-In Telemetry'`);
+    reportError(null, `Code telemetry keys [${missingInDocs.join(', ')}] are not documented in COMPLIANCE.md under 'Opt-In Telemetry'`, 'telemetry');
     localHasErrors = true;
-    hasErrors = true;
   }
   if (undocumentedInCode.length > 0) {
-    console.error(`Error: Documented telemetry keys [${undocumentedInCode.join(', ')}] are not present in src/types.ts ALLOWED_TELEMETRY_KEYS`);
+    reportError(null, `Documented telemetry keys [${undocumentedInCode.join(', ')}] are not present in src/types.ts ALLOWED_TELEMETRY_KEYS`, 'telemetry');
     localHasErrors = true;
-    hasErrors = true;
   }
   
   if (missingInDocs.length === 0 && undocumentedInCode.length === 0) {
@@ -507,8 +533,7 @@ export function runAudit() {
   for (const file of files) {
     const filePath = path.join(repoRoot, file);
     if (!fs.existsSync(filePath)) {
-      console.error(`Error: File ${file} does not exist at ${filePath}`);
-      hasErrors = true;
+      reportError(file, `File does not exist at ${filePath}`, 'missingFile');
       continue;
     }
     const { content } = getParsedFile(file);

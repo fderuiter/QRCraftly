@@ -1,0 +1,182 @@
+/*
+    QRCraftly
+    Copyright (C) 2025 fderuiter
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
+import { FountainDecoder } from './decoder';
+import { parseDropletString } from './envelope';
+import { FountainSessionHeader, openFountainSession } from './session';
+
+/**
+ * Decoder progress snapshot reported after each accepted droplet.
+ */
+export interface FountainProgress {
+  /** Source block count K. */
+  k: number;
+  /** Rank of the received equation system (lower bound, equals K when done). */
+  rank: number;
+  /** Source blocks resolved so far. */
+  resolved: number;
+  /** Unique droplets accepted for this session. */
+  dropletsReceived: number;
+  /** Resolved blocks as a percentage of K. */
+  progress: number;
+}
+
+/** Consecutive droplets from a different session before the reassembler switches to it. */
+const SESSION_SWITCH_THRESHOLD = 8;
+
+/**
+ * Stateless-entry reassembler: accepts `ur:bytes/` droplets in any order from
+ * any point in the stream, and on completion verifies and opens the session
+ * (header parse, `deflate-raw` decompression, SHA-256 check). Shared by the
+ * reassembly worker and the main-thread receiver fallback.
+ */
+export class FountainReassembler {
+  private decoder = new FountainDecoder();
+  private foreignStreak = 0;
+
+  /**
+   * True once all source blocks are resolved and {@link finalize} can run.
+   * @returns Completion state.
+   */
+  public get isComplete(): boolean {
+    return this.decoder.isComplete;
+  }
+
+  /**
+   * Current progress snapshot, or null before the first droplet.
+   * @returns Progress or null.
+   */
+  public snapshot(): FountainProgress | null {
+    const { k } = this.decoder;
+    if (k === null) return null;
+    return {
+      k,
+      rank: this.decoder.rank,
+      resolved: this.decoder.resolvedBlockCount,
+      dropletsReceived: this.decoder.dropletsReceived,
+      progress: this.decoder.progress,
+    };
+  }
+
+  /**
+   * Ingests one decoded QR string.
+   * @param text Decoded QR text.
+   * @returns A progress snapshot when the droplet was accepted, otherwise null.
+   */
+  public ingest(text: string): FountainProgress | null {
+    if (this.decoder.isComplete) return null;
+    const parsed = parseDropletString(text);
+    if (!parsed) return null;
+
+    if (!this.decoder.matchesSession(parsed.meta, parsed.data.length)) {
+      this.foreignStreak += 1;
+      if (this.foreignStreak < SESSION_SWITCH_THRESHOLD) return null;
+      this.decoder.reset();
+    }
+    this.foreignStreak = 0;
+
+    const before = this.decoder.dropletsReceived;
+    this.decoder.ingest(parsed.meta, parsed.data);
+    if (this.decoder.dropletsReceived === before) return null;
+    return this.snapshot();
+  }
+
+  /**
+   * Reconstructs, decompresses and SHA-256-verifies the transferred file.
+   * @returns The verified file bytes and its session header.
+   * @throws Error on incomplete decoding or any integrity failure.
+   */
+  public async finalize(): Promise<{ data: Uint8Array; header: FountainSessionHeader }> {
+    const message = this.decoder.finalize();
+    if (!message) throw new Error('Fountain decoding is not complete.');
+    return openFountainSession(message);
+  }
+
+  /**
+   * Clears all state for a new stream.
+   */
+  public reset(): void {
+    this.decoder.reset();
+    this.foreignStreak = 0;
+  }
+}
+
+/**
+ * Receiver-side telemetry derived from decoder progress and scan timing.
+ */
+export interface FountainTelemetry extends FountainProgress {
+  /** Droplet QR codes decoded per second over the recent window. */
+  fps: number;
+  /** Estimated seconds until completion, or null when unknown. */
+  etaSeconds: number | null;
+}
+
+/**
+ * Tracks scan throughput (decoded droplets per second over a sliding window)
+ * and estimates time remaining for a rateless transfer.
+ */
+export class FountainRateTracker {
+  private stamps: number[] = [];
+
+  constructor(private readonly windowMs = 2000) {}
+
+  /**
+   * Records one decoded droplet frame.
+   * @param now Timestamp in milliseconds.
+   */
+  public record(now: number): void {
+    this.stamps.push(now);
+    const cutoff = now - this.windowMs;
+    while (this.stamps.length > 0 && this.stamps[0] < cutoff) this.stamps.shift();
+  }
+
+  /**
+   * Droplet frames per second over the window ending at `now`.
+   * @param now Timestamp in milliseconds.
+   * @returns Frames per second (0 when idle).
+   */
+  public fps(now: number): number {
+    const cutoff = now - this.windowMs;
+    const recent = this.stamps.filter(t => t >= cutoff);
+    if (recent.length < 2) return 0;
+    const span = Math.max(recent[recent.length - 1] - recent[0], 1);
+    return ((recent.length - 1) * 1000) / span;
+  }
+
+  /**
+   * Combines a progress snapshot with the current rate into telemetry.
+   * Remaining work assumes the typical ~20% Robust Soliton reception overhead
+   * over K, and never less than the missing rank.
+   * @param progress Decoder progress.
+   * @param now Timestamp in milliseconds.
+   * @returns Telemetry including FPS and ETA.
+   */
+  public telemetry(progress: FountainProgress, now: number): FountainTelemetry {
+    const fps = this.fps(now);
+    const remaining = Math.max(progress.k - progress.rank, Math.ceil(progress.k * 1.2) - progress.dropletsReceived, 0);
+    const etaSeconds = remaining === 0 ? 0 : fps > 0 ? remaining / fps : null;
+    return { ...progress, fps, etaSeconds };
+  }
+
+  /**
+   * Clears recorded timestamps.
+   */
+  public reset(): void {
+    this.stamps = [];
+  }
+}

@@ -16,7 +16,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { FountainDecoder } from './lib/fountain/decoder';
+import { FountainReassembler } from './lib/fountain/reassembler';
 
 export interface HandshakeMetadata {
   fileName?: string;
@@ -69,7 +69,12 @@ let targetFileSize: number | null = null;
 let knownChunkSize: number | null = null;
 let receivedIndices: Set<number> = new Set();
 let handshakeMetadata: HandshakeMetadata | null = null;
-let fountainDecoder: FountainDecoder | null = null;
+let fountainReassembler: FountainReassembler | null = null;
+let fountainFinalizing = false;
+
+function post(message: Record<string, unknown>, transfer: Transferable[] = []): void {
+  self.postMessage(message, { transfer });
+}
 
 function resetWorkerState(): void {
   allocatedBuffer = null;
@@ -78,9 +83,55 @@ function resetWorkerState(): void {
   knownChunkSize = null;
   receivedIndices = new Set();
   handshakeMetadata = null;
-  if (fountainDecoder) {
-    fountainDecoder.reset();
-    fountainDecoder = null;
+  fountainReassembler = null;
+  fountainFinalizing = false;
+}
+
+/**
+ * Feeds one droplet to the stateless reassembler; on completion decompresses,
+ * verifies the SHA-256 from the session header and posts the file.
+ */
+async function handleFountainDroplet(droplet: string): Promise<void> {
+  if (fountainFinalizing) return;
+  if (!fountainReassembler) fountainReassembler = new FountainReassembler();
+  const reassembler = fountainReassembler;
+
+  const snapshot = reassembler.ingest(droplet);
+  if (!snapshot) return;
+  post({
+    type: 'PROGRESS',
+    progress: snapshot.progress,
+    current: snapshot.resolved,
+    total: snapshot.k,
+    rank: snapshot.rank,
+    dropletsReceived: snapshot.dropletsReceived,
+    isFountain: true,
+  });
+
+  if (!reassembler.isComplete) return;
+  fountainFinalizing = true;
+  try {
+    const { data, header } = await reassembler.finalize();
+    const bufCopy = new Uint8Array(data);
+    post(
+      {
+        type: 'COMPLETE',
+        buffer: bufCopy.buffer,
+        handshake: {
+          fileName: header.fileName || `received_file_${Date.now()}.bin`,
+          fileSize: header.fileSize,
+          mimeType: header.mimeType || 'application/octet-stream',
+          sha256: header.sha256,
+        },
+        compression: header.compression,
+        isFountain: true,
+      },
+      [bufCopy.buffer]
+    );
+  } catch (err: unknown) {
+    post({ type: 'ERROR', error: err instanceof Error ? err.message : 'Fountain reassembly failed', isFountain: true });
+  } finally {
+    resetWorkerState();
   }
 }
 
@@ -98,64 +149,23 @@ self.onmessage = async (e: MessageEvent<FileReassemblyIncomingMessage>) => {
   const data = e.data;
   if (!data || typeof data !== 'object') return;
 
-  const { type } = data;
 
   try {
-    if (type === 'CLEAR' || type === 'RESET') {
+    if (data.type === 'CLEAR' || data.type === 'RESET') {
       resetWorkerState();
       return;
     }
 
-    // --- Fountain Droplet Ingestion ---
-    if (type === 'FOUNTAIN_DROPLET' || type === 'DROPLET') {
-      const msg = data as FountainWorkerMessage;
-      if (!fountainDecoder) {
-        fountainDecoder = new FountainDecoder();
-      }
-
-      const madeProgress = fountainDecoder.ingestString(msg.droplet);
-      if (madeProgress) {
-        const total = fountainDecoder.k || 1;
-        const current = fountainDecoder.resolvedBlockCount;
-        const progress = fountainDecoder.progress;
-
-        (self as any).postMessage({
-          type: 'PROGRESS',
-          progress,
-          current,
-          total,
-          isFountain: true,
-        });
-
-        if (fountainDecoder.isComplete) {
-          const finalBuffer = fountainDecoder.finalize();
-          if (finalBuffer) {
-            const bufCopy = new Uint8Array(finalBuffer);
-            (self as any).postMessage(
-              {
-                type: 'COMPLETE',
-                buffer: bufCopy.buffer,
-                handshake: {
-                  fileName: `received_file_${Date.now()}.bin`,
-                  fileSize: finalBuffer.length,
-                  mimeType: 'application/octet-stream',
-                  sha256: '',
-                },
-                isFountain: true,
-              },
-              [bufCopy.buffer]
-            );
-            resetWorkerState();
-          }
-        }
-      }
+    // --- Fountain Droplet Ingestion (stateless entry, no handshake) ---
+    if (data.type === 'FOUNTAIN_DROPLET' || data.type === 'DROPLET') {
+      await handleFountainDroplet(data.droplet);
       return;
     }
 
     // --- Legacy Chunking Ingestion ---
-    if (type === 'INIT' || type === 'ALLOCATE') {
+    if (data.type === 'INIT' || data.type === 'ALLOCATE') {
       resetWorkerState();
-      const msg = data as InitWorkerMessage;
+      const msg = data;
       if (typeof msg.fileSize === 'number' && msg.fileSize > 0) {
         targetFileSize = msg.fileSize;
         allocatedBuffer = new Uint8Array(msg.fileSize);
@@ -175,8 +185,8 @@ self.onmessage = async (e: MessageEvent<FileReassemblyIncomingMessage>) => {
       return;
     }
 
-    if (type === 'CHUNK' || type === 'PROCESS_CHUNK') {
-      const msg = data as ChunkWorkerMessage;
+    if (data.type === 'CHUNK' || data.type === 'PROCESS_CHUNK') {
+      const msg = data;
       const index = msg.index;
       const base64 = msg.base64;
       const tot = msg.totalChunks ?? msg.total;
@@ -248,7 +258,7 @@ self.onmessage = async (e: MessageEvent<FileReassemblyIncomingMessage>) => {
       const current = receivedIndices.size;
       const progress = Math.round((current / total) * 100);
 
-      (self as any).postMessage({
+      post({
         type: 'PROGRESS',
         progress,
         current,
@@ -266,7 +276,7 @@ self.onmessage = async (e: MessageEvent<FileReassemblyIncomingMessage>) => {
         const transferableData = new Uint8Array(finalBuffer);
         const bufferToTransfer = transferableData.buffer;
 
-        (self as any).postMessage(
+        post(
           {
             type: 'COMPLETE',
             buffer: bufferToTransfer,
@@ -280,12 +290,12 @@ self.onmessage = async (e: MessageEvent<FileReassemblyIncomingMessage>) => {
       return;
     }
 
-    if (type === 'START_REASSEMBLY') {
-      const msg = data as LegacyReassemblyMessage;
+    if (data.type === 'START_REASSEMBLY') {
+      const msg = data;
       const { chunks, totalChunks } = msg;
 
       if (!chunks || chunks.length !== totalChunks) {
-        (self as any).postMessage({
+        post({
           type: 'ERROR',
           error: `Incomplete chunk set: received ${chunks?.length || 0} of ${totalChunks}`,
         });
@@ -303,7 +313,7 @@ self.onmessage = async (e: MessageEvent<FileReassemblyIncomingMessage>) => {
         totalBytes += bytes.length;
 
         const progress = Math.round(((i + 1) / totalChunks) * 100);
-        (self as any).postMessage({
+        post({
           type: 'PROGRESS',
           progress,
           current: i + 1,
@@ -318,7 +328,7 @@ self.onmessage = async (e: MessageEvent<FileReassemblyIncomingMessage>) => {
         offset += chunk.length;
       }
 
-      (self as any).postMessage(
+      post(
         {
           type: 'COMPLETE',
           buffer: combined.buffer,
@@ -328,10 +338,10 @@ self.onmessage = async (e: MessageEvent<FileReassemblyIncomingMessage>) => {
 
       resetWorkerState();
     }
-  } catch (err: any) {
-    (self as any).postMessage({
+  } catch (err: unknown) {
+    post({
       type: 'ERROR',
-      error: err?.message || 'Unknown reassembly error',
+      error: err instanceof Error && err.message ? err.message : 'Unknown reassembly error',
     });
   }
 };
