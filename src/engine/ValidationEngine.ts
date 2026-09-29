@@ -22,7 +22,7 @@ export const ValidationEngine = {
   /**
    * Registry for type-specific validator functions to preserve backwards compatibility.
    */
-  typeValidators: Object.create(null) as Record<string, (value: string) => string[]>,
+  typeValidators: new Map<string, (value: string) => string[]>(),
 
   /**
    * Registers a validator function for a specific QRType.
@@ -31,20 +31,19 @@ export const ValidationEngine = {
    * @param validator - The validation function for the QRType.
    */
   registerValidator(type: QRType, validator: (value: string) => string[]) {
-    this.typeValidators[type] = validator;
+    this.typeValidators.set(type, validator);
   },
 
   /**
    * Runs the custom validator registered for a type, if any.
-   * Only own, function-valued registry entries are dispatched.
+   * Only validators registered via registerValidator are dispatched.
    * @param type - The QR code type whose validator should run.
    * @param value - The raw QR payload string.
    * @returns Violations reported by the custom validator, or an empty array.
    */
   runCustomValidator(type: string, value: string): string[] {
-    if (!Object.prototype.hasOwnProperty.call(this.typeValidators, type)) return [];
-    const validator = this.typeValidators[type];
-    return typeof validator === 'function' ? validator(value) : [];
+    const validator = this.typeValidators.get(type);
+    return validator ? validator(value) : [];
   },
 
   /**
