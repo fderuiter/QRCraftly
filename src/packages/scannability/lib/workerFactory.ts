@@ -31,3 +31,49 @@ export function createScannabilityWorker(): Worker | null {
     return null;
   }
 }
+
+/** Callbacks a Scannability Health Evaluator attaches to its worker. */
+export interface ScannabilityWorkerHandlers {
+  onMessage: (data: unknown) => void;
+  onError: (reason: unknown) => void;
+}
+
+/** The evaluator's private view of one worker generation. */
+export interface ScannabilityWorkerHandle {
+  /** Posts a validated request, transferring ownership of the listed objects. */
+  post: (request: unknown, transfer: Transferable[]) => void;
+  /** Detaches the listeners and terminates the worker thread. */
+  terminate: () => void;
+}
+
+/**
+ * Spawns a worker generation for the evaluator, or returns null where workers are unavailable
+ * (the evaluator then runs every check on the main thread).
+ */
+export type ScannabilityWorkerFactory = (
+  handlers: ScannabilityWorkerHandlers
+) => ScannabilityWorkerHandle | null;
+
+/**
+ * Default evaluator worker factory, wrapping `createScannabilityWorker`.
+ */
+export const connectScannabilityWorker: ScannabilityWorkerFactory = (handlers) => {
+  const worker = createScannabilityWorker();
+  if (!worker) return null;
+  const onMessage = (event: MessageEvent) => handlers.onMessage(event.data);
+  const onError = (event: Event) => handlers.onError(event);
+  worker.addEventListener('message', onMessage);
+  worker.addEventListener('error', onError);
+  return {
+    post: (request, transfer) => worker.postMessage(request, transfer),
+    terminate: () => {
+      worker.removeEventListener('message', onMessage);
+      worker.removeEventListener('error', onError);
+      try {
+        worker.terminate();
+      } catch {
+        // Already gone; nothing left to release.
+      }
+    },
+  };
+};

@@ -140,28 +140,4 @@ describe('ValidationEngine', () => {
       expect(ValidationEngine.runCustomValidator('unregistered', 'payload')).toEqual([]);
     });
   });
-
-  describe('calculateScannability', () => {
-    it('should calculate standard scannability score without local contrast violations', () => {
-      const config = getBaseConfig();
-      const result = ValidationEngine.calculateScannability(config);
-      expect(result.score).toBe(100);
-      expect(result.warnings).toHaveLength(0);
-    });
-
-    it('should deduct score points when local contrast violations are present', () => {
-      const config = getBaseConfig();
-      const result = ValidationEngine.calculateScannability(config, { violations: 5, minContrast: 2.1 });
-      expect(result.score).toBeLessThan(100);
-      expect(result.warnings.some(w => w.includes('Local contrast drop detected'))).toBe(true);
-    });
-
-    it('identifies critical contrast separately from display copy', () => {
-      const config = { ...getBaseConfig(), fgColor: '#eeeeee', eyeColor: '#eeeeee', bgColor: '#ffffff' };
-
-      const result = ValidationEngine.calculateScannability(config);
-
-      expect(result.criticalWarnings).toContain('critical-contrast');
-    });
-  });
 });

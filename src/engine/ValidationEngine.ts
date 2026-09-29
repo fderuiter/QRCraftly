@@ -9,12 +9,11 @@ import {
 } from '@/packages/qr-payload';
 import { REGEX_STRICT_CONTROL_CHARS, REGEX_PRESERVE_FORMAT_CONTROL_CHARS } from '../utils/security';
 import { SafeUrlPipeline } from '../utils/url';
-import { calculateScannabilityHealth, type HealthScore } from '@/packages/scannability';
 
 /**
  * Core validation and sanitization engine for QR code generation.
  * Handles containment profiles, regex validation, protocol identification,
- * payload sanitization, and scannability heuristics.
+ * and payload sanitization. Scannability Health scoring lives in @/packages/scannability.
  *
  * Delegates payload validation, sanitization, and containment profiles to @/packages/qr-payload.
  */
@@ -132,20 +131,5 @@ export const ValidationEngine = {
    */
   sanitizeConfig(config: QRConfig): QRConfig {
     return sanitizeConfig(config);
-  },
-
-  /**
-   * Analyzes a QR configuration profile and returns a scannability score and recommendations.
-   * @param config - The QR code generation configuration.
-   * @param localMetrics - Optional localized module contrast audit metrics.
-   * @param localMetrics.violations - Count of local contrast violations.
-   * @param localMetrics.minContrast - Minimum local contrast ratio.
-   * @returns An object containing the rating score and an array of scannability warning messages.
-   */
-  calculateScannability(
-    config: QRConfig,
-    localMetrics?: { violations?: number; minContrast?: number }
-  ): HealthScore {
-    return calculateScannabilityHealth(config, localMetrics);
-  },
+  }
 };

@@ -1,10 +1,17 @@
 import { describe, it, expect, vi, beforeEach, afterEach, beforeAll } from 'vitest';
 import jsQR from 'jsqr';
+import { getLuminanceFromRgb } from '@/utils/colorUtils';
 
 vi.mock('jsqr', () => {
   return {
     default: vi.fn(),
   };
+});
+
+// Spy on the luminance helper the contrast audit uses, so a test can make processing crash.
+vi.mock('@/utils/colorUtils', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/utils/colorUtils')>();
+  return { ...actual, getLuminanceFromRgb: vi.fn(actual.getLuminanceFromRgb) };
 });
 
 describe('scannabilityWorker', () => {
@@ -177,7 +184,7 @@ describe('scannabilityWorker', () => {
     });
   });
 
-  it('catches crash error if global processing fails internally', async () => {
+  it('treats a decoder exception as "no code found", like the main-thread check', async () => {
     const postMessageSpy = vi.fn();
     globalThis.postMessage = postMessageSpy;
 
@@ -186,6 +193,25 @@ describe('scannabilityWorker', () => {
     });
 
     await workerHandler({ data: createDummyRequest() } as MessageEvent);
+
+    expect(postMessageSpy).toHaveBeenCalledWith(expect.objectContaining({
+      success: false,
+      physicalReady: false,
+      error: 'NOT_FOUND',
+      configId: '123',
+    }));
+    vi.mocked(jsQR).mockReset();
+  });
+
+  it('catches crash error if global processing fails internally', async () => {
+    const postMessageSpy = vi.fn();
+    globalThis.postMessage = postMessageSpy;
+
+    vi.mocked(getLuminanceFromRgb).mockImplementationOnce(() => {
+      throw new Error('Contrast audit crash');
+    });
+
+    await workerHandler({ data: createDummyRequest('123', true, 5) } as MessageEvent);
 
     expect(postMessageSpy).toHaveBeenCalledWith({
       success: false,
@@ -310,10 +336,11 @@ describe('scannabilityWorker', () => {
       height: 10,
       configId: '301',
       isTest: true,
+      moduleCount: 5,
     };
 
-    vi.mocked(jsQR).mockImplementationOnce(() => {
-      throw new Error('Context extraction failure');
+    vi.mocked(getLuminanceFromRgb).mockImplementationOnce(() => {
+      throw new Error('Processing failure');
     });
 
     await workerHandler({ data: req } as MessageEvent);
