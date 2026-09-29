@@ -133,6 +133,12 @@ describe('ValidationEngine', () => {
         delete ValidationEngine.typeValidators[QRType.URL];
       }
     });
+
+    it('should ignore non-own or non-function validator registry entries', () => {
+      expect(ValidationEngine.runCustomValidator('toString', 'payload')).toEqual([]);
+      expect(ValidationEngine.runCustomValidator('__proto__', 'payload')).toEqual([]);
+      expect(ValidationEngine.runCustomValidator('unregistered', 'payload')).toEqual([]);
+    });
   });
 
   describe('calculateScannability', () => {

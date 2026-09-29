@@ -35,6 +35,19 @@ export const ValidationEngine = {
   },
 
   /**
+   * Runs the custom validator registered for a type, if any.
+   * Only own, function-valued registry entries are dispatched.
+   * @param type - The QR code type whose validator should run.
+   * @param value - The raw QR payload string.
+   * @returns Violations reported by the custom validator, or an empty array.
+   */
+  runCustomValidator(type: string, value: string): string[] {
+    if (!Object.prototype.hasOwnProperty.call(this.typeValidators, type)) return [];
+    const validator = this.typeValidators[type];
+    return typeof validator === 'function' ? validator(value) : [];
+  },
+
+  /**
    * Formal containment profiles for validating structured text and emails.
    */
   CONTAINMENT_PROFILES,
@@ -86,8 +99,8 @@ export const ValidationEngine = {
   validateConfig(config: QRConfig): string[] {
     const violations = validateConfig(config);
     // If any custom validators were registered on typeValidators, run them as well
-    if (config.value && config.type && this.typeValidators[config.type]) {
-      const customViolations = this.typeValidators[config.type](config.value);
+    if (config.value && config.type) {
+      const customViolations = this.runCustomValidator(config.type, config.value);
       if (customViolations && customViolations.length > 0) {
         violations.push(...customViolations);
       }
@@ -104,8 +117,8 @@ export const ValidationEngine = {
   validatePayload(value: string, type?: QRType): string[] {
     const violations = validatePayload(value, type);
     const effectiveType = type || identifyProtocol(value);
-    if (effectiveType && this.typeValidators[effectiveType]) {
-      const customViolations = this.typeValidators[effectiveType](value);
+    if (effectiveType) {
+      const customViolations = this.runCustomValidator(effectiveType, value);
       if (customViolations && customViolations.length > 0) {
         violations.push(...customViolations);
       }
