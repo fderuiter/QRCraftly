@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection */
 /*
     QRCraftly
     Copyright (C) 2025 fderuiter
@@ -18,61 +19,80 @@
 
 import { FountainDroplet, FountainEncoderOptions } from './contracts';
 import { buildRobustSolitonCdf, getNeighborsForSeq } from './soliton';
-import { computeCrc32Hex, serializeDroplet } from './envelope';
+import { crc32 } from './crc32';
+import { serializeDroplet } from './envelope';
+
+/**
+ * Returns the default highest sequence number for a stream of `k` source blocks.
+ * @param k Source block count.
+ * @returns Sequence ceiling before the stream wraps.
+ */
+export function defaultMaxSeq(k: number): number {
+  return Math.max(16 * k, 9999);
+}
 
 /**
  * Rateless fountain block slicer and Luby Transform encoder over GF(2).
+ * Emits an unbounded stream: sequence numbers 1..k are systematic, later ones
+ * are Robust Soliton mixtures; after `maxSeq` the stream wraps to `k + 1`.
  */
 export class FountainEncoder {
-  public readonly fileSize: number;
+  public readonly messageLength: number;
   public readonly blockSize: number;
   public readonly k: number;
-  public readonly checksum: string;
+  public readonly checksum: number;
+  public readonly maxSeq: number;
 
-  private blocks: Uint8Array[];
-  private cdf: Float64Array;
-  private currentSeq: number = 0;
+  private readonly blocks: Uint8Array[];
+  private readonly cdf: Float64Array;
+  private emitted = 0;
 
-  constructor(data: Uint8Array, options: FountainEncoderOptions = {}) {
-    this.fileSize = data.length;
-    this.blockSize = Math.max(32, options.blockSize ?? 180);
-    this.k = Math.max(1, Math.ceil(this.fileSize / this.blockSize));
-    this.checksum = computeCrc32Hex(data);
+  constructor(message: Uint8Array, options: FountainEncoderOptions = {}) {
+    this.messageLength = message.length;
+    this.blockSize = Math.max(1, Math.floor(options.blockSize ?? 64));
+    this.k = Math.max(1, Math.ceil(this.messageLength / this.blockSize));
+    this.checksum = crc32(message);
+    this.maxSeq = Math.max(this.k + 1, options.maxSeq ?? defaultMaxSeq(this.k));
     this.cdf = buildRobustSolitonCdf(this.k, options.c ?? 0.1, options.delta ?? 0.05);
 
-    // Partition source data into K blocks of equal size `blockSize`
-    this.blocks = new Array(this.k);
+    this.blocks = new Array<Uint8Array>(this.k);
     for (let i = 0; i < this.k; i++) {
       const block = new Uint8Array(this.blockSize);
       const start = i * this.blockSize;
-      const end = Math.min(this.fileSize, start + this.blockSize);
-      if (start < this.fileSize) {
-        block.set(data.subarray(start, end), 0);
-      }
+      block.set(message.subarray(start, Math.min(this.messageLength, start + this.blockSize)), 0);
       this.blocks[i] = block;
     }
   }
 
   /**
-   * Generates a specific droplet for a sequence number.
+   * Maps a zero-based emission index to its sequence number, wrapping after `maxSeq`.
+   * @param index Zero-based frame index.
+   * @returns 1-based sequence number.
+   */
+  public seqForIndex(index: number): number {
+    if (index < this.maxSeq) return index + 1;
+    const repairSpan = this.maxSeq - this.k;
+    return this.k + 1 + ((index - this.maxSeq) % repairSpan);
+  }
+
+  /**
+   * Generates the droplet for a sequence number.
    * @param seq Droplet sequence number (1-based integer).
+   * @returns The droplet.
    */
   public getDroplet(seq: number): FountainDroplet {
     const { degree, indices } = getNeighborsForSeq(seq, this.k, this.cdf);
     const dropletData = new Uint8Array(this.blockSize);
-
-    // XOR combine blocks in GF(2)
     for (const idx of indices) {
       const sourceBlock = this.blocks[idx];
       for (let b = 0; b < this.blockSize; b++) {
         dropletData[b] ^= sourceBlock[b];
       }
     }
-
     return {
       seq,
       k: this.k,
-      fileSize: this.fileSize,
+      messageLength: this.messageLength,
       checksum: this.checksum,
       degree,
       indices,
@@ -81,25 +101,36 @@ export class FountainEncoder {
   }
 
   /**
-   * Emits the next sequential droplet in the rateless stream.
+   * Serialized BC-UR string for a zero-based emission index.
+   * @param index Zero-based frame index.
+   * @returns The UR droplet string.
+   */
+  public dropletStringForIndex(index: number): string {
+    return serializeDroplet(this.getDroplet(this.seqForIndex(index)));
+  }
+
+  /**
+   * Emits the next droplet in the rateless stream.
+   * @returns The droplet.
    */
   public nextDroplet(): FountainDroplet {
-    this.currentSeq += 1;
-    return this.getDroplet(this.currentSeq);
+    const seq = this.seqForIndex(this.emitted);
+    this.emitted += 1;
+    return this.getDroplet(seq);
   }
 
   /**
    * Emits the next serialized BC-UR droplet string.
+   * @returns The UR droplet string.
    */
   public nextDropletString(): string {
     return serializeDroplet(this.nextDroplet());
   }
 
   /**
-   * Resets the emission sequence back to 0.
+   * Resets the emission sequence back to the first droplet.
    */
   public reset(): void {
-    this.currentSeq = 0;
+    this.emitted = 0;
   }
 }
-
