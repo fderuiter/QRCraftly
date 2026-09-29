@@ -19,6 +19,7 @@
 import { QRConfig, QRModules, SocialFormat, TemplateStyle } from '../types';
 import { drawQRInternal, ModuleRenderOptions } from '@/packages/qr-matrix';
 import { drawRoundRect } from './canvasHelpers';
+import { hexToRgba } from './colorUtils';
 
 /**
  * Standard high-resolution dimensions for each social media format.
@@ -327,26 +328,4 @@ export function drawWithTemplate(
   if (config.templateStyle !== TemplateStyle.NONE) {
     drawTemplateText(ctx, config, displayWidth, displayHeight, qrY, qrSize);
   }
-}
-
-// ---------------------------------------------------------------------------
-// Utility
-// ---------------------------------------------------------------------------
-
-/**
- * Converts a CSS hex colour string (e.g. "#1a2b3c") to an rgba() string with
- * the given alpha value.  Falls back to transparent if parsing fails.
- * Supports both 3-char (#rgb) and 6-char (#rrggbb) hex notation.
- */
-function hexToRgba(hex: string, alpha: number): string {
-  const clean = hex.replace('#', '');
-  // Expand 3-char shorthand (#rgb → #rrggbb)
-  const full = clean.length === 3
-    ? clean[0] + clean[0] + clean[1] + clean[1] + clean[2] + clean[2]
-    : clean;
-  const r = parseInt(full.substring(0, 2), 16);
-  const g = parseInt(full.substring(2, 4), 16);
-  const b = parseInt(full.substring(4, 6), 16);
-  if (isNaN(r) || isNaN(g) || isNaN(b)) return `rgba(0,0,0,${alpha})`;
-  return `rgba(${r},${g},${b},${alpha})`;
 }

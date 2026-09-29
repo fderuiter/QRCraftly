@@ -239,3 +239,31 @@ describe('Metadata-Driven Frontmatter Filtering', () => {
     });
   });
 });
+
+describe('developer-audience documents (#978)', () => {
+  it('omits documents marked audience: developers from the published manifest', async () => {
+    const os = await import('os');
+    const fsMod = await import('fs');
+    const pathMod = await import('path');
+    const { compileManifest: compile, isDeveloperAudience } = await import('../scripts/compile_docs_manifest.js');
+    const dir = fsMod.mkdtempSync(pathMod.join(os.tmpdir(), 'docs-audience-'));
+    const out = pathMod.join(dir, 'out', 'manifest.json');
+    fsMod.writeFileSync(pathMod.join(dir, 'PUBLIC.md'), '---\npublish-approved: true\n---\n# Public Policy\n\nFor everyone.');
+    fsMod.writeFileSync(pathMod.join(dir, 'INTERNAL.md'), '---\npublish-approved: true\naudience: developers # repo only\n---\n# Internal Guide\n\nFor contributors.');
+    compile(dir, out);
+    const manifest = JSON.parse(fsMod.readFileSync(out, 'utf8')) as Array<{ id: string }>;
+    expect(manifest.map((d) => d.id)).toEqual(['public']);
+    expect(isDeveloperAudience({ audience: 'Developers' })).toBe(true);
+    expect(isDeveloperAudience({})).toBe(false);
+    fsMod.rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('does not publish internal developer docs on the /security page', async () => {
+    const manifest = (await import('../src/data/docs_manifest.json')).default as Array<{ id: string }>;
+    const ids = manifest.map((d) => d.id);
+    expect(ids).toEqual(expect.arrayContaining(['security', 'compliance']));
+    for (const internal of ['style_guide', 'ui_catalog', 'scaling']) {
+      expect(ids).not.toContain(internal);
+    }
+  });
+});

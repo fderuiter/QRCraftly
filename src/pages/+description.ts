@@ -1,9 +1,10 @@
-import { getMetadataForPath } from "../data/contentRegistry";
+import { getMetadataForPageContext, MetadataPageContext } from "../data/contentRegistry";
 
 /**
- *
- * @param pageContext
+ * Page description from the content registry (the 404 page uses the `_error` entry).
+ * @param pageContext - Vike page context.
+ * @returns The meta description.
  */
-export default function description(pageContext: any) {
-  return getMetadataForPath(pageContext.urlPathname).description;
+export default function description(pageContext: MetadataPageContext) {
+  return getMetadataForPageContext(pageContext).description;
 }

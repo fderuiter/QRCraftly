@@ -17,9 +17,9 @@
 */
 
 /**
- * Page-specific configuration for the VCard QR Code page.
+ * Page-specific configuration for the vCard QR Code page.
  */
 export default {
     image: '/og-image.png?type=vcard',
-    imageAlt: 'Preview of the VCard QR Code Generator tool'
+    imageAlt: 'Preview of the vCard QR Code Generator tool'
 }
