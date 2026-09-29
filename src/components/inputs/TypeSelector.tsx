@@ -1,6 +1,7 @@
 import React from "react";
 import { QR_TYPE_ROUTES } from "../../data/navigation";
 import { QRType } from "../../types";
+import { isDangerousUrl } from "../../utils/security";
 import {
   Wifi,
   Link,
@@ -62,18 +63,22 @@ export const TypeSelector: React.FC<TypeSelectorProps> = ({ currentType }) => {
       <ul className="grid grid-cols-4 gap-2 rounded-xl bg-slate-100 p-2 transition-colors duration-300 dark:bg-slate-800">
         {ITEMS.map((item) => {
           const isCurrent = currentType === item.type;
-          return (
-            <li key={item.type}>
-              <a
-                href={QR_TYPE_ROUTES[item.type]}
-                aria-current={isCurrent ? "page" : undefined}
-                className={`${LINK_BASE} ${isCurrent ? LINK_CURRENT : LINK_IDLE}`}
-              >
-                <item.icon className="size-4" aria-hidden="true" />
-                <span className="w-full text-center break-words whitespace-normal">{item.label}</span>
-              </a>
-            </li>
-          );
+          const href = QR_TYPE_ROUTES[item.type];
+          if (!isDangerousUrl(href)) {
+            return (
+              <li key={item.type}>
+                <a
+                  href={href}
+                  aria-current={isCurrent ? "page" : undefined}
+                  className={`${LINK_BASE} ${isCurrent ? LINK_CURRENT : LINK_IDLE}`}
+                >
+                  <item.icon className="size-4" aria-hidden="true" />
+                  <span className="w-full text-center break-words whitespace-normal">{item.label}</span>
+                </a>
+              </li>
+            );
+          }
+          return null;
         })}
       </ul>
     </nav>
