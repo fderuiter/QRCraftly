@@ -25,51 +25,94 @@ export interface CachedFrame {
 
 /**
  * Pre-allocated contiguous memory pool for caching pre-rendered QR code frame matrices.
- * Prevents garbage collection pauses, allocations, and CPU spikes during active animation playback and loop wraps.
+ * Frames are stored in fixed-size slots of one contiguous buffer; a slot is recycled as
+ * soon as its frame is deleted, so an unbounded (rateless) stream with a bounded
+ * lookahead never grows the pool, and no allocation happens during playback.
  */
 export class PreallocatedFramePool {
   private capacity: number;
   private maxModulesPerFrame: number;
   private pool: Uint8Array;
   private frameMap: Map<number, CachedFrame>;
+  private slotOf: Map<number, number>;
+  private freeSlots: number[];
+  private nextUnusedSlot = 0;
 
   constructor(initialMaxFrames = 500, maxModulesPerFrame = 200 * 200) {
-    this.capacity = initialMaxFrames;
+    this.capacity = Math.max(1, initialMaxFrames);
     this.maxModulesPerFrame = maxModulesPerFrame;
     // Single contiguous Uint8Array memory block allocated upfront
-    this.pool = new Uint8Array(initialMaxFrames * maxModulesPerFrame);
+    this.pool = new Uint8Array(this.capacity * maxModulesPerFrame);
     this.frameMap = new Map();
+    this.slotOf = new Map();
+    this.freeSlots = [];
   }
 
   /**
-   * Stores a pre-rendered frame matrix in the contiguous memory pool.
+   * Number of frame slots currently allocated in the contiguous buffer.
+   * @returns Slot capacity.
    */
-  public storeFrame(index: number, size: number, sourceData: Uint8Array): CachedFrame {
-    // Dynamically expand contiguous memory buffer if frame count exceeds current capacity
-    if (index >= this.capacity) {
-      const newCapacity = Math.max(index + 1, this.capacity * 2);
+  public get slotCapacity(): number {
+    return this.capacity;
+  }
+
+  /**
+   * Byte length of the contiguous backing buffer.
+   * @returns Buffer size in bytes.
+   */
+  public get byteLength(): number {
+    return this.pool.byteLength;
+  }
+
+  private acquireSlot(): number {
+    const recycled = this.freeSlots.pop();
+    if (recycled !== undefined) return recycled;
+    if (this.nextUnusedSlot >= this.capacity) {
+      // Grow only when every slot is simultaneously live.
+      const newCapacity = this.capacity * 2;
       const newPool = new Uint8Array(newCapacity * this.maxModulesPerFrame);
       newPool.set(this.pool);
       this.pool = newPool;
       this.capacity = newCapacity;
+      for (const [index, frame] of this.frameMap) {
+        const slot = this.slotOf.get(index) ?? 0;
+        const offset = slot * this.maxModulesPerFrame;
+        frame.data = this.pool.subarray(offset, offset + frame.size * frame.size);
+      }
     }
+    return this.nextUnusedSlot++;
+  }
 
-    const offset = index * this.maxModulesPerFrame;
+  /**
+   * Stores a pre-rendered frame matrix in the contiguous memory pool.
+   * @param index Frame index.
+   * @param size Module count per side.
+   * @param sourceData Row-major module data (size * size bytes).
+   * @returns The cached frame view.
+   */
+  public storeFrame(index: number, size: number, sourceData: Uint8Array): CachedFrame {
     const len = size * size;
+    if (len > this.maxModulesPerFrame) {
+      throw new RangeError(`Frame of ${size}x${size} modules exceeds the pool slot size.`);
+    }
+    let slot = this.slotOf.get(index);
+    if (slot === undefined) {
+      slot = this.acquireSlot();
+      this.slotOf.set(index, slot);
+    }
+    const offset = slot * this.maxModulesPerFrame;
     const frameSlice = this.pool.subarray(offset, offset + len);
     frameSlice.set(sourceData.subarray(0, len));
 
-    const cached: CachedFrame = {
-      index,
-      size,
-      data: frameSlice,
-    };
+    const cached: CachedFrame = { index, size, data: frameSlice };
     this.frameMap.set(index, cached);
     return cached;
   }
 
   /**
    * Retrieves a cached frame matrix by index.
+   * @param index Frame index.
+   * @returns The cached frame, if present.
    */
   public getFrame(index: number): CachedFrame | undefined {
     return this.frameMap.get(index);
@@ -77,6 +120,8 @@ export class PreallocatedFramePool {
 
   /**
    * Checks if a frame is cached in the memory pool.
+   * @param index Frame index.
+   * @returns Whether the frame is cached.
    */
   public hasFrame(index: number): boolean {
     return this.frameMap.has(index);
@@ -84,23 +129,33 @@ export class PreallocatedFramePool {
 
   /**
    * Returns total number of frames currently stored in the cache.
+   * @returns Live frame count.
    */
   public get size(): number {
     return this.frameMap.size;
   }
 
   /**
-   * Deletes a frame mapping by index.
+   * Deletes a frame and returns its slot to the free list for reuse.
+   * @param index Frame index.
+   * @returns True if a frame was removed.
    */
   public delete(index: number): boolean {
+    const slot = this.slotOf.get(index);
+    if (slot !== undefined) {
+      this.slotOf.delete(index);
+      this.freeSlots.push(slot);
+    }
     return this.frameMap.delete(index);
   }
 
   /**
-   * Releases a frame mapping by index.
+   * Releases a frame mapping by index (alias of {@link delete}).
+   * @param index Frame index.
+   * @returns True if a frame was removed.
    */
   public releaseFrame(index: number): boolean {
-    return this.frameMap.delete(index);
+    return this.delete(index);
   }
 
   /**
@@ -108,6 +163,9 @@ export class PreallocatedFramePool {
    */
   public clear(): void {
     this.frameMap.clear();
+    this.slotOf.clear();
+    this.freeSlots = [];
+    this.nextUnusedSlot = 0;
   }
 }
 

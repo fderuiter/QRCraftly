@@ -117,7 +117,7 @@ describe('File Transfer Page & Pipeline', () => {
     
     // Sliders exist
     expect(screen.getByLabelText('Transfer speed')).toBeInTheDocument();
-    expect(screen.getByLabelText('Data per QR')).toBeInTheDocument();
+    expect(screen.getByLabelText('Max data per QR')).toBeInTheDocument();
 
     // Canvas exists
     const canvas = screen.getByRole('img', { name: /transfer qr/i });

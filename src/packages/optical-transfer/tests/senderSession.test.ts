@@ -95,4 +95,94 @@ describe('Optical Transfer Sender Engine', () => {
 
     session.destroy();
   });
+
+  it('recycles PreallocatedFramePool slots so an unbounded stream never grows the buffer', () => {
+    const pool = new PreallocatedFramePool(4, 45 * 45);
+    const bytes = pool.byteLength;
+    const frame = new Uint8Array(45 * 45);
+
+    // Rateless playback: a lookahead of 3 frames live at a time, 10k frames total.
+    for (let index = 0; index < 10_000; index++) {
+      frame[0] = index & 0xff;
+      pool.storeFrame(index, 45, frame);
+      if (index >= 3) {
+        expect(pool.getFrame(index - 3)?.data[0]).toBe((index - 3) & 0xff);
+        pool.releaseFrame(index - 3);
+      }
+    }
+    expect(pool.size).toBe(3);
+    expect(pool.byteLength).toBe(bytes);
+    expect(pool.slotCapacity).toBe(4);
+
+    // Re-storing a live index reuses its slot.
+    pool.storeFrame(9_999, 45, frame);
+    expect(pool.size).toBe(3);
+    expect(() => pool.storeFrame(1, 46, new Uint8Array(46 * 46))).toThrow(RangeError);
+  });
+
+  it('grows the pool only when every slot is live and keeps existing frame data intact', () => {
+    const pool = new PreallocatedFramePool(2, 21 * 21);
+    pool.storeFrame(0, 21, new Uint8Array(441).fill(7));
+    pool.storeFrame(1, 21, new Uint8Array(441).fill(8));
+    pool.storeFrame(2, 21, new Uint8Array(441).fill(9));
+    expect(pool.slotCapacity).toBe(4);
+    expect(pool.getFrame(0)?.data[440]).toBe(7);
+    expect(pool.getFrame(1)?.data[0]).toBe(8);
+    expect(pool.getFrame(2)?.data[0]).toBe(9);
+    pool.clear();
+    expect(pool.size).toBe(0);
+    expect(pool.slotCapacity).toBe(4);
+  });
+
+  it('runs the fountain stream lifecycle: INITIALIZED, frames past K, no wrap or restart', () => {
+    const file = new Blob(['fountain lifecycle']);
+    const onInitialized = vi.fn();
+    const onFrame = vi.fn();
+    const onError = vi.fn();
+    const session = new TransferSession(file, { config: mockConfig }, { onInitialized, onFrame, onError });
+    expect(session.fountainMode).toBe(true);
+
+    session.handleWorkerMessage({ type: 'INITIALIZED', totalFrames: 2, chunkSize: 40, sha256: 'abc', fountain: { k: 2, symbolSize: 40, compression: 'none', messageLength: 70 } });
+    expect(onInitialized).toHaveBeenCalledWith(2, 40, 'abc');
+    expect(session.symbolSize).toBe(40);
+
+    for (let index = 0; index < 5; index++) {
+      session.handleWorkerMessage({ type: 'FRAME', index, total: 2, size: 21, data: new Uint8Array(441) });
+      const frame = session.step();
+      expect(frame?.index).toBe(index);
+      expect(frame?.isHandshake).toBe(false);
+    }
+    // Rateless: the index keeps increasing instead of wrapping at K.
+    expect(session.currentFrameIndex).toBe(5);
+
+    session.handleWorkerMessage({ type: 'ERROR', message: 'boom' });
+    expect(onError).toHaveBeenCalledWith('boom');
+    session.destroy();
+  });
+
+  it('keeps the legacy carousel wrap when fountain mode is disabled', () => {
+    const session = new TransferSession(new Blob(['legacy']), { config: mockConfig, fountainMode: false });
+    session.handleWorkerMessage({ type: 'INITIALIZED', totalFrames: 2, chunkSize: 180, sha256: '', fountain: null });
+    session.handleWorkerMessage({ type: 'FRAME', index: 0, total: 2, size: 21, data: new Uint8Array(441) });
+    expect(session.step()?.isHandshake).toBe(true);
+    session.handleWorkerMessage({ type: 'FRAME', index: 1, total: 2, size: 21, data: new Uint8Array(441) });
+    session.step();
+    expect(session.currentFrameIndex).toBe(0);
+    session.destroy();
+  });
+
+  it('starts and stops timed playback', () => {
+    vi.useFakeTimers();
+    const onFrame = vi.fn();
+    const session = new TransferSession(new Blob(['timer']), { config: mockConfig, fps: 20 }, { onFrame });
+    session.handleWorkerMessage({ type: 'FRAME', index: 0, total: 1, size: 21, data: new Uint8Array(441) });
+    session.start();
+    expect(session.isRunning).toBe(true);
+    vi.advanceTimersByTime(60);
+    expect(onFrame).toHaveBeenCalledTimes(1);
+    session.stop();
+    expect(session.isRunning).toBe(false);
+    session.destroy();
+    vi.useRealTimers();
+  });
 });

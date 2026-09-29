@@ -17,17 +17,19 @@
 */
 
 /**
- * Metadata descriptor for a rateless fountain droplet symbol.
+ * Self-describing metadata carried by every rateless fountain droplet.
+ * Mirrors the BC-UR multipart fragment header (BCR-2020-005):
+ * `[seqNum, seqLen, messageLen, checksum, data]`.
  */
 export interface DropletMetadata {
-  /** Droplet sequence seed index (1-based). */
+  /** Droplet sequence number (1-based). The first `k` droplets are systematic. */
   seq: number;
-  /** Total number of source blocks (K). */
+  /** Total number of source blocks (BC-UR `seqLen`, often called K). */
   k: number;
-  /** Total file size in bytes. */
-  fileSize: number;
-  /** Expected checksum (first 8 chars of SHA-256 or CRC32 hex). */
-  checksum: string;
+  /** Byte length of the fountain-encoded message (BC-UR `messageLen`). */
+  messageLength: number;
+  /** CRC-32 of the complete message (BC-UR `checksum`); binds droplets to one session. */
+  checksum: number;
 }
 
 /**
@@ -38,7 +40,7 @@ export interface FountainDroplet extends DropletMetadata {
   indices: number[];
   /** Degree of the droplet (number of combined source blocks). */
   degree: number;
-  /** The XOR-combined payload bytes. */
+  /** The XOR-combined payload bytes (always exactly one block long). */
   data: Uint8Array;
 }
 
@@ -46,11 +48,16 @@ export interface FountainDroplet extends DropletMetadata {
  * Options for fountain encoding.
  */
 export interface FountainEncoderOptions {
-  /** Target block size in bytes. Defaults to 180. */
+  /** Symbol (block) size in bytes. Defaults to 64. */
   blockSize?: number;
   /** Tuning parameter c for Robust Soliton. Defaults to 0.1. */
   c?: number;
   /** Failure probability delta for Robust Soliton. Defaults to 0.05. */
   delta?: number;
+  /**
+   * Highest sequence number emitted before the stream wraps back to the first
+   * repair droplet (`k + 1`). Bounds the header width so the QR version stays
+   * constant for the whole session. Defaults to `max(16 * k, 9999)`.
+   */
+  maxSeq?: number;
 }
-

@@ -6,7 +6,7 @@ status: accepted
 
 ## Context
 
-Optical barcode scanning from real-time webcam streams, uploaded image files, and video recordings previously suffered from architectural fragmentation and shallowness. The scanning pipeline was split across [`src/hooks/useAdaptiveScanner.ts`](../../src/hooks/useAdaptiveScanner.ts), [`src/utils/FrameProvider.ts`](../../src/utils/FrameProvider.ts), [`src/utils/AdaptiveFrameScheduler.ts`](../../src/utils/AdaptiveFrameScheduler.ts), and [`src/utils/scannerWorker.ts`](../../src/utils/scannerWorker.ts).
+Optical barcode scanning from real-time webcam streams, uploaded image files, and video recordings previously suffered from architectural fragmentation and shallowness. The scanning pipeline was split across [`src/hooks/useAdaptiveScanner.ts`](../../src/hooks/useAdaptiveScanner.ts), `src/utils/FrameProvider.ts` (since deleted), `src/utils/AdaptiveFrameScheduler.ts` (since deleted), and `src/utils/scannerWorker.ts` (since deleted).
 
 This fragmentation caused several acute maintenance and reliability challenges:
 

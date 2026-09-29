@@ -116,35 +116,27 @@ export default defineConfig(() => {
         coverage: {
           reporter: ['text', 'json-summary', 'json'],
           reportOnFailure: true,
+          // Floors set just under the measured totals for the scope below; raise
+          // them as coverage improves, never lower them to make a PR pass.
           thresholds: {
-            statements: 81,
-            branches: 80,
-            functions: 89,
-            lines: 81,
+            // Measured on dev when this scope was introduced: statements 80.4%,
+            // branches 73.1%, functions 86.1%, lines 81.4%.
+            statements: 80,
+            branches: 72,
+            functions: 85,
+            lines: 80,
           },
+          // Measure the logic layers: shared utilities, the deep-module packages
+          // and the Cloudflare Pages Functions. Components, hooks and pages are
+          // exercised by the jsdom project and Playwright but not gated here.
           include: [
-            'src/utils/*.ts',
-            'src/utils/qr-renderers/*.ts'
+            'src/utils/**/*.ts',
+            'src/packages/**/*.ts',
+            'functions/**/*.ts',
           ],
           exclude: [
-            'src/utils/svgContext.ts',
-            'src/utils/svgExport.ts',
-            'src/utils/templateRenderer.ts',
-            'src/utils/a11y.ts',
-            'src/utils/assetCache.ts',
-            'src/utils/imageResizeHelper.ts',
-            'src/utils/imageResizeWorker.ts',
-            'src/utils/matrixWorker.ts',
-            'src/utils/mazeContract.ts',
-            'src/utils/mazeWorker.ts',
-            'src/utils/metadataEngine.ts',
-            'src/utils/notificationStyles.ts',
-            'src/utils/publicEnvironment.ts',
-            'src/utils/scannabilityChecker.ts',
-            'src/utils/schemaGenerator.ts',
-            'src/utils/security.ts',
-            'src/utils/exportRiskPolicy.ts',
-            'src/utils/qrRenderer.ts',
+            '**/*.test.ts',
+            '**/*.d.ts',
           ],
         }
       },

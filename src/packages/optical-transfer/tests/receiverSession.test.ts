@@ -17,36 +17,58 @@
 */
 
 import { describe, it, expect, vi } from 'vitest';
-import { ReceiverSession, FountainEncoder } from '../index';
+import { ReceiverSession, FountainEncoder, createFountainSession, encodeSessionMessage } from '../index';
 
 describe('Optical Transfer Receiver Engine', () => {
-  it('should autonomously sniff and process rateless fountain streams with stateless stream entry', () => {
-    const originalText = 'Stateless optical transfer payload via fountain code';
+  it('should autonomously sniff and process rateless fountain streams with stateless stream entry', async () => {
+    const originalText = 'Stateless optical transfer payload via fountain code. '.repeat(20);
     const originalBytes = new TextEncoder().encode(originalText);
-    const encoder = new FountainEncoder(originalBytes, { blockSize: 30 });
+    const { encoder, header } = await createFountainSession(originalBytes, {
+      fileName: 'notes.txt',
+      mimeType: 'text/plain',
+    });
 
     const onProgress = vi.fn();
     const onSuccess = vi.fn();
+    const onError = vi.fn();
+    // No handshake required and none ever sent: the droplets are self-describing.
+    const session = new ReceiverSession({ onProgress, onSuccess, onError, handshakeRequired: true });
 
-    const session = new ReceiverSession({ onProgress, onSuccess });
-
-    // Skip the first 10 droplets (simulating user pointing camera mid-stream)
-    for (let i = 0; i < 10; i++) {
-      encoder.nextDropletString();
+    // Join mid-stream (skip the first 10 droplets) and lose every third frame.
+    let index = 10;
+    while (!session.isComplete && index < 10 + encoder.k * 4) {
+      if (index % 3 !== 0) session.ingest(encoder.dropletStringForIndex(index));
+      index++;
     }
-
-    let iterations = 0;
-    while (!session.isComplete && iterations < 100) {
-      const dropletStr = encoder.nextDropletString();
-      session.ingest(dropletStr);
-      iterations++;
-    }
+    await session.completion;
 
     expect(session.isComplete).toBe(true);
-    expect(onSuccess).toHaveBeenCalled();
-    const [reassembled] = onSuccess.mock.calls[0];
+    expect(onError).not.toHaveBeenCalled();
+    expect(onProgress).toHaveBeenCalled();
+    expect(onSuccess).toHaveBeenCalledTimes(1);
+    const [reassembled, handshake] = onSuccess.mock.calls[0];
     expect(new TextDecoder().decode(reassembled)).toBe(originalText);
+    expect(handshake).toMatchObject({ fileName: 'notes.txt', mimeType: 'text/plain', sha256: header.sha256 });
+    expect(session.ingest(encoder.dropletStringForIndex(index))).toBe(false);
 
+    session.destroy();
+  });
+
+  it('should report an integrity error instead of succeeding when the session hash does not match', async () => {
+    const bytes = new TextEncoder().encode('tampered payload');
+    const message = encodeSessionMessage(
+      { fileName: 'x.bin', mimeType: 'application/octet-stream', fileSize: bytes.length, sha256: '00'.repeat(32), compression: 'none' },
+      bytes
+    );
+    const encoder = new FountainEncoder(message, { blockSize: 16 });
+    const onSuccess = vi.fn();
+    const onError = vi.fn();
+    const session = new ReceiverSession({ onSuccess, onError });
+    for (let i = 0; i < encoder.k; i++) session.ingest(encoder.dropletStringForIndex(i));
+    await session.completion;
+
+    expect(onSuccess).not.toHaveBeenCalled();
+    expect(onError).toHaveBeenCalledWith(expect.stringMatching(/SHA-256 mismatch/));
     session.destroy();
   });
 

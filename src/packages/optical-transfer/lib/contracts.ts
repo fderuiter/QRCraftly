@@ -17,6 +17,7 @@
 */
 
 import { QRConfig } from '@/types';
+import type { TransferCompression } from './fountain/session';
 
 /**
  * Handshake metadata exchanged at the beginning of legacy streams or derived from droplet headers.
@@ -55,6 +56,7 @@ export interface SenderSessionOptions {
   config: QRConfig;
   chunkSize?: number;
   fps?: number;
+  /** Rateless BC-UR fountain broadcast with no handshake frame. Defaults to true. */
   fountainMode?: boolean;
 }
 
@@ -62,6 +64,7 @@ export interface SenderSessionOptions {
  * Configuration options for the headless receiver session.
  */
 export interface ReceiverSessionOptions {
+  /** Require an `H|` handshake before legacy `F|` chunks. Fountain streams carry their own session header and never need one. */
   handshakeRequired?: boolean;
   streamMode?: 'text' | 'binary';
   autoDownload?: boolean;
@@ -71,3 +74,36 @@ export interface ReceiverSessionOptions {
   onSecurityAlert?: (message: string) => void;
 }
 
+
+/** START payload accepted by the slice worker. */
+export interface SliceStartPayload {
+  file?: Blob;
+  chunkSize?: number;
+  errorCorrectionLevel?: string;
+  fps?: number;
+  /** Rateless BC-UR fountain broadcast (default in `useOpticalSender`). */
+  fountainMode?: boolean;
+}
+
+/** Messages the slice worker accepts. */
+export type SliceWorkerIncomingMessage =
+  | { type: 'START'; payload?: SliceStartPayload }
+  | { type: 'ACK'; payload?: { index?: number } }
+  | { type: 'HEAL'; payload?: { lastAckedIndex?: unknown } }
+  | { type: 'STOP' };
+
+/** Fountain session details reported on INITIALIZED. */
+export interface FountainInitInfo {
+  k: number;
+  symbolSize: number;
+  compression: TransferCompression;
+  messageLength: number;
+}
+
+/** Messages the slice worker emits. */
+export type SliceWorkerOutgoingMessage =
+  | { type: 'FRAME'; index: number; total: number; size: number; data: Uint8Array }
+  | { type: 'PROGRESS'; index: number; total: number; fileName?: string; fileSize?: number }
+  | { type: 'INITIALIZED'; totalFrames: number; chunkSize: number; sha256: string; fountain: FountainInitInfo | null }
+  | { type: 'COMPLETE' }
+  | { type: 'ERROR'; message: string };
