@@ -18,7 +18,7 @@
 
 import '@testing-library/jest-dom';
 import 'vitest-axe/extend-expect';
-import { terminateSharedScannerWorker } from './src/utils/sharedScannerWorker';
+import { terminateScannerWorker } from './src/packages/optical-scanner/scheduler';
 import * as matchers from 'vitest-axe/matchers';
 import { vi, afterEach, expect } from 'vitest';
 import { isDangerousUrl } from './src/utils/security';
@@ -1211,8 +1211,5 @@ afterEach(() => {
   if (globalThis.mockWorkerControl) {
     globalThis.mockWorkerControl.reset();
   }
-  terminateSharedScannerWorker();
-  if (typeof (globalThis as any).terminateSharedScannerWorker === 'function') {
-    (globalThis as any).terminateSharedScannerWorker();
-  }
+  terminateScannerWorker();
 });

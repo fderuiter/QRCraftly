@@ -82,6 +82,10 @@ _Avoid_: Stale frame response, dropped signal, busy unlock event
 A consolidated deep module encapsulating real-time webcam frame acquisition, multi-format media decoding (images, WebM, MKV), transferable buffer recycling, and off-thread Web Worker barcode decoding behind a unified entry-point seam.
 _Avoid_: Camera frame provider, QR scanner helper, scanner utility
 
+**Camera Scanner Engine**:
+The headless component of the Optical Detection Engine that owns the live camera frame loop, adaptive sampling, backpressure, downscaling, and the private scanner worker (epochs, 1500ms watchdog, three-retry exponential backoff, and main-thread fallback). React code reaches it only through the `useQrScanner` adapter hook.
+_Avoid_: Camera frame provider, scanner loop hook, worker ref
+
 **Adaptive Frame Scheduler**:
 A backpressure and pacing controller managing dynamic sleep intervals, in-flight frame sequencing, execution latency histories, and starvation watchdog recovery during continuous video capture.
 _Avoid_: Frame timer, scanner loop, camera ticker
