@@ -17,18 +17,18 @@
 */
 
 import React, { useState, useCallback, useRef } from 'react';
-import { Play, Square, Camera, AlertTriangle, Activity, Cpu, Sun, Moon, QrCode, ArrowLeft, Trash2, CheckCircle2, Upload } from 'lucide-react';
+import { Play, Square, Camera, AlertTriangle, Activity, Cpu, QrCode, Trash2, CheckCircle2, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Alert } from '@/components/ui/Alert';
-import { useTheme } from '@/hooks/useTheme';
+import { PrimaryNav } from '@/components/ui/PrimaryNav';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { useToast } from '@/components/ui/Toast';
 import { useAnimatedQrReceiver } from '@/hooks/useAnimatedQrReceiver';
 import { QRProvider } from '@/context/QRContext';
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
 
 function FileTransferReceiveInner() {
-  const { isDarkMode, toggleDarkMode } = useTheme();
   const { addToast } = useToast();
 
   const [streamMode, setStreamMode] = useState<'text' | 'binary'>('text');
@@ -151,12 +151,12 @@ function FileTransferReceiveInner() {
   const progressPercent = totalChunks ? Math.round((receivedCount / totalChunks) * 100) : 0;
 
   return (
-    <div className={`${isDarkMode ? 'dark' : ''} min-h-screen w-full`}>
+    <div className="min-h-screen w-full">
       <div className="relative flex h-screen min-h-screen flex-col-reverse overflow-hidden bg-slate-50 transition-colors duration-300 md:h-auto md:min-h-0 md:flex-row md:overflow-visible dark:bg-slate-950">
         
         {/* Left Stats & controls Sidebar */}
         <aside aria-label="Receiver Settings and Controls" className="relative z-10 flex max-h-[50vh] w-full flex-col overflow-y-auto border-r border-slate-200 bg-white shadow-xl transition-colors duration-300 md:max-h-none md:w-120 dark:border-slate-800 dark:bg-slate-900">
-          <header className="sticky top-0 z-20 flex items-center justify-between border-b border-slate-100 bg-white p-6 transition-colors duration-300 dark:border-slate-800 dark:bg-slate-900">
+          <header className="sticky top-0 z-20 flex items-center justify-between gap-2 border-b border-slate-100 bg-white p-6 transition-colors duration-300 dark:border-slate-800 dark:bg-slate-900">
             <div>
               <a href="/" aria-label="Home" className="mb-1 flex items-center gap-2 text-teal-700 transition-opacity hover:opacity-80 dark:text-teal-400">
                 <QrCode className="size-6" />
@@ -167,25 +167,9 @@ function FileTransferReceiveInner() {
                 <span className="rounded-full bg-teal-100 px-2 py-0.5 text-xs font-semibold text-teal-800 dark:bg-teal-900/60 dark:text-teal-300">Beta</span>
               </div>
             </div>
-            <div className="flex gap-2">
-              <a
-                href="/file-transfer"
-                className="flex items-center gap-1 rounded-full p-2 text-slate-500 transition-colors hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
-                title="Back to Sender"
-                aria-label="Back to File Sender"
-              >
-                <ArrowLeft className="size-5" />
-              </a>
-              <Button
-                variant="icon"
-                size="icon"
-                onClick={toggleDarkMode}
-                className="rounded-full"
-                title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
-                aria-label={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
-              >
-                {isDarkMode ? <Sun className="size-5" /> : <Moon className="size-5" />}
-              </Button>
+            <div className="flex shrink-0 items-center gap-1">
+              <PrimaryNav layout="compact" />
+              <ThemeToggle />
             </div>
           </header>
 

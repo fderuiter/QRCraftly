@@ -62,9 +62,9 @@ Boundary checks run automatically during `pnpm run lint` and CI.
 
 - **Purpose**: Consolidated off-thread barcode decoding for live camera video streams, static images, and video files with adaptive backpressure throttling and watchdog fault recovery.
 - **Entry Points**:
-  - `index.ts`: Public API, polymorphic `scan(source, options)` for files/images, scanner contracts, and downscaling math.
-  - `client.ts`: Headless React hook (`useQrScanner`) with integrated camera streaming and file drag-and-drop.
-  - `scheduler.ts`: Secondary entry point exposing `AdaptiveFrameScheduler`, `DoubleBufferPool`, and worker recovery testing hooks.
+  - `index.ts`: Public API, polymorphic `scan(source, options)` for files/images, the headless Camera Scanner Engine (`createCameraScannerEngine`), scanner contracts, and downscaling math.
+  - `client.ts`: Thin React adapter hook (`useQrScanner`) over the Camera Scanner Engine, plus file drag-and-drop scanning.
+  - `scheduler.ts`: Secondary entry point exposing `AdaptiveFrameScheduler`, `DoubleBufferPool`, and `terminateScannerWorker` (shared file-scan worker teardown). Worker spawning is private to the package.
   - `worker.ts`: Dedicated background Web Worker performing WebCodecs demuxing, EBML parsing, and jsQR optical decoding.
 
 ### `qr-payload` (`@/packages/qr-payload`)

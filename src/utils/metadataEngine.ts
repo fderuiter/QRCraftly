@@ -143,6 +143,7 @@ export const formatPathName = (segment: string): string => {
     'audio-qr': 'Audio QR',
     'destroy-the-qr': 'Destroy the QR',
     'game': 'QR Damage Simulator Game',
+    'arcade': 'QR Arcade',
     'security': 'Security & Privacy',
   };
 

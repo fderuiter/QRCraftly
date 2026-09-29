@@ -57,7 +57,7 @@ const isInputDataValid = (type: QRType, data: any): boolean => {
  * @returns An object containing the component to render and its props.
  */
 export function useInputLogic(
-  config: QRConfig,
+  config: Pick<QRConfig, 'type' | 'value'>,
   onChange: (updates: Partial<QRConfig>) => void,
 ): { InputComponent: ElementType | null; inputProps: { data: InputDataMap[keyof InputDataMap]; onChange: (updates: Partial<InputDataMap[keyof InputDataMap]>) => void } | Record<string, never> } {
   // Initialize state for all types from registry

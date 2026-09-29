@@ -13,6 +13,10 @@ import {
   computeNextBump,
   groupCommits,
   formatChangelogSection,
+  compareVersions,
+  parseGitLog,
+  insertChangelogSection,
+  extractReleaseNotes,
 } from '../scripts/release_engine.js';
 
 // ---------------------------------------------------------------------------
@@ -231,5 +235,110 @@ describe('formatChangelogSection', () => {
     const result = formatChangelogSection('0.8.0', '2026-09-03', groups);
     expect(result).toContain('`a1b2c3d`');
     expect(result).not.toContain('a1b2c3d4e5f6');
+  });
+});
+// ---------------------------------------------------------------------------
+// compareVersions
+// ---------------------------------------------------------------------------
+describe('compareVersions', () => {
+  it('orders versions by major, then minor, then patch', () => {
+    expect(compareVersions(parseTagVersion('0.9.0'), parseTagVersion('v0.8.0'))).toBeGreaterThan(0);
+    expect(compareVersions(parseTagVersion('0.8.1'), parseTagVersion('0.8.0'))).toBeGreaterThan(0);
+    expect(compareVersions(parseTagVersion('0.8.0'), parseTagVersion('v0.8.0'))).toBe(0);
+    expect(compareVersions(parseTagVersion('0.7.9'), parseTagVersion('1.0.0'))).toBeLessThan(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// parseGitLog
+// ---------------------------------------------------------------------------
+describe('parseGitLog', () => {
+  const FS = '\x1f';
+  const RS = '\x1e';
+
+  it('keeps multi-line bodies with their commit instead of splitting them into bogus commits', () => {
+    const raw =
+      `aaa${FS}Fred${FS}feat(qr): redesign API${FS}Details line 1\n\nBREAKING CHANGE: renamed options${RS}\n` +
+      `bbb${FS}Fred${FS}fix: small fix${FS}${RS}\n`;
+    const commits = parseGitLog(raw);
+    expect(commits).toHaveLength(2);
+    expect(commits[0]).toEqual({
+      hash: 'aaa',
+      author: 'Fred',
+      subject: 'feat(qr): redesign API',
+      body: 'Details line 1\n\nBREAKING CHANGE: renamed options',
+    });
+    expect(commits[1].subject).toBe('fix: small fix');
+    expect(computeNextBump(commits)).toBe('major');
+  });
+
+  it('returns no commits for empty output', () => {
+    expect(parseGitLog('')).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// insertChangelogSection / extractReleaseNotes
+// ---------------------------------------------------------------------------
+describe('insertChangelogSection', () => {
+  const existing = [
+    '# Changelog',
+    '',
+    'Intro.',
+    '',
+    '---',
+    '',
+    '## [Unreleased]',
+    '',
+    '## [0.8.0] - 2026-09-03',
+    '',
+    '### Features',
+    '',
+    '- feat: old (`aaaaaaa`)',
+    '',
+  ].join('\n');
+
+  it('puts the new release below [Unreleased] and above the previous release', () => {
+    const section = '## [0.9.0] - 2026-10-01\n\n### Bug Fixes\n- fix: new (`bbbbbbb`)';
+    const updated = insertChangelogSection(existing, section);
+    const unreleased = updated.indexOf('## [Unreleased]');
+    const next = updated.indexOf('## [0.9.0]');
+    const previous = updated.indexOf('## [0.8.0]');
+    expect(unreleased).toBeLessThan(next);
+    expect(next).toBeLessThan(previous);
+    expect(updated).toContain('- fix: new (`bbbbbbb`)\n\n---\n\n## [0.8.0]');
+  });
+
+  it('creates a Keep a Changelog header when the file is empty', () => {
+    const updated = insertChangelogSection('', '## [0.1.0] - 2026-10-01');
+    expect(updated.startsWith('# Changelog')).toBe(true);
+    expect(updated.indexOf('## [Unreleased]')).toBeLessThan(updated.indexOf('## [0.1.0]'));
+  });
+});
+
+describe('extractReleaseNotes', () => {
+  const changelog = [
+    '# Changelog',
+    '',
+    '## [Unreleased]',
+    '',
+    '## [0.9.0] - 2026-10-01',
+    '',
+    '### Bug Fixes',
+    '- fix: new',
+    '',
+    '---',
+    '',
+    '## [0.8.0] - 2026-09-03',
+    '- feat: old',
+  ].join('\r\n');
+
+  it('returns only the body of the requested version', () => {
+    expect(extractReleaseNotes(changelog, '0.9.0')).toBe('### Bug Fixes\n- fix: new');
+    expect(extractReleaseNotes(changelog, '0.8.0')).toBe('- feat: old');
+  });
+
+  it('returns null for a version with no section', () => {
+    expect(extractReleaseNotes(changelog, '1.0.0')).toBeNull();
   });
 });

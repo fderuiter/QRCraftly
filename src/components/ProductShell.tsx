@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react';
 import { QrCode } from 'lucide-react';
 import { isDangerousUrl } from '../utils/security';
+import { PrimaryNav } from './ui/PrimaryNav';
+import { ThemeToggle } from './ui/ThemeToggle';
 
 const generatorLinks = [
   ['URL', '/'],
@@ -19,21 +21,15 @@ export function ProductShell({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-screen w-full flex-col bg-slate-50 dark:bg-slate-950">
       <header className="border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-6 p-4 sm:px-6">
-          <a href="/" aria-label="QRCraftly Home" className="flex items-center gap-2 text-teal-700 transition-opacity hover:opacity-80 dark:text-teal-400">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 p-4 sm:gap-6 sm:px-6">
+          <a href="/" aria-label="QRCraftly Home" className="flex min-w-0 items-center gap-2 text-teal-700 transition-opacity hover:opacity-80 dark:text-teal-400">
             <QrCode className="size-7" aria-hidden="true" />
             <span className="text-xl font-bold tracking-tight text-slate-800 dark:text-slate-100">QRCraftly</span>
           </a>
-          <nav aria-label="Primary navigation" className="flex items-center gap-1 text-sm font-semibold sm:gap-2">
-            <a href="/" className="rounded-lg px-3 py-2 text-slate-600 transition-colors hover:bg-slate-100 hover:text-teal-700 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-teal-400">Create QR</a>
-            <a href="/file-transfer" className="hidden rounded-lg px-3 py-2 text-slate-600 transition-colors hover:bg-slate-100 hover:text-teal-700 sm:block dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-teal-400">Send File</a>
-            <a href="/file-transfer" className="hidden items-center gap-1.5 rounded-lg px-3 py-2 text-slate-600 transition-colors hover:bg-slate-100 hover:text-teal-700 sm:inline-flex dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-teal-400">
-              <span>Send File</span>
-              <span className="rounded-full bg-teal-100 px-1.5 py-0.5 text-[10px] font-semibold text-teal-800 dark:bg-teal-900/60 dark:text-teal-300">Beta</span>
-            </a>
-            <a href="/about" className="rounded-lg px-3 py-2 text-slate-600 transition-colors hover:bg-slate-100 hover:text-teal-700 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-teal-400">About</a>
-            <a href="/security" className="hidden rounded-lg px-3 py-2 text-slate-600 transition-colors hover:bg-slate-100 hover:text-teal-700 md:block dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-teal-400">Security</a>
-          </nav>
+          <div className="flex shrink-0 items-center gap-1">
+            <PrimaryNav />
+            <ThemeToggle />
+          </div>
         </div>
       </header>
 

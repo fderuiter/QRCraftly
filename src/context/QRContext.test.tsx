@@ -20,12 +20,14 @@ import React from 'react';
 import { render, renderHook, act, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
+  clearRetainedAppearance,
   QRProvider,
   useQRStore,
   useQRStoreSelector,
   useOptionalQRStoreSelector,
 } from './QRContext';
 import { DEFAULT_CONFIG } from '@/constants';
+import { QRConfig, QRErrorCorrectionLevel, QRType, SocialFormat } from '@/types';
 
 // ---------------------------------------------------------------------------
 // Helper wrapper
@@ -121,9 +123,14 @@ describe('QRProvider and useQRStore', () => {
     expect(result.current.getState().preferences.telemetryOptIn).toBeNull();
   });
 
-  it('defaults darkMode to false', () => {
+  it('does not own the colour theme (owned by the global ThemeProvider)', () => {
     const { result } = renderHook(() => useQRStore(), { wrapper });
-    expect(result.current.getState().preferences.darkMode).toBe(false);
+    expect(Object.keys(result.current.getState().preferences)).toEqual(['telemetryOptIn']);
+  });
+
+  it('does not keep an unused violations list in state', () => {
+    const { result } = renderHook(() => useQRStore(), { wrapper });
+    expect(result.current.getState()).not.toHaveProperty('violations');
   });
 });
 
@@ -157,6 +164,47 @@ describe('QRStore.updateConfig', () => {
     expect(listener).toHaveBeenCalledTimes(1);
   });
 
+  it('does not notify subscribers when an update changes nothing', () => {
+    const { result } = renderHook(() => useQRStore(), { wrapper });
+    const listener = vi.fn();
+    const before = result.current.getState();
+    act(() => {
+      result.current.subscribe(listener);
+    });
+    act(() => {
+      result.current.updateConfig({ value: before.config.value, fgColor: before.config.fgColor });
+      result.current.updateConfig({});
+    });
+    expect(listener).not.toHaveBeenCalled();
+    expect(result.current.getState()).toBe(before);
+  });
+
+  it('keeps scannability fallback active across appearance-only changes', () => {
+    const { result } = renderHook(() => useQRStore(), { wrapper });
+    act(() => {
+      result.current.emitSignal('scannability-fail', { errorType: 'LOW_CONTRAST' });
+    });
+    act(() => {
+      result.current.updateConfig({ fgColor: '#123456', bgColor: '#fafafa' });
+    });
+    expect(result.current.getState().isScannabilityFallbackActive).toBe(true);
+  });
+
+  it.each([
+    ['value', { value: 'https://changed.example' }],
+    ['errorCorrectionLevel', { errorCorrectionLevel: QRErrorCorrectionLevel.L }],
+    ['type', { type: QRType.TEXT }],
+  ] as const)('resets scannability fallback when %s changes', (_field, update) => {
+    const { result } = renderHook(() => useQRStore(), { wrapper });
+    act(() => {
+      result.current.emitSignal('scannability-fail', { errorType: 'LOW_CONTRAST' });
+    });
+    act(() => {
+      result.current.updateConfig(update);
+    });
+    expect(result.current.getState().isScannabilityFallbackActive).toBe(false);
+  });
+
   it('can update multiple config fields at once', () => {
     const { result } = renderHook(() => useQRStore(), { wrapper });
     act(() => {
@@ -177,12 +225,26 @@ describe('QRStore.updatePreferences', () => {
     clearLocalStorage();
   });
 
-  it('updates darkMode preference', () => {
+  it('does not notify when the preference is unchanged', () => {
     const { result } = renderHook(() => useQRStore(), { wrapper });
+    const listener = vi.fn();
     act(() => {
-      result.current.updatePreferences({ darkMode: true });
+      result.current.subscribe(listener);
+      result.current.updatePreferences({ telemetryOptIn: null });
+      result.current.updatePreferences({});
     });
-    expect(result.current.getState().preferences.darkMode).toBe(true);
+    expect(listener).not.toHaveBeenCalled();
+  });
+
+  it('probes storage once per store rather than on every update', () => {
+    const removeSpy = vi.spyOn(Storage.prototype, 'removeItem');
+    const { result } = renderHook(() => useQRStore(), { wrapper });
+    const probesAfterCreate = removeSpy.mock.calls.filter(([key]) => key === '__test__').length;
+    act(() => {
+      result.current.updatePreferences({ telemetryOptIn: true });
+      result.current.updatePreferences({ telemetryOptIn: false });
+    });
+    expect(removeSpy.mock.calls.filter(([key]) => key === '__test__').length).toBe(probesAfterCreate);
   });
 
   it('updates telemetryOptIn preference', () => {
@@ -225,11 +287,11 @@ describe('QRStore.updatePreferences', () => {
     await act(async () => {
       await new Promise(r => setTimeout(r, 50));
     });
-    // Then update preferences with only darkMode (not telemetryOptIn)
+    // Then reset the preference to null (unanswered)
     const setItemSpy = vi.spyOn(Storage.prototype, 'setItem');
     setItemSpy.mockClear();
     act(() => {
-      result.current.updatePreferences({ darkMode: true });
+      result.current.updatePreferences({ telemetryOptIn: null });
     });
     await act(async () => {
       await new Promise(r => setTimeout(r, 50));
@@ -332,18 +394,6 @@ describe('QRStore signals', () => {
     expect(callback).toHaveBeenCalledWith({ errorType: 'NOT_FOUND' });
   });
 
-  it('registerSignal and emitSignal - render-complete', () => {
-    const { result } = renderHook(() => useQRStore(), { wrapper });
-    const callback = vi.fn();
-    act(() => {
-      result.current.registerSignal('render-complete', callback);
-    });
-    act(() => {
-      result.current.emitSignal('render-complete', { moduleCount: 33 });
-    });
-    expect(callback).toHaveBeenCalledWith({ moduleCount: 33 });
-  });
-
   it('unregistering a signal callback stops it from being called', () => {
     const { result } = renderHook(() => useQRStore(), { wrapper });
     const callback = vi.fn();
@@ -360,22 +410,12 @@ describe('QRStore signals', () => {
     expect(callback).not.toHaveBeenCalled();
   });
 
-  it('emitting render-complete with moduleCount updates store moduleCount', async () => {
+  it('scannability-fail activates the store-owned fallback flag', () => {
     const { result } = renderHook(() => useQRStore(), { wrapper });
-    // QRProvider registers its own 'render-complete' handler to call setModuleCount
     act(() => {
-      result.current.emitSignal('render-complete', { moduleCount: 41 });
+      result.current.emitSignal('scannability-fail', { engine: 'native', styleId: 'square', errorType: 'NOT_FOUND' });
     });
-    expect(result.current.getState().moduleCount).toBe(41);
-  });
-
-  it('emitting render-complete without moduleCount does not update store', () => {
-    const { result } = renderHook(() => useQRStore(), { wrapper });
-    const before = result.current.getState().moduleCount;
-    act(() => {
-      result.current.emitSignal('render-complete', {});
-    });
-    expect(result.current.getState().moduleCount).toBe(before);
+    expect(result.current.getState().isScannabilityFallbackActive).toBe(true);
   });
 
   it('multiple callbacks on same signal are all notified', () => {
@@ -437,14 +477,6 @@ describe('useQRStoreSelector', () => {
     expect(renderCount.count).toBe(initialCount); // No spurious re-renders in original hook
   });
 
-  it('selector for preferences.darkMode returns false initially', () => {
-    const { result } = renderHook(
-      () => useQRStoreSelector(s => s.preferences.darkMode),
-      { wrapper }
-    );
-    expect(result.current).toBe(false);
-  });
-
   it('selector for preferences.telemetryOptIn returns null initially', () => {
     const { result } = renderHook(
       () => useQRStoreSelector(s => s.preferences.telemetryOptIn),
@@ -485,5 +517,60 @@ describe('useOptionalQRStoreSelector', () => {
   it('returns selected state when inside QRProvider', () => {
     const { result } = renderHook(() => useOptionalQRStoreSelector(s => s.moduleCount), { wrapper });
     expect(result.current).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests: appearance retained across generator routes (memory only)
+// ---------------------------------------------------------------------------
+describe('QRProvider retainAppearance', () => {
+  afterEach(() => {
+    clearRetainedAppearance();
+    clearLocalStorage();
+  });
+
+  const retainingWrapper = (initialConfig: Partial<QRConfig>) =>
+    ({ children }: { children: React.ReactNode }) => (
+      <QRProvider initialConfig={initialConfig} retainAppearance>{children}</QRProvider>
+    );
+
+  it('carries appearance, but never content or free text, into the next route', () => {
+    const first = renderHook(() => useQRStore(), { wrapper: retainingWrapper({ ...DEFAULT_CONFIG, type: QRType.URL }) });
+    act(() => {
+      first.result.current.updateConfig({
+        value: 'https://secret.example/patient',
+        fgColor: '#112233',
+        socialFormat: SocialFormat.STORY_9_16,
+        templateHeadline: 'Private headline',
+      });
+    });
+    first.unmount();
+
+    const second = renderHook(() => useQRStore(), { wrapper: retainingWrapper({ ...DEFAULT_CONFIG, type: QRType.TEXT }) });
+    const config = second.result.current.getState().config;
+    expect(config.type).toBe(QRType.TEXT);
+    expect(config.value).toBe(DEFAULT_CONFIG.value);
+    expect(config.fgColor).toBe('#112233');
+    expect(config.socialFormat).toBe(SocialFormat.STORY_9_16);
+    expect(config.templateHeadline).toBe(DEFAULT_CONFIG.templateHeadline);
+  });
+
+  it('does not retain appearance for providers that did not opt in', () => {
+    const first = renderHook(() => useQRStore(), { wrapper });
+    act(() => {
+      first.result.current.updateConfig({ fgColor: '#445566' });
+    });
+    first.unmount();
+    const second = renderHook(() => useQRStore(), { wrapper: retainingWrapper({}) });
+    expect(second.result.current.getState().config.fgColor).toBe(DEFAULT_CONFIG.fgColor);
+  });
+
+  it('never writes retained appearance to persistent storage', () => {
+    const { result } = renderHook(() => useQRStore(), { wrapper: retainingWrapper({}) });
+    act(() => {
+      result.current.updateConfig({ fgColor: '#010203' });
+    });
+    expect(Object.keys(window.localStorage)).not.toContain('fgColor');
+    expect(JSON.stringify({ ...window.localStorage })).not.toContain('#010203');
   });
 });
