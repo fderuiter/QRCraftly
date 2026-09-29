@@ -309,7 +309,7 @@ describe('useScannability - changed behavior: uses useQRStore instead of useQRCo
 
     // Update preferences (unrelated to config or store identity)
     act(() => {
-      result.current.store.updatePreferences({ darkMode: true });
+      result.current.store.updatePreferences({ telemetryOptIn: false });
     });
 
     // Store reference is stable (same QRStore instance), config did not change,

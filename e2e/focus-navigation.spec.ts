@@ -95,35 +95,28 @@ test.describe('Focus Management & Keyboard Navigation', () => {
     await expect(modalTitle).not.toBeVisible();
   });
 
-  test('Keyboard focus transitions cleanly when switching input panels', async ({ page }) => {
-    // Focus the initial 'URL' tab
-    const urlTab = page.getByRole('tab', { name: 'URL' });
-    await urlTab.focus();
-    await expect(urlTab).toBeFocused();
+  test('QR types are links: Tab moves between them and arrow keys are not intercepted', async ({ page }) => {
+    const typeNav = page.getByRole('navigation', { name: 'QR code types' });
+    const urlLink = typeNav.getByRole('link', { name: 'URL' });
+    await expect(urlLink).toHaveAttribute('aria-current', 'page');
+    await urlLink.focus();
 
-    // Press ArrowRight to move to the 'Text' tab and programmatically switch
+    // Arrow keys leave focus and the route alone
     await page.keyboard.press('ArrowRight');
-    const textTab = page.getByRole('tab', { name: 'Text' });
-    await expect(textTab).toBeFocused();
+    await expect(urlLink).toBeFocused();
+    await expect(page).toHaveURL(/\/$/);
 
-    // Wait for the Text panel's input field to be rendered in the DOM and visible
-    const textInput = page.locator('#text-content');
-    await textInput.waitFor({ state: 'visible' });
-
-    // Press Tab to shift focus directly to the associated panel contents (Text input textarea)
+    // Tab reaches the next type link in document order
     await page.keyboard.press('Tab');
-    await expect(textInput).toBeFocused();
+    await expect(typeNav.getByRole('link', { name: 'Text' })).toBeFocused();
   });
 
-  test('Screen readers receive immediate change notifications during component state updates', async ({ page }) => {
-    const liveRegion = page.locator('[role="status"]').first();
-    
-    // Switch to WiFi tab
-    await page.getByRole('tab', { name: 'WiFi' }).click();
-    await expect(liveRegion).toHaveText('WiFi input loaded');
-
-    // Switch to Email tab
-    await page.getByRole('tab', { name: 'Email' }).click();
-    await expect(liveRegion).toHaveText('Email input loaded');
+  test('Choosing a QR type navigates to its route and the URL, current link and panel agree', async ({ page }) => {
+    await page.getByRole('navigation', { name: 'QR code types' }).getByRole('link', { name: 'WiFi' }).click();
+    await expect(page).toHaveURL(/\/wifi-qr-code$/);
+    await page.waitForSelector('main[data-hydrated="true"]');
+    await expect(page.getByRole('navigation', { name: 'QR code types' }).getByRole('link', { name: 'WiFi' })).toHaveAttribute('aria-current', 'page');
+    await expect(page.getByLabel('Network Name (SSID)')).toBeVisible();
+    await expect(page.locator('[role="status"]').first()).toHaveText('WiFi input loaded');
   });
 });

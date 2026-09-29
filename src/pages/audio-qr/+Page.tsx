@@ -25,15 +25,13 @@ import {
   Square, 
   Download, 
   Sliders, 
-  Sun, 
-  Moon, 
   QrCode, 
   Info, 
   ArrowLeft
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
-import { useTheme } from '@/hooks/useTheme';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { useAudioContext } from '@/hooks/useAudioContext';
 import { useChirpTransceiver } from '@/hooks/useChirpTransceiver';
 import { useSpectrogramQR } from '@/hooks/useSpectrogramQR';
@@ -55,7 +53,6 @@ export { bufferToWav };
  * Acoustic Steganography & Audio QR Code page
  */
 function AudioQRToolInner() {
-  const { isDarkMode, toggleDarkMode } = useTheme();
   const [activeTab, setActiveTab] = useState<'chirp' | 'spectrogram'>('chirp');
 
   const { getAudioContext } = useAudioContext();
@@ -86,7 +83,7 @@ function AudioQRToolInner() {
   } = useSpectrogramQR(getAudioContext);
 
   return (
-    <div className={`${isDarkMode ? 'dark' : ''} min-h-screen w-full bg-slate-50 transition-colors duration-300 dark:bg-slate-950`}>
+    <div className="min-h-screen w-full bg-slate-50 transition-colors duration-300 dark:bg-slate-950">
       
       <div className="mx-auto max-w-7xl px-4 py-8">
         {/* Navigation / Header */}
@@ -99,15 +96,7 @@ function AudioQRToolInner() {
             <ArrowLeft className="size-5" />
             Back to Home
           </a>
-          <Button
-            variant="icon"
-            size="icon"
-            onClick={toggleDarkMode}
-            className="rounded-full bg-white shadow-sm dark:bg-slate-800"
-            aria-label={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
-          >
-            {isDarkMode ? <Sun className="size-5 text-yellow-400" /> : <Moon className="size-5 text-indigo-600" />}
-          </Button>
+          <ThemeToggle className="bg-white shadow-sm dark:bg-slate-800" />
         </nav>
 
         <header className="mb-10 text-center">

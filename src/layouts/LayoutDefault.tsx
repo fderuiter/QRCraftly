@@ -20,6 +20,7 @@ import React, { useEffect, useState } from 'react';
 import './index.css';
 import { ToastProvider } from '../components/ui/Toast';
 import { ErrorBoundary } from '../components/ErrorBoundary';
+import { ThemeProvider } from '../context/ThemeContext';
 import { ServiceWorkerUpdatePrompt } from '../components/ServiceWorkerUpdatePrompt';
 
 /**
@@ -89,6 +90,7 @@ export default function LayoutDefault({ children }: { children: React.ReactNode 
   }, []);
 
   return (
+    <ThemeProvider>
     <ToastProvider>
       <ServiceWorkerUpdatePrompt enabled={!import.meta.env.DEV} />
       <a
@@ -109,5 +111,6 @@ export default function LayoutDefault({ children }: { children: React.ReactNode 
         </ErrorBoundary>
       </main>
     </ToastProvider>
+    </ThemeProvider>
   );
 }

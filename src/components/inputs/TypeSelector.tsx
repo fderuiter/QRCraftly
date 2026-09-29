@@ -1,6 +1,7 @@
 import React from "react";
-import { Button } from "../ui/Button";
+import { QR_TYPE_ROUTES } from "../../data/navigation";
 import { QRType } from "../../types";
+import { isDangerousUrl } from "../../utils/security";
 import {
   Wifi,
   Link,
@@ -17,19 +18,12 @@ import {
 } from "lucide-react";
 
 /**
- *
+ * Properties for {@link TypeSelector}.
  */
 interface TypeSelectorProps {
-  /**
-   *
-   */
+  /** The QR type of the current route; marked with `aria-current="page"`. */
   currentType: QRType;
-  /**
-   *
-   */
-  onSelect: (type: QRType) => void;
 }
-
 
 const ITEMS = [
   { type: QRType.URL, icon: Link, label: "URL" },
@@ -46,107 +40,45 @@ const ITEMS = [
   { type: QRType.SOCIAL, icon: Share2, label: "Social" },
 ];
 
+const LINK_BASE =
+  "flex min-h-11 w-full flex-col items-center justify-center gap-1 rounded-lg border p-2 text-xs font-medium transition-colors";
+const LINK_CURRENT =
+  "border-teal-700 bg-teal-50 font-semibold text-teal-800 shadow-sm ring-1 ring-teal-700 dark:border-teal-300 dark:bg-teal-950 dark:text-teal-100 dark:ring-teal-300";
+const LINK_IDLE =
+  "border-transparent text-slate-700 hover:bg-slate-200/60 hover:text-slate-900 dark:text-slate-200 dark:hover:bg-slate-700/50 dark:hover:text-white";
+
 /**
- *
- * @param root0
- * @param root0.currentType
- * @param root0.onSelect
+ * QR type navigation. Each type has its own route, so the choices are ordinary links in a
+ * labelled `nav` list: Tab reaches each one, arrow keys are left to the browser, and the
+ * current route is announced with `aria-current="page"`. Following a link is a normal page
+ * navigation; nothing is cleared before it happens, and the new route's generator starts
+ * from its own defaults (QR content is not carried between routes or persisted).
+ * @param root0 - Component properties.
+ * @param root0.currentType - The type of the current route.
+ * @returns The QR type navigation.
  */
-export const TypeSelector: React.FC<TypeSelectorProps> = ({
-  currentType,
-  onSelect,
-}) => {
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLUListElement>) => {
-    const isArrowLeft = e.key === "ArrowLeft";
-    const isArrowRight = e.key === "ArrowRight";
-    const isHome = e.key === "Home";
-    const isEnd = e.key === "End";
-    const isSpace = e.key === " " || e.key === "Spacebar";
-    const isEnter = e.key === "Enter";
-
-    if (!isArrowLeft && !isArrowRight && !isHome && !isEnd && !isSpace && !isEnter) {
-      return;
-    }
-
-    const tabs = Array.from(
-      e.currentTarget.querySelectorAll<HTMLElement>('[role="tab"]')
-    );
-    const currentIndex = tabs.findIndex(tab => tab === document.activeElement);
-
-    if (isArrowLeft || isArrowRight || isHome || isEnd) {
-      e.preventDefault();
-      if (currentIndex === -1) return;
-
-      let nextIndex = currentIndex;
-      if (isHome) {
-        nextIndex = 0;
-      } else if (isEnd) {
-        nextIndex = tabs.length - 1;
-      } else if (isArrowRight) {
-        nextIndex = (currentIndex + 1) % tabs.length;
-      } else {
-        nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
-      }
-
-      const nextTab = tabs[nextIndex];
-      if (nextTab) {
-        nextTab.focus();
-        const nextItem = ITEMS[nextIndex];
-        if (nextItem) {
-          onSelect(nextItem.type);
-        }
-      }
-    }
-
-    if (isSpace || isEnter) {
-      if (currentIndex !== -1) {
-        if (isSpace) {
-          e.preventDefault();
-        }
-        const item = ITEMS[currentIndex];
-        if (item) {
-          onSelect(item.type);
-        }
-      }
-    }
-
-  };
-
+export const TypeSelector: React.FC<TypeSelectorProps> = ({ currentType }) => {
   return (
-    <nav aria-label="QR Code Types">
-      <ul
-        role="tablist"
-        aria-label="QR Code Types"
-        onKeyDown={handleKeyDown}
-        className="grid grid-cols-4 gap-2 rounded-xl bg-slate-100 p-2 transition-colors duration-300 dark:bg-slate-800"
-      >
+    <nav aria-label="QR code types">
+      <ul className="grid grid-cols-4 gap-2 rounded-xl bg-slate-100 p-2 transition-colors duration-300 dark:bg-slate-800">
         {ITEMS.map((item) => {
-          const isActive = currentType === item.type;
-
-          return (
-            <li key={item.type} role="presentation">
-              <Button
-                id={`tab-${item.type}`}
-                role="tab"
-                aria-controls={`panel-${item.type}`}
-                aria-selected={isActive}
-                tabIndex={isActive ? 0 : -1}
-                variant={isActive ? 'secondary' : 'ghost'}
-                size="none"
-                onClick={() => onSelect(item.type)}
-                className={`h-auto w-full flex-col items-center justify-center gap-1 rounded-lg p-2 text-xs font-medium transition-all ${
-                  isActive
-                    ? 'border border-teal-200 bg-teal-50 text-teal-700 shadow-sm dark:border-slate-700 dark:bg-slate-800 dark:text-teal-400'
-                    : 'border border-transparent bg-transparent text-slate-500 hover:bg-slate-200/50 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-700/50 dark:hover:text-slate-200'
-                }`}
-              >
-                <item.icon className="size-4" />
-                <span className="w-full text-center break-words whitespace-normal text-slate-700 dark:text-slate-200">
-                  {item.label}
-                </span>
-              </Button>
-            </li>
-          );
+          const isCurrent = currentType === item.type;
+          const href = QR_TYPE_ROUTES[item.type];
+          if (!isDangerousUrl(href)) {
+            return (
+              <li key={item.type}>
+                <a
+                  href={href}
+                  aria-current={isCurrent ? "page" : undefined}
+                  className={`${LINK_BASE} ${isCurrent ? LINK_CURRENT : LINK_IDLE}`}
+                >
+                  <item.icon className="size-4" aria-hidden="true" />
+                  <span className="w-full text-center break-words whitespace-normal">{item.label}</span>
+                </a>
+              </li>
+            );
+          }
+          return null;
         })}
       </ul>
     </nav>

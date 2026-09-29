@@ -111,11 +111,11 @@ export const LayoutControls: React.FC<LayoutControlsProps> = ({ config, onChange
           {FORMAT_OPTIONS.map((opt) => (
             <Button
               key={opt.id}
-              variant={config.socialFormat === opt.id ? 'secondary' : 'outline'}
+              variant="outline"
               onClick={() => onChange({ socialFormat: opt.id })}
-              aria-pressed={config.socialFormat === opt.id}
+              pressed={config.socialFormat === opt.id}
               aria-label={`Select ${opt.label} format (${opt.sublabel})`}
-              className={`h-auto flex-col rounded-lg border-2 px-1 py-2 ${config.socialFormat === opt.id ? 'border-teal-500' : 'border-transparent'}`}
+              className="h-auto flex-col rounded-lg px-1 py-2"
             >
               {opt.icon}
               <span className="mt-1 text-[10px] leading-none font-semibold">{opt.label}</span>
@@ -136,11 +136,11 @@ export const LayoutControls: React.FC<LayoutControlsProps> = ({ config, onChange
           {TEMPLATE_OPTIONS.map((opt) => (
             <Button
               key={opt.id}
-              variant={config.templateStyle === opt.id ? 'secondary' : 'outline'}
+              variant="outline"
               onClick={() => onChange({ templateStyle: opt.id })}
-              aria-pressed={config.templateStyle === opt.id}
+              pressed={config.templateStyle === opt.id}
               aria-label={`Select ${opt.label} template`}
-              className={`h-auto rounded-lg border-2 p-2 text-xs ${config.templateStyle === opt.id ? 'border-teal-500' : 'border-transparent'}`}
+              className="h-auto rounded-lg p-2 text-xs"
             >
               {opt.label}
             </Button>
