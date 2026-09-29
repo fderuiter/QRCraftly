@@ -4,7 +4,7 @@ Operating instructions and core invariants for AI agents working in this reposit
 
 ## Non-Negotiable Invariants
 
-- **Package Manager**: Use `pnpm` exclusively. Never run `npm` or `yarn`. Node.js 22.14.0+ required.
+- **Package Manager**: Use `pnpm` exclusively. Never run `npm` or `yarn`. Node.js `^22.22.2 || >=24.15.0` required (`engines` in `package.json`; `.nvmrc` pins the CI version).
 - **Privacy & Storage Allowlist**: All QR code generation is strictly client-side. Never send user payloads across the network or encode user input into URL query parameters. The pre-build storage AST auditor (`scripts/storage_privacy_ast_auditor.js`) blocks any unapproved persistent browser storage. Only approved keys (`qr-telemetry-opt-in`, `qrcraftly:dynamic-redirects`, `qrcraftly:dynamic-consent-accepted`, `qrcraftly:theme`, `__test__`) are allowed. `qrcraftly:theme` holds only the colour-theme preference (`light`, `dark` or `system`), owned by the global `ThemeProvider` (`src/context/ThemeContext.tsx`); never store QR content with it.
 - **UI Component Reuse**: Consult `docs/public/UI_CATALOG.md` before creating any visual element.
   - Range sliders: Always use `RangeInput` from `src/components/ui/RangeInput.tsx`.
@@ -34,6 +34,13 @@ Canonical five-role vocabulary (`needs-triage`, `needs-info`, `ready-for-agent`,
 Single-context layout (`CONTEXT.md` and `docs/adr/` at repo root). Always consult `CONTEXT.md` for canonical domain terminology (avoiding listed `_Avoid_` synonyms) and `docs/adr/` for established architectural decisions. See `docs/agents/domain.md`.
 
 Packages are deep modules: see [src/packages/README.md](./src/packages/README.md) before adding or importing one.
+
+### Documentation checks
+
+- Run `pnpm run docs:sync` after changing a UI component in `src/components/ui/`, `src/components/inputs/` or `src/components/style-controls/`, `ALLOWED_TELEMETRY_KEYS` in `src/types.ts`, or any page in `docs/public/` or `docs/SECURITY.md`. It regenerates `docs/public/UI_CATALOG.md` entries, the telemetry key list in `docs/public/COMPLIANCE.md`, and `src/data/docs_manifest.json`. Commit what it changes.
+- Run `pnpm run docs:lint` after editing any Markdown. It checks links, anchors, unfinished-work placeholder markers and TS snippets in `docs/`, `docs/public/`, `docs/adr/`, `docs/agents/`, `README.md`, `CONTEXT.md` and `AGENTS.md`; ADR file names and gap-free numbering; the UI catalog; and that the docs manifest is current. Every error prints a `Fix:` hint. `pnpm run lint`, CI and the pre-commit hook (for staged `*.md` files) run the same checks.
+
+See `docs/agents/docs-maintenance.md`.
 
 ## Architecture & Deep Topic Pointers
 

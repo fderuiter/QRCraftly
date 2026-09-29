@@ -148,8 +148,11 @@ test.describe('Canvas aspect ratio reflects selected format', () => {
 
 test.describe('Canvas internal pixel dimensions', () => {
   test('canvas is square by default (width == height)', async ({ page }) => {
-    // Give the debounce time to render
-    await page.waitForTimeout(300);
+    // Wait for the debounced first render instead of sleeping a fixed time
+    await page.waitForFunction(() => {
+      const c = document.querySelector('canvas');
+      return !!c && c.width > 0 && c.height > 0;
+    });
     const { width, height } = await getCanvasInternalSize(page);
     expect(width).toBe(height);
   });
@@ -286,7 +289,6 @@ test.describe('Headline and subtext inputs', () => {
 test.describe('Live QR canvas after format/template changes', () => {
   test('QR canvas is visible after switching to Portrait format', async ({ page }) => {
     await page.getByRole('button', { name: /Select Portrait format/i }).click();
-    await page.waitForTimeout(300);
 
     await expect(page.getByRole('img', { name: /QR Code for/i })).toBeVisible();
     await expect(page.getByRole('img', { name: /Scan to view content/i })).toBeVisible();
@@ -294,7 +296,6 @@ test.describe('Live QR canvas after format/template changes', () => {
 
   test('QR canvas is visible after switching to Story format', async ({ page }) => {
     await page.getByRole('button', { name: /Select Story format/i }).click();
-    await page.waitForTimeout(300);
 
     await expect(page.getByRole('img', { name: /QR Code for/i })).toBeVisible();
     await expect(page.getByRole('img', { name: /Scan to view content/i })).toBeVisible();
@@ -302,21 +303,18 @@ test.describe('Live QR canvas after format/template changes', () => {
 
   test('QR canvas is visible after selecting Minimalist template', async ({ page }) => {
     await page.getByRole('button', { name: /Select Minimalist template/i }).click();
-    await page.waitForTimeout(300);
 
     await expect(page.getByRole('img', { name: /QR Code for/i })).toBeVisible();
   });
 
   test('QR canvas is visible after selecting Gradient Blur template', async ({ page }) => {
     await page.getByRole('button', { name: /Select Gradient template/i }).click();
-    await page.waitForTimeout(300);
 
     await expect(page.getByRole('img', { name: /QR Code for/i })).toBeVisible();
   });
 
   test('QR canvas is visible after selecting Solid Frame template', async ({ page }) => {
     await page.getByRole('button', { name: /Select Solid Frame template/i }).click();
-    await page.waitForTimeout(300);
 
     await expect(page.getByRole('img', { name: /QR Code for/i })).toBeVisible();
   });
@@ -324,7 +322,6 @@ test.describe('Live QR canvas after format/template changes', () => {
   test('QR canvas still visible after Story format + Minimalist template combination', async ({ page }) => {
     await page.getByRole('button', { name: /Select Story format/i }).click();
     await page.getByRole('button', { name: /Select Minimalist template/i }).click();
-    await page.waitForTimeout(300);
 
     await expect(page.getByRole('img', { name: /QR Code for/i })).toBeVisible();
   });
@@ -332,9 +329,6 @@ test.describe('Live QR canvas after format/template changes', () => {
   test('QR canvas updates when headline text is entered', async ({ page }) => {
     await page.getByRole('button', { name: /Select Minimalist template/i }).click();
     await page.getByLabel('Template headline').fill('Hello World');
-
-    // Allow debounce to settle and canvas to re-render
-    await page.waitForTimeout(300);
 
     // Canvas should still be alive with a scannable image
     await expect(page.getByRole('img', { name: /QR Code for/i })).toBeVisible();

@@ -75,6 +75,32 @@ test.describe('Automated Workbox Precaching and Offline Readiness', () => {
     }
   });
 
+  test('Dynamic redirect links and unknown routes are answered by the network, not the cached homepage', async ({ browserName, page }) => {
+    test.skip(browserName !== 'chromium', 'Service worker response inspection is only reliable in Chromium in Playwright');
+    await page.evaluate(async () => {
+      await navigator.serviceWorker.ready;
+      if (navigator.serviceWorker.controller) return;
+      await new Promise<void>((resolve) => {
+        navigator.serviceWorker.addEventListener('controllerchange', () => resolve(), { once: true });
+        setTimeout(() => resolve(), 2000);
+      });
+    });
+    await page.reload();
+    await page.waitForSelector('main[data-hydrated="true"]');
+    expect(await page.evaluate(() => !!navigator.serviceWorker.controller)).toBe(true);
+
+    const redirectResponse = await page.goto('/r/abc123');
+    expect(redirectResponse?.fromServiceWorker()).toBe(false);
+
+    // Unknown routes are passed through to the server, so its 404 reaches the page
+    // instead of the precached homepage.
+    const unknownResponse = await page.goto('/this-route-does-not-exist');
+    expect(unknownResponse?.status()).toBe(404);
+
+    const aboutResponse = await page.goto('/about');
+    expect(aboutResponse?.fromServiceWorker()).toBe(true);
+  });
+
   test('Constraint 1: Custom brand logo uploads are transient and fully cleared on page refresh', async ({ page }) => {
     // 1. Expand the Logo section and locate its file input
     await page.getByRole('button', { name: 'Logo', exact: true }).click();

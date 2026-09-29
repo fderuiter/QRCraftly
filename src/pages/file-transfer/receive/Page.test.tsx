@@ -23,6 +23,7 @@ import React from 'react';
 import Page from './+Page';
 import { ToastProvider } from '@/components/ui/Toast';
 import { StreamLookaheadReceiver } from '@/engine/StreamLookahead';
+import { FountainReassembler, createFountainSession } from '@/packages/optical-transfer';
 
 let scanSuccessCallback: ((data: string) => void) | undefined;
 
@@ -143,15 +144,9 @@ describe('File Transfer Receive Page & Pipeline', () => {
       await new Promise(resolve => setTimeout(resolve, 1500));
     });
 
-    // Verify all 10 chunks were eventually received
-    const grid = screen.getByTestId('progress-grid');
-    expect(grid).toBeInTheDocument();
-
-    for (let i = 0; i < 10; i++) {
-      const block = screen.getByTestId(`chunk-block-${i}`);
-      expect(block).toBeInTheDocument();
-      expect(block).toHaveAttribute('data-received', 'true');
-    }
+    // Legacy streams show a plain progress readout; the per-part grid is gone.
+    expect(screen.getByText('10 / 10 parts')).toBeInTheDocument();
+    expect(screen.queryByTestId('progress-grid')).not.toBeInTheDocument();
 
     // Verify the inline complete panel replaced the active camera space
     expect(screen.getByTestId('inline-complete-panel')).toBeInTheDocument();
@@ -218,42 +213,21 @@ describe('File Transfer Receive Page & Pipeline', () => {
     expect(screen.getByText('Camera inactive')).toBeInTheDocument();
   });
 
-  it('allows toggling between text and binary mode and bypasses security alerts in binary mode', async () => {
+  it('no longer offers a Compatibility mode toggle and always keeps text safety checks on', async () => {
     render(
       <ToastProvider>
         <Page />
       </ToastProvider>
     );
 
-    expect(screen.getByText('Checks text content for potentially unsafe links and commands.')).toBeInTheDocument();
+    expect(screen.queryByRole('switch', { name: /compatibility mode/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/Compatibility mode/i)).not.toBeInTheDocument();
 
-    const modeSwitch = screen.getByRole('switch', { name: /compatibility mode/i });
-    expect(modeSwitch).not.toBeChecked();
-
-    // Toggle to binary mode
-    await act(async () => {
-      fireEvent.click(modeSwitch);
-    });
-
-    expect(modeSwitch).toBeChecked();
-    expect(screen.getByText('Accepts all file data, but skips checks that block potentially unsafe text content.')).toBeInTheDocument();
-
-    // Now try simulating a restricted schema - it should not trigger a security warning in binary mode!
     const simDangerousButton = screen.getByRole('button', { name: /simulate dangerous scheme/i });
     await act(async () => {
       fireEvent.click(simDangerousButton);
     });
-
-    // Security alert is NOT rendered
-    expect(screen.queryByText(/Security Intercepted/i)).not.toBeInTheDocument();
-
-    // Switch back to text mode
-    await act(async () => {
-      fireEvent.click(modeSwitch);
-    });
-
-    expect(modeSwitch).not.toBeChecked();
-    expect(screen.getByText('Checks text content for potentially unsafe links and commands.')).toBeInTheDocument();
+    expect(screen.getByText(/Security Intercepted/i)).toBeInTheDocument();
   });
 
   describe('Synchronous Page-Level QR Frame Deduplication', () => {
@@ -407,37 +381,7 @@ describe('File Transfer Receive Page & Pipeline', () => {
       expect(screen.queryByTestId('progress-grid')).not.toBeInTheDocument();
     });
 
-    it('renders a fallback high-performance progress bar card and no grid cells when total chunks count is > 200', async () => {
-      render(
-        <ToastProvider>
-          <Page />
-        </ToastProvider>
-      );
-
-      expect(scanSuccessCallback).toBeDefined();
-
-      await act(async () => {
-        scanSuccessCallback!("H|test.txt|1000|text/plain|sha256");
-      });
-
-      await act(async () => {
-        scanSuccessCallback!("F|0|250|Zm9v");
-      });
-
-      // Check progress percentage text
-      expect(screen.getByText('0%')).toBeInTheDocument();
-      // Received parts text: receivedCount / totalChunks parts
-      expect(screen.getByText('1 / 250 parts')).toBeInTheDocument();
-
-      // Verify fallback-progress-card is in the document
-      expect(screen.getByTestId('fallback-progress-card')).toBeInTheDocument();
-      expect(screen.getByText('High-Performance Progress Bar Active')).toBeInTheDocument();
-
-      // Verify detailed block grid is NOT in the document
-      expect(screen.queryByTestId('progress-grid')).not.toBeInTheDocument();
-    });
-
-    it('renders a detailed block grid and no fallback card when total chunks count is 200 or fewer', async () => {
+    it('shows a progress readout without a per-part grid for legacy chunk streams', async () => {
       render(
         <ToastProvider>
           <Page />
@@ -454,11 +398,101 @@ describe('File Transfer Receive Page & Pipeline', () => {
         scanSuccessCallback!("F|0|150|Zm9v");
       });
 
-      // Verify detailed block grid is in the document
-      expect(screen.getByTestId('progress-grid')).toBeInTheDocument();
-
-      // Verify fallback progress card is NOT in the document
+      expect(screen.getByTestId('legacy-progress')).toBeInTheDocument();
+      expect(screen.getByText('1 / 150 parts')).toBeInTheDocument();
+      expect(screen.queryByTestId('progress-grid')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('chunk-block-0')).not.toBeInTheDocument();
       expect(screen.queryByTestId('fallback-progress-card')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Rateless fountain reception', () => {
+    /** Routes reassembly-worker droplets through a real FountainReassembler. */
+    function installFountainWorker() {
+      const reassembler = new FountainReassembler();
+      globalThis.mockWorkerControl.setInterceptor(async (message: any, worker: any) => {
+        if (!String(worker.url).includes('worker-reassembly')) return;
+        if (message.type === 'CLEAR') {
+          reassembler.reset();
+          return;
+        }
+        if (message.type !== 'FOUNTAIN_DROPLET') return;
+        const snap = reassembler.ingest(message.droplet);
+        if (!snap) return;
+        worker.dispatchMessage({ type: 'PROGRESS', progress: snap.progress, current: snap.resolved, total: snap.k, rank: snap.rank, dropletsReceived: snap.dropletsReceived, isFountain: true });
+        if (!reassembler.isComplete) return;
+        const { data, header } = await reassembler.finalize();
+        worker.dispatchMessage({ type: 'COMPLETE', buffer: data.slice().buffer, handshake: { fileName: header.fileName, fileSize: header.fileSize, mimeType: header.mimeType, sha256: header.sha256 }, isFountain: true });
+      });
+    }
+
+    afterEach(() => {
+      globalThis.mockWorkerControl.setInterceptor(null);
+    });
+
+    it('shows droplets/K, rank, FPS and ETA telemetry and verifies SHA-256 before download', async () => {
+      installFountainWorker();
+      const text = 'Page-level fountain telemetry. '.repeat(40);
+      const { encoder } = await createFountainSession(new TextEncoder().encode(text), { fileName: 'fountain.txt', mimeType: 'text/plain' });
+
+      render(
+        <ToastProvider>
+          <Page />
+        </ToastProvider>
+      );
+
+      // Join mid-stream: the first droplet seen is #6, no handshake frame ever arrives.
+      await act(async () => {
+        scanSuccessCallback!(encoder.dropletStringForIndex(5));
+        await new Promise(resolve => setTimeout(resolve, 10));
+      });
+
+      expect(screen.getByTestId('fountain-telemetry')).toBeInTheDocument();
+      expect(screen.getByTestId('fountain-droplets')).toHaveTextContent(`1 / ${encoder.k}`);
+      // A repair droplet may not raise the rank on its own.
+      expect(screen.getByTestId('fountain-rank')).toHaveTextContent(new RegExp(`^[01] / ${encoder.k}$`));
+      expect(screen.getByTestId('fountain-fps')).toHaveTextContent(/fps/);
+      expect(screen.getByTestId('fountain-eta')).toBeInTheDocument();
+      expect(screen.getByRole('progressbar', { name: /decoding rank/i })).toBeInTheDocument();
+      expect(screen.queryByTestId('progress-grid')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('receiver-error')).not.toBeInTheDocument();
+
+      for (let index = 6; index < encoder.k * 4; index++) {
+        if (index % 3 === 0) continue; // dropped frames
+        await act(async () => {
+          scanSuccessCallback!(encoder.dropletStringForIndex(index));
+          await new Promise(resolve => setTimeout(resolve, 0));
+        });
+        if (screen.queryByTestId('inline-complete-panel')) break;
+      }
+
+      await waitFor(() => expect(screen.getByTestId('inline-complete-panel')).toBeInTheDocument());
+      expect(screen.getByText(/fountain\.txt was rebuilt and its SHA-256 checksum verified/)).toBeInTheDocument();
+      expect(screen.getByTestId('fountain-rank')).toHaveTextContent(`${encoder.k} / ${encoder.k}`);
+      expect(global.URL.createObjectURL).not.toHaveBeenCalled();
+
+      const downloadBtn = screen.getByRole('button', { name: /download file/i });
+      await act(async () => {
+        fireEvent.click(downloadBtn);
+      });
+      await waitFor(() => expect(global.URL.createObjectURL).toHaveBeenCalled());
+    });
+
+    it('runs the development fountain simulation end-to-end', async () => {
+      installFountainWorker();
+      render(
+        <ToastProvider>
+          <Page />
+        </ToastProvider>
+      );
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: /simulate fountain stream/i }));
+      });
+      await act(async () => {
+        await new Promise(resolve => setTimeout(resolve, 1500));
+      });
+      await waitFor(() => expect(screen.getByTestId('inline-complete-panel')).toBeInTheDocument());
     });
   });
 

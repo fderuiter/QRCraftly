@@ -17,10 +17,22 @@
 */
 
 import { HandshakeInfo, ReceiverSessionOptions } from './lib/contracts';
-import { FountainDecoder } from './lib/fountain/decoder';
+import { FountainReassembler } from './lib/fountain/reassembler';
 import { isFountainDropletString } from './lib/fountain/envelope';
+import { sha256Hex } from './lib/fountain/session';
 import { parseSequentialFrame } from './lib/chunking/sequential';
 import { StreamLookaheadReceiver } from './lib/streamLookahead';
+
+/** Messages posted by the reassembly worker. */
+interface ReassemblyWorkerMessage {
+  type?: 'PROGRESS' | 'COMPLETE' | 'ERROR';
+  progress?: number;
+  current?: number;
+  total?: number;
+  buffer?: ArrayBuffer;
+  error?: string;
+  handshake?: HandshakeInfo | null;
+}
 
 /**
  * Headless receiver session managing autonomous protocol sniffing,
@@ -35,7 +47,9 @@ export class ReceiverSession {
 
   private worker: Worker | null = null;
   private lookahead: StreamLookaheadReceiver;
-  private fountainDecoder: FountainDecoder | null = null;
+  /** Resolves once an in-flight fountain finalization (decompress + verify) settles. */
+  public completion: Promise<void> = Promise.resolve();
+  private fountainReassembler: FountainReassembler | null = null;
 
   constructor(options: ReceiverSessionOptions = {}) {
     this.options = options;
@@ -55,43 +69,36 @@ export class ReceiverSession {
 
     const worker = new Worker(new URL('./worker-reassembly.ts', import.meta.url), { type: 'module' });
 
-    worker.onmessage = async (e: MessageEvent) => {
-      const { type, progress, current, total, buffer, error, handshake: workerHandshake } = e.data || {};
+    worker.onmessage = async (e: MessageEvent<ReassemblyWorkerMessage>) => {
+      const message = e.data;
+      if (!message) return;
 
-      if (type === 'PROGRESS') {
-        if (this.options.onProgress) {
-          this.options.onProgress(progress, current, total);
-        }
-      } else if (type === 'COMPLETE') {
-        this.isComplete = true;
-        const reassembled = new Uint8Array(buffer);
-        const activeHandshake = workerHandshake || this.handshake;
-
-        if (activeHandshake && activeHandshake.sha256) {
-          if (typeof crypto !== 'undefined' && crypto.subtle) {
-            const hashBuffer = await crypto.subtle.digest('SHA-256', new Uint8Array(reassembled));
-            const hashArray = Array.from(new Uint8Array(hashBuffer));
-            const actualSHA256 = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-
-            if (actualSHA256 !== activeHandshake.sha256) {
-              const err = `Integrity validation failed! SHA-256 mismatch.`;
-              if (this.options.onError) this.options.onError(err);
-              return;
-            }
-          }
-        }
-
-        if (this.options.onSuccess) {
-          this.options.onSuccess(reassembled, activeHandshake);
-        }
-      } else if (type === 'ERROR') {
-        if (this.options.onError) {
-          this.options.onError(error || 'Reassembly worker error');
-        }
+      if (message.type === 'PROGRESS') {
+        this.options.onProgress?.(message.progress ?? 0, message.current ?? 0, message.total ?? null);
+      } else if (message.type === 'COMPLETE' && message.buffer) {
+        await this.complete(new Uint8Array(message.buffer), message.handshake ?? this.handshake);
+      } else if (message.type === 'ERROR') {
+        this.options.onError?.(message.error || 'Reassembly worker error');
       }
     };
 
     this.worker = worker;
+  }
+
+  /**
+   * Verifies the SHA-256 from the handshake or fountain session header before
+   * handing the file to `onSuccess`.
+   */
+  private async complete(data: Uint8Array, handshake: HandshakeInfo | null): Promise<void> {
+    this.isComplete = true;
+    if (handshake?.sha256) {
+      const actual = await sha256Hex(data);
+      if (actual !== handshake.sha256.toLowerCase()) {
+        this.options.onError?.('Integrity validation failed! SHA-256 mismatch.');
+        return;
+      }
+    }
+    this.options.onSuccess?.(data, handshake);
   }
 
   /**
@@ -112,34 +119,24 @@ export class ReceiverSession {
       }
 
       // Main-thread fallback for test or worker-constrained environments
-      if (!this.fountainDecoder) {
-        this.fountainDecoder = new FountainDecoder();
+      if (!this.fountainReassembler) {
+        this.fountainReassembler = new FountainReassembler();
       }
+      const reassembler = this.fountainReassembler;
+      const snapshot = reassembler.ingest(payload);
+      if (!snapshot) return false;
+      this.options.onProgress?.(snapshot.progress, snapshot.resolved, snapshot.k);
 
-      const progressed = this.fountainDecoder.ingestString(payload);
-      if (progressed) {
-        const total = this.fountainDecoder.k || 1;
-        const current = this.fountainDecoder.resolvedBlockCount;
-        const progress = this.fountainDecoder.progress;
-
-        if (this.options.onProgress) {
-          this.options.onProgress(progress, current, total);
-        }
-
-        if (this.fountainDecoder.isComplete) {
-          this.isComplete = true;
-          const finalBuffer = this.fountainDecoder.finalize();
-          if (finalBuffer && this.options.onSuccess) {
-            this.options.onSuccess(finalBuffer, {
-              fileName: `received_file_${Date.now()}.bin`,
-              fileSize: finalBuffer.length,
-              mimeType: 'application/octet-stream',
-              sha256: '',
-            });
-          }
-        }
+      if (reassembler.isComplete) {
+        this.isComplete = true;
+        this.completion = reassembler
+          .finalize()
+          .then(({ data, header }) => this.complete(data, header))
+          .catch((err: unknown) => {
+            this.options.onError?.(err instanceof Error ? err.message : 'Fountain reassembly failed');
+          });
       }
-      return progressed;
+      return true;
     }
 
     // 2. Legacy Sequential Handshake / Chunk Stream
@@ -184,9 +181,9 @@ export class ReceiverSession {
       // Security check on payload
       try {
         this.lookahead.receive(decodedPayload);
-      } catch (err: any) {
+      } catch (err: unknown) {
         if (this.options.onSecurityAlert) {
-          this.options.onSecurityAlert(err?.message || 'Malicious stream detected');
+          this.options.onSecurityAlert(err instanceof Error && err.message ? err.message : 'Malicious stream detected');
         }
         return false;
       }
@@ -213,10 +210,7 @@ export class ReceiverSession {
     this.isComplete = false;
     this.totalChunks = null;
     this.processedIndices.clear();
-    if (this.fountainDecoder) {
-      this.fountainDecoder.reset();
-      this.fountainDecoder = null;
-    }
+    this.fountainReassembler = null;
     if (this.worker) {
       this.worker.postMessage({ type: 'CLEAR' });
     }

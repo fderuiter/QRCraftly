@@ -18,6 +18,9 @@
 
 import { defineConfig, devices } from '@playwright/test';
 
+/** Specs that must run with the Content Security Policy enforced (bypassCSP: false). */
+const CSP_ENFORCED_SPECS = 'csp-enforcement.spec.ts';
+
 export default defineConfig({
   testDir: './e2e',
   testIgnore: 'development-hydration.spec.ts',
@@ -41,20 +44,33 @@ export default defineConfig({
     baseURL: process.env.PLAYWRIGHT_TEST_BASE_URL || 'http://127.0.0.1:3000',
     /* Collect trace when retrying the failed test. */
     trace: 'on-first-retry',
+    /* Most projects bypass CSP so specs can instrument pages freely; the
+       `chromium-csp` project below enforces the real policy (see #969). */
     bypassCSP: true,
   },
   projects: [
     {
       name: 'chromium',
+      testIgnore: CSP_ENFORCED_SPECS,
       use: { ...devices['Desktop Chrome'] },
     },
     {
       name: 'firefox',
+      testIgnore: CSP_ENFORCED_SPECS,
       use: { ...devices['Desktop Firefox'] },
     },
     {
       name: 'webkit',
+      testIgnore: CSP_ENFORCED_SPECS,
       use: { ...devices['Desktop Safari'] },
+    },
+    {
+      /* Runs against the built app (webServer below) with the shipped Content
+         Security Policy enforced, so CSP regressions such as a missing blob:
+         source fail here instead of only in production. */
+      name: 'chromium-csp',
+      testMatch: CSP_ENFORCED_SPECS,
+      use: { ...devices['Desktop Chrome'], bypassCSP: false },
     },
   ],
   /* Run your local dev server before starting the tests */
