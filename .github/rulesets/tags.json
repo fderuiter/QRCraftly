@@ -1,6 +1,6 @@
 {
-  "name": "Protect main (production)",
-  "target": "branch",
+  "name": "Protect release tags",
+  "target": "tag",
   "enforcement": "active",
   "bypass_actors": [
     {
@@ -11,7 +11,7 @@
   ],
   "conditions": {
     "ref_name": {
-      "include": ["refs/heads/main", "refs/heads/backup"],
+      "include": ["refs/tags/v*"],
       "exclude": []
     }
   },
@@ -24,9 +24,6 @@
     },
     {
       "type": "deletion"
-    },
-    {
-      "type": "non_fast_forward"
     }
   ]
 }
