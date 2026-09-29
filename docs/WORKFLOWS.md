@@ -90,6 +90,7 @@ GitHub Actions triggers the consolidated CI pipeline on the PR:
 3. `test`: Vitest unit tests with strict coverage thresholds.
 4. `e2e`: Playwright cross-browser tests across Chromium, Firefox, and WebKit.
 5. `build`: Production build verification, bundle size budgets, and Lighthouse CI performance audits.
+6. `dependency-audit`: `pnpm audit --audit-level=high`, reported as its own check. No other job depends on it, so a newly published upstream advisory flags the PR without skipping the checks above.
 
 ### Step 5: Ephemeral Branch Preview Verification
 
