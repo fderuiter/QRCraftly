@@ -203,6 +203,9 @@ export async function generateQRSvg(
   return sanitizeSvg(ctx.serialize());
 }
 
+/** Upper bound for an SVG blob image to load before rasterization is abandoned. */
+const SVG_RASTER_LOAD_TIMEOUT_MS = 10_000;
+
 /**
  * Draws an SVG XML payload string onto an offscreen canvas element on the main thread.
  *
@@ -236,14 +239,16 @@ export function rasterizeSvgToCanvas(
     const url = URL.createObjectURL(svgBlob);
 
     let handled = false;
+    let watchdog: ReturnType<typeof setTimeout> | undefined;
 
     const cleanup = () => {
+      if (watchdog !== undefined) clearTimeout(watchdog);
       try {
         URL.revokeObjectURL(url);
       } catch {}
     };
 
-    img.onload = () => {
+    const draw = () => {
       if (handled) return;
       handled = true;
       try {
@@ -256,35 +261,36 @@ export function rasterizeSvgToCanvas(
       }
     };
 
-    img.onerror = (err) => {
+    const fail = (reason: unknown) => {
       if (handled) return;
       handled = true;
       cleanup();
-      reject(err);
+      reject(reason instanceof Error ? reason : new Error('Failed to load SVG image for rasterization'));
     };
 
+    // Only draw once the image has actually loaded; drawing earlier yields a blank canvas
+    // that falsely fails the scannability check for large SVGs or SVGs with logos (#969).
+    img.onload = draw;
+    img.onerror = fail;
     img.src = url;
 
-    // Handle test / jsdom environments or synchronous mocks where Image src assignment does not fire async onload
-    if (img.complete) {
-      if (typeof img.onload === 'function') {
-        img.onload(new Event('load') as any);
-      }
-    } else {
-      const isJsdom = typeof navigator !== 'undefined' && navigator.userAgent?.includes('jsdom');
-      setTimeout(() => {
-        if (!handled) {
-          handled = true;
-          cleanup();
-          try {
-            ctx.drawImage(img, 0, 0, width, height);
-            resolve(canvas);
-          } catch (err) {
-            reject(err);
-          }
-        }
-      }, isJsdom ? 0 : 50);
+    if (img.complete && img.naturalWidth > 0) {
+      // Already decoded (e.g. served from the image cache): draw now; the handled guard ignores the later onload.
+      draw();
+      return;
     }
+
+    // jsdom never fetches or decodes image resources, so onload would never fire there.
+    // Rasterize immediately so unit tests exercise the canvas pipeline with their mocked context.
+    const isJsdom = typeof window !== 'undefined' && window.navigator?.userAgent?.includes('jsdom') === true;
+    if (isJsdom) {
+      setTimeout(draw, 0);
+      return;
+    }
+
+    // Real browsers: fail loudly instead of hanging forever if the image never settles
+    // (for example when a Content Security Policy blocks the blob: URL without firing onerror).
+    watchdog = setTimeout(() => fail(new Error('Timed out waiting for SVG image to load')), SVG_RASTER_LOAD_TIMEOUT_MS);
   });
 }
 
