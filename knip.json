@@ -15,7 +15,7 @@
     "@/*": ["./src/*"]
   },
   "ignoreBinaries": ["shellcheck"],
-  "ignoreDependencies": ["wrangler", "bidi-js", "lint-staged"],
+  "ignoreDependencies": ["wrangler", "lint-staged"],
   "husky": false,
   "rules": {
     "files": "error",

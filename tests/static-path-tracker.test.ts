@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import fs from 'fs';
 import path from 'path';
-import { scanFileForPaths } from '../scripts/static-path-tracker.js';
+import os from 'os';
+import { scanFileForPaths, callsSanitizeSvg } from '../scripts/static-path-tracker.js';
 
 describe('static-path-tracker', () => {
   describe('scanFileForPaths', () => {
@@ -60,6 +61,43 @@ describe('static-path-tracker', () => {
     it('should ignore clean files where sanitization is present', () => {
       const findings = scanFileForPaths(tempFileClean);
       expect(findings.length).toBe(0);
+    });
+  });
+
+  describe('sanitization must be real code', () => {
+    const flow = (extra: string) => `
+      ${extra}
+      export function handleLogo(file: File, onSuccess: (url: string) => void) {
+        const reader = new FileReader();
+        reader.onload = (e) => onSuccess(String(e.target?.result));
+        reader.readAsText(file);
+      }
+    `;
+    const scanSource = (source: string) => {
+      const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'path-tracker-'));
+      const file = path.join(dir, 'upload.ts');
+      try {
+        fs.writeFileSync(file, source, 'utf8');
+        return scanFileForPaths(file);
+      } finally {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    };
+
+    it('does not accept sanitizeSvg mentioned only in a comment', () => {
+      expect(scanSource(flow('// sanitizeSvg is applied elsewhere'))).toHaveLength(1);
+    });
+
+    it('does not accept sanitizeSvg mentioned only in a string or an unused import', () => {
+      expect(scanSource(flow("import { sanitizeSvg } from './security';\nconst note = 'sanitizeSvg';"))).toHaveLength(1);
+    });
+
+    it('accepts a direct call, a namespaced call, or passing it as a callback', () => {
+      expect(callsSanitizeSvg('const x = sanitizeSvg(raw);', 'a.ts')).toBe(true);
+      expect(callsSanitizeSvg('const x = security.sanitizeSvg(raw);', 'a.ts')).toBe(true);
+      expect(callsSanitizeSvg('p.then(sanitizeSvg);', 'a.ts')).toBe(true);
+      expect(callsSanitizeSvg('const el = <div>{sanitizeSvg(raw)}</div>;', 'a.tsx')).toBe(true);
+      expect(callsSanitizeSvg('// sanitizeSvg(raw)\nconst y = "sanitizeSvg(raw)";', 'a.ts')).toBe(false);
     });
   });
 });

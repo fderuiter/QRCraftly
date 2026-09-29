@@ -241,18 +241,25 @@ publish-approved: true
       try {
         fs.writeFileSync(dummyComponentPath, 'export const TempSyncTestComp = () => <div />;');
         
-        // Running validate_ui_catalog without --fix should fail
+        // Running validate_ui_catalog without --fix should fail. Capture stderr
+        // (instead of inheriting it) so the expected error stays out of the test log.
         let failed = false;
+        let stderr = '';
         try {
           execFileSync('node', ['scripts/validate_ui_catalog.js', 'src/components/ui/TempSyncTestComp.tsx'], {
             cwd: defaultRepoRoot,
             encoding: 'utf8',
+            stdio: ['ignore', 'pipe', 'pipe'],
             env: { ...process.env, SKIP_GIT_VALIDATION: '1' }
           });
-        } catch {
+        } catch (err) {
           failed = true;
+          if (err && typeof err === 'object' && 'stderr' in err) {
+            stderr = String(err.stderr);
+          }
         }
         expect(failed).toBe(true);
+        expect(stderr).toContain("UI component 'TempSyncTestComp.tsx' is missing from the catalog");
 
         // Running validate_ui_catalog with --fix should scaffold the entry and succeed
         const fixOutput = execFileSync(

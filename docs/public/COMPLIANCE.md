@@ -26,8 +26,8 @@ To maintain security, performance, and legal accountability, we collect basic ac
   - Request Path (e.g., `/`, `/about` - which are static).
   - Timestamp.
 - **Opt-In Telemetry:**
-  - **Current status: no telemetry is transmitted.** No collection endpoint is deployed (the edge Worker serves only the dynamic redirect API), so the telemetry hook has no endpoint (`TELEMETRY_ENDPOINT = null`) and sends nothing. Your opt-in or opt-out choice is still stored locally (`qr-telemetry-opt-in`) so it is honoured if an endpoint is added later.
-  - If an endpoint is configured and you encounter a scannability issue and opt-in to telemetry, we transmit limited diagnostic data to help us improve the application. This data consists only of the following parameters: `engine`, `styleId`, `errorType`, `fgColor`, `bgColor`, `eyeColor`, `errorCorrectionLevel`, `isBorderEnabled`, `borderSize`, `borderColor`, `borderStyle`, `templateStyle`.
+  - **Current status: no telemetry is transmitted.** No collection endpoint is deployed (the edge Worker serves only the dynamic redirect API), so sending is switched off in the telemetry hook (`TELEMETRY_ENABLED = false`) and nothing is sent. When enabled, it posts only to the same-origin path `/api/telemetry/scannability`. Your opt-in or opt-out choice is still stored locally (`qr-telemetry-opt-in`) so it is honoured if an endpoint is added later.
+  - If sending is enabled and you encounter a scannability issue and opt-in to telemetry, we transmit limited diagnostic data to help us improve the application. This data consists only of the following parameters: `engine`, `styleId`, `errorType`, `fgColor`, `bgColor`, `eyeColor`, `errorCorrectionLevel`, `isBorderEnabled`, `borderSize`, `borderColor`, `borderStyle`, `templateStyle`.
   - **Telemetry Schema Contract (source of truth):**
     - Diagnostic telemetry is strictly allowlisted in `src/types.ts` via ALLOWED_TELEMETRY_KEYS.
     - Accepted keys are: `engine`, `styleId`, `errorType`, `fgColor`, `bgColor`, `eyeColor`, `errorCorrectionLevel`, `isBorderEnabled`, `borderSize`, `borderColor`, `borderStyle`, `templateStyle`.

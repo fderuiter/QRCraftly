@@ -19,10 +19,10 @@
 import React from 'react';
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { useTelemetry, TELEMETRY_ENDPOINT } from './useTelemetry';
+import { useTelemetry, TELEMETRY_ENABLED } from './useTelemetry';
 
-/** Injected collection endpoint: production has none, so telemetry is a no-op there. */
-const TEST_ENDPOINT = 'https://telemetry.test/scannability';
+/** Same-origin collection path; sending is injected as enabled because production has no endpoint. */
+const TELEMETRY_PATH = '/api/telemetry/scannability';
 import { QRProvider, useQRStore } from '@/context/QRContext';
 
 // ---------------------------------------------------------------------------
@@ -35,7 +35,7 @@ const wrapper = ({ children }: { children: React.ReactNode }) =>
 function renderTelemetry(status: Parameters<typeof useTelemetry>[0]) {
   return renderHook(
     () => ({
-      telemetry: useTelemetry(status, TEST_ENDPOINT),
+      telemetry: useTelemetry(status, true),
       store: useQRStore(),
     }),
     { wrapper }
@@ -111,7 +111,7 @@ describe('useTelemetry', () => {
       result.current.telemetry.handleOptIn(true);
     });
     expect(fetchSpy).toHaveBeenCalledWith(
-      TEST_ENDPOINT,
+      TELEMETRY_PATH,
       expect.objectContaining({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -229,7 +229,7 @@ describe('useTelemetry', () => {
   // No deployed endpoint: telemetry is a no-op, never a failing request
   // -------------------------------------------------------------------------
   it('has no default endpoint and sends nothing even when opted in and failing', () => {
-    expect(TELEMETRY_ENDPOINT).toBeNull();
+    expect(TELEMETRY_ENABLED).toBe(false);
     const { result } = renderHook(
       () => ({ telemetry: useTelemetry('fail'), store: useQRStore() }),
       { wrapper }

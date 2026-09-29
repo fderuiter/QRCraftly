@@ -18,38 +18,39 @@ function sanitizeTelemetryPayload(payload: any): TelemetryPayload {
 }
 
 /**
- * Collection endpoint for opt-in scannability telemetry. No endpoint is deployed
- * (the edge Worker serves only `/api/redirect/*`), so this is `null` and
- * telemetry is a no-op: the opt-in choice is still recorded, but nothing is sent
- * (previously this posted to a nonexistent `/api/telemetry/scannability` route).
- * See docs/public/COMPLIANCE.md.
+ * Whether telemetry is sent. No collection endpoint is deployed (the edge Worker
+ * serves only `/api/redirect/*`), so this is `false` and telemetry is a no-op:
+ * the opt-in choice is still recorded, but nothing is sent (previously this
+ * posted to the nonexistent route). See docs/public/COMPLIANCE.md.
  */
-export const TELEMETRY_ENDPOINT: string | null = null;
+export const TELEMETRY_ENABLED = false;
 
 /**
  * Opt-in scannability telemetry: sends the allowlisted diagnostic payload to
- * `endpoint` when the user opted in, and does nothing when there is no endpoint.
+ * the same-origin collection path when the user opted in and sending is
+ * enabled, and does nothing otherwise.
  * @param status - Current scannability status.
- * @param endpoint - Collection endpoint (defaults to {@link TELEMETRY_ENDPOINT}).
+ * @param enabled - Whether sending is enabled (defaults to {@link TELEMETRY_ENABLED}).
  * @returns Whether to show the opt-in prompt, and the opt-in handler.
  */
-export function useTelemetry(status: ScannabilityStatus, endpoint: string | null = TELEMETRY_ENDPOINT) {
+export function useTelemetry(status: ScannabilityStatus, enabled: boolean = TELEMETRY_ENABLED) {
   const store = useQRStore();
   const telemetryOptIn = useQRStoreSelector(state => state.preferences.telemetryOptIn);
   const { engine } = useCapabilities();
 
   const sendTelemetryPing = useCallback((detail: any) => {
-    if (!endpoint) return;
+    if (!enabled) return;
     try {
       const sanitized = sanitizeTelemetryPayload(detail);
-      fetch(endpoint, {
+      // Literal same-origin path so the bundle compliance audit can authorize this call site.
+      fetch('/api/telemetry/scannability', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(sanitized),
         keepalive: true
       }).catch(() => {});
     } catch {}
-  }, [endpoint]);
+  }, [enabled]);
 
   useEffect(() => {
     return store.registerSignal('scannability-fail', (detail) => {

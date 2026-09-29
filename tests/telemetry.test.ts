@@ -11,7 +11,7 @@ const wrapper = ({ children }: { children: React.ReactNode }) =>
 function renderTelemetry(status: Parameters<typeof useTelemetry>[0]) {
   return renderHook(
     () => ({
-      telemetry: useTelemetry(status, 'https://telemetry.test/scannability'),
+      telemetry: useTelemetry(status, true),
       store: useQRStore(),
     }),
     { wrapper }

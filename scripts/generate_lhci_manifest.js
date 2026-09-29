@@ -6,7 +6,11 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const DIST_DIR = path.resolve(__dirname, '../dist/client');
+// The tracked lighthouserc.json is the base config (thresholds, collect settings).
+// The generated config with the discovered routes goes to dist/, which is
+// gitignored, so a build never modifies tracked files.
 const LIGHTHOUSE_RC_FILE = path.resolve(__dirname, '../lighthouserc.json');
+const GENERATED_RC_FILE = path.resolve(__dirname, '../dist/lighthouserc.json');
 
 function findHtmlFiles(dir, fileList = []) {
   if (!fs.existsSync(dir)) return fileList;
@@ -24,25 +28,33 @@ function findHtmlFiles(dir, fileList = []) {
   return fileList;
 }
 
-function generateLhciManifest() {
-  if (!fs.existsSync(DIST_DIR)) {
-    console.warn(`[LHCI Manifest] Directory ${DIST_DIR} does not exist. Skipping LHCI manifest generation.`);
-    return;
+/**
+ * Builds the Lighthouse CI config for the pre-rendered routes in distDir.
+ *
+ * @param {string} [distDir] Folder with the pre-rendered client build.
+ * @param {string} [baseConfigPath] Tracked base config that is read, never written.
+ * @param {string} [outputPath] Where the generated config is written.
+ * @returns {string[] | null} The audited URLs, or null when nothing was generated.
+ */
+export function generateLhciManifest(distDir = DIST_DIR, baseConfigPath = LIGHTHOUSE_RC_FILE, outputPath = GENERATED_RC_FILE) {
+  if (!fs.existsSync(distDir)) {
+    console.warn(`[LHCI Manifest] Directory ${distDir} does not exist. Skipping LHCI manifest generation.`);
+    return null;
   }
 
-  const htmlFiles = findHtmlFiles(DIST_DIR);
+  const htmlFiles = findHtmlFiles(distDir);
   
   // Log all pre-rendered HTML routes found (should be 11)
   console.log(`[LHCI Manifest] Found ${htmlFiles.length} pre-rendered HTML routes/files:`);
   htmlFiles.forEach(file => {
-    const rel = path.relative(DIST_DIR, file);
+    const rel = path.relative(distDir, file);
     console.log(`  - ${rel}`);
   });
 
   const urls = [];
 
   for (const file of htmlFiles) {
-    const relativePath = path.relative(DIST_DIR, file);
+    const relativePath = path.relative(distDir, file);
     const posixPath = relativePath.split(path.sep).join('/');
     
     // Exclude 404, draft, test, and sandbox pages from the audit list
@@ -76,13 +88,13 @@ function generateLhciManifest() {
     urls.push(fullUrl);
   }
 
-  // Read current lighthouserc.json
-  if (!fs.existsSync(LIGHTHOUSE_RC_FILE)) {
-    console.error(`[LHCI Manifest] ${LIGHTHOUSE_RC_FILE} not found!`);
-    return;
+  // Read the tracked base config
+  if (!fs.existsSync(baseConfigPath)) {
+    console.error(`[LHCI Manifest] ${baseConfigPath} not found!`);
+    return null;
   }
 
-  const lhciConfig = JSON.parse(fs.readFileSync(LIGHTHOUSE_RC_FILE, 'utf8'));
+  const lhciConfig = JSON.parse(fs.readFileSync(baseConfigPath, 'utf8'));
 
   // Ensure structure
   if (!lhciConfig.ci) lhciConfig.ci = {};
@@ -99,8 +111,12 @@ function generateLhciManifest() {
   if (!lhciConfig.ci.assert.assertions) lhciConfig.ci.assert.assertions = {};
   lhciConfig.ci.assert.assertions['categories:seo'] = ['error', { minScore: 0.95 }];
 
-  fs.writeFileSync(LIGHTHOUSE_RC_FILE, JSON.stringify(lhciConfig, null, 2) + '\n', 'utf8');
-  console.log(`[LHCI Manifest] Successfully wrote ${urls.length} audit URLs and updated SEO threshold in ${LIGHTHOUSE_RC_FILE}`);
+  fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+  fs.writeFileSync(outputPath, JSON.stringify(lhciConfig, null, 2) + '\n', 'utf8');
+  console.log(`[LHCI Manifest] Successfully wrote ${urls.length} audit URLs and the SEO threshold to ${outputPath}`);
+  return urls;
 }
 
-generateLhciManifest();
+if (process.argv[1] && fs.realpathSync(process.argv[1]) === fs.realpathSync(__filename)) {
+  generateLhciManifest();
+}

@@ -14,7 +14,18 @@ This application is designed with a "Privacy First" architecture. Please refer t
 
 ## Content Security Policy (CSP)
 
-Our application utilizes a multi-layered Content Security Policy (CSP) enforced via both meta tags and HTTP response headers. To protect production deployments from script-injection (XSS) attacks, our build pipeline automatically parses compiled static HTML assets and computes SHA-256 integrity hashes for all inline scripts (such as JSON-LD structured blocks, framework hydration elements and the pre-hydration theme initialisation script from `src/utils/theme.ts`, which must remain a static string so its hash is stable). Consequently, the `unsafe-inline` directive is completely absent from production deployments. In local development environments, a permissive fallback policy is utilized to allow unimpeded feature iteration.
+Our application utilizes a multi-layered Content Security Policy (CSP) enforced via both meta tags and HTTP response headers. To protect production deployments from script-injection (XSS) attacks, our build pipeline automatically parses compiled static HTML assets and computes SHA-256 integrity hashes for all inline scripts (such as JSON-LD structured blocks, framework hydration elements and the pre-hydration theme initialisation script from `src/utils/theme.ts`, which must remain a static string so its hash is stable). Consequently, `script-src 'unsafe-inline'` is completely absent from production deployments. (`style-src 'unsafe-inline'` remains, because React renders dynamic preview styles as inline `style` attributes.) In local development environments, a permissive fallback policy is utilized to allow unimpeded feature iteration.
+
+The base policy lives in two places that must stay byte-identical: the meta tag in `src/layouts/Head.tsx` and `BASE_CSP_PATTERN` in `scripts/csp_hash_injector.js`. A unit test fails the build if they drift apart.
+
+- **No third-party origins:** The app no longer loads web fonts from Google Fonts; text renders with the system font stack (Tailwind's default `font-sans` and `font-mono`). Every directive therefore allows only `'self'`, plus the `data:` and `blob:` schemes where they are needed. No visitor IP address or referrer is sent to a font CDN. If a brand typeface is added later, bundle it with the app (for example from an `@fontsource` package) and keep `font-src 'self'`.
+- **`img-src 'self' data: blob:`:** SVG export rasterizes its `blob:` object URL to check that the code scans, and the logo resize fallback decodes uploads through `blob:` URLs.
+- **`media-src 'self' blob:`:** The optical scanner plays uploaded video files through `blob:` object URLs.
+- **Regression coverage:** The `chromium-csp` Playwright project runs `e2e/csp-enforcement.spec.ts` against the built app with `bypassCSP: false`, so a policy that breaks SVG export fails in CI. The other projects still bypass CSP.
+
+## Permissions Policy
+
+`public/_headers` sends `Permissions-Policy: camera=*, microphone=(self), geolocation=(self), payment=()`. The camera is available for the optical scanner. The microphone is limited to the site itself, for Audio QR receive, and so is geolocation, for "Use Current Location" on the Location QR type. Payment is disabled. An empty allowlist `()` turns a feature off for the site itself too, so never use `()` for a feature the app calls. `tests/security_headers.test.ts` checks these values.
 
 ## Reporting a Vulnerability
 
