@@ -20,6 +20,7 @@ import React, { useEffect, useState } from 'react';
 import './index.css';
 import { ToastProvider } from '../components/ui/Toast';
 import { ErrorBoundary } from '../components/ErrorBoundary';
+import { ServiceWorkerUpdatePrompt } from '../components/ServiceWorkerUpdatePrompt';
 
 /**
  * Helper to check if the application is currently running inside an E2E or unit/integration test environment.
@@ -85,19 +86,11 @@ export default function LayoutDefault({ children }: { children: React.ReactNode 
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => {
     setHydrated(true);
-    if ('serviceWorker' in navigator && !import.meta.env.DEV) {
-      navigator.serviceWorker.register('/sw.js')
-        .then(reg => {
-          console.log('SW registered with scope:', reg.scope);
-        })
-        .catch(err => {
-          console.error('SW registration failed:', err);
-        });
-    }
   }, []);
 
   return (
     <ToastProvider>
+      <ServiceWorkerUpdatePrompt enabled={!import.meta.env.DEV} />
       <a
         href="#main-content"
         className="sr-only transition-all focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:rounded-lg focus:border-2 focus:border-teal-700 focus:bg-white focus:px-4 focus:py-2 focus:text-teal-700 focus:shadow-lg focus:outline-none dark:focus:bg-slate-800 dark:focus:text-teal-400"
