@@ -13,13 +13,13 @@ import {
 import {
   DoubleBufferPool,
   AdaptiveFrameScheduler,
-  resetScannerWorker,
+  terminateScannerWorker,
 } from '../scheduler';
 
 describe('Optical Detection Engine — Deep Module Seam Tests', () => {
   beforeEach(() => {
     vi.useFakeTimers();
-    resetScannerWorker();
+    terminateScannerWorker();
 
     if (typeof ImageData === 'undefined') {
       (globalThis as any).ImageData = class ImageData {
@@ -47,7 +47,7 @@ describe('Optical Detection Engine — Deep Module Seam Tests', () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.restoreAllMocks();
-    resetScannerWorker();
+    terminateScannerWorker();
   });
 
   describe('Dimension scaling mathematics', () => {

@@ -34,7 +34,7 @@ export const WifiInput: React.FC<WifiInputProps> = ({ data, onChange }) => {
 
 ## Available Components
 
-- `TypeSelector.tsx`: The grid of icons for selecting the QR type. Employs standard WAI-ARIA tablist semantics, a roving tabIndex focus cycle, and arrow-key navigation.
+- `TypeSelector.tsx`: The grid of QR types. Each type has its own SEO route (`QR_TYPE_ROUTES` in `src/data/navigation.ts`), so the choices are ordinary links inside a labelled `nav` list, with `aria-current="page"` on the current route. There are no tab roles, no roving tabIndex and no arrow-key interception: Tab moves through the links in document order. Choosing a type is a normal navigation; the URL, metadata, selected link and input panel all come from the route. Nothing is cleared before navigation, and QR content is not carried to the next route or persisted (volatile memory guarantee). Appearance-only settings (colours, style, layout; not content or free text such as template headlines) are carried to the next generator route in memory only, via `QRProvider retainAppearance`.
 - `UrlInput.tsx`: For `QRType.URL`. Handles URL validation and sanitization.
 - `TextInput.tsx`: For `QRType.TEXT`. Includes character counting.
 - `WifiInput.tsx`: For `QRType.WIFI`. Handles SSID, password, encryption type, hidden network flags, and (for WPA2-Enterprise) the EAP method (`E:`), phase 2 authentication (`PH2:`) and identity (`I:`) fields.
@@ -54,7 +54,7 @@ export const WifiInput: React.FC<WifiInputProps> = ({ data, onChange }) => {
 2.  Create construction, hydration, and parsing helpers in `src/utils/qrHelpers.ts`.
 3.  Create a new component file in this directory (e.g., `NewTypeInput.tsx`).
 4.  Register the component, its initial state, and helpers in `src/components/inputs/InputRegistry.ts`.
-5.  Add the new type to the `TypeSelector` options.
+5.  Add the new type to the `TypeSelector` options and its route to `QR_TYPE_ROUTES` in `src/data/navigation.ts` (with a matching page under `src/pages/`).
 
 ## QR Animation Configurations
 
@@ -66,7 +66,7 @@ The `InputPanel` features an integrated, high-performance dual-mode QR Code Scan
 
 1. **Live Webcam Viewfinder**: Uses a custom `useCamera` hook to acquire media streams and robustly handles permission rejections (`NotAllowedError`) without throwing unhandled promise exceptions. Decodes real-time camera frames smoothly using the `useAdaptiveScanner` loop backpressure mechanism.
 2. **Client-Side File Upload Fallback**: If camera permissions are blocked or hardware is unavailable, displays an interactive troubleshooting card with platform-specific recovery instructions. Users can instantly transition to file upload mode to drag and drop or select QR code images for client-side decoding using `jsQR`. This guarantees user privacy by avoiding any external server transmissions.
-3. **Accessible Keyboard Navigation**: The scanner toggle action is positioned directly after the dynamic input tabpanels, ensuring natural forward Tab sequences flow seamlessly into the active input fields before reaching secondary scanner actions.
+3. **Accessible Keyboard Navigation**: The scanner toggle action is positioned directly after the dynamic input panel, ensuring natural forward Tab sequences flow seamlessly into the active input fields before reaching secondary scanner actions.
 
 ## Playable Maze Overlay Configuration
 

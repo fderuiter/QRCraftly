@@ -1,8 +1,11 @@
 ---
 status: accepted
+superseded_in_part_by: 0018
 ---
 
 # Automated Release Lifecycle and Git Lineage Synchronization
+
+> The release, promotion and rollback mechanics described here were replaced by [ADR 0018](./0018-release-pr-tag-driven-publishing.md). See [RELEASING.md](../../RELEASING.md) for the current process.
 
 ## Context
 

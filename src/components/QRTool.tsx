@@ -22,20 +22,22 @@ import { Card } from "./ui/Card";
 import { Alert } from "./ui/Alert";
 import { QRConfig } from '@/types';
 import QRCanvas from '@/components/QRCanvas';
-import { Download, Share2, QrCode, ChevronDown, Moon, Sun, Info, Copy, Check, AlertTriangle, Menu } from 'lucide-react';
+import { Download, Share2, QrCode, ChevronDown, Info, CircleHelp, Copy, Check, AlertTriangle } from 'lucide-react';
 import { Modal } from './ui/Modal';
 import { useDebounce } from '@/hooks/useDebounce';
-import { useOnClickOutside } from '@/hooks/useOnClickOutside';
 import { useQRDownload, ExportStatus, ExportOptions } from '@/hooks/useQRDownload';
 import { getExportRiskPolicy } from '@/utils/exportRiskPolicy';
 import { useToast } from './ui/Toast';
 import { useScannability } from '@/hooks/useScannability';
 import { ScannabilityIndicator } from '@/components/ScannabilityIndicator';
 import { QRProvider, useQRStore, useQRStoreSelector } from '@/context/QRContext';
-import { useTheme } from '@/hooks/useTheme';
+import { PrimaryNav } from './ui/PrimaryNav';
+import { ThemeToggle } from './ui/ThemeToggle';
+import { Menu } from './ui/Menu';
 import { useTelemetry } from '@/hooks/useTelemetry';
 import { useCapabilities } from '@/hooks/useCapabilities';
 import { sidebarControls } from '@/registry';
+import { StressTestButton } from './arcade/StressTestButton';
 
 /**
  * Renders the QR code generator interface with configuration controls, preview, and export actions.
@@ -48,18 +50,13 @@ import { sidebarControls } from '@/registry';
 function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: string }) {
   const config = useQRStoreSelector(s => s.config);
   const store = useQRStore();
-  const emitSignal = store.emitSignal;
-  const { isDarkMode, toggleDarkMode } = useTheme();
+  const setModuleCount = store.setModuleCount;
   const { addToast } = useToast();
   
-  const [showDownloadMenu, setShowDownloadMenu] = useState(false);
-  const [showMobileNav, setShowMobileNav] = useState(false);
   const [showSafetyGate, setShowSafetyGate] = useState(false);
   const [gateAction, setGateAction] = useState<(() => void | Promise<void>) | null>(null);
   const qrRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const downloadMenuRef = useRef<HTMLDivElement>(null);
-  const mobileNavRef = useRef<HTMLDivElement>(null);
 
   // Focus preservation refs for originating buttons
   const downloadButtonRef = useRef<HTMLButtonElement>(null);
@@ -75,20 +72,14 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
 
   
   const handleRendered = useCallback((info: { moduleCount: number, virtualImageData?: ImageData, virtualImageBitmap?: ImageBitmap } = { moduleCount: 0 }) => {
-    if (info.moduleCount) emitSignal('render-complete', info);
+    if (info.moduleCount) setModuleCount(info.moduleCount);
     if (info.virtualImageBitmap) {
       checkScannability(undefined, info.virtualImageBitmap, info.moduleCount);
     } else if (info.virtualImageData) {
       checkScannability(info.virtualImageData, undefined, info.moduleCount);
     }
-  }, [emitSignal, checkScannability]);
+  }, [setModuleCount, checkScannability]);
   const { showTelemetryPrompt, handleOptIn } = useTelemetry(scannabilityStatus);
-
-  // Close download menu when clicking outside
-  const closeDownloadMenu = useCallback(() => setShowDownloadMenu(false), []);
-  useOnClickOutside(downloadMenuRef, closeDownloadMenu, showDownloadMenu);
-  const closeMobileNav = useCallback(() => setShowMobileNav(false), []);
-  useOnClickOutside(mobileNavRef, closeMobileNav, showMobileNav);
 
   // Debounce the config for QRCanvas to prevent lag during rapid typing or style changes.
   const debouncedConfig = useDebounce(config, 100);
@@ -181,19 +172,16 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
   };
 
   const handleSaveAsFlow = async (format: 'png' | 'jpeg' | 'webp', options?: ExportOptions) => {
-    setShowDownloadMenu(false);
     const result = await exportAsset(format, options);
     handleExportResult(result, downloadButtonRef);
   };
 
   const handleSaveSvgFlow = async (options?: ExportOptions) => {
-    setShowDownloadMenu(false);
     const result = await exportAsset('svg', options);
     handleExportResult(result, downloadButtonRef);
   };
 
   const downloadToDeviceFlow = async (format: 'png' | 'jpeg' | 'webp', buttonRef: React.RefObject<HTMLButtonElement | null>, options?: ExportOptions) => {
-    setShowDownloadMenu(false);
     const result = await exportAsset(format, { ...options, directDownload: true });
     handleExportResult(result, buttonRef);
   };
@@ -207,7 +195,7 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
   };
 
   return (
-    <div className={`${isDarkMode ? 'dark' : ''} w-full`} id="top">
+    <div className="w-full" id="top">
       <Modal isOpen={showSafetyGate} onClose={() => setShowSafetyGate(false)} title="Scan Safety Warning">
         <div className="flex flex-col items-center gap-4 text-center">
           <AlertTriangle className="size-12 text-amber-500" />
@@ -226,8 +214,8 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
       <div className="relative flex min-h-screen flex-col-reverse bg-slate-50 transition-colors duration-300 md:min-h-0 md:flex-row dark:bg-slate-950">
         {/* Sidebar Controls */}
         <aside aria-label="QR Code Settings" className="relative z-10 flex w-full flex-col border-r border-slate-200 bg-white shadow-xl transition-colors duration-300 md:w-120 dark:border-slate-800 dark:bg-slate-900">
-          <header className="sticky top-0 z-20 flex items-center justify-between border-b border-slate-100 bg-white p-6 transition-colors duration-300 dark:border-slate-800 dark:bg-slate-900">
-            <div>
+          <header className="sticky top-0 z-20 flex items-center justify-between gap-2 border-b border-slate-100 bg-white p-6 transition-colors duration-300 dark:border-slate-800 dark:bg-slate-900">
+            <div className="min-w-0">
               <a href="/" aria-label="QRCraftly Home" className="mb-1 flex items-center gap-2 text-teal-700 transition-opacity hover:opacity-80 dark:text-teal-400">
                 <QrCode className="size-6" />
                 <h1 className="text-xl font-bold tracking-tight text-slate-700 dark:text-slate-100">{title || "QRCraftly"}</h1>
@@ -235,81 +223,17 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
               <p className="text-sm text-slate-600 dark:text-slate-400">Design beautiful QR codes in seconds.</p>
             </div>
             
-            <div className="flex items-center gap-2">
-              <div ref={mobileNavRef} className="relative sm:hidden">
-                <Button
-                  variant="icon"
-                  size="icon"
-                  onClick={() => setShowMobileNav((isOpen) => !isOpen)}
-                  className="rounded-full"
-                  title="File transfer menu"
-                  aria-label="File transfer menu"
-                  aria-expanded={showMobileNav}
-                  aria-controls="mobile-file-transfer-menu"
-                >
-                  <Menu className="size-5" />
-                </Button>
-                {showMobileNav && (
-                  <nav
-                    id="mobile-file-transfer-menu"
-                    aria-label="File transfer"
-                    className="absolute top-full right-0 z-30 mt-2 w-44 overflow-hidden rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl dark:border-slate-700 dark:bg-slate-900"
-                  >
-                    <a
-                      href="/file-transfer"
-                      aria-label="Send File"
-                      className="flex items-center justify-between rounded-lg px-3 py-2 text-sm font-semibold text-teal-700 transition-colors hover:bg-slate-100 dark:text-teal-400 dark:hover:bg-slate-800"
-                    >
-                      <span>Send File</span>
-                      <span aria-hidden="true" className="rounded-full bg-teal-100 px-1.5 py-0.5 text-[10px] font-semibold text-teal-800 dark:bg-teal-900/60 dark:text-teal-300">Beta</span>
-                    </a>
-                    <a
-                      href="/file-transfer/receive"
-                      aria-label="Receive File"
-                      className="flex items-center justify-between rounded-lg px-3 py-2 text-sm font-semibold text-teal-700 transition-colors hover:bg-slate-100 dark:text-teal-400 dark:hover:bg-slate-800"
-                    >
-                      <span>Receive File</span>
-                      <span aria-hidden="true" className="rounded-full bg-teal-100 px-1.5 py-0.5 text-[10px] font-semibold text-teal-800 dark:bg-teal-900/60 dark:text-teal-300">Beta</span>
-                    </a>
-                  </nav>
-                )}
-              </div>
-              <a
-                href="/file-transfer"
-                className="hidden items-center gap-1.5 rounded-full px-2 py-1 text-xs font-semibold text-teal-700 transition-colors hover:bg-slate-100 sm:flex dark:text-teal-400 dark:hover:bg-slate-800"
-                title="Send File"
-                aria-label="Send Offline File"
-              >
-                <span>Send File</span>
-                <span className="rounded-full bg-teal-100 px-1.5 py-0.5 text-[10px] font-semibold text-teal-800 dark:bg-teal-900/60 dark:text-teal-300">Beta</span>
-              </a>
-              <a
-                href="/file-transfer/receive"
-                className="hidden items-center gap-1.5 rounded-full px-2 py-1 text-xs font-semibold text-teal-700 transition-colors hover:bg-slate-100 sm:flex dark:text-teal-400 dark:hover:bg-slate-800"
-                title="Receive File"
-                aria-label="Receive Offline File"
-              >
-                <span>Receive File</span>
-                <span className="rounded-full bg-teal-100 px-1.5 py-0.5 text-[10px] font-semibold text-teal-800 dark:bg-teal-900/60 dark:text-teal-300">Beta</span>
-              </a>
+            <div className="flex shrink-0 items-center gap-1">
+              <PrimaryNav layout="compact" />
               <a
                 href="#content-section"
-                className="rounded-full p-2 text-slate-500 transition-colors hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
-                title="About Us"
-                aria-label="About QRCraftly"
+                className="flex min-h-11 min-w-11 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
+                title="How to use"
+                aria-label="How to use"
               >
-                <Info className="size-5" />
+                <CircleHelp className="size-5" aria-hidden="true" />
               </a>
-              <Button
-                variant="icon"
-                size="icon"
-                onClick={toggleDarkMode}
-                className="rounded-full"
-                title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
-                aria-label={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
-              >
-                {isDarkMode ? <Sun className="size-5" /> : <Moon className="size-5" />}
-              </Button>
+              <ThemeToggle />
             </div>
           </header>
 
@@ -361,8 +285,6 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
                       <li><a href="/location-qr-code" className="transition-colors hover:text-teal-700 dark:hover:text-teal-400">Location QR Code</a></li>
                       <li><a href="/meeting-qr-code" className="transition-colors hover:text-teal-700 dark:hover:text-teal-400">Meeting QR Code</a></li>
                       <li><a href="/social-qr-code" className="transition-colors hover:text-teal-700 dark:hover:text-teal-400">Social QR Code</a></li>
-                      <li><a href="/file-transfer" className="font-semibold text-teal-700 transition-colors hover:text-teal-800 dark:text-teal-300 dark:hover:text-teal-200">File Share (Send)</a></li>
-                      <li><a href="/file-transfer/receive" className="font-semibold text-teal-700 transition-colors hover:text-teal-800 dark:text-teal-300 dark:hover:text-teal-200">File Share (Receive)</a></li>
                       <li>
                         <a href="/file-transfer" className="inline-flex items-center gap-1.5 font-semibold text-teal-700 transition-colors hover:text-teal-800 dark:text-teal-300 dark:hover:text-teal-200">
                           <span>File Share (Send)</span>
@@ -410,6 +332,7 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
                     <h2 className="font-semibold text-slate-700 dark:text-slate-200">Live Preview</h2>
                     <ScannabilityIndicator status={scannabilityStatus} health={health} />
                 </div>
+                <StressTestButton />
                 
                 {workerRecoveryActive && (
                    <div className="mb-4">
@@ -427,38 +350,28 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
                 <div className="grid w-full grid-cols-1 gap-3">
                    {/* Row 1: Download & Share */}
                    <div className="flex gap-2">
-                       <div className="relative flex-1" ref={downloadMenuRef}>
-                          <Button 
-                              ref={downloadButtonRef}
+                       <Menu
+                          id="download-format"
+                          className="flex-1"
+                          triggerRef={downloadButtonRef}
+                          items={[
+                            { id: 'png', label: <><span aria-hidden="true" className="size-1.5 rounded-full bg-teal-500"></span> PNG (High Quality)</>, onSelect: () => executeWithSafetyGate((opts) => handleSaveAsFlow('png', opts)) },
+                            { id: 'jpeg', label: <><span aria-hidden="true" className="size-1.5 rounded-full bg-blue-500"></span> JPEG (Compact)</>, onSelect: () => executeWithSafetyGate((opts) => handleSaveAsFlow('jpeg', opts)) },
+                            { id: 'webp', label: <><span aria-hidden="true" className="size-1.5 rounded-full bg-purple-500"></span> WebP (Modern)</>, onSelect: () => executeWithSafetyGate((opts) => handleSaveAsFlow('webp', opts)) },
+                            { id: 'svg', separatorBefore: true, label: <><span aria-hidden="true" className="size-1.5 rounded-full bg-orange-500"></span> SVG (Vector)</>, onSelect: () => executeWithSafetyGate((opts) => handleSaveSvgFlow(opts)) },
+                          ]}
+                          renderTrigger={(triggerProps) => (
+                            <Button
+                              {...triggerProps}
                               variant={getExportRiskPolicy({ status: scannabilityStatus, health }) === 'unsafe' ? 'error' : 'primary'}
                               fullWidth
-                              onClick={() => setShowDownloadMenu(!showDownloadMenu)}
-                              aria-expanded={showDownloadMenu}
-                              aria-haspopup="true"
-                          >
-                              <Download className="size-4" />
+                            >
+                              <Download className="size-4" aria-hidden="true" />
                               Download
-                              <ChevronDown className="ml-auto size-4 opacity-80" />
-                          </Button>
-                          
-                          {showDownloadMenu && (
-                              <div className="animate-in fade-in zoom-in-95 absolute inset-x-0 top-full z-50 mt-2 overflow-hidden rounded-xl border border-slate-100 bg-white py-1 shadow-xl duration-100 dark:border-slate-700 dark:bg-slate-800" role="menu">
-                                  <Button onClick={() => executeWithSafetyGate((opts) => handleSaveAsFlow('png', opts))} role="menuitem" variant="menuitem">
-                                      <div className="size-1.5 rounded-full bg-teal-500"></div> PNG (High Quality)
-                                  </Button>
-                                  <Button onClick={() => executeWithSafetyGate((opts) => handleSaveAsFlow('jpeg', opts))} role="menuitem" variant="menuitem">
-                                      <div className="size-1.5 rounded-full bg-blue-500"></div> JPEG (Compact)
-                                  </Button>
-                                  <Button onClick={() => executeWithSafetyGate((opts) => handleSaveAsFlow('webp', opts))} role="menuitem" variant="menuitem">
-                                      <div className="size-1.5 rounded-full bg-purple-500"></div> WebP (Modern)
-                                  </Button>
-                                  <div className="my-1 h-px bg-slate-100 dark:bg-slate-700" role="separator" />
-                                  <Button onClick={() => executeWithSafetyGate((opts) => handleSaveSvgFlow(opts))} role="menuitem" variant="menuitem">
-                                      <div className="size-1.5 rounded-full bg-orange-500"></div> SVG (Vector)
-                                  </Button>
-                              </div>
+                              <ChevronDown className="ml-auto size-4 opacity-80" aria-hidden="true" />
+                            </Button>
                           )}
-                       </div>
+                       />
                        
                        <Button
                           ref={copyButtonRef}
@@ -515,7 +428,7 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
  */
 export default function QRTool({ initialConfig, title, toolId = 'index' }: { initialConfig?: Partial<QRConfig>, title?: string, toolId?: string }) {
   return (
-    <QRProvider initialConfig={initialConfig}>
+    <QRProvider initialConfig={initialConfig} retainAppearance>
       <QRToolInner title={title} toolId={toolId} />
     </QRProvider>
   );
