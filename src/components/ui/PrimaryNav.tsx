@@ -21,6 +21,7 @@ import { Menu as MenuIcon, X } from 'lucide-react';
 import { usePageContext } from 'vike-react/usePageContext';
 import { Button } from './Button';
 import { usePopoverDismiss } from '@/hooks/usePopoverDismiss';
+import { isDangerousUrl } from '@/utils/security';
 import { PRIMARY_NAV_ITEMS, PrimaryNavItem, getCurrentPrimaryNavId } from '@/data/navigation';
 
 /**
@@ -49,22 +50,26 @@ const LINK_CURRENT_CLASSES = 'text-teal-800 underline decoration-2 underline-off
  * @param root0.item - The destination.
  * @param root0.isCurrent - Whether it is the current page.
  * @param root0.onNavigate - Called when the link is activated.
- * @returns The list item.
+ * @returns The list item, or nothing when the destination is not a safe URL.
  */
 function NavLink({ item, isCurrent, onNavigate }: { item: PrimaryNavItem; isCurrent: boolean; onNavigate?: () => void }) {
-  return (
-    <li>
-      <a
-        href={item.href}
-        aria-current={isCurrent ? 'page' : undefined}
-        onClick={onNavigate}
-        className={`${LINK_BASE_CLASSES} ${isCurrent ? LINK_CURRENT_CLASSES : LINK_IDLE_CLASSES}`}
-      >
-        <span>{item.label}</span>
-        {item.beta && <span className={BETA_BADGE_CLASSES}>Beta</span>}
-      </a>
-    </li>
-  );
+  const { href } = item;
+  if (!isDangerousUrl(href)) {
+    return (
+      <li>
+        <a
+          href={href}
+          aria-current={isCurrent ? 'page' : undefined}
+          onClick={onNavigate}
+          className={`${LINK_BASE_CLASSES} ${isCurrent ? LINK_CURRENT_CLASSES : LINK_IDLE_CLASSES}`}
+        >
+          <span>{item.label}</span>
+          {item.beta && <span className={BETA_BADGE_CLASSES}>Beta</span>}
+        </a>
+      </li>
+    );
+  }
+  return null;
 }
 
 /**
@@ -85,7 +90,7 @@ interface PrimaryNavProps {
  * ordinary links in the Tab order). The panel closes on Escape (restoring focus to its
  * button), on a pointer press outside and when focus leaves it. Targets are at least 44px.
  * @param props - Navigation properties.
- * @param props.layout
+ * @param props.layout - `responsive` (inline links from `md` up) or `compact` (menu button only).
  * @returns The primary navigation landmark.
  */
 export function PrimaryNav({ layout = 'responsive' }: PrimaryNavProps) {

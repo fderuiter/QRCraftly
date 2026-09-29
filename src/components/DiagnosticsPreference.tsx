@@ -34,8 +34,8 @@ export interface DiagnosticsPreferenceProps {
  * Privacy settings panel for the anonymous scannability diagnostics preference.
  * Diagnostics stay off until the person turns them on here; nothing is sent while unset.
  * @param props - Current preference and change handler.
- * @param props.optIn
- * @param props.onChange
+ * @param props.optIn - Current choice (null when not chosen yet).
+ * @param props.onChange - Called with the new choice.
  * @returns The privacy settings section.
  */
 export function DiagnosticsPreference({ optIn, onChange }: DiagnosticsPreferenceProps) {

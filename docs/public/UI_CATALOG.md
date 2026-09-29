@@ -29,7 +29,7 @@ These low-level, primitive UI elements are designed to be extremely customizable
 - **Menu** (`Menu.tsx` / `Menu.test.tsx`): Accessible menu button (WAI-ARIA menu button pattern) for action lists such as the Download formats: `aria-haspopup`/`aria-expanded`/`aria-controls` on the trigger, Arrow/Home/End navigation, Escape and item activation restore trigger focus, and outside press or focus loss closes it.
 - **Modal** (`Modal.tsx` / `Modal.test.tsx`): Accessibility-compliant dialog component complete with focus traps, exit listeners, and smooth animations.
 - **PatternModule** (`PatternModule.tsx`): Visual sub-module used to configure and showcase QR pattern variants, rendering customized preview shapes including fluid bezier curves for Fluid Ink.
-- **PrimaryNav** (`PrimaryNav.tsx` / `PrimaryNav.test.tsx`): Site-wide primary navigation rendered from the shared `PRIMARY_NAV_ITEMS` model in `src/data/navigation.ts` (Create QR, Send File, Receive File, About, Security). Marks the current destination with `aria-current="page"` and moves every destination into a 44px-target disclosure panel on narrow layouts (Escape, outside press and focus loss close it). Use it in every page header instead of hand-written nav links.
+- **PrimaryNav** (`PrimaryNav.tsx` / `PrimaryNav.test.tsx`): Site-wide primary navigation rendered from the shared `PRIMARY_NAV_ITEMS` model in `src/data/navigation.ts` (Create QR, Send File, Receive File, Arcade, About, Security). Marks the current destination with `aria-current="page"` and moves every destination into a 44px-target disclosure panel on narrow layouts (Escape, outside press and focus loss close it). Use it in every page header instead of hand-written nav links.
 - **RangeInput** (`RangeInput.tsx` / `RangeInput.test.tsx`): **Mandatory slider control component** supporting minimum, maximum, step-size configuration, and granular visual previews.
 - **SanitizedHtml** (`SanitizedHtml.tsx`): Safe, sanitized HTML injection system to avoid cross-site scripting (XSS) issues in dynamically parsed rich content.
 - **TextField** (`TextField.tsx`): Standard form text input primitive with full validation styles and focus rings.
@@ -70,6 +70,17 @@ Unified appearance control modules that manage and present customization options
 - **LayoutControls** (`LayoutControls.tsx` / `LayoutControls.test.tsx`): Controls size, padding, margin, and output format.
 - **LogoControls** (`LogoControls.tsx`): Coordinates uploading custom logos, configuring scaling boundaries, and adjusting background-mask thresholds.
 - **PatternControls** (`PatternControls.tsx`): Pattern-style selector that conditionally displays one assertive scannability warning for low-reliability patterns, avoiding duplicate screen-reader announcements.
+
+---
+
+## 3a. QR Arcade Components (`src/components/arcade/`)
+
+Page-level building blocks of `/arcade`. Game logic lives in the `@/packages/arcade` deep module; these components only render it with catalog primitives (`Button`, `Card`, `Modal`, `TextField`, `ToggleSwitch`).
+
+- **ChoiceGroup** (`ChoiceGroup.tsx`): Single-select radio group or tab list of `Button`s with a roving tab stop and Arrow/Home/End keys; selection uses the Button `pressed` style while `aria-checked`/`aria-selected` carry the state.
+- **ArcadeCockpit** (`ArcadeCockpit.tsx`): Responsive arcade layout: stacked arena-first layout with a quick weapon bar and a collapsible settings drawer below 1024px, three-pane cockpit from 1024px.
+- **ScanHud** (`ScanHud.tsx`): Dual-layer verification HUD (Reed-Solomon health bar and finder status beside the live scanner verdict).
+- **StressTestButton** (`StressTestButton.tsx`): "Stress Test in Arcade" call to action for the generator preview; hands the design over in memory only.
 
 ---
 

@@ -1,0 +1,112 @@
+/*
+    QRCraftly
+    Copyright (C) 2026 fderuiter
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
+import React from 'react';
+import { RefreshCw } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
+import { Card } from '@/components/ui/Card';
+import { TextField } from '@/components/ui/TextField';
+import { ECC_LEVELS, ECC_RECOVERY, EccLevel } from '@/packages/arcade';
+import type { ArcadeTarget } from '@/packages/arcade/handoff';
+import { ChoiceGroup } from './ChoiceGroup';
+
+const PRESETS: readonly { label: string; value: string }[] = [
+  { label: 'QRCraftly', value: 'https://qrcraftly.com' },
+  { label: 'Secret text', value: 'PROMO_CODE_BLASTED_SURVIVAL' },
+  { label: 'Arcade mode', value: 'ARCADE_SANDBOX_STATION_ALPHA' },
+  { label: 'WiFi hotspot', value: 'WIFI:S:DurabilityTest;T:WPA;P:SuperSecure123;;' },
+];
+
+/** Properties for {@link TargetSettings}. */
+interface TargetSettingsProps {
+  /** Target under test. */
+  target: ArcadeTarget;
+  /** Updates the target. */
+  onChange: (updates: Partial<ArcadeTarget>) => void;
+  /** Restores the generator design. */
+  onResetToGenerator: () => void;
+  /** Whether a generator design is available. */
+  hasGeneratorDesign: boolean;
+}
+
+/**
+ * Target configuration: payload, error correction tier, content presets and the
+ * "Reset to Generator QR" action.
+ * @param props - Panel properties.
+ * @param props.target
+ * @param props.onChange
+ * @param props.onResetToGenerator
+ * @param props.hasGeneratorDesign
+ * @returns The panel.
+ */
+export function TargetSettings({ target, onChange, onResetToGenerator, hasGeneratorDesign }: TargetSettingsProps) {
+  return (
+    <Card variant="control" className="space-y-4">
+      <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100">Target QR</h2>
+      <TextField
+        id="arcade-target-payload"
+        label="Target QR content"
+        value={target.payload}
+        onChange={(event: React.ChangeEvent<HTMLInputElement>) => onChange({ payload: event.target.value })}
+        placeholder="Enter a URL or text to test"
+        autoComplete="off"
+        spellCheck={false}
+      />
+      <div>
+        <span aria-hidden="true" className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
+          Error correction level
+        </span>
+        <ChoiceGroup<EccLevel>
+          kind="radiogroup"
+          label="Error correction level"
+          className="grid grid-cols-4 gap-2"
+          choices={ECC_LEVELS.map((level) => ({
+            id: level,
+            label: level,
+            // eslint-disable-next-line security/detect-object-injection
+            ariaLabel: `Level ${level} (${Math.round(ECC_RECOVERY[level] * 100)}% recovery)`,
+          }))}
+          value={target.ecc}
+          onChange={(ecc) => onChange({ ecc })}
+        />
+        <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
+          Level {target.ecc} recovers about {Math.round(ECC_RECOVERY[target.ecc] * 100)}% of damaged modules.
+        </p>
+      </div>
+      <div>
+        <span className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Content presets</span>
+        <div className="grid grid-cols-2 gap-2">
+          {PRESETS.map((preset) => (
+            <Button key={preset.label} variant="outline" size="sm" pressed={target.payload === preset.value} onClick={() => onChange({ payload: preset.value })}>
+              {preset.label}
+            </Button>
+          ))}
+        </div>
+      </div>
+      <Button variant="secondary" fullWidth onClick={onResetToGenerator}>
+        <RefreshCw className="size-4" aria-hidden="true" />
+        Reset to Generator QR
+      </Button>
+      <p className="text-xs text-slate-600 dark:text-slate-400">
+        {hasGeneratorDesign
+          ? 'Uses the design, colours and content from your generator session.'
+          : 'No generator design in this tab yet: resets to the default high-contrast code.'}
+      </p>
+    </Card>
+  );
+}

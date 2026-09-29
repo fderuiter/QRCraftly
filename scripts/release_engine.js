@@ -4,10 +4,18 @@
  *
  * Cross-platform ESM release engine for QRCraftly.
  *
- * Modes:
+ * Modes (see RELEASING.md for the full flow):
  *   --dry-run            Preview next version + changelog, exit 0 (no side effects)
  *   --generate-changelog Write CHANGELOG.md and update package.json version
- *   --promote            Fast-forward main from dev, create annotated tag, push
+ *   --prepare            From an up-to-date dev: create release/vX.Y.Z, write the
+ *                        changelog + version, and commit `chore(release): vX.Y.Z`
+ *                        (open it as a PR into dev)
+ *   --promote            From dev at a merged release commit: fast-forward main to it
+ *                        and push the annotated tag vX.Y.Z in one atomic push
+ *   --notes <version>    Print the CHANGELOG.md section for <version> (release notes)
+ *
+ *   --bump=major|minor|patch overrides the computed bump for --dry-run,
+ *   --generate-changelog and --prepare.
  *
  * Conventional Commit types supported:
  *   feat:              -> minor bump
@@ -67,6 +75,17 @@ export function applyBump(current, bump) {
   if (bump === 'major') return `${major + 1}.0.0`;
   if (bump === 'minor') return `${major}.${minor + 1}.0`;
   return `${major}.${minor}.${patch + 1}`;
+}
+
+/**
+ * Compares two versions. Returns a positive number when a is newer than b.
+ *
+ * @param {{ major: number, minor: number, patch: number }} a
+ * @param {{ major: number, minor: number, patch: number }} b
+ * @returns {number}
+ */
+export function compareVersions(a, b) {
+  return a.major - b.major || a.minor - b.minor || a.patch - b.patch;
 }
 
 // ---------------------------------------------------------------------------
@@ -198,6 +217,33 @@ function getLatestTag() {
   }
 }
 
+const FIELD_SEP = '\x1f';
+const RECORD_SEP = '\x1e';
+const GIT_LOG_FORMAT = `%H${FIELD_SEP}%an${FIELD_SEP}%s${FIELD_SEP}%b${RECORD_SEP}`;
+
+/**
+ * Parses `git log --format=GIT_LOG_FORMAT` output. Records are split on a record
+ * separator, not on newlines, because commit bodies span several lines.
+ *
+ * @param {string} raw
+ * @returns {Commit[]}
+ */
+export function parseGitLog(raw) {
+  return raw
+    .split(RECORD_SEP)
+    .map(record => record.replace(/^\r?\n/, ''))
+    .filter(record => record.trim().length > 0)
+    .map(record => {
+      const [hash, author, subject, body] = record.split(FIELD_SEP);
+      return {
+        hash: (hash ?? '').trim(),
+        author: (author ?? '').trim(),
+        subject: (subject ?? '').trim(),
+        body: (body ?? '').replace(/\r\n/g, '\n').trim(),
+      };
+    });
+}
+
 /**
  * Returns commits between fromRef (exclusive) and HEAD (inclusive).
  *
@@ -205,22 +251,9 @@ function getLatestTag() {
  * @returns {Commit[]}
  */
 function getCommitsSince(fromRef) {
-  const SEP = '\x1f';
-  const fmt = `%H${SEP}%an${SEP}%s${SEP}%b`;
   const range = fromRef ? `${fromRef}..HEAD` : 'HEAD';
-  const raw = execBinary('git', ['log', range, `--format=${fmt}`, '--no-merges']);
-  return raw
-    .split(/\r?\n/)
-    .filter(Boolean)
-    .map(line => {
-      const [hash, author, subject, ...bodyParts] = line.split(SEP);
-      return {
-        hash: (hash ?? '').trim(),
-        author: (author ?? '').trim(),
-        subject: (subject ?? '').trim(),
-        body: bodyParts.join('\n').trim(),
-      };
-    });
+  const raw = execBinary('git', ['log', range, `--format=${GIT_LOG_FORMAT}`, '--no-merges']);
+  return parseGitLog(raw);
 }
 
 // ---------------------------------------------------------------------------
@@ -228,15 +261,16 @@ function getCommitsSince(fromRef) {
 // ---------------------------------------------------------------------------
 
 /**
+ * @param {'major'|'minor'|'patch'|null} [bumpOverride]
  * @returns {{ latestTag: string|null; currentVersion: {major:number,minor:number,patch:number}; bump: string|null; nextVersion: string; commits: Commit[]; groups: ReturnType<typeof groupCommits>; date: string }}
  */
-function computeRelease() {
+function computeRelease(bumpOverride = null) {
   const latestTag = getLatestTag();
   const currentVersion = latestTag
     ? parseTagVersion(latestTag)
     : { major: 0, minor: 0, patch: 0 };
   const commits = getCommitsSince(latestTag);
-  const bump = computeNextBump(commits);
+  const bump = bumpOverride ?? computeNextBump(commits);
   const nextVersion = applyBump(currentVersion, bump ?? 'patch');
   const groups = groupCommits(commits);
   const date = new Date().toISOString().slice(0, 10);
@@ -272,26 +306,107 @@ export function prependChangelog(section, version) {
     return;
   }
 
-  const HEADER_END_RE = /^(# .+?(?:\n.*)*?)(?=\n## \[)/m;
-  const match = HEADER_END_RE.exec(existing);
-  let newContent;
-  if (match) {
-    const splitAt = match.index + match[0].length;
-    newContent = existing.slice(0, splitAt) + '\n\n' + section + '\n' + existing.slice(splitAt);
-  } else {
-    const defaultHeader =
-      '# Changelog\n\n' +
-      'All notable changes to this project will be documented in this file.\n\n' +
-      'The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),\n' +
-      'and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).\n';
-    newContent = (existing || defaultHeader) + '\n' + section + '\n';
-  }
-  fs.writeFileSync(changelogPath, newContent, 'utf8');
+  fs.writeFileSync(changelogPath, insertChangelogSection(existing, section), 'utf8');
 }
+
+/**
+ * Inserts a release section below the `## [Unreleased]` heading and above the
+ * newest released version, keeping the `---` separators the changelog uses.
+ *
+ * @param {string} existing  Current CHANGELOG.md content ('' when missing)
+ * @param {string} section   Section produced by formatChangelogSection
+ * @returns {string}
+ */
+export function insertChangelogSection(existing, section) {
+  const defaultHeader =
+    '# Changelog\n\n' +
+    'All notable changes to this project will be documented in this file.\n\n' +
+    'The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),\n' +
+    'and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).\n\n' +
+    '## [Unreleased]\n';
+  const content = (existing || defaultHeader).replace(/\r\n/g, '\n');
+
+  const released = /^## \[(?!Unreleased\])/m.exec(content);
+  if (released) {
+    return content.slice(0, released.index) + section + '\n\n---\n\n' + content.slice(released.index);
+  }
+  return content.replace(/\n*$/, '\n\n') + section + '\n';
+}
+
+/**
+ * Returns the CHANGELOG.md section for a version, without its heading, for use as
+ * GitHub Release notes.
+ *
+ * @param {string} changelog
+ * @param {string} version
+ * @returns {string|null}
+ */
+export function extractReleaseNotes(changelog, version) {
+  const lines = changelog.split(/\r?\n/);
+  const start = lines.findIndex(line => line.startsWith(`## [${version}]`));
+  if (start === -1) return null;
+  const rest = lines.slice(start + 1);
+  const end = rest.findIndex(line => line.startsWith('## [') || line.trim() === '---');
+  return (end === -1 ? rest : rest.slice(0, end)).join('\n').trim();
+}
+
 
 // ---------------------------------------------------------------------------
 // CLI entry point — only executes when run directly (not when imported by tests)
 // ---------------------------------------------------------------------------
+
+/**
+ * Runs git and returns trimmed stdout, or null when the command fails.
+ *
+ * @param {string[]} args
+ * @returns {string|null}
+ */
+function tryGit(args) {
+  try {
+    return execBinary('git', args).trim();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Exits with a message when the condition does not hold.
+ *
+ * @param {boolean} ok
+ * @param {string} message
+ */
+function ensure(ok, message) {
+  if (!ok) {
+    console.error(`\n${message}\n`);
+    process.exit(1);
+  }
+}
+
+/**
+ * Checks the local clone is on a clean dev that matches origin/dev.
+ */
+function ensureCleanUpToDateDev() {
+  const branch = tryGit(['branch', '--show-current']);
+  ensure(branch === 'dev', `Run this from the 'dev' branch (currently on '${branch}').`);
+  ensure(tryGit(['status', '--porcelain']) === '', 'Working tree is not clean. Commit or stash your changes first.');
+  ensure(tryGit(['fetch', 'origin', 'dev', 'main', '--tags']) !== null, 'Could not fetch from origin.');
+  ensure(
+    tryGit(['rev-parse', 'HEAD']) === tryGit(['rev-parse', 'origin/dev']),
+    "Local dev does not match origin/dev. Run 'git pull --ff-only origin dev' first."
+  );
+}
+
+/**
+ * @param {string[]} args
+ * @returns {'major'|'minor'|'patch'|null}
+ */
+function parseBumpFlag(args) {
+  const flag = args.find(a => a.startsWith('--bump='));
+  if (!flag) return null;
+  const value = flag.slice('--bump='.length);
+  ensure(['major', 'minor', 'patch'].includes(value), `Invalid --bump value '${value}'. Use major, minor or patch.`);
+  return /** @type {'major'|'minor'|'patch'} */ (value);
+}
 
 const isMain =
   process.argv[1] &&
@@ -299,16 +414,68 @@ const isMain =
 
 if (isMain) {
   const args = process.argv.slice(2);
-  const isDryRun = args.includes('--dry-run');
-  const isGenerateChangelog = args.includes('--generate-changelog');
-  const isPromote = args.includes('--promote');
+  const mode = ['--dry-run', '--generate-changelog', '--prepare', '--promote', '--notes'].find(m => args.includes(m));
 
-  if (!isDryRun && !isGenerateChangelog && !isPromote) {
-    console.error('Usage: node scripts/release_engine.js [--dry-run | --generate-changelog | --promote]');
+  if (!mode) {
+    console.error(
+      'Usage: node scripts/release_engine.js [--dry-run | --generate-changelog | --prepare | --promote | --notes <version>] [--bump=major|minor|patch]'
+    );
     process.exit(1);
   }
 
-  const release = computeRelease();
+  const changelogPath = path.join(repoRoot, 'CHANGELOG.md');
+  const readChangelog = () => (fs.existsSync(changelogPath) ? fs.readFileSync(changelogPath, 'utf8') : '');
+
+  if (mode === '--notes') {
+    const version = (args[args.indexOf('--notes') + 1] ?? '').replace(/^v/, '');
+    const notes = extractReleaseNotes(readChangelog(), version);
+    ensure(notes !== null, `CHANGELOG.md has no section for ${version}.`);
+    process.stdout.write((notes || `Release v${version}`) + '\n');
+    process.exit(0);
+  }
+
+  if (mode === '--promote') {
+    // Promotion publishes a release commit that was already reviewed and merged into
+    // dev through a release PR. It never commits and never pushes dev.
+    ensureCleanUpToDateDev();
+
+    const pkg = JSON.parse(fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8'));
+    const version = pkg.version;
+    const tagName = `v${version}`;
+    const latestTag = getLatestTag();
+
+    ensure(
+      readChangelog().includes(`## [${version}]`),
+      `CHANGELOG.md has no section for ${version}. Merge a release PR first ('pnpm run release:prepare').`
+    );
+    ensure(tryGit(['rev-parse', '-q', '--verify', `refs/tags/${tagName}`]) === null, `Tag ${tagName} already exists.`);
+    ensure(
+      !latestTag || compareVersions(parseTagVersion(version), parseTagVersion(latestTag)) > 0,
+      `package.json version ${version} is not newer than the latest tag ${latestTag}.`
+    );
+    ensure(
+      tryGit(['merge-base', '--is-ancestor', 'origin/main', 'HEAD']) !== null,
+      'origin/main has commits that dev does not. Merge main into dev through a PR, then retry.'
+    );
+
+    console.log(`\nPromoting ${tryGit(['rev-parse', '--short', 'HEAD'])} to main as ${tagName}`);
+    execBinary('git', ['tag', '-a', tagName, '-m', `Release ${tagName}`]);
+    try {
+      // Atomic: main and the tag land together or not at all. A plain push (no
+      // --force) is rejected unless it is a fast-forward, so SHAs never change.
+      execBinary('git', ['push', '--atomic', 'origin', 'HEAD:refs/heads/main', `refs/tags/${tagName}`]);
+    } catch (err) {
+      tryGit(['tag', '-d', tagName]);
+      console.error(`\nPush failed; removed the local tag ${tagName}.\n`);
+      throw err;
+    }
+
+    console.log(`\nmain now points at ${tagName}. The Release workflow publishes the GitHub Release`);
+    console.log('and smoke tests production once Cloudflare Workers Builds has deployed it.\n');
+    process.exit(0);
+  }
+
+  const release = computeRelease(parseBumpFlag(args));
 
   console.log('\n Release Engine');
   console.log(`   Latest tag:      ${release.latestTag ?? '(none)'}`);
@@ -322,64 +489,30 @@ if (isMain) {
   console.log(section);
   console.log('-'.repeat(60));
 
-  if (isDryRun) {
+  if (mode === '--dry-run') {
     console.log('\nDry run complete -- no files modified.\n');
     process.exit(0);
   }
 
-  if (isGenerateChangelog) {
-    updatePackageJsonVersion(release.nextVersion);
-    prependChangelog(section, release.nextVersion);
-    console.log(`\nUpdated package.json -> ${release.nextVersion}`);
-    console.log('Prepended CHANGELOG.md\n');
-    process.exit(0);
+  if (mode === '--prepare') {
+    ensureCleanUpToDateDev();
+    ensure(release.commits.length > 0, `Nothing to release: no commits since ${release.latestTag}.`);
+    const branch = `release/v${release.nextVersion}`;
+    ensure(tryGit(['rev-parse', '-q', '--verify', `refs/heads/${branch}`]) === null, `Branch ${branch} already exists.`);
+    execBinary('git', ['checkout', '-b', branch]);
   }
 
-  if (isPromote) {
-    const currentBranch = execBinary('git', ['branch', '--show-current']).trim();
-    if (currentBranch !== 'dev') {
-      console.error(`\n--promote must be run from the 'dev' branch (currently on '${currentBranch}').\n`);
-      process.exit(1);
-    }
+  updatePackageJsonVersion(release.nextVersion);
+  prependChangelog(section, release.nextVersion);
+  console.log(`\nUpdated package.json -> ${release.nextVersion}`);
+  console.log('Updated CHANGELOG.md\n');
 
-    const pkgPath = path.join(repoRoot, 'package.json');
-    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
-    const changelogPath = path.join(repoRoot, 'CHANGELOG.md');
-    const changelog = fs.existsSync(changelogPath) ? fs.readFileSync(changelogPath, 'utf8') : '';
-
-    const alreadyPrepared =
-      pkg.version !== '0.0.0' && changelog.includes(`## [${pkg.version}]`);
-    const targetVersion = alreadyPrepared ? pkg.version : release.nextVersion;
-
-    // 1. Bump version + write changelog if not already prepared
-    if (!alreadyPrepared) {
-      updatePackageJsonVersion(targetVersion);
-      prependChangelog(section, targetVersion);
-    }
-
-    // 2. Commit if there are changes to changelog or package.json
-    const status = execBinary('git', ['status', '--porcelain']).trim();
-    if (status.includes('CHANGELOG.md') || status.includes('package.json')) {
-      execBinary('git', ['add', 'CHANGELOG.md', 'package.json']);
-      execBinary('git', ['commit', '-m', `chore(release): v${targetVersion}`]);
-    }
-
-    // 3. Push to origin/dev, then fast-forward origin/main
-    execBinary('git', ['push', 'origin', 'dev']);
-    execBinary('git', ['push', 'origin', 'dev:main']);
-
-    // 4. Tag
-    const tagName = `v${targetVersion}`;
-    try {
-      execBinary('git', ['tag', '-a', tagName, '-m', `Release ${tagName}`]);
-      execBinary('git', ['push', 'origin', tagName]);
-      console.log(`Created and pushed tag ${tagName}`);
-    } catch {
-      console.log(`Tag ${tagName} already exists or was previously pushed.`);
-    }
-
-    console.log(`\nFast-forwarded origin/main to dev HEAD`);
-    console.log(`Release v${targetVersion} successfully promoted!\n`);
-    process.exit(0);
+  if (mode === '--prepare') {
+    execBinary('git', ['add', 'CHANGELOG.md', 'package.json']);
+    execBinary('git', ['commit', '-m', `chore(release): v${release.nextVersion}`]);
+    console.log(`Committed chore(release): v${release.nextVersion} on ${`release/v${release.nextVersion}`}.`);
+    console.log('Next: edit CHANGELOG.md if needed, push the branch, and open a PR into dev.');
+    console.log('Merge it with "Squash and merge" once CI is green, then run pnpm run release:promote from dev.\n');
   }
+  process.exit(0);
 }

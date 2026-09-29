@@ -39,14 +39,9 @@ const ROUTES = [
   '/file-transfer/receive',
   '/audio-qr',
   '/dynamic-dashboard',
+  '/arcade',
   '/this-page-does-not-exist',
 ];
-
-/**
- * Game routes are being rebuilt by the Arcade work; their overflow fixes land there.
- * They stay listed so the check starts guarding them as soon as that work merges.
- */
-const PENDING_ARCADE_ROUTES = ['/destroy-the-qr', '/game'];
 
 /** Common phone viewports: iPhone SE, iPhone 12-15, Android (Pixel 7 class), small Android. */
 const PHONE_VIEWPORTS = [
@@ -90,13 +85,6 @@ test.describe('No horizontal page overflow at 390px (#978)', () => {
     });
   }
 
-  for (const route of PENDING_ARCADE_ROUTES) {
-    test.fixme(`${route} fits the viewport width (Arcade rebuild)`, async ({ page }) => {
-      await gotoHydrated(page, route);
-      const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
-      expect(scrollWidth).toBeLessThanOrEqual(390);
-    });
-  }
 });
 
 test.describe('Content-first mobile generator (#795)', () => {

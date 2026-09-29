@@ -68,7 +68,7 @@ test.describe('Primary navigation at 320px', () => {
       await menuButton.click();
       await expect(menuButton).toHaveAttribute('aria-expanded', 'true');
       const nav = page.getByRole('navigation', { name: 'Primary navigation' });
-      for (const label of ['Create QR', 'Send File', 'Receive File', 'About', 'Security']) {
+      for (const label of ['Create QR', 'Send File', 'Receive File', 'Arcade', 'About', 'Security']) {
         await expect(nav.getByRole('link', { name: new RegExp(`^${label}`) })).toBeVisible();
       }
 

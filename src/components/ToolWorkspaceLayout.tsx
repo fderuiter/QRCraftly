@@ -53,13 +53,13 @@ export interface ToolWorkspaceLayoutProps {
  * vertical scrolling surface. Desktop (`md` and up): a fixed-width control column beside a
  * sticky, viewport-height preview column that scrolls independently when it overflows.
  * @param props - Layout slots and labels.
- * @param props.header
- * @param props.controls
- * @param props.preview
- * @param props.secondary
- * @param props.controlsLabel
- * @param props.previewLabel
- * @param props.previewId
+ * @param props.header - Tool header.
+ * @param props.controls - Primary controls.
+ * @param props.preview - Preview surface.
+ * @param props.secondary - Optional secondary controls.
+ * @param props.controlsLabel - Accessible name of the control column.
+ * @param props.previewLabel - Accessible name of the preview region.
+ * @param props.previewId - DOM id of the preview region.
  * @returns The workspace layout.
  */
 export function ToolWorkspaceLayout({
@@ -158,13 +158,13 @@ export interface ToolWorkspaceHeaderProps {
  * Header shared by every tool workspace: home link, page heading, primary navigation,
  * theme toggle and, on mobile, a jump link to the preview.
  * @param props - Header content.
- * @param props.title
- * @param props.subtitle
- * @param props.badge
- * @param props.brandIsHeading
- * @param props.actions
- * @param props.previewId
- * @param props.previewJumpLabel
+ * @param props.title - Page heading text.
+ * @param props.subtitle - Description under the heading.
+ * @param props.badge - Optional pill after the subtitle.
+ * @param props.brandIsHeading - Whether the h1 is the brand link.
+ * @param props.actions - Extra header actions.
+ * @param props.previewId - DOM id of the preview region.
+ * @param props.previewJumpLabel - Label of the mobile jump link.
  * @returns The workspace header.
  */
 export function ToolWorkspaceHeader({

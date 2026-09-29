@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { contentRegistry, auxiliaryRegistry, SchemaType, SchemaCategory, TargetPersona, StrategicValueCategory, hasValidOgImage, isToolContent, getMetadataForPath, getMetadataForPageContext } from './contentRegistry';
+import { contentRegistry, auxiliaryRegistry, SchemaType, SchemaCategory, TargetPersona, StrategicValueCategory, hasValidOgImage, isToolContent, getMetadataForPath, getMetadataForPageContext, legacyRouteRegistry } from './contentRegistry';
 import { ValidationEngine } from '../engine/ValidationEngine';
 
 describe('Content Registry Validation', () => {
@@ -80,9 +80,10 @@ describe('Content Registry Validation', () => {
     const validSchemaTypes = Object.values(SchemaType);
     const validSchemaCategories = Object.values(SchemaCategory);
 
-    // Verify exactly 18 registered tools exist and are fully populated
+    // Verify exactly 17 registered tools exist and are fully populated (the two retired games
+    // were consolidated into "arcade"; their routes live in legacyRouteRegistry)
     const registryKeys = Object.keys(contentRegistry);
-    expect(registryKeys.length).toBe(18);
+    expect(registryKeys.length).toBe(17);
 
     registryKeys.forEach((key) => {
       const tool = contentRegistry[key];
@@ -146,7 +147,7 @@ describe('Content Registry Validation', () => {
 
   it('should generate valid WebApplication, HowTo, and FAQPage schemas for all promoted standalone public tools', async () => {
     const { generateSchema } = await import('../utils/schemaGenerator');
-    const promotedTools = ['audio-qr', 'destroy-the-qr', 'game', 'security'];
+    const promotedTools = ['audio-qr', 'arcade', 'security'];
 
     promotedTools.forEach((toolId) => {
       const tool = contentRegistry[toolId];
@@ -191,9 +192,21 @@ describe('Content Registry Validation', () => {
     });
   });
 
+  it('records the retired game routes as redirects to the arcade', () => {
+    expect(contentRegistry['game']).toBeUndefined();
+    expect(contentRegistry['destroy-the-qr']).toBeUndefined();
+    expect(Object.keys(legacyRouteRegistry).sort()).toEqual(['destroy-the-qr', 'game']);
+    for (const entry of Object.values(legacyRouteRegistry)) {
+      expect(entry.canonicalPath).toBe('/arcade');
+      expect(entry.redirectTo).toMatch(/^\/arcade\?mode=(blaster|simulator)$/);
+      expect(hasValidOgImage(entry)).toBe(true);
+    }
+  });
+
   it('should resolve complete path metadata including image parameters for all public routes', () => {
     const testRoutes = [
       '/audio-qr',
+      '/arcade',
       '/destroy-the-qr',
       '/game',
       '/dynamic-dashboard',

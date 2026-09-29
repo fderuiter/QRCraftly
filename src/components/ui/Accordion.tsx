@@ -25,12 +25,12 @@ interface AccordionItemProps {
  * region. Collapsed panels are hidden with the `hidden` attribute rather than unmounted, so
  * form state inside them is kept and the content remains in server-rendered HTML.
  * @param props - Component props.
- * @param props.title
- * @param props.children
- * @param props.defaultOpen
- * @param props.headingLevel
- * @param props.panelId
- * @param props.onOpenChange
+ * @param props.title - Visible label of the disclosure button.
+ * @param props.children - Content.
+ * @param props.defaultOpen - Whether the panel starts expanded.
+ * @param props.headingLevel - Heading level wrapping the button.
+ * @param props.panelId - Optional stable panel id.
+ * @param props.onOpenChange - Called with the new expanded state.
  * @returns The disclosure section.
  */
 export function AccordionItem({ title, children, defaultOpen = false, headingLevel, panelId: panelIdProp, onOpenChange }: AccordionItemProps) {
@@ -90,7 +90,7 @@ interface AccordionProps {
 /**
  * Vertical group of independent disclosure sections.
  * @param props - Component props.
- * @param props.children
+ * @param props.children - Content.
  * @returns The accordion container.
  */
 export function Accordion({ children }: AccordionProps) {
