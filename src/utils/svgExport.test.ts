@@ -546,5 +546,29 @@ describe('generateQRSvg', () => {
       expect(isScannable).toBe(false);
       expect(spy).toHaveBeenCalled();
     });
+
+    it('validateSvgScannability returns true when allowUnsafe is true even if pixel scannability check fails', async () => {
+      const mockScannabilityChecker = await import('./scannabilityChecker');
+      const spy = vi.spyOn(mockScannabilityChecker, 'performScannabilityCheck').mockClear();
+
+      const svgString = await generateQRSvg(DEFAULT_CONFIG as QRConfig);
+      const isScannable = await validateSvgScannability(svgString, DEFAULT_CONFIG as QRConfig, { allowUnsafe: true });
+      expect(isScannable).toBe(true);
+      expect(spy).not.toHaveBeenCalled();
+    });
+
+    it('validateSvgScannability returns false when allowUnsafe is false and pixel scannability check fails', async () => {
+      const mockScannabilityChecker = await import('./scannabilityChecker');
+      const spy = vi.spyOn(mockScannabilityChecker, 'performScannabilityCheck').mockClear().mockReturnValueOnce({
+        success: false,
+        physicalReady: false,
+        error: 'NOT_FOUND',
+      });
+
+      const svgString = await generateQRSvg(DEFAULT_CONFIG as QRConfig);
+      const isScannable = await validateSvgScannability(svgString, DEFAULT_CONFIG as QRConfig, { allowUnsafe: false });
+      expect(isScannable).toBe(false);
+      expect(spy).toHaveBeenCalled();
+    });
   });
 });

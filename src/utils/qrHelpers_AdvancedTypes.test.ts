@@ -18,9 +18,11 @@
 
 import { describe, it, expect } from 'vitest';
 import { FIXTURES } from "../../tests/fixtures/data";
-import { constructLocationString } from './qr-generators/location';
-import { constructMeetingString } from './qr-generators/meeting';
-import { constructSocialString } from './qr-generators/social';
+import {
+  constructLocationString,
+  constructMeetingString,
+  constructSocialString,
+} from '@/packages/qr-payload';
 import { SocialPlatform } from '../types';
 
 describe('Location generator', () => {

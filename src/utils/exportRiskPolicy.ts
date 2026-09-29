@@ -18,4 +18,5 @@
 
 export {
   getExportRiskPolicy,
+  type ExportOptions,
 } from '@/packages/scannability';

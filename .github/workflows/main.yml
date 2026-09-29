@@ -5,12 +5,22 @@ on:
     branches: [main, dev]
     paths: &workflow_paths
       - 'src/**'
-      - 'src/layouts/index.css'
       - 'public/**'
       - 'scripts/**'
       - 'e2e/**'
+      - 'tests/**'
+      - 'functions/**'
+      - 'docs/**'
+      - '*.md'
       - 'package.json'
       - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'eslint.config.js'
+      - 'knip.json'
+      - '.jscpd.json'
+      - '.dependency-cruiser.cjs'
+      - 'semgrep.yml'
+      - 'requirements.txt'
       - 'playwright.config.ts'
       - 'vite.config.ts'
       - 'vitest.setup.ts'
@@ -19,6 +29,7 @@ on:
       - 'lighthouserc.json'
       - 'wrangler.jsonc'
       - '.github/workflows/**'
+      - '.github/actions/**'
   pull_request:
     branches: [main, dev]
   workflow_dispatch:
@@ -47,6 +58,18 @@ jobs:
       - name: Setup Environment
         uses: ./.github/actions/setup
 
+  # Reported as its own check so a new upstream advisory flags the PR without
+  # skipping lint, tests, and build (no other job depends on this one).
+  dependency-audit:
+    name: Dependency Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Environment
+        uses: ./.github/actions/setup
+
       - name: Audit Dependencies
         run: pnpm audit --audit-level=high
 
@@ -68,7 +91,7 @@ jobs:
 
       - name: Get changed files
         id: changed-files
-        uses: tj-actions/changed-files@v47
+        uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
 
       - name: Run Sequential Static Validation
         run: pnpm run lint
@@ -83,7 +106,7 @@ jobs:
         run: node scripts/secret-scanner.js
 
       - name: Set up Python
-        uses: actions/setup-python@v7
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: '3.11'
           cache: 'pip'
@@ -299,7 +322,8 @@ jobs:
     needs: [static-validation, test, e2e, build]
     # Restricted to emergency rollback: revert commits pushed to main.
     # Normal releases are handled by .github/workflows/release.yml.
-    if: github.event_name == 'push' && startsWith(github.event.head_commit.message, 'Revert')
+    # The ref guard keeps a revert merged into dev from deploying to production.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && startsWith(github.event.head_commit.message, 'Revert')
     permissions:
       attestations: write
       contents: write

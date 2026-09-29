@@ -1253,6 +1253,3 @@ export function useOpticalReceiver({
     stream,
   };
 }
-
-export const useAnimatedQrSender = useOpticalSender;
-export const useAnimatedQrReceiver = useOpticalReceiver;

@@ -20,9 +20,9 @@ export default {
     ];
   },
   '**/*.{js,jsx,ts,tsx,mjs,cjs}': (filenames) => {
-    return eslintCommand(filenames);
+    return [eslintCommand(filenames), prettierCommand(filenames)];
   },
-  '**/*.{css,json,md}': (filenames) => {
+  '**/*.{css,json,md,yml,yaml}': (filenames) => {
     return prettierCommand(filenames);
   }
 };

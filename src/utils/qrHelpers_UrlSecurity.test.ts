@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { constructUrlString } from './qr-generators/url';
+import { constructUrlString } from '@/packages/qr-payload';
 
 describe('qrHelpers Security - URL', () => {
   it('should allow raw value for javascript: protocol', () => {

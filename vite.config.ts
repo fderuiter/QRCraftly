@@ -124,7 +124,6 @@ export default defineConfig(() => {
           },
           include: [
             'src/utils/*.ts',
-            'src/utils/qr-generators/*.ts',
             'src/utils/qr-renderers/*.ts'
           ],
           exclude: [
@@ -156,9 +155,6 @@ export default defineConfig(() => {
             'src/utils/exportRiskPolicy.ts',
             'src/utils/opticalSimulation.ts',
             'src/utils/qrRenderer.ts',
-            'src/utils/qr-generators/email.ts',
-            'src/utils/qr-generators/event.ts',
-            'src/utils/qr-generators/sms.ts',
           ],
         }
       },

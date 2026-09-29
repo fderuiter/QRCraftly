@@ -77,7 +77,7 @@ export function useScannabilityRunner(
   const lastLatencyRef = useRef<number>(0);
   const startTimeRef = useRef<number | null>(null);
   const isWorkerBusyRef = useRef<boolean>(false);
-  const watchdogRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const watchdogRef = useRef<{ timer: ReturnType<typeof setTimeout>; seq: number } | null>(null);
   const watchdogFallbackRef = useRef<(() => void) | null>(null);
   const consecutiveTimeoutsRef = useRef(0);
   const pendingModuleCountRef = useRef<number | undefined>(undefined);
@@ -87,10 +87,12 @@ export function useScannabilityRunner(
     { violations?: number; minContrast?: number } | undefined
   >();
 
-  const clearWatchdog = useCallback(() => {
+  const clearWatchdog = useCallback((seq?: number) => {
     if (watchdogRef.current !== null) {
-      clearTimeout(watchdogRef.current);
-      watchdogRef.current = null;
+      if (seq === undefined || watchdogRef.current.seq === seq) {
+        clearTimeout(watchdogRef.current.timer);
+        watchdogRef.current = null;
+      }
     }
   }, []);
 
@@ -182,26 +184,35 @@ export function useScannabilityRunner(
         } else {
           assertWorkerResponse(e.data);
         }
+        assertWorkerResponse(e.data);
 
         const { configId } = e.data;
+
+        // Messages without configId are invalid or untracked; drop them without altering flight state
+        if (!configId) {
+          return;
+        }
 
         // Handle superseded dropped ACKs before sequence checks to release backpressure deadlock
         if ('dropped' in e.data && e.data.dropped) {
           startTimeRef.current = null;
           isWorkerBusyRef.current = false;
           if (configId === String(sequenceRef.current)) {
-            clearWatchdog();
+            clearWatchdog(Number(configId));
             setStatus('idle');
           }
           return;
         }
 
-        // Sequence ID check: discard late results if configId does not match current sequence ID
+        // Sequence ID check: discard late results if configId does not match current sequence ID,
+        // but reset busy state to release backpressure
         if (configId !== String(sequenceRef.current)) {
+          startTimeRef.current = null;
+          isWorkerBusyRef.current = false;
           return;
         }
 
-        clearWatchdog();
+        clearWatchdog(Number(configId));
 
         if ('retryWithImageData' in e.data && e.data.retryWithImageData) {
           hasWorkerOffscreenDegradationRef.current = true;
@@ -225,10 +236,11 @@ export function useScannabilityRunner(
           };
           assertWorkerRequest(payload);
           worker.postMessage(payload, [imageData.data.buffer]);
-          watchdogRef.current = setTimeout(
+          const timer = setTimeout(
             () => watchdogFallbackRef.current?.(),
             SCANNABILITY_WATCHDOG_MS
           );
+          watchdogRef.current = { timer, seq: Number(configId) };
           return;
         }
 
@@ -370,6 +382,7 @@ export function useScannabilityRunner(
                             : 'digital-pass'
                           : 'fail'
                       );
+                      setWorkerRecoveryActive(false);
                       if (!result.success && result.error) {
                         store.emitSignal('scannability-fail', {
                           engine,
@@ -422,6 +435,7 @@ export function useScannabilityRunner(
                     : 'digital-pass'
                   : 'fail'
               );
+              setWorkerRecoveryActive(false);
               if (!result.success && result.error) {
                 store.emitSignal('scannability-fail', {
                   engine,
@@ -480,12 +494,14 @@ export function useScannabilityRunner(
       isWorkerBusyRef.current = true;
       startTimeRef.current = performance.now();
 
-      const startWatchdog = () => {
+      const startWatchdog = (seq: number) => {
         clearWatchdog();
         const runFallback = async () => {
-          if (currentSequence !== String(sequenceRef.current) || !isWorkerBusyRef.current) return;
+          if (String(seq) !== String(sequenceRef.current)) return;
 
-          watchdogRef.current = null;
+          if (watchdogRef.current?.seq === seq) {
+            watchdogRef.current = null;
+          }
           isWorkerBusyRef.current = false;
           startTimeRef.current = null;
           consecutiveTimeoutsRef.current += 1;
@@ -499,8 +515,10 @@ export function useScannabilityRunner(
 
           try {
             const { performScannabilityCheck } = await import('@/packages/scannability');
-            let imageData = overrideImageData;
-            if (!imageData && overrideImageBitmap) {
+            let imageData: ImageData | null = null;
+            if (overrideImageData && overrideImageData.data && overrideImageData.data.byteLength > 0) {
+              imageData = overrideImageData;
+            } else if (overrideImageBitmap && overrideImageBitmap.width > 0 && overrideImageBitmap.height > 0) {
               try {
                 if (typeof OffscreenCanvas !== 'undefined') {
                   const oc = new OffscreenCanvas(overrideImageBitmap.width || 1, overrideImageBitmap.height || 1);
@@ -528,7 +546,11 @@ export function useScannabilityRunner(
                 imageData = context.getImageData(0, 0, canvas.width, canvas.height);
               }
             }
-            if (!imageData || currentSequence !== String(sequenceRef.current)) return;
+            if (String(seq) !== String(sequenceRef.current)) return;
+            if (!imageData) {
+              setStatus('fail');
+              return;
+            }
 
             const result = performScannabilityCheck(
               imageData,
@@ -537,7 +559,7 @@ export function useScannabilityRunner(
               !!navigator.webdriver,
               moduleCountToUse
             );
-            if (currentSequence !== String(sequenceRef.current)) return;
+            if (String(seq) !== String(sequenceRef.current)) return;
             if (result.localContrastViolations !== undefined) {
               setLocalMetrics({
                 violations: result.localContrastViolations,
@@ -553,23 +575,21 @@ export function useScannabilityRunner(
             );
           } catch (error) {
             console.error('Scannability worker watchdog fallback failed:', error);
-            if (currentSequence === String(sequenceRef.current)) setStatus('fail');
+            if (String(seq) === String(sequenceRef.current)) setStatus('fail');
           }
         };
         watchdogFallbackRef.current = () => void runFallback();
-        watchdogRef.current = setTimeout(watchdogFallbackRef.current, SCANNABILITY_WATCHDOG_MS);
+        const timer = setTimeout(watchdogFallbackRef.current, SCANNABILITY_WATCHDOG_MS);
+        watchdogRef.current = { timer, seq };
       };
 
       // Start watchdog immediately on checkScannability to catch canvas capture stalls
-      startWatchdog();
+      startWatchdog(sequenceRef.current);
 
       // If virtual renderer provided deterministic ImageBitmap, use it directly
       if (overrideImageBitmap) {
         if (currentSequence !== String(sequenceRef.current)) {
           releaseImageHandle(overrideImageBitmap);
-          isWorkerBusyRef.current = false;
-          startTimeRef.current = null;
-          clearWatchdog();
           return;
         }
 
@@ -587,9 +607,11 @@ export function useScannabilityRunner(
         } catch (err) {
           console.error('Outgoing worker request validation failed:', err);
           setStatus('fail');
-          isWorkerBusyRef.current = false;
-          startTimeRef.current = null;
-          clearWatchdog();
+          if (currentSequence === String(sequenceRef.current)) {
+            isWorkerBusyRef.current = false;
+            startTimeRef.current = null;
+            clearWatchdog(sequenceRef.current);
+          }
           releaseImageHandle(overrideImageBitmap);
         }
         return;
@@ -597,6 +619,10 @@ export function useScannabilityRunner(
 
       // If virtual renderer provided deterministic image data, use it directly
       if (overrideImageData) {
+        if (currentSequence !== String(sequenceRef.current)) {
+          return;
+        }
+
         const payload = {
           imageData: overrideImageData,
           width: overrideImageData.width,
@@ -611,27 +637,39 @@ export function useScannabilityRunner(
         } catch (err) {
           console.error('Outgoing worker request validation failed:', err);
           setStatus('fail');
-          isWorkerBusyRef.current = false;
-          startTimeRef.current = null;
-          clearWatchdog();
+          if (currentSequence === String(sequenceRef.current)) {
+            isWorkerBusyRef.current = false;
+            startTimeRef.current = null;
+            clearWatchdog(sequenceRef.current);
+          }
         }
         return;
       }
 
       // Capture main canvas state asynchronously as an ImageBitmap handle
       const runCaptureAndSend = () => {
+        if (currentSequence !== String(sequenceRef.current)) {
+          return;
+        }
+
         const canvas = canvasRef.current;
         if (!canvas) {
           setStatus('idle');
-          isWorkerBusyRef.current = false;
-          startTimeRef.current = null;
+          if (currentSequence === String(sequenceRef.current)) {
+            isWorkerBusyRef.current = false;
+            startTimeRef.current = null;
+            clearWatchdog(sequenceRef.current);
+          }
           return;
         }
 
         if (canvas.width === 0 || canvas.height === 0) {
           setStatus('idle');
-          isWorkerBusyRef.current = false;
-          startTimeRef.current = null;
+          if (currentSequence === String(sequenceRef.current)) {
+            isWorkerBusyRef.current = false;
+            startTimeRef.current = null;
+            clearWatchdog(sequenceRef.current);
+          }
           return;
         }
 
@@ -645,9 +683,6 @@ export function useScannabilityRunner(
           .then((imageBitmap) => {
             if (currentSequence !== String(sequenceRef.current)) {
               imageBitmap.close();
-              isWorkerBusyRef.current = false;
-              startTimeRef.current = null;
-              clearWatchdog();
               return;
             }
             const payload = {
@@ -664,13 +699,18 @@ export function useScannabilityRunner(
             } catch (err) {
               console.error('Outgoing worker request validation failed:', err);
               setStatus('fail');
-              isWorkerBusyRef.current = false;
-              startTimeRef.current = null;
-              clearWatchdog();
+              if (currentSequence === String(sequenceRef.current)) {
+                isWorkerBusyRef.current = false;
+                startTimeRef.current = null;
+                clearWatchdog(sequenceRef.current);
+              }
               imageBitmap.close();
             }
           })
           .catch((err) => {
+            if (currentSequence !== String(sequenceRef.current)) {
+              return;
+            }
             console.error('createImageBitmap failed, falling back to synchronous read:', err);
             readAndSendFallback();
           });
@@ -678,21 +718,29 @@ export function useScannabilityRunner(
 
       // Fallback synchronous canvas read with zero-copy buffer transfer
       const readAndSendFallback = () => {
+        if (currentSequence !== String(sequenceRef.current)) {
+          return;
+        }
+
         const canvas = canvasRef.current;
         if (!canvas) {
           setStatus('idle');
-          isWorkerBusyRef.current = false;
-          startTimeRef.current = null;
-          clearWatchdog();
+          if (currentSequence === String(sequenceRef.current)) {
+            isWorkerBusyRef.current = false;
+            startTimeRef.current = null;
+            clearWatchdog(sequenceRef.current);
+          }
           return;
         }
         try {
           const ctx = canvas.getContext('2d');
           if (!ctx) {
             setStatus('fail');
-            isWorkerBusyRef.current = false;
-            startTimeRef.current = null;
-            clearWatchdog();
+            if (currentSequence === String(sequenceRef.current)) {
+              isWorkerBusyRef.current = false;
+              startTimeRef.current = null;
+              clearWatchdog(sequenceRef.current);
+            }
             return;
           }
 
@@ -710,9 +758,11 @@ export function useScannabilityRunner(
         } catch (err) {
           console.error('Failed to read canvas data or validation failed', err);
           setStatus('fail');
-          isWorkerBusyRef.current = false;
-          startTimeRef.current = null;
-          clearWatchdog();
+          if (currentSequence === String(sequenceRef.current)) {
+            isWorkerBusyRef.current = false;
+            startTimeRef.current = null;
+            clearWatchdog(sequenceRef.current);
+          }
         }
       };
 

@@ -43,6 +43,11 @@ export {
   type ReceiverSessionOptions,
 } from './lib/contracts';
 
+export {
+  parseSequentialFrame,
+  SequentialReassembler,
+} from './lib/chunking/sequential';
+
 export { FountainEncoder } from './lib/fountain/encoder';
 export { FountainDecoder } from './lib/fountain/decoder';
 export {

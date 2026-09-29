@@ -61,6 +61,8 @@ export default tseslint.config(
 
       "react-hooks/exhaustive-deps": "off",
       "react-hooks/set-state-in-effect": "off",
+      "react-hooks/immutability": "off",
+      "react-hooks/preserve-manual-memoization": "off",
 
       "no-useless-escape": "off",
       "no-case-declarations": "off",

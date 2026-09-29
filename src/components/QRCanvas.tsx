@@ -158,6 +158,16 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
 
   const onRenderedRef = useRef(onRendered);
   const sizeRef = useRef(size);
+  const virtualRenderTimerRef = useRef<{ cancel: () => void } | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (virtualRenderTimerRef.current) {
+        virtualRenderTimerRef.current.cancel();
+        virtualRenderTimerRef.current = null;
+      }
+    };
+  }, []);
 
   useEffect(() => {
     configRef.current = activeConfig;
@@ -530,9 +540,10 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
     }
 
     if (currentOnRendered) {
-      currentOnRendered({ moduleCount: modules.size });
-
-      if (isPerfTest) return;
+      if (isPerfTest) {
+        currentOnRendered({ moduleCount: modules.size });
+        return;
+      }
 
       const runVirtualRender = () => {
         try {
@@ -549,6 +560,7 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
 
           const vCtx = vCanvas.getContext('2d', { willReadFrequently: true }) as CanvasRenderingContext2D | null;
           if (!vCtx || typeof vCtx.fillRect !== 'function' || typeof vCtx.clearRect !== 'function') {
+            currentOnRendered({ moduleCount: modules.size });
             return;
           }
 
@@ -583,13 +595,29 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
           }
         } catch (err) {
           console.error("Virtual rendering failed:", err);
+          currentOnRendered({ moduleCount: modules.size });
         }
       };
 
+      if (virtualRenderTimerRef.current) {
+        virtualRenderTimerRef.current.cancel();
+        virtualRenderTimerRef.current = null;
+      }
+
       if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-        (window as any).requestIdleCallback(runVirtualRender, { timeout: 100 });
+        const handle = (window as any).requestIdleCallback(runVirtualRender, { timeout: 100 });
+        virtualRenderTimerRef.current = {
+          cancel: () => {
+            if (typeof window !== 'undefined' && 'cancelIdleCallback' in window) {
+              (window as any).cancelIdleCallback(handle);
+            }
+          },
+        };
       } else {
-        setTimeout(runVirtualRender, 50);
+        const handle = setTimeout(runVirtualRender, 50);
+        virtualRenderTimerRef.current = {
+          cancel: () => clearTimeout(handle),
+        };
       }
     }
   }, []);

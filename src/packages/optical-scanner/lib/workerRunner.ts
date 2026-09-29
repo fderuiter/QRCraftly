@@ -1,4 +1,4 @@
-import { isValidScannerResponse, ScannerResponse } from './contracts';
+import { isValidScannerResponse } from './contracts';
 
 let sharedWorker: Worker | null = null;
 let consecutiveRestarts = 0;

@@ -8,10 +8,8 @@ import { mergeClasses } from './styles';
  */
 interface AlertProps {
   /**
-   * The style variant of the alert (warning or error).
    * The style variant of the alert (warning, error, or info).
    */
-  variant?: 'warning' | 'error';
   variant?: 'warning' | 'error' | 'info';
   /**
    * Optional bold title text.
@@ -40,7 +38,6 @@ interface AlertProps {
 }
 
 /**
- * An accessible Alert component that displays warning or error status messages.
  * An accessible Alert component that displays warning, error, or informational status messages.
  * @param props Component properties.
  * @returns React functional component rendering an alert box.
@@ -55,20 +52,15 @@ export const Alert: React.FC<AlertProps> = (props) => {
     'aria-live': ariaLive,
     onDismiss,
   } = props;
-  const baseClasses = "flex items-start gap-3 p-3 border rounded-lg text-sm";
   const baseClasses = 'flex items-start gap-3 p-3 border rounded-lg text-sm';
   const colorClasses = getNotificationColors(variant, true);
 
   return (
-    <div role={role || "alert"} aria-live={ariaLive} className={mergeClasses(baseClasses, colorClasses, className)}>
     <div role={role || 'alert'} aria-live={ariaLive} className={mergeClasses(baseClasses, colorClasses, className)}>
       {React.createElement(getNotificationIcon(variant), {
-        className: "mt-0.5 size-5 flex-shrink-0",
-        "aria-hidden": "true",
         className: 'mt-0.5 size-5 flex-shrink-0',
         'aria-hidden': 'true',
       })}
-      <div>
       <div className="flex-1">
         {title && <strong>{title}: </strong>}
         {children}
