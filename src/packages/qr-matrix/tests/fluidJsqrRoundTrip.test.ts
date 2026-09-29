@@ -326,7 +326,20 @@ beforeAll(async () => {
 
 const QUIET_MODULES = 4;
 
+// Software rasterising is slow on shared CI runners, so each (payload, EC, size)
+// is drawn once and the result reused by every test that inspects it.
+const renderCache = new Map<string, ReturnType<typeof renderFluidUncached>>();
 const renderFluid = (value: string, ecLevel: QRErrorCorrectionLevel, pxPerModule = 8) => {
+  const key = `${ecLevel}|${pxPerModule}|${value}`;
+  let rendered = renderCache.get(key);
+  if (!rendered) {
+    rendered = renderFluidUncached(value, ecLevel, pxPerModule);
+    renderCache.set(key, rendered);
+  }
+  return rendered;
+};
+
+function renderFluidUncached(value: string, ecLevel: QRErrorCorrectionLevel, pxPerModule: number) {
   const qr = QRCode.create(value, { errorCorrectionLevel: ecLevel });
   const modules = qr.modules as unknown as QRModulesLike;
   const moduleCount = modules.size;
@@ -344,11 +357,11 @@ const renderFluid = (value: string, ecLevel: QRErrorCorrectionLevel, pxPerModule
   );
   const { drawX, cellSize } = calculateLayout(baseConfig, size, moduleCount);
   return { raster, modules, moduleCount, size, origin: drawX, cell: cellSize };
-};
+}
 
 const isDark = (rgb: [number, number, number]): boolean => rgb[0] + rgb[1] + rgb[2] < 384;
 
-describe('Fluid Ink jsQR round-trip (real pixels)', () => {
+describe('Fluid Ink jsQR round-trip (real pixels)', { timeout: 60_000 }, () => {
   // Two module sizes: before the fluid eyeball became a squircle, a round eyeball made
   // jsQR miss the finder patterns at 8 and 16 px per module for some payloads.
   for (const { name, value } of payloads) {
@@ -364,8 +377,8 @@ describe('Fluid Ink jsQR round-trip (real pixels)', () => {
     }
   }
 
-  it('renders every module centre with the colour of the encoded matrix', () => {
-    for (const ec of ecLevels) {
+  for (const ec of ecLevels) {
+    it(`renders every module centre with the colour of the encoded matrix at EC ${ec}`, () => {
       const { raster, modules, moduleCount, origin, cell } = renderFluid(payloads[3].value, ec);
       for (let r = 0; r < moduleCount; r++) {
         for (let c = 0; c < moduleCount; c++) {
@@ -375,8 +388,8 @@ describe('Fluid Ink jsQR round-trip (real pixels)', () => {
           }
         }
       }
-    }
-  });
+    });
+  }
 
   it('actually renders fluid geometry (curves and diagonal bridges), not plain squares', () => {
     const { raster, modules, moduleCount, origin, cell } = renderFluid(payloads[3].value, QRErrorCorrectionLevel.H);
