@@ -5,10 +5,11 @@ test.describe('Visual Regression Layout Checks', () => {
     await page.setViewportSize({ width: 1280, height: 720 });
     await page.goto('/');
     await page.waitForSelector('main[data-hydrated="true"]');
-    await page.waitForTimeout(1000); // Allow canvas to render
+    // Wait for the QR preview itself; toHaveScreenshot then waits for two identical frames.
+    await expect(page.getByRole('img', { name: /QR Code for/i })).toBeVisible();
     await expect(page).toHaveScreenshot('desktop-standard.png', {
       fullPage: false,
-      maxDiffPixelRatio: 0.1,
+      maxDiffPixelRatio: 0.02,
       threshold: 0.2
     });
   });
@@ -17,10 +18,11 @@ test.describe('Visual Regression Layout Checks', () => {
     await page.setViewportSize({ width: 375, height: 667 });
     await page.goto('/');
     await page.waitForSelector('main[data-hydrated="true"]');
-    await page.waitForTimeout(1000); // Allow canvas to render
+    // Wait for the QR preview itself; toHaveScreenshot then waits for two identical frames.
+    await expect(page.getByRole('img', { name: /QR Code for/i })).toBeVisible();
     await expect(page).toHaveScreenshot('mobile-standard.png', {
       fullPage: false,
-      maxDiffPixelRatio: 0.1,
+      maxDiffPixelRatio: 0.02,
       threshold: 0.2
     });
   });
@@ -30,10 +32,11 @@ test.describe('Visual Regression Layout Checks', () => {
     await page.setViewportSize({ width: 480, height: 270 });
     await page.goto('/');
     await page.waitForSelector('main[data-hydrated="true"]');
-    await page.waitForTimeout(1000); // Allow canvas to render
+    // Wait for the QR preview itself; toHaveScreenshot then waits for two identical frames.
+    await expect(page.getByRole('img', { name: /QR Code for/i })).toBeVisible();
     await expect(page).toHaveScreenshot('desktop-high-zoom.png', {
       fullPage: false,
-      maxDiffPixelRatio: 0.1,
+      maxDiffPixelRatio: 0.02,
       threshold: 0.25
     });
   });
