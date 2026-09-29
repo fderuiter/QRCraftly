@@ -22,9 +22,6 @@ import { DEFAULT_CONFIG } from '@/constants';
 import { QRType } from '@/types';
 import { JsonLdScript } from '@/components/ui/JsonLdScript';
 
-/**
- *
- */
 interface QRTypePageProps {
   /** The QR code type to pre-select. */
   type: QRType;

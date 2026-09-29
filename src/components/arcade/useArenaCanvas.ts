@@ -85,13 +85,7 @@ export interface ArenaCanvas {
    */
   draw: (paint: (ctx: CanvasRenderingContext2D) => void) => void;
   /** Maps a pointer event to arena coordinates. */
-  toArena: (event: { /**
-                      *
-                      */
-  clientX: number; /**
-                    *
-                    */
-  clientY: number }) => Point;
+  toArena: (event: { clientX: number; clientY: number }) => Point;
 }
 
 /**
