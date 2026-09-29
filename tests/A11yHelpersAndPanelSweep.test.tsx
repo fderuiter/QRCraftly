@@ -74,16 +74,17 @@ describe('Modular Accessibility Test Helpers & Full Panel Sweep', () => {
       </ToastProvider>
     );
 
-    // Locate the primary Download button
-    const downloadBtn = screen.getAllByText('Download')[0];
-    expect(downloadBtn).toBeInTheDocument();
+    // Locate the primary Download menu button
+    const downloadBtn = screen.getByRole('button', { name: /^Download$/ });
 
-    // Open download menu and click export format to trigger safety gate
+    // Open download menu (focus moves to the first item) and choose a format
     fireEvent.click(downloadBtn);
-    const pngOption = screen.getByText(/PNG \(High Quality\)/i);
-    pngOption.focus();
+    const pngOption = screen.getByRole('menuitem', { name: /PNG \(High Quality\)/i });
     expect(document.activeElement).toBe(pngOption);
     fireEvent.click(pngOption);
+
+    // Choosing an item closes the menu and returns focus to its trigger
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
 
     // Verify warning dialog is open
     expect(screen.getByText('Scan Safety Warning')).toBeInTheDocument();
@@ -97,52 +98,27 @@ describe('Modular Accessibility Test Helpers & Full Panel Sweep', () => {
       expect(screen.queryByText('Scan Safety Warning')).not.toBeInTheDocument();
     });
 
-    // Verify focus is safely and seamlessly restored to the triggering element
-    expect(document.activeElement).toBe(pngOption);
+    // Verify focus is restored to the element that opened the dialog (the menu trigger)
+    expect(document.activeElement).toBe(downloadBtn);
   });
 
   // Requirement 2 / AC 2: Bidirectional & Boundary Keyboard Navigation
-  it('navigates sequentially and boundary-wraps across QR panels using Left, Right, Home, and End keys', () => {
-    const mockOnSelect = vi.fn();
-    render(<TypeSelector currentType={QRType.URL} onSelect={mockOnSelect} />);
-    const tablist = screen.getByRole('tablist');
-    const tabs = screen.getAllByRole('tab');
+  it('exposes QR types as ordinary links in document order without arrow-key interception', () => {
+    render(<TypeSelector currentType={QRType.URL} />);
+    const links = screen.getAllByRole('link');
+    expect(links.length).toBe(12);
+    expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
 
-    expect(tabs.length).toBe(12);
+    links.forEach((link) => {
+      // Every link is in the natural Tab order (no roving tabindex)
+      expect(link).not.toHaveAttribute('tabindex');
+    });
 
-    // Set initial focus to the first tab (URL)
-    tabs[0].focus();
-    expect(document.activeElement).toBe(tabs[0]);
-
-    // Test End boundary key - jumps to the final (Social) tab
-    fireEvent.keyDown(tablist, { key: 'End' });
-    expect(document.activeElement).toBe(tabs[11]);
-    expect(mockOnSelect).toHaveBeenCalledWith(QRType.SOCIAL);
-
-    // Test Home boundary key - jumps back to the first (URL) tab
-    fireEvent.keyDown(tablist, { key: 'Home' });
-    expect(document.activeElement).toBe(tabs[0]);
-    expect(mockOnSelect).toHaveBeenCalledWith(QRType.URL);
-
-    // Test ArrowRight key - moves to second tab (Text)
-    fireEvent.keyDown(tablist, { key: 'ArrowRight' });
-    expect(document.activeElement).toBe(tabs[1]);
-    expect(mockOnSelect).toHaveBeenCalledWith(QRType.TEXT);
-
-    // Test ArrowLeft key - moves back to first tab (URL)
-    fireEvent.keyDown(tablist, { key: 'ArrowLeft' });
-    expect(document.activeElement).toBe(tabs[0]);
-    expect(mockOnSelect).toHaveBeenCalledWith(QRType.URL);
-
-    // Test Wrap-around Left: ArrowLeft on the first element jumps to the last element (Social)
-    fireEvent.keyDown(tablist, { key: 'ArrowLeft' });
-    expect(document.activeElement).toBe(tabs[11]);
-    expect(mockOnSelect).toHaveBeenCalledWith(QRType.SOCIAL);
-
-    // Test Wrap-around Right: ArrowRight on the last element wraps to the first element (URL)
-    fireEvent.keyDown(tablist, { key: 'ArrowRight' });
-    expect(document.activeElement).toBe(tabs[0]);
-    expect(mockOnSelect).toHaveBeenCalledWith(QRType.URL);
+    links[0].focus();
+    for (const key of ['ArrowRight', 'ArrowLeft', 'Home', 'End']) {
+      expect(fireEvent.keyDown(links[0], { key })).toBe(true);
+      expect(document.activeElement).toBe(links[0]);
+    }
   });
 
   // Requirement 3 / AC 3: Contrast Alerts Polite Live Region Updates

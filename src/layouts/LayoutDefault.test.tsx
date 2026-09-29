@@ -17,10 +17,11 @@
 */
 
 import React, { useEffect } from 'react';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import LayoutDefault from './LayoutDefault';
 import { useToast } from '../components/ui/Toast';
+import { ThemeToggle } from '../components/ui/ThemeToggle';
 
 const ProblematicComponent = () => {
   throw new Error('Simulated fatal rendering error');
@@ -35,6 +36,36 @@ const NotificationTrigger = () => {
 };
 
 describe('LayoutDefault', () => {
+  it('provides one global theme that survives route changes and themes toasts', () => {
+    window.localStorage.clear();
+    const { rerender } = render(
+      <LayoutDefault>
+        <ThemeToggle />
+      </LayoutDefault>
+    );
+    const toggle = screen.getByRole('button', { name: /^Theme: System/ });
+    fireEvent.click(toggle); // light
+    fireEvent.click(toggle); // dark
+    expect(document.documentElement).toHaveClass('dark');
+
+    // Simulate client-side navigation: the page changes, the layout (and theme) persists.
+    rerender(
+      <LayoutDefault>
+        <NotificationTrigger />
+        <ThemeToggle />
+      </LayoutDefault>
+    );
+    expect(screen.getByRole('button', { name: /^Theme: Dark/ })).toBeInTheDocument();
+    // Toasts render inside the themed document root, so dark variants apply to them.
+    expect(document.documentElement).toHaveClass('dark');
+    expect(document.documentElement.contains(screen.getByText('Test Layout Notification'))).toBe(true);
+
+    document.documentElement.classList.remove('dark');
+    document.documentElement.removeAttribute('style');
+    document.documentElement.removeAttribute('data-theme');
+    window.localStorage.clear();
+  });
+
   it('renders children correctly', () => {
     render(
       <LayoutDefault>

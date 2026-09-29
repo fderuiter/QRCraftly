@@ -40,6 +40,7 @@ export {
   type WorkerResponse,
 } from './lib/sharedContract';
 export { releaseImageHandle } from './lib/imageHandle';
+export { createScannabilityWorker } from './lib/workerFactory';
 
 
 export interface ScannabilityEvaluation {

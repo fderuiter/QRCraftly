@@ -1,6 +1,6 @@
 /*
     QRCraftly
-    Copyright (C) 2025 fderuiter
+    Copyright (C) 2026 fderuiter
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as published
@@ -19,7 +19,7 @@
 import type { Config } from 'vike/types';
 
 /**
- * Page-specific configuration for the QR Damage Simulator Game page.
+ * Retired /game route, kept as a prerendered redirect to /arcade?mode=simulator so bookmarks work.
  */
 export default {
   prerender: true,

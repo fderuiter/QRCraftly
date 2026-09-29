@@ -130,8 +130,14 @@ describe('ValidationEngine', () => {
         );
         expect(cleanViolations).not.toContain('CUSTOM_FORBIDDEN_KEYWORD');
       } finally {
-        delete ValidationEngine.typeValidators[QRType.URL];
+        ValidationEngine.typeValidators.delete(QRType.URL);
       }
+    });
+
+    it('should ignore types without a registered validator', () => {
+      expect(ValidationEngine.runCustomValidator('toString', 'payload')).toEqual([]);
+      expect(ValidationEngine.runCustomValidator('__proto__', 'payload')).toEqual([]);
+      expect(ValidationEngine.runCustomValidator('unregistered', 'payload')).toEqual([]);
     });
   });
 

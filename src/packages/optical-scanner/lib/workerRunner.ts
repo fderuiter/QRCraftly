@@ -1,4 +1,4 @@
-import { isValidScannerResponse } from './contracts';
+import { isValidScannerResponse, type ScannerRequest } from './contracts';
 
 let sharedWorker: Worker | null = null;
 let consecutiveRestarts = 0;
@@ -17,10 +17,7 @@ export function getScannerWorker(): Worker {
   return sharedWorker;
 }
 
-/**
- * Terminates the shared scanner worker and resets the singleton instance.
- */
-export function terminateScannerWorker(): void {
+function disposeSharedWorker(): void {
   if (sharedWorker) {
     try {
       sharedWorker.terminate();
@@ -32,10 +29,11 @@ export function terminateScannerWorker(): void {
 }
 
 /**
- * Resets the worker reference and crash counters (used in unit test teardowns).
+ * Terminates the shared scanner worker, releasing its memory, and clears the crash counter.
+ * The next scan lazily provisions a fresh worker.
  */
-export function resetScannerWorker(): void {
-  sharedWorker = null;
+export function terminateScannerWorker(): void {
+  disposeSharedWorker();
   consecutiveRestarts = 0;
 }
 
@@ -45,7 +43,7 @@ export function resetScannerWorker(): void {
  */
 function recreateScannerWorker(): Worker | null {
   consecutiveRestarts += 1;
-  terminateScannerWorker();
+  disposeSharedWorker();
 
   if (consecutiveRestarts > MAX_CONSECUTIVE_RESTARTS) {
     console.error(
@@ -214,8 +212,67 @@ export function dispatchWorkerFrame(
   });
 }
 
-// Global hooks for test mock environments
-if (typeof globalThis !== 'undefined') {
-  (globalThis as any).terminateSharedScannerWorker = terminateScannerWorker;
-  (globalThis as any).resetSharedScannerWorker = resetScannerWorker;
+/**
+ * Callbacks the Camera Scanner Engine registers on the worker it drives.
+ */
+export interface ScannerWorkerHandlers {
+  onMessage: (data: unknown) => void;
+  onError: (reason: unknown) => void;
 }
+
+/**
+ * The engine's private view of a scanner worker: post a camera frame, detach, or kill it.
+ */
+export interface ScannerWorkerHandle {
+  /** Posts a camera frame request, transferring ownership of the listed objects. */
+  postFrame: (request: ScannerRequest, transfer: Transferable[]) => void;
+  /** Detaches the engine's listeners but leaves the worker running for other callers. */
+  release: () => void;
+  /** Detaches listeners and terminates the worker (used by watchdog recovery). */
+  terminate: () => void;
+}
+
+/**
+ * Creates a worker handle wired to the given handlers. Throws when no worker can be spawned
+ * (for example under a strict CSP), which makes the engine fall back to main-thread decoding.
+ */
+export type ScannerWorkerFactory = (handlers: ScannerWorkerHandlers) => ScannerWorkerHandle;
+
+/**
+ * Default engine worker factory: attaches to the package's shared scanner worker so camera scanning
+ * and file scanning reuse a single background thread.
+ */
+export const connectSharedScannerWorker: ScannerWorkerFactory = (handlers) => {
+  const worker = getScannerWorker();
+  const onMessage = (event: MessageEvent) => handlers.onMessage(event.data);
+  const onError = (event: Event) => handlers.onError(event);
+  worker.addEventListener('message', onMessage);
+  worker.addEventListener('error', onError);
+  worker.addEventListener('messageerror', onError);
+
+  let attached = true;
+  const release = () => {
+    if (!attached) return;
+    attached = false;
+    try {
+      worker.removeEventListener('message', onMessage);
+      worker.removeEventListener('error', onError);
+      worker.removeEventListener('messageerror', onError);
+    } catch (err) {
+      console.error('Failed to detach scanner worker listeners:', err);
+    }
+  };
+
+  return {
+    postFrame: (request, transfer) => worker.postMessage(request, transfer),
+    release,
+    terminate: () => {
+      release();
+      if (sharedWorker === worker) {
+        disposeSharedWorker();
+      } else {
+        worker.terminate();
+      }
+    },
+  };
+};

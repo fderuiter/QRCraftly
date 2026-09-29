@@ -173,8 +173,8 @@ Lighthouse CI runs on every Pull Request to audit performance, accessibility, be
 
 ## Contributing
 
-- **Branch from `dev`.** `dev` is the default and integration branch. Name branches with a standard prefix (`feat/`, `fix/`, `docs/`, `refactor/`, `chore/`, `agent/`) and open pull requests against `dev`. Never open a pull request against `main`; `main` only advances by fast-forward promotion (see [RELEASE_GUIDE.md](docs/RELEASE_GUIDE.md) and ADR 0015).
-- **Use [Conventional Commits](https://www.conventionalcommits.org/)** (`feat:`, `fix:`, `docs:`, `chore:`, ...). The release engine derives the next SemVer version and the changelog from them.
+- **Branch from `dev`.** `dev` is the default and integration branch. Name branches with a standard prefix (`feat/`, `fix/`, `docs/`, `refactor/`, `chore/`, `agent/`) and open pull requests against `dev`. PRs are squash-merged once the `CI` and `PR Title` checks pass. Never open a pull request against `main`; `main` only advances when a maintainer runs the release process in [RELEASING.md](RELEASING.md).
+- **Use [Conventional Commits](https://www.conventionalcommits.org/)** for PR titles (`feat:`, `fix:`, `docs:`, `chore:`, ...). The squashed title becomes the commit on `dev`, and the release engine derives the next SemVer version and the changelog from it.
 - **Run the checks before pushing.** Husky runs formatting, typechecking, duplication audits and tests on commit. CI additionally runs `pnpm run lint`, `pnpm exec vitest run --coverage`, `pnpm test:e2e` and `pnpm build`.
 - **Read the guardrails.** [AGENTS.md](AGENTS.md) lists the project invariants (client-side only generation, storage allowlist, UI component reuse, workflow hardening), and [CONTEXT.md](CONTEXT.md) defines the domain vocabulary.
 - **Report bugs and ideas** through the GitHub issue forms; report security issues privately as described in [SECURITY.md](docs/SECURITY.md).
@@ -186,7 +186,7 @@ To maintain security and reduce repository noise, QRCraftly uses **Dependabot** 
 - **Automated Scanning**: Dependabot checks for outdated packages daily and monitors for security vulnerabilities.
 - **Grouped Updates**: Non-security routine updates are consolidated into logical groups (e.g., `dev-dependencies`, `production-dependencies`) to minimize PR volume.
 - **Security Priority**: Critical security patches bypass routine grouping and are issued as isolated PRs for immediate visibility.
-- **Review Process**: All dependency update PRs require human review. Before merging, ensure the CI pipeline (Unit Tests, E2E Tests, Consolidated Static Validation, and Build & Artifact with its bundle size check) has passed successfully.
+- **Review Process**: All dependency update PRs require human review. Before merging, ensure the CI pipeline (the `CI` check, which covers static validation, unit tests, E2E tests, and the build with its bundle size check) has passed successfully.
 - **Package Manager**: QRCraftly strictly mandates **pnpm**. Dependabot is configured to respect `pnpm-lock.yaml`. Never use `npm install` or `yarn` when manually updating dependencies.
 
 ## Technologies Used

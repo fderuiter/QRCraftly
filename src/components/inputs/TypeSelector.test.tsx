@@ -1,131 +1,61 @@
-import React from "react";
-import { render, screen, fireEvent, act } from "@testing-library/react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, screen, fireEvent, within } from "@testing-library/react";
+import { describe, it, expect } from "vitest";
+import { axe } from "vitest-axe";
 import { TypeSelector } from "./TypeSelector";
 import { QRType } from "../../types";
+import { QR_TYPE_ROUTES } from "../../data/navigation";
 
-describe("TypeSelector Component Accessibility & Keyboard Navigation", () => {
-  const mockOnSelect = vi.fn();
-
-  beforeEach(() => {
-    mockOnSelect.mockClear();
-    document.body.innerHTML = "";
+describe("TypeSelector link navigation", () => {
+  it("renders a labelled navigation landmark containing a list of links", () => {
+    render(<TypeSelector currentType={QRType.URL} />);
+    const nav = screen.getByRole("navigation", { name: "QR code types" });
+    const list = within(nav).getByRole("list");
+    expect(within(list).getAllByRole("listitem")).toHaveLength(12);
+    expect(within(nav).getAllByRole("link")).toHaveLength(12);
   });
 
-  it("renders the container as role='tablist' with proper label", () => {
-    render(<TypeSelector currentType={QRType.URL} onSelect={mockOnSelect} />);
-    const tablist = screen.getByRole("tablist");
-    expect(tablist).toBeInTheDocument();
-    expect(tablist).toHaveAttribute("aria-label", "QR Code Types");
+  it("does not use tab semantics or roving tabIndex", () => {
+    const { container } = render(<TypeSelector currentType={QRType.WIFI} />);
+    expect(screen.queryByRole("tablist")).not.toBeInTheDocument();
+    expect(screen.queryAllByRole("tab")).toHaveLength(0);
+    expect(container.querySelector("[tabindex]")).toBeNull();
+    expect(container.querySelector("[aria-selected]")).toBeNull();
   });
 
-  it("renders all individual choices with role='tab'", () => {
-    render(<TypeSelector currentType={QRType.URL} onSelect={mockOnSelect} />);
-    const tabs = screen.getAllByRole("tab");
-    expect(tabs.length).toBe(12);
+  it("links each type to its dedicated route", () => {
+    render(<TypeSelector currentType={QRType.URL} />);
+    expect(screen.getByRole("link", { name: "URL" })).toHaveAttribute("href", "/");
+    expect(screen.getByRole("link", { name: "Text" })).toHaveAttribute("href", "/text-qr-code");
+    expect(screen.getByRole("link", { name: "Contact" })).toHaveAttribute("href", "/vcard-qr-code");
+    expect(screen.getByRole("link", { name: "Social" })).toHaveAttribute("href", QR_TYPE_ROUTES[QRType.SOCIAL]);
   });
 
-  it("uses role='presentation' for list items (li) to strip list semantics", () => {
-    const { container } = render(
-      <TypeSelector currentType={QRType.URL} onSelect={mockOnSelect} />
-    );
-    const lis = container.querySelectorAll("li");
-    lis.forEach((li) => {
-      expect(li).toHaveAttribute("role", "presentation");
-    });
+  it("marks only the current route with aria-current='page'", () => {
+    render(<TypeSelector currentType={QRType.WIFI} />);
+    const current = screen.getAllByRole("link").filter((link) => link.getAttribute("aria-current") === "page");
+    expect(current).toHaveLength(1);
+    expect(current[0]).toHaveAccessibleName("WiFi");
+    expect(screen.getByRole("link", { name: "URL" })).not.toHaveAttribute("aria-current");
   });
 
-  it("correctly sets aria-selected and doesn't use aria-pressed or aria-current", () => {
-    const { container } = render(
-      <TypeSelector currentType={QRType.URL} onSelect={mockOnSelect} />
-    );
-    const tabs = screen.getAllByRole("tab");
-    
-    // Active tab
-    const urlTab = screen.getByRole("tab", { name: "URL" });
-    expect(urlTab).toHaveAttribute("aria-selected", "true");
-    expect(urlTab).not.toHaveAttribute("aria-current");
-    expect(urlTab).not.toHaveAttribute("aria-pressed");
-
-    // Inactive tab
-    const textTab = screen.getByRole("tab", { name: "Text" });
-    expect(textTab).toHaveAttribute("aria-selected", "false");
-    expect(textTab).not.toHaveAttribute("aria-current");
-    expect(textTab).not.toHaveAttribute("aria-pressed");
+  it("styles the current link with a non-colour cue in both themes", () => {
+    render(<TypeSelector currentType={QRType.TEXT} />);
+    const current = screen.getByRole("link", { name: "Text" });
+    expect(current.className).toContain("ring-1");
+    expect(current.className).toContain("dark:border-teal-300");
   });
 
-  it("assigns matching id and aria-controls attributes for programmatic linking", () => {
-    render(<TypeSelector currentType={QRType.URL} onSelect={mockOnSelect} />);
-    const urlTab = screen.getByRole("tab", { name: "URL" });
-    expect(urlTab).toHaveAttribute("id", "tab-URL");
-    expect(urlTab).toHaveAttribute("aria-controls", "panel-URL");
+  it("does not intercept arrow keys", () => {
+    render(<TypeSelector currentType={QRType.URL} />);
+    const link = screen.getByRole("link", { name: "URL" });
+    link.focus();
+    const notCancelled = fireEvent.keyDown(link, { key: "ArrowRight" });
+    expect(notCancelled).toBe(true);
+    expect(document.activeElement).toBe(link);
   });
 
-  it("implements roving tabIndex (only active tab has tabIndex=0, others -1)", () => {
-    render(<TypeSelector currentType={QRType.URL} onSelect={mockOnSelect} />);
-    const urlTab = screen.getByRole("tab", { name: "URL" });
-    const textTab = screen.getByRole("tab", { name: "Text" });
-
-    expect(urlTab).toHaveAttribute("tabIndex", "0");
-    expect(textTab).toHaveAttribute("tabIndex", "-1");
-  });
-
-  it("navigates focus and triggers selection on Left and Right Arrow keys with wrapping", () => {
-    render(<TypeSelector currentType={QRType.URL} onSelect={mockOnSelect} />);
-    const tablist = screen.getByRole("tablist");
-    const tabs = screen.getAllByRole("tab");
-
-    // Start focus on first tab
-    tabs[0].focus();
-    expect(document.activeElement).toBe(tabs[0]);
-
-    // Press ArrowRight -> moves to index 1 (Text)
-    fireEvent.keyDown(tablist, { key: "ArrowRight" });
-    expect(document.activeElement).toBe(tabs[1]);
-    expect(mockOnSelect).toHaveBeenCalledWith(QRType.TEXT);
-
-    // Press ArrowLeft -> moves back to index 0 (URL)
-    fireEvent.keyDown(tablist, { key: "ArrowLeft" });
-    expect(document.activeElement).toBe(tabs[0]);
-    expect(mockOnSelect).toHaveBeenCalledWith(QRType.URL);
-
-    // Press ArrowLeft on first tab -> wraps to last tab (Social)
-    fireEvent.keyDown(tablist, { key: "ArrowLeft" });
-    expect(document.activeElement).toBe(tabs[11]);
-    expect(mockOnSelect).toHaveBeenCalledWith(QRType.SOCIAL);
-
-    // Press ArrowRight on last tab -> wraps to first tab (URL)
-    fireEvent.keyDown(tablist, { key: "ArrowRight" });
-    expect(document.activeElement).toBe(tabs[0]);
-    expect(mockOnSelect).toHaveBeenCalledWith(QRType.URL);
-  });
-
-  it("activates tab and triggers onSelect callback on Space or Enter keys", () => {
-    render(<TypeSelector currentType={QRType.URL} onSelect={mockOnSelect} />);
-    const tablist = screen.getByRole("tablist");
-    const tabs = screen.getAllByRole("tab");
-
-    // Focus WiFi tab (index 2)
-    tabs[2].focus();
-
-    // Press Space
-    fireEvent.keyDown(tablist, { key: " " });
-    expect(mockOnSelect).toHaveBeenCalledWith(QRType.WIFI);
-
-    // Press Enter
-    fireEvent.keyDown(tablist, { key: "Enter" });
-    expect(mockOnSelect).toHaveBeenCalledWith(QRType.WIFI);
-  });
-
-  it("leaves Tab navigation to the browser", () => {
-    render(<TypeSelector currentType={QRType.URL} onSelect={mockOnSelect} />);
-    const tablist = screen.getByRole("tablist");
-    const tabs = screen.getAllByRole("tab");
-
-    tabs[0].focus();
-    const eventWasNotCancelled = fireEvent.keyDown(tablist, { key: "Tab" });
-
-    expect(eventWasNotCancelled).toBe(true);
-    expect(document.activeElement).toBe(tabs[0]);
+  it("has no axe violations", async () => {
+    const { container } = render(<TypeSelector currentType={QRType.EMAIL} />);
+    expect(await axe(container)).toHaveNoViolations();
   });
 });
