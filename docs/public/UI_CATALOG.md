@@ -51,7 +51,7 @@ These components capture specialized data structures required to construct disti
 - **TypeSelector** (`TypeSelector.tsx` / `TypeSelector.test.tsx`): Accessible tabbed layout for switching between QR configurations, with arrow, Home, End, Enter, and Space keyboard controls while leaving Tab navigation to the browser's native focus order and performing in-SPA type switching.
 - **UrlInput** (`UrlInput.tsx` / `UrlInput.test.tsx`): Text input with automatic verification and correction of URL protocol schemes, featuring Cloudflare Turnstile bot verification safeguards, an integrated opt-in toggle, and explicit consent modal for dynamic tracking and edge redirection with dual-platform App Store destinations for iOS and Android.
 - **VCardInput** (`VCardInput.tsx`): Extensive contact form detailing names, organization, email, phone, and address.
-- **WifiInput** (`WifiInput.tsx`): Wireless network panel specifying SSID, passwords, and security type.
+- **WifiInput** (`WifiInput.tsx` / `WifiInput.test.tsx`): Wireless network panel specifying SSID, passwords, and security type, plus EAP method and phase 2 selects for WPA2-Enterprise.
 
 ---
 

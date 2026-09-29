@@ -1,5 +1,5 @@
 import React from "react";
-import { WifiData, WifiEncryption } from "../../types";
+import { WifiData, WifiEncryption, WifiEapMethod, WifiEapPhase2 } from "../../types";
 import { TextField, SelectField, CheckboxField } from "../ui/FormFields";
 import { ValidationEngine } from "../../engine/ValidationEngine";
 import { FormBlock } from "../ui/FormBlock";
@@ -68,6 +68,40 @@ export const WifiInput: React.FC<WifiInputProps> = ({ data, onChange }) => {
           <option value={WifiEncryption.NOPASS}>None (Open Network)</option>
         </SelectField>
       </div>
+
+      {data.encryption === WifiEncryption.WPA2_EAP && (
+        <SelectField
+          id="wifi-eap-method"
+          label="EAP Method"
+          value={data.eapMethod ?? WifiEapMethod.PEAP}
+          onChange={(e) =>
+            onChange({ eapMethod: e.target.value as WifiEapMethod })
+          }
+        >
+          <option value={WifiEapMethod.PEAP}>PEAP</option>
+          <option value={WifiEapMethod.TTLS}>TTLS</option>
+          <option value={WifiEapMethod.TLS}>TLS</option>
+          <option value={WifiEapMethod.PWD}>PWD</option>
+        </SelectField>
+      )}
+
+      {data.encryption === WifiEncryption.WPA2_EAP &&
+        (data.eapMethod ?? WifiEapMethod.PEAP) !== WifiEapMethod.TLS &&
+        (data.eapMethod ?? WifiEapMethod.PEAP) !== WifiEapMethod.PWD && (
+        <SelectField
+          id="wifi-eap-phase2"
+          label="Phase 2 Authentication"
+          value={data.eapPhase2 ?? WifiEapPhase2.MSCHAPV2}
+          onChange={(e) =>
+            onChange({ eapPhase2: e.target.value as WifiEapPhase2 })
+          }
+        >
+          <option value={WifiEapPhase2.MSCHAPV2}>MSCHAPV2</option>
+          <option value={WifiEapPhase2.GTC}>GTC</option>
+          <option value={WifiEapPhase2.PAP}>PAP</option>
+          <option value={WifiEapPhase2.NONE}>None</option>
+        </SelectField>
+      )}
 
       {data.encryption === WifiEncryption.WPA2_EAP && (
         <TextField

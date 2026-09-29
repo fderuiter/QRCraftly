@@ -96,20 +96,20 @@ describe('normalizeUrl', () => {
     expect(normalizeUrl(url)).toBe('https://example.com/foo');
   });
 
-  it('should add http:// to URLs without protocol', () => {
+  it('should add https:// to URLs without protocol', () => {
     const url = 'example.com';
-    expect(normalizeUrl(url)).toBe('http://example.com/');
+    expect(normalizeUrl(url)).toBe('https://example.com/');
   });
 
-  it('should add http:// to URLs starting with www', () => {
+  it('should add https:// to URLs starting with www', () => {
     const url = 'www.google.com';
-    expect(normalizeUrl(url)).toBe('http://www.google.com/');
+    expect(normalizeUrl(url)).toBe('https://www.google.com/');
   });
 
   it('should encode spaces in URLs without protocol', () => {
-    // "example.com/foo bar" -> http://example.com/foo%20bar
+    // "example.com/foo bar" -> https://example.com/foo%20bar
     const url = 'example.com/foo bar';
-    expect(normalizeUrl(url)).toBe('http://example.com/foo%20bar');
+    expect(normalizeUrl(url)).toBe('https://example.com/foo%20bar');
   });
 
   it('should fallback to encodeURI for malformed URLs that cannot be parsed as URL', () => {

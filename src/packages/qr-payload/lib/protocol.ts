@@ -62,6 +62,30 @@ export const splitByUnescapedSemicolons = (str: string): string[] => {
 };
 
 /**
+ * Percent-encodes characters that would otherwise terminate the path of a
+ * `tel:` or `sms:` URI. RFC 3966 requires `#` to be sent as `%23`, because a
+ * raw `#` starts a URI fragment and dialers cut the number off there.
+ * @param dialString - A phone number that has already been through `cleanPhoneNumber`.
+ * @returns The dial string, safe to place in a URI path.
+ */
+export const encodeDialString = (dialString: string): string => {
+  return dialString.replace(/%/g, '%25').replace(/#/g, '%23');
+};
+
+/**
+ * Decodes percent-escapes in a URI component without throwing on malformed input.
+ * @param value - The percent-encoded component.
+ * @returns The decoded string, or the input unchanged when it is not valid percent-encoding.
+ */
+export const safeDecodeURIComponent = (value: string): string => {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+};
+
+/**
  * Unescapes a MATMSG value parameter string.
  * @param str - The escaped value string.
  * @returns The unescaped value string.

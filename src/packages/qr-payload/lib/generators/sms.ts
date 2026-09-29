@@ -17,7 +17,7 @@
 */
 
 import { SmsData, QRType, QRGeneratorContract } from '@/types';
-import { parseProtocol, identifyProtocol } from '../protocol';
+import { parseProtocol, identifyProtocol, encodeDialString, safeDecodeURIComponent } from '../protocol';
 import { cleanPhoneNumber } from '@/utils/security';
 
 /**
@@ -27,7 +27,7 @@ export const constructSmsString = (data: SmsData): string => {
   if (!data) return 'sms:?body=';
   const cleanNumber = cleanPhoneNumber(data.number || '', true);
   const encodedBody = encodeURIComponent(data.message || '');
-  return `sms:${cleanNumber}?body=${encodedBody}`;
+  return `sms:${encodeDialString(cleanNumber)}?body=${encodedBody}`;
 };
 
 /**
@@ -41,7 +41,7 @@ export const hydrateSmsData = (raw: string): SmsData => {
 
   const parsed = parseProtocol(raw);
   if (parsed && (parsed.scheme === 'sms' || parsed.scheme === 'smsto')) {
-    result.number = parsed.path;
+    result.number = safeDecodeURIComponent(parsed.path);
     result.message = parsed.params.get('body') || '';
   }
 
@@ -57,7 +57,7 @@ export const SmsContract: QRGeneratorContract<SmsData> = {
     const violations: string[] = [];
     const parsed = parseProtocol(raw);
     if (parsed && (parsed.scheme === 'sms' || parsed.scheme === 'smsto')) {
-      const numberPart = parsed.path;
+      const numberPart = safeDecodeURIComponent(parsed.path);
       if (
         /[a-zA-Z]/.test(numberPart) ||
         /[^0-9+*#\-().;,\s]/.test(numberPart) ||

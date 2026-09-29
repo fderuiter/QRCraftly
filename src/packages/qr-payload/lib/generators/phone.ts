@@ -17,7 +17,7 @@
 */
 
 import { PhoneData, QRType, QRGeneratorContract } from '@/types';
-import { parseProtocol, identifyProtocol } from '../protocol';
+import { parseProtocol, identifyProtocol, encodeDialString, safeDecodeURIComponent } from '../protocol';
 import { cleanPhoneNumber } from '@/utils/security';
 
 /**
@@ -27,7 +27,7 @@ export const constructPhoneString = (data: PhoneData): string => {
   if (!data) return 'tel:';
   const cleanNumber = cleanPhoneNumber(data.number || '');
   // nosemgrep: enforce-cleanphonenumber
-  return `tel:${cleanNumber}`;
+  return `tel:${encodeDialString(cleanNumber)}`;
 };
 
 /**
@@ -36,7 +36,7 @@ export const constructPhoneString = (data: PhoneData): string => {
 export const hydratePhoneData = (raw: string): PhoneData => {
   const parsed = parseProtocol(raw);
   if (parsed && parsed.scheme === 'tel') {
-    return { number: parsed.path };
+    return { number: safeDecodeURIComponent(parsed.path) };
   }
   return { number: '' };
 };
