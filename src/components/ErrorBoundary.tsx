@@ -1,4 +1,5 @@
 import { Component, ErrorInfo, ReactNode } from 'react';
+import { Button } from './ui/Button';
 
 /**
  *
@@ -65,7 +66,9 @@ export class ErrorBoundary extends Component<Props, State> {
         <div className="flex min-h-[50vh] flex-col items-center justify-center p-8 text-center text-slate-700 dark:text-slate-200">
           <h2 role="alert" className="mb-4 text-3xl font-bold text-rose-700 dark:text-rose-400">Application Error</h2>
           <p className="mb-8 text-lg">We're sorry, but something went wrong while rendering this page.</p>
-          <button
+          <Button
+            variant="primary"
+            size="lg"
             onClick={() => {
               if (typeof window !== 'undefined') {
                 try {
@@ -81,10 +84,9 @@ export class ErrorBoundary extends Component<Props, State> {
                 window.location.reload();
               }
             }}
-            className="rounded-lg bg-teal-600 px-6 py-3 font-medium text-white shadow-sm transition-colors hover:bg-teal-700"
           >
             Reload Page
-          </button>
+          </Button>
         </div>
       );
     }

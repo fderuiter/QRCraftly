@@ -86,13 +86,17 @@ export function syncUICatalog(
   // Map directory segments to headings
   const segmentToDir = {};
   for (const dir of uiDirs) {
-    const norm = dir.replace(/\\/g, '/').toLowerCase();
-    if (norm.includes('style-controls')) {
+    // Match on the directory's own name, not the absolute path, so parent folders
+    // (for example a home directory containing "ui") never change the mapping.
+    const base = path.basename(dir.replace(/\\/g, '/').replace(/\/+$/, '')).toLowerCase();
+    if (base === 'style-controls') {
       segmentToDir['style-controls'] = dir;
-    } else if (norm.includes('inputs')) {
+    } else if (base === 'inputs') {
       segmentToDir['inputs'] = dir;
-    } else if (norm.includes('ui')) {
+    } else if (base === 'ui') {
       segmentToDir['ui'] = dir;
+    } else if (base === 'components') {
+      segmentToDir['components'] = dir;
     }
   }
 
@@ -103,7 +107,9 @@ export function syncUICatalog(
 
     const headingLower = section.heading.replace(/\\/g, '/').toLowerCase();
     let targetDir = null;
-    if (headingLower.includes('style-controls')) {
+    if (headingLower.includes('`src/components/`')) {
+      targetDir = segmentToDir['components'];
+    } else if (headingLower.includes('style-controls')) {
       targetDir = segmentToDir['style-controls'];
     } else if (headingLower.includes('inputs')) {
       targetDir = segmentToDir['inputs'];

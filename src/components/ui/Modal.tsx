@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { Button } from './Button';
@@ -50,6 +50,8 @@ export const Modal: React.FC<ModalProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
+  // Unique per instance so two dialogs never share a labelling id.
+  const titleId = `modal-title-${useId()}`;
 
   useEffect(() => {
     setMounted(true);
@@ -114,11 +116,11 @@ export const Modal: React.FC<ModalProps> = ({
       <div 
         role="dialog" 
         aria-modal="true" 
-        aria-labelledby="modal-title"
+        aria-labelledby={titleId}
         className="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-xl bg-white shadow-2xl dark:bg-slate-900"
       >
         <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4 dark:border-slate-800">
-          <h2 id="modal-title" className="text-lg font-semibold text-slate-800 dark:text-slate-100">{title}</h2>
+          <h2 id={titleId} className="text-lg font-semibold text-slate-800 dark:text-slate-100">{title}</h2>
           <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close modal" className="shrink-0">
             <X className="size-5" />
           </Button>

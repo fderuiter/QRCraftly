@@ -2,6 +2,7 @@ import React from 'react';
 import { X } from 'lucide-react';
 import { getNotificationColors, getNotificationIcon } from '../../utils/notificationStyles';
 import { mergeClasses } from './styles';
+import { Button } from './Button';
 
 /**
  * Properties for the Alert component.
@@ -66,14 +67,15 @@ export const Alert: React.FC<AlertProps> = (props) => {
         {children}
       </div>
       {onDismiss && (
-        <button
-          type="button"
+        <Button
+          variant="ghost"
+          size="none"
           onClick={onDismiss}
-          className="-mr-1 -mt-1 ml-auto rounded-md p-1 opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-offset-1"
+          className="-mt-1 -mr-1 ml-auto size-8 shrink-0 rounded-md"
           aria-label="Dismiss alert"
         >
-          <X className="size-4" />
-        </button>
+          <X className="size-4" aria-hidden="true" />
+        </Button>
       )}
     </div>
   );
