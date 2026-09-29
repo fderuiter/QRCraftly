@@ -29,8 +29,10 @@ describe('Same-Repo Gate & Local Mock Preview Workflow Integration', () => {
     const scriptPath = path.resolve(process.cwd(), 'scripts/ci/verify_toolchain.sh');
     const scriptContent = fs.existsSync(scriptPath) ? fs.readFileSync(scriptPath, 'utf8') : '';
     const combinedContent = workflowContent + '\n' + scriptContent;
-    expect(combinedContent).toContain('EXPECTED_PNPM="11.1.3"');
-    expect(combinedContent).toContain('EXPECTED_NODE="v22.14.0"');
+    // Versions are read from package.json (packageManager) and .nvmrc, not hardcoded.
+    expect(combinedContent).toContain("require('./package.json').packageManager");
+    expect(combinedContent).toContain('.nvmrc');
+    expect(combinedContent).toMatch(/if \[ "\$NODE_VERSION" != "\$EXPECTED_NODE" \]/);
   });
 
   it('configures git checkout with fetch-depth: 0 for lineage validation', () => {
