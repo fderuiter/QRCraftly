@@ -1,0 +1,27 @@
+name: Feature request
+description: Suggest an improvement or a new QR code capability.
+labels: ['needs-triage']
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+      description: Describe the need or use case, not only the solution.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy
+      options:
+        - label: This feature can work entirely client-side without sending user payloads over the network (see docs/public/COMPLIANCE.md).

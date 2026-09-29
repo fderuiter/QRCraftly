@@ -10,6 +10,7 @@ on:
 permissions:
   contents: write
   actions: write
+  pull-requests: read
 
 jobs:
   cleanup_branches:
@@ -23,34 +24,53 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            // Get all branches
-            const { data: branches } = await github.rest.repos.listBranches({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
+            const { owner, repo } = context.repo;
+            const defaultBranch = context.payload.repository.default_branch;
+            const minAgeMs = 7 * 24 * 60 * 60 * 1000;
+
+            // Get all unprotected branches (paginated past the first 100)
+            const branches = await github.paginate(github.rest.repos.listBranches, {
+              owner,
+              repo,
               protected: false,
               per_page: 100
             });
-            
+
+            // Long-lived branches are never cleanup candidates, even when unprotected:
+            // dev is the default integration branch and is identical to main right after a promotion.
+            const longLived = new Set(['main', 'master', 'dev', 'backup', defaultBranch]);
+
+            // Branches backing an open PR stay, whatever their merge state.
+            const openPulls = await github.paginate(github.rest.pulls.list, { owner, repo, state: 'open', per_page: 100 });
+            const withOpenPr = new Set(openPulls.filter((pr) => pr.head.repo && pr.head.repo.full_name === `${owner}/${repo}`).map((pr) => pr.head.ref));
+
             for (const branch of branches) {
-              if (branch.name === 'main' || branch.name === 'master') continue;
-              
+              if (longLived.has(branch.name) || withOpenPr.has(branch.name)) continue;
+
               try {
-                // Check if branch is merged by checking if its head commit is in main
+                // Feature branches merge into the default branch (dev), so a branch whose head
+                // is already contained in it is merged.
                 const { data: compare } = await github.rest.repos.compareCommits({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  base: 'main',
+                  owner,
+                  repo,
+                  base: defaultBranch,
                   head: branch.name
                 });
-                
-                if (compare.status === 'identical' || compare.status === 'behind') {
-                  console.log(`Deleting merged branch: ${branch.name}`);
-                  await github.rest.git.deleteRef({
-                    owner: context.repo.owner,
-                    repo: context.repo.repo,
-                    ref: `heads/${branch.name}`
-                  });
-                }
+
+                if (compare.status !== 'identical' && compare.status !== 'behind') continue;
+
+                // A branch cut moments ago has no commits of its own yet and also looks merged;
+                // leave anything whose head commit is younger than a week.
+                const { data: head } = await github.rest.repos.getCommit({ owner, repo, ref: branch.commit.sha });
+                const committedAt = new Date(head.commit.committer.date).getTime();
+                if (Date.now() - committedAt < minAgeMs) continue;
+
+                console.log(`Deleting merged branch: ${branch.name}`);
+                await github.rest.git.deleteRef({
+                  owner,
+                  repo,
+                  ref: `heads/${branch.name}`
+                });
               } catch (e) {
                 console.log(`Error checking/deleting branch ${branch.name}: ${e.message}`);
               }
@@ -70,13 +90,13 @@ jobs:
             const daysToKeep = 7;
             const threshold = new Date(Date.now() - daysToKeep * 24 * 60 * 60 * 1000);
             
-            const { data: artifacts } = await github.rest.actions.listArtifactsForRepo({
+            const artifacts = await github.paginate(github.rest.actions.listArtifactsForRepo, {
               owner: context.repo.owner,
               repo: context.repo.repo,
               per_page: 100
             });
-            
-            for (const artifact of artifacts.artifacts) {
+
+            for (const artifact of artifacts) {
               const createdAt = new Date(artifact.created_at);
               if (createdAt < threshold) {
                 console.log(`Deleting artifact: ${artifact.name} (Created: ${createdAt})`);

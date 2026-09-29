@@ -13,8 +13,8 @@ To prevent broken builds, formatting regressions, and unformatted code from ente
 We standardize on **Husky v9** combined with **lint-staged** for client-side pre-commit validation:
 
 1. **Standardized Hook Orchestration**: Husky v9 manages `.husky/pre-commit` as a lightweight shell entry point executed automatically by Git.
-2. **Staged Formatting Gate**: `lint-staged` runs Prettier across staged TypeScript, JavaScript, JSON, CSS, and Markdown files before commit finalization.
-3. **Repository Definition**: `.lintstagedrc` defines the staged file patterns and formatting tasks, and `package.json` configures `"prepare": "husky"`.
+2. **Staged Formatting & Audit Gate**: `lint-staged` runs the secret scanner, storage privacy auditor, UI catalog validator, static path tracker, and git lineage auditor on every staged file, then `eslint --fix` and Prettier on staged code, and Prettier on staged JSON, CSS, Markdown, and YAML files before commit finalization.
+3. **Repository Definition**: `lint-staged.config.js` is the single lint-staged configuration (a `.lintstagedrc` or a `lint-staged` block in `package.json` would take precedence and silently disable it, so neither may exist), and `package.json` configures `"prepare": "husky"`.
 
 ## Rationale
 

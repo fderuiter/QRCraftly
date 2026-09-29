@@ -29,6 +29,7 @@ jobs:
   promote:
     name: Fast-Forward Promote dev to main
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     if: github.event_name == 'workflow_dispatch'
     steps:
       - name: Checkout Repository
