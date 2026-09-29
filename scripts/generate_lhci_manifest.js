@@ -50,6 +50,8 @@ function generateLhciManifest() {
     // Dynamic link resolver shell: noindex, needs the edge API and a #key fragment.
     if (posixPath.startsWith('r/')) continue;
     if (posixPath.includes('draft') || posixPath.includes('test') || posixPath.includes('dev-sandbox')) continue;
+    // Skip retired routes that only redirect (e.g. /game -> /arcade); auditing them measures the redirect stub.
+    if (/<meta[^>]+http-equiv=["']?refresh/i.test(fs.readFileSync(file, 'utf8'))) continue;
 
     let route = `/${posixPath}`;
     

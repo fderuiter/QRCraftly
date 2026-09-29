@@ -1,0 +1,5 @@
+# Retired game routes now live in the QR Arcade (see src/data/contentRegistry.ts legacyRouteRegistry).
+/destroy-the-qr /arcade?mode=blaster 301
+/destroy-the-qr/ /arcade?mode=blaster 301
+/game /arcade?mode=simulator 301
+/game/ /arcade?mode=simulator 301

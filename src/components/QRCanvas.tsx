@@ -16,14 +16,14 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import React, { useEffect, useRef, useCallback, useState, useMemo, useSyncExternalStore } from 'react';
+import React, { useEffect, useRef, useCallback, useState, useMemo } from 'react';
 import { QRConfig, SocialFormat, TemplateStyle, QRModules, QRType } from '../types';
 import { drawQR, drawQRInternal } from '../utils/qrRenderer';
 import { drawWithTemplate, SOCIAL_DIMENSIONS } from '../utils/templateRenderer';
 import { useImage } from '../hooks/useImage';
 import { ValidationEngine } from '../engine/ValidationEngine';
 import { Alert } from './ui/Alert';
-import { useOptionalQRStore } from '../context/QRContext';
+import { useOptionalQRStoreSelector } from '../context/QRContext';
 import { getMazeCacheKey, mazeCache } from '@/packages/qr-matrix/maze';
 import { normalizeUrl, shouldNormalizeUrl } from '../utils/url';
 import {
@@ -99,17 +99,8 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
     }
   };
 
-  const store = useOptionalQRStore();
-
-  const isStoreFallbackActive = useSyncExternalStore(
-    store ? store.subscribe : () => () => {},
-    () => (store ? store.getState().isScannabilityFallbackActive : false),
-    () => (store ? store.getState().isScannabilityFallbackActive : false)
-  );
-
-  const [localFallbackActive, setLocalFallbackActive] = useState(false);
-
-  const fallbackActive = isStoreFallbackActive || localFallbackActive;
+  // The QR store is the single owner of the scannability fallback flag.
+  const fallbackActive = useOptionalQRStoreSelector(state => state.isScannabilityFallbackActive) ?? false;
 
   const activeConfig = useMemo(() => {
     if (fallbackActive) {
@@ -117,29 +108,6 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
     }
     return config;
   }, [config, fallbackActive]);
-
-  useEffect(() => {
-    setLocalFallbackActive(false);
-  }, [
-    config.value,
-    config.style,
-    config.fgColor,
-    config.bgColor,
-    config.eyeColor,
-    config.errorCorrectionLevel,
-    config.isMazeEnabled,
-    config.isMazeBridgesEnabled,
-  ]);
-
-  useEffect(() => {
-    if (!store) return;
-    const unregister = store.registerSignal('scannability-fail', () => {
-      setLocalFallbackActive(true);
-    });
-    return () => {
-      unregister();
-    };
-  }, [store]);
 
   // Pre-load images to avoid async rendering and flickering
   const logoImg = useImage(activeConfig.logoUrl);

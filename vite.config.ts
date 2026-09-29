@@ -166,7 +166,6 @@ export default defineConfig(() => {
             'src/utils/schemaGenerator.ts',
             'src/utils/security.ts',
             'src/utils/sharedContract.ts',
-            'src/utils/sharedScannerWorker.ts',
             'src/utils/contrastAudit.ts',
             'src/utils/exportRiskPolicy.ts',
             'src/utils/opticalSimulation.ts',

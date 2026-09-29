@@ -48,4 +48,23 @@ describe('About Page', () => {
     expect(wifiLink).toBeInTheDocument();
     expect(wifiLink).toHaveAttribute('href', '/wifi-qr-code');
   });
+
+  it('has a single h1, no "About About" heading and ordered h2/h3 levels', () => {
+    const { container } = render(<Page />);
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
+    expect(screen.queryByRole('heading', { name: /About About/i })).not.toBeInTheDocument();
+
+    const main = container.querySelector('main main, main') as HTMLElement;
+    const levels = Array.from(main.querySelectorAll('h1, h2, h3, h4, h5, h6')).map((h) => Number(h.tagName[1]));
+    for (let i = 1; i < levels.length; i++) {
+      expect(levels[i] - levels[i - 1]).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it('does not repeat hero or feature copy further down the page', () => {
+    render(<Page />);
+    expect(screen.getAllByText(/QRCraftly is completely free to use/i)).toHaveLength(1);
+    expect(screen.getAllByText(/We believe in transparency/i)).toHaveLength(1);
+    expect(screen.queryByText(/Learn about QRCraftly's mission/i)).not.toBeInTheDocument();
+  });
 });

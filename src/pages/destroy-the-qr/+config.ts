@@ -16,9 +16,11 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import type { Config } from 'vike/types';
+
 /**
- * Isolated configuration for the Destroy the QR game page.
- * Leverages the local +Layout.tsx file to bypass the default layout shell.
+ * Retired /destroy-the-qr route, kept as a prerendered redirect to /arcade?mode=blaster so bookmarks work.
  */
 export default {
-};
+  prerender: true,
+} satisfies Config;

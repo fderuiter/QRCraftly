@@ -24,7 +24,8 @@ We consolidate the entire optical detection pipeline into a unified deep module 
 The package exposes minimal, orthogonal public seams:
 
 - **`index.ts` (Headless Entry Point)**: Exposes polymorphic `scan(source, options)` supporting `ImageData`, `HTMLCanvasElement`, `ImageBitmap`, and `File`/`Blob` (static images and WebM/MKV video files), alongside public type definitions and runtime validation contracts.
-- **`client.ts` (React Hook Seam)**: Exposes `useQrScanner`, a headless React hook that coordinates off-thread Web Worker QR code decoding on camera stream frames, manages dynamic backpressure-based sampling throttling (16ms–1000ms), handles video seeking/playback events, and provides a unified `scanFile(file)` method.
+- **`index.ts` also exposes the Camera Scanner Engine** (`createCameraScannerEngine`): the headless owner of the camera frame loop, adaptive sampling, backpressure, downscaling, worker epochs, the 1500ms watchdog, three-retry exponential backoff and main-thread fallback (see section 4).
+- **`client.ts` (React Hook Seam)**: Exposes `useQrScanner`, a thin React adapter over the Camera Scanner Engine that creates it lazily, keeps its sampling bounds in sync, batches its events into React state, destroys it on unmount, and provides a unified `scanFile(file)` method. It does not expose the worker.
 - **`worker.ts` (Web Worker Seam)**: The dedicated off-thread Web Worker entry point consolidating WebCodecs video demuxing, EBML parsing, and pure JavaScript jsQR optical decoding (`attemptBoth`).
 
 ### 2. Private Internal Subsystem (`lib/`)
@@ -34,13 +35,26 @@ All complex internal mechanics are strictly hidden inside `lib/` and are inacces
 - **`lib/sourceExtractor.ts`**: Unified extraction pipeline for all `ScanSource` types. Handles native HTML5 video frame stepping (24 FPS), WASM WebM demuxer fallback, global file concurrency locking, and client-side telemetry dispatches.
 - **`lib/scheduler.ts`**: `AdaptiveFrameScheduler` managing in-flight frame tracking, round-trip execution latency histories, dynamic sleep interval pacing, and immediate 1500ms starvation watchdog triggers.
 - **`lib/bufferPool.ts`**: `DoubleBufferPool` managing transferable zero-copy `ArrayBuffer` instances to prevent runtime garbage collection pauses.
-- **`lib/workerRunner.ts`**: Lazy singleton worker instantiation, listener boundary management, watchdog recovery, and thread teardown.
+- **`lib/cameraEngine.ts`**: The Camera Scanner Engine (section 4).
+- **`lib/clock.ts`**: Injectable `ScannerClock` used by the engine and the scheduler.
+- **`lib/workerRunner.ts`**: Lazy singleton worker instantiation (private to the package), the default engine worker factory, listener boundary management, watchdog recovery for file scans, and thread teardown.
 - **`lib/contracts.ts`**: Strict TypeScript runtime validation contracts, type assertion guards, and dimension downscaling math.
 
 ### 3. Deletion of Dead Machinery & Legacy Shims
 
 - Deleted `src/utils/scannerWorker.ts` in favor of `src/packages/optical-scanner/worker.ts`.
-- Converted legacy utility files (`useAdaptiveScanner.ts`, `AdaptiveFrameScheduler.ts`, `scannerContract.ts`, `sharedScannerWorker.ts`) into minimal, single-line backwards-compatibility re-export shims.
+- Converted legacy utility files (`useAdaptiveScanner.ts`, `AdaptiveFrameScheduler.ts`, `scannerContract.ts`) into minimal, single-line backwards-compatibility re-export shims. The `sharedScannerWorker.ts` shim (`terminateSharedScannerWorker` alias) was later deleted; the canonical `terminateScannerWorker` is imported from `scheduler.ts`.
+
+### 4. Camera Scanner Engine and Sealed Worker Seam (amendment, issue #920)
+
+The camera hook originally mixed worker lifecycle, watchdog recovery, adaptive scheduling, canvas fallback and render batching (`useWorkerRecovery`, `useVideoBinding`, `useBatchScannerState`) and leaked `workerRef` through its public result. These are now consolidated into one headless engine:
+
+- **Interface**: `createCameraScannerEngine({ getSource, minSamplingDelay, maxSamplingDelay })` returns `start`, `stop`, `destroy`, `setOptions`, `getMetrics` and `subscribe(events)` with typed `onScanSuccess`, `onScanFail`, `onStatusChange` (`idle | checking | pass | fail`) and `onMetricsChange` (`samplingDelay`, `latencyHistory`) listeners.
+- **Sealed worker**: the worker handle, epoch counter, message listeners and termination are private to the engine. Messages from a replaced worker generation or an earlier session are discarded by epoch.
+- **Recovery policy**: a frame in flight longer than the watchdog budget (1500ms) or a worker `error`/`messageerror` recreates the worker with a doubled budget (3000ms, then capped at 6000ms). Any valid, non-stale worker answer resets the counter and budget. After three consecutive restarts fail, or when the worker factory throws, the engine decodes on the main thread (frames capped at 800px) without changing its interface.
+- **Dependency injection instead of test hooks**: the worker factory (`ScannerWorkerFactory`), clock (`ScannerClock`), frame grabber and main-thread decoder are injectable. The package no longer attaches `terminateSharedScannerWorker`/`resetSharedScannerWorker` to `globalThis`, and the camera path no longer switches to synchronous state updates under test.
+- **Tests**: [`src/packages/optical-scanner/tests/cameraScannerEngine.test.ts`](../../src/packages/optical-scanner/tests/cameraScannerEngine.test.ts) drives the engine headlessly (node environment, fake frame source, fake workers, fake clock). [`src/packages/optical-scanner/tests/useQrScanner.test.tsx`](../../src/packages/optical-scanner/tests/useQrScanner.test.tsx) is a small adapter smoke test.
+- **Duplicated frame provider**: the standalone `FrameProvider.ts` camera loop was already deleted (section 3); the engine is now the only camera frame loop.
 
 ## Rationale
 
@@ -51,6 +65,7 @@ All complex internal mechanics are strictly hidden inside `lib/` and are inacces
 ## Consequences
 
 - [`src/components/QRScanner.tsx`](../../src/components/QRScanner.tsx) uses a single hook (`useQrScanner`) for both live camera feeds and file drag-and-drop (`scanFile`).
+- Removing `workerRef` from `UseQrScannerResult` is a breaking change for direct readers of that property; no UI component read it.
 - Zero dependency violations reported by `depcruise src` across all 388 modules.
 - Complete backwards compatibility preserved for existing test harnesses and subpages via minimal re-export shims.
 - All 193 test suites (1,910 tests) and Playwright E2E suites pass with zero regressions.

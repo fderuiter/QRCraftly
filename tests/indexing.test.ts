@@ -3,6 +3,7 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { describe, it, expect } from 'vitest';
 import { shouldExcludePath, getRegistryRoutes, generateSitemap } from '../scripts/generate_sitemap';
+import { legacyRouteRegistry } from '../src/data/contentRegistry';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -34,19 +35,22 @@ describe('Search Engine Indexing Prevention & Hybrid Sitemap Generation', () => 
     expect(shouldExcludePath('dist/client/dev-sandbox/index.html')).toBe(true);
     expect(shouldExcludePath('dist/client/index.html')).toBe(false);
     expect(shouldExcludePath('dist/client/about.html')).toBe(false);
-    expect(shouldExcludePath('dist/client/game/index.html')).toBe(false);
-    expect(shouldExcludePath('dist/client/game.html')).toBe(false);
+    expect(shouldExcludePath('dist/client/arcade/index.html')).toBe(false);
+    expect(shouldExcludePath('dist/client/arcade.html')).toBe(false);
+    // Retired routes only redirect to /arcade, so they are not indexed.
+    expect(shouldExcludePath('/game')).toBe(true);
+    expect(shouldExcludePath('/destroy-the-qr')).toBe(true);
   });
 
-  it('should verify game page config enables static pre-rendering', async () => {
-    const gameConfig = (await import('../src/pages/game/+config')).default;
-    expect(gameConfig.prerender).not.toBe(false);
+  it('should verify arcade page config enables static pre-rendering', async () => {
+    const arcadeConfig = (await import('../src/pages/arcade/+config')).default;
+    expect(arcadeConfig.prerender).not.toBe(false);
   });
 
   it('should verify generated static HTML files contain valid canonical tags and DOM content if build output exists', () => {
     const distDir = join(__dirname, '../dist/client');
     if (existsSync(distDir)) {
-      const publicRoutes = ['index.html', 'about/index.html', 'game/index.html', 'wifi-qr-code/index.html'];
+      const publicRoutes = ['index.html', 'about/index.html', 'arcade/index.html', 'wifi-qr-code/index.html'];
       for (const routeFile of publicRoutes) {
         const filePath = join(distDir, routeFile);
         if (existsSync(filePath)) {
@@ -63,7 +67,8 @@ describe('Search Engine Indexing Prevention & Hybrid Sitemap Generation', () => 
 
   it('should discover client-rendered tool routes from central application registries', () => {
     const registryRoutes = getRegistryRoutes();
-    expect(registryRoutes).toContain('/game');
+    expect(registryRoutes).toContain('/arcade');
+    expect(registryRoutes).not.toContain('/game');
     expect(registryRoutes).toContain('/about');
     expect(registryRoutes).toContain('/wifi-qr-code');
     expect(registryRoutes.length).toBeGreaterThan(10);
@@ -88,10 +93,12 @@ describe('Search Engine Indexing Prevention & Hybrid Sitemap Generation', () => 
     expect(sitemapXml).toContain('<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">');
     expect(sitemapXml).toContain('</urlset>');
 
-    // 2. Contains static pre-rendered pages AND public client-rendered routes (like /game)
+    // 2. Contains static pre-rendered pages AND public client-rendered routes (like /arcade)
     expect(sitemapXml).toContain('<loc>https://qrcraftly.com</loc>');
     expect(sitemapXml).toContain('<loc>https://qrcraftly.com/about</loc>');
-    expect(sitemapXml).toContain('<loc>https://qrcraftly.com/game</loc>');
+    expect(sitemapXml).toContain('<loc>https://qrcraftly.com/arcade</loc>');
+    expect(sitemapXml).not.toContain('/game<');
+    expect(sitemapXml).not.toContain('/destroy-the-qr');
     expect(sitemapXml).toContain('<loc>https://qrcraftly.com/wifi-qr-code</loc>');
 
     // 3. Omitted routes (dev-sandbox, _error, 404, etc.)
@@ -110,5 +117,17 @@ describe('Search Engine Indexing Prevention & Hybrid Sitemap Generation', () => 
       expect(url).toMatch(/^https?:\/\//);
     }
   });
-});
 
+  it('serves an edge 301 for every retired arcade route in public/_redirects', () => {
+    const rules = readFileSync(join(__dirname, '../public/_redirects'), 'utf-8')
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0 && !line.startsWith('#'))
+      .map((line) => line.split(/\s+/));
+    for (const [id, legacy] of Object.entries(legacyRouteRegistry)) {
+      for (const source of [`/${id}`, `/${id}/`]) {
+        expect(rules).toContainEqual([source, legacy.redirectTo, '301']);
+      }
+    }
+  });
+});

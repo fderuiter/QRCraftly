@@ -2,7 +2,7 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [main, dev]
+    branches: [dev]
     paths: &workflow_paths
       - 'src/**'
       - 'public/**'
@@ -30,10 +30,10 @@ on:
       - '.github/workflows/**'
       - '.github/actions/**'
   pull_request:
-    branches: [main, dev]
+    branches: [dev]
   workflow_dispatch:
-    # Use .github/workflows/release.yml for version bumps and release tagging.
-    # This manual trigger is reserved for forcing a CI re-run without a code push.
+    # Manual trigger for re-running CI without a code push. Releases are cut locally
+    # (see RELEASING.md); .github/workflows/release.yml only publishes a pushed tag.
 
 permissions:
   contents: read
@@ -172,7 +172,7 @@ jobs:
 
   # JOB 5: Build Application
   build:
-    name: Build & Artifact
+    name: Build
     needs: [static-validation, test, e2e] # Wait for quality checks before burning CPU on build
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -303,46 +303,41 @@ jobs:
               }
             }
 
-      # UPLOAD ARTIFACT for Deployment
-      - name: Upload Build Artifact
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: dist
-          path: dist
-          retention-days: 1
-
       - name: Restore Workspace Source Metadata
         if: always()
         run: |
           git checkout -- .
 
-  deploy:
-    name: Deploy (Rollback Only)
-    needs: [static-validation, test, e2e, build]
-    # Restricted to emergency rollback: revert commits pushed to main.
-    # Normal releases are handled by .github/workflows/release.yml.
-    # The ref guard keeps a revert merged into dev from deploying to production.
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && startsWith(github.event.head_commit.message, 'Revert')
-    permissions:
-      attestations: write
-      contents: write
-      deployments: write
-      id-token: write
-    concurrency:
-      group: production-deployment
-      cancel-in-progress: false
-    uses: ./.github/workflows/deploy.yml
-    with:
-      version_bump: ''
-      is_rollback: true
-    secrets: inherit
+  # Single required check for rulesets. Branch rules require "CI" instead of every
+  # job name, so renaming or adding jobs never leaves a PR waiting on a check that
+  # no longer reports. Dependency Audit stays advisory (see its comment above).
+  ci:
+    name: CI
+    needs: [setup, static-validation, test, e2e, build]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require every quality job to succeed
+        env:
+          NEEDS_RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "Job results: $NEEDS_RESULTS"
+          for result in $NEEDS_RESULTS; do
+            if [ "$result" != "success" ]; then
+              echo "::error::A required CI job finished with '$result'."
+              exit 1
+            fi
+          done
 
+  # Cloudflare Workers Builds deploys dev to staging on its own. Wait until staging
+  # serves this commit, then smoke test it.
   verify-staging:
     name: Verify Preview Staging Environment
-    needs: [static-validation, test, e2e, build]
+    needs: [ci]
     if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     steps:
       - name: Checkout Code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -350,9 +345,13 @@ jobs:
       - name: Setup Environment
         uses: ./.github/actions/setup
 
+      - name: Wait for staging to serve this commit
+        env:
+          BASE_URL: "https://dev-qrcraftly.fpderuiter.workers.dev"
+          EXPECTED_COMMIT: ${{ github.sha }}
+        run: bash scripts/ci/wait_for_deploy.sh
+
       - name: Run Playwright Smoke Tests on Preview Staging
         env:
           PLAYWRIGHT_TEST_BASE_URL: "https://dev-qrcraftly.fpderuiter.workers.dev"
         run: bash scripts/ci/run_smoke_tests.sh
-
-
