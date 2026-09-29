@@ -102,12 +102,14 @@ test.describe('Transition & Storage Verification', () => {
   });
 
   test('Requirement 4: Assert that the telemetry preference persists its exact state across page reloads', async ({ page }) => {
-    // 1. Locate the Opt-In button ("Yes, Help Fix This" or "Allow")
-    const yesButton = page.getByRole('button', { name: /Yes, Help Fix This|Allow/i });
-    await expect(yesButton).toBeVisible();
+    // 1. Locate the diagnostics switch in the footer privacy settings (#802)
+    const diagnosticsSwitch = page.getByRole('switch', { name: 'Share anonymous diagnostics' });
+    await diagnosticsSwitch.scrollIntoViewIfNeeded();
+    await expect(diagnosticsSwitch).not.toBeChecked();
 
-    // Click to Opt-In
-    await yesButton.click();
+    // Turn it on to opt in
+    await page.locator('label[for="diagnostics-opt-in"]').click(); // the visible switch track is the label
+    await expect(diagnosticsSwitch).toBeChecked();
 
     // Verify localStorage has the 'qr-telemetry-opt-in' set to 'true'
     let optInVal = await page.evaluate(() => window.localStorage.getItem('qr-telemetry-opt-in'));
@@ -131,12 +133,15 @@ test.describe('Transition & Storage Verification', () => {
   });
 
   test('Requirement 4 (Alt): Assert that telemetry opt-out also persists its exact state across page reloads', async ({ page }) => {
-    // 1. Locate the Opt-Out button ("No Thanks" or "No thanks")
-    const noButton = page.getByRole('button', { name: /No Thanks|No thanks/i });
-    await expect(noButton).toBeVisible();
+    // 1. Locate the diagnostics switch in the footer privacy settings (#802)
+    const diagnosticsSwitch = page.getByRole('switch', { name: 'Share anonymous diagnostics' });
+    await diagnosticsSwitch.scrollIntoViewIfNeeded();
 
-    // Click to Opt-Out
-    await noButton.click();
+    // Turn it on and back off to record an explicit opt-out
+    await page.locator('label[for="diagnostics-opt-in"]').click(); // the visible switch track is the label
+    await expect(diagnosticsSwitch).toBeChecked();
+    await page.locator('label[for="diagnostics-opt-in"]').click(); // the visible switch track is the label
+    await expect(diagnosticsSwitch).not.toBeChecked();
 
     // Verify localStorage has the 'qr-telemetry-opt-in' set to 'false'
     let optOutVal = await page.evaluate(() => window.localStorage.getItem('qr-telemetry-opt-in'));

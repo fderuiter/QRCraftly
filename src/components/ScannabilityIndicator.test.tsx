@@ -1,5 +1,6 @@
 import { render, screen, act, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { axe } from 'vitest-axe';
 import { ScannabilityIndicator } from './ScannabilityIndicator';
 
 describe('ScannabilityIndicator Component', () => {
@@ -75,28 +76,61 @@ describe('ScannabilityIndicator Component', () => {
     expect(liveRegion.textContent).toBe('Scannability status: Print simulation verified. Health score: 95.');
   });
 
-  it('focuses the scannability card container when Alt + S is pressed', () => {
+  it('is not a tab stop and does not register a global Alt+S shortcut', () => {
     render(<ScannabilityIndicator status="physical-pass" health={{ score: 100, warnings: [] }} />);
-    
     const wrapper = screen.getByTestId('scannability-feedback-wrapper');
-    expect(wrapper).toBeInTheDocument();
-    
-    // Focus should not be on wrapper yet
+
+    expect(wrapper).not.toHaveAttribute('tabindex');
+    expect(wrapper.querySelector('[tabindex]')).toBeNull();
+
+    const event = new KeyboardEvent('keydown', { key: 's', altKey: true, bubbles: true, cancelable: true });
+    fireEvent(window, event);
+    expect(event.defaultPrevented).toBe(false);
     expect(document.activeElement).not.toBe(wrapper);
-
-    // Fire Alt + s keydown event globally
-    fireEvent.keyDown(window, { key: 's', altKey: true });
-
-    // Focus should be shifted to wrapper
-    expect(document.activeElement).toBe(wrapper);
   });
 
-  it('card has high-contrast focus styles classes configured', () => {
-    render(<ScannabilityIndicator status="physical-pass" health={{ score: 100, warnings: [] }} />);
-    const wrapper = screen.getByTestId('scannability-feedback-wrapper');
-    
-    expect(wrapper).toHaveClass('focus:ring-2');
-    expect(wrapper).toHaveClass('focus:ring-teal-600');
-    expect(wrapper).toHaveClass('dark:focus:ring-teal-400');
+  it('keeps exactly one polite status region, including while idle', () => {
+    const { rerender } = render(<ScannabilityIndicator status="idle" />);
+    expect(screen.getAllByRole('status')).toHaveLength(1);
+
+    rerender(<ScannabilityIndicator status="checking" />);
+    expect(screen.getAllByRole('status')).toHaveLength(1);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('announces a failure once through a single alert, not through the polite region', () => {
+    const { rerender } = render(<ScannabilityIndicator status="checking" />);
+    rerender(<ScannabilityIndicator status="fail" health={{ score: 40, warnings: ['Low contrast'] }} />);
+
+    const alerts = screen.getAllByRole('alert');
+    expect(alerts).toHaveLength(1);
+    expect(alerts[0]).toHaveTextContent('Low contrast');
+
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
+    expect(screen.getByRole('status').textContent).toBe('');
+    // The visible badge carries no live role of its own.
+    expect(screen.getByText('Scan verification failed').closest('[role]')?.getAttribute('role')).not.toBe('alert');
+    expect(document.querySelector('[aria-live="off"]')).toBeNull();
+  });
+
+  it('still raises an alert for a failure without warnings', () => {
+    render(<ScannabilityIndicator status="fail" />);
+    expect(screen.getByRole('alert')).toHaveTextContent(/Scan verification failed/i);
+  });
+
+  it('does not raise an alert for non-failing warnings', () => {
+    render(<ScannabilityIndicator status="digital-pass" health={{ score: 85, warnings: ['Review before printing'] }} />);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getByText('Review before printing')).toBeInTheDocument();
+  });
+
+  it('has no axe violations in pass and fail states', async () => {
+    vi.useRealTimers();
+    const { container, rerender } = render(<ScannabilityIndicator status="physical-pass" health={{ score: 100, warnings: [] }} />);
+    expect(await axe(container)).toHaveNoViolations();
+    rerender(<ScannabilityIndicator status="fail" health={{ score: 30, warnings: ['Low contrast'] }} />);
+    expect(await axe(container)).toHaveNoViolations();
   });
 });

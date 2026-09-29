@@ -76,8 +76,9 @@ test.describe('Automated Workbox Precaching and Offline Readiness', () => {
   });
 
   test('Constraint 1: Custom brand logo uploads are transient and fully cleared on page refresh', async ({ page }) => {
-    // 1. Locate the Logo upload button or the input file element
-    const fileInput = page.locator('input[type="file"]');
+    // 1. Expand the Logo section and locate its file input
+    await page.getByRole('button', { name: 'Logo', exact: true }).click();
+    const fileInput = page.getByRole('region', { name: 'Logo' }).locator('input[type="file"]');
     await expect(fileInput).toBeAttached();
 
     // 2. Simulate uploading a custom brand logo image

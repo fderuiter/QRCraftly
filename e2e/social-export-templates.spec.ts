@@ -46,7 +46,8 @@ test.beforeEach(async ({ page }) => {
   });
   await page.goto('/');
   await page.waitForSelector('main[data-hydrated="true"]');
-  // Wait until the Appearance section lazy-loads StyleControls (it uses React.lazy)
+  // StyleControls lazy-loads; Export Layout lives in the collapsed "Layout & Border" accordion section.
+  await page.getByRole('button', { name: 'Layout & Border' }).click();
   await page.getByText('Export Layout').waitFor({ state: 'visible' });
 });
 

@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { QRConfig } from '../../types';
 import { PRESET_COLORS, MIN_CONTRAST_THRESHOLD } from '../../constants';
 import { getContrastRatio } from '../../utils/colorUtils';
+import { Check } from 'lucide-react';
 import { ColorInput } from '../ui/ColorInput';
 import { ContrastBadge, ContrastBanner } from './ContrastWarning';
 
@@ -38,47 +39,54 @@ export const ColorControls: React.FC<ColorControlsProps> = ({ config, onChange }
   return (
     <div>
       <div className="mb-3 flex items-baseline justify-between">
-        <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Colors</h3>
+        <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Colors</h4>
         <ContrastBadge isVisible={isLowContrast} contrastRatio={worstContrast} decimalPrecision={1} />
       </div>
 
 
       <div
-        className="mb-5 flex flex-wrap gap-3"
+        className="mb-5 grid grid-cols-3 gap-2"
         role="radiogroup"
         aria-label="Color Presets"
       >
-        {PRESET_COLORS.map((preset, idx) => (
-          <label
-            key={idx}
-            className={`group relative inline-flex size-10 cursor-pointer items-center justify-center overflow-hidden rounded-lg font-medium shadow-sm ring-1 transition duration-200 focus-within:ring-2 focus-within:ring-teal-500 hover:scale-110 ${
-              config.fgColor === preset.fg && config.bgColor === preset.bg && config.eyeColor === preset.eye
-                ? 'ring-teal-500'
-                : 'ring-slate-200 dark:ring-slate-700'
-            }`}
-            title={preset.label}
-          >
-            <input
-              type="radio"
-              name="color-preset"
-              value={preset.label}
-              checked={config.fgColor === preset.fg && config.bgColor === preset.bg && config.eyeColor === preset.eye}
-              onChange={() => onChange({ fgColor: preset.fg, bgColor: preset.bg, eyeColor: preset.eye })}
-              onClick={() => onChange({ fgColor: preset.fg, bgColor: preset.bg, eyeColor: preset.eye })}
-              className="sr-only"
-              aria-label={`Select ${preset.label} theme`}
-            />
-            {/* Use SVG presentation attributes instead of inline styles for CSP compliance */}
-            <svg viewBox="0 0 40 40" className="absolute inset-0 size-full" aria-hidden="true">
-              {/* Background */}
-              <rect width="40" height="40" fill={preset.bg} />
-              {/* Foreground Ring (Simulating Modules) */}
-              <rect x="6" y="6" width="28" height="28" rx="2" fill="none" stroke={preset.fg} strokeWidth="6" />
-              {/* Eye Center */}
-              <rect x="11" y="11" width="18" height="18" rx="1" fill={preset.eye} />
-            </svg>
-          </label>
-        ))}
+        {PRESET_COLORS.map((preset) => {
+          const isSelected = config.fgColor === preset.fg && config.bgColor === preset.bg && config.eyeColor === preset.eye;
+          const applyPreset = () => onChange({ fgColor: preset.fg, bgColor: preset.bg, eyeColor: preset.eye });
+          return (
+            <label
+              key={preset.label}
+              className={`relative flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border-2 p-1.5 text-xs transition-colors focus-within:ring-2 focus-within:ring-teal-500 focus-within:ring-offset-1 dark:focus-within:ring-offset-slate-900 ${
+                isSelected
+                  ? 'border-teal-700 bg-teal-50 font-semibold text-teal-900 dark:border-teal-300 dark:bg-teal-950 dark:text-teal-100'
+                  : 'border-slate-200 bg-white font-medium text-slate-700 hover:border-slate-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:border-slate-500'
+              }`}
+            >
+              <input
+                type="radio"
+                name="color-preset"
+                value={preset.label}
+                checked={isSelected}
+                onChange={applyPreset}
+                onClick={applyPreset}
+                className="sr-only"
+                aria-label={`Select ${preset.label} theme`}
+              />
+              {/* Use SVG presentation attributes instead of inline styles for CSP compliance */}
+              <svg viewBox="0 0 40 40" className="size-7 shrink-0 rounded ring-1 ring-slate-300 dark:ring-slate-600" aria-hidden="true">
+                {/* Background */}
+                <rect width="40" height="40" fill={preset.bg} />
+                {/* Foreground Ring (Simulating Modules) */}
+                <rect x="6" y="6" width="28" height="28" rx="2" fill="none" stroke={preset.fg} strokeWidth="6" />
+                {/* Eye Center */}
+                <rect x="11" y="11" width="18" height="18" rx="1" fill={preset.eye} />
+              </svg>
+              <span className="min-w-0 leading-tight">{preset.label}</span>
+              {isSelected && (
+                <Check className="absolute top-0.5 right-0.5 size-3.5 text-teal-700 dark:text-teal-300" aria-hidden="true" />
+              )}
+            </label>
+          );
+        })}
       </div>
 
       <div className="grid grid-cols-2 gap-4">

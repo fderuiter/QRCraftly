@@ -118,21 +118,33 @@ describe('Structural Isolation and Reserved Space for QR Preview', () => {
         </ToastProvider>
       );
       
-      // The mobile workspace retains its preview-first layout without locking the document viewport.
-      const parentContainer = container.querySelector('.bg-slate-50.dark\\:bg-slate-950');
-      expect(parentContainer).toHaveClass('min-h-screen');
-      expect(parentContainer).toHaveClass('flex-col-reverse');
-      expect(parentContainer).not.toHaveClass('h-screen');
-      expect(parentContainer).not.toHaveClass('overflow-hidden');
-      
+      // The shared workspace is a single in-flow column on mobile (content first) and only
+      // becomes a two-column, sticky-preview grid at the md breakpoint.
+      const workspace = screen.getByTestId('tool-workspace');
+      expect(workspace).toHaveClass('grid-cols-1');
+      expect(workspace).not.toHaveClass('flex-col-reverse');
+      expect(workspace).not.toHaveClass('h-screen');
+      expect(workspace).not.toHaveClass('overflow-hidden');
+
       // Both panels participate in normal document flow on mobile and at high zoom.
       const settingsPanel = screen.getByLabelText(/QR Code Settings/i);
       expect(settingsPanel).not.toHaveClass('max-h-[50vh]');
       expect(settingsPanel).not.toHaveClass('overflow-y-auto');
-      
+
       const previewPanel = screen.getByLabelText(/QR Code Preview/i);
       expect(previewPanel).not.toHaveClass('max-h-[50vh]');
       expect(previewPanel).not.toHaveClass('overflow-y-auto');
+      expect(previewPanel).not.toHaveClass('overflow-x-hidden');
+
+      // The preview only scrolls independently on desktop; decorative glows are clipped.
+      const scroller = screen.getByTestId('tool-workspace-preview-scroller');
+      expect(scroller).toHaveClass('md:overflow-y-auto');
+      expect(scroller).not.toHaveClass('overflow-y-auto');
+      expect(scroller).not.toHaveClass('overflow-x-hidden');
+      expect(scroller.querySelector('.overflow-clip')).not.toBeNull();
+
+      // Content entry comes before the preview in document (and therefore mobile) order.
+      expect(settingsPanel.compareDocumentPosition(previewPanel) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     });
   });
 });

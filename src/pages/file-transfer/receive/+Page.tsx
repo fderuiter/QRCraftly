@@ -17,12 +17,11 @@
 */
 
 import React, { useState, useCallback, useRef } from 'react';
-import { Play, Square, Camera, AlertTriangle, Activity, Cpu, QrCode, Trash2, CheckCircle2, Upload } from 'lucide-react';
+import { Play, Square, Camera, AlertTriangle, Activity, Cpu, Trash2, CheckCircle2, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Alert } from '@/components/ui/Alert';
-import { PrimaryNav } from '@/components/ui/PrimaryNav';
-import { ThemeToggle } from '@/components/ui/ThemeToggle';
+import { ToolWorkspaceLayout, ToolWorkspaceHeader } from '@/components/ToolWorkspaceLayout';
 import { useToast } from '@/components/ui/Toast';
 import { useAnimatedQrReceiver } from '@/hooks/useAnimatedQrReceiver';
 import { QRProvider } from '@/context/QRContext';
@@ -151,38 +150,22 @@ function FileTransferReceiveInner() {
   const progressPercent = totalChunks ? Math.round((receivedCount / totalChunks) * 100) : 0;
 
   return (
-    <div className="min-h-screen w-full">
-      <div className="relative flex h-screen min-h-screen flex-col-reverse overflow-hidden bg-slate-50 transition-colors duration-300 md:h-auto md:min-h-0 md:flex-row md:overflow-visible dark:bg-slate-950">
-        
-        {/* Left Stats & controls Sidebar */}
-        <aside aria-label="Receiver Settings and Controls" className="relative z-10 flex max-h-[50vh] w-full flex-col overflow-y-auto border-r border-slate-200 bg-white shadow-xl transition-colors duration-300 md:max-h-none md:w-120 dark:border-slate-800 dark:bg-slate-900">
-          <header className="sticky top-0 z-20 flex items-center justify-between gap-2 border-b border-slate-100 bg-white p-6 transition-colors duration-300 dark:border-slate-800 dark:bg-slate-900">
-            <div>
-              <a href="/" aria-label="Home" className="mb-1 flex items-center gap-2 text-teal-700 transition-opacity hover:opacity-80 dark:text-teal-400">
-                <QrCode className="size-6" />
-                <h1 className="text-xl font-bold tracking-tight text-slate-700 dark:text-slate-100">QRCraftly</h1>
-              </a>
-              <div className="flex items-center gap-2">
-                <p className="text-sm text-slate-600 dark:text-slate-400">Receive a File by QR Code</p>
-                <span className="rounded-full bg-teal-100 px-2 py-0.5 text-xs font-semibold text-teal-800 dark:bg-teal-900/60 dark:text-teal-300">Beta</span>
-              </div>
-            </div>
-            <div className="flex shrink-0 items-center gap-1">
-              <PrimaryNav layout="compact" />
-              <ThemeToggle />
-            </div>
-          </header>
-
-          <div className="space-y-8 p-6 pb-24">
-            
-            {showBetaAlert && (
-              <Alert
-                variant="info"
-                onDismiss={() => setShowBetaAlert(false)}
-              >
-                <span className="font-semibold">Beta Feature:</span> Air-gapped file transfer streams binary data across screen and camera. For optimal transmission, ensure consistent lighting, minimize display glare, and keep devices steady.
-              </Alert>
-            )}
+    <div className="w-full">
+      <ToolWorkspaceLayout
+        controlsLabel="Receiver Settings and Controls"
+        previewLabel="Camera Capture Viewport"
+        previewId="receiver-viewport"
+        header={
+          <ToolWorkspaceHeader
+            title="Receive a File by QR Code"
+            subtitle="Scan an animated transfer QR with your camera or a video."
+            badge="Beta"
+            previewId="receiver-viewport"
+            previewJumpLabel="Jump to camera"
+          />
+        }
+        controls={
+          <>
             {/* Connection / Status Section */}
             <section className="space-y-4">
               <h2 className="flex items-center gap-2 text-xs font-bold tracking-wider text-slate-600 uppercase dark:text-slate-400">
@@ -192,43 +175,35 @@ function FileTransferReceiveInner() {
 
               {/* Dual-Mode Pill Switcher */}
               <div
-                className="flex rounded-xl bg-slate-100 p-1 dark:bg-slate-800/80"
-                role="radiogroup"
+                className="grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1 dark:bg-slate-800/80"
+                role="group"
                 aria-label="Receiver Input Mode"
               >
-                <button
-                  type="button"
-                  role="radio"
-                  aria-checked={receiverMode === 'camera'}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  pressed={receiverMode === 'camera'}
                   onClick={() => setReceiverMode('camera')}
-                  className={`flex flex-1 items-center justify-center gap-2 rounded-lg py-2 text-xs font-semibold transition-all ${
-                    receiverMode === 'camera'
-                      ? 'bg-white text-teal-700 shadow-sm dark:bg-slate-900 dark:text-teal-400'
-                      : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
-                  }`}
+                  className="min-h-11 gap-2 text-xs font-semibold"
                 >
-                  <Camera className="size-4" />
+                  <Camera className="size-4" aria-hidden="true" />
                   Camera Feed
-                </button>
-                <button
-                  type="button"
-                  role="radio"
-                  aria-checked={receiverMode === 'file'}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  pressed={receiverMode === 'file'}
                   onClick={() => setReceiverMode('file')}
-                  className={`flex flex-1 items-center justify-center gap-2 rounded-lg py-2 text-xs font-semibold transition-all ${
-                    receiverMode === 'file'
-                      ? 'bg-white text-teal-700 shadow-sm dark:bg-slate-900 dark:text-teal-400'
-                      : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
-                  }`}
+                  className="min-h-11 gap-2 text-xs font-semibold"
                 >
-                  <Upload className="size-4" />
+                  <Upload className="size-4" aria-hidden="true" />
                   Video File
-                </button>
+                </Button>
               </div>
 
               <div className="flex flex-col gap-3">
                 {securityAlert && (
-                  <div className="animate-bounce">
+                  <div>
                     <Alert variant="error" title="Security Intercepted">
                       {securityAlert}
                     </Alert>
@@ -236,7 +211,7 @@ function FileTransferReceiveInner() {
                 )}
 
                 {receiverError && (
-                  <div className="animate-bounce" data-testid="receiver-error">
+                  <div data-testid="receiver-error">
                     <Alert variant="error" title="Transfer Error">
                       {receiverError}
                     </Alert>
@@ -244,7 +219,7 @@ function FileTransferReceiveInner() {
                 )}
 
                 {fileValidationError && (
-                  <div className="animate-bounce" data-testid="file-validation-error">
+                  <div data-testid="file-validation-error">
                     <Alert variant="error" title="Invalid File">
                       {fileValidationError}
                     </Alert>
@@ -310,7 +285,7 @@ function FileTransferReceiveInner() {
                       <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">
                         {videoFile ? videoFile.name : 'Drop video file here or click to browse'}
                       </p>
-                      <p className="text-2xs mt-1 text-slate-500 dark:text-slate-400">
+                      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                         {videoFile ? `${(videoFile.size / (1024 * 1024)).toFixed(2)} MB` : 'MP4, WebM, MOV, etc.'}
                       </p>
                       <input
@@ -379,8 +354,20 @@ function FileTransferReceiveInner() {
               </div>
             </section>
 
-            <div className="h-px bg-slate-100 dark:bg-slate-800" />
-
+            {/* Beta notice after the primary actions so they stay in the first mobile viewport. */}
+            {showBetaAlert && (
+              <Alert
+                variant="info"
+                role="note"
+                onDismiss={() => setShowBetaAlert(false)}
+              >
+                <span className="font-semibold">Beta Feature:</span> Air-gapped file transfer streams binary data across screen and camera. For optimal transmission, ensure consistent lighting, minimize display glare, and keep devices steady.
+              </Alert>
+            )}
+          </>
+        }
+        secondary={
+          <>
             {/* Live Progress Metrics */}
             <section className="space-y-4">
               <h2 className="flex items-center gap-2 text-xs font-bold tracking-wider text-slate-600 uppercase dark:text-slate-400">
@@ -502,20 +489,10 @@ function FileTransferReceiveInner() {
               </>
             )}
 
-          </div>
-        </aside>
-
-        {/* Right Active Webcam Viewport */}
-        <section aria-label="Camera Capture Viewport" className="relative flex max-h-[50vh] flex-1 flex-col items-center justify-center overflow-x-hidden overflow-y-auto bg-slate-50 p-4 transition-colors duration-300 md:sticky md:top-0 md:h-[100dvh] md:max-h-none md:p-8 dark:bg-slate-950">
-          
-          {/* Background Decorative Glow */}
-          <div className="pointer-events-none absolute inset-0 opacity-40 dark:opacity-20">
-            <div className="absolute top-0 left-0 size-96 -translate-1/2 rounded-full bg-teal-200 blur-3xl transition-colors duration-300 dark:bg-teal-900"></div>
-            <div className="absolute right-0 bottom-0 size-96 translate-1/2 rounded-full bg-slate-300 blur-3xl transition-colors duration-300 dark:bg-slate-800"></div>
-          </div>
-
-          <div className="relative z-10 w-full max-w-md">
-            <Card className="hover:scale-1.01 transform overflow-hidden transition-all duration-300">
+          </>
+        }
+        preview={
+            <Card className="overflow-hidden">
               <div className="mb-6 flex items-center justify-between">
                 <h2 className="font-semibold text-slate-700 dark:text-slate-200">
                   {receiverMode === 'camera' ? 'Camera Viewport' : 'Video Viewport'}
@@ -526,7 +503,7 @@ function FileTransferReceiveInner() {
                       ? 'border border-emerald-200 bg-emerald-100 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400' 
                       : 'border border-slate-200 bg-slate-100 text-slate-600 dark:border-slate-800 dark:bg-slate-900/30 dark:text-slate-400'
                   }`}>
-                    <span className={`size-1.5 rounded-full ${isScanning ? 'animate-pulse bg-emerald-500' : 'bg-slate-400'}`} />
+                    <span aria-hidden="true" className={`size-1.5 rounded-full ${isScanning ? 'bg-emerald-500 motion-safe:animate-pulse' : 'bg-slate-400'}`} />
                     {isScanning ? 'Active Scanning' : 'Idle'}
                   </span>
                 </div>
@@ -536,7 +513,7 @@ function FileTransferReceiveInner() {
               <div className="relative aspect-square w-full overflow-hidden rounded-2xl border border-slate-100 bg-slate-950 p-0 dark:border-slate-900">
                 {isComplete ? (
                   <div className="flex size-full flex-col items-center justify-center gap-4 bg-slate-900 p-6 text-center text-slate-100 dark:bg-slate-950" data-testid="inline-complete-panel">
-                    <div className="animate-pulse rounded-full bg-emerald-500/10 p-3 text-emerald-400">
+                    <div className="rounded-full bg-emerald-500/10 p-3 text-emerald-400">
                       <CheckCircle2 className="size-12" />
                     </div>
                     <div>
@@ -613,10 +590,8 @@ function FileTransferReceiveInner() {
                 Position the transfer QR inside the guide. Use good lighting and avoid glare for faster scanning.
               </div>
             </Card>
-          </div>
-        </section>
-
-      </div>
+        }
+      />
     </div>
   );
 }

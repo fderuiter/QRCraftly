@@ -471,11 +471,11 @@ describe('File Transfer Receive Page & Pipeline', () => {
       );
 
       // Camera mode is active by default
-      const cameraRadio = screen.getByRole('radio', { name: /camera feed/i });
-      const fileRadio = screen.getByRole('radio', { name: /video file/i });
+      const cameraRadio = screen.getByRole('button', { name: /camera feed/i });
+      const fileRadio = screen.getByRole('button', { name: /^video file/i });
 
-      expect(cameraRadio).toHaveAttribute('aria-checked', 'true');
-      expect(fileRadio).toHaveAttribute('aria-checked', 'false');
+      expect(cameraRadio).toHaveAttribute('aria-pressed', 'true');
+      expect(fileRadio).toHaveAttribute('aria-pressed', 'false');
       expect(screen.getByRole('button', { name: /activate camera scanner/i })).toBeInTheDocument();
 
       // Switch to Video File mode
@@ -483,8 +483,8 @@ describe('File Transfer Receive Page & Pipeline', () => {
         fireEvent.click(fileRadio);
       });
 
-      expect(fileRadio).toHaveAttribute('aria-checked', 'true');
-      expect(cameraRadio).toHaveAttribute('aria-checked', 'false');
+      expect(fileRadio).toHaveAttribute('aria-pressed', 'true');
+      expect(cameraRadio).toHaveAttribute('aria-pressed', 'false');
       expect(screen.getByTestId('sidebar-dropzone')).toBeInTheDocument();
       expect(screen.getByTestId('viewport-dropzone')).toBeInTheDocument();
 
@@ -493,7 +493,7 @@ describe('File Transfer Receive Page & Pipeline', () => {
         fireEvent.click(cameraRadio);
       });
 
-      expect(cameraRadio).toHaveAttribute('aria-checked', 'true');
+      expect(cameraRadio).toHaveAttribute('aria-pressed', 'true');
       expect(screen.getByRole('button', { name: /activate camera scanner/i })).toBeInTheDocument();
     });
 
@@ -504,7 +504,7 @@ describe('File Transfer Receive Page & Pipeline', () => {
         </ToastProvider>
       );
 
-      const fileRadio = screen.getByRole('radio', { name: /video file/i });
+      const fileRadio = screen.getByRole('button', { name: /^video file/i });
       await act(async () => {
         fireEvent.click(fileRadio);
       });
@@ -528,7 +528,7 @@ describe('File Transfer Receive Page & Pipeline', () => {
         </ToastProvider>
       );
 
-      const fileRadio = screen.getByRole('radio', { name: /video file/i });
+      const fileRadio = screen.getByRole('button', { name: /^video file/i });
       await act(async () => {
         fireEvent.click(fileRadio);
       });
@@ -554,8 +554,8 @@ describe('File Transfer Receive Page & Pipeline', () => {
         </ToastProvider>
       );
 
-      const cameraRadio = screen.getByRole('radio', { name: /camera feed/i });
-      const fileRadio = screen.getByRole('radio', { name: /video file/i });
+      const cameraRadio = screen.getByRole('button', { name: /camera feed/i });
+      const fileRadio = screen.getByRole('button', { name: /^video file/i });
 
       await act(async () => {
         fireEvent.click(fileRadio);
@@ -584,7 +584,7 @@ describe('File Transfer Receive Page & Pipeline', () => {
         </ToastProvider>
       );
 
-      const fileRadio = screen.getByRole('radio', { name: /video file/i });
+      const fileRadio = screen.getByRole('button', { name: /^video file/i });
       await act(async () => {
         fireEvent.click(fileRadio);
       });

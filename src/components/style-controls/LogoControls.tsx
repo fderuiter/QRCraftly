@@ -51,7 +51,7 @@ export const LogoControls: React.FC<LogoControlsProps> = ({ config, onChange }) 
   return (
     <div>
       <div className="mb-3 flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Logo</h3>
+        <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Logo</h4>
         {config.logoUrl && (
           <Button variant="error" size="sm" onClick={() => { onChange({ logoUrl: null }); setError(null); }} className="rounded px-2 py-1">
             <X className="mr-1 size-3"/> Remove

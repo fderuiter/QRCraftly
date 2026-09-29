@@ -158,7 +158,7 @@ test.describe('Isolated Web Worker Recovery & Export Bypass', () => {
     await expect(warningModalTitle).not.toBeVisible({ timeout: 15000 });
   });
 
-  test('Requirement 5: Display diagnostic preferences options popup during failure state and dismiss on choice declaration', async ({ page }) => {
+  test('Requirement 5: Keep diagnostic preferences in privacy settings during failure state and record the choice there', async ({ page }) => {
     // Inject background failure
     await page.evaluate(() => {
       (window as any).simulateFailure = true;
@@ -175,16 +175,18 @@ test.describe('Isolated Web Worker Recovery & Export Bypass', () => {
     await expect(alertBadge).toBeVisible({ timeout: 15000 });
     await expect(alertBadge).toContainText(/scan verification failed/i);
 
-    // Assert that the diagnostic options popup renders (help improve scannability card)
-    const telemetryTitle = page.getByText(/Anonymous diagnostics/i);
-    await expect(telemetryTitle).toBeVisible({ timeout: 15000 });
+    // Exactly one alert announces the failure; no consent popup interrupts it (#800, #802)
+    await expect(page.getByRole('alert')).toHaveCount(1);
+    await expect(page.getByRole('button', { name: /No thanks/i })).toHaveCount(0);
 
-    // Click 'No thanks' option to save choice and dismiss popup
-    const noThanksButton = page.getByRole('button', { name: /No thanks/i });
-    await expect(noThanksButton).toBeVisible();
-    await noThanksButton.click();
-
-    // Assert that the diagnostic preferences popup is successfully dismissed and no longer visible
-    await expect(telemetryTitle).not.toBeVisible({ timeout: 15000 });
+    // The diagnostics preference lives in the footer privacy settings instead
+    const privacySettings = page.getByRole('region', { name: 'Privacy settings' });
+    const diagnosticsSwitch = privacySettings.getByRole('switch', { name: 'Share anonymous diagnostics' });
+    await diagnosticsSwitch.scrollIntoViewIfNeeded();
+    await expect(diagnosticsSwitch).not.toBeChecked();
+    await page.locator('label[for="diagnostics-opt-in"]').click(); // the visible switch track is the label
+    await expect(diagnosticsSwitch).toBeChecked();
+    await expect(privacySettings.getByTestId('diagnostics-status')).toHaveText('On');
+    expect(await page.evaluate(() => window.localStorage.getItem('qr-telemetry-opt-in'))).toBe('true');
   });
 });

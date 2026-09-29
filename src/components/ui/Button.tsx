@@ -39,7 +39,7 @@ const PRESSED_STYLES =
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className = '', variant = 'secondary', size = 'md', fullWidth = false, type = 'button', pressed, ...props }, ref) => {
     
-    let baseStyles = 'disabled:cursor-not-allowed disabled:opacity-50 font-medium inline-flex items-center justify-center transition-colors';
+    let baseStyles = 'disabled:cursor-not-allowed disabled:opacity-50 aria-disabled:cursor-not-allowed aria-disabled:opacity-50 font-medium inline-flex items-center justify-center transition-colors';
     
     let variantStyles = '';
     let sizeStyles = '';

@@ -29,7 +29,7 @@ export const PatternControls: React.FC<PatternControlsProps> = ({ config, onChan
 
   return (
     <div>
-      <h3 className="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-300">Pattern Style</h3>
+      <h4 className="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-300">Pattern Style</h4>
       
       {isLowReliability && (
         <div className="mb-4" data-testid="pattern-warning-slot">
