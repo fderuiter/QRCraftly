@@ -52,7 +52,7 @@
         "strict_required_status_checks_policy": true,
         "required_status_checks": [
           {
-            "context": "Quality Checks",
+            "context": "Consolidated Static Validation",
             "integration_id": 15368
           },
           {
@@ -64,7 +64,7 @@
             "integration_id": 15368
           },
           {
-            "context": "Docs Audit & Verification",
+            "context": "Build & Artifact",
             "integration_id": 15368
           }
         ]
