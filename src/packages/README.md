@@ -56,7 +56,15 @@ Boundary checks run automatically during `pnpm run lint` and CI.
 - **Purpose**: Full QR code matrix visual orchestration, styles, locator eyes, logo cutouts, alignment pattern zones, and playable maze generation.
 - **Entry Points**:
   - `index.ts`: `drawQR`, `drawQRInternal`, `renderBorder`, `renderEyes`, `renderModules`, `renderFluidModules`, `renderLogo`, `renderMaze`, layout and logo math.
-  - `maze.ts`: `generateMaze`, `getMazeCacheKey`, `mazeCache`, `clearMazeCache`, `getStyleAdaptiveMazePathWidth`, `renderMaze`, `applyMazeHaloMask`, and bridge validation helpers.
+  - `maze.ts`: `generateMaze`, `getMazeCacheKey`, `mazeCache`, `clearMazeCache`, `getStyleAdaptiveMazePathWidth`, `renderMaze`, `MazeData`, and bridge validation helpers (`DSU`, `isBridgeCell`, `isFinderEyeZone`). The halo mask (`applyMazeHaloMask`) is private to `lib/maze.ts`.
+
+### `arcade` (`@/packages/arcade`)
+
+- **Purpose**: Headless game logic behind the QR Arcade (`/arcade`): target matrices, the Damage Simulator (blasts, barrages and Reed-Solomon damage analytics), the Arcade Blaster (micro-cell damage grid, projectile and particle physics), and the empirical scan pipeline that checks whether the damaged code still decodes.
+- **Entry Points**:
+  - `index.ts`: `buildTargetMatrix`, `analyzeDamage`, `applyBlast`, `planBarrage`, `MicroGrid`, the physics helpers, mode definitions (`ARCADE_MODES`, `parseArcadeMode`, `arcadeModeHref`) and `EmpiricalScanPipeline`.
+  - `client.ts`: React hooks (`useEmpiricalScan`, `useMediaQuery`, `useReducedMotion`, `useLatestRef`).
+  - `handoff.ts`: In-memory hand-off of a design from the generator to the arcade (`stageArcadeTarget`, `getStagedArcadeTarget`, `clearStagedArcadeTarget`).
 
 ### `optical-scanner` (`@/packages/optical-scanner`)
 

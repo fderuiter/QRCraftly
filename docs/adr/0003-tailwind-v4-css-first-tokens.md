@@ -12,6 +12,8 @@ Tailwind CSS v4 replaces JavaScript configuration files (`tailwind.config.js`) w
 
 We manage all design system tokens, typography scales, semantic color mappings, and dark mode variants exclusively in `src/layouts/index.css` using native `@theme` blocks, eliminating `tailwind.config.js` entirely.
 
+> **Current state (September 2026):** `src/layouts/index.css` declares only `@variant dark`. The app uses Tailwind's default palette and has no `@theme` block yet; custom tokens, when added, go in an `@theme` block in that file.
+
 ## Rationale
 
 A single CSS-first source of truth leverages native CSS cascade rules and removes build-time JavaScript translation overhead. Utility class ordering is enforced deterministically by Prettier and `pnpm run format:classes`.

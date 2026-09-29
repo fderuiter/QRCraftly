@@ -24,7 +24,7 @@ QRCraftly uses Tailwind CSS v4 without a `tailwind.config.js` file:
 
 ## 2. Color Design Tokens
 
-The application relies on color scales defined in `src/colors.json` and CSS variables in `src/layouts/index.css`:
+The application uses Tailwind's default color scales; `src/colors.json` records the values below for the contrast checker (`scripts/contrast_check.js`) and the color presets. `src/layouts/index.css` defines no custom color variables or `@theme` block:
 
 - **Monochrome Base**:
   - `white`: `#ffffff`

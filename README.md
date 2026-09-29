@@ -8,16 +8,20 @@
 
 ## Features
 
-- **Multiple Data Types**: Generate QR codes for URLs, plain text, WiFi networks (WPA/WEP/EAP/Open), Email, vCard contacts, Phone numbers, SMS, Cryptocurrency payments, Calendar Events, GPS Location Coordinates, Video Meetings (Zoom, Google Meet), and Social Profiles (Bluesky, GitHub, Instagram, LinkedIn, Mastodon, X, YouTube, Threads).
+- **Multiple Data Types**: Generate QR codes for URLs, plain text, WiFi networks (WPA/WEP/EAP/Open), Email, vCard contacts, Phone numbers, SMS, Cryptocurrency payments, Calendar Events, GPS Location Coordinates, Video Meetings (Zoom, Microsoft Teams, Google Meet), and Social Profiles (Instagram, X / Twitter, TikTok).
 - **Visual Customization**:
   - **Patterns**: Choose from Standard Industrial, Modern Soft, Swiss Dot, Fluid Ink, Cyber Circuit, The Hive, Grunge, and Starburst styles.
   - **Colors**: Customize foreground, background, and finder pattern colors. Includes accessibility-checked preset themes.
   - **Logos**: Upload and embed custom logos with configurable padding, sizes, and border styles (Square, Circle, None). Maximum logo size is 30% to maintain scannability.
   - **Upload Limits**: Supported custom logo formats are image/jpeg, image/png, image/webp, image/svg+xml. Maximum file size is 2MB.
 - **Privacy First**: Client-side architecture. All sensitive data processing happens locally in your browser with volatile in-memory guarantees; no user payloads are sent to external servers.
-- **Dynamic Redirection (Architecture)**: Cloudflare edge redirection with zero-knowledge AES-GCM client encryption where decryption keys reside exclusively in URL anchor hash fragments (`#key=...`) (undergoing active stabilization).
+- **Dynamic Redirection (built, switched off)**: Cloudflare edge redirection with zero-knowledge AES-GCM client encryption where decryption keys reside exclusively in URL anchor hash fragments (`#key=...`). The code is in the repository, but the UI flags are off and production serves static assets only until Cloudflare D1 and Turnstile are provisioned. See [EDGE_ARCHITECTURE.md](docs/public/EDGE_ARCHITECTURE.md).
+- **Scan to Fill**: Scan an existing QR code with the webcam or from an image file to load its content into the matching input form. Decoding runs in the browser.
+- **Air-Gapped File Transfer (Beta)**: Send a file from one device to another as an animated stream of QR codes (`/file-transfer`) and receive it with a camera (`/file-transfer/receive`). No network, Bluetooth or USB is involved.
+- **Audio QR**: Encode data as audible chirps or as a spectrogram that renders a scannable QR code (`/audio-qr`), using the Web Audio API.
+- **QR Arcade**: Stress-test a QR design by damaging it and watching whether a real scanner still decodes it (`/arcade`).
 - **Advanced Architecture**:
-  - **Scannability Web Workers**: Real-time QR code scannability, module-aligned relative luminance audits, and orientation decoding run off-thread with transferable `ArrayBuffer` double buffering (`DoubleBufferPool`), keeping the UI fluid at 60 FPS.
+  - **Scannability Web Workers**: Real-time QR code scannability, module-aligned relative luminance audits, and orientation decoding run off-thread, passing pixel data as transferable `ArrayBuffer`s (zero-copy) so the UI stays responsive. The camera scanner recycles its frame buffers through a `DoubleBufferPool`.
   - **Client-Side SVG Export**: Features a custom `SvgContext` that mimics the Canvas 2D API to generate high-quality, resolution-independent vector graphics directly in the browser.
 - **Live Preview**: See your changes instantly as you edit.
 - **Download & Share**:
@@ -115,12 +119,11 @@ pnpm run lint
 ```
 
 **Bundle Size Check:**
-The build pipeline enforces a 3MB limit on the client bundle.
+CI fails if the gzipped size of all files in `dist/client` exceeds 700 KB (`scripts/check-bundle-size.js`). `pnpm build` does not run this check; run it yourself after a build:
 
 ```bash
 pnpm build
-# Check size of dist/client directory
-du -sh dist/client
+pnpm run check-bundle-size
 ```
 
 **Performance & SEO:**
@@ -146,10 +149,14 @@ Lighthouse CI runs on every Pull Request to audit performance, accessibility, be
 ## Project Structure
 
 - `CONTEXT.md`: Root domain glossary defining canonical project terminology.
+- `RELEASING.md`: Release, promotion and rollback runbook.
 - `docs/`: Architectural specifications and system documentation.
   - `adr/`: Architectural Decision Records.
   - `public/`: Public guides, UI component catalog, edge architecture, scaling, and compliance specifications.
   - `SECURITY.md`: Security policy, Content Security Policy, and vulnerability reporting.
+  - `WORKFLOWS.md`: Branching model and CI pipeline.
+  - `agents/`: Instructions for AI agents (issue tracker, triage labels, domain docs).
+- `e2e/`: Playwright end-to-end tests.
 - `src/`: Source code.
   - `components/`: Reusable React components.
     - `InputPanel.tsx`: Main controller for data input; orchestrates sub-components.
@@ -157,18 +164,28 @@ Lighthouse CI runs on every Pull Request to audit performance, accessibility, be
     - `StyleControls.tsx`: UI for customizing colors, patterns, and logos.
     - `QRCanvas.tsx`: The core component that renders the QR code using HTML5 Canvas.
     - `QRTool.tsx`: The main container component that integrates inputs, controls, and canvas.
+    - `QRScanner.tsx`: Webcam and file-upload QR scanner used by the input panel.
+    - `arcade/`: Components for the QR Arcade page.
+  - `packages/`: Deep modules with small public entry points (`qr-matrix`, `qr-payload`, `scannability`, `optical-scanner`, `optical-transfer`, `arcade`). See [src/packages/README.md](src/packages/README.md).
+  - `hooks/`: React hooks (camera, image upload, download, audio, telemetry, dynamic redirects).
   - `layouts/`: Application layouts.
     - `LayoutDefault.tsx`: The main layout wrapper.
     - `Head.tsx`: Manages document head elements.
   - `pages/`: Page-level components (Vike routing).
     - `index/+Page.tsx`: The home page.
     - `about/+Page.tsx`: The about page.
-    - `wifi-qr-code/+Page.tsx`: Specialized WiFi QR code page.
+    - `wifi-qr-code/+Page.tsx` and the other `*-qr-code/` folders: One page per QR type.
+    - `file-transfer/+Page.tsx` and `file-transfer/receive/+Page.tsx`: Air-gapped file sender and receiver.
+    - `audio-qr/+Page.tsx`: Audio QR.
+    - `arcade/+Page.tsx`: QR Arcade (`/game` and `/destroy-the-qr` redirect here).
     - `+config.ts`: Global Vike configuration.
   - `types.ts`: TypeScript definitions for application state and data structures.
   - `constants.ts`: Default configurations and preset data.
 - `scripts/`: Utility scripts.
   - `contrast_check.js`: Checks WCAG contrast compliance for UI elements.
+  - `check-bundle-size.js`: Gzipped client bundle budget (700 KB), run in CI.
+  - `storage_privacy_ast_auditor.js`: Blocks browser storage keys that are not on the allowlist.
+- `tests/`: Vitest tests for the repository scripts and CI tooling.
 - `public/`: Static assets (favicon, etc.).
 
 ## Contributing
@@ -194,7 +211,7 @@ To maintain security and reduce repository noise, QRCraftly uses **Dependabot** 
 - **React 19**: UI library.
 - **TypeScript**: Static typing for better code quality.
 - **Vite 6**: Fast build tool and development server.
-- **Vike**: Server-side rendering and routing framework.
+- **Vike**: Routing and build-time pre-rendering (every page is pre-rendered to static HTML).
 - **Tailwind CSS v4**: Utility-first CSS framework for styling.
 - **qrcode**: Library for generating QR code module data.
 - **Lucide React**: Icon set.
@@ -208,7 +225,7 @@ All custom styling, theme extensions, and Tailwind configurations are now manage
 
 ### How to Manage Styles
 
-- **Theme Variables**: To add custom brand colors, breakpoints, fonts, or other theme extensions, define them inline in `src/layouts/index.css` using the `@theme` directive.
+- **Theme Variables**: The app currently uses Tailwind's default palette, and `src/layouts/index.css` has no `@theme` block. To add custom brand colors, breakpoints, fonts, or other theme extensions, add an `@theme` block to that file.
 - **Dark Mode**: The class-based dark mode is configured using a custom variant directly in the CSS (`@variant dark (&:where(.dark, .dark *));`), replacing the legacy JS configuration.
 - **Utility Classes**: Continue writing standard Tailwind utility classes in your React components. The PostCSS setup will automatically handle processing via the `@tailwindcss/postcss` plugin.
 

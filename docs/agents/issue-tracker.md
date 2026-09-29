@@ -1,6 +1,17 @@
 # Issue tracker: GitHub
 
-Issues and specs for this repo live as GitHub issues. Use the `gh` CLI for all operations.
+Issues and specs for this repo live as GitHub issues (`fderuiter/QRCraftly`). Use the `gh` CLI when it is installed. Cloud agent sessions (for example Claude Code on the web) usually have no `gh`; use the GitHub MCP tools there instead:
+
+| Operation                        | `gh` CLI                          | GitHub MCP tool                 |
+| -------------------------------- | --------------------------------- | ------------------------------- |
+| Create an issue                  | `gh issue create`                 | `issue_write` (method `create`) |
+| Read an issue and its comments   | `gh issue view <n> --comments`    | `issue_read`                    |
+| List or search issues            | `gh issue list`                   | `list_issues`, `search_issues`  |
+| Comment on an issue              | `gh issue comment`                | `add_issue_comment`             |
+| Add or remove labels, close      | `gh issue edit`, `gh issue close` | `issue_write` (method `update`) |
+| Read a pull request and its diff | `gh pr view`, `gh pr diff`        | `pull_request_read`             |
+
+The commands below use `gh`; translate them with this table when `gh` is not available.
 
 ## Conventions
 

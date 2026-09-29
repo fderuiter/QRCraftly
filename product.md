@@ -27,7 +27,7 @@ Make beautiful, accessible, privacy-safe QR codes trivially easy to produce — 
 | **Category**        | Client-side QR code studio                                                 |
 | **Differentiation** | Studio-grade visual customization + zero-knowledge privacy architecture    |
 | **License**         | AGPL-3.0 open-source; open-core with a paid self-hosted / white-label tier |
-| **Deployment**      | Progressive web app on Cloudflare''s global edge network (`qrcraftly.com`) |
+| **Deployment**      | Progressive web app on Cloudflare's global edge network (`qrcraftly.com`)  |
 | **Maturity**        | Pre-release (`v0.x`); actively approaching `v1.0` stable                   |
 
 ---
@@ -46,7 +46,7 @@ QRCraftly's output must be objectively the most polished in class. Scannability 
 
 ### P3 — Simplicity wins for the core flow
 
-The path from landing to downloading a customized QR code must require zero account creation, zero configuration, and zero learning. Advanced features (Dynamic Redirection, Air-Gapped Transfer) are opt-in surfaces that do not interrupt the primary flow.
+The path from landing to downloading a customized QR code must require zero account creation, zero configuration, and zero learning. Advanced features (Air-Gapped Transfer, Audio QR, the QR Arcade, and Dynamic Redirection if it is switched on) are opt-in surfaces that do not interrupt the primary flow.
 
 ### P4 — Accessibility and compliance are first-class
 
@@ -99,10 +99,11 @@ Features are tagged with a maturity tier:
 
 ### 6.1 Core QR Generation `[STABLE]`
 
-- **Data types**: URL, plain text, WiFi (WPA/WEP/EAP/Open), email, vCard (RFC 6350 CRLF + UTF-8 line folding), phone, SMS, cryptocurrency payments, calendar events (iCal), GPS coordinates, video meeting links (Zoom, Google Meet), social profiles (Bluesky, GitHub, Instagram, LinkedIn, Mastodon, X, YouTube, Threads).
+- **Data types**: URL, plain text, WiFi (WPA/WEP/EAP/Open), email, vCard (RFC 6350 CRLF + UTF-8 line folding), phone, SMS, cryptocurrency payments, calendar events (iCal), GPS coordinates, video meeting links (Zoom, Microsoft Teams, Google Meet), social profiles (Instagram, X / Twitter, TikTok).
 - **Error correction levels**: L / M / Q / H (user-selectable).
 - **Live preview**: QR matrix re-renders in real time with every input change.
-- **Off-thread rendering**: All scannability auditing and barcode decoding runs in the [Scannability Worker](src/packages/) via transferable `ArrayBuffer` double-buffering, keeping the UI at 60 FPS.
+- **Off-thread analysis**: Scannability auditing runs in the Scannability Worker (`src/packages/scannability/`) and camera or file decoding runs in the optical scanner worker (`src/packages/optical-scanner/`). Pixel data moves to the workers as transferable `ArrayBuffer`s, keeping the UI responsive.
+- **Scan to fill**: The input panel can scan an existing QR code from the webcam or an image file and load its content into the matching form.
 
 ### 6.2 Visual Customization `[STABLE]`
 
@@ -117,14 +118,14 @@ Features are tagged with a maturity tier:
 - **File System Access API**: Native "Save As" dialog on supported browsers.
 - **Web Share API**: One-tap mobile sharing to any installed app.
 
-### 6.4 Air-Gapped Optical Transfer `[INTERNAL]`
+### 6.4 Air-Gapped Optical Transfer `[BETA]`
 
-Architecture is implemented and tested; the feature is not yet user-facing.
+User-facing at `/file-transfer` (send) and `/file-transfer/receive` (receive), linked from the site footer with "Beta" labels.
 
 - **Mechanism**: Transmits arbitrary binary files across physical air gaps as animated QR streams — no network, Bluetooth, or USB required.
-- **Reliability**: Two-tier optical error correction — intra-frame Reed-Solomon (GF(2^8)) for spatial blemishes + inter-frame rateless fountain coding (Luby Transform over GF(2)) for temporal frame drops.
-- **Stateless entry**: Receiver can begin capturing a stream at any point without a handshake.
-- **Near-term roadmap**: Making this feature user-facing and discoverable is the current #1 priority (see Section 8).
+- **Reliability**: Each frame is protected by the QR code's own Reed-Solomon error correction. The received file is checked against a SHA-256 hash before it is offered for download.
+- **Stream design**: The rateless fountain codec (Luby Transform over GF(2)) and its rollout status are described in [ADR 0014](docs/adr/0014-rateless-fountain-codes-for-airgapped-optical-transfer.md) and [ADR 0017](docs/adr/0017-consolidated-air-gapped-optical-transfer-package.md).
+- **Near-term roadmap**: Taking this feature out of Beta is the current #1 priority (see Section 8).
 
 ### 6.5 Accessibility `[STABLE]`
 
@@ -138,6 +139,22 @@ Architecture is implemented and tested; the feature is not yet user-facing.
 - Dark mode supported.
 - Core generation works offline once static assets are cached.
 
+### 6.7 Audio QR `[BETA]`
+
+- At `/audio-qr`: encodes text as audible chirps, or synthesizes an audio spectrogram that shows a scannable QR code, using the Web Audio API in the browser.
+
+### 6.8 QR Arcade `[BETA]`
+
+- At `/arcade` (the old `/game` and `/destroy-the-qr` links redirect here): damage a QR design in the Blaster or the Damage Simulator while Reed-Solomon analytics and a real scanner report whether it still decodes.
+
+### 6.9 Dynamic Redirection `[INTERNAL]`
+
+Architecture exists; not yet user-facing.
+
+- **Mechanism**: The browser encrypts the destination with AES-GCM and keeps the key in the URL fragment (`#key=...`), so the edge stores only ciphertext in Cloudflare D1. See [`docs/public/EDGE_ARCHITECTURE.md`](docs/public/EDGE_ARCHITECTURE.md).
+- **Status**: Switched off. The UI flags `ENABLE_DYNAMIC_TRACKING` and `ENABLE_DYNAMIC_DASHBOARD` are `false`, and production serves static assets only until D1 and Turnstile are provisioned.
+- **Product intent**: Not decided. See the note under Section 9.
+
 ---
 
 ## 7. Privacy & Compliance Architecture
@@ -147,10 +164,12 @@ This section is **non-negotiable**. Any feature proposal must be evaluated again
 | Invariant                                 | Enforcement Mechanism                                                                                 |
 | ----------------------------------------- | ----------------------------------------------------------------------------------------------------- |
 | User payloads never transmitted to server | Client-side Canvas / Web Worker generation only                                                       |
-| No QR content stored server-side          | Volatile browser memory; cleared on tab close                                                         |
+| No QR content stored server-side          | QR content is held in browser memory only and is gone when the tab closes (see the exception below)   |
 | No user input in URL query parameters     | Architectural constraint; prevents history/proxy leakage                                              |
 | Storage keys explicitly allowlisted       | Pre-build AST auditor (`scripts/storage_privacy_ast_auditor.js`) blocks unapproved keys at build time |
 | Opt-in telemetry schema allowlisted       | `ALLOWED_TELEMETRY_KEYS` in `src/types.ts`; no payload-adjacent fields permitted                      |
+
+**Exception: dynamic links.** If Dynamic Redirection is switched on, each dynamic link the person creates is saved in `localStorage` under `qrcraftly:dynamic-redirects` so they can manage it later. That record holds the original destination URL in plain text, the decryption key and the admin key, and it stays until the person deletes it or clears site data. The feature is switched off today, so nothing is written under this key in production.
 
 HIPAA Technical Safeguard alignment is documented in [`docs/public/COMPLIANCE.md`](docs/public/COMPLIANCE.md). This is a _technical_ safeguard; organizational HIPAA certification remains the responsibility of the deploying organization.
 
@@ -160,7 +179,7 @@ HIPAA Technical Safeguard alignment is documented in [`docs/public/COMPLIANCE.md
 
 ### Now — Current Sprint
 
-- **Graduate Air-Gapped Optical Transfer to user-facing**: Design and build the UI surface that makes the Optical Transfer Engine discoverable and usable by non-technical users. This is the #1 priority.
+- **Take Air-Gapped Optical Transfer out of Beta**: The send and receive pages ship with Beta labels. Make the Optical Transfer Engine reliable and easy for non-technical users. This is the #1 priority.
 
 ### Next — Near-Term (next 1–3 minor releases)
 
@@ -170,7 +189,7 @@ HIPAA Technical Safeguard alignment is documented in [`docs/public/COMPLIANCE.md
 
 - **Open-core paid tier launch**: Self-hosted or white-label license offering for organizations. Gate advanced features (Air-Gapped Transfer, future team workspaces) behind this tier.
 - **Expand QR data types**: Additional social platforms, structured data types, and AR marker support as demand warrants.
-- **v1.0 stable release**: Graduate from `v0.x` pre-release when Air-Gapped Optical Transfer is user-facing and the core studio feature set is considered complete.
+- **v1.0 stable release**: Graduate from `v0.x` pre-release when Air-Gapped Optical Transfer is out of Beta and the core studio feature set is considered complete.
 
 ### Icebox — Under Evaluation
 
@@ -183,14 +202,16 @@ HIPAA Technical Safeguard alignment is documented in [`docs/public/COMPLIANCE.md
 
 The following are explicitly **out of scope** and should not be planned, specced, or built without a deliberate product decision to revise this list:
 
-| Non-Goal                                               | Rationale                                                                                                                                                                              |
-| ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Dynamic / trackable QR redirection                     | Any server-side redirection requires storing a destination URL server-side and logging scan events, which cannot be reconciled with the privacy-first invariant. Removed as a feature. |
-| Server-side QR generation                              | Violates the privacy-first invariant; payloads must never leave the client                                                                                                             |
-| Native mobile apps (iOS / Android)                     | Web-first strategy; responsive PWA is sufficient                                                                                                                                       |
-| Batch / bulk QR generation via API or CSV upload       | Adds infrastructure complexity without a clear user persona match today                                                                                                                |
-| External analytics or telemetry tracking QR content    | Violates privacy-first invariant; only opt-in, schema-controlled diagnostic telemetry is permitted                                                                                     |
-| Server-side storage of user QR codes or cloud accounts | Violates volatile memory guarantee                                                                                                                                                     |
+| Non-Goal                                               | Rationale                                                                                                                                                                                                                                                                       |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Dynamic / trackable QR redirection                     | Any server-side redirection requires storing a destination URL server-side and logging scan events, which cannot be reconciled with the privacy-first invariant. Not removed: an encrypted implementation is built but switched off (Section 6.9); see the open decision below. |
+| Server-side QR generation                              | Violates the privacy-first invariant; payloads must never leave the client                                                                                                                                                                                                      |
+| Native mobile apps (iOS / Android)                     | Web-first strategy; responsive PWA is sufficient                                                                                                                                                                                                                                |
+| Batch / bulk QR generation via API or CSV upload       | Adds infrastructure complexity without a clear user persona match today                                                                                                                                                                                                         |
+| External analytics or telemetry tracking QR content    | Violates privacy-first invariant; only opt-in, schema-controlled diagnostic telemetry is permitted                                                                                                                                                                              |
+| Server-side storage of user QR codes or cloud accounts | Violates volatile memory guarantee                                                                                                                                                                                                                                              |
+
+> **Open decision: Dynamic Redirection.** This document lists dynamic redirection as a non-goal (Section 9) and as part of the paid tier (Section 11), while the code is built but switched off (Section 6.9). Whether to enable it for everyone, keep it for the paid self-hosted tier, or remove it is a product decision that has not been made yet.
 
 ---
 
@@ -200,14 +221,14 @@ QRCraftly is healthy and growing when all of the following trend in the right di
 
 ### Technical Quality
 
-| Metric                                             | Target                                                   |
-| -------------------------------------------------- | -------------------------------------------------------- |
-| Lighthouse Performance                             | >= 90                                                    |
-| Lighthouse Accessibility                           | >= 95                                                    |
-| Lighthouse SEO                                     | >= 90                                                    |
-| Lighthouse Best Practices                          | >= 90                                                    |
-| Client bundle size                                 | <= 3 MB                                                  |
-| Scannability pass rate (Print Simulation Verified) | >= 95% across all pattern styles in CI visual regression |
+| Metric                                             | Target                                                   | Enforced in CI today                        |
+| -------------------------------------------------- | -------------------------------------------------------- | ------------------------------------------- |
+| Lighthouse Performance                             | >= 90                                                    | >= 75 (`lighthouserc.json`)                 |
+| Lighthouse Accessibility                           | >= 95                                                    | >= 90 (`lighthouserc.json`)                 |
+| Lighthouse SEO                                     | >= 90                                                    | >= 95 (`lighthouserc.json`)                 |
+| Lighthouse Best Practices                          | >= 90                                                    | >= 90 (`lighthouserc.json`)                 |
+| Client bundle size                                 | <= 700 KB gzipped (all files in `dist/client`)           | Same limit (`scripts/check-bundle-size.js`) |
+| Scannability pass rate (Print Simulation Verified) | >= 95% across all pattern styles in CI visual regression | No CI check measures this rate              |
 
 ### Product Engagement
 
@@ -236,7 +257,7 @@ QRCraftly is **open-source under AGPL-3.0**. The base product is free forever fo
 The planned commercial tier is **open-core**:
 
 - **Free (open-source)**: Full QR generation studio, all data types, all visual customization, Air-Gapped Transfer — all features that run entirely in-browser.
-- **Paid (self-hosted / white-label license)**: Organizations that want to self-host QRCraftly, remove attribution, use a custom domain, access the Dynamic Redirection backend with their own Cloudflare D1/KV infrastructure, and receive commercial support.
+- **Paid (self-hosted / white-label license)**: Organizations that want to self-host QRCraftly, remove attribution, use a custom domain, access the Dynamic Redirection backend (built but switched off; see Section 6.9) with their own Cloudflare D1 database, and receive commercial support.
 
 > No SaaS subscription or per-code pricing is planned at this stage. Revisit at `v1.0`.
 
@@ -256,4 +277,4 @@ The planned commercial tier is **open-core**:
 
 ---
 
-_This document is the single source of truth for QRCraftly''s product direction. Update it as a required step in the release process whenever scope, priorities, or principles change._
+_This document is the single source of truth for QRCraftly's product direction. Update it as a required step in the release process whenever scope, priorities, or principles change._
