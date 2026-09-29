@@ -43,7 +43,7 @@ export const ValidationEngine = {
    */
   runCustomValidator(type: string, value: string): string[] {
     const validator = this.typeValidators.get(type);
-    return validator ? validator(value) : [];
+    return typeof validator === 'function' ? validator(value) : [];
   },
 
   /**
