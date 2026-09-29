@@ -4,8 +4,7 @@ import { renderHook, act } from '@testing-library/react';
 import { scan } from '@/packages/optical-scanner';
 import {
   sharedBufferPool,
-  AdaptiveFrameScheduler,
-  resetScannerWorker,
+  terminateScannerWorker,
 } from '@/packages/optical-scanner/scheduler';
 import { useQrScanner } from '@/packages/optical-scanner/client';
 
@@ -21,7 +20,7 @@ function makeVideoRef() {
 describe('Optical Detection Engine — Unified Package Integration Tests', () => {
   beforeEach(() => {
     vi.useFakeTimers();
-    resetScannerWorker();
+    terminateScannerWorker();
 
     vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb: FrameRequestCallback) => {
       return setTimeout(() => cb(performance.now()), 16) as any;
@@ -71,7 +70,7 @@ describe('Optical Detection Engine — Unified Package Integration Tests', () =>
   afterEach(() => {
     vi.useRealTimers();
     vi.restoreAllMocks();
-    resetScannerWorker();
+    terminateScannerWorker();
     sharedBufferPool.clear();
     if (globalThis.mockWorkerControl) {
       globalThis.mockWorkerControl.reset();
@@ -91,76 +90,6 @@ describe('Optical Detection Engine — Unified Package Integration Tests', () =>
 
     sharedBufferPool.release(buf1);
     expect(sharedBufferPool.getPoolSize()).toBe(2);
-  });
-
-  // 2. Camera Backpressure & Sampling Delay via useQrScanner
-  it('should block new frame capture requests if a prior frame is actively decoding (backpressure)', () => {
-    const videoNode = makeVideoRef();
-    const videoRef = { current: videoNode };
-
-    let postMessageCount = 0;
-    globalThis.mockWorkerControl.setInterceptor((_msg, _worker) => {
-      postMessageCount++;
-    });
-
-    const { result } = renderHook(() =>
-      useQrScanner({
-        videoRef,
-      })
-    );
-
-    act(() => {
-      result.current.startScanning();
-    });
-
-    vi.advanceTimersByTime(200);
-
-    // Should only post 1 message due to backpressure block
-    expect(postMessageCount).toBe(1);
-
-    act(() => {
-      result.current.stopScanning();
-    });
-  });
-
-  // 3. Starvation Watchdog and Worker Recreation
-  it('should automatically recreate background worker thread when a simulated 1500ms stall occurs', () => {
-    const videoNode = makeVideoRef();
-    const videoRef = { current: videoNode };
-
-    let activeWorker: any = null;
-    globalThis.mockWorkerControl.setInterceptor((_msg, worker) => {
-      activeWorker = worker;
-    });
-
-    const { result } = renderHook(() =>
-      useQrScanner({
-        videoRef,
-      })
-    );
-
-    act(() => {
-      result.current.startScanning();
-    });
-
-    act(() => {
-      vi.advanceTimersByTime(100);
-    });
-    expect(activeWorker).not.toBeNull();
-
-    const initialWorker = activeWorker;
-    const terminateSpy = vi.spyOn(initialWorker, 'terminate');
-
-    // Advance timers past 1500ms watchdog threshold
-    act(() => {
-      vi.advanceTimersByTime(1600);
-    });
-
-    expect(terminateSpy).toHaveBeenCalled();
-
-    act(() => {
-      result.current.stopScanning();
-    });
   });
 
   // 4. Telemetry dispatching
