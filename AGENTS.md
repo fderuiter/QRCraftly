@@ -5,7 +5,7 @@ Operating instructions and core invariants for AI agents working in this reposit
 ## Non-Negotiable Invariants
 
 - **Package Manager**: Use `pnpm` exclusively. Never run `npm` or `yarn`. Node.js 22.14.0+ required.
-- **Privacy & Storage Allowlist**: All QR code generation is strictly client-side. Never send user payloads across the network or encode user input into URL query parameters. The pre-build storage AST auditor (`scripts/storage_privacy_ast_auditor.js`) blocks any unapproved persistent browser storage. Only approved keys (`qr-telemetry-opt-in`, `qrcraftly:dynamic-redirects`, `qrcraftly:dynamic-consent-accepted`, `__test__`) are allowed.
+- **Privacy & Storage Allowlist**: All QR code generation is strictly client-side. Never send user payloads across the network or encode user input into URL query parameters. The pre-build storage AST auditor (`scripts/storage_privacy_ast_auditor.js`) blocks any unapproved persistent browser storage. Only approved keys (`qr-telemetry-opt-in`, `qrcraftly:dynamic-redirects`, `qrcraftly:dynamic-consent-accepted`, `qrcraftly:theme`, `__test__`) are allowed. `qrcraftly:theme` holds only the colour-theme preference (`light`, `dark` or `system`), owned by the global `ThemeProvider` (`src/context/ThemeContext.tsx`); never store QR content with it.
 - **UI Component Reuse**: Consult `docs/public/UI_CATALOG.md` before creating any visual element.
   - Range sliders: Always use `RangeInput` from `src/components/ui/RangeInput.tsx`.
   - Buttons: Always use `Button` from `src/components/ui/Button.tsx`.

@@ -350,7 +350,8 @@ test.describe('Format and template persist across QR type changes', () => {
     await expect(page.getByRole('button', { name: /Select Story format/i })).toHaveAttribute('aria-pressed', 'true');
 
     // Switch QR type
-    await page.getByRole('tab', { name: 'Event' }).click();
+    await page.getByRole('navigation', { name: 'QR code types' }).getByRole('link', { name: 'Event' }).click();
+    await page.waitForURL(/\/event-qr-code$/);
     // Wait for Appearance panel – StyleControls re-renders lazily
     await page.getByText('Export Layout').waitFor({ state: 'visible' });
 
@@ -362,7 +363,8 @@ test.describe('Format and template persist across QR type changes', () => {
     await page.getByRole('button', { name: /Select Gradient template/i }).click();
     await expect(page.getByRole('button', { name: /Select Gradient template/i })).toHaveAttribute('aria-pressed', 'true');
 
-    await page.getByRole('tab', { name: 'Location' }).click();
+    await page.getByRole('navigation', { name: 'QR code types' }).getByRole('link', { name: 'Location' }).click();
+    await page.waitForURL(/\/location-qr-code$/);
     await page.getByText('Export Layout').waitFor({ state: 'visible' });
 
     await expect(page.getByRole('button', { name: /Select Gradient template/i })).toHaveAttribute('aria-pressed', 'true');

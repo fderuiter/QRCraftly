@@ -92,11 +92,13 @@ describe('InputPanel Component', () => {
     expect(screen.getByPlaceholderText('https://example.com')).toBeInTheDocument();
   });
 
-  it('changes content type', () => {
+  it('links to other content types without clearing the current value first', () => {
     renderPanel();
-    const wifiButton = screen.getByText('WiFi');
-    fireEvent.click(wifiButton);
-    expect(mockOnChange).toHaveBeenCalledWith({ type: QRType.WIFI, value: '' });
+    const wifiLink = screen.getByRole('link', { name: 'WiFi' });
+    expect(wifiLink).toHaveAttribute('href', '/wifi-qr-code');
+    expect(screen.getByRole('link', { name: 'URL' })).toHaveAttribute('aria-current', 'page');
+    fireEvent.click(wifiLink);
+    expect(mockOnChange).not.toHaveBeenCalled();
   });
 
   it('renders WiFi inputs when WiFi type is selected', () => {

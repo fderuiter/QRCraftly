@@ -19,6 +19,7 @@
 import { render, cleanup } from '@testing-library/react';
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import HeadDefault from './Head';
+import { THEME_INIT_SCRIPT } from '@/utils/theme';
 
 // Hoist the mock functions so they can be used inside vi.mock
 const { mockUsePageContext, mockGetPublicDomain } = vi.hoisted(() => {
@@ -70,6 +71,15 @@ describe('HeadDefault', () => {
 
     const content = metaCSP?.getAttribute('content') || '';
     expect(content).toContain("default-src 'self'");
+  });
+
+  it('renders the pre-hydration theme script after the CSP meta tag', () => {
+    render(<HeadDefault />, { container: document.head });
+    const children = Array.from(document.head.children);
+    const cspIndex = children.findIndex((el) => el.getAttribute('http-equiv') === 'Content-Security-Policy');
+    const themeIndex = children.findIndex((el) => el.tagName === 'SCRIPT' && el.textContent === THEME_INIT_SCRIPT);
+    expect(themeIndex).toBeGreaterThan(cspIndex);
+    expect(children[themeIndex]).not.toHaveAttribute('type');
   });
 
   it('includes complete global organization schema metadata', () => {
