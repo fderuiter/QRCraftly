@@ -52,11 +52,6 @@
     "release:promote": "node scripts/release_engine.js --promote",
     "prepare": "husky"
   },
-  "lint-staged": {
-    "*.{js,jsx,ts,tsx,json,css,md}": [
-      "prettier --write"
-    ]
-  },
   "dependencies": {
     "jsqr": "^1.4.0",
     "lucide-react": "^1.31.0",
@@ -79,7 +74,7 @@
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
     "@vitejs/plugin-react": "^5.0.0",
-    "@vitest/coverage-v8": "^4.1.9",
+    "@vitest/coverage-v8": "^4.1.11",
     "bidi-js": "^1.0.3",
     "dependency-cruiser": "^18.2.0",
     "eslint": "^9.39.4",
@@ -102,7 +97,7 @@
     "typescript": "~5.8.2",
     "typescript-eslint": "^8.67.0",
     "vite": "6.4.3",
-    "vitest": "^4.1.9",
+    "vitest": "^4.1.11",
     "vitest-axe": "^0.1.0",
     "wrangler": "^4.123.0"
   },

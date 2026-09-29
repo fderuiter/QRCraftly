@@ -30,7 +30,7 @@ jobs:
 
       - name: Send Email on Failure
         if: failure()
-        uses: dawidd6/action-send-mail@v22
+        uses: dawidd6/action-send-mail@67ce3558d613188179559c61d3565140cf389968 # v22
         with:
           server_address: ${{ secrets.SMTP_SERVER || 'smtp.gmail.com' }}
           server_port: ${{ secrets.SMTP_PORT || 465 }}
@@ -40,7 +40,7 @@ jobs:
           to: ${{ secrets.MAIL_TO }}
           from: "Security Audit Bot <${{ secrets.SMTP_USERNAME }}>"
           body: |
-            A moderate-severity or higher dependency vulnerability was detected in the main branch of ${{ github.repository }}.
+            A moderate-severity or higher dependency vulnerability was detected on the ${{ github.ref_name }} branch of ${{ github.repository }}.
 
             Workflow Run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
