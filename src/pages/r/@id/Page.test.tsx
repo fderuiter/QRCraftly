@@ -97,4 +97,21 @@ describe('RedirectResolverPage', () => {
       expect(window.location.replace).not.toHaveBeenCalled();
     });
   });
+
+  it('reads the id from the address bar when served as the pre-rendered /r/shell page', async () => {
+    mockRouteParams = { id: 'shell' };
+    const keyHex = await generateDecryptionKey();
+    const ciphertext = await encryptUrl('https://destination.com/from-shell', keyHex);
+    const realId = '0b5f7c1e-8d2a-4c3b-9e4f-1a2b3c4d5e6f';
+    (window as any).location.pathname = `/r/${realId}`;
+    window.location.hash = `#key=${keyHex}`;
+    fetchSpy.mockResolvedValueOnce({ ok: true, json: async () => ({ id: realId, redirectUrl: ciphertext }) });
+
+    render(<RedirectResolverPage />);
+
+    await waitFor(() => {
+      expect(fetchSpy).toHaveBeenCalledWith(`/api/redirect/${realId}`, { headers: { 'Accept': 'application/json' } });
+      expect(window.location.replace).toHaveBeenCalledWith('https://destination.com/from-shell');
+    });
+  });
 });

@@ -22,6 +22,14 @@ describe('Service Worker API Navigation Bypass Unit Suite', () => {
     expect(apiCheckIndex).toBeLessThan(getMethodCheckIndex);
   });
 
+  it('should never serve dynamic link resolver pages (/r/<id>) from the SW cache', () => {
+    const swScriptContent = fs.readFileSync(swScriptPath, 'utf8');
+    const resolverCheckIndex = swScriptContent.indexOf("url.pathname.startsWith('/r/')");
+    const respondWithIndex = swScriptContent.indexOf('event.respondWith(');
+    expect(resolverCheckIndex).toBeGreaterThan(-1);
+    expect(resolverCheckIndex).toBeLessThan(respondWithIndex);
+  });
+
   it('should bypass service worker handling for all HTTP methods targeting API routes', () => {
     // Extract fetch listener body from generate_sw.cjs logic
     const swScriptContent = fs.readFileSync(swScriptPath, 'utf8');

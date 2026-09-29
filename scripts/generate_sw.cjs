@@ -118,6 +118,12 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Dynamic link resolver pages (/r/<id>#key=...) must always come from the edge
+  // Worker; a cache-first navigation fallback would serve the home page instead.
+  if (url.pathname.startsWith('/r/')) {
+    return;
+  }
+
   // Only handle same-origin GET requests
   if (request.method !== 'GET' || url.origin !== self.location.origin) {
     return;

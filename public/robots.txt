@@ -1,5 +1,7 @@
 User-agent: *
 Disallow: /dev-sandbox
+Disallow: /r/
+Disallow: /api/
 Allow: /
 
 Sitemap: https://qrcraftly.com/sitemap.xml
