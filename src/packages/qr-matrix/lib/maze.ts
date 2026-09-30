@@ -29,18 +29,32 @@ export interface MazeData {
   solution: MazeNode[];
 }
 
-// Global cache for computed mazes to ensure top performance and stability
-export const mazeCache = new Map<string, MazeData>();
+// Module-private cache for computed mazes; reached only through the functions below.
+const mazeCache = new Map<string, MazeData>();
+
+/**
+ * Returns the maze previously computed for a cache key (see `getMazeCacheKey`), if any.
+ */
+export function getCachedMaze(cacheKey: string): MazeData | undefined {
+  return mazeCache.get(cacheKey);
+}
+
+/**
+ * Stores a maze computed elsewhere (for example by the maze Web Worker) under its cache key.
+ */
+export function storeMaze(cacheKey: string, mazeData: MazeData): void {
+  mazeCache.set(cacheKey, mazeData);
+}
 
 export function clearMazeCache(): void {
   mazeCache.clear();
 }
 
 /**
- * Checks if a grid coordinate lies inside a finder eye pattern or its adjacent safety zone.
+ * Checks if a grid coordinate lies inside a Finder Pattern or the 2-module safety margin around it.
  * Quiet separator is preserved to prevent scanning issues.
  */
-export function isFinderEyeZone(r: number, c: number, size: number): boolean {
+export function isFinderPatternWithMargin(r: number, c: number, size: number): boolean {
   // Finder patterns are 7x7 inside [0, size-1]
   // We exclude an extra margin around finder eyes to guarantee absolute scanner safety.
   if (r >= -2 && r <= 8 && c >= -2 && c <= 8) return true;
@@ -87,7 +101,7 @@ function seedRandom(seedStr: string) {
 /**
  * Disjoint Set Union (DSU) implementation for finding spanning forest.
  */
-export class DSU {
+class DSU {
   parent: Map<string, string>;
   constructor(keys: string[]) {
     this.parent = new Map();
@@ -162,7 +176,7 @@ export function generateMaze(modules: QRModules, config: QRConfig, size: number)
   for (let r = 0; r < size; r++) {
     for (let c = 0; c < size; c++) {
       const isBridge = !!(bridgesEnabled && isBridgeCell(r, c, size));
-      if (isFinderEyeZone(r, c, size)) {
+      if (isFinderPatternWithMargin(r, c, size)) {
         if (!isBridge) {
           continue;
         }
@@ -572,15 +586,10 @@ export function renderMaze(
   if (!config.isMazeEnabled) return;
 
   const cacheKey = getMazeCacheKey(config, size, modules);
-  let maze = mazeData || mazeCache.get(cacheKey);
+  const maze = mazeData || mazeCache.get(cacheKey);
 
-  if (!maze) {
-    if (process.env.NODE_ENV === 'test') {
-      maze = generateMaze(modules, config, size);
-    } else {
-      return;
-    }
-  }
+  // Maze generation is off-thread (or idle-time) work owned by the caller; draw only what is ready.
+  if (!maze) return;
 
   const effectivePathWidth = getStyleAdaptiveMazePathWidth(config.style, config.mazePathWidth);
   const pathWidth = cellSize * Math.max(0.10, Math.min(0.50, effectivePathWidth));

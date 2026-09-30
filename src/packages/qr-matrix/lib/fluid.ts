@@ -55,14 +55,14 @@ export function clearFluidCache(): void {
 }
 
 /**
- * Determines if a module coordinate lies inside any of the three 7x7 locator eye patterns.
+ * Determines if a module coordinate lies inside any of the three 7x7 Finder Patterns.
  *
  * @param r Row coordinate in QR grid.
  * @param c Column coordinate in QR grid.
  * @param moduleCount Total number of modules along one dimension.
  * @returns True if inside a finder pattern, false otherwise.
  */
-export function isFinderEyeZone(r: number, c: number, moduleCount: number): boolean {
+export function isFinderPattern(r: number, c: number, moduleCount: number): boolean {
   if (r < 7 && c < 7) return true; // Top-Left
   if (r < 7 && c >= moduleCount - 7) return true; // Top-Right
   if (r >= moduleCount - 7 && c < 7) return true; // Bottom-Left

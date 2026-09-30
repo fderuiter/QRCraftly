@@ -1,31 +1,13 @@
 import { useState, useEffect } from 'react';
 
-/**
- *
- */
 type BrowserEngine = 'WebKit' | 'Chromium' | 'Firefox' | 'Unknown';
 
-/**
- *
- */
 interface Capabilities {
-  /**
-   *
-   */
   engine: BrowserEngine;
-  /**
-   *
-   */
   canSaveFilePicker: boolean;
-  /**
-   *
-   */
   canShare: boolean;
 }
 
-/**
- *
- */
 export function useCapabilities(): Capabilities {
   const [capabilities, setCapabilities] = useState<Capabilities>({
     engine: 'Unknown',

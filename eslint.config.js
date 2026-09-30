@@ -85,6 +85,8 @@ export default tseslint.config(
       "jsdoc/require-jsdoc": [
         "error",
         {
+          // Never autofix: the fixer inserts empty `/** */` stubs that carry no documentation.
+          enableFixer: false,
           require: {
             FunctionDeclaration: false,
             ArrowFunctionExpression: false,
@@ -129,6 +131,8 @@ export default tseslint.config(
       "jsdoc/require-jsdoc": [
         "warn",
         {
+          // Never autofix: the fixer inserts empty `/** */` stubs that carry no documentation.
+          enableFixer: false,
           require: {
             FunctionDeclaration: false,
             ArrowFunctionExpression: false,

@@ -8,6 +8,10 @@ import { QRStyle } from '../types';
 // Mock qrcode module
 
 import QRCode from 'qrcode';
+import { useQrcodeAsCanvasEncoder } from '../../tests/fixtures/fakeQrcode';
+
+vi.mock('qrcode', async () => (await import('../../tests/fixtures/fakeQrcode')).createFakeQrcodeModule());
+useQrcodeAsCanvasEncoder(QRCode);
 
 describe('QRCanvas Performance Refactoring', () => {
   let mockContext: any;

@@ -27,7 +27,7 @@ describe('scannabilityWorker', () => {
     globalThis.ImageData = MockImageData as any;
 
     // Dynamically import once to set self.onmessage and capture it
-    await import('./scannabilityWorker');
+    await import('@/packages/scannability/worker');
     workerHandler = globalThis.onmessage;
   });
 

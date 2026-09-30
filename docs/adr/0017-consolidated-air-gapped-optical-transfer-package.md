@@ -6,7 +6,7 @@ status: accepted
 
 ## Context
 
-Air-gapped screen-to-camera optical file transfer previously suffered from severe architectural entanglement across React hooks, utility workers, and ad-hoc frame memory caching. The sender and receiver subsystems were dispersed across [`src/hooks/useAnimatedQrSender.ts`](../../src/hooks/useAnimatedQrSender.ts) (748 lines), [`src/hooks/useAnimatedQrReceiver.ts`](../../src/hooks/useAnimatedQrReceiver.ts) (787 lines), [`src/utils/fileSliceWorker.ts`](../../src/utils/fileSliceWorker.ts), [`src/utils/fileReassemblyWorker.ts`](../../src/utils/fileReassemblyWorker.ts), [`src/utils/FrameMemoryPool.ts`](../../src/utils/FrameMemoryPool.ts), and [`src/engine/StreamLookahead.ts`](../../src/engine/StreamLookahead.ts).
+Air-gapped screen-to-camera optical file transfer previously suffered from severe architectural entanglement across React hooks, utility workers, and ad-hoc frame memory caching. The sender and receiver subsystems were dispersed across [`src/hooks/useAnimatedQrSender.ts`](../../src/hooks/useAnimatedQrSender.ts) (748 lines), [`src/hooks/useAnimatedQrReceiver.ts`](../../src/hooks/useAnimatedQrReceiver.ts) (787 lines), `src/utils/fileSliceWorker.ts` (since deleted), `src/utils/fileReassemblyWorker.ts` (since deleted), `src/utils/FrameMemoryPool.ts` (since deleted), and [`src/engine/StreamLookahead.ts`](../../src/engine/StreamLookahead.ts).
 
 This monolithic design presented multiple systemic deficiencies:
 

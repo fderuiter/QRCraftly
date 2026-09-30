@@ -30,7 +30,6 @@ export {
   type ScanSource,
   type ScanResult,
   type ScanOptions,
-  type ScannerMetrics,
   type ScannerStatus,
   type ScannerRequest,
   type ScannerResponse,

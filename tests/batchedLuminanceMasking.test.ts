@@ -6,7 +6,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderModules, sampleCellLuminances, ModuleRenderOptions } from '@/packages/qr-matrix';
 import { drawQRInternal } from '../src/utils/qrRenderer';
-import { auditModuleContrast } from '../src/utils/contrastAudit';
+import { auditModuleContrast } from '@/packages/scannability';
 import { generateQRSvg } from '../src/utils/svgExport';
 import { QRConfig, QRStyle, QRType, QRErrorCorrectionLevel, SocialFormat, TemplateStyle } from '../src/types';
 

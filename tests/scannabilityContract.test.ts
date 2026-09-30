@@ -4,7 +4,7 @@ import {
   assertWorkerRequest,
   isWorkerResponse,
   assertWorkerResponse,
-} from './sharedContract';
+} from '@/packages/scannability';
 
 describe('sharedContract runtime assertion logic', () => {
   describe('isWorkerRequest & assertWorkerRequest', () => {
