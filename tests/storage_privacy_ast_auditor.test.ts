@@ -41,9 +41,6 @@ describe('Pre-Build Storage Privacy AST Auditor Guardrail', () => {
       tempCleanFile,
       `
       export function handlePreferences() {
-        const optIn = localStorage.getItem('qr-telemetry-opt-in');
-        localStorage.setItem('qr-telemetry-opt-in', 'true');
-        
         const consent = localStorage.getItem('qrcraftly:dynamic-consent-accepted');
         localStorage.setItem('qrcraftly:dynamic-consent-accepted', 'true');
         
@@ -68,7 +65,7 @@ describe('Pre-Build Storage Privacy AST Auditor Guardrail', () => {
 
   describe('ALLOWED_STORAGE_KEYS', () => {
     it('contains all authorized persistent storage keys', () => {
-      expect(ALLOWED_STORAGE_KEYS.has('qr-telemetry-opt-in')).toBe(true);
+      expect(ALLOWED_STORAGE_KEYS.has('qr-telemetry-opt-in')).toBe(false);
       expect(ALLOWED_STORAGE_KEYS.has('qrcraftly:dynamic-redirects')).toBe(true);
       expect(ALLOWED_STORAGE_KEYS.has('qrcraftly:dynamic-consent-accepted')).toBe(true);
       expect(ALLOWED_STORAGE_KEYS.has('qrcraftly:theme')).toBe(true);
@@ -78,7 +75,6 @@ describe('Pre-Build Storage Privacy AST Auditor Guardrail', () => {
     it('allows only the documented preference, consent and probe keys', () => {
       expect([...ALLOWED_STORAGE_KEYS].sort()).toEqual([
         '__test__',
-        'qr-telemetry-opt-in',
         'qrcraftly:dynamic-consent-accepted',
         'qrcraftly:dynamic-redirects',
         'qrcraftly:theme',

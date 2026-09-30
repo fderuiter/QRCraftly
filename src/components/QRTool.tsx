@@ -22,7 +22,7 @@ import { Card } from "./ui/Card";
 import { Alert } from "./ui/Alert";
 import { QRConfig } from '@/types';
 import QRCanvas from '@/components/QRCanvas';
-import { Download, Share2, QrCode, ChevronDown, Info, CircleHelp, Copy, Check, AlertTriangle } from 'lucide-react';
+import { Download, Share2, QrCode, ChevronDown, CircleHelp, Copy, Check, AlertTriangle } from 'lucide-react';
 import { Modal } from './ui/Modal';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useQRDownload, ExportStatus, ExportOptions } from '@/hooks/useQRDownload';
@@ -34,10 +34,10 @@ import { QRProvider, useQRStore, useQRStoreSelector } from '@/context/QRContext'
 import { PrimaryNav } from './ui/PrimaryNav';
 import { ThemeToggle } from './ui/ThemeToggle';
 import { Menu } from './ui/Menu';
-import { useTelemetry } from '@/hooks/useTelemetry';
 import { useCapabilities } from '@/hooks/useCapabilities';
 import { sidebarControls } from '@/registry';
 import { StressTestButton } from './arcade/StressTestButton';
+import { PLEDGE_TAGLINE } from '@/data/pledge';
 
 /**
  * Renders the QR code generator interface with configuration controls, preview, and export actions.
@@ -79,7 +79,6 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
       checkScannability(info.virtualImageData, undefined, info.moduleCount);
     }
   }, [setModuleCount, checkScannability]);
-  const { showTelemetryPrompt, handleOptIn } = useTelemetry(scannabilityStatus);
 
   // Debounce the config for QRCanvas to prevent lag during rapid typing or style changes.
   const debouncedConfig = useDebounce(config, 100);
@@ -248,26 +247,6 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
             ))}
 
             <footer className="mt-8 border-t border-slate-100 pt-8 dark:border-slate-800">
-              {showTelemetryPrompt && (
-                <section
-                  aria-labelledby="telemetry-consent-title"
-                  className="mb-8 border-b border-slate-100 pb-8 dark:border-slate-800"
-                >
-                  <h2
-                    id="telemetry-consent-title"
-                    className="mb-2 flex items-center gap-2 text-xs font-semibold tracking-wider text-slate-900 uppercase dark:text-slate-200"
-                  >
-                    <Info className="size-4 text-blue-500" /> Anonymous diagnostics
-                  </h2>
-                  <p className="mb-3 text-xs leading-relaxed text-slate-600 dark:text-slate-400">
-                    If a scan check fails, may we send your browser engine and QR style settings to help improve QRCraftly? QR content and images are never sent.
-                  </p>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={() => handleOptIn(true)} className="flex-1 text-xs">Allow</Button>
-                    <Button variant="outline" size="sm" onClick={() => handleOptIn(false)} className="flex-1 text-xs">No thanks</Button>
-                  </div>
-                </section>
-              )}
               <nav aria-label="Site Map">
                 <div className="mb-4 grid grid-cols-2 gap-4">
                   <div>
@@ -303,15 +282,16 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
                     <h2 className="mb-3 text-xs font-semibold tracking-wider text-slate-900 uppercase dark:text-slate-200">Company</h2>
                     <ul className="space-y-2 text-sm text-slate-500 dark:text-slate-400">
                       <li><a href="/about" className="transition-colors hover:text-teal-700 dark:hover:text-teal-400">About</a></li>
+                      <li><a href="/free-forever" className="transition-colors hover:text-teal-700 dark:hover:text-teal-400">No-Ads Pledge</a></li>
                       <li><a href="/security#security-policy" className="transition-colors hover:text-teal-700 dark:hover:text-teal-400">Security Policy</a></li>
                       <li><a href="/security#privacy-architecture" className="transition-colors hover:text-teal-700 dark:hover:text-teal-400">Privacy Architecture</a></li>
-                      <li><a href="https://ko-fi.com/laser_loon" target="_blank" rel="noopener noreferrer" className="transition-colors hover:text-teal-700 dark:hover:text-teal-400">Ko-fi</a></li>
                       <li><a href="https://github.com/fderuiter/QRCraftly" target="_blank" rel="noopener noreferrer" className="transition-colors hover:text-teal-700 dark:hover:text-teal-400">GitHub</a></li>
                     </ul>
                   </div>
                 </div>
               </nav>
               <p className="mt-6 border-t border-slate-100 pt-4 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
+                <a href="/free-forever" className="font-medium text-slate-600 hover:text-teal-700 dark:text-slate-300 dark:hover:text-teal-400">{PLEDGE_TAGLINE}</a>{' '}
                 &copy; {new Date().getFullYear()} QRCraftly. Open Source.
               </p>
             </footer>

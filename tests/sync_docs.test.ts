@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { syncUICatalog, syncTelemetryCompliance, syncAll } from '../scripts/sync_docs.js';
+import { syncUICatalog, syncAll } from '../scripts/sync_docs.js';
 import { validateCatalog } from '../scripts/validate_ui_catalog.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -15,8 +15,6 @@ describe('Documentation Synchronization Engine (docs:sync)', () => {
   const mockInputsDir = path.join(tempTestDir, 'src/components/inputs');
   const mockStyleControlsDir = path.join(tempTestDir, 'src/components/style-controls');
   const mockCatalogPath = path.join(tempTestDir, 'docs/public/UI_CATALOG.md');
-  const mockTypesPath = path.join(tempTestDir, 'src/types.ts');
-  const mockCompliancePath = path.join(tempTestDir, 'docs/public/COMPLIANCE.md');
 
   beforeAll(() => {
     fs.mkdirSync(mockUiDir, { recursive: true });
@@ -161,47 +159,8 @@ publish-approved: true
     });
   });
 
-  describe('syncTelemetryCompliance()', () => {
-    it('synchronizes telemetry keys from types.ts into COMPLIANCE.md', () => {
-      const mockTypesContent = `
-export const ALLOWED_TELEMETRY_KEYS = [
-  'engine',
-  'styleId',
-  'errorType',
-  'customMetric'
-] as const;
-`;
-      fs.writeFileSync(mockTypesPath, mockTypesContent);
-
-      const mockComplianceContent = `---
-publish-approved: true
----
-
-# Compliance
-
-- **Opt-In Telemetry:**
-  - If you encounter a scannability issue, parameters are: \`engine\`, \`styleId\`.
-  - **Telemetry Schema Contract (source of truth):**
-    - Diagnostic telemetry is strictly allowlisted in \`src/types.ts\` via ALLOWED_TELEMETRY_KEYS.
-    - Accepted keys are: \`engine\`, \`styleId\`.
-- **What is NOT Logged:**
-`;
-      fs.writeFileSync(mockCompliancePath, mockComplianceContent);
-
-      const result = syncTelemetryCompliance(mockTypesPath, mockCompliancePath);
-      expect(result.changed).toBe(true);
-
-      const updatedCompliance = fs.readFileSync(mockCompliancePath, 'utf8');
-      expect(updatedCompliance).toContain('`engine`, `styleId`, `errorType`, `customMetric`');
-
-      // Second pass should be idempotent
-      const secondPass = syncTelemetryCompliance(mockTypesPath, mockCompliancePath);
-      expect(secondPass.changed).toBe(false);
-    });
-  });
-
   describe('syncAll()', () => {
-    it('runs catalog sync and telemetry compliance sync in one invocation', () => {
+    it('runs catalog sync in one invocation', () => {
       fs.writeFileSync(path.join(mockUiDir, 'Box.tsx'), 'export const Box = () => <div />;');
       fs.writeFileSync(mockCatalogPath, `---
 publish-approved: true
@@ -222,8 +181,6 @@ publish-approved: true
         uiDirs: [mockUiDir, mockInputsDir, mockStyleControlsDir],
         catalogPath: mockCatalogPath,
         root: tempTestDir,
-        typesPath: mockTypesPath,
-        compliancePath: mockCompliancePath,
         skipManifest: true,
       });
 

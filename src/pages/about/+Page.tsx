@@ -18,7 +18,8 @@
 
 
 import React from 'react';
-import { Shield, Database, Code, ArrowLeft, Zap, Wifi, Coffee } from 'lucide-react';
+import { Shield, Database, Code, ArrowLeft, Zap, Wifi, Ban } from 'lucide-react';
+import { PLEDGE_COMMITMENT, PLEDGE_HEADLINE } from '@/data/pledge';
 import { JsonLdScript } from '@/components/ui/JsonLdScript';
 import { contentRegistry } from '@/data/contentRegistry';
 import { generateSchema } from '@/utils/schemaGenerator';
@@ -48,7 +49,7 @@ const GithubIcon: React.FC<{ className?: string }> = ({ className }) => (
  * About Page Component
  *
  * Displays information about the QRCraftly project, including its core values
- * (Privacy, No Database, Open Source, Free Use) and licensing information.
+ * (Privacy, No Database, Open Source, Free Use), the no-ads pledge and licensing information.
  * Includes a link to the GitHub repository.
  * @returns The About page layout.
  */
@@ -78,7 +79,7 @@ export default function Page() {
         </h1>
         <p className="mx-auto max-w-2xl text-lg text-slate-600 dark:text-slate-300">
           A privacy-focused QR code generator built with modern web technologies.
-          Entirely free with no login required.
+          Entirely free, with no ads and no login required.
         </p>
       </header>
 
@@ -101,7 +102,7 @@ export default function Page() {
             </div>
             <h3 className="mb-2 text-lg font-semibold text-slate-900 dark:text-white">No Third-Party Tracking</h3>
             <p className="text-slate-600 dark:text-slate-400">
-              We do not use tracking pixels, cookies, or third-party analytics. We only collect basic server logs for performance and reliability.
+              No analytics, tracking cookies, tracking pixels or third-party scripts. Our host, Cloudflare, only sees ordinary page requests, never your QR content.
             </p>
           </div>
 
@@ -111,7 +112,7 @@ export default function Page() {
             </div>
             <h3 className="mb-2 text-lg font-semibold text-slate-900 dark:text-white">Privacy First</h3>
             <p className="text-slate-600 dark:text-slate-400">
-              We utilize a Privacy First architecture. Your content is processed entirely in your browser and not transmitted to our servers without your explicit opt-in for telemetry.
+              Your content is processed entirely in your browser and is never sent to a server. Nothing is reported back, ever.
             </p>
           </div>
 
@@ -141,28 +142,21 @@ export default function Page() {
         </a>
       </section>
 
-      <section className="relative mb-16 overflow-hidden rounded-2xl border border-rose-100 bg-gradient-to-br from-rose-50 to-orange-50 p-8 text-center md:p-12 dark:border-rose-800/30 dark:from-rose-900/20 dark:to-orange-900/20">
-        <div className="pointer-events-none absolute top-0 right-0 -mt-16 -mr-16 size-64 rounded-full bg-rose-200/20 dark:bg-rose-500/10"></div>
-        <div className="pointer-events-none absolute bottom-0 left-0 -mb-16 -ml-16 size-64 rounded-full bg-orange-200/20 dark:bg-orange-500/10"></div>
-
-        <div className="relative z-10">
-          <div className="mx-auto mb-6 flex size-16 rotate-3 items-center justify-center rounded-2xl border border-rose-100 bg-white shadow-sm transition-transform duration-300 hover:rotate-12 dark:border-rose-700/50 dark:bg-slate-800">
-            <Coffee className="size-8 text-[#FF5E5B]" />
-          </div>
-          <h2 className="mb-4 text-3xl font-bold text-slate-900 dark:text-white">Support the Project</h2>
-          <p className="mx-auto mb-8 max-w-2xl text-lg leading-relaxed text-slate-600 dark:text-slate-300">
-            QRCraftly is 100% free, open-source, and privacy-respecting. If you find this tool helpful, consider buying me a coffee! Your support helps cover hosting costs and fuels future development.
-          </p>
-          <a
-            href="https://ko-fi.com/laser_loon"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-3 rounded-xl bg-[#FF5E5B] px-8 py-4 text-lg font-bold text-white transition-all hover:-translate-y-1 hover:bg-[#FF4A47] hover:shadow-xl hover:shadow-[#FF5E5B]/25 active:translate-y-0"
-          >
-            <Coffee className="size-6" />
-            Support me on Ko-fi
-          </a>
+      <section
+        aria-labelledby="about-pledge"
+        className="mb-16 rounded-2xl border border-teal-100 bg-teal-50 p-8 text-center md:p-12 dark:border-teal-800/40 dark:bg-teal-900/20"
+      >
+        <div className="mx-auto mb-6 flex size-16 items-center justify-center rounded-2xl border border-teal-100 bg-white shadow-sm dark:border-teal-700/50 dark:bg-slate-800">
+          <Ban className="size-8 text-teal-700 dark:text-teal-400" aria-hidden="true" />
         </div>
+        <h2 id="about-pledge" className="mb-4 text-3xl font-bold text-slate-900 dark:text-white">{PLEDGE_HEADLINE}</h2>
+        <p className="mx-auto mb-8 max-w-2xl text-lg leading-relaxed text-slate-600 dark:text-slate-300">{PLEDGE_COMMITMENT}</p>
+        <a
+          href="/free-forever"
+          className="inline-flex items-center gap-2 rounded-xl bg-teal-700 px-6 py-3 font-medium text-white shadow-lg shadow-teal-900/20 transition-colors hover:bg-teal-800"
+        >
+          Read the QRCraftly Pledge
+        </a>
       </section>
 
       <section className="mb-12 rounded-2xl border border-slate-200 bg-slate-50 p-8 text-center dark:border-slate-700 dark:bg-slate-800/50">

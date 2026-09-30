@@ -1,0 +1,160 @@
+/*
+    QRCraftly
+    Copyright (C) 2025 fderuiter
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
+
+import { ArrowLeft, Ban, EyeOff, Laptop, Gift } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import { JsonLdScript } from '@/components/ui/JsonLdScript';
+import { contentRegistry } from '@/data/contentRegistry';
+import {
+  PLEDGE_AFFORDABLE,
+  PLEDGE_COLLECTED,
+  PLEDGE_COMMITMENT,
+  PLEDGE_HEADLINE,
+  PLEDGE_LEAD,
+  PLEDGE_NEVER_EXPIRE,
+  PLEDGE_NOT_COLLECTED,
+  PLEDGE_PROMISES,
+  PLEDGE_SIGNATURE,
+  PLEDGE_VERIFY,
+  PLEDGE_WHY,
+  SOURCE_CODE_URL,
+  TRIAL_EXPIRY_EXAMPLE,
+} from '@/data/pledge';
+import { generateSchema } from '@/utils/schemaGenerator';
+import { resolveDomainForPath } from '@/utils/metadataEngine';
+import { usePageContext } from 'vike-react/usePageContext';
+import { ProductShell } from '@/components/ProductShell';
+
+const PROMISE_ICONS: readonly LucideIcon[] = [Ban, EyeOff, Laptop, Gift];
+
+/**
+ * The Free Forever page: the QRCraftly Pledge (no ads, no tracking, client-side processing,
+ * free use), why the codes never expire, and an exact list of what is and isn't collected.
+ * @returns The pledge page layout.
+ */
+export default function Page() {
+  const pageContext = usePageContext();
+  const urlPathname = pageContext?.urlPathname ?? '/free-forever';
+  const resolvedDomain = resolveDomainForPath(urlPathname);
+  const schemaData = generateSchema(contentRegistry['free-forever'], resolvedDomain, urlPathname);
+
+  return (
+    <ProductShell>
+      <div className="mx-auto max-w-4xl px-4 py-12">
+        <JsonLdScript data={schemaData} />
+        <nav className="mb-8">
+          <a
+            href="/"
+            className="inline-flex items-center gap-2 text-slate-600 transition-colors hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+          >
+            <ArrowLeft className="size-5" />
+            Back to Home
+          </a>
+        </nav>
+
+        <header className="mb-12 text-center">
+          <p className="mb-3 text-sm font-semibold tracking-wider text-teal-700 uppercase dark:text-teal-400">The QRCraftly Pledge</p>
+          <h1 className="mb-6 text-4xl font-bold text-slate-900 md:text-5xl dark:text-white">{PLEDGE_HEADLINE}</h1>
+          <p className="mx-auto mb-4 max-w-2xl text-xl font-medium text-slate-800 dark:text-slate-100">{PLEDGE_LEAD}</p>
+          <p className="mx-auto max-w-2xl text-lg leading-relaxed text-slate-600 dark:text-slate-300">{PLEDGE_WHY}</p>
+        </header>
+
+        <section aria-labelledby="pledge-promises" className="mb-12">
+          <h2 id="pledge-promises" className="sr-only">What I promise</h2>
+          <ul className="grid gap-6 md:grid-cols-2">
+            {PLEDGE_PROMISES.map((promise, index) => {
+              const Icon = PROMISE_ICONS[index % PROMISE_ICONS.length];
+              return (
+                <li
+                  key={promise.title}
+                  className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800"
+                >
+                  <div className="mb-4 flex size-12 items-center justify-center rounded-xl bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400">
+                    <Icon className="size-6" aria-hidden="true" />
+                  </div>
+                  <h3 className="mb-2 text-lg font-semibold text-slate-900 dark:text-white">{promise.title}</h3>
+                  <p className="text-slate-600 dark:text-slate-400">{promise.text}</p>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+
+        <section
+          aria-labelledby="pledge-commitment"
+          className="mb-12 rounded-2xl border border-teal-100 bg-teal-50 p-8 text-center md:p-12 dark:border-teal-800/40 dark:bg-teal-900/20"
+        >
+          <h2 id="pledge-commitment" className="mb-4 text-2xl font-bold text-slate-900 dark:text-white">Ads or nothing? Nothing.</h2>
+          <p className="mx-auto max-w-2xl text-lg leading-relaxed text-slate-700 dark:text-slate-200">{PLEDGE_COMMITMENT}</p>
+          <p className="mt-6 text-sm font-medium text-slate-600 dark:text-slate-400">{PLEDGE_SIGNATURE}</p>
+        </section>
+
+        <section aria-labelledby="pledge-never-expire" className="mb-12">
+          <h2 id="pledge-never-expire" className="mb-4 text-2xl font-bold text-slate-900 dark:text-white">Why your codes never expire</h2>
+          <p className="mb-3 leading-relaxed text-slate-600 dark:text-slate-400">{PLEDGE_NEVER_EXPIRE}</p>
+          <p className="leading-relaxed text-slate-600 dark:text-slate-400">
+            For example, see the vendor&apos;s own article on{' '}
+            <a href={TRIAL_EXPIRY_EXAMPLE.href} target="_blank" rel="noopener noreferrer" className="font-medium text-teal-700 underline hover:text-teal-800 dark:text-teal-400 dark:hover:text-teal-300">
+              {TRIAL_EXPIRY_EXAMPLE.label}
+            </a>
+            .
+          </p>
+        </section>
+
+        <section aria-labelledby="pledge-affordable" className="mb-12">
+          <h2 id="pledge-affordable" className="mb-4 text-2xl font-bold text-slate-900 dark:text-white">How it stays free without ads</h2>
+          <p className="leading-relaxed text-slate-600 dark:text-slate-400">{PLEDGE_AFFORDABLE}</p>
+        </section>
+
+        <section aria-labelledby="pledge-data" className="mb-12">
+          <h2 id="pledge-data" className="mb-6 text-2xl font-bold text-slate-900 dark:text-white">Exactly what is and isn&apos;t collected</h2>
+          <div className="grid gap-8 md:grid-cols-2">
+            <div>
+              <h3 className="mb-3 text-lg font-semibold text-slate-900 dark:text-white">What is seen or stored</h3>
+              <ul className="list-disc space-y-3 pl-5 text-slate-600 dark:text-slate-400">
+                {PLEDGE_COLLECTED.map((item) => <li key={item}>{item}</li>)}
+              </ul>
+            </div>
+            <div>
+              <h3 className="mb-3 text-lg font-semibold text-slate-900 dark:text-white">What is never collected</h3>
+              <ul className="list-disc space-y-3 pl-5 text-slate-600 dark:text-slate-400">
+                {PLEDGE_NOT_COLLECTED.map((item) => <li key={item}>{item}</li>)}
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <section aria-labelledby="pledge-verify" className="mb-12">
+          <h2 id="pledge-verify" className="mb-4 text-2xl font-bold text-slate-900 dark:text-white">Check it yourself</h2>
+          <p className="leading-relaxed text-slate-600 dark:text-slate-400">
+            {PLEDGE_VERIFY} Read the{' '}
+            <a href="/security#compliance" className="font-medium text-teal-700 underline hover:text-teal-800 dark:text-teal-400 dark:hover:text-teal-300">
+              privacy details
+            </a>{' '}
+            or the{' '}
+            <a href={SOURCE_CODE_URL} target="_blank" rel="noopener noreferrer" className="font-medium text-teal-700 underline hover:text-teal-800 dark:text-teal-400 dark:hover:text-teal-300">
+              source code on GitHub
+            </a>
+            .
+          </p>
+        </section>
+      </div>
+    </ProductShell>
+  );
+}

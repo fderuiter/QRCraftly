@@ -77,10 +77,10 @@ test.describe('Transition & Storage Verification', () => {
     const sessionKeys = await page.evaluate(() => Object.keys(window.sessionStorage));
     expect(sessionKeys).toEqual([]);
 
-    // Evaluate window.localStorage to confirm it only ever contains telemetry preferences or is empty (no sensitive QR data)
+    // Evaluate window.localStorage to confirm it only ever holds the colour-theme preference or is empty (no QR data)
     const localKeys = await page.evaluate(() => Object.keys(window.localStorage));
-    const nonTelemetryKeys = localKeys.filter(key => key !== 'qr-telemetry-opt-in');
-    expect(nonTelemetryKeys).toEqual([]);
+    const nonThemeKeys = localKeys.filter(key => key !== 'qrcraftly:theme');
+    expect(nonThemeKeys).toEqual([]);
 
     // Double check that the sensitive value itself is nowhere in storage
     const fullLocalStorage = await page.evaluate(() => ({ ...window.localStorage }));
@@ -101,61 +101,27 @@ test.describe('Transition & Storage Verification', () => {
     }
   });
 
-  test('Requirement 4: Assert that the telemetry preference persists its exact state across page reloads', async ({ page }) => {
-    // 1. Locate the Opt-In button ("Yes, Help Fix This" or "Allow")
-    const yesButton = page.getByRole('button', { name: /Yes, Help Fix This|Allow/i });
-    await expect(yesButton).toBeVisible();
+  test('Requirement 4: No diagnostics consent is asked for or stored, and nothing is sent to another origin', async ({ page }) => {
+    const pageOrigin = new URL(page.url()).origin;
+    const foreignRequests: string[] = [];
+    page.on('request', request => {
+      const url = new URL(request.url());
+      if (/^https?:$/.test(url.protocol) && url.origin !== pageOrigin) foreignRequests.push(request.url());
+    });
 
-    // Click to Opt-In
-    await yesButton.click();
-
-    // Verify localStorage has the 'qr-telemetry-opt-in' set to 'true'
-    let optInVal = await page.evaluate(() => window.localStorage.getItem('qr-telemetry-opt-in'));
-    expect(optInVal).toBe('true');
-
-    // Reload the page
     await page.reload();
     await page.waitForSelector('main[data-hydrated="true"]');
+    await page.locator('#url-input').fill('https://example.com/private');
 
-    // Confirm telemetry option is still 'true' after reload
-    optInVal = await page.evaluate(() => window.localStorage.getItem('qr-telemetry-opt-in'));
-    expect(optInVal).toBe('true');
-
-    // Confirm that the localStorage only contains 'qr-telemetry-opt-in' and no other keys
-    let localKeys = await page.evaluate(() => Object.keys(window.localStorage));
-    expect(localKeys).toEqual(['qr-telemetry-opt-in']);
-
-    // Confirm sessionStorage is completely empty
-    const sessionKeys = await page.evaluate(() => Object.keys(window.sessionStorage));
-    expect(sessionKeys).toEqual([]);
+    await expect(page.getByRole('button', { name: /^Allow$|No thanks/i })).toHaveCount(0);
+    const localKeys = await page.evaluate(() => Object.keys(window.localStorage));
+    expect(localKeys.filter(key => key !== 'qrcraftly:theme')).toEqual([]);
+    expect(foreignRequests).toEqual([]);
   });
 
-  test('Requirement 4 (Alt): Assert that telemetry opt-out also persists its exact state across page reloads', async ({ page }) => {
-    // 1. Locate the Opt-Out button ("No Thanks" or "No thanks")
-    const noButton = page.getByRole('button', { name: /No Thanks|No thanks/i });
-    await expect(noButton).toBeVisible();
-
-    // Click to Opt-Out
-    await noButton.click();
-
-    // Verify localStorage has the 'qr-telemetry-opt-in' set to 'false'
-    let optOutVal = await page.evaluate(() => window.localStorage.getItem('qr-telemetry-opt-in'));
-    expect(optOutVal).toBe('false');
-
-    // Reload the page
-    await page.reload();
-    await page.waitForSelector('main[data-hydrated="true"]');
-
-    // Confirm telemetry option is still 'false' after reload
-    optOutVal = await page.evaluate(() => window.localStorage.getItem('qr-telemetry-opt-in'));
-    expect(optOutVal).toBe('false');
-
-    // Confirm that the localStorage only contains 'qr-telemetry-opt-in' and no other keys
-    let localKeys = await page.evaluate(() => Object.keys(window.localStorage));
-    expect(localKeys).toEqual(['qr-telemetry-opt-in']);
-
-    // Confirm sessionStorage is completely empty
-    const sessionKeys = await page.evaluate(() => Object.keys(window.sessionStorage));
-    expect(sessionKeys).toEqual([]);
+  test('Requirement 5: The no-ads pledge page is linked from the footer', async ({ page }) => {
+    await page.getByRole('link', { name: 'No-Ads Pledge' }).first().click();
+    await expect(page).toHaveURL(/\/free-forever$/);
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('QRCraftly is not ad supported, and it never will be.');
   });
 });

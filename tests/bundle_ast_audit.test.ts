@@ -25,7 +25,10 @@ describe('bundle_ast_audit call-site authorization', () => {
   it('allows fetch to an authorized first-party API prefix', () => {
     expect(audit('client/assets/a.js', 'async function r(x){return fetch("/api/redirect/register",{method:"POST",body:x})}')).toEqual([]);
     expect(audit('client/assets/b.js', 'function s(i){return fetch(`/api/redirect/stats?id=${i}`)}')).toEqual([]);
-    expect(audit('client/assets/c.js', 'function t(d){navigator.onLine&&fetch("/api/telemetry/scannability",{method:"POST",body:d})}')).toEqual([]);
+  });
+
+  it('rejects the retired telemetry endpoint', () => {
+    expect(audit('client/assets/c.js', 'function t(d){navigator.onLine&&fetch("/api/telemetry/scannability",{method:"POST",body:d})}')).not.toEqual([]);
   });
 
   it('allows a dynamic fetch only when its own function carries an authorized literal', () => {

@@ -150,7 +150,7 @@ This section is **non-negotiable**. Any feature proposal must be evaluated again
 | No QR content stored server-side          | Volatile browser memory; cleared on tab close                                                         |
 | No user input in URL query parameters     | Architectural constraint; prevents history/proxy leakage                                              |
 | Storage keys explicitly allowlisted       | Pre-build AST auditor (`scripts/storage_privacy_ast_auditor.js`) blocks unapproved keys at build time |
-| Opt-in telemetry schema allowlisted       | `ALLOWED_TELEMETRY_KEYS` in `src/types.ts`; no payload-adjacent fields permitted                      |
+| No analytics, telemetry or ads            | [The QRCraftly Pledge](docs/PLEDGE.md); CSP `connect-src 'self'` and the bundle network audit         |
 
 HIPAA Technical Safeguard alignment is documented in [`docs/public/COMPLIANCE.md`](docs/public/COMPLIANCE.md). This is a _technical_ safeguard; organizational HIPAA certification remains the responsibility of the deploying organization.
 
@@ -189,7 +189,7 @@ The following are explicitly **out of scope** and should not be planned, specced
 | Server-side QR generation                              | Violates the privacy-first invariant; payloads must never leave the client                                                                                                             |
 | Native mobile apps (iOS / Android)                     | Web-first strategy; responsive PWA is sufficient                                                                                                                                       |
 | Batch / bulk QR generation via API or CSV upload       | Adds infrastructure complexity without a clear user persona match today                                                                                                                |
-| External analytics or telemetry tracking QR content    | Violates privacy-first invariant; only opt-in, schema-controlled diagnostic telemetry is permitted                                                                                     |
+| Ads, analytics, telemetry or diagnostics reporting     | Violates [the QRCraftly Pledge](docs/PLEDGE.md): the project shuts down before it becomes ad supported                                                                                 |
 | Server-side storage of user QR codes or cloud accounts | Violates volatile memory guarantee                                                                                                                                                     |
 
 ---

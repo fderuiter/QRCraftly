@@ -145,6 +145,7 @@ export const formatPathName = (segment: string): string => {
     'game': 'QR Damage Simulator Game',
     'arcade': 'QR Arcade',
     'security': 'Security & Privacy',
+    'free-forever': 'Free Forever',
   };
 
   if (overrides[segment]) {
