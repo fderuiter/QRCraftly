@@ -81,6 +81,9 @@ interface ReassemblyWorkerMessage {
   dropletsReceived?: number;
 }
 
+/** Longest pause between camera samples while receiving a stream. */
+const STREAM_MAX_SAMPLING_DELAY_MS = 150;
+
 const FILE_RECEIVED_MESSAGE = 'File completely received & offline binary reconstruction triggered!';
 
 /**
@@ -227,6 +230,8 @@ export function useOpticalReceiver({
         const { type, progress, current, total, isFountain, rank, dropletsReceived } = message;
 
         if (type === 'PROGRESS' && isFountain) {
+          // A fresh fountain decode (after a failed one) clears the old error.
+          setReceiverError(null);
           setFountainStats(
             rateTrackerRef.current.telemetry(
               { k: total ?? 0, rank: rank ?? 0, resolved: current ?? 0, dropletsReceived: dropletsReceived ?? 0, progress: progress ?? 0 },
@@ -396,13 +401,15 @@ export function useOpticalReceiver({
 
   const handleFrame = useCallback(async (decodedText: string) => {
     if (!decodedText || receiverSuccess || isVerifying) return;
-    if (receiverError && !decodedText.startsWith('H|')) return;
 
+    // Fountain droplets are always accepted, even after an error: the worker starts a
+    // fresh decode, so a failed transfer recovers by simply scanning on.
     if (isFountainDropletString(decodedText)) {
       rateTrackerRef.current.record(performance.now());
       initWorker().postMessage({ type: 'FOUNTAIN_DROPLET', droplet: decodedText });
       return;
     }
+    if (receiverError && !decodedText.startsWith('H|')) return;
 
     const chunk = parseLegacyChunk(decodedText);
     if (chunk) {
@@ -504,6 +511,9 @@ export function useOpticalReceiver({
     onScanSuccess: (data) => {
       handleFrame(data);
     },
+    // An animated stream changes frame every ~66 ms, so sampling may never back off
+    // to the single-code scanner's 1 fps floor. The worker's backpressure still bounds load.
+    maxSamplingDelay: STREAM_MAX_SAMPLING_DELAY_MS,
   });
 
   useEffect(() => {

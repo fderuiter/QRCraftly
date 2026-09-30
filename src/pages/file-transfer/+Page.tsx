@@ -27,12 +27,34 @@ import { QRProvider, useQRStore, useQRStoreSelector } from '@/context/QRContext'
 import { useImage } from '@/hooks/useImage';
 import { ToolWorkspaceLayout, ToolWorkspaceHeader } from '@/components/ToolWorkspaceLayout';
 import { useOpticalSender } from '@/packages/optical-transfer/client';
+import { estimateTransferFrames, type TransferDensity } from '@/packages/optical-transfer';
 import { paintTransferFrame } from './paintTransferFrame';
 import { JsonLdScript } from '@/components/ui/JsonLdScript';
 import { generateSchema } from '@/utils/schemaGenerator';
 import { resolveDomainForPath } from '@/utils/metadataEngine';
 import { usePageContext } from 'vike-react/usePageContext';
 import { contentRegistry } from '@/data/contentRegistry';
+
+const DENSITY_OPTIONS: ReadonlyArray<{ value: TransferDensity; label: string; hint: string }> = [
+  { value: 'reliable', label: 'Reliable', hint: 'Small QR codes for older phones, dim rooms or a shaky hand.' },
+  { value: 'balanced', label: 'Balanced', hint: 'Medium QR codes. Works for most phones held steady.' },
+  { value: 'fast', label: 'Fast', hint: 'Large QR codes. Needs a sharp camera close to a bright screen.' },
+];
+
+/**
+ * Formats a duration in seconds as a rough, human-readable estimate.
+ * @param seconds Duration in seconds.
+ * @returns For example "about 40 seconds" or "about 12 minutes".
+ */
+function formatDuration(seconds: number): string {
+  if (seconds < 60) {
+    const whole = Math.max(1, Math.round(seconds));
+    return `about ${whole} second${whole === 1 ? '' : 's'}`;
+  }
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 90) return `about ${minutes} minute${minutes === 1 ? '' : 's'}`;
+  return `about ${(seconds / 3600).toFixed(1)} hours`;
+}
 
 /**
  * High-Performance Animated QR File Transfer Tool - Sender only view
@@ -59,8 +81,8 @@ function FileTransferToolInner() {
     progress,
     currentFrameIndex,
     totalFrames,
-    chunkSize,
-    setChunkSize,
+    density,
+    setDensity,
     fps,
     setFps,
     currentPass,
@@ -80,6 +102,22 @@ function FileTransferToolInner() {
   });
 
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+
+  // Upper bound before compression: text-like files usually need far fewer frames.
+  const estimate = React.useMemo(() => {
+    if (!selectedFile) return null;
+    try {
+      return estimateTransferFrames(selectedFile.size, density);
+    } catch {
+      return null;
+    }
+  }, [selectedFile, density]);
+  // Fountain streams never end: show frames against the typical number a receiver needs.
+  const framesNeeded = fountainInfo ? Math.ceil(fountainInfo.k * 1.15) : totalFrames;
+  const senderPercent = fountainInfo
+    ? Math.min(100, Math.round((currentFrameIndex / Math.max(1, framesNeeded)) * 100))
+    : progress;
+  const activeDensityHint = DENSITY_OPTIONS.find(option => option.value === density)?.hint ?? '';
 
   const handleDragOver = (event: React.DragEvent<HTMLLabelElement>) => {
     event.preventDefault();
@@ -158,6 +196,7 @@ function FileTransferToolInner() {
                     ref={fileInputRef}
                     type="file"
                     className="hidden"
+                    aria-label="Choose a file to send"
                     onChange={handleFileChange}
                     disabled={isTransferring}
                   />
@@ -210,23 +249,33 @@ function FileTransferToolInner() {
                 formatValue={(v) => `${v} frames/sec`}
               />
 
-              <RangeInput
-                id="chunk-slider"
-                label="Max data per QR"
-                min={16}
-                max={100}
-                step={4}
-                value={chunkSize}
-                onChange={(val) => {
-                  setChunkSize(val);
-                  stopTransfer();
-                }}
-                formatValue={(v) => `${v} bytes`}
-              />
-              <p className="text-xs text-slate-500 dark:text-slate-400" data-testid="fountain-symbol-info">
+              <div className="space-y-2">
+                <span id="density-label" className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                  QR density
+                </span>
+                <div role="group" aria-labelledby="density-label" className="grid grid-cols-3 gap-1 rounded-xl bg-slate-100 p-1 dark:bg-slate-800/80">
+                  {DENSITY_OPTIONS.map(option => (
+                    <Button
+                      key={option.value}
+                      variant="outline"
+                      size="sm"
+                      pressed={density === option.value}
+                      disabled={isTransferring}
+                      onClick={() => setDensity(option.value)}
+                      className="min-h-11 text-xs font-semibold"
+                    >
+                      {option.label}
+                    </Button>
+                  ))}
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{activeDensityHint}</p>
+              </div>
+              <p className="text-xs text-slate-600 dark:text-slate-400" data-testid="fountain-symbol-info">
                 {fountainInfo
-                  ? `Sending ${fountainInfo.symbolSize} bytes per QR (${fountainInfo.compression === 'deflate-raw' ? 'compressed' : 'uncompressed'}), ${fountainInfo.k} source blocks. Sizes are capped so every QR stays at version 7 or lower.`
-                  : 'Each QR is sized to stay at version 7 or lower for reliable camera scanning.'}
+                  ? `Each QR carries ${fountainInfo.symbolSize} bytes (${fountainInfo.compression === 'deflate-raw' ? 'compressed' : 'uncompressed'}). The receiver needs about ${Math.ceil(fountainInfo.k * 1.15)} frames, ${formatDuration((fountainInfo.k * 1.15) / fps)} at ${fps} frames/sec.`
+                  : estimate
+                    ? `Estimated transfer time: up to ${formatDuration(estimate.frames / fps)} at ${fps} frames/sec (${estimate.symbolSize} bytes per QR). Text and other compressible files go faster.`
+                    : 'Choose a file to see how long the transfer will take.'}
               </p>
             </section>
 
@@ -306,23 +355,23 @@ function FileTransferToolInner() {
 
               {/* Active Transfer Stats */}
               {isTransferring && (
-                <div className="mb-4 space-y-3 rounded-xl border border-slate-100 bg-slate-50/50 p-4 text-xs dark:border-slate-900 dark:bg-slate-900/40">
+                <div className="mb-4 space-y-3 rounded-xl border border-slate-100 bg-slate-50/50 p-4 text-xs dark:border-slate-900 dark:bg-slate-900/40" data-testid="sender-progress">
                   <div className="flex items-center justify-between">
                     <span className="flex items-center gap-1 font-medium text-slate-500">
-                      <Activity className="size-3.5 text-teal-600" aria-hidden="true" /> Progress:
+                      <Activity className="size-3.5 text-teal-600" aria-hidden="true" /> {fountainInfo ? 'First pass:' : 'Progress:'}
                     </span>
-                    <span className="font-mono font-bold text-slate-800 dark:text-slate-200">{progress}%</span>
+                    <span className="font-mono font-bold text-slate-800 dark:text-slate-200">{senderPercent}%</span>
                   </div>
                   
                   <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
-                    <div className="h-full bg-teal-600 motion-safe:transition-all motion-safe:duration-150" style={{ width: `${progress}%` }} />
+                    <div className="h-full bg-teal-600 motion-safe:transition-all motion-safe:duration-150" style={{ width: `${senderPercent}%` }} />
                   </div>
 
                   <div className="grid grid-cols-2 gap-4 pt-2">
                     <div>
-                      <div className="text-slate-500 dark:text-slate-400">{fountainInfo ? 'Droplets sent' : `Current QR (Pass ${currentPass})`}</div>
-                      <div className="font-mono text-sm font-semibold text-slate-700 dark:text-slate-300">
-                        {fountainInfo ? `${currentFrameIndex} (K = ${totalFrames})` : `${currentFrameIndex} / ${totalFrames}`}
+                      <div className="text-slate-500 dark:text-slate-400">{fountainInfo ? 'Frames shown' : `Current QR (Pass ${currentPass})`}</div>
+                      <div className="font-mono text-sm font-semibold text-slate-700 dark:text-slate-300" data-testid="sender-frames">
+                        {fountainInfo ? `${currentFrameIndex} of ~${framesNeeded}` : `${currentFrameIndex} / ${totalFrames}`}
                         {!fountainInfo && (
                           <span className="ml-1 text-xs text-teal-700 dark:text-teal-400">
                             {currentPass === 1 ? '(Seq)' : '(Shuffled)'}
@@ -337,6 +386,11 @@ function FileTransferToolInner() {
                       <div className="font-mono text-sm font-semibold text-slate-700 dark:text-slate-300">{transferStats.frameBufferMemory}</div>
                     </div>
                   </div>
+                  {fountainInfo && (
+                    <p className="text-slate-600 dark:text-slate-400">
+                      The stream keeps going after the first pass so a receiver can join late or miss frames. Stop once the receiver shows Transfer Complete.
+                    </p>
+                  )}
                 </div>
               )}
 

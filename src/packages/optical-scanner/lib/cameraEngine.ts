@@ -19,6 +19,8 @@ const WORKER_MAX_DIMENSION = 1280;
 /** Longest edge of a frame decoded on the main thread (kept smaller to protect the UI thread). */
 const MAIN_THREAD_MAX_DIMENSION = 800;
 const DEFAULT_FRAME_WIDTH = 640;
+/** `HTMLMediaElement.HAVE_CURRENT_DATA`. */
+const HAVE_CURRENT_DATA = 2;
 const DEFAULT_FRAME_HEIGHT = 480;
 
 type SourceEvent = 'pause' | 'seeked' | 'play' | 'playing' | 'loadeddata';
@@ -35,6 +37,8 @@ export interface CameraFrameSource {
   readonly srcObject: unknown;
   readonly src: string;
   readonly currentSrc: string;
+  /** `HTMLMediaElement.readyState`; frames are skipped until it reaches HAVE_CURRENT_DATA (2). */
+  readonly readyState?: number;
   addEventListener(type: SourceEvent, listener: () => void): void;
   removeEventListener(type: SourceEvent, listener: () => void): void;
 }
@@ -324,6 +328,8 @@ export function createCameraScannerEngine(config: CameraScannerEngineConfig): Ca
   function captureFrame(force = false): boolean {
     const source = getSource();
     if (!source) return false;
+    // A stream that has not delivered its first frame yet cannot be captured.
+    if (typeof source.readyState === 'number' && source.readyState < HAVE_CURRENT_DATA) return false;
     if (!force && scheduler.getInFlight()) return false;
 
     const width = source.videoWidth || DEFAULT_FRAME_WIDTH;

@@ -16,7 +16,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import type { TransferCompression } from './fountain/session';
+import type { TransferCompression, TransferDensity } from './fountain/session';
 
 /**
  * Handshake metadata exchanged at the beginning of legacy streams or derived from droplet headers.
@@ -47,6 +47,8 @@ export interface SliceStartPayload {
   fps?: number;
   /** Rateless BC-UR fountain broadcast (default in `useOpticalSender`). */
   fountainMode?: boolean;
+  /** Fountain only: QR version ceiling and ECC of the droplets. Replaces `errorCorrectionLevel`. */
+  density?: TransferDensity;
 }
 
 /** Messages the slice worker accepts. */
@@ -59,6 +61,8 @@ export type SliceWorkerIncomingMessage =
 /** Fountain session details reported on INITIALIZED. */
 export interface FountainInitInfo {
   k: number;
+  /** Density the droplets were sized for. */
+  density: TransferDensity;
   symbolSize: number;
   compression: TransferCompression;
   messageLength: number;

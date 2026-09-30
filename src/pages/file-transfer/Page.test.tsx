@@ -17,7 +17,7 @@
 */
 
 // @vitest-environment jsdom
-import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, act, waitFor, within } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import React from 'react';
 import Page from './+Page';
@@ -126,7 +126,8 @@ describe('File Transfer Page & Pipeline', () => {
     
     // Sliders exist
     expect(screen.getByLabelText('Transfer speed')).toBeInTheDocument();
-    expect(screen.getByLabelText('Max data per QR')).toBeInTheDocument();
+    const density = screen.getByRole('group', { name: 'QR density' });
+    expect(within(density).getByRole('button', { name: 'Balanced' })).toHaveAttribute('aria-pressed', 'true');
 
     // Canvas exists
     const canvas = screen.getByRole('img', { name: /transfer qr/i });
@@ -276,6 +277,33 @@ describe('File Transfer Page & Pipeline', () => {
 
     expect(fileInput.value).toBe('');
     expect(screen.getAllByText('same_file.txt')[0]).toBeInTheDocument();
+  });
+
+  it('estimates the transfer time from the file size and the chosen QR density', async () => {
+    render(<Page />);
+
+    const info = screen.getByTestId('fountain-symbol-info');
+    expect(info).toHaveTextContent('Choose a file to see how long the transfer will take.');
+
+    const file = new File([new Uint8Array(20 * 1024)], 'photo.jpg', { type: 'image/jpeg' });
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText('Choose a file to send'), { target: { files: [file] } });
+    });
+
+    const bytesPerQr = () => Number(/\((\d+) bytes per QR\)/.exec(info.textContent ?? '')?.[1]);
+    expect(info).toHaveTextContent(/Estimated transfer time: up to/);
+    const balanced = bytesPerQr();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Reliable' }));
+    });
+    expect(screen.getByRole('button', { name: 'Reliable' })).toHaveAttribute('aria-pressed', 'true');
+    expect(bytesPerQr()).toBeLessThan(balanced);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Fast' }));
+    });
+    expect(bytesPerQr()).toBeGreaterThan(balanced);
   });
 
   it('clears file input value on drag-and-drop so subsequent manual picker selection works', async () => {
