@@ -102,8 +102,8 @@ test.describe('Automated Workbox Precaching and Offline Readiness', () => {
   });
 
   test('Constraint 1: Custom brand logo uploads are transient and fully cleared on page refresh', async ({ page }) => {
-    // 1. Locate the Logo upload button or the input file element
-    const fileInput = page.locator('input[type="file"]');
+    // 1. Locate the logo file input (the Mosaic panel has its own file input)
+    const fileInput = page.getByLabel('Upload logo image', { exact: true });
     await expect(fileInput).toBeAttached();
 
     // 2. Simulate uploading a custom brand logo image
@@ -127,5 +127,27 @@ test.describe('Automated Workbox Precaching and Offline Readiness', () => {
 
     // 5. Verify the custom brand logo state has been fully wiped and reset
     await expect(page.getByText('Custom Logo')).not.toBeVisible();
+  });
+
+  test('Constraint 2: Mosaic QR designs are transient and fully cleared on page refresh', async ({ page }) => {
+    const fileInput = page.getByLabel('Upload mosaic design', { exact: true });
+    await expect(fileInput).toBeAttached();
+
+    await fileInput.setInputFiles({
+      name: 'test-mosaic.png',
+      mimeType: 'image/png',
+      buffer: Buffer.from(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+        'base64'
+      ),
+    });
+
+    const removeMosaic = page.getByRole('button', { name: 'Remove mosaic image' });
+    await expect(removeMosaic).toBeVisible();
+
+    await page.reload();
+    await page.waitForSelector('main[data-hydrated="true"]');
+
+    await expect(page.getByRole('button', { name: 'Remove mosaic image' })).not.toBeVisible();
   });
 });
