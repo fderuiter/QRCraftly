@@ -79,8 +79,8 @@ GitHub Actions triggers the consolidated CI pipeline on the PR:
 3. `test`: Vitest unit tests with strict coverage thresholds.
 4. `build`: Production build verification, bundle size budgets, and Lighthouse CI performance audits. Uploads `dist` as a short-lived artifact.
 5. `e2e`: Downloads the `build` job's `dist` and runs Playwright cross-browser tests across Chromium, Firefox, and WebKit against `vite preview` (no second build), then `pnpm run test:e2e:dev` checks that the Vite development server hydrates without runtime errors.
-6. `dependency-audit`: `pnpm audit --audit-level=high`, reported as its own check. No other job depends on it, so a newly published upstream advisory flags the PR without skipping the checks above.
-7. `ci`: the aggregate **`CI`** check. It passes only when jobs 1 to 5 all succeed, and it is the check the `main` ruleset requires.
+6. `dependency-audit`: `pnpm audit --audit-level=high`, reported as its own check. No other job depends on it, so a newly published upstream advisory never skips the checks above, but it does block the merge through `CI`.
+7. `ci`: the aggregate **`CI`** check. It passes only when jobs 1 to 6 all succeed, and it is the check the `main` ruleset requires.
 
 ### Step 5: Ephemeral Branch Preview Verification
 

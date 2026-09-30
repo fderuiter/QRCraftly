@@ -20,7 +20,7 @@ release/vX.Y.Z    ──release PR (chore(release): vX.Y.Z)──►  main ─�
 | Deploys                                  | Cloudflare Workers Builds | Builds every push. `main` deploys to production; every other branch uploads a preview version with its own URL. |
 | `package.json` `version`, `CHANGELOG.md` | Release PR                | Written by `pnpm run release:prepare`, reviewed and merged like any other change.                               |
 | `vX.Y.Z` tags                            | Release workflow          | Created on the release commit when the release PR merges. Protected from being moved or deleted.                |
-| `.github/workflows/main.yml`             | GitHub Actions            | Quality gate. The `CI` job is the one required check. After each push to `main`, it smoke tests production.     |
+| `.github/workflows/main.yml`             | GitHub Actions            | Quality gate. The `CI` job aggregates every quality job. After each push to `main`, it smoke tests production.  |
 | `.github/workflows/release.yml`          | GitHub Actions            | Tags a new `package.json` version, publishes the GitHub Release, and smoke tests production for that version.   |
 
 ## Environments
@@ -47,8 +47,18 @@ Prefer fewer, larger PRs that each carry a complete, tested change, over many sm
 1. Branch from `main` with a standard prefix: `feat/`, `fix/`, `docs/`, `refactor/`, `chore/`, `agent/`.
 2. Open a PR into `main`. Give it a [Conventional Commit](https://www.conventionalcommits.org/) title, such as `fix(scanner): handle empty frames`. The `PR Title` check enforces this.
 3. Check the change on the branch preview URL, and wait for every required check to pass: `CI`, `PR Title` and `Workers Builds: qrcraftly`. If `main` moved, update the branch and let the checks run again. Nothing merges on a red or stale PR, admins included.
-4. Merge with **Squash and merge**. The PR title becomes the commit subject on `main`, which is what the changelog and version bump are built from.
+4. Turn on **auto-merge (squash)** once the PR is ready, or merge with **Squash and merge** yourself. The PR title becomes the commit subject on `main`, which is what the changelog and version bump are built from.
 5. Cloudflare deploys it to production. The `Verify Production Deployment` job waits until production serves the new commit and runs the smoke tests against it.
+
+### Auto-merge
+
+Auto-merge lets a PR merge itself the moment it is green, so nobody has to come back and press the button.
+
+- **Turn it on per PR** once the change is complete: **Enable auto-merge → Squash and merge** on the PR page, or `gh pr merge <number> --auto --squash`. Claude threads turn it on for the PRs they open.
+- GitHub then merges when every required check passes: `CI` (setup, dependency audit, static validation, unit tests, E2E and build), `PR Title` and `Workers Builds: qrcraftly`. A red check leaves the PR open; push a fix and it merges when the checks go green.
+- **Up to date first.** `main` requires branches to be current, and GitHub does not update them for you. When another PR merges first, press **Update branch** (or merge `main` in); CI runs again and the PR merges when it passes. Claude threads do this when they get the base-changed notice.
+- **Never on release PRs.** A `chore(release): vX.Y.Z` PR publishes a version, so a maintainer merges it by hand.
+- Enable it as a person (the button, `gh`, or a Claude thread acting for you), not from a workflow using `GITHUB_TOKEN`. GitHub does not start workflows from pushes made with that token, so the production smoke test and the Release workflow would never run after the merge.
 
 ### How titles map to versions
 
@@ -80,7 +90,7 @@ A release names what is already running in production: it bumps the version, wri
 
    `release:prepare` refuses to run unless you are on a clean `main` that matches `origin/main`. It creates `release/vX.Y.Z`, updates `package.json` and `CHANGELOG.md`, and commits `chore(release): vX.Y.Z`. Edit the changelog on the branch if you want to reword entries, then open a PR into `main` titled `chore(release): vX.Y.Z`.
 
-3. Squash-merge it once `CI` passes. The **Release** workflow then:
+3. Squash-merge it by hand once `CI` passes (don't use auto-merge here). The **Release** workflow then:
    - sees that `package.json` has a version with no tag, and checks `CHANGELOG.md` has a section for it
    - creates the annotated tag `vX.Y.Z` on the merge commit
    - publishes the GitHub Release with that changelog section as notes
@@ -113,5 +123,5 @@ Check the `Workers Builds: qrcraftly` check on the release commit. A failed Clou
 These settings live in GitHub and Cloudflare, not in the repository, so an admin has to apply them.
 
 - **Rulesets** (Settings → Rules → Rulesets → New ruleset → Import a ruleset): import `.github/rulesets/main.json` and `.github/rulesets/tags.json`, and delete any older ruleset they replace. See [.github/rulesets/README.md](.github/rulesets/README.md).
-- **Merge button** (Settings → General → Pull Requests): allow squash merging, with the default commit message set to **Pull request title**. Enable **Automatically delete head branches**.
+- **Merge button** (Settings → General → Pull Requests): allow squash merging, with the default commit message set to **Pull request title**. Enable **Automatically delete head branches**. Enable **Allow auto-merge**, but only after the `main` ruleset is imported: auto-merge waits for required checks, and without them it merges straight away.
 - **Cloudflare Workers Builds** (Workers & Pages → qrcraftly → Settings → Build): check that the production branch is `main`, **Builds for non-production branches** is on (this is what serves PR previews), the build command is `pnpm run build`, and the deploy command is `npx wrangler deploy`.

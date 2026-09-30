@@ -11,14 +11,14 @@ Applies to the default branch, `main`, which is the only long-lived branch and d
 - **Pull request required.** Direct pushes are blocked. Only **squash** merges are allowed, so each PR title becomes one Conventional Commit on `main`.
 - **Approvals:** `0`, because the project has a single maintainer and GitHub never lets authors approve their own PRs. Review threads must be resolved before merging.
 - **Required status checks** (`integration_id` 15368 is GitHub Actions):
-  - **CI**: the aggregate job in `.github/workflows/main.yml`. It succeeds only when setup, Consolidated Static Validation, Unit Tests, E2E Tests and Build all succeed. Requiring one aggregate check means renaming or adding jobs never leaves a PR waiting on a check that no longer reports.
+  - **CI**: the aggregate job in `.github/workflows/main.yml`. It succeeds only when setup, Dependency Audit, Consolidated Static Validation, Unit Tests, E2E Tests and Build all succeed. Requiring one aggregate check means renaming or adding jobs never leaves a PR waiting on a check that no longer reports.
   - **PR Title**: `.github/workflows/pr-title.yml`, which enforces Conventional Commit titles.
   - **Workers Builds: qrcraftly**: Cloudflare's build of the PR branch. It has no `integration_id`, so any app reporting that name satisfies it. If Cloudflare ever renames the check, update it here.
 - **Branches must be up to date** with `main` before merging (`strict_required_status_checks_policy: true`), so every merge was tested against exactly what it lands on. The project prefers fewer, larger PRs, so re-running CI after a rebase is an acceptable cost.
 - **Deletion and force pushes are blocked.**
 - **No bypass.** Nothing merges into `main` until every required check is green, including for admins. An admin can still edit or disable the ruleset in an emergency.
 
-`Dependency Audit` is intentionally not required. It reports new upstream advisories without blocking unrelated PRs.
+These required checks are also what auto-merge waits for, so the ruleset must be imported before **Allow auto-merge** is turned on. Without it, an auto-merge PR would merge as soon as it is opened.
 
 ### `tags.json`: Protect release tags
 

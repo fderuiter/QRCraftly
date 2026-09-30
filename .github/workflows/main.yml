@@ -66,8 +66,8 @@ jobs:
       - name: Setup Environment
         uses: ./.github/actions/setup
 
-  # Reported as its own check so a new upstream advisory flags the PR without
-  # skipping lint, tests, and build (no other job depends on this one).
+  # Runs in parallel with the other jobs (none of them depends on it), so a new
+  # upstream advisory never skips lint, tests or build. The CI aggregate requires it.
   dependency-audit:
     name: Dependency Audit
     runs-on: ubuntu-latest
@@ -337,10 +337,10 @@ jobs:
 
   # Single required check for rulesets. Branch rules require "CI" instead of every
   # job name, so renaming or adding jobs never leaves a PR waiting on a check that
-  # no longer reports. Dependency Audit stays advisory (see its comment above).
+  # no longer reports. It is also what auto-merge waits on (see RELEASING.md).
   ci:
     name: CI
-    needs: [setup, static-validation, test, e2e, build]
+    needs: [setup, dependency-audit, static-validation, test, e2e, build]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
