@@ -36,7 +36,7 @@ function useCurrentPathname(): string {
 }
 
 const BETA_BADGE_CLASSES =
-  'rounded-full bg-teal-100 px-1.5 py-0.5 text-[10px] font-semibold text-teal-800 dark:bg-teal-900/60 dark:text-teal-300';
+  'rounded-full bg-teal-100 px-1.5 py-0.5 text-xs font-semibold text-teal-800 dark:bg-teal-900/60 dark:text-teal-300';
 
 const LINK_BASE_CLASSES =
   'flex min-h-11 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold transition-colors hover:bg-slate-100 hover:text-teal-700 dark:hover:bg-slate-800 dark:hover:text-teal-400';

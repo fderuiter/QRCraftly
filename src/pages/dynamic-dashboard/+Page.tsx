@@ -316,7 +316,7 @@ function DashboardContent() {
                           variant="ghost"
                           size="icon"
                           onClick={() => refreshStats(r.id)}
-                          className={isRefreshing ? 'animate-spin' : ''}
+                          className={isRefreshing ? 'motion-safe:animate-spin' : ''}
                           title="Refresh Stats"
                         >
                           <RefreshCw className="size-4" />

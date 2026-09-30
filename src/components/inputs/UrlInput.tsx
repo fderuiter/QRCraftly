@@ -355,7 +355,7 @@ export const UrlInput: React.FC<UrlInputProps> = ({ data, onChange }) => {
                 <div className="flex items-center justify-between text-xs font-semibold text-slate-700 dark:text-slate-300">
                   <span>Bot Safeguard Verification</span>
                   {turnstileToken && (
-                    <span className="text-[10px] font-bold text-teal-600 dark:text-teal-400">✓ Verified</span>
+                    <span className="text-xs font-bold text-teal-600 dark:text-teal-400">✓ Verified</span>
                   )}
                 </div>
                 <div
@@ -391,7 +391,7 @@ export const UrlInput: React.FC<UrlInputProps> = ({ data, onChange }) => {
                 className="flex items-center justify-center gap-2"
               >
                 {isLoading ? (
-                  <RefreshCw className="size-4 animate-spin" />
+                  <RefreshCw className="size-4 motion-safe:animate-spin" />
                 ) : (
                   <ArrowRight className="size-4" />
                 )}
