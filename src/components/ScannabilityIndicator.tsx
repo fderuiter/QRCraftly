@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { ShieldCheck, Loader2, ShieldX } from 'lucide-react';
 import { ScannabilityStatus, HealthScore } from '../hooks/useScannability';
 import { getExportRiskPolicy } from '../utils/exportRiskPolicy';
+import { useOptionalQRStore } from '../context/QRContext';
+import { DEFAULT_CONFIG } from '../constants';
 
 interface Props {
   status: ScannabilityStatus;
@@ -50,6 +52,25 @@ const getAnnouncementText = (status: ScannabilityStatus, health?: HealthScore): 
  */
 export const ScannabilityIndicator: React.FC<Props> = ({ status, health }) => {
   const [announcement, setAnnouncement] = useState('');
+  const store = useOptionalQRStore();
+
+  const handleAutoFixContrast = () => {
+    if (!store) return;
+    store.updateConfig({
+      fgColor: '#000000',
+      bgColor: '#ffffff',
+      eyeColor: '#000000',
+    });
+  };
+
+  const handleResetColors = () => {
+    if (!store) return;
+    store.updateConfig({
+      fgColor: DEFAULT_CONFIG.fgColor,
+      bgColor: DEFAULT_CONFIG.bgColor,
+      eyeColor: DEFAULT_CONFIG.eyeColor,
+    });
+  };
 
   // Debounce polite announcements by 1000ms so typing does not produce a stream of updates.
   // Failures are announced by the alert element below instead, never by this region.
@@ -90,7 +111,7 @@ export const ScannabilityIndicator: React.FC<Props> = ({ status, health }) => {
 
   return (
     <div
-      className="flex h-13 flex-col items-end justify-start rounded-lg select-none"
+      className="flex h-13 min-h-13 flex-col items-end justify-start rounded-lg select-none"
       data-testid="scannability-feedback-wrapper"
     >
       {politeRegion}
@@ -126,20 +147,44 @@ export const ScannabilityIndicator: React.FC<Props> = ({ status, health }) => {
           </span>
         )}
       </div>
-      <div className="mt-1 flex h-5 w-full items-center justify-end">
+      <div className="mt-1 flex w-full flex-col items-end gap-1.5">
         {status === 'digital-pass' && !firstWarning && (
           <div className="max-w-xs text-right text-xs text-amber-700 dark:text-amber-400">
             Test with a physical camera before large print runs.
           </div>
         )}
         {status === 'fail' ? (
-          <div
-            role="alert"
-            className={`max-w-xs text-right text-xs text-rose-700 dark:text-rose-400 ${firstWarning ? '' : 'sr-only'}`}
-            data-testid="scannability-alert"
-          >
-            {firstWarning ?? 'Scan verification failed. Adjust colors, pattern, or margin before exporting.'}
-          </div>
+          <>
+            <div
+              role="alert"
+              className={`max-w-xs text-right text-xs text-rose-700 dark:text-rose-400 ${firstWarning ? '' : 'sr-only'}`}
+              data-testid="scannability-alert"
+            >
+              {firstWarning ?? 'Scan verification failed. Adjust colors, pattern, or margin before exporting.'}
+            </div>
+            {store && (
+              <div className="mt-0.5 flex items-center gap-1.5" data-testid="scannability-recovery-actions">
+                <button
+                  type="button"
+                  onClick={handleAutoFixContrast}
+                  className="rounded-md border border-rose-200 bg-rose-50 px-2 py-0.5 text-xs font-medium text-rose-700 transition-colors hover:bg-rose-100 focus:ring-2 focus:ring-rose-500 focus:ring-offset-1 focus:outline-none dark:border-rose-800 dark:bg-rose-950 dark:text-rose-300 dark:hover:bg-rose-900 dark:focus:ring-offset-slate-900"
+                  aria-label="Auto-Fix Contrast"
+                  data-testid="auto-fix-contrast-btn"
+                >
+                  Auto-Fix Contrast
+                </button>
+                <button
+                  type="button"
+                  onClick={handleResetColors}
+                  className="rounded-md border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-200 focus:ring-2 focus:ring-slate-500 focus:ring-offset-1 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 dark:focus:ring-offset-slate-900"
+                  aria-label="Reset Colors"
+                  data-testid="reset-colors-btn"
+                >
+                  Reset Colors
+                </button>
+              </div>
+            )}
+          </>
         ) : (
           firstWarning && (
             <div

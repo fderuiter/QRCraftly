@@ -2,6 +2,8 @@ import { render, screen, act, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { axe } from 'vitest-axe';
 import { ScannabilityIndicator } from './ScannabilityIndicator';
+import { QRProvider, useQRStore } from '../context/QRContext';
+import { DEFAULT_CONFIG } from '../constants';
 
 describe('ScannabilityIndicator Component', () => {
   beforeEach(() => {
@@ -131,6 +133,88 @@ describe('ScannabilityIndicator Component', () => {
     const { container, rerender } = render(<ScannabilityIndicator status="physical-pass" health={{ score: 100, warnings: [] }} />);
     expect(await axe(container)).toHaveNoViolations();
     rerender(<ScannabilityIndicator status="fail" health={{ score: 30, warnings: ['Low contrast'] }} />);
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it('renders interactive recovery buttons when status is fail and store is available', () => {
+    render(
+      <QRProvider>
+        <ScannabilityIndicator status="fail" health={{ score: 30, warnings: ['Low contrast'] }} />
+      </QRProvider>
+    );
+
+    expect(screen.getByTestId('scannability-recovery-actions')).toBeInTheDocument();
+    expect(screen.getByTestId('auto-fix-contrast-btn')).toHaveTextContent('Auto-Fix Contrast');
+    expect(screen.getByTestId('reset-colors-btn')).toHaveTextContent('Reset Colors');
+  });
+
+  it('does not render recovery buttons when status is not fail', () => {
+    render(
+      <QRProvider>
+        <ScannabilityIndicator status="physical-pass" health={{ score: 100, warnings: [] }} />
+      </QRProvider>
+    );
+
+    expect(screen.queryByTestId('scannability-recovery-actions')).not.toBeInTheDocument();
+  });
+
+  it('does not render recovery buttons when rendered outside QRProvider', () => {
+    render(<ScannabilityIndicator status="fail" health={{ score: 30, warnings: ['Low contrast'] }} />);
+
+    expect(screen.queryByTestId('scannability-recovery-actions')).not.toBeInTheDocument();
+  });
+
+  it('calls updateConfig with high-contrast parameters when Auto-Fix Contrast is clicked', () => {
+    let storeRef: ReturnType<typeof useQRStore> | undefined;
+    const StoreGetter = () => {
+      storeRef = useQRStore();
+      return null;
+    };
+
+    render(
+      <QRProvider initialConfig={{ fgColor: '#ff0000', bgColor: '#fe0000', eyeColor: '#ff0000' }}>
+        <StoreGetter />
+        <ScannabilityIndicator status="fail" health={{ score: 20, warnings: ['Low contrast'] }} />
+      </QRProvider>
+    );
+
+    expect(storeRef?.getState().config.fgColor).toBe('#ff0000');
+
+    fireEvent.click(screen.getByTestId('auto-fix-contrast-btn'));
+
+    expect(storeRef?.getState().config.fgColor).toBe('#000000');
+    expect(storeRef?.getState().config.bgColor).toBe('#ffffff');
+    expect(storeRef?.getState().config.eyeColor).toBe('#000000');
+  });
+
+  it('calls updateConfig with default color parameters when Reset Colors is clicked', () => {
+    let storeRef: ReturnType<typeof useQRStore> | undefined;
+    const StoreGetter = () => {
+      storeRef = useQRStore();
+      return null;
+    };
+
+    render(
+      <QRProvider initialConfig={{ fgColor: '#123456', bgColor: '#654321', eyeColor: '#123456' }}>
+        <StoreGetter />
+        <ScannabilityIndicator status="fail" health={{ score: 20, warnings: ['Low contrast'] }} />
+      </QRProvider>
+    );
+
+    fireEvent.click(screen.getByTestId('reset-colors-btn'));
+
+    expect(storeRef?.getState().config.fgColor).toBe(DEFAULT_CONFIG.fgColor);
+    expect(storeRef?.getState().config.bgColor).toBe(DEFAULT_CONFIG.bgColor);
+    expect(storeRef?.getState().config.eyeColor).toBe(DEFAULT_CONFIG.eyeColor);
+  });
+
+  it('has no axe violations when failure recovery buttons are rendered', async () => {
+    vi.useRealTimers();
+    const { container } = render(
+      <QRProvider>
+        <ScannabilityIndicator status="fail" health={{ score: 30, warnings: ['Low contrast'] }} />
+      </QRProvider>
+    );
     expect(await axe(container)).toHaveNoViolations();
   });
 });
