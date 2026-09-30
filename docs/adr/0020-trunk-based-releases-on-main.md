@@ -13,7 +13,7 @@ ADR 0018 kept two long-lived branches: `dev` for integration and staging, and `m
 1. **`main` is the trunk.** All work branches from `main` and returns through squash-merged pull requests that pass the `CI` and `PR Title` checks. There is no integration or staging branch.
 2. **Every merge to `main` deploys to production** through Cloudflare Workers Builds. PR branch preview URLs replace the `dev` staging environment. After each push, `main.yml` waits for production to serve the commit and smoke tests it.
 3. **A release is a merged release PR.** `pnpm run release:prepare` creates `release/vX.Y.Z` with the version bump and changelog. When it merges, `release.yml` sees a `package.json` version without a tag, creates the annotated tag on that commit, publishes the GitHub Release, and smoke tests production for that version. The local `release:promote` step and its admin-only push are removed.
-4. **Rulesets:** `main` requires a pull request (squash only), the `CI` and `PR Title` checks, and blocks deletion and force pushes. Release tags can be created by the Release workflow but cannot be moved or deleted except by admins. The `dev` ruleset is removed.
+4. **Rulesets:** `main` requires a pull request (squash only), an up-to-date branch, and the `CI`, `PR Title` and `Workers Builds: qrcraftly` checks, with no bypass. It blocks deletion and force pushes. The maintainer's rule is fewer, larger, well-tested PRs, and nothing merges until full CI is green. Release tags can be created by the Release workflow but cannot be moved or deleted except by admins. The `dev` ruleset is removed.
 5. **Rollback** stays a Cloudflare version rollback followed by a fix-forward PR.
 
 ## Consequences

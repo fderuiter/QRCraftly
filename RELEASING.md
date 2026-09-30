@@ -42,9 +42,11 @@ GitHub Actions holds no Cloudflare credentials and never deploys. Workers Builds
 
 ## Day-to-day changes
 
+Prefer fewer, larger PRs that each carry a complete, tested change, over many small ones. Every merge deploys to production, so each PR should be something you would ship on its own.
+
 1. Branch from `main` with a standard prefix: `feat/`, `fix/`, `docs/`, `refactor/`, `chore/`, `agent/`.
 2. Open a PR into `main`. Give it a [Conventional Commit](https://www.conventionalcommits.org/) title, such as `fix(scanner): handle empty frames`. The `PR Title` check enforces this.
-3. Check the change on the branch preview URL, and wait for the `CI` check to pass.
+3. Check the change on the branch preview URL, and wait for every required check to pass: `CI`, `PR Title` and `Workers Builds: qrcraftly`. If `main` moved, update the branch and let the checks run again. Nothing merges on a red or stale PR, admins included.
 4. Merge with **Squash and merge**. The PR title becomes the commit subject on `main`, which is what the changelog and version bump are built from.
 5. Cloudflare deploys it to production. The `Verify Production Deployment` job waits until production serves the new commit and runs the smoke tests against it.
 

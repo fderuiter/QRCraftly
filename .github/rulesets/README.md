@@ -13,9 +13,10 @@ Applies to the default branch, `main`, which is the only long-lived branch and d
 - **Required status checks** (`integration_id` 15368 is GitHub Actions):
   - **CI**: the aggregate job in `.github/workflows/main.yml`. It succeeds only when setup, Consolidated Static Validation, Unit Tests, E2E Tests and Build all succeed. Requiring one aggregate check means renaming or adding jobs never leaves a PR waiting on a check that no longer reports.
   - **PR Title**: `.github/workflows/pr-title.yml`, which enforces Conventional Commit titles.
-- **Branches don't need to be up to date** before merging (`strict_required_status_checks_policy: false`), which avoids re-running the full suite after every merge.
+  - **Workers Builds: qrcraftly**: Cloudflare's build of the PR branch. It has no `integration_id`, so any app reporting that name satisfies it. If Cloudflare ever renames the check, update it here.
+- **Branches must be up to date** with `main` before merging (`strict_required_status_checks_policy: true`), so every merge was tested against exactly what it lands on. The project prefers fewer, larger PRs, so re-running CI after a rebase is an acceptable cost.
 - **Deletion and force pushes are blocked.**
-- **Bypass:** repository admins, in `pull_request` mode. Admins can merge a PR whose checks are failing, but can't push to `main` directly.
+- **No bypass.** Nothing merges into `main` until every required check is green, including for admins. An admin can still edit or disable the ruleset in an emergency.
 
 `Dependency Audit` is intentionally not required. It reports new upstream advisories without blocking unrelated PRs.
 

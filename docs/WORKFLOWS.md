@@ -21,7 +21,7 @@ QRCraftly is **trunk-based**. `main` is the only long-lived branch (see [ADR 002
 
 - **Role**: The trunk. Default branch for clones, forks and new PRs.
 - **Edge Deployment**: Every push is deployed by Cloudflare Workers Builds to the **Production Environment** at `https://qrcraftly.fpderuiter.workers.dev/` and `https://qrcraftly.com`.
-- **Invariants**: Changes land only through squash-merged pull requests that pass the `CI` and `PR Title` checks. Direct pushes and force pushes are blocked.
+- **Invariants**: Changes land only through squash-merged, up-to-date pull requests that pass the `CI`, `PR Title` and `Workers Builds: qrcraftly` checks. Direct pushes and force pushes are blocked.
 
 ---
 
