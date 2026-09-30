@@ -2,10 +2,6 @@ import React, { useState } from 'react';
 import { Button } from '../ui/Button';
 import { QRConfig, QRErrorCorrectionLevel } from '../../types';
 import { ChevronDown } from 'lucide-react';
-import { ToggleSwitch } from '../ui/ToggleSwitch';
-import { ColorInput } from '../ui/ColorInput';
-import { RangeInput } from '../ui/RangeInput';
-import { getStyleAdaptiveMazePathWidth } from '@/packages/qr-matrix/maze';
 
 interface AdvancedControlsProps {
   config: QRConfig;
@@ -86,57 +82,6 @@ export const AdvancedControls: React.FC<AdvancedControlsProps> = ({ config, onCh
             <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
               Higher levels allow the QR code to be scanned even if damaged or covered (e.g., by a logo), but result in a denser code.
             </p>
-          </div>
-
-          {/* Maze Overlay Controls */}
-          <div className="border-t border-slate-100 pt-4 dark:border-slate-800">
-            <div className="mb-4">
-              <ToggleSwitch
-                id="is-maze-enabled"
-                label="Playable Maze Overlay"
-                checked={!!config.isMazeEnabled}
-                onChange={(checked) => onChange({ isMazeEnabled: checked })}
-              />
-              <p className="mt-1 pl-12 text-xs text-slate-500 dark:text-slate-400">
-                Generates a solvable maze on empty modules and quiet zones without changing data modules.
-              </p>
-            </div>
-
-            {config.isMazeEnabled && (
-              <div className="space-y-4 pl-12">
-                <ToggleSwitch
-                  id="is-maze-bridges-enabled"
-                  label="Finder Pattern Bridges"
-                  checked={config.isMazeBridgesEnabled !== false}
-                  onChange={(checked) => onChange({ isMazeBridgesEnabled: checked })}
-                />
-
-                <RangeInput
-                  id="maze-path-width"
-                  label="Maze Path Width"
-                  value={getStyleAdaptiveMazePathWidth(config.style, config.mazePathWidth)}
-                  min={0.10}
-                  max={0.50}
-                  step={0.01}
-                  formatValue={(val) => `${Math.round(val * 100)}%`}
-                  onChange={(val) => onChange({ mazePathWidth: val })}
-                />
-
-                <ColorInput
-                  id="maze-color"
-                  label="Maze Path Color"
-                  value={config.mazeColor || '#3b82f6'}
-                  onChange={(val) => onChange({ mazeColor: val })}
-                />
-                
-                <ToggleSwitch
-                  id="show-maze-solution"
-                  label="Show Maze Solution"
-                  checked={!!config.showMazeSolution}
-                  onChange={(checked) => onChange({ showMazeSolution: checked })}
-                />
-              </div>
-            )}
           </div>
         </div>
       )}

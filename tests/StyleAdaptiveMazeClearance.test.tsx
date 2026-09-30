@@ -3,7 +3,8 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, fireEvent, screen } from '@testing-library/react';
 import { QRConfig, QRStyle, QRType, QRErrorCorrectionLevel } from '../src/types';
 import { getStyleAdaptiveMazePathWidth, getMazeCacheKey, renderMaze } from '../src/packages/qr-matrix/maze';
-import { AdvancedControls } from '../src/components/style-controls/AdvancedControls';
+import { TargetSettings } from '../src/components/arcade/TargetSettings';
+import type { ArcadeTarget } from '../src/packages/arcade/handoff';
 import { drawQRInternal } from '../src/utils/qrRenderer';
 import * as scannabilityChecker from '../src/utils/scannabilityChecker';
 import QRCode from 'qrcode';
@@ -58,14 +59,22 @@ describe('Style-Adaptive Maze Clearance and Masking Suite', () => {
     });
   });
 
-  describe('2. UI Slider in AdvancedControls Panel', () => {
+  describe('2. UI Slider in TargetSettings Panel', () => {
+    const baseTarget: ArcadeTarget = {
+      payload: 'https://qrcraftly.com/maze-test',
+      ecc: 'H',
+      fgColor: '#000000',
+      bgColor: '#ffffff',
+      eyeColor: '#000000',
+      isMazeEnabled: true,
+      mazeColor: '#3b82f6',
+      isMazeBridgesEnabled: true,
+      showMazeSolution: false,
+    };
+
     it('renders the maze corridor path width range slider when maze overlay is enabled', () => {
       const onChange = vi.fn();
-      render(<AdvancedControls config={baseConfig} onChange={onChange} />);
-
-      // Expand Advanced Mode panel
-      const advancedBtn = screen.getByRole('button', { name: /advanced mode/i });
-      fireEvent.click(advancedBtn);
+      render(<TargetSettings target={baseTarget} onChange={onChange} onResetToGenerator={vi.fn()} hasGeneratorDesign={true} />);
 
       const slider = screen.getByLabelText(/maze path width/i) as HTMLInputElement;
       expect(slider).not.toBeNull();
@@ -77,10 +86,7 @@ describe('Style-Adaptive Maze Clearance and Masking Suite', () => {
 
     it('triggers onChange with updated mazePathWidth when user drags slider', () => {
       const onChange = vi.fn();
-      render(<AdvancedControls config={baseConfig} onChange={onChange} />);
-
-      const advancedBtn = screen.getByRole('button', { name: /advanced mode/i });
-      fireEvent.click(advancedBtn);
+      render(<TargetSettings target={baseTarget} onChange={onChange} onResetToGenerator={vi.fn()} hasGeneratorDesign={true} />);
 
       const slider = screen.getByLabelText(/maze path width/i);
       fireEvent.change(slider, { target: { value: '0.35' } });
