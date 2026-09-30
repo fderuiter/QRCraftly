@@ -17,7 +17,8 @@
 */
 
 import QRCode from 'qrcode';
-import { isFinderPattern } from '@/packages/qr-matrix';
+import { buildMatrix, fromQrcodePackage, isFinderPattern } from '@/packages/qr-matrix';
+import { QRErrorCorrectionLevel, QRType } from '@/types';
 
 /** Reed-Solomon error correction tier. */
 export type EccLevel = 'L' | 'M' | 'Q' | 'H';
@@ -45,13 +46,30 @@ export interface TargetMatrix {
   usedFallback: boolean;
 }
 
+const encoder = fromQrcodePackage(QRCode);
+
+function toErrorCorrectionLevel(ecc: EccLevel): QRErrorCorrectionLevel {
+  switch (ecc) {
+    case 'L':
+      return QRErrorCorrectionLevel.L;
+    case 'M':
+      return QRErrorCorrectionLevel.M;
+    case 'Q':
+      return QRErrorCorrectionLevel.Q;
+    case 'H':
+      return QRErrorCorrectionLevel.H;
+  }
+}
+
 function encode(payload: string, ecc: EccLevel): TargetMatrix {
-  const qr = QRCode.create(payload, { errorCorrectionLevel: ecc });
-  const size = qr.modules.size;
+  // The payload is already the exact string the generator encodes (see `targetFromConfig`,
+  // which applies `resolveEncodedValue`), so it is encoded verbatim here.
+  const matrix = buildMatrix({ type: QRType.TEXT, value: payload, errorCorrectionLevel: toErrorCorrectionLevel(ecc) }, encoder);
+  const size = matrix.size;
   const modules = new Uint8Array(size * size);
   for (let r = 0; r < size; r++) {
     for (let c = 0; c < size; c++) {
-      modules[r * size + c] = qr.modules.get(r, c) ? 1 : 0;
+      modules[r * size + c] = matrix.get(r, c) ? 1 : 0;
     }
   }
   return { size, modules, payload, ecc, usedFallback: false };

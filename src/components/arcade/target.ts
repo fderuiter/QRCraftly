@@ -17,8 +17,8 @@
 */
 
 import { DEFAULT_CONFIG } from '@/constants';
-import { QRConfig, QRType } from '@/types';
-import { normalizeUrl, shouldNormalizeUrl } from '@/utils/url';
+import { QRConfig } from '@/types';
+import { resolveEncodedValue } from '@/packages/qr-matrix';
 import type { ArcadeTarget } from '@/packages/arcade/handoff';
 
 /**
@@ -28,7 +28,7 @@ import type { ArcadeTarget } from '@/packages/arcade/handoff';
  * @returns The arcade target.
  */
 export function targetFromConfig(config: QRConfig): ArcadeTarget {
-  const payload = config.type === QRType.URL && shouldNormalizeUrl(config.value) ? normalizeUrl(config.value) : config.value;
+  const payload = resolveEncodedValue(config);
   return {
     payload,
     ecc: config.errorCorrectionLevel,

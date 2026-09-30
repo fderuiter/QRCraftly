@@ -56,6 +56,14 @@ describe('target matrix', () => {
     expect(isDarkModule(matrix, -1, 0)).toBe(false);
   });
 
+  it('encodes the payload verbatim, without re-normalizing it', () => {
+    const create = vi.spyOn(QRCode, 'create');
+    const matrix = buildTargetMatrix('example.com', 'Q');
+    expect(create).toHaveBeenCalledWith('example.com', { errorCorrectionLevel: 'Q' });
+    expect(matrix.payload).toBe('example.com');
+    expect(matrix.ecc).toBe('Q');
+  });
+
   it('falls back when the payload is empty or too long', () => {
     expect(buildTargetMatrix('', 'L')).toMatchObject({ payload: FALLBACK_PAYLOAD, usedFallback: true });
     expect(buildTargetMatrix('x'.repeat(5000), 'H')).toMatchObject({ payload: FALLBACK_PAYLOAD, usedFallback: true });
