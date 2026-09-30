@@ -23,7 +23,7 @@ import { QRType } from '@/types';
 describe('Url generator and contract', () => {
   it('constructs url string with normalization', () => {
     expect(constructUrlString({ url: 'https://example.com' })).toBe('https://example.com/');
-    expect(constructUrlString({ url: 'google.com' })).toBe('http://google.com/');
+    expect(constructUrlString({ url: 'google.com' })).toBe('https://google.com/');
   });
 
   it('implements UrlContract correctly and validates URLs', () => {

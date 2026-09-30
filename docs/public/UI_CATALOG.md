@@ -54,7 +54,7 @@ These components capture specialized data structures required to construct disti
 - **TypeSelector** (`TypeSelector.tsx` / `TypeSelector.test.tsx`): QR type navigation rendered as ordinary links to each type's dedicated route inside a labelled `nav` list. The current route is marked with `aria-current="page"`; Tab reaches every link and arrow keys are not intercepted.
 - **UrlInput** (`UrlInput.tsx` / `UrlInput.test.tsx`): Text input with automatic verification and correction of URL protocol schemes, featuring the real Cloudflare Turnstile widget (via the `useTurnstile` hook, rendered only while dynamic mode is on and `VITE_TURNSTILE_SITE_KEY` is set), error toasts that surface the edge API's status and message, an integrated opt-in toggle, and explicit consent modal for dynamic tracking and edge redirection with dual-platform App Store destinations for iOS and Android.
 - **VCardInput** (`VCardInput.tsx`): Extensive contact form detailing names, organization, email, phone, and address.
-- **WifiInput** (`WifiInput.tsx`): Wireless network panel specifying SSID, passwords, and security type.
+- **WifiInput** (`WifiInput.tsx` / `WifiInput.test.tsx`): Wireless network panel specifying SSID, passwords, and security type, plus EAP method and phase 2 selects for WPA2-Enterprise.
 
 ---
 

@@ -77,6 +77,27 @@ export enum WifiEncryption {
 }
 
 /**
+ * EAP methods for WPA2-Enterprise networks, emitted as the `E:` field of a WIFI payload.
+ */
+export enum WifiEapMethod {
+  PEAP = 'PEAP',
+  TTLS = 'TTLS',
+  TLS = 'TLS',
+  PWD = 'PWD',
+}
+
+/**
+ * Phase 2 (inner) authentication for PEAP/TTLS, emitted as the `PH2:` field of a WIFI payload.
+ * `NONE` omits the field.
+ */
+export enum WifiEapPhase2 {
+  NONE = '',
+  MSCHAPV2 = 'MSCHAPV2',
+  GTC = 'GTC',
+  PAP = 'PAP',
+}
+
+/**
  * Defines the shape of the padding area around an embedded logo.
  */
 export type LogoPaddingStyle = 'square' | 'circle' | 'none';
@@ -213,6 +234,10 @@ export interface WifiData {
   hidden: boolean;
   /** The identity for WPA2-EAP enterprise networks (optional). */
   eapIdentity?: string;
+  /** The EAP method for WPA2-EAP networks (`E:` field). Defaults to PEAP. */
+  eapMethod?: WifiEapMethod;
+  /** The phase 2 authentication for WPA2-EAP networks (`PH2:` field). Defaults to MSCHAPV2. */
+  eapPhase2?: WifiEapPhase2;
 }
 
 /**

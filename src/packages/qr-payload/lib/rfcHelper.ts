@@ -17,7 +17,7 @@
 */
 
 const REGEX_ESCAPE_VCARD = /([;,])/g;
-const REGEX_UNESCAPE_VCARD = /\\([;,])/g;
+const REGEX_UNESCAPE_VCARD = /\\([\\;,nN])/g;
 
 /**
  * Escapes special characters and formats newlines for vCard and VEvent properties.
@@ -39,10 +39,11 @@ export const escapeVCardEvent = (str: string | undefined): string => {
  */
 export const unescapeVCardEvent = (str: string | undefined): string => {
   if (!str) return '';
-  return str
-    .replace(/\\n/gi, '\n')
-    .replace(REGEX_UNESCAPE_VCARD, '$1')
-    .replace(/\\\\/g, '\\');
+  // One left-to-right scan: every escape sequence is consumed exactly once, so an escaped
+  // backslash followed by `n` (e.g. `dir\\new`) is not misread as a newline.
+  return str.replace(REGEX_UNESCAPE_VCARD, (_match, ch: string) =>
+    ch === 'n' || ch === 'N' ? '\n' : ch
+  );
 };
 
 const encoder = new TextEncoder();
