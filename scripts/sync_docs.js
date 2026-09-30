@@ -14,8 +14,6 @@ export const DEFAULT_UI_DIRS = [
 ];
 
 export const DEFAULT_CATALOG_PATH = path.join(defaultRepoRoot, 'docs/public/UI_CATALOG.md');
-export const DEFAULT_TYPES_PATH = path.join(defaultRepoRoot, 'src/types.ts');
-export const DEFAULT_COMPLIANCE_PATH = path.join(defaultRepoRoot, 'docs/public/COMPLIANCE.md');
 
 /**
  * Extracts JSDoc description from component file content if present.
@@ -243,65 +241,6 @@ export function syncUICatalog(
 }
 
 /**
- * Synchronizes telemetry keys between src/types.ts and docs/public/COMPLIANCE.md.
- * 
- * @param {string} typesPath Path to src/types.ts
- * @param {string} compliancePath Path to docs/public/COMPLIANCE.md
- * @returns {{ changed: boolean, details: string[] }}
- */
-export function syncTelemetryCompliance(
-  typesPath = DEFAULT_TYPES_PATH,
-  compliancePath = DEFAULT_COMPLIANCE_PATH
-) {
-  const details = [];
-  if (!fs.existsSync(typesPath) || !fs.existsSync(compliancePath)) {
-    return { changed: false, details: ['Files not found'] };
-  }
-
-  const typesContent = fs.readFileSync(typesPath, 'utf8');
-  const complianceContent = fs.readFileSync(compliancePath, 'utf8');
-
-  const arrayMatch = typesContent.match(/export const ALLOWED_TELEMETRY_KEYS\s*=\s*\[([\s\S]*?)\]/);
-  if (!arrayMatch) {
-    return { changed: false, details: ['ALLOWED_TELEMETRY_KEYS not found in types.ts'] };
-  }
-
-  const codeKeys = arrayMatch[1]
-    .split(',')
-    .map(k => k.trim().replace(/['"]/g, ''))
-    .filter(k => k.length > 0);
-
-  const formattedKeys = codeKeys.map(k => `\`${k}\``).join(', ');
-
-  let newComplianceContent = complianceContent;
-
-  // Replace line: - Accepted keys are: ...
-  const acceptedKeysRegex = /(- Accepted keys are:\s*)([^\n]+)/;
-  if (acceptedKeysRegex.test(newComplianceContent)) {
-    const currentLine = newComplianceContent.match(acceptedKeysRegex)[0];
-    const targetLine = `- Accepted keys are: ${formattedKeys}.`;
-    if (currentLine !== targetLine) {
-      newComplianceContent = newComplianceContent.replace(acceptedKeysRegex, targetLine);
-    }
-  }
-
-  // Update prose in Opt-In Telemetry bullet if keys differ
-  const proseRegex = /(This data consists only of the following parameters:\s*)([^\n]+)/;
-  if (proseRegex.test(newComplianceContent)) {
-    const targetProse = `This data consists only of the following parameters: ${formattedKeys}.`;
-    newComplianceContent = newComplianceContent.replace(proseRegex, targetProse);
-  }
-
-  if (newComplianceContent !== complianceContent) {
-    fs.writeFileSync(compliancePath, newComplianceContent, 'utf8');
-    details.push(`Updated COMPLIANCE.md with ${codeKeys.length} telemetry keys.`);
-    return { changed: true, details };
-  }
-
-  return { changed: false, details: [] };
-}
-
-/**
  * Runs the full documentation synchronization engine.
  * 
  * @param {object} [options]
@@ -332,24 +271,7 @@ export function syncAll(options = {}) {
     console.error(`❌ UI Catalog synchronization failed: ${err.message}`);
   }
 
-  // 2. Sync Telemetry Compliance
-  try {
-    const telemetryRes = syncTelemetryCompliance(
-      options.typesPath || DEFAULT_TYPES_PATH,
-      options.compliancePath || DEFAULT_COMPLIANCE_PATH
-    );
-    if (telemetryRes.changed) {
-      anyChanged = true;
-      allDetails.push(...telemetryRes.details);
-      console.log(`✅ Telemetry compliance synchronized.`);
-    } else {
-      console.log('✅ Telemetry compliance is already fully synchronized.');
-    }
-  } catch (err) {
-    console.error(`❌ Telemetry compliance synchronization failed: ${err.message}`);
-  }
-
-  // 3. Compile Docs Manifest
+  // 2. Compile Docs Manifest
   if (!options.skipManifest) {
     try {
       compileManifest(

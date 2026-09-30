@@ -167,7 +167,7 @@ This section is **non-negotiable**. Any feature proposal must be evaluated again
 | No QR content stored server-side          | QR content is held in browser memory only and is gone when the tab closes (see the exception below)   |
 | No user input in URL query parameters     | Architectural constraint; prevents history/proxy leakage                                              |
 | Storage keys explicitly allowlisted       | Pre-build AST auditor (`scripts/storage_privacy_ast_auditor.js`) blocks unapproved keys at build time |
-| Opt-in telemetry schema allowlisted       | `ALLOWED_TELEMETRY_KEYS` in `src/types.ts`; no payload-adjacent fields permitted                      |
+| No analytics, telemetry or ads            | [The QRCraftly Pledge](docs/PLEDGE.md); CSP `connect-src 'self'` and the bundle network audit         |
 
 **Exception: dynamic links.** If Dynamic Redirection is switched on, each dynamic link the person creates is saved in `localStorage` under `qrcraftly:dynamic-redirects` so they can manage it later. That record holds the original destination URL in plain text, the decryption key and the admin key, and it stays until the person deletes it or clears site data. The feature is switched off today, so nothing is written under this key in production.
 
@@ -202,16 +202,14 @@ HIPAA Technical Safeguard alignment is documented in [`docs/public/COMPLIANCE.md
 
 The following are explicitly **out of scope** and should not be planned, specced, or built without a deliberate product decision to revise this list:
 
-| Non-Goal                                               | Rationale                                                                                                                                                                                                                                                                       |
-| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Dynamic / trackable QR redirection                     | Any server-side redirection requires storing a destination URL server-side and logging scan events, which cannot be reconciled with the privacy-first invariant. Not removed: an encrypted implementation is built but switched off (Section 6.9); see the open decision below. |
-| Server-side QR generation                              | Violates the privacy-first invariant; payloads must never leave the client                                                                                                                                                                                                      |
-| Native mobile apps (iOS / Android)                     | Web-first strategy; responsive PWA is sufficient                                                                                                                                                                                                                                |
-| Batch / bulk QR generation via API or CSV upload       | Adds infrastructure complexity without a clear user persona match today                                                                                                                                                                                                         |
-| External analytics or telemetry tracking QR content    | Violates privacy-first invariant; only opt-in, schema-controlled diagnostic telemetry is permitted                                                                                                                                                                              |
-| Server-side storage of user QR codes or cloud accounts | Violates volatile memory guarantee                                                                                                                                                                                                                                              |
-
-> **Open decision: Dynamic Redirection.** This document lists dynamic redirection as a non-goal (Section 9) and as part of the paid tier (Section 11), while the code is built but switched off (Section 6.9). Whether to enable it for everyone, keep it for the paid self-hosted tier, or remove it is a product decision that has not been made yet.
+| Non-Goal                                               | Rationale                                                                                                                                                                              |
+| ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Dynamic / trackable QR redirection                     | Any server-side redirection requires storing a destination URL server-side and logging scan events, which cannot be reconciled with the privacy-first invariant. Removed as a feature. |
+| Server-side QR generation                              | Violates the privacy-first invariant; payloads must never leave the client                                                                                                             |
+| Native mobile apps (iOS / Android)                     | Web-first strategy; responsive PWA is sufficient                                                                                                                                       |
+| Batch / bulk QR generation via API or CSV upload       | Adds infrastructure complexity without a clear user persona match today                                                                                                                |
+| Ads, analytics, telemetry or diagnostics reporting     | Violates [the QRCraftly Pledge](docs/PLEDGE.md): the project shuts down before it becomes ad supported                                                                                 |
+| Server-side storage of user QR codes or cloud accounts | Violates volatile memory guarantee                                                                                                                                                     |
 
 ---
 

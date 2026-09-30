@@ -57,6 +57,8 @@ export const WifiInput: React.FC<WifiInputProps> = ({ data, onChange }) => {
 5.  Add the new type to the `TypeSelector` options and its route to `QR_TYPE_ROUTES` in `src/data/navigation.ts` (with a matching page under `src/pages/`).
 6.  Add its display name to `QR_TYPE_LABELS` in `src/components/InputPanel.tsx`. Announcements ("WiFi input loaded") and the scan toast ("Type detected: vCard contact") use these labels, never raw enum values. The map is typed `Record<QRType, string>`, so `tsc` fails until the new type has a label.
 
+Input data never leaves the browser. `src/types.ts` has no telemetry or reporting schema, and new input types must not add one (see [the QRCraftly Pledge](../../../docs/PLEDGE.md)).
+
 ## QR Animation Configurations
 
 The centralized config structure in `src/types.ts` has optional fields for `animationValues`, `isAnimating`, and `animationFps` to drive high-performance frame playbacks in the canvas.

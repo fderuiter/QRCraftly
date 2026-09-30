@@ -109,16 +109,61 @@ export const contentRegistry: Record<string, ToolContent> = {
         "answer": "QRCraftly is completely free to use. No sign-up, no login, and no hidden fees. Just generate your QR codes instantly."
       },
       {
+        "question": "Does QRCraftly show ads?",
+        "answer": "No, and it never will. QRCraftly is not ad supported; the project would be shut down before it ever showed an ad. Read the QRCraftly Pledge at /free-forever."
+      },
+      {
         "question": "Does QRCraftly track users?",
-        "answer": "We do not use tracking pixels, cookies, or third-party analytics. We only collect basic server logs for performance and reliability."
+        "answer": "No. QRCraftly has no analytics, no tracking cookies, no tracking pixels and no third-party scripts. Our host, Cloudflare, handles each page request (IP address, browser, page address and time) to serve the site and block attacks, but the content of your QR codes is never part of any request."
       },
       {
         "question": "Is my data secure?",
-        "answer": "We utilize a Privacy First architecture. Your content is processed entirely in your browser and not transmitted to our servers without your explicit opt-in for telemetry."
+        "answer": "Yes. Your content is processed entirely in your browser and is never sent to a server. QRCraftly has no diagnostics or reporting of any kind."
       },
       {
         "question": "Is QRCraftly open source?",
         "answer": "Our code is open for inspection and contribution. We believe in transparency."
+      }
+    ]
+  },
+  "free-forever": {
+    "id": "free-forever",
+    "name": "The QRCraftly Pledge",
+    "url": getPublicDomain() + "/free-forever",
+    "description": "Free QR codes that never expire. No sign-up, no ads, nothing leaves your browser. QRCraftly will shut down before it ever becomes ad supported.",
+    "seoTitle": "Free QR Codes: No Ads, No Tracking, Never Expire - QRCraftly",
+    "image": "/og-image.png?type=free-forever",
+    "imageAlt": "The QRCraftly Pledge: no ads, no tracking, free forever",
+    "features": [
+      "No Ads, Ever",
+      "No Tracking or Analytics",
+      "Entirely Client-Side",
+      "Completely Free, No Sign-Up"
+    ],
+    "schemaType": SchemaType.AboutPage,
+    "schemaCategory": SchemaCategory.UtilitiesApplication,
+    "personas": [TargetPersona.HealthcareLegal, TargetPersona.SecurityConsciousEnterprise],
+    "valueProposition": StrategicValueCategory.ZeroTransitPrivacySovereignty,
+    "faqs": [
+      {
+        "question": "Is there a QR code generator with no ads?",
+        "answer": "Yes. QRCraftly is not ad supported and never will be. There are no banner ads, sponsored placements, affiliate links or paid upgrades."
+      },
+      {
+        "question": "Does QRCraftly track me?",
+        "answer": "No. There are no analytics, tracking cookies, tracking pixels or third-party scripts, and the site's Content Security Policy blocks connections to any other server. Cloudflare, which hosts the site, sees ordinary request information such as your IP address to deliver pages, but never the content of your QR codes."
+      },
+      {
+        "question": "Is my QR code data sent to a server?",
+        "answer": "No. QR codes are generated entirely in your browser. What you type, upload or scan never leaves your device."
+      },
+      {
+        "question": "Do QRCraftly QR codes expire?",
+        "answer": "No. QRCraftly makes static QR codes: the content is stored in the code itself, so there is no account, subscription or server that could switch it off. A code you make today keeps working as long as the thing it points to exists."
+      },
+      {
+        "question": "What happens if QRCraftly can't pay for itself?",
+        "answer": "It will be shut down before it ever shows an ad. The only way the project would change hands is an outright purchase of the whole project."
       }
     ]
   },

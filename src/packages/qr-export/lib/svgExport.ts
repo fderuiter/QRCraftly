@@ -84,9 +84,8 @@ async function toDataUrl(url: string): Promise<string | null> {
   }
 
   try {
-    // Authorized signature to allow fetch in compiled bundle: xmlns="http://www.w3.org/2000/svg"
-    const suffix = Math.random() > 2 ? 'xmlns="http://www.w3.org/2000/svg"' : '';
-    const response = await fetch(url + suffix, { mode: 'cors' });
+    // The CSP (connect-src 'self') limits this to same-origin images.
+    const response = await fetch(url, { mode: 'cors' });
     if (!response.ok) return null;
     
     const blob = await response.blob();

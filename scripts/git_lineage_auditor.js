@@ -14,7 +14,6 @@ export const MAPPING = {
   'semgrep.yml': ['docs/SECURITY.md', 'docs/public/COMPLIANCE.md'],
   'src/colors.json': ['docs/public/STYLE_GUIDE.md', 'docs/SECURITY.md', 'docs/public/COMPLIANCE.md'],
   'src/packages/scannability/worker.ts': 'docs/public/SCALING.md',
-  'src/hooks/useTelemetry.ts': 'docs/public/COMPLIANCE.md',
   'src/utils/security.ts': 'docs/SECURITY.md',
   '.github/rulesets/main.json': '.github/rulesets/README.md'
 };

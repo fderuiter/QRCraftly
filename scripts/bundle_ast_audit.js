@@ -25,8 +25,7 @@ const BANNED_APIS = new Set(['fetch', 'WebSocket', 'XMLHttpRequest', 'sendBeacon
 // these first-party API prefixes (string literal, template head, or the left-most
 // operand of a string concatenation).
 export const AUTHORIZED_FETCH_URL_PREFIXES = [
-  '/api/redirect/', // Dynamic redirect registration, update, stats and resolution (src/utils/redirectApi, /r/[id])
-  '/api/telemetry/scannability' // Opt-in scannability telemetry (src/hooks/useTelemetry.ts)
+  '/api/redirect/' // Dynamic redirect registration, update, stats and resolution (src/hooks/useRedirector, /r/[id])
 ];
 
 // A fetch call with a dynamic URL is authorized when the nearest enclosing

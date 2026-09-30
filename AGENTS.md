@@ -5,7 +5,7 @@ Operating instructions and core invariants for AI agents working in this reposit
 ## Non-Negotiable Invariants
 
 - **Package Manager**: Use `pnpm` exclusively. Never run `npm` or `yarn`. Node.js `^22.22.2 || >=24.15.0` required (`engines` in `package.json`; `.nvmrc` pins the CI version).
-- **Privacy & Storage Allowlist**: All QR code generation is strictly client-side. Never send user payloads across the network or encode user input into URL query parameters. The pre-build storage AST auditor (`scripts/storage_privacy_ast_auditor.js`) blocks any unapproved persistent browser storage. Only approved keys (`qr-telemetry-opt-in`, `qrcraftly:dynamic-redirects`, `qrcraftly:dynamic-consent-accepted`, `qrcraftly:theme`, `__test__`) are allowed. `qrcraftly:theme` holds only the colour-theme preference (`light`, `dark` or `system`), owned by the global `ThemeProvider` (`src/context/ThemeContext.tsx`); never store QR content with it.
+- **Privacy & Storage Allowlist**: All QR code generation is strictly client-side. Never send user payloads across the network or encode user input into URL query parameters. The pre-build storage AST auditor (`scripts/storage_privacy_ast_auditor.js`) blocks any unapproved persistent browser storage. Only approved keys (`qrcraftly:dynamic-redirects`, `qrcraftly:dynamic-consent-accepted`, `qrcraftly:theme`, `__test__`) are allowed. `qrcraftly:theme` holds only the colour-theme preference (`light`, `dark` or `system`), owned by the global `ThemeProvider` (`src/context/ThemeContext.tsx`); never store QR content with it.
 - **UI Component Reuse**: Consult `docs/public/UI_CATALOG.md` before creating any visual element.
   - Range sliders: Always use `RangeInput` from `src/components/ui/RangeInput.tsx`.
   - Buttons: Always use `Button` from `src/components/ui/Button.tsx`.
@@ -37,7 +37,7 @@ Packages are deep modules: see [src/packages/README.md](./src/packages/README.md
 
 ### Documentation checks
 
-- Run `pnpm run docs:sync` after changing a UI component in `src/components/ui/`, `src/components/inputs/` or `src/components/style-controls/`, `ALLOWED_TELEMETRY_KEYS` in `src/types.ts`, or any page in `docs/public/` or `docs/SECURITY.md`. It regenerates `docs/public/UI_CATALOG.md` entries, the telemetry key list in `docs/public/COMPLIANCE.md`, and `src/data/docs_manifest.json`. Commit what it changes.
+- Run `pnpm run docs:sync` after changing a UI component in `src/components/ui/`, `src/components/inputs/` or `src/components/style-controls/`, or any page in `docs/public/` or `docs/SECURITY.md`. It regenerates `docs/public/UI_CATALOG.md` entries and `src/data/docs_manifest.json`. Commit what it changes.
 - Run `pnpm run docs:lint` after editing any Markdown. It checks links, anchors, unfinished-work placeholder markers and TS snippets in `docs/`, `docs/public/`, `docs/adr/`, `docs/agents/`, `README.md`, `CONTEXT.md` and `AGENTS.md`; ADR file names and gap-free numbering; the UI catalog; and that the docs manifest is current. Every error prints a `Fix:` hint. `pnpm run lint`, CI and the pre-commit hook (for staged `*.md` files) run the same checks.
 
 See `docs/agents/docs-maintenance.md`.
@@ -47,7 +47,8 @@ See `docs/agents/docs-maintenance.md`.
 - **Dynamic Edge Redirection**: Worker entry in the `src/packages/edge-redirect/` deep module (`/api/redirect/*` and `/r/<id>`, falling through to static assets), D1 SQL database, the Cloudflare Rate Limiting binding, and zero-knowledge anchor hash encryption (`#key=...`). Not wired into `wrangler.jsonc` until D1 and Turnstile are provisioned. Read `docs/public/EDGE_ARCHITECTURE.md`.
 - **Worker Concurrency & Scannability**: Off-thread Web Workers (`src/packages/scannability/worker.ts`, `src/packages/optical-scanner/worker.ts`), zero-copy `ArrayBuffer` double-buffering, degradation state caching, immediate 1500ms watchdog fault-tolerance, non-blocking superseded dropped ACK backpressure handling, and client-side SVG generation via `SvgContext`. Read `docs/public/SCALING.md`.
 - **Security & Sanitization**: SVG element allowlists (`sanitizeSvg`), phone/SMS sanitization, anchor link sanitization (`sanitizeHref`), and inline-script CSP hashing. Read `docs/SECURITY.md`.
-- **HIPAA Compliance Guidelines**: Client-side volatile memory guarantees and telemetry schema rules. Read `docs/public/COMPLIANCE.md`.
+- **HIPAA Compliance Guidelines**: Client-side volatile memory guarantees and what the host can see. Read `docs/public/COMPLIANCE.md`.
+- **No-Ads Pledge**: QRCraftly is never ad supported and has no analytics, telemetry or third-party requests. Never add ads, analytics, diagnostics reporting or third-party scripts. Read `docs/PLEDGE.md`; the site copy lives in `src/data/pledge.ts`.
 
 ## Quality & Development Standards
 
