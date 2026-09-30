@@ -54,6 +54,10 @@ _Avoid_: Stateless mode, incognito processing, memory wipe
 An empirical classification of code readability derived from automated contrast checks and barcode detector evaluation.
 _Avoid_: Readability rate, success score, scan rating, reliability index
 
+**Scannability Health Evaluator**:
+The headless deep module that answers "how scannable is this QR frame?" with one assessment (verification status, health score, export risk, worker recovery state). It privately owns canvas capture, buffer transfer, request sequencing, the Scannability Worker lifecycle, the 1500ms watchdog and the main-thread fallback. React code reaches it only through the `useScannability` adapter hook.
+_Avoid_: Scannability runner, worker runner, scannability hook internals
+
 **Scannability Worker**:
 A dedicated background process performing real-time contrast auditing and optical decoding off the main user interface thread.
 _Avoid_: Background scanner, validation thread, scannability thread
