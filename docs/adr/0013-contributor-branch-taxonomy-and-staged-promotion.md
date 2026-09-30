@@ -1,11 +1,11 @@
 ---
 status: accepted
-superseded_in_part_by: 0018
+superseded_in_part_by: 0018, 0020
 ---
 
 # Contributor Branch Taxonomy and Staged Promotion
 
-> The release, promotion and rollback mechanics described here were replaced by [ADR 0018](./0018-release-pr-tag-driven-publishing.md). See [RELEASING.md](../../RELEASING.md) for the current process.
+> The branch model and release mechanics described here were replaced by [ADR 0020](./0020-trunk-based-releases-on-main.md): `main` is the only branch. See [RELEASING.md](../../RELEASING.md) for the current process.
 
 ## Context
 

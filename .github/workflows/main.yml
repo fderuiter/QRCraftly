@@ -2,7 +2,7 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [dev]
+    branches: [main]
     paths: &workflow_paths
       - 'src/**'
       - 'public/**'
@@ -40,10 +40,10 @@ on:
       - '.github/workflows/**'
       - '.github/actions/**'
   pull_request:
-    branches: [dev]
+    branches: [main]
   workflow_dispatch:
-    # Manual trigger for re-running CI without a code push. Releases are cut locally
-    # (see RELEASING.md); .github/workflows/release.yml only publishes a pushed tag.
+    # Manual trigger for re-running CI without a code push. Releases are tagged by
+    # .github/workflows/release.yml when a release PR merges (see RELEASING.md).
 
 permissions:
   contents: read
@@ -344,12 +344,12 @@ jobs:
             fi
           done
 
-  # Cloudflare Workers Builds deploys dev to staging on its own. Wait until staging
-  # serves this commit, then smoke test it.
+  # Cloudflare Workers Builds deploys every push to main to production on its own.
+  # Wait until production serves this commit, then smoke test it.
   verify-staging:
-    name: Verify Preview Staging Environment
+    name: Verify Production Deployment
     needs: [ci]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -361,11 +361,11 @@ jobs:
 
       - name: Wait for staging to serve this commit
         env:
-          BASE_URL: "https://dev-qrcraftly.fpderuiter.workers.dev"
+          BASE_URL: "https://qrcraftly.fpderuiter.workers.dev"
           EXPECTED_COMMIT: ${{ github.sha }}
         run: bash scripts/ci/wait_for_deploy.sh
 
-      - name: Run Playwright Smoke Tests on Preview Staging
+      - name: Run Playwright Smoke Tests on Production
         env:
-          PLAYWRIGHT_TEST_BASE_URL: "https://dev-qrcraftly.fpderuiter.workers.dev"
+          PLAYWRIGHT_TEST_BASE_URL: "https://qrcraftly.fpderuiter.workers.dev"
         run: bash scripts/ci/run_smoke_tests.sh

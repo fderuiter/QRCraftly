@@ -178,22 +178,22 @@ _Avoid_: Commit hooks, git checks, pre-commit scripts, git filters
 The division of responsibility in which GitHub Actions is the quality gate (the required `CI` check, audits, smoke tests) and Cloudflare Workers Builds is the only system that deploys, building each pushed branch from Git.
 _Avoid_: Build trigger, dual deploy, cloud build runner, auto-deployment app
 
-**Staged Promotion**:
-The lifecycle discipline where all feature and fix branches merge into the default integration branch (`dev`), deploying to the preview staging environment (`dev-qrcraftly.fpderuiter.workers.dev`) before production release promotion to `main`.
-_Avoid_: Dev-to-main copy, branch sync, direct push release, cherry-pick release
+**Trunk-Based Delivery**:
+The lifecycle discipline where every feature and fix branch returns to `main` through a squash-merged pull request that passes the required `CI` and `PR Title` checks, and every merge to `main` deploys to production.
+_Avoid_: Staged promotion, dev branch, integration branch, direct push release
 
 **Ephemeral Preview Environment**:
 An isolated edge preview version that Cloudflare Workers Builds uploads for each pushed branch, served at `https://<branch>-qrcraftly.fpderuiter.workers.dev`, for visual review prior to merge.
 _Avoid_: Test deploy, PR sandbox, temp site, branch build
 
-**Fast-Forward Promotion**:
-The exclusive, SHA-preserving method by which `main` is advanced to a reviewed release commit on `dev` during a production release (`pnpm run release:promote`, an atomic push of `main` and the `vX.Y.Z` tag with no force), guaranteeing that both branches share identical commit SHAs and preventing history divergence.
-_Avoid_: PR merge to main, rebase-and-merge release, squash promotion, cherry-pick release
+**Release PR**:
+The `release/vX.Y.Z` pull request created by `pnpm run release:prepare`, carrying the `package.json` version bump and the new `CHANGELOG.md` section. Merging it into `main` makes the Release workflow create the `vX.Y.Z` tag and GitHub Release.
+_Avoid_: Promotion, release branch merge, dev-to-main PR, manual tag
 
 **Conventional Commit**:
 A structured commit message following the `<type>(<scope>): <description>` format (e.g. `feat(qr): add logo embedding`), used by the release engine to automatically determine the next SemVer bump and generate the changelog.
 _Avoid_: Tagged message, semantic commit, versioned commit, prefix commit
 
 **Release Engine**:
-The cross-platform Node.js utility (`scripts/release_engine.js`) that reads conventional commits since the latest git tag, computes the next SemVer version, generates a grouped Keep-a-Changelog section, prepares the release PR (`--prepare`), and fast-forward promotes `main` with its tag in a single atomic push (`--promote`).
+The cross-platform Node.js utility (`scripts/release_engine.js`) that reads conventional commits since the latest git tag, computes the next SemVer version, generates a grouped Keep-a-Changelog section, and prepares the Release PR (`--prepare`).
 _Avoid_: Version bumper, changelog writer, deploy script, tag creator

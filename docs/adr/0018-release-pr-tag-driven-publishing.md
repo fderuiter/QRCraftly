@@ -1,8 +1,11 @@
 ---
 status: accepted
+superseded_in_part_by: 0020
 ---
 
 # Release PRs, Tag-Driven Publishing, and Cloudflare-Owned Deploys
+
+> The branch model and release mechanics described here were replaced by [ADR 0020](./0020-trunk-based-releases-on-main.md): `main` is the only branch. See [RELEASING.md](../../RELEASING.md) for the current process.
 
 ## Context
 
