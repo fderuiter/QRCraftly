@@ -1,12 +1,6 @@
-import { generateMaze } from '@/packages/qr-matrix/maze';
-import {
-  isMazeWorkerRequest,
-  assertMazeWorkerRequest,
-  isMazeWorkerResponse,
-  assertMazeWorkerResponse,
-  MazeWorkerResponse,
-} from './mazeContract';
-import type { QRModules } from '../types';
+import { generateMaze } from './lib/maze';
+import { assertMazeWorkerRequest, assertMazeWorkerResponse, type MazeWorkerResponse } from './lib/mazeContract';
+import type { QRModules } from '@/types';
 
 let latestSequenceId = -1;
 
@@ -32,11 +26,7 @@ self.onmessage = async (e: MessageEvent<unknown>) => {
     }
 
     // Strictly validate incoming message at runtime
-    if (!isMazeWorkerRequest(data)) {
-      assertMazeWorkerRequest(data);
-    } else {
-      assertMazeWorkerRequest(data);
-    }
+    assertMazeWorkerRequest(data);
 
     const { size, matrix, config } = data;
 
@@ -67,11 +57,7 @@ self.onmessage = async (e: MessageEvent<unknown>) => {
     };
 
     // Strictly validate outgoing message
-    if (!isMazeWorkerResponse(response)) {
-      assertMazeWorkerResponse(response);
-    } else {
-      assertMazeWorkerResponse(response);
-    }
+    assertMazeWorkerResponse(response);
 
     self.postMessage(response);
   } catch (error: any) {
@@ -86,11 +72,7 @@ self.onmessage = async (e: MessageEvent<unknown>) => {
     };
 
     try {
-      if (!isMazeWorkerResponse(response)) {
-        assertMazeWorkerResponse(response);
-      } else {
-        assertMazeWorkerResponse(response);
-      }
+      assertMazeWorkerResponse(response);
       self.postMessage(response);
     } catch {
       self.postMessage({

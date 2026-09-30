@@ -17,7 +17,7 @@
 */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { clampCornerRadius, drawRoundRect, drawPoly, drawStar, drawRoughRect, drawScribble, drawCircularModule, drawCircuitModule, drawStandardModule } from './canvasHelpers';
+import { clampCornerRadius, drawRoundRect, drawPoly, drawStar, drawRoughRect, drawScribble, drawCircularModule, drawCircuitModule, drawStandardModule } from '../canvas';
 
 describe('canvasHelpers', () => {
   let ctx: any;

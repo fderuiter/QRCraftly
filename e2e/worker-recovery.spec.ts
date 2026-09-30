@@ -41,8 +41,8 @@ test.describe('Isolated Web Worker Recovery & Export Bypass', () => {
           const url = String(scriptURL);
           const isScannabilityWorker =
             (url.includes('scannability') || url.includes('worker-') || url.includes('worker.ts') || url.includes('scannabilityWorker')) &&
-            !url.includes('matrixWorker') &&
-            !url.includes('mazeWorker') &&
+            !url.includes('worker-matrix') &&
+            !url.includes('worker-maze') &&
             !url.includes('fileSliceWorker') &&
             !url.includes('imageResizeWorker');
 

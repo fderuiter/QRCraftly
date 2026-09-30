@@ -1,7 +1,9 @@
 import QRCode from 'qrcode';
 import { validateConfig } from '@/packages/qr-payload';
-import { QRConfig, QRType } from '../types';
-import { normalizeUrl, shouldNormalizeUrl } from './url';
+import type { QRConfig } from '@/types';
+import { buildMatrix, fromQrcodePackage } from './lib/buildMatrix';
+
+const encoder = fromQrcodePackage(QRCode);
 
 let latestSequenceId = -1;
 
@@ -37,17 +39,10 @@ self.onmessage = async (e: MessageEvent<{ config: QRConfig; sequenceId: number }
       return;
     }
 
-    let val = config.value;
-    if (config.type === QRType.URL && shouldNormalizeUrl(val)) {
-      val = normalizeUrl(val);
-    }
-
     // 2. Perform QR calculations (Reed-Solomon & module layout)
-    const data = QRCode.create(val, {
-      errorCorrectionLevel: config.errorCorrectionLevel,
-    });
+    const modules = buildMatrix(config, encoder);
 
-    const size = data.modules.size;
+    const size = modules.size;
     const matrix = new Uint8Array(size * size);
 
     // Yield cooperatively during the serialization of heavy iterations
@@ -60,7 +55,7 @@ self.onmessage = async (e: MessageEvent<{ config: QRConfig; sequenceId: number }
         }
       }
       for (let c = 0; c < size; c++) {
-        matrix[r * size + c] = data.modules.get(r, c) ? 1 : 0;
+        matrix[r * size + c] = modules.get(r, c) ? 1 : 0;
       }
     }
 

@@ -16,10 +16,10 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { QRConfig, QRModules, SocialFormat, TemplateStyle } from '../types';
+import { QRConfig, QRModules, SocialFormat, TemplateStyle } from '@/types';
 import { drawQRInternal, ModuleRenderOptions } from '@/packages/qr-matrix';
-import { drawRoundRect } from './canvasHelpers';
-import { hexToRgba } from './colorUtils';
+import { drawRoundRect } from '@/packages/qr-matrix/canvas';
+import { hexToRgba } from '@/utils/colorUtils';
 
 /**
  * Standard high-resolution dimensions for each social media format.

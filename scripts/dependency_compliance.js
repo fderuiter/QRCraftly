@@ -31,7 +31,7 @@ export const FORBIDDEN_IMPORTS = [
 // 3. Whitelisted files in src/ that are authorized to perform network requests (fetch)
 export const AUTHORIZED_NETWORK_FILES = new Set([
   'src/hooks/useTelemetry.ts',
-  'src/utils/svgExport.ts',
+  'src/packages/qr-export/lib/svgExport.ts',
   'src/utils/assetCache.ts',
   'src/hooks/useRedirector.ts',
   'src/packages/edge-redirect/lib/turnstile.ts',

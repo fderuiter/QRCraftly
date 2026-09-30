@@ -20,10 +20,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   SOCIAL_DIMENSIONS,
   drawWithTemplate,
-} from './templateRenderer';
-import { DEFAULT_CONFIG } from '../constants';
-import { SocialFormat, TemplateStyle, QRConfig, QRStyle } from '../types';
-import { SvgContext } from './svgContext';
+  SvgContext,
+} from '../index';
+import { DEFAULT_CONFIG } from '@/constants';
+import { SocialFormat, TemplateStyle, QRConfig, QRStyle } from '@/types';
 import * as qrMatrix from '@/packages/qr-matrix';
 import { calculateLayout } from '@/packages/qr-matrix';
 

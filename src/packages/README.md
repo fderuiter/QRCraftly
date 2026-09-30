@@ -43,10 +43,19 @@ Boundary checks run automatically during `pnpm run lint` and CI.
 
 ### `qr-matrix` (`@/packages/qr-matrix`)
 
-- **Purpose**: Full QR code matrix visual orchestration, styles, locator eyes, logo cutouts, alignment pattern zones, and playable maze generation.
+- **Purpose**: Full QR code matrix visual orchestration, styles, locator eyes, logo cutouts, alignment pattern zones, and playable maze generation. Owns the one place a configuration becomes a module matrix (`buildMatrix`) and the Matrix and Maze Workers.
 - **Entry Points**:
-  - `index.ts`: `drawQR`, `drawQRInternal`, `renderBorder`, `renderEyes`, `renderModules`, `renderFluidModules`, `renderLogo`, `renderMaze`, layout and logo math.
-  - `maze.ts`: `generateMaze`, `getMazeCacheKey`, `getCachedMaze`, `storeMaze`, `clearMazeCache`, `getStyleAdaptiveMazePathWidth`, `renderMaze`, `MazeData`, and bridge validation helpers (`isBridgeCell`, `isFinderPatternWithMargin`). The halo mask (`applyMazeHaloMask`) is private to `lib/maze.ts`.
+  - `index.ts`: `buildMatrix` (normalizes URL payloads, then encodes), `resolveEncodedValue`, `loadQrEncoder` (lazy `qrcode`), `fromQrcodePackage`, `QrEncoder`, the worker factories `createMatrixWorker` and `createMazeWorker`, `drawQR`, `drawQRInternal`, `renderBorder`, `renderEyes`, `renderModules`, `renderFluidModules`, `renderLogo`, `renderMaze`, layout and logo math.
+  - `maze.ts`: `generateMaze`, `getMazeCacheKey`, `getCachedMaze`, `storeMaze`, `clearMazeCache`, `getStyleAdaptiveMazePathWidth`, `renderMaze`, `MazeData`, bridge validation helpers (`isBridgeCell`, `isFinderPatternWithMargin`), and the Maze Worker contract (`isMazeWorkerRequest`, `assertMazeWorkerRequest`, `isMazeWorkerResponse`, `assertMazeWorkerResponse`). The halo mask (`applyMazeHaloMask`) is private to `lib/maze.ts`.
+  - `canvas.ts`: Canvas drawing primitives (`clampCornerRadius`, `drawRoundRect`, `drawPoly`, `drawStar`, `drawRoughRect`, `drawScribble`, and the module shape painters).
+  - `worker-matrix.ts`: Background Web Worker that validates a configuration and serializes its `buildMatrix` output. Spawn it only through `createMatrixWorker()`.
+  - `worker-maze.ts`: Background Web Worker running maze generation and A* pathfinding. Spawn it only through `createMazeWorker()`.
+
+### `qr-export` (`@/packages/qr-export`)
+
+- **Purpose**: Social template composition and self-contained SVG export: a `CanvasRenderingContext2D`-compatible SVG recorder, template frames and text, logo inlining, SVG sanitization and the offscreen scannability check before download.
+- **Entry Points**:
+  - `index.ts`: `generateQRSvg`, `rasterizeSvgToCanvas`, `validateSvgScannability`, `SvgContext`, `drawWithTemplate`, `SOCIAL_DIMENSIONS`.
 
 ### `arcade` (`@/packages/arcade`)
 

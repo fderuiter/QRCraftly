@@ -18,6 +18,15 @@
 
 export { drawQR, drawQRInternal } from './lib/renderer';
 export {
+  buildMatrix,
+  resolveEncodedValue,
+  loadQrEncoder,
+  fromQrcodePackage,
+  type QrEncoder,
+  type MatrixSource,
+} from './lib/buildMatrix';
+export { createMatrixWorker, createMazeWorker } from './lib/workerFactory';
+export {
   calculateLayout,
   getLogoMetrics,
   getIsCoveredByLogo,

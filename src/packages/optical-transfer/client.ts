@@ -20,7 +20,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { QRConfig, QRErrorCorrectionLevel, SocialFormat, TemplateStyle } from '@/types';
 import { drawQRInternal } from '@/utils/qrRenderer';
-import { drawWithTemplate, SOCIAL_DIMENSIONS } from '@/utils/templateRenderer';
+import { drawWithTemplate, SOCIAL_DIMENSIONS } from '@/packages/qr-export';
 import { PreallocatedFramePool, shuffleInPlace } from './lib/framePool';
 import { sanitizeStreamConfig, verifyHandshakeFrame } from './lib/handshake';
 import { StreamLookaheadReceiver, DANGEROUS_SCHEMES } from './lib/streamLookahead';

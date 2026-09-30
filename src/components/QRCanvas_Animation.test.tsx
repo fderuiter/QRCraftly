@@ -21,6 +21,7 @@ import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import React from 'react';
 import QRCanvas from './QRCanvas';
 import { DEFAULT_CONFIG } from '../constants';
+import { QRType } from '../types';
 import QRCode from 'qrcode';
 import { useQrcodeAsCanvasEncoder } from '../../tests/fixtures/fakeQrcode';
 
@@ -183,5 +184,43 @@ describe('QRCanvas Animation Loop', () => {
       unmount();
     });
     expect(window.cancelAnimationFrame).toHaveBeenCalled();
+  });
+
+  it('normalizes URL frames before encoding, like the static canvas and SVG export', async () => {
+    const config = {
+      ...DEFAULT_CONFIG,
+      type: QRType.URL,
+      animationValues: ['example.com/frame-1'],
+      isAnimating: true,
+      animationFps: 30,
+    };
+
+    await act(async () => {
+      render(<QRCanvas config={config} />);
+    });
+
+    await vi.waitFor(() => {
+      expect(QRCode.create).toHaveBeenCalledWith('https://example.com/frame-1', expect.any(Object));
+    });
+    expect(QRCode.create).not.toHaveBeenCalledWith('example.com/frame-1', expect.any(Object));
+  });
+
+  it('encodes non-URL frames verbatim', async () => {
+    const config = {
+      ...DEFAULT_CONFIG,
+      type: QRType.TEXT,
+      value: 'plain text',
+      animationValues: ['example.com/frame-1'],
+      isAnimating: true,
+      animationFps: 30,
+    };
+
+    await act(async () => {
+      render(<QRCanvas config={config} />);
+    });
+
+    await vi.waitFor(() => {
+      expect(QRCode.create).toHaveBeenCalledWith('example.com/frame-1', expect.any(Object));
+    });
   });
 });

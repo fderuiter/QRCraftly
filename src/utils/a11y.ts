@@ -1,5 +1,5 @@
 import { QRType } from '../types';
-import { QR_GENERATORS } from './qrHelpers';
+import { QR_GENERATORS } from '@/packages/qr-payload';
 
 export function combineIds(...ids: (string | undefined | null | false)[]): string | undefined {
   const combined = ids.filter(Boolean).join(' ');

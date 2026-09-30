@@ -24,7 +24,8 @@ import { vi, afterEach, expect } from 'vitest';
 import { isDangerousUrl } from './src/utils/security';
 import { applyOpticalSimulationMath } from './src/packages/scannability/opticalSimulation';
 import QRCode from 'qrcode';
-import { setQrCanvasRuntime, fromQrcodePackage } from './src/utils/qrCanvasRuntime';
+import { fromQrcodePackage } from './src/packages/qr-matrix';
+import { setQrCanvasRuntime } from './src/utils/qrCanvasRuntime';
 
 
 declare module 'vitest' {

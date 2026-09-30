@@ -18,7 +18,7 @@ import {
   MeetingData,
   SocialData,
 } from "../../types";
-import { QR_GENERATORS } from "../../utils/qrHelpers";
+import { QR_GENERATORS } from "@/packages/qr-payload";
 
 import { UrlInput } from "./UrlInput";
 import { TextInput } from "./TextInput";

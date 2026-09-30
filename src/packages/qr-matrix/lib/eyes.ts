@@ -17,7 +17,7 @@
 */
 
 import { QRConfig } from '@/types';
-import { drawEyeFrame, drawEyeball } from '@/utils/canvasHelpers';
+import { drawEyeFrame, drawEyeball } from './canvasHelpers';
 import { ModuleRenderOptions, sampleCellLuminances } from './modules';
 import { getLuminance } from '@/utils/colorUtils';
 

@@ -8,7 +8,7 @@ import {
   drawStar,
   drawCircularModule,
   drawCircuitModule,
-} from '@/utils/canvasHelpers';
+} from './canvasHelpers';
 
 interface MazeNode {
   r: number;

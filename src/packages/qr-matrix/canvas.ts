@@ -16,8 +16,18 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-// Re-export generic URL utility
-export * from './url';
-
-// Re-export QR Payload and Generator Engine
-export * from '@/packages/qr-payload';
+/**
+ * Canvas drawing primitives shared by the module renderers, the SVG context and the
+ * social templates (rounded rects, polygons, stars and the module shape painters).
+ */
+export {
+  clampCornerRadius,
+  drawRoundRect,
+  drawPoly,
+  drawStar,
+  drawRoughRect,
+  drawScribble,
+  drawCircularModule,
+  drawCircuitModule,
+  drawStandardModule,
+} from './lib/canvasHelpers';

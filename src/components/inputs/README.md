@@ -51,7 +51,7 @@ export const WifiInput: React.FC<WifiInputProps> = ({ data, onChange }) => {
 ## Adding a New Input Type
 
 1.  Define the data structure in `src/types.ts`.
-2.  Create the payload generator (construction, hydration, and parsing) in `src/packages/qr-payload/lib/generators/` and register it in `src/packages/qr-payload/lib/registry.ts`. `src/utils/qrHelpers.ts` is only a re-export shim.
+2.  Create the payload generator (construction, hydration, and parsing) in `src/packages/qr-payload/lib/generators/` and register it in `src/packages/qr-payload/lib/registry.ts`. Import generators from `@/packages/qr-payload`; there is no `utils` shim.
 3.  Create a new component file in this directory (e.g., `NewTypeInput.tsx`).
 4.  Register the component, its initial state, and helpers in `src/components/inputs/InputRegistry.ts`.
 5.  Add the new type to the `TypeSelector` options and its route to `QR_TYPE_ROUTES` in `src/data/navigation.ts` (with a matching page under `src/pages/`).

@@ -1,23 +1,5 @@
-import { QRConfig } from '../types';
-
-interface MazeNode {
-  r: number;
-  c: number;
-}
-
-interface MazeEdge {
-  u: MazeNode;
-  v: MazeNode;
-}
-
-export interface MazeData {
-  nodes: MazeNode[];
-  edges: MazeEdge[];
-  start: MazeNode | null;
-  end: MazeNode | null;
-  key: MazeNode | null;
-  solution: MazeNode[];
-}
+import type { QRConfig } from '@/types';
+import type { MazeData } from './maze';
 
 export interface MazeWorkerRequest {
   size: number;

@@ -17,7 +17,7 @@
 */
 
 import { describe, it, expect } from 'vitest';
-import { SvgContext } from './svgContext';
+import { SvgContext } from '../index';
 
 describe('SvgContext', () => {
   describe('serialize', () => {

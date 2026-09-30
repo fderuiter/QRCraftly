@@ -17,22 +17,9 @@
 */
 
 export {
-  renderMaze,
-  generateMaze,
-  getMazeCacheKey,
-  getCachedMaze,
-  storeMaze,
-  clearMazeCache,
-  getStyleAdaptiveMazePathWidth,
-  isBridgeCell,
-  isFinderPatternWithMargin,
-  type MazeData,
-} from './lib/maze';
-export {
-  isMazeWorkerRequest,
-  assertMazeWorkerRequest,
-  isMazeWorkerResponse,
-  assertMazeWorkerResponse,
-  type MazeWorkerRequest,
-  type MazeWorkerResponse,
-} from './lib/mazeContract';
+  generateQRSvg,
+  rasterizeSvgToCanvas,
+  validateSvgScannability,
+} from './lib/svgExport';
+export { SvgContext } from './lib/svgContext';
+export { drawWithTemplate, SOCIAL_DIMENSIONS } from './lib/templateRenderer';

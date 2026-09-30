@@ -15,7 +15,7 @@
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
-import { QRStyle } from '../types';
+import { QRStyle } from '@/types';
 
 /**
  * Clamps the corner radius so it doesn't exceed half of the width or height,

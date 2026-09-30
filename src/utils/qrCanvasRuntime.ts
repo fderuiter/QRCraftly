@@ -16,14 +16,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import type { QRErrorCorrectionLevel, QRModules } from '../types';
-
-/**
- * The part of the `qrcode` encoder that the canvas uses on the main thread.
- */
-export interface QrEncoder {
-  create(value: string, options: { errorCorrectionLevel: QRErrorCorrectionLevel }): { modules: QRModules };
-}
+import { createMatrixWorker, createMazeWorker, loadQrEncoder, type QrEncoder } from '@/packages/qr-matrix';
 
 /**
  * Dependencies of `QRCanvas` that differ between environments.
@@ -41,26 +34,10 @@ export interface QrCanvasRuntime {
   loadEncoder: () => QrEncoder | Promise<QrEncoder>;
 }
 
-/**
- * Adapts the `qrcode` package, whose modules report 0 or 1, to the boolean `QRModules` contract.
- */
-export function fromQrcodePackage(qrcode: Pick<typeof import('qrcode'), 'create'>): QrEncoder {
-  return {
-    create: (value, options) => {
-      const { modules } = qrcode.create(value, options);
-      return { modules: { size: modules.size, get: (row, col) => Boolean(modules.get(row, col)) } };
-    },
-  };
-}
-
-const hasWorker = (): boolean => typeof window !== 'undefined' && typeof Worker !== 'undefined';
-
 const defaultRuntime: QrCanvasRuntime = {
-  createMatrixWorker: () =>
-    hasWorker() ? new Worker(new URL('./matrixWorker.ts', import.meta.url), { type: 'module' }) : null,
-  createMazeWorker: () =>
-    hasWorker() ? new Worker(new URL('./mazeWorker.ts', import.meta.url), { type: 'module' }) : null,
-  loadEncoder: () => import('qrcode').then((mod) => fromQrcodePackage(mod.default ?? mod)),
+  createMatrixWorker,
+  createMazeWorker,
+  loadEncoder: loadQrEncoder,
 };
 
 let activeRuntime: QrCanvasRuntime = defaultRuntime;

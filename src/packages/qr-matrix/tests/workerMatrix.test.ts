@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach, beforeAll } from 'vitest';
-import { QRConfig, QRType, QRStyle, QRErrorCorrectionLevel, SocialFormat, TemplateStyle } from '../types';
+import { QRConfig, QRType, QRStyle, QRErrorCorrectionLevel, SocialFormat, TemplateStyle } from '@/types';
 
-describe('matrixWorker', () => {
+describe('Matrix Worker', () => {
   let workerHandler: any;
   let originalPostMessage: any;
 
@@ -10,7 +10,7 @@ describe('matrixWorker', () => {
       (globalThis as any).self = globalThis;
     }
     // Capture the worker's onmessage handler
-    await import('./matrixWorker');
+    await import('../worker-matrix');
     workerHandler = globalThis.onmessage;
   });
 

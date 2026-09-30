@@ -16,17 +16,17 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { QRConfig, QRType, TemplateStyle, SocialFormat } from '../types';
+import { QRConfig, TemplateStyle, SocialFormat } from '@/types';
 import { SvgContext } from './svgContext';
 import { drawWithTemplate, SOCIAL_DIMENSIONS } from './templateRenderer';
-import { getQrTypeLabel, getQrTypeDescription } from './a11y';
+import { getQrTypeLabel, getQrTypeDescription } from '@/utils/a11y';
 
-import { SafeUrlPipeline, normalizeUrl, shouldNormalizeUrl } from './url';
-import { getCachedAsset } from './assetCache';
-import { sanitizeSvg } from './security';
-import { performScannabilityCheck } from './scannabilityChecker';
+import { SafeUrlPipeline, normalizeUrl } from '@/utils/url';
+import { getCachedAsset } from '@/utils/assetCache';
+import { sanitizeSvg } from '@/utils/security';
+import { performScannabilityCheck } from '@/utils/scannabilityChecker';
 
-import { ModuleRenderOptions } from '@/packages/qr-matrix';
+import { buildMatrix, loadQrEncoder, type ModuleRenderOptions } from '@/packages/qr-matrix';
 
 /**
  * Converts an image URL to a base64 data-URL so it can be embedded inline in
@@ -140,17 +140,8 @@ export async function generateQRSvg(
   config: QRConfig,
   options?: { onLogoOmitted?: () => void; renderOptions?: ModuleRenderOptions }
 ): Promise<string> {
-  // Dynamically import qrcode to match the pattern used elsewhere in the project
-  const QRCode = await import('qrcode');
-  let val = config.value;
-  if (config.type === QRType.URL && shouldNormalizeUrl(val)) {
-    val = normalizeUrl(val);
-  }
-  const qrData = QRCode.create(val, { errorCorrectionLevel: config.errorCorrectionLevel });
-  // The qrcode library's BitMatrix.get() returns a number (truthy for dark modules).
-  // Our QRModules interface expects boolean, but all consumers treat it as truthy/falsy,
-  // so the cast is safe.
-  const modules = qrData.modules as unknown as import('../types').QRModules;
+  // The encoder is loaded lazily so `qrcode` stays out of the main bundle.
+  const modules = buildMatrix(config, await loadQrEncoder());
   const moduleCount = modules.size;
 
   // Pre-resolve logo images to inline data-URLs

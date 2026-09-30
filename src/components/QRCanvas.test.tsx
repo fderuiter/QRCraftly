@@ -28,7 +28,6 @@ import { setQrCanvasRuntime } from '../utils/qrCanvasRuntime';
 
 vi.mock('qrcode', async () => (await import('../../tests/fixtures/fakeQrcode')).createFakeQrcodeModule());
 useQrcodeAsCanvasEncoder(QRCode);
-import '../utils/qrHelpers';
 
 // Mock qrcode module
 

@@ -18,7 +18,7 @@
 
 import { RefObject, useCallback } from 'react';
 import { QRConfig, TemplateStyle, SocialFormat } from '../types';
-import { generateQRSvg, validateSvgScannability } from '../utils/svgExport';
+import { generateQRSvg, validateSvgScannability } from '@/packages/qr-export';
 import { useCapabilities } from './useCapabilities';
 import { performScannabilityCheck } from '../utils/scannabilityChecker';
 import { ExportOptions } from '../utils/exportRiskPolicy';

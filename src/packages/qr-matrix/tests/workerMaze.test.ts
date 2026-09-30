@@ -4,8 +4,8 @@ import {
   assertMazeWorkerRequest,
   isMazeWorkerResponse,
   assertMazeWorkerResponse,
-} from './mazeContract';
-import { QRStyle, QRType, QRErrorCorrectionLevel } from '../types';
+} from '../maze';
+import { QRStyle, QRType, QRErrorCorrectionLevel } from '@/types';
 
 describe('Maze Worker & Contract Validation', () => {
   let workerHandler: any;
@@ -13,7 +13,7 @@ describe('Maze Worker & Contract Validation', () => {
 
   beforeAll(async () => {
     // Dynamically import once to set self.onmessage and capture it
-    await import('./mazeWorker');
+    await import('../worker-maze');
     workerHandler = (globalThis as any).onmessage;
   });
 

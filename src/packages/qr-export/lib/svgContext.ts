@@ -16,7 +16,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { clampCornerRadius } from './canvasHelpers';
+import { clampCornerRadius } from '@/packages/qr-matrix/canvas';
 
 /**
  * A 2D affine transformation matrix in column-major form:

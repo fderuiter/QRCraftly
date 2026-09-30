@@ -17,22 +17,23 @@
 */
 
 import React, { useEffect, useRef, useCallback, useState, useMemo } from 'react';
-import { QRConfig, SocialFormat, TemplateStyle, QRModules, QRType } from '../types';
+import { QRConfig, SocialFormat, TemplateStyle, QRModules } from '../types';
 import { drawQR, drawQRInternal } from '../utils/qrRenderer';
-import { drawWithTemplate, SOCIAL_DIMENSIONS } from '../utils/templateRenderer';
+import { drawWithTemplate, SOCIAL_DIMENSIONS } from '@/packages/qr-export';
 import { useImage } from '../hooks/useImage';
 import { validateConfig } from '@/packages/qr-payload';
 import { Alert } from './ui/Alert';
 import { useOptionalQRStoreSelector } from '../context/QRContext';
-import { generateMaze, getMazeCacheKey, storeMaze } from '@/packages/qr-matrix/maze';
-import { getQrCanvasRuntime, type QrEncoder } from '../utils/qrCanvasRuntime';
-import { normalizeUrl, shouldNormalizeUrl } from '../utils/url';
 import {
+  generateMaze,
+  getMazeCacheKey,
+  storeMaze,
   isMazeWorkerRequest,
-  isMazeWorkerResponse,
   assertMazeWorkerResponse,
   type MazeData,
-} from '../utils/mazeContract';
+} from '@/packages/qr-matrix/maze';
+import { buildMatrix, type QrEncoder } from '@/packages/qr-matrix';
+import { getQrCanvasRuntime } from '../utils/qrCanvasRuntime';
 
 /**
  * Props for the QRCanvas component.
@@ -149,8 +150,11 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
       try {
         const cached = activeAnimationValues.map((val) => {
           try {
-            const data = QRCode.create(val, { errorCorrectionLevel: config.errorCorrectionLevel });
-            return { value: val, modules: data.modules };
+            const modules = buildMatrix(
+              { type: config.type, value: val, errorCorrectionLevel: config.errorCorrectionLevel },
+              QRCode
+            );
+            return { value: val, modules };
           } catch (e) {
             console.warn("QR precompute failed for value:", val, e);
             return null;
@@ -166,7 +170,7 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
       isMounted = false;
       cachedFramesRef.current = [];
     };
-  }, [activeAnimationValues, config.errorCorrectionLevel]);
+  }, [activeAnimationValues, config.type, config.errorCorrectionLevel]);
 
   // Direct canvas animation loop using requestAnimationFrame, bypassing React updates
   useEffect(() => {
@@ -308,11 +312,7 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
 
       worker.onmessage = (e) => {
         // Strictly validate message format at runtime
-        if (!isMazeWorkerResponse(e.data)) {
-          assertMazeWorkerResponse(e.data);
-        } else {
-          assertMazeWorkerResponse(e.data);
-        }
+        assertMazeWorkerResponse(e.data);
 
         const { status, sequenceId, mazeData, error } = e.data;
         if (sequenceId !== mazeSequenceIdRef.current) {
@@ -596,14 +596,7 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
             return;
           }
 
-          let val = currentConfig.value;
-          if (currentConfig.type === QRType.URL && shouldNormalizeUrl(val)) {
-            val = normalizeUrl(val);
-          }
-          const data = QRCode.create(val, {
-            errorCorrectionLevel: currentConfig.errorCorrectionLevel,
-          });
-          const modules: QRModules = data.modules;
+          const modules = buildMatrix(currentConfig, QRCode);
           lastModulesRef.current = modules;
           paintMatrix(modules);
         } catch (e) {
