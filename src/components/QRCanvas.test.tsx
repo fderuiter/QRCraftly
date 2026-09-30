@@ -16,24 +16,90 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-
 import { render, screen, waitFor, act } from '@testing-library/react';
-import { vi, describe, it, expect, beforeEach, Mock } from 'vitest';
+import { vi, describe, it, expect, beforeEach, afterEach, type Mock } from 'vitest';
 import QRCanvas from './QRCanvas';
 import { DEFAULT_CONFIG } from '../constants';
-import { QRStyle, LogoPaddingStyle, QRErrorCorrectionLevel, SocialFormat, QRType } from '../types';
+import {
+  QRStyle,
+  LogoPaddingStyle,
+  QRErrorCorrectionLevel,
+  SocialFormat,
+  QRType,
+  QRConfig,
+} from '../types';
 import QRCode from 'qrcode';
 import { useQrcodeAsCanvasEncoder } from '../../tests/fixtures/fakeQrcode';
 import { setQrCanvasRuntime } from '../utils/qrCanvasRuntime';
+import React from 'react';
 
 vi.mock('qrcode', async () => (await import('../../tests/fixtures/fakeQrcode')).createFakeQrcodeModule());
-useQrcodeAsCanvasEncoder(QRCode);
-import '../utils/qrHelpers';
 
-// Mock qrcode module
+/** The real encoder, for the border specs that render a genuine QR code instead of the fake 21x21 matrix. */
+const realQrcode = await vi.importActual<typeof import('qrcode')>('qrcode');
 
+/**
+ * getContext is already a mock from vitest.setup.ts, so `vi.spyOn` in the specs below reuses it and
+ * replaces its implementation. Put the setup's pixel-tracking context back after every test.
+ */
+const setupGetContext = vi.mocked(HTMLCanvasElement.prototype.getContext).getMockImplementation();
+afterEach(() => {
+  if (setupGetContext) vi.mocked(HTMLCanvasElement.prototype.getContext).mockImplementation(setupGetContext);
+});
+
+/** A spy-backed 2D context covering every canvas call QRCanvas makes. */
+function createMockContext() {
+  return {
+    arc: vi.fn(),
+    beginPath: vi.fn(),
+    bezierCurveTo: vi.fn(),
+    clearRect: vi.fn(),
+    closePath: vi.fn(),
+    drawImage: vi.fn(),
+    fill: vi.fn(),
+    fillRect: vi.fn(),
+    fillText: vi.fn(),
+    lineTo: vi.fn(),
+    moveTo: vi.fn(),
+    quadraticCurveTo: vi.fn(),
+    rect: vi.fn(),
+    restore: vi.fn(),
+    rotate: vi.fn(),
+    roundRect: vi.fn(),
+    save: vi.fn(),
+    scale: vi.fn(),
+    setLineDash: vi.fn(),
+    stroke: vi.fn(),
+    strokeRect: vi.fn(),
+    translate: vi.fn(),
+    measureText: vi.fn().mockReturnValue({ width: 10 }),
+    canvas: { width: 0, height: 0 },
+    fillStyle: '',
+    strokeStyle: '',
+    lineWidth: 0,
+    font: '',
+    textAlign: '',
+    textBaseline: '',
+  };
+}
+
+/** Replaces window.Image with an inert stand-in that never loads; specs trigger onload themselves. */
+function stubWindowImage(onCreate?: (image: object) => void) {
+  window.Image = class {
+    onload: (() => void) | null = null;
+    onerror: (() => void) | null = null;
+    src = '';
+    complete = false;
+    crossOrigin = '';
+    constructor() {
+      onCreate?.(this);
+    }
+  } as unknown as typeof Image;
+}
 
 describe('QRCanvas Component', () => {
+  useQrcodeAsCanvasEncoder(QRCode);
+
   let mockContext: any;
   let mockModules: any;
   let createdImages: any[];
@@ -42,29 +108,7 @@ describe('QRCanvas Component', () => {
     vi.clearAllMocks(); // Clear call history
 
     // Setup Mock Canvas Context
-    mockContext = {
-      clearRect: vi.fn(),
-      fillRect: vi.fn(),
-      roundRect: vi.fn(),
-      quadraticCurveTo: vi.fn(),
-      beginPath: vi.fn(),
-      fill: vi.fn(),
-      arc: vi.fn(),
-      rect: vi.fn(),
-      save: vi.fn(),
-      translate: vi.fn(),
-      rotate: vi.fn(),
-      restore: vi.fn(),
-      scale: vi.fn(),
-      drawImage: vi.fn(),
-      moveTo: vi.fn(),
-      lineTo: vi.fn(),
-      closePath: vi.fn(),
-      stroke: vi.fn(),
-      bezierCurveTo: vi.fn(),
-      canvas: { width: 0, height: 0 },
-      fillStyle: '',
-    };
+    mockContext = createMockContext();
 
     // Mock getContext
     vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation((contextId) => {
@@ -92,17 +136,7 @@ describe('QRCanvas Component', () => {
     });
 
     createdImages = [];
-    class MockImage {
-      onload: (() => void) | null = null;
-      onerror: (() => void) | null = null;
-      src = '';
-      complete = false;
-      crossOrigin = '';
-      constructor() {
-        createdImages.push(this);
-      }
-    }
-    window.Image = MockImage as any;
+    stubWindowImage(image => createdImages.push(image));
   });
 
   
@@ -597,6 +631,893 @@ describe('QRCanvas Component', () => {
         const fallbackCall = spyGenerateMaze.mock.calls.find(call => call[1].isMazeBridgesEnabled === false);
         expect(fallbackCall).toBeDefined();
       });
+    });
+  });
+});
+
+describe('QRCanvas Rendering Logic Extended', () => {
+  useQrcodeAsCanvasEncoder(QRCode);
+
+  let mockContext: any;
+  let mockModules: any;
+
+  beforeEach(() => {
+    vi.clearAllMocks(); // Clear call history
+
+    // Setup Mock Canvas Context
+    mockContext = createMockContext();
+
+    // Mock getContext
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation((contextId) => {
+      if (contextId === '2d') {
+        return mockContext;
+      }
+      return null;
+    });
+
+    // Setup Mock QRCode Data
+    const size = 21;
+    mockModules = {
+      size: size,
+      get: vi.fn().mockReturnValue(false),
+    };
+
+    (QRCode.create as unknown as Mock).mockReturnValue({
+      modules: mockModules,
+    });
+
+    stubWindowImage();
+  });
+
+  
+  // Helper to trigger specific module state
+  const setModule = (r: number, c: number, val: boolean) => {
+      mockModules.get.mockImplementation((row: number, col: number) => {
+          if (row === r && col === c) return val;
+          return false;
+      });
+  };
+
+  it('draws FLUID style correctly (using curves)', async () => {
+      setModule(10, 10, true);
+      const config = { ...DEFAULT_CONFIG, style: QRStyle.FLUID };
+      render(<QRCanvas config={config} />);
+
+      await waitFor(() => {
+          expect(mockContext.quadraticCurveTo).toHaveBeenCalled();
+          expect(mockContext.fill).toHaveBeenCalled();
+      });
+  });
+
+  it('draws GRUNGE style correctly (using rough rect / rotation)', async () => {
+      setModule(10, 10, true);
+      const config = { ...DEFAULT_CONFIG, style: QRStyle.GRUNGE };
+      render(<QRCanvas config={config} />);
+
+      await waitFor(() => {
+          expect(mockContext.save).toHaveBeenCalled();
+          expect(mockContext.rotate).toHaveBeenCalled();
+          expect(mockContext.restore).toHaveBeenCalled();
+          expect(mockContext.fillRect).toHaveBeenCalled();
+      });
+  });
+
+  it('draws CIRCUIT style correctly (full square + notches)', async () => {
+      setModule(10, 10, true);
+      const config = { ...DEFAULT_CONFIG, style: QRStyle.CIRCUIT };
+      render(<QRCanvas config={config} />);
+
+      await waitFor(() => {
+          // Should use roundRect for the main body
+          expect(mockContext.quadraticCurveTo).toHaveBeenCalled();
+          expect(mockContext.fill).toHaveBeenCalled();
+          // And potentially fillRect for connections (though none here)
+      });
+  });
+
+  it('draws Border DOTTED style', async () => {
+      const config = { ...DEFAULT_CONFIG, isBorderEnabled: true, borderStyle: 'dotted' as const, borderSize: 0.1 };
+      render(<QRCanvas config={config} />);
+
+      await waitFor(() => {
+          expect(mockContext.setLineDash).toHaveBeenCalledWith(expect.arrayContaining([expect.any(Number), expect.any(Number)]));
+          expect(mockContext.strokeRect).toHaveBeenCalled();
+      });
+  });
+
+  it('draws Border DOUBLE style', async () => {
+      const config = { ...DEFAULT_CONFIG, isBorderEnabled: true, borderStyle: 'double' as const, borderSize: 0.1 };
+      render(<QRCanvas config={config} />);
+
+      await waitFor(() => {
+          // Double style just draws a strokeRect with offset
+          expect(mockContext.strokeRect).toHaveBeenCalled();
+          // It doesn't use setLineDash
+          expect(mockContext.setLineDash).not.toHaveBeenCalledWith(expect.any(Array));
+      });
+  });
+
+  it('draws Border Text Top Center', async () => {
+      const config = { ...DEFAULT_CONFIG, isBorderEnabled: true, borderText: 'TEST', borderTextPosition: 'top-center' as const };
+      render(<QRCanvas config={config} />);
+
+      await waitFor(() => {
+          expect(mockContext.fillText).toHaveBeenCalledWith('TEST', expect.any(Number), expect.any(Number));
+          // Verify Y position is small (near top)
+          const call = mockContext.fillText.mock.calls[0];
+          expect(call[2]).toBeLessThan(1024 / 2); // y < half height
+      });
+  });
+
+  it('uses manual drawRoundRect fallback if ctx.roundRect is missing', async () => {
+      // Delete roundRect from mock
+      mockContext.roundRect = undefined;
+
+      setModule(10, 10, true);
+      const config = { ...DEFAULT_CONFIG, style: QRStyle.MODERN }; // Modern uses roundRect
+      render(<QRCanvas config={config} />);
+
+      await waitFor(() => {
+          expect(mockContext.quadraticCurveTo).toHaveBeenCalled();
+          expect(mockContext.moveTo).toHaveBeenCalled();
+          expect(mockContext.lineTo).toHaveBeenCalled();
+          expect(mockContext.closePath).toHaveBeenCalled();
+      });
+  });
+
+  it('draws different eye patterns correctly', async () => {
+     // We just want to ensure specific calls happen for eyes.
+     // Eyes are drawn at (0,0), (0, 14), (14, 0) relative to modules... wait size is 21.
+     // Eyes are top-left, top-right, bottom-left.
+
+     // Check FLUID Eye
+     const fluidConfig = { ...DEFAULT_CONFIG, style: QRStyle.FLUID };
+     render(<QRCanvas config={fluidConfig} />);
+     await waitFor(() => {
+         // Fluid eye uses drawRoundRect for both frame and (squircle) pupil
+         expect(mockContext.quadraticCurveTo).toHaveBeenCalled();
+         expect(mockContext.arc).not.toHaveBeenCalled();
+     });
+
+     // Reset mocks
+     vi.clearAllMocks();
+
+     // Check STARBURST Eye
+     const starConfig = { ...DEFAULT_CONFIG, style: QRStyle.STARBURST };
+     render(<QRCanvas config={starConfig} />);
+     await waitFor(() => {
+         // Starburst uses fillRect for frame (square) and drawStar for pupil
+         // drawStar uses many lineTo calls
+         expect(mockContext.lineTo).toHaveBeenCalled();
+     });
+
+     // Reset mocks
+     vi.clearAllMocks();
+
+     // Check GRUNGE Eye
+     const grungeConfig = { ...DEFAULT_CONFIG, style: QRStyle.GRUNGE };
+     render(<QRCanvas config={grungeConfig} />);
+     await waitFor(() => {
+         // Grunge uses drawRoughRect (rotate) and drawScribble (rotate + loop)
+         expect(mockContext.rotate).toHaveBeenCalled();
+     });
+  });
+});
+
+describe('QRCanvas Batch Rendering', () => {
+  useQrcodeAsCanvasEncoder(QRCode);
+
+  let mockContext: any;
+  let mockModules: any;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    mockContext = createMockContext();
+
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(() => mockContext);
+
+    // 21x21 modules
+    mockModules = {
+      size: 21,
+      get: vi.fn().mockReturnValue(false),
+    };
+
+    (QRCode.create as unknown as Mock).mockReturnValue({
+      modules: mockModules,
+    });
+
+    stubWindowImage();
+  });
+
+  
+  const setModulesPattern = () => {
+      // Set a few modules to true to trigger drawing
+      mockModules.get.mockImplementation((r: number, c: number) => {
+          // Activate a block of modules (6x6 = 36 modules)
+          // Avoid eyes (0-7, 0-7 etc)
+          if (r > 8 && r < 15 && c > 8 && c < 15) return true;
+          return false;
+      });
+  };
+
+  it('batches HIVE style (drawPoly) calls', async () => {
+      setModulesPattern();
+      const config = { ...DEFAULT_CONFIG, style: QRStyle.HIVE };
+      render(<QRCanvas config={config} />);
+
+      // Wait for drawing to happen
+      await waitFor(() => {
+          expect(mockContext.fill).toHaveBeenCalled();
+      });
+
+      const fillCallCount = mockContext.fill.mock.calls.length;
+
+      // With optimization: fill should be called once for background + once for modules batch + 3 eyes = ~5
+      // Without optimization: fill called for every module (36) + eyes + background = >40
+      expect(fillCallCount).toBeLessThan(10);
+  });
+
+  it('batches STARBURST style (drawStar) calls', async () => {
+      setModulesPattern();
+      const config = { ...DEFAULT_CONFIG, style: QRStyle.STARBURST };
+      render(<QRCanvas config={config} />);
+
+      await waitFor(() => {
+          expect(mockContext.fill).toHaveBeenCalled();
+      });
+
+      const fillCallCount = mockContext.fill.mock.calls.length;
+      expect(fillCallCount).toBeLessThan(10);
+  });
+
+  it('batches GRUNGE style (drawRoughRect) calls', async () => {
+      setModulesPattern();
+      const config = { ...DEFAULT_CONFIG, style: QRStyle.GRUNGE };
+      render(<QRCanvas config={config} />);
+
+      await waitFor(() => {
+        // Wait for rendering to start.
+        // In unoptimized mode, fillRect is called.
+        // In optimized mode, fill is called.
+        // So we wait for clearRect which means render cycle started,
+        // but we need to wait for actual drawing commands.
+        // Let's wait for fillRect (background uses it)
+        expect(mockContext.fillRect).toHaveBeenCalled();
+      });
+
+      // Allow some time for module loop to finish if it's async/heavy?
+      // No, it's synchronous inside useEffect.
+
+      const fillRectCount = mockContext.fillRect.mock.calls.length;
+
+      // With optimization: fillRect only used for eyes (frames + holes) + background = ~4-10
+      // Modules use rect().
+      // Without optimization: fillRect called for every module (36) + eyes + background = >40
+      expect(fillRectCount).toBeLessThan(20);
+
+      // And we expect fill() to be called for the modules batch (if optimized)
+      // If unoptimized, fill() is NOT called for modules (only background if border enabled? No default border is disabled).
+      // Wait, background uses fillRect.
+      expect(mockContext.fill).toHaveBeenCalled();
+  });
+});
+
+describe('QRCanvas Circuit Style Bug', () => {
+  useQrcodeAsCanvasEncoder(QRCode);
+
+  let mockModules: any;
+
+  beforeEach(() => {
+    vi.clearAllMocks(); // Clear call history
+
+    // Setup Mock QRCode Data
+    const size = 21;
+    mockModules = {
+      size: size,
+      get: vi.fn().mockReturnValue(false),
+    };
+
+    (QRCode.create as unknown as Mock).mockReturnValue({
+      modules: mockModules,
+    });
+
+    stubWindowImage();
+  });
+
+  it('draws traces centered on cell axes for CIRCUIT style', async () => {
+     // Setup modules such that we have a connection
+     // Let's test connection to the Right (col+1)
+     // Cell at (10, 10) connects to (10, 11)
+     mockModules.get.mockImplementation((r: number, c: number) => {
+        if (r === 10 && c === 10) return true;
+        if (r === 10 && c === 11) return true; // Right neighbor
+        return false;
+     });
+
+     const config = { ...DEFAULT_CONFIG, style: QRStyle.CIRCUIT, value: 'test' };
+     const size = 100;
+     const { container } = render(<QRCanvas config={config} size={size} />);
+
+     await waitFor(() => {
+        expect(QRCode.create).toHaveBeenCalled();
+     });
+
+     const canvas = container.querySelector('canvas') as HTMLCanvasElement;
+     const ctx = canvas.getContext('2d') as any;
+
+     // Calculate expected coordinates
+     const moduleCount = 21;
+     const displaySize = size; // 100
+     const minBorderPx = (4 * displaySize) / (moduleCount + 8);
+     const cellSize = (displaySize - 2 * minBorderPx) / moduleCount; // 100 / 21 ~= 4.76
+
+     const r = 10;
+     const c = 10;
+
+     const x = minBorderPx + c * cellSize;
+     const y = minBorderPx + r * cellSize;
+     const cx = x + cellSize / 2;
+     const cy = y + cellSize / 2;
+
+     // Main cell (10, 10) should be filled
+     expect(ctx.isFilled(cx, cy)).toBe(true);
+
+     // Connected right cell (10, 11) should be filled
+     expect(ctx.isFilled(cx + cellSize, cy)).toBe(true);
+
+     // Unconnected left cell (10, 9) should be empty
+     expect(ctx.isFilled(cx - cellSize, cy)).toBe(false);
+
+     // Unconnected top cell (9, 10) should be empty
+     expect(ctx.isFilled(cx, cy - cellSize)).toBe(false);
+
+     // Unconnected bottom cell (11, 10) should be empty
+     expect(ctx.isFilled(cx, cy + cellSize)).toBe(false);
+  });
+
+  it('draws vertical traces centered on cell axes for CIRCUIT style', async () => {
+     // Setup modules such that we have a connection to Bottom
+     // Cell at (10, 10) connects to (11, 10)
+     mockModules.get.mockImplementation((r: number, c: number) => {
+        if (r === 10 && c === 10) return true;
+        if (r === 11 && c === 10) return true; // Bottom neighbor
+        return false;
+     });
+
+     const config = { ...DEFAULT_CONFIG, style: QRStyle.CIRCUIT, value: 'test' };
+     const size = 100;
+     const { container } = render(<QRCanvas config={config} size={size} />);
+
+     await waitFor(() => {
+        expect(QRCode.create).toHaveBeenCalled();
+     });
+
+     const canvas = container.querySelector('canvas') as HTMLCanvasElement;
+     const ctx = canvas.getContext('2d') as any;
+
+     const moduleCount = 21;
+     const displaySize = size;
+     const minBorderPx = (4 * displaySize) / (moduleCount + 8);
+     const cellSize = (displaySize - 2 * minBorderPx) / moduleCount;
+
+     const r = 10;
+     const c = 10;
+
+     const x = minBorderPx + c * cellSize;
+     const y = minBorderPx + r * cellSize;
+     const cx = x + cellSize / 2;
+     const cy = y + cellSize / 2;
+
+     // Main cell (10, 10) should be filled
+     expect(ctx.isFilled(cx, cy)).toBe(true);
+
+     // Connected bottom cell (11, 10) should be filled
+     expect(ctx.isFilled(cx, cy + cellSize)).toBe(true);
+
+     // Unconnected top cell (9, 10) should be empty
+     expect(ctx.isFilled(cx, cy - cellSize)).toBe(false);
+
+     // Unconnected left cell (10, 9) should be empty
+     expect(ctx.isFilled(cx - cellSize, cy)).toBe(false);
+
+     // Unconnected right cell (10, 11) should be empty
+     expect(ctx.isFilled(cx + cellSize, cy)).toBe(false);
+  });
+});
+
+describe('QRCanvas Circuit Style Eye Bracket Bug', () => {
+  useQrcodeAsCanvasEncoder(QRCode);
+
+  let mockContext: any;
+  let mockModules: any;
+
+  beforeEach(() => {
+    vi.clearAllMocks(); // Clear call history
+
+    // Setup Mock Canvas Context
+    mockContext = createMockContext();
+
+    // Mock getContext
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation((contextId) => {
+      if (contextId === '2d') {
+        return mockContext;
+      }
+      return null;
+    });
+
+    // Setup Mock QRCode Data
+    const size = 21;
+    mockModules = {
+      size: size,
+      get: vi.fn().mockReturnValue(false),
+    };
+
+    (QRCode.create as unknown as Mock).mockReturnValue({
+      modules: mockModules,
+    });
+
+    stubWindowImage();
+  });
+
+  
+  it('verifies that the bracket cuts in Circuit style are deep enough (fixed)', async () => {
+     const config = { ...DEFAULT_CONFIG, style: QRStyle.CIRCUIT, value: 'test', eyeColor: '#000000', bgColor: '#ffffff' };
+     const size = 100;
+     render(<QRCanvas config={config} size={size} />);
+
+     await waitFor(() => {
+        expect(QRCode.create).toHaveBeenCalled();
+     });
+
+     const moduleCount = 21;
+     const displaySize = size; // 100
+     const minBorderPx = (4 * displaySize) / (moduleCount + 8);
+     const cellSize = (displaySize - 2 * minBorderPx) / moduleCount;
+
+     // The implementation draws the cuts using fillRect with bgColor
+     // We are looking for the calls to fillRect that make the cuts
+     // The fix sets depth to cellSize * 1.1
+
+     // Top cut: ctx.fillRect(cx - gap/2, y, gap, cellSize * 1.1);
+
+     const calls = mockContext.fillRect.mock.calls;
+
+     // Look for the Top Cut
+     // It should have height = cellSize * 1.1
+     const topCutCall = calls.find((args: any[]) => {
+         const [_dx, _dy, _dw, dh] = args;
+         // Check dimensions
+         const heightMatch = Math.abs(dh - (cellSize * 1.1)) < 0.01;
+         return heightMatch;
+     });
+
+     // Expect to find the cut call
+     expect(topCutCall).toBeDefined();
+
+     // Confirm the depth is correct
+     expect(topCutCall[3]).toBeCloseTo(cellSize * 1.1, 0.001);
+  });
+});
+
+describe('QRCanvas Performance Refactoring', () => {
+  useQrcodeAsCanvasEncoder(QRCode);
+
+  let mockContext: any;
+  let mockModules: any;
+  let createdImages: any[] = [];
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    createdImages = [];
+
+    mockContext = createMockContext();
+
+    // Mock getContext
+    const getContextMock = vi.fn().mockImplementation(() => mockContext);
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(getContextMock);
+
+    // Setup basic modules (21x21)
+    mockModules = {
+      size: 21,
+      get: vi.fn(),
+    };
+
+    (QRCode.create as unknown as Mock).mockReturnValue({
+      modules: mockModules,
+    });
+
+    window.Image = class {
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      src = '';
+      complete = false;
+      crossOrigin = '';
+      naturalHeight = 100;
+
+      constructor() {
+          createdImages.push(this);
+      }
+    } as any;
+  });
+
+  
+  const setupModules = (patternFn: (r: number, c: number) => boolean) => {
+    mockModules.get.mockImplementation(patternFn);
+  };
+
+  it('renders MODERN style correctly using roundRect', async () => {
+    // Activate some modules in the middle
+    setupModules((r, c) => r > 8 && r < 12 && c > 8 && c < 12);
+
+    const config = { ...DEFAULT_CONFIG, style: QRStyle.MODERN };
+    render(<QRCanvas config={config} />);
+
+    await waitFor(() => {
+       // Expect roundRect to be called.
+       // Note: QRCanvas uses drawRoundRect helper which might fallback to paths if roundRect is missing.
+       // JSDOM canvas context might not have roundRect.
+       // We mocked getContext, so mockContext DOES have roundRect spy.
+       // However, drawRoundRect checks `if (ctx.roundRect)`.
+       // Since our mockContext has it, it should be called.
+       expect(mockContext.quadraticCurveTo).toHaveBeenCalled();
+       expect(mockContext.fill).toHaveBeenCalled();
+    });
+  });
+
+  it('renders CIRCUIT style correctly', async () => {
+    setupModules((r, c) => r > 8 && r < 12 && c > 8 && c < 12);
+
+    const config = { ...DEFAULT_CONFIG, style: QRStyle.CIRCUIT };
+    render(<QRCanvas config={config} />);
+
+    await waitFor(() => {
+       expect(mockContext.quadraticCurveTo).toHaveBeenCalled();
+       expect(mockContext.rect).toHaveBeenCalled();
+    });
+  });
+
+  it('handles logo exclusion correctly', async () => {
+    setupModules(() => true);
+
+    const config = {
+        ...DEFAULT_CONFIG,
+        logoUrl: 'https://example.com/logo.png',
+        logoSize: 0.2
+    };
+
+    render(<QRCanvas config={config} />);
+
+    await waitFor(() => {
+        expect(createdImages.length).toBeGreaterThan(0);
+    });
+
+    act(() => {
+        const img = createdImages[0];
+        if (img && img.onload) {
+            img.complete = true;
+            img.onload();
+        }
+    });
+
+    await waitFor(() => {
+        expect(mockContext.drawImage).toHaveBeenCalled();
+    });
+  });
+
+  it('renders STANDARD style using rect', async () => {
+    setupModules((r, c) => r === 10 && c === 10);
+    const config = { ...DEFAULT_CONFIG, style: QRStyle.STANDARD };
+
+    render(<QRCanvas config={config} />);
+
+    await waitFor(() => {
+        expect(mockContext.rect).toHaveBeenCalled();
+    });
+  });
+});
+
+describe('QRCanvas Animation Loop', () => {
+  useQrcodeAsCanvasEncoder(QRCode);
+
+  let mockContext: any;
+  let rafCallback: any = null;
+  let rafId = 0;
+  let mockTime = 1000;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    rafCallback = null;
+    rafId = 0;
+    mockTime = 1000;
+
+    vi.spyOn(performance, 'now').mockImplementation(() => mockTime);
+
+    mockContext = createMockContext();
+
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation((contextId) => {
+      if (contextId === '2d') {
+        return mockContext;
+      }
+      return null;
+    });
+
+    // Mock requestAnimationFrame to capture loop callback
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb: any) => {
+      rafCallback = cb;
+      return ++rafId;
+    });
+
+    vi.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    rafCallback = null;
+    vi.restoreAllMocks();
+  });
+
+  it('pre-calculates and caches frame matrices, and runs animation loop', async () => {
+    const animationValues = ['frame_one', 'frame_two', 'frame_three'];
+    const config = {
+      ...DEFAULT_CONFIG,
+      animationValues,
+      isAnimating: true,
+      animationFps: 30,
+    };
+
+    await act(async () => {
+      render(<QRCanvas config={config} />);
+    });
+
+    // Wait for the asynchronous qrcode module load and precomputation
+    await vi.waitFor(() => {
+      expect(QRCode.create).toHaveBeenCalledWith('frame_one', expect.any(Object));
+      expect(QRCode.create).toHaveBeenCalledWith('frame_two', expect.any(Object));
+      expect(QRCode.create).toHaveBeenCalledWith('frame_three', expect.any(Object));
+    });
+
+    // Verify requestAnimationFrame is called
+    expect(window.requestAnimationFrame).toHaveBeenCalled();
+    expect(rafCallback).not.toBeNull();
+
+    // Advance time to draw frames
+    mockTime += 40; // Advance time by > 33.3ms (for 30fps)
+    await act(async () => {
+      await Promise.resolve(); // Flush microtask queue
+      rafCallback(mockTime);
+    });
+
+    // Clear rect should be called on frame draw
+    expect(mockContext.clearRect).toHaveBeenCalled();
+  });
+
+  it('preserves static canvas dimensions during active looping to prevent buffer clearing and flickering', async () => {
+    const animationValues = ['frame_one', 'frame_two'];
+    const config = {
+      ...DEFAULT_CONFIG,
+      animationValues,
+      isAnimating: true,
+      animationFps: 30,
+    };
+
+    let container: HTMLElement | null = null;
+    await act(async () => {
+      const rendered = render(<QRCanvas config={config} size={512} />);
+      container = rendered.container;
+    });
+
+    const canvas = container!.querySelector('canvas') as HTMLCanvasElement;
+
+    // Wait for the precomputation
+    await vi.waitFor(() => {
+      expect(QRCode.create).toHaveBeenCalledWith('frame_one', expect.any(Object));
+    });
+
+    // Check that the width and height are fixed
+    expect(canvas.width).toBe(512);
+    expect(canvas.height).toBe(512);
+
+    // execute the RAF loop by advancing mockTime
+    mockTime += 50;
+    await act(async () => {
+      await Promise.resolve(); // Flush microtask queue
+      rafCallback(mockTime);
+    });
+
+    // Canvas width and height should remain perfectly static (unchanged)
+    expect(canvas.width).toBe(512);
+    expect(canvas.height).toBe(512);
+  });
+
+  it('stops loop cleanly on component unmount and cancels next requestAnimationFrame', async () => {
+    const animationValues = ['frame_one'];
+    const config = {
+      ...DEFAULT_CONFIG,
+      animationValues,
+      isAnimating: true,
+    };
+
+    let unmount: () => void = () => {};
+    await act(async () => {
+      const rendered = render(<QRCanvas config={config} />);
+      unmount = rendered.unmount;
+    });
+
+    await vi.waitFor(() => {
+      expect(QRCode.create).toHaveBeenCalled();
+    });
+
+    expect(window.requestAnimationFrame).toHaveBeenCalled();
+
+    // Unmount should cancel the RAF
+    await act(async () => {
+      unmount();
+    });
+    expect(window.cancelAnimationFrame).toHaveBeenCalled();
+  });
+});
+
+describe('QRCanvas Border Rendering', () => {
+  useQrcodeAsCanvasEncoder(realQrcode);
+
+  const mockContext = createMockContext();
+
+  const setupCanvasMock = (originalCreateElement: any) => {
+    // Use the original create element to make a real canvas, then mock getContext
+    const canvas = originalCreateElement.call(document, 'canvas');
+    const context = { ...mockContext, canvas };
+    canvas.getContext = vi.fn().mockReturnValue(context);
+    return canvas;
+  };
+
+  it('renders border when enabled', async () => {
+    const originalCreateElement = document.createElement;
+    document.createElement = vi.fn((tagName) => {
+        if (tagName === 'canvas') return setupCanvasMock(originalCreateElement);
+        return originalCreateElement.call(document, tagName);
+    }) as any;
+
+    const config: QRConfig = {
+      ...DEFAULT_CONFIG,
+      isBorderEnabled: true,
+      borderSize: 0.1,
+      borderColor: '#ff0000',
+      bgColor: '#ffffff',
+      value: 'test',
+    };
+
+    render(<QRCanvas config={config} size={100} />);
+
+    await waitFor(() => {
+        expect(mockContext.fillRect).toHaveBeenCalled();
+    });
+
+    const fillRectCalls = mockContext.fillRect.mock.calls;
+
+    // Find the call for the border: 0, 0, 100, 100
+    const borderCall = fillRectCalls.find(call => call[0] === 0 && call[1] === 0 && call[2] === 100 && call[3] === 100);
+    expect(borderCall).toBeTruthy();
+
+    // Find the call for the inner background: 10, 10, 80, 80 (since 0.1 * 100 = 10px border on each side)
+    const innerBgCall = fillRectCalls.find(call => call[0] > 13 && call[0] < 14 && call[2] > 72 && call[2] < 73);
+    expect(innerBgCall).toBeTruthy();
+
+    document.createElement = originalCreateElement;
+  });
+
+  it('does not render border when disabled', async () => {
+    const originalCreateElement = document.createElement;
+    document.createElement = vi.fn((tagName) => {
+        if (tagName === 'canvas') return setupCanvasMock(originalCreateElement);
+        return originalCreateElement.call(document, tagName);
+    }) as any;
+
+    const config: QRConfig = {
+      ...DEFAULT_CONFIG,
+      isBorderEnabled: false,
+      borderSize: 0.1,
+      borderColor: '#ff0000',
+    };
+
+    mockContext.fillRect.mockClear();
+    render(<QRCanvas config={config} size={100} />);
+
+    await waitFor(() => {
+        expect(mockContext.fillRect).toHaveBeenCalled();
+    });
+
+    const fillRectCalls = mockContext.fillRect.mock.calls;
+
+    // Should NOT have inner background fill (10, 10, 80, 80)
+    const innerBgCall = fillRectCalls.find(call => call[0] > 13 && call[0] < 14 && call[2] > 72 && call[2] < 73);
+    expect(innerBgCall).toBeUndefined();
+
+    document.createElement = originalCreateElement;
+  });
+});
+
+describe('QRCanvas Border Extended Features', () => {
+  useQrcodeAsCanvasEncoder(realQrcode);
+
+  let mockContext: any;
+  let createdImages: any[] = [];
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    createdImages = [];
+
+    mockContext = createMockContext();
+
+    // Spy on getContext to return our mock context
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation((contextId) => {
+      if (contextId === '2d') {
+        return mockContext;
+      }
+      return null;
+    });
+
+    stubWindowImage(image => createdImages.push(image));
+  });
+
+  
+  it('renders dashed border style', async () => {
+    const config: QRConfig = {
+      ...DEFAULT_CONFIG,
+      isBorderEnabled: true,
+      borderSize: 0.1,
+      borderColor: '#000000',
+      borderStyle: 'dashed',
+    };
+
+    render(<QRCanvas config={config} size={100} />);
+
+    await waitFor(() => {
+      expect(mockContext.setLineDash).toHaveBeenCalled();
+      expect(mockContext.strokeRect).toHaveBeenCalled();
+    });
+  });
+
+  it('renders border text', async () => {
+    const config: QRConfig = {
+      ...DEFAULT_CONFIG,
+      isBorderEnabled: true,
+      borderSize: 0.1,
+      borderText: 'Scan Me',
+      borderTextPosition: 'bottom-center',
+    };
+
+    render(<QRCanvas config={config} size={100} />);
+
+    await waitFor(() => {
+      expect(mockContext.fillText).toHaveBeenCalledWith('Scan Me', expect.any(Number), expect.any(Number));
+    });
+  });
+
+  it('renders border logo', async () => {
+    const config: QRConfig = {
+      ...DEFAULT_CONFIG,
+      isBorderEnabled: true,
+      borderSize: 0.1,
+      borderLogoUrl: 'data:image/png;base64,fake',
+    };
+
+    render(<QRCanvas config={config} size={100} />);
+
+    // Wait for image to load and draw
+    await waitFor(() => {
+      expect(createdImages.length).toBeGreaterThan(0);
+    });
+
+    act(() => {
+      const img = createdImages[0];
+      if (img && img.onload) {
+        img.complete = true;
+        img.onload();
+      }
+    });
+
+    await waitFor(() => {
+      expect(mockContext.drawImage).toHaveBeenCalled();
     });
   });
 });
