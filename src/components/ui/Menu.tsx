@@ -79,11 +79,6 @@ interface MenuProps {
  * and returns focus to the trigger before running the action. Items are unmounted when
  * closed, so hidden content can never keep focus.
  * @param props - Menu properties.
- * @param props.id
- * @param props.items
- * @param props.renderTrigger
- * @param props.triggerRef
- * @param props.className
  * @returns The menu button and its popup.
  */
 export function Menu({ id, items, renderTrigger, triggerRef: externalTriggerRef, className = '' }: MenuProps) {

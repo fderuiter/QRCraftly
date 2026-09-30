@@ -73,7 +73,6 @@ export function getQrTypeDescription(type: QRType, value: string): string {
 
 /**
  * Announce a message politely to screen readers using a visually hidden live region.
- * @param message
  */
 export function announcePolitely(message: string) {
   if (typeof document === 'undefined') return;

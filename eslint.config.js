@@ -21,6 +21,20 @@ const TEST_FILES = [
 // Node-side tooling: build/audit scripts and root config files.
 const NODE_FILES = ["scripts/**/*.{js,ts,cjs}", "*.config.{js,ts}"];
 
+// JSDoc rules that catch real documentation bugs. The stylistic "require-*" rules are deliberately
+// not enabled: they generated hundreds of empty `/** */` and `@param x` stubs (#982, #992).
+const JSDOC_CORRECTNESS_RULES = {
+  "jsdoc/check-param-names": ["error", { checkDestructured: false }],
+  "jsdoc/check-tag-names": ["error", { typed: true }],
+  "jsdoc/check-alignment": "error",
+  "jsdoc/escape-inline-tags": "error",
+  "jsdoc/no-types": "error",
+  "jsdoc/require-param-name": "error",
+  "jsdoc/no-multi-asterisks": "error",
+  "jsdoc/empty-tags": "error",
+  "jsdoc/no-blank-blocks": "error",
+};
+
 export default tseslint.config(
   {
     ignores: [
@@ -104,10 +118,7 @@ export default tseslint.config(
     ignores: TEST_FILES,
     plugins: { jsdoc },
     settings: { jsdoc: { mode: "typescript" } },
-    rules: {
-      "jsdoc/check-param-names": ["error", { checkDestructured: false }],
-      "jsdoc/escape-inline-tags": "error"
-    }
+    rules: JSDOC_CORRECTNESS_RULES
   },
   {
     files: TEST_FILES,

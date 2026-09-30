@@ -4,26 +4,11 @@ import { PATTERNS, LOW_RELIABILITY_PATTERNS } from '../../constants';
 import { PatternModule } from '../ui/PatternModule';
 import { Alert } from '../ui/Alert';
 
-/**
- *
- */
 interface PatternControlsProps {
-  /**
-   *
-   */
   config: QRConfig;
-  /**
-   *
-   */
   onChange: (updates: Partial<QRConfig>) => void;
 }
 
-/**
- *
- * @param root0
- * @param root0.config
- * @param root0.onChange
- */
 export const PatternControls: React.FC<PatternControlsProps> = ({ config, onChange }) => {
   const isLowReliability = LOW_RELIABILITY_PATTERNS.includes(config.style);
 

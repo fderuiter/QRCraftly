@@ -211,9 +211,6 @@ function drawScene(ctx: CanvasRenderingContext2D, s: Scene) {
  * plasma bolts, a thermal laser and antimatter rockets, with particles and screen shake
  * (both disabled under reduced motion).
  * @param props - Mode properties.
- * @param props.target
- * @param props.settings
- * @param props.announce
  * @returns The blaster.
  */
 export function BlasterMode({ target, settings, announce }: ModeProps) {

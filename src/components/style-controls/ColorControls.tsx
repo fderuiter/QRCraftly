@@ -6,26 +6,11 @@ import { Check } from 'lucide-react';
 import { ColorInput } from '../ui/ColorInput';
 import { ContrastBadge, ContrastBanner } from './ContrastWarning';
 
-/**
- *
- */
 interface ColorControlsProps {
-  /**
-   *
-   */
   config: QRConfig;
-  /**
-   *
-   */
   onChange: (updates: Partial<QRConfig>) => void;
 }
 
-/**
- *
- * @param root0
- * @param root0.config
- * @param root0.onChange
- */
 export const ColorControls: React.FC<ColorControlsProps> = ({ config, onChange }) => {
   const contrastRatios = useMemo(() => {
     const fgContrast = getContrastRatio(config.fgColor, config.bgColor);

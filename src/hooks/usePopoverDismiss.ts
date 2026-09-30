@@ -38,10 +38,6 @@ interface PopoverDismissOptions {
  * - a pointer press outside the container closes it without moving focus;
  * - focus leaving the container (for example with Tab) closes it.
  * @param options - Popup state, refs and close callback.
- * @param options.open
- * @param options.containerRef
- * @param options.triggerRef
- * @param options.onClose
  */
 export function usePopoverDismiss({ open, containerRef, triggerRef, onClose }: PopoverDismissOptions): void {
   const onCloseRef = useRef(onClose);

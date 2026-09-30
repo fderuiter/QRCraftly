@@ -48,10 +48,6 @@ interface TargetSettingsProps {
  * Target configuration: payload, error correction tier, content presets and the
  * "Reset to Generator QR" action.
  * @param props - Panel properties.
- * @param props.target
- * @param props.onChange
- * @param props.onResetToGenerator
- * @param props.hasGeneratorDesign
  * @returns The panel.
  */
 export function TargetSettings({ target, onChange, onResetToGenerator, hasGeneratorDesign }: TargetSettingsProps) {

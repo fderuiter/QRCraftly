@@ -5,9 +5,6 @@ import { Button } from './Button';
 import { useScrollLock } from '../../hooks/useScrollLock';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 
-/**
- *
- */
 interface ModalProps {
   /**
    * Whether the modal is open.

@@ -1,28 +1,10 @@
 import React from 'react';
 
-/**
- *
- */
 interface ToggleSwitchProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange'> {
-  /**
-   *
-   */
   id: string;
-  /**
-   *
-   */
   label: string;
-  /**
-   *
-   */
   checked: boolean;
-  /**
-   *
-   */
   onChange: (checked: boolean) => void;
-  /**
-   *
-   */
   srLabel?: boolean;
   /**
    * Optional custom classes for the label text span
@@ -30,16 +12,6 @@ interface ToggleSwitchProps extends Omit<React.InputHTMLAttributes<HTMLInputElem
   labelClassName?: string;
 }
 
-/**
- *
- * @param root0
- * @param root0.id
- * @param root0.label
- * @param root0.checked
- * @param root0.onChange
- * @param root0.srLabel
- * @param root0.labelClassName
- */
 export const ToggleSwitch: React.FC<ToggleSwitchProps> = ({
   id,
   label,

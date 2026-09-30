@@ -72,9 +72,6 @@ interface ScanHudProps {
  * (Layer 1, updated synchronously on every damage event) beside the empirical scanner
  * verdict (Layer 2, from a real decoder).
  * @param props - HUD properties.
- * @param props.analysis
- * @param props.empirical
- * @param props.isNative
  * @returns The HUD card.
  */
 export function ScanHud({ analysis, empirical, isNative }: ScanHudProps) {

@@ -3,17 +3,8 @@ import { ShieldCheck, Loader2, ShieldX } from 'lucide-react';
 import { ScannabilityStatus, HealthScore } from '../hooks/useScannability';
 import { getExportRiskPolicy } from '../utils/exportRiskPolicy';
 
-/**
- *
- */
 interface Props {
-  /**
-   *
-   */
   status: ScannabilityStatus;
-  /**
-   *
-   */
   health?: HealthScore;
 }
 

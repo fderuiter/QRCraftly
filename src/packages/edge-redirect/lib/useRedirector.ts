@@ -27,91 +27,22 @@ export interface DynamicQRRecord {
  * Represents detailed scan analytics for a dynamic tracking link.
  */
 export interface ScanAnalytics {
-  /**
-   *
-   */
   scans: number;
-  /**
-   *
-   */
-  hourly?: Array<{ /**
-                    *
-                    */
-  hour: string; /**
-                 *
-                 */
-  count: number }>;
-  /**
-   *
-   */
-  daily?: Array<{ /**
-                   *
-                   */
-  date: string; /**
-                 *
-                 */
-  count: number }>;
-  /**
-   *
-   */
-  devices?: { /**
-               *
-               */
-  mobile: number; /**
-                   *
-                   */
-  desktop: number; /**
-                    *
-                    */
-  tablet: number; /**
-                   *
-                   */
-  other: number };
-  /**
-   *
-   */
+  hourly?: Array<{ hour: string; count: number }>;
+  daily?: Array<{ date: string; count: number }>;
+  devices?: { mobile: number; desktop: number; tablet: number; other: number };
   locations?: Record<string, number>;
-  /**
-   *
-   */
   events?: Array<{
-    /**
-     *
-     */
     id: string;
-    /**
-     *
-     */
     timestamp: string;
-    /**
-     *
-     */
     userAgent: string;
-    /**
-     *
-     */
     device: string;
-    /**
-     *
-     */
-    location: { /**
-                 *
-                 */
-    country?: string; /**
-                       *
-                       */
-    region?: string; /**
-                      *
-                      */
-    city?: string };
+    location: { country?: string; region?: string; city?: string };
   }>;
 }
 
 /** Failure of a redirector call, carrying the backend's HTTP status and message when there was one. */
 export interface RedirectorFailure {
-  /**
-   *
-   */
   ok: false;
   /** HTTP status returned by the edge API, or null when no response was received. */
   status: number | null;
@@ -120,19 +51,10 @@ export interface RedirectorFailure {
 }
 
 /** Result of {@link useRedirector}'s `registerRedirect`. */
-export type RegisterResult = { /**
-                                *
-                                */
-ok: true; /**
-           *
-           */
-record: DynamicQRRecord } | RedirectorFailure;
+export type RegisterResult = { ok: true; record: DynamicQRRecord } | RedirectorFailure;
 
 /** Result of {@link useRedirector}'s `updateRedirect`. */
-export type UpdateResult = { /**
-                              *
-                              */
-ok: true } | RedirectorFailure;
+export type UpdateResult = { ok: true } | RedirectorFailure;
 
 function readStoredRecords(): DynamicQRRecord[] {
   try {

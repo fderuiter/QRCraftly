@@ -11,6 +11,8 @@ This catalog serves as the central directory index for all reusable UI component
 
 To eliminate logical UI redundancy, prevent design drift, and maintain robust WCAG accessibility compliance, **all developers must consult this catalog before implementing any new visual elements, slider inputs, or color-related algorithms.** Peer reviewers will actively audit every pull request against this catalog to ensure maximum reuse of pre-existing codebase assets.
 
+Document component props with JSDoc only where the comment adds information. Empty `/** */` blocks and bare `@param name` stubs are rejected by ESLint (`jsdoc/no-blank-blocks`, `jsdoc/check-param-names`), so do not generate them.
+
 ---
 
 ## 1. Core Shared UI Elements (`src/components/ui/`)

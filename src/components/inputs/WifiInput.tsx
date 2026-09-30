@@ -4,26 +4,11 @@ import { TextField, SelectField, CheckboxField } from "../ui/FormFields";
 import { CONTAINMENT_PROFILES } from "@/packages/qr-payload";
 import { FormBlock } from "../ui/FormBlock";
 
-/**
- *
- */
 interface WifiInputProps {
-  /**
-   *
-   */
   data: WifiData;
-  /**
-   *
-   */
   onChange: (updates: Partial<WifiData>) => void;
 }
 
-/**
- *
- * @param root0
- * @param root0.data
- * @param root0.onChange
- */
 export const WifiInput: React.FC<WifiInputProps> = ({ data, onChange }) => {
   const ssidError = data.ssid && CONTAINMENT_PROFILES.STRICT_NO_CONTROL.test(data.ssid)
     ? "Network Name cannot contain control or zero-width characters."

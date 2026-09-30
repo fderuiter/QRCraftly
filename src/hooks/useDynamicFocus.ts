@@ -3,7 +3,6 @@ import { announcePolitely } from '../utils/a11y';
 
 /**
  * Helper to retrieve all form fields (inputs, selects, textareas) inside a container.
- * @param container
  */
 function getFormFields(container: HTMLElement): HTMLElement[] {
   return Array.from(
@@ -15,8 +14,6 @@ function getFormFields(container: HTMLElement): HTMLElement[] {
 
 /**
  * Check if two arrays of HTML elements have exactly the same elements.
- * @param arr1
- * @param arr2
  */
 function areElementsEqual(arr1: HTMLElement[], arr2: HTMLElement[]): boolean {
   if (arr1.length !== arr2.length) return false;
@@ -31,7 +28,6 @@ function areElementsEqual(arr1: HTMLElement[], arr2: HTMLElement[]): boolean {
 
 /**
  * Get a clean name for a form element based on its label or attributes.
- * @param element
  */
 function getElementName(element: HTMLElement): string {
   const id = element.id;

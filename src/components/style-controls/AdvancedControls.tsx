@@ -7,26 +7,11 @@ import { ColorInput } from '../ui/ColorInput';
 import { RangeInput } from '../ui/RangeInput';
 import { getStyleAdaptiveMazePathWidth } from '@/packages/qr-matrix/maze';
 
-/**
- *
- */
 interface AdvancedControlsProps {
-  /**
-   *
-   */
   config: QRConfig;
-  /**
-   *
-   */
   onChange: (updates: Partial<QRConfig>) => void;
 }
 
-/**
- *
- * @param root0
- * @param root0.config
- * @param root0.onChange
- */
 export const AdvancedControls: React.FC<AdvancedControlsProps> = ({ config, onChange }) => {
   const [showAdvanced, setShowAdvanced] = useState(false);
 

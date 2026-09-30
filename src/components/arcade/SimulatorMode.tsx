@@ -116,9 +116,6 @@ function drawBoard(
  * Damage Simulator: precision strikes on modules with four blast radii, artillery barrages,
  * interleaved Reed-Solomon analytics, finder monitoring and a defeat diagnostic.
  * @param props - Mode properties.
- * @param props.target
- * @param props.settings
- * @param props.announce
  * @returns The simulator.
  */
 export function SimulatorMode({ target, settings, announce }: ModeProps) {

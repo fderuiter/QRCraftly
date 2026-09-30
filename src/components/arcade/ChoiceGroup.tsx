@@ -59,16 +59,6 @@ interface ChoiceGroupProps<T extends string> {
  * Selection is shown with the Button `pressed` style; `aria-checked` / `aria-selected`
  * carry the state (`aria-pressed` is not valid on radios or tabs, so it is omitted).
  * @param props - Group properties.
- * @param props.kind
- * @param props.label
- * @param props.choices
- * @param props.value
- * @param props.onChange
- * @param props.className
- * @param props.itemClassName
- * @param props.size
- * @param props.controls
- * @param props.tabId
  * @returns The group.
  */
 export function ChoiceGroup<T extends string>({
