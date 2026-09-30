@@ -8,9 +8,15 @@ vi.mock('jsqr', () => {
   };
 });
 
+const liveWorkers: Worker[] = [];
+
+/** Poll often: these checks wait on real worker round-trips, which are slower under coverage. */
+const WAIT = { timeout: 5000, interval: 2 };
+
 /** The real scannability worker module, run in-thread by the global Worker from vitest.setup.ts. */
 const createScannabilityWorker = async () => {
   const worker = new Worker(new URL('../src/packages/scannability/worker.ts', import.meta.url), { type: 'module' });
+  liveWorkers.push(worker);
   // Wait until the module is evaluated so the timing assertions below measure message handling only.
   await (worker as unknown as { ready: Promise<void> }).ready;
   return worker;
@@ -25,6 +31,8 @@ describe('High-Fidelity Worker Concurrency & Serialization Tests', () => {
   });
 
   afterEach(() => {
+    // Stop every worker so no in-flight decode from one test leaks jsQR calls into the next.
+    liveWorkers.splice(0).forEach(worker => worker.terminate());
     vi.clearAllMocks();
     if (globalThis.mockWorkerControl) {
       globalThis.mockWorkerControl.reset();
@@ -99,7 +107,7 @@ describe('High-Fidelity Worker Concurrency & Serialization Tests', () => {
     });
 
     // Wait for the asynchronous task to complete
-    await new Promise<void>(resolve => setTimeout(resolve, 50));
+    await vi.waitFor(() => expect(receivedResponse?.configId).toBe('sec-check'), WAIT);
 
     expect(receivedResponse).toEqual({
       success: false,
@@ -130,7 +138,7 @@ describe('High-Fidelity Worker Concurrency & Serialization Tests', () => {
       configId: 'safe-check',
     });
 
-    await new Promise<void>(resolve => setTimeout(resolve, 50));
+    await vi.waitFor(() => expect(receivedResponse?.configId).toBe('safe-check'), WAIT);
 
     expect(receivedResponse).toEqual({
       success: true,
@@ -149,8 +157,10 @@ describe('High-Fidelity Worker Concurrency & Serialization Tests', () => {
 
     const worker = await createScannabilityWorker();
     const responses: any[] = [];
+    const finishedAt: number[] = [];
     worker.onmessage = (e: any) => {
       responses.push(e.data);
+      finishedAt.push(performance.now());
     };
 
     vi.mocked(jsQR).mockReturnValue({ data: 'https://safe.com' } as any);
@@ -170,24 +180,23 @@ describe('High-Fidelity Worker Concurrency & Serialization Tests', () => {
       width: 10, height: 10, isTest: true, configId: 'task-3'
     });
 
-    // At t=15ms, none should have completed
+    // With a 30ms delay nothing can finish within the first 15ms.
     await new Promise<void>(resolve => setTimeout(resolve, 15));
     expect(responses).toHaveLength(0);
 
-    // At t=45ms, task-1 should have completed
-    await new Promise<void>(resolve => setTimeout(resolve, 30));
-    expect(responses).toHaveLength(1);
+    // With a concurrency limit of 1 the tasks finish strictly one after another, in order,
+    // each at least one delay after the previous one. Lower bounds only, so a slow run
+    // (for example under coverage instrumentation) cannot fail this.
+    await vi.waitFor(() => expect(responses).toHaveLength(1), WAIT);
     expect(responses[0].configId).toBe('task-1');
 
-    // At t=75ms, task-2 should have completed
-    await new Promise<void>(resolve => setTimeout(resolve, 30));
-    expect(responses).toHaveLength(2);
+    await vi.waitFor(() => expect(responses).toHaveLength(2), WAIT);
     expect(responses[1].configId).toBe('task-2');
+    expect(finishedAt[1] - finishedAt[0]).toBeGreaterThanOrEqual(25);
 
-    // At t=105ms, task-3 should have completed
-    await new Promise<void>(resolve => setTimeout(resolve, 30));
-    expect(responses).toHaveLength(3);
+    await vi.waitFor(() => expect(responses).toHaveLength(3), WAIT);
     expect(responses[2].configId).toBe('task-3');
+    expect(finishedAt[2] - finishedAt[1]).toBeGreaterThanOrEqual(25);
   });
 
   // Requirement 1, 2, 4 & Acceptance Criteria 1, 2: Two-pass sequence of dontInvert followed by an
@@ -220,7 +229,7 @@ describe('High-Fidelity Worker Concurrency & Serialization Tests', () => {
       configId: 'inverted-test',
     });
 
-    await new Promise<void>(resolve => setTimeout(resolve, 50));
+    await vi.waitFor(() => expect(receivedResponse?.configId).toBe('inverted-test'), WAIT);
 
     // Verify two-pass sequence (digital check followed by physical check) was followed with onlyInvert fallback
     expect(optionsPassed).toEqual(['dontInvert', 'attemptBoth', 'dontInvert', 'attemptBoth']);
