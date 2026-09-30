@@ -6,3 +6,4 @@ export * from './LogoControls';
 export * from './PatternControls';
 export * from './ContrastWarning';
 
+export * from './MosaicControls';

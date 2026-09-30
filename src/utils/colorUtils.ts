@@ -41,11 +41,39 @@ export const normalizeHex = (val: string): string | null => {
  * @returns Relative luminance value (0..1).
  */
 export const getLuminanceFromRgb = (r: number, g: number, b: number): number => {
-  const rLin = r <= 0.03928 ? r / 12.92 : Math.pow((r + 0.055) / 1.055, 2.4);
-  const gLin = g <= 0.03928 ? g / 12.92 : Math.pow((g + 0.055) / 1.055, 2.4);
-  const bLin = b <= 0.03928 ? b / 12.92 : Math.pow((b + 0.055) / 1.055, 2.4);
-  return 0.2126 * rLin + 0.7152 * gLin + 0.0722 * bLin;
+  return getLuminanceFromLinearRgb(srgbToLinear(r), srgbToLinear(g), srgbToLinear(b));
 };
+
+/**
+ * Converts one gamma-encoded sRGB channel (0..1) to linear light (0..1).
+ *
+ * @param c - Gamma-encoded channel value (0..1).
+ * @returns Linear-light channel value (0..1).
+ */
+export const srgbToLinear = (c: number): number =>
+  c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+
+/**
+ * Converts one linear-light channel (0..1) back to gamma-encoded sRGB (0..1).
+ * Inverse of {@link srgbToLinear}.
+ *
+ * @param c - Linear-light channel value (0..1).
+ * @returns Gamma-encoded channel value (0..1).
+ */
+export const linearToSrgb = (c: number): number =>
+  c <= 0.03928 / 12.92 ? c * 12.92 : 1.055 * Math.pow(c, 1 / 2.4) - 0.055;
+
+/**
+ * Calculates WCAG relative luminance from linear-light channels (0..1).
+ * Relative luminance is linear in these channels, so scaling all three by `k` scales it by `k`.
+ *
+ * @param r - Red channel in linear light (0..1).
+ * @param g - Green channel in linear light (0..1).
+ * @param b - Blue channel in linear light (0..1).
+ * @returns Relative luminance value (0..1).
+ */
+export const getLuminanceFromLinearRgb = (r: number, g: number, b: number): number =>
+  0.2126 * r + 0.7152 * g + 0.0722 * b;
 
 /**
  * Utility to calculate relative luminance of a color based on the WCAG 2.0 formula.
