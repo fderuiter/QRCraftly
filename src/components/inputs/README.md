@@ -37,7 +37,7 @@ export const WifiInput: React.FC<WifiInputProps> = ({ data, onChange }) => {
 - `TypeSelector.tsx`: The grid of QR types. Each type has its own SEO route (`QR_TYPE_ROUTES` in `src/data/navigation.ts`), so the choices are ordinary links inside a labelled `nav` list, with `aria-current="page"` on the current route. There are no tab roles, no roving tabIndex and no arrow-key interception: Tab moves through the links in document order. Choosing a type is a normal navigation; the URL, metadata, selected link and input panel all come from the route. Nothing is cleared before navigation, and QR content is not carried to the next route or persisted (volatile memory guarantee). Appearance-only settings (colours, style, layout; not content or free text such as template headlines) are carried to the next generator route in memory only, via `QRProvider retainAppearance`.
 - `UrlInput.tsx`: For `QRType.URL`. Handles URL validation and sanitization.
 - `TextInput.tsx`: For `QRType.TEXT`. Includes character counting.
-- `WifiInput.tsx`: For `QRType.WIFI`. Handles SSID, password, encryption type, and hidden network flags.
+- `WifiInput.tsx`: For `QRType.WIFI`. Handles SSID, password, encryption type, hidden network flags, and (for WPA2-Enterprise) the EAP method (`E:`), phase 2 authentication (`PH2:`) and identity (`I:`) fields.
 - `EventInput.tsx`: For `QRType.EVENT`. Builds iCalendar-compatible event payloads.
 - `EmailInput.tsx`: For `QRType.EMAIL`. Fields for address, subject, and body.
 - `VCardInput.tsx`: For `QRType.VCARD`. Complex form for contact details.

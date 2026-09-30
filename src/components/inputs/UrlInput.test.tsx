@@ -38,7 +38,7 @@ describe('UrlInput', () => {
     fireEvent.blur(urlInput);
 
     expect(mockOnChange).toHaveBeenCalledTimes(1);
-    expect(mockOnChange).toHaveBeenCalledWith({ url: 'http://google.com/' });
+    expect(mockOnChange).toHaveBeenCalledWith({ url: 'https://google.com/' });
   });
 
   it('displays validation error for dangerous urls', () => {
