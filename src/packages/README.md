@@ -73,3 +73,12 @@ Boundary checks run automatically during `pnpm run lint` and CI.
   - `client.ts`: Headless React hooks. `useOpticalSender` broadcasts fountain droplets by default, with no handshake frame and every QR at version 7 or lower. `useOpticalReceiver` provides stateless entry and exposes `fountainStats` telemetry (droplets vs K, rank, FPS, ETA). Also exports UI state types.
   - `worker-slice.ts`: Background Web Worker: hashing, `deflate-raw` compression (skipped when it saves less than 5%), density-bounded symbol sizing, and QR matrix generation for droplets or legacy chunks.
   - `worker-reassembly.ts`: Background Web Worker: fountain reassembly (peeling + GF(2) elimination), decompression and SHA-256 verification, plus legacy chunk reassembly.
+
+### `edge-redirect` (`@/packages/edge-redirect`)
+
+- **Purpose**: Server side of Zero-Knowledge Redirection: the hardened `/api/redirect/*` API (ciphertext-only destinations, Turnstile failing closed, Rate Limiting bindings, origin allowlist, body caps) and the `/r/<id>` resolver routing, backed by Cloudflare D1. Not enabled in production yet; see `docs/public/EDGE_ARCHITECTURE.md`.
+- **Entry Points**:
+  - `index.ts`: `handleRedirectApi`, `serveResolverPage`, `routeEdgeRequest`, `MemoryRateLimiter`, `verifyTurnstileWithSiteverify`, limits and binding types.
+  - `worker.ts`: Cloudflare Worker entry (`main` in `wrangler.jsonc` once enabled); falls through to the `ASSETS` binding.
+  - `dev.ts`: Vite dev middleware and in-memory `MockD1Database` so `pnpm dev` works without Cloudflare credentials.
+  - `schema.sql`: D1 schema applied with `pnpm exec wrangler d1 execute`.

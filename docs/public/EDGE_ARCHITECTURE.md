@@ -6,9 +6,11 @@ publish-approved: true
 
 ## Executive Summary
 
-QRCraftly operates on a hybrid edge-native architecture that combines browser-bound static code execution with Cloudflare Workers / Pages Functions serverless edge compute and Cloudflare D1 relational database persistence. While core QR code generation, canvas rendering, and scannability diagnostics are performed locally on client devices via Web Workers, dynamic redirection services (`/r/[id]`), edge server-side rendering (Vike SSR), and high-concurrency scan analytics leverage distributed edge infrastructure.
+QRCraftly is served by **Cloudflare Workers with Static Assets** (ADR 0012). Every page is pre-rendered at build time (Vike SSG) and served from `dist/client`; there is no edge server-side rendering. Core QR code generation, canvas rendering, and scannability diagnostics run locally on client devices via Web Workers.
 
-To preserve end-to-end data privacy across dynamic workflows, QRCraftly implements a client-side zero-knowledge encryption protocol using the Web Crypto API (`AES-GCM`). Decryption keys are stored exclusively in URL anchor hash fragments (`#key=...`), ensuring sensitive target payloads remain isolated in browser memory and are never exposed to edge servers, database stores, or transit logs.
+The only server-side feature is **Zero-Knowledge Redirection** (dynamic QR codes): a small Worker entry (`src/packages/edge-redirect/worker.ts`) stores client-encrypted destinations in Cloudflare D1 and serves the `/r/<id>` resolver. Destinations are encrypted in the browser with AES-GCM and the decryption key lives only in the URL fragment (`#key=...`), so the edge never sees a destination URL.
+
+> **Status: implemented, not enabled.** The Worker entry, its hardening and its tests are in the repository, but `wrangler.jsonc` has no `main`, no Rate Limiting binding and a placeholder D1 `database_id`, and the UI flags `ENABLE_DYNAMIC_TRACKING` / `ENABLE_DYNAMIC_DASHBOARD` are `false`. Production serves static assets only. Follow the [enablement checklist](#enablement-checklist) to turn it on.
 
 ---
 
@@ -17,109 +19,119 @@ To preserve end-to-end data privacy across dynamic workflows, QRCraftly implemen
 ```
 +-----------------------------------------------------------------------------------+
 |                                  Client Browser                                   |
-|  +---------------------------+   +---------------------------------------------+  |
-|  | Web Workers & Canvas      |   | Web Crypto API (AES-GCM)                    |  |
-|  | (Static QR Generation)    |   | Decryption Key in Anchor Hash (#key=...)    |  |
-|  +---------------------------+   +---------------------------------------------+  |
+|  QR generation in Web Workers    |  Web Crypto AES-GCM, key in #key=... fragment  |
 +----------------------------------------|------------------------------------------+
-                                         | HTTP GET /r/[id] (Hash fragment isolated in browser)
+                                         | GET /r/<id>  (fragment never sent)
+                                         | GET /api/redirect/<id>
                                          v
 +-----------------------------------------------------------------------------------+
-|                             Cloudflare Edge Network                               |
-|  +-----------------------------------------------------------------------------+  |
-|  | Vike SSR & Pages Functions Catch-All Interceptor ([[path]].ts)             |  |
-|  | - Evaluates Cache Control & Bypass Rules                                    |  |
-|  | - Pre-renders Dynamic Routes                                                |  |
-|  +-----------------------------------------------------------------------------+  |
-|                                        |                                          |
-|  +-------------------------------------v---------------------------------------+  |
-|  | Dynamic Redirect Engine (/r/[id].ts)                                        |  |
-|  | 1. Read from KV Edge Cache (redirect:<id>)                                 |  |
-|  | 2. Fallback to Primary Cloudflare D1 Relational SQL Database                 |  |
-|  | 3. Asynchronous Non-Blocking Scan Counter & Telemetry (waitUntil)          |  |
-|  +-----------------------------------------------------------------------------+  |
+|                 Cloudflare Workers with Static Assets (one Worker)                |
+|  1. Request matches a file in dist/client  -> served by the asset pipeline        |
+|  2. Otherwise the Worker entry runs (src/packages/edge-redirect/worker.ts):       |
+|     /api/redirect/*  -> redirect API (D1, Rate Limiting, Turnstile)               |
+|     /r/<id>          -> static resolver shell /r/shell/ (404 if id unknown)       |
+|     anything else    -> env.ASSETS (a real 404 stays a 404)                       |
 +-----------------------------------------------------------------------------------+
 ```
 
----
-
-## Edge Server-Side Rendering (SSR)
-
-Server-side pre-rendering and dynamic routing are handled at the edge through Vike and Cloudflare Pages Functions:
-
-1. **Edge Request Interception (`functions/[[path]].ts`):**
-   - Incoming HTTP requests on dynamic, non-static paths are intercepted by a universal Cloudflare Pages Functions catch-all worker.
-   - Static assets (`/assets/*`) and pre-rendered SSG routes are immediately delegated to Cloudflare Pages static asset storage via `context.next()`.
-2. **Vike Edge SSR Engine:**
-   - Uncached dynamic route requests invoke the Vike server bundle at edge locations close to the end user.
-   - The engine constructs page context (`urlOriginal`, `userAgent`, headers) and executes edge server rendering to return pre-rendered HTML with minimal TTFB (Time to First Byte).
-3. **API Routing Decoupling:**
-   - API routes residing under `/api/*` bypass HTML rendering pipelines and route directly to lightweight serverless function handlers.
+`src/packages/edge-redirect/` is a deep module: `index.ts` (API), `worker.ts` (Worker entry), `dev.ts` (Vite dev middleware and in-memory mock D1), `schema.sql` (D1 schema).
 
 ---
 
-## Dynamic Link Redirection & D1 Database Architecture
+## Dynamic Redirect API
 
-Dynamic QR links route users through edge functions to resolve target URLs, apply platform-specific routing rules, and track usage analytics.
+| Route                         | Method | Purpose                                                 | Rate limit binding   |
+| :---------------------------- | :----- | :------------------------------------------------------ | :------------------- |
+| `/api/redirect/register`      | POST   | Store a new redirect; returns `201 { id, adminKey }`    | `WRITE_RATE_LIMITER` |
+| `/api/redirect/update`        | POST   | Replace destinations, authorized by `adminKey`          | `WRITE_RATE_LIMITER` |
+| `/api/redirect/<id>`          | GET    | Return the ciphertext for the resolver; count the scan  | `READ_RATE_LIMITER`  |
+| `/api/redirect/stats?id=<id>` | GET    | Return `{ id, scans, createdAt }`                       | `READ_RATE_LIMITER`  |
+| `/r/<id>`                     | GET    | Serve the resolver shell, or a real 404 for unknown ids | `READ_RATE_LIMITER`  |
 
-### Redirection Execution Flow (`/r/[id]`)
+### Hardening rules
 
-When a user scans a dynamic QR code pointing to `/r/[id]`:
+- **Ciphertext only.** `redirectUrl`, `iosUrl` and `androidUrl` must be `enc:v1:<24 hex IV>:<hex ciphertext>`; plaintext is rejected with 400, so the API can never act as an open redirector, and it never answers with a 3xx. Because the server cannot read ciphertext, it runs no URL reputation check (#928); register and update share one validation path, so update is vetted exactly like register. The resolver page re-validates the decrypted URL (http/https only, dangerous schemes blocked) before navigating.
+- **Input limits.** JSON bodies only (`415` otherwise), capped at 16 KiB (`413`); each destination is capped at the ciphertext length of a 2048-byte URL; ids must be UUIDs and admin keys 32 hex characters. Wrong types answer `400`, never `500`, and error bodies never echo internal exception text.
+- **Turnstile.** Registration requires a Cloudflare Turnstile token verified with siteverify. There are no bypass tokens and no fallback secret in production code: if `TURNSTILE_SECRET_KEY` is missing, or siteverify is unreachable or errors, registration fails closed (`503`); a rejected token answers `403`. Tests and the dev server inject their own verifier.
+- **Rate limiting on every route** through the Cloudflare [Rate Limiting binding](https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/), keyed per route and `CF-Connecting-IP`. If `WRITE_RATE_LIMITER` is missing or errors, writes fail closed with `429`. If `READ_RATE_LIMITER` is missing or errors, reads fall back to a per-isolate limiter (120 requests per minute per client, at most 1000 tracked clients). A missing binding never produces a `5xx`.
+- **Origins.** Writes need an `Origin` (or `Referer`) equal to the request's own origin (covers branch previews and local dev), `https://qrcraftly.com`, `https://qrcraftly.fpderuiter.workers.dev` or `https://dev-qrcraftly.fpderuiter.workers.dev`, or an origin listed in the optional `ALLOWED_ORIGINS` variable (comma separated). Anything else, or no header at all, is `403`.
+- **Admin keys** are 128-bit random values returned once to the browser; D1 stores only their SHA-256 hash, compared in constant time.
+- **No stale destinations, no unbounded caches.** There is no KV and no module-level record cache; every lookup reads D1 and API responses are `Cache-Control: no-store`, so an update is visible on the next scan. (`caches.default` purges are per data centre, so caching destinations could not guarantee this.) The only in-memory state is the bounded fallback limiter.
+- **Real 404s.** Unknown paths fall through to the static assets binding and keep its `404`. Unknown or malformed `/r/<id>` ids get a `404` with the static 404 page, never a cached soft `200`.
+- **Crawlers and the service worker.** `/r/*` and `/api/*` are `Disallow`ed in `robots.txt` and sent with `X-Robots-Tag: noindex`; the service worker never serves `/r/*` from cache, so a scan always reaches the Worker.
 
-1. **KV Edge Cache Lookup:**
-   - The edge handler (`functions/api/redirect/[id].ts`) checks the Cloudflare KV store for `redirect:<id>`.
-   - On a cache hit, the handler retrieves pre-indexed target metadata without querying the primary SQL database.
-2. **Primary D1 Relational Query:**
-   - On a cache miss, the handler queries Cloudflare D1 SQL database (`SELECT * FROM redirects WHERE id = ?`).
-   - Upon successful retrieval, the record is asynchronously written to KV edge storage to accelerate subsequent requests.
-3. **Device & OS Specific Targeting:**
-   - User-Agent headers are evaluated at the edge to route users conditionally based on operating system rules (`ios_url`, `android_url`, or default `redirect_url`).
-4. **Asynchronous Non-Blocking Scan Tracking:**
-   - Scan counts and diagnostic events (timestamp, device category, geo-location region) are processed asynchronously via `context.waitUntil()`.
-   - The edge worker executes an atomic SQL increment (`UPDATE redirects SET scans = scans + 1 WHERE id = ?`) and persists event logs to KV.
-   - Because telemetry processing runs in the background, client redirect latency is completely decoupled from database write overhead.
+### Scan counting
 
-### Bot Verification & Abuse Mitigation (Cloudflare Turnstile)
-
-Dynamic redirection record creation requires client-side Cloudflare Turnstile bot verification. Prior to committing a new redirect mapping to Cloudflare D1, the edge creation handler validates the Turnstile response token against Cloudflare's verification API. This blocks automated scrapers, denial-of-wallet attempts, and unauthorized edge write exhaustion while preserving seamless user experience for humans.
-
----
-
-## Caching Tiers & Cache Invalidation Rules
-
-QRCraftly employs a multi-tiered edge caching strategy to balance low latency with immediate configuration updates.
-
-### Caching Layers
-
-| Layer      | Component       | Mechanism                         | Expiration / Control                 |
-| :--------- | :-------------- | :-------------------------------- | :----------------------------------- |
-| **Tier 1** | KV Edge Cache   | Key-Value Store (`redirect:<id>`) | High-speed global edge read cache    |
-| **Tier 2** | Edge HTML Cache | Cloudflare CDN (`caches.default`) | Pre-rendered Vike SSR HTML responses |
-| **Tier 3** | Browser Cache   | HTTP Response Headers             | Client-side HTTP response directives |
-
-### Cache Bypass Rules
-
-To allow instant dynamic link configuration updates and force re-validation, the edge engine evaluates explicit bypass criteria on incoming requests:
-
-- **Query Parameter Directives:** Requests containing `bypass-cache`, `bypass=true`, `purge=true`, `nocache=true`, or `refresh=true`.
-- **HTTP Header Directives:** Requests containing `Cache-Control: no-cache`, `Cache-Control: no-store`, `Pragma: no-cache`, or `X-Bypass-Cache: 1`.
-
-When bypass rules match, the edge worker bypasses Tier 1 and Tier 2 caches, fetches fresh records directly from the Cloudflare D1 SQL database, and updates the edge cache tiers.
+`GET /api/redirect/<id>` runs `UPDATE redirects SET scans = scans + 1 WHERE id = ?` in `ctx.waitUntil()`. A failed increment is logged and does not fail the lookup.
 
 ---
 
-## Static Fallback & Operational Resiliency
+## Free-Tier Budget
 
-QRCraftly guarantees uninterrupted core functionality even during Cloudflare Workers, KV, or D1 database outages:
+Everything fits the Cloudflare Workers free plan. Each scan costs one Worker request for `/r/<id>` (plus one D1 row read) and one for `/api/redirect/<id>` (one D1 row read and one D1 row write).
 
-1. **Static Asset Fallback (`context.next()`):**
-   - If edge server-side rendering fails or encounters uncaught runtime exceptions, request execution gracefully degrades to static asset serving.
-2. **Offline Core Generator:**
-   - Standard static QR code generation (URLs, text, WiFi credentials, vCards) operates 100% inside the browser using Web Workers (`scannabilityWorker.ts`) and HTML5 Canvas APIs.
-   - Static QR creation has zero dependence on Cloudflare Workers, D1 database connections, or active internet connectivity once static assets are cached by the browser service worker.
-3. **Database Fail-Open Behavior:**
-   - If D1 database queries fail or exceed timeout thresholds during dynamic link resolution, the system attempts a fallback read against KV edge cache.
-   - If scan tracking updates fail, the redirect response completes successfully without blocking the user (fail-open model).
+| Resource        | Free allowance  | Cost per scan        | Scans per day before the limit |
+| :-------------- | :-------------- | :------------------- | :----------------------------- |
+| Worker requests | 100,000 / day   | 2                    | about 50,000                   |
+| D1 rows read    | 5,000,000 / day | 2                    | about 2,500,000                |
+| D1 rows written | 100,000 / day   | 1                    | about 100,000                  |
+| D1 storage      | 5 GB            | under 10 KB per link | not a practical limit          |
+| Rate Limiting   | included        | no extra cost        | not a limit                    |
+
+Static asset requests are free and unlimited and never invoke the Worker.
+
+---
+
+## Local Development
+
+`pnpm dev` needs no Cloudflare credentials. A Vite plugin in `vite.config.ts` mounts `createDevRedirectMiddleware()` from `src/packages/edge-redirect/dev.ts`, which serves `/api/redirect/*` from an in-memory mock D1 with in-memory rate limiters. Its Turnstile verifier accepts any non-empty token, and the dev UI offers a "Skip bot check (local dev only)" button when no `VITE_TURNSTILE_SITE_KEY` is set. `/r/<id>` needs no middleware in dev because Vike renders the resolver page directly. Data is lost when the dev server restarts.
+
+---
+
+## Enablement Checklist
+
+Run these steps in order, on the `dev` branch first (preview staging), then promote.
+
+1. **Create the D1 database** (once) and note the printed `database_id`:
+   ```bash
+   pnpm exec wrangler d1 create qrcraftly-db
+   ```
+2. **Apply the schema** to the remote database:
+   ```bash
+   pnpm exec wrangler d1 execute qrcraftly-db --remote --file=src/packages/edge-redirect/schema.sql
+   ```
+3. **Create a Turnstile widget** in the Cloudflare dashboard for `qrcraftly.com`, `qrcraftly.fpderuiter.workers.dev` and `dev-qrcraftly.fpderuiter.workers.dev`. Store the secret with `pnpm exec wrangler secret put TURNSTILE_SECRET_KEY`, and set the public site key as the build variable `VITE_TURNSTILE_SITE_KEY` in Workers Builds.
+4. **Edit `wrangler.jsonc`**: add the Worker entry and the assets binding, replace the placeholder `database_id`, and add both Rate Limiting bindings (each `namespace_id` is any integer string unique in the account; `period` must be 10 or 60):
+   ```jsonc
+   {
+     "name": "qrcraftly",
+     "main": "src/packages/edge-redirect/worker.ts",
+     "compatibility_date": "2024-09-23",
+     "assets": { "directory": "dist/client", "binding": "ASSETS" },
+     "d1_databases": [
+       {
+         "binding": "DB",
+         "database_name": "qrcraftly-db",
+         "database_id": "<id from step 1>",
+       },
+     ],
+     "ratelimits": [
+       {
+         "name": "WRITE_RATE_LIMITER",
+         "namespace_id": "1001",
+         "simple": { "limit": 10, "period": 60 },
+       },
+       {
+         "name": "READ_RATE_LIMITER",
+         "namespace_id": "1002",
+         "simple": { "limit": 120, "period": 60 },
+       },
+     ],
+   }
+   ```
+5. **Allow Turnstile in the CSP.** Add `https://challenges.cloudflare.com` to `script-src` and add `frame-src https://challenges.cloudflare.com` in both the CSP meta tag in `src/layouts/Head.tsx` and `baseCspPattern` in `scripts/csp_hash_injector.js`. This is not done yet on purpose: while the feature is off, the widget is never rendered and the CSP stays strict.
+6. **Flip the flags**: `ENABLE_DYNAMIC_TRACKING` in `src/components/inputs/UrlInput.tsx` and `ENABLE_DYNAMIC_DASHBOARD` in `src/pages/dynamic-dashboard/+Page.tsx`, and restore the dashboard link in `src/components/QRTool.tsx` that #917 removed (commit `f8a51a9`).
+7. **Verify on preview staging** (`https://dev-qrcraftly.fpderuiter.workers.dev/`): create a dynamic link, scan it, update it, check that the next scan uses the new destination, that `/r/<random uuid>` returns 404, and that `POST /api/redirect/register` from another origin returns 403. Then run `pnpm run release:promote`.
 
 ---
 
@@ -143,7 +155,7 @@ For applications requiring strict payload privacy (e.g., medical records, sensit
 | 3. Edge Server Resolves Payload                                                   |
 |    - Reads record: target = enc:v1:<iv>:<ciphertext>                              |
 |    - Detects encrypted format via isEncrypted() test                              |
-|    - Returns HTTP 200 JSON: { "redirectUrl": "enc:v1:<iv>:<ciphertext>" }         |
+|    - GET /api/redirect/abc123 returns HTTP 200 JSON with the ciphertext           |
 |    - Server sees ONLY ciphertext; decryption key K is completely unknown to edge  |
 |                                                                                   |
 | 4. Client Browser Performs In-Memory Decryption                                   |
@@ -160,10 +172,10 @@ For applications requiring strict payload privacy (e.g., medical records, sensit
    - Payload format: `enc:v1:<iv_hex>:<ciphertext_hex>` using a 12-byte (96-bit) cryptographically random Initialization Vector (IV).
 2. **Anchor Hash Fragment Isolation (RFC 3986):**
    - According to RFC 3986 Section 3.5, URI fragment identifiers (`#...`) are processed exclusively by user agents (browsers) and are **never** included in HTTP request URIs sent over the network.
-   - When a user scans or visits `https://qrcraftly.com/r/abc123#key=4f8a...`, the browser sends `GET /r/abc123` to the Cloudflare edge worker. The `#key=4f8a...` fragment remains strictly isolated in the client browser's memory (`window.location.hash`).
+   - When a user scans or visits `https://qrcraftly.com/r/abc123#key=4f8a...`, the browser sends `GET /r/abc123` to the Cloudflare Worker, which returns the static resolver shell. The `#key=4f8a...` fragment remains strictly isolated in the client browser's memory (`window.location.hash`).
 3. **Zero-Knowledge Resolution & Delivery:**
-   - The edge worker (`/r/[id]`) inspects the stored destination payload. When `isEncrypted(payload)` returns `true`, the worker bypasses HTTP 307 auto-redirection and returns an HTTP 200 response with JSON containing the encrypted string.
+   - The API accepts only `enc:v1:` ciphertext and never answers with an HTTP redirect. `GET /api/redirect/<id>` returns HTTP 200 JSON containing the ciphertext.
    - Client-side browser script extracts the key from `window.location.hash` using `extractKeyFromHash()`, executes `decryptUrl()`, and performs client-side navigation.
 4. **Data Sovereignty Guarantee:**
-   - Edge servers, Cloudflare D1 databases, KV stores, and network log aggregators never receive, store, or process the unencrypted destination URL or the decryption key.
+   - Edge servers, Cloudflare D1 databases, and network log aggregators never receive, store, or process the unencrypted destination URL or the decryption key.
    - Complete zero-knowledge payload privacy is guaranteed by mathematical encryption and browser network protocols.

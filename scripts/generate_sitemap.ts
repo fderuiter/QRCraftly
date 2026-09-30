@@ -62,7 +62,11 @@ export function shouldExcludePath(posixPath: string): boolean {
     clean.includes('dev-sandbox') ||
     clean.includes('quarantine') ||
     clean.includes('internal') ||
-    clean.includes('@id')
+    clean.includes('@id') ||
+    // Dynamic link resolver shell (/r/shell), served by the edge Worker for /r/<id>
+    clean === '/r' ||
+    clean.startsWith('/r/') ||
+    clean.startsWith('r/')
   ) {
     return true;
   }

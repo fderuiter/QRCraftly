@@ -102,7 +102,8 @@ function DashboardContent() {
       return;
     }
 
-    let finalIos: string | undefined = undefined;
+    // An empty field is sent as "" so the edge clears the stored override.
+    let finalIos = '';
     if (editIosUrlValue.trim()) {
       finalIos = normalizeUrl(editIosUrlValue.trim());
       if (isDangerousUrl(finalIos)) {
@@ -111,7 +112,7 @@ function DashboardContent() {
       }
     }
 
-    let finalAndroid: string | undefined = undefined;
+    let finalAndroid = '';
     if (editAndroidUrlValue.trim()) {
       finalAndroid = normalizeUrl(editAndroidUrlValue.trim());
       if (isDangerousUrl(finalAndroid)) {
@@ -120,11 +121,11 @@ function DashboardContent() {
       }
     }
 
-    const success = await updateRedirect(record.id, record.adminKey, normalized, {
+    const result = await updateRedirect(record.id, record.adminKey, normalized, {
       iosUrl: finalIos,
       androidUrl: finalAndroid,
     });
-    if (success) {
+    if (result.ok) {
       addToast({
         type: 'success',
         message: 'Destination URL updated successfully at the edge proxy!',
@@ -132,7 +133,7 @@ function DashboardContent() {
       });
       setEditingId(null);
     } else {
-      setEditError('Failed to update URL on the edge database.');
+      setEditError(`Failed to update URL on the edge database: ${result.message}`);
     }
   };
 

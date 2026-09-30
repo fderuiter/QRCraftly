@@ -11,18 +11,18 @@ publish-approved: true
 
 _Streamlined and secured QR code generation and edge redirection capabilities._
 
-QRCraftly is architected as a **Hybrid Edge-Native Application** combining **Client-Side Heavy Processing** with **Serverless Edge Compute**. Hosted on Cloudflare Pages and Workers, the core static QR generation, matrix math, and image rendering are offloaded entirely to browser Web Workers on the user's device. Dynamic features—such as dynamic link redirection (`/r/[id]`), Vike server-side edge rendering (SSR), and scan analytics tracking—utilize serverless Cloudflare Workers and Cloudflare D1 relational database storage with KV edge caching.
+QRCraftly is architected as a **Hybrid Edge-Native Application** combining **Client-Side Heavy Processing** with **Serverless Edge Compute**. Hosted on Cloudflare Workers with Static Assets, the core static QR generation, matrix math, and image rendering are offloaded entirely to browser Web Workers on the user's device. Dynamic features—dynamic link redirection (`/r/[id]`) and scan counting—use an optional Cloudflare Worker entry backed by Cloudflare D1 (currently disabled; see `EDGE_ARCHITECTURE.md`).
 
 ## Architecture & Resource Usage
 
 ### 1. Architecture: Hybrid Edge-Native Model
 
-- **Framework:** Vike (Vite + React) running on Cloudflare Workers / Pages Functions (`functions/[[path]].ts`).
-- **Rendering Model:** Static pre-rendering (SSG) for static routes, paired with Edge Server-Side Rendering (SSR) for dynamic paths.
+- **Framework:** Vike (Vite + React) served by Cloudflare Workers with Static Assets. The optional Worker entry (`src/packages/edge-redirect/worker.ts`) handles only `/api/redirect/*` and `/r/*`.
+- **Rendering Model:** Static pre-rendering (SSG) for every route. There is no edge SSR; the dynamic link resolver is a pre-rendered shell (`/r/shell`) that the Worker serves for each `/r/<id>`.
 - **Client Processing:** Core QR code generation, canvas rendering, matrix contrast auditing, and zero-knowledge Web Crypto AES-GCM operations occur 100% locally in browser Web Workers (`scannabilityWorker.ts`, `optical-scanner/worker.ts`).
-- **Serverless Edge Compute & Database Persistence:** Dynamic link resolution (`/r/[id]`) routes requests through Cloudflare Workers, retrieving dynamic destinations from Cloudflare D1 relational database storage and KV edge caches while updating scan analytics asynchronously (`UPDATE redirects SET scans = scans + 1 WHERE id = ?`).
+- **Serverless Edge Compute & Database Persistence:** Dynamic link resolution (`/r/[id]`) routes requests through Cloudflare Workers, retrieving encrypted destinations from Cloudflare D1 (no KV, no destination caching) while updating scan analytics asynchronously (`UPDATE redirects SET scans = scans + 1 WHERE id = ?`).
 
-### 2. Hosting & Infrastructure Limits: Cloudflare Pages & Workers
+### 2. Hosting & Infrastructure Limits: Cloudflare Workers
 
 The application leverages Cloudflare's distributed edge infrastructure. System limits and operational impacts are structured as follows:
 
@@ -31,7 +31,7 @@ The application leverages Cloudflare's distributed edge infrastructure. System l
 | **Static Requests**           | Unlimited              | ~10-15 per session                                | **None** (Absorbed by Cloudflare CDN)                           |
 | **Bandwidth**                 | Unlimited              | ~500KB per session                                | **None** (Cached globally at edge)                              |
 | **Serverless Edge Functions** | 100,000 requests / day | Used for Edge SSR & dynamic redirects (`/r/[id]`) | **Edge Quota Limit** (Scales seamlessly with Workers Paid tier) |
-| **Cloudflare D1 SQL Reads**   | 5,000,000 rows / day   | Querying dynamic redirect records                 | **High Throughput** (Offloaded via KV edge cache layer)         |
+| **Cloudflare D1 SQL Reads**   | 5,000,000 rows / day   | Querying dynamic redirect records                 | **High Throughput** (one primary-key read per scan, no KV)      |
 | **Cloudflare D1 SQL Writes**  | 100,000 rows / day     | Dynamic link creation & scan count increments     | **Optimized** (Non-blocking background batch/scan pipeline)     |
 | **Concurrent Users**          | Unlimited              | Offloaded to client & edge nodes                  | **None**                                                        |
 | **Builds / Deploys**          | 500 / month            | ~1 per deploy                                     | **Operational Constraint**                                      |
@@ -39,7 +39,7 @@ The application leverages Cloudflare's distributed edge infrastructure. System l
 ### 3. Serverless Edge Compute Quotas & D1 Storage Behavior
 
 - **Cloudflare Workers Execution Quotas:** Serverless Workers enforce a 10ms CPU time limit per request on the Free Tier (and 30s wall-clock CPU time on Paid Tiers). Because heavy cryptographic and matrix operations are offloaded to client browser Web Workers, edge function CPU time per redirect remains under 2ms.
-- **D1 Relational Storage Behaviors:** Dynamic redirect mappings (`id`, `redirect_url`, `ios_url`, `android_url`, `scans`, `created_at`) are stored in Cloudflare D1 SQLite database tables. Database read queries are cached at the edge via Cloudflare KV (`redirect:<id>`), minimizing D1 read row count overhead.
+- **D1 Relational Storage Behaviors:** Dynamic redirect mappings (`id`, `redirect_url`, `ios_url`, `android_url`, `scans`, `created_at`) are stored in Cloudflare D1 SQLite database tables. Destinations are stored as `enc:v1:` ciphertext and are not cached (no KV), so an update is visible on the next scan; each scan costs one primary-key read and one scan-count write.
 - **Scan Aggregation & Telemetry Pipeline:** Scan analytics updates are executed asynchronously using non-blocking edge invocation handlers (`context.waitUntil()`). This ensures that database write operations (`UPDATE redirects SET scans = scans + 1 WHERE id = ?`) do not block client redirect latency or cause request queue bottlenecks under high concurrency.
 - **Turnstile Bot Mitigation & Write Quota Defense:** Dynamic link creation endpoints incorporate Cloudflare Turnstile bot verification. Verifying tokens at edge ingress protects the 100,000 daily D1 write quota against automated brute-force attempts and synthetic traffic exhaustion.
 
@@ -90,4 +90,4 @@ _Mitigation:_ This affects developer deploy frequency, not end-user capacity. If
 
 QRCraftly's hybrid edge-native architecture efficiently splits computational responsibilities between browser Web Workers and Cloudflare serverless edge infrastructure. By keeping static QR matrix generation strictly client-side, serverless edge compute and D1 relational database capacity are preserved exclusively for dynamic URL redirection and scan analytics.
 
-**Recommendation:** Maintain the current Cloudflare Pages and Workers infrastructure. Upgrading to Cloudflare Workers Paid ($5/month) expands dynamic redirect capacity to over 10,000,000 requests per month whenever enterprise dynamic link volume exceeds standard free tier limits.
+**Recommendation:** Maintain the current Cloudflare Workers infrastructure. Upgrading to Cloudflare Workers Paid ($5/month) expands dynamic redirect capacity to over 10,000,000 requests per month whenever enterprise dynamic link volume exceeds standard free tier limits.

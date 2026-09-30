@@ -5,6 +5,9 @@ import { isDangerousUrl } from '@/utils/security';
 import { normalizeUrl, SafeUrlPipeline } from '@/utils/url';
 import { ShieldAlert, RefreshCw, Lock } from 'lucide-react';
 
+/** Route id of the pre-rendered resolver shell (see ./+onBeforePrerenderStart.ts). */
+const RESOLVER_SHELL_ID = 'shell';
+
 /**
  * Zero-Knowledge Dynamic Link Redirect Resolver Page (/r/:id#key=...).
  * Extracts the decryption key from the URL anchor hash fragment (#key=...),
@@ -15,7 +18,7 @@ import { ShieldAlert, RefreshCw, Lock } from 'lucide-react';
  */
 export default function RedirectResolverPage() {
   const pageContext = usePageContext();
-  const id = pageContext.routeParams?.id;
+  const routeId = pageContext.routeParams?.id;
 
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -24,6 +27,10 @@ export default function RedirectResolverPage() {
     let isMounted = true;
 
     async function resolveAndRedirect() {
+      // In production the edge Worker serves one pre-rendered shell (/r/shell) for every
+      // /r/<id>, so the real id comes from the address bar rather than the route params.
+      const pathMatch = window.location.pathname?.match(/^\/r\/([^/]+)\/?$/);
+      const id = pathMatch && pathMatch[1] !== RESOLVER_SHELL_ID ? decodeURIComponent(pathMatch[1]) : routeId;
       if (!id) {
         if (isMounted) {
           setErrorMessage("Invalid dynamic link identifier.");
@@ -113,7 +120,7 @@ export default function RedirectResolverPage() {
     return () => {
       isMounted = false;
     };
-  }, [id]);
+  }, [routeId]);
 
   if (errorMessage) {
     return (

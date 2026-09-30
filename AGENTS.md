@@ -44,7 +44,7 @@ See `docs/agents/docs-maintenance.md`.
 
 ## Architecture & Deep Topic Pointers
 
-- **Dynamic Edge Redirection & SSR**: Cloudflare Pages Functions (`functions/[[path]].ts`), D1 SQL database, KV edge caching, and zero-knowledge anchor hash encryption (`#key=...`). Read `docs/public/EDGE_ARCHITECTURE.md`.
+- **Dynamic Edge Redirection**: Worker entry in the `src/packages/edge-redirect/` deep module (`/api/redirect/*` and `/r/<id>`, falling through to static assets), D1 SQL database, the Cloudflare Rate Limiting binding, and zero-knowledge anchor hash encryption (`#key=...`). Not wired into `wrangler.jsonc` until D1 and Turnstile are provisioned. Read `docs/public/EDGE_ARCHITECTURE.md`.
 - **Worker Concurrency & Scannability**: Off-thread Web Workers (`scannabilityWorker.ts`, `scannerWorker.ts`), zero-copy `ArrayBuffer` double-buffering, degradation state caching, immediate 1500ms watchdog fault-tolerance, non-blocking superseded dropped ACK backpressure handling, and client-side SVG generation via `SvgContext`. Read `docs/public/SCALING.md`.
 - **Security & Sanitization**: SVG element allowlists (`sanitizeSvg`), phone/SMS sanitization, anchor link sanitization (`sanitizeHref`), and inline-script CSP hashing. Read `docs/SECURITY.md`.
 - **HIPAA Compliance Guidelines**: Client-side volatile memory guarantees and telemetry schema rules. Read `docs/public/COMPLIANCE.md`.

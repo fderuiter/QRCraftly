@@ -45,7 +45,7 @@ describe('CI trigger paths (main.yml)', () => {
     'CONTEXT.md',
     'AGENTS.md',
     'README.md',
-    'functions/api/redirect/register.ts',
+    'src/packages/edge-redirect/worker.ts',
     'tests/ci_tooling.test.ts',
     'eslint.config.js',
     'knip.json',

@@ -34,7 +34,10 @@ export const AUTHORIZED_NETWORK_FILES = new Set([
   'src/utils/svgExport.ts',
   'src/utils/assetCache.ts',
   'src/hooks/useRedirector.ts',
-  'src/utils/reputation.ts',
+  'src/packages/edge-redirect/lib/turnstile.ts',
+  'src/packages/edge-redirect/lib/router.ts',
+  'src/packages/edge-redirect/lib/types.ts',
+  'src/packages/edge-redirect/worker.ts',
   'src/pages/r/@id/+Page.tsx'
 ]);
 

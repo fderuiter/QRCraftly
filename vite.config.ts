@@ -20,6 +20,21 @@ import path from 'path';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import vike from 'vike/plugin';
+import type { Plugin } from 'vite';
+import { createDevRedirectMiddleware } from './src/packages/edge-redirect/dev';
+
+/**
+ * Serves `/api/redirect/*` from an in-memory mock D1 during `pnpm dev`, so dynamic
+ * links can be created and resolved locally without Cloudflare credentials (#928).
+ * Production uses the Worker entry `src/packages/edge-redirect/worker.ts`.
+ */
+const devRedirectApi = (): Plugin => ({
+  name: 'qrcraftly:dev-redirect-api',
+  apply: 'serve',
+  configureServer(server) {
+    server.middlewares.use(createDevRedirectMiddleware());
+  },
+});
 
 /**
  * Vite configuration file.
@@ -37,7 +52,8 @@ export default defineConfig(() => {
       },
       plugins: [
         react(),
-        vike()
+        vike(),
+        devRedirectApi(),
       ],
       esbuild: {
         target: 'es2022'

@@ -19,7 +19,10 @@
 import React from 'react';
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { useTelemetry } from './useTelemetry';
+import { useTelemetry, TELEMETRY_ENABLED } from './useTelemetry';
+
+/** Same-origin collection path; sending is injected as enabled because production has no endpoint. */
+const TELEMETRY_PATH = '/api/telemetry/scannability';
 import { QRProvider, useQRStore } from '@/context/QRContext';
 
 // ---------------------------------------------------------------------------
@@ -32,7 +35,7 @@ const wrapper = ({ children }: { children: React.ReactNode }) =>
 function renderTelemetry(status: Parameters<typeof useTelemetry>[0]) {
   return renderHook(
     () => ({
-      telemetry: useTelemetry(status),
+      telemetry: useTelemetry(status, true),
       store: useQRStore(),
     }),
     { wrapper }
@@ -108,7 +111,7 @@ describe('useTelemetry', () => {
       result.current.telemetry.handleOptIn(true);
     });
     expect(fetchSpy).toHaveBeenCalledWith(
-      '/api/telemetry/scannability',
+      TELEMETRY_PATH,
       expect.objectContaining({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -219,6 +222,26 @@ describe('useTelemetry', () => {
     act(() => {
       result.current.store.emitSignal('scannability-fail', { errorType: 'fail' });
     });
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  // -------------------------------------------------------------------------
+  // No deployed endpoint: telemetry is a no-op, never a failing request
+  // -------------------------------------------------------------------------
+  it('has no default endpoint and sends nothing even when opted in and failing', () => {
+    expect(TELEMETRY_ENABLED).toBe(false);
+    const { result } = renderHook(
+      () => ({ telemetry: useTelemetry('fail'), store: useQRStore() }),
+      { wrapper }
+    );
+    expect(result.current.telemetry.showTelemetryPrompt).toBe(true);
+    act(() => {
+      result.current.telemetry.handleOptIn(true);
+    });
+    act(() => {
+      result.current.store.emitSignal('scannability-fail', { engine: 'Chromium', errorType: 'NOT_FOUND' });
+    });
+    expect(result.current.store.getState().preferences.telemetryOptIn).toBe(true);
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
