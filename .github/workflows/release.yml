@@ -1,21 +1,25 @@
 name: Release
 
-# Publishes a release after a maintainer runs `pnpm run release:promote`, which
-# fast-forwards main to the reviewed release commit on dev and pushes the
-# annotated tag vX.Y.Z in one atomic push. See RELEASING.md.
+# Tags and publishes a release when a release PR merges into main. See RELEASING.md.
 #
-# This workflow never pushes to a branch. Cloudflare Workers Builds deploys main
-# to production on its own; this workflow verifies the tag, publishes the GitHub
-# Release, waits for production to serve the new version, and smoke tests it.
+# `pnpm run release:prepare` opens a release PR that bumps package.json and adds a
+# CHANGELOG.md section. When that PR is squash-merged, this workflow sees a
+# package.json version on main with no matching tag, creates the annotated tag
+# vX.Y.Z on that commit, publishes the GitHub Release, waits for Cloudflare Workers
+# Builds to serve the version in production, and smoke tests it.
+#
+# Every other push to main finds the tag already exists and does nothing. The only
+# thing this workflow pushes is the tag; it never pushes a branch.
 
 on:
   push:
-    tags: ['v*.*.*']
+    branches: [main]
+    paths: ['package.json']
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Existing release tag to (re)publish and verify, e.g. v0.9.0'
-        required: true
+        description: 'Existing release tag to republish and verify, e.g. v0.9.0 (leave empty to tag the current main)'
+        required: false
         type: string
 
 permissions:
@@ -27,55 +31,71 @@ concurrency:
 
 jobs:
   publish:
-    name: Verify Tag & Publish GitHub Release
+    name: Tag & Publish GitHub Release
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
       contents: write
     outputs:
-      version: ${{ steps.verify.outputs.version }}
+      version: ${{ steps.resolve.outputs.version }}
+      published: ${{ steps.resolve.outputs.published }}
     steps:
-      - name: Checkout Tag
+      - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ inputs.tag || github.ref }}
+          ref: ${{ inputs.tag || github.sha }}
           fetch-depth: 0
 
-      - name: Verify tag matches package.json and is on main
-        id: verify
+      - name: Resolve the release to publish
+        id: resolve
         env:
-          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+          INPUT_TAG: ${{ inputs.tag }}
         run: |
           set -euo pipefail
           VERSION=$(node -p "JSON.parse(require('fs').readFileSync('package.json','utf8')).version")
-          if [ "v$VERSION" != "$RELEASE_TAG" ]; then
-            echo "::error::Tag $RELEASE_TAG does not match package.json version $VERSION."
-            exit 1
-          fi
-          if [ "$(git cat-file -t "refs/tags/$RELEASE_TAG")" != "tag" ]; then
-            echo "::error::$RELEASE_TAG must be an annotated tag (use pnpm run release:promote)."
-            exit 1
-          fi
-          git fetch --no-tags origin main
-          if ! git merge-base --is-ancestor "$RELEASE_TAG^{commit}" origin/main; then
-            echo "::error::$RELEASE_TAG is not on main. Promote the release commit before tagging."
-            exit 1
-          fi
-          if ! grep -q "^## \[$VERSION\]" CHANGELOG.md; then
-            echo "::error::CHANGELOG.md has no section for $VERSION."
-            exit 1
-          fi
+          TAG="v$VERSION"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+          if [ -n "$INPUT_TAG" ] && [ "$INPUT_TAG" != "$TAG" ]; then
+            echo "::error::Tag $INPUT_TAG does not match package.json version $VERSION at that tag."
+            exit 1
+          fi
+
+          if [ -z "$INPUT_TAG" ] && git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+            echo "$TAG already exists; this push is not a release."
+            echo "published=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if ! grep -q "^## \[$VERSION\]" CHANGELOG.md; then
+            echo "::error::package.json is $VERSION but CHANGELOG.md has no section for it. Cut releases with pnpm run release:prepare."
+            exit 1
+          fi
+          echo "published=true" >> "$GITHUB_OUTPUT"
+
+      - name: Create annotated tag
+        if: steps.resolve.outputs.published == 'true' && inputs.tag == ''
+        env:
+          RELEASE_TAG: ${{ steps.resolve.outputs.tag }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$RELEASE_TAG" -m "Release $RELEASE_TAG"
+          git push origin "refs/tags/$RELEASE_TAG"
 
       - name: Extract release notes from CHANGELOG.md
+        if: steps.resolve.outputs.published == 'true'
         env:
-          RELEASE_VERSION: ${{ steps.verify.outputs.version }}
+          RELEASE_VERSION: ${{ steps.resolve.outputs.version }}
         run: node scripts/release_engine.js --notes "$RELEASE_VERSION" > "$RUNNER_TEMP/release_notes.md"
 
       - name: Publish GitHub Release
+        if: steps.resolve.outputs.published == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+          RELEASE_TAG: ${{ steps.resolve.outputs.tag }}
         run: |
           set -euo pipefail
           if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
@@ -87,6 +107,7 @@ jobs:
   smoke-tests:
     name: Production Smoke Tests
     needs: publish
+    if: needs.publish.outputs.published == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
@@ -96,10 +117,10 @@ jobs:
           - https://qrcraftly.fpderuiter.workers.dev
           - https://qrcraftly.com
     steps:
-      - name: Checkout Tag
+      - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ inputs.tag || github.ref }}
+          ref: ${{ inputs.tag || github.sha }}
 
       - name: Setup Environment
         uses: ./.github/actions/setup

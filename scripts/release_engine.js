@@ -7,11 +7,10 @@
  * Modes (see RELEASING.md for the full flow):
  *   --dry-run            Preview next version + changelog, exit 0 (no side effects)
  *   --generate-changelog Write CHANGELOG.md and update package.json version
- *   --prepare            From an up-to-date dev: create release/vX.Y.Z, write the
+ *   --prepare            From an up-to-date main: create release/vX.Y.Z, write the
  *                        changelog + version, and commit `chore(release): vX.Y.Z`
- *                        (open it as a PR into dev)
- *   --promote            From dev at a merged release commit: fast-forward main to it
- *                        and push the annotated tag vX.Y.Z in one atomic push
+ *                        (open it as a PR into main; merging it makes the Release
+ *                        workflow tag vX.Y.Z and publish the GitHub Release)
  *   --notes <version>    Print the CHANGELOG.md section for <version> (release notes)
  *
  *   --bump=major|minor|patch overrides the computed bump for --dry-run,
@@ -383,16 +382,16 @@ function ensure(ok, message) {
 }
 
 /**
- * Checks the local clone is on a clean dev that matches origin/dev.
+ * Checks the local clone is on a clean main that matches origin/main.
  */
-function ensureCleanUpToDateDev() {
+function ensureCleanUpToDateMain() {
   const branch = tryGit(['branch', '--show-current']);
-  ensure(branch === 'dev', `Run this from the 'dev' branch (currently on '${branch}').`);
+  ensure(branch === 'main', `Run this from the 'main' branch (currently on '${branch}').`);
   ensure(tryGit(['status', '--porcelain']) === '', 'Working tree is not clean. Commit or stash your changes first.');
-  ensure(tryGit(['fetch', 'origin', 'dev', 'main', '--tags']) !== null, 'Could not fetch from origin.');
+  ensure(tryGit(['fetch', 'origin', 'main', '--tags']) !== null, 'Could not fetch from origin.');
   ensure(
-    tryGit(['rev-parse', 'HEAD']) === tryGit(['rev-parse', 'origin/dev']),
-    "Local dev does not match origin/dev. Run 'git pull --ff-only origin dev' first."
+    tryGit(['rev-parse', 'HEAD']) === tryGit(['rev-parse', 'origin/main']),
+    "Local main does not match origin/main. Run 'git pull --ff-only origin main' first."
   );
 }
 
@@ -414,11 +413,11 @@ const isMain =
 
 if (isMain) {
   const args = process.argv.slice(2);
-  const mode = ['--dry-run', '--generate-changelog', '--prepare', '--promote', '--notes'].find(m => args.includes(m));
+  const mode = ['--dry-run', '--generate-changelog', '--prepare', '--notes'].find(m => args.includes(m));
 
   if (!mode) {
     console.error(
-      'Usage: node scripts/release_engine.js [--dry-run | --generate-changelog | --prepare | --promote | --notes <version>] [--bump=major|minor|patch]'
+      'Usage: node scripts/release_engine.js [--dry-run | --generate-changelog | --prepare | --notes <version>] [--bump=major|minor|patch]'
     );
     process.exit(1);
   }
@@ -431,47 +430,6 @@ if (isMain) {
     const notes = extractReleaseNotes(readChangelog(), version);
     ensure(notes !== null, `CHANGELOG.md has no section for ${version}.`);
     process.stdout.write((notes || `Release v${version}`) + '\n');
-    process.exit(0);
-  }
-
-  if (mode === '--promote') {
-    // Promotion publishes a release commit that was already reviewed and merged into
-    // dev through a release PR. It never commits and never pushes dev.
-    ensureCleanUpToDateDev();
-
-    const pkg = JSON.parse(fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8'));
-    const version = pkg.version;
-    const tagName = `v${version}`;
-    const latestTag = getLatestTag();
-
-    ensure(
-      readChangelog().includes(`## [${version}]`),
-      `CHANGELOG.md has no section for ${version}. Merge a release PR first ('pnpm run release:prepare').`
-    );
-    ensure(tryGit(['rev-parse', '-q', '--verify', `refs/tags/${tagName}`]) === null, `Tag ${tagName} already exists.`);
-    ensure(
-      !latestTag || compareVersions(parseTagVersion(version), parseTagVersion(latestTag)) > 0,
-      `package.json version ${version} is not newer than the latest tag ${latestTag}.`
-    );
-    ensure(
-      tryGit(['merge-base', '--is-ancestor', 'origin/main', 'HEAD']) !== null,
-      'origin/main has commits that dev does not. Merge main into dev through a PR, then retry.'
-    );
-
-    console.log(`\nPromoting ${tryGit(['rev-parse', '--short', 'HEAD'])} to main as ${tagName}`);
-    execBinary('git', ['tag', '-a', tagName, '-m', `Release ${tagName}`]);
-    try {
-      // Atomic: main and the tag land together or not at all. A plain push (no
-      // --force) is rejected unless it is a fast-forward, so SHAs never change.
-      execBinary('git', ['push', '--atomic', 'origin', 'HEAD:refs/heads/main', `refs/tags/${tagName}`]);
-    } catch (err) {
-      tryGit(['tag', '-d', tagName]);
-      console.error(`\nPush failed; removed the local tag ${tagName}.\n`);
-      throw err;
-    }
-
-    console.log(`\nmain now points at ${tagName}. The Release workflow publishes the GitHub Release`);
-    console.log('and smoke tests production once Cloudflare Workers Builds has deployed it.\n');
     process.exit(0);
   }
 
@@ -495,7 +453,7 @@ if (isMain) {
   }
 
   if (mode === '--prepare') {
-    ensureCleanUpToDateDev();
+    ensureCleanUpToDateMain();
     ensure(release.commits.length > 0, `Nothing to release: no commits since ${release.latestTag}.`);
     const branch = `release/v${release.nextVersion}`;
     ensure(tryGit(['rev-parse', '-q', '--verify', `refs/heads/${branch}`]) === null, `Branch ${branch} already exists.`);
@@ -511,8 +469,8 @@ if (isMain) {
     execBinary('git', ['add', 'CHANGELOG.md', 'package.json']);
     execBinary('git', ['commit', '-m', `chore(release): v${release.nextVersion}`]);
     console.log(`Committed chore(release): v${release.nextVersion} on ${`release/v${release.nextVersion}`}.`);
-    console.log('Next: edit CHANGELOG.md if needed, push the branch, and open a PR into dev.');
-    console.log('Merge it with "Squash and merge" once CI is green, then run pnpm run release:promote from dev.\n');
+    console.log('Next: edit CHANGELOG.md if needed, push the branch, and open a PR into main.');
+    console.log('Squash-merge it once CI is green; the Release workflow then tags and publishes it.\n');
   }
   process.exit(0);
 }

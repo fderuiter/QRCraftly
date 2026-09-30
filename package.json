@@ -52,7 +52,6 @@
     "release:dry-run": "node scripts/release_engine.js --dry-run",
     "release:changelog": "node scripts/release_engine.js --generate-changelog",
     "release:prepare": "node scripts/release_engine.js --prepare",
-    "release:promote": "node scripts/release_engine.js --promote",
     "prepare": "husky"
   },
   "dependencies": {

@@ -6,33 +6,22 @@ This document outlines the standard Git branching strategy, contribution workflo
 
 ## 1. Branch Hierarchy and Topology
 
-QRCraftly operates on a **Two-Tier Staged Promotion** model:
+QRCraftly is **trunk-based**. `main` is the only long-lived branch (see [ADR 0020](./adr/0020-trunk-based-releases-on-main.md)):
 
 ```
-[ feat/*, fix/*, agent/* ]
+[ feat/*, fix/*, agent/*, release/* ]
              │
-             ▼ (Pull Request)
-           [ dev ]  (Default Integration Branch)
-             │      └── Deploys to: https://dev-qrcraftly.fpderuiter.workers.dev/
-             ▼ (pnpm run release:promote: fast-forward + vX.Y.Z tag)
-          [ main ]  (Production Branch)
+             ▼ (Pull Request, squash merge, CI + PR Title required)
+          [ main ]  (Trunk and Production Branch)
                     └── Deploys to: https://qrcraftly.fpderuiter.workers.dev/
                                     https://qrcraftly.com
 ```
 
-### `dev` (Default Integration Branch)
+### `main`
 
-- **Role**: Primary integration trunk for all active development.
-- **Access**: Default branch for repository clones, forks, and new PRs.
-- **Edge Deployment**: Automatically deployed by Cloudflare Workers Builds to the **Preview Staging Environment** at `https://dev-qrcraftly.fpderuiter.workers.dev/` with `X-Robots-Tag: noindex`.
-- **Invariants**: Changes land only through squash-merged pull requests that pass the `CI` and `PR Title` checks.
-
-### `main` (Production Branch)
-
-- **Role**: Stable production release branch.
-- **Access**: Protected. Direct pushes and standard feature PRs are prohibited.
-- **Edge Deployment**: Automatically deployed by Cloudflare Workers Builds to the **Production Environment** at `https://qrcraftly.fpderuiter.workers.dev/` and `https://qrcraftly.com`.
-- **Invariants**: Updated exclusively by `pnpm run release:promote`, which fast-forwards `main` to a reviewed release commit on `dev` and pushes the release tag with it. See [RELEASING.md](../RELEASING.md).
+- **Role**: The trunk. Default branch for clones, forks and new PRs.
+- **Edge Deployment**: Every push is deployed by Cloudflare Workers Builds to the **Production Environment** at `https://qrcraftly.fpderuiter.workers.dev/` and `https://qrcraftly.com`.
+- **Invariants**: Changes land only through squash-merged, up-to-date pull requests that pass the `CI`, `PR Title` and `Workers Builds: qrcraftly` checks. Direct pushes and force pushes are blocked.
 
 ---
 
@@ -53,11 +42,11 @@ All working branches created by human developers or autonomous AI agents must ad
 
 ## 3. Contributor & Agent Workflow (Step-by-Step)
 
-### Step 1: Create Branch from `dev`
+### Step 1: Create Branch from `main`
 
 ```bash
-git checkout dev
-git pull origin dev
+git checkout main
+git pull origin main
 git checkout -b feat/my-new-feature
 ```
 
@@ -77,9 +66,9 @@ pnpm test
 pnpm run test:e2e
 ```
 
-### Step 3: Open Pull Request Targeting `dev`
+### Step 3: Open Pull Request Targeting `main`
 
-Push your branch to GitHub and open a pull request targeting the **`dev`** branch. The PR title must be a [Conventional Commit](https://www.conventionalcommits.org/) (for example `fix(scanner): handle empty frames`), because it becomes the squashed commit subject that the changelog and version bump are built from. The `PR Title` check enforces this.
+Push your branch to GitHub and open a pull request targeting the **`main`** branch. The PR title must be a [Conventional Commit](https://www.conventionalcommits.org/) (for example `fix(scanner): handle empty frames`), because it becomes the squashed commit subject that the changelog and version bump are built from. The `PR Title` check enforces this.
 
 ### Step 4: Automated CI Quality Gate Validation
 
@@ -91,7 +80,7 @@ GitHub Actions triggers the consolidated CI pipeline on the PR:
 4. `build`: Production build verification, bundle size budgets, and Lighthouse CI performance audits. Uploads `dist` as a short-lived artifact.
 5. `e2e`: Downloads the `build` job's `dist` and runs Playwright cross-browser tests across Chromium, Firefox, and WebKit against `vite preview` (no second build), then `pnpm run test:e2e:dev` checks that the Vite development server hydrates without runtime errors.
 6. `dependency-audit`: `pnpm audit --audit-level=high`, reported as its own check. No other job depends on it, so a newly published upstream advisory flags the PR without skipping the checks above.
-7. `ci`: the aggregate **`CI`** check. It passes only when jobs 1 to 5 all succeed, and it is the check the `dev` ruleset requires.
+7. `ci`: the aggregate **`CI`** check. It passes only when jobs 1 to 5 all succeed, and it is the check the `main` ruleset requires.
 
 ### Step 5: Ephemeral Branch Preview Verification
 
@@ -99,34 +88,21 @@ Cloudflare Workers Builds automatically detects the PR branch and deploys an eph
 $$\text{https://<branch-name>-qrcraftly.fpderuiter.workers.dev/}$$
 Reviewers and agents can verify changes live in an edge environment before approval.
 
-### Step 6: Merge into `dev`
+### Step 6: Merge into `main`
 
-Once `CI` passes and reviews are complete, merge with **Squash and merge**. Cloudflare automatically updates `https://dev-qrcraftly.fpderuiter.workers.dev/`, and the `Verify Preview Staging Environment` job smoke tests staging once it serves the new commit.
-
----
-
-## 4. Staged Production Promotion (`dev` $\rightarrow$ `main`)
-
-Releases, versioning, tags and rollback are documented in one place: [RELEASING.md](../RELEASING.md). In short:
-
-1. `pnpm run release:prepare` opens a `release/vX.Y.Z` branch with the version bump and changelog. Merge it into `dev` through a PR.
-2. `pnpm run release:promote` fast-forwards `main` to that commit and pushes the annotated `vX.Y.Z` tag in one atomic push.
-3. Cloudflare Workers Builds deploys `main`. The `Release` workflow publishes the GitHub Release and smoke tests production.
-
-**Never open a pull request from `dev` into `main`**, and never push to `main` any other way.
+Once `CI` passes and reviews are complete, merge with **Squash and merge**. Cloudflare deploys the merge to production, and the `Verify Production Deployment` job smoke tests production once it serves the new commit.
 
 ---
 
-## 5. Cloudflare Domain and Edge Routing Summary
+## 4. Releases, Rollback and Environments
 
-| Environment         | Target Branch | Active Domain                                                          | Access & Indexing                       |
-| ------------------- | ------------- | ---------------------------------------------------------------------- | --------------------------------------- |
-| **Production**      | `main`        | `https://qrcraftly.fpderuiter.workers.dev`<br/>`https://qrcraftly.com` | Public, indexed by search engines       |
-| **Preview Staging** | `dev`         | `https://dev-qrcraftly.fpderuiter.workers.dev`                         | Public staging, `X-Robots-Tag: noindex` |
-| **PR Previews**     | `<branch>`    | `https://<branch>-qrcraftly.fpderuiter.workers.dev`                    | Ephemeral, `X-Robots-Tag: noindex`      |
+Releases, versioning, tags, environments and rollback are documented in one place: [RELEASING.md](../RELEASING.md). In short:
 
----
+1. `pnpm run release:prepare` opens a `release/vX.Y.Z` branch with the version bump and changelog. Open it as a PR into `main`.
+2. Merging that PR makes the `Release` workflow tag `vX.Y.Z`, publish the GitHub Release, and smoke test production.
+3. To roll back, roll back the Cloudflare deployment, then fix forward with a PR.
 
-## 6. Release Lifecycle, Hotfixes and Rollback
-
-See [RELEASING.md](../RELEASING.md) for versioning rules, the release scripts, the changelog format, and the rollback procedure (roll back the Cloudflare deployment, then fix forward through `dev`).
+| Environment    | Branch     | Active Domain                                                          | Access & Indexing                  |
+| -------------- | ---------- | ---------------------------------------------------------------------- | ---------------------------------- |
+| **Production** | `main`     | `https://qrcraftly.fpderuiter.workers.dev`<br/>`https://qrcraftly.com` | Public, indexed by search engines  |
+| **PR Preview** | `<branch>` | `https://<branch>-qrcraftly.fpderuiter.workers.dev`                    | Ephemeral, `X-Robots-Tag: noindex` |
