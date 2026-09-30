@@ -175,8 +175,8 @@ Lighthouse CI runs on every Pull Request to audit performance, accessibility, be
 
 ## Contributing
 
-- **Branch from `dev`.** `dev` is the default and integration branch. Name branches with a standard prefix (`feat/`, `fix/`, `docs/`, `refactor/`, `chore/`, `agent/`) and open pull requests against `dev`. PRs are squash-merged once the `CI` and `PR Title` checks pass. Never open a pull request against `main`; `main` only advances when a maintainer runs the release process in [RELEASING.md](RELEASING.md).
-- **Use [Conventional Commits](https://www.conventionalcommits.org/)** for PR titles (`feat:`, `fix:`, `docs:`, `chore:`, ...). The squashed title becomes the commit on `dev`, and the release engine derives the next SemVer version and the changelog from it.
+- **Branch from `main`.** `main` is the only long-lived branch, and every merge to it deploys to production. Name branches with a standard prefix (`feat/`, `fix/`, `docs/`, `refactor/`, `chore/`, `agent/`) and open pull requests against `main`. PRs are squash-merged once the `CI` and `PR Title` checks pass. Releases are described in [RELEASING.md](RELEASING.md).
+- **Use [Conventional Commits](https://www.conventionalcommits.org/)** for PR titles (`feat:`, `fix:`, `docs:`, `chore:`, ...). The squashed title becomes the commit on `main`, and the release engine derives the next SemVer version and the changelog from it.
 - **Run the checks before pushing.** Husky runs formatting, typechecking, duplication audits and tests on commit. CI additionally runs `pnpm run lint`, `pnpm exec vitest run --coverage`, `pnpm test:e2e` and `pnpm build`.
 - **Read the guardrails.** [AGENTS.md](AGENTS.md) lists the project invariants (client-side only generation, storage allowlist, UI component reuse, workflow hardening), and [CONTEXT.md](CONTEXT.md) defines the domain vocabulary.
 - **Report bugs and ideas** through the GitHub issue forms; report security issues privately as described in [SECURITY.md](docs/SECURITY.md).

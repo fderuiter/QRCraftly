@@ -1,12 +1,12 @@
 name: PR Title
 
-# dev is squash-merged, so each PR title becomes one commit subject on dev and one
+# main is squash-merged, so each PR title becomes one commit subject on main and one
 # line in the changelog. The release engine derives the SemVer bump from those
 # subjects, so they must be Conventional Commits.
 
 on:
   pull_request:
-    branches: [dev]
+    branches: [main]
     types: [opened, edited, reopened, synchronize]
 
 permissions:
