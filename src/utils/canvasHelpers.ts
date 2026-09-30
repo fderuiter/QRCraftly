@@ -414,6 +414,13 @@ export const drawEyeball = (
       break;
 
     case QRStyle.FLUID:
+      // A squircle rather than a circle: a round 3x3 core shrinks along the diagonals and
+      // fails jsQR's finder-pattern check at common sizes (see fluidJsqrRoundTrip.test.ts).
+      ctx.beginPath();
+      drawRoundRect(ctx, x + 2 * cellSize, y + 2 * cellSize, 3 * cellSize, 3 * cellSize, cellSize);
+      ctx.fill();
+      break;
+
     case QRStyle.SWISS:
       ctx.beginPath();
       ctx.arc(cx, cy, 1.5 * cellSize, 0, Math.PI * 2);

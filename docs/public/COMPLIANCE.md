@@ -32,7 +32,7 @@ To maintain security, performance, and legal accountability, we collect basic ac
     - Accepted keys are: `engine`, `styleId`, `errorType`, `fgColor`, `bgColor`, `eyeColor`, `errorCorrectionLevel`, `isBorderEnabled`, `borderSize`, `borderColor`, `borderStyle`, `templateStyle`.
     - Values are constrained to non-sensitive primitive types (string | number | boolean | null) through TelemetryPayload.
 - **What is NOT Logged:**
-  - **User Input:** Since the application runs client-side, the text, URLs, or WiFi passwords you type are never part of the HTTP request to the server.
+  - **User Input:** Since the application runs client-side, the text, URLs, or WiFi passwords (including WPA2-Enterprise EAP method, phase 2 and identity fields) you type are never part of the HTTP request to the server.
   - **Generated Images:** The QR codes created are generated in the browser and never uploaded.
 
 ### 3. Technical Safeguards
