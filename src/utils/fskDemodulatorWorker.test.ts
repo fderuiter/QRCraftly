@@ -17,6 +17,7 @@
 */
 
 import { describe, it, expect, vi, beforeEach, afterEach, beforeAll } from 'vitest';
+import { loadWorkerModule, type InThreadWorkerScope, type WorkerModuleUnderTest } from '../../tests/utils/inThreadWorker';
 import {
   SYNC_FREQ,
   ZERO_FREQ,
@@ -104,29 +105,28 @@ describe('fskDemodulatorContract & fskDemodulatorWorker', () => {
   });
 
   describe('fskDemodulatorWorker Thread Logic', () => {
-    let workerHandler: any;
+    let workerHandler: WorkerModuleUnderTest['handle'];
+    let scope: InThreadWorkerScope;
     let originalPostMessage: any;
 
     beforeAll(async () => {
-      if (typeof (globalThis as any).self === 'undefined') {
-        (globalThis as any).self = globalThis;
-      }
-      await import('./fskDemodulatorWorker');
-      workerHandler = globalThis.onmessage;
+      const worker = await loadWorkerModule(new URL('./fskDemodulatorWorker.ts', import.meta.url));
+      scope = worker.scope;
+      workerHandler = worker.handle;
     });
 
     beforeEach(() => {
-      originalPostMessage = globalThis.postMessage;
+      originalPostMessage = scope.postMessage;
       vi.clearAllMocks();
     });
 
     afterEach(() => {
-      globalThis.postMessage = originalPostMessage;
+      scope.postMessage = originalPostMessage;
     });
 
     it('initializes worker configuration on init message', () => {
       const postMessageSpy = vi.fn();
-      globalThis.postMessage = postMessageSpy;
+      scope.postMessage = postMessageSpy;
 
       workerHandler({
         data: {
@@ -141,7 +141,7 @@ describe('fskDemodulatorContract & fskDemodulatorWorker', () => {
 
     it('resets demodulator state on reset message', () => {
       const postMessageSpy = vi.fn();
-      globalThis.postMessage = postMessageSpy;
+      scope.postMessage = postMessageSpy;
 
       workerHandler({
         data: {
@@ -154,7 +154,7 @@ describe('fskDemodulatorContract & fskDemodulatorWorker', () => {
 
     it('detects silence when FFT amplitudes are below threshold', () => {
       const postMessageSpy = vi.fn();
-      globalThis.postMessage = postMessageSpy;
+      scope.postMessage = postMessageSpy;
 
       const buffer = new ArrayBuffer(1024);
       workerHandler({
@@ -174,7 +174,7 @@ describe('fskDemodulatorContract & fskDemodulatorWorker', () => {
 
     it('detects sync tone, decodes bits, and reconstructs ASCII character', () => {
       const postMessageSpy = vi.fn();
-      globalThis.postMessage = postMessageSpy;
+      scope.postMessage = postMessageSpy;
 
       const sampleRate = 44100;
       const fftSize = 2048;

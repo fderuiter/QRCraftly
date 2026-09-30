@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach, beforeAll } from 'vitest';
+import { loadWorkerModule, type InThreadWorkerScope, type WorkerModuleUnderTest } from './utils/inThreadWorker';
 import jsQR from 'jsqr';
 import { getLuminanceFromRgb } from '@/utils/colorUtils';
 
@@ -15,7 +16,9 @@ vi.mock('@/utils/colorUtils', async (importOriginal) => {
 });
 
 describe('scannabilityWorker', () => {
-  let workerHandler: any;
+  let workerHandler: WorkerModuleUnderTest['handle'];
+  let worker: WorkerModuleUnderTest;
+  let scope: InThreadWorkerScope;
   let originalPostMessage: any;
   let originalImageData: any;
 
@@ -33,18 +36,18 @@ describe('scannabilityWorker', () => {
     }
     globalThis.ImageData = MockImageData as any;
 
-    // Dynamically import once to set self.onmessage and capture it
-    await import('@/packages/scannability/worker');
-    workerHandler = globalThis.onmessage;
+    worker = await loadWorkerModule(new URL('../src/packages/scannability/worker.ts', import.meta.url));
+    scope = worker.scope;
+    workerHandler = worker.handle;
   });
 
   beforeEach(() => {
-    originalPostMessage = globalThis.postMessage;
+    originalPostMessage = scope.postMessage;
     vi.clearAllMocks();
   });
 
   afterEach(() => {
-    globalThis.postMessage = originalPostMessage;
+    scope.postMessage = originalPostMessage;
   });
 
   const createDummyRequest = (configId = '123', isTest = true, moduleCount?: number) => {
@@ -64,7 +67,7 @@ describe('scannabilityWorker', () => {
 
   it('sets self.onmessage and processes safe digital pass and physical pass request', async () => {
     const postMessageSpy = vi.fn();
-    globalThis.postMessage = postMessageSpy;
+    scope.postMessage = postMessageSpy;
 
     // Control mocks
     vi.mocked(jsQR).mockReturnValueOnce({ data: 'https://safe.com' } as any) // digital
@@ -86,7 +89,7 @@ describe('scannabilityWorker', () => {
 
   it('handles safe digital pass but physical scan failure', async () => {
     const postMessageSpy = vi.fn();
-    globalThis.postMessage = postMessageSpy;
+    scope.postMessage = postMessageSpy;
 
     vi.mocked(jsQR).mockReturnValueOnce({ data: 'https://safe.com' } as any) // digital
                   .mockReturnValueOnce(null); // physical fails (dontInvert)
@@ -105,7 +108,7 @@ describe('scannabilityWorker', () => {
 
   it('handles dangerous URLs via ValidationEngine as security violation', async () => {
     const postMessageSpy = vi.fn();
-    globalThis.postMessage = postMessageSpy;
+    scope.postMessage = postMessageSpy;
 
     vi.mocked(jsQR).mockReturnValueOnce({ data: 'javascript:alert(1)' } as any);
 
@@ -121,7 +124,7 @@ describe('scannabilityWorker', () => {
 
   it('handles case where first digital scan fails but second (onlyInvert) passes', async () => {
     const postMessageSpy = vi.fn();
-    globalThis.postMessage = postMessageSpy;
+    scope.postMessage = postMessageSpy;
 
     vi.mocked(jsQR).mockReturnValueOnce(null) // digital 1 fails
                   .mockReturnValueOnce({ data: 'https://safe.com' } as any) // digital 2 passes
@@ -138,7 +141,7 @@ describe('scannabilityWorker', () => {
 
   it('handles case where both digital scans fail', async () => {
     const postMessageSpy = vi.fn();
-    globalThis.postMessage = postMessageSpy;
+    scope.postMessage = postMessageSpy;
 
     vi.mocked(jsQR).mockReturnValueOnce(null) // digital 1 fails
                   .mockReturnValueOnce(null); // digital 2 fails
@@ -155,7 +158,7 @@ describe('scannabilityWorker', () => {
 
   it('applies optical simulation math when isTest is false', async () => {
     const postMessageSpy = vi.fn();
-    globalThis.postMessage = postMessageSpy;
+    scope.postMessage = postMessageSpy;
 
     vi.mocked(jsQR).mockReturnValueOnce({ data: 'https://safe.com' } as any) // digital
                   .mockReturnValueOnce({ data: 'https://safe.com' } as any); // physical
@@ -171,7 +174,7 @@ describe('scannabilityWorker', () => {
 
   it('catches validation error if the payload is invalid', async () => {
     const postMessageSpy = vi.fn();
-    globalThis.postMessage = postMessageSpy;
+    scope.postMessage = postMessageSpy;
 
     // Send invalid payload to trigger isWorkerRequest/assertWorkerRequest validation error
     await workerHandler({ data: { invalidPayload: true } } as MessageEvent);
@@ -186,7 +189,7 @@ describe('scannabilityWorker', () => {
 
   it('treats a decoder exception as "no code found", like the main-thread check', async () => {
     const postMessageSpy = vi.fn();
-    globalThis.postMessage = postMessageSpy;
+    scope.postMessage = postMessageSpy;
 
     vi.mocked(jsQR).mockImplementation(() => {
       throw new Error('Simulation crash');
@@ -205,7 +208,7 @@ describe('scannabilityWorker', () => {
 
   it('catches crash error if global processing fails internally', async () => {
     const postMessageSpy = vi.fn();
-    globalThis.postMessage = postMessageSpy;
+    scope.postMessage = postMessageSpy;
 
     vi.mocked(getLuminanceFromRgb).mockImplementationOnce(() => {
       throw new Error('Contrast audit crash');
@@ -223,19 +226,19 @@ describe('scannabilityWorker', () => {
 
   it('handles postMessage crash fallback when postMessage throws', async () => {
     // Make postMessage throw first time to trigger catch fallback
-    globalThis.postMessage = vi.fn().mockImplementationOnce(() => {
+    scope.postMessage = vi.fn().mockImplementationOnce(() => {
       throw new Error('postMessage crash');
     });
 
     await workerHandler({ data: { invalidPayload: true } } as MessageEvent);
 
     // Should fall back to posting basic crash payload
-    expect(globalThis.postMessage).toHaveBeenCalledTimes(2);
+    expect(scope.postMessage).toHaveBeenCalledTimes(2);
   });
 
   it('handles falsy e.data or non-object e.data gracefully', async () => {
     const postMessageSpy = vi.fn();
-    globalThis.postMessage = postMessageSpy;
+    scope.postMessage = postMessageSpy;
 
     // Send null data
     await workerHandler({ data: null } as MessageEvent);
@@ -250,7 +253,7 @@ describe('scannabilityWorker', () => {
 
   it('handles case where first physical scan fails but second physical scan passes', async () => {
     const postMessageSpy = vi.fn();
-    globalThis.postMessage = postMessageSpy;
+    scope.postMessage = postMessageSpy;
 
     vi.mocked(jsQR).mockReturnValueOnce({ data: 'https://safe.com' } as any) // digital passes
                   .mockReturnValueOnce(null) // physical 1 fails
@@ -267,7 +270,7 @@ describe('scannabilityWorker', () => {
 
   it('cooperatively cancels older execution sequence when a newer configId is dispatched', async () => {
     const postMessageSpy = vi.fn();
-    globalThis.postMessage = postMessageSpy;
+    scope.postMessage = postMessageSpy;
 
     // Mock responses
     vi.mocked(jsQR).mockReturnValue({ data: 'https://safe.com' } as any);
@@ -294,7 +297,7 @@ describe('scannabilityWorker', () => {
 
   it('releases transferred image handle immediately upon detecting cooperative cancellation', async () => {
     const postMessageSpy = vi.fn();
-    globalThis.postMessage = postMessageSpy;
+    scope.postMessage = postMessageSpy;
     vi.mocked(jsQR).mockReturnValue({ data: 'https://safe.com' } as any);
 
     const closeSpy1 = vi.fn();
@@ -327,7 +330,25 @@ describe('scannabilityWorker', () => {
 
   it('releases transferred image handle when context extraction or processing throws an exception', async () => {
     const postMessageSpy = vi.fn();
-    globalThis.postMessage = postMessageSpy;
+    scope.postMessage = postMessageSpy;
+    // Node has no OffscreenCanvas; give the worker a minimal one so extraction succeeds and processing throws.
+    vi.stubGlobal(
+      'OffscreenCanvas',
+      class {
+        constructor(public width: number, public height: number) {}
+        getContext() {
+          return {
+            clearRect: () => {},
+            drawImage: () => {},
+            getImageData: (_x: number, _y: number, w: number, h: number) => ({
+              data: new Uint8ClampedArray(w * h * 4),
+              width: w,
+              height: h,
+            }),
+          };
+        }
+      },
+    );
 
     const closeSpy = vi.fn();
     const req = {
@@ -343,7 +364,11 @@ describe('scannabilityWorker', () => {
       throw new Error('Processing failure');
     });
 
-    await workerHandler({ data: req } as MessageEvent);
+    try {
+      await workerHandler({ data: req } as MessageEvent);
+    } finally {
+      vi.unstubAllGlobals();
+    }
 
     expect(closeSpy).toHaveBeenCalledTimes(1);
     expect(postMessageSpy).toHaveBeenCalledWith(
@@ -357,7 +382,7 @@ describe('scannabilityWorker', () => {
 
   it('requests image data when worker canvas extraction is unavailable', async () => {
     const postMessageSpy = vi.fn();
-    globalThis.postMessage = postMessageSpy;
+    scope.postMessage = postMessageSpy;
     const originalOffscreenCanvas = globalThis.OffscreenCanvas;
     delete (globalThis as { OffscreenCanvas?: typeof OffscreenCanvas }).OffscreenCanvas;
 
@@ -382,7 +407,7 @@ describe('scannabilityWorker', () => {
 
   it('recycles pre-allocated double-buffer ArrayBuffer back to main thread in postMessage transfer list', async () => {
     const postMessageSpy = vi.fn();
-    globalThis.postMessage = postMessageSpy;
+    scope.postMessage = postMessageSpy;
 
     vi.mocked(jsQR).mockReturnValueOnce({ data: 'https://safe.com' } as any)
                   .mockReturnValueOnce({ data: 'https://safe.com' } as any);
@@ -418,7 +443,7 @@ describe('scannabilityWorker', () => {
 
   it('executes frame evaluation using pure JavaScript logic without WebAssembly instantiation or stubs', async () => {
     const postMessageSpy = vi.fn();
-    globalThis.postMessage = postMessageSpy;
+    scope.postMessage = postMessageSpy;
 
     const instantiateSpy = vi.spyOn(globalThis.WebAssembly, 'instantiate');
 
