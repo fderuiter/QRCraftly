@@ -40,7 +40,24 @@ export {
   type WorkerResponse,
 } from './lib/sharedContract';
 export { releaseImageHandle } from './lib/imageHandle';
-export { createScannabilityWorker } from './lib/workerFactory';
+export {
+  createScannabilityWorker,
+  type ScannabilityWorkerFactory,
+  type ScannabilityWorkerHandle,
+  type ScannabilityWorkerHandlers,
+} from './lib/workerFactory';
+export type { PixelFrame } from './lib/checker';
+export {
+  createScannabilityEvaluator,
+  assessScannability,
+  type ScannabilityEvaluator,
+  type ScannabilityEvaluatorConfig,
+  type ScannabilityAssessment,
+  type ScannabilityCheckRequest,
+  type ScannabilityCanvas,
+  type ScannabilityClock,
+  type ScannabilityFrameReader,
+} from './lib/evaluator';
 
 
 export interface ScannabilityEvaluation {
