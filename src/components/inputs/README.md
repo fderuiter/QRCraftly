@@ -82,6 +82,10 @@ The centralized configuration in `src/types.ts` also contains parameters for gen
 
 These parameters are controlled via `AdvancedControls.tsx`.
 
+## Mosaic QR Configuration
+
+`QRConfig` also carries the Mosaic QR style fields (ADR 0019): `mosaicImageUrl` (the uploaded design as a `data:` URL, or null), `mosaicMode` (`halftone` or `tiles`) and `mosaicContrast` (0..1). They are style fields, not content, and are controlled by `MosaicControls.tsx`.
+
 ## Template Export Configuration
 
 Template export options in `QRConfig` include `templateStyle`, optional `templateHeadline`/`templateSubtext`, color overrides (`templateBgColor`, `templateTextColor`), and `templateQrScale`.

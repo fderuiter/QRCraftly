@@ -34,6 +34,14 @@ _Avoid_: Diagonal bleed, corner bleed, diagonal connector
 A closed polygon formed by directed boundary segments outlining contiguous module clusters for smooth vector rendering.
 _Avoid_: Outline, border path, trace line
 
+**Mosaic QR**:
+A render mode that tiles a user-supplied image into the modules, recolouring each module (or its centre sub-cell in halftone mode) towards its dark or light value so the matrix still decodes. See ADR 0019.
+_Avoid_: Art QR, picture QR, image QR, AI QR
+
+**Mosaic Core**:
+The centre sub-cell of a halftone mosaic module, held at full contrast because scanners sample module centres; the outer sub-cells carry image detail.
+_Avoid_: Centre dot, data dot, halftone pixel
+
 ### Privacy & Compliance
 
 **Zero-Knowledge Redirection**:

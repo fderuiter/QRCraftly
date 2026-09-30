@@ -24,6 +24,7 @@ import {
   PatternControls,
   ColorControls,
   LogoControls,
+  MosaicControls,
   AdvancedControls,
   LayoutControls
 } from './style-controls';
@@ -89,6 +90,9 @@ const StyleControls: React.FC<StyleControlsProps> = ({ config, onChange }) => {
       <AccordionItem title="Logo" headingLevel={3} defaultOpen={sectionOpenState.get('Logo') ?? false} onOpenChange={rememberSection('Logo')}>
         <div className="pt-1">
           <LogoControls config={config} onChange={onChange} />
+          <div className="border-t border-slate-100 pt-5 dark:border-slate-700">
+            <MosaicControls config={config} onChange={onChange} />
+          </div>
         </div>
       </AccordionItem>
 

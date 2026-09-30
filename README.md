@@ -13,6 +13,7 @@
   - **Patterns**: Choose from Standard Industrial, Modern Soft, Swiss Dot, Fluid Ink, Cyber Circuit, The Hive, Grunge, and Starburst styles.
   - **Colors**: Customize foreground, background, and finder pattern colors. Includes accessibility-checked preset themes.
   - **Logos**: Upload and embed custom logos with configurable padding, sizes, and border styles (Square, Circle, None). Maximum logo size is 30% to maintain scannability.
+  - **Mosaic QR**: Upload a design and tile it across the whole code. Each module takes the image colour under it while keeping its dark or light value, so the code still scans (Halftone or Tiles layout, adjustable Scan Contrast; see [ADR 0019](docs/adr/0019-mosaic-qr-module-level-image-tiling.md)).
   - **Upload Limits**: Supported custom logo formats are image/jpeg, image/png, image/webp, image/svg+xml. Maximum file size is 2MB.
 - **Privacy First**: Client-side architecture. All sensitive data processing happens locally in your browser with volatile in-memory guarantees; no user payloads are sent to external servers.
 - **Dynamic Redirection (Architecture)**: Cloudflare edge redirection with zero-knowledge AES-GCM client encryption where decryption keys reside exclusively in URL anchor hash fragments (`#key=...`) (undergoing active stabilization).
@@ -138,6 +139,7 @@ Lighthouse CI runs on every Pull Request to audit performance, accessibility, be
 4.  **Add a Logo (Optional)**:
     - Click "Upload Logo" to add an image to the center of the QR code.
     - Adjust the logo size, border style, and padding.
+    - Or click "Upload Mosaic Design" to tile a picture across the whole code, then pick Halftone or Tiles and raise Scan Contrast if the scan badge warns.
 5.  **Download**:
     - Click the **Download** button to save as a high-quality PNG.
     - Click the arrow next to Download to choose other formats (JPEG, WebP).

@@ -25,6 +25,7 @@ import { validateConfig } from '@/packages/qr-payload';
 import { Alert } from './ui/Alert';
 import { useOptionalQRStoreSelector } from '../context/QRContext';
 import { generateMaze, getMazeCacheKey, storeMaze } from '@/packages/qr-matrix/maze';
+import { loadMosaicSource } from '@/packages/qr-matrix/mosaic';
 import { getQrCanvasRuntime, type QrEncoder } from '../utils/qrCanvasRuntime';
 import { normalizeUrl, shouldNormalizeUrl } from '../utils/url';
 import {
@@ -103,6 +104,20 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
   // Pre-load images to avoid async rendering and flickering
   const logoImg = useImage(activeConfig.logoUrl);
   const borderLogoImg = useImage(activeConfig.isBorderEnabled ? activeConfig.borderLogoUrl : null);
+
+  // Decode the Mosaic QR image once; the renderer reads it from the in-memory cache.
+  const [mosaicSourceVersion, setMosaicSourceVersion] = useState(0);
+  useEffect(() => {
+    const url = activeConfig.mosaicImageUrl;
+    if (!url) return;
+    let isCurrent = true;
+    loadMosaicSource(url).then((source) => {
+      if (isCurrent && source) setMosaicSourceVersion((v) => v + 1);
+    });
+    return () => {
+      isCurrent = false;
+    };
+  }, [activeConfig.mosaicImageUrl]);
 
   // Animation states and refs to ensure we can read latest visual styles without rebuilding/restarting loop
   const cachedFramesRef = useRef<{ value: string; modules: QRModules }[]>([]);
@@ -710,6 +725,10 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
     activeConfig.mazeColor,
     activeConfig.mazePathWidth,
     activeConfig.showMazeSolution,
+    config.mosaicImageUrl,
+    config.mosaicMode,
+    config.mosaicContrast,
+    mosaicSourceVersion,
     logoImg,
     borderLogoImg,
     size,
