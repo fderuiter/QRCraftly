@@ -49,7 +49,7 @@ describe('QR Helpers', () => {
         hidden: false,
         eapIdentity: 'user@domain.com'
       };
-      expect(constructWifiString(data)).toBe('WIFI:T:WPA2-EAP;S:EnterpriseNet;I:user@domain.com;P:securepass;;');
+      expect(constructWifiString(data)).toBe('WIFI:T:WPA2-EAP;S:EnterpriseNet;E:PEAP;PH2:MSCHAPV2;I:user@domain.com;P:securepass;;');
     });
 
     it('constructs a nopass WiFi string (omits password)', () => {
@@ -113,8 +113,8 @@ describe('QR Helpers', () => {
         body: 'Body'
       };
       const result = constructEmailString(data);
-      // Should preserve raw value since internal parameter splitting is removed
-      expect(result).toBe('mailto:user@example.com?cc=attacker@example.com?subject=Test&body=Body');
+      // The recipient is percent-encoded (RFC 6068) so `?` and `=` cannot start a query
+      expect(result).toBe('mailto:user@example.com%3Fcc%3Dattacker@example.com?subject=Test&body=Body');
     });
   });
 
@@ -215,7 +215,9 @@ describe('QR Helpers', () => {
       };
       const result = constructPaymentString(data);
       expect(result).toContain('ethereum:0x123...');
-      expect(result).toContain('amount=1.5');
+      // EIP-681: Ethereum amounts are `value=` in wei
+      expect(result).toContain('value=1500000000000000000');
+      expect(result).not.toContain('amount=');
       expect(result).toContain('label=Payment%20for%20Services');
     });
 

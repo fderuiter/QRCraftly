@@ -21,15 +21,27 @@ import {
   CONTAINMENT_PROFILES,
   identifyProtocol,
   parseProtocol,
+  safeDecodeURIComponent,
   splitByUnescapedSemicolons,
 } from '../protocol';
+
+/**
+ * Percent-encodes a mailto recipient (RFC 6068) so that `?`, `&`, `#`, `%` and
+ * whitespace in the address cannot start a query, inject a header or open a
+ * fragment. `@` and `+` are left as-is because RFC 6068 allows them unencoded.
+ * @param address - The raw recipient address.
+ * @returns The encoded recipient for the mailto path.
+ */
+const encodeMailtoRecipient = (address: string): string => {
+  return encodeURIComponent(address.trim()).replace(/%40/g, '@').replace(/%2B/gi, '+');
+};
 
 /**
  * Constructs the mailto string for Email QR code.
  */
 export const constructEmailString = (data: EmailData): string => {
   if (!data) return 'mailto:?subject=&body=';
-  return `mailto:${data.email || ''}?subject=${encodeURIComponent(data.subject || '')}&body=${encodeURIComponent(data.body || '')}`;
+  return `mailto:${encodeMailtoRecipient(data.email || '')}?subject=${encodeURIComponent(data.subject || '')}&body=${encodeURIComponent(data.body || '')}`;
 };
 
 /**
@@ -53,7 +65,8 @@ export const hydrateEmailData = (raw: string): EmailData => {
   }
 
   if (parsed.scheme === 'mailto') {
-    result.email = parsed.path;
+    const parsedRecipient = safeDecodeURIComponent(parsed.path);
+    result.email = parsedRecipient;
     result.subject = parsed.params.get('subject') || '';
     result.body = parsed.params.get('body') || '';
   }
@@ -89,8 +102,10 @@ export const EmailContract: QRGeneratorContract<EmailData> = {
       return violations;
     }
 
-    // Validate email address
-    if (!parsed.path || !CONTAINMENT_PROFILES.EMAIL.test(parsed.path)) {
+    // Validate email address (mailto recipients are percent-encoded, RFC 6068)
+    const recipient =
+      parsed.scheme === 'mailto' ? safeDecodeURIComponent(parsed.path) : parsed.path;
+    if (!recipient || !CONTAINMENT_PROFILES.EMAIL.test(recipient)) {
       violations.push('EMAIL_STRUCTURE_VIOLATION');
     }
 

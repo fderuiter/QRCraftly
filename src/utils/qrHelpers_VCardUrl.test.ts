@@ -25,11 +25,11 @@ describe('VCard URL Normalization', () => {
     expect(result).toContain('URL:http://example.com/foo%20bar');
   });
 
-  it('should handle URL without protocol by adding http://', () => {
+  it('should handle URL without protocol by adding https://', () => {
     const data = { ...baseData, website: 'www.google.com' };
     const result = constructVCardString(data);
     // Should add protocol
-    expect(result).toContain('URL:http://www.google.com/');
+    expect(result).toContain('URL:https://www.google.com/');
   });
 
   it('should not double-encode already encoded URL', () => {
