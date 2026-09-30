@@ -29,101 +29,133 @@ export interface ScannabilityResult {
   minLocalContrast?: number;
 }
 
+/** Raw RGBA pixels with their dimensions (an `ImageData` satisfies it). */
+export interface PixelFrame {
+  data: Uint8ClampedArray;
+  width: number;
+  height: number;
+}
+
 /**
- * Shared evaluation engine to run localized module contrast checks, two-pass barcode decoding,
- * security inspection, and optical print degradation simulation.
+ * Reusable scratch memory for the optical print simulation. The worker keeps one pair alive
+ * across requests so continuous slider edits do not allocate two full-frame buffers per check.
+ */
+export interface OpticalScratchBuffers {
+  dst?: Uint8ClampedArray;
+  temp?: Uint8ClampedArray;
+}
+
+type Decoder = typeof jsQR;
+
+// Some bundlers hand the CommonJS jsQR build back as `{ default: fn }`.
+const decodeQR: Decoder =
+  typeof jsQR === 'function' ? jsQR : (jsQR as unknown as { default: Decoder }).default;
+
+/**
+ * Attempts one jsQR pass. Decoder exceptions are treated as "no code found" so a crash in one
+ * polarity pass never prevents the next pass from running.
+ */
+function tryDecode(
+  frame: PixelFrame,
+  inversionAttempts: 'dontInvert' | 'attemptBoth'
+): string | null {
+  try {
+    const code = decodeQR(frame.data, frame.width, frame.height, { inversionAttempts });
+    return code ? code.data : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The single Scannability Health check, written as a generator so the Scannability Worker can
+ * yield to its event loop (and abandon superseded requests) between the expensive stages, while
+ * the main-thread fallback runs the exact same steps synchronously. Every `yield` marks a point
+ * where the caller may stop iterating.
  *
- * Guarantees exact parity across Web Worker and main-thread fallback execution.
+ * Stages: localized module contrast audit, two-pass (normal, then inverted) digital decode, the
+ * dangerous-URL security check, optical print simulation, then a two-pass physical decode.
+ *
+ * @param frame - Pixels to evaluate.
+ * @param isTest - Skips the randomized optical simulation (deterministic automation runs).
+ * @param moduleCount - QR modules per side; enables the localized contrast audit.
+ * @param scratch - Optional reusable buffers for the optical simulation.
+ * @returns A generator whose return value is the check result.
+ */
+export function* scannabilitySteps(
+  frame: PixelFrame,
+  isTest: boolean,
+  moduleCount?: number,
+  scratch?: OpticalScratchBuffers
+): Generator<void, ScannabilityResult, void> {
+  const { width, height } = frame;
+
+  // 0. Localized module contrast audit
+  let localContrastViolations = 0;
+  let minLocalContrast = 21;
+  if (moduleCount && moduleCount > 0) {
+    const audit = auditModuleContrast(frame, moduleCount);
+    localContrastViolations = audit.violations;
+    minLocalContrast = audit.minContrast;
+  }
+  const metrics = { localContrastViolations, minLocalContrast };
+
+  // 1. Digital check (pass 1: normal polarity, pass 2: inverted polarity)
+  let decoded = tryDecode(frame, 'dontInvert');
+  if (decoded === null) {
+    yield;
+    decoded = tryDecode(frame, 'attemptBoth');
+  }
+
+  if (decoded === null) {
+    return { success: false, physicalReady: false, error: 'NOT_FOUND', ...metrics };
+  }
+
+  // Security check: a code that decodes to a dangerous URL is never reported as scannable.
+  if (isDangerousUrl(decoded)) {
+    return { success: false, physicalReady: false, error: 'SECURITY_VIOLATION', ...metrics };
+  }
+
+  yield;
+
+  // 2. Optical print simulation
+  let simulated: PixelFrame = frame;
+  if (!isTest) {
+    const length = width * height * 4;
+    if (scratch) {
+      if (!scratch.dst || scratch.dst.length !== length) scratch.dst = new Uint8ClampedArray(length);
+      if (!scratch.temp || scratch.temp.length !== length) scratch.temp = new Uint8ClampedArray(length);
+    }
+    const dst = applyOpticalSimulationMath(frame.data, width, height, 10, scratch?.dst, scratch?.temp);
+    simulated = { data: dst, width, height };
+  }
+
+  yield;
+
+  // 3. Physical check (pass 1: normal polarity, pass 2: inverted polarity)
+  let physicalReady = tryDecode(simulated, 'dontInvert') !== null;
+  if (!physicalReady) {
+    yield;
+    physicalReady = tryDecode(simulated, 'attemptBoth') !== null;
+  }
+
+  return { success: true, physicalReady, ...metrics };
+}
+
+/**
+ * Runs the Scannability Health check synchronously on the calling thread. This is the same
+ * step sequence the Scannability Worker runs (see `scannabilitySteps`), so worker and
+ * main-thread fallback results match by construction rather than by copied code.
  */
 export function performScannabilityCheck(
-  imageData: ImageData | { data: Uint8ClampedArray; width: number; height: number },
+  imageData: PixelFrame,
   width: number,
   height: number,
   isTest: boolean,
   moduleCount?: number
 ): ScannabilityResult {
-  // 0. Localized module contrast audit
-  let localContrastViolations = 0;
-  let minLocalContrast = 21;
-
-  if (moduleCount && moduleCount > 0) {
-    const audit = auditModuleContrast({ data: imageData.data, width, height }, moduleCount);
-    localContrastViolations = audit.violations;
-    minLocalContrast = audit.minContrast;
-  }
-
-  // 1. Digital-only check (Pass 1: Normal polarity, Pass 2: Inverted polarity)
-  let digitalPass = false;
-  let decodedData = '';
-  let code = null;
-  try {
-    code = jsQR(imageData.data, width, height, { inversionAttempts: 'dontInvert' });
-  } catch {}
-
-  if (code) {
-    digitalPass = true;
-    decodedData = code.data;
-  } else {
-    try {
-      code = jsQR(imageData.data, width, height, { inversionAttempts: 'attemptBoth' });
-    } catch {}
-    if (code) {
-      digitalPass = true;
-      decodedData = code.data;
-    }
-  }
-
-  // Security Check: URL / Payload safety
-  if (digitalPass && isDangerousUrl(decodedData)) {
-    return {
-      success: false,
-      physicalReady: false,
-      error: 'SECURITY_VIOLATION',
-      localContrastViolations,
-      minLocalContrast,
-    };
-  }
-
-  if (!digitalPass) {
-    return {
-      success: false,
-      physicalReady: false,
-      error: 'NOT_FOUND',
-      localContrastViolations,
-      minLocalContrast,
-    };
-  }
-
-  // 2. Optical simulation & physical check
-  let physicalPass = false;
-  let simulatedData: ImageData | { data: Uint8ClampedArray; width: number; height: number };
-
-  if (isTest) {
-    simulatedData = imageData;
-  } else {
-    const dst = applyOpticalSimulationMath(imageData.data, width, height);
-    simulatedData = { data: dst, width, height };
-  }
-
-  let codeSim = null;
-  try {
-    codeSim = jsQR(simulatedData.data, width, height, { inversionAttempts: 'dontInvert' });
-  } catch {}
-
-  if (codeSim) {
-    physicalPass = true;
-  } else {
-    try {
-      codeSim = jsQR(simulatedData.data, width, height, { inversionAttempts: 'attemptBoth' });
-    } catch {}
-    if (codeSim) physicalPass = true;
-  }
-
-  return {
-    success: true,
-    physicalReady: physicalPass,
-    localContrastViolations,
-    minLocalContrast,
-  };
+  const steps = scannabilitySteps({ data: imageData.data, width, height }, isTest, moduleCount);
+  let step = steps.next();
+  while (!step.done) step = steps.next();
+  return step.value;
 }
-
