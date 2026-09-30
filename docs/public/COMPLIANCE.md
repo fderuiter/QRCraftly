@@ -12,7 +12,8 @@ This application is designed to **support** HIPAA-compliant workflows through a 
 
 - **Local Processing:** All QR code generation happens locally within the user's browser using HTML5 Canvas and JavaScript.
 - **Data Transmission:** The sensitive data you enter to generate a QR code (which may include PHI) remains strictly in your device's memory and is not sent to our servers.
-- **Volatile Memory:** Data entered into the application is cleared when the browser tab is closed or refreshed.
+- **Volatile Memory:** QR content you enter is held only in memory and is cleared when the browser tab is closed or refreshed. The only values written to persistent browser storage are the keys listed under Technical Safeguards below.
+- **Dynamic Link Records (exception, currently switched off):** Dynamic links are built but switched off in production. If they are switched on, each dynamic link you create is saved in `localStorage` under `qrcraftly:dynamic-redirects` so you can manage it later. That record holds the original destination URL in plain text, the decryption key and the admin key for the link, and it stays on your device until you delete the link or clear site data. The server receives only the encrypted destination.
 - **Animation Loop Frames:** Any cached frames or matrices generated for animation loops are also kept solely in volatile client-side memory.
 - **Playable Maze Overlay:** All coordinates, keep-out boundary zones, scannability-audited finder pattern bridge channels, and solutions computed for the playable maze overlay are processed completely in-memory locally in the user's browser, ensuring absolute privacy and data isolation.
 

@@ -10,7 +10,9 @@ Evaluating QR scannability in real time requires continuous pixel extraction, co
 
 ## Decision
 
-We run scannability analysis off the main thread in dedicated Web Workers (`scannabilityWorker.ts`, `scannerWorker.ts`) using a pure JavaScript engine (`jsQR`) combined with transferable, zero-copy `ArrayBuffer` instances managed by a pre-allocated `DoubleBufferPool`.
+We run scannability analysis off the main thread in dedicated Web Workers using a pure JavaScript engine (`jsQR`) combined with transferable, zero-copy `ArrayBuffer` instances.
+
+> **Current state:** the scannability worker lives in `src/packages/scannability/worker.ts` (re-exported through the `src/utils/scannabilityWorker.ts` shim) and transfers each pixel buffer to the worker and back for reuse. The scanner worker `src/utils/scannerWorker.ts` was deleted ([ADR 0016](./0016-consolidated-optical-detection-engine.md)); camera and file decoding run in `src/packages/optical-scanner/worker.ts`, and only the optical scanner recycles frames through the pre-allocated `DoubleBufferPool` (`src/packages/optical-scanner/lib/bufferPool.ts`).
 
 ## Rationale
 

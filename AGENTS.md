@@ -10,8 +10,8 @@ Operating instructions and core invariants for AI agents working in this reposit
   - Range sliders: Always use `RangeInput` from `src/components/ui/RangeInput.tsx`.
   - Buttons: Always use `Button` from `src/components/ui/Button.tsx`.
   - Color pickers: Always use `ColorInput` from `src/components/ui/ColorInput.tsx`.
-  - Color & contrast math: Never write custom luminance, hex normalization, or contrast formulas. Always import from `src/utils/colorUtils.ts` or `src/utils/a11y.ts`.
-- **Tailwind CSS v4 (CSS-First)**: Theme variables, tokens, and dark mode variants live exclusively in `src/layouts/index.css` via `@theme` and `@variant`. There is no `tailwind.config.js`.
+  - Color & contrast math: Never write custom luminance, hex normalization, or contrast formulas. Always import from `src/utils/colorUtils.ts` or `src/utils/contrastAudit.ts`.
+- **Tailwind CSS v4 (CSS-First)**: Theme variables, tokens, and dark mode variants live exclusively in `src/layouts/index.css` via `@theme` and `@variant` (today the file declares only `@variant dark`; the app uses Tailwind's default palette and has no `@theme` block yet). There is no `tailwind.config.js`.
 - **Platform Invariance & Path Canonicalization**: All repository tooling, AST auditors, scripts, tests, and build steps must be completely environment-agnostic (Windows, macOS, Linux). Never hardcode OS drive paths, platform-specific binaries (`npx.cmd`), or raw `split('\n')`. Always canonicalize relative paths using POSIX forward slashes (`/`), standardize line endings to `LF` with defensive regex splitting (`/\r?\n/`), and use `scripts/utils/execHelper.js` or `tests/utils/execHelper.ts` for process execution. Verified by `scripts/path_invariance_auditor.js`.
 - **Deployment Integrity & Edge Hosting**: Cloudflare Workers with Static Assets provides the edge runtime. Domain isolation is guaranteed via native branch routing: `dev` deploys to the preview staging environment (`https://dev-qrcraftly.fpderuiter.workers.dev/`), while `main` deploys to production (`https://qrcraftly.fpderuiter.workers.dev/` and `https://qrcraftly.com`). GitHub Actions functions as the Authoritative Quality Gatekeeper. Never introduce local server mock fallbacks (`localhost:3000`) or monkey-patch the Wrangler CLI in CI scripts.
 - **GitHub Actions Workflow Hardening**: Never use inline `${{ ... }}` template expressions inside `run:` or `script:` execution blocks in `.github/workflows/*.yml`. All step outputs, inputs, secrets, and dynamic expressions MUST be passed through step-scoped `env:` blocks and accessed as environment variables (e.g. `$MY_VAR`) to prevent script injection attacks. Verified by `tests/workflow_hardening.test.ts`.
@@ -62,8 +62,8 @@ See `docs/agents/docs-maintenance.md`.
 Before declaring any implementation task complete, verify your changes:
 
 1. **Standard Code Changes**: Run and ensure passing:
-   - `pnpm run lint` (runs AST storage checks, UI catalog validation, markdown audits, TypeScript type-checking, ESLint, Knip, contrast checks, Prettier, and duplication checks)
+   - `pnpm run lint` (runs dependency license compliance, the git lineage (code-to-doc pairing) audit, AST storage checks, the path invariance audit, UI catalog validation, markdown audits, static SVG path tracking, the docs manifest check, TypeScript type-checking, dependency-cruiser package boundaries, ESLint, Knip, contrast checks, Prettier, and duplication checks)
    - `pnpm test` (Vitest test suite)
 2. **Build, Routing, or Core Generator Changes**: In addition to standard checks, run:
-   - `pnpm build` (verifies SSR/SSG compilation, bundle size budget, and postbuild security scripts)
+   - `pnpm build` (verifies SSG pre-rendering, the bundle AST audit, and postbuild security scripts; the gzipped bundle size budget is a separate CI step, `pnpm run check-bundle-size`)
    - `pnpm test:e2e` (Playwright end-to-end verification, when modifying navigation, rendering, or input flows)

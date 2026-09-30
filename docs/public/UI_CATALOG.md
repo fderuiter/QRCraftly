@@ -115,10 +115,14 @@ These utility functions handle hex conversion, relative luminance, contrast chec
   - **Description:** Normalizes custom hex inputs (supports shorthand `#abc`, converts to `#aabbcc`, formats casing, and appends a `#` prefix if absent).
 - `getContrastRatio(fg: string, bg: string): number` (`src/utils/colorUtils.ts`)
   - **Description:** Computes the contrast ratio between foreground and background sRGB colors based on WCAG 2.0 relative luminance formulas.
-- `renderModules` (`src/utils/qr-renderers/modules.ts`)
+- `renderModules` (`src/packages/qr-matrix/lib/modules.ts`, imported from `@/packages/qr-matrix`)
   - **Description:** Central vector module drawing orchestrator executing batched two-pass drawing across standard, geometric, and artistic styles.
-- `renderFluidModules` (`src/utils/qr-renderers/fluid.ts`)
+- `renderFluidModules` (`src/packages/qr-matrix/lib/fluid.ts`, imported from `@/packages/qr-matrix`)
   - **Description:** High-performance fluid vector renderer evaluating 4-neighbor matrix module connectivity to draw continuous bezier curve bridges for the Fluid Ink style without impacting corner finder patterns.
+- `getLuminance(hex: string): number` and `getLuminanceFromRgb(r: number, g: number, b: number): number` (`src/utils/colorUtils.ts`)
+  - **Description:** WCAG relative luminance of a hex colour or of 0–255 RGB channels. Use these instead of writing luminance weights.
+- Shared form class strings (`src/components/ui/styles.ts`)
+  - **Description:** Tailwind class constants for inputs, fieldsets, legends and grids (for example `TEXT_FIELD_CLASSES`, `GRID_TWO_COLUMNS_CLASSES`). Reuse them so custom fields match `TextField` and `FormFields`.
 
 ---
 

@@ -30,7 +30,7 @@ We establish a **Two-Tier Staged Promotion Model** with an enforced **Semantic B
 
 3. **Dual-Branch Quality Gates**:
    - Both `dev` and `main` require all static validation gates (`pnpm run lint`), unit tests (`vitest`), and cross-browser e2e suites (`playwright`) to pass in CI before PR merges are permitted.
-   - PRs targeting `dev` spin up ephemeral previews to run smoke tests before merge.
+   - PRs targeting `dev` get an ephemeral Cloudflare Workers Builds preview URL for manual review before merge. No automated smoke tests run against it ([ADR 0018](./0018-release-pr-tag-driven-publishing.md)).
 
 4. **Staged Promotion Lifecycle**:
    - When a batch of changes on `dev` is verified on `https://dev-qrcraftly.fpderuiter.workers.dev/`, a promotional PR from `dev` into `main` is created (e.g. `release: vX.Y.Z`).

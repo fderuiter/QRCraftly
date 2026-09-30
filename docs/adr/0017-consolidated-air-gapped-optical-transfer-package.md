@@ -24,8 +24,8 @@ We consolidate the entire air-gapped optical transfer pipeline into a unified de
 
 The package exposes minimal, orthogonal public entry points:
 
-- **`sender.ts` (Headless Sender Entry Point)**: Exposes `createTransferSession(file, options)` and `startTransfer(file, options)` for off-thread fountain/block slicing, contiguous frame caching, and rate-paced module frame stepping.
-- **`receiver.ts` (Headless Receiver Entry Point)**: Exposes `createReceiverSession(options)` and `listenForStream(source, options)` managing off-thread droplet/chunk reassembly, stream lookahead security validation, and SHA-256 integrity verification.
+- **`sender.ts` (Headless Sender Entry Point)**: Exposes `createTransferSession(file, options, callbacks)` (resolving to a `TransferSession`) for off-thread fountain/block slicing, contiguous frame caching, and rate-paced module frame stepping.
+- **`receiver.ts` (Headless Receiver Entry Point)**: Exposes `createReceiverSession(options)` (returning a `ReceiverSession`) managing off-thread droplet/chunk reassembly, stream lookahead security validation, and SHA-256 integrity verification.
 - **`client.ts` (React Hook Seam)**: Exposes headless React hooks `useOpticalSender` and `useOpticalReceiver` to manage reactive lifecycle states, fps sliders, progress metrics, and canvas/video bindings without exposing internal memory buffers or workers.
 - **`worker-slice.ts` & `worker-reassembly.ts` (Worker Entry Points)**: Dedicated off-thread Web Worker entry points isolating CPU-heavy slicing, fountain degree sampling, and peeling reassembly from the main thread.
 
