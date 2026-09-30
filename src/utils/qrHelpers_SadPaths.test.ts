@@ -34,7 +34,7 @@ describe('QR Helpers Sad Paths', () => {
         subject: 'Test',
         body: 'Body'
       };
-      expect(constructEmailString(data)).toBe('mailto:?subject=bad?subject=Test&body=Body');
+      expect(constructEmailString(data)).toBe('mailto:%3Fsubject%3Dbad?subject=Test&body=Body');
     });
 
     it('should handle completely empty data', () => {

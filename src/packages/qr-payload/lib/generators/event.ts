@@ -68,9 +68,65 @@ export const hydrateEventData = (raw: string): EventData => {
 };
 
 /**
- * Constructs an iCalendar VEVENT payload.
+ * Options for {@link constructEventString}. Both are injectable so tests can pin the output.
  */
-export const constructEventString = (data: EventData): string => {
+interface EventConstructOptions {
+  /** Clock used for DTSTAMP. Defaults to the time the first event was built in this session. */
+  now?: Date;
+  /** Overrides the content-derived UID. */
+  uid?: string;
+}
+
+/**
+ * 32-bit FNV-1a hash of a string, as 8 lowercase hex digits.
+ */
+const fnv1a = (input: string, seed: number): string => {
+  let hash = seed >>> 0;
+  for (let i = 0; i < input.length; i++) {
+    hash ^= input.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  return hash.toString(16).padStart(8, '0');
+};
+
+/**
+ * Builds a stable RFC 5545 UID from the event content, without any network or random source.
+ * The same event always gets the same UID, so re-scanning updates the calendar entry
+ * instead of duplicating it.
+ */
+const deriveEventUid = (data: EventData): string => {
+  const key = [data.title, data.startDate, data.endDate, data.location, data.description]
+    .map((part) => part || '')
+    .join('\u001f');
+  return `${fnv1a(key, 0x811c9dc5)}${fnv1a(key, 0x01000193)}@qrcraftly.com`;
+};
+
+/**
+ * Formats a Date as an RFC 5545 UTC DATE-TIME (e.g. 20250101T120000Z).
+ */
+const formatUtcStamp = (date: Date): string => {
+  return date.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+};
+
+// DTSTAMP is fixed for the session so that building the same event twice gives the
+// same payload (the input panel compares constructed values to detect external edits).
+let sessionStamp: string | undefined;
+
+const resolveStamp = (now: Date | undefined): string => {
+  if (now) return formatUtcStamp(now);
+  if (!sessionStamp) sessionStamp = formatUtcStamp(new Date());
+  return sessionStamp;
+};
+
+/**
+ * Constructs an iCalendar VEVENT payload.
+ * Includes the RFC 5545 required UID and DTSTAMP properties, and leaves out
+ * properties whose value would be empty (some calendar apps reject `DTEND:`).
+ */
+export const constructEventString = (
+  data: EventData,
+  options: EventConstructOptions = {}
+): string => {
   if (!data) return '';
   const startFormatted = formatEventDateTime(data.startDate);
   const endFormatted = formatEventDateTime(data.endDate);
@@ -78,16 +134,20 @@ export const constructEventString = (data: EventData): string => {
   const dtstartKey = startFormatted.tzid ? `DTSTART;TZID=${startFormatted.tzid}` : 'DTSTART';
   const dtendKey = endFormatted.tzid ? `DTEND;TZID=${endFormatted.tzid}` : 'DTEND';
 
+  const optional = (key: string, value: string): string[] => (value ? [`${key}:${value}`] : []);
+
   const parts = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
     'PRODID:-//QRCraftly//EN',
     'BEGIN:VEVENT',
-    `SUMMARY:${escapeVCardEvent(data.title)}`,
-    `${dtstartKey}:${startFormatted.value}`,
-    `${dtendKey}:${endFormatted.value}`,
-    `LOCATION:${escapeVCardEvent(data.location)}`,
-    `DESCRIPTION:${escapeVCardEvent(data.description)}`,
+    `UID:${escapeVCardEvent(options.uid || deriveEventUid(data))}`,
+    `DTSTAMP:${resolveStamp(options.now)}`,
+    ...optional('SUMMARY', escapeVCardEvent(data.title)),
+    ...optional(dtstartKey, startFormatted.value),
+    ...optional(dtendKey, endFormatted.value),
+    ...optional('LOCATION', escapeVCardEvent(data.location)),
+    ...optional('DESCRIPTION', escapeVCardEvent(data.description)),
     'END:VEVENT',
     'END:VCALENDAR',
   ];

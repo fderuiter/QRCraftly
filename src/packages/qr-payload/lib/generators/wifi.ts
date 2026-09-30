@@ -16,7 +16,14 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { WifiData, WifiEncryption, QRType, QRGeneratorContract } from '@/types';
+import {
+  WifiData,
+  WifiEncryption,
+  WifiEapMethod,
+  WifiEapPhase2,
+  QRType,
+  QRGeneratorContract,
+} from '@/types';
 import { identifyProtocol } from '../protocol';
 
 const REGEX_ESCAPE_WIFI = /([\\;,":])/g;
@@ -42,6 +49,12 @@ const unescapeWifi = (str: string | undefined): string => {
   if (!str) return '';
   return str.replace(REGEX_UNESCAPE_WIFI, '$1');
 };
+
+const isEapMethod = (value: string): value is WifiEapMethod =>
+  (Object.values(WifiEapMethod) as string[]).includes(value);
+
+const isEapPhase2 = (value: string): value is WifiEapPhase2 =>
+  (Object.values(WifiEapPhase2) as string[]).includes(value);
 
 /**
  * Hydrates WifiData from a raw string.
@@ -118,6 +131,20 @@ export const hydrateWifiData = (raw: string): WifiData => {
       case 'I':
         result.eapIdentity = unescapeWifi(value);
         break;
+      case 'E': {
+        const method = unescapeWifi(value).toUpperCase();
+        if (isEapMethod(method)) {
+          result.eapMethod = method;
+        }
+        break;
+      }
+      case 'PH2': {
+        const phase2 = unescapeWifi(value).toUpperCase();
+        if (isEapPhase2(phase2)) {
+          result.eapPhase2 = phase2;
+        }
+        break;
+      }
     }
   });
 
@@ -135,6 +162,17 @@ export const constructWifiString = (data: WifiData): string => {
   const parts = [`T:${encryption}`, `S:${escapeWifi(data.ssid)}`];
 
   if (encryption === WifiEncryption.WPA2_EAP) {
+    // Android's WIFI parser needs `E:` (EAP method) to join enterprise networks.
+    const method = data.eapMethod && isEapMethod(data.eapMethod) ? data.eapMethod : WifiEapMethod.PEAP;
+    const phase2 =
+      data.eapPhase2 !== undefined && isEapPhase2(data.eapPhase2)
+        ? data.eapPhase2
+        : WifiEapPhase2.MSCHAPV2;
+    parts.push(`E:${method}`);
+    // EAP-TLS and EAP-PWD have no inner authentication.
+    if (phase2 && method !== WifiEapMethod.TLS && method !== WifiEapMethod.PWD) {
+      parts.push(`PH2:${phase2}`);
+    }
     parts.push(`I:${escapeWifi(data.eapIdentity)}`);
   }
 

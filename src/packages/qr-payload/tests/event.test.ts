@@ -102,11 +102,14 @@ describe('Event generator', () => {
       description: undefined as unknown as string,
     };
     const str = constructEventString(data);
-    expect(str).toContain('SUMMARY:');
-    expect(str).toContain('DTSTART:');
-    expect(str).toContain('DTEND:');
-    expect(str).toContain('LOCATION:');
-    expect(str).toContain('DESCRIPTION:');
+    // Empty properties are omitted (RFC 5545); UID and DTSTAMP are always present
+    expect(str).toContain('UID:');
+    expect(str).toContain('DTSTAMP:');
+    expect(str).not.toContain('SUMMARY:');
+    expect(str).not.toContain('DTSTART');
+    expect(str).not.toContain('DTEND');
+    expect(str).not.toContain('LOCATION:');
+    expect(str).not.toContain('DESCRIPTION:');
   });
 
   it('implements EventContract correctly', () => {

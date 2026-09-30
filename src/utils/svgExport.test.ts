@@ -133,12 +133,12 @@ describe('generateQRSvg', () => {
     expect(svg).toContain(' C ');
   });
 
-  it('produces SVG for FLUID style (circles)', async () => {
+  it('produces SVG for FLUID style (curves)', async () => {
     const config = { ...DEFAULT_CONFIG, style: QRStyle.FLUID } as QRConfig;
     const svg = await generateQRSvg(config);
     parseAndAssertValidSvg(svg);
     expect(svg).toContain('<svg');
-    expect(svg).toContain(' C ');
+    expect(svg).toContain('Q ');
   });
 
   it('produces SVG for GRUNGE style', async () => {

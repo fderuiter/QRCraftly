@@ -18,7 +18,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { constructWifiString, hydrateWifiData, WifiContract } from '../index';
-import { WifiEncryption, QRType } from '@/types';
+import { WifiEncryption, WifiEapMethod, WifiEapPhase2, QRType } from '@/types';
 
 describe('Wifi generator', () => {
   it('constructs and hydrates successfully', () => {
@@ -55,7 +55,12 @@ describe('Wifi generator', () => {
     };
     const str = constructWifiString(data);
     const hydrated = hydrateWifiData(str);
-    expect(hydrated).toEqual(data);
+    // The default EAP method and phase 2 are emitted, so they come back on hydrate
+    expect(hydrated).toEqual({
+      ...data,
+      eapMethod: WifiEapMethod.PEAP,
+      eapPhase2: WifiEapPhase2.MSCHAPV2,
+    });
   });
 
   it('hydrates string ending with single semicolon', () => {

@@ -18,7 +18,56 @@
 
 import { PaymentData, CryptoNetwork, QRType, QRGeneratorContract } from '@/types';
 import { isDangerousUrl, sanitizeInput } from '@/utils/security';
-import { identifyProtocol } from '../protocol';
+import { identifyProtocol, safeDecodeURIComponent } from '../protocol';
+
+/** Number of wei in one ether (10^18), as used by EIP-681 `value=`. */
+const WEI_DECIMALS = 18;
+
+/**
+ * Converts a decimal ether amount to an integer wei string using exact string
+ * arithmetic (no floating point), e.g. "0.1" -> "100000000000000000".
+ * @param amount - The decimal ether amount entered by the user.
+ * @returns The wei amount, or null when the input is not a plain non-negative
+ * decimal or has more than 18 fractional digits.
+ */
+const etherToWei = (amount: string): string | null => {
+  const match = /^(\d*)(?:\.(\d*))?$/.exec(amount.trim());
+  if (!match) return null;
+  const whole = match[1] || '';
+  const fraction = match[2] || '';
+  if (!whole && !fraction) return null;
+  if (fraction.length > WEI_DECIMALS) return null;
+  const digits = (whole + fraction.padEnd(WEI_DECIMALS, '0')).replace(/^0+/, '');
+  return digits || '0';
+};
+
+/**
+ * Converts an EIP-681 `value=` (integer wei, optionally in scientific notation such
+ * as `2.014e18`) back to a decimal ether amount using exact string arithmetic.
+ * @param value - The raw `value` parameter.
+ * @returns The ether amount without trailing zeros, or null when it is not a valid integer amount.
+ */
+const weiToEther = (value: string): string | null => {
+  const match = /^(\d+)(?:\.(\d+))?(?:[eE]\+?(\d+))?$/.exec(value.trim());
+  if (!match) return null;
+  const intPart = match[1];
+  const fracPart = match[2] || '';
+  const exponent = match[3] ? parseInt(match[3], 10) : 0;
+  if (fracPart.length > exponent) return null; // not a whole number of wei
+  const wei = (intPart + fracPart.padEnd(exponent, '0')).replace(/^0+/, '') || '0';
+  const padded = wei.padStart(WEI_DECIMALS + 1, '0');
+  const whole = padded.slice(0, padded.length - WEI_DECIMALS);
+  const fraction = padded.slice(padded.length - WEI_DECIMALS).replace(/0+$/, '');
+  return fraction ? `${whole}.${fraction}` : whole;
+};
+
+/**
+ * Percent-encodes a wallet address so `&`, `#`, `%` or whitespace cannot inject
+ * URI parameters. `@` is kept for EIP-681 chain ids (`address@chainId`).
+ */
+const encodeAddress = (address: string): string => {
+  return encodeURIComponent(address.trim()).replace(/%40/g, '@');
+};
 
 /**
  * Constructs the crypto payment URI string.
@@ -46,13 +95,21 @@ export const constructPaymentString = (data: PaymentData): string => {
     }
 
     // Sanitize address to prevent parameter injection if user accidentally pastes a full URI or malicious string
-    const safeAddress = sanitizeInput(data.address);
+    const safeAddress = encodeAddress(sanitizeInput(data.address || ''));
     paymentString = `${data.network}:${safeAddress}`;
     const params: string[] = [];
 
     if (data.amount) {
-      // Encode amount to prevent parameter injection
-      params.push(`amount=${encodeURIComponent(data.amount)}`);
+      if (data.network === CryptoNetwork.ETHEREUM) {
+        // EIP-681: the amount is `value=` in wei; wallets ignore `amount=`.
+        const wei = etherToWei(data.amount);
+        if (wei !== null) {
+          params.push(`value=${wei}`);
+        }
+      } else {
+        // Encode amount to prevent parameter injection
+        params.push(`amount=${encodeURIComponent(data.amount)}`);
+      }
     }
 
     if (data.label) {
@@ -95,13 +152,16 @@ export const hydratePaymentData = (raw: string): PaymentData => {
       const rest = raw.substring(colonIndex + 1);
       const qIndex = rest.indexOf('?');
       if (qIndex !== -1) {
-        result.address = rest.substring(0, qIndex);
+        result.address = safeDecodeURIComponent(rest.substring(0, qIndex));
         const query = rest.substring(qIndex + 1);
         const params = new URLSearchParams(query);
-        result.amount = params.get('amount') || '';
+        const weiValue = params.get('value');
+        const ether =
+          networkPart === CryptoNetwork.ETHEREUM && weiValue ? weiToEther(weiValue) : null;
+        result.amount = ether ?? (params.get('amount') || '');
         result.label = params.get('label') || '';
       } else {
-        result.address = rest;
+        result.address = safeDecodeURIComponent(rest);
       }
       return result;
     }

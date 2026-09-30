@@ -76,6 +76,42 @@ export const SafeUrlPipeline = {
     return this.DANGEROUS_PROTOCOLS.some(p => decoded.startsWith(p));
   },
 
+  /**
+   * Schemes accepted without a following `//`. Anything else that merely looks like a
+   * scheme (`example.com:8080/path`, `localhost:3000`) is really a host and port.
+   */
+  OPAQUE_SCHEMES: new Set([
+    'http',
+    'https',
+    'ftp',
+    'mailto',
+    'tel',
+    'sms',
+    'smsto',
+    'geo',
+    'matmsg',
+    'wifi',
+    'urn',
+    'magnet',
+    'bitcoin',
+    'ethereum',
+    'litecoin',
+    'solana',
+    'market',
+    'intent',
+  ]),
+
+  /**
+   * Returns true when the input starts with a real URI scheme: one followed by `//`,
+   * or one on the {@link OPAQUE_SCHEMES} allowlist.
+   */
+  hasExplicitScheme(url: string): boolean {
+    const match = /^([a-z][a-z0-9+.-]*):/i.exec(url);
+    if (!match) return false;
+    if (url.startsWith('//', match[0].length)) return true;
+    return this.OPAQUE_SCHEMES.has(match[1].toLowerCase());
+  },
+
   normalize(url: string | undefined): string {
     if (!url) return '';
     
@@ -84,11 +120,15 @@ export const SafeUrlPipeline = {
     
     let parsed = '';
     try {
-      parsed = new URL(noControl).href;
-    } catch {
+      if (this.hasExplicitScheme(noControl)) {
+        parsed = new URL(noControl).href;
+      }
+    } catch {}
+
+    if (!parsed && !this.hasExplicitScheme(noControl)) {
       try {
         if (!noControl.startsWith('/') && !noControl.startsWith('?')) {
-          parsed = new URL(`http://${noControl}`).href;
+          parsed = new URL(`https://${noControl}`).href;
         }
       } catch {}
     }
@@ -110,7 +150,8 @@ export const SafeUrlPipeline = {
 
 /**
  * Normalizes a URL string to ensure it is valid and properly encoded.
- * Uses native URL API to handle spaces and missing protocols.
+ * Uses native URL API to handle spaces and missing protocols. Inputs without a
+ * scheme (including `host:port` forms such as `localhost:3000`) default to `https://`.
  */
 export const normalizeUrl = (url: string | undefined): string => {
   return SafeUrlPipeline.normalize(url);
@@ -127,8 +168,9 @@ export const shouldNormalizeUrl = (url: string | undefined): boolean => {
 
   const hasDot = url.includes('.');
   const isWww = url.toLowerCase().startsWith('www.');
+  const isLocalhost = /^localhost(?::\d+)?(?:[/?#]|$)/i.test(url);
 
-  return hasDot || isWww;
+  return hasDot || isWww || isLocalhost;
 };
 
 /**
