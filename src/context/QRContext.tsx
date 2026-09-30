@@ -234,6 +234,14 @@ export function useQRStoreSelector<T>(selector: (state: QRState) => T): T {
 }
 
 /**
+ * Returns the nearest QR store if inside a `QRProvider`, or null otherwise.
+ * @returns The store or null.
+ */
+export function useOptionalQRStore(): QRStore | null {
+  return useContext(QRStoreContext) || null;
+}
+
+/**
  * Returns the nearest QR store. Throws outside a `QRProvider`.
  * @returns The store.
  */

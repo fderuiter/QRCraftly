@@ -67,6 +67,9 @@ export default defineConfig(() => {
         target: "es2022",
         rollupOptions: {}
       },
+      worker: {
+        format: 'es' as const,
+      },
       test: {
         globals: true,
         testTimeout: 15000,

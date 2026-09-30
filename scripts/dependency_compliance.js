@@ -9,6 +9,7 @@ const repoRoot = path.join(__dirname, '..');
 // 1. Strict Allowed Production Dependencies List
 export const ALLOWED_DEPENDENCIES = new Set([
   'jsqr',
+  'jszip',
   'lucide-react',
   'qrcode',
   'react',

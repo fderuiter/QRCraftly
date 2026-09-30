@@ -107,3 +107,10 @@ Boundary checks run automatically during `pnpm run lint` and CI.
   - `index.ts`: FSK worker contract (`SYNC_FREQ`, `ZERO_FREQ`, `ONE_FREQ`, `assertFskWorkerRequest`, `isFskWorkerResponse`, and friends) and the spectrogram DSP engine (`scheduleSpectrogramQR`, `bufferToWav`).
   - `client.ts`: React hooks (`useAudioContext`, `useChirpTransceiver`, `useSpectrogramQR`).
   - `worker.ts`: Dedicated background Web Worker performing FSK demodulation of byte frequency frames. Spawning it is private to the package (`useChirpTransceiver` owns it).
+
+### `bulk-csv` (`@/packages/bulk-csv`)
+
+- **Purpose**: High-speed off-thread Web Worker CSV parsing, batch QR generation, real-time progress updates, instant cancellation, and streaming ZIP archive assembly.
+- **Entry Points**:
+  - `index.ts`: Primary public API: `parseCsv`, `renderBatch`, `sanitizeFilename`, `createBulkCsvWorker`, `connectBulkCsvWorker`, options, and contracts.
+  - `worker.ts`: Dedicated background Web Worker performing CSV parsing, batch rendering, progress reporting, and JSZip archive assembly off-thread.

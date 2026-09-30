@@ -16,15 +16,18 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useSyncExternalStore } from 'react';
 import { QRConfig, QRType } from '../types';
 import { TypeSelector, useInputLogic } from './inputs';
 import { useDynamicFocus } from '../hooks/useDynamicFocus';
 import { Button } from './ui/Button';
-import { Camera } from 'lucide-react';
+import { Camera, FileSpreadsheet } from 'lucide-react';
 import { QRScanner } from './QRScanner';
 import { useToast } from './ui/Toast';
 import { INPUT_REGISTRY } from './inputs/InputRegistry';
+import { BulkCSVModal } from './BulkCSVModal';
+import { useOptionalQRStore } from '../context/QRContext';
+import { DEFAULT_CONFIG } from '../constants';
 
 /**
  * Props for the InputPanel component.
@@ -61,13 +64,22 @@ export function getQRTypeLabel(type: QRType): string {
   return QR_TYPE_LABELS[type] ?? type;
 }
 
+function useOptionalQRConfig(): QRConfig | null {
+  const store = useOptionalQRStore();
+  return useSyncExternalStore(
+    (onStoreChange) => (store ? store.subscribe(onStoreChange) : () => {}),
+    () => (store ? store.getState().config : null),
+    () => (store ? store.getState().config : null)
+  );
+}
+
 /**
  * A component that provides input fields for different QR code types.
  * Allows users to enter data for URL, Text, WiFi, Email, vCard, Phone, and SMS.
  * It updates the main configuration with the formatted string for the QR code.
- * @param props - The component props.
- * @param props.config - The current QR code configuration state.
- * @param props.onChange - Callback function to update the configuration.
+ * @param root0 - The component props.
+ * @param root0.config - The current QR code configuration state.
+ * @param root0.onChange - Callback function to update the configuration.
  * @returns The InputPanel component.
  */
 const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
@@ -75,7 +87,15 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
   const containerRef = useDynamicFocus<HTMLDivElement>([config.type]);
   const [announcement, setAnnouncement] = useState('');
   const [scannerActive, setScannerActive] = useState(false);
+  const [bulkModalActive, setBulkModalActive] = useState(false);
   const { addToast } = useToast();
+
+  // Try to get full QRConfig from store if available, or fall back to DEFAULT_CONFIG merged with config
+  const fullStoreConfig = useOptionalQRConfig();
+  const activeConfig: QRConfig = fullStoreConfig || {
+    ...DEFAULT_CONFIG,
+    ...config,
+  };
 
   // Update live region announcement when type changes
   useEffect(() => {
@@ -143,20 +163,36 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
         )}
       </div>
 
-      {/* Scanner Control Button */}
+      {/* Action Buttons */}
       {!scannerActive && (
-        <div className="flex justify-end">
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setBulkModalActive(true)}
+            className="flex items-center gap-2"
+          >
+            <FileSpreadsheet className="size-4" aria-hidden="true" />
+            Bulk CSV Batch
+          </Button>
           <Button
             variant="outline"
             size="sm"
             onClick={() => setScannerActive(true)}
             className="flex items-center gap-2"
           >
-            <Camera className="size-4" />
+            <Camera className="size-4" aria-hidden="true" />
             Scan QR Code
           </Button>
         </div>
       )}
+
+      {/* Bulk CSV Batch Generator Modal */}
+      <BulkCSVModal
+        isOpen={bulkModalActive}
+        onClose={() => setBulkModalActive(false)}
+        config={activeConfig}
+      />
     </div>
   );
 };

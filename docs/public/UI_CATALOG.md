@@ -91,6 +91,7 @@ Page-level building blocks of `/arcade`. Game logic lives in the `@/packages/arc
 
 Feature-level building blocks shared by several routes. Reuse these instead of rebuilding page chrome, previews or status output.
 
+- **BulkCSVModal** (`BulkCSVModal.tsx` / `BulkCSVModal.test.tsx`): Modal dialog for bulk CSV batch QR code generation off-thread via `@/packages/bulk-csv`, supporting column mapping, format options (SVG/PNG), real-time progress, instant batch cancellation, and automatic ZIP download via `downloadManager.ts`.
 - **CharCount** (`CharCount.tsx` / `CharCount.test.tsx`): Accessible character counter for length-limited inputs, with a progress ring and polite limit announcements.
 - **ErrorBoundary** (`ErrorBoundary.tsx`): Root error boundary that renders an application error message and a `Button` to reload the page, clearing simulated-crash query flags.
 - **InputPanel** (`InputPanel.tsx` / `InputPanel.test.tsx`): Content entry for the generator: renders the QR type navigation, the active type's input form and the scan-to-fill scanner with a human-readable "type detected" toast.

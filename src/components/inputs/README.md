@@ -72,6 +72,10 @@ The `InputPanel` features an integrated, high-performance dual-mode QR Code Scan
 3. **Mode Switch**: Webcam and File Upload are a `Button` group with `aria-pressed`, so the selected mode is announced; the upload dropzone is a `Button` whose file input sits outside it.
 4. **Accessible Keyboard Navigation**: The scanner toggle action is positioned directly after the dynamic input panel, ensuring natural forward Tab sequences flow seamlessly into the active input fields before reaching secondary scanner actions.
 
+## Bulk CSV Batch Generator Integration
+
+The `InputPanel` includes a "Bulk CSV Batch" action button that opens `BulkCSVModal.tsx` for generating up to 1,000+ QR codes from CSV files off-thread in a Web Worker (`@/packages/bulk-csv`). Users can map CSV columns, choose vector SVG or PNG raster formats, view real-time progress, cancel active batches at any time, and automatically download the resulting ZIP archive via `downloadManager.ts`.
+
 ## Playable Maze Overlay Configuration
 
 The centralized configuration in `src/types.ts` also contains parameters for generating a solvable maze overlay directly on the QR code:
