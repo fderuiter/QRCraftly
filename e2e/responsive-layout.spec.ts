@@ -164,12 +164,15 @@ test.describe('File transfer workspaces on phones (#796)', () => {
     });
   }
 
-  test('Send and Receive are reachable from each other on mobile', async ({ page }) => {
+  test('Send and Receive are reachable from each other on mobile via transfer mode switcher', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await gotoHydrated(page, '/file-transfer');
-    await page.getByRole('button', { name: 'Site menu' }).click();
-    await page.getByRole('navigation', { name: 'Primary navigation' }).getByRole('link', { name: /Receive File/ }).click();
+    await page.getByRole('navigation', { name: 'Transfer mode' }).getByRole('link', { name: /Receive File/ }).click();
     await expect(page).toHaveURL(/\/file-transfer\/receive\/?$/);
     await expect(page.getByRole('heading', { level: 1, name: 'Receive a File by QR Code' })).toBeVisible();
+
+    await page.getByRole('navigation', { name: 'Transfer mode' }).getByRole('link', { name: /Send File/ }).click();
+    await expect(page).toHaveURL(/\/file-transfer\/?$/);
+    await expect(page.getByRole('heading', { level: 1, name: 'Send a File by QR Code' })).toBeVisible();
   });
 });

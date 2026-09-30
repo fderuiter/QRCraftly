@@ -26,6 +26,7 @@ import StyleControls from '@/components/StyleControls';
 import { QRProvider, useQRStore, useQRStoreSelector } from '@/context/QRContext';
 import { useImage } from '@/hooks/useImage';
 import { ToolWorkspaceLayout, ToolWorkspaceHeader } from '@/components/ToolWorkspaceLayout';
+import { TransferModeSwitcher } from '@/components/TransferModeSwitcher';
 import { useOpticalSender } from '@/packages/optical-transfer/client';
 import { estimateTransferFrames, type TransferDensity } from '@/packages/optical-transfer';
 import { paintTransferFrame } from './paintTransferFrame';
@@ -161,6 +162,7 @@ function FileTransferToolInner() {
             title="Send a File by QR Code"
             subtitle="Stream a file to another device as animated QR codes."
             badge="Beta"
+            modeSwitcher={<TransferModeSwitcher currentMode="send" />}
             previewId="transfer-preview"
             previewJumpLabel="Jump to transfer QR"
           />
