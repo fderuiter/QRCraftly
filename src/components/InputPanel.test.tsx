@@ -18,15 +18,43 @@
 
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { axe } from 'vitest-axe';
-import InputPanel from './InputPanel';
+import InputPanel, { getQRTypeLabel } from './InputPanel';
 import { DEFAULT_CONFIG } from '../constants';
-import { QRType, QRConfig, WifiEncryption } from '../types';
-import { FIXTURES } from "../../tests/fixtures/data";
+import { QRType, QRConfig, WifiEncryption, WifiData, EmailData } from '../types';
+import { FIXTURES } from '../../tests/fixtures/data';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { WifiInput, EmailInput } from './inputs';
+import { ToastProvider } from './ui/Toast';
+import type { QRScannerProps } from './QRScanner';
 
-describe('InputPanel Component Accessibility', () => {
-  const mockOnChange = vi.fn();
+/**
+ * The scan-toast tests swap the camera scanner for a button that reports a fixed
+ * vCard; every other test uses the real QRScanner.
+ */
+const scannerMock = vi.hoisted(() => ({ simulate: false }));
 
+vi.mock('./QRScanner', async importOriginal => {
+  const actual = await importOriginal<typeof import('./QRScanner')>();
+  const Scanner = (props: QRScannerProps) =>
+    scannerMock.simulate ? (
+      <button type="button" onClick={() => props.onScanSuccess('BEGIN:VCARD\nVERSION:3.0\nFN:Ada Lovelace\nEND:VCARD')}>
+        Simulate scan
+      </button>
+    ) : (
+      <actual.QRScanner {...props} />
+    );
+  return { ...actual, default: Scanner, QRScanner: Scanner };
+});
+
+const mockOnChange = vi.fn();
+
+const renderPanel = (configUpdates: Partial<QRConfig> = {}) => {
+  const config = { ...DEFAULT_CONFIG, ...configUpdates };
+  return render(<InputPanel config={config} onChange={mockOnChange} />);
+};
+
+/** Debounced inputs are driven with fake timers; each test starts with a clean onChange spy. */
+const withDebounceTimers = () => {
   beforeEach(() => {
     vi.useFakeTimers();
     mockOnChange.mockClear();
@@ -35,11 +63,10 @@ describe('InputPanel Component Accessibility', () => {
   afterEach(() => {
     vi.useRealTimers();
   });
+};
 
-  const renderPanel = (configUpdates: Partial<QRConfig> = {}) => {
-    const config = { ...DEFAULT_CONFIG, ...configUpdates };
-    return render(<InputPanel config={config} onChange={mockOnChange} />);
-  };
+describe('InputPanel Component Accessibility', () => {
+  withDebounceTimers();
 
   const typesToTest = [
     QRType.URL,
@@ -69,21 +96,7 @@ describe('InputPanel Component Accessibility', () => {
 });
 
 describe('InputPanel Component', () => {
-  const mockOnChange = vi.fn();
-
-  beforeEach(() => {
-    vi.useFakeTimers();
-    mockOnChange.mockClear();
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
-  });
-
-  const renderPanel = (configUpdates: Partial<QRConfig> = {}) => {
-    const config = { ...DEFAULT_CONFIG, ...configUpdates };
-    render(<InputPanel config={config} onChange={mockOnChange} />);
-  };
+  withDebounceTimers();
 
   it('renders URL input by default', () => {
     renderPanel();
@@ -469,5 +482,258 @@ describe('InputPanel Component', () => {
     fireEvent.click(closeBtn);
 
     expect(screen.getByRole('button', { name: /scan qr code/i })).toBeInTheDocument();
+  });
+});
+
+describe('Input Character Counts', () => {
+  it('renders character count for Wifi SSID', () => {
+    const data: WifiData = {
+      ssid: '',
+      password: '',
+      encryption: WifiEncryption.WPA,
+      hidden: false,
+    };
+
+    render(<WifiInput data={data} onChange={mockOnChange} />);
+
+    // SSID has maxLength 32
+    expect(screen.getByText('0 / 32')).toBeInTheDocument();
+  });
+
+  it('renders character count for Wifi Password', () => {
+    const data: WifiData = {
+      ssid: 'Test Network',
+      password: '',
+      encryption: WifiEncryption.WPA,
+      hidden: false,
+    };
+
+    render(<WifiInput data={data} onChange={mockOnChange} />);
+
+    // Password has maxLength 63
+    expect(screen.getByText('0 / 63')).toBeInTheDocument();
+  });
+
+  it('renders character count for Email Subject', () => {
+    const data: EmailData = {
+      email: 'test@example.com',
+      subject: '',
+      body: '',
+    };
+
+    render(<EmailInput data={data} onChange={mockOnChange} />);
+
+    // Subject has maxLength 200
+    expect(screen.getByText('0 / 200')).toBeInTheDocument();
+  });
+});
+
+describe('InputPanel Edge Cases', () => {
+  withDebounceTimers();
+
+  it('escapes special characters in WiFi SSID and Password', () => {
+    renderPanel({ type: QRType.WIFI });
+
+    const ssidInput = screen.getByLabelText('Network Name (SSID)');
+    const passwordInput = screen.getByLabelText('Password');
+
+    // Characters that need escaping: \ ; , " :
+    const trickySSID = 'My "Special" WiFi;\\:';
+    const trickyPass = 'P@ssw,or;d\\';
+
+    fireEvent.change(ssidInput, { target: { value: trickySSID } });
+    act(() => { vi.advanceTimersByTime(100); });
+
+    fireEvent.change(passwordInput, { target: { value: trickyPass } });
+    act(() => { vi.advanceTimersByTime(100); });
+
+    // Expect backslashes before special chars
+    // SSID: My "Special" WiFi;\: -> My \"Special\" WiFi\;\\\:
+    // Pass: P@ssw,or;d\ -> P@ssw\,or\;d\\
+
+    // Construct the expected WiFi string
+    // Format: WIFI:T:WPA;S:<ssid>;P:<pass>;H:false;;
+    const expectedSSID = 'My \\"Special\\" WiFi\\;\\\\\\:';
+    const expectedPass = 'P@ssw\\,or\\;d\\\\';
+
+    const lastCall = mockOnChange.mock.calls[mockOnChange.mock.calls.length - 1][0];
+    expect(lastCall.value).toContain(`S:${expectedSSID}`);
+    expect(lastCall.value).toContain(`P:${expectedPass}`);
+  });
+
+  it('cleans formatting characters from Phone number', () => {
+    renderPanel({ type: QRType.PHONE });
+
+    const phoneInput = screen.getByLabelText('Phone Number');
+
+    // Input with spaces, colons (which should be stripped)
+    fireEvent.change(phoneInput, { target: { value: '+1 555 : 123 456' } });
+    act(() => { vi.advanceTimersByTime(100); });
+
+    // Should result in clean number
+    expect(mockOnChange).toHaveBeenCalledWith({ value: 'tel:+1555123456' });
+  });
+
+  it('handles empty cleaned phone number gracefully', () => {
+    renderPanel({ type: QRType.PHONE });
+
+    const phoneInput = screen.getByLabelText('Phone Number');
+
+    // Input with only stripped characters
+    fireEvent.change(phoneInput, { target: { value: ' : ' } });
+    act(() => { vi.advanceTimersByTime(100); });
+
+    // Should result in empty tel: prefix
+    expect(mockOnChange).toHaveBeenCalledWith({ value: 'tel:' });
+  });
+
+  it('handles colons in SMS message correctly', () => {
+    renderPanel({ type: QRType.SMS });
+
+    const phoneInput = screen.getByLabelText('Phone Number');
+    const msgInput = screen.getByLabelText('Pre-filled Message');
+
+    fireEvent.change(phoneInput, { target: { value: '123' } });
+    act(() => { vi.advanceTimersByTime(100); });
+
+    fireEvent.change(msgInput, { target: { value: 'Time: 12:30 PM' } });
+    act(() => { vi.advanceTimersByTime(100); });
+
+    // Format: sms:number?body=encodedMessage
+    expect(mockOnChange).toHaveBeenLastCalledWith({ value: 'sms:123?body=Time%3A%2012%3A30%20PM' });
+  });
+
+  it('escapes special characters in WPA2-EAP Identity', () => {
+    renderPanel({ type: QRType.WIFI });
+
+    // Switch to WPA2-EAP
+    const encryptionSelect = screen.getByLabelText('Encryption');
+    fireEvent.change(encryptionSelect, { target: { value: 'WPA2-EAP' } });
+    act(() => { vi.advanceTimersByTime(100); });
+
+    const identityInput = screen.getByLabelText('Identity / Username');
+
+    const trickyIdentity = 'domain\\user;name';
+    fireEvent.change(identityInput, { target: { value: trickyIdentity } });
+    act(() => { vi.advanceTimersByTime(100); });
+
+    const expectedIdentity = 'domain\\\\user\\;name';
+
+    const lastCall = mockOnChange.mock.calls[mockOnChange.mock.calls.length - 1][0];
+    expect(lastCall.value).toContain(`I:${expectedIdentity}`);
+  });
+});
+
+describe('InputPanel Security (Input Limits)', () => {
+  withDebounceTimers();
+
+  it('enforces maxLength on URL input', () => {
+    render(<InputPanel config={{ ...DEFAULT_CONFIG, type: QRType.URL }} onChange={mockOnChange} />);
+    const input = screen.getByLabelText('Website URL');
+    expect(input).toHaveAttribute('maxLength', '2048');
+  });
+
+  it('enforces maxLength on Text content', () => {
+    render(<InputPanel config={{ ...DEFAULT_CONFIG, type: QRType.TEXT }} onChange={mockOnChange} />);
+    const input = screen.getByLabelText('Content');
+    expect(input).toHaveAttribute('maxLength', '2500');
+  });
+
+  it('enforces maxLength on WiFi inputs', () => {
+    render(<InputPanel config={{ ...DEFAULT_CONFIG, type: QRType.WIFI }} onChange={mockOnChange} />);
+
+    const ssid = screen.getByLabelText('Network Name (SSID)');
+    expect(ssid).toHaveAttribute('maxLength', '32');
+
+    const wifiPasswordInput = screen.getByLabelText('Password');
+    expect(wifiPasswordInput).toHaveAttribute('maxLength', '63');
+  });
+
+  it('enforces maxLength on Email inputs', () => {
+    render(<InputPanel config={{ ...DEFAULT_CONFIG, type: QRType.EMAIL }} onChange={mockOnChange} />);
+
+    const emailAddressInput = screen.getByLabelText('Email Address');
+    expect(emailAddressInput).toHaveAttribute('maxLength', '254'); // RFC 5321
+
+    const subject = screen.getByLabelText('Subject');
+    expect(subject).toHaveAttribute('maxLength', '200');
+
+    const body = screen.getByLabelText('Body');
+    expect(body).toHaveAttribute('maxLength', '2000');
+  });
+
+  it('rejects dangerous protocols in URL input', () => {
+    const config = { ...DEFAULT_CONFIG, type: QRType.URL, value: 'https://safe.com' };
+    render(<InputPanel config={config} onChange={mockOnChange} />);
+
+    const input = screen.getByLabelText('Website URL');
+
+    // Safe update
+    fireEvent.change(input, { target: { value: 'https://safe.com/test' } });
+
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
+
+    expect(mockOnChange).toHaveBeenCalledWith({ value: 'https://safe.com/test' });
+
+    mockOnChange.mockClear();
+
+    // Dangerous update
+    fireEvent.change(input, { target: { value: 'javascript:alert(1)' } });
+
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
+
+    expect(mockOnChange).not.toHaveBeenCalled();
+  });
+});
+
+describe('InputPanel UX', () => {
+  it('renders visible labels for vCard address fields', () => {
+    render(<InputPanel config={{ ...DEFAULT_CONFIG, type: QRType.VCARD }} onChange={mockOnChange} />);
+
+    // These should exist as visible <label> elements
+    // Currently they do not (they are aria-labels on inputs)
+    expect(screen.getByText('Street', { selector: 'label' })).toBeInTheDocument();
+    expect(screen.getByText('City', { selector: 'label' })).toBeInTheDocument();
+    expect(screen.getByText('Country', { selector: 'label' })).toBeInTheDocument();
+
+    // Also verify they are associated with inputs
+    const streetLabel = screen.getByText('Street', { selector: 'label' });
+    const streetInput = screen.getByLabelText('Street');
+    expect(streetLabel.getAttribute('for')).toBe(streetInput.id);
+  });
+});
+
+
+describe('InputPanel scan toast (#978)', () => {
+  beforeEach(() => {
+    scannerMock.simulate = true;
+  });
+
+  afterEach(() => {
+    scannerMock.simulate = false;
+  });
+
+  it('names every QR type in human-readable form', () => {
+    for (const type of Object.values(QRType)) {
+      expect(getQRTypeLabel(type)).toBeTruthy();
+      expect(getQRTypeLabel(type)).not.toMatch(/^[A-Z]{4,}$/);
+    }
+    expect(getQRTypeLabel(QRType.VCARD)).toBe('vCard contact');
+  });
+
+  it('shows the detected type with its display name, not the raw enum value', () => {
+    render(
+      <ToastProvider>
+        <InputPanel config={{ ...DEFAULT_CONFIG }} onChange={vi.fn()} />
+      </ToastProvider>
+    );
+    fireEvent.click(screen.getByRole('button', { name: /scan qr code/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Simulate scan' }));
+    expect(screen.getByText(/Type detected: vCard contact/)).toBeInTheDocument();
+    expect(screen.queryByText(/Type detected: VCARD/)).not.toBeInTheDocument();
   });
 });

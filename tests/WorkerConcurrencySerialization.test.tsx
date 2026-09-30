@@ -8,6 +8,14 @@ vi.mock('jsqr', () => {
   };
 });
 
+/** The real scannability worker module, run in-thread by the global Worker from vitest.setup.ts. */
+const createScannabilityWorker = async () => {
+  const worker = new Worker(new URL('../src/packages/scannability/worker.ts', import.meta.url), { type: 'module' });
+  // Wait until the module is evaluated so the timing assertions below measure message handling only.
+  await (worker as unknown as { ready: Promise<void> }).ready;
+  return worker;
+};
+
 describe('High-Fidelity Worker Concurrency & Serialization Tests', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -24,8 +32,8 @@ describe('High-Fidelity Worker Concurrency & Serialization Tests', () => {
   });
 
   // Requirement 1 / Acceptance Criteria 1: Non-serializable payload fails
-  it('should fail/throw synchronously if a non-serializable payload (such as a function) is passed to postMessage', () => {
-    const worker = new Worker('mock-url');
+  it('should fail/throw synchronously if a non-serializable payload (such as a function) is passed to postMessage', async () => {
+    const worker = await createScannabilityWorker();
     
     // Passing a function should throw a structuredClone/DataCloneError
     expect(() => {
@@ -45,8 +53,8 @@ describe('High-Fidelity Worker Concurrency & Serialization Tests', () => {
     }
   });
 
-  it('should succeed/not throw if a fully serializable payload is passed to postMessage', () => {
-    const worker = new Worker('mock-url');
+  it('should succeed/not throw if a fully serializable payload is passed to postMessage', async () => {
+    const worker = await createScannabilityWorker();
     expect(() => {
       worker.postMessage({
         imageData: {
@@ -64,7 +72,7 @@ describe('High-Fidelity Worker Concurrency & Serialization Tests', () => {
 
   // Requirement 2 / Acceptance Criteria 2: Executing exact optical and security checks used in production
   it('should execute actual worker logic and run optical/security checks dynamically', async () => {
-    const worker = new Worker('mock-url');
+    const worker = await createScannabilityWorker();
     let receivedResponse: any = null;
     worker.onmessage = (e: any) => {
       receivedResponse = e.data;
@@ -98,6 +106,8 @@ describe('High-Fidelity Worker Concurrency & Serialization Tests', () => {
       physicalReady: false,
       error: 'SECURITY_VIOLATION',
       configId: 'sec-check',
+      localContrastViolations: 0,
+      minLocalContrast: 21,
     });
 
     // 2. Let's test a safe payload
@@ -126,6 +136,8 @@ describe('High-Fidelity Worker Concurrency & Serialization Tests', () => {
       success: true,
       physicalReady: true,
       configId: 'safe-check',
+      localContrastViolations: 0,
+      minLocalContrast: 21,
     });
   });
 
@@ -135,7 +147,7 @@ describe('High-Fidelity Worker Concurrency & Serialization Tests', () => {
     globalThis.mockWorkerControl.setDelay(30);
     globalThis.mockWorkerControl.setConcurrencyLimit(1);
 
-    const worker = new Worker('mock-url');
+    const worker = await createScannabilityWorker();
     const responses: any[] = [];
     worker.onmessage = (e: any) => {
       responses.push(e.data);
@@ -178,9 +190,10 @@ describe('High-Fidelity Worker Concurrency & Serialization Tests', () => {
     expect(responses[2].configId).toBe('task-3');
   });
 
-  // Requirement 1, 2, 4 & Acceptance Criteria 1, 2: Two-pass sequence of dontInvert followed by onlyInvert
-  it('should execute standard decoding (dontInvert) followed by inverted-only decoding (onlyInvert) without attemptBoth', async () => {
-    const worker = new Worker('mock-url');
+  // Requirement 1, 2, 4 & Acceptance Criteria 1, 2: Two-pass sequence of dontInvert followed by an
+  // attemptBoth fallback, in both the digital and the physical check (see scannabilitySteps).
+  it('should execute standard decoding (dontInvert) followed by an inverted fallback pass (attemptBoth)', async () => {
+    const worker = await createScannabilityWorker();
     let receivedResponse: any = null;
     worker.onmessage = (e: any) => {
       receivedResponse = e.data;
@@ -189,7 +202,7 @@ describe('High-Fidelity Worker Concurrency & Serialization Tests', () => {
     const optionsPassed: any[] = [];
     vi.mocked(jsQR).mockImplementation((data: any, width: number, height: number, options?: any) => {
       optionsPassed.push(options?.inversionAttempts);
-      if (options?.inversionAttempts === 'onlyInvert') {
+      if (options?.inversionAttempts === 'attemptBoth') {
         return { data: 'https://inverted-qr.com' } as any;
       }
       return null;
@@ -210,12 +223,14 @@ describe('High-Fidelity Worker Concurrency & Serialization Tests', () => {
     await new Promise<void>(resolve => setTimeout(resolve, 50));
 
     // Verify two-pass sequence (digital check followed by physical check) was followed with onlyInvert fallback
-    expect(optionsPassed).toEqual(['dontInvert', 'onlyInvert', 'dontInvert', 'onlyInvert']);
-    expect(optionsPassed).not.toContain('attemptBoth');
+    expect(optionsPassed).toEqual(['dontInvert', 'attemptBoth', 'dontInvert', 'attemptBoth']);
+    expect(optionsPassed).not.toContain('onlyInvert');
     expect(receivedResponse).toEqual({
       success: true,
       physicalReady: true,
       configId: 'inverted-test',
+      localContrastViolations: 0,
+      minLocalContrast: 21,
     });
   });
 });

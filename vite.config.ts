@@ -88,11 +88,7 @@ export default defineConfig(() => {
               exclude: [
                 '**/*.test.tsx',
                 'src/hooks/**/*.test.ts',
-                'tests/scannabilityWorker.test.ts',
-                'src/packages/qr-matrix/tests/workerMatrix.test.ts',
-                'src/packages/qr-matrix/tests/workerMaze.test.ts',
                 'src/utils/qrRenderer.test.ts',
-                'tests/opticalTransferSliceWorker.test.ts',
                 'tests/telemetry.test.ts',
                 '**/node_modules/**',
                 '**/dist/**',
@@ -114,11 +110,7 @@ export default defineConfig(() => {
               include: [
                 '**/*.test.tsx',
                 'src/hooks/**/*.test.ts',
-                'tests/scannabilityWorker.test.ts',
-                'src/packages/qr-matrix/tests/workerMatrix.test.ts',
-                'src/packages/qr-matrix/tests/workerMaze.test.ts',
                 'src/utils/qrRenderer.test.ts',
-                'tests/opticalTransferSliceWorker.test.ts',
                 'tests/telemetry.test.ts',
               ],
               exclude: [
@@ -142,13 +134,12 @@ export default defineConfig(() => {
             functions: 85,
             lines: 80,
           },
-          // Measure the logic layers: shared utilities, the deep-module packages
-          // and the Cloudflare Pages Functions. Components, hooks and pages are
-          // exercised by the jsdom project and Playwright but not gated here.
+          // Measure the logic layers: shared utilities and the deep-module
+          // packages. Components, hooks and pages are exercised by the jsdom
+          // project and Playwright but not gated here.
           include: [
             'src/utils/**/*.ts',
             'src/packages/**/*.ts',
-            'functions/**/*.ts',
           ],
           exclude: [
             '**/*.test.ts',

@@ -1,26 +1,26 @@
 import { describe, it, expect, vi, beforeEach, afterEach, beforeAll } from 'vitest';
+import { loadWorkerModule, type InThreadWorkerScope, type WorkerModuleUnderTest } from '../../../../tests/utils/inThreadWorker';
 import { QRConfig, QRType, QRStyle, QRErrorCorrectionLevel, SocialFormat, TemplateStyle } from '@/types';
 
 describe('Matrix Worker', () => {
-  let workerHandler: any;
+  let workerHandler: WorkerModuleUnderTest['handle'];
+  let worker: WorkerModuleUnderTest;
+  let scope: InThreadWorkerScope;
   let originalPostMessage: any;
 
   beforeAll(async () => {
-    if (typeof (globalThis as any).self === 'undefined') {
-      (globalThis as any).self = globalThis;
-    }
-    // Capture the worker's onmessage handler
-    await import('../worker-matrix');
-    workerHandler = globalThis.onmessage;
+    worker = await loadWorkerModule(new URL('../worker-matrix.ts', import.meta.url));
+    scope = worker.scope;
+    workerHandler = worker.handle;
   });
 
   beforeEach(() => {
-    originalPostMessage = globalThis.postMessage;
+    originalPostMessage = scope.postMessage;
     vi.clearAllMocks();
   });
 
   afterEach(() => {
-    globalThis.postMessage = originalPostMessage;
+    scope.postMessage = originalPostMessage;
   });
 
   const createDummyConfig = (value = 'https://example.com'): QRConfig => ({
@@ -51,7 +51,7 @@ describe('Matrix Worker', () => {
 
   it('generates QR matrix and sends success message', async () => {
     const postMessageSpy = vi.fn();
-    globalThis.postMessage = postMessageSpy;
+    scope.postMessage = postMessageSpy;
 
     await workerHandler({
       data: {
@@ -73,7 +73,7 @@ describe('Matrix Worker', () => {
 
   it('fails validation and returns validationFailed message', async () => {
     const postMessageSpy = vi.fn();
-    globalThis.postMessage = postMessageSpy;
+    scope.postMessage = postMessageSpy;
 
     // Border Text contains strict control char
     const invalidConfig = createDummyConfig();
@@ -97,7 +97,7 @@ describe('Matrix Worker', () => {
 
   it('discards stale requests based on sequence ID sequenceId tracking', async () => {
     const postMessageSpy = vi.fn();
-    globalThis.postMessage = postMessageSpy;
+    scope.postMessage = postMessageSpy;
 
     // Dispatch a request with sequenceId = 3, then a newer request with sequenceId = 4
     const p1 = workerHandler({
@@ -125,7 +125,7 @@ describe('Matrix Worker', () => {
 
   it('handles generation exceptions and reports error status', async () => {
     const postMessageSpy = vi.fn();
-    globalThis.postMessage = postMessageSpy;
+    scope.postMessage = postMessageSpy;
 
     // Trigger an error in qrcode library by sending an undefined value
     const invalidPayloadConfig = createDummyConfig();

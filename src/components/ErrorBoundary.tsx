@@ -71,16 +71,6 @@ export class ErrorBoundary extends Component<Props, State> {
             size="lg"
             onClick={() => {
               if (typeof window !== 'undefined') {
-                try {
-                  const url = new URL(window.location.href);
-                  if (url.searchParams.has('simulate-crash') || url.searchParams.has('crash')) {
-                    url.searchParams.delete('simulate-crash');
-                    url.searchParams.delete('crash');
-                    window.history.replaceState({}, '', url.toString());
-                  }
-                } catch (e) {
-                  console.error('Failed to parse URL in ErrorBoundary:', e);
-                }
                 window.location.reload();
               }
             }}

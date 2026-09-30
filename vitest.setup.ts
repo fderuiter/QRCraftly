@@ -21,8 +21,7 @@ import 'vitest-axe/extend-expect';
 import { terminateScannerWorker } from './src/packages/optical-scanner/scheduler';
 import * as matchers from 'vitest-axe/matchers';
 import { vi, afterEach, expect } from 'vitest';
-import { isDangerousUrl } from './src/utils/security';
-import { applyOpticalSimulationMath } from './src/packages/scannability/opticalSimulation';
+import { InThreadWorker, assertStructuredCloneable } from './tests/utils/inThreadWorker';
 import QRCode from 'qrcode';
 import { fromQrcodePackage } from './src/packages/qr-matrix';
 import { setQrCanvasRuntime } from './src/utils/qrCanvasRuntime';
@@ -168,36 +167,6 @@ const mockConfig: WorkerMockConfig = {
 let runningTasksCount = 0;
 const pendingTasks: Array<() => Promise<void>> = [];
 
-function checkSerializable(val: any, path: any[] = []) {
-  if (val === null || val === undefined) return;
-  
-  if (typeof val === 'function') {
-    throw new DOMException('Functions cannot be cloned', 'DataCloneError');
-  }
-  if (typeof val === 'symbol') {
-    throw new DOMException('Symbols cannot be cloned', 'DataCloneError');
-  }
-  if (val && (val instanceof Element || val.nodeType !== undefined || (val.ownerDocument && val.ownerDocument.defaultView))) {
-    throw new DOMException('DOM elements cannot be cloned', 'DataCloneError');
-  }
-
-  if (path.includes(val)) {
-    return;
-  }
-
-  if (typeof val === 'object') {
-    if (Array.isArray(val)) {
-      for (const item of val) {
-        checkSerializable(item, [...path, val]);
-      }
-    } else if (Object.prototype.toString.call(val) === '[object Object]') {
-      for (const key of Object.keys(val)) {
-        checkSerializable(val[key], [...path, val]);
-      }
-    }
-  }
-}
-
 function runNextTasks() {
   while (pendingTasks.length > 0 && runningTasksCount < mockConfig.concurrencyLimit) {
     const nextTask = pendingTasks.shift();
@@ -216,417 +185,51 @@ function enqueueTask(task: () => Promise<void>) {
   runNextTasks();
 }
 
-class MockWorker {
-  private listeners: Record<string, Set<(...args: any[]) => void>> = {};
-  public terminated = false;
-  private _onmessage: any = null;
-  private _onerror: any = null;
-
-  constructor(public url: string | URL, public options?: WorkerOptions) {
+/**
+ * jsdom has no Web Workers, so `new Worker(url)` runs the real worker module on the
+ * test thread (see tests/utils/inThreadWorker.ts). `mockWorkerControl` can still
+ * intercept messages, override responses, delay delivery or cap concurrency.
+ */
+class MockWorker extends InThreadWorker {
+  constructor(url: string | URL, options?: WorkerOptions) {
+    super(url, options);
     mockConfig.instances.push(this);
     mockConfig.activeWorker = this;
   }
 
-  addEventListener = vi.fn((type: string, listener: any) => {
-    if (!this.listeners[type]) {
-      this.listeners[type] = new Set();
-    }
-    this.listeners[type].add(listener);
-  });
+  addEventListener = vi.fn((type: string, listener: any) => super.addEventListener(type, listener));
 
-  removeEventListener = vi.fn((type: string, listener: any) => {
-    if (this.listeners[type]) {
-      this.listeners[type].delete(listener);
-    }
-  });
+  removeEventListener = vi.fn((type: string, listener: any) => super.removeEventListener(type, listener));
 
-  get onmessage() { return this._onmessage; }
-  set onmessage(val) { this._onmessage = val; }
-
-  get onerror() { return this._onerror; }
-  set onerror(val) { this._onerror = val; }
-
-  terminate = vi.fn(() => {
-    this.terminated = true;
-  });
-
-  dispatchMessage(data: any) {
-    if (this.terminated) return;
-    const event = { data } as MessageEvent;
-    
-    if (this.listeners['message']) {
-      this.listeners['message'].forEach(handler => {
-        try { handler(event); } catch (e) { console.error(e); }
-      });
-    }
-    if (typeof this._onmessage === 'function') {
-      try { this._onmessage(event); } catch (e) { console.error(e); }
-    }
-  }
-
-  dispatchError(error: any) {
-    if (this.terminated) return;
-    const event = { error } as any;
-    if (this.listeners['error']) {
-      this.listeners['error'].forEach(handler => {
-        try { handler(event); } catch (e) { console.error(e); }
-      });
-    }
-    if (typeof this._onerror === 'function') {
-      try { this._onerror(event); } catch (e) { console.error(e); }
-    }
-  }
+  terminate = vi.fn(() => super.terminate());
 
   postMessage = vi.fn((message: any, _transfer?: any) => {
     if (this.terminated) return;
-
-    // Reject non-serializable objects under strict structured cloning rules (Requirement 1)
-    checkSerializable(message);
+    // Reject non-serializable payloads synchronously, as a real postMessage does.
+    assertStructuredCloneable(message);
     structuredClone(message);
 
     const delay = mockConfig.delayMs;
-    const task = async () => {
+    const execute = async () => {
       if (this.terminated) return;
-
-      const executeTask = async () => {
-        if (this.terminated) return;
-
-        if (mockConfig.interceptor) {
-          mockConfig.interceptor(message, this);
-          return;
-        }
-
-        if (mockConfig.responseOverride !== null) {
-          this.dispatchMessage(mockConfig.responseOverride);
-          return;
-        }
-
-        // Run the actual verification engine logic (Requirement 2)
-        try {
-          if (this.url.toString().includes('imageDecoderWorker')) {
-            const { buffer, width, height } = message;
-            if (buffer && typeof width === 'number' && typeof height === 'number') {
-              const { default: jsQR } = await import('jsqr');
-              const data = new Uint8ClampedArray(buffer);
-              let code = jsQR(data, width, height, { inversionAttempts: 'dontInvert' });
-              if (!code) {
-                code = jsQR(data, width, height, { inversionAttempts: 'onlyInvert' });
-              }
-              if (code && code.data) {
-                this.dispatchMessage({ success: true, data: code.data });
-              } else {
-                this.dispatchMessage({ success: false, error: 'No QR code detected in this image. Try a clearer or higher-contrast QR code image.' });
-              }
-              return;
-            }
-          }
-
-          if (
-            (this.url.toString().includes('fileReassemblyWorker') ||
-              this.url.toString().includes('worker-reassembly')) &&
-            message &&
-            typeof message === 'object'
-          ) {
-            const { type } = message;
-
-            if (type === 'CLEAR' || type === 'RESET') {
-              (this as any)._reassemblyState = null;
-              return;
-            }
-
-            if (type === 'INIT' || type === 'ALLOCATE') {
-              (this as any)._reassemblyState = {
-                allocatedBuffer: message.fileSize ? new Uint8Array(message.fileSize) : null,
-                targetFileSize: message.fileSize || null,
-                totalChunksCount: message.totalChunks || null,
-                knownChunkSize: message.chunkSize || null,
-                receivedIndices: new Set<number>(),
-                handshakeMetadata: {
-                  fileName: message.fileName,
-                  fileSize: message.fileSize,
-                  mimeType: message.mimeType,
-                  sha256: message.sha256,
-                },
-              };
-              return;
-            }
-
-            if (type === 'CHUNK' || type === 'PROCESS_CHUNK') {
-              let state = (this as any)._reassemblyState;
-              if (!state) {
-                state = (this as any)._reassemblyState = {
-                  allocatedBuffer: null,
-                  targetFileSize: null,
-                  totalChunksCount: null,
-                  knownChunkSize: null,
-                  receivedIndices: new Set<number>(),
-                  handshakeMetadata: null,
-                };
-              }
-
-              const { index, base64 } = message;
-              const tot = message.totalChunks ?? message.total;
-              if (typeof tot === 'number' && tot > 0) {
-                state.totalChunksCount = tot;
-              }
-
-              if (state.receivedIndices.has(index)) {
-                return;
-              }
-
-              const binaryString = atob(base64);
-              const decodedBytes = new Uint8Array(binaryString.length);
-              for (let j = 0; j < binaryString.length; j++) {
-                decodedBytes[j] = binaryString.charCodeAt(j);
-              }
-
-              if (typeof message.chunkSize === 'number' && message.chunkSize > 0) {
-                state.knownChunkSize = message.chunkSize;
-              } else if (!state.knownChunkSize && state.totalChunksCount) {
-                if (index < state.totalChunksCount - 1 || state.totalChunksCount === 1) {
-                  state.knownChunkSize = decodedBytes.length;
-                }
-              }
-
-              if (!state.allocatedBuffer) {
-                if (state.targetFileSize && state.targetFileSize > 0) {
-                  state.allocatedBuffer = new Uint8Array(state.targetFileSize);
-                } else if (state.knownChunkSize && state.totalChunksCount) {
-                  if (index === state.totalChunksCount - 1) {
-                    state.targetFileSize = (state.totalChunksCount - 1) * state.knownChunkSize + decodedBytes.length;
-                  } else {
-                    state.targetFileSize = state.totalChunksCount * state.knownChunkSize;
-                  }
-                  state.allocatedBuffer = new Uint8Array(state.targetFileSize);
-                } else if (state.totalChunksCount === 1) {
-                  state.targetFileSize = decodedBytes.length;
-                  state.allocatedBuffer = new Uint8Array(state.targetFileSize);
-                }
-              }
-
-              let offset = 0;
-              if (state.knownChunkSize) {
-                offset = index * state.knownChunkSize;
-              } else if (state.totalChunksCount && index === state.totalChunksCount - 1 && state.targetFileSize) {
-                offset = state.targetFileSize - decodedBytes.length;
-              }
-
-              if (state.allocatedBuffer) {
-                if (state.allocatedBuffer.length < offset + decodedBytes.length) {
-                  const newLen = Math.max(state.allocatedBuffer.length, offset + decodedBytes.length);
-                  const expanded = new Uint8Array(newLen);
-                  expanded.set(state.allocatedBuffer, 0);
-                  state.allocatedBuffer = expanded;
-                  state.targetFileSize = newLen;
-                }
-                state.allocatedBuffer.set(decodedBytes, offset);
-
-                const currentEnd = offset + decodedBytes.length;
-                if (state.handshakeMetadata?.fileSize && currentEnd > state.handshakeMetadata.fileSize) {
-                  state.handshakeMetadata.fileSize = currentEnd;
-                }
-
-                if (!state.handshakeMetadata?.fileSize && state.totalChunksCount && index === state.totalChunksCount - 1) {
-                  state.targetFileSize = currentEnd;
-                }
-              }
-
-              state.receivedIndices.add(index);
-              const total = state.totalChunksCount || 1;
-              const current = state.receivedIndices.size;
-              const progress = Math.round((current / total) * 100);
-
-              this.dispatchMessage({
-                type: 'PROGRESS',
-                progress,
-                current,
-                total,
-                index,
-              });
-
-              if (state.totalChunksCount && state.receivedIndices.size === state.totalChunksCount && state.allocatedBuffer) {
-                let exactSize = state.allocatedBuffer.length;
-                if (typeof state.handshakeMetadata?.fileSize === 'number' && state.handshakeMetadata.fileSize > 0) {
-                  exactSize = state.handshakeMetadata.fileSize;
-                } else if (typeof state.targetFileSize === 'number' && state.targetFileSize > 0) {
-                  exactSize = state.targetFileSize;
-                }
-
-                const finalUint8 = state.allocatedBuffer.slice(0, exactSize);
-                const buffer = finalUint8.buffer;
-                const metadata = state.handshakeMetadata;
-                (this as any)._reassemblyState = null;
-                this.dispatchMessage({
-                  type: 'COMPLETE',
-                  buffer,
-                  handshake: metadata,
-                });
-              }
-              return;
-            }
-
-            if (type === 'START_REASSEMBLY') {
-              try {
-                const { chunks, totalChunks } = message;
-                if (!chunks || !Array.isArray(chunks)) {
-                  throw new Error('Invalid or missing chunks array.');
-                }
-                const sortedChunks = [...chunks].sort((a, b) => a.index - b.index);
-                if (sortedChunks.length !== totalChunks) {
-                  throw new Error(`Chunk count mismatch. Expected ${totalChunks}, got ${sortedChunks.length}`);
-                }
-                const decodedChunks: Uint8Array[] = [];
-                let totalLength = 0;
-                for (let i = 0; i < totalChunks; i++) {
-                  const base64Str = sortedChunks[i].base64;
-                  const binaryString = atob(base64Str);
-                  const len = binaryString.length;
-                  const bytes = new Uint8Array(len);
-                  for (let j = 0; j < len; j++) {
-                    bytes[j] = binaryString.charCodeAt(j);
-                  }
-                  decodedChunks.push(bytes);
-                  totalLength += len;
-
-                  this.dispatchMessage({
-                    type: 'PROGRESS',
-                    progress: Math.round(((i + 1) / totalChunks) * 100),
-                    current: i + 1,
-                    total: totalChunks,
-                  });
-                }
-
-                const mergedArray = new Uint8Array(totalLength);
-                let offset = 0;
-                for (let i = 0; i < totalChunks; i++) {
-                  mergedArray.set(decodedChunks[i], offset);
-                  offset += decodedChunks[i].length;
-                }
-
-                const buffer = mergedArray.buffer;
-                this.dispatchMessage({
-                  type: 'COMPLETE',
-                  buffer
-                });
-              } catch (err: any) {
-                this.dispatchMessage({
-                  type: 'ERROR',
-                  error: err?.message || 'Unknown reassembly error'
-                });
-              }
-              return;
-            }
-          }
-
-          if (this.url.toString().includes('audio-transfer/worker') && message && typeof message === 'object') {
-            if (message.type === 'init' || message.type === 'reset') {
-              return;
-            }
-            if (message.type === 'process') {
-              this.dispatchMessage({
-                type: 'fsk_response',
-                symbol: 'Silence / Gap',
-                buffer: message.buffer,
-              });
-              return;
-            }
-          }
-
-          if ((this.url.toString().includes('scannerWorker') || this.url.toString().includes('optical-scanner') || this.url.toString().includes('worker.ts')) && message && typeof message === 'object' && typeof message.sequenceId === 'number') {
-            const { image, buffer, width, height, epochId } = message;
-            if ((image || buffer) && typeof width === 'number' && typeof height === 'number') {
-              const { default: jsQR } = await import('jsqr');
-              const data = (image as any)?._data || (buffer ? new Uint8ClampedArray(buffer) : new Uint8ClampedArray(width * height * 4));
-              let code = jsQR(data, width, height, { inversionAttempts: 'dontInvert' });
-              if (!code) {
-                code = jsQR(data, width, height, { inversionAttempts: 'onlyInvert' });
-              }
-              if (code && code.data) {
-                this.dispatchMessage({ status: 'pass', decodedData: code.data, sequenceId: message.sequenceId, epochId, buffer });
-              } else {
-                this.dispatchMessage({ status: 'fail', error: 'No QR code detected in this image. Try a clearer or higher-contrast QR code image.', sequenceId: message.sequenceId, epochId, buffer });
-              }
-              return;
-            }
-          }
-
-          if (message && typeof message === 'object') {
-            const { imageData, width, height, isTest, configId } = message;
-            if (imageData && typeof width === 'number' && typeof height === 'number') {
-              const { default: jsQR } = await import('jsqr');
-
-              // 1. Digital pass check
-              let digitalCheckSuccess = false;
-              let decodedData = '';
-              let code = jsQR(imageData.data, width, height, { inversionAttempts: "dontInvert" });
-              if (code) {
-                digitalCheckSuccess = true;
-                decodedData = code.data;
-              } else {
-                code = jsQR(imageData.data, width, height, { inversionAttempts: "onlyInvert" });
-                if (code) {
-                  digitalCheckSuccess = true;
-                  decodedData = code.data;
-                }
-              }
-
-              // 2. Security Check (Dangerous URL check)
-              if (digitalCheckSuccess && isDangerousUrl(decodedData)) {
-                const response = { success: false, physicalReady: false, error: 'SECURITY_VIOLATION', configId };
-                this.dispatchMessage(response);
-                return;
-              }
-
-              if (!digitalCheckSuccess) {
-                const response = { success: false, physicalReady: false, error: 'NOT_FOUND', configId };
-                this.dispatchMessage(response);
-                return;
-              }
-
-              // 3. Physical check (Optical Simulation math)
-              let physicalCheckSuccess = false;
-              const simulatedData = isTest ? imageData : new ImageData(applyOpticalSimulationMath(imageData.data, width, height), width, height);
-              let codeSim = jsQR(simulatedData.data, width, height, { inversionAttempts: "dontInvert" });
-              if (codeSim) {
-                physicalCheckSuccess = true;
-              } else {
-                codeSim = jsQR(simulatedData.data, width, height, { inversionAttempts: "onlyInvert" });
-                if (codeSim) physicalCheckSuccess = true;
-              }
-
-              const response = { success: true, physicalReady: physicalCheckSuccess, configId };
-              this.dispatchMessage(response);
-              return;
-            }
-          }
-        } catch (err: any) {
-          console.error("Failed to run actual worker logic in MockWorker:", err);
-        }
-
-        // Default behavior fallback to prevent stuck UI:
-        this.dispatchMessage({
-          success: true,
-          physicalReady: true,
-          error: null,
-        });
-      };
-
-      if (delay > 0) {
-        await new Promise<void>(resolve => {
-          setTimeout(() => {
-            executeTask().then(resolve);
-          }, delay);
-        });
-      } else {
-        await new Promise<void>(resolve => {
-          setTimeout(() => {
-            executeTask().then(resolve);
-          }, 0);
-        });
+      if (mockConfig.interceptor) {
+        mockConfig.interceptor(message, this);
+        return;
       }
+      if (mockConfig.responseOverride !== null) {
+        this.dispatchMessage(mockConfig.responseOverride);
+        return;
+      }
+      await this.deliverToWorker(message);
     };
-
-    enqueueTask(task);
+    enqueueTask(
+      () =>
+        new Promise<void>(resolve => {
+          setTimeout(() => {
+            execute().then(resolve, resolve);
+          }, delay);
+        }),
+    );
   });
 }
 

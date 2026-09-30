@@ -4,7 +4,8 @@
     "src/pages/**/+*.{ts,tsx}!",
     "src/packages/*/worker*.ts!",
     "src/utils/imageResizeWorker.ts!",
-    "scripts/**/*.{js,cjs,ts}!"
+    "scripts/**/*.{js,cjs,ts}!",
+    "tests/fixtures/echoWorker.ts"
   ],
   "project": [
     "src/**/*.{ts,tsx}!",

@@ -151,9 +151,10 @@ jobs:
         uses: davelosert/vitest-coverage-report-action@c4bbc33a89b7ace0e63d35f1f7d4bcee31155a73 # v2
 
   # JOB E2E: Playwright Cross-Browser Tests
+  # Runs against the exact `dist` the Build job produced, so CI builds the app once.
   e2e:
     name: E2E Tests
-    needs: setup
+    needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -164,11 +165,23 @@ jobs:
       - name: Setup Environment
         uses: ./.github/actions/setup
 
+      - name: Download Build Output
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: dist
+          path: dist/
+
       - name: Install Playwright Browsers
         run: pnpm exec playwright install --with-deps
 
       - name: Run Playwright tests
+        env:
+          # Serve the downloaded build with `vite preview` instead of rebuilding.
+          PLAYWRIGHT_USE_EXISTING_BUILD: "true"
         run: pnpm run test:e2e
+
+      - name: Run Development Hydration Tests
+        run: pnpm run test:e2e:dev
 
       # The list reporter writes no HTML report; keep the failing tests' screenshots,
       # diffs and traces instead so visual baselines can be reviewed and refreshed.
@@ -179,12 +192,10 @@ jobs:
           path: test-results/
           retention-days: 14
 
-
-
   # JOB 5: Build Application
   build:
     name: Build
-    needs: [static-validation, test, e2e] # Wait for quality checks before burning CPU on build
+    needs: setup # E2E consumes this job's dist artifact, so build first
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -199,6 +210,14 @@ jobs:
         uses: ./.github/actions/setup
 
       - run: pnpm run build
+
+      - name: Upload Build Output
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: dist
+          path: dist/
+          if-no-files-found: error
+          retention-days: 1
 
       - name: Check Bundle Size
         run: node scripts/check-bundle-size.js
@@ -315,11 +334,6 @@ jobs:
                 console.error("Warning: Failed to post Lighthouse report comment due to a GitHub API error:", error);
               }
             }
-
-      - name: Restore Workspace Source Metadata
-        if: always()
-        run: |
-          git checkout -- .
 
   # Single required check for rulesets. Branch rules require "CI" instead of every
   # job name, so renaming or adding jobs never leaves a PR waiting on a check that

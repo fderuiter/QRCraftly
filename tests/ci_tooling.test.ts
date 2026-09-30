@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 import lintStagedConfig from '../lint-staged.config.js';
@@ -151,5 +151,58 @@ describe('generated files stay out of the tracked tree', () => {
     expect(read('.github/workflows/main.yml')).toContain('configPath: "./dist/lighthouserc.json"');
     const base = JSON.parse(read('lighthouserc.json'));
     expect(base.ci.collect.url).toBeUndefined();
+  });
+
+  it('never hides build-time rewrites with a workspace reset in CI', () => {
+    expect(read('.github/workflows/main.yml')).not.toMatch(/git checkout -- \./);
+  });
+
+  it('does not measure coverage for a functions/ tree that does not exist', () => {
+    expect(fs.existsSync(path.join(root, 'functions'))).toBe(false);
+    expect(read('vite.config.ts')).not.toContain("'functions/**/*.ts'");
+  });
+});
+
+/** Returns the body of one job in main.yml (from `  <name>:` to the next top-level job). */
+function jobBlock(name: string): string {
+  const workflow = read('.github/workflows/main.yml');
+  const lines = workflow.split(/\r?\n/);
+  const start = lines.findIndex(line => line === `  ${name}:`);
+  expect(start).toBeGreaterThan(-1);
+  const end = lines.findIndex((line, index) => index > start && /^ {2}[a-z][a-z0-9-]*:$/.test(line));
+  return lines.slice(start, end === -1 ? undefined : end).join('\n');
+}
+
+describe('CI builds the app once', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+
+  it('uploads dist from the build job and serves it in the e2e job', () => {
+    const build = jobBlock('build');
+    const e2e = jobBlock('e2e');
+    expect(build).toMatch(/- run: pnpm run build/);
+    expect(build).toMatch(/uses: actions\/upload-artifact@[0-9a-f]{40}[\s\S]*name: dist\n\s*path: dist\//);
+    expect(e2e).toMatch(/needs: build/);
+    expect(e2e).toMatch(/uses: actions\/download-artifact@[0-9a-f]{40}[\s\S]*name: dist\n\s*path: dist\//);
+    expect(e2e).toContain('PLAYWRIGHT_USE_EXISTING_BUILD: "true"');
+    expect(e2e).not.toMatch(/pnpm (run )?build/);
+  });
+
+  it('runs the development-hydration suite in the e2e job', () => {
+    expect(jobBlock('e2e')).toContain('run: pnpm run test:e2e:dev');
+  });
+
+  it('skips the build in the Playwright web server only when a build is supplied', async () => {
+    vi.stubEnv('PLAYWRIGHT_TEST_BASE_URL', '');
+    vi.stubEnv('PLAYWRIGHT_USE_EXISTING_BUILD', 'true');
+    const prebuilt = (await import('../playwright.config')).default;
+    expect(prebuilt.webServer).toMatchObject({ command: 'pnpm run preview' });
+
+    vi.resetModules();
+    vi.stubEnv('PLAYWRIGHT_USE_EXISTING_BUILD', '');
+    const local = (await import('../playwright.config')).default;
+    expect(local.webServer).toMatchObject({ command: 'pnpm run build && pnpm run preview' });
   });
 });

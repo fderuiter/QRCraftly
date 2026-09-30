@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach, beforeAll } from 'vitest';
+import { loadWorkerModule, type InThreadWorkerScope, type WorkerModuleUnderTest } from '../../../../tests/utils/inThreadWorker';
 import {
   isMazeWorkerRequest,
   assertMazeWorkerRequest,
@@ -8,22 +9,24 @@ import {
 import { QRStyle, QRType, QRErrorCorrectionLevel } from '@/types';
 
 describe('Maze Worker & Contract Validation', () => {
-  let workerHandler: any;
+  let workerHandler: WorkerModuleUnderTest['handle'];
+  let worker: WorkerModuleUnderTest;
+  let scope: InThreadWorkerScope;
   let originalPostMessage: any;
 
   beforeAll(async () => {
-    // Dynamically import once to set self.onmessage and capture it
-    await import('../worker-maze');
-    workerHandler = (globalThis as any).onmessage;
+    worker = await loadWorkerModule(new URL('../worker-maze.ts', import.meta.url));
+    scope = worker.scope;
+    workerHandler = worker.handle;
   });
 
   beforeEach(() => {
-    originalPostMessage = (globalThis as any).postMessage;
+    originalPostMessage = scope.postMessage;
     vi.clearAllMocks();
   });
 
   afterEach(() => {
-    (globalThis as any).postMessage = originalPostMessage;
+    scope.postMessage = originalPostMessage;
   });
 
   const baseConfig = {
@@ -104,7 +107,7 @@ describe('Maze Worker & Contract Validation', () => {
   describe('Worker Thread Execution Flows', () => {
     it('sets self.onmessage and processes maze generation request successfully', async () => {
       const postMessageSpy = vi.fn();
-      (globalThis as any).postMessage = postMessageSpy;
+      scope.postMessage = postMessageSpy;
 
       expect(workerHandler).toBeDefined();
 
@@ -121,7 +124,7 @@ describe('Maze Worker & Contract Validation', () => {
 
     it('handles runtime error during validation of bad payload gracefully', async () => {
       const postMessageSpy = vi.fn();
-      (globalThis as any).postMessage = postMessageSpy;
+      scope.postMessage = postMessageSpy;
 
       // Trigger with bad request payload
       await workerHandler({ data: { invalidPayload: true } } as MessageEvent);
@@ -134,7 +137,7 @@ describe('Maze Worker & Contract Validation', () => {
 
     it('cooperatively cancels older execution sequences when a newer sequenceId is received', async () => {
       const postMessageSpy = vi.fn();
-      (globalThis as any).postMessage = postMessageSpy;
+      scope.postMessage = postMessageSpy;
 
       // Dispatch multiple requests with incremental sequenceIds
       const firstPromise = workerHandler({ data: createDummyRequest(101) } as MessageEvent);

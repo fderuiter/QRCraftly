@@ -16,24 +16,50 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { test, expect } from '@playwright/test';
+import { test, expect, type Route } from '@playwright/test';
+
+/**
+ * Text that only the lazily loaded StyleControls chunk contains. The home page
+ * imports that chunk with `React.lazy` after hydration, so a chunk that fails to
+ * evaluate throws during render and must be caught by the layout's ErrorBoundary.
+ * This exercises a real production failure mode (a broken or stale deploy chunk)
+ * without any test-only hook in the shipped code (#983).
+ */
+const LAZY_CHUNK_MARKER = 'Layout & Border';
 
 test.describe('Error Fallbacks and Recovery E2E Tests', () => {
-  test('successfully triggers simulated crash, displays fallback recovery UI, and restores state on reload', async ({ page }) => {
-    // Inject the test execution flag __E2E_TEST__ to enable the crash trigger in LayoutDefault
-    await page.addInitScript(() => {
-      (window as any).__E2E_TEST__ = true;
-    });
+  // Service workers answer chunk requests from their cache, which bypasses page.route.
+  test.use({ serviceWorkers: 'block' });
 
-    // Ignore the intentional crash pageerror
+  test('a lazily loaded chunk that fails to evaluate shows the fallback UI, and reload restores the app', async ({ page }) => {
+    let brokenChunks = 0;
+    const breakLazyChunk = async (route: Route) => {
+      const response = await route.fetch();
+      const body = await response.text();
+      if (body.includes(LAZY_CHUNK_MARKER)) {
+        brokenChunks += 1;
+        await route.fulfill({
+          status: 200,
+          contentType: 'text/javascript',
+          headers: { 'cache-control': 'no-store' },
+          body: "throw new Error('Simulated broken deploy chunk');",
+        });
+        return;
+      }
+      await route.fulfill({ response, body });
+    };
+    await page.route('**/*.js', breakLazyChunk);
+
+    // Ignore the intentional chunk evaluation error
     page.on('pageerror', () => {});
 
-    // 1. Navigate to the page with the crash trigger query parameter
-    await page.goto('/?simulate-crash=true');
+    // 1. Load the generator; its Appearance panel lazily imports the broken chunk after hydration
+    await page.goto('/');
 
-    // 2. The application should immediately intercept the exception and render the fallback layout
+    // 2. The ErrorBoundary intercepts the render-time failure and shows the fallback layout
     const fallbackTitle = page.getByText('Application Error');
     await expect(fallbackTitle).toBeVisible({ timeout: 15000 });
+    expect(brokenChunks).toBeGreaterThan(0);
 
     const fallbackText = page.getByText("We're sorry, but something went wrong while rendering this page.");
     await expect(fallbackText).toBeVisible();
@@ -42,10 +68,10 @@ test.describe('Error Fallbacks and Recovery E2E Tests', () => {
     const reloadButton = page.getByRole('button', { name: 'Reload Page' });
     await expect(reloadButton).toBeVisible();
 
-    // 4. Clicking the reload control successfully restores the active application state (clearing the crash state)
+    // 4. Once the chunk is served intact again (e.g. the deploy finished), reloading restores the app
+    await page.unroute('**/*.js', breakLazyChunk);
     await reloadButton.click();
 
-    // The page should have reloaded without the query parameters, which restores standard operation
     const mainElement = page.locator('main[data-hydrated="true"]');
     await expect(mainElement).toBeVisible({ timeout: 15000 });
 
