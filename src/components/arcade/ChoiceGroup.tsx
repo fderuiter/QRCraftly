@@ -59,16 +59,6 @@ interface ChoiceGroupProps<T extends string> {
  * Selection is shown with the Button `pressed` style; `aria-checked` / `aria-selected`
  * carry the state (`aria-pressed` is not valid on radios or tabs, so it is omitted).
  * @param props - Group properties.
- * @param props.kind
- * @param props.label
- * @param props.choices
- * @param props.value
- * @param props.onChange
- * @param props.className
- * @param props.itemClassName
- * @param props.size
- * @param props.controls
- * @param props.tabId
  * @returns The group.
  */
 export function ChoiceGroup<T extends string>({
@@ -94,10 +84,8 @@ export function ChoiceGroup<T extends string>({
     else if (event.key === 'End') next = choices.length - 1;
     if (next < 0) return;
     event.preventDefault();
-    // eslint-disable-next-line security/detect-object-injection
     const choice = choices[next];
     onChange(choice.id);
-    // eslint-disable-next-line security/detect-object-injection
     refs.current[next]?.focus();
   };
 
@@ -109,7 +97,6 @@ export function ChoiceGroup<T extends string>({
           <Button
             key={choice.id}
             ref={(el) => {
-              // eslint-disable-next-line security/detect-object-injection
               refs.current[index] = el;
             }}
             role={isTabs ? 'tab' : 'radio'}

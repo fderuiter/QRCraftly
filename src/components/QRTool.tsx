@@ -50,9 +50,7 @@ export const EMPTY_CONTENT_MESSAGE = 'Enter content to generate a QR code.';
 /**
  * Renders the QR code generator interface with configuration controls, preview, and export actions.
  * @param title - Optional title used for the generator heading and branding.
- * @param title.title
  * @param toolId - Identifier passed to the sidebar controls.
- * @param title.toolId
  * @returns The QR code generator interface.
  */
 const primaryControls = sidebarControls.filter((c) => c.placement === 'primary');
@@ -467,13 +465,6 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
   );
 }
 
-/**
- *
- * @param root0
- * @param root0.initialConfig
- * @param root0.title
- * @param root0.toolId
- */
 export default function QRTool({ initialConfig, title, toolId = 'index' }: { initialConfig?: Partial<QRConfig>, title?: string, toolId?: string }) {
   return (
     <QRProvider initialConfig={initialConfig} retainAppearance>

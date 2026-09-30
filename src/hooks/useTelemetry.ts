@@ -4,14 +4,21 @@ import { ScannabilityStatus } from './useScannability';
 import { useCapabilities } from './useCapabilities';
 import { ALLOWED_TELEMETRY_KEYS, TelemetryPayload } from '../types';
 
-function sanitizeTelemetryPayload(payload: any): TelemetryPayload {
+function isTelemetryValue(value: unknown): value is string | number | boolean | null {
+  return value === null || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean';
+}
+
+/** Keeps only allowlisted keys whose values are primitives; nested objects are dropped. */
+function sanitizeTelemetryPayload(payload: unknown): TelemetryPayload {
   if (!payload || typeof payload !== 'object') {
     return {};
   }
+  const record = payload as Record<string, unknown>;
   const sanitized: TelemetryPayload = {};
   for (const key of ALLOWED_TELEMETRY_KEYS) {
-    if (key in payload) {
-      sanitized[key] = payload[key];
+    const value = record[key];
+    if (key in record && isTelemetryValue(value)) {
+      sanitized[key] = value;
     }
   }
   return sanitized;
@@ -38,7 +45,7 @@ export function useTelemetry(status: ScannabilityStatus, enabled: boolean = TELE
   const telemetryOptIn = useQRStoreSelector(state => state.preferences.telemetryOptIn);
   const { engine } = useCapabilities();
 
-  const sendTelemetryPing = useCallback((detail: any) => {
+  const sendTelemetryPing = useCallback((detail: unknown) => {
     if (!enabled) return;
     try {
       const sanitized = sanitizeTelemetryPayload(detail);

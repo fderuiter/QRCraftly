@@ -106,7 +106,7 @@ export function getDownscaledDimensions(
  */
 export function isValidScannerRequest(data: unknown): data is ScannerRequest {
   if (typeof data !== 'object' || data === null) return false;
-  const d = data as any;
+  const d = data as Record<string, unknown>;
   if (typeof ImageBitmap === 'undefined' || !(d.image instanceof ImageBitmap)) return false;
   if (typeof d.width !== 'number' || !Number.isFinite(d.width) || d.width <= 0) return false;
   if (typeof d.height !== 'number' || !Number.isFinite(d.height) || d.height <= 0) return false;
@@ -122,7 +122,7 @@ export function assertScannerRequest(data: unknown): asserts data is ScannerRequ
   if (typeof data !== 'object' || data === null) {
     throw new Error('Scanner request must be a non-null object');
   }
-  const d = data as any;
+  const d = data as Record<string, unknown>;
   if (typeof ImageBitmap === 'undefined' || !(d.image instanceof ImageBitmap)) {
     throw new Error('Scanner request must contain a valid ImageBitmap');
   }
@@ -145,7 +145,7 @@ export function assertScannerRequest(data: unknown): asserts data is ScannerRequ
  */
 export function isValidScannerResponse(data: unknown): data is ScannerResponse {
   if (typeof data !== 'object' || data === null) return false;
-  const d = data as any;
+  const d = data as Record<string, unknown>;
   if (d.status !== 'pass' && d.status !== 'fail') return false;
   if (typeof d.sequenceId !== 'number' || !Number.isFinite(d.sequenceId)) return false;
   if (d.decodedData !== undefined && d.decodedData !== null && typeof d.decodedData !== 'string') return false;
@@ -161,7 +161,7 @@ export function assertScannerResponse(data: unknown): asserts data is ScannerRes
   if (typeof data !== 'object' || data === null) {
     throw new Error('Scanner response must be a non-null object');
   }
-  const d = data as any;
+  const d = data as Record<string, unknown>;
   if (d.status !== 'pass' && d.status !== 'fail') {
     throw new Error('Scanner response status must be either "pass" or "fail"');
   }

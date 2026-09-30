@@ -28,17 +28,8 @@ import { getContrastRatio } from '../../utils/colorUtils';
 import { MIN_CONTRAST_THRESHOLD } from '../../constants';
 import { ContrastBadge, ContrastBanner } from './ContrastWarning';
 
-/**
- *
- */
 interface LayoutControlsProps {
-  /**
-   *
-   */
   config: QRConfig;
-  /**
-   *
-   */
   onChange: (updates: Partial<QRConfig>) => void;
 }
 
@@ -77,9 +68,6 @@ const TEMPLATE_OPTIONS: Array<{ id: TemplateStyle; label: string }> = [
 /**
  * Controls for choosing the social-media export aspect ratio and template
  * style applied to the QR code canvas.
- * @param root0
- * @param root0.config
- * @param root0.onChange
  */
 export const LayoutControls: React.FC<LayoutControlsProps> = ({ config, onChange }) => {
   const showTextInputs = config.templateStyle !== TemplateStyle.NONE;

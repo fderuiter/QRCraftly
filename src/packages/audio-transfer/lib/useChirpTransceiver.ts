@@ -164,8 +164,8 @@ export function useChirpTransceiver(getAudioContext: () => AudioContext) {
           logMessage('Acoustic transmission finished successfully.');
         }
       }, totalDurationMs + 100);
-    } catch (err: any) {
-      logMessage(`Transmission Error: ${err.message}`);
+    } catch (err) {
+      logMessage(`Transmission Error: ${err instanceof Error ? err.message : String(err)}`);
       setIsTransmitting(false);
     }
   }, [chirpText, getAudioContext, logMessage]);
@@ -267,8 +267,8 @@ export function useChirpTransceiver(getAudioContext: () => AudioContext) {
       };
 
       rxAnimationRef.current = requestAnimationFrame(decodeLoop);
-    } catch (err: any) {
-      logMessage(`Microphone Access Denied/Error: ${err.message}`);
+    } catch (err) {
+      logMessage(`Microphone Access Denied/Error: ${err instanceof Error ? err.message : String(err)}`);
       isListeningRef.current = false;
       setIsListening(false);
     }

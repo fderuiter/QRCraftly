@@ -28,7 +28,7 @@ interface QRTypePageProps {
   /** The title to display in the QRTool header. */
   title: string;
   /** The structured data (JSON-LD) object to inject. */
-  schemaData: any;
+  schemaData: unknown;
   /** The tool ID for loading content. */
   toolId: string;
 }
@@ -36,11 +36,6 @@ interface QRTypePageProps {
 /**
  * A reusable page component for specific QR code type landing pages.
  * It sets up the QRTool with the correct type and injects the provided schema.org data.
- * @param root0
- * @param root0.type
- * @param root0.title
- * @param root0.schemaData
- * @param root0.toolId
  */
 export const QRTypePage: React.FC<QRTypePageProps> = ({ type, title, schemaData, toolId }) => {
   const config = {

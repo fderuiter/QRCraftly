@@ -124,7 +124,7 @@ test.describe('Transition & Storage Verification', () => {
     expect(optInVal).toBe('true');
 
     // Confirm that the localStorage only contains 'qr-telemetry-opt-in' and no other keys
-    let localKeys = await page.evaluate(() => Object.keys(window.localStorage));
+    const localKeys = await page.evaluate(() => Object.keys(window.localStorage));
     expect(localKeys).toEqual(['qr-telemetry-opt-in']);
 
     // Confirm sessionStorage is completely empty
@@ -156,7 +156,7 @@ test.describe('Transition & Storage Verification', () => {
     expect(optOutVal).toBe('false');
 
     // Confirm that the localStorage only contains 'qr-telemetry-opt-in' and no other keys
-    let localKeys = await page.evaluate(() => Object.keys(window.localStorage));
+    const localKeys = await page.evaluate(() => Object.keys(window.localStorage));
     expect(localKeys).toEqual(['qr-telemetry-opt-in']);
 
     // Confirm sessionStorage is completely empty

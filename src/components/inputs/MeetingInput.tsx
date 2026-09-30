@@ -5,17 +5,8 @@ import { parseMeetingUrl } from "../../utils/meetingParsers";
 import { FormBlock } from "../ui/FormBlock";
 import { announcePolitely } from "../../utils/a11y";
 
-/**
- *
- */
 interface MeetingInputProps {
-  /**
-   *
-   */
   data: MeetingData;
-  /**
-   *
-   */
   onChange: (updates: Partial<MeetingData>) => void;
 }
 
@@ -25,12 +16,6 @@ const SERVICE_LABELS: Record<string, string> = {
   meet: "Google Meet",
 };
 
-/**
- *
- * @param root0
- * @param root0.data
- * @param root0.onChange
- */
 export const MeetingInput: React.FC<MeetingInputProps> = ({
   data,
   onChange,

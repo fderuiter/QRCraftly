@@ -11,6 +11,8 @@ This catalog serves as the central directory index for all reusable UI component
 
 To eliminate logical UI redundancy, prevent design drift, and maintain robust WCAG accessibility compliance, **all developers must consult this catalog before implementing any new visual elements, slider inputs, or color-related algorithms.** Peer reviewers will actively audit every pull request against this catalog to ensure maximum reuse of pre-existing codebase assets.
 
+Document component props with JSDoc only where the comment adds information. Empty `/** */` blocks and bare `@param name` stubs are rejected by ESLint (`jsdoc/no-blank-blocks`, `jsdoc/check-param-names`), so do not generate them.
+
 ---
 
 ## 1. Core Shared UI Elements (`src/components/ui/`)
@@ -19,13 +21,13 @@ These low-level, primitive UI elements are designed to be extremely customizable
 
 - **Accordion** (`Accordion.tsx` / `Accordion.test.tsx`): A collapsible vertical disclosure component for FAQs and grouped controls. Each item's button exposes `aria-expanded`/`aria-controls`; collapsed panels stay mounted (hidden), so state is kept and content remains in server-rendered HTML. Pass `headingLevel` to put the button in the document outline.
 - **Alert** (`Alert.tsx` / `Alert.test.tsx`): Displays warning, error, or informational banners with standard status states, an accessible dismiss action, and full WCAG contrast compliance.
-- **Button** (`Button.tsx` / `Button.test.tsx`): High-reusability button supporting multiple visual variants (primary, secondary, outline, danger, ghost), sizes, and loading states. `aria-disabled="true"` gets the same dimmed, not-allowed styling as `disabled` while staying focusable (use it with `aria-describedby` to explain why an action is unavailable). For toggle or selected-state buttons pass `pressed`: it sets `aria-pressed` and applies a selected style defined for both light and dark themes (do not pass selected-state border classes through `className`; they lose to the variant's `dark:` classes).
+- **Button** (`Button.tsx` / `Button.test.tsx`): High-reusability button supporting visual variants (`primary`, `secondary`, `outline`, `error`, `ghost`, `menuitem`, `icon`), sizes (`sm`, `md`, `lg`, `icon`, `none`) and `fullWidth`; it defaults to `type="button"`. `aria-disabled="true"` gets the same dimmed, not-allowed styling as `disabled` while staying focusable (use it with `aria-describedby` to explain why an action is unavailable). For toggle or selected-state buttons pass `pressed`: it sets `aria-pressed` and applies a selected style defined for both light and dark themes (do not pass selected-state border classes through `className`; they lose to the variant's `dark:` classes).
 - **Card** (`Card.tsx` / `Card.test.tsx`): Container box styled consistently with modern borders, background transitions, and padding rules.
 - **ColorInput** (`ColorInput.tsx` / `ColorInput.test.tsx`): A specialized, keyboard-accessible text and visual picker element for hex colors with WCAG 2.1 SC 1.4.11 compliant hover states.
 - **FieldWrapper** (`FieldWrapper.tsx`): Form layout primitive that automatically renders labels, assistive descriptions, character counts, and error states.
 - **FormBlock** (`FormBlock.tsx` / `FormBlock.test.tsx`): Structural wrapper to organize form fields, titles, and action grids neatly.
 - **FormFields** (`FormFields.tsx`): Standard field grouping configurations with WCAG 2.1 SC 1.4.11 compliant border boundaries.
-- **JsonLdScript** (`JsonLdScript.tsx`): Secure utility component that safely injects structural SEO schema metadata.
+- **JsonLdScript** (`JsonLdScript.tsx`): Secure utility component that safely injects structural SEO schema metadata. `data` accepts any JSON value and is serialised through `safeJsonLdStringify`, which escapes `<`, `>` and `&` so the schema cannot close its `<script>` element.
 - **Menu** (`Menu.tsx` / `Menu.test.tsx`): Accessible menu button (WAI-ARIA menu button pattern) for action lists such as the Download formats: `aria-haspopup`/`aria-expanded`/`aria-controls` on the trigger, Arrow/Home/End navigation, Escape and item activation restore trigger focus, and outside press or focus loss closes it.
 - **Modal** (`Modal.tsx` / `Modal.test.tsx`): Accessibility-compliant dialog component complete with focus traps, exit listeners, and smooth animations.
 - **PatternModule** (`PatternModule.tsx`): Visual sub-module used to configure and showcase QR pattern variants, rendering customized preview shapes including fluid bezier curves for Fluid Ink.

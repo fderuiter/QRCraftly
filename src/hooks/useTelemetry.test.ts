@@ -205,6 +205,23 @@ describe('useTelemetry', () => {
     expect(body.styleId).toBe('circuit');
   });
 
+  it('drops allowlisted keys whose values are not primitives', () => {
+    const { result } = renderTelemetry('idle');
+    act(() => {
+      result.current.store.updatePreferences({ telemetryOptIn: true });
+    });
+    act(() => {
+      result.current.store.emitSignal('scannability-fail', {
+        engine: 'Firefox',
+        styleId: { nested: 'user data' },
+        errorType: ['DECODE_FAIL'],
+      } as any);
+    });
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    const body = JSON.parse(fetchSpy.mock.calls[0][1].body);
+    expect(body).toEqual({ engine: 'Firefox' });
+  });
+
   it('does NOT send ping via scannability-fail signal when telemetryOptIn is false', () => {
     const { result } = renderTelemetry('idle');
     act(() => {

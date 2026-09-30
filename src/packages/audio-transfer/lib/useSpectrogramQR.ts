@@ -170,8 +170,8 @@ export function useSpectrogramQR(getAudioContext: () => AudioContext) {
           stopSpectrogramQR();
         }
       }, totalDurationMs);
-    } catch (err: any) {
-      alert(`Spectrogram synthesis failed: ${err.message}`);
+    } catch (err) {
+      alert(`Spectrogram synthesis failed: ${err instanceof Error ? err.message : String(err)}`);
       isPlayingRef.current = false;
       setIsPlayingSpectrogram(false);
     }
@@ -185,9 +185,7 @@ export function useSpectrogramQR(getAudioContext: () => AudioContext) {
       const totalDuration = size * specColDuration + 0.5;
       const sampleRate = 44100;
 
-      const OfflineCtxClass =
-        window.OfflineAudioContext || (window as any).OfflineAudioContext;
-      const offlineCtx = new OfflineCtxClass(
+      const offlineCtx = new window.OfflineAudioContext(
         1,
         sampleRate * totalDuration,
         sampleRate
@@ -219,8 +217,8 @@ export function useSpectrogramQR(getAudioContext: () => AudioContext) {
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
-    } catch (err: any) {
-      alert(`WAV Generation failed: ${err.message}`);
+    } catch (err) {
+      alert(`WAV Generation failed: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
       setIsGeneratingWav(false);
     }

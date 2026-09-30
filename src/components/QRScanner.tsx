@@ -5,6 +5,13 @@ import { useQrScanner } from '@/packages/optical-scanner/client';
 import { Button } from './ui/Button';
 
 /**
+ * Error-like check that also accepts `DOMException`s, which are not `Error` instances in
+ * every runtime (jsdom).
+ */
+const isErrorLike = (value: unknown): value is Error =>
+  typeof value === 'object' && value !== null && 'name' in value && 'message' in value;
+
+/**
  * QRScannerProps definition.
  */
 export interface QRScannerProps {
@@ -201,9 +208,10 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
       } else if (result.error) {
         setFileError(result.error);
       }
-    } catch (err: any) {
-      if (!controller.signal.aborted && err?.name !== 'AbortError') {
-        setFileError(err.message || 'Failed to parse file.');
+    } catch (err) {
+      const isAbort = isErrorLike(err) && err.name === 'AbortError';
+      if (!controller.signal.aborted && !isAbort) {
+        setFileError((isErrorLike(err) && err.message) || 'Failed to parse file.');
       }
     } finally {
       if (fileAbortControllerRef.current === controller) {

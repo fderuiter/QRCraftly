@@ -110,7 +110,7 @@ export function dispatchWorkerFrame(
     }
 
     let isDone = false;
-    let timerId: any = null;
+    let timerId: ReturnType<typeof setTimeout> | null = null;
 
     const cleanup = () => {
       if (timerId) {
@@ -124,8 +124,10 @@ export function dispatchWorkerFrame(
             worker.removeEventListener('message', handleMessage);
             worker.removeEventListener('error', handleError);
           } else {
-            (worker as any).onmessage = null;
-            (worker as any).onerror = null;
+            // Test doubles without addEventListener: fall back to the handler properties.
+            const legacyWorker: Pick<Worker, 'onmessage' | 'onerror'> = worker;
+            legacyWorker.onmessage = null;
+            legacyWorker.onerror = null;
           }
         } catch {
           // Ignore listener removal errors
@@ -150,7 +152,7 @@ export function dispatchWorkerFrame(
       }
     };
 
-    const handleError = (err: any) => {
+    const handleError = (err: unknown) => {
       console.warn('Worker error during frame dispatch:', err);
       if (!isDone) {
         isDone = true;
@@ -186,11 +188,13 @@ export function dispatchWorkerFrame(
         worker.addEventListener('message', handleMessage);
         worker.addEventListener('error', handleError);
       } else {
-        (worker as any).onmessage = handleMessage;
-        (worker as any).onerror = handleError;
+        // Test doubles without addEventListener: fall back to the handler properties.
+        const legacyWorker: Pick<Worker, 'onmessage' | 'onerror'> = worker;
+        legacyWorker.onmessage = handleMessage;
+        legacyWorker.onerror = handleError;
       }
 
-      const messagePayload: any = {
+      const messagePayload: { buffer: ArrayBuffer; width: number; height: number; sequenceId: number; imageData?: ImageData } = {
         buffer,
         width,
         height,

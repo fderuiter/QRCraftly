@@ -9,26 +9,11 @@ import { useImageUpload } from '../../hooks/useImageUpload';
 import { SYSTEM_LIMITS } from '../../constants';
 import { combineIds } from '../../utils/a11y';
 
-/**
- *
- */
 interface LogoControlsProps {
-  /**
-   *
-   */
   config: QRConfig;
-  /**
-   *
-   */
   onChange: (updates: Partial<QRConfig>) => void;
 }
 
-/**
- *
- * @param root0
- * @param root0.config
- * @param root0.onChange
- */
 export const LogoControls: React.FC<LogoControlsProps> = ({ config, onChange }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const uploadButtonRef = useRef<HTMLButtonElement>(null);

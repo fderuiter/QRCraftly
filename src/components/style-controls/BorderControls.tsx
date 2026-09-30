@@ -12,26 +12,11 @@ import { useOptionalQRStoreSelector } from '../../context/QRContext';
 import { MIN_CONTRAST_THRESHOLD } from '../../constants';
 import { ContrastBadge } from './ContrastWarning';
 
-/**
- *
- */
 interface BorderControlsProps {
-  /**
-   *
-   */
   config: QRConfig;
-  /**
-   *
-   */
   onChange: (updates: Partial<QRConfig>) => void;
 }
 
-/**
- *
- * @param root0
- * @param root0.config
- * @param root0.onChange
- */
 export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange }) => {
   const moduleCount = useOptionalQRStoreSelector(s => s.moduleCount) ?? 0;
 

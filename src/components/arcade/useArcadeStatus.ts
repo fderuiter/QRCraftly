@@ -50,14 +50,14 @@ export function useArcadeStatus(analysis: DamageAnalysis, empirical: EmpiricalSt
     if (!analysis.failure) setDefeatOpen(false);
     previousFailure.current = analysis.failure;
     previousTone.current = tone;
-  }, [analysis.failure, tone]);
+  }, [analysis.failure, analysis.healthPercent, announce, tone]);
 
   useEffect(() => {
     if (empirical.status === previousScan.current) return;
     previousScan.current = empirical.status;
     if (empirical.status === 'scannable') announce('Live scanner: scannable.');
     else if (empirical.status === 'corrupted') announce('Live scanner: corrupted, no data decoded.');
-  }, [empirical.status]);
+  }, [announce, empirical.status]);
 
   const closeDefeat = useCallback(() => setDefeatOpen(false), []);
   return { defeatOpen, closeDefeat };

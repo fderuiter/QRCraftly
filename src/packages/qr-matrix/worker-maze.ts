@@ -11,7 +11,8 @@ self.onmessage = async (e: MessageEvent<unknown>) => {
   try {
     const data = e.data;
     if (data && typeof data === 'object') {
-      sequenceId = (data as any).sequenceId;
+      const candidate = (data as Record<string, unknown>).sequenceId;
+      sequenceId = typeof candidate === 'number' ? candidate : undefined;
     }
 
     if (typeof sequenceId === 'number' && sequenceId > latestSequenceId) {
@@ -60,7 +61,7 @@ self.onmessage = async (e: MessageEvent<unknown>) => {
     assertMazeWorkerResponse(response);
 
     self.postMessage(response);
-  } catch (error: any) {
+  } catch (error) {
     if (sequenceId !== undefined && sequenceId < latestSequenceId) {
       return; // Quietly ignore obsolete request errors
     }
@@ -68,7 +69,7 @@ self.onmessage = async (e: MessageEvent<unknown>) => {
     const response: MazeWorkerResponse = {
       status: 'error',
       sequenceId: sequenceId ?? -1,
-      error: error?.message || 'MAZE_GENERATION_FAILED',
+      error: (error instanceof Error && error.message) || 'MAZE_GENERATION_FAILED',
     };
 
     try {
@@ -78,7 +79,7 @@ self.onmessage = async (e: MessageEvent<unknown>) => {
       self.postMessage({
         status: 'error',
         sequenceId: sequenceId ?? -1,
-        error: error?.message || 'MAZE_GENERATION_FAILED',
+        error: (error instanceof Error && error.message) || 'MAZE_GENERATION_FAILED',
       });
     }
   }

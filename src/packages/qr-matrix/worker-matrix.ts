@@ -67,12 +67,12 @@ self.onmessage = async (e: MessageEvent<{ config: QRConfig; sequenceId: number }
         matrix,
       });
     }
-  } catch (error: any) {
+  } catch (error) {
     if (sequenceId === latestSequenceId) {
       self.postMessage({
         status: 'error',
         sequenceId,
-        error: error?.message || 'MATRIX_GENERATION_FAILED',
+        error: (error instanceof Error && error.message) || 'MATRIX_GENERATION_FAILED',
       });
     }
   }

@@ -22,7 +22,6 @@ import { setCachedAsset, convertImageToBase64 } from '../utils/assetCache';
 /**
  * Hook to load an image asynchronously.
  * Returns the HTMLImageElement once loaded, or null.
- * @param url
  */
 export const useImage = (url: string | null) => {
   const [image, setImage] = useState<HTMLImageElement | null>(null);

@@ -106,10 +106,10 @@ export default function RedirectResolverPage() {
 
         // Navigate safely to the decrypted destination
         window.location.replace(normalized);
-      } catch (err: any) {
+      } catch (err) {
         console.error('[Redirect Resolver Error]', err);
         if (isMounted) {
-          setErrorMessage(err.message || "An error occurred while resolving the encrypted dynamic link.");
+          setErrorMessage((err instanceof Error && err.message) || "An error occurred while resolving the encrypted dynamic link.");
           setIsLoading(false);
         }
       }

@@ -43,8 +43,6 @@ const patternRenderers: Record<QRStyle, React.ReactNode> = {
 
 /**
  * Helper component for rendering pattern preview modules.
- * @param root0
- * @param root0.style
  */
 export const PatternModule: React.FC<{ style: QRStyle }> = ({ style }) => {
   return <>{patternRenderers[style] || patternRenderers[QRStyle.STANDARD]}</>;

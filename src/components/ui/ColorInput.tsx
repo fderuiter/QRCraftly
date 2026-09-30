@@ -7,62 +7,18 @@ import { mergeClasses, ERROR_INPUT_CLASSES } from './styles';
  * Helper component for color inputs to reduce duplication.
  */
 interface ColorInputProps {
-  /**
-   *
-   */
   id: string;
-  /**
-   *
-   */
   label?: string;
-  /**
-   *
-   */
   value: string;
-  /**
-   *
-   */
   onChange: (value: string) => void;
-  /**
-   *
-   */
   displayValue?: string;
-  /**
-   *
-   */
   sizeClass?: string;
-  /**
-   *
-   */
   title?: string;
-  /**
-   *
-   */
   disabled?: boolean;
-  /**
-   *
-   */
   error?: string;
-  /**
-   *
-   */
   hideLabel?: boolean;
 }
 
-/**
- *
- * @param root0
- * @param root0.id
- * @param root0.label
- * @param root0.value
- * @param root0.onChange
- * @param root0.displayValue
- * @param root0.sizeClass
- * @param root0.title
- * @param root0.disabled
- * @param root0.error
- * @param root0.hideLabel
- */
 export const ColorInput: React.FC<ColorInputProps> = ({
   id,
   label,

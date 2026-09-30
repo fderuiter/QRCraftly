@@ -58,7 +58,6 @@ const QR_TYPE_LABELS: Record<QRType, string> = {
  * @returns The display label, falling back to the raw value for unknown types.
  */
 export function getQRTypeLabel(type: QRType): string {
-  // eslint-disable-next-line security/detect-object-injection -- keyed by the QRType enum
   return QR_TYPE_LABELS[type] ?? type;
 }
 
@@ -90,7 +89,6 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
     // Auto-detect the correct QRType based on registry hydrate matchers
     let detectedType = QRType.TEXT;
     for (const key of Object.keys(INPUT_REGISTRY) as QRType[]) {
-      // eslint-disable-next-line security/detect-object-injection
       const entry = INPUT_REGISTRY[key];
       if (entry && entry.canHydrateFn && entry.canHydrateFn(decodedData)) {
         detectedType = key;

@@ -28,11 +28,6 @@ export interface ContrastBadgeProps {
 /**
  * A centralized inline badge component for standardizing visual style,
  * text size, and screen-reader polite notifications for low-contrast warnings.
- * @param root0
- * @param root0.isVisible
- * @param root0.contrastRatio
- * @param root0.decimalPrecision
- * @param root0.'data-testid'
  */
 export const ContrastBadge: React.FC<ContrastBadgeProps> = ({
   isVisible,
@@ -90,13 +85,6 @@ export interface ContrastBannerProps {
 /**
  * A centralized warning banner component that unifies bottom styling alert boxes,
  * providing standard screen-reader dynamic notifications and customizable precision.
- * @param root0
- * @param root0.isVisible
- * @param root0.contrastRatio
- * @param root0.messageType
- * @param root0.decimalPrecision
- * @param root0.className
- * @param root0.role
  */
 export const ContrastBanner: React.FC<ContrastBannerProps> = ({
   isVisible,

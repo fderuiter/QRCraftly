@@ -133,7 +133,7 @@ export function useEmpiricalScan(options: UseEmpiricalScanOptions): UseEmpirical
       pipeline.dispose();
       pipelineRef.current = null;
     };
-  }, []);
+  }, [optionsRef]);
 
   useEffect(() => {
     setState({ status: 'pending', decoded: null, engine: 'none' });

@@ -351,7 +351,7 @@ export function extractFluidContours(
             const outDy = cand.segment.p2.y - cand.segment.p1.y;
             const outAngle = Math.atan2(outDy, outDx);
 
-            let diff = outAngle - inAngle;
+            const diff = outAngle - inAngle;
             let turnAngle = diff % (2 * Math.PI);
             if (turnAngle <= 0) turnAngle += 2 * Math.PI;
 

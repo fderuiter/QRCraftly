@@ -114,7 +114,7 @@ function main() {
     try {
       const findings = scanFileForPaths(filePath);
       allFindings = allFindings.concat(findings);
-    } catch (e) {
+    } catch {
       // Ignore read errors
     }
   });

@@ -67,13 +67,13 @@ function parseCatalogSections(catalogContent) {
  * 
  * @param {string[]} uiDirs Array of directory paths
  * @param {string} catalogPath Path to UI_CATALOG.md
- * @param {string} [repoRoot] Optional repository root
+ * @param {string} [_repoRoot] Optional repository root (currently unused)
  * @returns {{ changed: boolean, details: string[] }}
  */
 export function syncUICatalog(
   uiDirs = DEFAULT_UI_DIRS,
   catalogPath = DEFAULT_CATALOG_PATH,
-  repoRoot = defaultRepoRoot
+  _repoRoot = defaultRepoRoot
 ) {
   const details = [];
   if (!fs.existsSync(catalogPath)) {
@@ -212,7 +212,6 @@ export function syncUICatalog(
     let seenEntries = false;
 
     // Separate leading prose from trailing prose
-    let foundNonEmptyAfterHeader = false;
     for (const line of section.lines) {
       if (line.match(entryRegex)) {
         seenEntries = true;

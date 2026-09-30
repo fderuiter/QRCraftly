@@ -1,20 +1,8 @@
 import { ButtonHTMLAttributes, forwardRef } from 'react';
 
-/**
- *
- */
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  /**
-   *
-   */
   variant?: 'primary' | 'secondary' | 'error' | 'ghost' | 'outline' | 'menuitem' | 'icon';
-  /**
-   *
-   */
   size?: 'sm' | 'md' | 'lg' | 'icon' | 'none';
-  /**
-   *
-   */
   fullWidth?: boolean;
   /**
    * Toggle/selection state. When provided, the button exposes `aria-pressed` and, when
@@ -33,13 +21,10 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 const PRESSED_STYLES =
   'bg-teal-50 border border-teal-700 ring-1 ring-teal-700 text-teal-800 font-semibold hover:bg-teal-100 dark:bg-teal-950 dark:border-teal-300 dark:ring-teal-300 dark:text-teal-100 dark:hover:bg-teal-900';
 
-/**
- *
- */
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className = '', variant = 'secondary', size = 'md', fullWidth = false, type = 'button', pressed, ...props }, ref) => {
     
-    let baseStyles = 'disabled:cursor-not-allowed disabled:opacity-50 aria-disabled:cursor-not-allowed aria-disabled:opacity-50 font-medium inline-flex items-center justify-center transition-colors';
+    const baseStyles = 'disabled:cursor-not-allowed disabled:opacity-50 aria-disabled:cursor-not-allowed aria-disabled:opacity-50 font-medium inline-flex items-center justify-center transition-colors';
     
     let variantStyles = '';
     let sizeStyles = '';

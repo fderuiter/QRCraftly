@@ -3,26 +3,11 @@ import { EventData } from "../../types";
 import { TextField, TextAreaField } from "../ui/FormFields";
 import { CONTAINER_SPACING_CLASSES } from "../ui/styles";
 
-/**
- *
- */
 interface EventInputProps {
-  /**
-   *
-   */
   data: EventData;
-  /**
-   *
-   */
   onChange: (updates: Partial<EventData>) => void;
 }
 
-/**
- *
- * @param root0
- * @param root0.data
- * @param root0.onChange
- */
 export const EventInput: React.FC<EventInputProps> = ({ data, onChange }) => {
   return (
     <div className={CONTAINER_SPACING_CLASSES}>

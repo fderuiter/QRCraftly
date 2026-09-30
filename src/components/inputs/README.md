@@ -55,7 +55,7 @@ export const WifiInput: React.FC<WifiInputProps> = ({ data, onChange }) => {
 3.  Create a new component file in this directory (e.g., `NewTypeInput.tsx`).
 4.  Register the component, its initial state, and helpers in `src/components/inputs/InputRegistry.ts`.
 5.  Add the new type to the `TypeSelector` options and its route to `QR_TYPE_ROUTES` in `src/data/navigation.ts` (with a matching page under `src/pages/`).
-6.  Add its display name to `QR_TYPE_LABELS` in `src/components/InputPanel.tsx`. Announcements ("WiFi input loaded") and the scan toast ("Type detected: vCard contact") use these labels, never raw enum values.
+6.  Add its display name to `QR_TYPE_LABELS` in `src/components/InputPanel.tsx`. Announcements ("WiFi input loaded") and the scan toast ("Type detected: vCard contact") use these labels, never raw enum values. The map is typed `Record<QRType, string>`, so `tsc` fails until the new type has a label.
 
 ## QR Animation Configurations
 

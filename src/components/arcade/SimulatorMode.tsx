@@ -116,9 +116,6 @@ function drawBoard(
  * Damage Simulator: precision strikes on modules with four blast radii, artillery barrages,
  * interleaved Reed-Solomon analytics, finder monitoring and a defeat diagnostic.
  * @param props - Mode properties.
- * @param props.target
- * @param props.settings
- * @param props.announce
  * @returns The simulator.
  */
 export function SimulatorMode({ target, settings, announce }: ModeProps) {
@@ -156,11 +153,15 @@ export function SimulatorMode({ target, settings, announce }: ModeProps) {
     boardKey: `${matrix.payload}|${matrix.ecc}|${target.fgColor}|${target.bgColor}|${rebuilds}`,
   });
   const { defeatOpen, closeDefeat } = useArcadeStatus(analysis, scan.state, announce);
+  const requestScan = scan.request;
 
   const scene = useLatestRef({ matrix, target, palette, cursor });
   const redraw = useCallback(() => {
     const s = scene.current;
     drawRef.current((ctx) => drawBoard(ctx, s.matrix, damageRef.current, s.target, s.palette, ringsRef.current, s.cursor));
+    // `scene` and `drawRef` are stable refs; `drawRef` is declared below because useArenaCanvas
+    // needs `redraw` first, so listing it here would read it before initialisation.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const { canvasRef, draw, toArena } = useArenaCanvas(BOARD, BOARD, redraw);
   const drawRef = useLatestRef(draw);
@@ -210,9 +211,9 @@ export function SimulatorMode({ target, settings, announce }: ModeProps) {
       setDamage(next);
       setLatency(Number(((performance.now() - start) / Math.max(1, strikes.length)).toFixed(2)));
       if (!reducedMotion) animateRings();
-      scan.request();
+      requestScan();
     },
-    [matrix.size, reducedMotion, animateRings, scan.request]
+    [matrix.size, reducedMotion, animateRings, requestScan]
   );
 
   const strikeAt = (event: { clientX: number; clientY: number }) => {

@@ -22,6 +22,7 @@ export {
   parsePayload,
   validatePayload,
   QR_GENERATORS,
+  type QRPayloadDataMap,
 } from './lib/registry';
 
 // Config validation & sanitization

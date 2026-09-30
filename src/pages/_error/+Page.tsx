@@ -28,7 +28,7 @@ import { ProductShell } from '@/components/ProductShell';
  */
 export default function Page() {
   const pageContext = usePageContext();
-  const is404 = (pageContext as any).is404;
+  const is404 = pageContext.is404;
 
   return (
     <ProductShell>

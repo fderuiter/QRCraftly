@@ -13,7 +13,7 @@ try {
     stdio: 'inherit'
   });
   console.log('✅ Code duplication check passed successfully!');
-} catch (error) {
+} catch {
   console.error('❌ Code duplication check failed or exceeded thresholds.');
   process.exit(1);
 }

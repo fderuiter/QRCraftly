@@ -10,7 +10,7 @@ import { SidebarContent } from '@/components/SidebarContent';
 import { usePageContext } from 'vike-react/usePageContext';
 
 /**
- * Typography for compiled Markdown. The project does not ship @tailwindcss/typography, so
+ * Typography for compiled Markdown. The project does not ship `@tailwindcss/typography`, so
  * `prose` classes would be inert; these descendant utilities style the manifest HTML
  * explicitly and keep long code, tables and URLs inside the card on narrow screens.
  */

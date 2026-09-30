@@ -8,6 +8,46 @@ let offscreenCanvas: OffscreenCanvas | null = null;
 let offscreenCtx: OffscreenCanvasRenderingContext2D | null = null;
 const canceledTaskIds = new Set<string>();
 
+/** The dedicated worker scope's `postMessage`, which accepts a transfer list. */
+interface WorkerScope {
+  postMessage(message: unknown, transfer?: Transferable[]): void;
+}
+
+/**
+ * `self` as the dedicated worker scope. The app compiles against the DOM lib (not the WebWorker
+ * lib), which types `self` as `Window`, whose `postMessage` has no transfer-list overload.
+ * `self` is read on every call rather than captured once at module load, so the scope that is
+ * current when a message is posted is the one that receives it.
+ */
+const workerScope: WorkerScope = {
+  postMessage(message, transfer) {
+    const scope = self as unknown as WorkerScope;
+    if (transfer) {
+      scope.postMessage(message, transfer);
+    } else {
+      scope.postMessage(message);
+    }
+  },
+};
+
+/**
+ * Every message shape this worker accepts (video demux, raw buffer / ImageData scan, camera
+ * ImageBitmap scan, abort). Fields are optional and checked before use.
+ */
+interface ScannerWorkerMessage {
+  type?: string;
+  taskId?: string;
+  epochId?: number;
+  fileBuffer?: ArrayBuffer;
+  wasmBuffer?: ArrayBuffer;
+  buffer?: unknown;
+  imageData?: { data: Uint8ClampedArray | ArrayLike<number> };
+  width?: unknown;
+  height?: unknown;
+  sequenceId?: number;
+  image?: unknown;
+}
+
 /**
  * Extract frames from an EBML container (WebM/MKV).
  */
@@ -111,7 +151,7 @@ async function decodeWebCodecsFrame(frameData: Uint8Array, onFrame: (bitmap: Ima
   });
 }
 
-self.onmessage = async (e: MessageEvent<any>) => {
+self.onmessage = async (e: MessageEvent<ScannerWorkerMessage | null>) => {
   const payload = e.data;
   if (!payload) return;
   const epochId = payload.epochId;
@@ -127,8 +167,8 @@ self.onmessage = async (e: MessageEvent<any>) => {
     const isAborted = () => taskId && canceledTaskIds.has(taskId);
 
     if (isAborted()) {
-      canceledTaskIds.delete(taskId);
-      (self as any).postMessage({ type: 'done', taskId, canceled: true });
+      if (taskId) canceledTaskIds.delete(taskId);
+      workerScope.postMessage({ type: 'done', taskId, canceled: true });
       return;
     }
 
@@ -144,7 +184,7 @@ self.onmessage = async (e: MessageEvent<any>) => {
       }
     }
 
-    const u8Array = new Uint8Array(fileBuffer);
+    const u8Array = new Uint8Array(fileBuffer ?? new ArrayBuffer(0));
     const textDecoder = new TextDecoder();
 
     const headerStr = textDecoder.decode(u8Array.subarray(0, 50));
@@ -154,14 +194,14 @@ self.onmessage = async (e: MessageEvent<any>) => {
         const mockFrames = JSON.parse(jsonStr);
         for (const frame of mockFrames) {
           if (isAborted()) {
-            canceledTaskIds.delete(taskId);
-            (self as any).postMessage({ type: 'done', taskId, canceled: true });
+            if (taskId) canceledTaskIds.delete(taskId);
+            workerScope.postMessage({ type: 'done', taskId, canceled: true });
             return;
           }
-          (self as any).postMessage({ type: 'frame_decoded', taskId, data: frame });
+          workerScope.postMessage({ type: 'frame_decoded', taskId, data: frame });
         }
         if (taskId) canceledTaskIds.delete(taskId);
-        (self as any).postMessage({ type: 'done', taskId });
+        workerScope.postMessage({ type: 'done', taskId });
         return;
       } catch (err) {
         console.error('Failed to parse mock video file:', err);
@@ -176,32 +216,32 @@ self.onmessage = async (e: MessageEvent<any>) => {
         const lines = wholeText.split(/[\r\n,]+/);
         for (const line of lines) {
           if (isAborted()) {
-            canceledTaskIds.delete(taskId);
-            (self as any).postMessage({ type: 'done', taskId, canceled: true });
+            if (taskId) canceledTaskIds.delete(taskId);
+            workerScope.postMessage({ type: 'done', taskId, canceled: true });
             return;
           }
           const trimmed = line.trim();
           if (trimmed.startsWith('F|')) {
-            (self as any).postMessage({ type: 'frame_decoded', taskId, data: trimmed });
+            workerScope.postMessage({ type: 'frame_decoded', taskId, data: trimmed });
           }
         }
         if (taskId) canceledTaskIds.delete(taskId);
-        (self as any).postMessage({ type: 'done', taskId });
+        workerScope.postMessage({ type: 'done', taskId });
         return;
       }
     }
 
     for (const frameData of frames) {
       if (isAborted()) {
-        canceledTaskIds.delete(taskId);
-        (self as any).postMessage({ type: 'done', taskId, canceled: true });
+        if (taskId) canceledTaskIds.delete(taskId);
+        workerScope.postMessage({ type: 'done', taskId, canceled: true });
         return;
       }
 
       try {
         const decodedStr = textDecoder.decode(frameData);
         if (decodedStr.startsWith('F|')) {
-          (self as any).postMessage({ type: 'frame_decoded', taskId, data: decodedStr });
+          workerScope.postMessage({ type: 'frame_decoded', taskId, data: decodedStr });
           continue;
         }
       } catch {
@@ -236,7 +276,7 @@ self.onmessage = async (e: MessageEvent<any>) => {
                 }
               } catch {}
               if (code && code.data && !isAborted()) {
-                (self as any).postMessage({ type: 'frame_decoded', taskId, data: code.data });
+                workerScope.postMessage({ type: 'frame_decoded', taskId, data: code.data });
               }
             } else {
               imageBitmap.close();
@@ -249,32 +289,31 @@ self.onmessage = async (e: MessageEvent<any>) => {
     }
 
     if (taskId) canceledTaskIds.delete(taskId);
-    (self as any).postMessage({ type: 'done', taskId });
+    workerScope.postMessage({ type: 'done', taskId });
     return;
   }
 
   // 2. Check for image file upload or fallback canvas-based scan payloads
-  const isBufferRequest = payload.buffer instanceof ArrayBuffer && typeof payload.width === 'number' && typeof payload.height === 'number';
-  const isImageDataRequest = payload.imageData && typeof payload.width === 'number' && typeof payload.height === 'number';
+  const { width: requestWidth, height: requestHeight, imageData } = payload;
+  const requestBuffer = payload.buffer instanceof ArrayBuffer ? payload.buffer : null;
 
-  if (isBufferRequest || isImageDataRequest) {
-    const width = payload.width;
-    const height = payload.height;
+  if (typeof requestWidth === 'number' && typeof requestHeight === 'number' && (requestBuffer || imageData)) {
     const sequenceId = payload.sequenceId;
     let data: Uint8ClampedArray;
 
-    if (isBufferRequest) {
-      data = new Uint8ClampedArray(payload.buffer);
+    if (requestBuffer) {
+      data = new Uint8ClampedArray(requestBuffer);
+    } else if (imageData) {
+      data = imageData.data instanceof Uint8ClampedArray ? imageData.data : new Uint8ClampedArray(imageData.data);
     } else {
-      const imgData = payload.imageData;
-      data = imgData.data instanceof Uint8ClampedArray ? imgData.data : new Uint8ClampedArray(imgData.data);
+      return;
     }
 
     let code = null;
     try {
-      code = jsQR(data, width, height, { inversionAttempts: 'dontInvert' });
+      code = jsQR(data, requestWidth, requestHeight, { inversionAttempts: 'dontInvert' });
       if (!code) {
-        code = jsQR(data, width, height, { inversionAttempts: 'attemptBoth' });
+        code = jsQR(data, requestWidth, requestHeight, { inversionAttempts: 'attemptBoth' });
       }
     } catch {}
 
@@ -282,22 +321,21 @@ self.onmessage = async (e: MessageEvent<any>) => {
       status: code ? ('pass' as const) : ('fail' as const),
       sequenceId,
       decodedData: code ? code.data : null,
-      buffer: isBufferRequest ? payload.buffer : undefined,
+      buffer: requestBuffer ?? undefined,
       epochId,
     };
     assertScannerResponse(response);
-    if (isBufferRequest) {
-      (self as any).postMessage(response, [payload.buffer]);
+    if (requestBuffer) {
+      workerScope.postMessage(response, [requestBuffer]);
     } else {
-      (self as any).postMessage(response);
+      workerScope.postMessage(response);
     }
     return;
   }
 
   // 3. Camera scanning mode (ImageBitmap)
   if (!isValidScannerRequest(payload)) {
-    const hasImage = payload && payload.image instanceof ImageBitmap;
-    if (hasImage) {
+    if (payload.image instanceof ImageBitmap) {
       try {
         payload.image.close();
       } catch (err) {
@@ -312,10 +350,10 @@ self.onmessage = async (e: MessageEvent<any>) => {
     };
     try {
       assertScannerResponse(response);
-    } catch (validationErr: any) {
+    } catch (validationErr) {
       console.error('Validation error on emergency payload:', validationErr);
     }
-    (self as any).postMessage(response);
+    workerScope.postMessage(response);
     return;
   }
 
@@ -334,7 +372,7 @@ self.onmessage = async (e: MessageEvent<any>) => {
       epochId,
     };
     assertScannerResponse(response);
-    (self as any).postMessage(response);
+    workerScope.postMessage(response);
     return;
   }
   latestSequenceId = sequenceId;
@@ -354,7 +392,7 @@ self.onmessage = async (e: MessageEvent<any>) => {
       epochId,
     };
     assertScannerResponse(response);
-    (self as any).postMessage(response);
+    workerScope.postMessage(response);
     return;
   }
 
@@ -396,8 +434,8 @@ self.onmessage = async (e: MessageEvent<any>) => {
       epochId,
     };
     assertScannerResponse(response);
-    (self as any).postMessage(response);
-  } catch (error: any) {
+    workerScope.postMessage(response);
+  } catch (error) {
     try {
       image.close();
     } catch {
@@ -406,11 +444,11 @@ self.onmessage = async (e: MessageEvent<any>) => {
     const response = {
       status: 'fail' as const,
       sequenceId,
-      error: error?.message || 'DECODE_ERROR',
+      error: (error instanceof Error && error.message) || 'DECODE_ERROR',
       epochId,
     };
     assertScannerResponse(response);
-    (self as any).postMessage(response);
+    workerScope.postMessage(response);
   }
 };
 
