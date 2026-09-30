@@ -186,3 +186,44 @@ describe("useInputLogic", () => {
     expect(onChange).toHaveBeenCalledWith({ value: "http://google.com/" });
   });
 });
+
+describe("useInputLogic flush", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("applies a pending debounced edit immediately and only once", () => {
+    const onChange = vi.fn();
+    const { result } = renderHook(() => useInputLogic(createMockConfig(QRType.TEXT, ""), onChange));
+
+    act(() => {
+      (result.current.inputProps as { onChange: (u: { text: string }) => void }).onChange({ text: "typed" });
+    });
+    expect(onChange).not.toHaveBeenCalled();
+
+    act(() => {
+      result.current.flush();
+    });
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenCalledWith({ value: "typed" });
+
+    act(() => {
+      vi.advanceTimersByTime(200);
+      result.current.flush();
+    });
+    expect(onChange).toHaveBeenCalledTimes(1);
+  });
+
+  it("does nothing when no edit is pending", () => {
+    const onChange = vi.fn();
+    const { result } = renderHook(() => useInputLogic(createMockConfig(QRType.TEXT, "x"), onChange));
+    act(() => {
+      result.current.flush();
+    });
+    expect(onChange).not.toHaveBeenCalled();
+  });
+});
