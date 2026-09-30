@@ -24,12 +24,11 @@
  * route through Cloudflare Rate Limiting bindings, verifies Turnstile on
  * registration (failing closed), and never caches destinations.
  */
-export { handleRedirectApi, serveResolverPage, routeEdgeRequest, API_PREFIX, RESOLVER_SHELL_PATH } from './lib/router';
+export { handleRedirectApi, routeEdgeRequest, RESOLVER_SHELL_PATH } from './lib/router';
 export { MemoryRateLimiter } from './lib/rateLimit';
 export { verifyTurnstileWithSiteverify } from './lib/turnstile';
-export { DEFAULT_ALLOWED_ORIGINS } from './lib/origin';
 export { MAX_BODY_BYTES } from './lib/http';
-export { MAX_CIPHERTEXT_LENGTH, MAX_PLAINTEXT_URL_BYTES } from './lib/validation';
+export { MAX_CIPHERTEXT_LENGTH } from './lib/validation';
 export type {
   AssetsBinding,
   D1Like,

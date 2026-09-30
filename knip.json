@@ -4,12 +4,11 @@
     "src/pages/**/+*.{ts,tsx}!",
     "src/packages/*/worker*.ts!",
     "src/utils/{matrix,maze,imageResize,fskDemodulator}Worker.ts!",
-    "functions/**/*.ts!",
     "scripts/**/*.{js,cjs,ts}!"
   ],
   "project": [
     "src/**/*.{ts,tsx}!",
-    "functions/**/*.ts!",
+    "!src/packages/edge-redirect/{dev.ts,lib/mockD1.ts,tests/**}!",
     "scripts/**/*.{js,cjs,ts}!",
     "tests/**/*.{ts,tsx}",
     "e2e/**/*.ts"
