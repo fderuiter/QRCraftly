@@ -68,6 +68,7 @@ Unified appearance control modules that manage and present customization options
 - **ContrastWarning** (`ContrastWarning.tsx`): Dynamic accessibility banner that displays contrast warnings if combinations fall below WCAG parameters.
 - **LayoutControls** (`LayoutControls.tsx` / `LayoutControls.test.tsx`): Controls size, padding, margin, and output format.
 - **LogoControls** (`LogoControls.tsx`): Coordinates uploading custom logos, configuring scaling boundaries, and adjusting background-mask thresholds.
+- **MosaicControls** (`MosaicControls.tsx` / `MosaicControls.test.tsx`): Controls for Mosaic QR (ADR 0019): tiles an uploaded design into the QR modules while every module keeps its dark or light value. The image is processed on this device only.
 - **PatternControls** (`PatternControls.tsx`): Pattern-style selector that conditionally displays one assertive scannability warning for low-reliability patterns, avoiding duplicate screen-reader announcements.
 
 ---

@@ -24,6 +24,7 @@ import {
   PatternControls,
   ColorControls,
   LogoControls,
+  MosaicControls,
   AdvancedControls,
   LayoutControls
 } from './style-controls';
@@ -64,6 +65,9 @@ const StyleControls: React.FC<StyleControlsProps> = ({ config, onChange }) => {
 
       {/* Logo */}
       <LogoControls config={config} onChange={onChange} />
+
+      {/* Mosaic QR */}
+      <MosaicControls config={config} onChange={onChange} />
 
       {/* Advanced Mode */}
       <AdvancedControls config={config} onChange={onChange} />

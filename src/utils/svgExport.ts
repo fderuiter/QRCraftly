@@ -27,6 +27,7 @@ import { sanitizeSvg } from './security';
 import { performScannabilityCheck } from './scannabilityChecker';
 
 import { ModuleRenderOptions } from '@/packages/qr-matrix';
+import { loadMosaicSource } from '@/packages/qr-matrix/mosaic';
 
 /**
  * Converts an image URL to a base64 data-URL so it can be embedded inline in
@@ -169,6 +170,11 @@ export async function generateQRSvg(
   const logoOmitted = (hasRemoteLogo && !logoDataUrl) || (hasRemoteBorderLogo && !borderLogoDataUrl);
   if (logoOmitted && options?.onLogoOmitted) {
     options.onLogoOmitted();
+  }
+
+  // Decode the Mosaic QR image (if any) so the renderer can tile it into the modules
+  if (config.mosaicImageUrl) {
+    await loadMosaicSource(config.mosaicImageUrl);
   }
 
   // Determine output dimensions from the social format (canonical resolution)
