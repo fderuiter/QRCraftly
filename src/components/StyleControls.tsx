@@ -26,7 +26,8 @@ import {
   LogoControls,
   MosaicControls,
   AdvancedControls,
-  LayoutControls
+  LayoutControls,
+  BrandTemplateGallery
 } from './style-controls';
 import { Accordion, AccordionItem } from './ui/Accordion';
 
@@ -34,7 +35,10 @@ import { Accordion, AccordionItem } from './ui/Accordion';
  * Appearance sections the person has expanded or collapsed during this visit. Held in memory
  * only (never persisted), so the open sections survive switching QR type without a reload.
  */
-const sectionOpenState = new Map<string, boolean>([['Pattern & Colors', true]]);
+const sectionOpenState = new Map<string, boolean>([
+  ['Brand Templates', true],
+  ['Pattern & Colors', true]
+]);
 
 /**
  * Remembers a section's expanded state for the rest of the visit.
@@ -67,6 +71,13 @@ interface StyleControlsProps {
 const StyleControls: React.FC<StyleControlsProps> = ({ config, onChange }) => {
   return (
     <Accordion>
+      {/* Brand Template Gallery */}
+      <AccordionItem title="Brand Templates" headingLevel={3} defaultOpen={sectionOpenState.get('Brand Templates') ?? true} onOpenChange={rememberSection('Brand Templates')}>
+        <div className="pt-1">
+          <BrandTemplateGallery config={config} onChange={onChange} />
+        </div>
+      </AccordionItem>
+
       {/* Primary appearance controls: expanded by default. */}
       <AccordionItem title="Pattern & Colors" headingLevel={3} defaultOpen={sectionOpenState.get('Pattern & Colors') ?? false} onOpenChange={rememberSection('Pattern & Colors')}>
         <div className="space-y-6 pt-1">

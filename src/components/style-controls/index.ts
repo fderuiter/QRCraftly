@@ -1,5 +1,6 @@
 export * from './AdvancedControls';
 export * from './BorderControls';
+export * from './BrandTemplateGallery';
 export * from './ColorControls';
 export * from './LayoutControls';
 export * from './LogoControls';

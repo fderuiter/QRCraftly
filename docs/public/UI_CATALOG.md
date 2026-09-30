@@ -67,6 +67,7 @@ Unified appearance control modules that manage and present customization options
 
 - **AdvancedControls** (`AdvancedControls.tsx`): Advanced generator settings panel managing Error Correction Level options.
 - **BorderControls** (`BorderControls.tsx` / `BorderControls.test.tsx`): Controls options for border thickness, padding, and corner radius around outputs.
+- **BrandTemplateGallery** (`BrandTemplateGallery.tsx` / `BrandTemplateGallery.test.tsx`): Scaffolded entry for BrandTemplateGallery.
 - **ColorControls** (`ColorControls.tsx`): Consolidates pickers and presets for foreground, background, and corner eye accents. Presets are a three-column radio grid with visible names and a bold border plus check mark on the selected preset.
 - **ContrastWarning** (`ContrastWarning.tsx`): Dynamic accessibility banner that displays contrast warnings if combinations fall below WCAG parameters.
 - **LayoutControls** (`LayoutControls.tsx` / `LayoutControls.test.tsx`): Controls size, padding, margin, and output format.
