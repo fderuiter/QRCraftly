@@ -78,7 +78,7 @@ Boundary checks run automatically during `pnpm run lint` and CI.
 
 - **Purpose**: Server side of Zero-Knowledge Redirection: the hardened `/api/redirect/*` API (ciphertext-only destinations, Turnstile failing closed, Rate Limiting bindings, origin allowlist, body caps) and the `/r/<id>` resolver routing, backed by Cloudflare D1. Not enabled in production yet; see `docs/public/EDGE_ARCHITECTURE.md`.
 - **Entry Points**:
-  - `index.ts`: `handleRedirectApi`, `serveResolverPage`, `routeEdgeRequest`, `MemoryRateLimiter`, `verifyTurnstileWithSiteverify`, limits and binding types.
+  - `index.ts`: `handleRedirectApi`, `routeEdgeRequest`, `RESOLVER_SHELL_PATH`, `MemoryRateLimiter`, `verifyTurnstileWithSiteverify`, limits and binding types.
   - `worker.ts`: Cloudflare Worker entry (`main` in `wrangler.jsonc` once enabled); falls through to the `ASSETS` binding.
   - `dev.ts`: Vite dev middleware and in-memory `MockD1Database` so `pnpm dev` works without Cloudflare credentials.
   - `schema.sql`: D1 schema applied with `pnpm exec wrangler d1 execute`.
