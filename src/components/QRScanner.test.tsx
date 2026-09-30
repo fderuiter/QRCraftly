@@ -15,7 +15,6 @@ vi.mock('../hooks/useCamera', () => ({
 
 vi.mock('@/packages/optical-scanner/client', () => ({
   useQrScanner: vi.fn(),
-  useAdaptiveScanner: vi.fn(),
 }));
 
 vi.mock('jsqr', () => ({

@@ -20,39 +20,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import React from 'react';
-import { useAnimatedQrSender } from './useAnimatedQrSender';
-import { QRConfig, QRType, QRStyle, QRErrorCorrectionLevel, SocialFormat, TemplateStyle } from '../types';
+import { useOpticalSender } from '../client';
+import { senderOptions } from './fixtures';
+import { QRStyle } from '@/types';
 
-const mockConfig: QRConfig = {
-  value: 'Hello World',
-  type: QRType.TEXT,
-  fgColor: '#000000',
-  bgColor: '#ffffff',
-  style: QRStyle.STANDARD,
-  logoUrl: null,
-  logoSize: 0.2,
-  logoPaddingStyle: 'none',
-  logoPadding: 1,
-  logoBackgroundColor: '#ffffff',
-  eyeColor: '#000000',
-  errorCorrectionLevel: QRErrorCorrectionLevel.M,
-  isBorderEnabled: false,
-  borderSize: 0.05,
-  borderColor: '#000000',
-  borderStyle: 'solid',
-  borderText: '',
-  borderTextPosition: 'bottom-center',
-  borderTextColor: '#ffffff',
-  borderLogoUrl: null,
-  borderLogoPosition: 'bottom-center',
-  socialFormat: SocialFormat.SQUARE_1_1,
-  templateStyle: TemplateStyle.NONE,
-  templateHeadline: '',
-  templateSubtext: '',
-  templateQrScale: 1.0,
-};
 
-describe('useAnimatedQrSender Hook', () => {
+describe('useOpticalSender', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     if (globalThis.mockWorkerControl) {
@@ -70,11 +43,7 @@ describe('useAnimatedQrSender Hook', () => {
 
   it('should initialize with standard defaults and lower visual density (< 256 bytes)', () => {
     const { result } = renderHook(() =>
-      useAnimatedQrSender({
-        config: mockConfig,
-        logoImg: null,
-        borderLogoImg: null,
-      })
+      useOpticalSender(senderOptions())
     );
 
     expect(result.current.selectedFile).toBeNull();
@@ -90,11 +59,7 @@ describe('useAnimatedQrSender Hook', () => {
 
   it('should handle simulated 50MB file selection', () => {
     const { result } = renderHook(() =>
-      useAnimatedQrSender({
-        config: mockConfig,
-        logoImg: null,
-        borderLogoImg: null,
-      })
+      useOpticalSender(senderOptions())
     );
 
     act(() => {
@@ -108,11 +73,7 @@ describe('useAnimatedQrSender Hook', () => {
 
   it('sends the fps parameter to the worker on START', async () => {
     const { result } = renderHook(() =>
-      useAnimatedQrSender({
-        config: mockConfig,
-        logoImg: null,
-        borderLogoImg: null,
-      })
+      useOpticalSender(senderOptions())
     );
 
     act(() => {
@@ -142,11 +103,7 @@ describe('useAnimatedQrSender Hook', () => {
     vi.useFakeTimers();
 
     const { result } = renderHook(() =>
-      useAnimatedQrSender({
-        config: mockConfig,
-        logoImg: null,
-        borderLogoImg: null,
-      })
+      useOpticalSender(senderOptions())
     );
 
     act(() => {
@@ -217,11 +174,7 @@ describe('useAnimatedQrSender Hook', () => {
 
   it('supports adaptive density and frame memory pool caching across multiple passes', () => {
     const { result } = renderHook(() =>
-      useAnimatedQrSender({
-        config: mockConfig,
-        logoImg: null,
-        borderLogoImg: null,
-      })
+      useOpticalSender(senderOptions())
     );
 
     const dummyFile = new File(['Hello World Payload Array For Testing Animated Transfers'], 'test.txt', {
@@ -248,11 +201,7 @@ describe('useAnimatedQrSender Hook', () => {
 
   it('unconditionally clears target value synchronously on every handleFileChange event', () => {
     const { result } = renderHook(() =>
-      useAnimatedQrSender({
-        config: mockConfig,
-        logoImg: null,
-        borderLogoImg: null,
-      })
+      useOpticalSender(senderOptions())
     );
 
     // Scenario 1: File selected
@@ -275,5 +224,96 @@ describe('useAnimatedQrSender Hook', () => {
 
     // File selection should remain or not crash, target value must be cleared synchronously
     expect(mockTarget2.value).toBe('');
+  });
+
+  /** Starts a transfer whose slice worker answers START with `frames` frames. */
+  async function startWithFrames(options: ReturnType<typeof senderOptions>, frames = 3) {
+    const hook = renderHook(() => useOpticalSender(options));
+    hook.result.current.canvasRef.current = document.createElement('canvas');
+    act(() => {
+      hook.result.current.setSelectedFile(new File(['payload'], 'p.txt', { type: 'text/plain' }));
+    });
+    globalThis.mockWorkerControl.setInterceptor((message: any, worker: any) => {
+      if (message.type === 'START') {
+        worker.dispatchMessage({ type: 'PROGRESS', index: 0, total: frames });
+        for (let index = 0; index < frames; index++) {
+          worker.dispatchMessage({ type: 'FRAME', index, total: frames, size: 21, data: new Uint8Array(441) });
+        }
+      }
+    });
+    await act(async () => {
+      hook.result.current.startTransfer();
+    });
+    return hook;
+  }
+
+  it('gates playback on the injected verifier and paints frames with the injected renderer', async () => {
+    const options = senderOptions();
+    const { result } = await startWithFrames(options);
+
+    await waitFor(() => expect(result.current.isTransferring).toBe(true));
+    expect(options.verifyFrame).toHaveBeenCalledTimes(1);
+    // Fountain frames are checked as they are shown: sanitized, without logos.
+    expect(options.verifyFrame).toHaveBeenCalledWith(
+      expect.objectContaining({ size: 21 }),
+      expect.objectContaining({ style: QRStyle.STANDARD, logoUrl: null }),
+      null,
+      null
+    );
+    await waitFor(() => expect(options.renderFrame).toHaveBeenCalled());
+    expect(options.renderFrame).toHaveBeenCalledWith(
+      result.current.canvasRef.current,
+      expect.objectContaining({ size: 21 }),
+      expect.objectContaining({ fgColor: '#000000' }),
+      null,
+      null
+    );
+    act(() => result.current.stopTransfer());
+    globalThis.mockWorkerControl.setInterceptor(null);
+  });
+
+  it('keeps playback paused when the injected verifier rejects the first frame', async () => {
+    const options = senderOptions({ verifyFrame: vi.fn(async () => false) });
+    const { result } = await startWithFrames(options);
+
+    await waitFor(() => expect(result.current.handshakeError).toMatch(/failed scannability check/));
+    expect(result.current.isTransferring).toBe(false);
+    expect(result.current.handshakeVerified).toBe(false);
+    expect(options.renderFrame).not.toHaveBeenCalled();
+    globalThis.mockWorkerControl.setInterceptor(null);
+  });
+
+  it('drops maze bridges from the checked legacy handshake frame while the scannability fallback is active', async () => {
+    const options = senderOptions({
+      fountainMode: false,
+      scannabilityFallbackActive: true,
+      config: { ...senderOptions().config, isMazeEnabled: true, isMazeBridgesEnabled: true },
+    });
+    const { result } = await startWithFrames(options);
+
+    await waitFor(() => expect(result.current.isTransferring).toBe(true));
+    expect(options.verifyFrame).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ isMazeEnabled: true, isMazeBridgesEnabled: false }),
+      null,
+      null
+    );
+    act(() => result.current.stopTransfer());
+    globalThis.mockWorkerControl.setInterceptor(null);
+  });
+
+  it('reports the frame pool buffer size as frame memory while transferring', async () => {
+    const options = senderOptions();
+    const { result } = await startWithFrames(options);
+    expect(result.current.transferStats.fileName).toBe('p.txt');
+
+    await waitFor(() => expect(result.current.isTransferring).toBe(true));
+    const poolBytes = result.current.framePoolRef.current.byteLength;
+    expect(poolBytes).toBeGreaterThan(0);
+    expect(result.current.transferStats.frameBufferMemory).toBe(`${(poolBytes / 1024 / 1024).toFixed(2)} MB`);
+
+    act(() => result.current.stopTransfer());
+    expect(result.current.transferStats.frameBufferMemory).toBe('0.00 MB');
+    globalThis.mockWorkerControl.setInterceptor(null);
   });
 });

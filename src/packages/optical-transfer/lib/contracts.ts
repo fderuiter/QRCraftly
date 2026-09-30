@@ -16,7 +16,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { QRConfig } from '@/types';
 import type { TransferCompression } from './fountain/session';
 
 /**
@@ -30,50 +29,15 @@ export interface HandshakeInfo {
 }
 
 /**
- * Real-time transfer statistics and metrics.
+ * Sender telemetry shown while a transfer plays.
  */
 export interface TransferStats {
   fileName: string;
   fileSize: number;
   startTime: number;
-  activeMemory: string;
+  /** Size of the preallocated frame pool buffer, formatted in megabytes. */
+  frameBufferMemory: string;
 }
-
-/**
- * High-performance frame data delivered to renderers and consumers.
- */
-export interface StreamFrame {
-  index: number;
-  size: number;
-  data: Uint8Array;
-  isHandshake?: boolean;
-}
-
-/**
- * Configuration options for the headless sender session.
- */
-export interface SenderSessionOptions {
-  config: QRConfig;
-  chunkSize?: number;
-  fps?: number;
-  /** Rateless BC-UR fountain broadcast with no handshake frame. Defaults to true. */
-  fountainMode?: boolean;
-}
-
-/**
- * Configuration options for the headless receiver session.
- */
-export interface ReceiverSessionOptions {
-  /** Require an `H|` handshake before legacy `F|` chunks. Fountain streams carry their own session header and never need one. */
-  handshakeRequired?: boolean;
-  streamMode?: 'text' | 'binary';
-  autoDownload?: boolean;
-  onProgress?: (percent: number, current: number, total: number | null) => void;
-  onSuccess?: (data: Uint8Array, handshake: HandshakeInfo | null) => void;
-  onError?: (error: string) => void;
-  onSecurityAlert?: (message: string) => void;
-}
-
 
 /** START payload accepted by the slice worker. */
 export interface SliceStartPayload {

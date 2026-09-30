@@ -24,7 +24,9 @@ import { Card } from '@/components/ui/Card';
 import { Alert } from '@/components/ui/Alert';
 import { ToolWorkspaceLayout, ToolWorkspaceHeader } from '@/components/ToolWorkspaceLayout';
 import { useToast } from '@/components/ui/Toast';
-import { useAnimatedQrReceiver } from '@/hooks/useAnimatedQrReceiver';
+import { useOpticalReceiver } from '@/packages/optical-transfer/client';
+import { useCamera } from '@/hooks/useCamera';
+import { triggerFileDownload } from '@/utils/downloadManager';
 import { QRProvider } from '@/context/QRContext';
 
 /**
@@ -41,6 +43,7 @@ function formatEta(seconds: number | null): string {
 
 function FileTransferReceiveInner() {
   const { addToast } = useToast();
+  const camera = useCamera();
 
   const [isDragging, setIsDragging] = useState(false);
   const [showBetaAlert, setShowBetaAlert] = useState(true);
@@ -69,7 +72,9 @@ function FileTransferReceiveInner() {
     videoFile,
     fileValidationError,
     handleFileUpload,
-  } = useAnimatedQrReceiver({
+  } = useOpticalReceiver({
+    camera,
+    saveFile: triggerFileDownload,
     addToast,
     // Legacy F| chunks still need an H| handshake; fountain droplets carry their own verified session header.
     handshakeRequired: true,

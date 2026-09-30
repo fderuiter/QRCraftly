@@ -16,13 +16,21 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+
 /**
- * Backward-compatibility re-export shim.
- * Canonical implementation now lives in @/packages/optical-transfer.
+ * Spawns the slice worker that cuts the selected file into QR frames off the main thread.
+ * This is the only place the slice worker script is referenced by path.
+ * @returns The slice worker.
  */
-export {
-  StreamLookaheadReceiver,
-  DANGEROUS_SCHEMES,
-  decodeHtmlEntities,
-  recursiveDecode,
-} from '@/packages/optical-transfer';
+export function spawnSliceWorker(): Worker {
+  return new Worker(new URL('../../worker-slice.ts', import.meta.url), { type: 'module' });
+}
+
+/**
+ * Formats a byte count as megabytes for the transfer telemetry panel.
+ * @param bytes Byte count.
+ * @returns The value with two decimals and an `MB` suffix.
+ */
+export function formatMegabytes(bytes: number): string {
+  return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
+}

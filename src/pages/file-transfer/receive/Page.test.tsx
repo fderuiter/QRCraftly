@@ -22,18 +22,17 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import React from 'react';
 import Page from './+Page';
 import { ToastProvider } from '@/components/ui/Toast';
-import { StreamLookaheadReceiver } from '@/engine/StreamLookahead';
-import { FountainReassembler, createFountainSession } from '@/packages/optical-transfer';
+import { FountainReassembler, StreamLookaheadReceiver, createFountainSession } from '@/packages/optical-transfer';
 
 let scanSuccessCallback: ((data: string) => void) | undefined;
 
-vi.mock('@/hooks/useAdaptiveScanner', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/hooks/useAdaptiveScanner')>();
+vi.mock('@/packages/optical-scanner/client', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/packages/optical-scanner/client')>();
   return {
     ...actual,
-    useAdaptiveScanner: (options: any) => {
-      scanSuccessCallback = options.onScanSuccess;
-      return actual.useAdaptiveScanner(options);
+    useQrScanner: (options: Parameters<typeof actual.useQrScanner>[0]) => {
+      scanSuccessCallback = options?.onScanSuccess;
+      return actual.useQrScanner(options);
     }
   };
 });
