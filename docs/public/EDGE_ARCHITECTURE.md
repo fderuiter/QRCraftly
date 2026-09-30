@@ -4,6 +4,8 @@ publish-approved: true
 
 # Edge Architecture and Zero-Knowledge Privacy Specification
 
+> **Status: not deployed.** Production serves static files only (Cloudflare Workers Static Assets with no Worker script). No edge rendering, database, redirect service or scan counting runs today, and dynamic QR codes are switched off in the app. This page describes a design kept in the repository; if it is ever turned on, the [QRCraftly Pledge](https://qrcraftly.com/free-forever) and the privacy notes will be updated first.
+
 ## Executive Summary
 
 QRCraftly operates on a hybrid edge-native architecture that combines browser-bound static code execution with Cloudflare Workers / Pages Functions serverless edge compute and Cloudflare D1 relational database persistence. While core QR code generation, canvas rendering, and scannability diagnostics are performed locally on client devices via Web Workers, dynamic redirection services (`/r/[id]`), edge server-side rendering (Vike SSR), and high-concurrency scan analytics leverage distributed edge infrastructure.

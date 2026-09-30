@@ -21,4 +21,4 @@ Client-side execution eliminates data transit across external networks and ensur
 - Zero backend database liability or exposure to transit intercept attacks for static QR codes.
 - Batch or headless generation cannot be performed server-side without a client rendering context.
 - Unapproved persistent storage keys fail the automated build pipeline closed.
-- The allowlist holds only preference, consent and probe keys: `qr-telemetry-opt-in`, `qrcraftly:dynamic-redirects`, `qrcraftly:dynamic-consent-accepted`, `qrcraftly:theme` (colour-theme preference: `light`, `dark` or `system`) and `__test__`. Adding a key requires updating the auditor, its tests, `AGENTS.md` and the privacy documentation together.
+- The allowlist holds only preference, consent and probe keys: `qrcraftly:dynamic-redirects`, `qrcraftly:dynamic-consent-accepted`, `qrcraftly:theme` (colour-theme preference: `light`, `dark` or `system`) and `__test__`. Adding a key requires updating the auditor, its tests, `AGENTS.md` and the privacy documentation together.

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import fs from 'fs';
 import path from 'path';
-import { getFilesToAudit, reportError, REMEDIATION_HINTS, slugify, checkPlaceholders, buildFileHeadings, verifyLinks, validateTelemetryCompliance, resetErrors, checkCodeSnippets, existsSyncCaseSensitive, checkPublishApproved } from '../scripts/audit_markdown.js';
+import { getFilesToAudit, reportError, REMEDIATION_HINTS, slugify, checkPlaceholders, buildFileHeadings, verifyLinks, resetErrors, checkCodeSnippets, existsSyncCaseSensitive, checkPublishApproved } from '../scripts/audit_markdown.js';
 
 describe('audit_markdown', () => {
   beforeEach(() => {
@@ -109,47 +109,6 @@ describe('audit_markdown', () => {
 
       const hasLinkErrors = verifyLinks('test.md', content, fileHeadings);
       expect(hasLinkErrors).toBe(true);
-    });
-  });
-
-  describe('validateTelemetryCompliance', () => {
-    it('should pass compliance match when keys match perfectly', () => {
-      const typesContent = `export const ALLOWED_TELEMETRY_KEYS = ['key_one', 'key_two'];`;
-      const complianceContent = `
-# Opt-In Telemetry
-These keys are supported: \`key_one\`, \`key_two\`.
-
-## What is NOT Logged
-No private info.
-`;
-      const hasErrors = validateTelemetryCompliance(complianceContent, typesContent);
-      expect(hasErrors).toBe(false);
-    });
-
-    it('should fail when code key is not documented', () => {
-      const typesContent = `export const ALLOWED_TELEMETRY_KEYS = ['key_one', 'key_undocumented'];`;
-      const complianceContent = `
-# Opt-In Telemetry
-These keys are supported: \`key_one\`.
-
-## What is NOT Logged
-No private info.
-`;
-      const hasErrors = validateTelemetryCompliance(complianceContent, typesContent);
-      expect(hasErrors).toBe(true);
-    });
-
-    it('should fail when documented key is not in code', () => {
-      const typesContent = `export const ALLOWED_TELEMETRY_KEYS = ['key_one'];`;
-      const complianceContent = `
-# Opt-In Telemetry
-These keys are supported: \`key_one\`, \`key_undocumented_in_code\`.
-
-## What is NOT Logged
-No private info.
-`;
-      const hasErrors = validateTelemetryCompliance(complianceContent, typesContent);
-      expect(hasErrors).toBe(true);
     });
   });
 
@@ -324,9 +283,8 @@ No private info.
         checkPlaceholders('doc.md', 'A TODO marker');
         verifyLinks('docs/doc.md', '[x](./nope-missing.md)', {});
         verifyLinks('doc.md', '[x](#absent)', { 'doc.md': new Set(['present']) });
-        validateTelemetryCompliance('Opt-In Telemetry `a` What is NOT Logged', "export const ALLOWED_TELEMETRY_KEYS = ['b'];");
         const messages = errorSpy.mock.calls.map(call => String(call[0]));
-        expect(messages.length).toBeGreaterThanOrEqual(5);
+        expect(messages.length).toBeGreaterThanOrEqual(3);
         for (const message of messages) {
           expect(message).toMatch(/\n {2}Fix: \S/);
         }
@@ -340,7 +298,7 @@ No private info.
       try {
         const kinds: Array<keyof typeof REMEDIATION_HINTS> = [
           'missingFile', 'publishApproved', 'placeholder', 'outsideRoot',
-          'brokenFile', 'brokenAnchor', 'snippet', 'telemetry'
+          'brokenFile', 'brokenAnchor', 'snippet'
         ];
         expect([...kinds].sort()).toEqual(Object.keys(REMEDIATION_HINTS).sort());
         for (const kind of kinds) {

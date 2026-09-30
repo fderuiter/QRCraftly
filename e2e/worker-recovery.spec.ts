@@ -158,7 +158,12 @@ test.describe('Isolated Web Worker Recovery & Export Bypass', () => {
     await expect(warningModalTitle).not.toBeVisible({ timeout: 15000 });
   });
 
-  test('Requirement 5: Display diagnostic preferences options popup during failure state and dismiss on choice declaration', async ({ page }) => {
+  test('Requirement 5: A scan failure sends no diagnostics and asks for no consent', async ({ page }) => {
+    const reportRequests: string[] = [];
+    page.on('request', request => {
+      if (new URL(request.url()).pathname.startsWith('/api/')) reportRequests.push(request.url());
+    });
+
     // Inject background failure
     await page.evaluate(() => {
       (window as any).simulateFailure = true;
@@ -175,16 +180,8 @@ test.describe('Isolated Web Worker Recovery & Export Bypass', () => {
     await expect(alertBadge).toBeVisible({ timeout: 15000 });
     await expect(alertBadge).toContainText(/scan verification failed/i);
 
-    // Assert that the diagnostic options popup renders (help improve scannability card)
-    const telemetryTitle = page.getByText(/Anonymous diagnostics/i);
-    await expect(telemetryTitle).toBeVisible({ timeout: 15000 });
-
-    // Click 'No thanks' option to save choice and dismiss popup
-    const noThanksButton = page.getByRole('button', { name: /No thanks/i });
-    await expect(noThanksButton).toBeVisible();
-    await noThanksButton.click();
-
-    // Assert that the diagnostic preferences popup is successfully dismissed and no longer visible
-    await expect(telemetryTitle).not.toBeVisible({ timeout: 15000 });
+    // No diagnostics prompt, and nothing is reported anywhere
+    await expect(page.getByText(/Anonymous diagnostics/i)).toHaveCount(0);
+    expect(reportRequests).toEqual([]);
   });
 });

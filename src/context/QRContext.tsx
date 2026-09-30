@@ -4,8 +4,8 @@ import { DEFAULT_CONFIG } from '@/constants';
 import { sanitizeConfig } from '@/packages/qr-payload';
 
 /**
- * Payload of the `scannability-fail` signal. Only allowlisted, non-sensitive diagnostic
- * fields travel with it (see `ALLOWED_TELEMETRY_KEYS`).
+ * Payload of the `scannability-fail` signal. It stays in memory on this device and only
+ * carries non-sensitive diagnostic fields, never QR content.
  */
 interface ScannabilityFailDetail {
   /** Decoder engine that reported the failure. */
@@ -27,15 +27,6 @@ type SignalName = keyof SignalPayloads;
 type SignalCallback<N extends SignalName> = (detail: SignalPayloads[N]) => void;
 
 /**
- * User preferences that belong to the QR domain. The colour theme is not here: it is
- * owned by the global `ThemeProvider` (`src/context/ThemeContext.tsx`).
- */
-interface QRPreferences {
-  /** Anonymous diagnostics consent; null until the visitor answers. */
-  telemetryOptIn: boolean | null;
-}
-
-/**
  * Snapshot held by a QR store.
  */
 export type QRState = {
@@ -43,8 +34,6 @@ export type QRState = {
   config: QRConfig;
   /** Module count of the last rendered matrix. */
   moduleCount: number;
-  /** Domain preferences. */
-  preferences: QRPreferences;
   /**
    * Whether scannability fallback mode is active. The store is its single owner: it is set
    * by the `scannability-fail` signal and reset only when content (type/value) or the
@@ -67,8 +56,6 @@ export interface QRStore {
   setModuleCount: (count: number) => void;
   /** Sets the scannability fallback flag. */
   setScannabilityFallbackActive: (active: boolean) => void;
-  /** Updates domain preferences, persisting telemetry consent. */
-  updatePreferences: (updates: Partial<QRPreferences>) => void;
   /** Emits a typed signal. */
   emitSignal: <N extends SignalName>(name: N, detail: SignalPayloads[N]) => void;
   /** Registers a typed signal callback; returns an unregister function. */
@@ -76,37 +63,6 @@ export interface QRStore {
 }
 
 const QRStoreContext = createContext<QRStore | undefined>(undefined);
-
-const fallbackMemoryStore = new Map<string, string>();
-
-/**
- * Minimal storage surface used by the store.
- */
-interface PreferenceStorage {
-  getItem: (key: string) => string | null;
-  setItem: (key: string, value: string) => void;
-}
-
-/**
- * Probes localStorage once and returns it, or an in-memory fallback when it is unavailable.
- * Callers keep the result so the write/remove probe does not run on every update.
- * @returns A usable storage object.
- */
-const getSafeLocalStorage = (): PreferenceStorage => {
-  if (typeof window !== 'undefined' && window.localStorage && typeof window.localStorage.getItem === 'function') {
-    try {
-      window.localStorage.setItem('__test__', '1');
-      window.localStorage.removeItem('__test__');
-      return window.localStorage;
-    } catch (_e) {
-      // Use fallback
-    }
-  }
-  return {
-    getItem: (key: string) => fallbackMemoryStore.get(key) ?? null,
-    setItem: (key: string, value: string) => { fallbackMemoryStore.set(key, value); }
-  };
-};
 
 /** Config fields whose change invalidates a scannability fallback decision. */
 const FALLBACK_RESET_FIELDS: ReadonlyArray<keyof QRConfig> = ['type', 'value', 'errorCorrectionLevel'];
@@ -160,15 +116,9 @@ export function clearRetainedAppearance(): void {
 }
 
 function createQRStore(initialConfig?: Partial<QRConfig>, retainAppearance = false): QRStore {
-  const storage = getSafeLocalStorage();
-  const savedOptIn = storage.getItem('qr-telemetry-opt-in');
-
   let state: QRState = {
     config: { ...DEFAULT_CONFIG, ...initialConfig, ...(retainAppearance ? retainedAppearance : null) },
     moduleCount: 0,
-    preferences: {
-      telemetryOptIn: savedOptIn === 'true' ? true : savedOptIn === 'false' ? false : null,
-    },
     isScannabilityFallbackActive: false,
   };
 
@@ -206,13 +156,6 @@ function createQRStore(initialConfig?: Partial<QRConfig>, retainAppearance = fal
       if (state.isScannabilityFallbackActive !== active) {
         setState({ ...state, isScannabilityFallbackActive: active });
       }
-    },
-    updatePreferences: (updates) => {
-      if (updates.telemetryOptIn === undefined || updates.telemetryOptIn === state.preferences.telemetryOptIn) return;
-      if (updates.telemetryOptIn !== null) {
-        storage.setItem('qr-telemetry-opt-in', String(updates.telemetryOptIn));
-      }
-      setState({ ...state, preferences: { ...state.preferences, ...updates } });
     },
     setModuleCount: (count) => {
       if (state.moduleCount !== count) {

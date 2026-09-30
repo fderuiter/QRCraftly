@@ -14,7 +14,6 @@ const repoRoot = path.join(__dirname, '..');
 
 // Approved storage keys allowed in client-side persistent storage operations
 export const ALLOWED_STORAGE_KEYS = new Set([
-  'qr-telemetry-opt-in',
   'qrcraftly:dynamic-redirects',
   'qrcraftly:dynamic-consent-accepted',
   'qrcraftly:theme',

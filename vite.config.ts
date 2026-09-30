@@ -77,7 +77,6 @@ export default defineConfig(() => {
                 'src/utils/mazeWorker.test.ts',
                 'src/utils/qrRenderer.test.ts',
                 'tests/opticalTransferSliceWorker.test.ts',
-                'tests/telemetry.test.ts',
                 '**/node_modules/**',
                 '**/dist/**',
                 'e2e/**',
@@ -103,7 +102,6 @@ export default defineConfig(() => {
                 'src/utils/mazeWorker.test.ts',
                 'src/utils/qrRenderer.test.ts',
                 'tests/opticalTransferSliceWorker.test.ts',
-                'tests/telemetry.test.ts',
               ],
               exclude: [
                 '**/node_modules/**',

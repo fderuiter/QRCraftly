@@ -44,10 +44,6 @@ const wrapperWithConfig = (initialConfig: any) =>
 // ---------------------------------------------------------------------------
 // localStorage helpers
 // ---------------------------------------------------------------------------
-function setLocalStorageItem(key: string, value: string) {
-  window.localStorage.setItem(key, value);
-}
-
 function clearLocalStorage() {
   window.localStorage.clear();
 }
@@ -106,26 +102,18 @@ describe('QRProvider and useQRStore', () => {
     expect(state.config.fgColor).toBe(DEFAULT_CONFIG.fgColor);
   });
 
-  it('reads telemetryOptIn from localStorage on construction (true)', () => {
-    setLocalStorageItem('qr-telemetry-opt-in', 'true');
+  it('holds no preferences and does not own the colour theme (owned by the global ThemeProvider)', () => {
     const { result } = renderHook(() => useQRStore(), { wrapper });
-    expect(result.current.getState().preferences.telemetryOptIn).toBe(true);
+    expect(result.current.getState()).not.toHaveProperty('preferences');
   });
 
-  it('reads telemetryOptIn from localStorage on construction (false)', () => {
-    setLocalStorageItem('qr-telemetry-opt-in', 'false');
-    const { result } = renderHook(() => useQRStore(), { wrapper });
-    expect(result.current.getState().preferences.telemetryOptIn).toBe(false);
-  });
-
-  it('defaults telemetryOptIn to null when localStorage is empty', () => {
-    const { result } = renderHook(() => useQRStore(), { wrapper });
-    expect(result.current.getState().preferences.telemetryOptIn).toBeNull();
-  });
-
-  it('does not own the colour theme (owned by the global ThemeProvider)', () => {
-    const { result } = renderHook(() => useQRStore(), { wrapper });
-    expect(Object.keys(result.current.getState().preferences)).toEqual(['telemetryOptIn']);
+  it('does not read or write browser storage', () => {
+    const getSpy = vi.spyOn(Storage.prototype, 'getItem');
+    const setSpy = vi.spyOn(Storage.prototype, 'setItem');
+    renderHook(() => useQRStore(), { wrapper });
+    expect(getSpy).not.toHaveBeenCalled();
+    expect(setSpy).not.toHaveBeenCalled();
+    vi.restoreAllMocks();
   });
 
   it('does not keep an unused violations list in state', () => {
@@ -212,95 +200,6 @@ describe('QRStore.updateConfig', () => {
     });
     expect(result.current.getState().config.fgColor).toBe('#ff0000');
     expect(result.current.getState().config.bgColor).toBe('#0000ff');
-  });
-});
-
-describe('QRStore.updatePreferences', () => {
-  beforeEach(() => {
-    clearLocalStorage();
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-    clearLocalStorage();
-  });
-
-  it('does not notify when the preference is unchanged', () => {
-    const { result } = renderHook(() => useQRStore(), { wrapper });
-    const listener = vi.fn();
-    act(() => {
-      result.current.subscribe(listener);
-      result.current.updatePreferences({ telemetryOptIn: null });
-      result.current.updatePreferences({});
-    });
-    expect(listener).not.toHaveBeenCalled();
-  });
-
-  it('probes storage once per store rather than on every update', () => {
-    const removeSpy = vi.spyOn(Storage.prototype, 'removeItem');
-    const { result } = renderHook(() => useQRStore(), { wrapper });
-    const probesAfterCreate = removeSpy.mock.calls.filter(([key]) => key === '__test__').length;
-    act(() => {
-      result.current.updatePreferences({ telemetryOptIn: true });
-      result.current.updatePreferences({ telemetryOptIn: false });
-    });
-    expect(removeSpy.mock.calls.filter(([key]) => key === '__test__').length).toBe(probesAfterCreate);
-  });
-
-  it('updates telemetryOptIn preference', () => {
-    const { result } = renderHook(() => useQRStore(), { wrapper });
-    act(() => {
-      result.current.updatePreferences({ telemetryOptIn: true });
-    });
-    expect(result.current.getState().preferences.telemetryOptIn).toBe(true);
-  });
-
-  it('persists telemetryOptIn=true to localStorage', async () => {
-    const { result } = renderHook(() => useQRStore(), { wrapper });
-    act(() => {
-      result.current.updatePreferences({ telemetryOptIn: true });
-    });
-    // asyncPersist uses queueMicrotask, flush it
-    await act(async () => {
-      await new Promise(r => setTimeout(r, 50));
-    });
-    expect(window.localStorage.getItem('qr-telemetry-opt-in')).toBe('true');
-  });
-
-  it('persists telemetryOptIn=false to localStorage', async () => {
-    const { result } = renderHook(() => useQRStore(), { wrapper });
-    act(() => {
-      result.current.updatePreferences({ telemetryOptIn: false });
-    });
-    await act(async () => {
-      await new Promise(r => setTimeout(r, 50));
-    });
-    expect(window.localStorage.getItem('qr-telemetry-opt-in')).toBe('false');
-  });
-
-  it('does NOT persist to localStorage when telemetryOptIn is null', async () => {
-    const { result } = renderHook(() => useQRStore(), { wrapper });
-    // First set it to true
-    act(() => {
-      result.current.updatePreferences({ telemetryOptIn: true });
-    });
-    await act(async () => {
-      await new Promise(r => setTimeout(r, 50));
-    });
-    // Then reset the preference to null (unanswered)
-    const setItemSpy = vi.spyOn(Storage.prototype, 'setItem');
-    setItemSpy.mockClear();
-    act(() => {
-      result.current.updatePreferences({ telemetryOptIn: null });
-    });
-    await act(async () => {
-      await new Promise(r => setTimeout(r, 50));
-    });
-    // setItem should not have been called again for the telemetry key
-    const telemetryCalls = setItemSpy.mock.calls.filter(
-      ([key]) => key === 'qr-telemetry-opt-in'
-    );
-    expect(telemetryCalls.length).toBe(0);
   });
 });
 
@@ -475,14 +374,6 @@ describe('useQRStoreSelector', () => {
     // After provider-level update, new hooks get latest state
     expect(result2.current).toBe(DEFAULT_CONFIG.value); // fresh provider = fresh store
     expect(renderCount.count).toBe(initialCount); // No spurious re-renders in original hook
-  });
-
-  it('selector for preferences.telemetryOptIn returns null initially', () => {
-    const { result } = renderHook(
-      () => useQRStoreSelector(s => s.preferences.telemetryOptIn),
-      { wrapper }
-    );
-    expect(result.current).toBeNull();
   });
 
   it('same-value updates do not change selected reference', () => {

@@ -44,14 +44,24 @@ describe('QRTool Footer', () => {
     expect(footer).toHaveTextContent(/Open Source/i);
   });
 
-  it('presents unset telemetry consent neutrally outside the preview card', () => {
+  it('asks for no diagnostics consent and sends no reports', () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
     render(<ToastProvider><QRTool /></ToastProvider>);
 
-    const footer = screen.getByRole('contentinfo');
-    const consent = within(footer).getByRole('region', { name: /anonymous diagnostics/i });
+    expect(screen.queryByRole('region', { name: /anonymous diagnostics/i })).not.toBeInTheDocument();
+    expect(fetchSpy).not.toHaveBeenCalled();
+    fetchSpy.mockRestore();
+  });
 
-    expect(consent).toHaveTextContent(/if a scan check fails/i);
-    expect(consent).toHaveTextContent(/QR content and images are never sent/i);
-    expect(screen.queryByText(/we noticed your QR code might be hard to scan/i)).not.toBeInTheDocument();
+  it('links the no-ads pledge and has no donation links', () => {
+    render(<ToastProvider><QRTool /></ToastProvider>);
+    const footer = screen.getByRole('contentinfo');
+
+    const pledgeLinks = within(footer).getAllByRole('link', { name: /pledge|no ads/i });
+    expect(pledgeLinks.length).toBeGreaterThan(0);
+    for (const link of pledgeLinks) {
+      expect(link).toHaveAttribute('href', '/free-forever');
+    }
+    expect(footer.innerHTML).not.toMatch(/ko-fi/i);
   });
 });

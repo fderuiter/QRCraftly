@@ -80,10 +80,11 @@ describe('Content Registry Validation', () => {
     const validSchemaTypes = Object.values(SchemaType);
     const validSchemaCategories = Object.values(SchemaCategory);
 
-    // Verify exactly 17 registered tools exist and are fully populated (the two retired games
-    // were consolidated into "arcade"; their routes live in legacyRouteRegistry)
+    // Verify exactly 18 registered pages exist and are fully populated (the two retired games
+    // were consolidated into "arcade"; their routes live in legacyRouteRegistry; "free-forever"
+    // is the no-ads pledge page)
     const registryKeys = Object.keys(contentRegistry);
-    expect(registryKeys.length).toBe(17);
+    expect(registryKeys.length).toBe(18);
 
     registryKeys.forEach((key) => {
       const tool = contentRegistry[key];

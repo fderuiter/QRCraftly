@@ -6,6 +6,12 @@
 
 [QRCraftly](https://qrcraftly.com) is a powerful, privacy-focused, and user-friendly React application for generating customized QR codes. It supports various data types including URLs, text, WiFi credentials, vCards, emails, and crypto payments. Users can extensively customize the appearance of their QR codes, including colors, patterns, and embedded logos, all while ensuring data privacy through client-side processing.
 
+## The QRCraftly Pledge
+
+**QRCraftly is not ad supported, and it never will be.** No ads, no tracking, no sign-up, and everything runs in your browser. If it ever comes down to ads or nothing, the project will be shut down before a single ad goes on it; the only way it would change hands is an outright purchase of the whole project.
+
+Read the full pledge, and exactly what is and isn't collected, in [docs/PLEDGE.md](docs/PLEDGE.md) or at [qrcraftly.com/free-forever](https://qrcraftly.com/free-forever).
+
 ## Features
 
 - **Multiple Data Types**: Generate QR codes for URLs, plain text, WiFi networks (WPA/WEP/EAP/Open), Email, vCard contacts, Phone numbers, SMS, Cryptocurrency payments, Calendar Events, GPS Location Coordinates, Video Meetings (Zoom, Google Meet), and Social Profiles (Bluesky, GitHub, Instagram, LinkedIn, Mastodon, X, YouTube, Threads).
@@ -15,8 +21,8 @@
   - **Logos**: Upload and embed custom logos with configurable padding, sizes, and border styles (Square, Circle, None). Maximum logo size is 30% to maintain scannability.
   - **Mosaic QR**: Upload a design and tile it across the whole code. Each module takes the image colour under it while keeping its dark or light value, so the code still scans (Halftone or Tiles layout, adjustable Scan Contrast; see [ADR 0019](docs/adr/0019-mosaic-qr-module-level-image-tiling.md)).
   - **Upload Limits**: Supported custom logo formats are image/jpeg, image/png, image/webp, image/svg+xml. Maximum file size is 2MB.
-- **Privacy First**: Client-side architecture. All sensitive data processing happens locally in your browser with volatile in-memory guarantees; no user payloads are sent to external servers.
-- **Dynamic Redirection (Architecture)**: Cloudflare edge redirection with zero-knowledge AES-GCM client encryption where decryption keys reside exclusively in URL anchor hash fragments (`#key=...`) (undergoing active stabilization).
+- **Privacy First**: Client-side architecture. All sensitive data processing happens locally in your browser with volatile in-memory guarantees; no user payloads are sent to any server, and there is no analytics or diagnostics reporting.
+- **Dynamic Redirection (switched off)**: Code for Cloudflare edge redirection with zero-knowledge AES-GCM client encryption (keys only in `#key=...` fragments) exists but is disabled and has no production backend. See [docs/PLEDGE.md](docs/PLEDGE.md#things-that-would-change-this-page).
 - **Advanced Architecture**:
   - **Scannability Web Workers**: Real-time QR code scannability, module-aligned relative luminance audits, and orientation decoding run off-thread with transferable `ArrayBuffer` double buffering (`DoubleBufferPool`), keeping the UI fluid at 60 FPS.
   - **Client-Side SVG Export**: Features a custom `SvgContext` that mimics the Canvas 2D API to generate high-quality, resolution-independent vector graphics directly in the browser.
