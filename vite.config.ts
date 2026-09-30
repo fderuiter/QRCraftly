@@ -88,11 +88,11 @@ export default defineConfig(() => {
               exclude: [
                 '**/*.test.tsx',
                 'src/hooks/**/*.test.ts',
-                'src/utils/scannabilityWorker.test.ts',
+                'tests/scannabilityWorker.test.ts',
                 'src/utils/matrixWorker.test.ts',
                 'src/utils/mazeWorker.test.ts',
                 'src/utils/qrRenderer.test.ts',
-                'src/utils/fileSliceWorker.test.ts',
+                'tests/opticalTransferSliceWorker.test.ts',
                 'tests/telemetry.test.ts',
                 '**/node_modules/**',
                 '**/dist/**',
@@ -114,11 +114,11 @@ export default defineConfig(() => {
               include: [
                 '**/*.test.tsx',
                 'src/hooks/**/*.test.ts',
-                'src/utils/scannabilityWorker.test.ts',
+                'tests/scannabilityWorker.test.ts',
                 'src/utils/matrixWorker.test.ts',
                 'src/utils/mazeWorker.test.ts',
                 'src/utils/qrRenderer.test.ts',
-                'src/utils/fileSliceWorker.test.ts',
+                'tests/opticalTransferSliceWorker.test.ts',
                 'tests/telemetry.test.ts',
               ],
               exclude: [

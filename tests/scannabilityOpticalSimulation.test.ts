@@ -17,7 +17,7 @@
 */
 
 import { describe, it, expect, vi } from 'vitest';
-import { calculateBlurRadius, applyOpticalSimulationMath } from './opticalSimulation';
+import { calculateBlurRadius, applyOpticalSimulationMath } from '@/packages/scannability';
 
 describe('Optical Simulation Utility Math', () => {
   describe('calculateBlurRadius', () => {
