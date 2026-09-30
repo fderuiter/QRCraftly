@@ -108,7 +108,7 @@ Feature-level building blocks shared by several routes. Reuse these instead of r
 
 ---
 
-## 5. Shared Utilities & Renderers (`src/utils/colorUtils.ts`, `src/utils/a11y.ts`, & `src/utils/qr-renderers/`)
+## 5. Shared Utilities & Renderers (`src/utils/colorUtils.ts`, `src/utils/a11y.ts`, & `src/packages/qr-matrix/`)
 
 These utility functions handle hex conversion, relative luminance, contrast checks, and specialized QR module canvas drawing routines. **Do not write custom math, hex formatting, or bespoke path-drawing logic under any circumstances.**
 

@@ -190,11 +190,11 @@ banner "Cloudflare Edge Infrastructure Setup"
 
 # ── Stage 1: Account ID & API Token ─────────────────────────────────────────
 stage "Cloudflare: Account ID & API Token"
-say "We will configure your Cloudflare Account ID and deploy API token."
-say "The token requires Edit permissions for Pages, D1, and Workers KV."
+say "We will configure your Cloudflare Account ID and an API token for Wrangler."
+say "The token needs Edit permissions for Workers Scripts and D1."
 open_url "https://dash.cloudflare.com/profile/api-tokens"
 step "Click 'Create Token' → 'Create Custom Token'."
-step "Set Permissions: Account -> Cloudflare Pages (Edit), D1 (Edit), Workers KV Storage (Edit)."
+step "Set Permissions: Account -> Workers Scripts (Edit), D1 (Edit)."
 step "Copy your Account ID from the Cloudflare Dashboard sidebar / URL."
 ask CLOUDFLARE_ACCOUNT_ID "Paste Cloudflare Account ID:"
 step "Create and copy the generated API Token."
@@ -210,35 +210,36 @@ if [[ -n "$CLOUDFLARE_API_TOKEN" ]]; then
   set_secret CLOUDFLARE_API_TOKEN "$CLOUDFLARE_API_TOKEN"
 fi
 
-# ── Stage 2: Cloudflare Pages Project ───────────────────────────────────────
-stage "Cloudflare: Pages Project"
-say "Verify or create the target Cloudflare Pages project for QRCraftly."
-open_url "https://dash.cloudflare.com/?to=/:account/pages"
-step "Ensure project 'qrcraftly' is configured or choose your custom project name."
-ask CLOUDFLARE_PAGES_PROJECT_NAME "Cloudflare Pages project name (default: qrcraftly):"
-CLOUDFLARE_PAGES_PROJECT_NAME="${CLOUDFLARE_PAGES_PROJECT_NAME:-qrcraftly}"
-write_env CLOUDFLARE_PAGES_PROJECT_NAME "$CLOUDFLARE_PAGES_PROJECT_NAME"
+# ── Stage 2: Worker & Workers Builds ────────────────────────────────────────
+stage "Cloudflare: Worker & Workers Builds"
+say "QRCraftly deploys as a Cloudflare Worker with Static Assets (see wrangler.jsonc)."
+say "Workers Builds builds every push; main is the production branch."
+open_url "https://dash.cloudflare.com/?to=/:account/workers-and-pages"
+step "Open the 'qrcraftly' Worker (or create it and connect this GitHub repository)."
+step "Settings -> Build: confirm the production branch is 'main' and branch previews are on."
 
 # ── Stage 3: D1 SQL Database ────────────────────────────────────────────────
 stage "Cloudflare: D1 SQL Database"
-say "QRCraftly uses Cloudflare D1 for zero-knowledge redirection records."
-open_url "https://dash.cloudflare.com/?to=/:account/workers/d1"
-step "Create or locate database 'qrcraftly-db'."
-step "Copy the Database ID (UUID format)."
+say "Dynamic links store only encrypted destinations in Cloudflare D1."
+say "Dynamic links stay switched off until docs/public/EDGE_ARCHITECTURE.md's enablement checklist is done."
+step "Create the database: pnpm exec wrangler d1 create qrcraftly-db"
+step "Apply the schema: pnpm exec wrangler d1 execute qrcraftly-db --remote --file=src/packages/edge-redirect/schema.sql"
+step "Copy the printed database_id (UUID format) into wrangler.jsonc."
 ask CLOUDFLARE_D1_DATABASE_ID "Paste D1 Database ID (Enter keeps existing or local mock):"
 if [[ -n "$CLOUDFLARE_D1_DATABASE_ID" ]]; then
   write_env CLOUDFLARE_D1_DATABASE_ID "$CLOUDFLARE_D1_DATABASE_ID"
 fi
 
-# ── Stage 4: Workers KV Namespace ───────────────────────────────────────────
-stage "Cloudflare: Workers KV Namespace"
-say "QRCraftly uses Workers KV for high-speed edge caching of dynamic redirects."
-open_url "https://dash.cloudflare.com/?to=/:account/workers/kv/namespaces"
-step "Create or locate KV Namespace 'qrcraftly-cache'."
-step "Copy the Namespace ID."
-ask CLOUDFLARE_KV_NAMESPACE_ID "Paste KV Namespace ID (Enter keeps existing or local mock):"
-if [[ -n "$CLOUDFLARE_KV_NAMESPACE_ID" ]]; then
-  write_env CLOUDFLARE_KV_NAMESPACE_ID "$CLOUDFLARE_KV_NAMESPACE_ID"
+# ── Stage 4: Turnstile ──────────────────────────────────────────────────────
+stage "Cloudflare: Turnstile"
+say "Creating a dynamic link requires a Cloudflare Turnstile check."
+open_url "https://dash.cloudflare.com/?to=/:account/turnstile"
+step "Add a widget for qrcraftly.com and qrcraftly.fpderuiter.workers.dev."
+step "Store the secret on the Worker: pnpm exec wrangler secret put TURNSTILE_SECRET_KEY"
+step "Set the site key as the Workers Builds build variable VITE_TURNSTILE_SITE_KEY."
+ask VITE_TURNSTILE_SITE_KEY "Paste the Turnstile site key (public; Enter to skip):"
+if [[ -n "$VITE_TURNSTILE_SITE_KEY" ]]; then
+  write_env VITE_TURNSTILE_SITE_KEY "$VITE_TURNSTILE_SITE_KEY"
 fi
 
 finish

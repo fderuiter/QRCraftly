@@ -10,7 +10,7 @@ Setting up local development environments, provisioning Cloudflare edge infrastr
 
 While bash scripts provide an interactive, lightweight interface for terminal guidance (opening URLs, capturing hidden secrets, and upserting environment files), executing interactive bash scripts on Windows systems can fail when run directly through PowerShell or Command Prompt.
 
-> **Current state:** the site is deployed as a Cloudflare Worker with Static Assets by Workers Builds ([ADR 0012](./0012-cloudflare-workers-static-assets-and-multi-environment.md), [ADR 0018](./0018-release-pr-tag-driven-publishing.md)), not as a Cloudflare Pages project, and it uses no KV namespace. `scripts/wizards/setup-cloudflare.sh` still asks for a Pages project name and Pages token permissions; those steps are out of date.
+> **Current state:** the site is deployed as a Cloudflare Worker with Static Assets by Workers Builds ([ADR 0012](./0012-cloudflare-workers-static-assets-and-multi-environment.md), [ADR 0018](./0018-release-pr-tag-driven-publishing.md)), not as a Cloudflare Pages project, and it uses no KV namespace. `scripts/wizards/setup-cloudflare.sh` walks through the Worker and Workers Builds settings, the D1 database and the Turnstile widget.
 
 ## Decision
 

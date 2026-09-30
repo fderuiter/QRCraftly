@@ -168,7 +168,7 @@ Lighthouse CI runs on every Pull Request to audit performance, accessibility, be
     - `QRTool.tsx`: The main container component that integrates inputs, controls, and canvas.
     - `QRScanner.tsx`: Webcam and file-upload QR scanner used by the input panel.
     - `arcade/`: Components for the QR Arcade page.
-  - `packages/`: Deep modules with small public entry points (`qr-matrix`, `qr-payload`, `scannability`, `optical-scanner`, `optical-transfer`, `arcade`). See [src/packages/README.md](src/packages/README.md).
+  - `packages/`: Deep modules with small public entry points (`qr-matrix`, `qr-export`, `qr-payload`, `scannability`, `optical-scanner`, `optical-transfer`, `audio-transfer`, `edge-redirect`, `arcade`). See [src/packages/README.md](src/packages/README.md).
   - `hooks/`: React hooks (camera, image upload, download, audio, telemetry, dynamic redirects).
   - `layouts/`: Application layouts.
     - `LayoutDefault.tsx`: The main layout wrapper.
