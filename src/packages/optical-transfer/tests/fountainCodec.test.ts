@@ -47,6 +47,10 @@ import {
   maxDropletStringLength,
   sha256Hex,
   MAX_QR_VERSION,
+  TRANSFER_DENSITY_PROFILES,
+  DEFAULT_TRANSFER_DENSITY,
+  resolveTransferDensity,
+  estimateTransferFrames,
 } from '../index';
 
 /** Deterministic pseudo-random bytes (incompressible). */
@@ -464,9 +468,47 @@ describe('Fountain session layer', () => {
         });
         expect(worst.length).toBeLessThanOrEqual(longest);
         const qr = QRCode.create(worst, { errorCorrectionLevel: ecc });
-        expect(qr.version).toBeLessThanOrEqual(MAX_QR_VERSION);
+        expect(qr.version).toBeLessThanOrEqual(7);
       }
     }
+  });
+
+  it.each(Object.entries(TRANSFER_DENSITY_PROFILES))(
+    'keeps every %s droplet within its QR version and ECC for any file size',
+    (_density, { maxVersion, errorCorrectionLevel }) => {
+      expect(maxVersion).toBeLessThanOrEqual(MAX_QR_VERSION);
+      for (const size of [1, 100, 5000, 250_000, 5_000_000]) {
+        const { symbolSize, k, maxSeq } = resolveFountainSymbolSize(size, errorCorrectionLevel, undefined, maxVersion);
+        const worst = serializeDroplet({
+          seq: maxSeq,
+          k,
+          messageLength: size,
+          checksum: 0xffffffff,
+          degree: 1,
+          indices: [0],
+          data: new Uint8Array(symbolSize).fill(0xff),
+        });
+        expect(worst.length).toBeLessThanOrEqual(maxDropletStringLength(symbolSize, k, size, maxSeq));
+        expect(QRCode.create(worst, { errorCorrectionLevel }).version).toBeLessThanOrEqual(maxVersion);
+      }
+    }
+  );
+
+  it('resolves unknown densities to the default and estimates frames per density', () => {
+    expect(resolveTransferDensity('fast')).toBe('fast');
+    expect(resolveTransferDensity('turbo')).toBe(DEFAULT_TRANSFER_DENSITY);
+    expect(resolveTransferDensity(undefined)).toBe(DEFAULT_TRANSFER_DENSITY);
+
+    const reliable = estimateTransferFrames(12 * 1024, 'reliable');
+    const balanced = estimateTransferFrames(12 * 1024, 'balanced');
+    const fast = estimateTransferFrames(12 * 1024, 'fast');
+    expect(reliable.symbolSize).toBeLessThan(balanced.symbolSize);
+    expect(balanced.symbolSize).toBeLessThan(fast.symbolSize);
+    expect(fast.frames).toBeLessThan(balanced.frames);
+    expect(balanced.frames).toBeLessThan(reliable.frames);
+    // Robust Soliton needs about 15% more droplets than source blocks.
+    expect(balanced.frames).toBe(Math.ceil(balanced.k * 1.15));
+    expect(estimateTransferFrames(12 * 1024)).toEqual(balanced);
   });
 
   it('honours a smaller requested symbol size and lower version ceilings', () => {

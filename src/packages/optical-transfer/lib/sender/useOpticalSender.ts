@@ -23,7 +23,7 @@ import { QRConfig, QRErrorCorrectionLevel } from '@/types';
 import { PreallocatedFramePool, shuffleInPlace } from '../framePool';
 import { sanitizeStreamConfig, verifyHandshakeFrame, type HandshakeFrameVerifier } from '../handshake';
 import type { SliceWorkerOutgoingMessage, TransferStats } from '../contracts';
-import { MAX_SYMBOL_SIZE, type TransferCompression } from '../fountain/session';
+import { DEFAULT_TRANSFER_DENSITY, type TransferCompression, type TransferDensity } from '../fountain/session';
 import { formatMegabytes, spawnSliceWorker } from './workers';
 
 /** One QR module matrix produced by the slice worker. */
@@ -69,8 +69,10 @@ export interface UseOpticalSenderOptions {
 export interface SenderFountainInfo {
   /** Source block count K. */
   k: number;
-  /** Effective bytes per droplet after the QR version ≤ 7 clamp. */
+  /** Effective bytes per droplet after the density's QR version clamp. */
   symbolSize: number;
+  /** Density the droplets were sized for. */
+  density: TransferDensity;
   /** Whether the payload was deflate-raw compressed or sent verbatim. */
   compression: TransferCompression;
 }
@@ -99,7 +101,9 @@ export function useOpticalSender({
   const [progress, setProgress] = useState(0);
   const [currentFrameIndex, setCurrentFrameIndex] = useState(0);
   const [totalFrames, setTotalFrames] = useState(0);
-  const [chunkSize, setChunkSize] = useState(fountainMode ? MAX_SYMBOL_SIZE : 180);
+  /** Legacy carousel only: bytes per `F|` frame. Fountain streams size droplets from `density`. */
+  const [chunkSize, setChunkSize] = useState(180);
+  const [density, setDensity] = useState<TransferDensity>(DEFAULT_TRANSFER_DENSITY);
   const [fountainInfo, setFountainInfo] = useState<SenderFountainInfo | null>(null);
   const [fps, setFps] = useState(15);
   const [currentPass, setCurrentPass] = useState(1);
@@ -345,7 +349,12 @@ export function useOpticalSender({
       case 'INITIALIZED': {
         setFountainInfo(
           message.fountain
-            ? { k: message.fountain.k, symbolSize: message.fountain.symbolSize, compression: message.fountain.compression }
+            ? {
+                k: message.fountain.k,
+                symbolSize: message.fountain.symbolSize,
+                compression: message.fountain.compression,
+                density: message.fountain.density,
+              }
             : null
         );
         break;
@@ -402,23 +411,25 @@ export function useOpticalSender({
       worker.onmessage = (e: MessageEvent<SliceWorkerOutgoingMessage | null>) => handleWorkerMessage(e.data);
     }
 
-    const effectiveChunkSize = fountainMode ? Math.min(chunkSize, MAX_SYMBOL_SIZE) : chunkSize < 256 ? chunkSize : 180;
-    const effectiveEcc =
+    // Legacy frames follow the appearance ECC (raised to Q); fountain droplets take theirs from the density.
+    const legacyEcc =
       config.errorCorrectionLevel === QRErrorCorrectionLevel.H || config.errorCorrectionLevel === QRErrorCorrectionLevel.Q
         ? config.errorCorrectionLevel
         : QRErrorCorrectionLevel.Q;
 
     workerRef.current.postMessage({
       type: 'START',
-      payload: {
-        file: selectedFile,
-        chunkSize: effectiveChunkSize,
-        errorCorrectionLevel: effectiveEcc,
-        fps: fpsRef.current,
-        fountainMode,
-      },
+      payload: fountainMode
+        ? { file: selectedFile, fps: fpsRef.current, fountainMode, density }
+        : {
+            file: selectedFile,
+            chunkSize: chunkSize < 256 ? chunkSize : 180,
+            errorCorrectionLevel: legacyEcc,
+            fps: fpsRef.current,
+            fountainMode,
+          },
     });
-  }, [selectedFile, chunkSize, config.errorCorrectionLevel, stopTransfer, handleWorkerMessage, fountainMode]);
+  }, [selectedFile, chunkSize, density, config.errorCorrectionLevel, stopTransfer, handleWorkerMessage, fountainMode]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const fileList = e.target.files;
@@ -457,6 +468,8 @@ export function useOpticalSender({
     totalFrames,
     chunkSize,
     setChunkSize,
+    density,
+    setDensity,
     fps,
     setFps,
     currentPass,

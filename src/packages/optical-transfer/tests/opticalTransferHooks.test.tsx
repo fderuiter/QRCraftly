@@ -36,7 +36,7 @@ describe('Optical Transfer Client Hooks', () => {
       expect(result.current.isTransferring).toBe(false);
       expect(result.current.isVerifyingHandshake).toBe(false);
       expect(result.current.progress).toBe(0);
-      expect(result.current.chunkSize).toBe(100);
+      expect(result.current.density).toBe('balanced');
       expect(result.current.fountainMode).toBe(true);
       expect(result.current.fps).toBe(15);
     });
@@ -60,6 +60,7 @@ describe('Optical Transfer Client Hooks', () => {
       );
       act(() => {
         result.current.setSelectedFile(new File(['fountain'], 'f.txt', { type: 'text/plain' }));
+        result.current.setDensity('fast');
       });
 
       const sent: Array<{ type: string; payload?: Record<string, unknown> }> = [];
@@ -72,7 +73,7 @@ describe('Optical Transfer Client Hooks', () => {
             totalFrames: 2,
             chunkSize: 40,
             sha256: 'abc',
-            fountain: { k: 2, symbolSize: 40, compression: 'deflate-raw', messageLength: 80 },
+            fountain: { k: 2, density: 'fast', symbolSize: 40, compression: 'deflate-raw', messageLength: 80 },
           });
           for (let index = 0; index < 6; index++) {
             worker.dispatchMessage({ type: 'FRAME', index, total: 2, size: 21, data: new Uint8Array(441) });
@@ -86,10 +87,11 @@ describe('Optical Transfer Client Hooks', () => {
 
       await waitFor(() => expect(result.current.isTransferring).toBe(true));
       const start = sent.find(m => m.type === 'START');
-      expect(start?.payload).toMatchObject({ fountainMode: true, errorCorrectionLevel: 'Q' });
-      expect(Number(start?.payload?.chunkSize)).toBeLessThanOrEqual(100);
+      // The density picks the droplet size and ECC in the worker; the legacy chunk size is not sent.
+      expect(start?.payload).toMatchObject({ fountainMode: true, density: 'fast' });
+      expect(start?.payload).not.toHaveProperty('chunkSize');
       expect(result.current.handshakeVerified).toBe(true);
-      expect(result.current.fountainInfo).toEqual({ k: 2, symbolSize: 40, compression: 'deflate-raw' });
+      expect(result.current.fountainInfo).toEqual({ k: 2, density: 'fast', symbolSize: 40, compression: 'deflate-raw' });
 
       // Play past K = 2: every droplet is ACKed and its pool slot recycled; no START restart.
       await waitFor(() => expect(result.current.currentFrameIndex).toBeGreaterThanOrEqual(5), { timeout: 3000 });

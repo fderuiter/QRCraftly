@@ -1,4 +1,4 @@
-import jsQR from 'jsqr';
+import { decodeRgbaFrame } from './decodeSync';
 import { isValidScannerRequest, assertScannerResponse, getDownscaledDimensions } from './contracts';
 
 const yieldToEventLoop = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
@@ -268,15 +268,9 @@ self.onmessage = async (e: MessageEvent<ScannerWorkerMessage | null>) => {
                 return;
               }
 
-              let code = null;
-              try {
-                code = jsQR(imageData.data, dWidth, dHeight, { inversionAttempts: 'dontInvert' });
-                if (!code) {
-                  code = jsQR(imageData.data, dWidth, dHeight, { inversionAttempts: 'attemptBoth' });
-                }
-              } catch {}
-              if (code && code.data && !isAborted()) {
-                workerScope.postMessage({ type: 'frame_decoded', taskId, data: code.data });
+              const code = decodeRgbaFrame(imageData.data, dWidth, dHeight);
+              if (code && !isAborted()) {
+                workerScope.postMessage({ type: 'frame_decoded', taskId, data: code });
               }
             } else {
               imageBitmap.close();
@@ -309,18 +303,12 @@ self.onmessage = async (e: MessageEvent<ScannerWorkerMessage | null>) => {
       return;
     }
 
-    let code = null;
-    try {
-      code = jsQR(data, requestWidth, requestHeight, { inversionAttempts: 'dontInvert' });
-      if (!code) {
-        code = jsQR(data, requestWidth, requestHeight, { inversionAttempts: 'attemptBoth' });
-      }
-    } catch {}
+    const code = decodeRgbaFrame(data, requestWidth, requestHeight);
 
     const response = {
       status: code ? ('pass' as const) : ('fail' as const),
       sequenceId,
-      decodedData: code ? code.data : null,
+      decodedData: code,
       buffer: requestBuffer ?? undefined,
       epochId,
     };
@@ -419,18 +407,12 @@ self.onmessage = async (e: MessageEvent<ScannerWorkerMessage | null>) => {
       console.error('Failed to close image after drawing:', err);
     }
 
-    let code = null;
-    try {
-      code = jsQR(imageData.data, width, height, { inversionAttempts: 'dontInvert' });
-      if (!code) {
-        code = jsQR(imageData.data, width, height, { inversionAttempts: 'attemptBoth' });
-      }
-    } catch {}
+    const code = decodeRgbaFrame(imageData.data, width, height);
 
     const response = {
       status: code ? ('pass' as const) : ('fail' as const),
       sequenceId,
-      decodedData: code ? code.data : null,
+      decodedData: code,
       epochId,
     };
     assertScannerResponse(response);

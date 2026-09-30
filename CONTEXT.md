@@ -128,6 +128,10 @@ _Avoid_: Mid-stream scan, instant sync, handshake-free mode
 An individual rateless fountain packet produced by XOR-combining a pseudo-random subset of source blocks according to a degree distribution.
 _Avoid_: Packet chunk, fountain slice, stream bit
 
+**Transfer Density**:
+The sender's choice of how much data each droplet QR carries (Reliable, Balanced or Fast). It sets the highest QR version and the error correction level of every droplet, independent of the QR appearance.
+_Avoid_: Chunk size, max data per QR, QR speed
+
 **Fountain Block Slicer**:
 The partitioning subsystem dividing source file binaries into fixed-size input blocks and generating rateless fountain droplet symbols.
 _Avoid_: File cutter, chunk generator, packet slicer

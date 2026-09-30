@@ -233,6 +233,27 @@ describe('AdaptiveFrameScheduler', () => {
     expect(totalRecoveryTimeMs).toBeLessThan(1500);
   });
 
+  it('recovers from the maximum delay when decodes settle at a moderate 40-100 ms', () => {
+    const scheduler = new AdaptiveFrameScheduler({ minSamplingDelay: 16, maxSamplingDelay: 1000 });
+    scheduler.start();
+
+    for (let i = 0; i < 5; i++) {
+      const seq = scheduler.beginFrame(true);
+      mockTime += 700;
+      scheduler.endFrame(seq!, 'fail', null, null);
+    }
+    expect(scheduler.getSamplingDelay()).toBe(1000);
+
+    // Dense QR codes decode in about 70 ms: the delay must fall back towards that, not stay at 1 fps.
+    for (let i = 0; i < 20; i++) {
+      const seq = scheduler.beginFrame(true);
+      mockTime += 70;
+      scheduler.endFrame(seq!, 'fail', null, null);
+    }
+    expect(scheduler.getSamplingDelay()).toBeLessThanOrEqual(80);
+    expect(scheduler.getSamplingDelay()).toBeGreaterThanOrEqual(70);
+  });
+
   it('should handle watchdog checking and triggers', () => {
     const onWatchdogTriggered = vi.fn();
     const scheduler = new AdaptiveFrameScheduler({ onWatchdogTriggered });

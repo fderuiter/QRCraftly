@@ -51,9 +51,9 @@ describe('useOpticalSender', () => {
     expect(result.current.progress).toBe(0);
     expect(result.current.fps).toBe(15);
     expect(result.current.chunkSize).toBeLessThan(256);
-    // Fountain mode is the default: the symbol-size cap is 100 bytes (QR version <= 7).
+    // Fountain mode is the default; the balanced density sizes its droplets.
     expect(result.current.fountainMode).toBe(true);
-    expect(result.current.chunkSize).toBe(100);
+    expect(result.current.density).toBe('balanced');
     expect(result.current.currentPass).toBe(1);
   });
 
