@@ -71,11 +71,11 @@ export const PLEDGE_LEAD = 'Free QR codes that never expire. No sign-up, no ads,
 export const PLEDGE_NEVER_EXPIRE =
   'Many QR code sites put your code behind a redirect on their own server and switch it off when a free trial ends. QRCraftly makes static codes: what you encode is stored in the code itself, so there is no account, subscription or server that could ever deactivate it.';
 
-/** A vendor's own support page describing trial codes being deactivated. */
-export const TRIAL_EXPIRY_EXAMPLE = {
-  label: 'what happens to QR codes when a QR Code Generator trial expires',
-  href: 'https://support.qr-code-generator.com/hc/en-us/articles/7665046137613-What-happens-to-my-account-and-QR-Codes-when-the-trial-expires',
-} as const;
+/**
+ * Link text for a vendor's own support article on trial codes being deactivated. The URL is a
+ * literal in the page (hrefs must be literals or pass isDangerousUrl).
+ */
+export const TRIAL_EXPIRY_LINK_LABEL = 'what happens to QR codes when a QR Code Generator trial expires';
 
 /** How the project stays free without ads. */
 export const PLEDGE_AFFORDABLE =
@@ -99,5 +99,3 @@ export const PLEDGE_NOT_COLLECTED: readonly string[] = [
 /** How anyone can check the claims above. */
 export const PLEDGE_VERIFY =
   'The code is open source under the AGPL. The site\u2019s Content Security Policy tells your browser to refuse connections to any server other than QRCraftly itself, and the build fails if the code makes a network request that has not been reviewed and allowlisted.';
-
-export const SOURCE_CODE_URL = 'https://github.com/fderuiter/QRCraftly';

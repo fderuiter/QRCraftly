@@ -33,8 +33,7 @@ import {
   PLEDGE_SIGNATURE,
   PLEDGE_VERIFY,
   PLEDGE_WHY,
-  SOURCE_CODE_URL,
-  TRIAL_EXPIRY_EXAMPLE,
+  TRIAL_EXPIRY_LINK_LABEL,
 } from '@/data/pledge';
 import { generateSchema } from '@/utils/schemaGenerator';
 import { resolveDomainForPath } from '@/utils/metadataEngine';
@@ -110,8 +109,8 @@ export default function Page() {
           <p className="mb-3 leading-relaxed text-slate-600 dark:text-slate-400">{PLEDGE_NEVER_EXPIRE}</p>
           <p className="leading-relaxed text-slate-600 dark:text-slate-400">
             For example, see the vendor&apos;s own article on{' '}
-            <a href={TRIAL_EXPIRY_EXAMPLE.href} target="_blank" rel="noopener noreferrer" className="font-medium text-teal-700 underline hover:text-teal-800 dark:text-teal-400 dark:hover:text-teal-300">
-              {TRIAL_EXPIRY_EXAMPLE.label}
+            <a href="https://support.qr-code-generator.com/hc/en-us/articles/7665046137613-What-happens-to-my-account-and-QR-Codes-when-the-trial-expires" target="_blank" rel="noopener noreferrer" className="font-medium text-teal-700 underline hover:text-teal-800 dark:text-teal-400 dark:hover:text-teal-300">
+              {TRIAL_EXPIRY_LINK_LABEL}
             </a>
             .
           </p>
@@ -148,7 +147,7 @@ export default function Page() {
               privacy details
             </a>{' '}
             or the{' '}
-            <a href={SOURCE_CODE_URL} target="_blank" rel="noopener noreferrer" className="font-medium text-teal-700 underline hover:text-teal-800 dark:text-teal-400 dark:hover:text-teal-300">
+            <a href="https://github.com/fderuiter/QRCraftly" target="_blank" rel="noopener noreferrer" className="font-medium text-teal-700 underline hover:text-teal-800 dark:text-teal-400 dark:hover:text-teal-300">
               source code on GitHub
             </a>
             .
