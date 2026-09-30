@@ -46,7 +46,7 @@ interface InputPanelProps {
  * @returns The InputPanel component.
  */
 const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
-  const { InputComponent, inputProps } = useInputLogic(config, onChange);
+  const { InputComponent, inputProps, flush } = useInputLogic(config, onChange);
   const containerRef = useDynamicFocus<HTMLDivElement>([config.type]);
   const [announcement, setAnnouncement] = useState('');
   const [scannerActive, setScannerActive] = useState(false);
@@ -118,6 +118,9 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
         id="qr-content-input"
         className="space-y-4"
         ref={containerRef}
+        // Commit a pending debounced edit as soon as focus leaves the inputs, so a button
+        // pressed right after typing acts on what was typed.
+        onBlur={flush}
       >
         {scannerActive ? (
           <QRScanner
