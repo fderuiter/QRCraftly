@@ -21,16 +21,6 @@ src/packages/<name>/
 
 Packages may expose several small, purpose-built entry points (such as `index.ts`, `client.ts`, `worker.ts`) rather than funnelling everything through one giant barrel `index.ts`. Barrel files that blindly re-export an entire internal subtree are discouraged; keep entry points focused and hide implementation in subfolders.
 
-## Copy-Me Starter Template
-
-A committed starter template is provided in [`src/packages/example/`](./example/):
-
-- `index.ts`: Public root entry point exporting high-level functions.
-- `lib/impl.ts`: Private implementation file hidden in a subfolder.
-- `tests/example.test.ts`: Test suite verifying behaviour exclusively through `../index`.
-
-Copy this directory when scaffolding a new deep module, or delete it once custom modules are in place.
-
 ## Automated Verification
 
 Run boundary verification at any time:
@@ -56,7 +46,7 @@ Boundary checks run automatically during `pnpm run lint` and CI.
 - **Purpose**: Full QR code matrix visual orchestration, styles, locator eyes, logo cutouts, alignment pattern zones, and playable maze generation.
 - **Entry Points**:
   - `index.ts`: `drawQR`, `drawQRInternal`, `renderBorder`, `renderEyes`, `renderModules`, `renderFluidModules`, `renderLogo`, `renderMaze`, layout and logo math.
-  - `maze.ts`: `generateMaze`, `getMazeCacheKey`, `mazeCache`, `clearMazeCache`, `getStyleAdaptiveMazePathWidth`, `renderMaze`, `MazeData`, and bridge validation helpers (`DSU`, `isBridgeCell`, `isFinderEyeZone`). The halo mask (`applyMazeHaloMask`) is private to `lib/maze.ts`.
+  - `maze.ts`: `generateMaze`, `getMazeCacheKey`, `getCachedMaze`, `storeMaze`, `clearMazeCache`, `getStyleAdaptiveMazePathWidth`, `renderMaze`, `MazeData`, and bridge validation helpers (`isBridgeCell`, `isFinderPatternWithMargin`). The halo mask (`applyMazeHaloMask`) is private to `lib/maze.ts`.
 
 ### `arcade` (`@/packages/arcade`)
 

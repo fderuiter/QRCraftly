@@ -22,7 +22,9 @@ import { terminateScannerWorker } from './src/packages/optical-scanner/scheduler
 import * as matchers from 'vitest-axe/matchers';
 import { vi, afterEach, expect } from 'vitest';
 import { isDangerousUrl } from './src/utils/security';
-import { applyOpticalSimulationMath } from './src/utils/opticalSimulation';
+import { applyOpticalSimulationMath } from './src/packages/scannability/opticalSimulation';
+import QRCode from 'qrcode';
+import { setQrCanvasRuntime, fromQrcodePackage } from './src/utils/qrCanvasRuntime';
 
 
 declare module 'vitest' {
@@ -1172,35 +1174,15 @@ if (typeof URL.revokeObjectURL === 'undefined') {
 }
 
 // ---------------------------------------------------------------------------
-// Global mocks for QRCode
+// QRCanvas runtime: jsdom has no real Web Workers, so the canvas encodes with the
+// real `qrcode` package and builds mazes on the main thread. Tests that need a
+// fake encoder inject one locally with setQrCanvasRuntime.
 // ---------------------------------------------------------------------------
 
-vi.mock('qrcode', () => {
-  const createMock = vi.fn().mockImplementation((val) => {
-    if (!val) throw new Error('Value is required');
-    return {
-      modules: {
-        size: 21,
-        data: new Uint8Array(21 * 21),
-        get: vi.fn().mockImplementation((r, c) => ((r === 0 && c === 0) || (r === 10 && c === 10))),
-      }
-    };
-  });
-
-  const mockObj = {
-    create: createMock,
-    toCanvas: vi.fn().mockResolvedValue(undefined),
-    toDataURL: vi.fn().mockResolvedValue('data:image/png;base64,mock'),
-    default: {
-      create: createMock,
-      toCanvas: vi.fn().mockResolvedValue(undefined),
-      toDataURL: vi.fn().mockResolvedValue('data:image/png;base64,mock'),
-    }
-  };
-
-  (globalThis as any).mockQRCode = mockObj;
-
-  return mockObj;
+setQrCanvasRuntime({
+  createMatrixWorker: () => null,
+  createMazeWorker: () => null,
+  loadEncoder: () => fromQrcodePackage(QRCode),
 });
 
 const originalImage = window.Image;

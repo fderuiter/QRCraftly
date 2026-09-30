@@ -42,7 +42,6 @@ test.describe('Throttled Interactive Performance Testing', () => {
 
       // Inject a script to observe and record long tasks on the main thread
       await page.addInitScript(() => {
-        (window as any).isPerformanceTest = true;
         (window as any).longTasks = [];
         const observer = new PerformanceObserver((list) => {
           for (const entry of list.getEntries()) {

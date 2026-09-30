@@ -5,15 +5,15 @@ import { checkLineage, parseGitStatus, MAPPING, parseArgs, runAuditor, parseGitD
 
 describe('Local Git-Diff Lineage Auditor', () => {
   it('should maintain the correct core mappings', () => {
-    expect(MAPPING).toHaveProperty('src/utils/sharedContract.ts', 'docs/public/SCALING.md');
+    expect(MAPPING).toHaveProperty('src/packages/scannability/lib/sharedContract.ts', 'docs/public/SCALING.md');
     expect(MAPPING).toHaveProperty('src/components/InputPanel.tsx', 'src/components/inputs/README.md');
   });
 
   it('should parse git status --porcelain correctly', () => {
-    const mockStdout = ` M src/utils/sharedContract.ts\n?? some/new/file.ts\n R old_file.ts -> src/components/InputPanel.tsx`;
+    const mockStdout = ` M src/packages/scannability/lib/sharedContract.ts\n?? some/new/file.ts\n R old_file.ts -> src/components/InputPanel.tsx`;
     const parsed = parseGitStatus(mockStdout);
     
-    expect(parsed.has('src/utils/sharedContract.ts')).toBe(true);
+    expect(parsed.has('src/packages/scannability/lib/sharedContract.ts')).toBe(true);
     expect(parsed.has('some/new/file.ts')).toBe(true);
     expect(parsed.has('src/components/InputPanel.tsx')).toBe(true);
     expect(parsed.has('old_file.ts')).toBe(false);
@@ -42,25 +42,25 @@ describe('Local Git-Diff Lineage Auditor', () => {
   });
 
   it('should fail validation when a mapped contract is modified without its paired doc', () => {
-    const modifiedFiles = new Set(['src/utils/sharedContract.ts', 'src/types.ts']);
+    const modifiedFiles = new Set(['src/packages/scannability/lib/sharedContract.ts', 'src/constants.ts']);
     const missing = checkLineage(modifiedFiles);
     
     expect(missing).toHaveLength(1);
     expect(missing[0]).toEqual({
-      codeFile: 'src/utils/sharedContract.ts',
+      codeFile: 'src/packages/scannability/lib/sharedContract.ts',
       docFile: 'docs/public/SCALING.md'
     });
   });
 
   it('should pass validation when a mapped contract is modified with its paired doc', () => {
-    const modifiedFiles = new Set(['src/utils/sharedContract.ts', 'docs/public/SCALING.md']);
+    const modifiedFiles = new Set(['src/packages/scannability/lib/sharedContract.ts', 'docs/public/SCALING.md']);
     const missing = checkLineage(modifiedFiles);
     
     expect(missing).toHaveLength(0);
   });
 
   it('should pass validation when no mapped contracts are modified', () => {
-    const modifiedFiles = new Set(['src/types.ts', 'src/components/inputs/TextInput.tsx']);
+    const modifiedFiles = new Set(['src/constants.ts', 'src/components/inputs/TextInput.tsx']);
     const missing = checkLineage(modifiedFiles);
     
     expect(missing).toHaveLength(0);
@@ -149,7 +149,7 @@ describe('Local Git-Diff Lineage Auditor', () => {
 
   describe('Targeted Static Mapping and Lineage Validation', () => {
     it('should maintain the correct new mappings', () => {
-      expect(MAPPING).toHaveProperty('src/utils/scannabilityWorker.ts', 'docs/public/SCALING.md');
+      expect(MAPPING).toHaveProperty('src/packages/scannability/worker.ts', 'docs/public/SCALING.md');
       expect(MAPPING).toHaveProperty('src/hooks/useTelemetry.ts', 'docs/public/COMPLIANCE.md');
       expect(MAPPING).toHaveProperty('src/utils/security.ts', 'docs/SECURITY.md');
       expect(MAPPING).toHaveProperty('.github/rulesets/main.json', '.github/rulesets/README.md');
@@ -178,18 +178,18 @@ describe('Local Git-Diff Lineage Auditor', () => {
     });
 
     it('should fail validation when scannability worker is modified without scaling doc', () => {
-      const modifiedFiles = new Set(['src/utils/scannabilityWorker.ts']);
+      const modifiedFiles = new Set(['src/packages/scannability/worker.ts']);
       const missing = checkLineage(modifiedFiles);
       expect(missing).toContainEqual({
-        codeFile: 'src/utils/scannabilityWorker.ts',
+        codeFile: 'src/packages/scannability/worker.ts',
         docFile: 'docs/public/SCALING.md'
       });
     });
 
     it('should pass validation when scannability worker is modified with scaling doc', () => {
-      const modifiedFiles = new Set(['src/utils/scannabilityWorker.ts', 'docs/public/SCALING.md']);
+      const modifiedFiles = new Set(['src/packages/scannability/worker.ts', 'docs/public/SCALING.md']);
       const missing = checkLineage(modifiedFiles);
-      const hasScannabilityMissing = missing.some(m => m.codeFile === 'src/utils/scannabilityWorker.ts');
+      const hasScannabilityMissing = missing.some(m => m.codeFile === 'src/packages/scannability/worker.ts');
       expect(hasScannabilityMissing).toBe(false);
     });
 
@@ -234,9 +234,9 @@ describe('Local Git-Diff Lineage Auditor', () => {
     });
 
     it('should normalize backslashes to forward slashes', () => {
-      const args = ['src\\utils\\sharedContract.ts', 'docs\\public\\SCALING.md'];
+      const args = ['src\\packages\\scannability\\lib\\sharedContract.ts', 'docs\\public\\SCALING.md'];
       const parsed = parseArgs(args);
-      expect(parsed).toEqual(['src/utils/sharedContract.ts', 'docs/public/SCALING.md']);
+      expect(parsed).toEqual(['src/packages/scannability/lib/sharedContract.ts', 'docs/public/SCALING.md']);
     });
 
     it('should handle space-separated or comma-separated files inside a single argument', () => {
@@ -330,7 +330,7 @@ describe('Local Git-Diff Lineage Auditor', () => {
         execSync: (file, args) => {
           const argStr = args.join(' ');
           if (file === 'git' && argStr === 'diff --name-only origin/feature-branch...HEAD') {
-            return 'src/utils/sharedContract.ts\ndocs/public/SCALING.md';
+            return 'src/packages/scannability/lib/sharedContract.ts\ndocs/public/SCALING.md';
           }
           throw new Error(`Unexpected command: ${file} ${argStr}`);
         },
@@ -447,7 +447,7 @@ describe('Local Git-Diff Lineage Auditor', () => {
         execSync: (file, args) => {
           const argStr = args.join(' ');
           if (file === 'git' && argStr.includes('origin/main...HEAD')) {
-            return 'src/utils/sharedContract.ts'; // sharedContract.ts is modified, but docs/public/SCALING.md is not!
+            return 'src/packages/scannability/lib/sharedContract.ts'; // sharedContract.ts is modified, but docs/public/SCALING.md is not!
           }
           throw new Error(`Unexpected command: ${file} ${argStr}`);
         },
@@ -515,7 +515,7 @@ describe('Local Git-Diff Lineage Auditor', () => {
               throw new Error('unknown revision or path not in the working tree');
             }
             diffRetried = true;
-            return 'src/utils/sharedContract.ts\ndocs/public/SCALING.md';
+            return 'src/packages/scannability/lib/sharedContract.ts\ndocs/public/SCALING.md';
           }
           if (file === 'git' && argStr === 'fetch origin main:refs/remotes/origin/main') {
             fetched = true;
@@ -554,7 +554,7 @@ describe('Local Git-Diff Lineage Auditor', () => {
           }
           if (file === 'git' && argStr === 'diff --name-only origin/main..HEAD') {
             doubleDotTried = true;
-            return 'src/utils/sharedContract.ts\ndocs/public/SCALING.md';
+            return 'src/packages/scannability/lib/sharedContract.ts\ndocs/public/SCALING.md';
           }
           throw new Error(`Unexpected command: ${file} ${argStr}`);
         },

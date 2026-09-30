@@ -1,5 +1,5 @@
 import QRCode from 'qrcode';
-import { ValidationEngine } from '../engine/ValidationEngine';
+import { validateConfig } from '@/packages/qr-payload';
 import { QRConfig, QRType } from '../types';
 import { normalizeUrl, shouldNormalizeUrl } from './url';
 
@@ -25,7 +25,7 @@ self.onmessage = async (e: MessageEvent<{ config: QRConfig; sequenceId: number }
 
   try {
     // 1. Validate the configuration profile
-    const violations = ValidationEngine.validateConfig(config);
+    const violations = validateConfig(config);
     if (violations.length > 0) {
       if (sequenceId === latestSequenceId) {
         self.postMessage({

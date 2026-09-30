@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { auditModuleContrast } from './contrastAudit';
+import { auditModuleContrast } from '@/packages/scannability';
 
 describe('auditModuleContrast', () => {
   it('returns 0 violations and high min contrast for high-contrast solid background', () => {
