@@ -73,7 +73,9 @@ export function resolveBash() {
     execSync('bash --version', { stdio: 'ignore' });
     cachedBash = 'bash';
     return 'bash';
-  } catch (_e) {}
+  } catch {
+    // bash is not on PATH; fall through to platform-specific locations below.
+  }
 
   if (process.platform === 'win32') {
     const sysDrive = process.env.SystemDrive || '';

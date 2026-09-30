@@ -27,10 +27,10 @@ export const ALLOWLISTED_FAKEMOCK_PATHS = [
 ];
 
 // Regex for detecting hardcoded Windows drives (e.g. C:\Users, D:/Project, file:///C:/...), not protocols like https://
-const WINDOWS_DRIVE_REGEX = /(?:^|[\s"'`(=,\[])(?:file:\/\/\/)?([a-zA-Z]:(?:\\+|\/+)[a-zA-Z0-9_.\-]+(?:(?:\\+|\/+)[a-zA-Z0-9_.\-]+)*)/;
+const WINDOWS_DRIVE_REGEX = /(?:^|[\s"'`(=,[])(?:file:\/\/\/)?([a-zA-Z]:(?:\\+|\/+)[a-zA-Z0-9_.-]+(?:(?:\\+|\/+)[a-zA-Z0-9_.-]+)*)/;
 
 // Regex for detecting hardcoded Unix/macOS user directories (e.g., /home/user, /Users/user)
-const UNIX_USER_HOME_REGEX = /(?:^|[\s"'`(=,\[])(?:\/(?:Users|home)\/[a-zA-Z0-9_.\-]+(?:\/[a-zA-Z0-9_.\-]+)+)/;
+const UNIX_USER_HOME_REGEX = /(?:^|[\s"'`(=,[])(?:\/(?:Users|home)\/[a-zA-Z0-9_.-]+(?:\/[a-zA-Z0-9_.-]+)+)/;
 
 // Regex for detecting raw split on \n without handling \r
 const RAW_NEWLINE_SPLIT_REGEX = /\.split\(\s*['"]\\n['"]\s*\)/;

@@ -31,6 +31,7 @@ const WEI_DECIMALS = 18;
  * decimal or has more than 18 fractional digits.
  */
 const etherToWei = (amount: string): string | null => {
+  // eslint-disable-next-line security/detect-unsafe-regex -- linear: the digit runs are separated by a literal '.' and anchored.
   const match = /^(\d*)(?:\.(\d*))?$/.exec(amount.trim());
   if (!match) return null;
   const whole = match[1] || '';
@@ -48,6 +49,7 @@ const etherToWei = (amount: string): string | null => {
  * @returns The ether amount without trailing zeros, or null when it is not a valid integer amount.
  */
 const weiToEther = (value: string): string | null => {
+  // eslint-disable-next-line security/detect-unsafe-regex -- linear: digit runs are separated by literal '.' / 'e' and anchored.
   const match = /^(\d+)(?:\.(\d+))?(?:[eE]\+?(\d+))?$/.exec(value.trim());
   if (!match) return null;
   const intPart = match[1];

@@ -12,7 +12,6 @@ import { computeCspHash, extractInlineScripts } from '../scripts/csp_hash_inject
 const root = document.documentElement;
 
 function runInitScript() {
-  // eslint-disable-next-line @typescript-eslint/no-implied-eval, no-new-func
   new Function(THEME_INIT_SCRIPT)();
 }
 

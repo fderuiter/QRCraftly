@@ -56,12 +56,10 @@ describe('StyleControls Component', () => {
      expandAppearanceSections();
 
      // Starburst should have an SVG
-     // eslint-disable-next-line testing-library/no-container, testing-library/no-node-access
      const starPath = container.querySelector('path[d^="M12 2l3.09 6.26"]');
      expect(starPath).toBeInTheDocument();
 
      // Hive uses SVG polygon
-     // eslint-disable-next-line testing-library/no-container, testing-library/no-node-access
      const hiveElements = container.querySelectorAll('polygon[points="50,0 100,25 100,75 50,100 0,75 0,25"]');
      expect(hiveElements.length).toBeGreaterThan(0);
   });
@@ -151,7 +149,6 @@ describe('StyleControls Component', () => {
       expandAppearanceSections();
 
       const file = new File(['(⌐□_□)'], 'chucknorris.png', { type: 'image/png' });
-      // eslint-disable-next-line testing-library/no-container, testing-library/no-node-access
       const fileInput = container.querySelector('input[type="file"]');
 
       const originalFileReader = global.FileReader;
@@ -322,7 +319,6 @@ describe('StyleControls Component', () => {
       // Click "Add Logo" or "Change" - trigger file input interaction
       // The button clicks the hidden input ref. We can just interact with the input directly for testing.
       // There are two file inputs now. The border one is the second one.
-      // eslint-disable-next-line testing-library/no-container, testing-library/no-node-access
       const fileInputs = container.querySelectorAll('input[type="file"]');
       // The first file input is the main logo, the second is the border logo
       // Wait, let's verify if that's guaranteed.
@@ -399,7 +395,6 @@ describe('StyleControls Component', () => {
 
       // We can find it by looking for the image alt "Secondary Brand Graphic" and finding the button sibling?
       const borderLogoImg = screen.getByAltText('Secondary Brand Graphic');
-      // eslint-disable-next-line testing-library/no-node-access
       const removeBtn = borderLogoImg.nextElementSibling as HTMLElement;
       if (removeBtn) {
           await user.click(removeBtn);

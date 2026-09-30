@@ -8,7 +8,6 @@ const __dirname = path.dirname(__filename);
 
 const DIST_DIR = path.resolve(__dirname, '../dist/client');
 export const MAX_GZIPPED_SIZE_KB = 700;
-const MAX_GZIPPED_SIZE_BYTES = MAX_GZIPPED_SIZE_KB * 1024;
 
 /**
  * Recursively gets all file paths in a directory.

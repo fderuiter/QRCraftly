@@ -78,7 +78,6 @@ export function TargetSettings({ target, onChange, onResetToGenerator, hasGenera
           choices={ECC_LEVELS.map((level) => ({
             id: level,
             label: level,
-            // eslint-disable-next-line security/detect-object-injection
             ariaLabel: `Level ${level} (${Math.round(ECC_RECOVERY[level] * 100)}% recovery)`,
           }))}
           value={target.ecc}

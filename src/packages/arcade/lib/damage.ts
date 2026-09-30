@@ -138,7 +138,6 @@ export interface DamageAnalysis {
  */
 export function analyzeDamage(damage: Iterable<number>, size: number, ecc: EccLevel): DamageAnalysis {
   const totalModules = size * size;
-  // eslint-disable-next-line security/detect-object-injection
   const budget = Math.floor(totalModules * ECC_RECOVERY[ecc]);
   const blockBudget = Math.floor(budget / VIRTUAL_BLOCK_COUNT);
   const blockDamage = new Array<number>(VIRTUAL_BLOCK_COUNT).fill(0);
@@ -148,7 +147,6 @@ export function analyzeDamage(damage: Iterable<number>, size: number, ecc: EccLe
   for (const index of damage) {
     damagedCount++;
     const finder = finderAt(Math.floor(index / size), index % size, size);
-    // eslint-disable-next-line security/detect-object-injection
     if (finder) finderDamage[finder]++;
     blockDamage[index % VIRTUAL_BLOCK_COUNT]++;
   }

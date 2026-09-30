@@ -106,7 +106,7 @@ export function validateCatalog(uiDir = DEFAULT_UI_DIR, catalogPath = DEFAULT_CA
     // Fallback 2: Try exact base name match as whole word or path component (case-insensitive)
     for (const d of dirs) {
       const baseName = path.basename(d).toLowerCase();
-      const escapedBaseName = baseName.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+      const escapedBaseName = baseName.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
       const regex = new RegExp(`(?:\\b|\\/|\\\\)${escapedBaseName}(?:\\b|\\/|\\\\)`);
       if (regex.test(cleanHeading)) {
         return d;
@@ -361,7 +361,7 @@ export function decodeGitPath(filePath) {
   try {
     const uint8Array = new Uint8Array(bytes);
     decoded = new TextDecoder('utf-8', { fatal: true }).decode(uint8Array);
-  } catch (err) {
+  } catch {
     try {
       const uint8Array = new Uint8Array(bytes);
       decoded = new TextDecoder('utf-8', { fatal: false }).decode(uint8Array);

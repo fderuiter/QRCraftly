@@ -168,6 +168,7 @@ export const shouldNormalizeUrl = (url: string | undefined): boolean => {
 
   const hasDot = url.includes('.');
   const isWww = url.toLowerCase().startsWith('www.');
+  // eslint-disable-next-line security/detect-unsafe-regex -- linear: a single optional ':\d+' group, anchored at the start.
   const isLocalhost = /^localhost(?::\d+)?(?:[/?#]|$)/i.test(url);
 
   return hasDot || isWww || isLocalhost;

@@ -50,7 +50,7 @@ export function sortClassesInContent(content) {
     return `className='${sortClassString(p1)}'`;
   });
 
-  updated = updated.replace(/className=\{\`([^\`]+)\`\}/g, (match, p1) => {
+  updated = updated.replace(/className=\{`([^`]+)`\}/g, (match, p1) => {
     return `className={\`${sortClassString(p1)}\`}`;
   });
 
@@ -120,7 +120,7 @@ if (process.argv[1] && (process.argv[1] === fileURLToPath(import.meta.url) || pr
       console.log('✅ Tailwind CSS classes sorted successfully!');
     }
     process.exit(0);
-  } catch (error) {
+  } catch {
     console.error('❌ Tailwind CSS class sorting check or format failed.');
     process.exit(1);
   }

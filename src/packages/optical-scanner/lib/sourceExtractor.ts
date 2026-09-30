@@ -429,7 +429,7 @@ export async function scanSource(source: ScanSource, options: ScanOptions = {}):
 
       let latencyHistory: number[] = [];
       let lastLatency = 0;
-      let frameDropCount = 0;
+      const frameDropCount = 0;
 
       try {
         const file = source as File;

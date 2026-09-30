@@ -152,7 +152,6 @@ export function spawnProjectile(kind: ProjectileKind, geometry: ArenaGeometry, t
   const dy = target.y - geometry.cannonY;
   const distance = Math.hypot(dx, dy);
   if (distance === 0) return null;
-  // eslint-disable-next-line security/detect-object-injection
   const spec = PROJECTILE_SPECS[kind];
   return {
     x: geometry.cannonX,
@@ -193,7 +192,6 @@ function toMicro(geometry: ArenaGeometry, grid: MicroGrid, x: number, y: number,
 export function stepProjectiles(projectiles: Projectile[], grid: MicroGrid, geometry: ArenaGeometry): Impact[] {
   const impacts: Impact[] = [];
   for (let i = projectiles.length - 1; i >= 0; i--) {
-    // eslint-disable-next-line security/detect-object-injection
     const p = projectiles[i];
     p.x += p.vx;
     p.y += p.vy;
@@ -310,7 +308,6 @@ export function addParticles(particles: Particle[], sparks: Particle[]): void {
  */
 export function stepParticles(particles: Particle[]): void {
   for (let i = particles.length - 1; i >= 0; i--) {
-    // eslint-disable-next-line security/detect-object-injection
     const pt = particles[i];
     pt.x += pt.vx;
     pt.y += pt.vy;
@@ -339,7 +336,6 @@ export const SHAKE: Readonly<Record<ProjectileKind | 'laser' | 'plasmaHit' | 'ro
  */
 export function addShake(current: number, event: keyof typeof SHAKE, reducedMotion: boolean): number {
   if (reducedMotion) return 0;
-  // eslint-disable-next-line security/detect-object-injection
   const { add, cap } = SHAKE[event];
   return Math.max(current, Math.min(current + add, cap));
 }

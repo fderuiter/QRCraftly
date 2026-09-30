@@ -1,4 +1,5 @@
 import js from "@eslint/js";
+import globals from "globals";
 import tseslint from "typescript-eslint";
 import reactPlugin from "eslint-plugin-react";
 import reactHooksPlugin from "eslint-plugin-react-hooks";
@@ -7,23 +8,45 @@ import jsdoc from "eslint-plugin-jsdoc";
 import jsxA11y from "eslint-plugin-jsx-a11y";
 import tailwind from "eslint-plugin-tailwindcss";
 
-const jsdocWarnRules = {};
-for (const [ruleName, ruleVal] of Object.entries(jsdoc.configs["flat/recommended-typescript-error"].rules)) {
-  if (ruleVal === "error") {
-    jsdocWarnRules[ruleName] = "warn";
-  } else if (Array.isArray(ruleVal) && ruleVal[0] === "error") {
-    jsdocWarnRules[ruleName] = ["warn", ...ruleVal.slice(1)];
-  } else {
-    jsdocWarnRules[ruleName] = ruleVal;
-  }
-}
+// Unit/integration tests and their support code (Vitest + Testing Library).
+const TEST_FILES = [
+  "**/*.test.{ts,tsx}",
+  "tests/**/*.{ts,tsx}",
+  "src/**/tests/**/*.{ts,tsx}",
+  "src/**/__mocks__/**/*.{ts,tsx}",
+  "src/test/**/*.{ts,tsx}",
+  "vitest.setup.ts"
+];
+
+// Node-side tooling: build/audit scripts and root config files.
+const NODE_FILES = ["scripts/**/*.{js,ts,cjs}", "*.config.{js,ts}"];
 
 export default tseslint.config(
   {
-    ignores: ["dist/**", "node_modules/**", "coverage/**", "scripts/**", "e2e/**", "**/*.test.ts", "**/*.test.tsx", ".agents/**", ".jules/**", "**/*.cjs"]
+    ignores: [
+      "dist/**",
+      "dist-ssr/**",
+      "node_modules/**",
+      "coverage/**",
+      "playwright-report/**",
+      "test-results/**",
+      ".wrangler/**",
+      ".vike/**",
+      ".agents/**",
+      ".jules/**",
+      ".dependency-cruiser.cjs"
+    ]
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
+  {
+    rules: {
+      "@typescript-eslint/no-unused-vars": ["error", { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_", "caughtErrorsIgnorePattern": "^_" }],
+      // ignoreReadBeforeAssign: a `let` read by a closure before its single deferred assignment (e.g. a
+      // watchdog timer cleared in `cleanup`) cannot become `const` without a temporal-dead-zone hazard.
+      "prefer-const": ["error", { ignoreReadBeforeAssign: true }]
+    }
+  },
   {
     files: ["**/*.{ts,tsx}"],
     plugins: {
@@ -34,13 +57,8 @@ export default tseslint.config(
     },
     languageOptions: {
       globals: {
-        document: "readonly",
-        window: "readonly",
-        navigator: "readonly",
-        console: "readonly",
+        ...globals.browser,
         process: "readonly",
-        setTimeout: "readonly",
-        clearTimeout: "readonly",
       }
     },
     rules: {
@@ -55,7 +73,6 @@ export default tseslint.config(
       "react/no-danger": "error",
 
       "@typescript-eslint/no-explicit-any": "off",
-      "@typescript-eslint/no-unused-vars": ["error", { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_", "caughtErrorsIgnorePattern": "^_" }],
       "@typescript-eslint/ban-ts-comment": "off",
       "@typescript-eslint/no-this-alias": "off",
 
@@ -64,9 +81,11 @@ export default tseslint.config(
       "react-hooks/immutability": "off",
       "react-hooks/preserve-manual-memoization": "off",
 
+      // Flags every `obj[key]` access, typed keys included (~170 hits, effectively all false positives).
+      "security/detect-object-injection": "off",
+
       "no-useless-escape": "off",
       "no-case-declarations": "off",
-      "prefer-const": "off",
       "no-empty": "off",
       "no-useless-assignment": "off",
       "no-control-regex": "off",
@@ -78,88 +97,67 @@ export default tseslint.config(
     }
   },
   {
-    files: ["src/types.ts", "src/utils/scannabilityWorker.ts", "src/engine/**/*.ts"],
+    files: ["src/**/*.{ts,tsx}"],
+    ignores: TEST_FILES,
     plugins: { jsdoc },
+    settings: { jsdoc: { mode: "typescript" } },
     rules: {
-      ...jsdoc.configs["flat/recommended-typescript-error"].rules,
-      "jsdoc/require-jsdoc": [
-        "error",
-        {
-          // Never autofix: the fixer inserts empty `/** */` stubs that carry no documentation.
-          enableFixer: false,
-          require: {
-            FunctionDeclaration: false,
-            ArrowFunctionExpression: false,
-            FunctionExpression: false,
-            ClassDeclaration: false,
-            ClassExpression: false,
-            MethodDefinition: false
-          },
-          contexts: [
-            "ExportNamedDeclaration > FunctionDeclaration",
-            "ExportDefaultDeclaration > FunctionDeclaration",
-            "ExportNamedDeclaration > VariableDeclaration > VariableDeclarator > ArrowFunctionExpression",
-            "ExportNamedDeclaration > VariableDeclaration > VariableDeclarator > FunctionExpression",
-            "ExportNamedDeclaration",
-            "MethodDefinition",
-            "ClassDeclaration",
-            "ExportNamedDeclaration > VariableDeclaration > VariableDeclarator > ObjectExpression > Property",
-            "TSInterfaceDeclaration",
-            "TSTypeAliasDeclaration",
-            "TSInterfaceDeclaration TSPropertySignature",
-            "TSTypeAliasDeclaration TSPropertySignature"
-          ]
-        }
-      ],
-      "jsdoc/require-description": "error",
-      "jsdoc/require-param-description": "error",
-      "jsdoc/require-returns-description": "error"
+      "jsdoc/check-param-names": ["error", { checkDestructured: false }],
+      "jsdoc/escape-inline-tags": "error"
     }
   },
   {
-    files: [
-      "src/components/**/*.{ts,tsx}",
-      "src/context/**/*.{ts,tsx}",
-      "src/layouts/**/*.{ts,tsx}",
-      "src/pages/**/*.{ts,tsx}",
-      "src/hooks/**/*.{ts,tsx}",
-      "src/registry.tsx"
-    ],
-    plugins: { jsdoc },
+    files: TEST_FILES,
+    languageOptions: {
+      globals: {
+        ...globals.node,
+        ...globals.vitest
+      }
+    },
     rules: {
-      ...jsdocWarnRules,
-      "jsdoc/require-jsdoc": [
-        "warn",
-        {
-          // Never autofix: the fixer inserts empty `/** */` stubs that carry no documentation.
-          enableFixer: false,
-          require: {
-            FunctionDeclaration: false,
-            ArrowFunctionExpression: false,
-            FunctionExpression: false,
-            ClassDeclaration: false,
-            ClassExpression: false,
-            MethodDefinition: false
-          },
-          contexts: [
-            "ExportNamedDeclaration > FunctionDeclaration",
-            "ExportDefaultDeclaration > FunctionDeclaration",
-            "ExportNamedDeclaration > VariableDeclaration > VariableDeclarator > ArrowFunctionExpression",
-            "ExportNamedDeclaration > VariableDeclaration > VariableDeclarator > FunctionExpression",
-            "ExportNamedDeclaration",
-            "MethodDefinition",
-            "ClassDeclaration",
-            "ExportNamedDeclaration > VariableDeclaration > VariableDeclarator > ObjectExpression > Property",
-            "TSInterfaceDeclaration",
-            "TSTypeAliasDeclaration",
-            "TSInterfaceDeclaration TSPropertySignature",
-            "TSTypeAliasDeclaration TSPropertySignature"
-          ]
-        }
-      ],
-      "jsdoc/require-description": "warn",
-      "jsdoc/require-param-description": "warn",
-      "jsdoc/require-returns-description": "warn"
+      // Tests stub browser/worker APIs, build partial fixtures and destructure unused helpers;
+      // type-safety and the security heuristics (fs paths, regexes built from fixtures) add noise there.
+      "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-unused-vars": "off",
+      "@typescript-eslint/no-require-imports": "off",
+      "security/detect-non-literal-fs-filename": "off",
+      "security/detect-non-literal-regexp": "off",
+      "security/detect-unsafe-regex": "off",
+      // `vi.mock` factories define fake `use*` hooks at module scope.
+      "react-hooks/rules-of-hooks": "off"
+    }
+  },
+  {
+    files: ["e2e/**/*.ts"],
+    languageOptions: {
+      globals: globals.node
+    },
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+      // Playwright fixtures call `use()`, which the hooks plugin mistakes for React's `use`.
+      "react-hooks/rules-of-hooks": "off",
+      "security/detect-non-literal-fs-filename": "off",
+      "security/detect-non-literal-regexp": "off"
+    }
+  },
+  {
+    files: NODE_FILES,
+    languageOptions: {
+      globals: globals.node
+    },
+    rules: {
+      // Build tooling reads and writes paths derived from the repository layout, never user input.
+      "security/detect-non-literal-fs-filename": "off"
+    }
+  },
+  {
+    files: ["**/*.cjs"],
+    languageOptions: {
+      sourceType: "commonjs",
+      globals: globals.node
+    },
+    rules: {
+      "@typescript-eslint/no-require-imports": "off"
     }
   },
   {

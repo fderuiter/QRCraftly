@@ -29,7 +29,7 @@ import { setQrCanvasRuntime } from './src/utils/qrCanvasRuntime';
 
 
 declare module 'vitest' {
-  // eslint-disable-next-line @typescript-eslint/no-empty-object-type, @typescript-eslint/no-unused-vars
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
   export interface Assertion<T = any> extends matchers.AxeMatchers {}
   // eslint-disable-next-line @typescript-eslint/no-empty-object-type
   export interface AsymmetricMatchersContaining extends matchers.AxeMatchers {}

@@ -30,7 +30,7 @@ export class MemoryRateLimiter implements RateLimitBinding {
   private readonly windows = new Map<string, { start: number; count: number }>();
 
   /**
-   * @param limit - Requests allowed per window.
+   * @param maxRequests - Requests allowed per window.
    * @param periodMs - Window length in milliseconds.
    * @param maxKeys - Maximum number of tracked keys.
    * @param now - Clock (injectable for tests).

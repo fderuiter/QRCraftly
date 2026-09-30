@@ -71,7 +71,6 @@ describe('StyleControls Accessibility', () => {
 
     // Try to upload an invalid file type (e.g. .txt)
     const file = new File(['hello world'], 'hello.txt', { type: 'text/plain' });
-    // eslint-disable-next-line testing-library/no-container, testing-library/no-node-access
     const fileInput = container.querySelector('input[type="file"]');
     expect(fileInput).toBeInTheDocument();
 

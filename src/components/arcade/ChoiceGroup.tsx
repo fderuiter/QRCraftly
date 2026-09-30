@@ -94,10 +94,8 @@ export function ChoiceGroup<T extends string>({
     else if (event.key === 'End') next = choices.length - 1;
     if (next < 0) return;
     event.preventDefault();
-    // eslint-disable-next-line security/detect-object-injection
     const choice = choices[next];
     onChange(choice.id);
-    // eslint-disable-next-line security/detect-object-injection
     refs.current[next]?.focus();
   };
 
@@ -109,7 +107,6 @@ export function ChoiceGroup<T extends string>({
           <Button
             key={choice.id}
             ref={(el) => {
-              // eslint-disable-next-line security/detect-object-injection
               refs.current[index] = el;
             }}
             role={isTabs ? 'tab' : 'radio'}

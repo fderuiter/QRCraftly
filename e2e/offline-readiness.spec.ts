@@ -30,7 +30,7 @@ test.describe('Automated Workbox Precaching and Offline Readiness', () => {
     // 1. Wait for Service Worker to register, install, and become active
     const isSwActive = await page.evaluate(async () => {
       if (!('serviceWorker' in navigator)) return false;
-      const reg = await navigator.serviceWorker.ready;
+      await navigator.serviceWorker.ready;
       if (navigator.serviceWorker.controller) return true;
       
       // If there is no controller yet, wait for controllerchange

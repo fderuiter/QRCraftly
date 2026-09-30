@@ -190,7 +190,7 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
       configRef.current.templateStyle !== TemplateStyle.NONE ||
       configRef.current.socialFormat !== SocialFormat.SQUARE_1_1;
 
-    let displayWidth = activeSize;
+    const displayWidth = activeSize;
     let displayHeight = activeSize;
 
     if (useTemplate) {

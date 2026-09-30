@@ -118,6 +118,7 @@ export function mergeClasses(...inputs: (string | undefined | null | false)[]): 
         group = 'transition';
       } else if (baseClass.startsWith('border-') || baseClass === 'border') {
         // Distinguish border-color vs border-width
+        // eslint-disable-next-line security/detect-unsafe-regex -- linear: the optional groups start with distinct literals ('-', '/') and are anchored.
         const isColor = /^border-(slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|white|black|transparent|current|inherit)(-\d+)?(\/\d+)?$/.test(baseClass);
         if (isColor) {
           group = 'border-color';
