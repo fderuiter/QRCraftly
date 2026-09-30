@@ -33,7 +33,7 @@ export const AUTHORIZED_NETWORK_FILES = new Set([
   'src/hooks/useTelemetry.ts',
   'src/utils/svgExport.ts',
   'src/utils/assetCache.ts',
-  'src/hooks/useRedirector.ts',
+  'src/packages/edge-redirect/lib/useRedirector.ts',
   'src/packages/edge-redirect/lib/turnstile.ts',
   'src/packages/edge-redirect/lib/router.ts',
   'src/packages/edge-redirect/lib/types.ts',

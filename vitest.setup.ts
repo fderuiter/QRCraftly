@@ -517,7 +517,7 @@ class MockWorker {
             }
           }
 
-          if (this.url.toString().includes('fskDemodulatorWorker') && message && typeof message === 'object') {
+          if (this.url.toString().includes('audio-transfer/worker') && message && typeof message === 'object') {
             if (message.type === 'init' || message.type === 'reset') {
               return;
             }

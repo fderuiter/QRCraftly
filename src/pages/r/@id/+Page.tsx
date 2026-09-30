@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { usePageContext } from 'vike-react/usePageContext';
-import { decryptUrl, extractKeyFromHash } from '@/utils/encryption';
+import { decryptUrl, extractKeyFromHash } from '@/packages/edge-redirect/client';
 import { isDangerousUrl } from '@/utils/security';
 import { normalizeUrl, SafeUrlPipeline } from '@/utils/url';
 import { ShieldAlert, RefreshCw, Lock } from 'lucide-react';

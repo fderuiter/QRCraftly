@@ -3,7 +3,7 @@ import { UrlData } from "../../types";
 import { TextField } from "../ui/FormFields";
 import { normalizeUrl } from "../../utils/url";
 import { isDangerousUrl } from "../../utils/security";
-import { useRedirector } from "../../hooks/useRedirector";
+import { useRedirector } from "../../packages/edge-redirect/client";
 import { useTurnstile } from "../../hooks/useTurnstile";
 import { ToggleSwitch } from "../ui/ToggleSwitch";
 import { Modal } from "../ui/Modal";

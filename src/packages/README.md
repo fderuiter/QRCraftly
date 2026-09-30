@@ -84,9 +84,18 @@ Boundary checks run automatically during `pnpm run lint` and CI.
 
 ### `edge-redirect` (`@/packages/edge-redirect`)
 
-- **Purpose**: Server side of Zero-Knowledge Redirection: the hardened `/api/redirect/*` API (ciphertext-only destinations, Turnstile failing closed, Rate Limiting bindings, origin allowlist, body caps) and the `/r/<id>` resolver routing, backed by Cloudflare D1. Not enabled in production yet; see `docs/public/EDGE_ARCHITECTURE.md`.
+- **Purpose**: Both sides of Zero-Knowledge Redirection. Server side: the hardened `/api/redirect/*` API (ciphertext-only destinations, Turnstile failing closed, Rate Limiting bindings, origin allowlist, body caps) and the `/r/<id>` resolver routing, backed by Cloudflare D1. Not enabled in production yet; see `docs/public/EDGE_ARCHITECTURE.md`.
 - **Entry Points**:
   - `index.ts`: `handleRedirectApi`, `routeEdgeRequest`, `RESOLVER_SHELL_PATH`, `MemoryRateLimiter`, `verifyTurnstileWithSiteverify`, limits and binding types.
+  - `client.ts`: Browser side: AES-GCM destination encryption with the key kept in the `#key=...` anchor (`generateDecryptionKey`, `encryptUrl`, `decryptUrl`, `isEncrypted`, `extractKeyFromHash`) and the `useRedirector` hook that registers, updates and lists records under the approved `qrcraftly:dynamic-redirects` storage key. The Worker entries never import React; the server shares only the private `isEncrypted` check.
   - `worker.ts`: Cloudflare Worker entry (`main` in `wrangler.jsonc` once enabled); falls through to the `ASSETS` binding.
   - `dev.ts`: Vite dev middleware and in-memory `MockD1Database` so `pnpm dev` works without Cloudflare credentials.
   - `schema.sql`: D1 schema applied with `pnpm exec wrangler d1 execute`.
+
+### `audio-transfer` (`@/packages/audio-transfer`)
+
+- **Purpose**: Air-gapped acoustic data transfer behind the Audio QR page (`/audio-qr`): the FSK chirp modem (sync/zero/one tones, off-thread demodulation of microphone spectra) and the spectrogram QR engine that paints QR modules into the audio spectrum and exports WAV files.
+- **Entry Points**:
+  - `index.ts`: FSK worker contract (`SYNC_FREQ`, `ZERO_FREQ`, `ONE_FREQ`, `assertFskWorkerRequest`, `isFskWorkerResponse`, and friends) and the spectrogram DSP engine (`scheduleSpectrogramQR`, `bufferToWav`).
+  - `client.ts`: React hooks (`useAudioContext`, `useChirpTransceiver`, `useSpectrogramQR`).
+  - `worker.ts`: Dedicated background Web Worker performing FSK demodulation of byte frequency frames. Spawning it is private to the package (`useChirpTransceiver` owns it).

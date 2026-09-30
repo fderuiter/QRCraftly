@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ArrowLeft, Trash2, Edit2, Save, ExternalLink, QrCode, RefreshCw, X, BarChart2, ChevronDown, ChevronUp, ShieldCheck } from 'lucide-react';
-import { useRedirector, DynamicQRRecord, ScanAnalytics } from '@/hooks/useRedirector';
+import { useRedirector, DynamicQRRecord, ScanAnalytics } from '@/packages/edge-redirect/client';
 import { useToast } from '@/components/ui/Toast';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';

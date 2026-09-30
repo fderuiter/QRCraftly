@@ -16,7 +16,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { isEncrypted } from '../../../utils/encryption';
+import { isEncrypted } from './encryption';
 
 /** Longest plaintext destination (in bytes) the client may encrypt. */
 export const MAX_PLAINTEXT_URL_BYTES = 2048;

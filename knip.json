@@ -3,7 +3,7 @@
   "entry": [
     "src/pages/**/+*.{ts,tsx}!",
     "src/packages/*/worker*.ts!",
-    "src/utils/{matrix,maze,imageResize,fskDemodulator}Worker.ts!",
+    "src/utils/{matrix,maze,imageResize}Worker.ts!",
     "scripts/**/*.{js,cjs,ts}!"
   ],
   "project": [

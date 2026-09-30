@@ -16,7 +16,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { isEncrypted } from '../../../utils/encryption';
+import { isEncrypted } from './encryption';
 import { json, jsonError, readJsonBody } from './http';
 import { isAllowedOrigin } from './origin';
 import { applyLimit, defaultFallbackReadLimiter } from './rateLimit';

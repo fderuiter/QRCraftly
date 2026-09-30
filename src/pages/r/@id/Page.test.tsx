@@ -2,7 +2,7 @@ import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import RedirectResolverPage from './+Page';
-import { encryptUrl, generateDecryptionKey } from '@/utils/encryption';
+import { encryptUrl, generateDecryptionKey } from '@/packages/edge-redirect/client';
 
 let mockRouteParams: { id?: string } = { id: 'test-link-123' };
 
