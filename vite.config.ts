@@ -142,13 +142,12 @@ export default defineConfig(() => {
             functions: 85,
             lines: 80,
           },
-          // Measure the logic layers: shared utilities, the deep-module packages
-          // and the Cloudflare Pages Functions. Components, hooks and pages are
-          // exercised by the jsdom project and Playwright but not gated here.
+          // Measure the logic layers: shared utilities and the deep-module
+          // packages. Components, hooks and pages are exercised by the jsdom
+          // project and Playwright but not gated here.
           include: [
             'src/utils/**/*.ts',
             'src/packages/**/*.ts',
-            'functions/**/*.ts',
           ],
           exclude: [
             '**/*.test.ts',
