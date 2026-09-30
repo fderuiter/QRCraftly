@@ -17,7 +17,7 @@
 */
 
 import { describe, it, expect } from 'vitest';
-import { getContrastRatio, normalizeHex, hexToRgba } from './colorUtils';
+import { getContrastRatio, normalizeHex, hexToRgba, srgbToLinear, linearToSrgb, getLuminanceFromLinearRgb, getLuminanceFromRgb } from './colorUtils';
 
 describe('colorUtils', () => {
   describe('getContrastRatio', () => {
@@ -114,5 +114,20 @@ describe('hexToRgba', () => {
 
   it('falls back to black for invalid input', () => {
     expect(hexToRgba('not-a-colour', 0.18)).toBe('rgba(0,0,0,0.18)');
+  });
+});
+
+describe('linear-light helpers', () => {
+  it('round-trips sRGB channels through linear light', () => {
+    for (let v = 0; v <= 255; v += 17) {
+      const c = v / 255;
+      expect(linearToSrgb(srgbToLinear(c))).toBeCloseTo(c, 9);
+    }
+  });
+
+  it('computes the same luminance from linear channels as from sRGB channels', () => {
+    const [r, g, b] = [0.2, 0.6, 0.9];
+    expect(getLuminanceFromLinearRgb(srgbToLinear(r), srgbToLinear(g), srgbToLinear(b))).toBeCloseTo(getLuminanceFromRgb(r, g, b), 12);
+    expect(getLuminanceFromLinearRgb(1, 1, 1)).toBeCloseTo(1, 12);
   });
 });

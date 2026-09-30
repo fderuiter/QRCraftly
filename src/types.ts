@@ -203,7 +203,18 @@ export interface QRConfig {
   fgColorLight?: string;
   /** Relative luminance threshold separating light and dark background cells (0..1). */
   luminanceThreshold?: number;
+  /** Image tiled into the modules as a Mosaic QR (normally a `data:` URL), or null for none. */
+  mosaicImageUrl?: string | null;
+  /** Mosaic layout: one tile per module, or 3x3 halftone sub-cells with a full-contrast core. */
+  mosaicMode?: MosaicMode;
+  /** How hard mosaic tiles are pushed towards their dark or light value (0..1). */
+  mosaicContrast?: number;
 }
+
+/**
+ * Mosaic QR layout (ADR 0019).
+ */
+export type MosaicMode = 'tiles' | 'halftone';
 
 /**
  * Defines the style of the border around the QR code.
