@@ -46,6 +46,7 @@ Boundary checks run automatically during `pnpm run lint` and CI.
 - **Purpose**: Full QR code matrix visual orchestration, styles, locator eyes, logo cutouts, alignment pattern zones, and playable maze generation.
 - **Entry Points**:
   - `index.ts`: `drawQR`, `drawQRInternal`, `renderBorder`, `renderEyes`, `renderModules`, `renderFluidModules`, `renderLogo`, `renderMaze`, layout and logo math.
+  - `mosaic.ts`: Mosaic QR engine ([ADR 0019](../../docs/adr/0019-mosaic-qr-module-level-image-tiling.md)): `planMosaic`, `renderMosaic`, `rasterizeMosaic`, `sampleMosaicGrid`, `resolveMosaicThresholds`, `isMosaicFunctionModule`, and the in-memory image cache (`loadMosaicSource`, `getMosaicSource`).
   - `maze.ts`: `generateMaze`, `getMazeCacheKey`, `getCachedMaze`, `storeMaze`, `clearMazeCache`, `getStyleAdaptiveMazePathWidth`, `renderMaze`, `applyMazeHaloMask`, and bridge validation helpers.
 
 ### `optical-scanner` (`@/packages/optical-scanner`)
