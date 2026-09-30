@@ -17,7 +17,7 @@
 */
 
 import { describe, it, expect, vi } from 'vitest';
-import { scheduleSpectrogramQR, bufferToWav } from './spectrogramDspEngine';
+import { scheduleSpectrogramQR, bufferToWav } from '../index';
 
 class MockAudioParam {
   value = 0;

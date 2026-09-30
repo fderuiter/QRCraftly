@@ -3,7 +3,7 @@
   "entry": [
     "src/pages/**/+*.{ts,tsx}!",
     "src/packages/*/worker*.ts!",
-    "src/utils/{imageResize,fskDemodulator}Worker.ts!",
+    "src/utils/imageResizeWorker.ts!",
     "scripts/**/*.{js,cjs,ts}!"
   ],
   "project": [

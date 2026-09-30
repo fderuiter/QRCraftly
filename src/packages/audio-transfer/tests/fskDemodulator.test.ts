@@ -27,7 +27,7 @@ import {
   assertFskWorkerResponse,
   FskWorkerRequest,
   FskWorkerResponse,
-} from './fskDemodulatorContract';
+} from '../index';
 
 describe('fskDemodulatorContract & fskDemodulatorWorker', () => {
   describe('fskDemodulatorContract Validation', () => {
@@ -111,7 +111,7 @@ describe('fskDemodulatorContract & fskDemodulatorWorker', () => {
       if (typeof (globalThis as any).self === 'undefined') {
         (globalThis as any).self = globalThis;
       }
-      await import('./fskDemodulatorWorker');
+      await import('../worker');
       workerHandler = globalThis.onmessage;
     });
 

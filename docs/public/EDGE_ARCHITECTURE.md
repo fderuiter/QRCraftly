@@ -167,7 +167,7 @@ For applications requiring strict payload privacy (e.g., medical records, sensit
 
 ### Technical Implementation Details
 
-1. **Client-Side Web Crypto API (`src/utils/encryption.ts`):**
+1. **Client-Side Web Crypto API (`src/packages/edge-redirect/client.ts`):**
    - Symmetric 256-bit AES-GCM encryption key generation via `window.crypto.subtle.generateKey()`.
    - Payload format: `enc:v1:<iv_hex>:<ciphertext_hex>` using a 12-byte (96-bit) cryptographically random Initialization Vector (IV).
 2. **Anchor Hash Fragment Isolation (RFC 3986):**

@@ -17,7 +17,7 @@
 */
 
 import { vi } from 'vitest';
-import { encryptUrl, generateDecryptionKey } from '@/utils/encryption';
+import { encryptUrl, generateDecryptionKey } from '../client';
 import { MemoryRateLimiter, type RedirectDeps, type RedirectEnv, type TurnstileVerifier } from '../index';
 import { MockD1Database } from '../dev';
 

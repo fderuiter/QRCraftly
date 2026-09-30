@@ -1,6 +1,6 @@
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { useRedirector } from './useRedirector';
+import { useRedirector } from '../client';
 
 describe('useRedirector Hook', () => {
   let fetchSpy: ReturnType<typeof vi.fn>;

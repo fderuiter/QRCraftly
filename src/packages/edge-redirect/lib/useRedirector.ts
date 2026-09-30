@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { generateDecryptionKey, encryptUrl, extractKeyFromHash } from '../utils/encryption';
+import { generateDecryptionKey, encryptUrl, extractKeyFromHash } from './encryption';
 
 /**
  * Represents a registered dynamic QR tracking record in local storage.

@@ -18,9 +18,7 @@
 
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { useAudioContext } from './useAudioContext';
-import { useChirpTransceiver } from './useChirpTransceiver';
-import { useSpectrogramQR } from './useSpectrogramQR';
+import { useAudioContext, useChirpTransceiver, useSpectrogramQR } from '../client';
 
 class MockAudioParam {
   value = 0;

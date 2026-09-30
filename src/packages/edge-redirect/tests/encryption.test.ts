@@ -7,7 +7,7 @@ import {
   extractKeyFromHash,
   bufferToHex,
   hexToBuffer,
-} from './encryption';
+} from '../client';
 
 describe('Zero-Knowledge Client Encryption Utilities', () => {
   it('generates a valid 64-character hex encryption key', async () => {

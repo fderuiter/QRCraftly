@@ -17,6 +17,7 @@
 */
 
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { createFskDemodulatorWorker } from './workerFactory';
 
 // Frequency mapping parameters
 const SYNC_FREQ = 1500;
@@ -202,10 +203,7 @@ export function useChirpTransceiver(getAudioContext: () => AudioContext) {
         fskWorkerRef.current.terminate();
       }
 
-      const worker = new Worker(
-        new URL('../utils/fskDemodulatorWorker.ts', import.meta.url),
-        { type: 'module' }
-      );
+      const worker = createFskDemodulatorWorker();
       fskWorkerRef.current = worker;
       bufferPoolRef.current = [];
       isWorkerBusyRef.current = false;

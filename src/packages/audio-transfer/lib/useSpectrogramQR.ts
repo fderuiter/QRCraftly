@@ -18,7 +18,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import QRCode from 'qrcode';
-import { scheduleSpectrogramQR, bufferToWav } from '@/utils/spectrogramDspEngine';
+import { scheduleSpectrogramQR, bufferToWav } from './spectrogramDspEngine';
 
 const specColDuration = 0.25; // 250ms per column
 const specMinFreq = 1200;      // lowest row frequency (Hz)

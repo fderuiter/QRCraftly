@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { usePageContext } from 'vike-react/usePageContext';
-import { decryptUrl, extractKeyFromHash } from '@/utils/encryption';
+import { decryptUrl, extractKeyFromHash } from '@/packages/edge-redirect/client';
 import { isDangerousUrl } from '@/utils/security';
 import { normalizeUrl, SafeUrlPipeline } from '@/utils/url';
 import { ShieldAlert, RefreshCw, Lock } from 'lucide-react';
@@ -150,7 +150,7 @@ export default function RedirectResolverPage() {
     <div className="flex min-h-[60vh] flex-col items-center justify-center p-4 text-center">
       <div className="mb-4 flex size-14 items-center justify-center rounded-full bg-teal-100 text-teal-600 dark:bg-teal-950/60 dark:text-teal-400">
         {isLoading ? (
-          <RefreshCw className="size-7 animate-spin" />
+          <RefreshCw className="size-7 motion-safe:animate-spin" />
         ) : (
           <Lock className="size-7" />
         )}

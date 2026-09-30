@@ -17,7 +17,7 @@
 */
 
 import { describe, it, expect, vi } from 'vitest';
-import { decryptUrl } from '@/utils/encryption';
+import { decryptUrl } from '../client';
 import { handleRedirectApi, type D1Statement } from '../index';
 import { cipher, get, harness, post, type Harness } from './fixtures';
 

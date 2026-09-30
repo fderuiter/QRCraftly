@@ -32,9 +32,7 @@ import {
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
-import { useAudioContext } from '@/hooks/useAudioContext';
-import { useChirpTransceiver } from '@/hooks/useChirpTransceiver';
-import { useSpectrogramQR } from '@/hooks/useSpectrogramQR';
+import { useAudioContext, useChirpTransceiver, useSpectrogramQR } from '@/packages/audio-transfer/client';
 import { QRProvider } from '@/context/QRContext';
 import { JsonLdScript } from '@/components/ui/JsonLdScript';
 import { contentRegistry } from '@/data/contentRegistry';
