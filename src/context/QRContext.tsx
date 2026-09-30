@@ -201,6 +201,14 @@ export const QRProvider = ({ children, initialConfig, retainAppearance = false }
 const noopSubscribe = () => () => {};
 
 /**
+ * Returns the nearest QR store, or undefined outside a `QRProvider`.
+ * @returns The store, or undefined without a provider.
+ */
+export function useOptionalQRStore(): QRStore | undefined {
+  return useContext(QRStoreContext);
+}
+
+/**
  * Selects a slice of the nearest QR store, or undefined outside a `QRProvider`.
  * Selectors should return primitives or stable references to avoid extra renders.
  * @param selector - Picks the slice a consumer needs.
