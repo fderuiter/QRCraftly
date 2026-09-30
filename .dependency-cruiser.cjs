@@ -8,9 +8,6 @@
 // though any subfolder is private). A package may expose several small entry
 // points (index.ts, client.ts, server.ts, …); prefer that over one giant
 // barrel index.
-//
-// Beyond PACKAGES_ROOT, the app-layer rule's known-violations list below must
-// only ever shrink (see GitHub issue #980).
 
 /** Where packages live. One immediate child dir per package (flat, no nesting). */
 const PACKAGES_ROOT = "src/packages";
@@ -26,12 +23,6 @@ const PACKAGE_INTERNALS = `^${R}/[^/]+/[^/]+/`;
 
 /** App layers that packages must never import (see packages-must-not-import-app-layers). */
 const APP_LAYERS = "^src/(context|hooks|components|pages)/|^src/registry\\.tsx?$";
-
-/**
- * Files with pre-existing app-layer imports, tracked by GitHub issue #980. Keep this list short
- * and exact; it exists so the rule can be an error today without blessing new violations.
- */
-const KNOWN_APP_LAYER_VIOLATORS = `^${R}/optical-transfer/client\\.ts$`;
 
 /** @type {import('dependency-cruiser').IConfiguration} */
 module.exports = {
@@ -87,18 +78,19 @@ module.exports = {
       comment:
         "Packages are app-independent deep modules: they never import the app's React layers (context, hooks, components, pages, registry). Inject stores, capabilities and callbacks from the call site instead.",
       severity: "error",
-      from: { path: `^${R}/`, pathNot: KNOWN_APP_LAYER_VIOLATORS },
+      from: { path: `^${R}/` },
       to: { path: APP_LAYERS },
     },
     {
-      name: "packages-must-not-import-app-layers-known-violations",
+      name: "cross-package-imports-use-alias",
       comment:
-        "KNOWN VIOLATIONS (follow-up: GitHub issue #980). optical-transfer/client.ts still imports these three app-layer modules. Only these exact edges are tolerated; any other app-layer import from that file is an error. Remove this rule once #980 moves the wiring to the call site.",
+        "A package reaches another package only through the `@/packages/<name>` alias to its entry points, never a relative path such as `../../other/index`. Relative paths hide the package seam and break when either package moves (GitHub issue #980).",
       severity: "error",
-      from: { path: KNOWN_APP_LAYER_VIOLATORS },
+      from: { path: `^${R}/([^/]+)/` },
       to: {
-        path: APP_LAYERS,
-        pathNot: "^src/(hooks/useCamera|hooks/useAdaptiveScanner|context/QRContext)\\.tsx?$",
+        path: `^${R}/`,
+        pathNot: `^${R}/$1/`,
+        dependencyTypesNot: ["aliased"],
       },
     },
 

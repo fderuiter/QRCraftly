@@ -22,46 +22,14 @@ import { renderHook, act, waitFor } from '@testing-library/react';
 import React from 'react';
 import { useOpticalSender, useOpticalReceiver } from '../client';
 import { FountainReassembler, createFountainSession, encodeSessionMessage, FountainEncoder } from '../index';
-import { QRConfig, QRType, QRStyle, QRErrorCorrectionLevel, SocialFormat, TemplateStyle } from '@/types';
+import { receiverOptions, senderOptions } from './fixtures';
 
-const mockConfig: QRConfig = {
-  value: 'Hello',
-  type: QRType.TEXT,
-  fgColor: '#000000',
-  bgColor: '#ffffff',
-  style: QRStyle.STANDARD,
-  logoUrl: null,
-  logoSize: 0.2,
-  logoPaddingStyle: 'none',
-  logoPadding: 1,
-  logoBackgroundColor: '#ffffff',
-  eyeColor: '#000000',
-  errorCorrectionLevel: QRErrorCorrectionLevel.M,
-  isBorderEnabled: false,
-  borderSize: 0.05,
-  borderColor: '#000000',
-  borderStyle: 'solid',
-  borderText: '',
-  borderTextPosition: 'bottom-center',
-  borderTextColor: '#ffffff',
-  borderLogoUrl: null,
-  borderLogoPosition: 'bottom-center',
-  socialFormat: SocialFormat.SQUARE_1_1,
-  templateStyle: TemplateStyle.NONE,
-  templateHeadline: '',
-  templateSubtext: '',
-  templateQrScale: 1.0,
-};
 
 describe('Optical Transfer Client Hooks', () => {
   describe('useOpticalSender', () => {
     it('should initialize with default states', () => {
       const { result } = renderHook(() =>
-        useOpticalSender({
-          config: mockConfig,
-          logoImg: null,
-          borderLogoImg: null,
-        })
+        useOpticalSender(senderOptions())
       );
 
       expect(result.current.selectedFile).toBeNull();
@@ -75,11 +43,7 @@ describe('Optical Transfer Client Hooks', () => {
 
     it('should simulate 50MB file correctly', () => {
       const { result } = renderHook(() =>
-        useOpticalSender({
-          config: mockConfig,
-          logoImg: null,
-          borderLogoImg: null,
-        })
+        useOpticalSender(senderOptions())
       );
 
       act(() => {
@@ -92,7 +56,7 @@ describe('Optical Transfer Client Hooks', () => {
     });
     it('starts a fountain broadcast without a handshake frame and never restarts the stream', async () => {
       const { result } = renderHook(() =>
-        useOpticalSender({ config: mockConfig, logoImg: null, borderLogoImg: null })
+        useOpticalSender(senderOptions())
       );
       act(() => {
         result.current.setSelectedFile(new File(['fountain'], 'f.txt', { type: 'text/plain' }));
@@ -143,7 +107,7 @@ describe('Optical Transfer Client Hooks', () => {
 
     it('surfaces worker errors (e.g. density bound) instead of stalling', async () => {
       const { result } = renderHook(() =>
-        useOpticalSender({ config: mockConfig, logoImg: null, borderLogoImg: null })
+        useOpticalSender(senderOptions())
       );
       act(() => {
         result.current.setSelectedFile(new File(['x'], 'x.bin'));
@@ -161,31 +125,15 @@ describe('Optical Transfer Client Hooks', () => {
   });
 
   describe('useOpticalReceiver', () => {
-    let originalMediaDevices: any;
 
     beforeEach(() => {
-      originalMediaDevices = navigator.mediaDevices;
-      Object.defineProperty(navigator, 'mediaDevices', {
-        writable: true,
-        configurable: true,
-        value: {
-          getUserMedia: vi.fn().mockResolvedValue({
-            getTracks: () => [{ stop: vi.fn() }],
-          }),
-        },
-      });
     });
 
     afterEach(() => {
-      Object.defineProperty(navigator, 'mediaDevices', {
-        writable: true,
-        configurable: true,
-        value: originalMediaDevices,
-      });
     });
 
     it('should initialize with standard defaults', () => {
-      const { result } = renderHook(() => useOpticalReceiver());
+      const { result } = renderHook(() => useOpticalReceiver(receiverOptions()));
 
       expect(result.current.chunks.size).toBe(0);
       expect(result.current.totalChunks).toBeNull();
@@ -221,7 +169,7 @@ describe('Optical Transfer Client Hooks', () => {
       installFountainWorker();
       const text = 'Hook-level fountain reception. '.repeat(30);
       const { encoder, header } = await createFountainSession(new TextEncoder().encode(text), { fileName: 'hook.txt', mimeType: 'text/plain' });
-      const { result } = renderHook(() => useOpticalReceiver({ autoDownload: false, handshakeRequired: true }));
+      const { result } = renderHook(() => useOpticalReceiver(receiverOptions({ autoDownload: false, handshakeRequired: true })));
 
       for (let index = 4; index < encoder.k * 4 && !result.current.receiverSuccess; index++) {
         if (index % 4 === 0) continue;
@@ -248,7 +196,7 @@ describe('Optical Transfer Client Hooks', () => {
         encodeSessionMessage({ fileName: 'x.txt', mimeType: 'text/plain', fileSize: bytes.length, sha256: 'aa'.repeat(32), compression: 'none' }, bytes),
         { blockSize: 16 }
       );
-      const { result } = renderHook(() => useOpticalReceiver({ autoDownload: true }));
+      const { result } = renderHook(() => useOpticalReceiver(receiverOptions({ autoDownload: true })));
       for (let index = 0; index < encoder.k; index++) {
         await act(async () => {
           await result.current.handleFrame(encoder.dropletStringForIndex(index));
@@ -262,10 +210,10 @@ describe('Optical Transfer Client Hooks', () => {
     });
 
     it('should reset receiver state cleanly', () => {
-      const { result } = renderHook(() => useOpticalReceiver());
+      const { result } = renderHook(() => useOpticalReceiver(receiverOptions()));
 
       act(() => {
-        result.current.resetReceiver();
+        result.current.handleClear();
       });
 
       expect(result.current.chunks.size).toBe(0);

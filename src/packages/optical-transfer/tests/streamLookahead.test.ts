@@ -4,7 +4,7 @@ import {
   DANGEROUS_SCHEMES,
   recursiveDecode,
   decodeHtmlEntities,
-} from './StreamLookahead';
+} from '../index';
 
 describe('StreamLookahead Decoder Utilities', () => {
   describe('decodeHtmlEntities', () => {

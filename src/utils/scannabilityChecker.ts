@@ -16,7 +16,4 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-export {
-  performScannabilityCheck,
-  type ScannabilityResult,
-} from '@/packages/scannability';
+export { performScannabilityCheck } from '@/packages/scannability';

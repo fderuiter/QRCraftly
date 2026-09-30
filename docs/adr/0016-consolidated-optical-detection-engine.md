@@ -6,7 +6,7 @@ status: accepted
 
 ## Context
 
-Optical barcode scanning from real-time webcam streams, uploaded image files, and video recordings previously suffered from architectural fragmentation and shallowness. The scanning pipeline was split across [`src/hooks/useAdaptiveScanner.ts`](../../src/hooks/useAdaptiveScanner.ts), `src/utils/FrameProvider.ts` (since deleted), `src/utils/AdaptiveFrameScheduler.ts` (since deleted), and `src/utils/scannerWorker.ts` (since deleted).
+Optical barcode scanning from real-time webcam streams, uploaded image files, and video recordings previously suffered from architectural fragmentation and shallowness. The scanning pipeline was split across `src/hooks/useAdaptiveScanner.ts` (since deleted), `src/utils/FrameProvider.ts` (since deleted), `src/utils/AdaptiveFrameScheduler.ts` (since deleted), and `src/utils/scannerWorker.ts` (since deleted).
 
 This fragmentation caused several acute maintenance and reliability challenges:
 
@@ -43,7 +43,7 @@ All complex internal mechanics are strictly hidden inside `lib/` and are inacces
 ### 3. Deletion of Dead Machinery & Legacy Shims
 
 - Deleted `src/utils/scannerWorker.ts` in favor of `src/packages/optical-scanner/worker.ts`.
-- Converted legacy utility files (`useAdaptiveScanner.ts`, `AdaptiveFrameScheduler.ts`, `scannerContract.ts`) into minimal, single-line backwards-compatibility re-export shims. The `sharedScannerWorker.ts` shim (`terminateSharedScannerWorker` alias) was later deleted; the canonical `terminateScannerWorker` is imported from `scheduler.ts`.
+- Converted legacy utility files (`useAdaptiveScanner.ts`, `AdaptiveFrameScheduler.ts`, `scannerContract.ts`) into minimal, single-line backwards-compatibility re-export shims. The `sharedScannerWorker.ts` shim (`terminateSharedScannerWorker` alias) was later deleted; the canonical `terminateScannerWorker` is imported from `scheduler.ts`. The `useAdaptiveScanner` alias shim was also deleted (issue #982): callers import `useQrScanner` from `@/packages/optical-scanner/client`.
 
 ### 4. Camera Scanner Engine and Sealed Worker Seam (amendment, issue #920)
 

@@ -20,39 +20,23 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import React from 'react';
-import { useAnimatedQrReceiver } from './useAnimatedQrReceiver';
+import { useOpticalReceiver } from '../client';
+import { createFakeCamera, receiverOptions } from './fixtures';
 
-describe('useAnimatedQrReceiver Hook', () => {
-  let originalMediaDevices: any;
+describe('useOpticalReceiver', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
     global.URL.createObjectURL = vi.fn(() => 'mock-download-url');
     global.URL.revokeObjectURL = vi.fn();
-
-    originalMediaDevices = navigator.mediaDevices;
-    Object.defineProperty(navigator, 'mediaDevices', {
-      writable: true,
-      configurable: true,
-      value: {
-        getUserMedia: vi.fn().mockResolvedValue({
-          getTracks: () => [{ stop: vi.fn() }],
-        }),
-      },
-    });
   });
 
   afterEach(() => {
-    Object.defineProperty(navigator, 'mediaDevices', {
-      writable: true,
-      configurable: true,
-      value: originalMediaDevices,
-    });
     vi.restoreAllMocks();
   });
 
   it('should initialize with standard defaults', () => {
-    const { result } = renderHook(() => useAnimatedQrReceiver());
+    const { result } = renderHook(() => useOpticalReceiver(receiverOptions()));
 
     expect(result.current.chunks.size).toBe(0);
     expect(result.current.totalChunks).toBeNull();
@@ -61,7 +45,7 @@ describe('useAnimatedQrReceiver Hook', () => {
   });
 
   it('should process simulated normal data frames when handshake is present', async () => {
-    const { result } = renderHook(() => useAnimatedQrReceiver());
+    const { result } = renderHook(() => useOpticalReceiver(receiverOptions()));
 
     await act(async () => {
       await result.current.handleFrame('H|test.txt|6|text/plain|c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2');
@@ -77,7 +61,7 @@ describe('useAnimatedQrReceiver Hook', () => {
 
   it('should ignore data frames when no handshake frame has been scanned', async () => {
     const addToast = vi.fn();
-    const { result } = renderHook(() => useAnimatedQrReceiver({ addToast }));
+    const { result } = renderHook(() => useOpticalReceiver(receiverOptions({ addToast })));
 
     await act(async () => {
       await result.current.handleFrame('F|0|2|Zm9v');
@@ -92,7 +76,7 @@ describe('useAnimatedQrReceiver Hook', () => {
   });
 
   it('should intercept dangerous schemes immediately', async () => {
-    const { result } = renderHook(() => useAnimatedQrReceiver());
+    const { result } = renderHook(() => useOpticalReceiver(receiverOptions()));
 
     await act(async () => {
       await result.current.handleFrame('javascript:alert(1)');
@@ -103,7 +87,8 @@ describe('useAnimatedQrReceiver Hook', () => {
 
   it('should compile, verify SHA-256, and reassemble files via background worker', async () => {
     const addToast = vi.fn();
-    const { result } = renderHook(() => useAnimatedQrReceiver({ addToast }));
+    const options = receiverOptions({ addToast });
+    const { result } = renderHook(() => useOpticalReceiver(options));
 
     await act(async () => {
       await result.current.handleFrame('H|test.txt|6|text/plain|c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2');
@@ -122,7 +107,7 @@ describe('useAnimatedQrReceiver Hook', () => {
     });
 
     expect(result.current.receiverSuccess).toBe(true);
-    expect(global.URL.createObjectURL).toHaveBeenCalled();
+    expect(options.saveFile).toHaveBeenCalledWith(expect.any(Uint8Array), 'test.txt', 'text/plain');
     expect(addToast).toHaveBeenCalledWith(expect.objectContaining({
       type: 'success',
     }));
@@ -130,7 +115,8 @@ describe('useAnimatedQrReceiver Hook', () => {
 
   it('should abort download and emit toast error when computed SHA-256 hash does not match handshake hash', async () => {
     const addToast = vi.fn();
-    const { result } = renderHook(() => useAnimatedQrReceiver({ addToast }));
+    const options = receiverOptions({ addToast });
+    const { result } = renderHook(() => useOpticalReceiver(options));
 
     await act(async () => {
       await result.current.handleFrame('H|test.txt|6|text/plain|wrongsha256hashvalue');
@@ -149,7 +135,7 @@ describe('useAnimatedQrReceiver Hook', () => {
     });
 
     expect(result.current.receiverSuccess).toBe(false);
-    expect(global.URL.createObjectURL).not.toHaveBeenCalled();
+    expect(options.saveFile).not.toHaveBeenCalled();
     expect(addToast).toHaveBeenCalledWith(expect.objectContaining({
       type: 'error',
       message: expect.stringContaining('Integrity validation failed'),
@@ -157,7 +143,7 @@ describe('useAnimatedQrReceiver Hook', () => {
   });
 
   it('should synchronously and atomically reset state and frame-tracking memory when a new file handshake with a different SHA-256 is detected', async () => {
-    const { result } = renderHook(() => useAnimatedQrReceiver());
+    const { result } = renderHook(() => useOpticalReceiver(receiverOptions()));
 
     // 1. Process first file's handshake and first frame
     await act(async () => {
@@ -194,7 +180,7 @@ describe('useAnimatedQrReceiver Hook', () => {
   });
 
   it('should reset the lookahead validation security engine concurrently with the frame cache for new file handshakes', async () => {
-    const { result } = renderHook(() => useAnimatedQrReceiver({ streamMode: 'text' }));
+    const { result } = renderHook(() => useOpticalReceiver(receiverOptions({ streamMode: 'text' })));
 
     // Send first handshake
     await act(async () => {
@@ -225,7 +211,7 @@ describe('useAnimatedQrReceiver Hook', () => {
   });
 
   it('should block split-payload attacks (e.g., java and script:) across frames immediately', async () => {
-    const { result } = renderHook(() => useAnimatedQrReceiver());
+    const { result } = renderHook(() => useOpticalReceiver(receiverOptions()));
 
     await act(async () => {
       await result.current.handleFrame('H|test.txt|10|text/plain|sha256');
@@ -246,7 +232,7 @@ describe('useAnimatedQrReceiver Hook', () => {
   });
 
   it('should not block legitimate QR codes containing standard data', async () => {
-    const { result } = renderHook(() => useAnimatedQrReceiver());
+    const { result } = renderHook(() => useOpticalReceiver(receiverOptions()));
 
     await act(async () => {
       await result.current.handleFrame('H|test.txt|10|text/plain|sha256');
@@ -266,7 +252,7 @@ describe('useAnimatedQrReceiver Hook', () => {
   });
 
   it('should reject transfers exceeding 5,000 chunks', async () => {
-    const { result } = renderHook(() => useAnimatedQrReceiver());
+    const { result } = renderHook(() => useOpticalReceiver(receiverOptions()));
 
     await act(async () => {
       await result.current.handleFrame('F|0|5001|Zm9v');
@@ -278,7 +264,7 @@ describe('useAnimatedQrReceiver Hook', () => {
 
   describe('Dual-Mode Receiver & Object URL Management', () => {
     it('should initialize in camera mode by default and allow mode toggling', () => {
-      const { result } = renderHook(() => useAnimatedQrReceiver());
+      const { result } = renderHook(() => useOpticalReceiver(receiverOptions()));
 
       expect(result.current.receiverMode).toBe('camera');
       expect(result.current.videoFile).toBeNull();
@@ -298,7 +284,7 @@ describe('useAnimatedQrReceiver Hook', () => {
     });
 
     it('should load a valid video file, generate Object URL, and set scanning to true', () => {
-      const { result } = renderHook(() => useAnimatedQrReceiver({ initialMode: 'file' }));
+      const { result } = renderHook(() => useOpticalReceiver(receiverOptions({ initialMode: 'file' })));
       const file = new File(['dummy video content'], 'test.mp4', { type: 'video/mp4' });
 
       act(() => {
@@ -314,7 +300,7 @@ describe('useAnimatedQrReceiver Hook', () => {
     });
 
     it('should reject invalid file types, set fileValidationError, and block Object URL creation', () => {
-      const { result } = renderHook(() => useAnimatedQrReceiver({ initialMode: 'file' }));
+      const { result } = renderHook(() => useOpticalReceiver(receiverOptions({ initialMode: 'file' })));
       const file = new File(['plain text'], 'document.txt', { type: 'text/plain' });
 
       act(() => {
@@ -330,7 +316,7 @@ describe('useAnimatedQrReceiver Hook', () => {
     });
 
     it('should revoke Object URL when replacing an uploaded video file', () => {
-      const { result } = renderHook(() => useAnimatedQrReceiver({ initialMode: 'file' }));
+      const { result } = renderHook(() => useOpticalReceiver(receiverOptions({ initialMode: 'file' })));
       const file1 = new File(['vid1'], 'video1.mp4', { type: 'video/mp4' });
       const file2 = new File(['vid2'], 'video2.webm', { type: 'video/webm' });
 
@@ -349,7 +335,7 @@ describe('useAnimatedQrReceiver Hook', () => {
     });
 
     it('should revoke Object URL when toggling mode from file to camera', () => {
-      const { result } = renderHook(() => useAnimatedQrReceiver({ initialMode: 'file' }));
+      const { result } = renderHook(() => useOpticalReceiver(receiverOptions({ initialMode: 'file' })));
       const file = new File(['vid'], 'video.mp4', { type: 'video/mp4' });
 
       act(() => {
@@ -368,7 +354,7 @@ describe('useAnimatedQrReceiver Hook', () => {
     });
 
     it('should revoke Object URL when hook unmounts', () => {
-      const { result, unmount } = renderHook(() => useAnimatedQrReceiver({ initialMode: 'file' }));
+      const { result, unmount } = renderHook(() => useOpticalReceiver(receiverOptions({ initialMode: 'file' })));
       const file = new File(['vid'], 'video.mp4', { type: 'video/mp4' });
 
       act(() => {
@@ -381,7 +367,7 @@ describe('useAnimatedQrReceiver Hook', () => {
     });
 
     it('should revoke Object URL when handleClear is called', () => {
-      const { result } = renderHook(() => useAnimatedQrReceiver({ initialMode: 'file' }));
+      const { result } = renderHook(() => useOpticalReceiver(receiverOptions({ initialMode: 'file' })));
       const file = new File(['vid'], 'video.mp4', { type: 'video/mp4' });
 
       act(() => {
@@ -397,5 +383,35 @@ describe('useAnimatedQrReceiver Hook', () => {
       expect(result.current.videoObjectUrl).toBeNull();
       expect(result.current.fileValidationError).toBeNull();
     });
+  });
+
+  it('drives the injected camera when a camera session starts and stops', async () => {
+    const addToast = vi.fn();
+    const options = receiverOptions({ addToast });
+    const { result } = renderHook(() => useOpticalReceiver(options));
+
+    await act(async () => {
+      await result.current.startCameraSession();
+    });
+    expect(options.camera.startStream).toHaveBeenCalledTimes(1);
+    expect(result.current.isScanning).toBe(true);
+    expect(addToast).toHaveBeenCalledWith(expect.objectContaining({ message: 'Camera scanner activated.' }));
+
+    act(() => {
+      result.current.stopCameraSession();
+    });
+    expect(options.camera.stopStream).toHaveBeenCalled();
+    expect(result.current.isScanning).toBe(false);
+  });
+
+  it('does not start scanning when the camera stream is refused', async () => {
+    const camera = createFakeCamera();
+    camera.startStream.mockResolvedValueOnce(null);
+    const { result } = renderHook(() => useOpticalReceiver(receiverOptions({ camera })));
+
+    await act(async () => {
+      await result.current.startCameraSession();
+    });
+    expect(result.current.isScanning).toBe(false);
   });
 });

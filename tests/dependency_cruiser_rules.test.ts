@@ -4,6 +4,7 @@ import { createRequire } from 'node:module';
 interface RuleSide {
   path?: string;
   pathNot?: string;
+  dependencyTypesNot?: string[];
 }
 
 interface Rule {
@@ -34,15 +35,20 @@ function forbids(r: Rule, from: string, to: string): boolean {
   return matches(r.from, from) && matches(r.to, to);
 }
 
+/** Substitutes the package name captured by `from.path` into `to.pathNot`, as dependency-cruiser does. */
+function resolveOwnPackage(r: Rule, from: string): Rule {
+  const ownPackage = /^src\/packages\/([^/]+)\//.exec(from)?.[1] ?? '';
+  return { ...r, to: { ...r.to, pathNot: r.to.pathNot?.replace('$1', ownPackage) } };
+}
+
 const appLayerRule = rule('packages-must-not-import-app-layers');
-const knownViolations = rule('packages-must-not-import-app-layers-known-violations');
-const forbiddenByAppLayerRules = (from: string, to: string) =>
-  forbids(appLayerRule, from, to) || forbids(knownViolations, from, to);
+const forbiddenByAppLayerRules = (from: string, to: string) => forbids(appLayerRule, from, to);
 
 describe('dependency-cruiser package boundary rules', () => {
-  it('enforces the app-layer rules as errors', () => {
+  it('enforces the app-layer rule as an error with no known-violation exemptions', () => {
     expect(appLayerRule.severity).toBe('error');
-    expect(knownViolations.severity).toBe('error');
+    expect(appLayerRule.from.pathNot).toBeUndefined();
+    expect(config.forbidden.some((r) => r.name.includes('known-violations'))).toBe(false);
   });
 
   it.each([
@@ -67,27 +73,47 @@ describe('dependency-cruiser package boundary rules', () => {
     expect(forbiddenByAppLayerRules('src/hooks/useScannability.ts', 'src/context/QRContext.tsx')).toBe(false);
   });
 
-  it('tolerates only the exact known violations tracked by #980', () => {
-    const violator = 'src/packages/optical-transfer/client.ts';
-    expect(knownViolations.comment).toContain('#980');
-    for (const tolerated of ['src/hooks/useCamera.ts', 'src/hooks/useAdaptiveScanner.ts', 'src/context/QRContext.tsx']) {
-      expect(forbiddenByAppLayerRules(violator, tolerated)).toBe(false);
+  it('forbids optical-transfer from importing the app layers it used to reach into (#980)', () => {
+    for (const target of ['src/hooks/useCamera.ts', 'src/context/QRContext.tsx', 'src/components/QRTool.tsx']) {
+      expect(forbiddenByAppLayerRules('src/packages/optical-transfer/client.ts', target)).toBe(true);
+      expect(forbiddenByAppLayerRules('src/packages/optical-transfer/lib/receiver/useOpticalReceiver.ts', target)).toBe(true);
     }
-    expect(forbiddenByAppLayerRules(violator, 'src/components/QRTool.tsx')).toBe(true);
-    expect(forbiddenByAppLayerRules(violator, 'src/hooks/useCapabilities.ts')).toBe(true);
-    // Other optical-transfer files get no exemption.
-    expect(forbiddenByAppLayerRules('src/packages/optical-transfer/lib/handshake.ts', 'src/hooks/useCamera.ts')).toBe(true);
+  });
+
+  describe('cross-package-imports-use-alias', () => {
+    const aliasRule = rule('cross-package-imports-use-alias');
+    const from = 'src/packages/optical-transfer/lib/handshake.ts';
+    const resolved = resolveOwnPackage(aliasRule, from);
+    /** Mirrors dependency-cruiser's dependencyTypesNot check on the `to` side. */
+    const forbidsImport = (to: string, dependencyTypes: string[]) =>
+      forbids(resolved, from, to) &&
+      !(aliasRule.to.dependencyTypesNot ?? []).some((type) => dependencyTypes.includes(type));
+
+    it('is an error', () => {
+      expect(aliasRule.severity).toBe('error');
+    });
+
+    it('forbids a relative import into another package, even of its entry point', () => {
+      expect(forbidsImport('src/packages/qr-matrix/index.ts', ['local', 'import'])).toBe(true);
+      expect(forbidsImport('src/packages/scannability/worker.ts', ['local', 'import'])).toBe(true);
+    });
+
+    it('allows the @/packages alias to another package', () => {
+      expect(forbidsImport('src/packages/qr-matrix/index.ts', ['aliased', 'aliased-tsconfig', 'local', 'import'])).toBe(false);
+    });
+
+    it("allows relative imports inside the package's own files", () => {
+      expect(forbidsImport('src/packages/optical-transfer/lib/framePool.ts', ['local', 'import'])).toBe(false);
+    });
+
+    it('does not constrain app code outside the packages', () => {
+      expect(forbids(aliasRule, 'src/pages/file-transfer/+Page.tsx', 'src/packages/optical-transfer/client.ts')).toBe(false);
+    });
   });
 
   it("forbids a package from deep-importing another package's lib/", () => {
-    const acrossPackages = rule('entrypoint-boundary-across-packages');
     const from = 'src/packages/arcade/lib/scanPipeline.ts';
-    // dependency-cruiser substitutes the captured package name ($1) from `from.path`.
-    const ownPackage = /^src\/packages\/([^/]+)\//.exec(from)?.[1] ?? '';
-    const resolved: Rule = {
-      ...acrossPackages,
-      to: { ...acrossPackages.to, pathNot: acrossPackages.to.pathNot?.replace('$1', ownPackage) },
-    };
+    const resolved = resolveOwnPackage(rule('entrypoint-boundary-across-packages'), from);
     expect(forbids(resolved, from, 'src/packages/scannability/lib/checker.ts')).toBe(true);
     expect(forbids(resolved, from, 'src/packages/scannability/index.ts')).toBe(false);
     expect(forbids(resolved, from, 'src/packages/arcade/lib/matrix.ts')).toBe(false);

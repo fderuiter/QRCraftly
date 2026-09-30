@@ -26,7 +26,8 @@ import StyleControls from '@/components/StyleControls';
 import { QRProvider, useQRStore, useQRStoreSelector } from '@/context/QRContext';
 import { useImage } from '@/hooks/useImage';
 import { ToolWorkspaceLayout, ToolWorkspaceHeader } from '@/components/ToolWorkspaceLayout';
-import { useAnimatedQrSender } from '@/hooks/useAnimatedQrSender';
+import { useOpticalSender } from '@/packages/optical-transfer/client';
+import { paintTransferFrame } from './paintTransferFrame';
 import { JsonLdScript } from '@/components/ui/JsonLdScript';
 import { generateSchema } from '@/utils/schemaGenerator';
 import { resolveDomainForPath } from '@/utils/metadataEngine';
@@ -41,6 +42,7 @@ function FileTransferToolInner() {
   const [isDraggingFile, setIsDraggingFile] = React.useState(false);
   const [showBetaAlert, setShowBetaAlert] = React.useState(true);
   const config = useQRStoreSelector(s => s.config);
+  const scannabilityFallbackActive = useQRStoreSelector(s => s.isScannabilityFallbackActive);
   const store = useQRStore();
 
   // Logo images
@@ -69,10 +71,12 @@ function FileTransferToolInner() {
     stopTransfer,
     handleFileChange,
     simulate50MBFile,
-  } = useAnimatedQrSender({
+  } = useOpticalSender({
     config,
     logoImg,
     borderLogoImg,
+    renderFrame: paintTransferFrame,
+    scannabilityFallbackActive,
   });
 
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
@@ -328,9 +332,9 @@ function FileTransferToolInner() {
                     </div>
                     <div>
                       <div className="flex items-center gap-1 text-slate-500 dark:text-slate-400">
-                        <Cpu className="size-3 text-teal-500" aria-hidden="true" /> Memory use
+                        <Cpu className="size-3 text-teal-500" aria-hidden="true" /> Frame buffer
                       </div>
-                      <div className="font-mono text-sm font-semibold text-slate-700 dark:text-slate-300">{transferStats.activeMemory}</div>
+                      <div className="font-mono text-sm font-semibold text-slate-700 dark:text-slate-300">{transferStats.frameBufferMemory}</div>
                     </div>
                   </div>
                 </div>

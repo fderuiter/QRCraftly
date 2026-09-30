@@ -9,6 +9,7 @@
   "project": [
     "src/**/*.{ts,tsx}!",
     "!src/packages/edge-redirect/{dev.ts,lib/mockD1.ts,tests/**}!",
+    "!src/packages/*/tests/**!",
     "scripts/**/*.{js,cjs,ts}!",
     "tests/**/*.{ts,tsx}",
     "e2e/**/*.ts"
@@ -19,13 +20,10 @@
   "ignoreExportsUsedInFile": true,
   "ignoreFiles": [
     "src/packages/*/index.ts",
-    "src/packages/scannability/opticalSimulation.ts",
-    "src/packages/optical-transfer/**",
-    "src/engine/StreamLookahead.ts"
+    "src/packages/scannability/opticalSimulation.ts"
   ],
   "ignoreIssues": {
     "src/packages/*/*.ts": ["types"],
-    "src/packages/optical-transfer/**": ["exports", "types"],
     "src/packages/scannability/**": ["exports", "types"]
   },
   "ignoreBinaries": ["shellcheck"],
