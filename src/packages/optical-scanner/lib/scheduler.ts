@@ -245,6 +245,10 @@ export class AdaptiveFrameScheduler {
         const excess = this.samplingDelay - targetDelay;
         const step = Math.max(10, Math.round(excess * 0.5));
         nextDelay = Math.max(this.minSamplingDelay, this.samplingDelay - step);
+      } else if (this.samplingDelay > medianLatency) {
+        // Moderate decodes (dense codes take 40-100 ms) recover towards their own latency;
+        // otherwise one slow burst would pin sampling at the maximum delay for good.
+        nextDelay = Math.max(this.minSamplingDelay, Math.round((this.samplingDelay + medianLatency) / 2));
       }
 
       this.samplingDelay = nextDelay;

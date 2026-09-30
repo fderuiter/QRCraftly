@@ -21,6 +21,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import React from 'react';
 import { useOpticalReceiver } from '../client';
+import { createFountainSession } from '../index';
 import { createFakeCamera, receiverOptions } from './fixtures';
 
 describe('useOpticalReceiver', () => {
@@ -73,6 +74,34 @@ describe('useOpticalReceiver', () => {
       type: 'error',
       message: expect.stringContaining('missing handshake metadata'),
     }));
+  });
+
+  it('keeps accepting fountain droplets after an error and clears it once decoding progresses', async () => {
+    const posted: string[] = [];
+    globalThis.mockWorkerControl.setInterceptor((message: { type: string }, worker: { dispatchMessage: (m: unknown) => void }) => {
+      posted.push(message.type);
+      if (message.type === 'FOUNTAIN_DROPLET') {
+        worker.dispatchMessage({ type: 'PROGRESS', progress: 10, current: 1, total: 10, rank: 1, dropletsReceived: 1, isFountain: true });
+      }
+    });
+    try {
+      const { result } = renderHook(() => useOpticalReceiver(receiverOptions()));
+
+      await act(async () => {
+        await result.current.handleFrame('F|0|2|Zm9v');
+      });
+      expect(result.current.receiverError).toContain('Handshake metadata required');
+
+      const { encoder } = await createFountainSession(new TextEncoder().encode('recover'), { fileName: 'r.txt', mimeType: 'text/plain' });
+      await act(async () => {
+        await result.current.handleFrame(encoder.dropletStringForIndex(0));
+      });
+
+      await waitFor(() => expect(posted).toContain('FOUNTAIN_DROPLET'));
+      await waitFor(() => expect(result.current.receiverError).toBeNull());
+    } finally {
+      globalThis.mockWorkerControl.setInterceptor(null);
+    }
   });
 
   it('should intercept dangerous schemes immediately', async () => {

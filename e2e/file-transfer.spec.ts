@@ -1,0 +1,189 @@
+/*
+    QRCraftly
+    Copyright (C) 2025 fderuiter
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
+/**
+ * Optical file transfer, end to end: a sender page streams a real file as
+ * animated QR codes, and a receiver page scans them through a synthetic camera
+ * (see `utils/opticalLink.ts`) with the production scanner worker, rebuilds the
+ * file, verifies its SHA-256 and downloads it. Every transfer test compares the
+ * downloaded bytes with the original.
+ */
+
+import { createHash, randomBytes } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
+import type { Page } from '@playwright/test';
+import { test, expect } from './fixtures';
+import { installSyntheticCamera, relayFrames, type CameraCondition } from './utils/opticalLink';
+
+interface TransferFile {
+  name: string;
+  mimeType: string;
+  buffer: Buffer;
+}
+
+async function openSender(sender: Page, file: TransferFile, density?: 'Reliable' | 'Balanced' | 'Fast') {
+  await sender.goto('/file-transfer');
+  await sender.waitForSelector('main[data-hydrated="true"]');
+  await sender.getByLabel('Choose a file to send').setInputFiles(file);
+  if (density) await sender.getByRole('button', { name: density, exact: true }).click();
+  await sender.getByRole('button', { name: 'Start file transfer' }).click();
+  await expect(sender.getByRole('button', { name: 'Stop file transfer' })).toBeVisible({ timeout: 20_000 });
+}
+
+async function openReceiver(receiver: Page) {
+  await receiver.goto('/file-transfer/receive');
+  await receiver.waitForSelector('main[data-hydrated="true"]');
+  await receiver.getByRole('button', { name: 'Activate camera scanner' }).click();
+  await expect(receiver.getByRole('button', { name: 'Deactivate camera scanner' })).toBeVisible();
+}
+
+const isComplete = (receiver: Page) => () => receiver.getByTestId('inline-complete-panel').isVisible();
+
+async function blocksDecoded(receiver: Page): Promise<number> {
+  const text = (await receiver.getByTestId('fountain-rank').textContent().catch(() => null)) ?? '';
+  return Number(/^(\d+)/.exec(text)?.[1] ?? 0);
+}
+
+async function relayUntilComplete(
+  sender: Page,
+  receiver: Page,
+  options: { condition?: CameraCondition; drop?: (n: number) => boolean } = {}
+) {
+  await relayFrames(sender, receiver, { ...options, until: isComplete(receiver), timeoutMs: 90_000 });
+}
+
+/** Downloads the received file and checks its name, its bytes and the SHA-256 shown to the user. */
+async function expectDownloadedCopy(receiver: Page, file: TransferFile) {
+  const sha256 = createHash('sha256').update(file.buffer).digest('hex');
+  const summary = receiver.getByTestId('received-file-summary');
+  await expect(summary).toContainText(file.name);
+  await expect(summary.getByTitle(sha256)).toBeVisible();
+
+  const downloadPromise = receiver.waitForEvent('download');
+  await receiver.getByRole('button', { name: 'Download File' }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toBe(file.name);
+  const received = await readFile(await download.path());
+  expect(received.length).toBe(file.buffer.length);
+  expect(received.equals(file.buffer)).toBe(true);
+}
+
+test.describe('Optical file transfer', () => {
+  test.describe('through a synthetic camera', () => {
+    // The camera stand-in feeds canvas.captureStream() into the real scanner worker. Its frame
+    // timing is calibrated for Chromium only; the protocol itself is covered by the unit suites.
+    test.skip(({ browserName }) => browserName !== 'chromium', 'synthetic camera relay is Chromium-only');
+    test.setTimeout(150_000);
+
+    test('sends a binary file and downloads a byte-identical, SHA-256-verified copy', async ({ page: receiver, context }) => {
+      await installSyntheticCamera(context);
+      const sender = await context.newPage();
+      const file = { name: 'firmware.bin', mimeType: 'application/octet-stream', buffer: randomBytes(6 * 1024) };
+
+      // The receiver joins after the stream has started and misses a quarter of the frames.
+      await openSender(sender, file);
+      await expect(sender.getByTestId('fountain-symbol-info')).toContainText('bytes (uncompressed)');
+      await sender.waitForTimeout(1_000);
+      await openReceiver(receiver);
+      await relayUntilComplete(sender, receiver, { drop: n => n % 4 === 0 });
+
+      await expectDownloadedCopy(receiver, file);
+    });
+
+    test('keeps progress when the scanner pauses and the sender restarts', async ({ page: receiver, context }) => {
+      await installSyntheticCamera(context);
+      const sender = await context.newPage();
+      const file = { name: 'notes.bin', mimeType: 'application/octet-stream', buffer: randomBytes(5 * 1024) };
+      await openSender(sender, file, 'Reliable');
+      await openReceiver(receiver);
+
+      await relayFrames(sender, receiver, { until: async () => (await blocksDecoded(receiver)) >= 40, timeoutMs: 60_000 });
+      await receiver.getByRole('button', { name: 'Deactivate camera scanner' }).click();
+      await sender.getByRole('button', { name: 'Stop file transfer' }).click();
+      const before = await blocksDecoded(receiver);
+      expect(before).toBeGreaterThanOrEqual(40);
+
+      await sender.getByRole('button', { name: 'Start file transfer' }).click();
+      await receiver.getByRole('button', { name: 'Activate camera scanner' }).click();
+      await relayUntilComplete(sender, receiver);
+      await expectDownloadedCopy(receiver, file);
+    });
+
+    test('reads dense frames through a small, dim and blurred camera view', async ({ page: receiver, context }) => {
+      await installSyntheticCamera(context);
+      const sender = await context.newPage();
+      const file = { name: 'photo.jpg', mimeType: 'image/jpeg', buffer: randomBytes(8 * 1024) };
+      await openSender(sender, file, 'Fast');
+      await openReceiver(receiver);
+      await relayUntilComplete(sender, receiver, { condition: { scale: 0.5, blurPx: 1, brightness: 0.5, contrast: 0.7 } });
+      await expectDownloadedCopy(receiver, file);
+    });
+
+    test('receives a second file after the first one completes', async ({ page: receiver, context }) => {
+      await installSyntheticCamera(context);
+      const sender = await context.newPage();
+      const first = { name: 'first.txt', mimeType: 'text/plain', buffer: Buffer.from('first file\n'.repeat(80)) };
+      const rows = Array.from({ length: 200 }, (_, i) => `${i},${i * i}`).join('\n');
+      const second = { name: 'second.csv', mimeType: 'text/csv', buffer: Buffer.from(`id,value\n${rows}\n`) };
+
+      await openSender(sender, first);
+      await openReceiver(receiver);
+      await relayUntilComplete(sender, receiver);
+      await expectDownloadedCopy(receiver, first);
+
+      await sender.getByRole('button', { name: 'Stop file transfer' }).click();
+      await sender.getByLabel('Choose a file to send').setInputFiles(second);
+      await sender.getByRole('button', { name: 'Start file transfer' }).click();
+      await receiver.getByRole('button', { name: 'Receive another file' }).click();
+      await expect(receiver.getByRole('button', { name: 'Deactivate camera scanner' })).toBeVisible();
+      await relayUntilComplete(sender, receiver);
+      await expectDownloadedCopy(receiver, second);
+    });
+
+    test('works between two phone-sized screens', async ({ browser }) => {
+      const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+      try {
+        await installSyntheticCamera(context);
+        const sender = await context.newPage();
+        const receiver = await context.newPage();
+        const vcard = 'BEGIN:VCARD\nVERSION:4.0\nFN:Ada Lovelace\nEND:VCARD\n';
+        const file = { name: 'contact.vcf', mimeType: 'text/vcard', buffer: Buffer.from(vcard.repeat(20)) };
+        await openSender(sender, file);
+        await sender.getByRole('img', { name: 'Transfer QR code' }).scrollIntoViewIfNeeded();
+        await openReceiver(receiver);
+        await relayUntilComplete(sender, receiver);
+        await expectDownloadedCopy(receiver, file);
+      } finally {
+        await context.close();
+      }
+    });
+  });
+
+  test('explains a blocked camera and offers the video file route', async ({ page, context }) => {
+    await installSyntheticCamera(context, { deny: true });
+    await page.goto('/file-transfer/receive');
+    await page.waitForSelector('main[data-hydrated="true"]');
+    await page.getByRole('button', { name: 'Activate camera scanner' }).click();
+
+    const alert = page.getByTestId('camera-error');
+    await expect(alert).toContainText('Camera access was blocked');
+    await alert.getByRole('button', { name: 'Use a video file instead' }).click();
+    await expect(page.getByRole('button', { name: 'Select Video File' })).toBeVisible();
+    await expect(alert).toBeHidden();
+  });
+});

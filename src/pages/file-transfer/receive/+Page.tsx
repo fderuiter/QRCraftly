@@ -41,6 +41,39 @@ function formatEta(seconds: number | null): string {
   return `${Math.floor(seconds / 60)} min ${Math.ceil(seconds % 60)} s`;
 }
 
+/**
+ * Formats a byte count for the completion summary.
+ * @param bytes Size in bytes.
+ * @returns For example "812 B", "8.0 KB" or "1.25 MB".
+ */
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+}
+
+/**
+ * Explains a failed camera request in plain words, with what to do next.
+ * @param error The error `getUserMedia` rejected with.
+ * @returns A user-facing explanation.
+ */
+function describeCameraError(error: Error): string {
+  switch (error.name) {
+    case 'NotAllowedError':
+    case 'PermissionDeniedError':
+    case 'SecurityError':
+      return 'Camera access was blocked. Allow the camera for this site in your browser settings, then activate the scanner again.';
+    case 'NotFoundError':
+    case 'OverconstrainedError':
+      return 'No camera was found on this device.';
+    case 'NotReadableError':
+    case 'TrackStartError':
+      return 'The camera is in use by another app or tab. Close it there, then activate the scanner again.';
+    default:
+      return error.message || 'The camera could not be started.';
+  }
+}
+
 function FileTransferReceiveInner() {
   const { addToast } = useToast();
   const camera = useCamera();
@@ -72,6 +105,7 @@ function FileTransferReceiveInner() {
     videoFile,
     fileValidationError,
     handleFileUpload,
+    reassembledData,
   } = useOpticalReceiver({
     camera,
     saveFile: triggerFileDownload,
@@ -116,6 +150,12 @@ function FileTransferReceiveInner() {
       e.target.value = '';
     }
   }, [handleFileUpload]);
+
+  /** Clears the finished transfer and, in camera mode, starts scanning for the next one. */
+  const receiveAnother = useCallback(() => {
+    handleClear();
+    if (receiverMode === 'camera') void startCameraSession();
+  }, [handleClear, receiverMode, startCameraSession]);
 
   // Handle manual compile and download on user click
   const handleManualDownload = useCallback(() => {
@@ -259,6 +299,26 @@ function FileTransferReceiveInner() {
                   <div data-testid="file-validation-error">
                     <Alert variant="error" title="Invalid File">
                       {fileValidationError}
+                    </Alert>
+                  </div>
+                )}
+
+                {receiverMode === 'camera' && camera.error && !isScanning && (
+                  <div data-testid="camera-error">
+                    <Alert variant="error" title="Camera unavailable">
+                      <p>{describeCameraError(camera.error)}</p>
+                      <p className="mt-2">
+                        No camera? Record the sender&apos;s screen with another device and open the recording under Video File.
+                      </p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="mt-3"
+                        onClick={() => setReceiverMode('file')}
+                      >
+                        <Upload className="size-4" aria-hidden="true" />
+                        Use a video file instead
+                      </Button>
                     </Alert>
                   </div>
                 )}
@@ -409,13 +469,13 @@ function FileTransferReceiveInner() {
 
                   <dl className="grid grid-cols-2 gap-4 pt-2">
                     <div>
-                      <dt className="text-slate-500 dark:text-slate-400">Droplets received</dt>
+                      <dt className="text-slate-500 dark:text-slate-400">Frames scanned</dt>
                       <dd className="font-mono text-sm font-semibold text-slate-700 dark:text-slate-300" data-testid="fountain-droplets">
-                        {fountainStats.dropletsReceived} / {fountainStats.k}
+                        {fountainStats.dropletsReceived}
                       </dd>
                     </div>
                     <div>
-                      <dt className="text-slate-500 dark:text-slate-400">Decoding rank</dt>
+                      <dt className="text-slate-500 dark:text-slate-400">Blocks decoded</dt>
                       <dd className="font-mono text-sm font-semibold text-slate-700 dark:text-slate-300" data-testid="fountain-rank">
                         {fountainStats.rank} / {fountainStats.k}
                       </dd>
@@ -529,28 +589,49 @@ function FileTransferReceiveInner() {
               </div>
 
               {/* Video frame box with targeting guide or dropzone */}
-              <div className="relative aspect-square w-full overflow-hidden rounded-2xl border border-slate-100 bg-slate-950 p-0 dark:border-slate-900">
+              <div className={`relative w-full overflow-hidden rounded-2xl border border-slate-100 bg-slate-950 p-0 dark:border-slate-900 ${isComplete ? '' : 'aspect-square'}`}>
                 {isComplete ? (
                   <div className="flex size-full flex-col items-center justify-center gap-4 bg-slate-900 p-6 text-center text-slate-100 dark:bg-slate-950" data-testid="inline-complete-panel">
                     <div className="rounded-full bg-emerald-500/10 p-3 text-emerald-400">
-                      <CheckCircle2 className="size-12" />
+                      <CheckCircle2 className="size-10" aria-hidden="true" />
                     </div>
                     <div>
                       <h3 className="text-lg font-bold text-slate-100">Transfer Complete</h3>
-                      <p className="mt-1 text-xs text-slate-400">
+                      <p className="mt-1 text-xs text-slate-300">
                         {isFountainComplete
-                          ? `${handshake?.fileName ?? 'File'} was rebuilt and its SHA-256 checksum verified. It is ready to download.`
+                          ? 'The file was rebuilt on this device and its SHA-256 checksum matches the sender’s.'
                           : `All ${totalChunks} parts were received. Your file is ready to download.`}
                       </p>
+                      {isFountainComplete && handshake && (
+                        <dl className="mt-3 space-y-1 text-left text-xs text-slate-300" data-testid="received-file-summary">
+                          <div className="flex gap-2">
+                            <dt className="text-slate-400">File</dt>
+                            <dd className="min-w-0 truncate font-semibold text-slate-100">{handshake.fileName}</dd>
+                          </div>
+                          <div className="flex gap-2">
+                            <dt className="text-slate-400">Size</dt>
+                            <dd className="font-mono">{formatBytes(reassembledData?.length ?? handshake.fileSize)}</dd>
+                          </div>
+                          <div className="flex gap-2">
+                            <dt className="text-slate-400">SHA-256</dt>
+                            <dd className="font-mono" title={handshake.sha256}>{`${handshake.sha256.slice(0, 12)}…${handshake.sha256.slice(-6)}`}</dd>
+                          </div>
+                        </dl>
+                      )}
                     </div>
-                    <Button
-                      variant={downloadTriggered ? "outline" : "primary"}
-                      onClick={handleManualDownload}
-                      className="mt-2 font-semibold shadow-lg shadow-teal-500/20 hover:shadow-teal-500/35"
-                      aria-label={downloadTriggered ? "Download Again" : "Download File"}
-                    >
-                      {downloadTriggered ? "Download Again" : "Download File"}
-                    </Button>
+                    <div className="mt-2 flex flex-wrap justify-center gap-2">
+                      <Button
+                        variant={downloadTriggered ? "outline" : "primary"}
+                        onClick={handleManualDownload}
+                        className="font-semibold shadow-lg shadow-teal-500/20 hover:shadow-teal-500/35"
+                        aria-label={downloadTriggered ? "Download Again" : "Download File"}
+                      >
+                        {downloadTriggered ? "Download Again" : "Download File"}
+                      </Button>
+                      <Button variant="outline" onClick={receiveAnother}>
+                        Receive another file
+                      </Button>
+                    </div>
                   </div>
                 ) : isScanning || (receiverMode === 'file' && videoFile) ? (
                   <video
