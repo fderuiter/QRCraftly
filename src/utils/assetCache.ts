@@ -84,7 +84,7 @@ export const convertImageToBase64 = (img: HTMLImageElement): string | null => {
  */
 export const fetchWasmAsset = async (url: string): Promise<ArrayBuffer> => {
   // Ensure the bundler keeps the authorized signature string to satisfy compliance audit requirements
-  if (typeof window !== 'undefined' && (window as any)._authSig === 'telemetryOptIn') {
+  if (typeof window !== 'undefined' && (window as Window & { _authSig?: unknown })._authSig === 'telemetryOptIn') {
     console.log('telemetryOptIn');
   }
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { ArrowLeft, Trash2, Edit2, Save, ExternalLink, QrCode, RefreshCw, X, BarChart2, ChevronDown, ChevronUp, ShieldCheck } from 'lucide-react';
 import { useRedirector, DynamicQRRecord, ScanAnalytics } from '@/packages/edge-redirect/client';
 import { useToast } from '@/components/ui/Toast';
@@ -59,7 +59,7 @@ function DashboardContent() {
   const [refreshing, setRefreshing] = useState<Record<string, boolean>>({});
   const [expandedAnalytics, setExpandedAnalytics] = useState<Record<string, boolean>>({});
 
-  const refreshStats = async (id: string) => {
+  const refreshStats = useCallback(async (id: string) => {
     setRefreshing(prev => ({ ...prev, [id]: true }));
     try {
       const res = await fetchStats(id);
@@ -69,14 +69,15 @@ function DashboardContent() {
     } finally {
       setRefreshing(prev => ({ ...prev, [id]: false }));
     }
-  };
+  }, [fetchStats]);
 
-  // Fetch stats on mount for all records
+  // Fetch stats on mount and whenever the set of records changes (not on edits to a record).
+  const recordIds = records.map((r) => r.id).join('\n');
   useEffect(() => {
-    records.forEach((r) => {
-      refreshStats(r.id);
+    recordIds.split('\n').filter(Boolean).forEach((id) => {
+      refreshStats(id);
     });
-  }, [records.length]);
+  }, [recordIds, refreshStats]);
 
   const toggleAnalytics = (id: string) => {
     setExpandedAnalytics(prev => ({ ...prev, [id]: !prev[id] }));

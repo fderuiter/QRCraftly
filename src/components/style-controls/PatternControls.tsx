@@ -25,7 +25,7 @@ interface PatternControlsProps {
  * @param root0.onChange
  */
 export const PatternControls: React.FC<PatternControlsProps> = ({ config, onChange }) => {
-  const isLowReliability = LOW_RELIABILITY_PATTERNS.includes(config.style as any);
+  const isLowReliability = LOW_RELIABILITY_PATTERNS.includes(config.style);
 
   return (
     <div>

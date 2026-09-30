@@ -17,7 +17,7 @@
 */
 
 import { QRConfig, QRModules, SocialFormat, TemplateStyle } from '@/types';
-import { drawQRInternal, ModuleRenderOptions } from '@/packages/qr-matrix';
+import { drawQRInternal, ModuleRenderOptions, type MazeData } from '@/packages/qr-matrix';
 import { drawRoundRect } from '@/packages/qr-matrix/canvas';
 import { hexToRgba } from '@/utils/colorUtils';
 
@@ -242,7 +242,7 @@ export function drawWithTemplate(
   displayHeight: number,
   moduleCount: number,
   isVirtual: boolean = false,
-  mazeData?: any | null,
+  mazeData?: MazeData | null,
   options?: ModuleRenderOptions
 ): void {
   ctx.clearRect(0, 0, displayWidth, displayHeight);

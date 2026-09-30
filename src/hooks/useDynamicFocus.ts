@@ -69,7 +69,7 @@ function getElementName(element: HTMLElement): string {
  * Programmatically moves focus to the first interactive field of a newly rendered component.
  * @param _dependencies Array of dependencies (kept for backward compatibility, not used for re-binding)
  */
-export function useDynamicFocus<T extends HTMLElement = HTMLDivElement>(_dependencies: any[]) {
+export function useDynamicFocus<T extends HTMLElement = HTMLDivElement>(_dependencies: readonly unknown[]) {
   const containerRef = useRef<T>(null);
   
   // Track if we've focused once on mount. Focus shifts must only occur 

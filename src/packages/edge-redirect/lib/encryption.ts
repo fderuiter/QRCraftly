@@ -148,9 +148,7 @@ export async function decryptUrl(encryptedStr: string, keyHex: string): Promise<
 
     return new TextDecoder().decode(decryptedBuffer);
   } catch (_err) {
-    const err = new Error("Decryption failed: Invalid decryption key or corrupted ciphertext payload.");
-    (err as any).cause = _err;
-    throw err;
+    throw new Error("Decryption failed: Invalid decryption key or corrupted ciphertext payload.", { cause: _err });
   }
 }
 

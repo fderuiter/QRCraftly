@@ -1,6 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 
 /**
+ * Error-like check that also accepts `DOMException`s, which are not `Error` instances in
+ * every runtime (jsdom).
+ */
+const isErrorLike = (value: unknown): value is Error =>
+  typeof value === 'object' && value !== null && 'name' in value && 'message' in value;
+
+/**
  * Representation of the possible camera permission states.
  */
 export type PermissionState = 'prompt' | 'granted' | 'denied' | 'unavailable';
@@ -56,7 +63,7 @@ export function useCamera(): UseCameraResult {
     };
 
     navigator.permissions
-      .query({ name: 'camera' as any })
+      .query({ name: 'camera' })
       .then((status) => {
         permissionStatus = status;
         handleStatusChange();
@@ -156,8 +163,9 @@ export function useCamera(): UseCameraResult {
       setPermissionState('granted');
       setIsInitializing(false);
       return activeStream;
-    } catch (err: any) {
+    } catch (caught) {
       setIsInitializing(false);
+      const err = isErrorLike(caught) ? caught : new Error(String(caught));
 
       if (err.name === 'AbortError') {
         // Abort must fail silently in the background

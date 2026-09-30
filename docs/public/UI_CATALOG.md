@@ -25,7 +25,7 @@ These low-level, primitive UI elements are designed to be extremely customizable
 - **FieldWrapper** (`FieldWrapper.tsx`): Form layout primitive that automatically renders labels, assistive descriptions, character counts, and error states.
 - **FormBlock** (`FormBlock.tsx` / `FormBlock.test.tsx`): Structural wrapper to organize form fields, titles, and action grids neatly.
 - **FormFields** (`FormFields.tsx`): Standard field grouping configurations with WCAG 2.1 SC 1.4.11 compliant border boundaries.
-- **JsonLdScript** (`JsonLdScript.tsx`): Secure utility component that safely injects structural SEO schema metadata.
+- **JsonLdScript** (`JsonLdScript.tsx`): Secure utility component that safely injects structural SEO schema metadata. `data` accepts any JSON value and is serialised through `safeJsonLdStringify`, which escapes `<`, `>` and `&` so the schema cannot close its `<script>` element.
 - **Menu** (`Menu.tsx` / `Menu.test.tsx`): Accessible menu button (WAI-ARIA menu button pattern) for action lists such as the Download formats: `aria-haspopup`/`aria-expanded`/`aria-controls` on the trigger, Arrow/Home/End navigation, Escape and item activation restore trigger focus, and outside press or focus loss closes it.
 - **Modal** (`Modal.tsx` / `Modal.test.tsx`): Accessibility-compliant dialog component complete with focus traps, exit listeners, and smooth animations.
 - **PatternModule** (`PatternModule.tsx`): Visual sub-module used to configure and showcase QR pattern variants, rendering customized preview shapes including fluid bezier curves for Fluid Ink.

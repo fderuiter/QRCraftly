@@ -54,7 +54,7 @@ export type FskWorkerResponse = FskProcessResponse;
  */
 export function isFskWorkerRequest(data: unknown): data is FskWorkerRequest {
   if (typeof data !== 'object' || data === null) return false;
-  const req = data as any;
+  const req = data as Record<string, unknown>;
   if (req.type === 'init') {
     return typeof req.sampleRate === 'number' && Number.isFinite(req.sampleRate) && req.sampleRate > 0 &&
            typeof req.fftSize === 'number' && Number.isFinite(req.fftSize) && req.fftSize > 0;
@@ -75,7 +75,7 @@ export function assertFskWorkerRequest(data: unknown): asserts data is FskWorker
   if (typeof data !== 'object' || data === null) {
     throw new Error('FSK Worker request must be a non-null object');
   }
-  const req = data as any;
+  const req = data as Record<string, unknown>;
   if (req.type === 'init') {
     if (typeof req.sampleRate !== 'number' || !Number.isFinite(req.sampleRate) || req.sampleRate <= 0) {
       throw new Error('FSK Worker init request sampleRate must be a positive number');
@@ -102,7 +102,7 @@ export function assertFskWorkerRequest(data: unknown): asserts data is FskWorker
  */
 export function isFskWorkerResponse(data: unknown): data is FskWorkerResponse {
   if (typeof data !== 'object' || data === null) return false;
-  const res = data as any;
+  const res = data as Record<string, unknown>;
   if (res.type === 'fsk_response') {
     if (typeof res.symbol !== 'string') return false;
     if (!(res.buffer instanceof ArrayBuffer)) return false;
@@ -120,7 +120,7 @@ export function assertFskWorkerResponse(data: unknown): asserts data is FskWorke
   if (typeof data !== 'object' || data === null) {
     throw new Error('FSK Worker response must be a non-null object');
   }
-  const res = data as any;
+  const res = data as Record<string, unknown>;
   if (res.type !== 'fsk_response') {
     throw new Error('FSK Worker response type must be "fsk_response"');
   }

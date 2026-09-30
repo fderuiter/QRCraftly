@@ -1,5 +1,13 @@
 import { getConfiguredPublicDomain } from './publicEnvironment';
 
+/** A value inside a schema.org JSON-LD document (`undefined` members are dropped when serialised). */
+export type JsonLdValue = string | number | boolean | null | undefined | JsonLdObject | JsonLdValue[];
+
+/** A schema.org JSON-LD node such as `{ "@type": "HowTo", ... }`. */
+export interface JsonLdObject {
+  [key: string]: JsonLdValue;
+}
+
 export const getPublicDomain = (): string => {
   return getConfiguredPublicDomain().replace(/\/+$/, '');
 };
@@ -188,7 +196,9 @@ export const formatPathName = (segment: string): string => {
     .join(' ');
 };
 
-export const compileBreadcrumbSchema = (path: string): any | null => {
+// The result is free-form JSON-LD that callers index into loosely (see metadataEngine.test.ts).
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const compileBreadcrumbSchema = (path: string): any => {
   if (!path) return null;
 
   // Determine the base path to correctly resolve the home URL for domains and subdomains
@@ -197,7 +207,7 @@ export const compileBreadcrumbSchema = (path: string): any | null => {
 
   const resolvedDomain = resolveDomainForPath(path);
 
-  const breadcrumbItems: any[] = [
+  const breadcrumbItems: JsonLdObject[] = [
     {
       "@type": "ListItem",
       "position": 1,

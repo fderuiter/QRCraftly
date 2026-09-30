@@ -28,7 +28,7 @@ export function useCapabilities(): Capabilities {
       engine = 'Chromium';
     }
 
-    const canSaveFilePicker = 'showSaveFilePicker' in window && typeof (window as any).showSaveFilePicker === 'function';
+    const canSaveFilePicker = 'showSaveFilePicker' in window && typeof window.showSaveFilePicker === 'function';
     
     const canShare = 'share' in navigator && typeof navigator.share === 'function' && 
                      'canShare' in navigator && typeof navigator.canShare === 'function';

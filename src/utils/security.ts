@@ -28,7 +28,7 @@ const jsonLdCache = new Map<string, string>();
  * @param data The JSON-LD schema object to serialize.
  * @returns A safe, escaped JSON string representation of the data, or '{}' if undefined/invalid.
  */
-export const safeJsonLdStringify = (data: any): string => {
+export const safeJsonLdStringify = (data: unknown): string => {
   const str = JSON.stringify(data);
   if (!str) return '{}';
 

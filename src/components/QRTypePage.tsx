@@ -28,7 +28,7 @@ interface QRTypePageProps {
   /** The title to display in the QRTool header. */
   title: string;
   /** The structured data (JSON-LD) object to inject. */
-  schemaData: any;
+  schemaData: unknown;
   /** The tool ID for loading content. */
   toolId: string;
 }

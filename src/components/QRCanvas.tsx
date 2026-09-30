@@ -66,6 +66,9 @@ interface QRCanvasProps {
  * @param props.onRendered - Callback when render finishes.
  * @returns The QRCanvas component.
  */
+// Stable fallback so the precompute effect does not re-run on every render when there are no values.
+const NO_ANIMATION_VALUES: string[] = [];
+
 const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
   config,
   size = 1024,
@@ -76,7 +79,7 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
   animationFps
 }, ref) => {
   const activeIsAnimating = isAnimating !== undefined ? isAnimating : (config.isAnimating || false);
-  const activeAnimationValues = animationValues !== undefined ? animationValues : (config.animationValues || []);
+  const activeAnimationValues = animationValues !== undefined ? animationValues : (config.animationValues || NO_ANIMATION_VALUES);
   const activeAnimationFps = animationFps !== undefined ? animationFps : (config.animationFps || 30);
 
   const localCanvasRef = useRef<HTMLCanvasElement>(null);

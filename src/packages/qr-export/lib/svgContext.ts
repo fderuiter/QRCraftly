@@ -512,9 +512,9 @@ export class SvgContext {
    */
   drawImage(
     image: HTMLImageElement | { src: string; width?: number; height?: number; naturalWidth?: number; naturalHeight?: number },
-    ...args: any[]
+    ...args: number[]
   ): void {
-    const href = (image as any).src ?? '';
+    const href = image.src ?? '';
     if (!href) return;
 
     let dx = 0;
@@ -532,8 +532,8 @@ export class SvgContext {
       // 3-parameter: drawImage(image, dx, dy)
       dx = args[0];
       dy = args[1];
-      dw = (image as any).naturalWidth || (image as any).width || 0;
-      dh = (image as any).naturalHeight || (image as any).height || 0;
+      dw = image.naturalWidth || image.width || 0;
+      dh = image.naturalHeight || image.height || 0;
     } else if (args.length === 4) {
       // 5-parameter: drawImage(image, dx, dy, dw, dh)
       dx = args[0];
@@ -558,8 +558,8 @@ export class SvgContext {
     const tAttr = this._getTransformAttr();
 
     if (isSubImage) {
-      const imgWidth = (image as any).naturalWidth || (image as any).width || sw;
-      const imgHeight = (image as any).naturalHeight || (image as any).height || sh;
+      const imgWidth = image.naturalWidth || image.width || sw;
+      const imgHeight = image.naturalHeight || image.height || sh;
 
       if (tAttr) {
         this._elements.push(

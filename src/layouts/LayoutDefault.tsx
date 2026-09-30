@@ -30,8 +30,9 @@ import { ServiceWorkerUpdatePrompt } from '../components/ServiceWorkerUpdateProm
  */
 function isTestExecution(): boolean {
   if (typeof window !== 'undefined') {
-    const isE2E = !!(window as any).__E2E_TEST__;
-    const isVitest = !!(window as any).__VITEST__ || typeof (window as any).vi !== 'undefined';
+    const flags = window as Window & { __E2E_TEST__?: unknown; __VITEST__?: unknown; vi?: unknown };
+    const isE2E = !!flags.__E2E_TEST__;
+    const isVitest = !!flags.__VITEST__ || typeof flags.vi !== 'undefined';
     const isLocalOrTestRunner = 
       window.location.hostname === 'localhost' ||
       window.location.hostname === '127.0.0.1' ||

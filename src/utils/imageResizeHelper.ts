@@ -50,7 +50,9 @@ export const isLowTierDevice = (): boolean => {
   }
 
   // Rule 2: Check deviceMemory (< 4 GB is low-tier)
-  if ('deviceMemory' in navigator && typeof (navigator as any).deviceMemory === 'number' && (navigator as any).deviceMemory < 4) {
+  // `navigator.deviceMemory` (Chromium only) is not in TypeScript's DOM lib.
+  const { deviceMemory } = navigator as Navigator & { deviceMemory?: unknown };
+  if (typeof deviceMemory === 'number' && deviceMemory < 4) {
     return true;
   }
 

@@ -20,7 +20,7 @@ export interface MazeWorkerResponse {
  */
 export function isMazeWorkerRequest(data: unknown): data is MazeWorkerRequest {
   if (typeof data !== 'object' || data === null) return false;
-  const d = data as any;
+  const d = data as Record<string, unknown>;
   if (typeof d.size !== 'number' || isNaN(d.size) || d.size <= 0) return false;
   if (!(d.matrix instanceof Uint8Array)) return false;
   if (typeof d.config !== 'object' || d.config === null) return false;
@@ -42,14 +42,15 @@ export function assertMazeWorkerRequest(data: unknown): asserts data is MazeWork
  */
 export function isMazeWorkerResponse(data: unknown): data is MazeWorkerResponse {
   if (typeof data !== 'object' || data === null) return false;
-  const d = data as any;
+  const d = data as Record<string, unknown>;
   if (d.status !== 'success' && d.status !== 'error') return false;
   if (typeof d.sequenceId !== 'number') return false;
   if (d.mazeData !== undefined) {
     if (typeof d.mazeData !== 'object' || d.mazeData === null) return false;
-    if (!Array.isArray(d.mazeData.nodes)) return false;
-    if (!Array.isArray(d.mazeData.edges)) return false;
-    if (!Array.isArray(d.mazeData.solution)) return false;
+    const maze = d.mazeData as Record<string, unknown>;
+    if (!Array.isArray(maze.nodes)) return false;
+    if (!Array.isArray(maze.edges)) return false;
+    if (!Array.isArray(maze.solution)) return false;
   }
   if (d.error !== undefined && typeof d.error !== 'string') return false;
   return true;

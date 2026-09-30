@@ -28,7 +28,8 @@ export function useAudioContext() {
 
   const getAudioContext = useCallback(() => {
     if (!audioCtxRef.current) {
-      const AudioCtxClass = window.AudioContext || (window as any).webkitAudioContext;
+      const AudioCtxClass =
+        window.AudioContext || (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
       audioCtxRef.current = new AudioCtxClass();
     }
     if (audioCtxRef.current.state === 'suspended') {

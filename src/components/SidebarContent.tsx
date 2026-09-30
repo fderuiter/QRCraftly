@@ -58,7 +58,7 @@ export function SidebarContent({ toolId }: SidebarContentProps) {
           <h2 className="mb-5 text-2xl font-bold text-slate-800 dark:text-slate-100">{content.howTo.name}</h2>
           {content.howTo.description && <p className="mb-5 text-sm text-slate-600 dark:text-slate-400">{content.howTo.description}</p>}
           <div className="space-y-4">
-            {content.howTo.steps.map((step: any, idx: number) => (
+            {content.howTo.steps.map((step, idx) => (
               <div key={idx} className="flex gap-4 rounded-xl border border-slate-100 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/50">
                 <div className="flex size-8 flex-shrink-0 items-center justify-center rounded-full bg-teal-100 text-sm font-bold text-teal-600 dark:bg-teal-900/50 dark:text-teal-400">
                   {idx + 1}
@@ -77,7 +77,7 @@ export function SidebarContent({ toolId }: SidebarContentProps) {
         <section className="mb-10">
           <h2 className="mb-5 text-2xl font-bold text-slate-800 dark:text-slate-100">Frequently Asked Questions</h2>
           <Accordion>
-            {displayFaqs.map((q: any, idx: number) => (
+            {displayFaqs.map((q, idx) => (
               <AccordionItem key={idx} title={q.question}>
                 {q.answer}
               </AccordionItem>

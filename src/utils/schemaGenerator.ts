@@ -1,5 +1,5 @@
 import { ToolContent, AuxiliaryContent, getContentForPath, getContentById } from '../data/contentRegistry';
-import { resolveDomainForPath, resolvePublicUrl } from './metadataEngine';
+import { resolveDomainForPath, resolvePublicUrl, JsonLdObject } from './metadataEngine';
 
 /**
  * Dynamically generates structured schema.org JSON-LD graph data directly from central content registry.
@@ -14,6 +14,8 @@ export function generateSchema(
   contentOrPath: ToolContent | AuxiliaryContent | string,
   resolvedDomain?: string,
   requestPath?: string
+  // Free-form JSON-LD document; callers index into its graph loosely (see schemaGenerator.test.ts).
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): any {
   let content: ToolContent | AuxiliaryContent | undefined;
 
@@ -36,7 +38,7 @@ export function generateSchema(
 
 
   if (content.id === 'about') {
-    const aboutGraph: any[] = [
+    const aboutGraph: JsonLdObject[] = [
       {
         "@type": "AboutPage",
         "name": content.name,
@@ -82,7 +84,7 @@ export function generateSchema(
 
   const featureList = [toolContent.valueProposition, ...(toolContent.features || [])].filter(Boolean).join(", ");
 
-  const appEntity: any = {
+  const appEntity: JsonLdObject = {
     "@type": typeValue,
     "name": content.name,
     "description": content.description,
@@ -111,7 +113,7 @@ export function generateSchema(
     }));
   }
 
-  const graph: any[] = [appEntity];
+  const graph: JsonLdObject[] = [appEntity];
 
   if (toolContent.howTo) {
     let extension = 'png';
@@ -125,7 +127,7 @@ export function generateSchema(
     }
     const imageUrl = `${domain}/assets/images/completed/${content.id}.${extension}`;
 
-    const howToObj: any = {
+    const howToObj: JsonLdObject = {
       "@type": "HowTo",
       "name": toolContent.howTo.name,
       "description": toolContent.howTo.description,

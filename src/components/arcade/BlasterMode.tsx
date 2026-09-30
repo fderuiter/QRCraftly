@@ -259,7 +259,7 @@ export function BlasterMode({ target, settings, announce }: ModeProps) {
     const g = live.current.grid;
     setDurability(readDurability(g));
     setMacroDamage(g.macroDamage());
-  }, []);
+  }, [live]);
 
   useEffect(() => {
     projectilesRef.current = [];
@@ -273,12 +273,12 @@ export function BlasterMode({ target, settings, announce }: ModeProps) {
     if (!projectile) return;
     projectilesRef.current.push(projectile);
     shakeRef.current = addShake(shakeRef.current, kind, live.current.reducedMotion);
-  }, []);
+  }, [live]);
 
   const trigger = useCallback(() => {
     const current = live.current.weapon;
     if (current !== 'laser') fire(current);
-  }, [fire]);
+  }, [fire, live]);
 
   const handleImpacts = useCallback((impacts: Impact[]) => {
     if (impacts.length === 0) return;
@@ -298,7 +298,7 @@ export function BlasterMode({ target, settings, announce }: ModeProps) {
     }
     syncStats();
     scanRef.current.request();
-  }, [syncStats]);
+  }, [live, scanRef, syncStats]);
 
   // Main loop: physics, damage and rendering run on refs so React does not re-render per frame.
   useEffect(() => {
@@ -344,7 +344,7 @@ export function BlasterMode({ target, settings, announce }: ModeProps) {
     return () => {
       if (frame !== null) cancelAnimationFrame(frame);
     };
-  }, [draw, fire, handleImpacts]);
+  }, [draw, fire, handleImpacts, live, scanRef]);
 
   const selectWeapon = useCallback(
     (id: BlasterWeaponId) => {
@@ -385,7 +385,7 @@ export function BlasterMode({ target, settings, announce }: ModeProps) {
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', onKeyUp);
     };
-  }, [selectWeapon, trigger]);
+  }, [live, scanRef, selectWeapon, trigger]);
 
   const heal = useCallback(() => {
     grid.heal();

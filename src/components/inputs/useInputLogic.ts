@@ -17,32 +17,37 @@
 */
 
 import { useState, useRef, useEffect, ElementType } from "react";
-import { QRConfig, QRType } from "../../types";
+import { QRConfig, QRType, WifiData, VCardData, PaymentData, UrlData } from "../../types";
 import { INPUT_REGISTRY, InputDataMap } from "./InputRegistry";
 import { isDangerousUrl } from "../../utils/security";
 import { CONTAINMENT_PROFILES } from "@/packages/qr-payload";
 
-const isInputDataValid = (type: QRType, data: any): boolean => {
+// `type` selects which member of the data union `data` is, so the casts below follow it.
+const isInputDataValid = (type: QRType, data: InputDataMap[QRType]): boolean => {
   if (type === QRType.WIFI) {
-    if (data.ssid && CONTAINMENT_PROFILES.STRICT_NO_CONTROL.test(data.ssid)) {
+    const wifi = data as WifiData;
+    if (wifi.ssid && CONTAINMENT_PROFILES.STRICT_NO_CONTROL.test(wifi.ssid)) {
       return false;
     }
-    if (data.password && CONTAINMENT_PROFILES.STRICT_NO_CONTROL.test(data.password)) {
+    if (wifi.password && CONTAINMENT_PROFILES.STRICT_NO_CONTROL.test(wifi.password)) {
       return false;
     }
-    if (data.eapIdentity && CONTAINMENT_PROFILES.STRICT_NO_CONTROL.test(data.eapIdentity)) {
+    if (wifi.eapIdentity && CONTAINMENT_PROFILES.STRICT_NO_CONTROL.test(wifi.eapIdentity)) {
       return false;
     }
   } else if (type === QRType.VCARD) {
-    if (data.website && isDangerousUrl(data.website)) {
+    const vcard = data as VCardData;
+    if (vcard.website && isDangerousUrl(vcard.website)) {
       return false;
     }
   } else if (type === QRType.PAYMENT) {
-    if (data.address && isDangerousUrl(data.address)) {
+    const payment = data as PaymentData;
+    if (payment.address && isDangerousUrl(payment.address)) {
       return false;
     }
   } else if (type === QRType.URL) {
-    if (data.url && isDangerousUrl(data.url)) {
+    const url = data as UrlData;
+    if (url.url && isDangerousUrl(url.url)) {
       return false;
     }
   }

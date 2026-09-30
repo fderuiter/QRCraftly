@@ -23,6 +23,24 @@ import { useCapabilities } from './useCapabilities';
 import { performScannabilityCheck } from '../utils/scannabilityChecker';
 import { ExportOptions } from '../utils/exportRiskPolicy';
 
+/**
+ * Error-like check that also accepts `DOMException`s, which are not `Error` instances in
+ * every runtime (jsdom).
+ */
+const isErrorLike = (value: unknown): value is Error =>
+  typeof value === 'object' && value !== null && 'name' in value && 'message' in value;
+
+/** Normalises a caught value so `ExportStatus.error` is always an `Error`. */
+const toError = (err: unknown): Error => {
+  if (isErrorLike(err)) return err;
+  const error = new Error(String(err));
+  // Keep the name of plain `{ name }` rejections so callers can still recognise an AbortError.
+  if (typeof err === 'object' && err !== null && 'name' in err && typeof err.name === 'string') {
+    error.name = err.name;
+  }
+  return error;
+};
+
 export type { ExportOptions };
 
 /**
@@ -34,7 +52,7 @@ export interface ExportStatus {
   /** Format of the exported asset. */
   format?: 'png' | 'jpeg' | 'webp' | 'svg' | 'clipboard' | 'share';
   /** Error object if export failed. */
-  error?: any;
+  error?: Error;
   /** Indicates whether a fallback export mechanism was triggered. */
   fallbackTriggered?: boolean;
   /** Indicates whether remote logo was omitted during vector export. */
@@ -137,8 +155,8 @@ export function useQRDownload(
         link.click();
         document.body.removeChild(link);
         return { success: true, format };
-      } catch (err: any) {
-        return { success: false, format, error: err };
+      } catch (err) {
+        return { success: false, format, error: toError(err) };
       }
     }
     return { success: false, format, error: new Error('Canvas not found') };
@@ -169,7 +187,8 @@ export function useQRDownload(
 
         const ext = getExtension(format);
 
-        const handle = await (window as any).showSaveFilePicker({
+        if (!window.showSaveFilePicker) throw new Error('File System Access API unavailable');
+        const handle = await window.showSaveFilePicker({
           suggestedName: getFilename(ext),
           types: [{
             description: 'QR Code Image',
@@ -181,10 +200,10 @@ export function useQRDownload(
         await writable.write(blob);
         await writable.close();
         return { success: true, format };
-      } catch (err: any) {
+      } catch (err) {
         // If user aborted the picker, return failure but identify abort.
-        if (err.name === 'AbortError') {
-          return { success: false, format, error: err };
+        if (typeof err === 'object' && err !== null && 'name' in err && err.name === 'AbortError') {
+          return { success: false, format, error: toError(err) };
         }
 
         console.warn('File System Access API failed, falling back to standard download:', err);
@@ -223,7 +242,7 @@ export function useQRDownload(
       return { success: false, format: 'clipboard', error: new Error('ClipboardItem not supported') };
     } catch (err) {
       console.warn('Failed to copy to clipboard:', err);
-      return { success: false, format: 'clipboard', error: err };
+      return { success: false, format: 'clipboard', error: toError(err) };
     }
   }, [qrRef, validateScannability]);
 
@@ -259,7 +278,7 @@ export function useQRDownload(
             resolve({ success: true, format: 'share' });
           } catch (error) {
             console.log('Error sharing:', error);
-            resolve({ success: false, format: 'share', error });
+            resolve({ success: false, format: 'share', error: toError(error) });
           }
         } else {
           // Fallback for devices that don't support sharing files
@@ -303,9 +322,9 @@ export function useQRDownload(
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
       return { success: true, format: 'svg', logoOmitted };
-    } catch (err: any) {
+    } catch (err) {
       console.warn('SVG export failed:', err);
-      return { success: false, format: 'svg', error: err };
+      return { success: false, format: 'svg', error: toError(err) };
     }
   }, [config, getFilename]);
 

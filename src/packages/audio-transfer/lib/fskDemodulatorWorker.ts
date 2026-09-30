@@ -62,12 +62,18 @@ function resetDemodulatorState() {
   lastDecodedTime = 0;
 }
 
+/**
+ * `self` as the dedicated worker scope. The app compiles against the DOM lib (not the WebWorker
+ * lib), which types `self` as `Window`, whose `postMessage` has no transfer-list overload.
+ */
+const workerScope = self as unknown as { postMessage(message: unknown, transfer?: Transferable[]): void };
+
 self.onmessage = (e: MessageEvent) => {
   const data = e.data;
   if (!isFskWorkerRequest(data)) {
     try {
       assertFskWorkerRequest(data);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Invalid FSK Worker Request received:', err);
       return;
     }
@@ -169,6 +175,6 @@ self.onmessage = (e: MessageEvent) => {
     assertFskWorkerResponse(response);
 
     // Transfer array buffer back to host thread for zero-copy memory recycling
-    (self as any).postMessage(response, [buffer]);
+    workerScope.postMessage(response, [buffer]);
   }
 };

@@ -102,7 +102,7 @@ export const drawQRInternal = (
   mazeData?: MazeData | null,
   options?: ModuleRenderOptions
 ) => {
-  const canFill = ctx && typeof (ctx as any).fillRect === 'function';
+  const canFill = ctx && typeof ctx.fillRect === 'function';
   if (!canFill) {
     return;
   }

@@ -237,7 +237,7 @@ async function processVideoWithDemuxer(file: File, signal?: AbortSignal): Promis
 
     const taskId = `demux-${Date.now()}-${Math.random()}`;
     let isDone = false;
-    let watchdogTimer: any = null;
+    let watchdogTimer: ReturnType<typeof setTimeout> | null = null;
 
     const detachListeners = () => {
       if (watchdogTimer) {
@@ -251,8 +251,10 @@ async function processVideoWithDemuxer(file: File, signal?: AbortSignal): Promis
             worker.removeEventListener('message', handleMessage);
             worker.removeEventListener('error', handleError);
           } else {
-            (worker as any).onmessage = null;
-            (worker as any).onerror = null;
+            // Test doubles without addEventListener: fall back to the handler properties.
+            const legacyWorker: Pick<Worker, 'onmessage' | 'onerror'> = worker;
+            legacyWorker.onmessage = null;
+            legacyWorker.onerror = null;
           }
         } catch {
           // Ignore listener detachment errors
@@ -310,7 +312,7 @@ async function processVideoWithDemuxer(file: File, signal?: AbortSignal): Promis
       }
     };
 
-    const handleError = (err: any) => {
+    const handleError = (err: unknown) => {
       if (!isDone) {
         isDone = true;
         detachListeners();
@@ -326,8 +328,10 @@ async function processVideoWithDemuxer(file: File, signal?: AbortSignal): Promis
       worker.addEventListener('message', handleMessage);
       worker.addEventListener('error', handleError);
     } else {
-      (worker as any).onmessage = handleMessage;
-      (worker as any).onerror = handleError;
+      // Test doubles without addEventListener: fall back to the handler properties.
+      const legacyWorker: Pick<Worker, 'onmessage' | 'onerror'> = worker;
+      legacyWorker.onmessage = handleMessage;
+      legacyWorker.onerror = handleError;
     }
 
     worker.postMessage({ type: 'demux', fileBuffer, wasmBuffer, taskId }, [fileBuffer, wasmBuffer]);
@@ -560,12 +564,12 @@ export async function scanSource(source: ScanSource, options: ScanOptions = {}):
     }
 
     throw new Error('Unsupported scan source type');
-  } catch (err: any) {
+  } catch (err) {
     const durationMs = performance.now() - start;
     return {
       status: 'fail',
       data: null,
-      error: err?.message || 'Scanning failed',
+      error: (err instanceof Error && err.message) || 'Scanning failed',
       durationMs,
     };
   }

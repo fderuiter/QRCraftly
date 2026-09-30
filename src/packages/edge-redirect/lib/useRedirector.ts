@@ -367,7 +367,7 @@ export function useRedirector() {
     }
   };
 
-  const fetchStats = async (id: string): Promise<ScanAnalytics | null> => {
+  const fetchStats = useCallback(async (id: string): Promise<ScanAnalytics | null> => {
     setError(null);
     try {
       // Signature whitelist match: '/api/redirect'
@@ -388,7 +388,7 @@ export function useRedirector() {
       console.error('[Redirector error]', err);
       return null;
     }
-  };
+  }, []);
 
   const deleteRecord = (id: string) => {
     updateRecords((prev) => prev.filter(r => r.id !== id));

@@ -1,5 +1,5 @@
 import { QRType } from '../types';
-import { QR_GENERATORS } from '@/packages/qr-payload';
+import { QR_GENERATORS, type QRPayloadDataMap } from '@/packages/qr-payload';
 
 export function combineIds(...ids: (string | undefined | null | false)[]): string | undefined {
   const combined = ids.filter(Boolean).join(' ');
@@ -37,46 +37,35 @@ export function getQrTypeLabel(type: QRType): string {
   }
 }
 
+const DESCRIBERS: { [K in QRType]: (data: QRPayloadDataMap[K]) => string } = {
+  [QRType.WIFI]: (data) => data.ssid || '',
+  [QRType.URL]: (data) => data.url || '',
+  [QRType.TEXT]: (data) => data.text || '',
+  [QRType.EVENT]: (data) => data.title || '',
+  [QRType.VCARD]: (data) => {
+    const nameParts = [data.firstName, data.lastName].filter(Boolean);
+    return nameParts.join(' ') || data.organization || '';
+  },
+  [QRType.EMAIL]: (data) => data.email || '',
+  [QRType.PHONE]: (data) => data.number || '',
+  [QRType.SMS]: (data) => data.number || '',
+  [QRType.PAYMENT]: (data) => data.address || '',
+  [QRType.LOCATION]: (data) => (data.latitude && data.longitude ? `${data.latitude}, ${data.longitude}` : ''),
+  [QRType.MEETING]: (data) => data.url || '',
+  [QRType.SOCIAL]: (data) => (data.handle ? `@${data.handle}` : ''),
+};
+
+function describePayload<K extends QRType>(type: K, value: string): string {
+  const data = QR_GENERATORS[type].hydrate(value);
+  if (!data) return value;
+  return DESCRIBERS[type](data);
+}
+
 export function getQrTypeDescription(type: QRType, value: string): string {
   if (!value) return '';
-  const generator = QR_GENERATORS[type];
-  if (!generator) return value;
+  if (!Object.prototype.hasOwnProperty.call(QR_GENERATORS, type)) return value;
   try {
-    const data = generator.hydrate(value);
-    if (!data) return value;
-    switch (type) {
-      case QRType.WIFI:
-        return data.ssid || '';
-      case QRType.URL:
-        return data.url || '';
-      case QRType.TEXT:
-        return data.text || '';
-      case QRType.EVENT:
-        return data.title || '';
-      case QRType.VCARD: {
-        const nameParts = [data.firstName, data.lastName].filter(Boolean);
-        return nameParts.join(' ') || data.organization || '';
-      }
-      case QRType.EMAIL:
-        return data.email || '';
-      case QRType.PHONE:
-        return data.number || '';
-      case QRType.SMS:
-        return data.number || '';
-      case QRType.PAYMENT:
-        return data.address || '';
-      case QRType.LOCATION:
-        if (data.latitude && data.longitude) {
-          return `${data.latitude}, ${data.longitude}`;
-        }
-        return '';
-      case QRType.MEETING:
-        return data.url || '';
-      case QRType.SOCIAL:
-        return data.handle ? `@${data.handle}` : '';
-      default:
-        return value;
-    }
+    return describePayload(type, value);
   } catch {
     return value;
   }
