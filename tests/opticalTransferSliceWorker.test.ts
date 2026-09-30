@@ -35,7 +35,7 @@ describe('fileSliceWorker', () => {
         }
       };
     }
-    await import('./fileSliceWorker');
+    await import('@/packages/optical-transfer/worker-slice');
     workerHandler = (globalThis as any).self.onmessage;
   });
 
@@ -449,7 +449,7 @@ describe('fileSliceWorker State Cache', () => {
       (globalThis as any).self = globalThis;
     }
     // Import worker to register self.onmessage
-    await import('./fileSliceWorker');
+    await import('@/packages/optical-transfer/worker-slice');
     workerHandler = (globalThis as any).self.onmessage || globalThis.onmessage;
   });
 

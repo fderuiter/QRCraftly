@@ -1,7 +1,7 @@
 import React from "react";
 import { WifiData, WifiEncryption, WifiEapMethod, WifiEapPhase2 } from "../../types";
 import { TextField, SelectField, CheckboxField } from "../ui/FormFields";
-import { ValidationEngine } from "../../engine/ValidationEngine";
+import { CONTAINMENT_PROFILES } from "@/packages/qr-payload";
 import { FormBlock } from "../ui/FormBlock";
 
 /**
@@ -25,15 +25,15 @@ interface WifiInputProps {
  * @param root0.onChange
  */
 export const WifiInput: React.FC<WifiInputProps> = ({ data, onChange }) => {
-  const ssidError = data.ssid && ValidationEngine.CONTAINMENT_PROFILES.STRICT_NO_CONTROL.test(data.ssid)
+  const ssidError = data.ssid && CONTAINMENT_PROFILES.STRICT_NO_CONTROL.test(data.ssid)
     ? "Network Name cannot contain control or zero-width characters."
     : undefined;
 
-  const passwordError = data.password && ValidationEngine.CONTAINMENT_PROFILES.STRICT_NO_CONTROL.test(data.password)
+  const passwordError = data.password && CONTAINMENT_PROFILES.STRICT_NO_CONTROL.test(data.password)
     ? "Password cannot contain control or zero-width characters."
     : undefined;
 
-  const eapIdentityError = data.eapIdentity && ValidationEngine.CONTAINMENT_PROFILES.STRICT_NO_CONTROL.test(data.eapIdentity)
+  const eapIdentityError = data.eapIdentity && CONTAINMENT_PROFILES.STRICT_NO_CONTROL.test(data.eapIdentity)
     ? "Identity cannot contain control or zero-width characters."
     : undefined;
 

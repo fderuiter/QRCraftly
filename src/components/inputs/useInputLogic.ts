@@ -20,17 +20,17 @@ import { useState, useRef, useEffect, ElementType } from "react";
 import { QRConfig, QRType } from "../../types";
 import { INPUT_REGISTRY, InputDataMap } from "./InputRegistry";
 import { isDangerousUrl } from "../../utils/security";
-import { ValidationEngine } from "../../engine/ValidationEngine";
+import { CONTAINMENT_PROFILES } from "@/packages/qr-payload";
 
 const isInputDataValid = (type: QRType, data: any): boolean => {
   if (type === QRType.WIFI) {
-    if (data.ssid && ValidationEngine.CONTAINMENT_PROFILES.STRICT_NO_CONTROL.test(data.ssid)) {
+    if (data.ssid && CONTAINMENT_PROFILES.STRICT_NO_CONTROL.test(data.ssid)) {
       return false;
     }
-    if (data.password && ValidationEngine.CONTAINMENT_PROFILES.STRICT_NO_CONTROL.test(data.password)) {
+    if (data.password && CONTAINMENT_PROFILES.STRICT_NO_CONTROL.test(data.password)) {
       return false;
     }
-    if (data.eapIdentity && ValidationEngine.CONTAINMENT_PROFILES.STRICT_NO_CONTROL.test(data.eapIdentity)) {
+    if (data.eapIdentity && CONTAINMENT_PROFILES.STRICT_NO_CONTROL.test(data.eapIdentity)) {
       return false;
     }
   } else if (type === QRType.VCARD) {

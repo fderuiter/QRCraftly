@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { ValidationEngine } from './ValidationEngine';
-import { QRConfig, QRType, QRErrorCorrectionLevel, SocialFormat, TemplateStyle, QRStyle } from '../types';
+import { validateConfig } from '../index';
+import { QRConfig, QRType, QRErrorCorrectionLevel, SocialFormat, TemplateStyle, QRStyle } from '@/types';
 
 const getBaseConfig = (): QRConfig => ({
   type: QRType.TEXT,
@@ -28,25 +28,25 @@ const getBaseConfig = (): QRConfig => ({
   borderLogoPosition: 'bottom-center',
 });
 
-describe('ValidationEngine', () => {
-  describe('validateConfig', () => {
+describe('validateConfig', () => {
+  describe('containment and structure checks', () => {
     it('should pass valid configurations', () => {
       const config = getBaseConfig();
-      const violations = ValidationEngine.validateConfig(config);
+      const violations = validateConfig(config);
       expect(violations).toHaveLength(0);
     });
 
     it('should reject zero-width characters in border text', () => {
       const config = getBaseConfig();
       config.borderText = 'Hello\u200BWorld'; // Zero-width space
-      const violations = ValidationEngine.validateConfig(config);
+      const violations = validateConfig(config);
       expect(violations).toContain('Border Text contains invalid control or zero-width characters');
     });
 
     it('should reject zero-width characters in template headline', () => {
       const config = getBaseConfig();
       config.templateHeadline = 'Hello\uFEFFWorld'; // Byte order mark
-      const violations = ValidationEngine.validateConfig(config);
+      const violations = validateConfig(config);
       expect(violations).toContain('Template Headline contains invalid control or zero-width characters');
     });
 
@@ -54,7 +54,7 @@ describe('ValidationEngine', () => {
       const config = getBaseConfig();
       config.type = QRType.URL;
       config.value = 'javascript:alert(1)';
-      const violations = ValidationEngine.validateConfig(config);
+      const violations = validateConfig(config);
       expect(violations).toContain('URI_INJECTION_VIOLATION');
     });
 
@@ -62,7 +62,7 @@ describe('ValidationEngine', () => {
       const config = getBaseConfig();
       config.type = QRType.URL;
       config.value = 'http://safe.com/ \x00'; // Contains null character
-      const violations = ValidationEngine.validateConfig(config);
+      const violations = validateConfig(config);
       // It should either fail control char check or URL structure check
       expect(violations.length).toBeGreaterThan(0);
     });
@@ -71,7 +71,7 @@ describe('ValidationEngine', () => {
       const config = getBaseConfig();
       config.type = QRType.EMAIL;
       config.value = 'mailto:invalid@@email..com';
-      const violations = ValidationEngine.validateConfig(config);
+      const violations = validateConfig(config);
       expect(violations).toContain('EMAIL_STRUCTURE_VIOLATION');
     });
 
@@ -79,7 +79,7 @@ describe('ValidationEngine', () => {
       const config = getBaseConfig();
       config.type = QRType.LOCATION;
       config.value = 'geo:110,-74';
-      const violations = ValidationEngine.validateConfig(config);
+      const violations = validateConfig(config);
       expect(violations).toContain('LATITUDE_OUT_OF_BOUNDS_VIOLATION');
       expect(violations).not.toContain('LONGITUDE_OUT_OF_BOUNDS_VIOLATION');
     });
@@ -88,7 +88,7 @@ describe('ValidationEngine', () => {
       const config = getBaseConfig();
       config.type = QRType.LOCATION;
       config.value = 'geo:40,-195';
-      const violations = ValidationEngine.validateConfig(config);
+      const violations = validateConfig(config);
       expect(violations).toContain('LONGITUDE_OUT_OF_BOUNDS_VIOLATION');
       expect(violations).not.toContain('LATITUDE_OUT_OF_BOUNDS_VIOLATION');
     });
@@ -97,7 +97,7 @@ describe('ValidationEngine', () => {
       const config = getBaseConfig();
       config.type = QRType.LOCATION;
       config.value = 'geo:40,-74';
-      const violations = ValidationEngine.validateConfig(config);
+      const violations = validateConfig(config);
       expect(violations).toHaveLength(0);
     });
 
@@ -105,63 +105,9 @@ describe('ValidationEngine', () => {
       const config = getBaseConfig();
       config.type = 'toString' as QRType;
       expect(() => {
-        const violations = ValidationEngine.validateConfig(config);
+        const violations = validateConfig(config);
         expect(violations).toBeDefined();
       }).not.toThrow();
-    });
-  });
-
-  describe('validatePayload', () => {
-    it('validates payloads and runs custom registered validators', () => {
-      const customValidator = (val: string) =>
-        val.includes('forbidden') ? ['CUSTOM_FORBIDDEN_KEYWORD'] : [];
-      ValidationEngine.registerValidator(QRType.URL, customValidator);
-
-      try {
-        const violations = ValidationEngine.validatePayload(
-          'https://example.com/forbidden-path',
-          QRType.URL
-        );
-        expect(violations).toContain('CUSTOM_FORBIDDEN_KEYWORD');
-
-        const cleanViolations = ValidationEngine.validatePayload(
-          'https://example.com/allowed-path',
-          QRType.URL
-        );
-        expect(cleanViolations).not.toContain('CUSTOM_FORBIDDEN_KEYWORD');
-      } finally {
-        ValidationEngine.typeValidators.delete(QRType.URL);
-      }
-    });
-
-    it('should ignore types without a registered validator', () => {
-      expect(ValidationEngine.runCustomValidator('toString', 'payload')).toEqual([]);
-      expect(ValidationEngine.runCustomValidator('__proto__', 'payload')).toEqual([]);
-      expect(ValidationEngine.runCustomValidator('unregistered', 'payload')).toEqual([]);
-    });
-  });
-
-  describe('calculateScannability', () => {
-    it('should calculate standard scannability score without local contrast violations', () => {
-      const config = getBaseConfig();
-      const result = ValidationEngine.calculateScannability(config);
-      expect(result.score).toBe(100);
-      expect(result.warnings).toHaveLength(0);
-    });
-
-    it('should deduct score points when local contrast violations are present', () => {
-      const config = getBaseConfig();
-      const result = ValidationEngine.calculateScannability(config, { violations: 5, minContrast: 2.1 });
-      expect(result.score).toBeLessThan(100);
-      expect(result.warnings.some(w => w.includes('Local contrast drop detected'))).toBe(true);
-    });
-
-    it('identifies critical contrast separately from display copy', () => {
-      const config = { ...getBaseConfig(), fgColor: '#eeeeee', eyeColor: '#eeeeee', bgColor: '#ffffff' };
-
-      const result = ValidationEngine.calculateScannability(config);
-
-      expect(result.criticalWarnings).toContain('critical-contrast');
     });
   });
 });

@@ -36,17 +36,8 @@ const BADGE_CLASSES: Record<HealthTone, string> = {
 
 /** Headline for each failure cause. */
 export const FAILURE_TITLES: Record<FailureCause, string> = {
-  /**
-   *
-   */
   finder: 'Finder Subsystem Offline',
-  /**
-   *
-   */
   block: 'Local Block Overflow',
-  /**
-   *
-   */
   global: 'Global Budget Exhausted',
 };
 

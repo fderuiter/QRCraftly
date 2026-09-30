@@ -25,21 +25,9 @@ import {
   processImageOnMainThread
 } from '../utils/imageResizeHelper';
 
-/**
- *
- */
 interface UseImageUploadReturn {
-  /**
-   *
-   */
   error: string | null;
-  /**
-   *
-   */
   handleUpload: (e: React.ChangeEvent<HTMLInputElement>, onSuccess: (dataUrl: string) => void) => void;
-  /**
-   *
-   */
   setError: (error: string | null) => void;
 }
 
