@@ -300,15 +300,15 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
         />
         {isInitializing && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 p-6 text-white">
-            <RefreshCw className="mb-3 size-8 animate-spin text-teal-400" />
+            <RefreshCw className="mb-3 size-8 text-teal-400 motion-safe:animate-spin" aria-hidden="true" />
             <p className="text-sm font-medium">Initializing camera stream...</p>
           </div>
         )}
         {/* Scanning targeting guide overlay */}
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center border-[3px] border-teal-500/40">
-          <div className="relative flex size-48 animate-pulse items-center justify-center rounded-lg border-2 border-teal-400">
+          <div className="relative flex size-48 items-center justify-center rounded-lg border-2 border-teal-400 motion-safe:animate-pulse">
             {/* Guide line animation */}
-            <div className="absolute inset-x-0 h-0.5 animate-[bounce_2s_infinite] bg-teal-400 shadow-[0_0_8px_#2dd4bf]" />
+            <div className="absolute inset-x-0 h-0.5 bg-teal-400 shadow-[0_0_8px_#2dd4bf] motion-safe:animate-[bounce_2s_infinite]" />
           </div>
         </div>
         <div className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-black/60 px-3 py-1 text-xs font-medium text-white backdrop-blur-sm">
@@ -321,18 +321,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
   // Render file dropzone viewfinder state
   const renderFileViewfinder = () => {
     return (
-      <button
-        type="button"
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-        onClick={handleSelectFileClick}
-        className={`flex size-full flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 text-center transition-colors focus:ring-2 focus:ring-teal-500 focus:outline-none ${
-          dragOver
-            ? 'border-teal-500 bg-teal-50/50 dark:bg-teal-950/20'
-            : 'border-slate-300 bg-transparent hover:border-slate-400 dark:border-slate-700 dark:hover:border-slate-600'
-        }`}
-      >
+      <>
         <input
           type="file"
           accept="image/*, .webm, .mkv, video/webm, video/x-matroska"
@@ -341,31 +330,44 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
           onChange={handleFileChange}
           aria-label="Upload QR code image or video file"
         />
+        <Button
+          variant="ghost"
+          size="none"
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          onClick={handleSelectFileClick}
+          className={`size-full flex-col rounded-lg border-2 border-dashed p-6 text-center ${
+            dragOver
+              ? 'border-teal-500 bg-teal-50/50 dark:bg-teal-950/20'
+              : 'border-slate-300 hover:border-slate-400 dark:border-slate-700 dark:hover:border-slate-600'
+          }`}
+        >
+          {fileProcessing ? (
+            <span className="flex flex-col items-center">
+              <RefreshCw className="mb-3 size-8 text-teal-600 motion-safe:animate-spin dark:text-teal-400" aria-hidden="true" />
+              <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Processing file...</span>
+            </span>
+          ) : (
+            <span className="flex flex-col items-center">
+              <FileImage className="mb-3 size-10 text-slate-400" aria-hidden="true" />
+              <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                Drag & Drop QR Image or Video
+              </span>
+              <span className="mt-1 max-w-xs text-xs text-slate-500 dark:text-slate-400">
+                or click here to select a file from your device.
+              </span>
+            </span>
+          )}
 
-        {fileProcessing ? (
-          <div className="flex flex-col items-center">
-            <RefreshCw className="mb-3 size-8 animate-spin text-teal-600 dark:text-teal-400" />
-            <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Processing file...</p>
-          </div>
-        ) : (
-          <div className="flex flex-col items-center">
-            <FileImage className="mb-3 size-10 text-slate-400" />
-            <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-              Drag & Drop QR Image or Video
-            </p>
-            <p className="mt-1 max-w-xs text-xs text-slate-500 dark:text-slate-400">
-              or click here to select a file from your device.
-            </p>
-          </div>
-        )}
-
-        {fileError && (
-          <div className="mt-4 flex max-w-xs items-center gap-2 rounded-lg bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-600 dark:bg-rose-950/30 dark:text-rose-400">
-            <AlertTriangle className="size-4 shrink-0" />
-            <span>{fileError}</span>
-          </div>
-        )}
-      </button>
+          {fileError && (
+            <span className="mt-4 flex max-w-xs items-center gap-2 rounded-lg bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 dark:bg-rose-950/30 dark:text-rose-400">
+              <AlertTriangle className="size-4 shrink-0" aria-hidden="true" />
+              <span>{fileError}</span>
+            </span>
+          )}
+        </Button>
+      </>
     );
   };
 
@@ -373,9 +375,11 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
     <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
       {/* Scanner Mode Selector Header */}
       <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900/50">
-        <div className="flex gap-1.5 rounded-lg bg-slate-200/60 p-0.5 text-xs font-semibold dark:bg-slate-800">
-          <button
-            type="button"
+        <div className="flex gap-1.5" role="group" aria-label="Scanner input">
+          <Button
+            variant="outline"
+            size="sm"
+            pressed={mode === 'webcam'}
             onClick={() => {
               if (fileAbortControllerRef.current) {
                 fileAbortControllerRef.current.abort();
@@ -386,17 +390,15 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
               setFileError(null);
               setFileProcessing(false);
             }}
-            className={`rounded-md px-3 py-1.5 transition-all ${
-              mode === 'webcam'
-                ? 'bg-white text-slate-800 shadow-sm dark:bg-slate-700 dark:text-slate-100'
-                : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
-            }`}
+            className="gap-1 text-xs"
           >
-            <Camera className="mr-1 inline size-3.5" />
+            <Camera className="size-3.5" aria-hidden="true" />
             Webcam
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            pressed={mode === 'file'}
             onClick={() => {
               if (fileAbortControllerRef.current) {
                 fileAbortControllerRef.current.abort();
@@ -407,15 +409,11 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
               setFileError(null);
               setFileProcessing(false);
             }}
-            className={`rounded-md px-3 py-1.5 transition-all ${
-              mode === 'file'
-                ? 'bg-white text-slate-800 shadow-sm dark:bg-slate-700 dark:text-slate-100'
-                : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
-            }`}
+            className="gap-1 text-xs"
           >
-            <Upload className="mr-1 inline size-3.5" />
+            <Upload className="size-3.5" aria-hidden="true" />
             File Upload
-          </button>
+          </Button>
         </div>
 
         {onClose && (

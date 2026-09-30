@@ -185,6 +185,61 @@ describe('UI Catalog Validator and Lineage Sync Checks', () => {
     });
   });
 
+  describe('shared src/components scope', () => {
+    it('validates the real catalog, including shared components directly under src/components', () => {
+      expect(validateCatalog()).toEqual([]);
+    });
+
+    it('maps a section to a directory by the exact backticked path in its heading', () => {
+      const root = path.join(tempTestDir, 'scope');
+      const componentsDir = path.join(root, 'src', 'components');
+      const uiDir = path.join(componentsDir, 'ui');
+      fs.mkdirSync(uiDir, { recursive: true });
+      fs.writeFileSync(path.join(uiDir, 'Primitive.tsx'), 'export const Primitive = () => null;');
+      fs.writeFileSync(path.join(componentsDir, 'Feature.tsx'), 'export const Feature = () => null;');
+      const catalog = path.join(root, 'UI_CATALOG.md');
+      fs.writeFileSync(catalog, [
+        '# Catalog',
+        '## 1. Core Shared UI Elements (`' + path.relative(path.join(__dirname, '..'), uiDir).split(path.sep).join('/') + '/`)',
+        '- **Primitive** (`Primitive.tsx`): A primitive used by every feature component.',
+        '## 4. Shared Feature Components (`' + path.relative(path.join(__dirname, '..'), componentsDir).split(path.sep).join('/') + '/`)',
+        '- **Feature** (`Feature.tsx`): A shared feature component used by several routes.',
+        '',
+      ].join('\n'));
+
+      expect(validateCatalog([uiDir, componentsDir], catalog)).toEqual([]);
+
+      // A shared component that is not registered is reported.
+      fs.writeFileSync(path.join(componentsDir, 'Unlisted.tsx'), 'export const Unlisted = () => null;');
+      expect(validateCatalog([uiDir, componentsDir], catalog)).toContain("UI component 'Unlisted.tsx' is missing from the catalog (UI_CATALOG.md).");
+    });
+
+    it('does not attribute a section for an untracked subdirectory to its tracked parent', () => {
+      const root = path.join(tempTestDir, 'nested');
+      const componentsDir = path.join(root, 'src', 'components');
+      fs.mkdirSync(path.join(componentsDir, 'arcade'), { recursive: true });
+      fs.writeFileSync(path.join(componentsDir, 'Feature.tsx'), 'export const Feature = () => null;');
+      fs.writeFileSync(path.join(componentsDir, 'arcade', 'Cockpit.tsx'), 'export const Cockpit = () => null;');
+      const rel = path.relative(path.join(__dirname, '..'), componentsDir).split(path.sep).join('/');
+      const catalog = path.join(root, 'UI_CATALOG.md');
+      fs.writeFileSync(catalog, [
+        '# Catalog',
+        '## 3a. Arcade Components (`' + rel + '/arcade/`)',
+        '- **Cockpit** (`Cockpit.tsx`): Arcade layout documented in its own untracked section.',
+        '## 4. Shared Feature Components (`' + rel + '/`)',
+        '- **Feature** (`Feature.tsx`): A shared feature component used by several routes.',
+        '',
+      ].join('\n'));
+
+      expect(validateCatalog([componentsDir], catalog)).toEqual([]);
+    });
+
+    it('does not force a catalog edit for behaviour-only edits to shared components', () => {
+      expect(checkLineage(new Set(['src/components/QRTool.tsx']))).toEqual([]);
+      expect(checkLineage(new Set(['src/components/ui/Button.tsx']))).toHaveLength(1);
+    });
+  });
+
   describe('checkLineage() Git History Checks', () => {
     it('should fail validation when a UI component file is modified without the catalog file', () => {
       const modified = new Set(['src/components/ui/Accordion.tsx']);

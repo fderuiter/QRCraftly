@@ -146,7 +146,7 @@ export default function Page() {
         <div className="pointer-events-none absolute bottom-0 left-0 -mb-16 -ml-16 size-64 rounded-full bg-orange-200/20 dark:bg-orange-500/10"></div>
 
         <div className="relative z-10">
-          <div className="mx-auto mb-6 flex size-16 rotate-3 items-center justify-center rounded-2xl border border-rose-100 bg-white shadow-sm transition-transform duration-300 hover:rotate-12 dark:border-rose-700/50 dark:bg-slate-800">
+          <div className="mx-auto mb-6 flex size-16 rotate-3 items-center justify-center rounded-2xl border border-rose-100 bg-white shadow-sm motion-safe:transition-transform motion-safe:duration-300 motion-safe:hover:rotate-12 dark:border-rose-700/50 dark:bg-slate-800">
             <Coffee className="size-8 text-[#FF5E5B]" />
           </div>
           <h2 className="mb-4 text-3xl font-bold text-slate-900 dark:text-white">Support the Project</h2>
@@ -157,7 +157,7 @@ export default function Page() {
             href="https://ko-fi.com/laser_loon"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-3 rounded-xl bg-[#FF5E5B] px-8 py-4 text-lg font-bold text-white transition-all hover:-translate-y-1 hover:bg-[#FF4A47] hover:shadow-xl hover:shadow-[#FF5E5B]/25 active:translate-y-0"
+            className="inline-flex items-center gap-3 rounded-xl bg-[#FF5E5B] px-8 py-4 text-lg font-bold text-white transition-colors hover:bg-[#FF4A47] hover:shadow-xl hover:shadow-[#FF5E5B]/25 motion-safe:hover:-translate-y-1 motion-safe:active:translate-y-0"
           >
             <Coffee className="size-6" />
             Support me on Ko-fi

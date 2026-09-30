@@ -1,0 +1,229 @@
+/*
+    QRCraftly
+    Copyright (C) 2026 fderuiter
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
+import React, { useEffect, useRef } from 'react';
+import { QrCode, Eye } from 'lucide-react';
+import { PrimaryNav } from './ui/PrimaryNav';
+import { ThemeToggle } from './ui/ThemeToggle';
+import { isDangerousUrl } from '@/utils/security';
+
+/** Media query matching the desktop workspace breakpoint (Tailwind `md`). */
+export const DESKTOP_WORKSPACE_QUERY = '(min-width: 48rem)';
+
+/**
+ * Props for {@link ToolWorkspaceLayout}.
+ */
+export interface ToolWorkspaceLayoutProps {
+  /** Tool header (brand, page heading, navigation). Sticky only on desktop. */
+  header: React.ReactNode;
+  /** Primary controls, shown first on every viewport. */
+  controls: React.ReactNode;
+  /** Preview or camera surface. Follows the primary controls on mobile; sticky right column on desktop. */
+  preview: React.ReactNode;
+  /** Optional secondary controls: after the preview on mobile, below the primary controls on desktop. */
+  secondary?: React.ReactNode;
+  /** Accessible name of the control column. */
+  controlsLabel: string;
+  /** Accessible name of the preview region. */
+  previewLabel: string;
+  /** DOM id of the preview region, used by "jump to preview" links. */
+  previewId?: string;
+}
+
+/**
+ * Shared responsive workspace used by the QR generator, file sender and file receiver.
+ *
+ * Mobile contract: normal document flow in one column (controls, preview, secondary controls),
+ * no viewport-height panes and no nested scroll containers, so the document is the only
+ * vertical scrolling surface. Desktop (`md` and up): a fixed-width control column beside a
+ * sticky, viewport-height preview column that scrolls independently when it overflows.
+ * @param props - Layout slots and labels.
+ * @param props.header - Tool header.
+ * @param props.controls - Primary controls.
+ * @param props.preview - Preview surface.
+ * @param props.secondary - Optional secondary controls.
+ * @param props.controlsLabel - Accessible name of the control column.
+ * @param props.previewLabel - Accessible name of the preview region.
+ * @param props.previewId - DOM id of the preview region.
+ * @returns The workspace layout.
+ */
+export function ToolWorkspaceLayout({
+  header,
+  controls,
+  preview,
+  secondary,
+  controlsLabel,
+  previewLabel,
+  previewId,
+}: ToolWorkspaceLayoutProps) {
+  const previewScrollRef = useRef<HTMLDivElement>(null);
+
+  // The preview only scrolls on desktop. When the viewport shrinks to mobile, clear any
+  // retained desktop scroll offset so the in-flow preview never starts part-way down.
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
+    const query = window.matchMedia(DESKTOP_WORKSPACE_QUERY);
+    const reset = () => {
+      if (!query.matches && previewScrollRef.current) {
+        previewScrollRef.current.scrollTop = 0;
+      }
+    };
+    reset();
+    query.addEventListener?.('change', reset);
+    return () => query.removeEventListener?.('change', reset);
+  }, []);
+
+  return (
+    <div
+      className="relative grid w-full grid-cols-1 bg-slate-50 transition-colors duration-300 md:grid-cols-[30rem_minmax(0,1fr)] md:grid-rows-[auto_1fr] dark:bg-slate-950"
+      data-testid="tool-workspace"
+    >
+      <aside
+        aria-label={controlsLabel}
+        className="relative z-10 flex min-w-0 flex-col border-slate-200 bg-white transition-colors duration-300 md:col-start-1 md:row-start-1 md:border-r dark:border-slate-800 dark:bg-slate-900"
+      >
+        <div className="z-20 border-b border-slate-100 bg-white transition-colors duration-300 md:sticky md:top-0 dark:border-slate-800 dark:bg-slate-900">
+          {header}
+        </div>
+        <div className="space-y-8 p-4 sm:p-6">{controls}</div>
+      </aside>
+
+      <section
+        id={previewId}
+        aria-label={previewLabel}
+        className="relative min-w-0 md:col-start-2 md:row-span-2 md:row-start-1"
+      >
+        <div
+          ref={previewScrollRef}
+          className="relative flex flex-col items-center p-4 md:sticky md:top-0 md:h-dvh md:overflow-y-auto md:p-8"
+          data-testid="tool-workspace-preview-scroller"
+        >
+          {/* Decorative glow, clipped so it never widens the page or creates a scroll area. */}
+          <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-clip opacity-40 dark:opacity-20">
+            <div className="absolute top-0 left-0 size-96 -translate-1/2 rounded-full bg-teal-200 blur-3xl transition-colors duration-300 dark:bg-teal-900"></div>
+            <div className="absolute right-0 bottom-0 size-96 translate-1/2 rounded-full bg-slate-300 blur-3xl transition-colors duration-300 dark:bg-slate-800"></div>
+          </div>
+          <div className="relative z-10 w-full max-w-md">{preview}</div>
+        </div>
+      </section>
+
+      {secondary && (
+        <div className="min-w-0 border-slate-200 bg-white transition-colors duration-300 md:col-start-1 md:row-start-2 md:border-r dark:border-slate-800 dark:bg-slate-900">
+          <div className="space-y-8 p-4 pb-12 sm:p-6 sm:pb-12">{secondary}</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Props for {@link ToolWorkspaceHeader}.
+ */
+export interface ToolWorkspaceHeaderProps {
+  /** Page heading text (rendered as the page's only h1). */
+  title: string;
+  /** Short description under the heading. */
+  subtitle: string;
+  /** Optional pill shown after the subtitle, e.g. "Beta". */
+  badge?: string;
+  /**
+   * When true the h1 sits inside the home link (generator branding); otherwise a small
+   * "QRCraftly" home link is followed by a descriptive h1.
+   */
+  brandIsHeading?: boolean;
+  /** Extra header actions rendered before the primary navigation. */
+  actions?: React.ReactNode;
+  /** Id of the preview region; renders a mobile-only "Jump to preview" link when set. */
+  previewId?: string;
+  /** Label of the mobile jump link. */
+  previewJumpLabel?: string;
+}
+
+/**
+ * Header shared by every tool workspace: home link, page heading, primary navigation,
+ * theme toggle and, on mobile, a jump link to the preview.
+ * @param props - Header content.
+ * @param props.title - Page heading text.
+ * @param props.subtitle - Description under the heading.
+ * @param props.badge - Optional pill after the subtitle.
+ * @param props.brandIsHeading - Whether the h1 is the brand link.
+ * @param props.actions - Extra header actions.
+ * @param props.previewId - DOM id of the preview region.
+ * @param props.previewJumpLabel - Label of the mobile jump link.
+ * @returns The workspace header.
+ */
+export function ToolWorkspaceHeader({
+  title,
+  subtitle,
+  badge,
+  brandIsHeading = false,
+  actions,
+  previewId,
+  previewJumpLabel = 'Jump to preview',
+}: ToolWorkspaceHeaderProps) {
+  const previewHref = previewId ? `#${previewId}` : '';
+
+  const renderPreviewJump = () => {
+    if (!previewHref) return null;
+    if (!isDangerousUrl(previewHref)) {
+      return (
+        <a
+          href={previewHref}
+          className="mt-2 inline-flex min-h-11 items-center gap-1.5 rounded-lg text-sm font-semibold text-teal-700 underline-offset-2 hover:underline md:hidden dark:text-teal-400"
+        >
+          <Eye className="size-4" aria-hidden="true" />
+          {previewJumpLabel}
+        </a>
+      );
+    }
+    return null;
+  };
+
+  return (
+    <header className="flex items-start justify-between gap-2 p-4 sm:p-6">
+      <div className="min-w-0">
+        {brandIsHeading ? (
+          <a href="/" aria-label="QRCraftly Home" className="mb-1 flex items-center gap-2 text-teal-700 transition-opacity hover:opacity-80 dark:text-teal-400">
+            <QrCode className="size-6 shrink-0" aria-hidden="true" />
+            <h1 className="text-xl font-bold tracking-tight text-slate-700 dark:text-slate-100">{title}</h1>
+          </a>
+        ) : (
+          <>
+            <a href="/" aria-label="QRCraftly Home" className="mb-1 inline-flex items-center gap-2 text-sm font-semibold text-teal-700 transition-opacity hover:opacity-80 dark:text-teal-400">
+              <QrCode className="size-5 shrink-0" aria-hidden="true" />
+              <span>QRCraftly</span>
+            </a>
+            <h1 className="text-xl font-bold tracking-tight text-slate-700 dark:text-slate-100">{title}</h1>
+          </>
+        )}
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-sm text-slate-600 dark:text-slate-400">{subtitle}</p>
+          {badge && (
+            <span className="rounded-full bg-teal-100 px-2 py-0.5 text-xs font-semibold text-teal-800 dark:bg-teal-900/60 dark:text-teal-300">{badge}</span>
+          )}
+        </div>
+        {renderPreviewJump()}
+      </div>
+      <div className="flex shrink-0 items-center gap-1">
+        {actions}
+        <PrimaryNav layout="compact" />
+        <ThemeToggle />
+      </div>
+    </header>
+  );
+}

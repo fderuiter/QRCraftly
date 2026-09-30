@@ -1,5 +1,6 @@
 ---
 publish-approved: true
+audience: developers # internal developer documentation, not published on /security
 ---
 
 # Scalability Analysis & Capacity Planning

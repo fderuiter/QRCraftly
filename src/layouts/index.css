@@ -32,4 +32,20 @@
       outline-offset: 2px !important;
     }
   }
+
+  /*
+   * Reduced motion: stop nonessential movement (spins, pulses, bounces, scale and slide
+   * transitions) everywhere, including third-party and page-local animations. Components
+   * should still prefer `motion-safe:` variants for decorative motion.
+   */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
 }

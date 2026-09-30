@@ -18,6 +18,7 @@
 
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
+import { expandAppearanceSections } from '../../tests/utils/expandAppearanceSections';
 import StyleControls from './StyleControls';
 import { DEFAULT_CONFIG } from '../constants';
 import userEvent from '@testing-library/user-event';
@@ -27,6 +28,7 @@ describe('StyleControls Accessibility', () => {
 
   it('Advanced Mode toggle should have correct aria attributes', () => {
     render(<StyleControls config={DEFAULT_CONFIG} onChange={mockOnChange} />);
+    expandAppearanceSections();
 
     // Find the Advanced Mode toggle button
     const advancedToggle = screen.getByRole('button', { name: /Advanced Mode/i });
@@ -53,6 +55,7 @@ describe('StyleControls Accessibility', () => {
   it('logo upload trigger has focus ring classes, aria-describedby, and handles accessibility correctly', async () => {
     const user = userEvent.setup();
     const { container } = render(<StyleControls config={DEFAULT_CONFIG} onChange={mockOnChange} />);
+    expandAppearanceSections();
 
     // Check if the upload logo button exists and has the correct classes and attributes
     const uploadButton = screen.getByRole('button', { name: /Upload Logo/i });

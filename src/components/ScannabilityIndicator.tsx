@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ShieldCheck, Loader2, ShieldX } from 'lucide-react';
 import { ScannabilityStatus, HealthScore } from '../hooks/useScannability';
 import { getExportRiskPolicy } from '../utils/exportRiskPolicy';
@@ -46,20 +46,24 @@ const getAnnouncementText = (status: ScannabilityStatus, health?: HealthScore): 
 };
 
 /**
- * Renders the scannability indicators and supports debounced live region announcements
- * and keyboard shortcuts for immediate visual focus accessibility.
+ * Renders the scannability status badge.
+ *
+ * Announcement model: routine updates (checking, verified) go through one polite, debounced
+ * `role="status"` region; a failure is rendered once in a `role="alert"` element so it is
+ * announced immediately and exactly once. The visible badge itself has no live role, the
+ * output is not focusable, and there is no global keyboard shortcut.
  * @param root0 - The props object.
  * @param root0.status - The current scannability status.
  * @param root0.health - The optional health score with warnings.
  * @returns The scannability feedback element.
  */
 export const ScannabilityIndicator: React.FC<Props> = ({ status, health }) => {
-  const containerRef = useRef<HTMLDivElement>(null);
   const [announcement, setAnnouncement] = useState('');
 
-  // 1. Debounce screen reader announcements by 1000ms
+  // Debounce polite announcements by 1000ms so typing does not produce a stream of updates.
+  // Failures are announced by the alert element below instead, never by this region.
   useEffect(() => {
-    const text = getAnnouncementText(status, health);
+    const text = status === 'fail' ? '' : getAnnouncementText(status, health);
 
     // Clear active announcement immediately during inputs to prevent ongoing alerts
     setAnnouncement('');
@@ -75,113 +79,86 @@ export const ScannabilityIndicator: React.FC<Props> = ({ status, health }) => {
     };
   }, [status, health]);
 
-  // 2. Global keyboard shortcut (Alt + S / Alt + s) to focus the scannability card
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Check for Alt + S keydown (global keybind)
-      if (e.altKey && !e.ctrlKey && !e.metaKey && e.key.toLowerCase() === 's') {
-        e.preventDefault();
-        containerRef.current?.focus();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, []);
+  const politeRegion = (
+    <div className="sr-only" role="status" aria-live="polite" data-testid="scannability-status-region">
+      {announcement}
+    </div>
+  );
 
   if (status === 'idle') {
-    return <div className="inline-block h-13 w-auto" data-testid="scannability-indicator-placeholder" />;
+    return (
+      <div className="inline-block h-13 w-auto" data-testid="scannability-indicator-placeholder">
+        {politeRegion}
+      </div>
+    );
   }
 
   const showHealth = health && health.score < 100;
   const exportRisk = getExportRiskPolicy({ status, health });
+  const firstWarning = showHealth && health.warnings.length > 0 ? health.warnings[0] : null;
 
-  /* eslint-disable jsx-a11y/no-noninteractive-tabindex */
   return (
     <div
-      ref={containerRef}
-      tabIndex={0}
-      aria-label="Scannability feedback"
-      className="flex h-13 flex-col items-end justify-start rounded-lg transition-all duration-300 select-none focus:ring-2 focus:ring-teal-600 focus:ring-offset-2 focus:outline-none dark:focus:ring-teal-400 dark:focus:ring-offset-slate-900"
+      className="flex h-13 flex-col items-end justify-start rounded-lg select-none"
       data-testid="scannability-feedback-wrapper"
     >
-      {/* 
-        Visually hidden polite live-region element. 
-        Uses aria-live="polite" and role="status" to ensure compatibility.
-      */}
-      <div
-        className="sr-only"
-        aria-live="polite"
-        role="status"
-        style={{
-          position: 'absolute',
-          width: '1px',
-          height: '1px',
-          padding: '0',
-          margin: '-1px',
-          overflow: 'hidden',
-          clip: 'rect(0, 0, 0, 0)',
-          whiteSpace: 'nowrap',
-          borderWidth: '0',
-        }}
-      >
-        {announcement}
-      </div>
+      {politeRegion}
 
-      <div
-        role={status === 'fail' && !(showHealth && health?.warnings && health.warnings.length > 0) ? 'alert' : undefined}
-        aria-live="off"
-        className="flex items-center gap-1.5 rounded-full border bg-white px-2 py-1 text-xs font-medium shadow-sm transition-all duration-300 dark:bg-slate-800"
-      >
+      <div className="flex items-center gap-1.5 rounded-full border bg-white px-2 py-1 text-xs font-medium shadow-sm motion-safe:transition-colors motion-safe:duration-300 dark:bg-slate-800">
         {status === 'checking' && (
           <>
-            <Loader2 className="size-3.5 animate-spin text-slate-500" />
+            <Loader2 className="size-3.5 text-slate-500 motion-safe:animate-spin" aria-hidden="true" />
             <span className="text-slate-600 dark:text-slate-300">Checking...</span>
           </>
         )}
         {status === 'physical-pass' && (
           <>
-            <ShieldCheck className="size-3.5 text-emerald-500" />
+            <ShieldCheck className="size-3.5 text-emerald-500" aria-hidden="true" />
             <span className="text-emerald-700 dark:text-emerald-400">Print simulation verified</span>
           </>
         )}
         {status === 'digital-pass' && (
           <>
-            <ShieldCheck className="size-3.5 text-amber-500" />
+            <ShieldCheck className="size-3.5 text-amber-500" aria-hidden="true" />
             <span className="text-emerald-700 dark:text-emerald-400">Screen scan verified</span>
           </>
         )}
         {status === 'fail' && (
           <>
-            <ShieldX className="size-3.5 text-rose-500" />
+            <ShieldX className="size-3.5 text-rose-500" aria-hidden="true" />
             <span className="text-rose-700 dark:text-rose-400">Scan verification failed</span>
           </>
         )}
         {health && (
-          <span className={`ml-1 rounded-full px-1.5 text-[10px] ${exportRisk === 'safe' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300' : exportRisk === 'caution' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300' : 'bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-300'}`}>
+          <span className={`ml-1 rounded-full px-1.5 text-xs ${exportRisk === 'safe' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300' : exportRisk === 'caution' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300' : 'bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-300'}`}>
             Health: {health.score}
           </span>
         )}
       </div>
       <div className="mt-1 flex h-5 w-full items-center justify-end">
-        {status === 'digital-pass' && (!showHealth || health.warnings.length === 0) && (
+        {status === 'digital-pass' && !firstWarning && (
           <div className="max-w-xs text-right text-xs text-amber-700 dark:text-amber-400">
             Test with a physical camera before large print runs.
           </div>
         )}
-        {showHealth && health.warnings.length > 0 && (
+        {status === 'fail' ? (
           <div
             role="alert"
-            aria-live="off"
-            className={`animate-in fade-in slide-in-from-top-1 max-w-xs text-right text-xs ${exportRisk === 'unsafe' ? 'text-rose-700 dark:text-rose-400' : 'text-amber-700 dark:text-amber-400'}`}
+            className={`max-w-xs text-right text-xs text-rose-700 dark:text-rose-400 ${firstWarning ? '' : 'sr-only'}`}
+            data-testid="scannability-alert"
           >
-            {health.warnings[0]}
+            {firstWarning ?? 'Scan verification failed. Adjust colors, pattern, or margin before exporting.'}
           </div>
+        ) : (
+          firstWarning && (
+            <div
+              className={`max-w-xs text-right text-xs ${exportRisk === 'unsafe' ? 'text-rose-700 dark:text-rose-400' : 'text-amber-700 dark:text-amber-400'}`}
+            >
+              {firstWarning}
+            </div>
+          )
         )}
       </div>
     </div>
   );
-  /* eslint-enable jsx-a11y/no-noninteractive-tabindex */
 };

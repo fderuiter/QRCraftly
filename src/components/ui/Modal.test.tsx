@@ -163,8 +163,25 @@ describe('Modal Component Accessibility and Behavior', () => {
       const dialogCard = document.body.querySelector('[role="dialog"]') as HTMLElement;
       expect(dialogCard).toBeInTheDocument();
       expect(dialogCard).toHaveAttribute('aria-modal', 'true');
-      expect(dialogCard).toHaveAttribute('aria-labelledby', 'modal-title');
-      expect(dialogCard.querySelector('#modal-title')).toHaveTextContent('Test Modal');
+      const titleId = dialogCard.getAttribute('aria-labelledby') ?? '';
+      expect(titleId).toMatch(/^modal-title-/);
+      expect(document.getElementById(titleId)).toHaveTextContent('Test Modal');
+      expect(dialogCard).toHaveAccessibleName('Test Modal');
+    });
+
+    it('gives each open dialog its own title id', () => {
+      render(
+        <>
+          <Modal isOpen={true} onClose={() => {}} title="First">one</Modal>
+          <Modal isOpen={true} onClose={() => {}} title="Second">two</Modal>
+        </>
+      );
+      const dialogs = Array.from(document.body.querySelectorAll('[role="dialog"]'));
+      expect(dialogs).toHaveLength(2);
+      const ids = dialogs.map((d) => d.getAttribute('aria-labelledby'));
+      expect(new Set(ids).size).toBe(2);
+      expect(dialogs[0]).toHaveAccessibleName('First');
+      expect(dialogs[1]).toHaveAccessibleName('Second');
     });
 
     it('should NOT dismiss when clicking the backdrop if dismissOnBackdropClick is false (default)', async () => {
