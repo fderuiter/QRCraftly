@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { usePageContext } from 'vike-react/usePageContext';
 import { decryptUrl, extractKeyFromHash } from '@/packages/edge-redirect/client';
 import { isDangerousUrl } from '@/utils/security';
+import { ButtonLink } from '@/components/ui/Button';
 import { normalizeUrl, SafeUrlPipeline } from '@/utils/url';
 import { ShieldAlert, RefreshCw, Lock } from 'lucide-react';
 
@@ -135,12 +136,9 @@ export default function RedirectResolverPage() {
           <p className="mb-6 text-sm text-slate-600 dark:text-slate-300">
             {errorMessage}
           </p>
-          <a
-            href="/"
-            className="inline-flex items-center justify-center rounded-lg bg-slate-800 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-700 dark:bg-slate-700 dark:hover:bg-slate-600"
-          >
+          <ButtonLink href="/" variant="primary" size="sm">
             Return to Homepage
-          </a>
+          </ButtonLink>
         </div>
       </div>
     );

@@ -18,6 +18,7 @@
 
 import { usePageContext } from 'vike-react/usePageContext';
 import { ProductShell } from '@/components/ProductShell';
+import { ButtonLink } from '@/components/ui/Button';
 
 /**
  * Error Page Component
@@ -44,9 +45,9 @@ export default function Page() {
           <p className="mb-8">Something went wrong on our end.</p>
         </>
       )}
-      <a href="/" className="rounded bg-teal-700 px-4 py-2 text-white transition-colors hover:bg-teal-800">
+      <ButtonLink href="/" variant="primary">
         Go Home
-      </a>
+      </ButtonLink>
     </div>
     </ProductShell>
   );

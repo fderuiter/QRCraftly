@@ -2,6 +2,7 @@ import { ArrowLeft, ShieldCheck, ShieldAlert, FileText } from 'lucide-react';
 import { SanitizedHtml } from '@/components/ui/SanitizedHtml';
 import docsManifest from '../../data/docs_manifest.json';
 import { ProductShell } from '@/components/ProductShell';
+import { ButtonLink } from '@/components/ui/Button';
 import { JsonLdScript } from '@/components/ui/JsonLdScript';
 import { contentRegistry } from '@/data/contentRegistry';
 import { generateSchema } from '@/utils/schemaGenerator';
@@ -87,15 +88,17 @@ export default function Page() {
             <p className="mx-auto mb-8 max-w-2xl text-lg leading-relaxed text-slate-600 dark:text-slate-300">
               Security is our top priority. If you have discovered a security vulnerability, we want to hear from you immediately through our secure channel.
             </p>
-            <a
+            <ButtonLink
               href="https://github.com/fderuiter/QRCraftly/security/advisories/new"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex max-w-full items-center gap-3 rounded-xl bg-indigo-600 px-6 py-4 text-lg font-bold text-white transition-colors hover:bg-indigo-700 hover:shadow-xl hover:shadow-indigo-600/25 motion-safe:hover:-translate-y-1 motion-safe:active:translate-y-0 sm:px-8"
+              variant="primary"
+              size="lg"
+              className="max-w-full"
             >
-              <ShieldCheck className="size-6" />
+              <ShieldCheck className="size-6" aria-hidden="true" />
               Secure Disclosure Portal
-            </a>
+            </ButtonLink>
           </div>
         </section>
 

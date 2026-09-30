@@ -51,7 +51,7 @@ export const LogoControls: React.FC<LogoControlsProps> = ({ config, onChange }) 
           size="none"
           type="button"
           onClick={() => fileInputRef.current?.click()}
-          className="group flex w-full cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-6 hover:border-teal-400 hover:bg-teal-50 focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:outline-none dark:hover:border-teal-600 dark:hover:bg-teal-900/10"
+          className="group flex w-full cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-6 hover:border-teal-400 hover:bg-teal-50 focus-visible:ring-2 focus-visible:ring-focus focus-visible:outline-none dark:hover:border-teal-600 dark:hover:bg-teal-900/10"
           aria-describedby={combineIds('logo-upload-help', error && 'logo-upload-error')}
         >
           <div className="mb-2 flex size-10 items-center justify-center rounded-full bg-slate-100 transition-colors group-hover:bg-teal-100 dark:bg-slate-800 dark:group-hover:bg-teal-900/30">
@@ -86,7 +86,7 @@ export const LogoControls: React.FC<LogoControlsProps> = ({ config, onChange }) 
               ].map((style) => (
                 <label
                   key={style.id}
-                  className={`inline-flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md py-1.5 text-xs font-medium transition-colors focus-within:ring-2 focus-within:ring-teal-500 ${
+                  className={`inline-flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md py-1.5 text-xs font-medium transition-colors focus-within:ring-2 focus-within:ring-focus ${
                     config.logoPaddingStyle === style.id
                       ? 'bg-teal-50 text-teal-700 dark:bg-slate-800 dark:text-teal-400'
                       : 'bg-transparent text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800'

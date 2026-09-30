@@ -16,6 +16,27 @@ export const TEXT_AREA_CLASSES = `${BASE_INPUT_CLASSES} font-sans px-4 py-2`;
 export const SELECT_CLASSES = `${BASE_INPUT_CLASSES} font-mono px-3 py-2`;
 export const ERROR_INPUT_CLASSES = "border-rose-500 dark:border-rose-500";
 
+/** Tailwind font-size utilities: named steps plus arbitrary `text-[12px]` style sizes. */
+const TEXT_SIZE_PATTERN = /^text-(xs|sm|base|lg|xl|\d+xl|\[\d[^\]]*\])$/;
+const TEXT_ALIGN_PATTERN = /^text-(left|center|right|justify|start|end)$/;
+const TEXT_WRAP_PATTERN = /^text-(wrap|nowrap|balance|pretty)$/;
+const TEXT_OVERFLOW_PATTERN = /^text-(ellipsis|clip)$/;
+const FONT_FAMILY_PATTERN = /^font-(sans|serif|mono)$/;
+
+/**
+ * Splits `text-*` utilities into the properties they actually set, so a size such as
+ * `text-sm` and a colour such as `text-slate-700` both survive a merge.
+ * @param baseClass A `text-*` class without modifiers.
+ * @returns The conflict group for the class.
+ */
+function textGroup(baseClass: string): string {
+  if (TEXT_SIZE_PATTERN.test(baseClass)) return 'text-size';
+  if (TEXT_ALIGN_PATTERN.test(baseClass)) return 'text-align';
+  if (TEXT_WRAP_PATTERN.test(baseClass)) return 'text-wrap';
+  if (TEXT_OVERFLOW_PATTERN.test(baseClass)) return 'text-overflow';
+  return 'text-color';
+}
+
 /**
  * Merges Tailwind classes and resolves overrides.
  * Last-one-wins for conflicting classes within the same prefix category/modifier.
@@ -70,9 +91,9 @@ export function mergeClasses(...inputs: (string | undefined | null | false)[]): 
       } else if (baseClass.startsWith('bg-')) {
         group = 'bg';
       } else if (baseClass.startsWith('text-')) {
-        group = 'text';
+        group = textGroup(baseClass);
       } else if (baseClass.startsWith('font-')) {
-        group = 'font';
+        group = FONT_FAMILY_PATTERN.test(baseClass) ? 'font-family' : 'font-weight';
       } else if (baseClass.startsWith('rounded-') || baseClass === 'rounded') {
         group = 'rounded';
       } else if (baseClass.startsWith('placeholder-')) {

@@ -299,7 +299,7 @@ export function SimulatorMode({ target, settings, announce }: ModeProps) {
               tabIndex={0}
               role="img"
               aria-label={`Damage simulator board, ${matrix.size} by ${matrix.size} modules. Click or drag to strike with the ${weapon.name}; with the keyboard, move with the arrow keys and strike with Enter or Space.`}
-              className="block aspect-square w-full cursor-crosshair rounded-lg focus-visible:ring-2 focus-visible:ring-teal-600 focus-visible:outline-none"
+              className="block aspect-square w-full cursor-crosshair rounded-lg focus-visible:ring-2 focus-visible:ring-focus focus-visible:outline-none"
               style={{ touchAction: 'none' }}
               data-testid="arcade-simulator-canvas"
               onPointerDown={(event) => {

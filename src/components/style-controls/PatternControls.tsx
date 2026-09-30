@@ -32,7 +32,7 @@ export const PatternControls: React.FC<PatternControlsProps> = ({ config, onChan
         {PATTERNS.map((pattern) => (
           <label
             key={pattern.id}
-            className={`inline-flex h-auto cursor-pointer flex-col items-center justify-center rounded-xl border-2 p-3 font-medium transition-colors focus-within:ring-2 focus-within:ring-teal-500 ${
+            className={`inline-flex h-auto cursor-pointer flex-col items-center justify-center rounded-xl border-2 p-3 font-medium transition-colors focus-within:ring-2 focus-within:ring-focus ${
               config.style === pattern.id
                 ? 'border-teal-500 bg-teal-50 text-teal-700 hover:bg-teal-100 dark:bg-slate-800 dark:text-teal-400 dark:hover:bg-slate-700'
                 : 'border-transparent bg-white text-slate-700 hover:bg-slate-50 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700/50'

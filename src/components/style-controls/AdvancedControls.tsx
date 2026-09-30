@@ -53,7 +53,7 @@ export const AdvancedControls: React.FC<AdvancedControlsProps> = ({ config, onCh
                 return (
                   <label
                     key={level.id}
-                    className={`inline-flex cursor-pointer flex-col items-start rounded-lg border p-2 text-left transition-colors focus-within:ring-2 focus-within:ring-teal-500 ${
+                    className={`inline-flex cursor-pointer flex-col items-start rounded-lg border p-2 text-left transition-colors focus-within:ring-2 focus-within:ring-focus ${
                       config.errorCorrectionLevel === level.id
                         ? 'border-teal-500 bg-teal-50 text-teal-700 dark:bg-slate-800 dark:text-teal-400'
                         : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700/50'

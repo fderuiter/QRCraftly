@@ -151,7 +151,7 @@ function AudioQRToolInner() {
                       placeholder="ENTER TEXT PAYLOAD"
                       disabled={isTransmitting || isListening}
                     />
-                    <p className="text-2xs mt-1 text-slate-400">
+                    <p className="mt-1 text-xs text-slate-400">
                       Supports upper-case letters, digits, and basic punctuation.
                     </p>
                   </div>
@@ -160,7 +160,7 @@ function AudioQRToolInner() {
                     <h3 className="mb-1 flex items-center gap-1 text-xs font-bold text-teal-800 dark:text-teal-300">
                       <Info className="size-3.5" /> BFSK Protocols
                     </h3>
-                    <p className="text-2xs leading-relaxed text-teal-700/80 dark:text-teal-400/80">
+                    <p className="text-xs leading-relaxed text-teal-700/80 dark:text-teal-400/80">
                       This modem encodes messages to binary bitstreams. Tones are scheduled sequentially: 1500Hz prefixes the frame, 1200Hz represents '0', and 2200Hz represents '1'. A 30ms guard interval separates consecutive pulses to secure perfect boundary detection.
                     </p>
                   </div>
@@ -228,7 +228,7 @@ function AudioQRToolInner() {
                       placeholder="LISTEN"
                       disabled={isPlayingSpectrogram || isGeneratingWav}
                     />
-                    <p className="text-2xs mt-1 text-slate-400">
+                    <p className="mt-1 text-xs text-slate-400">
                       Keep text short (under 15 chars) for beautiful high-contrast renders.
                     </p>
                   </div>
@@ -237,7 +237,7 @@ function AudioQRToolInner() {
                     <h3 className="mb-1 flex items-center gap-1 text-xs font-bold text-teal-800 dark:text-teal-300">
                       <Info className="size-3.5" /> Spectrogram QR Synthesis
                     </h3>
-                    <p className="text-2xs leading-relaxed text-teal-700/80 dark:text-teal-400/80">
+                    <p className="text-xs leading-relaxed text-teal-700/80 dark:text-teal-400/80">
                       Maps the QR code's 2D grid matrix into an acoustic canvas. Each column represents a 250ms segment of time. Each row corresponds to a specific frequency sine wave (spaced 80Hz apart). Summed sine waves are generated in real-time, painting a readable QR code onto spectrogram waterfall FFT analyzers.
                     </p>
                   </div>
@@ -280,7 +280,7 @@ function AudioQRToolInner() {
               <h2 className="mb-3 flex items-center gap-1.5 text-xs font-bold tracking-wider text-slate-500 uppercase dark:text-slate-400">
                 <QrCode className="size-4" /> Core Technical Specifications
               </h2>
-              <ul className="text-2xs space-y-2 text-slate-600 dark:text-slate-400">
+              <ul className="space-y-2 text-xs text-slate-600 dark:text-slate-400">
                 <li className="flex justify-between border-b border-slate-100 pb-1.5 dark:border-slate-800/40">
                   <span>Modem Protocol:</span>
                   <span className="font-semibold text-slate-800 dark:text-slate-200">Binary FSK (Non-Coherent)</span>
@@ -313,7 +313,7 @@ function AudioQRToolInner() {
                     <h2 className="font-bold text-slate-800 dark:text-slate-100">
                       Receiver Terminal Output
                     </h2>
-                    <span className={`text-2xs inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-semibold ${
+                    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold ${
                       isListening 
                         ? 'border border-emerald-200 bg-emerald-100 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400' 
                         : 'border border-slate-200 bg-slate-100 text-slate-600 dark:border-slate-800 dark:bg-slate-900/30 dark:text-slate-400'
@@ -326,11 +326,11 @@ function AudioQRToolInner() {
                   {/* Active Frequency/Symbol Indicator */}
                   <div className="mb-6 grid grid-cols-2 gap-4 rounded-xl border border-slate-100 bg-slate-50/50 p-4 dark:border-slate-900 dark:bg-slate-900/30">
                     <div>
-                      <div className="text-3xs font-bold tracking-wide text-slate-400 uppercase">Detected Symbol</div>
+                      <div className="text-xs font-bold tracking-wide text-slate-400 uppercase">Detected Symbol</div>
                       <div className="font-mono text-sm font-semibold text-slate-700 dark:text-slate-300">{currentSymbol}</div>
                     </div>
                     <div>
-                      <div className="text-3xs font-bold tracking-wide text-slate-400 uppercase">Total Decoded Payload</div>
+                      <div className="text-xs font-bold tracking-wide text-slate-400 uppercase">Total Decoded Payload</div>
                       <div className="font-mono text-sm font-bold text-teal-600 dark:text-teal-400">
                         {decodedMessage ? `"${decodedMessage}"` : <span className="text-slate-400 italic">Empty</span>}
                       </div>
@@ -338,7 +338,7 @@ function AudioQRToolInner() {
                   </div>
 
                   {/* Terminal Logger */}
-                  <div className="text-2xs h-64 overflow-y-auto rounded-xl bg-slate-900 p-4 font-mono leading-relaxed text-teal-400/90 shadow-inner">
+                  <div className="h-64 overflow-y-auto rounded-xl bg-slate-900 p-4 font-mono text-xs leading-relaxed text-teal-400/90 shadow-inner">
                     {receiverLog.length === 0 ? (
                       <div className="text-slate-500 italic">No activity logs recorded. Click "Listen/Receive" and transmit some data to start decoding...</div>
                     ) : (
@@ -359,7 +359,7 @@ function AudioQRToolInner() {
                     <h2 className="font-bold text-slate-800 dark:text-slate-100">
                       Spectrogram Visualizer Canvas
                     </h2>
-                    <span className={`text-2xs inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-semibold ${
+                    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold ${
                       isPlayingSpectrogram 
                         ? 'border border-emerald-200 bg-emerald-100 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400' 
                         : 'border border-slate-200 bg-slate-100 text-slate-600 dark:border-slate-800 dark:bg-slate-900/30 dark:text-slate-400'
@@ -385,7 +385,7 @@ function AudioQRToolInner() {
                     <Info className="mt-0.5 size-5 shrink-0 text-teal-500" />
                     <div className="space-y-1">
                       <h4 className="font-semibold text-slate-800 dark:text-slate-200">How to scan this QR sound?</h4>
-                      <p className="text-2xs leading-relaxed text-slate-600 dark:text-slate-400">
+                      <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-400">
                         This sound actually encodes the QR code modules. When played back, the horizontal pixels render row-by-row on the scrolling visualizer. If you put a camera in front of this visualizer screen, any standard QR scanner app will recognize the glowing pattern and read the data!
                       </p>
                     </div>

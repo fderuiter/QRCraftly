@@ -26,6 +26,7 @@ import { generateSchema } from '@/utils/schemaGenerator';
 import { resolveDomainForPath } from '@/utils/metadataEngine';
 import { usePageContext } from 'vike-react/usePageContext';
 import { ProductShell } from '@/components/ProductShell';
+import { ButtonLink } from '@/components/ui/Button';
 
 const GithubIcon: React.FC<{ className?: string }> = ({ className }) => (
   <svg
@@ -133,13 +134,10 @@ export default function Page() {
         <p className="mx-auto mb-6 max-w-2xl text-lg text-slate-600 dark:text-slate-300">
           Looking for a specific use case? Try our dedicated tools.
         </p>
-        <a
-          href="/wifi-qr-code"
-          className="inline-flex items-center gap-2 rounded-xl bg-teal-700 px-6 py-3 font-medium text-white shadow-lg shadow-teal-900/20 transition-colors hover:bg-teal-800"
-        >
-          <Wifi className="size-5" />
+        <ButtonLink href="/wifi-qr-code" variant="primary" size="lg">
+          <Wifi className="size-5" aria-hidden="true" />
           Create WiFi QR Code
-        </a>
+        </ButtonLink>
       </section>
 
       <section
@@ -151,12 +149,9 @@ export default function Page() {
         </div>
         <h2 id="about-pledge" className="mb-4 text-3xl font-bold text-slate-900 dark:text-white">{PLEDGE_HEADLINE}</h2>
         <p className="mx-auto mb-8 max-w-2xl text-lg leading-relaxed text-slate-600 dark:text-slate-300">{PLEDGE_COMMITMENT}</p>
-        <a
-          href="/free-forever"
-          className="inline-flex items-center gap-2 rounded-xl bg-teal-700 px-6 py-3 font-medium text-white shadow-lg shadow-teal-900/20 transition-colors hover:bg-teal-800"
-        >
+        <ButtonLink href="/free-forever" variant="primary" size="lg">
           Read the QRCraftly Pledge
-        </a>
+        </ButtonLink>
       </section>
 
       <section className="mb-12 rounded-2xl border border-slate-200 bg-slate-50 p-8 text-center dark:border-slate-700 dark:bg-slate-800/50">
@@ -167,15 +162,10 @@ export default function Page() {
           QRCraftly is released under the <strong>GNU Affero General Public License v3.0 (AGPL-3.0)</strong>.
           This ensures that the software remains free and open source for everyone.
         </p>
-        <a
-          href="https://github.com/fderuiter/QRCraftly"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-6 py-3 font-medium text-white transition-colors hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100"
-        >
+        <ButtonLink href="https://github.com/fderuiter/QRCraftly" target="_blank" rel="noopener noreferrer" variant="outline" size="lg">
           <GithubIcon className="size-5" />
           View on GitHub
-        </a>
+        </ButtonLink>
       </section>
 
     </div>

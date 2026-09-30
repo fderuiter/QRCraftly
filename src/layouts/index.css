@@ -2,6 +2,22 @@
 
 @variant dark (&:where(.dark, .dark *));
 
+/*
+ * Design tokens. `--color-focus` is the one keyboard-focus colour for every control
+ * (brand teal, at least 3:1 against the light and dark surfaces; see
+ * scripts/contrast_check.js). The dark theme swaps the value below, so components use
+ * `ring-focus` without a `dark:` variant.
+ */
+@theme {
+  --color-focus: var(--color-teal-700);
+}
+
+@layer base {
+  .dark {
+    --color-focus: var(--color-teal-400);
+  }
+}
+
 @layer base {
   :focus {
     @apply outline-none;
@@ -15,13 +31,13 @@
     @apply outline-none;
   }
 
-  /* Standard keyboard-focused elements should use brand-compliant indigo-600 / indigo-500 */
+  /* Keyboard focus: an offset ring in the focus token, distinct from the filled tint used for selection */
   :focus-visible,
   :focus-visible + .peer,
   :focus-visible ~ .peer {
     outline: 2px solid transparent !important;
     outline-offset: 2px !important;
-    @apply ring-2 ring-indigo-600 ring-offset-2 dark:ring-indigo-500 dark:ring-offset-slate-900;
+    @apply ring-2 ring-focus ring-offset-2 dark:ring-offset-slate-900;
   }
 
   @media (forced-colors: active) {

@@ -34,6 +34,26 @@ describe('mergeClasses utility', () => {
     expect(result).toContain('dark:border-slate-700');
   });
 
+  it('keeps a text size and a text colour together (#1046)', () => {
+    const merged = mergeClasses(TEXT_FIELD_CLASSES).split(' ');
+    expect(merged).toContain('text-sm');
+    expect(merged).toContain('text-slate-700');
+    expect(merged).toContain('dark:text-slate-100');
+  });
+
+  it('overrides only the property of the same kind', () => {
+    expect(mergeClasses('text-sm text-slate-700', 'text-rose-700')).toBe('text-sm text-rose-700');
+    expect(mergeClasses('text-sm text-slate-700', 'text-lg')).toBe('text-lg text-slate-700');
+    expect(mergeClasses('text-left text-sm', 'text-center')).toBe('text-center text-sm');
+    expect(mergeClasses('text-[13px] text-slate-700', 'text-xs')).toBe('text-xs text-slate-700');
+    expect(mergeClasses('text-2xl text-white', 'truncate text-ellipsis')).toBe('text-2xl text-white truncate text-ellipsis');
+  });
+
+  it('keeps a font family and a font weight together', () => {
+    expect(mergeClasses('font-mono font-semibold', 'font-bold')).toBe('font-mono font-bold');
+    expect(mergeClasses('font-mono font-semibold', 'font-sans')).toBe('font-sans font-semibold');
+  });
+
   it('should resolve both light and dark border colors when unified error state is active', () => {
     const result = mergeClasses(TEXT_FIELD_CLASSES, ERROR_INPUT_CLASSES);
     expect(result).toContain('border-rose-500');

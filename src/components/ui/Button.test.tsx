@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { axe } from 'vitest-axe';
-import { Button } from './Button';
+import { Button, ButtonLink } from './Button';
 
 describe('Button pressed state', () => {
   it('omits aria-pressed when the button is not a toggle', () => {
@@ -46,6 +46,32 @@ describe('Button pressed state', () => {
         <Button variant="outline" pressed={false}>Square</Button>
       </div>,
     );
+    expect(await axe(container)).toHaveNoViolations();
+  });
+});
+
+describe('ButtonLink', () => {
+  it('renders a real link with the button styles of its variant', () => {
+    render(<ButtonLink href="/about" variant="primary">About</ButtonLink>);
+    const link = screen.getByRole('link', { name: 'About' });
+    expect(link).toHaveAttribute('href', '/about');
+    expect(link).toHaveClass('bg-teal-700', 'text-white', 'inline-flex');
+  });
+
+  it('passes link attributes through', () => {
+    render(<ButtonLink href="https://github.com/fderuiter/QRCraftly" target="_blank" rel="noopener noreferrer">GitHub</ButtonLink>);
+    const link = screen.getByRole('link', { name: 'GitHub' });
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+  });
+
+  it('renders nothing for an unsafe URL', () => {
+    render(<ButtonLink href="javascript:alert(1)">Bad</ButtonLink>);
+    expect(screen.queryByRole('link', { name: 'Bad' })).not.toBeInTheDocument();
+  });
+
+  it('has no axe violations', async () => {
+    const { container } = render(<ButtonLink href="/">Go Home</ButtonLink>);
     expect(await axe(container)).toHaveNoViolations();
   });
 });

@@ -40,7 +40,7 @@ export const ColorControls: React.FC<ColorControlsProps> = ({ config, onChange }
           return (
             <label
               key={preset.label}
-              className={`relative flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border-2 p-1.5 text-xs transition-colors focus-within:ring-2 focus-within:ring-teal-500 focus-within:ring-offset-1 dark:focus-within:ring-offset-slate-900 ${
+              className={`relative flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border-2 p-1.5 text-xs transition-colors focus-within:ring-2 focus-within:ring-focus focus-within:ring-offset-1 dark:focus-within:ring-offset-slate-900 ${
                 isSelected
                   ? 'border-teal-700 bg-teal-50 font-semibold text-teal-900 dark:border-teal-300 dark:bg-teal-950 dark:text-teal-100'
                   : 'border-slate-200 bg-white font-medium text-slate-700 hover:border-slate-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:border-slate-500'

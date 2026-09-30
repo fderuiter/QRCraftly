@@ -441,7 +441,7 @@ export function BlasterMode({ target, settings, announce }: ModeProps) {
               tabIndex={0}
               role="img"
               aria-label="Arcade blaster arena. Aim with the pointer and click or tap to fire; keys 1, 2 and 3 switch weapons and Space fires."
-              className="block aspect-[5/6] w-full cursor-crosshair rounded-lg focus-visible:ring-2 focus-visible:ring-teal-600 focus-visible:outline-none"
+              className="block aspect-[5/6] w-full cursor-crosshair rounded-lg focus-visible:ring-2 focus-visible:ring-focus focus-visible:outline-none"
               style={{ touchAction: 'none' }}
               data-testid="arcade-blaster-canvas"
               onPointerMove={(event) => {

@@ -84,7 +84,7 @@ export const MosaicControls: React.FC<MosaicControlsProps> = ({ config, onChange
           size="none"
           type="button"
           onClick={() => fileInputRef.current?.click()}
-          className="group flex w-full cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-6 hover:border-teal-400 hover:bg-teal-50 focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:outline-none dark:hover:border-teal-600 dark:hover:bg-teal-900/10"
+          className="group flex w-full cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-6 hover:border-teal-400 hover:bg-teal-50 focus-visible:ring-2 focus-visible:ring-focus focus-visible:outline-none dark:hover:border-teal-600 dark:hover:bg-teal-900/10"
           aria-describedby={combineIds('mosaic-upload-help', error && 'mosaic-upload-error')}
         >
           <Upload className="mb-2 size-5" aria-hidden="true" />
@@ -109,7 +109,7 @@ export const MosaicControls: React.FC<MosaicControlsProps> = ({ config, onChange
               {MOSAIC_MODES.map((option) => (
                 <label
                   key={option.id}
-                  className={`flex cursor-pointer flex-col items-center gap-1 rounded-lg border p-2 text-xs focus-within:ring-2 focus-within:ring-teal-500 ${
+                  className={`flex cursor-pointer flex-col items-center gap-1 rounded-lg border p-2 text-xs focus-within:ring-2 focus-within:ring-focus ${
                     mode === option.id
                       ? 'border-teal-500 bg-teal-50 text-teal-800 dark:bg-teal-900/20 dark:text-teal-300'
                       : 'border-slate-200 text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800'
