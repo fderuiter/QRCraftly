@@ -20,12 +20,11 @@ export {
   renderMaze,
   generateMaze,
   getMazeCacheKey,
-  mazeCache,
+  getCachedMaze,
+  storeMaze,
   clearMazeCache,
   getStyleAdaptiveMazePathWidth,
-  DSU,
   isBridgeCell,
-  isFinderEyeZone,
+  isFinderPatternWithMargin,
   type MazeData,
 } from './lib/maze';
-

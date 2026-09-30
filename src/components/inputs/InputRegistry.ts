@@ -33,109 +33,37 @@ import { LocationInput } from "./LocationInput";
 import { MeetingInput } from "./MeetingInput";
 import { SocialInput } from "./SocialInput";
 
-/**
- *
- */
 export type InputDataMap = {
-  /**
-   *
-   */
   [QRType.URL]: UrlData;
-  /**
-   *
-   */
   [QRType.TEXT]: TextData;
-  /**
-   *
-   */
   [QRType.WIFI]: WifiData;
-  /**
-   *
-   */
   [QRType.EVENT]: EventData;
-  /**
-   *
-   */
   [QRType.EMAIL]: EmailData;
-  /**
-   *
-   */
   [QRType.VCARD]: VCardData;
-  /**
-   *
-   */
   [QRType.PHONE]: PhoneData;
-  /**
-   *
-   */
   [QRType.SMS]: SmsData;
-  /**
-   *
-   */
   [QRType.PAYMENT]: PaymentData;
-  /**
-   *
-   */
   [QRType.LOCATION]: LocationData;
-  /**
-   *
-   */
   [QRType.MEETING]: MeetingData;
-  /**
-   *
-   */
   [QRType.SOCIAL]: SocialData;
 };
 
-/**
- *
- */
 interface InputRegistryEntry<T> {
-  /**
-   *
-   */
   Component: React.ComponentType<{
-    /**
-     *
-     */
     data: T;
-    /**
-     *
-     */
     onChange: (updates: Partial<T>) => void;
   }>;
-  /**
-   *
-   */
   initialState: T;
-  /**
-   *
-   */
   constructFn: (data: T) => string;
-  /**
-   *
-   */
   hydrateFn: (raw: string) => T;
-  /**
-   *
-   */
   canHydrateFn: (raw: string) => boolean;
 }
 
-/**
- *
- */
 export type Registry = {
   [K in QRType]: InputRegistryEntry<InputDataMap[K]>;
 };
 
-/**
- *
- */
 export const INPUT_REGISTRY: Registry = {
-  /**
-   *
-   */
   [QRType.URL]: {
     Component: UrlInput,
     initialState: {
@@ -145,9 +73,6 @@ export const INPUT_REGISTRY: Registry = {
     hydrateFn: QR_GENERATORS[QRType.URL].hydrate,
     canHydrateFn: QR_GENERATORS[QRType.URL].matches,
   },
-  /**
-   *
-   */
   [QRType.TEXT]: {
     Component: TextInput,
     initialState: {
@@ -157,9 +82,6 @@ export const INPUT_REGISTRY: Registry = {
     hydrateFn: QR_GENERATORS[QRType.TEXT].hydrate,
     canHydrateFn: QR_GENERATORS[QRType.TEXT].matches,
   },
-  /**
-   *
-   */
   [QRType.WIFI]: {
     Component: WifiInput,
     initialState: {
@@ -173,9 +95,6 @@ export const INPUT_REGISTRY: Registry = {
     hydrateFn: QR_GENERATORS[QRType.WIFI].hydrate,
     canHydrateFn: QR_GENERATORS[QRType.WIFI].matches,
   },
-  /**
-   *
-   */
   [QRType.EVENT]: {
     Component: EventInput,
     initialState: {
@@ -189,9 +108,6 @@ export const INPUT_REGISTRY: Registry = {
     hydrateFn: QR_GENERATORS[QRType.EVENT].hydrate,
     canHydrateFn: QR_GENERATORS[QRType.EVENT].matches,
   },
-  /**
-   *
-   */
   [QRType.EMAIL]: {
     Component: EmailInput,
     initialState: {
@@ -203,9 +119,6 @@ export const INPUT_REGISTRY: Registry = {
     hydrateFn: QR_GENERATORS[QRType.EMAIL].hydrate,
     canHydrateFn: QR_GENERATORS[QRType.EMAIL].matches,
   },
-  /**
-   *
-   */
   [QRType.VCARD]: {
     Component: VCardInput,
     initialState: {
@@ -224,9 +137,6 @@ export const INPUT_REGISTRY: Registry = {
     hydrateFn: QR_GENERATORS[QRType.VCARD].hydrate,
     canHydrateFn: QR_GENERATORS[QRType.VCARD].matches,
   },
-  /**
-   *
-   */
   [QRType.PHONE]: {
     Component: PhoneInput,
     initialState: {
@@ -236,9 +146,6 @@ export const INPUT_REGISTRY: Registry = {
     hydrateFn: QR_GENERATORS[QRType.PHONE].hydrate,
     canHydrateFn: QR_GENERATORS[QRType.PHONE].matches,
   },
-  /**
-   *
-   */
   [QRType.SMS]: {
     Component: SmsInput,
     initialState: {
@@ -249,9 +156,6 @@ export const INPUT_REGISTRY: Registry = {
     hydrateFn: QR_GENERATORS[QRType.SMS].hydrate,
     canHydrateFn: QR_GENERATORS[QRType.SMS].matches,
   },
-  /**
-   *
-   */
   [QRType.PAYMENT]: {
     Component: PaymentInput,
     initialState: {
@@ -264,9 +168,6 @@ export const INPUT_REGISTRY: Registry = {
     hydrateFn: QR_GENERATORS[QRType.PAYMENT].hydrate,
     canHydrateFn: QR_GENERATORS[QRType.PAYMENT].matches,
   },
-  /**
-   *
-   */
   [QRType.LOCATION]: {
     Component: LocationInput,
     initialState: {
@@ -277,9 +178,6 @@ export const INPUT_REGISTRY: Registry = {
     hydrateFn: QR_GENERATORS[QRType.LOCATION].hydrate,
     canHydrateFn: QR_GENERATORS[QRType.LOCATION].matches,
   },
-  /**
-   *
-   */
   [QRType.MEETING]: {
     Component: MeetingInput,
     initialState: {
@@ -289,9 +187,6 @@ export const INPUT_REGISTRY: Registry = {
     hydrateFn: QR_GENERATORS[QRType.MEETING].hydrate,
     canHydrateFn: QR_GENERATORS[QRType.MEETING].matches,
   },
-  /**
-   *
-   */
   [QRType.SOCIAL]: {
     Component: SocialInput,
     initialState: {

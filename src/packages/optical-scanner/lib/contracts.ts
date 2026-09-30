@@ -71,13 +71,6 @@ export function assertScanOptions(options: unknown): asserts options is ScanOpti
   }
 }
 
-export interface ScannerMetrics {
-  latencyHistory: number[];
-  frameDropCount: number;
-  processingLatency: number;
-  sessionType?: 'camera' | 'file';
-}
-
 export type ScannerStatus = 'idle' | 'checking' | 'pass' | 'fail';
 
 /**

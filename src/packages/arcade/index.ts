@@ -33,7 +33,6 @@ export {
   ECC_LEVELS,
   FALLBACK_PAYLOAD,
   type EccLevel,
-  type FinderId,
   type TargetMatrix,
 } from './lib/matrix';
 export {
@@ -44,18 +43,14 @@ export {
   healthTone,
   ECC_RECOVERY,
   VIRTUAL_BLOCK_COUNT,
-  FINDER_DAMAGE_THRESHOLD,
   type DamageAnalysis,
   type FailureCause,
   type HealthTone,
-  type Strike,
 } from './lib/damage';
-export { MicroGrid, MICRO_SUBDIVISION, MACRO_DAMAGE_THRESHOLD, type MicroCell } from './lib/microGrid';
+export { MicroGrid, MICRO_SUBDIVISION } from './lib/microGrid';
 export {
   BLASTER_ARENA,
   PROJECTILE_SPECS,
-  ROCKET_BLAST_RADIUS,
-  LASER_BURN_RADIUS,
   MAX_ROCKETS_IN_FLIGHT,
   MAX_PARTICLES,
   mapPointerToArena,
@@ -69,8 +64,6 @@ export {
   stepParticles,
   addShake,
   decayShake,
-  type ArenaGeometry,
-  type DisplayRect,
   type Impact,
   type Particle,
   type ParticleTone,
@@ -96,9 +89,6 @@ export {
   SCAN_FRAME_SIZE,
   SCAN_WATCHDOG_MS,
   type DetectorLike,
-  type EmpiricalScanOptions,
-  type EmpiricalStatus,
-  type FramePainter,
   type ScanOutcome,
   type WorkerLike,
 } from './lib/scanPipeline';

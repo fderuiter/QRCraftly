@@ -4,7 +4,7 @@ import {
   assertScannerRequest,
   isValidScannerResponse,
   assertScannerResponse,
-} from './scannerContract';
+} from '../index';
 
 if (typeof (globalThis as any).ImageBitmap === 'undefined') {
   (globalThis as any).ImageBitmap = class ImageBitmap {

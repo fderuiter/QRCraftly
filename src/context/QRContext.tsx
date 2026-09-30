@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useSyncExternalStore } from 'react';
 import { QRConfig } from '@/types';
 import { DEFAULT_CONFIG } from '@/constants';
-import { ValidationEngine } from '@/engine/ValidationEngine';
+import { sanitizeConfig } from '@/packages/qr-payload';
 
 /**
  * Payload of the `scannability-fail` signal. Only allowlisted, non-sensitive diagnostic
@@ -20,19 +20,10 @@ interface ScannabilityFailDetail {
  * Signal names mapped to their payload types.
  */
 interface SignalPayloads {
-  /**
-   *
-   */
   'scannability-fail': ScannabilityFailDetail;
 }
 
-/**
- *
- */
 type SignalName = keyof SignalPayloads;
-/**
- *
- */
 type SignalCallback<N extends SignalName> = (detail: SignalPayloads[N]) => void;
 
 /**
@@ -92,13 +83,7 @@ const fallbackMemoryStore = new Map<string, string>();
  * Minimal storage surface used by the store.
  */
 interface PreferenceStorage {
-  /**
-   *
-   */
   getItem: (key: string) => string | null;
-  /**
-   *
-   */
   setItem: (key: string, value: string) => void;
 }
 
@@ -206,7 +191,7 @@ function createQRStore(initialConfig?: Partial<QRConfig>, retainAppearance = fal
       };
     },
     updateConfig: (updates) => {
-      const sanitized = ValidationEngine.sanitizeConfig({ ...state.config, ...updates });
+      const sanitized = sanitizeConfig({ ...state.config, ...updates });
       if (shallowEqualConfig(sanitized, state.config)) return;
       if (retainAppearance) retainedAppearance = pickAppearance(sanitized);
       // eslint-disable-next-line security/detect-object-injection

@@ -23,6 +23,11 @@ import QRCanvas from './QRCanvas';
 import { DEFAULT_CONFIG } from '../constants';
 import { QRStyle, LogoPaddingStyle, QRErrorCorrectionLevel, SocialFormat, QRType } from '../types';
 import QRCode from 'qrcode';
+import { useQrcodeAsCanvasEncoder } from '../../tests/fixtures/fakeQrcode';
+import { setQrCanvasRuntime } from '../utils/qrCanvasRuntime';
+
+vi.mock('qrcode', async () => (await import('../../tests/fixtures/fakeQrcode')).createFakeQrcodeModule());
+useQrcodeAsCanvasEncoder(QRCode);
 import '../utils/qrHelpers';
 
 // Mock qrcode module
@@ -478,44 +483,18 @@ describe('QRCanvas Component', () => {
       const postMessageMock = vi.fn();
       const terminateMock = vi.fn();
       
-      const originalWorker = globalThis.Worker;
       class MockWorker {
-        onmessage: any = null;
-        onerror: any = null;
+        onmessage: ((event: MessageEvent) => void) | null = null;
+        onerror: ((event: ErrorEvent) => void) | null = null;
         postMessage = postMessageMock;
         terminate = terminateMock;
         addEventListener = vi.fn();
         removeEventListener = vi.fn();
       }
 
-      globalThis.Worker = function (urlObj: any, options?: any) {
-        const urlStr = urlObj.toString();
-        if (urlStr.includes('matrixWorker.ts')) {
-          throw new Error('Fallback matrix worker to sync path');
-        }
-        return new MockWorker();
-      } as any;
-
-      const originalURL = globalThis.URL;
-      globalThis.URL = class extends originalURL {
-        constructor(url: string | URL, base?: string | URL) {
-          const urlStr = typeof url === 'string' ? url : url.toString();
-          if (urlStr.includes('matrixWorker.ts')) {
-            super('http://localhost/matrixWorker.ts');
-          } else {
-            super('http://localhost/mazeWorker.ts');
-          }
-        }
-      } as any;
-
-      const originalEnv = process.env.NODE_ENV;
-      const originalUserAgent = navigator.userAgent;
-
-      // redfine NODE_ENV and userAgent to allow worker initialization in test
-      process.env.NODE_ENV = 'production';
-      Object.defineProperty(navigator, 'userAgent', {
-        value: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)',
-        configurable: true,
+      // Inject a maze worker through the runtime seam; the matrix stays on the main thread.
+      const restoreRuntime = setQrCanvasRuntime({
+        createMazeWorker: () => new MockWorker() as unknown as Worker,
       });
 
       try {
@@ -545,23 +524,16 @@ describe('QRCanvas Component', () => {
         expect(firstPayload).toHaveProperty('config');
         expect(firstPayload).toHaveProperty('sequenceId');
       } finally {
-        globalThis.Worker = originalWorker;
-        globalThis.URL = originalURL;
-        process.env.NODE_ENV = originalEnv;
-        Object.defineProperty(navigator, 'userAgent', {
-          value: originalUserAgent,
-          configurable: true,
-        });
+        restoreRuntime();
       }
     });
 
     it('falls back to main-thread pathfinding calculation using requestIdleCallback if Worker throws', async () => {
-      const originalWorker = globalThis.Worker;
-      globalThis.Worker = class {
-        constructor() {
+      const restoreRuntime = setQrCanvasRuntime({
+        createMazeWorker: () => {
           throw new Error('Worker blocked');
-        }
-      } as any;
+        },
+      });
 
       try {
         const mazeConfig = {
@@ -577,7 +549,7 @@ describe('QRCanvas Component', () => {
           expect(spyGenerateMaze).toHaveBeenCalled();
         });
       } finally {
-        globalThis.Worker = originalWorker;
+        restoreRuntime();
       }
     });
 

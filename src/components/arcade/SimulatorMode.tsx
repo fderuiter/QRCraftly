@@ -49,21 +49,9 @@ const BOARD = 512;
 
 /** A fading shockwave ring (visual only). */
 interface Ring {
-  /**
-   *
-   */
   x: number;
-  /**
-   *
-   */
   y: number;
-  /**
-   *
-   */
   radius: number;
-  /**
-   *
-   */
   life: number;
 }
 

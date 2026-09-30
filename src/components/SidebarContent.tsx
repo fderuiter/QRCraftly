@@ -1,13 +1,7 @@
 import { contentRegistry } from '@/data/contentRegistry';
 import { Accordion, AccordionItem } from './ui/Accordion';
 
-/**
- *
- */
 interface SidebarContentProps {
-  /**
-   *
-   */
   toolId: string;
 }
 

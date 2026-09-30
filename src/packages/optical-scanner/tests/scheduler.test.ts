@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { DoubleBufferPool, AdaptiveFrameScheduler } from './AdaptiveFrameScheduler';
+import { DoubleBufferPool, AdaptiveFrameScheduler } from '../scheduler';
 
 describe('DoubleBufferPool', () => {
   it('should initialize and resize pool correctly', () => {
