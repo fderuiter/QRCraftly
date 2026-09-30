@@ -95,11 +95,11 @@ export const ScannabilityIndicator: React.FC<Props> = ({ status, health }) => {
     >
       {politeRegion}
 
-      <div className="flex items-center gap-1.5 rounded-full border bg-white px-2 py-1 text-xs font-medium shadow-sm motion-safe:transition-colors motion-safe:duration-300 dark:bg-slate-800">
+      <div className="flex items-center gap-1.5 rounded-full border bg-surface-raised px-2 py-1 text-xs font-medium shadow-sm motion-safe:transition-colors motion-safe:duration-300">
         {status === 'checking' && (
           <>
             <Loader2 className="size-3.5 text-slate-500 motion-safe:animate-spin" aria-hidden="true" />
-            <span className="text-slate-600 dark:text-slate-300">Checking...</span>
+            <span className="text-fg-muted">Checking...</span>
           </>
         )}
         {status === 'physical-pass' && (
@@ -117,7 +117,7 @@ export const ScannabilityIndicator: React.FC<Props> = ({ status, health }) => {
         {status === 'fail' && (
           <>
             <ShieldX className="size-3.5 text-rose-500" aria-hidden="true" />
-            <span className="text-rose-700 dark:text-rose-400">Scan verification failed</span>
+            <span className="text-danger">Scan verification failed</span>
           </>
         )}
         {health && (
@@ -135,7 +135,7 @@ export const ScannabilityIndicator: React.FC<Props> = ({ status, health }) => {
         {status === 'fail' ? (
           <div
             role="alert"
-            className={`max-w-xs text-right text-xs text-rose-700 dark:text-rose-400 ${firstWarning ? '' : 'sr-only'}`}
+            className={`max-w-xs text-right text-xs text-danger ${firstWarning ? '' : 'sr-only'}`}
             data-testid="scannability-alert"
           >
             {firstWarning ?? 'Scan verification failed. Adjust colors, pattern, or margin before exporting.'}
@@ -143,7 +143,7 @@ export const ScannabilityIndicator: React.FC<Props> = ({ status, health }) => {
         ) : (
           firstWarning && (
             <div
-              className={`max-w-xs text-right text-xs ${exportRisk === 'unsafe' ? 'text-rose-700 dark:text-rose-400' : 'text-amber-700 dark:text-amber-400'}`}
+              className={`max-w-xs text-right text-xs ${exportRisk === 'unsafe' ? 'text-danger' : 'text-amber-700 dark:text-amber-400'}`}
             >
               {firstWarning}
             </div>

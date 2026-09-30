@@ -46,7 +46,7 @@ export function DefeatModal({ isOpen, analysis, onRebuild, onClose }: DefeatModa
   if (!failure) return null;
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={`QR code defeated: ${FAILURE_TITLES[failure]}`}>
-      <p className="text-sm leading-relaxed text-slate-700 dark:text-slate-300" data-testid="arcade-defeat-diagnostic">
+      <p className="text-sm leading-relaxed text-fg-soft" data-testid="arcade-defeat-diagnostic">
         {describeFailure(failure, analysis)}
       </p>
       <div className="mt-6 flex flex-wrap gap-3">

@@ -37,8 +37,7 @@ describe('mergeClasses utility', () => {
   it('keeps a text size and a text colour together (#1046)', () => {
     const merged = mergeClasses(TEXT_FIELD_CLASSES).split(' ');
     expect(merged).toContain('text-sm');
-    expect(merged).toContain('text-slate-700');
-    expect(merged).toContain('dark:text-slate-100');
+    expect(merged).toContain('text-fg');
   });
 
   it('overrides only the property of the same kind', () => {
@@ -54,51 +53,35 @@ describe('mergeClasses utility', () => {
     expect(mergeClasses('font-mono font-semibold', 'font-sans')).toBe('font-sans font-semibold');
   });
 
-  it('should resolve both light and dark border colors when unified error state is active', () => {
-    const result = mergeClasses(TEXT_FIELD_CLASSES, ERROR_INPUT_CLASSES);
-    expect(result).toContain('border-rose-500');
-    expect(result).toContain('dark:border-rose-500');
-    expect(result).not.toContain('border-slate-300');
-    expect(result).not.toContain('dark:border-slate-700');
+  it('swaps the input border for the danger token in the error state', () => {
+    const result = mergeClasses(TEXT_FIELD_CLASSES, ERROR_INPUT_CLASSES).split(' ');
+    expect(result).toContain('border-danger');
+    expect(result).toContain('border');
+    expect(result).not.toContain('border-line-strong');
+  });
+
+  it('treats semantic token borders as colours, not widths', () => {
+    expect(mergeClasses('border border-line', 'border-2')).toBe('border-2 border-line');
+    expect(mergeClasses('border-2 border-line', 'border-accent')).toBe('border-2 border-accent');
+    expect(mergeClasses('border border-dashed', 'border-solid')).toBe('border border-solid');
   });
 });
 
 describe('placeholder styling and accessibility alignment', () => {
-  it('should verify default high-contrast placeholder classes are present in base styles', () => {
-    // BASE_INPUT_CLASSES must contain the high-contrast placeholder styles
-    expect(BASE_INPUT_CLASSES).toContain('placeholder-slate-600');
-    expect(BASE_INPUT_CLASSES).toContain('dark:placeholder-slate-400');
-
-    // TEXT_FIELD_CLASSES must inherit them
-    expect(TEXT_FIELD_CLASSES).toContain('placeholder-slate-600');
-    expect(TEXT_FIELD_CLASSES).toContain('dark:placeholder-slate-400');
-
-    // TEXT_AREA_CLASSES must inherit them and NOT have the old placeholder-slate-400
-    expect(TEXT_AREA_CLASSES).toContain('placeholder-slate-600');
-    expect(TEXT_AREA_CLASSES).toContain('dark:placeholder-slate-400');
-    expect(TEXT_AREA_CLASSES.split(' ')).not.toContain('placeholder-slate-400');
+  it('uses the muted text token for placeholders in every input style', () => {
+    for (const classes of [BASE_INPUT_CLASSES, TEXT_FIELD_CLASSES, TEXT_AREA_CLASSES]) {
+      expect(classes.split(' ')).toContain('placeholder-fg-muted');
+    }
   });
 
   it('should override default placeholders correctly during merging', () => {
-    // Merge standard override
-    const resultStandard = mergeClasses(TEXT_FIELD_CLASSES, 'placeholder-red-500');
-    expect(resultStandard).toContain('placeholder-red-500');
-    expect(resultStandard).not.toContain('placeholder-slate-600');
-    // Dark mode placeholder should be untouched
-    expect(resultStandard).toContain('dark:placeholder-slate-400');
+    const result = mergeClasses(TEXT_FIELD_CLASSES, 'placeholder-danger');
+    expect(result).toContain('placeholder-danger');
+    expect(result).not.toContain('placeholder-fg-muted');
 
-    // Merge dark override
-    const resultDark = mergeClasses(TEXT_FIELD_CLASSES, 'dark:placeholder-red-400');
-    expect(resultDark).toContain('dark:placeholder-red-400');
-    expect(resultDark).not.toContain('dark:placeholder-slate-400');
-    // Light mode placeholder should be untouched
-    expect(resultDark).toContain('placeholder-slate-600');
-
-    // Merge both overrides
-    const resultBoth = mergeClasses(TEXT_FIELD_CLASSES, 'placeholder-red-500 dark:placeholder-red-400');
-    expect(resultBoth).toContain('placeholder-red-500');
-    expect(resultBoth).toContain('dark:placeholder-red-400');
-    expect(resultBoth).not.toContain('placeholder-slate-600');
-    expect(resultBoth).not.toContain('dark:placeholder-slate-400');
+    // A dark-only override keeps the base placeholder for light mode.
+    const resultDark = mergeClasses(TEXT_FIELD_CLASSES, 'dark:placeholder-danger');
+    expect(resultDark).toContain('dark:placeholder-danger');
+    expect(resultDark).toContain('placeholder-fg-muted');
   });
 });

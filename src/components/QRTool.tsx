@@ -239,7 +239,7 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
       <Modal isOpen={showSafetyGate} onClose={() => setShowSafetyGate(false)} title="Scan Safety Warning">
         <div className="flex flex-col items-center gap-4 text-center">
           <AlertTriangle className="size-12 text-amber-500" />
-          <p className="text-slate-700 dark:text-slate-300">
+          <p className="text-fg-soft">
             This QR code might fail to scan in real-world conditions. We recommend adjusting colors, pattern, or margin for better contrast.
           </p>
           <div className="mt-4 flex w-full gap-3">
@@ -265,7 +265,7 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
             actions={
               <a
                 href="#content-section"
-                className="flex min-h-11 min-w-11 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
+                className="flex min-h-11 min-w-11 items-center justify-center rounded-full text-fg-muted transition-colors hover:bg-surface-hover"
                 title="How to use"
                 aria-label="How to use"
               >
@@ -283,7 +283,7 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
         preview={
              <Card>
                 <div className="mb-6 flex items-center justify-between gap-2">
-                    <h2 className="font-semibold text-slate-700 dark:text-slate-200">Live Preview</h2>
+                    <h2 className="font-semibold text-fg-soft">Live Preview</h2>
                     <ScannabilityIndicator status={scannabilityStatus} health={health} />
                 </div>
                 {!isEmpty && <StressTestButton />}
@@ -299,11 +299,11 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
                 {isEmpty && (
                   <div
                     id={EMPTY_STATE_ID}
-                    className="mb-8 flex aspect-square w-full flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed border-slate-300 p-6 text-center dark:border-slate-700"
+                    className="mb-8 flex aspect-square w-full flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed border-line p-6 text-center"
                     data-testid="qr-empty-state"
                   >
-                    <QrCode className="size-12 text-slate-400 dark:text-slate-500" aria-hidden="true" />
-                    <p className="text-sm font-medium text-slate-600 dark:text-slate-300">{EMPTY_CONTENT_MESSAGE}</p>
+                    <QrCode className="size-12 text-fg-muted" aria-hidden="true" />
+                    <p className="text-sm font-medium text-fg-muted">{EMPTY_CONTENT_MESSAGE}</p>
                   </div>
                 )}
                 
@@ -404,7 +404,7 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
 
       {/* Educational content: full width below the workspace, at article width. */}
       {belowControls.length > 0 && (
-        <div className="border-t border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+        <div className="border-t border-line bg-surface">
           <div className="mx-auto max-w-3xl px-4 pb-4 sm:px-6">
             {belowControls.map((Control) => (
               <Control.component key={Control.id} toolId={toolId} />
@@ -413,48 +413,48 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
         </div>
       )}
 
-      <footer className="border-t border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950">
+      <footer className="border-t border-line bg-page">
         <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
           <nav aria-label="Site Map">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <h2 className="mb-3 text-xs font-semibold tracking-wider text-slate-900 uppercase dark:text-slate-200">Generators</h2>
-                <ul className="space-y-2 text-sm text-slate-600 dark:text-slate-400">
+                <h2 className="mb-3 text-xs font-semibold tracking-wider text-fg uppercase">Generators</h2>
+                <ul className="space-y-2 text-sm text-fg-muted">
                   {GENERATOR_LINKS.map(([label, href]) => {
                     if (!isDangerousUrl(href)) {
-                      return <li key={href}><a href={href} className="transition-colors hover:text-teal-700 dark:hover:text-teal-400">{label}</a></li>;
+                      return <li key={href}><a href={href} className="transition-colors hover:text-accent">{label}</a></li>;
                     }
                     return null;
                   })}
                   <li>
-                    <a href="/file-transfer" className="inline-flex items-center gap-1.5 font-semibold text-teal-700 transition-colors hover:text-teal-800 dark:text-teal-300 dark:hover:text-teal-200">
+                    <a href="/file-transfer" className="inline-flex items-center gap-1.5 font-semibold text-teal-700 transition-colors hover:text-accent-strong dark:text-teal-300">
                       <span>File Share (Send)</span>
-                      <span className="rounded-full bg-teal-100 px-1.5 py-0.5 text-xs font-semibold text-teal-800 dark:bg-teal-900/60 dark:text-teal-300">Beta</span>
+                      <span className="rounded-full bg-accent-soft px-1.5 py-0.5 text-xs font-semibold text-accent-strong">Beta</span>
                     </a>
                   </li>
                   <li>
-                    <a href="/file-transfer/receive" className="inline-flex items-center gap-1.5 font-semibold text-teal-700 transition-colors hover:text-teal-800 dark:text-teal-300 dark:hover:text-teal-200">
+                    <a href="/file-transfer/receive" className="inline-flex items-center gap-1.5 font-semibold text-teal-700 transition-colors hover:text-accent-strong dark:text-teal-300">
                       <span>File Share (Receive)</span>
-                      <span className="rounded-full bg-teal-100 px-1.5 py-0.5 text-xs font-semibold text-teal-800 dark:bg-teal-900/60 dark:text-teal-300">Beta</span>
+                      <span className="rounded-full bg-accent-soft px-1.5 py-0.5 text-xs font-semibold text-accent-strong">Beta</span>
                     </a>
                   </li>
                 </ul>
               </div>
               <div>
-                <h2 className="mb-3 text-xs font-semibold tracking-wider text-slate-900 uppercase dark:text-slate-200">Company</h2>
-                <ul className="space-y-2 text-sm text-slate-600 dark:text-slate-400">
-                  <li><a href="/about" className="transition-colors hover:text-teal-700 dark:hover:text-teal-400">About</a></li>
-                  <li><a href="/free-forever" className="transition-colors hover:text-teal-700 dark:hover:text-teal-400">No-Ads Pledge</a></li>
-                  <li><a href="/security#security" className="transition-colors hover:text-teal-700 dark:hover:text-teal-400">Security Policy</a></li>
-                  <li><a href="/security#compliance" className="transition-colors hover:text-teal-700 dark:hover:text-teal-400">Privacy Architecture</a></li>
-                  <li><a href="https://github.com/fderuiter/QRCraftly" target="_blank" rel="noopener noreferrer" className="transition-colors hover:text-teal-700 dark:hover:text-teal-400">GitHub</a></li>
+                <h2 className="mb-3 text-xs font-semibold tracking-wider text-fg uppercase">Company</h2>
+                <ul className="space-y-2 text-sm text-fg-muted">
+                  <li><a href="/about" className="transition-colors hover:text-accent">About</a></li>
+                  <li><a href="/free-forever" className="transition-colors hover:text-accent">No-Ads Pledge</a></li>
+                  <li><a href="/security#security" className="transition-colors hover:text-accent">Security Policy</a></li>
+                  <li><a href="/security#compliance" className="transition-colors hover:text-accent">Privacy Architecture</a></li>
+                  <li><a href="https://github.com/fderuiter/QRCraftly" target="_blank" rel="noopener noreferrer" className="transition-colors hover:text-accent">GitHub</a></li>
                 </ul>
               </div>
             </div>
           </nav>
         </div>
-        <p className="mx-auto max-w-7xl border-t border-slate-200 px-4 py-5 text-xs text-slate-500 sm:px-6 dark:border-slate-800 dark:text-slate-400">
-          <a href="/free-forever" className="font-medium text-slate-600 hover:text-teal-700 dark:text-slate-300 dark:hover:text-teal-400">{PLEDGE_TAGLINE}</a>{' '}
+        <p className="mx-auto max-w-7xl border-t border-line px-4 py-5 text-xs text-fg-muted sm:px-6">
+          <a href="/free-forever" className="font-medium text-fg-muted hover:text-accent">{PLEDGE_TAGLINE}</a>{' '}
           &copy; {new Date().getFullYear()} QRCraftly. Open Source.
         </p>
       </footer>

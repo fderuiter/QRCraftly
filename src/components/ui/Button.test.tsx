@@ -27,16 +27,16 @@ describe('Button pressed state', () => {
       const button = screen.getByRole('button', { name: 'Selected' });
       // Light and dark selected borders are present; the variant's dark border is not,
       // so it cannot override the selected border in dark mode.
-      expect(button.className).toContain('border-teal-700');
-      expect(button.className).toContain('dark:border-teal-300');
+      expect(button.className).toContain('border-accent-strong');
+      expect(button.className).toContain('bg-accent-soft');
       expect(button.className).toContain('ring-1');
-      expect(button.className).not.toContain('dark:border-slate-700');
+      expect(button.className).not.toContain('border-line ');
     },
   );
 
   it('keeps the variant styles when not pressed', () => {
     render(<Button variant="outline" pressed={false}>Idle</Button>);
-    expect(screen.getByRole('button', { name: 'Idle' }).className).toContain('dark:border-slate-700');
+    expect(screen.getByRole('button', { name: 'Idle' }).className).toContain('border-line');
   });
 
   it('has no axe violations in a toggle group', async () => {
@@ -55,7 +55,7 @@ describe('ButtonLink', () => {
     render(<ButtonLink href="/about" variant="primary">About</ButtonLink>);
     const link = screen.getByRole('link', { name: 'About' });
     expect(link).toHaveAttribute('href', '/about');
-    expect(link).toHaveClass('bg-teal-700', 'text-white', 'inline-flex');
+    expect(link).toHaveClass('bg-action', 'text-on-action', 'inline-flex');
   });
 
   it('passes link attributes through', () => {

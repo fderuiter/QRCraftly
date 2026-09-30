@@ -3,23 +3,21 @@ import { AlertCircle, AlertTriangle, CheckCircle, Info, LucideIcon } from 'lucid
 export type NotificationState = 'success' | 'error' | 'warning' | 'info';
 
 /**
- * Returns color classes for the specified notification state.
+ * Returns the semantic colour-token classes for a notification state (see the design
+ * tokens in src/layouts/index.css; they switch with the theme, so no `dark:` variants).
  * @param state The notification state type.
- * @param isAlert Boolean indicating if the style is for Alert component.
- * @returns Space-separated Tailwind color classes.
+ * @returns Space-separated Tailwind classes for background, border and text.
  */
-export function getNotificationColors(state: NotificationState, isAlert = false): string {
+export function getNotificationColors(state: NotificationState): string {
   switch (state) {
     case 'success':
-      return 'bg-teal-50 dark:bg-teal-900/30 border-teal-200 dark:border-teal-800 text-teal-800 dark:text-teal-200';
+      return 'bg-success-soft border-success-line text-success';
     case 'error':
-      return isAlert
-        ? 'bg-rose-50 dark:bg-rose-900/30 border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-300'
-        : 'bg-rose-50 dark:bg-rose-900/30 border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200';
+      return 'bg-danger-soft border-danger-line text-danger';
     case 'warning':
-      return 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-900 text-amber-800 dark:text-amber-400';
+      return 'bg-warning-soft border-warning-line text-warning';
     case 'info':
-      return 'bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-200';
+      return 'bg-accent-soft border-accent-line text-accent-strong';
   }
 }
 

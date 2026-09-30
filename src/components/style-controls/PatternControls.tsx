@@ -14,7 +14,7 @@ export const PatternControls: React.FC<PatternControlsProps> = ({ config, onChan
 
   return (
     <div>
-      <h4 className="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-300">Pattern Style</h4>
+      <h4 className="mb-3 text-sm font-semibold text-fg-soft">Pattern Style</h4>
       
       {isLowReliability && (
         <div className="mb-4" data-testid="pattern-warning-slot">
@@ -34,8 +34,8 @@ export const PatternControls: React.FC<PatternControlsProps> = ({ config, onChan
             key={pattern.id}
             className={`inline-flex h-auto cursor-pointer flex-col items-center justify-center rounded-xl border-2 p-3 font-medium transition-colors focus-within:ring-2 focus-within:ring-focus ${
               config.style === pattern.id
-                ? 'border-teal-500 bg-teal-50 text-teal-700 hover:bg-teal-100 dark:bg-slate-800 dark:text-teal-400 dark:hover:bg-slate-700'
-                : 'border-transparent bg-white text-slate-700 hover:bg-slate-50 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700/50'
+                ? 'border-teal-500 bg-teal-50 text-accent hover:bg-teal-100 dark:bg-slate-800 dark:hover:bg-slate-700'
+                : 'border-transparent bg-surface-raised text-fg-soft hover:bg-slate-50 dark:hover:bg-slate-700/50'
             }`}
           >
             <input

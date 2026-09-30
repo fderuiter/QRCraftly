@@ -75,36 +75,36 @@ function AudioQRToolInner() {
   } = useSpectrogramQR(getAudioContext);
 
   return (
-    <div className="min-h-screen w-full bg-slate-50 transition-colors duration-300 dark:bg-slate-950">
+    <div className="min-h-screen w-full bg-page transition-colors duration-300">
       
       <div className="mx-auto max-w-7xl px-4 py-8">
         {/* Navigation / Header */}
         <nav className="mb-6 flex items-center justify-between">
           <a
             href="/"
-            className="inline-flex items-center gap-2 text-slate-600 transition-colors hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+            className="inline-flex items-center gap-2 text-fg-muted transition-colors hover:text-fg"
             aria-label="Back to home"
           >
             <ArrowLeft className="size-5" />
             Back to Home
           </a>
-          <ThemeToggle className="bg-white shadow-sm dark:bg-slate-800" />
+          <ThemeToggle className="bg-surface-raised shadow-sm" />
         </nav>
 
         <header className="mb-10 text-center">
-          <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-2xl bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400">
+          <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-2xl bg-accent-soft text-accent">
             <Volume2 className="size-6" />
           </div>
-          <h1 className="mb-3 text-3xl font-extrabold text-slate-900 md:text-4xl dark:text-white">
+          <h1 className="mb-3 text-3xl font-extrabold text-fg md:text-4xl">
             Acoustic Steganography & Audio QR
           </h1>
-          <p className="mx-auto max-w-3xl text-sm text-slate-600 md:text-base dark:text-slate-300">
+          <p className="mx-auto max-w-3xl text-sm text-fg-muted md:text-base">
             Convert standard QR payloads or binary messages into audible signals. Transmit secure files or custom text over acoustic airwaves, or synthesize QR art onto real-time visual spectrogram streams.
           </p>
         </header>
 
         {/* Tab Selection */}
-        <div className="mb-8 flex flex-wrap justify-center gap-2 border-b border-slate-200 pb-4 dark:border-slate-800" role="group" aria-label="Audio mode">
+        <div className="mb-8 flex flex-wrap justify-center gap-2 border-b border-line pb-4" role="group" aria-label="Audio mode">
           <Button
             variant="outline"
             pressed={activeTab === 'chirp'}
@@ -132,20 +132,20 @@ function AudioQRToolInner() {
             {activeTab === 'chirp' ? (
               /* TAB 1 CONTROLS */
               <Card className="p-6">
-                <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-slate-800 dark:text-slate-100">
+                <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-fg">
                   <Sliders className="size-5 text-teal-500" />
                   Modem Configuration
                 </h2>
 
                 <div className="space-y-4">
                   <div>
-                    <label htmlFor="chirp-text-input" className="mb-1.5 block text-xs font-semibold text-slate-600 dark:text-slate-400">
+                    <label htmlFor="chirp-text-input" className="mb-1.5 block text-xs font-semibold text-fg-muted">
                       Message to Transmit (ASCII)
                     </label>
                     <input
                       id="chirp-text-input"
                       type="text"
-                      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm transition-all outline-none focus:border-teal-500 focus:bg-white dark:border-slate-800 dark:bg-slate-900/50 dark:text-slate-200 dark:focus:border-teal-500 dark:focus:bg-slate-900"
+                      className="w-full rounded-xl border border-line bg-slate-50 px-4 py-2.5 text-sm transition-all outline-none focus:border-teal-500 focus:bg-surface dark:bg-slate-900/50 dark:text-slate-200 dark:focus:border-teal-500"
                       value={chirpText}
                       onChange={(e) => setChirpText(e.target.value.toUpperCase().replace(/[^A-Z0-9\s!?,.]/g, ''))}
                       placeholder="ENTER TEXT PAYLOAD"
@@ -157,7 +157,7 @@ function AudioQRToolInner() {
                   </div>
 
                   <div className="rounded-xl border border-teal-100 bg-teal-50/50 p-4 dark:border-teal-900/30 dark:bg-teal-950/20">
-                    <h3 className="mb-1 flex items-center gap-1 text-xs font-bold text-teal-800 dark:text-teal-300">
+                    <h3 className="mb-1 flex items-center gap-1 text-xs font-bold text-accent-strong">
                       <Info className="size-3.5" /> BFSK Protocols
                     </h3>
                     <p className="text-xs leading-relaxed text-teal-700/80 dark:text-teal-400/80">
@@ -209,20 +209,20 @@ function AudioQRToolInner() {
             ) : (
               /* TAB 2 CONTROLS */
               <Card className="p-6">
-                <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-slate-800 dark:text-slate-100">
+                <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-fg">
                   <Sliders className="size-5 text-teal-500" />
                   Art Configuration
                 </h2>
 
                 <div className="space-y-4">
                   <div>
-                    <label htmlFor="spectrogram-text-input" className="mb-1.5 block text-xs font-semibold text-slate-600 dark:text-slate-400">
+                    <label htmlFor="spectrogram-text-input" className="mb-1.5 block text-xs font-semibold text-fg-muted">
                       QR Payload String
                     </label>
                     <input
                       id="spectrogram-text-input"
                       type="text"
-                      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm transition-all outline-none focus:border-teal-500 focus:bg-white dark:border-slate-800 dark:bg-slate-900/50 dark:text-slate-200 dark:focus:border-teal-500 dark:focus:bg-slate-900"
+                      className="w-full rounded-xl border border-line bg-slate-50 px-4 py-2.5 text-sm transition-all outline-none focus:border-teal-500 focus:bg-surface dark:bg-slate-900/50 dark:text-slate-200 dark:focus:border-teal-500"
                       value={spectrogramText}
                       onChange={(e) => setSpectrogramText(e.target.value.substring(0, 15))}
                       placeholder="LISTEN"
@@ -234,7 +234,7 @@ function AudioQRToolInner() {
                   </div>
 
                   <div className="rounded-xl border border-teal-100 bg-teal-50/50 p-4 dark:border-teal-900/30 dark:bg-teal-950/20">
-                    <h3 className="mb-1 flex items-center gap-1 text-xs font-bold text-teal-800 dark:text-teal-300">
+                    <h3 className="mb-1 flex items-center gap-1 text-xs font-bold text-accent-strong">
                       <Info className="size-3.5" /> Spectrogram QR Synthesis
                     </h3>
                     <p className="text-xs leading-relaxed text-teal-700/80 dark:text-teal-400/80">
@@ -277,25 +277,25 @@ function AudioQRToolInner() {
 
             {/* Common technical specifications card */}
             <Card className="p-6">
-              <h2 className="mb-3 flex items-center gap-1.5 text-xs font-bold tracking-wider text-slate-500 uppercase dark:text-slate-400">
+              <h2 className="mb-3 flex items-center gap-1.5 text-xs font-bold tracking-wider text-fg-muted uppercase">
                 <QrCode className="size-4" /> Core Technical Specifications
               </h2>
-              <ul className="space-y-2 text-xs text-slate-600 dark:text-slate-400">
+              <ul className="space-y-2 text-xs text-fg-muted">
                 <li className="flex justify-between border-b border-slate-100 pb-1.5 dark:border-slate-800/40">
                   <span>Modem Protocol:</span>
-                  <span className="font-semibold text-slate-800 dark:text-slate-200">Binary FSK (Non-Coherent)</span>
+                  <span className="font-semibold text-fg">Binary FSK (Non-Coherent)</span>
                 </li>
                 <li className="flex justify-between border-b border-slate-100 pb-1.5 dark:border-slate-800/40">
                   <span>Modulation Bitrate:</span>
-                  <span className="font-semibold text-slate-800 dark:text-slate-200">10 bits / sec (100ms duration)</span>
+                  <span className="font-semibold text-fg">10 bits / sec (100ms duration)</span>
                 </li>
                 <li className="flex justify-between border-b border-slate-100 pb-1.5 dark:border-slate-800/40">
                   <span>Frequencies:</span>
-                  <span className="font-semibold text-slate-800 dark:text-slate-200">1200Hz ('0'), 2200Hz ('1'), 1500Hz (Sync)</span>
+                  <span className="font-semibold text-fg">1200Hz ('0'), 2200Hz ('1'), 1500Hz (Sync)</span>
                 </li>
                 <li className="flex justify-between pb-1.5">
                   <span>Spectrogram Band:</span>
-                  <span className="font-semibold text-slate-800 dark:text-slate-200">1.2 kHz - 4.5 kHz</span>
+                  <span className="font-semibold text-fg">1.2 kHz - 4.5 kHz</span>
                 </li>
               </ul>
             </Card>
@@ -310,13 +310,13 @@ function AudioQRToolInner() {
               <div className="space-y-6">
                 <Card className="p-6">
                   <div className="mb-4 flex items-center justify-between">
-                    <h2 className="font-bold text-slate-800 dark:text-slate-100">
+                    <h2 className="font-bold text-fg">
                       Receiver Terminal Output
                     </h2>
                     <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold ${
                       isListening 
-                        ? 'border border-emerald-200 bg-emerald-100 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400' 
-                        : 'border border-slate-200 bg-slate-100 text-slate-600 dark:border-slate-800 dark:bg-slate-900/30 dark:text-slate-400'
+                        ? 'border border-success-line bg-success-soft text-emerald-700 dark:text-emerald-400' 
+                        : 'border border-line bg-slate-100 text-fg-muted dark:bg-slate-900/30'
                     }`}>
                       <span className={`size-1.5 rounded-full ${isListening ? 'bg-emerald-500 motion-safe:animate-pulse' : 'bg-slate-400'}`} />
                       {isListening ? 'LISTENING' : 'OFFLINE'}
@@ -327,11 +327,11 @@ function AudioQRToolInner() {
                   <div className="mb-6 grid grid-cols-2 gap-4 rounded-xl border border-slate-100 bg-slate-50/50 p-4 dark:border-slate-900 dark:bg-slate-900/30">
                     <div>
                       <div className="text-xs font-bold tracking-wide text-slate-400 uppercase">Detected Symbol</div>
-                      <div className="font-mono text-sm font-semibold text-slate-700 dark:text-slate-300">{currentSymbol}</div>
+                      <div className="font-mono text-sm font-semibold text-fg-soft">{currentSymbol}</div>
                     </div>
                     <div>
                       <div className="text-xs font-bold tracking-wide text-slate-400 uppercase">Total Decoded Payload</div>
-                      <div className="font-mono text-sm font-bold text-teal-600 dark:text-teal-400">
+                      <div className="font-mono text-sm font-bold text-accent">
                         {decodedMessage ? `"${decodedMessage}"` : <span className="text-slate-400 italic">Empty</span>}
                       </div>
                     </div>
@@ -356,13 +356,13 @@ function AudioQRToolInner() {
               <div className="space-y-6">
                 <Card className="p-6">
                   <div className="mb-4 flex items-center justify-between">
-                    <h2 className="font-bold text-slate-800 dark:text-slate-100">
+                    <h2 className="font-bold text-fg">
                       Spectrogram Visualizer Canvas
                     </h2>
                     <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold ${
                       isPlayingSpectrogram 
-                        ? 'border border-emerald-200 bg-emerald-100 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400' 
-                        : 'border border-slate-200 bg-slate-100 text-slate-600 dark:border-slate-800 dark:bg-slate-900/30 dark:text-slate-400'
+                        ? 'border border-success-line bg-success-soft text-emerald-700 dark:text-emerald-400' 
+                        : 'border border-line bg-slate-100 text-fg-muted dark:bg-slate-900/30'
                     }`}>
                       <span className={`size-1.5 rounded-full ${isPlayingSpectrogram ? 'bg-emerald-500 motion-safe:animate-pulse' : 'bg-slate-400'}`} />
                       {isPlayingSpectrogram ? 'DRAWING QR CODE' : 'STANDBY'}
@@ -373,7 +373,7 @@ function AudioQRToolInner() {
                   <div className="mb-6 flex min-h-75 items-center justify-center rounded-2xl border border-slate-100 bg-slate-900 p-4 dark:border-slate-900">
                     <canvas
                       ref={specCanvasRef}
-                      className="max-h-[60vh] w-full rounded-lg bg-[#0a0f1d] object-contain shadow-sm"
+                      className="max-h-[60vh] w-full rounded-lg bg-slate-950 object-contain shadow-sm"
                       width={512}
                       height={320}
                       role="img"
@@ -384,8 +384,8 @@ function AudioQRToolInner() {
                   <div className="flex items-start gap-3 rounded-xl border border-slate-100 bg-slate-50/50 p-4 text-xs dark:border-slate-900 dark:bg-slate-900/30">
                     <Info className="mt-0.5 size-5 shrink-0 text-teal-500" />
                     <div className="space-y-1">
-                      <h4 className="font-semibold text-slate-800 dark:text-slate-200">How to scan this QR sound?</h4>
-                      <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-400">
+                      <h4 className="font-semibold text-fg">How to scan this QR sound?</h4>
+                      <p className="text-xs leading-relaxed text-fg-muted">
                         This sound actually encodes the QR code modules. When played back, the horizontal pixels render row-by-row on the scrolling visualizer. If you put a camera in front of this visualizer screen, any standard QR scanner app will recognize the glowing pattern and read the data!
                       </p>
                     </div>

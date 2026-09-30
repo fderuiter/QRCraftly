@@ -36,13 +36,13 @@ function useCurrentPathname(): string {
 }
 
 const BETA_BADGE_CLASSES =
-  'rounded-full bg-teal-100 px-1.5 py-0.5 text-xs font-semibold text-teal-800 dark:bg-teal-900/60 dark:text-teal-300';
+  'rounded-full bg-accent-soft px-1.5 py-0.5 text-xs font-semibold text-accent-strong';
 
 const LINK_BASE_CLASSES =
-  'flex min-h-11 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold transition-colors hover:bg-slate-100 hover:text-teal-700 dark:hover:bg-slate-800 dark:hover:text-teal-400';
+  'flex min-h-11 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold transition-colors hover:bg-surface-hover hover:text-accent';
 
-const LINK_IDLE_CLASSES = 'text-slate-600 dark:text-slate-300';
-const LINK_CURRENT_CLASSES = 'text-teal-800 underline decoration-2 underline-offset-4 dark:text-teal-300';
+const LINK_IDLE_CLASSES = 'text-fg-muted';
+const LINK_CURRENT_CLASSES = 'text-accent-strong underline decoration-2 underline-offset-4';
 
 /**
  * One navigation link, marked with `aria-current="page"` when it owns the current route.
@@ -130,7 +130,7 @@ export function PrimaryNav({ layout = 'responsive' }: PrimaryNavProps) {
         {open && (
           <ul
             id={panelId}
-            className="absolute top-full right-0 z-40 mt-2 w-56 max-w-[calc(100vw-2rem)] space-y-1 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl dark:border-slate-700 dark:bg-slate-900"
+            className="absolute top-full right-0 z-40 mt-2 w-56 max-w-[calc(100vw-2rem)] space-y-1 rounded-xl border border-line bg-surface-raised p-1.5 shadow-overlay"
           >
             {PRIMARY_NAV_ITEMS.map((item) => (
               <NavLink key={item.id} item={item} isCurrent={item.id === currentId} onNavigate={close} />

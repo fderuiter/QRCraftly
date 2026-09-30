@@ -16,7 +16,7 @@ export const AdvancedControls: React.FC<AdvancedControlsProps> = ({ config, onCh
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   return (
-    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white transition-colors duration-300 dark:border-slate-700 dark:bg-slate-800">
+    <div className="overflow-hidden rounded-xl border border-line bg-surface-raised transition-colors duration-300">
       <h3 className="m-0 text-base">
         <Button
           variant="ghost"
@@ -26,10 +26,10 @@ export const AdvancedControls: React.FC<AdvancedControlsProps> = ({ config, onCh
           aria-expanded={showAdvanced}
           aria-controls="advanced-settings-panel"
         >
-          <span className="font-semibold text-slate-800 dark:text-slate-200">Advanced Mode</span>
+          <span className="font-semibold text-fg">Advanced Mode</span>
           <ChevronDown
             aria-hidden="true"
-            className={`size-5 text-slate-500 motion-safe:transition-transform dark:text-slate-400 ${showAdvanced ? 'rotate-180' : ''}`}
+            className={`size-5 text-fg-muted motion-safe:transition-transform ${showAdvanced ? 'rotate-180' : ''}`}
           />
         </Button>
       </h3>
@@ -37,7 +37,7 @@ export const AdvancedControls: React.FC<AdvancedControlsProps> = ({ config, onCh
       {showAdvanced && (
         <div className="space-y-4 px-5 pb-4" id="advanced-settings-panel">
           <div>
-            <span className="mb-2 block text-xs font-medium text-slate-500 dark:text-slate-400">Error Correction Level</span>
+            <span className="mb-2 block text-xs font-medium text-fg-muted">Error Correction Level</span>
             <div
               className="grid grid-cols-2 gap-2"
               role="radiogroup"
@@ -55,8 +55,8 @@ export const AdvancedControls: React.FC<AdvancedControlsProps> = ({ config, onCh
                     key={level.id}
                     className={`inline-flex cursor-pointer flex-col items-start rounded-lg border p-2 text-left transition-colors focus-within:ring-2 focus-within:ring-focus ${
                       config.errorCorrectionLevel === level.id
-                        ? 'border-teal-500 bg-teal-50 text-teal-700 dark:bg-slate-800 dark:text-teal-400'
-                        : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700/50'
+                        ? 'border-teal-500 bg-teal-50 text-accent dark:bg-slate-800'
+                        : 'border-line bg-surface-raised text-fg-soft hover:bg-slate-50 dark:hover:bg-slate-700/50'
                     }`}
                   >
                     <input
@@ -78,18 +78,18 @@ export const AdvancedControls: React.FC<AdvancedControlsProps> = ({ config, onCh
                       }`} aria-hidden="true"></div>
                       <span className="text-xs font-medium">{level.label}</span>
                     </div>
-                    <span id={descId} className="mt-0.5 block pl-5 text-xs text-slate-500 dark:text-slate-400">{level.desc}</span>
+                    <span id={descId} className="mt-0.5 block pl-5 text-xs text-fg-muted">{level.desc}</span>
                   </label>
                 );
               })}
             </div>
-            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+            <p className="mt-2 text-xs text-fg-muted">
               Higher levels allow the QR code to be scanned even if damaged or covered (e.g., by a logo), but result in a denser code.
             </p>
           </div>
 
           {/* Maze Overlay Controls */}
-          <div className="border-t border-slate-100 pt-4 dark:border-slate-800">
+          <div className="border-t border-line-subtle pt-4">
             <div className="mb-4">
               <ToggleSwitch
                 id="is-maze-enabled"
@@ -97,7 +97,7 @@ export const AdvancedControls: React.FC<AdvancedControlsProps> = ({ config, onCh
                 checked={!!config.isMazeEnabled}
                 onChange={(checked) => onChange({ isMazeEnabled: checked })}
               />
-              <p className="mt-1 pl-12 text-xs text-slate-500 dark:text-slate-400">
+              <p className="mt-1 pl-12 text-xs text-fg-muted">
                 Generates a solvable maze on empty modules and quiet zones without changing data modules.
               </p>
             </div>

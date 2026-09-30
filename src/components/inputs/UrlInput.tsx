@@ -197,10 +197,10 @@ export const UrlInput: React.FC<UrlInputProps> = ({ data, onChange }) => {
             <div className="flex justify-center">
               <Shield className="size-12 text-teal-600" />
             </div>
-            <p className="text-sm leading-relaxed text-slate-700 dark:text-slate-300">
+            <p className="text-sm leading-relaxed text-fg-soft">
               Standard QRCraftly codes are strictly local and offline. However, by enabling <strong>Dynamic Tracking</strong>, you opt into the following edge capabilities:
             </p>
-            <ul className="list-disc space-y-1 pl-5 text-xs text-slate-600 dark:text-slate-400">
+            <ul className="list-disc space-y-1 pl-5 text-xs text-fg-muted">
               <li>Your destination URL is stored in our Cloudflare Pages Edge Key-Value (KV) database.</li>
               <li> Cumulative scan counts are tracked anonymously (zero sensitive personal logs are collected).</li>
               <li>You can change the target destination at any time without reprinting the QR pattern.</li>
@@ -251,7 +251,7 @@ export const UrlInput: React.FC<UrlInputProps> = ({ data, onChange }) => {
             // Success State: Already Registered
             <div className="rounded-xl border border-teal-200 bg-teal-50/50 p-4 dark:border-teal-900/40 dark:bg-teal-950/20">
               <div className="flex items-start gap-2">
-                <CheckCircle className="mt-0.5 size-5 shrink-0 text-teal-600 dark:text-teal-400" />
+                <CheckCircle className="mt-0.5 size-5 shrink-0 text-accent" />
                 <div className="space-y-2">
                   <h4 className="text-sm font-semibold text-teal-900 dark:text-teal-300">
                     Trackable Redirection Enabled
@@ -304,8 +304,8 @@ export const UrlInput: React.FC<UrlInputProps> = ({ data, onChange }) => {
               />
 
               {/* Platform-Specific App Store Destinations */}
-              <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50/50 p-3 dark:border-slate-800 dark:bg-slate-900/50">
-                <div className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+              <div className="space-y-3 rounded-lg border border-line bg-slate-50/50 p-3 dark:bg-slate-900/50">
+                <div className="text-xs font-semibold text-fg-soft">
                   Dual-Platform App Store Destinations (Optional)
                 </div>
 
@@ -315,7 +315,7 @@ export const UrlInput: React.FC<UrlInputProps> = ({ data, onChange }) => {
                     label="Apple App Store Link (iOS)"
                     checked={enableIos}
                     onChange={(checked) => setEnableIos(checked)}
-                    labelClassName="text-xs font-medium text-slate-700 dark:text-slate-300"
+                    labelClassName="text-xs font-medium text-fg-soft"
                   />
                   {enableIos && (
                     <TextField
@@ -335,7 +335,7 @@ export const UrlInput: React.FC<UrlInputProps> = ({ data, onChange }) => {
                     label="Google Play Store Link (Android)"
                     checked={enableAndroid}
                     onChange={(checked) => setEnableAndroid(checked)}
-                    labelClassName="text-xs font-medium text-slate-700 dark:text-slate-300"
+                    labelClassName="text-xs font-medium text-fg-soft"
                   />
                   {enableAndroid && (
                     <TextField
@@ -351,11 +351,11 @@ export const UrlInput: React.FC<UrlInputProps> = ({ data, onChange }) => {
               </div>
 
               {/* Bot Safeguard Verification (Turnstile Challenge) */}
-              <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50/50 p-3 dark:border-slate-800 dark:bg-slate-900/50">
-                <div className="flex items-center justify-between text-xs font-semibold text-slate-700 dark:text-slate-300">
+              <div className="space-y-2 rounded-lg border border-line bg-slate-50/50 p-3 dark:bg-slate-900/50">
+                <div className="flex items-center justify-between text-xs font-semibold text-fg-soft">
                   <span>Bot Safeguard Verification</span>
                   {turnstileToken && (
-                    <span className="text-xs font-bold text-teal-600 dark:text-teal-400">✓ Verified</span>
+                    <span className="text-xs font-bold text-accent">✓ Verified</span>
                   )}
                 </div>
                 <div
@@ -370,10 +370,10 @@ export const UrlInput: React.FC<UrlInputProps> = ({ data, onChange }) => {
                     </Button>
                   )}
                   {turnstileStatus === "unconfigured" && !import.meta.env.DEV && (
-                    <p className="text-xs text-slate-600 dark:text-slate-400">Bot verification is not configured on this deployment.</p>
+                    <p className="text-xs text-fg-muted">Bot verification is not configured on this deployment.</p>
                   )}
                   {turnstileStatus === "error" && (
-                    <p role="alert" className="text-xs text-rose-700 dark:text-rose-400">The bot check could not load. Reload the page and try again.</p>
+                    <p role="alert" className="text-xs text-danger">The bot check could not load. Reload the page and try again.</p>
                   )}
                   {turnstileToken && (
                     <div className="flex items-center gap-1.5 font-mono text-xs text-teal-700 dark:text-teal-300">
@@ -410,9 +410,9 @@ export const UrlInput: React.FC<UrlInputProps> = ({ data, onChange }) => {
             label="Dynamic QR (Trackable Redirect)"
             checked={isDynamicMode}
             onChange={handleToggleChange}
-            labelClassName="text-sm font-semibold text-slate-700 dark:text-slate-300"
+            labelClassName="text-sm font-semibold text-fg-soft"
           />
-          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+          <p className="mt-1 text-xs text-fg-muted">
             Allows updating the destination later and tracking anonymous scan statistics.
           </p>
         </div>

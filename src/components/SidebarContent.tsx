@@ -31,11 +31,11 @@ export function SidebarContent({ toolId }: SidebarContentProps) {
     : contentRegistry['index'].faqs;
 
   return (
-    <div id="content-section" className="mt-12 border-t border-slate-100 pt-8 text-slate-700 dark:border-slate-800 dark:text-slate-300">
+    <div id="content-section" className="mt-12 border-t border-line-subtle pt-8 text-fg-soft">
       
       {content.name && content.name !== 'QRCraftly' && (
         <section className="mb-10">
-          <h2 className="mb-3 text-2xl font-bold text-slate-800 dark:text-slate-100">{getAboutHeading(content.name)}</h2>
+          <h2 className="mb-3 text-2xl font-bold text-fg">{getAboutHeading(content.name)}</h2>
           {content.description && <p className="mb-4 text-sm leading-relaxed">{content.description}</p>}
           {content.features && content.features.length > 0 && (
             <>
@@ -55,17 +55,17 @@ export function SidebarContent({ toolId }: SidebarContentProps) {
 
       {content.howTo && content.howTo.steps && content.howTo.steps.length > 0 && (
         <section className="mb-10">
-          <h2 className="mb-5 text-2xl font-bold text-slate-800 dark:text-slate-100">{content.howTo.name}</h2>
-          {content.howTo.description && <p className="mb-5 text-sm text-slate-600 dark:text-slate-400">{content.howTo.description}</p>}
+          <h2 className="mb-5 text-2xl font-bold text-fg">{content.howTo.name}</h2>
+          {content.howTo.description && <p className="mb-5 text-sm text-fg-muted">{content.howTo.description}</p>}
           <div className="space-y-4">
             {content.howTo.steps.map((step, idx) => (
-              <div key={idx} className="flex gap-4 rounded-xl border border-slate-100 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/50">
-                <div className="flex size-8 flex-shrink-0 items-center justify-center rounded-full bg-teal-100 text-sm font-bold text-teal-600 dark:bg-teal-900/50 dark:text-teal-400">
+              <div key={idx} className="flex gap-4 rounded-xl border border-line bg-slate-50 p-4 dark:bg-slate-800/50">
+                <div className="flex size-8 flex-shrink-0 items-center justify-center rounded-full bg-teal-100 text-sm font-bold text-accent dark:bg-teal-900/50">
                   {idx + 1}
                 </div>
                 <div>
-                  <h3 className="mb-1 text-sm font-semibold text-slate-800 dark:text-slate-200">{step.name}</h3>
-                  <p className="text-sm text-slate-600 dark:text-slate-400">{step.text}</p>
+                  <h3 className="mb-1 text-sm font-semibold text-fg">{step.name}</h3>
+                  <p className="text-sm text-fg-muted">{step.text}</p>
                 </div>
               </div>
             ))}
@@ -75,7 +75,7 @@ export function SidebarContent({ toolId }: SidebarContentProps) {
 
       {displayFaqs && displayFaqs.length > 0 && (
         <section className="mb-10">
-          <h2 className="mb-5 text-2xl font-bold text-slate-800 dark:text-slate-100">Frequently Asked Questions</h2>
+          <h2 className="mb-5 text-2xl font-bold text-fg">Frequently Asked Questions</h2>
           <Accordion>
             {displayFaqs.map((q, idx) => (
               <AccordionItem key={idx} title={q.question}>

@@ -26,7 +26,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement>, ButtonSty
  * 3:1 non-text contrast minimum against both the light and dark surfaces.
  */
 const PRESSED_STYLES =
-  'bg-teal-50 border border-teal-700 ring-1 ring-teal-700 text-teal-800 font-semibold hover:bg-teal-100 dark:bg-teal-950 dark:border-teal-300 dark:ring-teal-300 dark:text-teal-100 dark:hover:bg-teal-900';
+  'bg-accent-soft border border-accent-strong ring-1 ring-accent-strong text-accent-strong font-semibold hover:bg-surface-hover';
 
 /**
  * Builds the class list shared by `Button` and `ButtonLink`.
@@ -41,25 +41,25 @@ function buttonClassName({ variant = 'secondary', size = 'md', fullWidth = false
 
   switch (variant) {
     case 'primary':
-      variantStyles = 'bg-teal-700 dark:bg-teal-700 dark:hover:bg-teal-600 dark:shadow-teal-900/40 hover:bg-teal-800 shadow-lg shadow-teal-900/10 text-white';
+      variantStyles = 'bg-action hover:bg-action-hover shadow-raised text-on-action';
       break;
     case 'secondary':
-      variantStyles = 'bg-teal-50 border border-teal-200 dark:bg-slate-800 dark:border-slate-700 dark:hover:bg-slate-700 dark:text-teal-400 hover:bg-teal-100 text-teal-700';
+      variantStyles = 'bg-accent-soft border border-accent-line hover:bg-surface-hover text-accent';
       break;
     case 'error':
-      variantStyles = 'bg-rose-700 text-white hover:bg-rose-800 shadow-lg shadow-rose-900/10 dark:bg-rose-700 dark:hover:bg-rose-600 dark:shadow-rose-950/40';
+      variantStyles = 'bg-danger-action text-on-action hover:bg-danger-action-hover shadow-raised';
       break;
     case 'outline':
-      variantStyles = 'bg-white border border-slate-200 dark:bg-slate-800 dark:border-slate-700 dark:hover:bg-slate-700/50 dark:text-slate-200 hover:bg-slate-50 text-slate-700';
+      variantStyles = 'bg-surface-raised border border-line hover:bg-surface-hover text-fg-soft';
       break;
     case 'ghost':
-      variantStyles = 'bg-transparent dark:hover:bg-slate-800 dark:text-slate-400 hover:bg-slate-100 text-slate-500';
+      variantStyles = 'bg-transparent hover:bg-surface-hover text-fg-muted';
       break;
     case 'menuitem':
-      variantStyles = 'bg-transparent dark:hover:bg-slate-700/50 dark:text-slate-200 hover:bg-slate-50 text-slate-700';
+      variantStyles = 'bg-transparent hover:bg-surface-hover text-fg-soft';
       break;
     case 'icon':
-      variantStyles = 'bg-transparent dark:hover:bg-slate-800 dark:hover:text-slate-200 dark:text-slate-400 hover:bg-slate-100 hover:text-slate-700 text-slate-500';
+      variantStyles = 'bg-transparent hover:bg-surface-hover hover:text-fg text-fg-muted';
       break;
   }
 

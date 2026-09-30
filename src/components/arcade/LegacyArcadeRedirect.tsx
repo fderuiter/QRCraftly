@@ -38,7 +38,7 @@ export function LegacyArcadeRedirect({ to }: { to: string }) {
   let link: React.ReactNode = null;
   if (!isDangerousUrl(to)) {
     link = (
-      <a href={to} className="mt-6 inline-block font-semibold text-teal-700 underline underline-offset-4 dark:text-teal-400">
+      <a href={to} className="mt-6 inline-block font-semibold text-accent underline underline-offset-4">
         Open the QR Arcade
       </a>
     );
@@ -47,8 +47,8 @@ export function LegacyArcadeRedirect({ to }: { to: string }) {
   return (
     <ProductShell>
       <div className="mx-auto max-w-xl px-4 py-16 text-center">
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">This game now lives in the QR Arcade</h1>
-        <p className="mt-3 text-slate-600 dark:text-slate-300">Taking you there now.</p>
+        <h1 className="text-2xl font-bold text-fg">This game now lives in the QR Arcade</h1>
+        <p className="mt-3 text-fg-muted">Taking you there now.</p>
         {link}
       </div>
     </ProductShell>

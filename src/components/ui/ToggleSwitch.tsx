@@ -34,9 +34,9 @@ export const ToggleSwitch: React.FC<ToggleSwitchProps> = ({
           onChange={(e) => onChange(e.target.checked)}
           {...rest}
         />
-        <div className="peer h-5 w-9 rounded-full bg-slate-600 peer-checked:bg-teal-700 peer-focus-visible:ring-2 peer-focus-visible:ring-focus peer-focus-visible:ring-offset-2 after:absolute after:top-[2px] after:left-[2px] after:size-4 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white dark:border-gray-600 dark:bg-slate-400 dark:peer-checked:bg-teal-600 dark:peer-focus-visible:ring-offset-slate-900"></div>
+        <div className="peer h-5 w-9 rounded-full bg-line-strong peer-checked:bg-accent peer-focus-visible:ring-2 peer-focus-visible:ring-focus peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-surface after:absolute after:top-0.5 after:left-0.5 after:size-4 after:rounded-full after:border after:border-line after:bg-surface after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-on-action"></div>
         {!srLabel && (
-          <span className={labelClassName ? `ml-3 ${labelClassName}` : "ml-3 text-sm font-medium text-slate-700 dark:text-slate-300"}>
+          <span className={labelClassName ? `ml-3 ${labelClassName}` : "ml-3 text-sm font-medium text-fg-soft"}>
             {label}
           </span>
         )}

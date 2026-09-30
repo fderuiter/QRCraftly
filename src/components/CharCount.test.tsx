@@ -31,21 +31,21 @@ describe('CharCount Component', () => {
     const counterText = screen.getByText('10 / 100');
     // The text is inside a span, which is inside the div with the color class
     const wrapper = counterText.closest('div');
-    expect(wrapper).toHaveClass('text-slate-500');
+    expect(wrapper).toHaveClass('text-fg-muted');
   });
 
   it('renders warning color for >= 90% usage', () => {
     render(<CharCount current={90} max={100} />);
     const counterText = screen.getByText('90 / 100');
     const wrapper = counterText.closest('div');
-    expect(wrapper).toHaveClass('text-amber-700');
+    expect(wrapper).toHaveClass('text-warning');
   });
 
   it('renders error color for 100% usage', () => {
     render(<CharCount current={100} max={100} />);
     const counterText = screen.getByText('100 / 100');
     const wrapper = counterText.closest('div');
-    expect(wrapper).toHaveClass('text-rose-700');
+    expect(wrapper).toHaveClass('text-danger');
   });
 
   it('has accessibility attributes', () => {

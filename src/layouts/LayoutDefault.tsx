@@ -45,14 +45,14 @@ export default function LayoutDefault({ children }: { children: React.ReactNode 
       <ServiceWorkerUpdatePrompt enabled={!import.meta.env.DEV} />
       <a
         href="#main-content"
-        className="sr-only transition-all focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:rounded-lg focus:border-2 focus:border-teal-700 focus:bg-white focus:px-4 focus:py-2 focus:text-teal-700 focus:shadow-lg focus:outline-none dark:focus:bg-slate-800 dark:focus:text-teal-400"
+        className="sr-only transition-all focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:rounded-lg focus:border-2 focus:border-teal-700 focus:bg-surface-raised focus:px-4 focus:py-2 focus:text-accent focus:shadow-lg focus:outline-none"
       >
         Skip to main content
       </a>
       <main
         id="main-content"
         tabIndex={-1}
-        className="flex min-h-screen flex-col bg-slate-50 font-sans text-slate-700 antialiased focus:outline-none dark:bg-slate-900 dark:text-slate-200"
+        className="flex min-h-screen flex-col bg-page font-sans text-fg-soft antialiased focus:outline-none"
         data-hydrated={hydrated}
       >
         <ErrorBoundary>

@@ -261,13 +261,13 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
   const renderWebcamViewfinder = () => {
     if (permissionState === 'denied' || permissionState === 'unavailable') {
       return (
-        <div className="flex size-full flex-col justify-between p-5 text-center text-slate-800 dark:text-slate-200">
+        <div className="flex size-full flex-col justify-between p-5 text-center text-fg">
           <div className="flex flex-col items-center gap-3">
             <AlertTriangle className="size-10 text-amber-500" />
             <h3 className="text-base font-bold">
               {permissionState === 'denied' ? 'Camera Access Denied' : 'Camera Unavailable'}
             </h3>
-            <p className="max-w-sm text-xs text-slate-500 dark:text-slate-400">
+            <p className="max-w-sm text-xs text-fg-muted">
               {getPlatformInstructions()}
             </p>
           </div>
@@ -313,10 +313,10 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
           </div>
         )}
         {/* Scanning targeting guide overlay */}
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center border-[3px] border-teal-500/40">
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center border-3 border-teal-500/40">
           <div className="relative flex size-48 items-center justify-center rounded-lg border-2 border-teal-400 motion-safe:animate-pulse">
             {/* Guide line animation */}
-            <div className="absolute inset-x-0 h-0.5 bg-teal-400 shadow-[0_0_8px_#2dd4bf] motion-safe:animate-[bounce_2s_infinite]" />
+            <div className="absolute inset-x-0 h-0.5 bg-teal-400 shadow-glow motion-safe:animate-[bounce_2s_infinite]" />
           </div>
         </div>
         <div className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-black/60 px-3 py-1 text-xs font-medium text-white backdrop-blur-sm">
@@ -348,28 +348,28 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
           className={`size-full flex-col rounded-lg border-2 border-dashed p-6 text-center ${
             dragOver
               ? 'border-teal-500 bg-teal-50/50 dark:bg-teal-950/20'
-              : 'border-slate-300 hover:border-slate-400 dark:border-slate-700 dark:hover:border-slate-600'
+              : 'border-line hover:border-slate-400 dark:hover:border-slate-600'
           }`}
         >
           {fileProcessing ? (
             <span className="flex flex-col items-center">
-              <RefreshCw className="mb-3 size-8 text-teal-600 motion-safe:animate-spin dark:text-teal-400" aria-hidden="true" />
-              <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Processing file...</span>
+              <RefreshCw className="mb-3 size-8 text-accent motion-safe:animate-spin" aria-hidden="true" />
+              <span className="text-sm font-medium text-fg-soft">Processing file...</span>
             </span>
           ) : (
             <span className="flex flex-col items-center">
               <FileImage className="mb-3 size-10 text-slate-400" aria-hidden="true" />
-              <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+              <span className="text-sm font-semibold text-fg-soft">
                 Drag & Drop QR Image or Video
               </span>
-              <span className="mt-1 max-w-xs text-xs text-slate-500 dark:text-slate-400">
+              <span className="mt-1 max-w-xs text-xs text-fg-muted">
                 or click here to select a file from your device.
               </span>
             </span>
           )}
 
           {fileError && (
-            <span className="mt-4 flex max-w-xs items-center gap-2 rounded-lg bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 dark:bg-rose-950/30 dark:text-rose-400">
+            <span className="mt-4 flex max-w-xs items-center gap-2 rounded-lg bg-rose-50 px-3 py-2 text-xs font-semibold text-danger dark:bg-rose-950/30">
               <AlertTriangle className="size-4 shrink-0" aria-hidden="true" />
               <span>{fileError}</span>
             </span>
@@ -380,9 +380,9 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
   };
 
   return (
-    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+    <div className="overflow-hidden rounded-xl border border-line bg-surface shadow-sm">
       {/* Scanner Mode Selector Header */}
-      <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900/50">
+      <div className="flex items-center justify-between border-b border-line-subtle bg-slate-50 p-3 dark:bg-slate-900/50">
         <div className="flex gap-1.5" role="group" aria-label="Scanner input">
           <Button
             variant="outline"

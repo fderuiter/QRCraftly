@@ -90,14 +90,14 @@ export function ToolWorkspaceLayout({
 
   return (
     <div
-      className="relative grid w-full grid-cols-1 bg-slate-50 transition-colors duration-300 md:grid-cols-[30rem_minmax(0,1fr)] md:grid-rows-[auto_1fr] dark:bg-slate-950"
+      className="relative grid w-full grid-cols-1 bg-page transition-colors duration-300 md:grid-cols-[30rem_minmax(0,1fr)] md:grid-rows-[auto_1fr]"
       data-testid="tool-workspace"
     >
       <aside
         aria-label={controlsLabel}
-        className="relative z-10 flex min-w-0 flex-col border-slate-200 bg-white transition-colors duration-300 md:col-start-1 md:row-start-1 md:border-r dark:border-slate-800 dark:bg-slate-900"
+        className="relative z-10 flex min-w-0 flex-col border-line bg-surface transition-colors duration-300 md:col-start-1 md:row-start-1 md:border-r"
       >
-        <div className="z-20 border-b border-slate-100 bg-white transition-colors duration-300 md:sticky md:top-0 dark:border-slate-800 dark:bg-slate-900">
+        <div className="z-20 border-b border-line-subtle bg-surface transition-colors duration-300 md:sticky md:top-0">
           {header}
         </div>
         <div className="space-y-8 p-4 sm:p-6">{controls}</div>
@@ -123,7 +123,7 @@ export function ToolWorkspaceLayout({
       </section>
 
       {secondary && (
-        <div className="min-w-0 border-slate-200 bg-white transition-colors duration-300 md:col-start-1 md:row-start-2 md:border-r dark:border-slate-800 dark:bg-slate-900">
+        <div className="min-w-0 border-line bg-surface transition-colors duration-300 md:col-start-1 md:row-start-2 md:border-r">
           <div className="space-y-8 p-4 pb-12 sm:p-6 sm:pb-12">{secondary}</div>
         </div>
       )}
@@ -184,7 +184,7 @@ export function ToolWorkspaceHeader({
       return (
         <a
           href={previewHref}
-          className="mt-2 inline-flex min-h-11 items-center gap-1.5 rounded-lg text-sm font-semibold text-teal-700 underline-offset-2 hover:underline md:hidden dark:text-teal-400"
+          className="mt-2 inline-flex min-h-11 items-center gap-1.5 rounded-lg text-sm font-semibold text-accent underline-offset-2 hover:underline md:hidden"
         >
           <Eye className="size-4" aria-hidden="true" />
           {previewJumpLabel}
@@ -198,23 +198,23 @@ export function ToolWorkspaceHeader({
     <header className="flex items-start justify-between gap-2 p-4 sm:p-6">
       <div className="min-w-0">
         {brandIsHeading ? (
-          <a href="/" aria-label="QRCraftly Home" className="mb-1 flex items-center gap-2 text-teal-700 transition-opacity hover:opacity-80 dark:text-teal-400">
+          <a href="/" aria-label="QRCraftly Home" className="mb-1 flex items-center gap-2 text-accent transition-opacity hover:opacity-80">
             <QrCode className="size-6 shrink-0" aria-hidden="true" />
-            <h1 className="text-xl font-bold tracking-tight text-slate-700 dark:text-slate-100">{title}</h1>
+            <h1 className="text-xl font-bold tracking-tight text-fg">{title}</h1>
           </a>
         ) : (
           <>
-            <a href="/" aria-label="QRCraftly Home" className="mb-1 inline-flex items-center gap-2 text-sm font-semibold text-teal-700 transition-opacity hover:opacity-80 dark:text-teal-400">
+            <a href="/" aria-label="QRCraftly Home" className="mb-1 inline-flex items-center gap-2 text-sm font-semibold text-accent transition-opacity hover:opacity-80">
               <QrCode className="size-5 shrink-0" aria-hidden="true" />
               <span>QRCraftly</span>
             </a>
-            <h1 className="text-xl font-bold tracking-tight text-slate-700 dark:text-slate-100">{title}</h1>
+            <h1 className="text-xl font-bold tracking-tight text-fg">{title}</h1>
           </>
         )}
         <div className="flex flex-wrap items-center gap-2">
-          <p className="text-sm text-slate-600 dark:text-slate-400">{subtitle}</p>
+          <p className="text-sm text-fg-muted">{subtitle}</p>
           {badge && (
-            <span className="rounded-full bg-teal-100 px-2 py-0.5 text-xs font-semibold text-teal-800 dark:bg-teal-900/60 dark:text-teal-300">{badge}</span>
+            <span className="rounded-full bg-accent-soft px-2 py-0.5 text-xs font-semibold text-accent-strong">{badge}</span>
           )}
         </div>
         {renderPreviewJump()}

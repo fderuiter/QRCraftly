@@ -155,7 +155,7 @@ describe('QRTool Component', () => {
     expect(screen.getByText('JPEG (Compact)')).toBeInTheDocument();
     expect(screen.getByText('WebP (Modern)')).toBeInTheDocument();
     expect(screen.queryByText('Scan Safety Warning')).not.toBeInTheDocument();
-    expect(downloadButton).toHaveClass('bg-teal-700');
+    expect(downloadButton).toHaveClass('bg-action');
   });
 
   it.each([
@@ -171,7 +171,7 @@ describe('QRTool Component', () => {
     );
 
     const downloadButton = screen.getByRole('button', { name: /^Download$/ });
-    expect(downloadButton).toHaveClass('bg-rose-700');
+    expect(downloadButton).toHaveClass('bg-danger-action');
 
     fireEvent.click(downloadButton);
     expect(screen.queryByText('Scan Safety Warning')).not.toBeInTheDocument();

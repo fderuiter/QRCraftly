@@ -126,14 +126,14 @@ export default function RedirectResolverPage() {
   if (errorMessage) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center p-4">
-        <div className="w-full max-w-md rounded-2xl border border-rose-200 bg-white p-6 text-center shadow-lg dark:border-rose-900/50 dark:bg-slate-900">
-          <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-full bg-rose-100 text-rose-600 dark:bg-rose-950/60 dark:text-rose-400">
+        <div className="w-full max-w-md rounded-2xl border border-rose-200 bg-surface p-6 text-center shadow-lg dark:border-rose-900/50">
+          <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-full bg-rose-100 text-danger dark:bg-rose-950/60">
             <ShieldAlert className="size-8" />
           </div>
-          <h1 className="mb-2 text-xl font-bold text-slate-900 dark:text-white">
+          <h1 className="mb-2 text-xl font-bold text-fg">
             Link Resolution Error
           </h1>
-          <p className="mb-6 text-sm text-slate-600 dark:text-slate-300">
+          <p className="mb-6 text-sm text-fg-muted">
             {errorMessage}
           </p>
           <ButtonLink href="/" variant="primary" size="sm">
@@ -146,17 +146,17 @@ export default function RedirectResolverPage() {
 
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center p-4 text-center">
-      <div className="mb-4 flex size-14 items-center justify-center rounded-full bg-teal-100 text-teal-600 dark:bg-teal-950/60 dark:text-teal-400">
+      <div className="mb-4 flex size-14 items-center justify-center rounded-full bg-teal-100 text-accent dark:bg-teal-950/60">
         {isLoading ? (
           <RefreshCw className="size-7 motion-safe:animate-spin" />
         ) : (
           <Lock className="size-7" />
         )}
       </div>
-      <h2 className="mb-2 text-lg font-semibold text-slate-900 dark:text-white">
+      <h2 className="mb-2 text-lg font-semibold text-fg">
         Decrypting Zero-Knowledge Dynamic Link...
       </h2>
-      <p className="text-xs text-slate-500 dark:text-slate-400">
+      <p className="text-xs text-fg-muted">
         Target destination is being decrypted locally in your browser.
       </p>
     </div>

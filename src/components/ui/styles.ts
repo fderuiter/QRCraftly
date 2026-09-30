@@ -1,27 +1,30 @@
-export const BASE_INPUT_CLASSES = "bg-white border border-slate-600 dark:bg-slate-900 dark:border-slate-400 dark:text-slate-100 rounded-lg text-slate-700 text-sm transition-all w-full placeholder-slate-600 dark:placeholder-slate-400";
+export const BASE_INPUT_CLASSES = "bg-surface border border-line-strong rounded-lg text-fg text-sm transition-all w-full placeholder-fg-muted";
 
 /**
  * Unified Layout Spacing & Structure Variables
  */
 export const FIELDSET_CLASSES = "space-y-4 min-w-0";
-export const LEGEND_CLASSES = "text-sm font-semibold text-slate-700 dark:text-slate-200 w-full mb-3";
+export const LEGEND_CLASSES = "text-sm font-semibold text-fg-soft w-full mb-3";
 export const CONTAINER_SPACING_CLASSES = "space-y-3";
 export const GRID_TWO_COLUMNS_CLASSES = "grid grid-cols-2 gap-4";
-export const SUB_FIELDSET_CLASSES = "pt-2 border-t border-slate-100 dark:border-slate-800 min-w-0";
-export const SUB_LEGEND_CLASSES = "block text-sm font-bold text-slate-600 dark:text-slate-400 mb-2 w-full";
+export const SUB_FIELDSET_CLASSES = "pt-2 border-t border-line-subtle min-w-0";
+export const SUB_LEGEND_CLASSES = "block text-sm font-bold text-fg-muted mb-2 w-full";
 export const SUB_CONTAINER_SPACING_CLASSES = "space-y-4";
 
 export const TEXT_FIELD_CLASSES = `${BASE_INPUT_CLASSES} px-3 py-2`;
 export const TEXT_AREA_CLASSES = `${BASE_INPUT_CLASSES} font-sans px-4 py-2`;
 export const SELECT_CLASSES = `${BASE_INPUT_CLASSES} font-mono px-3 py-2`;
-export const ERROR_INPUT_CLASSES = "border-rose-500 dark:border-rose-500";
+export const ERROR_INPUT_CLASSES = "border-danger";
 
-/** Tailwind font-size utilities: named steps plus arbitrary `text-[12px]` style sizes. */
+/** Tailwind font-size utilities: named steps plus arbitrary bracketed pixel or rem sizes. */
 const TEXT_SIZE_PATTERN = /^text-(xs|sm|base|lg|xl|\d+xl|\[\d[^\]]*\])$/;
 const TEXT_ALIGN_PATTERN = /^text-(left|center|right|justify|start|end)$/;
 const TEXT_WRAP_PATTERN = /^text-(wrap|nowrap|balance|pretty)$/;
 const TEXT_OVERFLOW_PATTERN = /^text-(ellipsis|clip)$/;
-const FONT_FAMILY_PATTERN = /^font-(sans|serif|mono)$/;
+const FONT_FAMILY_PATTERN = /^font-(sans|serif|mono|display)$/;
+// eslint-disable-next-line security/detect-unsafe-regex -- linear: anchored, and each optional group starts with a literal '-'.
+const BORDER_WIDTH_PATTERN = /^border(-[xytrbl])?(-(\d+|\[[^\]]+\]))?$/;
+const BORDER_STYLE_PATTERN = /^border-(solid|dashed|dotted|double|hidden|none)$/;
 
 /**
  * Splits `text-*` utilities into the properties they actually set, so a size such as
@@ -105,17 +108,19 @@ export function mergeClasses(...inputs: (string | undefined | null | false)[]): 
       } else if (baseClass.startsWith('transition-') || baseClass === 'transition') {
         group = 'transition';
       } else if (baseClass.startsWith('border-') || baseClass === 'border') {
-        // Distinguish border-color vs border-width
-        // eslint-disable-next-line security/detect-unsafe-regex -- linear: the optional groups start with distinct literals ('-', '/') and are anchored.
-        const isColor = /^border-(slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|white|black|transparent|current|inherit)(-\d+)?(\/\d+)?$/.test(baseClass);
-        if (isColor) {
-          group = 'border-color';
-        } else {
+        // Distinguish border width (per side) and style from border colour (palette or semantic token).
+        if (BORDER_STYLE_PATTERN.test(baseClass)) {
+          group = 'border-style';
+        } else if (BORDER_WIDTH_PATTERN.test(baseClass)) {
           if (baseClass.startsWith('border-t')) group = 'border-t';
           else if (baseClass.startsWith('border-b')) group = 'border-b';
           else if (baseClass.startsWith('border-l')) group = 'border-l';
           else if (baseClass.startsWith('border-r')) group = 'border-r';
+          else if (baseClass.startsWith('border-x')) group = 'border-x';
+          else if (baseClass.startsWith('border-y')) group = 'border-y';
           else group = 'border-width';
+        } else {
+          group = 'border-color';
         }
       }
 

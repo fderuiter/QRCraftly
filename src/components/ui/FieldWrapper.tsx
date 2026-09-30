@@ -13,7 +13,7 @@ export interface BaseFieldProps {
 
 const getLabelClass = (customClass?: string) => {
   if (customClass) return customClass;
-  return "block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1";
+  return "block text-sm font-medium text-fg-soft mb-1";
 };
 
 interface FieldWrapperProps extends BaseFieldProps {
@@ -52,13 +52,13 @@ export const FieldWrapper: React.FC<FieldWrapperProps> = ({
           {children}
           {label && <span>{label}</span>}
           {contextualLabel && (
-            <span className="text-xs font-normal text-slate-500 dark:text-slate-400">
+            <span className="text-xs font-normal text-fg-muted">
               ({contextualLabel})
             </span>
           )}
         </label>
         {error && (
-          <p id={errorId} role="alert" className="mt-1 text-xs text-rose-700 dark:text-rose-400">
+          <p id={errorId} role="alert" className="mt-1 text-xs text-danger">
             {error}
           </p>
         )}
@@ -72,7 +72,7 @@ export const FieldWrapper: React.FC<FieldWrapperProps> = ({
         <label htmlFor={inputId} className={getLabelClass(labelClassName)}>
           {label}
           {contextualLabel && (
-            <span className="ml-2 text-xs font-normal text-slate-500 dark:text-slate-400">
+            <span className="ml-2 text-xs font-normal text-fg-muted">
               ({contextualLabel})
             </span>
           )}
@@ -83,7 +83,7 @@ export const FieldWrapper: React.FC<FieldWrapperProps> = ({
         <CharCount id={charCountId} current={String(value !== undefined && value !== null ? value : "").length} max={maxLength} />
       )}
       {error && (
-        <p id={errorId} role="alert" className="mt-1 text-xs text-rose-700 dark:text-rose-400">
+        <p id={errorId} role="alert" className="mt-1 text-xs text-danger">
           {error}
         </p>
       )}
