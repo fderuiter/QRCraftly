@@ -55,6 +55,19 @@ const isInputDataValid = (type: QRType, data: InputDataMap[QRType]): boolean => 
 };
 
 /**
+ * Module-scoped cache for uncommitted form field values in volatile memory.
+ * Preserves user text across generator route switches without persisting to storage.
+ */
+let retainedInputStates: Partial<InputDataMap> = {};
+
+/**
+ * Forgets input states retained from earlier generator routes.
+ */
+export function clearRetainedInputStates(): void {
+  retainedInputStates = {};
+}
+
+/**
  * Hook to encapsulate the state management and component selection logic for the InputPanel.
  * It maintains the state for each input type so that data is preserved when switching types.
  * @param config - The current QR configuration.
@@ -65,15 +78,17 @@ export function useInputLogic(
   config: Pick<QRConfig, 'type' | 'value'>,
   onChange: (updates: Partial<QRConfig>) => void,
 ): { InputComponent: ElementType | null; inputProps: { data: InputDataMap[keyof InputDataMap]; onChange: (updates: Partial<InputDataMap[keyof InputDataMap]>) => void } | Record<string, never>; flush: () => void } {
-  // Initialize state for all types from registry
+  // Initialize state for all types from registry or volatile retained cache
   const [inputStates, setInputStates] = useState<InputDataMap>(() => {
     const states = {} as Partial<InputDataMap>;
     (Object.keys(INPUT_REGISTRY) as QRType[]).forEach((key) => {
       // Cast the key-specific assignment to never first to safely satisfy the discriminated union constraint
       const entry = INPUT_REGISTRY[key];
-      // If this is the current type and we have a value, try to hydrate
-      // This ensures that initial config values (e.g. from URL or defaults) are reflected in the inputs
-      if (key === config.type && config.value && entry.hydrateFn && entry.canHydrateFn(config.value)) {
+      if (retainedInputStates[key] !== undefined) {
+        states[key] = { ...retainedInputStates[key] } as never;
+      } else if (key === config.type && config.value && entry.hydrateFn && entry.canHydrateFn(config.value)) {
+        // If this is the current type and we have a value, try to hydrate
+        // This ensures that initial config values (e.g. from URL or defaults) are reflected in the inputs
         try {
           states[key] = entry.hydrateFn(config.value) as never;
         } catch (e) {
@@ -115,6 +130,13 @@ export function useInputLogic(
       }
       pendingCommitRef.current = null;
 
+      // If we switched types, or on initial mount where retained state exists for this type:
+      // Preserve local retained state and push its constructed value to global state.
+      if (retainedInputStates[config.type] !== undefined && (prevType !== config.type || prevType === null)) {
+        onChange({ value: currentConstructed });
+        return;
+      }
+
       // If we switched types, and the target type has a non-empty local state,
       // and the incoming config.value is empty (usually from tab select),
       // then preserve the local state and push its constructed value to the global state.
@@ -130,6 +152,7 @@ export function useInputLogic(
             ...prev,
             [config.type]: hydrated,
           }));
+          retainedInputStates[config.type] = hydrated as never;
         } catch (e) {
           console.warn(`Failed to hydrate state for ${config.type} on external change`, e);
           setInputStates((prev) => ({
@@ -168,6 +191,7 @@ export function useInputLogic(
       ...prev,
       [type]: newData,
     }));
+    retainedInputStates[type] = newData as never;
 
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);

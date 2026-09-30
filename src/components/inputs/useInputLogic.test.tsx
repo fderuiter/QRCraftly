@@ -1,6 +1,6 @@
 import { renderHook, act } from "@testing-library/react";
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
-import { useInputLogic } from "./useInputLogic";
+import { useInputLogic, clearRetainedInputStates } from "./useInputLogic";
 import { QRConfig, QRType, QRStyle, QRErrorCorrectionLevel, SocialFormat, TemplateStyle } from "../../types";
 
 const createMockConfig = (type: QRType, value: string): QRConfig => ({
@@ -32,6 +32,7 @@ const createMockConfig = (type: QRType, value: string): QRConfig => ({
 describe("useInputLogic", () => {
   beforeEach(() => {
     vi.useFakeTimers();
+    clearRetainedInputStates();
   });
 
   afterEach(() => {
@@ -185,11 +186,88 @@ describe("useInputLogic", () => {
     // It should detect the tab switch, preserve the local "http://google.com/" state, and push it back to the store
     expect(onChange).toHaveBeenCalledWith({ value: "http://google.com/" });
   });
+
+  it("should preserve uncommitted form state across generator route remounts via volatile cache", () => {
+    const onChange1 = vi.fn();
+    const urlConfig = createMockConfig(QRType.URL, "https://qrcraftly.com");
+
+    // Route 1 (URL generator): user types uncommitted text
+    const { result: urlHook, unmount: unmountUrl } = renderHook(() => useInputLogic(urlConfig, onChange1));
+    act(() => {
+      urlHook.current.inputProps.onChange({ url: "https://example.com/retained" });
+    });
+    expect(urlHook.current.inputProps.data).toEqual({ url: "https://example.com/retained" });
+    unmountUrl(); // User navigates away to another route
+
+    // Route 2 (WiFi generator): mounts as a new route instance
+    const onChange2 = vi.fn();
+    const wifiConfig = createMockConfig(QRType.WIFI, "https://qrcraftly.com");
+    const { result: wifiHook, unmount: unmountWifi } = renderHook(() => useInputLogic(wifiConfig, onChange2));
+    act(() => {
+      wifiHook.current.inputProps.onChange({ ssid: "MyOfficeWiFi", password: "SecretPassword" });
+    });
+    expect((wifiHook.current.inputProps.data as any).ssid).toBe("MyOfficeWiFi");
+    unmountWifi(); // User navigates away from WiFi route
+
+    // Route 3: User returns to URL generator route (which starts with default config)
+    const onChange3 = vi.fn();
+    const returnUrlConfig = createMockConfig(QRType.URL, "https://qrcraftly.com");
+    const { result: returnUrlHook } = renderHook(() => useInputLogic(returnUrlConfig, onChange3));
+
+    // The returned hook should hydrate from retained input cache and push the constructed retained value
+    expect(returnUrlHook.current.inputProps.data).toEqual({ url: "https://example.com/retained" });
+    expect(onChange3).toHaveBeenCalledWith({ value: "https://example.com/retained" });
+  });
+
+  it("should preserve explicitly cleared empty state across route remounts", () => {
+    const onChange1 = vi.fn();
+    const urlConfig = createMockConfig(QRType.URL, "https://example.com");
+
+    // Route 1 (URL generator): user clears the text
+    const { result: urlHook, unmount: unmountUrl } = renderHook(() => useInputLogic(urlConfig, onChange1));
+    act(() => {
+      urlHook.current.inputProps.onChange({ url: "" });
+    });
+    expect(urlHook.current.inputProps.data).toEqual({ url: "" });
+    unmountUrl();
+
+    // Route 2: Return to URL route with default config
+    const onChange2 = vi.fn();
+    const defaultUrlConfig = createMockConfig(QRType.URL, "https://qrcraftly.com");
+    const { result: returnUrlHook } = renderHook(() => useInputLogic(defaultUrlConfig, onChange2));
+
+    // Retained cache should preserve the explicitly cleared state ("")
+    expect(returnUrlHook.current.inputProps.data).toEqual({ url: "" });
+    expect(onChange2).toHaveBeenCalledWith({ value: "" });
+  });
+
+  it("should clear retained input states when clearRetainedInputStates is called", () => {
+    const onChange1 = vi.fn();
+    const urlConfig = createMockConfig(QRType.URL, "https://example.com");
+
+    const { result: urlHook, unmount } = renderHook(() => useInputLogic(urlConfig, onChange1));
+    act(() => {
+      urlHook.current.inputProps.onChange({ url: "https://custom.org" });
+    });
+    unmount();
+
+    // Clear module memory
+    clearRetainedInputStates();
+
+    // Re-mount with default config
+    const onChange2 = vi.fn();
+    const defaultUrlConfig = createMockConfig(QRType.URL, "https://qrcraftly.com");
+    const { result: freshHook } = renderHook(() => useInputLogic(defaultUrlConfig, onChange2));
+
+    // Should fall back to default initial state rather than old custom value
+    expect(freshHook.current.inputProps.data).toEqual({ url: "https://qrcraftly.com" });
+  });
 });
 
 describe("useInputLogic flush", () => {
   beforeEach(() => {
     vi.useFakeTimers();
+    clearRetainedInputStates();
   });
 
   afterEach(() => {

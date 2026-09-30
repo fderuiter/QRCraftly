@@ -51,8 +51,8 @@ const LINK_IDLE =
  * QR type navigation. Each type has its own route, so the choices are ordinary links in a
  * labelled `nav` list: Tab reaches each one, arrow keys are left to the browser, and the
  * current route is announced with `aria-current="page"`. Following a link is a normal page
- * navigation; nothing is cleared before it happens, and the new route's generator starts
- * from its own defaults (QR content is not carried between routes or persisted).
+ * navigation; uncommitted form state is kept in a volatile in-memory cache across route switches
+ * (never stored in browser storage), and clearing browser memory or reloading starts fresh.
  * @param root0 - Component properties.
  * @param root0.currentType - The type of the current route.
  * @returns The QR type navigation.

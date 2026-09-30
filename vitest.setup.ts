@@ -791,11 +791,17 @@ setQrCanvasRuntime({
 
 const originalImage = window.Image;
 
-afterEach(() => {
+afterEach(async () => {
   // Restore specific global state used across canvas tests
   window.Image = originalImage;
   if (globalThis.mockWorkerControl) {
     globalThis.mockWorkerControl.reset();
   }
   terminateScannerWorker();
+  const [{ clearRetainedAppearance }, { clearRetainedInputStates }] = await Promise.all([
+    import('./src/context/QRContext'),
+    import('./src/components/inputs/useInputLogic'),
+  ]);
+  clearRetainedAppearance();
+  clearRetainedInputStates();
 });
