@@ -39,6 +39,8 @@ The application leverages Cloudflare's distributed edge infrastructure. System l
 
 ### 3. Serverless Edge Compute Quotas & D1 Storage Behavior
 
+> **Not deployed.** The edge compute and D1 items below describe the switched-off dynamic redirect design. Production runs no Worker script, database or scan counting.
+
 - **Cloudflare Workers Execution Quotas:** Serverless Workers enforce a 10ms CPU time limit per request on the Free Tier (and 30s wall-clock CPU time on Paid Tiers). Because heavy cryptographic and matrix operations are offloaded to client browser Web Workers, edge function CPU time per redirect remains under 2ms.
 - **D1 Relational Storage Behaviors:** Dynamic redirect mappings (`id`, `redirect_url`, `ios_url`, `android_url`, `scans`, `created_at`) are stored in Cloudflare D1 SQLite database tables. Destinations are stored as `enc:v1:` ciphertext and are not cached (no KV), so an update is visible on the next scan; each scan costs one primary-key read and one scan-count write.
 - **Scan Aggregation & Telemetry Pipeline:** Scan analytics updates are executed asynchronously using non-blocking edge invocation handlers (`context.waitUntil()`). This ensures that database write operations (`UPDATE redirects SET scans = scans + 1 WHERE id = ?`) do not block client redirect latency or cause request queue bottlenecks under high concurrency.

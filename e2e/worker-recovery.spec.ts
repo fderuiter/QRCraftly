@@ -22,7 +22,7 @@ import { test, expect } from './fixtures';
  * Isolated Web Worker Recovery E2E Testing
  * 
  * Verifies that the background worker failures are safely intercepted and handled.
- * Ensures the warning badge is shown, telemetry/diagnostics prompt can be answered,
+ * Ensures the warning badge is shown, no diagnostics are reported or asked for,
  * and the export bypass flow allows downloading anyway despite background thread errors.
  */
 
@@ -158,7 +158,12 @@ test.describe('Isolated Web Worker Recovery & Export Bypass', () => {
     await expect(warningModalTitle).not.toBeVisible({ timeout: 15000 });
   });
 
-  test('Requirement 5: Keep diagnostic preferences in privacy settings during failure state and record the choice there', async ({ page }) => {
+  test('Requirement 5: A scan failure sends no diagnostics and asks for no consent', async ({ page }) => {
+    const reportRequests: string[] = [];
+    page.on('request', request => {
+      if (new URL(request.url()).pathname.startsWith('/api/')) reportRequests.push(request.url());
+    });
+
     // Inject background failure
     await page.evaluate(() => {
       (window as any).simulateFailure = true;
@@ -179,14 +184,9 @@ test.describe('Isolated Web Worker Recovery & Export Bypass', () => {
     await expect(page.getByRole('alert')).toHaveCount(1);
     await expect(page.getByRole('button', { name: /No thanks/i })).toHaveCount(0);
 
-    // The diagnostics preference lives in the footer privacy settings instead
-    const privacySettings = page.getByRole('region', { name: 'Privacy settings' });
-    const diagnosticsSwitch = privacySettings.getByRole('switch', { name: 'Share anonymous diagnostics' });
-    await diagnosticsSwitch.scrollIntoViewIfNeeded();
-    await expect(diagnosticsSwitch).not.toBeChecked();
-    await page.locator('label[for="diagnostics-opt-in"]').click(); // the visible switch track is the label
-    await expect(diagnosticsSwitch).toBeChecked();
-    await expect(privacySettings.getByTestId('diagnostics-status')).toHaveText('On');
-    expect(await page.evaluate(() => window.localStorage.getItem('qr-telemetry-opt-in'))).toBe('true');
+    // No diagnostics prompt, and nothing is reported anywhere
+    await expect(page.getByText(/Anonymous diagnostics/i)).toHaveCount(0);
+    expect(reportRequests).toEqual([]);
+    await expect(page.getByRole('switch', { name: /diagnostics/i })).toHaveCount(0);
   });
 });

@@ -33,12 +33,11 @@ import { useScannability } from '@/hooks/useScannability';
 import { ScannabilityIndicator } from '@/components/ScannabilityIndicator';
 import { QRProvider, useQRStore, useQRStoreSelector } from '@/context/QRContext';
 import { Menu } from './ui/Menu';
-import { useTelemetry } from '@/hooks/useTelemetry';
 import { useCapabilities } from '@/hooks/useCapabilities';
 import { sidebarControls } from '@/registry';
 import { StressTestButton } from './arcade/StressTestButton';
 import { ToolWorkspaceLayout, ToolWorkspaceHeader } from './ToolWorkspaceLayout';
-import { DiagnosticsPreference } from './DiagnosticsPreference';
+import { PLEDGE_TAGLINE } from '@/data/pledge';
 
 /** Id of the generator preview region (target of the mobile jump link). */
 const PREVIEW_ID = 'qr-preview';
@@ -92,14 +91,13 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
   const [copied, setCopied] = useState(false);
   const { canShare } = useCapabilities();
 
-  // Scannability & Telemetry
+  // Scannability
   const { status: rawScannabilityStatus, checkScannability, health: rawHealth, workerRecoveryActive } = useScannability(canvasRef, config);
 
   // With no content there is no QR code: never report a stale "verified" result or health score.
   const isEmpty = !config.value;
   const scannabilityStatus = isEmpty ? 'idle' : rawScannabilityStatus;
   const health = isEmpty ? undefined : rawHealth;
-  const telemetryOptIn = useQRStoreSelector(s => s.preferences.telemetryOptIn);
 
   
   const handleRendered = useCallback((info: { moduleCount: number, virtualImageData?: ImageData, virtualImageBitmap?: ImageBitmap } = { moduleCount: 0 }) => {
@@ -110,7 +108,6 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
       checkScannability(info.virtualImageData, undefined, info.moduleCount);
     }
   }, [setModuleCount, checkScannability]);
-  const { handleOptIn } = useTelemetry(scannabilityStatus);
 
   // Debounce the config for QRCanvas to prevent lag during rapid typing or style changes.
   const debouncedConfig = useDebounce(config, 100);
@@ -417,8 +414,7 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
       )}
 
       <footer className="border-t border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950">
-        <div className="mx-auto grid max-w-7xl gap-10 px-4 py-10 sm:px-6 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-          <DiagnosticsPreference optIn={telemetryOptIn} onChange={handleOptIn} />
+        <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
           <nav aria-label="Site Map">
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -448,9 +444,9 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
                 <h2 className="mb-3 text-xs font-semibold tracking-wider text-slate-900 uppercase dark:text-slate-200">Company</h2>
                 <ul className="space-y-2 text-sm text-slate-600 dark:text-slate-400">
                   <li><a href="/about" className="transition-colors hover:text-teal-700 dark:hover:text-teal-400">About</a></li>
+                  <li><a href="/free-forever" className="transition-colors hover:text-teal-700 dark:hover:text-teal-400">No-Ads Pledge</a></li>
                   <li><a href="/security#security" className="transition-colors hover:text-teal-700 dark:hover:text-teal-400">Security Policy</a></li>
                   <li><a href="/security#compliance" className="transition-colors hover:text-teal-700 dark:hover:text-teal-400">Privacy Architecture</a></li>
-                  <li><a href="https://ko-fi.com/laser_loon" target="_blank" rel="noopener noreferrer" className="transition-colors hover:text-teal-700 dark:hover:text-teal-400">Ko-fi</a></li>
                   <li><a href="https://github.com/fderuiter/QRCraftly" target="_blank" rel="noopener noreferrer" className="transition-colors hover:text-teal-700 dark:hover:text-teal-400">GitHub</a></li>
                 </ul>
               </div>
@@ -458,6 +454,7 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
           </nav>
         </div>
         <p className="mx-auto max-w-7xl border-t border-slate-200 px-4 py-5 text-xs text-slate-500 sm:px-6 dark:border-slate-800 dark:text-slate-400">
+          <a href="/free-forever" className="font-medium text-slate-600 hover:text-teal-700 dark:text-slate-300 dark:hover:text-teal-400">{PLEDGE_TAGLINE}</a>{' '}
           &copy; {new Date().getFullYear()} QRCraftly. Open Source.
         </p>
       </footer>

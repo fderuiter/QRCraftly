@@ -6,6 +6,12 @@
 
 [QRCraftly](https://qrcraftly.com) is a powerful, privacy-focused, and user-friendly React application for generating customized QR codes. It supports various data types including URLs, text, WiFi credentials, vCards, emails, and crypto payments. Users can extensively customize the appearance of their QR codes, including colors, patterns, and embedded logos, all while ensuring data privacy through client-side processing.
 
+## The QRCraftly Pledge
+
+**QRCraftly is not ad supported, and it never will be.** No ads, no tracking, no sign-up, and everything runs in your browser. If it ever comes down to ads or nothing, the project will be shut down before a single ad goes on it; the only way it would change hands is an outright purchase of the whole project.
+
+Read the full pledge, and exactly what is and isn't collected, in [docs/PLEDGE.md](docs/PLEDGE.md) or at [qrcraftly.com/free-forever](https://qrcraftly.com/free-forever).
+
 ## Features
 
 - **Multiple Data Types**: Generate QR codes for URLs, plain text, WiFi networks (WPA/WEP/EAP/Open), Email, vCard contacts, Phone numbers, SMS, Cryptocurrency payments, Calendar Events, GPS Location Coordinates, Video Meetings (Zoom, Microsoft Teams, Google Meet), and Social Profiles (Instagram, X / Twitter, TikTok).
@@ -15,8 +21,8 @@
   - **Logos**: Upload and embed custom logos with configurable padding, sizes, and border styles (Square, Circle, None). Maximum logo size is 30% to maintain scannability.
   - **Mosaic QR**: Upload a design and tile it across the whole code. Each module takes the image colour under it while keeping its dark or light value, so the code still scans (Halftone or Tiles layout, adjustable Scan Contrast; see [ADR 0019](docs/adr/0019-mosaic-qr-module-level-image-tiling.md)).
   - **Upload Limits**: Supported custom logo formats are image/jpeg, image/png, image/webp, image/svg+xml. Maximum file size is 2MB.
-- **Privacy First**: Client-side architecture. All sensitive data processing happens locally in your browser with volatile in-memory guarantees; no user payloads are sent to external servers.
-- **Dynamic Redirection (built, switched off)**: Cloudflare edge redirection with zero-knowledge AES-GCM client encryption where decryption keys reside exclusively in URL anchor hash fragments (`#key=...`). The code is in the repository, but the UI flags are off and production serves static assets only until Cloudflare D1 and Turnstile are provisioned. See [EDGE_ARCHITECTURE.md](docs/public/EDGE_ARCHITECTURE.md).
+- **Privacy First**: Client-side architecture. All sensitive data processing happens locally in your browser with volatile in-memory guarantees; no user payloads are sent to any server, and there is no analytics or diagnostics reporting.
+- **Dynamic Redirection (built, switched off)**: Code for Cloudflare edge redirection with zero-knowledge AES-GCM client encryption (decryption keys only in `#key=...` anchor fragments) is in the repository, but the UI flags are off and it has no production backend; production serves static assets only. See [EDGE_ARCHITECTURE.md](docs/public/EDGE_ARCHITECTURE.md) and [docs/PLEDGE.md](docs/PLEDGE.md#things-that-would-change-this-page).
 - **Scan to Fill**: Scan an existing QR code with the webcam or from an image file to load its content into the matching input form. Decoding runs in the browser.
 - **Air-Gapped File Transfer (Beta)**: Send a file from one device to another as an animated stream of QR codes (`/file-transfer`) and receive it with a camera (`/file-transfer/receive`). No network, Bluetooth or USB is involved.
 - **Audio QR**: Encode data as audible chirps or as a spectrogram that renders a scannable QR code (`/audio-qr`), using the Web Audio API.
@@ -169,7 +175,7 @@ Lighthouse CI runs on every Pull Request to audit performance, accessibility, be
     - `QRScanner.tsx`: Webcam and file-upload QR scanner used by the input panel.
     - `arcade/`: Components for the QR Arcade page.
   - `packages/`: Deep modules with small public entry points (`qr-matrix`, `qr-export`, `qr-payload`, `scannability`, `optical-scanner`, `optical-transfer`, `audio-transfer`, `edge-redirect`, `arcade`). See [src/packages/README.md](src/packages/README.md).
-  - `hooks/`: React hooks (camera, image upload, download, audio, telemetry, dynamic redirects).
+  - `hooks/`: React hooks (camera, image upload, download, audio, dynamic redirects).
   - `layouts/`: Application layouts.
     - `LayoutDefault.tsx`: The main layout wrapper.
     - `Head.tsx`: Manages document head elements.

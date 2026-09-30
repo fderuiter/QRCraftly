@@ -150,7 +150,7 @@ describe('Local Git-Diff Lineage Auditor', () => {
   describe('Targeted Static Mapping and Lineage Validation', () => {
     it('should maintain the correct new mappings', () => {
       expect(MAPPING).toHaveProperty('src/packages/scannability/worker.ts', 'docs/public/SCALING.md');
-      expect(MAPPING).toHaveProperty('src/hooks/useTelemetry.ts', 'docs/public/COMPLIANCE.md');
+      expect(MAPPING).not.toHaveProperty('src/hooks/useTelemetry.ts');
       expect(MAPPING).toHaveProperty('src/utils/security.ts', 'docs/SECURITY.md');
       expect(MAPPING).toHaveProperty('.github/rulesets/main.json', '.github/rulesets/README.md');
     });
@@ -191,22 +191,6 @@ describe('Local Git-Diff Lineage Auditor', () => {
       const missing = checkLineage(modifiedFiles);
       const hasScannabilityMissing = missing.some(m => m.codeFile === 'src/packages/scannability/worker.ts');
       expect(hasScannabilityMissing).toBe(false);
-    });
-
-    it('should fail validation when telemetry hook is modified without compliance doc', () => {
-      const modifiedFiles = new Set(['src/hooks/useTelemetry.ts']);
-      const missing = checkLineage(modifiedFiles);
-      expect(missing).toContainEqual({
-        codeFile: 'src/hooks/useTelemetry.ts',
-        docFile: 'docs/public/COMPLIANCE.md'
-      });
-    });
-
-    it('should pass validation when telemetry hook is modified with compliance doc', () => {
-      const modifiedFiles = new Set(['src/hooks/useTelemetry.ts', 'docs/public/COMPLIANCE.md']);
-      const missing = checkLineage(modifiedFiles);
-      const hasTelemetryMissing = missing.some(m => m.codeFile === 'src/hooks/useTelemetry.ts');
-      expect(hasTelemetryMissing).toBe(false);
     });
 
     it('should fail validation when security utilities are modified without security doc', () => {

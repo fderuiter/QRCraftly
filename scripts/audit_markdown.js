@@ -68,8 +68,7 @@ export const REMEDIATION_HINTS = {
   outsideRoot: 'Link to a file inside the repository, or use an absolute https:// URL for external resources.',
   brokenFile: "Fix the relative path (it resolves from the linking file's folder and is case-sensitive), or restore the target file.",
   brokenAnchor: "Point the fragment at an existing heading slug in the target file (lowercase, spaces become '-', punctuation dropped).",
-  snippet: 'Make the snippet type-check against tsconfig.json, or fence it as ```text if it is only illustrative.',
-  telemetry: "Keep ALLOWED_TELEMETRY_KEYS in src/types.ts and the backticked keys under 'Opt-In Telemetry' in docs/public/COMPLIANCE.md identical."
+  snippet: 'Make the snippet type-check against tsconfig.json, or fence it as ```text if it is only illustrative.'
 };
 
 /**
@@ -440,90 +439,6 @@ export function checkCodeSnippets(filesList) {
   return localHasErrors;
 }
 
-export function validateTelemetryCompliance(complianceContent, typesContent) {
-  let localHasErrors = false;
-  
-  if (complianceContent === undefined) {
-    const compliancePath = path.join(repoRoot, 'docs', 'public', 'COMPLIANCE.md');
-    if (!fs.existsSync(compliancePath)) {
-      reportError(null, `Compliance file not found at ${compliancePath}`, 'telemetry');
-      localHasErrors = true;
-      return localHasErrors;
-    }
-    complianceContent = fs.readFileSync(compliancePath, 'utf-8');
-  }
-  
-  if (typesContent === undefined) {
-    const typesPath = path.join(repoRoot, 'src', 'types.ts');
-    if (!fs.existsSync(typesPath)) {
-      reportError(null, `Core types file not found at ${typesPath}`, 'telemetry');
-      localHasErrors = true;
-      return localHasErrors;
-    }
-    typesContent = fs.readFileSync(typesPath, 'utf-8');
-  }
-  
-  // 1. Extract keys from src/types.ts
-  const arrayMatch = typesContent.match(/export const ALLOWED_TELEMETRY_KEYS\s*=\s*\[([\s\S]*?)\]/);
-  if (!arrayMatch) {
-    reportError(null, "Could not find ALLOWED_TELEMETRY_KEYS in src/types.ts", 'telemetry');
-    localHasErrors = true;
-    return localHasErrors;
-  }
-  const codeKeys = arrayMatch[1]
-    .split(',')
-    .map(k => k.trim().replace(/['"]/g, ''))
-    .filter(k => k.length > 0);
-    
-  if (codeKeys.length === 0) {
-    reportError(null, "Telemetry keys array in src/types.ts is empty.", 'telemetry');
-    localHasErrors = true;
-    return localHasErrors;
-  }
-  
-  // 2. Extract keys from COMPLIANCE.md Opt-In Telemetry section
-  const optInIndex = complianceContent.indexOf('Opt-In Telemetry');
-  const nextSectionIndex = complianceContent.indexOf('What is NOT Logged');
-  if (optInIndex === -1 || nextSectionIndex === -1 || nextSectionIndex <= optInIndex) {
-    reportError(null, "Could not find correct 'Opt-In Telemetry' or 'What is NOT Logged' boundary in COMPLIANCE.md", 'telemetry');
-    localHasErrors = true;
-    return localHasErrors;
-  }
-  
-  const sectionText = complianceContent.slice(optInIndex, nextSectionIndex);
-  
-  // Extract all backtick words
-  const backtickRegex = /`([a-zA-Z0-9_]+)`/g;
-  const docKeys = [];
-  let match;
-  while ((match = backtickRegex.exec(sectionText)) !== null) {
-    docKeys.push(match[1]);
-  }
-  
-  // 3. Compare codeKeys with docKeys
-  const codeKeysSet = new Set(codeKeys);
-  const docKeysSet = new Set(docKeys);
-  
-  // Find discrepancies
-  const missingInDocs = codeKeys.filter(k => !docKeysSet.has(k));
-  const undocumentedInCode = docKeys.filter(k => !codeKeysSet.has(k));
-  
-  if (missingInDocs.length > 0) {
-    reportError(null, `Code telemetry keys [${missingInDocs.join(', ')}] are not documented in COMPLIANCE.md under 'Opt-In Telemetry'`, 'telemetry');
-    localHasErrors = true;
-  }
-  if (undocumentedInCode.length > 0) {
-    reportError(null, `Documented telemetry keys [${undocumentedInCode.join(', ')}] are not present in src/types.ts ALLOWED_TELEMETRY_KEYS`, 'telemetry');
-    localHasErrors = true;
-  }
-  
-  if (missingInDocs.length === 0 && undocumentedInCode.length === 0) {
-    console.log(`Telemetry compliance verification passed: ${codeKeys.length} keys match perfectly.`);
-  }
-
-  return localHasErrors;
-}
-
 export function runAudit() {
   hasErrors = false;
   const files = getFilesToAudit();
@@ -552,9 +467,6 @@ export function runAudit() {
   
   // 3. Extract and verify TypeScript/TSX code blocks
   checkCodeSnippets(files);
-  
-  // 4. Validate Telemetry Keys Alignment
-  validateTelemetryCompliance();
   
   if (hasErrors) {
     process.exit(1);

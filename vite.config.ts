@@ -89,7 +89,6 @@ export default defineConfig(() => {
                 '**/*.test.tsx',
                 'src/hooks/**/*.test.ts',
                 'src/utils/qrRenderer.test.ts',
-                'tests/telemetry.test.ts',
                 '**/node_modules/**',
                 '**/dist/**',
                 'e2e/**',
@@ -111,7 +110,6 @@ export default defineConfig(() => {
                 '**/*.test.tsx',
                 'src/hooks/**/*.test.ts',
                 'src/utils/qrRenderer.test.ts',
-                'tests/telemetry.test.ts',
               ],
               exclude: [
                 '**/node_modules/**',

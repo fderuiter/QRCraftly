@@ -20,29 +20,23 @@ This application is designed to **support** HIPAA-compliant workflows through a 
 
 ### 2. Logging & Metrics Policy
 
-To maintain security, performance, and legal accountability, we collect basic access logs. However, our architecture ensures this **does not compromise PHI**.
+QRCraftly runs no analytics, telemetry or diagnostics of its own, and keeps no logs of its own. The site is static files served by Cloudflare (Workers Static Assets, with no server code of ours). See [the QRCraftly Pledge](https://qrcraftly.com/free-forever) for the plain-language version.
 
-- **What IS Logged:**
-  - IP Address (for security auditing).
-  - User Agent (browser/device type).
-  - Request Path (e.g., `/`, `/about` - which are static).
-  - Timestamp.
-- **Opt-In Telemetry:**
-  - **Current status: no telemetry is transmitted.** No collection endpoint is deployed (the edge Worker serves only the dynamic redirect API), so sending is switched off in the telemetry hook (`TELEMETRY_ENABLED = false`) and nothing is sent. When enabled, it posts only to the same-origin path `/api/telemetry/scannability`. Your opt-in or opt-out choice is still stored locally (`qr-telemetry-opt-in`) so it is honoured if an endpoint is added later.
-  - If sending is enabled and you encounter a scannability issue and opt-in to telemetry, we transmit limited diagnostic data to help us improve the application. This data consists only of the following parameters: `engine`, `styleId`, `errorType`, `fgColor`, `bgColor`, `eyeColor`, `errorCorrectionLevel`, `isBorderEnabled`, `borderSize`, `borderColor`, `borderStyle`, `templateStyle`.
-  - **Telemetry Schema Contract (source of truth):**
-    - Diagnostic telemetry is strictly allowlisted in `src/types.ts` via ALLOWED_TELEMETRY_KEYS.
-    - Accepted keys are: `engine`, `styleId`, `errorType`, `fgColor`, `bgColor`, `eyeColor`, `errorCorrectionLevel`, `isBorderEnabled`, `borderSize`, `borderColor`, `borderStyle`, `templateStyle`.
-    - Values are constrained to non-sensitive primitive types (string | number | boolean | null) through TelemetryPayload, and the telemetry hook enforces this at runtime: an allowlisted key whose value is an object or array is dropped before sending.
+- **What the host sees:**
+  - Cloudflare handles every request for a page or file. Like any web host it processes the IP address, user agent, request path (e.g. `/`, `/about` - which are static) and time, to deliver the site and protect it from attacks, under [Cloudflare's privacy policy](https://www.cloudflare.com/privacypolicy/). The project owner sees only aggregate totals such as request counts in the Cloudflare dashboard.
+  - If Cloudflare's bot protection is enabled, it may set a short-lived security cookie. It is not used for tracking.
+- **What is stored on your device:**
+  - Only the colour-theme preference (`qrcraftly:theme`). QR content is never stored. Dynamic link records (`qrcraftly:dynamic-redirects`, see above) are written only if Dynamic Redirection is switched on, which it is not in production.
 - **What is NOT Logged:**
   - **User Input:** Since the application runs client-side, the text, URLs, or WiFi passwords (including WPA2-Enterprise EAP method, phase 2 and identity fields) you type are never part of the HTTP request to the server.
   - **Generated Images:** The QR codes created are generated in the browser and never uploaded.
+  - **Diagnostics:** Scannability failures are handled on the device and never reported.
 
 ### 3. Technical Safeguards
 
 - **HTTPS:** All connections are secured via HTTPS.
 - **State Isolation:** The application does not store user input in URL query parameters (e.g., `?data=...`), ensuring that sensitive data does not leak into browser history, proxy logs, or server access logs.
-- **Pre-Build Storage Privacy AST Auditor:** Automated static analysis (`scripts/storage_privacy_ast_auditor.js`) inspects all browser persistent storage calls prior to compilation. Detected storage operations are validated against an explicit allowlist of authorized preference and consent identifiers (`qr-telemetry-opt-in`, `qrcraftly:dynamic-redirects`, `qrcraftly:dynamic-consent-accepted`, `qrcraftly:theme`, `__test__`), preventing unapproved storage patterns or transient QR payload data from reaching persistent storage.
+- **Pre-Build Storage Privacy AST Auditor:** Automated static analysis (`scripts/storage_privacy_ast_auditor.js`) inspects all browser persistent storage calls prior to compilation. Detected storage operations are validated against an explicit allowlist of authorized preference and consent identifiers (`qrcraftly:dynamic-redirects`, `qrcraftly:dynamic-consent-accepted`, `qrcraftly:theme`, `__test__`), preventing unapproved storage patterns or transient QR payload data from reaching persistent storage.
 
 ## Certification Note
 

@@ -3,6 +3,7 @@ import { QrCode } from 'lucide-react';
 import { isDangerousUrl } from '../utils/security';
 import { PrimaryNav } from './ui/PrimaryNav';
 import { ThemeToggle } from './ui/ThemeToggle';
+import { PLEDGE_TAGLINE } from '../data/pledge';
 
 const generatorLinks = [
   ['URL', '/'],
@@ -65,12 +66,13 @@ export function ProductShell({ children }: { children: ReactNode }) {
             <h2 className="mb-3 text-xs font-semibold tracking-wider text-slate-900 uppercase dark:text-slate-200">Company</h2>
             <ul className="space-y-2 text-sm text-slate-500 dark:text-slate-400">
               <li><a href="/about" className="hover:text-teal-600 dark:hover:text-teal-400">About</a></li>
+              <li><a href="/free-forever" className="hover:text-teal-600 dark:hover:text-teal-400">No-Ads Pledge</a></li>
               <li><a href="/security" className="hover:text-teal-600 dark:hover:text-teal-400">Security & Privacy</a></li>
               <li><a href="https://github.com/fderuiter/QRCraftly" target="_blank" rel="noopener noreferrer" className="hover:text-teal-600 dark:hover:text-teal-400">GitHub</a></li>
             </ul>
           </nav>
         </div>
-        <p className="mx-auto max-w-7xl border-t border-slate-100 px-4 py-5 text-xs text-slate-500 sm:px-6 dark:border-slate-800 dark:text-slate-400">© {new Date().getFullYear()} QRCraftly. Open Source.</p>
+        <p className="mx-auto max-w-7xl border-t border-slate-100 px-4 py-5 text-xs text-slate-500 sm:px-6 dark:border-slate-800 dark:text-slate-400"><a href="/free-forever" className="font-medium text-slate-600 hover:text-teal-700 dark:text-slate-300 dark:hover:text-teal-400">{PLEDGE_TAGLINE}</a> © {new Date().getFullYear()} QRCraftly. Open Source.</p>
       </footer>
     </div>
   );

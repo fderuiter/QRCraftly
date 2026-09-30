@@ -1,6 +1,6 @@
 
 import { ToastProvider } from "./ui/Toast";
-import { render, screen, within, fireEvent } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import QRTool from './QRTool';
 import { beforeEach, describe, it, expect, vi } from 'vitest';
 
@@ -44,31 +44,26 @@ describe('QRTool Footer', () => {
     expect(footer).toHaveTextContent(/Open Source/i);
   });
 
-  it('keeps the diagnostics preference in a privacy settings section of the footer, off until chosen', () => {
+  it('asks for no diagnostics consent and sends no reports', () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
     render(<ToastProvider><QRTool /></ToastProvider>);
 
-    const footer = screen.getByRole('contentinfo');
-    const privacy = within(footer).getByRole('region', { name: /privacy settings/i });
-
-    expect(privacy).toHaveTextContent(/if a scan check fails/i);
-    expect(privacy).toHaveTextContent(/QR content and images are never sent/i);
-    const toggle = within(privacy).getByRole('switch', { name: /share anonymous diagnostics/i });
-    expect(toggle).not.toBeChecked();
-    expect(within(privacy).getByTestId('diagnostics-status')).toHaveTextContent(/not chosen yet/i);
-
-    // Nothing about diagnostics lives in the settings column any more.
-    const settings = screen.getByRole('complementary', { name: /QR Code Settings/i });
-    expect(within(settings).queryByText(/diagnostics/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/we noticed your QR code might be hard to scan/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: /anonymous diagnostics|privacy settings/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('switch', { name: /diagnostics/i })).not.toBeInTheDocument();
+    expect(fetchSpy).not.toHaveBeenCalled();
+    fetchSpy.mockRestore();
   });
 
-  it('persists the diagnostics choice when toggled', () => {
+  it('links the no-ads pledge and has no donation links', () => {
     render(<ToastProvider><QRTool /></ToastProvider>);
-    const toggle = screen.getByRole('switch', { name: /share anonymous diagnostics/i });
-    fireEvent.click(toggle);
-    expect(toggle).toBeChecked();
-    expect(window.localStorage.getItem('qr-telemetry-opt-in')).toBe('true');
-    expect(screen.getByTestId('diagnostics-status')).toHaveTextContent('On');
+    const footer = screen.getByRole('contentinfo');
+
+    const pledgeLinks = within(footer).getAllByRole('link', { name: /pledge|no ads/i });
+    expect(pledgeLinks.length).toBeGreaterThan(0);
+    for (const link of pledgeLinks) {
+      expect(link).toHaveAttribute('href', '/free-forever');
+    }
+    expect(footer.innerHTML).not.toMatch(/ko-fi/i);
   });
 
   it('links to real anchors on the security page', () => {

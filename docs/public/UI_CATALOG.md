@@ -92,7 +92,6 @@ Page-level building blocks of `/arcade`. Game logic lives in the `@/packages/arc
 Feature-level building blocks shared by several routes. Reuse these instead of rebuilding page chrome, previews or status output.
 
 - **CharCount** (`CharCount.tsx` / `CharCount.test.tsx`): Accessible character counter for length-limited inputs, with a progress ring and polite limit announcements.
-- **DiagnosticsPreference** (`DiagnosticsPreference.tsx`): Privacy settings section holding the anonymous scannability diagnostics opt-in switch (off until the person chooses), shown in the generator footer instead of inside the tool column.
 - **ErrorBoundary** (`ErrorBoundary.tsx`): Root error boundary that renders an application error message and a `Button` to reload the page, clearing simulated-crash query flags.
 - **InputPanel** (`InputPanel.tsx` / `InputPanel.test.tsx`): Content entry for the generator: renders the QR type navigation, the active type's input form and the scan-to-fill scanner with a human-readable "type detected" toast.
 - **ProductShell** (`ProductShell.tsx` / `ProductShell.test.tsx`): Header, primary navigation and footer chrome for informational and system pages (About, Security, errors).
