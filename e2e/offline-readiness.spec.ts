@@ -129,4 +129,28 @@ test.describe('Automated Workbox Precaching and Offline Readiness', () => {
     // 5. Verify the custom brand logo state has been fully wiped and reset
     await expect(page.getByText('Custom Logo')).not.toBeVisible();
   });
+
+  test('Constraint 2: Mosaic QR designs are transient and fully cleared on page refresh', async ({ page }) => {
+    // Mosaic QR lives in the Logo section of the appearance accordion
+    await page.getByRole('button', { name: 'Logo', exact: true }).click();
+    const fileInput = page.getByRole('region', { name: 'Logo' }).getByLabel('Upload mosaic design', { exact: true });
+    await expect(fileInput).toBeAttached();
+
+    await fileInput.setInputFiles({
+      name: 'test-mosaic.png',
+      mimeType: 'image/png',
+      buffer: Buffer.from(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+        'base64'
+      ),
+    });
+
+    const removeMosaic = page.getByRole('button', { name: 'Remove mosaic image' });
+    await expect(removeMosaic).toBeVisible();
+
+    await page.reload();
+    await page.waitForSelector('main[data-hydrated="true"]');
+
+    await expect(page.getByRole('button', { name: 'Remove mosaic image' })).not.toBeVisible();
+  });
 });
