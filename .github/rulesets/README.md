@@ -1,44 +1,38 @@
 # Repository Rulesets
 
-This directory holds the repository rulesets as JSON. GitHub does not read these files; an admin imports them under **Settings → Rules → Rulesets → New ruleset → Import a ruleset**. After importing, delete any older ruleset that covers the same branches or tags, such as a previous "Protect Main Branch" ruleset. The release process these rules support is described in [RELEASING.md](../../RELEASING.md).
+This directory holds the repository rulesets as JSON. GitHub does not read these files; an admin imports them under **Settings → Rules → Rulesets → New ruleset → Import a ruleset**. After importing, delete any older ruleset that covers the same branches or tags, such as a previous "Protect Main Branch" or "Protect dev (integration)" ruleset. The release process these rules support is described in [RELEASING.md](../../RELEASING.md).
 
 ## Rulesets
 
-### `dev.json`: Protect dev (integration)
+### `main.json`: Protect main
 
-Applies to `dev`, the default branch every pull request targets.
+Applies to the default branch, `main`, which is the only long-lived branch and deploys to production on every push.
 
-- **Pull request required.** Direct pushes are blocked. Only **squash** merges are allowed, so each PR title becomes one Conventional Commit on `dev`.
+- **Pull request required.** Direct pushes are blocked. Only **squash** merges are allowed, so each PR title becomes one Conventional Commit on `main`.
 - **Approvals:** `0`, because the project has a single maintainer and GitHub never lets authors approve their own PRs. Review threads must be resolved before merging.
 - **Required status checks** (`integration_id` 15368 is GitHub Actions):
   - **CI**: the aggregate job in `.github/workflows/main.yml`. It succeeds only when setup, Consolidated Static Validation, Unit Tests, E2E Tests and Build all succeed. Requiring one aggregate check means renaming or adding jobs never leaves a PR waiting on a check that no longer reports.
   - **PR Title**: `.github/workflows/pr-title.yml`, which enforces Conventional Commit titles.
-- **Branches don't need to be up to date** before merging (`strict_required_status_checks_policy: false`), which avoids re-running the full suite after every merge.
+  - **Workers Builds: qrcraftly**: Cloudflare's build of the PR branch. It has no `integration_id`, so any app reporting that name satisfies it. If Cloudflare ever renames the check, update it here.
+- **Branches must be up to date** with `main` before merging (`strict_required_status_checks_policy: true`), so every merge was tested against exactly what it lands on. The project prefers fewer, larger PRs, so re-running CI after a rebase is an acceptable cost.
 - **Deletion and force pushes are blocked.**
-- **Bypass:** repository admins, in `pull_request` mode. Admins can merge a PR whose checks are failing, but can't push to `dev` directly.
+- **No bypass.** Nothing merges into `main` until every required check is green, including for admins. An admin can still edit or disable the ruleset in an emergency.
 
 `Dependency Audit` is intentionally not required. It reports new upstream advisories without blocking unrelated PRs.
-
-### `main.json`: Protect main (production)
-
-Applies to `main` and `backup`.
-
-- **Creation, updates and deletion are restricted** to the bypass list, and **force pushes are blocked** for everyone.
-- **Bypass:** repository admins only. The only thing that updates `main` is `pnpm run release:promote`, run by an admin, which pushes a fast-forward and the release tag atomically.
-- There is no pull request rule and no required check. Nothing merges into `main` through a PR, and every commit it fast-forwards to already passed **CI** on `dev`.
 
 ### `tags.json`: Protect release tags
 
 Applies to `refs/tags/v*`.
 
-- **Creating, moving and deleting release tags is restricted** to repository admins. Release tags are only created by `pnpm run release:promote`.
+- **Moving and deleting release tags is restricted** to repository admins.
+- **Creating them is not restricted**, because the Release workflow creates `vX.Y.Z` with the GitHub Actions token when a release PR merges.
 
 ## Format
 
 Each file is a single raw JSON object (`{ ... }`), never an array, so it can be imported through the GitHub UI or the REST API. Check the syntax before importing:
 
 ```bash
-node -e "for (const f of ['dev','main','tags']) JSON.parse(require('fs').readFileSync('.github/rulesets/' + f + '.json'))"
+node -e "for (const f of ['main','tags']) JSON.parse(require('fs').readFileSync('.github/rulesets/' + f + '.json'))"
 ```
 
 ## Keeping them in sync

@@ -36,9 +36,8 @@ jobs:
               per_page: 100
             });
 
-            // Long-lived branches are never cleanup candidates, even when unprotected:
-            // dev is the default integration branch and is identical to main right after a promotion.
-            const longLived = new Set(['main', 'master', 'dev', 'backup', defaultBranch]);
+            // The trunk is never a cleanup candidate, even when unprotected.
+            const longLived = new Set(['main', defaultBranch]);
 
             // Branches backing an open PR stay, whatever their merge state.
             const openPulls = await github.paginate(github.rest.pulls.list, { owner, repo, state: 'open', per_page: 100 });
@@ -48,7 +47,7 @@ jobs:
               if (longLived.has(branch.name) || withOpenPr.has(branch.name)) continue;
 
               try {
-                // Feature branches merge into the default branch (dev), so a branch whose head
+                // Feature branches merge into the default branch (main), so a branch whose head
                 // is already contained in it is merged.
                 const { data: compare } = await github.rest.repos.compareCommits({
                   owner,
