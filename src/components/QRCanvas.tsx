@@ -16,15 +16,17 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import React, { useEffect, useRef, useCallback, useState, useMemo, useSyncExternalStore } from 'react';
+import React, { useEffect, useRef, useCallback, useState, useMemo } from 'react';
 import { QRConfig, SocialFormat, TemplateStyle, QRModules, QRType } from '../types';
 import { drawQR, drawQRInternal } from '../utils/qrRenderer';
 import { drawWithTemplate, SOCIAL_DIMENSIONS } from '../utils/templateRenderer';
 import { useImage } from '../hooks/useImage';
-import { ValidationEngine } from '../engine/ValidationEngine';
+import { validateConfig } from '@/packages/qr-payload';
 import { Alert } from './ui/Alert';
-import { useOptionalQRStore } from '../context/QRContext';
-import { getMazeCacheKey, mazeCache } from '@/packages/qr-matrix/maze';
+import { useOptionalQRStoreSelector } from '../context/QRContext';
+import { generateMaze, getMazeCacheKey, storeMaze } from '@/packages/qr-matrix/maze';
+import { loadMosaicSource } from '@/packages/qr-matrix/mosaic';
+import { getQrCanvasRuntime, type QrEncoder } from '../utils/qrCanvasRuntime';
 import { normalizeUrl, shouldNormalizeUrl } from '../utils/url';
 import {
   isMazeWorkerRequest,
@@ -44,17 +46,7 @@ interface QRCanvasProps {
   /** Optional CSS class names to apply to the canvas element. */
   className?: string;
   /** Optional callback fired when rendering is complete. */
-  onRendered?: (info: { /**
-                         *
-                         */
-  moduleCount: number; /**
-                        *
-                        */
-  virtualImageData?: ImageData;
-  /**
-   *
-   */
-  virtualImageBitmap?: ImageBitmap; }) => void;
+  onRendered?: (info: { moduleCount: number; virtualImageData?: ImageData; virtualImageBitmap?: ImageBitmap }) => void;
   /** Sequence of string values representing animated QR frames. If omitted, falls back to config.animationValues. */
   animationValues?: string[];
   /** Flag specifying if the visual animation loop is currently active. If omitted, falls back to config.isAnimating. */
@@ -99,17 +91,8 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
     }
   };
 
-  const store = useOptionalQRStore();
-
-  const isStoreFallbackActive = useSyncExternalStore(
-    store ? store.subscribe : () => () => {},
-    () => (store ? store.getState().isScannabilityFallbackActive : false),
-    () => (store ? store.getState().isScannabilityFallbackActive : false)
-  );
-
-  const [localFallbackActive, setLocalFallbackActive] = useState(false);
-
-  const fallbackActive = isStoreFallbackActive || localFallbackActive;
+  // The QR store is the single owner of the scannability fallback flag.
+  const fallbackActive = useOptionalQRStoreSelector(state => state.isScannabilityFallbackActive) ?? false;
 
   const activeConfig = useMemo(() => {
     if (fallbackActive) {
@@ -118,35 +101,26 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
     return config;
   }, [config, fallbackActive]);
 
-  useEffect(() => {
-    setLocalFallbackActive(false);
-  }, [
-    config.value,
-    config.style,
-    config.fgColor,
-    config.bgColor,
-    config.eyeColor,
-    config.errorCorrectionLevel,
-    config.isMazeEnabled,
-    config.isMazeBridgesEnabled,
-  ]);
-
-  useEffect(() => {
-    if (!store) return;
-    const unregister = store.registerSignal('scannability-fail', () => {
-      setLocalFallbackActive(true);
-    });
-    return () => {
-      unregister();
-    };
-  }, [store]);
-
   // Pre-load images to avoid async rendering and flickering
   const logoImg = useImage(activeConfig.logoUrl);
   const borderLogoImg = useImage(activeConfig.isBorderEnabled ? activeConfig.borderLogoUrl : null);
 
+  // Decode the Mosaic QR image once; the renderer reads it from the in-memory cache.
+  const [mosaicSourceVersion, setMosaicSourceVersion] = useState(0);
+  useEffect(() => {
+    const url = activeConfig.mosaicImageUrl;
+    if (!url) return;
+    let isCurrent = true;
+    loadMosaicSource(url).then((source) => {
+      if (isCurrent && source) setMosaicSourceVersion((v) => v + 1);
+    });
+    return () => {
+      isCurrent = false;
+    };
+  }, [activeConfig.mosaicImageUrl]);
+
   // Animation states and refs to ensure we can read latest visual styles without rebuilding/restarting loop
-  const cachedFramesRef = useRef<{ value: string; modules: any }[]>([]);
+  const cachedFramesRef = useRef<{ value: string; modules: QRModules }[]>([]);
   const isAnimatingRef = useRef(activeIsAnimating);
   const configRef = useRef(activeConfig);
   const logoImgRef = useRef(logoImg);
@@ -158,6 +132,16 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
 
   const onRenderedRef = useRef(onRendered);
   const sizeRef = useRef(size);
+  const virtualRenderTimerRef = useRef<{ cancel: () => void } | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (virtualRenderTimerRef.current) {
+        virtualRenderTimerRef.current.cancel();
+        virtualRenderTimerRef.current = null;
+      }
+    };
+  }, []);
 
   useEffect(() => {
     configRef.current = activeConfig;
@@ -175,7 +159,7 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
     }
 
     let isMounted = true;
-    import('qrcode').then((QRCode) => {
+    Promise.resolve(getQrCanvasRuntime().loadEncoder()).then((QRCode) => {
       if (!isMounted) return;
       try {
         const cached = activeAnimationValues.map((val) => {
@@ -186,7 +170,7 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
             console.warn("QR precompute failed for value:", val, e);
             return null;
           }
-        }).filter(Boolean) as { value: string; modules: any }[];
+        }).filter((frame): frame is { value: string; modules: QRModules } => frame !== null);
         cachedFramesRef.current = cached;
       } catch (err) {
         console.error("Precomputing matrices failed:", err);
@@ -209,8 +193,7 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const isPerfTest = typeof window !== 'undefined' && (window as any).isPerformanceTest;
-    const activeSize = isPerfTest ? 256 : size;
+    const activeSize = size;
     const pixelRatio = typeof window !== 'undefined' ? (window.devicePixelRatio || 1) : 1;
 
     // Fixed canvas dimensions at initialization to prevent buffer resets/flickering
@@ -310,21 +293,12 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
   const workerRef = useRef<Worker | null>(null);
   const sequenceIdRef = useRef<number>(0);
   const lastModulesRef = useRef<QRModules | null>(null);
-  const isWorkerFallbackRef = useRef<boolean>(
-    typeof window === 'undefined' ||
-    typeof Worker === 'undefined' ||
-    (typeof navigator !== 'undefined' && navigator.userAgent && navigator.userAgent.includes('jsdom')) ||
-    (typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 'test')
-  );
+  const isWorkerFallbackRef = useRef<boolean>(false);
 
   const mazeWorkerRef = useRef<Worker | null>(null);
   const mazeSequenceIdRef = useRef<number>(0);
-  const isMazeWorkerFallbackRef = useRef<boolean>(
-    typeof window === 'undefined' ||
-    typeof Worker === 'undefined' ||
-    (typeof navigator !== 'undefined' && navigator.userAgent && navigator.userAgent.includes('jsdom')) ||
-    (typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 'test')
-  );
+  const isMazeWorkerFallbackRef = useRef<boolean>(false);
+  const mazeCacheKeyRef = useRef<string | null>(null);
   const [computedMazeData, setComputedMazeData] = useState<MazeData | null>(null);
   const computedMazeDataRef = useRef<MazeData | null>(null);
 
@@ -341,10 +315,11 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
     }
 
     try {
-      const worker = new Worker(
-        new URL('../utils/mazeWorker.ts', import.meta.url),
-        { type: 'module' }
-      );
+      const worker = getQrCanvasRuntime().createMazeWorker();
+      if (!worker) {
+        isMazeWorkerFallbackRef.current = true;
+        return;
+      }
 
       worker.onmessage = (e) => {
         // Strictly validate message format at runtime
@@ -361,8 +336,9 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
 
         if (status === 'success' && mazeData) {
           setComputedMazeData(mazeData);
-          const cacheKey = getMazeCacheKey(configRef.current, sizeRef.current);
-          mazeCache.set(cacheKey, mazeData);
+          if (mazeCacheKeyRef.current) {
+            storeMaze(mazeCacheKeyRef.current, mazeData);
+          }
         } else {
           console.warn("Background maze calculation failed:", error);
         }
@@ -401,6 +377,7 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
     const currentSeqId = mazeSequenceIdRef.current;
 
     const size = modules.size;
+    mazeCacheKeyRef.current = getMazeCacheKey(activeConfig, size, modules);
     const matrix = new Uint8Array(size * size);
     for (let r = 0; r < size; r++) {
       for (let c = 0; c < size; c++) {
@@ -423,26 +400,22 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
 
       mazeWorkerRef.current.postMessage(requestPayload);
     } else {
-      // Dynamic import fallback running pathfinding on main thread during idle time
-      import('@/packages/qr-matrix/maze').then((module) => {
+      // Fallback: run pathfinding on the main thread during idle time
+      const runner = () => {
         if (currentSeqId !== mazeSequenceIdRef.current) return;
-
-        const runner = () => {
-          if (currentSeqId !== mazeSequenceIdRef.current) return;
-          try {
-            const mazeData = module.generateMaze(modules, activeConfig, size);
-            setComputedMazeData(mazeData);
-          } catch (e) {
-            console.warn("Main thread fallback maze generation failed:", e);
-          }
-        };
-
-        if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-          (window as any).requestIdleCallback(runner);
-        } else {
-          setTimeout(runner, 0);
+        try {
+          const mazeData = generateMaze(modules, activeConfig, size);
+          setComputedMazeData(mazeData);
+        } catch (e) {
+          console.warn("Main thread fallback maze generation failed:", e);
         }
-      });
+      };
+
+      if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+        window.requestIdleCallback(runner);
+      } else {
+        setTimeout(runner, 0);
+      }
     }
   }, [activeConfig]);
 
@@ -456,8 +429,7 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
     const currentConfig = configRef.current;
     const currentSize = sizeRef.current;
 
-    const isPerfTest = typeof window !== 'undefined' && (window as any).isPerformanceTest;
-    const activeSize = isPerfTest ? 256 : currentSize;
+    const activeSize = currentSize;
     const pixelRatio = typeof window !== 'undefined' ? (window.devicePixelRatio || 1) : 1;
 
     const useTemplate =
@@ -490,8 +462,7 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
     const currentOnRendered = onRenderedRef.current;
     const currentSize = sizeRef.current;
 
-    const isPerfTest = typeof window !== 'undefined' && (window as any).isPerformanceTest;
-    const activeSize = isPerfTest ? 256 : currentSize;
+    const activeSize = currentSize;
     const pixelRatio = typeof window !== 'undefined' ? (window.devicePixelRatio || 1) : 1;
 
     const useTemplate =
@@ -530,10 +501,6 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
     }
 
     if (currentOnRendered) {
-      currentOnRendered({ moduleCount: modules.size });
-
-      if (isPerfTest) return;
-
       const runVirtualRender = () => {
         try {
           const virtualSize = Math.max(512, Math.min(1024, (modules.size + 8) * 10));
@@ -549,6 +516,7 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
 
           const vCtx = vCanvas.getContext('2d', { willReadFrequently: true }) as CanvasRenderingContext2D | null;
           if (!vCtx || typeof vCtx.fillRect !== 'function' || typeof vCtx.clearRect !== 'function') {
+            currentOnRendered({ moduleCount: modules.size });
             return;
           }
 
@@ -583,13 +551,29 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
           }
         } catch (err) {
           console.error("Virtual rendering failed:", err);
+          currentOnRendered({ moduleCount: modules.size });
         }
       };
 
+      if (virtualRenderTimerRef.current) {
+        virtualRenderTimerRef.current.cancel();
+        virtualRenderTimerRef.current = null;
+      }
+
       if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-        (window as any).requestIdleCallback(runVirtualRender, { timeout: 100 });
+        const handle = window.requestIdleCallback(runVirtualRender, { timeout: 100 });
+        virtualRenderTimerRef.current = {
+          cancel: () => {
+            if (typeof window !== 'undefined' && 'cancelIdleCallback' in window) {
+              window.cancelIdleCallback(handle);
+            }
+          },
+        };
       } else {
-        setTimeout(runVirtualRender, 50);
+        const handle = setTimeout(runVirtualRender, 50);
+        virtualRenderTimerRef.current = {
+          cancel: () => clearTimeout(handle),
+        };
       }
     }
   }, []);
@@ -616,27 +600,17 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
         sequenceId: currentSeqId,
       });
     } else {
-      // Synchronous fallback calculation (crucial for testing and permission-blocked worker fallbacks)
-      let QRCodeModule: any = (globalThis as any).mockQRCode;
-      try {
-        if (!QRCodeModule) {
-          const req = typeof require !== 'undefined' ? require : null;
-          if (req) {
-            QRCodeModule = req('qrcode');
-          }
-        }
-      } catch {}
-
-      if (QRCodeModule) {
+      // Main-thread fallback when no matrix worker is available (blocked or unsupported)
+      const encodeOnMainThread = (QRCode: QrEncoder) => {
+        if (currentSeqId !== sequenceIdRef.current) return;
         try {
-          const violations = ValidationEngine.validateConfig(currentConfig);
+          const violations = validateConfig(currentConfig);
           if (violations.length > 0) {
             lastModulesRef.current = null;
             clearCanvasAndResize();
             return;
           }
 
-          const QRCode = (QRCodeModule as any).default || QRCodeModule;
           let val = currentConfig.value;
           if (currentConfig.type === QRType.URL && shouldNormalizeUrl(val)) {
             val = normalizeUrl(val);
@@ -652,34 +626,13 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
           lastModulesRef.current = null;
           clearCanvasAndResize();
         }
-      } else {
-        import('qrcode').then((mod) => {
-          if (currentSeqId !== sequenceIdRef.current) return;
-          try {
-            const violations = ValidationEngine.validateConfig(currentConfig);
-            if (violations.length > 0) {
-              lastModulesRef.current = null;
-              clearCanvasAndResize();
-              return;
-            }
+      };
 
-            const QRCode = (mod as any).default || mod;
-            let val = currentConfig.value;
-            if (currentConfig.type === QRType.URL && shouldNormalizeUrl(val)) {
-              val = normalizeUrl(val);
-            }
-            const data = QRCode.create(val, {
-              errorCorrectionLevel: currentConfig.errorCorrectionLevel,
-            });
-            const modules: QRModules = data.modules;
-            lastModulesRef.current = modules;
-            paintMatrix(modules);
-          } catch (e) {
-            console.warn("QR generation failed:", e);
-            lastModulesRef.current = null;
-            clearCanvasAndResize();
-          }
-        });
+      const encoder = getQrCanvasRuntime().loadEncoder();
+      if (encoder instanceof Promise) {
+        encoder.then(encodeOnMainThread);
+      } else {
+        encodeOnMainThread(encoder);
       }
     }
   }, [paintMatrix, clearCanvasAndResize]);
@@ -688,10 +641,11 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
   useEffect(() => {
     let worker: Worker | null = null;
     try {
-      worker = new Worker(
-        new URL('../utils/matrixWorker.ts', import.meta.url),
-        { type: 'module' }
-      );
+      worker = getQrCanvasRuntime().createMatrixWorker();
+      if (!worker) {
+        isWorkerFallbackRef.current = true;
+        return;
+      }
       worker.onmessage = (e) => {
         const { status, sequenceId, size, matrix } = e.data;
         if (sequenceId !== sequenceIdRef.current) {
@@ -771,6 +725,10 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
     activeConfig.mazeColor,
     activeConfig.mazePathWidth,
     activeConfig.showMazeSolution,
+    config.mosaicImageUrl,
+    config.mosaicMode,
+    config.mosaicContrast,
+    mosaicSourceVersion,
     logoImg,
     borderLogoImg,
     size,
@@ -789,7 +747,7 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
 
   const containerClasses = className ? `${className} ${aspectRatioClass}` : aspectRatioClass;
 
-  const violations = ValidationEngine.validateConfig(config);
+  const violations = validateConfig(config);
   const hasViolations = violations.length > 0;
 
   if (hasViolations) {

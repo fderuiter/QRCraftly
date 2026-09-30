@@ -23,7 +23,6 @@ import { JsonLdScript } from '@/components/ui/JsonLdScript';
 import { contentRegistry } from '@/data/contentRegistry';
 import { generateSchema } from '@/utils/schemaGenerator';
 import { resolveDomainForPath } from '@/utils/metadataEngine';
-import { SidebarContent } from '@/components/SidebarContent';
 import { usePageContext } from 'vike-react/usePageContext';
 import { ProductShell } from '@/components/ProductShell';
 
@@ -185,9 +184,6 @@ export default function Page() {
         </a>
       </section>
 
-      <div className="mx-auto max-w-3xl">
-        <SidebarContent toolId="about" />
-      </div>
     </div>
     </ProductShell>
   );

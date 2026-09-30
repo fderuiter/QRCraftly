@@ -28,9 +28,33 @@ jobs:
       - name: Run Moderate Dependency Audit
         run: pnpm audit --audit-level=moderate
 
-      - name: Send Email on Failure
+      # The failure email needs SMTP_USERNAME, SMTP_PASSWORD, MAIL_TO and a sender
+      # address (MAIL_FROM, or SMTP_USERNAME when that is an email address). Without
+      # them action-send-mail fails with "'from' address is invalid" and buries the
+      # audit result, so check first and skip the email with a warning.
+      - name: Check Failure Email Configuration
+        id: mail-config
         if: failure()
-        uses: dawidd6/action-send-mail@v18
+        env:
+          SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          MAIL_TO: ${{ secrets.MAIL_TO }}
+          MAIL_FROM: ${{ secrets.MAIL_FROM || secrets.SMTP_USERNAME }}
+        run: |
+          case "$MAIL_FROM" in
+            *@*) SENDER_OK=true ;;
+            *) SENDER_OK=false ;;
+          esac
+          if [ -n "$SMTP_USERNAME" ] && [ -n "$SMTP_PASSWORD" ] && [ -n "$MAIL_TO" ] && [ "$SENDER_OK" = true ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::Failure email skipped: set the SMTP_USERNAME, SMTP_PASSWORD and MAIL_TO secrets, plus MAIL_FROM when SMTP_USERNAME is not an email address."
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Send Email on Failure
+        if: failure() && steps.mail-config.outputs.configured == 'true'
+        uses: dawidd6/action-send-mail@67ce3558d613188179559c61d3565140cf389968 # v22
         with:
           server_address: ${{ secrets.SMTP_SERVER || 'smtp.gmail.com' }}
           server_port: ${{ secrets.SMTP_PORT || 465 }}
@@ -38,9 +62,9 @@ jobs:
           password: ${{ secrets.SMTP_PASSWORD }}
           subject: "Security Alert: Moderate-severity or higher vulnerability detected in ${{ github.repository }}"
           to: ${{ secrets.MAIL_TO }}
-          from: "Security Audit Bot <${{ secrets.SMTP_USERNAME }}>"
+          from: "Security Audit Bot <${{ secrets.MAIL_FROM || secrets.SMTP_USERNAME }}>"
           body: |
-            A moderate-severity or higher dependency vulnerability was detected in the main branch of ${{ github.repository }}.
+            A moderate-severity or higher dependency vulnerability was detected on the ${{ github.ref_name }} branch of ${{ github.repository }}.
 
             Workflow Run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
 

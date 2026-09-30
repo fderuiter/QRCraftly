@@ -34,6 +34,14 @@ _Avoid_: Diagonal bleed, corner bleed, diagonal connector
 A closed polygon formed by directed boundary segments outlining contiguous module clusters for smooth vector rendering.
 _Avoid_: Outline, border path, trace line
 
+**Mosaic QR**:
+A render mode that tiles a user-supplied image into the modules, recolouring each module (or its centre sub-cell in halftone mode) towards its dark or light value so the matrix still decodes. See ADR 0019.
+_Avoid_: Art QR, picture QR, image QR, AI QR
+
+**Mosaic Core**:
+The centre sub-cell of a halftone mosaic module, held at full contrast because scanners sample module centres; the outer sub-cells carry image detail.
+_Avoid_: Centre dot, data dot, halftone pixel
+
 ### Privacy & Compliance
 
 **Zero-Knowledge Redirection**:
@@ -53,6 +61,10 @@ _Avoid_: Stateless mode, incognito processing, memory wipe
 **Scannability Health**:
 An empirical classification of code readability derived from automated contrast checks and barcode detector evaluation.
 _Avoid_: Readability rate, success score, scan rating, reliability index
+
+**Scannability Health Evaluator**:
+The headless deep module that answers "how scannable is this QR frame?" with one assessment (verification status, health score, export risk, worker recovery state). It privately owns canvas capture, buffer transfer, request sequencing, the Scannability Worker lifecycle, the 1500ms watchdog and the main-thread fallback. React code reaches it only through the `useScannability` adapter hook.
+_Avoid_: Scannability runner, worker runner, scannability hook internals
 
 **Scannability Worker**:
 A dedicated background process performing real-time contrast auditing and optical decoding off the main user interface thread.
@@ -78,6 +90,18 @@ _Avoid_: Canvas fallback flag, broken worker cache, degradation state
 An off-thread Web Worker acknowledgement confirming a stale scan frame was dropped, used by the main-thread scheduler to release backpressure without overwriting active diagnostic status.
 _Avoid_: Stale frame response, dropped signal, busy unlock event
 
+**Optical Detection Engine**:
+A consolidated deep module encapsulating real-time webcam frame acquisition, multi-format media decoding (images, WebM, MKV), transferable buffer recycling, and off-thread Web Worker barcode decoding behind a unified entry-point seam.
+_Avoid_: Camera frame provider, QR scanner helper, scanner utility
+
+**Camera Scanner Engine**:
+The headless component of the Optical Detection Engine that owns the live camera frame loop, adaptive sampling, backpressure, downscaling, and the private scanner worker (epochs, 1500ms watchdog, three-retry exponential backoff, and main-thread fallback). React code reaches it only through the `useQrScanner` adapter hook.
+_Avoid_: Camera frame provider, scanner loop hook, worker ref
+
+**Adaptive Frame Scheduler**:
+A backpressure and pacing controller managing dynamic sleep intervals, in-flight frame sequencing, execution latency histories, and starvation watchdog recovery during continuous video capture.
+_Avoid_: Frame timer, scanner loop, camera ticker
+
 ### Air-Gapped Optical Transfer
 
 **Air-Gapped Optical Transfer**:
@@ -99,6 +123,22 @@ _Avoid_: Double ECC, dual error recovery, two-way ECC
 **Stateless Stream Entry**:
 The receiver capability to start capturing and decoding an optical stream at an arbitrary point in time without an explicit preparatory handshake phase.
 _Avoid_: Mid-stream scan, instant sync, handshake-free mode
+
+**Droplet Symbol**:
+An individual rateless fountain packet produced by XOR-combining a pseudo-random subset of source blocks according to a degree distribution.
+_Avoid_: Packet chunk, fountain slice, stream bit
+
+**Fountain Block Slicer**:
+The partitioning subsystem dividing source file binaries into fixed-size input blocks and generating rateless fountain droplet symbols.
+_Avoid_: File cutter, chunk generator, packet slicer
+
+**Degree Distribution**:
+The discrete probability distribution governing how many source blocks are XOR-combined into each emitted droplet symbol to guarantee low-overhead peeling decoding.
+_Avoid_: Block weight, degree spread, combination ratio
+
+**Optical Transfer Engine**:
+A consolidated deep module encapsulating rateless fountain coding, contiguous frame memory pooling, stream lookahead security validation, and off-thread slicing and reassembly behind unified entry-point seams.
+_Avoid_: Transfer helper, animated QR manager, file transfer utility
 
 ### Environment & Tooling Invariants
 
@@ -135,19 +175,19 @@ The automated client-side hooks combining Husky with lint-staged to enforce code
 _Avoid_: Commit hooks, git checks, pre-commit scripts, git filters
 
 **Authoritative Deployment Orchestrator**:
-The single source of truth (GitHub Actions) executing quality gates, security audits, build provenance attestations, and edge deployments, preventing duplicate or unverified builds from external git integrations.
+The division of responsibility in which GitHub Actions is the quality gate (the required `CI` check, audits, smoke tests) and Cloudflare Workers Builds is the only system that deploys, building each pushed branch from Git.
 _Avoid_: Build trigger, dual deploy, cloud build runner, auto-deployment app
 
 **Staged Promotion**:
-The lifecycle discipline where all feature and fix branches merge into the default integration branch (`dev`), deploying to an active preview environment (`qrcraftly.fpderuiter.workers.dev`) before production release promotion to `main`.
+The lifecycle discipline where all feature and fix branches merge into the default integration branch (`dev`), deploying to the preview staging environment (`dev-qrcraftly.fpderuiter.workers.dev`) before production release promotion to `main`.
 _Avoid_: Dev-to-main copy, branch sync, direct push release, cherry-pick release
 
 **Ephemeral Preview Environment**:
-An isolated, on-demand edge staging deployment created per pull request to enable automated end-to-end smoke verification and visual review prior to merge.
+An isolated edge preview version that Cloudflare Workers Builds uploads for each pushed branch, served at `https://<branch>-qrcraftly.fpderuiter.workers.dev`, for visual review prior to merge.
 _Avoid_: Test deploy, PR sandbox, temp site, branch build
 
 **Fast-Forward Promotion**:
-The exclusive, SHA-preserving method by which `dev` is advanced into `main` during a production release (`git push origin dev:main --ff-only`), guaranteeing that both branches share identical commit SHAs and preventing history divergence.
+The exclusive, SHA-preserving method by which `main` is advanced to a reviewed release commit on `dev` during a production release (`pnpm run release:promote`, an atomic push of `main` and the `vX.Y.Z` tag with no force), guaranteeing that both branches share identical commit SHAs and preventing history divergence.
 _Avoid_: PR merge to main, rebase-and-merge release, squash promotion, cherry-pick release
 
 **Conventional Commit**:
@@ -155,5 +195,5 @@ A structured commit message following the `<type>(<scope>): <description>` forma
 _Avoid_: Tagged message, semantic commit, versioned commit, prefix commit
 
 **Release Engine**:
-The cross-platform Node.js utility (`scripts/release_engine.js`) that reads conventional commits since the latest git tag, computes the next SemVer version, generates a grouped Keep-a-Changelog section, and can fast-forward promote `main` in a single atomic operation.
+The cross-platform Node.js utility (`scripts/release_engine.js`) that reads conventional commits since the latest git tag, computes the next SemVer version, generates a grouped Keep-a-Changelog section, prepares the release PR (`--prepare`), and fast-forward promotes `main` with its tag in a single atomic push (`--promote`).
 _Avoid_: Version bumper, changelog writer, deploy script, tag creator

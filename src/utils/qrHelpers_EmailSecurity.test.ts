@@ -17,27 +17,27 @@
 */
 
 import { describe, it, expect } from 'vitest';
-import { constructEmailString } from './qr-generators/email';
+import { constructEmailString } from '@/packages/qr-payload';
 import { EmailData } from '../types';
 
 describe('QR Helpers Email Security', () => {
-  it('constructEmailString should preserve raw newlines in email', () => {
+  it('constructEmailString should percent-encode raw newlines in email', () => {
     const data: EmailData = {
       email: 'user@example.com\ncc:attacker@example.com',
       subject: 'Test',
       body: 'Body'
     };
     const result = constructEmailString(data);
-    expect(result).toBe('mailto:user@example.com\ncc:attacker@example.com?subject=Test&body=Body');
+    expect(result).toBe('mailto:user@example.com%0Acc%3Aattacker@example.com?subject=Test&body=Body');
   });
 
-  it('constructEmailString should preserve raw control characters in email', () => {
+  it('constructEmailString should percent-encode raw control characters in email', () => {
       const data: EmailData = {
           email: 'user@example.com\x00',
           subject: 'Test',
           body: 'Body'
       };
       const result = constructEmailString(data);
-      expect(result).toBe('mailto:user@example.com\x00?subject=Test&body=Body');
+      expect(result).toBe('mailto:user@example.com%00?subject=Test&body=Body');
   });
 });

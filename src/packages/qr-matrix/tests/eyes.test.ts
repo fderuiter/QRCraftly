@@ -75,11 +75,20 @@ describe('renderEyes', () => {
     expect(ctx.fill).toHaveBeenCalled();
   });
 
-  it('renders fluid/swiss dot eyes', () => {
+  it('renders swiss dot eyes', () => {
+    const ctx = createMockCtx();
+    renderEyes(ctx, { ...baseConfig, style: QRStyle.SWISS }, 0, 0, 10, 21);
+
+    expect(ctx.arc).toHaveBeenCalled();
+    expect(ctx.fill).toHaveBeenCalled();
+  });
+
+  it('renders fluid eyes with a squircle eyeball (no circle, so jsQR finds the finder)', () => {
     const ctx = createMockCtx();
     renderEyes(ctx, { ...baseConfig, style: QRStyle.FLUID }, 0, 0, 10, 21);
 
-    expect(ctx.arc).toHaveBeenCalled();
+    expect(ctx.arc).not.toHaveBeenCalled();
+    expect(ctx.quadraticCurveTo).toHaveBeenCalled();
     expect(ctx.fill).toHaveBeenCalled();
   });
 

@@ -1,36 +1,46 @@
 import { describe, it, expect, vi } from 'vitest';
-import { generateMaze, renderMaze, isFinderEyeZone, isBridgeCell, DSU, getStyleAdaptiveMazePathWidth } from '../maze';
+import {
+  generateMaze,
+  renderMaze,
+  isFinderPatternWithMargin,
+  isBridgeCell,
+  getStyleAdaptiveMazePathWidth,
+  getMazeCacheKey,
+  getCachedMaze,
+  storeMaze,
+  clearMazeCache,
+} from '../maze';
 import { QRStyle, QRType, QRErrorCorrectionLevel } from '@/types';
 
-describe('isFinderEyeZone', () => {
+describe('isFinderPatternWithMargin', () => {
   it('identifies top-left finder eye zone correctly', () => {
-    expect(isFinderEyeZone(0, 0, 21)).toBe(true);
-    expect(isFinderEyeZone(3, 3, 21)).toBe(true);
-    expect(isFinderEyeZone(7, 7, 21)).toBe(true);
-    expect(isFinderEyeZone(8, 8, 21)).toBe(true);
-    expect(isFinderEyeZone(-2, -2, 21)).toBe(true);
+    expect(isFinderPatternWithMargin(0, 0, 21)).toBe(true);
+    expect(isFinderPatternWithMargin(3, 3, 21)).toBe(true);
+    expect(isFinderPatternWithMargin(7, 7, 21)).toBe(true);
+    expect(isFinderPatternWithMargin(8, 8, 21)).toBe(true);
+    expect(isFinderPatternWithMargin(-2, -2, 21)).toBe(true);
   });
 
   it('identifies top-right finder eye zone correctly', () => {
     const size = 21;
-    expect(isFinderEyeZone(0, size - 1, size)).toBe(true);
-    expect(isFinderEyeZone(0, size - 7, size)).toBe(true);
-    expect(isFinderEyeZone(8, size - 9, size)).toBe(true);
-    expect(isFinderEyeZone(-2, size + 4, size)).toBe(true);
+    expect(isFinderPatternWithMargin(0, size - 1, size)).toBe(true);
+    expect(isFinderPatternWithMargin(0, size - 7, size)).toBe(true);
+    expect(isFinderPatternWithMargin(8, size - 9, size)).toBe(true);
+    expect(isFinderPatternWithMargin(-2, size + 4, size)).toBe(true);
   });
 
   it('identifies bottom-left finder eye zone correctly', () => {
     const size = 21;
-    expect(isFinderEyeZone(size - 1, 0, size)).toBe(true);
-    expect(isFinderEyeZone(size - 7, 0, size)).toBe(true);
-    expect(isFinderEyeZone(size - 9, 8, size)).toBe(true);
-    expect(isFinderEyeZone(size + 4, -2, size)).toBe(true);
+    expect(isFinderPatternWithMargin(size - 1, 0, size)).toBe(true);
+    expect(isFinderPatternWithMargin(size - 7, 0, size)).toBe(true);
+    expect(isFinderPatternWithMargin(size - 9, 8, size)).toBe(true);
+    expect(isFinderPatternWithMargin(size + 4, -2, size)).toBe(true);
   });
 
   it('returns false for safe zones', () => {
     const size = 21;
     // (10, 10) is typically a safe middle zone
-    expect(isFinderEyeZone(10, 10, size)).toBe(false);
+    expect(isFinderPatternWithMargin(10, 10, size)).toBe(false);
   });
 });
 
@@ -167,12 +177,40 @@ describe('generateMaze & renderMaze', () => {
     expect(ctx.stroke).not.toHaveBeenCalled();
   });
 
+  it('draws nothing until a maze has been computed for the modules', () => {
+    clearMazeCache();
+    const ctx = createMockCtx();
+    const size = 21;
+    const modules = createMockModules(size);
+
+    renderMaze(ctx, modules, { ...baseConfig, value: 'not-yet-computed' }, 0, 0, 10, size);
+
+    expect(ctx.stroke).not.toHaveBeenCalled();
+  });
+
+  it('draws a maze stored under its cache key without regenerating it', () => {
+    clearMazeCache();
+    const ctx = createMockCtx();
+    const size = 21;
+    const modules = createMockModules(size);
+    const config = { ...baseConfig, value: 'stored-maze' };
+    const computed = generateMaze(modules, config, size);
+    clearMazeCache();
+
+    const key = getMazeCacheKey(config, size, modules);
+    storeMaze(key, computed);
+    expect(getCachedMaze(key)).toBe(computed);
+
+    renderMaze(ctx, modules, config, 0, 0, 10, size);
+    expect(ctx.stroke).toHaveBeenCalled();
+  });
+
   it('renders the maze and start/end markers when isMazeEnabled is true', () => {
     const ctx = createMockCtx();
     const size = 21;
     const modules = createMockModules(size);
 
-    renderMaze(ctx, modules, baseConfig, 0, 0, 10, size);
+    renderMaze(ctx, modules, baseConfig, 0, 0, 10, size, generateMaze(modules, baseConfig, size));
 
     expect(ctx.save).toHaveBeenCalled();
     expect(ctx.stroke).toHaveBeenCalled();
@@ -255,7 +293,7 @@ describe('generateMaze & renderMaze', () => {
       const modules = createMockModules(size);
       const noSolutionConfig = { ...baseConfig, showMazeSolution: false };
 
-      renderMaze(ctx, modules, noSolutionConfig, 0, 0, 10, size);
+      renderMaze(ctx, modules, noSolutionConfig, 0, 0, 10, size, generateMaze(modules, noSolutionConfig, size));
 
       // Verify we only stroke once for the maze edges and skip the solution path
       expect(ctx.stroke).toHaveBeenCalledTimes(1);
@@ -332,21 +370,21 @@ describe('generateMaze & renderMaze', () => {
       expect(ctx.arc).toHaveBeenCalledWith(expectedKx, expectedKy, cellSizeLarge * 0.18, 0, 2 * Math.PI);
     });
 
-    it('covers all branch conditions in isFinderEyeZone', () => {
+    it('covers all branch conditions in isFinderPatternWithMargin', () => {
       const size = 21;
       // Condition 1: r >= -2 && r <= 8 && c >= -2 && c <= 8
-      expect(isFinderEyeZone(-3, 0, size)).toBe(false); // r < -2
-      expect(isFinderEyeZone(9, 0, size)).toBe(false);  // r > 8
-      expect(isFinderEyeZone(0, -3, size)).toBe(false); // c < -2
-      expect(isFinderEyeZone(0, 9, size)).toBe(false);  // c > 8
+      expect(isFinderPatternWithMargin(-3, 0, size)).toBe(false); // r < -2
+      expect(isFinderPatternWithMargin(9, 0, size)).toBe(false);  // r > 8
+      expect(isFinderPatternWithMargin(0, -3, size)).toBe(false); // c < -2
+      expect(isFinderPatternWithMargin(0, 9, size)).toBe(false);  // c > 8
 
       // Condition 2: r >= -2 && r <= 8 && c >= size - 9 && c <= size + 4
-      expect(isFinderEyeZone(0, size - 10, size)).toBe(false); // c < size - 9
-      expect(isFinderEyeZone(0, size + 5, size)).toBe(false);  // c > size + 4
+      expect(isFinderPatternWithMargin(0, size - 10, size)).toBe(false); // c < size - 9
+      expect(isFinderPatternWithMargin(0, size + 5, size)).toBe(false);  // c > size + 4
 
       // Condition 3: r >= size - 9 && r <= size + 4 && c >= -2 && c <= 8
-      expect(isFinderEyeZone(size - 10, 0, size)).toBe(false); // r < size - 9
-      expect(isFinderEyeZone(size + 5, 0, size)).toBe(false);  // r > size + 4
+      expect(isFinderPatternWithMargin(size - 10, 0, size)).toBe(false); // r < size - 9
+      expect(isFinderPatternWithMargin(size + 5, 0, size)).toBe(false);  // r > size + 4
     });
 
     it('covers all branch conditions in isBridgeCell', () => {
@@ -402,7 +440,7 @@ describe('generateMaze & renderMaze', () => {
         mazeColor: undefined, // test default color path too
       };
 
-      renderMaze(ctx, modules, customConfig, 0, 0, 10, size);
+      renderMaze(ctx, modules, customConfig, 0, 0, 10, size, generateMaze(modules, customConfig, size));
       expect(ctx.save).toHaveBeenCalled();
     });
 
@@ -513,25 +551,6 @@ describe('generateMaze & renderMaze', () => {
   });
 });
 
-describe('DSU', () => {
-  it('manages disjoint sets and supports add, find, and union', () => {
-    const dsu = new DSU(['a', 'b']);
-    expect(dsu.find('a')).toBe('a');
-    expect(dsu.find('b')).toBe('b');
-    expect(dsu.union('a', 'b')).toBe(true);
-    expect(dsu.union('a', 'b')).toBe(false);
-
-    // Test add for new key
-    dsu.add('c');
-    expect(dsu.find('c')).toBe('c');
-    expect(dsu.union('a', 'c')).toBe(true);
-
-    // Test add for existing key
-    dsu.add('a');
-    expect(dsu.find('a')).toBe('c');
-  });
-});
-
 describe('getStyleAdaptiveMazePathWidth & Style-Adaptive Clearance', () => {
   it('returns style-adaptive defaults for custom stylized modules', () => {
     expect(getStyleAdaptiveMazePathWidth(QRStyle.STARBURST)).toBe(0.12);
@@ -594,7 +613,7 @@ describe('applyMazeHaloMask & Canvas Clearance', () => {
       mazeColor: '#3b82f6',
     } as any;
 
-    renderMaze(ctx, modules, starburstConfig, 0, 0, 10, size);
+    renderMaze(ctx, modules, starburstConfig, 0, 0, 10, size, generateMaze(modules, starburstConfig, size));
 
     expect(ctx.save).toHaveBeenCalled();
     expect(ctx.fill).toHaveBeenCalled();

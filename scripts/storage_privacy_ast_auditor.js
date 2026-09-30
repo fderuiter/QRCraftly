@@ -17,6 +17,7 @@ export const ALLOWED_STORAGE_KEYS = new Set([
   'qr-telemetry-opt-in',
   'qrcraftly:dynamic-redirects',
   'qrcraftly:dynamic-consent-accepted',
+  'qrcraftly:theme',
   '__test__'
 ]);
 

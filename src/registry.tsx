@@ -7,7 +7,10 @@ const StyleControls = React.lazy(() => import('@/components/StyleControls'));
 
 const ContentControl = () => {
   const store = useQRStore();
-  const config = useQRStoreSelector(state => state.config);
+  // Select only the content slice so appearance changes do not re-render the input panel.
+  const type = useQRStoreSelector(state => state.config.type);
+  const value = useQRStoreSelector(state => state.config.value);
+  const config = React.useMemo(() => ({ type, value }), [type, value]);
   const { updateConfig } = store;
   return (
     <section>
@@ -45,9 +48,6 @@ const AdditionalSidebarContent = ({ toolId }: { toolId?: string }) => {
   return <SidebarContent toolId={toolId || 'index'} />;
 };
 
-/**
- *
- */
 export const sidebarControls = [
   {
     id: 'content',

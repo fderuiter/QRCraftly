@@ -17,6 +17,12 @@ Please list all pre-existing UI elements or utilities from the [UI Component Reg
 - [ ] **No Button Duplication:** I have NOT introduced custom buttons; all buttons utilize standard `Button` primitives from `src/components/ui/`.
 - [ ] **No Custom Color Math:** I have NOT written custom hex validation, relative luminance formulas, sRGB conversion, or contrast math. I have imported these from `src/utils/colorUtils.ts` or `src/utils/a11y.ts` where necessary.
 
+### Verification:
+- [ ] This PR targets `dev` (never `main`) and its title follows [Conventional Commits](https://www.conventionalcommits.org/).
+- [ ] `pnpm run lint` passes.
+- [ ] `pnpm exec vitest run` passes.
+- [ ] `pnpm build` and `pnpm test:e2e` pass (required when touching build, routing, rendering, or input flows).
+
 ---
 
 ## 3. Peer Review Checklist (Reviewers Only)

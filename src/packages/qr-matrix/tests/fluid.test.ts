@@ -18,7 +18,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
-  isFinderEyeZone,
+  isFinderPattern,
   isFinderSeparatorZone,
   isFinderProtected,
   extractFluidContours,
@@ -46,17 +46,17 @@ describe('fluid renderer', () => {
 
   describe('finder zone protection', () => {
     it('correctly identifies finder eyes in all 3 corners', () => {
-      expect(isFinderEyeZone(0, 0, moduleCount)).toBe(true);
-      expect(isFinderEyeZone(6, 6, moduleCount)).toBe(true);
-      expect(isFinderEyeZone(7, 7, moduleCount)).toBe(false);
+      expect(isFinderPattern(0, 0, moduleCount)).toBe(true);
+      expect(isFinderPattern(6, 6, moduleCount)).toBe(true);
+      expect(isFinderPattern(7, 7, moduleCount)).toBe(false);
 
-      expect(isFinderEyeZone(0, 20, moduleCount)).toBe(true);
-      expect(isFinderEyeZone(6, 14, moduleCount)).toBe(true);
+      expect(isFinderPattern(0, 20, moduleCount)).toBe(true);
+      expect(isFinderPattern(6, 14, moduleCount)).toBe(true);
 
-      expect(isFinderEyeZone(20, 0, moduleCount)).toBe(true);
-      expect(isFinderEyeZone(14, 6, moduleCount)).toBe(true);
+      expect(isFinderPattern(20, 0, moduleCount)).toBe(true);
+      expect(isFinderPattern(14, 6, moduleCount)).toBe(true);
 
-      expect(isFinderEyeZone(10, 10, moduleCount)).toBe(false);
+      expect(isFinderPattern(10, 10, moduleCount)).toBe(false);
     });
 
     it('correctly identifies the 1-module quiet separator zone', () => {

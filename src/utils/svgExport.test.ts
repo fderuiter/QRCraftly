@@ -133,12 +133,12 @@ describe('generateQRSvg', () => {
     expect(svg).toContain(' C ');
   });
 
-  it('produces SVG for FLUID style (circles)', async () => {
+  it('produces SVG for FLUID style (curves)', async () => {
     const config = { ...DEFAULT_CONFIG, style: QRStyle.FLUID } as QRConfig;
     const svg = await generateQRSvg(config);
     parseAndAssertValidSvg(svg);
     expect(svg).toContain('<svg');
-    expect(svg).toContain(' C ');
+    expect(svg).toContain('Q ');
   });
 
   it('produces SVG for GRUNGE style', async () => {
@@ -510,6 +510,96 @@ describe('generateQRSvg', () => {
       expect(canvas.getContext('2d')).not.toBeNull();
     });
 
+    describe('rasterizeSvgToCanvas load waiting in real browsers (#969)', () => {
+      type Listener = (() => void) | null;
+      class ControlledImage {
+        static last: ControlledImage | null = null;
+        onload: Listener = null;
+        onerror: ((reason: unknown) => void) | null = null;
+        complete = false;
+        naturalWidth = 0;
+        src = '';
+        constructor() {
+          ControlledImage.last = this;
+        }
+        finishLoading() {
+          this.complete = true;
+          this.naturalWidth = 1000;
+          this.onload?.();
+        }
+      }
+
+      const withBrowserImage = async (run: () => Promise<void>) => {
+        const originalImage = globalThis.Image;
+        const uaSpy = vi.spyOn(window.navigator, 'userAgent', 'get').mockReturnValue('Mozilla/5.0 Chrome/140');
+        globalThis.Image = ControlledImage as unknown as typeof Image;
+        try {
+          await run();
+        } finally {
+          globalThis.Image = originalImage;
+          uaSpy.mockRestore();
+          ControlledImage.last = null;
+        }
+      };
+
+      it('does not draw until the image has loaded', async () => {
+        await withBrowserImage(async () => {
+          const originalCreateElement = document.createElement.bind(document);
+          let createdCanvas: HTMLCanvasElement | null = null;
+          const createSpy = vi.spyOn(document, 'createElement').mockImplementation((tagName: string) => {
+            const element = originalCreateElement(tagName);
+            if (tagName === 'canvas') createdCanvas = element as HTMLCanvasElement;
+            return element;
+          });
+          try {
+            let settled = false;
+            const pending = rasterizeSvgToCanvas('<svg xmlns="http://www.w3.org/2000/svg"/>', 400, 400).finally(() => {
+              settled = true;
+            });
+            const image = ControlledImage.last;
+            expect(image?.src).toMatch(/^blob:/);
+            expect(createdCanvas).not.toBeNull();
+            const drawImage = vi.mocked(createdCanvas!.getContext('2d')!.drawImage);
+
+            // Give any stray timers (the old 50 ms fallback) a chance to run before load completes.
+            await new Promise(r => setTimeout(r, 80));
+            expect(drawImage).not.toHaveBeenCalled();
+            expect(settled).toBe(false);
+
+            image?.finishLoading();
+            const canvas = await pending;
+            expect(canvas).toBe(createdCanvas);
+            expect(drawImage).toHaveBeenCalledTimes(1);
+            expect(drawImage).toHaveBeenCalledWith(image, 0, 0, 400, 400);
+          } finally {
+            createSpy.mockRestore();
+          }
+        });
+      });
+
+      it('rejects when the image fails to load', async () => {
+        await withBrowserImage(async () => {
+          const pending = rasterizeSvgToCanvas('<svg xmlns="http://www.w3.org/2000/svg"/>', 100, 100);
+          ControlledImage.last?.onerror?.(new Event('error'));
+          await expect(pending).rejects.toThrow('Failed to load SVG image for rasterization');
+        });
+      });
+
+      it('rejects instead of hanging when the image never settles', async () => {
+        await withBrowserImage(async () => {
+          vi.useFakeTimers();
+          try {
+            const pending = rasterizeSvgToCanvas('<svg xmlns="http://www.w3.org/2000/svg"/>', 100, 100);
+            const assertion = expect(pending).rejects.toThrow('Timed out waiting for SVG image to load');
+            await vi.advanceTimersByTimeAsync(10_000);
+            await assertion;
+          } finally {
+            vi.useRealTimers();
+          }
+        });
+      });
+    });
+
     it('validateSvgScannability passes when offscreen raster decodes successfully', async () => {
       const mockScannabilityChecker = await import('./scannabilityChecker');
       const spy = vi.spyOn(mockScannabilityChecker, 'performScannabilityCheck').mockReturnValueOnce({
@@ -543,6 +633,30 @@ describe('generateQRSvg', () => {
 
       const svgString = await generateQRSvg(DEFAULT_CONFIG as QRConfig);
       const isScannable = await validateSvgScannability(svgString, DEFAULT_CONFIG as QRConfig);
+      expect(isScannable).toBe(false);
+      expect(spy).toHaveBeenCalled();
+    });
+
+    it('validateSvgScannability returns true when allowUnsafe is true even if pixel scannability check fails', async () => {
+      const mockScannabilityChecker = await import('./scannabilityChecker');
+      const spy = vi.spyOn(mockScannabilityChecker, 'performScannabilityCheck').mockClear();
+
+      const svgString = await generateQRSvg(DEFAULT_CONFIG as QRConfig);
+      const isScannable = await validateSvgScannability(svgString, DEFAULT_CONFIG as QRConfig, { allowUnsafe: true });
+      expect(isScannable).toBe(true);
+      expect(spy).not.toHaveBeenCalled();
+    });
+
+    it('validateSvgScannability returns false when allowUnsafe is false and pixel scannability check fails', async () => {
+      const mockScannabilityChecker = await import('./scannabilityChecker');
+      const spy = vi.spyOn(mockScannabilityChecker, 'performScannabilityCheck').mockClear().mockReturnValueOnce({
+        success: false,
+        physicalReady: false,
+        error: 'NOT_FOUND',
+      });
+
+      const svgString = await generateQRSvg(DEFAULT_CONFIG as QRConfig);
+      const isScannable = await validateSvgScannability(svgString, DEFAULT_CONFIG as QRConfig, { allowUnsafe: false });
       expect(isScannable).toBe(false);
       expect(spy).toHaveBeenCalled();
     });

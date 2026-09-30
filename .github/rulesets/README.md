@@ -1,64 +1,46 @@
-# Branch Protection Ruleset Documentation
+# Repository Rulesets
 
-This directory contains the standardized, consolidated branch protection ruleset configuration for this repository. 
+This directory holds the repository rulesets as JSON. GitHub does not read these files; an admin imports them under **Settings → Rules → Rulesets → New ruleset → Import a ruleset**. After importing, delete any older ruleset that covers the same branches or tags, such as a previous "Protect Main Branch" ruleset. The release process these rules support is described in [RELEASING.md](../../RELEASING.md).
 
-## Consolidated Source of Truth
-- **Configuration File:** `main.json`
-- **Target Branches:** `main` and `backup`
+## Rulesets
 
----
+### `dev.json`: Protect dev (integration)
 
-## Scope and Rules
+Applies to `dev`, the default branch every pull request targets.
 
-### 1. Mandated Quality Gateways (CI Status Checks)
-The following status checks must pass successfully before a pull request can be merged into any of the target branches:
-- **Quality Checks**
-- **Unit Tests**
-- **E2E Tests**
-- **Docs Audit & Verification**
+- **Pull request required.** Direct pushes are blocked. Only **squash** merges are allowed, so each PR title becomes one Conventional Commit on `dev`.
+- **Approvals:** `0`, because the project has a single maintainer and GitHub never lets authors approve their own PRs. Review threads must be resolved before merging.
+- **Required status checks** (`integration_id` 15368 is GitHub Actions):
+  - **CI**: the aggregate job in `.github/workflows/main.yml`. It succeeds only when setup, Consolidated Static Validation, Unit Tests, E2E Tests and Build all succeed. Requiring one aggregate check means renaming or adding jobs never leaves a PR waiting on a check that no longer reports.
+  - **PR Title**: `.github/workflows/pr-title.yml`, which enforces Conventional Commit titles.
+- **Branches don't need to be up to date** before merging (`strict_required_status_checks_policy: false`), which avoids re-running the full suite after every merge.
+- **Deletion and force pushes are blocked.**
+- **Bypass:** repository admins, in `pull_request` mode. Admins can merge a PR whose checks are failing, but can't push to `dev` directly.
 
-### 2. Pull Request Requirements
-- **Required Approving Reviews:** At least `1` approving review is mandatory before merging.
-- **Dismiss Stale Reviews:** Active (dismisses previous approvals when a new commit is pushed).
-- **Require Code Owner Review:** Active (requires reviews from designated code owners).
-- **Required Review Thread Resolution:** Active (all conversations and review threads must be resolved).
-- **Linear History:** Enforced architecturally (not via this ruleset). All `dev → main` promotions must use fast-forward only (`--ff-only`), executed by the `release.yml` workflow. This approach preserves exact commit SHAs from `dev` without rewriting history, permanently preventing branch divergence. The `required_linear_history` GitHub ruleset rule was intentionally removed because it forces "Rebase and merge" which rewrites commit SHAs on `main`, causing inevitable divergence after every release.
+`Dependency Audit` is intentionally not required. It reports new upstream advisories without blocking unrelated PRs.
 
-### 3. Bypass Configurations
-The ruleset defines bypass options for specific roles and automated systems to ensure critical operations are not blocked. The following roles/actors can bypass these rules under appropriate conditions:
-- **Administrator Role** (Actor ID: `5`)
-- **Integration/Automation Bot** (Actor ID: `307`)
+### `main.json`: Protect main (production)
 
----
+Applies to `main` and `backup`.
 
-## File Format & Constraints
+- **Creation, updates and deletion are restricted** to the bypass list, and **force pushes are blocked** for everyone.
+- **Bypass:** repository admins only. The only thing that updates `main` is `pnpm run release:promote`, run by an admin, which pushes a fast-forward and the release tag atomically.
+- There is no pull request rule and no required check. Nothing merges into `main` through a PR, and every commit it fast-forwards to already passed **CI** on `dev`.
 
-### Raw JSON Object Requirement
-The ruleset configuration must **always** be formatted as a single raw JSON object (i.e., `{ ... }`), and **never** as a JSON array or list (i.e., `[ ... ]`). 
+### `tags.json`: Protect release tags
 
-Maintaining the single JSON object format prevents import errors when applying the ruleset dynamically via APIs or GitHub REST commands.
+Applies to `refs/tags/v*`.
 
----
+- **Creating, moving and deleting release tags is restricted** to repository admins. Release tags are only created by `pnpm run release:promote`.
 
-## How to Apply and Update the Ruleset
+## Format
 
-When updating branch policies, follow these steps to avoid configuration drift and maintain continuous protection of our critical branches:
+Each file is a single raw JSON object (`{ ... }`), never an array, so it can be imported through the GitHub UI or the REST API. Check the syntax before importing:
 
-### Step 1: Edit the Configuration Local Copy
-Make the required policy adjustments directly inside `.github/rulesets/main.json`. Ensure that you:
-- Preserve the mandated status checks and approval parameters.
-- Verify that the resulting JSON structure is a valid single JSON object.
-
-### Step 2: Local Linting & Validation
-Run local verification commands to check if any formatting is broken:
 ```bash
-# Verify JSON syntax
-node -e "JSON.parse(require('fs').readFileSync('.github/rulesets/main.json'))"
+node -e "for (const f of ['dev','main','tags']) JSON.parse(require('fs').readFileSync('.github/rulesets/' + f + '.json'))"
 ```
 
-### Step 3: Apply the Ruleset on GitHub
-To import/apply the updated ruleset to your repository:
-1. Navigate to **Settings** > **Rulesets** on GitHub.
-2. Select the existing ruleset or import/update from JSON.
-3. Import the updated `main.json` to overwrite current settings.
-4. Verify on the repository branch protection interface that all required quality checks are fully active.
+## Keeping them in sync
+
+When you change a ruleset file, import it again and check the rules under **Settings → Rules → Rulesets**. When you rename a job that a ruleset requires, update the ruleset in the same PR. Prefer adding the job to the `needs` of the aggregate **CI** job instead.

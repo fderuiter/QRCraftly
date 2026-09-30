@@ -74,18 +74,41 @@ describe('QRTool Component', () => {
     expect(screen.queryByText('Active')).not.toBeInTheDocument();
   });
 
-  it('exposes file transfer routes from the mobile navigation menu', () => {
+  it('exposes every primary destination from the site menu', () => {
     render(<ToastProvider><QRTool /></ToastProvider>);
 
-    const menuButton = screen.getByRole('button', { name: 'File transfer menu' });
+    const menuButton = screen.getByRole('button', { name: 'Site menu' });
     expect(menuButton).toHaveAttribute('aria-expanded', 'false');
 
     fireEvent.click(menuButton);
 
     expect(menuButton).toHaveAttribute('aria-expanded', 'true');
-    const mobileNav = screen.getByRole('navigation', { name: 'File transfer' });
-    expect(within(mobileNav).getByRole('link', { name: 'Send File' })).toHaveAttribute('href', '/file-transfer');
-    expect(within(mobileNav).getByRole('link', { name: 'Receive File' })).toHaveAttribute('href', '/file-transfer/receive');
+    const nav = screen.getByRole('navigation', { name: 'Primary navigation' });
+    expect(within(nav).getByRole('link', { name: /Create QR/ })).toHaveAttribute('href', '/');
+    expect(within(nav).getByRole('link', { name: /Send File/ })).toHaveAttribute('href', '/file-transfer');
+    expect(within(nav).getByRole('link', { name: /Receive File/ })).toHaveAttribute('href', '/file-transfer/receive');
+    expect(within(nav).getByRole('link', { name: 'Arcade' })).toHaveAttribute('href', '/arcade');
+    expect(within(nav).getByRole('link', { name: 'About' })).toHaveAttribute('href', '/about');
+    expect(within(nav).getByRole('link', { name: 'Security' })).toHaveAttribute('href', '/security');
+  });
+
+  it('offers "Stress Test in Arcade" in the live preview card', () => {
+    render(<ToastProvider><QRTool /></ToastProvider>);
+    const preview = screen.getByRole('region', { name: 'QR Code Preview' });
+    expect(within(preview).getByRole('button', { name: 'Stress Test in Arcade' })).toBeInTheDocument();
+  });
+
+  it('labels the help link by its in-page destination', () => {
+    render(<ToastProvider><QRTool /></ToastProvider>);
+    expect(screen.queryByRole('link', { name: 'About QRCraftly' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'How to use' })).toHaveAttribute('href', '#content-section');
+  });
+
+  it('lists each file transfer route only once in the footer site map', () => {
+    render(<ToastProvider><QRTool /></ToastProvider>);
+    const siteMap = screen.getByRole('navigation', { name: 'Site Map' });
+    expect(within(siteMap).getAllByRole('link', { name: /File Share \(Send\)/ })).toHaveLength(1);
+    expect(within(siteMap).getAllByRole('link', { name: /File Share \(Receive\)/ })).toHaveLength(1);
   });
 
   it('applies initial config if provided', () => {
@@ -97,22 +120,11 @@ describe('QRTool Component', () => {
       expect(urlInput).toBeInTheDocument();
   });
 
-  it('toggles dark mode', () => {
-    // We can also check the class on the container
+  it('renders the shared theme toggle and no page-local dark wrapper', () => {
     const { container } = render(<ToastProvider><QRTool /></ToastProvider>);
-
-    // Initially light mode (no 'dark' class on top div)
-    // The top div is the first child of the container
     const appDiv = container.firstChild as HTMLElement;
     expect(appDiv).not.toHaveClass('dark');
-
-    const toggleButtons = screen.getAllByTitle('Switch to Dark Mode');
-    expect(toggleButtons[0]).toBeInTheDocument();
-
-    fireEvent.click(toggleButtons[0]);
-
-    expect(screen.getByTitle('Switch to Light Mode')).toBeInTheDocument();
-    expect(appDiv).toHaveClass('dark');
+    expect(screen.getByRole('button', { name: /^Theme: / })).toBeInTheDocument();
   });
 
   it('renders InputPanel and StyleControls', () => {
@@ -181,6 +193,242 @@ describe('QRTool Component', () => {
     fireEvent.click(screen.getByRole('button', { name }));
 
     expect(screen.getByText('Scan Safety Warning')).toBeInTheDocument();
+  });
+
+  it('when scannability is unsafe and user clicks "Export Anyway", asset downloads successfully without SCAN_VALIDATION_FAILED error toast', async () => {
+    vi.mocked(jsQR).mockReturnValue(null); // Force scan verification failure
+    const appendSpy = vi.spyOn(document.body, 'appendChild');
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click');
+
+    render(
+      <ToastProvider>
+        <QRTool initialConfig={{ fgColor: '#eeeeee', eyeColor: '#eeeeee', bgColor: '#ffffff' }} />
+      </ToastProvider>
+    );
+
+    // 1. Trigger quick PNG download
+    const downloadBtn = screen.getByRole('button', { name: 'Download QR code as PNG' });
+    fireEvent.click(downloadBtn);
+
+    // 2. Scan Safety Warning modal opens
+    expect(screen.getByText('Scan Safety Warning')).toBeInTheDocument();
+
+    // 3. Click "Export Anyway"
+    const exportAnywayBtn = screen.getByRole('button', { name: 'Export Anyway' });
+    fireEvent.click(exportAnywayBtn);
+
+    // 4. Modal closes
+    await waitFor(() => {
+      expect(screen.queryByText('Scan Safety Warning')).not.toBeInTheDocument();
+    });
+
+    // 5. Download was triggered
+    expect(appendSpy).toHaveBeenCalled();
+    expect(clickSpy).toHaveBeenCalled();
+
+    // 6. Success toast is displayed, NO SCAN_VALIDATION_FAILED error toast
+    await waitFor(() => {
+      expect(screen.queryByText(/SCAN_VALIDATION_FAILED/i)).not.toBeInTheDocument();
+      const statuses = screen.getAllByRole('status');
+      const hasSuccess = statuses.some(s => s.textContent?.includes('QR code exported successfully as PNG!'));
+      expect(hasSuccess).toBe(true);
+    });
+  });
+
+  it('when scannability is unsafe and user clicks "Export Anyway" from the dropdown menu, download succeeds with allowUnsafe bypass', async () => {
+    vi.mocked(jsQR).mockReturnValue(null);
+    const appendSpy = vi.spyOn(document.body, 'appendChild');
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click');
+
+    render(
+      <ToastProvider>
+        <QRTool initialConfig={{ fgColor: '#eeeeee', eyeColor: '#eeeeee', bgColor: '#ffffff' }} />
+      </ToastProvider>
+    );
+
+    // 1. Open download dropdown menu
+    const menuButton = screen.getByRole('button', { name: /^Download$/ });
+    fireEvent.click(menuButton);
+
+    // 2. Click PNG option
+    const pngOption = screen.getByText('PNG (High Quality)');
+    fireEvent.click(pngOption);
+
+    // 3. Scan Safety Warning modal opens
+    expect(screen.getByText('Scan Safety Warning')).toBeInTheDocument();
+
+    // 4. Click "Export Anyway"
+    const exportAnywayBtn = screen.getByRole('button', { name: 'Export Anyway' });
+    fireEvent.click(exportAnywayBtn);
+
+    // 5. Modal closes and download succeeds
+    await waitFor(() => {
+      expect(screen.queryByText('Scan Safety Warning')).not.toBeInTheDocument();
+    });
+
+    expect(appendSpy).toHaveBeenCalled();
+    expect(clickSpy).toHaveBeenCalled();
+
+    await waitFor(() => {
+      expect(screen.queryByText(/SCAN_VALIDATION_FAILED/i)).not.toBeInTheDocument();
+      const statuses = screen.getAllByRole('status');
+      const hasSuccess = statuses.some(s => s.textContent?.includes('QR code exported successfully as PNG!'));
+      expect(hasSuccess).toBe(true);
+    });
+  });
+
+  it('when scannability is unsafe and user clicks "Export Anyway" for SVG, vector export succeeds', async () => {
+    vi.mocked(jsQR).mockReturnValue(null);
+    const appendSpy = vi.spyOn(document.body, 'appendChild');
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click');
+
+    render(
+      <ToastProvider>
+        <QRTool initialConfig={{ fgColor: '#eeeeee', eyeColor: '#eeeeee', bgColor: '#ffffff' }} />
+      </ToastProvider>
+    );
+
+    // 1. Open download dropdown menu
+    const menuButton = screen.getByRole('button', { name: /^Download$/ });
+    fireEvent.click(menuButton);
+
+    // 2. Click SVG option
+    const svgOption = screen.getByText('SVG (Vector)');
+    fireEvent.click(svgOption);
+
+    // 3. Scan Safety Warning modal opens
+    expect(screen.getByText('Scan Safety Warning')).toBeInTheDocument();
+
+    // 4. Click "Export Anyway"
+    const exportAnywayBtn = screen.getByRole('button', { name: 'Export Anyway' });
+    fireEvent.click(exportAnywayBtn);
+
+    // 5. Modal closes and download succeeds
+    await waitFor(() => {
+      expect(screen.queryByText('Scan Safety Warning')).not.toBeInTheDocument();
+    });
+
+    expect(appendSpy).toHaveBeenCalled();
+    expect(clickSpy).toHaveBeenCalled();
+
+    await waitFor(() => {
+      expect(screen.queryByText(/SCAN_VALIDATION_FAILED/i)).not.toBeInTheDocument();
+      const statuses = screen.getAllByRole('status');
+      const hasSuccess = statuses.some(s => s.textContent?.includes('QR code exported successfully as SVG!'));
+      expect(hasSuccess).toBe(true);
+    });
+  });
+
+  it('when scannability is unsafe and user clicks "Export Anyway" for Copy, clipboard copy succeeds', async () => {
+    vi.mocked(jsQR).mockReturnValue(null);
+    const mockWrite = vi.fn().mockResolvedValue(undefined);
+    const originalClipboard = global.navigator.clipboard;
+    const originalClipboardItem = (global as any).ClipboardItem;
+    Object.defineProperty(global.navigator, 'clipboard', {
+      value: { write: mockWrite },
+      writable: true,
+      configurable: true,
+    });
+    (global as any).ClipboardItem = vi.fn().mockImplementation(function(this: any, data) { this.data = data; });
+
+    try {
+      render(
+        <ToastProvider>
+          <QRTool initialConfig={{ fgColor: '#eeeeee', eyeColor: '#eeeeee', bgColor: '#ffffff' }} />
+        </ToastProvider>
+      );
+
+      // 1. Click Copy button
+      const copyBtn = screen.getByRole('button', { name: 'Copy QR code to clipboard' });
+      fireEvent.click(copyBtn);
+
+      // 2. Modal opens
+      expect(screen.getByText('Scan Safety Warning')).toBeInTheDocument();
+
+      // 3. Click "Export Anyway"
+      const exportAnywayBtn = screen.getByRole('button', { name: 'Export Anyway' });
+      fireEvent.click(exportAnywayBtn);
+
+      // 4. Modal closes and copy succeeds
+      await waitFor(() => {
+        expect(screen.queryByText('Scan Safety Warning')).not.toBeInTheDocument();
+      });
+
+      await waitFor(() => {
+        expect(screen.queryByText(/SCAN_VALIDATION_FAILED/i)).not.toBeInTheDocument();
+        const statuses = screen.getAllByRole('status');
+        const hasSuccess = statuses.some(s => s.textContent?.includes('QR code copied to clipboard!'));
+        expect(hasSuccess).toBe(true);
+      });
+    } finally {
+      Object.defineProperty(global.navigator, 'clipboard', {
+        value: originalClipboard,
+        writable: true,
+        configurable: true,
+      });
+      (global as any).ClipboardItem = originalClipboardItem;
+    }
+  });
+
+  it('when scannability is unsafe and user clicks "Export Anyway" for Share, Web Share succeeds', async () => {
+    vi.mocked(jsQR).mockReturnValue(null);
+    const mockShare = vi.fn().mockResolvedValue(undefined);
+    const mockCanShare = vi.fn().mockReturnValue(true);
+    const originalShare = global.navigator.share;
+    const originalCanShare = global.navigator.canShare;
+
+    Object.defineProperty(global.navigator, 'share', {
+      value: mockShare,
+      writable: true,
+      configurable: true,
+    });
+    Object.defineProperty(global.navigator, 'canShare', {
+      value: mockCanShare,
+      writable: true,
+      configurable: true,
+    });
+
+    try {
+      render(
+        <ToastProvider>
+          <QRTool initialConfig={{ fgColor: '#eeeeee', eyeColor: '#eeeeee', bgColor: '#ffffff' }} />
+        </ToastProvider>
+      );
+
+      // 1. Click Share button
+      const shareBtn = screen.getByRole('button', { name: 'Share QR code' });
+      fireEvent.click(shareBtn);
+
+      // 2. Modal opens
+      expect(screen.getByText('Scan Safety Warning')).toBeInTheDocument();
+
+      // 3. Click "Export Anyway"
+      const exportAnywayBtn = screen.getByRole('button', { name: 'Export Anyway' });
+      fireEvent.click(exportAnywayBtn);
+
+      // 4. Modal closes and share succeeds
+      await waitFor(() => {
+        expect(screen.queryByText('Scan Safety Warning')).not.toBeInTheDocument();
+      });
+
+      await waitFor(() => {
+        expect(screen.queryByText(/SCAN_VALIDATION_FAILED/i)).not.toBeInTheDocument();
+        const statuses = screen.getAllByRole('status');
+        const hasSuccess = statuses.some(s => s.textContent?.includes('QR code shared successfully!'));
+        expect(hasSuccess).toBe(true);
+      });
+    } finally {
+      Object.defineProperty(global.navigator, 'share', {
+        value: originalShare,
+        writable: true,
+        configurable: true,
+      });
+      Object.defineProperty(global.navigator, 'canShare', {
+        value: originalCanShare,
+        writable: true,
+        configurable: true,
+      });
+    }
   });
 
   it('handles the quick PNG download', () => {

@@ -20,17 +20,17 @@ import { useState, useRef, useEffect, ElementType } from "react";
 import { QRConfig, QRType } from "../../types";
 import { INPUT_REGISTRY, InputDataMap } from "./InputRegistry";
 import { isDangerousUrl } from "../../utils/security";
-import { ValidationEngine } from "../../engine/ValidationEngine";
+import { CONTAINMENT_PROFILES } from "@/packages/qr-payload";
 
 const isInputDataValid = (type: QRType, data: any): boolean => {
   if (type === QRType.WIFI) {
-    if (data.ssid && ValidationEngine.CONTAINMENT_PROFILES.STRICT_NO_CONTROL.test(data.ssid)) {
+    if (data.ssid && CONTAINMENT_PROFILES.STRICT_NO_CONTROL.test(data.ssid)) {
       return false;
     }
-    if (data.password && ValidationEngine.CONTAINMENT_PROFILES.STRICT_NO_CONTROL.test(data.password)) {
+    if (data.password && CONTAINMENT_PROFILES.STRICT_NO_CONTROL.test(data.password)) {
       return false;
     }
-    if (data.eapIdentity && ValidationEngine.CONTAINMENT_PROFILES.STRICT_NO_CONTROL.test(data.eapIdentity)) {
+    if (data.eapIdentity && CONTAINMENT_PROFILES.STRICT_NO_CONTROL.test(data.eapIdentity)) {
       return false;
     }
   } else if (type === QRType.VCARD) {
@@ -57,9 +57,9 @@ const isInputDataValid = (type: QRType, data: any): boolean => {
  * @returns An object containing the component to render and its props.
  */
 export function useInputLogic(
-  config: QRConfig,
+  config: Pick<QRConfig, 'type' | 'value'>,
   onChange: (updates: Partial<QRConfig>) => void,
-): { InputComponent: ElementType | null; inputProps: { data: InputDataMap[keyof InputDataMap]; onChange: (updates: Partial<InputDataMap[keyof InputDataMap]>) => void } | Record<string, never> } {
+): { InputComponent: ElementType | null; inputProps: { data: InputDataMap[keyof InputDataMap]; onChange: (updates: Partial<InputDataMap[keyof InputDataMap]>) => void } | Record<string, never>; flush: () => void } {
   // Initialize state for all types from registry
   const [inputStates, setInputStates] = useState<InputDataMap>(() => {
     const states = {} as Partial<InputDataMap>;
@@ -88,6 +88,8 @@ export function useInputLogic(
   }, [inputStates]);
 
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // The debounced write waiting in timeoutRef, so flush() can apply it immediately.
+  const pendingCommitRef = useRef<(() => void) | null>(null);
   const prevTypeRef = useRef<QRType | null>(null);
 
   // Synchronize input states reactively when config changes externally (e.g., undo/redo or preset loaded)
@@ -106,6 +108,7 @@ export function useInputLogic(
         clearTimeout(timeoutRef.current);
         timeoutRef.current = null;
       }
+      pendingCommitRef.current = null;
 
       // If we switched types, and the target type has a non-empty local state,
       // and the incoming config.value is empty (usually from tab select),
@@ -144,6 +147,7 @@ export function useInputLogic(
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
       }
+      pendingCommitRef.current = null;
     };
   }, [config.type]);
 
@@ -164,7 +168,9 @@ export function useInputLogic(
       clearTimeout(timeoutRef.current);
     }
 
-    timeoutRef.current = setTimeout(() => {
+    const commit = () => {
+      timeoutRef.current = null;
+      pendingCommitRef.current = null;
       const entry = INPUT_REGISTRY[type];
       if (entry) {
         if (isInputDataValid(type, newData)) {
@@ -174,7 +180,20 @@ export function useInputLogic(
           onChange({ value: entry.constructFn(newData as never) });
         }
       }
-    }, 100);
+    };
+    pendingCommitRef.current = commit;
+    timeoutRef.current = setTimeout(commit, 100);
+  };
+
+  // Applies a pending debounced edit now, so an action taken right after typing (for example
+  // a button that reads the store) sees the latest content.
+  const flush = () => {
+    const commit = pendingCommitRef.current;
+    if (!commit) return;
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    commit();
   };
 
   // Handle all types via registry
@@ -186,11 +205,13 @@ export function useInputLogic(
         data: inputStates[config.type] || registryEntry.initialState,
         onChange: (updates: Partial<InputDataMap[keyof InputDataMap]>) => handleInputChange(config.type, updates as unknown as Partial<InputDataMap[QRType]>),
       },
+      flush,
     };
   }
 
   return {
     InputComponent: null,
     inputProps: {},
+    flush,
   };
 }

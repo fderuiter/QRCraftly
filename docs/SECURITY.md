@@ -14,7 +14,18 @@ This application is designed with a "Privacy First" architecture. Please refer t
 
 ## Content Security Policy (CSP)
 
-Our application utilizes a multi-layered Content Security Policy (CSP) enforced via both meta tags and HTTP response headers. To protect production deployments from script-injection (XSS) attacks, our build pipeline automatically parses compiled static HTML assets and computes SHA-256 integrity hashes for all inline scripts (such as JSON-LD structured blocks and framework hydration elements). Consequently, the `unsafe-inline` directive is completely absent from production deployments. In local development environments, a permissive fallback policy is utilized to allow unimpeded feature iteration.
+Our application utilizes a multi-layered Content Security Policy (CSP) enforced via both meta tags and HTTP response headers. To protect production deployments from script-injection (XSS) attacks, our build pipeline automatically parses compiled static HTML assets and computes SHA-256 integrity hashes for all inline scripts (such as JSON-LD structured blocks, framework hydration elements and the pre-hydration theme initialisation script from `src/utils/theme.ts`, which must remain a static string so its hash is stable). Consequently, `script-src 'unsafe-inline'` is completely absent from production deployments. (`style-src 'unsafe-inline'` remains, because React renders dynamic preview styles as inline `style` attributes.) In local development environments, a permissive fallback policy is utilized to allow unimpeded feature iteration.
+
+The base policy lives in two places that must stay byte-identical: the meta tag in `src/layouts/Head.tsx` and `BASE_CSP_PATTERN` in `scripts/csp_hash_injector.js`. A unit test fails the build if they drift apart.
+
+- **No third-party origins:** The app no longer loads web fonts from Google Fonts; text renders with the system font stack (Tailwind's default `font-sans` and `font-mono`). Every directive therefore allows only `'self'`, plus the `data:` and `blob:` schemes where they are needed. No visitor IP address or referrer is sent to a font CDN. If a brand typeface is added later, bundle it with the app (for example from an `@fontsource` package) and keep `font-src 'self'`.
+- **`img-src 'self' data: blob:`:** SVG export rasterizes its `blob:` object URL to check that the code scans, and the logo resize fallback decodes uploads through `blob:` URLs.
+- **`media-src 'self' blob:`:** The optical scanner plays uploaded video files through `blob:` object URLs.
+- **Regression coverage:** The `chromium-csp` Playwright project runs `e2e/csp-enforcement.spec.ts` against the built app with `bypassCSP: false`, so a policy that breaks SVG export fails in CI. The other projects still bypass CSP.
+
+## Permissions Policy
+
+`public/_headers` sends `Permissions-Policy: camera=*, microphone=(self), geolocation=(self), payment=()`. The camera is available for the optical scanner. The microphone is limited to the site itself, for Audio QR receive, and so is geolocation, for "Use Current Location" on the Location QR type. Payment is disabled. An empty allowlist `()` turns a feature off for the site itself too, so never use `()` for a feature the app calls. `tests/security_headers.test.ts` checks these values.
 
 ## Reporting a Vulnerability
 
@@ -40,13 +51,15 @@ To prevent injection of arbitrary characters or command payloads into telephone 
 
 - **General Phone Validation**: By default, general telephone input values are cleaned to remove all non-numeric and non-standard telephone symbols. Characters like semicolons and commas are stripped.
 - **SMS Multi-Recipient Isolation**: To support advanced client-side SMS campaign configurations, the SMS generator uses an isolated sanitization option that preserves semicolons and commas, while rejecting letters, other symbols, and line-break control characters.
+- **URI Delimiter Encoding**: After sanitization, `#` in a dial string is percent-encoded as `%23` (RFC 3966) so it cannot start a URI fragment and truncate the number. Mailto recipients are percent-encoded (RFC 6068, keeping `@`) so `?`, `&`, and `#` in the address cannot inject headers, and crypto wallet addresses are percent-encoded so `&` or `#` cannot inject payment parameters.
 
 ## SVG Sanitization & Path Tracking
 
 To prevent custom SVG logo uploads and native vector exports from exposing users to DOM-XSS and structural XML injection, QRCraftly incorporates two security controls:
 
-- **Pre-Build Storage Privacy AST Auditor**: The build and pre-commit pipelines run static AST analysis (`scripts/storage_privacy_ast_auditor.js`) on source code before compilation. It scans for browser persistent storage operations (`localStorage`, `sessionStorage`, `indexedDB`, `document.cookie`, `caches`) and enforces an explicit allowlist of authorized keys (`qr-telemetry-opt-in`, `qrcraftly:dynamic-redirects`, `qrcraftly:dynamic-consent-accepted`, `__test__`). Any attempts to persist transient QR payload data or use unapproved keys immediately abort the build.
+- **Pre-Build Storage Privacy AST Auditor**: The build and pre-commit pipelines run static AST analysis (`scripts/storage_privacy_ast_auditor.js`) on source code before compilation. It scans for browser persistent storage operations (`localStorage`, `sessionStorage`, `indexedDB`, `document.cookie`, `caches`) and enforces an explicit allowlist of authorized keys (`qr-telemetry-opt-in`, `qrcraftly:dynamic-redirects`, `qrcraftly:dynamic-consent-accepted`, `qrcraftly:theme`, `__test__`). The `qrcraftly:theme` key stores only the visitor's colour-theme preference (`light`, `dark` or `system`). Any attempts to persist transient QR payload data or use unapproved keys immediately abort the build.
 - **Static Path Tracking**: The build pipeline and pre-commit checks automatically trace data flows across files. They detect and block any unvalidated path where raw/external SVG code might reach rendering/storage sinks without passing through `sanitizeSvg()`.
+- **Mosaic QR Images**: A mosaic design (`QRConfig.mosaicImageUrl`, ADR 0019) goes through the same `useImageUpload` validation, SVG sanitization and resizing as a logo. It is decoded on the device into an in-memory cache of at most four images, never written to browser storage and never sent over the network.
 - **Runtime SVG Sanitization**: Uploaded logos and border images are processed entirely within the client browser to maintain offline privacy. The runtime parser enforces a zero-trust strict safe-element allowlist and zero-tolerance styling:
   - Discards any elements not present on a strict safe-element allowlist (such as `<foreignObject>`, `<embed>`, `<object>`, `<script>`, etc.).
   - Discards `<style>` blocks and element `style` attributes entirely if they contain any `@import` reference.

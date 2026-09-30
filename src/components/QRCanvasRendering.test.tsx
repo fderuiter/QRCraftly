@@ -23,6 +23,10 @@ import QRCanvas from './QRCanvas';
 import { DEFAULT_CONFIG } from '../constants';
 import { QRStyle } from '../types';
 import QRCode from 'qrcode';
+import { useQrcodeAsCanvasEncoder } from '../../tests/fixtures/fakeQrcode';
+
+vi.mock('qrcode', async () => (await import('../../tests/fixtures/fakeQrcode')).createFakeQrcodeModule());
+useQrcodeAsCanvasEncoder(QRCode);
 
 // Mock qrcode module
 
@@ -104,13 +108,13 @@ describe('QRCanvas Rendering Logic Extended', () => {
       });
   };
 
-  it('draws FLUID style correctly (using arc)', async () => {
+  it('draws FLUID style correctly (using curves)', async () => {
       setModule(10, 10, true);
       const config = { ...DEFAULT_CONFIG, style: QRStyle.FLUID };
       render(<QRCanvas config={config} />);
 
       await waitFor(() => {
-          expect(mockContext.arc).toHaveBeenCalled();
+          expect(mockContext.quadraticCurveTo).toHaveBeenCalled();
           expect(mockContext.fill).toHaveBeenCalled();
       });
   });
@@ -200,9 +204,9 @@ describe('QRCanvas Rendering Logic Extended', () => {
      const fluidConfig = { ...DEFAULT_CONFIG, style: QRStyle.FLUID };
      render(<QRCanvas config={fluidConfig} />);
      await waitFor(() => {
-         // Fluid eye uses drawRoundRect for frame and arc for pupil
+         // Fluid eye uses drawRoundRect for both frame and (squircle) pupil
          expect(mockContext.quadraticCurveTo).toHaveBeenCalled();
-         expect(mockContext.arc).toHaveBeenCalled();
+         expect(mockContext.arc).not.toHaveBeenCalled();
      });
 
      // Reset mocks

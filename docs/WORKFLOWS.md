@@ -14,7 +14,7 @@ QRCraftly operates on a **Two-Tier Staged Promotion** model:
              ▼ (Pull Request)
            [ dev ]  (Default Integration Branch)
              │      └── Deploys to: https://dev-qrcraftly.fpderuiter.workers.dev/
-             ▼ (Promotional Release PR)
+             ▼ (pnpm run release:promote: fast-forward + vX.Y.Z tag)
           [ main ]  (Production Branch)
                     └── Deploys to: https://qrcraftly.fpderuiter.workers.dev/
                                     https://qrcraftly.com
@@ -25,14 +25,14 @@ QRCraftly operates on a **Two-Tier Staged Promotion** model:
 - **Role**: Primary integration trunk for all active development.
 - **Access**: Default branch for repository clones, forks, and new PRs.
 - **Edge Deployment**: Automatically deployed by Cloudflare Workers Builds to the **Preview Staging Environment** at `https://dev-qrcraftly.fpderuiter.workers.dev/` with `X-Robots-Tag: noindex`.
-- **Invariants**: Must always pass static validation, unit tests, and cross-browser e2e suites.
+- **Invariants**: Changes land only through squash-merged pull requests that pass the `CI` and `PR Title` checks.
 
 ### `main` (Production Branch)
 
 - **Role**: Stable production release branch.
 - **Access**: Protected. Direct pushes and standard feature PRs are prohibited.
 - **Edge Deployment**: Automatically deployed by Cloudflare Workers Builds to the **Production Environment** at `https://qrcraftly.fpderuiter.workers.dev/` and `https://qrcraftly.com`.
-- **Invariants**: Updated exclusively via promotional pull requests from `dev` (or emergency hotfix rollbacks).
+- **Invariants**: Updated exclusively by `pnpm run release:promote`, which fast-forwards `main` to a reviewed release commit on `dev` and pushes the release tag with it. See [RELEASING.md](../RELEASING.md).
 
 ---
 
@@ -79,7 +79,7 @@ pnpm run test:e2e
 
 ### Step 3: Open Pull Request Targeting `dev`
 
-Push your branch to GitHub and open a pull request targeting the **`dev`** branch.
+Push your branch to GitHub and open a pull request targeting the **`dev`** branch. The PR title must be a [Conventional Commit](https://www.conventionalcommits.org/) (for example `fix(scanner): handle empty frames`), because it becomes the squashed commit subject that the changelog and version bump are built from. The `PR Title` check enforces this.
 
 ### Step 4: Automated CI Quality Gate Validation
 
@@ -90,6 +90,8 @@ GitHub Actions triggers the consolidated CI pipeline on the PR:
 3. `test`: Vitest unit tests with strict coverage thresholds.
 4. `e2e`: Playwright cross-browser tests across Chromium, Firefox, and WebKit.
 5. `build`: Production build verification, bundle size budgets, and Lighthouse CI performance audits.
+6. `dependency-audit`: `pnpm audit --audit-level=high`, reported as its own check. No other job depends on it, so a newly published upstream advisory flags the PR without skipping the checks above.
+7. `ci`: the aggregate **`CI`** check. It passes only when jobs 1 to 5 all succeed, and it is the check the `dev` ruleset requires.
 
 ### Step 5: Ephemeral Branch Preview Verification
 
@@ -99,66 +101,19 @@ Reviewers and agents can verify changes live in an edge environment before appro
 
 ### Step 6: Merge into `dev`
 
-Once all CI checks pass and reviews are complete, merge into `dev`. Cloudflare automatically updates `https://dev-qrcraftly.fpderuiter.workers.dev/`.
+Once `CI` passes and reviews are complete, merge with **Squash and merge**. Cloudflare automatically updates `https://dev-qrcraftly.fpderuiter.workers.dev/`, and the `Verify Preview Staging Environment` job smoke tests staging once it serves the new commit.
 
 ---
 
 ## 4. Staged Production Promotion (`dev` $\rightarrow$ `main`)
 
-> [!TIP]
-> For the comprehensive release runbook, architectural details, and troubleshooting, see [RELEASE_GUIDE.md](./RELEASE_GUIDE.md).
+Releases, versioning, tags and rollback are documented in one place: [RELEASING.md](../RELEASING.md). In short:
 
-When a batch of features and fixes on `dev` has been verified in staging and is ready for production,
-use the automated release engine to promote. **Never use a standard GitHub PR merge to promote `dev`
-into `main`** — this would trigger a rebase-and-merge that rewrites commit SHAs and causes permanent
-branch divergence.
+1. `pnpm run release:prepare` opens a `release/vX.Y.Z` branch with the version bump and changelog. Merge it into `dev` through a PR.
+2. `pnpm run release:promote` fast-forwards `main` to that commit and pushes the annotated `vX.Y.Z` tag in one atomic push.
+3. Cloudflare Workers Builds deploys `main`. The `Release` workflow publishes the GitHub Release and smoke tests production.
 
-### Fast-Forward Promotion Steps
-
-**Step 1: Preview the next release**
-
-```bash
-git checkout dev
-git pull origin dev
-pnpm run release:dry-run
-```
-
-Verify the computed next version and grouped changelog. No files are modified.
-
-**Step 2: Generate changelog and bump version**
-
-```bash
-pnpm run release:changelog
-```
-
-This writes the new section to `CHANGELOG.md` and updates `"version"` in `package.json`. Review the
-changes, then commit:
-
-```bash
-git add CHANGELOG.md package.json
-git commit -m "chore(release): vX.Y.Z"
-git push origin dev
-```
-
-**Step 3: Fast-forward promote and tag**
-
-```bash
-pnpm run release:promote
-```
-
-This:
-
-1. Fast-forwards `origin/main` to `dev` HEAD (`git push origin dev:main`).
-2. Creates an annotated Git tag `vX.Y.Z` and pushes it to `origin`.
-
-**Step 4: Automated post-promotion pipeline**
-
-The `push` to `main` triggers `.github/workflows/release.yml`, which:
-
-1. Creates an official GitHub Release with the changelog as release notes.
-2. Runs production smoke tests against `https://qrcraftly.fpderuiter.workers.dev` and `https://qrcraftly.com`.
-
-Cloudflare Workers Builds deploys from `main` independently.
+**Never open a pull request from `dev` into `main`**, and never push to `main` any other way.
 
 ---
 
@@ -172,46 +127,6 @@ Cloudflare Workers Builds deploys from `main` independently.
 
 ---
 
-## 6. Release Lifecycle
+## 6. Release Lifecycle, Hotfixes and Rollback
 
-QRCraftly uses [Conventional Commits](https://www.conventionalcommits.org/) and automated SemVer
-versioning via `scripts/release_engine.js`.
-
-### Versioning Rules (SemVer 2.0.0)
-
-| Commit type                                         | Version bump      |
-| --------------------------------------------------- | ----------------- |
-| `BREAKING CHANGE:` or `feat!:` / `fix!:`            | **major** (X.0.0) |
-| `feat:`                                             | **minor** (0.X.0) |
-| `fix:` / `perf:` / `refactor:` / `docs:` / `chore:` | **patch** (0.0.X) |
-
-### Release Scripts
-
-| Script                       | Description                                                        |
-| ---------------------------- | ------------------------------------------------------------------ |
-| `pnpm run release:dry-run`   | Preview next version and changelog. No side effects.               |
-| `pnpm run release:changelog` | Write `CHANGELOG.md` + update `package.json`.                      |
-| `pnpm run release:promote`   | Changelog + version bump commit, ff-push to `main`, annotated tag. |
-
-### Changelog Format
-
-`CHANGELOG.md` follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Sections are grouped
-as: **Breaking Changes**, **Features**, **Bug Fixes**, **Performance**, **Maintenance**.
-
----
-
-## 7. Emergency Hotfix and Rollback Procedure
-
-In the rare event that a critical defect reaches production:
-
-1. Revert the offending commit on `main` via `git revert <commit-sha>`.
-2. Push the revert commit directly to `main` (using the admin bypass if protected).
-3. The `push` to `main` with a `Revert` commit message triggers the rollback path in `main.yml` → `deploy.yml`.
-4. Cloudflare immediately builds and deploys the reverted state to production.
-5. Backport the revert into `dev` to keep staging synchronized:
-   ```bash
-   git checkout dev
-   git pull origin dev
-   git merge origin/main
-   git push origin dev
-   ```
+See [RELEASING.md](../RELEASING.md) for versioning rules, the release scripts, the changelog format, and the rollback procedure (roll back the Cloudflare deployment, then fix forward through `dev`).

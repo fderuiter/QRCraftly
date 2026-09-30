@@ -29,7 +29,8 @@ test.beforeEach(async ({ page }) => {
   await page.goto('/');
   await page.waitForSelector('main[data-hydrated="true"]');
   // Wait for all network requests to settle so React has fully hydrated
-  await page.getByRole('tab', { name: 'Location' }).click();
+  await page.getByRole('navigation', { name: 'QR code types' }).getByRole('link', { name: 'Location' }).click();
+  await page.waitForURL(/\/location-qr-code$/);
   // Wait for the form to be fully rendered
   await page.getByTestId('use-current-location').waitFor({ state: 'visible' });
 });

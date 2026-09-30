@@ -17,7 +17,7 @@
 */
 
 import React from 'react';
-import { Play, Square, Upload, FileUp, Cpu, Sliders, Sun, Moon, QrCode, Activity } from 'lucide-react';
+import { Play, Square, Upload, FileUp, Cpu, Sliders, QrCode, Activity } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { RangeInput } from '@/components/ui/RangeInput';
@@ -25,7 +25,8 @@ import { Alert } from '@/components/ui/Alert';
 import StyleControls from '@/components/StyleControls';
 import { QRProvider, useQRStore, useQRStoreSelector } from '@/context/QRContext';
 import { useImage } from '@/hooks/useImage';
-import { useTheme } from '@/hooks/useTheme';
+import { PrimaryNav } from '@/components/ui/PrimaryNav';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { useAnimatedQrSender } from '@/hooks/useAnimatedQrSender';
 import { JsonLdScript } from '@/components/ui/JsonLdScript';
 import { generateSchema } from '@/utils/schemaGenerator';
@@ -39,9 +40,9 @@ import { contentRegistry } from '@/data/contentRegistry';
  */
 function FileTransferToolInner() {
   const [isDraggingFile, setIsDraggingFile] = React.useState(false);
+  const [showBetaAlert, setShowBetaAlert] = React.useState(true);
   const config = useQRStoreSelector(s => s.config);
   const store = useQRStore();
-  const { isDarkMode, toggleDarkMode } = useTheme();
 
   // Logo images
   const logoImg = useImage(config.logoUrl);
@@ -62,6 +63,7 @@ function FileTransferToolInner() {
     fps,
     setFps,
     currentPass,
+    fountainInfo,
     transferStats,
     canvasRef,
     startTransfer,
@@ -108,42 +110,37 @@ function FileTransferToolInner() {
   };
 
   return (
-    <div className={`${isDarkMode ? 'dark' : ''} w-full`}>
+    <div className="w-full">
       <div className="relative flex h-screen min-h-screen flex-col-reverse overflow-hidden bg-slate-50 transition-colors duration-300 md:h-auto md:min-h-0 md:flex-row md:overflow-visible dark:bg-slate-950">
         
         {/* Left Control Sidebar */}
         <aside aria-label="Settings and Styling" className="relative z-10 flex max-h-[50vh] w-full flex-col overflow-y-auto border-r border-slate-200 bg-white shadow-xl transition-colors duration-300 md:max-h-none md:w-120 dark:border-slate-800 dark:bg-slate-900">
-          <header className="sticky top-0 z-20 flex items-center justify-between border-b border-slate-100 bg-white p-6 transition-colors duration-300 dark:border-slate-800 dark:bg-slate-900">
+          <header className="sticky top-0 z-20 flex items-center justify-between gap-2 border-b border-slate-100 bg-white p-6 transition-colors duration-300 dark:border-slate-800 dark:bg-slate-900">
             <div>
               <a href="/" aria-label="Home" className="mb-1 flex items-center gap-2 text-teal-700 transition-opacity hover:opacity-80 dark:text-teal-400">
                 <QrCode className="size-6" />
                 <h1 className="text-xl font-bold tracking-tight text-slate-700 dark:text-slate-100">QRCraftly</h1>
               </a>
-              <p className="text-sm text-slate-600 dark:text-slate-400">Send a File by QR Code</p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm text-slate-600 dark:text-slate-400">Send a File by QR Code</p>
+                <span className="rounded-full bg-teal-100 px-2 py-0.5 text-xs font-semibold text-teal-800 dark:bg-teal-900/60 dark:text-teal-300">Beta</span>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <a
-                href="/file-transfer/receive"
-                className="hidden items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold text-teal-600 transition-colors hover:bg-slate-100 sm:flex dark:text-teal-400 dark:hover:bg-slate-800"
-                title="Receive File"
-                aria-label="Receive Offline File"
-              >
-                Receive File
-              </a>
-              <Button
-                variant="icon"
-                size="icon"
-                onClick={toggleDarkMode}
-                className="rounded-full"
-                title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
-                aria-label={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
-              >
-                {isDarkMode ? <Sun className="size-5" /> : <Moon className="size-5" />}
-              </Button>
+            <div className="flex shrink-0 items-center gap-1">
+              <PrimaryNav layout="compact" />
+              <ThemeToggle />
             </div>
           </header>
 
           <div className="space-y-8 p-6 pb-24">
+            {showBetaAlert && (
+              <Alert
+                variant="info"
+                onDismiss={() => setShowBetaAlert(false)}
+              >
+                <span className="font-semibold">Beta Feature:</span> Air-gapped file transfer streams binary data across screen and camera. For optimal transmission, ensure consistent lighting, minimize display glare, and keep devices steady.
+              </Alert>
+            )}
             {/* File Selection & Pacing Section */}
             <section className="space-y-4">
               <h2 className="flex items-center gap-2 text-xs font-bold tracking-wider text-slate-600 uppercase dark:text-slate-400">
@@ -227,10 +224,10 @@ function FileTransferToolInner() {
 
               <RangeInput
                 id="chunk-slider"
-                label="Data per QR"
-                min={64}
-                max={240}
-                step={16}
+                label="Max data per QR"
+                min={16}
+                max={100}
+                step={4}
                 value={chunkSize}
                 onChange={(val) => {
                   setChunkSize(val);
@@ -238,6 +235,11 @@ function FileTransferToolInner() {
                 }}
                 formatValue={(v) => `${v} bytes`}
               />
+              <p className="text-xs text-slate-500 dark:text-slate-400" data-testid="fountain-symbol-info">
+                {fountainInfo
+                  ? `Sending ${fountainInfo.symbolSize} bytes per QR (${fountainInfo.compression === 'deflate-raw' ? 'compressed' : 'uncompressed'}), ${fountainInfo.k} source blocks. Sizes are capped so every QR stays at version 7 or lower.`
+                  : 'Each QR is sized to stay at version 7 or lower for reliable camera scanning.'}
+              </p>
             </section>
 
             <div className="h-px bg-slate-100 dark:bg-slate-800" />
@@ -326,12 +328,14 @@ function FileTransferToolInner() {
 
                       <div className="grid grid-cols-2 gap-4 pt-2">
                         <div>
-                          <div className="text-slate-400">Current QR (Pass {currentPass})</div>
+                          <div className="text-slate-400">{fountainInfo ? 'Droplets sent' : `Current QR (Pass ${currentPass})`}</div>
                           <div className="font-mono text-sm font-semibold text-slate-700 dark:text-slate-300">
-                            {currentFrameIndex} / {totalFrames}
-                            <span className="ml-1 text-[10px] text-teal-600 dark:text-teal-400">
-                              {currentPass === 1 ? '(Seq)' : '(Shuffled)'}
-                            </span>
+                            {fountainInfo ? `${currentFrameIndex} (K = ${totalFrames})` : `${currentFrameIndex} / ${totalFrames}`}
+                            {!fountainInfo && (
+                              <span className="ml-1 text-[10px] text-teal-600 dark:text-teal-400">
+                                {currentPass === 1 ? '(Seq)' : '(Shuffled)'}
+                              </span>
+                            )}
                           </div>
                         </div>
                         <div>
@@ -354,7 +358,7 @@ function FileTransferToolInner() {
                         aria-label="Start file transfer"
                       >
                         <Play className="size-4" />
-                        {isVerifyingHandshake ? 'Verifying Handshake...' : 'Start Transfer'}
+                        {isVerifyingHandshake ? 'Checking QR…' : 'Start Transfer'}
                       </Button>
                     ) : (
                       <Button

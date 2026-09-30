@@ -1,149 +1,116 @@
 name: Release
 
+# Publishes a release after a maintainer runs `pnpm run release:promote`, which
+# fast-forwards main to the reviewed release commit on dev and pushes the
+# annotated tag vX.Y.Z in one atomic push. See RELEASING.md.
+#
+# This workflow never pushes to a branch. Cloudflare Workers Builds deploys main
+# to production on its own; this workflow verifies the tag, publishes the GitHub
+# Release, waits for production to serve the new version, and smoke tests it.
+
 on:
   push:
-    branches: [main]
+    tags: ['v*.*.*']
   workflow_dispatch:
     inputs:
-      bump:
-        description: 'SemVer bump type (auto = derive from conventional commits)'
-        required: false
-        default: 'auto'
-        type: choice
-        options:
-          - auto
-          - patch
-          - minor
-          - major
+      tag:
+        description: 'Existing release tag to (re)publish and verify, e.g. v0.9.0'
+        required: true
+        type: string
 
 permissions:
-  contents: write
-  id-token: write
+  contents: read
 
 concurrency:
   group: release
   cancel-in-progress: false
 
 jobs:
-  # ─── 1. Promote dev to main (Triggered via GitHub UI workflow_dispatch) ──
-  promote:
-    name: Fast-Forward Promote dev to main
-    runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch'
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Setup Environment
-        uses: ./.github/actions/setup
-
-      - name: Configure git identity
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-
-      - name: Run Release Engine (Promote)
-        run: |
-          git checkout dev
-          node scripts/release_engine.js --promote
-
-  # ─── 2. Tag & GitHub Release (Triggered on push to main) ──────────────────
-  release:
-    name: Tag & Create GitHub Release
+  publish:
+    name: Verify Tag & Publish GitHub Release
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
     outputs:
-      version: ${{ steps.version.outputs.version }}
-      tag: ${{ steps.version.outputs.tag }}
-
+      version: ${{ steps.verify.outputs.version }}
     steps:
-      - name: Checkout Repository
+      - name: Checkout Tag
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ inputs.tag || github.ref }}
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Setup Environment
-        uses: ./.github/actions/setup
-
-      - name: Configure git identity
+      - name: Verify tag matches package.json and is on main
+        id: verify
+        env:
+          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-
-      - name: Read release version from package.json
-        id: version
-        run: |
+          set -euo pipefail
           VERSION=$(node -p "JSON.parse(require('fs').readFileSync('package.json','utf8')).version")
+          if [ "v$VERSION" != "$RELEASE_TAG" ]; then
+            echo "::error::Tag $RELEASE_TAG does not match package.json version $VERSION."
+            exit 1
+          fi
+          if [ "$(git cat-file -t "refs/tags/$RELEASE_TAG")" != "tag" ]; then
+            echo "::error::$RELEASE_TAG must be an annotated tag (use pnpm run release:promote)."
+            exit 1
+          fi
+          git fetch --no-tags origin main
+          if ! git merge-base --is-ancestor "$RELEASE_TAG^{commit}" origin/main; then
+            echo "::error::$RELEASE_TAG is not on main. Promote the release commit before tagging."
+            exit 1
+          fi
+          if ! grep -q "^## \[$VERSION\]" CHANGELOG.md; then
+            echo "::error::CHANGELOG.md has no section for $VERSION."
+            exit 1
+          fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
 
-      - name: Ensure annotated tag exists
+      - name: Extract release notes from CHANGELOG.md
         env:
-          RELEASE_TAG: ${{ steps.version.outputs.tag }}
-        run: |
-          TAG="$RELEASE_TAG"
-          git tag -a "$TAG" -m "Release $TAG" 2>/dev/null || echo "Tag $TAG already exists locally."
-          git push origin "$TAG" 2>/dev/null || echo "Tag $TAG already pushed to origin."
-
-      - name: Extract changelog section for release notes
-        id: notes
-        env:
-          RELEASE_VERSION: ${{ steps.version.outputs.version }}
-        run: |
-          VERSION="$RELEASE_VERSION"
-          node -e "
-            const fs = require('fs');
-            const changelog = fs.readFileSync('CHANGELOG.md', 'utf8');
-            const version = process.env.RELEASE_VERSION;
-            const versionEscaped = version.replace(/[.*+?^\${}()|[\]\\\\]/g, '\\\\\\$&');
-            const sectionRE = new RegExp('(## \\\\[' + versionEscaped + '\\\\][\\\\s\\\\S]*?)(?=\\n## \\\\[|$)');
-            const match = sectionRE.exec(changelog);
-            const notes = match ? match[1].trim() : 'Release v' + version;
-            fs.writeFileSync('/tmp/release_notes.md', notes);
-          "
+          RELEASE_VERSION: ${{ steps.verify.outputs.version }}
+        run: node scripts/release_engine.js --notes "$RELEASE_VERSION" > "$RUNNER_TEMP/release_notes.md"
 
       - name: Publish GitHub Release
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RELEASE_TAG: ${{ steps.version.outputs.tag }}
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
         run: |
-          TAG="$RELEASE_TAG"
-          gh release create "$TAG" \
-            --title "Release $TAG" \
-            --notes-file /tmp/release_notes.md \
-            --latest \
-            || gh release edit "$TAG" --notes-file /tmp/release_notes.md --latest || echo "Release already published."
+          set -euo pipefail
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release edit "$RELEASE_TAG" --title "$RELEASE_TAG" --notes-file "$RUNNER_TEMP/release_notes.md" --latest
+          else
+            gh release create "$RELEASE_TAG" --verify-tag --title "$RELEASE_TAG" --notes-file "$RUNNER_TEMP/release_notes.md" --latest
+          fi
 
-  # ─── Production Smoke Tests ──────────────────────────────────────────────
   smoke-tests:
     name: Production Smoke Tests
-    needs: release
+    needs: publish
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-    # Only run after a real push-to-main release (not on workflow_dispatch dry run)
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        base_url:
+          - https://qrcraftly.fpderuiter.workers.dev
+          - https://qrcraftly.com
     steps:
-      - name: Checkout Repository
+      - name: Checkout Tag
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.tag || github.ref }}
 
       - name: Setup Environment
         uses: ./.github/actions/setup
 
-      - name: Install Playwright Browsers
-        run: pnpm exec playwright install --with-deps chromium
-
-      - name: Run Smoke Tests against Workers.dev
+      - name: Wait for production to serve this release
         env:
-          PLAYWRIGHT_TEST_BASE_URL: "https://qrcraftly.fpderuiter.workers.dev"
-        run: bash scripts/ci/run_smoke_tests.sh
+          BASE_URL: ${{ matrix.base_url }}
+          EXPECTED_VERSION: ${{ needs.publish.outputs.version }}
+        run: bash scripts/ci/wait_for_deploy.sh
 
-      - name: Run Smoke Tests against Custom Domain
+      - name: Run Smoke Tests
         env:
-          PLAYWRIGHT_TEST_BASE_URL: "https://qrcraftly.com"
+          PLAYWRIGHT_TEST_BASE_URL: ${{ matrix.base_url }}
         run: bash scripts/ci/run_smoke_tests.sh

@@ -1,0 +1,82 @@
+/*
+    QRCraftly
+    Copyright (C) 2025-2026 fderuiter
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
+import { QRConfig, QRType } from '@/types';
+import {
+  REGEX_STRICT_CONTROL_CHARS,
+  REGEX_PRESERVE_FORMAT_CONTROL_CHARS,
+} from '@/utils/security';
+import { CONTAINMENT_PROFILES, identifyProtocol } from './protocol';
+import { validatePayload } from './registry';
+
+/**
+ * Performs full-scale validation on a complete QR configuration profile.
+ *
+ * @param config - The QR code generation configuration profile.
+ * @returns An array of security or structure violations.
+ */
+export function validateConfig(config: QRConfig): string[] {
+  const violations: string[] = [];
+
+  // 1. Mandatory validation step for rendering sinks (borders, templates)
+  const checkTextSink = (str: string | undefined, field: string) => {
+    if (str && CONTAINMENT_PROFILES.STRICT_NO_CONTROL.test(str)) {
+      violations.push(`${field} contains invalid control or zero-width characters`);
+    }
+  };
+
+  checkTextSink(config.borderText, 'Border Text');
+  checkTextSink(config.templateHeadline, 'Template Headline');
+  checkTextSink(config.templateSubtext, 'Template Subtext');
+
+  // 2. Validate QR payload against containment profiles & generator validators
+  if (config.value) {
+    const payloadViolations = validatePayload(config.value, config.type);
+    violations.push(...payloadViolations);
+  }
+
+  return violations;
+}
+
+/**
+ * Sanitizes all text-based fields inside a QR configuration by stripping control characters.
+ *
+ * @param config - The original QR configuration object.
+ * @returns A sanitized clone of the QR configuration.
+ */
+export function sanitizeConfig(config: QRConfig): QRConfig {
+  const clean = { ...config };
+  if (clean.borderText) {
+    clean.borderText = clean.borderText.replace(REGEX_STRICT_CONTROL_CHARS, '');
+  }
+  if (clean.templateHeadline) {
+    clean.templateHeadline = clean.templateHeadline.replace(REGEX_STRICT_CONTROL_CHARS, '');
+  }
+  if (clean.templateSubtext) {
+    clean.templateSubtext = clean.templateSubtext.replace(REGEX_STRICT_CONTROL_CHARS, '');
+  }
+  if (clean.value) {
+    const type = clean.type || identifyProtocol(clean.value);
+    if (type === QRType.VCARD || type === QRType.EVENT) {
+      clean.value = clean.value.replace(REGEX_PRESERVE_FORMAT_CONTROL_CHARS, '');
+    } else {
+      clean.value = clean.value.replace(REGEX_STRICT_CONTROL_CHARS, '');
+    }
+  }
+  return clean;
+}

@@ -16,8 +16,45 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-export {
-  useScannability,
-  type ScannabilityStatus,
-  type HealthScore,
+import { useCallback } from 'react';
+import type { QRConfig } from '@/types';
+import { useQRStore } from '@/context/QRContext';
+import {
+  useScannability as useScannabilityHealth,
+  type UseScannabilityReturn,
 } from '@/packages/scannability/client';
+import { useCapabilities } from './useCapabilities';
+
+/**
+ *
+ */
+export type {
+  ScannabilityStatus,
+  HealthScore,
+  UseScannabilityReturn,
+} from '@/packages/scannability/client';
+
+/**
+ * App wiring for the Scannability Health Evaluator: failures become `scannability-fail` store
+ * signals (tagged with the browser engine and QR style), and the store's module count is used
+ * when a check does not supply one. Must be used within `QRProvider`.
+ * @param canvasRef - Ref to the preview canvas element.
+ * @param config - Current QR code configuration profile.
+ * @returns The current Scannability Health assessment plus the `checkScannability` trigger.
+ */
+export function useScannability(
+  canvasRef: React.RefObject<HTMLCanvasElement | null>,
+  config: QRConfig
+): UseScannabilityReturn {
+  const store = useQRStore();
+  const { engine } = useCapabilities();
+  const styleId = config.style || 'default';
+
+  const onFail = useCallback(
+    (errorType: string) => store.emitSignal('scannability-fail', { engine, styleId, errorType }),
+    [store, engine, styleId]
+  );
+  const getModuleCount = useCallback(() => store.getState().moduleCount, [store]);
+
+  return useScannabilityHealth(canvasRef, config, { onFail, getModuleCount });
+}

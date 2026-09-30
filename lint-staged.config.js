@@ -20,9 +20,20 @@ export default {
     ];
   },
   '**/*.{js,jsx,ts,tsx,mjs,cjs}': (filenames) => {
-    return eslintCommand(filenames);
+    return [eslintCommand(filenames), prettierCommand(filenames)];
   },
-  '**/*.{css,json,md}': (filenames) => {
+  '**/*.{css,json,yml,yaml}': (filenames) => {
     return prettierCommand(filenames);
+  },
+  // Documentation checks (the docs:lint suite minus the UI catalog check, which the
+  // '*' entry above already runs on the staged files). They audit the whole doc set,
+  // so they run once without file arguments.
+  '**/*.md': (filenames) => {
+    return [
+      prettierCommand(filenames),
+      'node scripts/audit_markdown.js',
+      'node scripts/validate_adrs.js',
+      'node scripts/compile_docs_manifest.js --check'
+    ];
   }
 };

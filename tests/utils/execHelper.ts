@@ -1,4 +1,4 @@
-import { execFileSync, execSync, type ExecFileSyncOptions, type ExecSyncOptions } from 'child_process';
+import { execFileSync, execSync, type ExecFileSyncOptions } from 'child_process';
 import fs from 'fs';
 
 const WINDOWS_CMD_EXECUTABLES = new Set(['npx', 'npm', 'pnpm', 'yarn', 'tsc', 'wrangler', 'depcruise']);
@@ -33,19 +33,6 @@ export function execBinary(
   };
 
   const output = execFileSync(resolved, args, opts);
-  return typeof output === 'string' ? output.replace(/\r\n/g, '\n') : (output as unknown as string);
-}
-
-/**
- * Executes a shell command synchronously with UTF-8 decoding and LF output normalization.
- */
-export function execShell(command: string, options: ExecSyncOptions = {}): string {
-  const opts: ExecSyncOptions = {
-    encoding: 'utf8',
-    ...options,
-  };
-
-  const output = execSync(command, opts);
   return typeof output === 'string' ? output.replace(/\r\n/g, '\n') : (output as unknown as string);
 }
 

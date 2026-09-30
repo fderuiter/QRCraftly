@@ -92,11 +92,13 @@ describe('InputPanel Component', () => {
     expect(screen.getByPlaceholderText('https://example.com')).toBeInTheDocument();
   });
 
-  it('changes content type', () => {
+  it('links to other content types without clearing the current value first', () => {
     renderPanel();
-    const wifiButton = screen.getByText('WiFi');
-    fireEvent.click(wifiButton);
-    expect(mockOnChange).toHaveBeenCalledWith({ type: QRType.WIFI, value: '' });
+    const wifiLink = screen.getByRole('link', { name: 'WiFi' });
+    expect(wifiLink).toHaveAttribute('href', '/wifi-qr-code');
+    expect(screen.getByRole('link', { name: 'URL' })).toHaveAttribute('aria-current', 'page');
+    fireEvent.click(wifiLink);
+    expect(mockOnChange).not.toHaveBeenCalled();
   });
 
   it('renders WiFi inputs when WiFi type is selected', () => {
@@ -185,7 +187,7 @@ describe('InputPanel Component', () => {
 
     // Let's verify the call for the last change (password)
     // At this point: SSID is EnterpriseWiFi, Encryption is WPA2-EAP, Identity is user123, and Password is secretPass
-    const expectedValue = `WIFI:T:WPA2-EAP;S:EnterpriseWiFi;I:user123;P:secretPass;;`;
+    const expectedValue = `WIFI:T:WPA2-EAP;S:EnterpriseWiFi;E:PEAP;PH2:MSCHAPV2;I:user123;P:secretPass;;`;
     expect(mockOnChange).toHaveBeenLastCalledWith({ value: expectedValue });
   });
 
@@ -393,7 +395,7 @@ describe('InputPanel Component', () => {
     fireEvent.change(networkSelect, { target: { value: 'ethereum' } });
     act(() => { vi.advanceTimersByTime(100); });
     // State persists, so params are re-applied to new network scheme
-    expect(mockOnChange).toHaveBeenLastCalledWith({ value: 'ethereum:1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa?amount=0.005&label=Donation%20for%20Coffee' });
+    expect(mockOnChange).toHaveBeenLastCalledWith({ value: 'ethereum:1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa?value=5000000000000000&label=Donation%20for%20Coffee' });
 
     // Change to Custom
     fireEvent.change(networkSelect, { target: { value: 'custom' } });
@@ -425,6 +427,8 @@ describe('InputPanel Component', () => {
       'VERSION:2.0',
       'PRODID:-//QRCraftly//EN',
       'BEGIN:VEVENT',
+      'UID:<uid>',
+      'DTSTAMP:<stamp>',
       'SUMMARY:Launch Party',
       'DTSTART:20260501T183000',
       'DTEND:20260501T210000',
@@ -434,7 +438,12 @@ describe('InputPanel Component', () => {
       'END:VCALENDAR'
     ].join('\r\n');
 
-    expect(mockOnChange).toHaveBeenLastCalledWith({ value: expected });
+    const lastValue: string = mockOnChange.mock.lastCall?.[0].value ?? '';
+    // UID is content-derived and DTSTAMP is the session clock (RFC 5545 required properties)
+    const normalized = lastValue
+      .replace(/^UID:[0-9a-f]{16}@qrcraftly\.com$/m, 'UID:<uid>')
+      .replace(/^DTSTAMP:\d{8}T\d{6}Z$/m, 'DTSTAMP:<stamp>');
+    expect(normalized).toBe(expected);
   });
 
   it('shows character count for TEXT input', () => {

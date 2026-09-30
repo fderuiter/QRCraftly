@@ -27,6 +27,7 @@ import { sanitizeSvg } from './security';
 import { performScannabilityCheck } from './scannabilityChecker';
 
 import { ModuleRenderOptions } from '@/packages/qr-matrix';
+import { loadMosaicSource } from '@/packages/qr-matrix/mosaic';
 
 /**
  * Converts an image URL to a base64 data-URL so it can be embedded inline in
@@ -171,6 +172,11 @@ export async function generateQRSvg(
     options.onLogoOmitted();
   }
 
+  // Decode the Mosaic QR image (if any) so the renderer can tile it into the modules
+  if (config.mosaicImageUrl) {
+    await loadMosaicSource(config.mosaicImageUrl);
+  }
+
   // Determine output dimensions from the social format (canonical resolution)
   const { width: svgWidth, height: svgHeight } = SOCIAL_DIMENSIONS[config.socialFormat] || { width: 1080, height: 1080 };
 
@@ -202,6 +208,9 @@ export async function generateQRSvg(
 
   return sanitizeSvg(ctx.serialize());
 }
+
+/** Upper bound for an SVG blob image to load before rasterization is abandoned. */
+const SVG_RASTER_LOAD_TIMEOUT_MS = 10_000;
 
 /**
  * Draws an SVG XML payload string onto an offscreen canvas element on the main thread.
@@ -236,14 +245,16 @@ export function rasterizeSvgToCanvas(
     const url = URL.createObjectURL(svgBlob);
 
     let handled = false;
+    let watchdog: ReturnType<typeof setTimeout> | undefined;
 
     const cleanup = () => {
+      if (watchdog !== undefined) clearTimeout(watchdog);
       try {
         URL.revokeObjectURL(url);
       } catch {}
     };
 
-    img.onload = () => {
+    const draw = () => {
       if (handled) return;
       handled = true;
       try {
@@ -256,35 +267,36 @@ export function rasterizeSvgToCanvas(
       }
     };
 
-    img.onerror = (err) => {
+    const fail = (reason: unknown) => {
       if (handled) return;
       handled = true;
       cleanup();
-      reject(err);
+      reject(reason instanceof Error ? reason : new Error('Failed to load SVG image for rasterization'));
     };
 
+    // Only draw once the image has actually loaded; drawing earlier yields a blank canvas
+    // that falsely fails the scannability check for large SVGs or SVGs with logos (#969).
+    img.onload = draw;
+    img.onerror = fail;
     img.src = url;
 
-    // Handle test / jsdom environments or synchronous mocks where Image src assignment does not fire async onload
-    if (img.complete) {
-      if (typeof img.onload === 'function') {
-        img.onload(new Event('load') as any);
-      }
-    } else {
-      const isJsdom = typeof navigator !== 'undefined' && navigator.userAgent?.includes('jsdom');
-      setTimeout(() => {
-        if (!handled) {
-          handled = true;
-          cleanup();
-          try {
-            ctx.drawImage(img, 0, 0, width, height);
-            resolve(canvas);
-          } catch (err) {
-            reject(err);
-          }
-        }
-      }, isJsdom ? 0 : 50);
+    if (img.complete && img.naturalWidth > 0) {
+      // Already decoded (e.g. served from the image cache): draw now; the handled guard ignores the later onload.
+      draw();
+      return;
     }
+
+    // jsdom never fetches or decodes image resources, so onload would never fire there.
+    // Rasterize immediately so unit tests exercise the canvas pipeline with their mocked context.
+    const isJsdom = typeof window !== 'undefined' && window.navigator?.userAgent?.includes('jsdom') === true;
+    if (isJsdom) {
+      setTimeout(draw, 0);
+      return;
+    }
+
+    // Real browsers: fail loudly instead of hanging forever if the image never settles
+    // (for example when a Content Security Policy blocks the blob: URL without firing onerror).
+    watchdog = setTimeout(() => fail(new Error('Timed out waiting for SVG image to load')), SVG_RASTER_LOAD_TIMEOUT_MS);
   });
 }
 
@@ -294,12 +306,18 @@ export function rasterizeSvgToCanvas(
  *
  * @param svgString - The generated SVG XML payload string.
  * @param config - The QR code configuration.
- * @returns A promise resolving to true if the SVG offscreen raster is scannable, false otherwise.
+ * @param options - Optional export options, such as allowUnsafe to bypass scannability checks.
+ * @returns A promise resolving to true if the SVG offscreen raster is scannable or bypass is allowed, false otherwise.
  */
 export async function validateSvgScannability(
   svgString: string,
-  config: QRConfig
+  config: QRConfig,
+  options?: { allowUnsafe?: boolean }
 ): Promise<boolean> {
+  if (options?.allowUnsafe) {
+    return true;
+  }
+
   if (config.templateStyle !== TemplateStyle.NONE || config.socialFormat !== SocialFormat.SQUARE_1_1) {
     return true;
   }

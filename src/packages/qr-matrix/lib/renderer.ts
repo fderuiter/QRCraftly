@@ -17,12 +17,14 @@
 */
 
 import { QRConfig, QRModules } from '@/types';
-import { calculateLayout, getLogoMetrics } from './utils';
+import { calculateLayout, getLogoMetrics, getIsCoveredByLogo } from './utils';
 import { renderBorder, renderBorderDecoration } from './border';
 import { renderModules, ModuleRenderOptions } from './modules';
 import { renderEyes } from './eyes';
 import { renderLogo } from './logo';
 import { renderMaze, MazeData } from './maze';
+import { planMosaic, renderMosaic, DEFAULT_MOSAIC_OPTIONS } from './mosaic';
+import { getMosaicSource } from './mosaicSource';
 
 /**
  * Renders the QR code onto the canvas.
@@ -128,14 +130,25 @@ export const drawQRInternal = (
     ctx.fillRect(0, 0, displaySize, displaySize);
   }
 
-  // 4. Render Modules
-  renderModules(ctx, modules, config, drawX, drawY, cellSize, moduleCount, logoMetrics, isVirtual, options);
+  // 4. Render Modules (or the Mosaic QR tiles, which include the finder patterns)
+  const mosaicSource = getMosaicSource(config.mosaicImageUrl);
+  if (mosaicSource) {
+    const plan = planMosaic(modules, mosaicSource, {
+      mode: config.mosaicMode ?? DEFAULT_MOSAIC_OPTIONS.mode,
+      contrast: config.mosaicContrast ?? DEFAULT_MOSAIC_OPTIONS.contrast,
+    });
+    renderMosaic(ctx, plan, drawX, drawY, cellSize, getIsCoveredByLogo(config, moduleCount, logoMetrics));
+  } else {
+    renderModules(ctx, modules, config, drawX, drawY, cellSize, moduleCount, logoMetrics, isVirtual, options);
+  }
 
   // 4b. Render Maze (if enabled)
   renderMaze(ctx, modules, config, drawX, drawY, cellSize, moduleCount, mazeData);
 
   // 5. Render Eyes
-  renderEyes(ctx, config, drawX, drawY, cellSize, moduleCount, options);
+  if (!mosaicSource) {
+    renderEyes(ctx, config, drawX, drawY, cellSize, moduleCount, options);
+  }
 
   // 6. Render Center Logo
   renderLogo(ctx, config, logoImg, displaySize, logoMetrics);

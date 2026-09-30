@@ -505,6 +505,151 @@ describe('useQRDownload', () => {
       expect(status.success).toBe(false);
       expect(status.error?.message).toBe('SCAN_VALIDATION_FAILED');
     });
+
+    it.each(['png', 'jpeg', 'webp', 'svg', 'clipboard', 'share'] as const)(
+      'blocks exportAsset(%s) if scannability validation fails and allowUnsafe is not set',
+      async (format) => {
+        vi.mocked(jsQR).mockReturnValue(null);
+        const { result } = renderHook(() => useQRDownload(mockQrRef, DEFAULT_CONFIG as QRConfig), { wrapper: ToastProvider });
+
+        const status = await result.current.exportAsset(format);
+        expect(status.success).toBe(false);
+        expect(status.error?.message).toBe('SCAN_VALIDATION_FAILED');
+      }
+    );
+
+    it.each(['png', 'jpeg', 'webp', 'svg', 'clipboard', 'share'] as const)(
+      'blocks exportAsset(%s) if allowUnsafe is explicitly false and validation fails',
+      async (format) => {
+        vi.mocked(jsQR).mockReturnValue(null);
+        const { result } = renderHook(() => useQRDownload(mockQrRef, DEFAULT_CONFIG as QRConfig), { wrapper: ToastProvider });
+
+        const status = await result.current.exportAsset(format, { allowUnsafe: false });
+        expect(status.success).toBe(false);
+        expect(status.error?.message).toBe('SCAN_VALIDATION_FAILED');
+      }
+    );
   });
 
+  describe('gated scannability bypass ({ allowUnsafe: true })', () => {
+    let originalClipboardItem: any;
+    let originalClipboard: any;
+    let originalShare: any;
+    let originalCanShare: any;
+
+    beforeEach(() => {
+      vi.mocked(jsQR).mockReturnValue(null); // Scan verification always fails
+
+      originalClipboardItem = (global as any).ClipboardItem;
+      originalClipboard = global.navigator.clipboard;
+      originalShare = global.navigator.share;
+      originalCanShare = global.navigator.canShare;
+
+      // Mock Clipboard
+      const mockWrite = vi.fn().mockResolvedValue(undefined);
+      Object.defineProperty(global.navigator, 'clipboard', {
+        value: { write: mockWrite },
+        writable: true,
+        configurable: true,
+      });
+      const MockClipboardItem = vi.fn().mockImplementation(function(this: any, data) { this.data = data; });
+      (global as any).ClipboardItem = MockClipboardItem;
+
+      // Mock Web Share
+      const mockShare = vi.fn().mockResolvedValue(undefined);
+      const mockCanShare = vi.fn().mockReturnValue(true);
+      Object.defineProperty(global.navigator, 'share', {
+        value: mockShare,
+        writable: true,
+        configurable: true,
+      });
+      Object.defineProperty(global.navigator, 'canShare', {
+        value: mockCanShare,
+        writable: true,
+        configurable: true,
+      });
+    });
+
+    afterEach(() => {
+      (global as any).ClipboardItem = originalClipboardItem;
+      Object.defineProperty(global.navigator, 'clipboard', {
+        value: originalClipboard,
+        writable: true,
+        configurable: true,
+      });
+      Object.defineProperty(global.navigator, 'share', {
+        value: originalShare,
+        writable: true,
+        configurable: true,
+      });
+      Object.defineProperty(global.navigator, 'canShare', {
+        value: originalCanShare,
+        writable: true,
+        configurable: true,
+      });
+    });
+
+    it.each(['png', 'jpeg', 'webp'] as const)(
+      'downloadToDevice(%s) succeeds when allowUnsafe: true even if scannability fails',
+      async (format) => {
+        const { result } = renderHook(() => useQRDownload(mockQrRef, DEFAULT_CONFIG as QRConfig), { wrapper: ToastProvider });
+        const status = await result.current.downloadToDevice(format, { allowUnsafe: true });
+        expect(status.success).toBe(true);
+        expect(status.format).toBe(format);
+      }
+    );
+
+    it.each(['png', 'jpeg', 'webp'] as const)(
+      'handleSaveAs(%s) succeeds when allowUnsafe: true even if scannability fails',
+      async (format) => {
+        const { result } = renderHook(() => useQRDownload(mockQrRef, DEFAULT_CONFIG as QRConfig), { wrapper: ToastProvider });
+        const status = await result.current.handleSaveAs(format, { allowUnsafe: true });
+        expect(status.success).toBe(true);
+        expect(status.format).toBe(format);
+      }
+    );
+
+    it('handleSaveSvg succeeds when allowUnsafe: true even if scannability fails', async () => {
+      const { result } = renderHook(() => useQRDownload(mockQrRef, DEFAULT_CONFIG as QRConfig), { wrapper: ToastProvider });
+      const status = await result.current.handleSaveSvg({ allowUnsafe: true });
+      expect(status.success).toBe(true);
+      expect(status.format).toBe('svg');
+    });
+
+    it('handleCopy succeeds when allowUnsafe: true even if scannability fails', async () => {
+      const { result } = renderHook(() => useQRDownload(mockQrRef, DEFAULT_CONFIG as QRConfig), { wrapper: ToastProvider });
+      const status = await result.current.handleCopy({ allowUnsafe: true });
+      expect(status.success).toBe(true);
+      expect(status.format).toBe('clipboard');
+    });
+
+    it('handleShare succeeds when allowUnsafe: true even if scannability fails', async () => {
+      const { result } = renderHook(() => useQRDownload(mockQrRef, DEFAULT_CONFIG as QRConfig), { wrapper: ToastProvider });
+      const status = await result.current.handleShare({ allowUnsafe: true });
+      expect(status.success).toBe(true);
+      expect(status.format).toBe('share');
+    });
+
+    it.each(['png', 'jpeg', 'webp', 'svg', 'clipboard', 'share'] as const)(
+      'exportAsset(%s) succeeds when allowUnsafe: true even if scannability fails',
+      async (format) => {
+        const { result } = renderHook(() => useQRDownload(mockQrRef, DEFAULT_CONFIG as QRConfig), { wrapper: ToastProvider });
+        const status = await result.current.exportAsset(format, { allowUnsafe: true });
+        expect(status.success).toBe(true);
+        expect(status.format).toBe(format);
+      }
+    );
+
+    it.each(['png', 'jpeg', 'webp'] as const)(
+      'exportAsset(%s) triggers direct download when directDownload: true',
+      async (format) => {
+        const { result } = renderHook(() => useQRDownload(mockQrRef, DEFAULT_CONFIG as QRConfig), { wrapper: ToastProvider });
+        const appendSpy = vi.spyOn(document.body, 'appendChild');
+        const status = await result.current.exportAsset(format, { allowUnsafe: true, directDownload: true });
+        expect(status.success).toBe(true);
+        expect(status.format).toBe(format);
+        expect(appendSpy).toHaveBeenCalled();
+      }
+    );
+  });
 });

@@ -16,13 +16,28 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
    *
    */
   fullWidth?: boolean;
+  /**
+   * Toggle/selection state. When provided, the button exposes `aria-pressed` and, when
+   * true, swaps the variant colours for a selected style defined for both light and dark
+   * themes (thicker ring plus colour, so selection is not conveyed by colour alone).
+   * Use this instead of passing selected-state border classes through `className`,
+   * which lose to the variant's `dark:` classes.
+   */
+  pressed?: boolean;
 }
+
+/**
+ * Selected-state styles shared by every variant. Border and ring colours meet the
+ * 3:1 non-text contrast minimum against both the light and dark surfaces.
+ */
+const PRESSED_STYLES =
+  'bg-teal-50 border border-teal-700 ring-1 ring-teal-700 text-teal-800 font-semibold hover:bg-teal-100 dark:bg-teal-950 dark:border-teal-300 dark:ring-teal-300 dark:text-teal-100 dark:hover:bg-teal-900';
 
 /**
  *
  */
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className = '', variant = 'secondary', size = 'md', fullWidth = false, type = 'button', ...props }, ref) => {
+  ({ className = '', variant = 'secondary', size = 'md', fullWidth = false, type = 'button', pressed, ...props }, ref) => {
     
     let baseStyles = 'disabled:cursor-not-allowed disabled:opacity-50 font-medium inline-flex items-center justify-center transition-colors';
     
@@ -53,6 +68,10 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         break;
     }
 
+    if (pressed === true) {
+      variantStyles = PRESSED_STYLES;
+    }
+
     switch (size) {
       case 'sm':
         sizeStyles = 'px-3 py-1.5 rounded-lg text-sm';
@@ -81,7 +100,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     const combinedClassName = `${baseStyles} ${variantStyles} ${sizeStyles} ${widthStyles} ${className}`.trim();
 
     return (
-      <button ref={ref} type={type} className={combinedClassName} {...props} />
+      <button ref={ref} type={type} className={combinedClassName} aria-pressed={pressed} {...props} />
     );
   }
 );

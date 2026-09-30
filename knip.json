@@ -1,21 +1,36 @@
 {
+  "$schema": "https://unpkg.com/knip@6/schema.json",
   "entry": [
-    "src/pages/**/+*.ts",
-    "src/pages/**/+*.tsx",
-    "src/layouts/**/*.tsx",
-    "src/packages/*/*.ts",
-    "src/packages/*/lib/worker.ts",
-    "src/**/*.test.ts",
-    "src/**/*.test.tsx",
-    "tests/**/*.test.ts",
-    "tests/**/*.test.tsx"
+    "src/pages/**/+*.{ts,tsx}!",
+    "src/packages/*/worker*.ts!",
+    "src/utils/{matrix,maze,imageResize,fskDemodulator}Worker.ts!",
+    "functions/**/*.ts!",
+    "scripts/**/*.{js,cjs,ts}!"
   ],
-  "project": ["src/**/*.ts", "src/**/*.tsx"],
+  "project": [
+    "src/**/*.{ts,tsx}!",
+    "functions/**/*.ts!",
+    "scripts/**/*.{js,cjs,ts}!",
+    "tests/**/*.{ts,tsx}",
+    "e2e/**/*.ts"
+  ],
   "paths": {
     "@/*": ["./src/*"]
   },
+  "ignoreExportsUsedInFile": true,
+  "ignoreFiles": [
+    "src/packages/*/index.ts",
+    "src/packages/scannability/opticalSimulation.ts",
+    "src/packages/optical-transfer/**",
+    "src/engine/StreamLookahead.ts"
+  ],
+  "ignoreIssues": {
+    "src/packages/*/*.ts": ["types"],
+    "src/packages/optical-transfer/**": ["exports", "types"],
+    "src/packages/scannability/**": ["exports", "types"]
+  },
   "ignoreBinaries": ["shellcheck"],
-  "ignoreDependencies": ["wrangler", "bidi-js", "lint-staged"],
+  "ignoreDependencies": ["wrangler", "lint-staged"],
   "husky": false,
   "rules": {
     "files": "error",

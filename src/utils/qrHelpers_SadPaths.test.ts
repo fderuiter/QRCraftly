@@ -17,11 +17,13 @@
 */
 
 import { describe, it, expect } from 'vitest';
-import { constructEmailString } from './qr-generators/email';
-import { constructVCardString } from './qr-generators/vcard';
-import { constructPaymentString } from './qr-generators/payment';
-import { constructSmsString } from './qr-generators/sms';
-import { constructPhoneString } from './qr-generators/phone';
+import {
+  constructEmailString,
+  constructVCardString,
+  constructPaymentString,
+  constructSmsString,
+  constructPhoneString,
+} from '@/packages/qr-payload';
 import { EmailData, VCardData, PaymentData, CryptoNetwork, SmsData, PhoneData } from '../types';
 
 describe('QR Helpers Sad Paths', () => {
@@ -32,7 +34,7 @@ describe('QR Helpers Sad Paths', () => {
         subject: 'Test',
         body: 'Body'
       };
-      expect(constructEmailString(data)).toBe('mailto:?subject=bad?subject=Test&body=Body');
+      expect(constructEmailString(data)).toBe('mailto:%3Fsubject%3Dbad?subject=Test&body=Body');
     });
 
     it('should handle completely empty data', () => {

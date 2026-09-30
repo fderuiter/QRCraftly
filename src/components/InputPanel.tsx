@@ -30,8 +30,8 @@ import { INPUT_REGISTRY } from './inputs/InputRegistry';
  * Props for the InputPanel component.
  */
 interface InputPanelProps {
-  /** The current QR code configuration. */
-  config: QRConfig;
+  /** The content slice of the QR configuration (the panel reads only type and value). */
+  config: Pick<QRConfig, 'type' | 'value'>;
   /** Callback to update the configuration. */
   onChange: (updates: Partial<QRConfig>) => void;
 }
@@ -46,7 +46,7 @@ interface InputPanelProps {
  * @returns The InputPanel component.
  */
 const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
-  const { InputComponent, inputProps } = useInputLogic(config, onChange);
+  const { InputComponent, inputProps, flush } = useInputLogic(config, onChange);
   const containerRef = useDynamicFocus<HTMLDivElement>([config.type]);
   const [announcement, setAnnouncement] = useState('');
   const [scannerActive, setScannerActive] = useState(false);
@@ -111,21 +111,16 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
       </div>
 
       {/* Type Selector */}
-      <TypeSelector
-        currentType={config.type}
-        onSelect={(type) => {
-          setScannerActive(false);
-          onChange({ type, value: '' });
-        }}
-      />
+      <TypeSelector currentType={config.type} />
 
       {/* Inputs or Scanner Container */}
-      <div 
-        id={`panel-${config.type}`}
-        role="tabpanel"
-        aria-labelledby={`tab-${config.type}`}
-        className="space-y-4" 
+      <div
+        id="qr-content-input"
+        className="space-y-4"
         ref={containerRef}
+        // Commit a pending debounced edit as soon as focus leaves the inputs, so a button
+        // pressed right after typing acts on what was typed.
+        onBlur={flush}
       >
         {scannerActive ? (
           <QRScanner

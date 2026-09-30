@@ -21,7 +21,7 @@ import { performScannabilityCheck, ScannabilityResult } from './lib/checker';
 import { calculateScannabilityHealth, HealthScore } from './lib/scoring';
 import { getExportRiskPolicy, ExportRisk, ScannabilityStatus } from './lib/exportRiskPolicy';
 
-export type { ScannabilityStatus, ExportRisk, ExportRiskPolicyInput } from './lib/exportRiskPolicy';
+export type { ScannabilityStatus, ExportRisk, ExportRiskPolicyInput, ExportOptions } from './lib/exportRiskPolicy';
 export type { HealthScore } from './lib/scoring';
 export type { ScannabilityResult } from './lib/checker';
 export type { ModuleContrastAuditResult, LowContrastCell } from './lib/contrastAudit';
@@ -40,6 +40,24 @@ export {
   type WorkerResponse,
 } from './lib/sharedContract';
 export { releaseImageHandle } from './lib/imageHandle';
+export {
+  createScannabilityWorker,
+  type ScannabilityWorkerFactory,
+  type ScannabilityWorkerHandle,
+  type ScannabilityWorkerHandlers,
+} from './lib/workerFactory';
+export type { PixelFrame } from './lib/checker';
+export {
+  createScannabilityEvaluator,
+  assessScannability,
+  type ScannabilityEvaluator,
+  type ScannabilityEvaluatorConfig,
+  type ScannabilityAssessment,
+  type ScannabilityCheckRequest,
+  type ScannabilityCanvas,
+  type ScannabilityClock,
+  type ScannabilityFrameReader,
+} from './lib/evaluator';
 
 
 export interface ScannabilityEvaluation {

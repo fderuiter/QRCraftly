@@ -18,11 +18,13 @@
 
 import '@testing-library/jest-dom';
 import 'vitest-axe/extend-expect';
-import { terminateSharedScannerWorker } from './src/utils/sharedScannerWorker';
+import { terminateScannerWorker } from './src/packages/optical-scanner/scheduler';
 import * as matchers from 'vitest-axe/matchers';
 import { vi, afterEach, expect } from 'vitest';
 import { isDangerousUrl } from './src/utils/security';
-import { applyOpticalSimulationMath } from './src/utils/opticalSimulation';
+import { applyOpticalSimulationMath } from './src/packages/scannability/opticalSimulation';
+import QRCode from 'qrcode';
+import { setQrCanvasRuntime, fromQrcodePackage } from './src/utils/qrCanvasRuntime';
 
 
 declare module 'vitest' {
@@ -318,7 +320,12 @@ class MockWorker {
             }
           }
 
-          if (this.url.toString().includes('fileReassemblyWorker') && message && typeof message === 'object') {
+          if (
+            (this.url.toString().includes('fileReassemblyWorker') ||
+              this.url.toString().includes('worker-reassembly')) &&
+            message &&
+            typeof message === 'object'
+          ) {
             const { type } = message;
 
             if (type === 'CLEAR' || type === 'RESET') {
@@ -524,19 +531,19 @@ class MockWorker {
             }
           }
 
-          if (this.url.toString().includes('scannerWorker') && message && typeof message === 'object' && typeof message.sequenceId === 'number') {
-            const { image, width, height, epochId } = message;
-            if (image && typeof width === 'number' && typeof height === 'number') {
+          if ((this.url.toString().includes('scannerWorker') || this.url.toString().includes('optical-scanner') || this.url.toString().includes('worker.ts')) && message && typeof message === 'object' && typeof message.sequenceId === 'number') {
+            const { image, buffer, width, height, epochId } = message;
+            if ((image || buffer) && typeof width === 'number' && typeof height === 'number') {
               const { default: jsQR } = await import('jsqr');
-              const data = (image as any)._data || new Uint8ClampedArray(width * height * 4);
+              const data = (image as any)?._data || (buffer ? new Uint8ClampedArray(buffer) : new Uint8ClampedArray(width * height * 4));
               let code = jsQR(data, width, height, { inversionAttempts: 'dontInvert' });
               if (!code) {
                 code = jsQR(data, width, height, { inversionAttempts: 'onlyInvert' });
               }
               if (code && code.data) {
-                this.dispatchMessage({ status: 'pass', decodedData: code.data, sequenceId: message.sequenceId, epochId });
+                this.dispatchMessage({ status: 'pass', decodedData: code.data, sequenceId: message.sequenceId, epochId, buffer });
               } else {
-                this.dispatchMessage({ status: 'fail', error: 'No QR code detected in this image. Try a clearer or higher-contrast QR code image.', sequenceId: message.sequenceId, epochId });
+                this.dispatchMessage({ status: 'fail', error: 'No QR code detected in this image. Try a clearer or higher-contrast QR code image.', sequenceId: message.sequenceId, epochId, buffer });
               }
               return;
             }
@@ -1167,35 +1174,15 @@ if (typeof URL.revokeObjectURL === 'undefined') {
 }
 
 // ---------------------------------------------------------------------------
-// Global mocks for QRCode
+// QRCanvas runtime: jsdom has no real Web Workers, so the canvas encodes with the
+// real `qrcode` package and builds mazes on the main thread. Tests that need a
+// fake encoder inject one locally with setQrCanvasRuntime.
 // ---------------------------------------------------------------------------
 
-vi.mock('qrcode', () => {
-  const createMock = vi.fn().mockImplementation((val) => {
-    if (!val) throw new Error('Value is required');
-    return {
-      modules: {
-        size: 21,
-        data: new Uint8Array(21 * 21),
-        get: vi.fn().mockImplementation((r, c) => ((r === 0 && c === 0) || (r === 10 && c === 10))),
-      }
-    };
-  });
-
-  const mockObj = {
-    create: createMock,
-    toCanvas: vi.fn().mockResolvedValue(undefined),
-    toDataURL: vi.fn().mockResolvedValue('data:image/png;base64,mock'),
-    default: {
-      create: createMock,
-      toCanvas: vi.fn().mockResolvedValue(undefined),
-      toDataURL: vi.fn().mockResolvedValue('data:image/png;base64,mock'),
-    }
-  };
-
-  (globalThis as any).mockQRCode = mockObj;
-
-  return mockObj;
+setQrCanvasRuntime({
+  createMatrixWorker: () => null,
+  createMazeWorker: () => null,
+  loadEncoder: () => fromQrcodePackage(QRCode),
 });
 
 const originalImage = window.Image;
@@ -1206,8 +1193,5 @@ afterEach(() => {
   if (globalThis.mockWorkerControl) {
     globalThis.mockWorkerControl.reset();
   }
-  terminateSharedScannerWorker();
-  if (typeof (globalThis as any).terminateSharedScannerWorker === 'function') {
-    (globalThis as any).terminateSharedScannerWorker();
-  }
+  terminateScannerWorker();
 });

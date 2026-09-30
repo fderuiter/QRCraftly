@@ -17,22 +17,34 @@
 */
 
 import React, { useState, useCallback, useRef } from 'react';
-import { Play, Square, Camera, AlertTriangle, Activity, Cpu, Sun, Moon, QrCode, ArrowLeft, Trash2, CheckCircle2, Upload } from 'lucide-react';
+import { createFountainSession } from '@/packages/optical-transfer';
+import { Play, Square, Camera, AlertTriangle, Activity, Cpu, QrCode, Trash2, CheckCircle2, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Alert } from '@/components/ui/Alert';
-import { useTheme } from '@/hooks/useTheme';
+import { PrimaryNav } from '@/components/ui/PrimaryNav';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { useToast } from '@/components/ui/Toast';
 import { useAnimatedQrReceiver } from '@/hooks/useAnimatedQrReceiver';
 import { QRProvider } from '@/context/QRContext';
-import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
+
+/**
+ * Formats an ETA in seconds for the telemetry panel.
+ * @param seconds Estimated seconds remaining, or null when unknown.
+ * @returns A short human-readable duration.
+ */
+function formatEta(seconds: number | null): string {
+  if (seconds === null || !Number.isFinite(seconds)) return '--';
+  if (seconds < 1) return '<1 s';
+  if (seconds < 60) return `${Math.ceil(seconds)} s`;
+  return `${Math.floor(seconds / 60)} min ${Math.ceil(seconds % 60)} s`;
+}
 
 function FileTransferReceiveInner() {
-  const { isDarkMode, toggleDarkMode } = useTheme();
   const { addToast } = useToast();
 
-  const [streamMode, setStreamMode] = useState<'text' | 'binary'>('text');
   const [isDragging, setIsDragging] = useState(false);
+  const [showBetaAlert, setShowBetaAlert] = useState(true);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Use the unified animated QR receiver hook
@@ -51,6 +63,8 @@ function FileTransferReceiveInner() {
     reconstructAndValidateFile,
     handshake,
     compilationStatus,
+    fountainStats,
+    receiverSuccess,
     receiverMode,
     setReceiverMode,
     videoFile,
@@ -58,12 +72,13 @@ function FileTransferReceiveInner() {
     handleFileUpload,
   } = useAnimatedQrReceiver({
     addToast,
+    // Legacy F| chunks still need an H| handshake; fountain droplets carry their own verified session header.
     handshakeRequired: true,
-    streamMode,
     autoDownload: false,
   });
 
-  const isComplete = totalChunks !== null && chunks.size === totalChunks;
+  const isFountainComplete = fountainStats !== null && receiverSuccess;
+  const isComplete = isFountainComplete || (totalChunks !== null && chunks.size === totalChunks);
 
   // Drag and drop handlers for video file upload
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -101,7 +116,7 @@ function FileTransferReceiveInner() {
   // Handle manual compile and download on user click
   const handleManualDownload = useCallback(() => {
     if (!isComplete) return;
-    reconstructAndValidateFile(chunks, totalChunks, handshake || undefined);
+    reconstructAndValidateFile(chunks, totalChunks ?? undefined, handshake || undefined);
   }, [chunks, totalChunks, handshake, isComplete, reconstructAndValidateFile]);
   // Simulation controls
   const simulateOutOfOrder = () => {
@@ -131,6 +146,23 @@ function FileTransferReceiveInner() {
     });
   };
 
+  // Rateless fountain stream joined mid-stream with ~30% of frames dropped.
+  const simulateFountainStream = async () => {
+    handleClear();
+    const text = 'Fountain-coded air-gapped transfer: join at any frame, lose any frame. '.repeat(8);
+    const { encoder } = await createFountainSession(new TextEncoder().encode(text), {
+      fileName: 'fountain_demo.txt',
+      mimeType: 'text/plain',
+    });
+    let delay = 0;
+    for (let index = 7; index < encoder.k * 4; index++) {
+      if (index % 10 < 3) continue;
+      const droplet = encoder.dropletStringForIndex(index);
+      setTimeout(() => handleFrame(droplet), delay);
+      delay += 20;
+    }
+  };
+
   const simulateRestrictedSchema = () => {
     handleFrame("javascript:alert('malicious')");
   };
@@ -148,45 +180,41 @@ function FileTransferReceiveInner() {
   // Re-calculate statistics
   const receivedCount = chunks.size;
   const progressPercent = totalChunks ? Math.round((receivedCount / totalChunks) * 100) : 0;
+  const fountainPercent = fountainStats && fountainStats.k > 0 ? Math.round((fountainStats.rank / fountainStats.k) * 100) : 0;
 
   return (
-    <div className={`${isDarkMode ? 'dark' : ''} min-h-screen w-full`}>
+    <div className="min-h-screen w-full">
       <div className="relative flex h-screen min-h-screen flex-col-reverse overflow-hidden bg-slate-50 transition-colors duration-300 md:h-auto md:min-h-0 md:flex-row md:overflow-visible dark:bg-slate-950">
         
         {/* Left Stats & controls Sidebar */}
         <aside aria-label="Receiver Settings and Controls" className="relative z-10 flex max-h-[50vh] w-full flex-col overflow-y-auto border-r border-slate-200 bg-white shadow-xl transition-colors duration-300 md:max-h-none md:w-120 dark:border-slate-800 dark:bg-slate-900">
-          <header className="sticky top-0 z-20 flex items-center justify-between border-b border-slate-100 bg-white p-6 transition-colors duration-300 dark:border-slate-800 dark:bg-slate-900">
+          <header className="sticky top-0 z-20 flex items-center justify-between gap-2 border-b border-slate-100 bg-white p-6 transition-colors duration-300 dark:border-slate-800 dark:bg-slate-900">
             <div>
               <a href="/" aria-label="Home" className="mb-1 flex items-center gap-2 text-teal-700 transition-opacity hover:opacity-80 dark:text-teal-400">
                 <QrCode className="size-6" />
                 <h1 className="text-xl font-bold tracking-tight text-slate-700 dark:text-slate-100">QRCraftly</h1>
               </a>
-              <p className="text-sm text-slate-600 dark:text-slate-400">Receive a File by QR Code</p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm text-slate-600 dark:text-slate-400">Receive a File by QR Code</p>
+                <span className="rounded-full bg-teal-100 px-2 py-0.5 text-xs font-semibold text-teal-800 dark:bg-teal-900/60 dark:text-teal-300">Beta</span>
+              </div>
             </div>
-            <div className="flex gap-2">
-              <a
-                href="/file-transfer"
-                className="flex items-center gap-1 rounded-full p-2 text-slate-500 transition-colors hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
-                title="Back to Sender"
-                aria-label="Back to File Sender"
-              >
-                <ArrowLeft className="size-5" />
-              </a>
-              <Button
-                variant="icon"
-                size="icon"
-                onClick={toggleDarkMode}
-                className="rounded-full"
-                title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
-                aria-label={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
-              >
-                {isDarkMode ? <Sun className="size-5" /> : <Moon className="size-5" />}
-              </Button>
+            <div className="flex shrink-0 items-center gap-1">
+              <PrimaryNav layout="compact" />
+              <ThemeToggle />
             </div>
           </header>
 
           <div className="space-y-8 p-6 pb-24">
             
+            {showBetaAlert && (
+              <Alert
+                variant="info"
+                onDismiss={() => setShowBetaAlert(false)}
+              >
+                <span className="font-semibold">Beta Feature:</span> Air-gapped file transfer streams binary data across screen and camera. For optimal transmission, ensure consistent lighting, minimize display glare, and keep devices steady.
+              </Alert>
+            )}
             {/* Connection / Status Section */}
             <section className="space-y-4">
               <h2 className="flex items-center gap-2 text-xs font-bold tracking-wider text-slate-600 uppercase dark:text-slate-400">
@@ -350,36 +378,6 @@ function FileTransferReceiveInner() {
                   </div>
                 )}
 
-                {/* Stream Mode Selection Control */}
-                <div className="mt-2 rounded-xl border border-slate-100 bg-slate-50/50 p-4 dark:border-slate-800/60 dark:bg-slate-900/40">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <label htmlFor="stream-mode-switch" className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-                        Compatibility mode
-                      </label>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">
-                        {streamMode === 'binary'
-                          ? 'Accepts all file data, but skips checks that block potentially unsafe text content.'
-                          : 'Checks text content for potentially unsafe links and commands.'}
-                      </p>
-                    </div>
-                    <ToggleSwitch
-                      id="stream-mode-switch"
-                      label="Compatibility mode"
-                      srLabel={true}
-                      checked={streamMode === 'binary'}
-                      onChange={(checked) => {
-                        const newMode = checked ? 'binary' : 'text';
-                        setStreamMode(newMode);
-                        addToast({
-                          type: 'info',
-                          message: `Compatibility mode ${newMode === 'binary' ? 'enabled' : 'disabled'}`,
-                          duration: 3000,
-                        });
-                      }}
-                    />
-                  </div>
-                </div>
               </div>
             </section>
 
@@ -399,64 +397,68 @@ function FileTransferReceiveInner() {
                 </div>
               )}
 
-              {totalChunks !== null ? (
-                <div className="space-y-3 rounded-xl border border-slate-100 bg-slate-50/50 p-4 text-xs dark:border-slate-900 dark:bg-slate-900/40">
+              {fountainStats ? (
+                <div className="space-y-3 rounded-xl border border-slate-100 bg-slate-50/50 p-4 text-xs dark:border-slate-900 dark:bg-slate-900/40" data-testid="fountain-telemetry">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-slate-500">Decoded:</span>
+                    <span className="font-mono font-bold text-slate-800 dark:text-slate-200">{fountainPercent}%</span>
+                  </div>
+
+                  <div
+                    className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800"
+                    role="progressbar"
+                    aria-label="Decoding rank"
+                    aria-valuemin={0}
+                    aria-valuemax={fountainStats.k}
+                    aria-valuenow={fountainStats.rank}
+                  >
+                    <div className="h-full bg-teal-600 transition-all duration-150" style={{ width: `${fountainPercent}%` }} />
+                  </div>
+
+                  <dl className="grid grid-cols-2 gap-4 pt-2">
+                    <div>
+                      <dt className="text-slate-500 dark:text-slate-400">Droplets received</dt>
+                      <dd className="font-mono text-sm font-semibold text-slate-700 dark:text-slate-300" data-testid="fountain-droplets">
+                        {fountainStats.dropletsReceived} / {fountainStats.k}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-slate-500 dark:text-slate-400">Decoding rank</dt>
+                      <dd className="font-mono text-sm font-semibold text-slate-700 dark:text-slate-300" data-testid="fountain-rank">
+                        {fountainStats.rank} / {fountainStats.k}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-slate-500 dark:text-slate-400">Scan rate</dt>
+                      <dd className="font-mono text-sm font-semibold text-slate-700 dark:text-slate-300" data-testid="fountain-fps">
+                        {fountainStats.fps.toFixed(1)} fps
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-slate-500 dark:text-slate-400">Time left</dt>
+                      <dd className="font-mono text-sm font-semibold text-slate-700 dark:text-slate-300" data-testid="fountain-eta">
+                        {formatEta(fountainStats.etaSeconds)}
+                      </dd>
+                    </div>
+                  </dl>
+                </div>
+              ) : totalChunks !== null ? (
+                <div className="space-y-3 rounded-xl border border-slate-100 bg-slate-50/50 p-4 text-xs dark:border-slate-900 dark:bg-slate-900/40" data-testid="legacy-progress">
                   <div className="flex items-center justify-between">
                     <span className="font-medium text-slate-500">Progress:</span>
                     <span className="font-mono font-bold text-slate-800 dark:text-slate-200">{progressPercent}%</span>
                   </div>
-                  
+
                   <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
                     <div className="h-full bg-teal-600 transition-all duration-150" style={{ width: `${progressPercent}%` }} />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4 pt-2">
-                    <div>
-                      <div className="text-slate-400">Received</div>
-                      <div className="font-mono text-sm font-semibold text-slate-700 dark:text-slate-300">
-                        {receivedCount} / {totalChunks} parts
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-slate-400">Parts received</div>
-                      <div className="font-mono text-sm font-semibold text-slate-700 dark:text-slate-300">
-                        {chunks.size}
-                      </div>
+                  <div className="pt-2">
+                    <div className="text-slate-500 dark:text-slate-400">Received</div>
+                    <div className="font-mono text-sm font-semibold text-slate-700 dark:text-slate-300">
+                      {receivedCount} / {totalChunks} parts
                     </div>
                   </div>
-
-                  {totalChunks <= 200 ? (
-                    <div className="pt-2">
-                      <div className="mb-2 font-semibold text-slate-500">Received parts:</div>
-                      <div className="mx-auto grid max-w-sm grid-cols-5 gap-2" data-testid="progress-grid">
-                        {Array.from({ length: totalChunks }).map((_, idx) => {
-                          const isReceived = chunks.has(idx);
-                          return (
-                            <div
-                              key={idx}
-                              data-testid={`chunk-block-${idx}`}
-                              data-received={isReceived}
-                              className={`flex size-10 items-center justify-center rounded-lg border font-mono text-xs font-bold transition-all ${
-                                isReceived
-                                  ? 'border-emerald-500 bg-emerald-500 text-white'
-                                  : 'border-slate-200 bg-slate-50 text-slate-400 dark:border-slate-800 dark:bg-slate-900'
-                              }`}
-                              title={`Part ${idx + 1}: ${isReceived ? 'Received' : 'Missing'}`}
-                            >
-                              {idx + 1}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="mt-4 rounded-xl border border-teal-100 bg-teal-50/20 p-4 text-center dark:border-teal-900/50 dark:bg-teal-950/10" data-testid="fallback-progress-card">
-                      <p className="mb-1 text-sm font-bold text-teal-800 dark:text-teal-400">High-Performance Progress Bar Active</p>
-                      <p className="text-xs text-slate-600 dark:text-slate-400">
-                        Detailed grid rendering is disabled to keep transfer smooth and avoid browser tab freeze.
-                      </p>
-                    </div>
-                  )}
                 </div>
               ) : (
                 <div className="rounded-xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-400 dark:border-slate-800">
@@ -484,6 +486,14 @@ function FileTransferReceiveInner() {
                     >
                       <Activity className="mr-2 size-4 text-teal-600" />
                       Simulate Out-of-Order (10 blocks)
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={simulateFountainStream}
+                      className="justify-start text-left text-xs"
+                    >
+                      <Activity className="mr-2 size-4 text-teal-600" />
+                      Simulate Fountain Stream (mid-stream, 30% loss)
                     </Button>
                     <Button
                       variant="outline"
@@ -546,7 +556,9 @@ function FileTransferReceiveInner() {
                     <div>
                       <h3 className="text-lg font-bold text-slate-100">Transfer Complete</h3>
                       <p className="mt-1 text-xs text-slate-400">
-                        All {totalChunks} parts were received. Your file is ready to download.
+                        {isFountainComplete
+                          ? `${handshake?.fileName ?? 'File'} was rebuilt and its SHA-256 checksum verified. It is ready to download.`
+                          : `All ${totalChunks} parts were received. Your file is ready to download.`}
                       </p>
                     </div>
                     <Button
