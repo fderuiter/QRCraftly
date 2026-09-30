@@ -1,55 +1,41 @@
 import React, { useState } from 'react';
 import { Button } from '../ui/Button';
 import { QRConfig, QRErrorCorrectionLevel } from '../../types';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import { ToggleSwitch } from '../ui/ToggleSwitch';
 import { ColorInput } from '../ui/ColorInput';
 import { RangeInput } from '../ui/RangeInput';
 import { getStyleAdaptiveMazePathWidth } from '@/packages/qr-matrix/maze';
 
-/**
- *
- */
 interface AdvancedControlsProps {
-  /**
-   *
-   */
   config: QRConfig;
-  /**
-   *
-   */
   onChange: (updates: Partial<QRConfig>) => void;
 }
 
-/**
- *
- * @param root0
- * @param root0.config
- * @param root0.onChange
- */
 export const AdvancedControls: React.FC<AdvancedControlsProps> = ({ config, onChange }) => {
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   return (
-    <div className="border-t border-slate-200 pt-5 dark:border-slate-700">
-      <Button
-        variant="ghost"
-        size="none"
-        onClick={() => setShowAdvanced(!showAdvanced)}
-        className="flex w-full items-center justify-between rounded-md text-left"
-        aria-expanded={showAdvanced}
-        aria-controls="advanced-settings-panel"
-      >
-        <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Advanced Mode</span>
-        {showAdvanced ? (
-          <ChevronUp className="size-4 text-slate-500" />
-        ) : (
-          <ChevronDown className="size-4 text-slate-500" />
-        )}
-      </Button>
+    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white transition-colors duration-300 dark:border-slate-700 dark:bg-slate-800">
+      <h3 className="m-0 text-base">
+        <Button
+          variant="ghost"
+          size="none"
+          onClick={() => setShowAdvanced(!showAdvanced)}
+          className="flex min-h-11 w-full justify-between! rounded-none px-5 py-4 text-left hover:bg-slate-50 dark:hover:bg-slate-700/40"
+          aria-expanded={showAdvanced}
+          aria-controls="advanced-settings-panel"
+        >
+          <span className="font-semibold text-slate-800 dark:text-slate-200">Advanced Mode</span>
+          <ChevronDown
+            aria-hidden="true"
+            className={`size-5 text-slate-500 motion-safe:transition-transform dark:text-slate-400 ${showAdvanced ? 'rotate-180' : ''}`}
+          />
+        </Button>
+      </h3>
 
       {showAdvanced && (
-        <div className="mt-4 space-y-4" id="advanced-settings-panel">
+        <div className="space-y-4 px-5 pb-4" id="advanced-settings-panel">
           <div>
             <span className="mb-2 block text-xs font-medium text-slate-500 dark:text-slate-400">Error Correction Level</span>
             <div
@@ -92,12 +78,12 @@ export const AdvancedControls: React.FC<AdvancedControlsProps> = ({ config, onCh
                       }`} aria-hidden="true"></div>
                       <span className="text-xs font-medium">{level.label}</span>
                     </div>
-                    <span id={descId} className="mt-0.5 block pl-5 text-[10px] text-slate-500 dark:text-slate-400">{level.desc}</span>
+                    <span id={descId} className="mt-0.5 block pl-5 text-xs text-slate-500 dark:text-slate-400">{level.desc}</span>
                   </label>
                 );
               })}
             </div>
-            <p className="mt-2 text-[10px] text-slate-500 dark:text-slate-400">
+            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
               Higher levels allow the QR code to be scanned even if damaged or covered (e.g., by a logo), but result in a denser code.
             </p>
           </div>
@@ -111,7 +97,7 @@ export const AdvancedControls: React.FC<AdvancedControlsProps> = ({ config, onCh
                 checked={!!config.isMazeEnabled}
                 onChange={(checked) => onChange({ isMazeEnabled: checked })}
               />
-              <p className="mt-1 pl-12 text-[10px] text-slate-500 dark:text-slate-400">
+              <p className="mt-1 pl-12 text-xs text-slate-500 dark:text-slate-400">
                 Generates a solvable maze on empty modules and quiet zones without changing data modules.
               </p>
             </div>

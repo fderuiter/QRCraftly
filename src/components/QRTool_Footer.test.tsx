@@ -48,7 +48,8 @@ describe('QRTool Footer', () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch');
     render(<ToastProvider><QRTool /></ToastProvider>);
 
-    expect(screen.queryByRole('region', { name: /anonymous diagnostics/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: /anonymous diagnostics|privacy settings/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('switch', { name: /diagnostics/i })).not.toBeInTheDocument();
     expect(fetchSpy).not.toHaveBeenCalled();
     fetchSpy.mockRestore();
   });
@@ -63,5 +64,15 @@ describe('QRTool Footer', () => {
       expect(link).toHaveAttribute('href', '/free-forever');
     }
     expect(footer.innerHTML).not.toMatch(/ko-fi/i);
+  });
+
+  it('links to real anchors on the security page', () => {
+    render(<ToastProvider><QRTool /></ToastProvider>);
+    const nav = screen.getByRole('navigation', { name: 'Site Map' });
+    expect(within(nav).getByRole('link', { name: 'Security Policy' })).toHaveAttribute('href', '/security#security');
+    expect(within(nav).getByRole('link', { name: 'Privacy Architecture' })).toHaveAttribute('href', '/security#compliance');
+    // Send and Receive are each listed exactly once.
+    expect(within(nav).getAllByRole('link', { name: /File Share \(Send\)/ })).toHaveLength(1);
+    expect(within(nav).getAllByRole('link', { name: /File Share \(Receive\)/ })).toHaveLength(1);
   });
 });

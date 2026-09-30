@@ -39,10 +39,6 @@ interface DefeatModalProps {
  * Game-over dialog explaining why the QR code can no longer be decoded (finder failure,
  * local block overflow or global budget exhaustion) with a rebuild action.
  * @param props - Dialog properties.
- * @param props.isOpen
- * @param props.analysis
- * @param props.onRebuild
- * @param props.onClose
  * @returns The dialog, or null when closed or not defeated.
  */
 export function DefeatModal({ isOpen, analysis, onRebuild, onClose }: DefeatModalProps) {

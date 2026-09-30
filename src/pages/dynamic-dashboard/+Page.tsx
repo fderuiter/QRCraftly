@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { ArrowLeft, Trash2, Edit2, Save, ExternalLink, QrCode, RefreshCw, X, BarChart2, ChevronDown, ChevronUp, ShieldCheck } from 'lucide-react';
-import { useRedirector, DynamicQRRecord, ScanAnalytics } from '@/hooks/useRedirector';
+import { useRedirector, DynamicQRRecord, ScanAnalytics } from '@/packages/edge-redirect/client';
 import { useToast } from '@/components/ui/Toast';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -59,7 +59,7 @@ function DashboardContent() {
   const [refreshing, setRefreshing] = useState<Record<string, boolean>>({});
   const [expandedAnalytics, setExpandedAnalytics] = useState<Record<string, boolean>>({});
 
-  const refreshStats = async (id: string) => {
+  const refreshStats = useCallback(async (id: string) => {
     setRefreshing(prev => ({ ...prev, [id]: true }));
     try {
       const res = await fetchStats(id);
@@ -69,14 +69,15 @@ function DashboardContent() {
     } finally {
       setRefreshing(prev => ({ ...prev, [id]: false }));
     }
-  };
+  }, [fetchStats]);
 
-  // Fetch stats on mount for all records
+  // Fetch stats on mount and whenever the set of records changes (not on edits to a record).
+  const recordIds = records.map((r) => r.id).join('\n');
   useEffect(() => {
-    records.forEach((r) => {
-      refreshStats(r.id);
+    recordIds.split('\n').filter(Boolean).forEach((id) => {
+      refreshStats(id);
     });
-  }, [records.length]);
+  }, [recordIds, refreshStats]);
 
   const toggleAnalytics = (id: string) => {
     setExpandedAnalytics(prev => ({ ...prev, [id]: !prev[id] }));
@@ -102,7 +103,8 @@ function DashboardContent() {
       return;
     }
 
-    let finalIos: string | undefined = undefined;
+    // An empty field is sent as "" so the edge clears the stored override.
+    let finalIos = '';
     if (editIosUrlValue.trim()) {
       finalIos = normalizeUrl(editIosUrlValue.trim());
       if (isDangerousUrl(finalIos)) {
@@ -111,7 +113,7 @@ function DashboardContent() {
       }
     }
 
-    let finalAndroid: string | undefined = undefined;
+    let finalAndroid = '';
     if (editAndroidUrlValue.trim()) {
       finalAndroid = normalizeUrl(editAndroidUrlValue.trim());
       if (isDangerousUrl(finalAndroid)) {
@@ -120,11 +122,11 @@ function DashboardContent() {
       }
     }
 
-    const success = await updateRedirect(record.id, record.adminKey, normalized, {
+    const result = await updateRedirect(record.id, record.adminKey, normalized, {
       iosUrl: finalIos,
       androidUrl: finalAndroid,
     });
-    if (success) {
+    if (result.ok) {
       addToast({
         type: 'success',
         message: 'Destination URL updated successfully at the edge proxy!',
@@ -132,7 +134,7 @@ function DashboardContent() {
       });
       setEditingId(null);
     } else {
-      setEditError('Failed to update URL on the edge database.');
+      setEditError(`Failed to update URL on the edge database: ${result.message}`);
     }
   };
 
@@ -315,7 +317,7 @@ function DashboardContent() {
                           variant="ghost"
                           size="icon"
                           onClick={() => refreshStats(r.id)}
-                          className={isRefreshing ? 'animate-spin' : ''}
+                          className={isRefreshing ? 'motion-safe:animate-spin' : ''}
                           title="Refresh Stats"
                         >
                           <RefreshCw className="size-4" />

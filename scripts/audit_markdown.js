@@ -387,7 +387,7 @@ export function checkCodeSnippets(filesList) {
             }
             return defaultHost.getSourceFile(fileName, languageVersionOrOptions, onError, shouldCreateNewSourceFile);
           },
-          writeFile(fileName, data, writeByteOrderMark, onError, sourceFiles) {
+          writeFile() {
             // No physical output files generated
           },
           directoryExists(directoryName) {

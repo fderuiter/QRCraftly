@@ -17,11 +17,20 @@
 */
 
 // @vitest-environment jsdom
-import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, act, waitFor, within } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import React from 'react';
 import Page from './+Page';
-import * as senderModule from '@/hooks/useAnimatedQrSender';
+import type { ScannabilityResult } from '@/packages/scannability';
+
+// The first-frame scannability gate runs on the main thread with a passing verdict, so the test
+// does not depend on canvas pixels or the Scannability Worker.
+const mainThreadVerdict = vi.hoisted(() => ({ success: true }));
+vi.mock('@/packages/scannability', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/packages/scannability')>()),
+  createScannabilityWorker: () => null,
+  performScannabilityCheck: (): ScannabilityResult => ({ success: mainThreadVerdict.success, physicalReady: mainThreadVerdict.success }),
+}));
 
 // Mock the crypto APIs if missing in test environment
 const mockSubtle = {
@@ -117,7 +126,8 @@ describe('File Transfer Page & Pipeline', () => {
     
     // Sliders exist
     expect(screen.getByLabelText('Transfer speed')).toBeInTheDocument();
-    expect(screen.getByLabelText('Max data per QR')).toBeInTheDocument();
+    const density = screen.getByRole('group', { name: 'QR density' });
+    expect(within(density).getByRole('button', { name: 'Balanced' })).toHaveAttribute('aria-pressed', 'true');
 
     // Canvas exists
     const canvas = screen.getByRole('img', { name: /transfer qr/i });
@@ -157,7 +167,7 @@ describe('File Transfer Page & Pipeline', () => {
   });
 
   it('simulates the 50MB high-load file and starts/stops transfer', async () => {
-    vi.spyOn(senderModule, 'verifyHandshakeFrame').mockResolvedValue(true);
+    mainThreadVerdict.success = true;
     render(<Page />);
 
     // Select the simulated file
@@ -207,7 +217,7 @@ describe('File Transfer Page & Pipeline', () => {
 
     // Check progress is rendered after async handshake check completes
     await waitFor(() => {
-      expect(screen.getByText('Memory use')).toBeInTheDocument();
+      expect(screen.getByText('Frame buffer')).toBeInTheDocument();
     });
 
     // Stop streaming
@@ -216,7 +226,32 @@ describe('File Transfer Page & Pipeline', () => {
       fireEvent.click(stopStreamButton);
     });
 
-    expect(screen.queryByText('Memory use')).not.toBeInTheDocument();
+    expect(screen.queryByText('Frame buffer')).not.toBeInTheDocument();
+  });
+
+  it('keeps playback paused and explains why when the first frame fails the scannability gate', async () => {
+    mainThreadVerdict.success = false;
+    try {
+      render(<Page />);
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: /simulate 50mb/i }));
+      });
+      globalThis.mockWorkerControl.setInterceptor((message: any, worker: any) => {
+        if (message.type === 'START') {
+          worker.dispatchMessage({ type: 'PROGRESS', index: 0, total: 10 });
+          worker.dispatchMessage({ type: 'FRAME', index: 0, total: 10, size: 21, data: new Uint8Array(21 * 21) });
+        }
+      });
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: /start file transfer/i }));
+      });
+
+      expect(await screen.findByText(/failed scannability check/i)).toBeInTheDocument();
+      expect(screen.queryByText('Frame buffer')).not.toBeInTheDocument();
+    } finally {
+      mainThreadVerdict.success = true;
+      globalThis.mockWorkerControl.setInterceptor(null);
+    }
   });
 
   it('unconditionally clears the file input value on change to allow consecutive re-selections of the same file', async () => {
@@ -242,6 +277,33 @@ describe('File Transfer Page & Pipeline', () => {
 
     expect(fileInput.value).toBe('');
     expect(screen.getAllByText('same_file.txt')[0]).toBeInTheDocument();
+  });
+
+  it('estimates the transfer time from the file size and the chosen QR density', async () => {
+    render(<Page />);
+
+    const info = screen.getByTestId('fountain-symbol-info');
+    expect(info).toHaveTextContent('Choose a file to see how long the transfer will take.');
+
+    const file = new File([new Uint8Array(20 * 1024)], 'photo.jpg', { type: 'image/jpeg' });
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText('Choose a file to send'), { target: { files: [file] } });
+    });
+
+    const bytesPerQr = () => Number(/\((\d+) bytes per QR\)/.exec(info.textContent ?? '')?.[1]);
+    expect(info).toHaveTextContent(/Estimated transfer time: up to/);
+    const balanced = bytesPerQr();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Reliable' }));
+    });
+    expect(screen.getByRole('button', { name: 'Reliable' })).toHaveAttribute('aria-pressed', 'true');
+    expect(bytesPerQr()).toBeLessThan(balanced);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Fast' }));
+    });
+    expect(bytesPerQr()).toBeGreaterThan(balanced);
   });
 
   it('clears file input value on drag-and-drop so subsequent manual picker selection works', async () => {

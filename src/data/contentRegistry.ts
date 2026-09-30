@@ -541,14 +541,14 @@ export const contentRegistry: Record<string, ToolContent> = {
   },
   "vcard-qr-code": {
     "id": "vcard-qr-code",
-    "name": "VCard QR Code Generator",
+    "name": "vCard QR Code Generator",
     "url": getPublicDomain() + "/vcard-qr-code",
-    "description": "Generate VCard QR codes for digital business cards. Share contact details easily. Compatible with all smartphones.",
-    "seoTitle": "Free VCard QR Code Generator | Digital Business Cards - QRCraftly",
+    "description": "Generate vCard QR codes for digital business cards. Share contact details easily. Compatible with all smartphones.",
+    "seoTitle": "Free vCard QR Code Generator | Digital Business Cards - QRCraftly",
     "image": "/og-image.png?type=vcard",
-    "imageAlt": "Preview of the VCard QR Code Generator tool",
+    "imageAlt": "Preview of the vCard QR Code Generator tool",
     "features": [
-      "Generate VCard Contact QR",
+      "Generate vCard Contact QR",
       "Secure Client-Side",
       "Custom Design"
     ],
@@ -557,7 +557,7 @@ export const contentRegistry: Record<string, ToolContent> = {
     "personas": [TargetPersona.HealthcareLegal, TargetPersona.SecurityConsciousEnterprise],
     "valueProposition": StrategicValueCategory.ZeroTransitPrivacySovereignty,
     "howTo": {
-      "name": "How to Create a VCard QR Code",
+      "name": "How to Create a vCard QR Code",
       "description": "Create a digital business card that can be scanned to save contact info.",
       "steps": [
         {
@@ -956,4 +956,27 @@ export function getMetadataForPath(path: string): { title: string; description: 
     image: "/og-image.png",
     imageAlt: "QRCraftly QR Code Example",
   };
+}
+
+/**
+ * Minimal page-context shape needed to resolve metadata.
+ */
+export interface MetadataPageContext {
+  /** The requested path. */
+  urlPathname: string;
+  /** Whether this render is the 404 page. */
+  is404?: boolean | null;
+  /** Status code of an aborted render, if any. */
+  abortStatusCode?: number;
+}
+
+/**
+ * Resolves metadata for a rendered page. The 404 page uses the
+ * dedicated `_error` entry instead of inheriting the homepage fallback for an unknown URL.
+ * @param pageContext - The Vike page context.
+ * @returns Title, description and image metadata.
+ */
+export function getMetadataForPageContext(pageContext: MetadataPageContext): ReturnType<typeof getMetadataForPath> {
+  const isError = Boolean(pageContext.is404) || pageContext.abortStatusCode === 404;
+  return getMetadataForPath(isError ? '/_error' : pageContext.urlPathname);
 }

@@ -5,23 +5,11 @@ import { useFieldIds } from '../../hooks/useFieldIds';
 import { FieldWrapper, BaseFieldProps } from './FieldWrapper';
 import { TEXT_FIELD_CLASSES, ERROR_INPUT_CLASSES, mergeClasses } from './styles';
 
-/**
- *
- */
 interface TextFieldProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size' | 'id'>, BaseFieldProps {
-  /**
-   *
-   */
   showPasswordToggle?: boolean;
-  /**
-   *
-   */
   showCharCount?: boolean;
 }
 
-/**
- *
- */
 export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(
   ({ className = '', inputClassName = '', label, contextualLabel, labelClassName, error, showPasswordToggle, showCharCount, type = 'text', id, maxLength, value, 'aria-describedby': ariaDescribedby, ...props }, ref) => {
     const [showPassword, setShowPassword] = useState(false);

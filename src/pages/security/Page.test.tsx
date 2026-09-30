@@ -48,4 +48,23 @@ describe('Security Page', () => {
     expect(complianceLink).not.toBeNull();
     expect(complianceLink?.textContent).toBe('COMPLIANCE.md');
   });
+
+  it('publishes only end-user documents, with shrinkable grid items and explicit typography (#978)', () => {
+    const { container } = render(<Page />);
+    expect(container.querySelector('#security')).not.toBeNull();
+    expect(container.querySelector('#compliance')).not.toBeNull();
+    for (const internal of ['style_guide', 'ui_catalog', 'scaling']) {
+      expect(container.querySelector(`#${internal}`)).toBeNull();
+    }
+    expect(screen.queryByRole('heading', { name: /Design System Visual Style Guide|UI Component Registry|Capacity Planning/i })).not.toBeInTheDocument();
+
+    const sections = container.querySelectorAll('section#security, section#compliance');
+    sections.forEach((section) => {
+      expect(section).toHaveClass('min-w-0');
+      expect(section.className).not.toMatch(/\bprose\b/);
+      const body = section.querySelector('[class*="[&_ul]:list-disc"]');
+      expect(body).not.toBeNull();
+      expect(body).toHaveClass('[&_pre]:overflow-x-auto');
+    });
+  });
 });

@@ -8,6 +8,20 @@ vi.mock('jsqr', () => {
   };
 });
 
+const liveWorkers: Worker[] = [];
+
+/** Poll often: these checks wait on real worker round-trips, which are slower under coverage. */
+const WAIT = { timeout: 5000, interval: 2 };
+
+/** The real scannability worker module, run in-thread by the global Worker from vitest.setup.ts. */
+const createScannabilityWorker = async () => {
+  const worker = new Worker(new URL('../src/packages/scannability/worker.ts', import.meta.url), { type: 'module' });
+  liveWorkers.push(worker);
+  // Wait until the module is evaluated so the timing assertions below measure message handling only.
+  await (worker as unknown as { ready: Promise<void> }).ready;
+  return worker;
+};
+
 describe('High-Fidelity Worker Concurrency & Serialization Tests', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -17,6 +31,8 @@ describe('High-Fidelity Worker Concurrency & Serialization Tests', () => {
   });
 
   afterEach(() => {
+    // Stop every worker so no in-flight decode from one test leaks jsQR calls into the next.
+    liveWorkers.splice(0).forEach(worker => worker.terminate());
     vi.clearAllMocks();
     if (globalThis.mockWorkerControl) {
       globalThis.mockWorkerControl.reset();
@@ -24,8 +40,8 @@ describe('High-Fidelity Worker Concurrency & Serialization Tests', () => {
   });
 
   // Requirement 1 / Acceptance Criteria 1: Non-serializable payload fails
-  it('should fail/throw synchronously if a non-serializable payload (such as a function) is passed to postMessage', () => {
-    const worker = new Worker('mock-url');
+  it('should fail/throw synchronously if a non-serializable payload (such as a function) is passed to postMessage', async () => {
+    const worker = await createScannabilityWorker();
     
     // Passing a function should throw a structuredClone/DataCloneError
     expect(() => {
@@ -45,8 +61,8 @@ describe('High-Fidelity Worker Concurrency & Serialization Tests', () => {
     }
   });
 
-  it('should succeed/not throw if a fully serializable payload is passed to postMessage', () => {
-    const worker = new Worker('mock-url');
+  it('should succeed/not throw if a fully serializable payload is passed to postMessage', async () => {
+    const worker = await createScannabilityWorker();
     expect(() => {
       worker.postMessage({
         imageData: {
@@ -64,7 +80,7 @@ describe('High-Fidelity Worker Concurrency & Serialization Tests', () => {
 
   // Requirement 2 / Acceptance Criteria 2: Executing exact optical and security checks used in production
   it('should execute actual worker logic and run optical/security checks dynamically', async () => {
-    const worker = new Worker('mock-url');
+    const worker = await createScannabilityWorker();
     let receivedResponse: any = null;
     worker.onmessage = (e: any) => {
       receivedResponse = e.data;
@@ -91,13 +107,15 @@ describe('High-Fidelity Worker Concurrency & Serialization Tests', () => {
     });
 
     // Wait for the asynchronous task to complete
-    await new Promise<void>(resolve => setTimeout(resolve, 50));
+    await vi.waitFor(() => expect(receivedResponse?.configId).toBe('sec-check'), WAIT);
 
     expect(receivedResponse).toEqual({
       success: false,
       physicalReady: false,
       error: 'SECURITY_VIOLATION',
       configId: 'sec-check',
+      localContrastViolations: 0,
+      minLocalContrast: 21,
     });
 
     // 2. Let's test a safe payload
@@ -120,12 +138,14 @@ describe('High-Fidelity Worker Concurrency & Serialization Tests', () => {
       configId: 'safe-check',
     });
 
-    await new Promise<void>(resolve => setTimeout(resolve, 50));
+    await vi.waitFor(() => expect(receivedResponse?.configId).toBe('safe-check'), WAIT);
 
     expect(receivedResponse).toEqual({
       success: true,
       physicalReady: true,
       configId: 'safe-check',
+      localContrastViolations: 0,
+      minLocalContrast: 21,
     });
   });
 
@@ -135,10 +155,12 @@ describe('High-Fidelity Worker Concurrency & Serialization Tests', () => {
     globalThis.mockWorkerControl.setDelay(30);
     globalThis.mockWorkerControl.setConcurrencyLimit(1);
 
-    const worker = new Worker('mock-url');
+    const worker = await createScannabilityWorker();
     const responses: any[] = [];
+    const finishedAt: number[] = [];
     worker.onmessage = (e: any) => {
       responses.push(e.data);
+      finishedAt.push(performance.now());
     };
 
     vi.mocked(jsQR).mockReturnValue({ data: 'https://safe.com' } as any);
@@ -158,29 +180,29 @@ describe('High-Fidelity Worker Concurrency & Serialization Tests', () => {
       width: 10, height: 10, isTest: true, configId: 'task-3'
     });
 
-    // At t=15ms, none should have completed
+    // With a 30ms delay nothing can finish within the first 15ms.
     await new Promise<void>(resolve => setTimeout(resolve, 15));
     expect(responses).toHaveLength(0);
 
-    // At t=45ms, task-1 should have completed
-    await new Promise<void>(resolve => setTimeout(resolve, 30));
-    expect(responses).toHaveLength(1);
+    // With a concurrency limit of 1 the tasks finish strictly one after another, in order,
+    // each at least one delay after the previous one. Lower bounds only, so a slow run
+    // (for example under coverage instrumentation) cannot fail this.
+    await vi.waitFor(() => expect(responses).toHaveLength(1), WAIT);
     expect(responses[0].configId).toBe('task-1');
 
-    // At t=75ms, task-2 should have completed
-    await new Promise<void>(resolve => setTimeout(resolve, 30));
-    expect(responses).toHaveLength(2);
+    await vi.waitFor(() => expect(responses).toHaveLength(2), WAIT);
     expect(responses[1].configId).toBe('task-2');
+    expect(finishedAt[1] - finishedAt[0]).toBeGreaterThanOrEqual(25);
 
-    // At t=105ms, task-3 should have completed
-    await new Promise<void>(resolve => setTimeout(resolve, 30));
-    expect(responses).toHaveLength(3);
+    await vi.waitFor(() => expect(responses).toHaveLength(3), WAIT);
     expect(responses[2].configId).toBe('task-3');
+    expect(finishedAt[2] - finishedAt[1]).toBeGreaterThanOrEqual(25);
   });
 
-  // Requirement 1, 2, 4 & Acceptance Criteria 1, 2: Two-pass sequence of dontInvert followed by onlyInvert
-  it('should execute standard decoding (dontInvert) followed by inverted-only decoding (onlyInvert) without attemptBoth', async () => {
-    const worker = new Worker('mock-url');
+  // Requirement 1, 2, 4 & Acceptance Criteria 1, 2: Two-pass sequence of dontInvert followed by an
+  // attemptBoth fallback, in both the digital and the physical check (see scannabilitySteps).
+  it('should execute standard decoding (dontInvert) followed by an inverted fallback pass (attemptBoth)', async () => {
+    const worker = await createScannabilityWorker();
     let receivedResponse: any = null;
     worker.onmessage = (e: any) => {
       receivedResponse = e.data;
@@ -189,7 +211,7 @@ describe('High-Fidelity Worker Concurrency & Serialization Tests', () => {
     const optionsPassed: any[] = [];
     vi.mocked(jsQR).mockImplementation((data: any, width: number, height: number, options?: any) => {
       optionsPassed.push(options?.inversionAttempts);
-      if (options?.inversionAttempts === 'onlyInvert') {
+      if (options?.inversionAttempts === 'attemptBoth') {
         return { data: 'https://inverted-qr.com' } as any;
       }
       return null;
@@ -207,15 +229,17 @@ describe('High-Fidelity Worker Concurrency & Serialization Tests', () => {
       configId: 'inverted-test',
     });
 
-    await new Promise<void>(resolve => setTimeout(resolve, 50));
+    await vi.waitFor(() => expect(receivedResponse?.configId).toBe('inverted-test'), WAIT);
 
     // Verify two-pass sequence (digital check followed by physical check) was followed with onlyInvert fallback
-    expect(optionsPassed).toEqual(['dontInvert', 'onlyInvert', 'dontInvert', 'onlyInvert']);
-    expect(optionsPassed).not.toContain('attemptBoth');
+    expect(optionsPassed).toEqual(['dontInvert', 'attemptBoth', 'dontInvert', 'attemptBoth']);
+    expect(optionsPassed).not.toContain('onlyInvert');
     expect(receivedResponse).toEqual({
       success: true,
       physicalReady: true,
       configId: 'inverted-test',
+      localContrastViolations: 0,
+      minLocalContrast: 21,
     });
   });
 });

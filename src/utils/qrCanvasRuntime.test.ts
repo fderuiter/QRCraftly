@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import QRCode from 'qrcode';
-import { fromQrcodePackage, getQrCanvasRuntime, setQrCanvasRuntime, type QrEncoder } from './qrCanvasRuntime';
+import { fromQrcodePackage, type QrEncoder } from '@/packages/qr-matrix';
+import { getQrCanvasRuntime, setQrCanvasRuntime } from './qrCanvasRuntime';
 import { QRErrorCorrectionLevel } from '../types';
 
 describe('qrCanvasRuntime', () => {

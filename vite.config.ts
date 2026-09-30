@@ -20,6 +20,21 @@ import path from 'path';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import vike from 'vike/plugin';
+import type { Plugin } from 'vite';
+import { createDevRedirectMiddleware } from './src/packages/edge-redirect/dev';
+
+/**
+ * Serves `/api/redirect/*` from an in-memory mock D1 during `pnpm dev`, so dynamic
+ * links can be created and resolved locally without Cloudflare credentials (#928).
+ * Production uses the Worker entry `src/packages/edge-redirect/worker.ts`.
+ */
+const devRedirectApi = (): Plugin => ({
+  name: 'qrcraftly:dev-redirect-api',
+  apply: 'serve',
+  configureServer(server) {
+    server.middlewares.use(createDevRedirectMiddleware());
+  },
+});
 
 /**
  * Vite configuration file.
@@ -37,7 +52,8 @@ export default defineConfig(() => {
       },
       plugins: [
         react(),
-        vike()
+        vike(),
+        devRedirectApi(),
       ],
       esbuild: {
         target: 'es2022'
@@ -72,11 +88,7 @@ export default defineConfig(() => {
               exclude: [
                 '**/*.test.tsx',
                 'src/hooks/**/*.test.ts',
-                'tests/scannabilityWorker.test.ts',
-                'src/utils/matrixWorker.test.ts',
-                'src/utils/mazeWorker.test.ts',
                 'src/utils/qrRenderer.test.ts',
-                'tests/opticalTransferSliceWorker.test.ts',
                 '**/node_modules/**',
                 '**/dist/**',
                 'e2e/**',
@@ -97,11 +109,7 @@ export default defineConfig(() => {
               include: [
                 '**/*.test.tsx',
                 'src/hooks/**/*.test.ts',
-                'tests/scannabilityWorker.test.ts',
-                'src/utils/matrixWorker.test.ts',
-                'src/utils/mazeWorker.test.ts',
                 'src/utils/qrRenderer.test.ts',
-                'tests/opticalTransferSliceWorker.test.ts',
               ],
               exclude: [
                 '**/node_modules/**',
@@ -124,13 +132,12 @@ export default defineConfig(() => {
             functions: 85,
             lines: 80,
           },
-          // Measure the logic layers: shared utilities, the deep-module packages
-          // and the Cloudflare Pages Functions. Components, hooks and pages are
-          // exercised by the jsdom project and Playwright but not gated here.
+          // Measure the logic layers: shared utilities and the deep-module
+          // packages. Components, hooks and pages are exercised by the jsdom
+          // project and Playwright but not gated here.
           include: [
             'src/utils/**/*.ts',
             'src/packages/**/*.ts',
-            'functions/**/*.ts',
           ],
           exclude: [
             '**/*.test.ts',

@@ -3,26 +3,11 @@ import { SocialData, SocialPlatform } from "../../types";
 import { TextField, SelectField } from "../ui/FormFields";
 import { FormBlock } from "../ui/FormBlock";
 
-/**
- *
- */
 interface SocialInputProps {
-  /**
-   *
-   */
   data: SocialData;
-  /**
-   *
-   */
   onChange: (updates: Partial<SocialData>) => void;
 }
 
-/**
- *
- * @param root0
- * @param root0.data
- * @param root0.onChange
- */
 export const SocialInput: React.FC<SocialInputProps> = ({ data, onChange }) => {
   return (
     <FormBlock legend="Social Media Profile">

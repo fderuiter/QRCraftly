@@ -16,7 +16,8 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-declare const FileReaderSync: any;
+/** Worker-only synchronous reader; absent from the DOM lib this project compiles against. */
+declare const FileReaderSync: { new (): { readAsDataURL(blob: Blob): string } } | undefined;
 
 let cachedCanvas: OffscreenCanvas | null = null;
 let cachedCtx: OffscreenCanvasRenderingContext2D | null = null;
@@ -87,7 +88,7 @@ self.onmessage = async (e: MessageEvent<{ file: Blob | File; maxDim: number }>) 
     }
 
     self.postMessage({ success: true, dataUrl });
-  } catch (error: any) {
-    self.postMessage({ success: false, error: error?.message || 'Error resizing image' });
+  } catch (error) {
+    self.postMessage({ success: false, error: (error instanceof Error && error.message) || 'Error resizing image' });
   }
 };

@@ -108,7 +108,7 @@ export function decodeGitPath(filePath) {
   try {
     const uint8Array = new Uint8Array(bytes);
     decoded = new TextDecoder('utf-8', { fatal: true }).decode(uint8Array);
-  } catch (err) {
+  } catch {
     try {
       const uint8Array = new Uint8Array(bytes);
       decoded = new TextDecoder('utf-8', { fatal: false }).decode(uint8Array);

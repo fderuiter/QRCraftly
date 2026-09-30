@@ -1,6 +1,5 @@
 import React, { useRef, useMemo, useEffect } from 'react';
 import { Button } from '../ui/Button';
-import { Card } from '../ui/Card';
 import { QRConfig, BorderStyle, BorderTextPosition, BorderLogoPosition } from '../../types';
 import { Upload, X } from 'lucide-react';
 import { getContrastRatio } from '../../utils/colorUtils';
@@ -13,26 +12,11 @@ import { useOptionalQRStoreSelector } from '../../context/QRContext';
 import { MIN_CONTRAST_THRESHOLD } from '../../constants';
 import { ContrastBadge } from './ContrastWarning';
 
-/**
- *
- */
 interface BorderControlsProps {
-  /**
-   *
-   */
   config: QRConfig;
-  /**
-   *
-   */
   onChange: (updates: Partial<QRConfig>) => void;
 }
 
-/**
- *
- * @param root0
- * @param root0.config
- * @param root0.onChange
- */
 export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange }) => {
   const moduleCount = useOptionalQRStoreSelector(s => s.moduleCount) ?? 0;
 
@@ -70,9 +54,9 @@ export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange
   const isLowBorderContrast = borderTextContrast < MIN_CONTRAST_THRESHOLD;
 
   return (
-    <Card variant="control">
+    <section>
       <div className="mb-4 flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Border</h3>
+        <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Border</h4>
         <ToggleSwitch
           id="enable-border"
           label="Enable Border"
@@ -83,7 +67,7 @@ export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange
       </div>
 
       {config.isBorderEnabled && (
-        <div className="animate-in fade-in slide-in-from-top-2 space-y-4 duration-200">
+        <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <SelectField
               id="border-style"
@@ -215,6 +199,6 @@ export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange
           </div>
         </div>
       )}
-    </Card>
+    </section>
   );
 };

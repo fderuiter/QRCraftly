@@ -22,18 +22,17 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import React from 'react';
 import Page from './+Page';
 import { ToastProvider } from '@/components/ui/Toast';
-import { StreamLookaheadReceiver } from '@/engine/StreamLookahead';
-import { FountainReassembler, createFountainSession } from '@/packages/optical-transfer';
+import { FountainReassembler, StreamLookaheadReceiver, createFountainSession } from '@/packages/optical-transfer';
 
 let scanSuccessCallback: ((data: string) => void) | undefined;
 
-vi.mock('@/hooks/useAdaptiveScanner', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/hooks/useAdaptiveScanner')>();
+vi.mock('@/packages/optical-scanner/client', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/packages/optical-scanner/client')>();
   return {
     ...actual,
-    useAdaptiveScanner: (options: any) => {
-      scanSuccessCallback = options.onScanSuccess;
-      return actual.useAdaptiveScanner(options);
+    useQrScanner: (options: Parameters<typeof actual.useQrScanner>[0]) => {
+      scanSuccessCallback = options?.onScanSuccess;
+      return actual.useQrScanner(options);
     }
   };
 });
@@ -124,6 +123,27 @@ describe('File Transfer Receive Page & Pipeline', () => {
     });
 
     expect(screen.getByText('Camera inactive')).toBeInTheDocument();
+  });
+
+  it('explains a blocked camera and offers the video file route', async () => {
+    navigator.mediaDevices.getUserMedia = vi.fn().mockRejectedValue(new DOMException('Permission denied', 'NotAllowedError'));
+    render(
+      <ToastProvider>
+        <Page />
+      </ToastProvider>
+    );
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /activate camera scanner/i }));
+    });
+
+    const alert = await screen.findByTestId('camera-error');
+    expect(alert).toHaveTextContent(/Camera access was blocked/);
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Use a video file instead' }));
+    });
+    expect(screen.getByRole('button', { name: /^video file/i })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.queryByTestId('camera-error')).not.toBeInTheDocument();
   });
 
   it('simulates out-of-order packet reassembly and triggers offline download on complete', async () => {
@@ -448,7 +468,7 @@ describe('File Transfer Receive Page & Pipeline', () => {
       });
 
       expect(screen.getByTestId('fountain-telemetry')).toBeInTheDocument();
-      expect(screen.getByTestId('fountain-droplets')).toHaveTextContent(`1 / ${encoder.k}`);
+      expect(screen.getByTestId('fountain-droplets')).toHaveTextContent(/^1$/);
       // A repair droplet may not raise the rank on its own.
       expect(screen.getByTestId('fountain-rank')).toHaveTextContent(new RegExp(`^[01] / ${encoder.k}$`));
       expect(screen.getByTestId('fountain-fps')).toHaveTextContent(/fps/);
@@ -467,7 +487,10 @@ describe('File Transfer Receive Page & Pipeline', () => {
       }
 
       await waitFor(() => expect(screen.getByTestId('inline-complete-panel')).toBeInTheDocument());
-      expect(screen.getByText(/fountain\.txt was rebuilt and its SHA-256 checksum verified/)).toBeInTheDocument();
+      expect(screen.getByText(/SHA-256 checksum matches the sender/)).toBeInTheDocument();
+      const summary = screen.getByTestId('received-file-summary');
+      expect(summary).toHaveTextContent('fountain.txt');
+      expect(summary).toHaveTextContent("1.2 KB");
       expect(screen.getByTestId('fountain-rank')).toHaveTextContent(`${encoder.k} / ${encoder.k}`);
       expect(global.URL.createObjectURL).not.toHaveBeenCalled();
 
@@ -476,6 +499,33 @@ describe('File Transfer Receive Page & Pipeline', () => {
         fireEvent.click(downloadBtn);
       });
       await waitFor(() => expect(global.URL.createObjectURL).toHaveBeenCalled());
+    });
+
+    it('clears a completed transfer and scans again with Receive another file', async () => {
+      installFountainWorker();
+      const { encoder } = await createFountainSession(new TextEncoder().encode('first file '.repeat(30)), {
+        fileName: 'first.txt',
+        mimeType: 'text/plain',
+      });
+      render(
+        <ToastProvider>
+          <Page />
+        </ToastProvider>
+      );
+
+      for (let index = 0; index < encoder.k * 4 && !screen.queryByTestId('inline-complete-panel'); index++) {
+        await act(async () => {
+          scanSuccessCallback!(encoder.dropletStringForIndex(index));
+          await new Promise(resolve => setTimeout(resolve, 0));
+        });
+      }
+      await waitFor(() => expect(screen.getByTestId('received-file-summary')).toHaveTextContent('first.txt'));
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Receive another file' }));
+      });
+      expect(screen.queryByTestId('inline-complete-panel')).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /deactivate camera scanner/i })).toBeInTheDocument();
     });
 
     it('runs the development fountain simulation end-to-end', async () => {
@@ -505,11 +555,11 @@ describe('File Transfer Receive Page & Pipeline', () => {
       );
 
       // Camera mode is active by default
-      const cameraRadio = screen.getByRole('radio', { name: /camera feed/i });
-      const fileRadio = screen.getByRole('radio', { name: /video file/i });
+      const cameraRadio = screen.getByRole('button', { name: /camera feed/i });
+      const fileRadio = screen.getByRole('button', { name: /^video file/i });
 
-      expect(cameraRadio).toHaveAttribute('aria-checked', 'true');
-      expect(fileRadio).toHaveAttribute('aria-checked', 'false');
+      expect(cameraRadio).toHaveAttribute('aria-pressed', 'true');
+      expect(fileRadio).toHaveAttribute('aria-pressed', 'false');
       expect(screen.getByRole('button', { name: /activate camera scanner/i })).toBeInTheDocument();
 
       // Switch to Video File mode
@@ -517,8 +567,8 @@ describe('File Transfer Receive Page & Pipeline', () => {
         fireEvent.click(fileRadio);
       });
 
-      expect(fileRadio).toHaveAttribute('aria-checked', 'true');
-      expect(cameraRadio).toHaveAttribute('aria-checked', 'false');
+      expect(fileRadio).toHaveAttribute('aria-pressed', 'true');
+      expect(cameraRadio).toHaveAttribute('aria-pressed', 'false');
       expect(screen.getByTestId('sidebar-dropzone')).toBeInTheDocument();
       expect(screen.getByTestId('viewport-dropzone')).toBeInTheDocument();
 
@@ -527,7 +577,7 @@ describe('File Transfer Receive Page & Pipeline', () => {
         fireEvent.click(cameraRadio);
       });
 
-      expect(cameraRadio).toHaveAttribute('aria-checked', 'true');
+      expect(cameraRadio).toHaveAttribute('aria-pressed', 'true');
       expect(screen.getByRole('button', { name: /activate camera scanner/i })).toBeInTheDocument();
     });
 
@@ -538,7 +588,7 @@ describe('File Transfer Receive Page & Pipeline', () => {
         </ToastProvider>
       );
 
-      const fileRadio = screen.getByRole('radio', { name: /video file/i });
+      const fileRadio = screen.getByRole('button', { name: /^video file/i });
       await act(async () => {
         fireEvent.click(fileRadio);
       });
@@ -562,7 +612,7 @@ describe('File Transfer Receive Page & Pipeline', () => {
         </ToastProvider>
       );
 
-      const fileRadio = screen.getByRole('radio', { name: /video file/i });
+      const fileRadio = screen.getByRole('button', { name: /^video file/i });
       await act(async () => {
         fireEvent.click(fileRadio);
       });
@@ -588,8 +638,8 @@ describe('File Transfer Receive Page & Pipeline', () => {
         </ToastProvider>
       );
 
-      const cameraRadio = screen.getByRole('radio', { name: /camera feed/i });
-      const fileRadio = screen.getByRole('radio', { name: /video file/i });
+      const cameraRadio = screen.getByRole('button', { name: /camera feed/i });
+      const fileRadio = screen.getByRole('button', { name: /^video file/i });
 
       await act(async () => {
         fireEvent.click(fileRadio);
@@ -618,7 +668,7 @@ describe('File Transfer Receive Page & Pipeline', () => {
         </ToastProvider>
       );
 
-      const fileRadio = screen.getByRole('radio', { name: /video file/i });
+      const fileRadio = screen.getByRole('button', { name: /^video file/i });
       await act(async () => {
         fireEvent.click(fileRadio);
       });

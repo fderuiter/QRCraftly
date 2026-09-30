@@ -25,9 +25,6 @@ import {
 } from '@/packages/scannability/client';
 import { useCapabilities } from './useCapabilities';
 
-/**
- *
- */
 export type {
   ScannabilityStatus,
   HealthScore,

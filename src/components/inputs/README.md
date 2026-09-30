@@ -51,10 +51,11 @@ export const WifiInput: React.FC<WifiInputProps> = ({ data, onChange }) => {
 ## Adding a New Input Type
 
 1.  Define the data structure in `src/types.ts`.
-2.  Create construction, hydration, and parsing helpers in `src/utils/qrHelpers.ts`.
+2.  Create the payload generator (construction, hydration, and parsing) in `src/packages/qr-payload/lib/generators/` and register it in `src/packages/qr-payload/lib/registry.ts`. Import generators from `@/packages/qr-payload`; there is no `utils` shim.
 3.  Create a new component file in this directory (e.g., `NewTypeInput.tsx`).
 4.  Register the component, its initial state, and helpers in `src/components/inputs/InputRegistry.ts`.
 5.  Add the new type to the `TypeSelector` options and its route to `QR_TYPE_ROUTES` in `src/data/navigation.ts` (with a matching page under `src/pages/`).
+6.  Add its display name to `QR_TYPE_LABELS` in `src/components/InputPanel.tsx`. Announcements ("WiFi input loaded") and the scan toast ("Type detected: vCard contact") use these labels, never raw enum values. The map is typed `Record<QRType, string>`, so `tsc` fails until the new type has a label.
 
 Input data never leaves the browser. `src/types.ts` has no telemetry or reporting schema, and new input types must not add one (see [the QRCraftly Pledge](../../../docs/PLEDGE.md)).
 
@@ -66,9 +67,10 @@ The centralized config structure in `src/types.ts` has optional fields for `anim
 
 The `InputPanel` features an integrated, high-performance dual-mode QR Code Scanner:
 
-1. **Live Webcam Viewfinder**: Uses a custom `useCamera` hook to acquire media streams and robustly handles permission rejections (`NotAllowedError`) without throwing unhandled promise exceptions. Decodes real-time camera frames smoothly using the `useAdaptiveScanner` loop backpressure mechanism.
+1. **Live Webcam Viewfinder**: Uses a custom `useCamera` hook to acquire media streams and robustly handles permission rejections (`NotAllowedError`) without throwing unhandled promise exceptions. Decodes real-time camera frames through the `useQrScanner` hook (`@/packages/optical-scanner/client`), which wraps the Camera Scanner Engine and its backpressure handling.
 2. **Client-Side File Upload Fallback**: If camera permissions are blocked or hardware is unavailable, displays an interactive troubleshooting card with platform-specific recovery instructions. Users can instantly transition to file upload mode to drag and drop or select QR code images for client-side decoding using `jsQR`. This guarantees user privacy by avoiding any external server transmissions.
-3. **Accessible Keyboard Navigation**: The scanner toggle action is positioned directly after the dynamic input panel, ensuring natural forward Tab sequences flow seamlessly into the active input fields before reaching secondary scanner actions.
+3. **Mode Switch**: Webcam and File Upload are a `Button` group with `aria-pressed`, so the selected mode is announced; the upload dropzone is a `Button` whose file input sits outside it.
+4. **Accessible Keyboard Navigation**: The scanner toggle action is positioned directly after the dynamic input panel, ensuring natural forward Tab sequences flow seamlessly into the active input fields before reaching secondary scanner actions.
 
 ## Playable Maze Overlay Configuration
 

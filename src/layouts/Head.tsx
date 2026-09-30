@@ -17,8 +17,9 @@
 */
 
 import { usePageContext } from 'vike-react/usePageContext';
+import type { PageContextServer } from 'vike/types';
 import { JsonLdScript } from '@/components/ui/JsonLdScript';
-import { resolveDomainForPath, resolvePublicUrl, resolveImageUrl, compileBreadcrumbSchema, getSanitizedPath } from '@/utils/metadataEngine';
+import { resolveDomainForPath, resolvePublicUrl, resolveImageUrl, compileBreadcrumbSchema, getSanitizedPath, type JsonLdObject } from '@/utils/metadataEngine';
 import { getLegacyRedirect, getMetadataForPath } from '@/data/contentRegistry';
 import { THEME_INIT_SCRIPT } from '@/utils/theme';
 
@@ -40,13 +41,13 @@ const CONTENT_SECURITY_POLICY = "default-src 'self'; script-src 'self' 'unsafe-i
  * @returns The fragment containing meta and link tags.
  */
 export default function HeadDefault() {
-  const pageContext = usePageContext();
+  // vike-react loads the Head setting only on the server (`env: { server: true }`).
+  const pageContext = usePageContext() as PageContextServer;
   // Vike-react exposes the resolved config in pageContext.config
-  // Cast to any to access is404 which might not be in the default type definition
-  const { config, is404 } = pageContext as any;
+  const { config, is404 } = pageContext;
 
   // Helper to resolve potentially functional config values
-  const getString = (val: string | ((pageContext: any) => string | null | undefined) | undefined | null, context: any, fallback: string): string => {
+  const getString = (val: string | ((pageContext: PageContextServer) => string | null | undefined) | undefined | null, context: PageContextServer, fallback: string): string => {
     if (!val) return fallback;
     const result = typeof val === 'function' ? val(context) : val;
     return result || fallback;
@@ -63,7 +64,7 @@ export default function HeadDefault() {
 
   // Resolve Open Graph Image
   // Allows pages to override the default OG image via config.image
-  const imageConfig = config?.image || pathMetadata.image;
+  const imageConfig = getString(config?.image, pageContext, '') || pathMetadata.image;
   const imageUrl = resolveImageUrl(imageConfig, pageContext.urlPathname);
 
   const imageAlt = config?.imageAlt || pathMetadata.imageAlt || "QRCraftly QR Code Example";
@@ -71,7 +72,7 @@ export default function HeadDefault() {
   const sanitizedPath = getSanitizedPath(pageContext.urlPathname);
   const isHomepage = sanitizedPath === '/' || sanitizedPath === '';
 
-  const schemaGraph: any[] = [
+  const schemaGraph: JsonLdObject[] = [
     {
       "@type": "Organization",
       "@id": `${resolvedDomain}/#organization`,

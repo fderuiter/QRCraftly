@@ -38,6 +38,16 @@ function slugify(text) {
     .replace(/\s+/g, '-');    // replace spaces with hyphens
 }
 
+/**
+ * Whether a document's frontmatter marks it as internal developer documentation.
+ * @param {Record<string, unknown>} frontmatter Parsed frontmatter.
+ * @returns {boolean} True when `audience: developers` (or `developer`) is set.
+ */
+export function isDeveloperAudience(frontmatter) {
+  const audience = typeof frontmatter.audience === 'string' ? frontmatter.audience.trim().toLowerCase() : '';
+  return audience === 'developers' || audience === 'developer';
+}
+
 export function extractTitle(content) {
   const match = content.match(/^#\s+(.+)$/m);
   return match ? match[1] : 'Untitled Document';
@@ -165,6 +175,12 @@ export function compileManifest(inputDir = docsPublicDir, outputPath = outputMan
       if (frontmatter.draft === true) {
         continue;
       }
+    }
+
+    // Developer-facing references (style guide, UI catalog, capacity planning) stay in the
+    // repository but are not published to end users on the /security page.
+    if (isDeveloperAudience(frontmatter)) {
+      continue;
     }
 
     const title = extractTitle(body);

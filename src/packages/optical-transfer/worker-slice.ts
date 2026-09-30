@@ -1,4 +1,3 @@
-/* eslint-disable security/detect-object-injection */
 /*
     QRCraftly
     Copyright (C) 2025 fderuiter
@@ -19,7 +18,7 @@
 
 import QRCode, { type QRCodeErrorCorrectionLevel } from 'qrcode';
 import { FountainEncoder } from './lib/fountain/encoder';
-import { createFountainSession, sha256Hex } from './lib/fountain/session';
+import { TRANSFER_DENSITY_PROFILES, createFountainSession, resolveTransferDensity, sha256Hex } from './lib/fountain/session';
 import type {
   FountainInitInfo,
   SliceStartPayload,
@@ -181,10 +180,15 @@ async function handleStart(payload: SliceStartPayload | undefined): Promise<void
     try {
       const bytes = fileBytes ?? new Uint8Array(await source.arrayBuffer());
       if (sessionId !== currentSessionId) return;
+      const density = resolveTransferDensity(payload?.density);
+      const profile = TRANSFER_DENSITY_PROFILES[density];
+      // Droplets use the density's ECC, not the page's appearance ECC.
+      errorCorrectionLevel = profile.errorCorrectionLevel;
       const session = await createFountainSession(bytes, {
         fileName: fileNameOf(source),
         mimeType: source.type,
         errorCorrectionLevel,
+        maxVersion: profile.maxVersion,
         requestedSymbolSize: payload?.chunkSize,
         sha256: fileSHA256,
       });
@@ -195,6 +199,7 @@ async function handleStart(payload: SliceStartPayload | undefined): Promise<void
       totalFrames = session.encoder.k;
       fountainInfo = {
         k: session.encoder.k,
+        density,
         symbolSize: session.symbolSize,
         compression: session.header.compression,
         messageLength: session.encoder.messageLength,

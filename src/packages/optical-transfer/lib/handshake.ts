@@ -17,7 +17,56 @@
 */
 
 import { QRConfig, QRStyle, SocialFormat, TemplateStyle } from '@/types';
-import { drawQRInternal } from '@/utils/qrRenderer';
+import { drawQRInternal } from '@/packages/qr-matrix';
+import { createScannabilityWorker, isWorkerResponse, performScannabilityCheck } from '@/packages/scannability';
+
+/** Side length, in CSS pixels, of the canvas the handshake frame is rendered onto for checking. */
+const DISPLAY_SIZE = 512;
+
+/**
+ * How long the Scannability Worker may take before the main-thread check runs instead.
+ * Matches the 1500ms watchdog used by the other Scannability Worker clients.
+ */
+export const HANDSHAKE_WATCHDOG_MS = 1500;
+
+/** Pixels of one rendered handshake frame, ready for a scannability check. */
+export interface HandshakeCheckRequest {
+  imageData: ImageData;
+  width: number;
+  height: number;
+  moduleCount: number;
+  /** Relaxed decoding for automated browsers (`navigator.webdriver`). */
+  isTest: boolean;
+}
+
+/** Capabilities the handshake gate runs on. Tests inject fakes; the app uses the defaults. */
+export interface HandshakeVerifierDeps {
+  /** Spawns a Scannability Worker, or returns null where workers are unavailable. */
+  createWorker: () => Worker | null;
+  /** Main-thread check used when the worker is unavailable, fails, or misses the watchdog. */
+  checkOnMainThread: (request: HandshakeCheckRequest) => boolean;
+  /** Creates the canvas the frame is rendered onto. */
+  createCanvas: () => HTMLCanvasElement;
+  /** Watchdog in milliseconds before the main-thread check takes over. */
+  watchdogMs: number;
+}
+
+/** Production capabilities: the real Scannability Worker and checker from `@/packages/scannability`. */
+const defaultHandshakeVerifierDeps: HandshakeVerifierDeps = {
+  createWorker: createScannabilityWorker,
+  checkOnMainThread: ({ imageData, width, height, isTest, moduleCount }) =>
+    performScannabilityCheck(imageData, width, height, isTest, moduleCount).success,
+  createCanvas: () => document.createElement('canvas'),
+  watchdogMs: HANDSHAKE_WATCHDOG_MS,
+};
+
+/** Signature of the handshake gate, so hooks can take an injected verifier. */
+export type HandshakeFrameVerifier = (
+  frame: { size: number; data: Uint8Array },
+  config: QRConfig,
+  logoImg: HTMLImageElement | null,
+  borderLogoImg: HTMLImageElement | null
+) => Promise<boolean>;
 
 /**
  * Sanitizes visual configuration for high-density animated stream chunk frames.
@@ -42,154 +91,118 @@ export function sanitizeStreamConfig(config: QRConfig): QRConfig {
 }
 
 /**
- * Runs a background scannability check on the initial handshake frame before initiating playback.
- * Uses background worker threads with a main-thread fallback for test or constrained environments.
- * @param frame The raw module matrix data of the handshake frame.
- * @param config The QR configuration used to render the handshake frame.
- * @param logoImg Optional logo image element.
- * @param borderLogoImg Optional border logo image element.
- * @returns A promise resolving to true if the handshake frame is scannable, false otherwise.
+ * Renders the frame and captures its pixels.
+ * @returns The check request, or null when no 2D context is available.
  */
-export async function verifyHandshakeFrame(
+function renderHandshakeFrame(
   frame: { size: number; data: Uint8Array },
   config: QRConfig,
-  logoImg: HTMLImageElement | null = null,
-  borderLogoImg: HTMLImageElement | null = null
-): Promise<boolean> {
-  if (typeof document === 'undefined') return true;
-
-  // In test environment, run deterministic contrast check
-  if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'test') {
-    const fg = (config.fgColor || '#000000').toLowerCase();
-    const bg = (config.bgColor || '#ffffff').toLowerCase();
-    if (fg === bg) return false;
-    return true;
-  }
-
-  const displaySize = 512;
-  const canvas = document.createElement('canvas');
-  canvas.width = displaySize;
-  canvas.height = displaySize;
+  logoImg: HTMLImageElement | null,
+  borderLogoImg: HTMLImageElement | null,
+  createCanvas: () => HTMLCanvasElement
+): HandshakeCheckRequest | null {
+  const canvas = createCanvas();
+  canvas.width = DISPLAY_SIZE;
+  canvas.height = DISPLAY_SIZE;
   const ctx = canvas.getContext('2d');
-  if (!ctx) return true;
+  if (!ctx) return null;
 
   const modules = {
     size: frame.size,
     get: (r: number, c: number) => !!frame.data[r * frame.size + c],
   };
+  drawQRInternal(ctx, modules, config, logoImg, borderLogoImg, DISPLAY_SIZE, modules.size);
 
-  drawQRInternal(
-    ctx as unknown as CanvasRenderingContext2D,
-    modules,
-    config,
-    logoImg,
-    borderLogoImg,
-    displaySize,
-    modules.size
-  );
+  return {
+    imageData: ctx.getImageData(0, 0, DISPLAY_SIZE, DISPLAY_SIZE),
+    width: DISPLAY_SIZE,
+    height: DISPLAY_SIZE,
+    moduleCount: modules.size,
+    isTest: typeof navigator !== 'undefined' ? !!navigator.webdriver : true,
+  };
+}
 
-  const imageData = ctx.getImageData(0, 0, displaySize, displaySize);
+/**
+ * Runs a scannability check on the first frame before playback starts.
+ * The Scannability Worker's answer is used whenever it arrives within the watchdog; the
+ * main-thread check runs only if the worker is unavailable, errors, drops the request, or
+ * misses the watchdog.
+ * @param frame The raw module matrix data of the frame.
+ * @param config The QR configuration used to render the frame.
+ * @param logoImg Optional logo image element.
+ * @param borderLogoImg Optional border logo image element.
+ * @param deps Injected worker factory, checker and canvas factory.
+ * @returns A promise resolving to true if the frame is scannable, false otherwise.
+ */
+export async function verifyHandshakeFrame(
+  frame: { size: number; data: Uint8Array },
+  config: QRConfig,
+  logoImg: HTMLImageElement | null = null,
+  borderLogoImg: HTMLImageElement | null = null,
+  deps: HandshakeVerifierDeps = defaultHandshakeVerifierDeps
+): Promise<boolean> {
+  // Server-side rendering has no canvas; the browser re-runs the gate before playback.
+  if (typeof document === 'undefined') return true;
+
+  const request = renderHandshakeFrame(frame, config, logoImg, borderLogoImg, deps.createCanvas);
+  if (!request) return true;
+
+  const fallback = (): boolean => {
+    try {
+      return deps.checkOnMainThread(request);
+    } catch {
+      return false;
+    }
+  };
+
+  let worker: Worker | null;
+  try {
+    worker = deps.createWorker();
+  } catch {
+    worker = null;
+  }
+  if (!worker) return fallback();
+  const activeWorker = worker;
 
   return new Promise<boolean>((resolve) => {
-    let isSettled = false;
-
-    const finish = (result: boolean) => {
-      if (!isSettled) {
-        isSettled = true;
-        resolve(result);
+    let settled = false;
+    const settle = (decide: () => boolean) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(watchdog);
+      activeWorker.onmessage = null;
+      activeWorker.onerror = null;
+      try {
+        activeWorker.terminate();
+      } catch {
+        // Already gone.
       }
+      resolve(decide());
     };
 
-    const timeoutTimer = setTimeout(() => {
-      import('@/utils/scannabilityChecker').then(({ performScannabilityCheck }) => {
-        try {
-          const res = performScannabilityCheck(
-            imageData,
-            displaySize,
-            displaySize,
-            typeof navigator !== 'undefined' ? !!navigator.webdriver : true,
-            modules.size
-          );
-          finish(res.success);
-        } catch {
-          finish(false);
-        }
-      }).catch(() => finish(false));
-    }, 100);
+    const watchdog = setTimeout(() => settle(fallback), deps.watchdogMs);
+
+    activeWorker.onmessage = (event: MessageEvent) => {
+      const response: unknown = event.data;
+      if (isWorkerResponse(response) && 'success' in response) {
+        settle(() => response.success);
+      } else {
+        settle(fallback);
+      }
+    };
+    activeWorker.onerror = () => settle(fallback);
 
     try {
-      if (typeof Worker === 'undefined') {
-        clearTimeout(timeoutTimer);
-        import('@/utils/scannabilityChecker').then(({ performScannabilityCheck }) => {
-          try {
-            const res = performScannabilityCheck(
-              imageData,
-              displaySize,
-              displaySize,
-              typeof navigator !== 'undefined' ? !!navigator.webdriver : true,
-              modules.size
-            );
-            finish(res.success);
-          } catch {
-            finish(false);
-          }
-        }).catch(() => finish(false));
-        return;
-      }
-
-      const worker = new Worker(new URL('../../scannability/worker.ts', import.meta.url), { type: 'module' });
-
-      worker.onmessage = (e: MessageEvent) => {
-        clearTimeout(timeoutTimer);
-        try { worker.terminate(); } catch {}
-        const { success } = e.data || {};
-        finish(!!success);
-      };
-
-      worker.onerror = () => {
-        clearTimeout(timeoutTimer);
-        try { worker.terminate(); } catch {}
-        import('@/utils/scannabilityChecker').then(({ performScannabilityCheck }) => {
-          try {
-            const res = performScannabilityCheck(
-              imageData,
-              displaySize,
-              displaySize,
-              typeof navigator !== 'undefined' ? !!navigator.webdriver : true,
-              modules.size
-            );
-            finish(res.success);
-          } catch {
-            finish(false);
-          }
-        }).catch(() => finish(false));
-      };
-
-      worker.postMessage({
-        imageData,
-        width: displaySize,
-        height: displaySize,
-        isTest: typeof navigator !== 'undefined' ? !!navigator.webdriver : true,
-        moduleCount: modules.size,
+      activeWorker.postMessage({
+        imageData: request.imageData,
+        width: request.width,
+        height: request.height,
+        isTest: request.isTest,
+        moduleCount: request.moduleCount,
         configId: 'handshake-gate',
       });
     } catch {
-      clearTimeout(timeoutTimer);
-      import('@/utils/scannabilityChecker').then(({ performScannabilityCheck }) => {
-        try {
-          const res = performScannabilityCheck(
-            imageData,
-            displaySize,
-            displaySize,
-            typeof navigator !== 'undefined' ? !!navigator.webdriver : true,
-            modules.size
-          );
-          finish(res.success);
-        } catch {
-          finish(false);
-        }
-      }).catch(() => finish(false));
+      settle(fallback);
     }
   });
 }
-

@@ -18,15 +18,14 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach, beforeAll } from 'vitest';
 import QRCode from 'qrcode';
+import { loadWorkerModule, type InThreadWorkerScope, type WorkerModuleUnderTest } from './utils/inThreadWorker';
 
 describe('fileSliceWorker', () => {
-  let workerHandler: any;
+  let workerHandler: WorkerModuleUnderTest['handle'];
+  let scope: InThreadWorkerScope;
   let originalPostMessage: any;
 
   beforeAll(async () => {
-    if (typeof (globalThis as any).self === 'undefined') {
-      (globalThis as any).self = globalThis;
-    }
     // Mock the global crypto subtly to avoid dependency issues if needed, but page.test already defined it
     if (!globalThis.crypto) {
       (globalThis as any).crypto = {
@@ -35,20 +34,21 @@ describe('fileSliceWorker', () => {
         }
       };
     }
-    await import('@/packages/optical-transfer/worker-slice');
-    workerHandler = (globalThis as any).self.onmessage;
+    const worker = await loadWorkerModule(new URL('../src/packages/optical-transfer/worker-slice.ts', import.meta.url));
+    scope = worker.scope;
+    workerHandler = worker.handle;
   });
 
   let digestSpy: any;
 
   beforeEach(() => {
-    originalPostMessage = (globalThis as any).postMessage;
+    originalPostMessage = scope.postMessage;
     digestSpy = vi.spyOn(globalThis.crypto.subtle, 'digest');
     vi.clearAllMocks();
   });
 
   afterEach(() => {
-    (globalThis as any).postMessage = originalPostMessage;
+    scope.postMessage = originalPostMessage;
     digestSpy.mockRestore();
     // Clear any active state by stopping the worker
     if (workerHandler) {
@@ -58,7 +58,7 @@ describe('fileSliceWorker', () => {
 
   it('scales the lookahead window based on target FPS', async () => {
     const postMessageSpy = vi.fn();
-    (globalThis as any).postMessage = postMessageSpy;
+    scope.postMessage = postMessageSpy;
 
     const dummyBlob = new Blob(['hello world'], { type: 'text/plain' });
 
@@ -86,7 +86,7 @@ describe('fileSliceWorker', () => {
 
   it('bounds the lookahead window to a maximum of 16 to prevent memory exhaustion', async () => {
     const postMessageSpy = vi.fn();
-    (globalThis as any).postMessage = postMessageSpy;
+    scope.postMessage = postMessageSpy;
 
     const dummyBlob = new Blob([new Uint8Array(100)], { type: 'application/octet-stream' });
 
@@ -112,7 +112,7 @@ describe('fileSliceWorker', () => {
   it('caches the SHA-256 hash across transfer restarts', async () => {
     const digestSpy = vi.spyOn(globalThis.crypto.subtle, 'digest');
     const postMessageSpy = vi.fn();
-    (globalThis as any).postMessage = postMessageSpy;
+    scope.postMessage = postMessageSpy;
 
     const dummyBlob = new Blob(['caching test'], { type: 'text/plain' });
 
@@ -154,7 +154,7 @@ describe('fileSliceWorker', () => {
 
   it('supports HEAL to resume frame generation from a specific ACK point', async () => {
     const postMessageSpy = vi.fn();
-    (globalThis as any).postMessage = postMessageSpy;
+    scope.postMessage = postMessageSpy;
 
     const dummyBlob = new Blob([new Uint8Array(50)], { type: 'application/octet-stream' });
 
@@ -199,7 +199,7 @@ describe('fileSliceWorker', () => {
 
   it('handles ACK messages and generates next frames up to lookahead limit', async () => {
     const postMessageSpy = vi.fn();
-    (globalThis as any).postMessage = postMessageSpy;
+    scope.postMessage = postMessageSpy;
 
     const dummyBlob = new Blob([new Uint8Array(20)], { type: 'application/octet-stream' });
 
@@ -239,7 +239,7 @@ describe('fileSliceWorker', () => {
 
   it('sends COMPLETE when last frame is ACKed', async () => {
     const postMessageSpy = vi.fn();
-    (globalThis as any).postMessage = postMessageSpy;
+    scope.postMessage = postMessageSpy;
 
     const dummyBlob = new Blob(['one'], { type: 'text/plain' });
 
@@ -279,7 +279,7 @@ describe('fileSliceWorker', () => {
 
   it('posts ERROR message when SHA-256 computation fails', async () => {
     const postMessageSpy = vi.fn();
-    (globalThis as any).postMessage = postMessageSpy;
+    scope.postMessage = postMessageSpy;
 
     const digestSpy = vi.spyOn(globalThis.crypto.subtle, 'digest').mockRejectedValueOnce(new Error('Mocked hash error'));
     const dummyBlob = new Blob(['hash fail'], { type: 'text/plain' });
@@ -306,7 +306,7 @@ describe('fileSliceWorker', () => {
 
   it('ignores unknown message types', async () => {
     const postMessageSpy = vi.fn();
-    (globalThis as any).postMessage = postMessageSpy;
+    scope.postMessage = postMessageSpy;
 
     await workerHandler({
       data: {
@@ -320,7 +320,7 @@ describe('fileSliceWorker', () => {
 
   it('posts ERROR message when QRCode.create throws an error during frame generation', async () => {
     const postMessageSpy = vi.fn();
-    (globalThis as any).postMessage = postMessageSpy;
+    scope.postMessage = postMessageSpy;
 
     const createSpy = vi.spyOn(QRCode, 'create').mockImplementationOnce(() => {
       throw new Error('Mocked QR creation failure');
@@ -350,7 +350,7 @@ describe('fileSliceWorker', () => {
 
   it('posts ERROR message when START payload has no file', async () => {
     const postMessageSpy = vi.fn();
-    (globalThis as any).postMessage = postMessageSpy;
+    scope.postMessage = postMessageSpy;
 
     await workerHandler({
       data: {
@@ -372,7 +372,7 @@ describe('fileSliceWorker', () => {
 
   it('covers remaining edge case branches of fileSliceWorker', async () => {
     const postMessageSpy = vi.fn();
-    (globalThis as any).postMessage = postMessageSpy;
+    scope.postMessage = postMessageSpy;
 
     const dummyBlob = new Blob(['fallback fps test'], { type: 'text/plain' });
     await workerHandler({
@@ -439,26 +439,23 @@ describe('fileSliceWorker', () => {
 });
 
 describe('fileSliceWorker State Cache', () => {
-  let workerHandler: any;
+  let workerHandler: WorkerModuleUnderTest['handle'];
+  let scope: InThreadWorkerScope;
   let originalPostMessage: any;
   let digestSpy: any;
   let postedMessages: any[] = [];
 
   beforeAll(async () => {
-    if (typeof (globalThis as any).self === 'undefined') {
-      (globalThis as any).self = globalThis;
-    }
-    // Import worker to register self.onmessage
-    await import('@/packages/optical-transfer/worker-slice');
-    workerHandler = (globalThis as any).self.onmessage || globalThis.onmessage;
+    const worker = await loadWorkerModule(new URL('../src/packages/optical-transfer/worker-slice.ts', import.meta.url));
+    scope = worker.scope;
+    workerHandler = worker.handle;
   });
 
   beforeEach(() => {
     postedMessages = [];
-    originalPostMessage = (globalThis as any).self.postMessage;
+    originalPostMessage = scope.postMessage;
     const spy = vi.fn((msg) => postedMessages.push(msg));
-    (globalThis as any).self.postMessage = spy;
-    (globalThis as any).postMessage = spy;
+    scope.postMessage = spy;
     digestSpy = vi.spyOn(crypto.subtle, 'digest');
     if ((QRCode.create as any).mockImplementation) {
       (QRCode.create as any).mockImplementation((val: any) => {
@@ -475,8 +472,7 @@ describe('fileSliceWorker State Cache', () => {
   });
 
   afterEach(() => {
-    (globalThis as any).self.postMessage = originalPostMessage;
-    (globalThis as any).postMessage = originalPostMessage;
+    scope.postMessage = originalPostMessage;
     digestSpy.mockRestore();
     if (workerHandler) {
       workerHandler({ data: { type: 'STOP' } });

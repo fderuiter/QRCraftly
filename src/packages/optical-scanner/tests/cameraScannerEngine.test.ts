@@ -83,6 +83,7 @@ class FakeSource implements CameraFrameSource {
   srcObject: unknown = { id: 'camera-stream' };
   src = '';
   currentSrc = '';
+  readyState?: number;
   readonly listeners = new Map<string, Set<Listener>>();
 
   addEventListener(type: string, listener: Listener) {
@@ -584,6 +585,18 @@ describe('Camera Scanner Engine (headless)', () => {
       await h.step(16);
       h.currentWorker()?.replyLatest({ status: 'pass', decodedData: 'QUIET' });
       expect(h.events.onScanSuccess).not.toHaveBeenCalled();
+    });
+
+    it('skips a stream until it has delivered its first frame', async () => {
+      const h = createHarness();
+      h.source.readyState = 0;
+      h.engine.start();
+      await h.step(200);
+      expect(h.currentWorker()?.frames).toHaveLength(0);
+
+      h.source.readyState = 2;
+      await h.step(100);
+      expect(h.currentWorker()?.frames).toHaveLength(1);
     });
 
     it('waits for a source to appear', async () => {

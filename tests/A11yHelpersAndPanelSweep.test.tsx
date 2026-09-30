@@ -5,9 +5,10 @@ import { ToastProvider } from '@/components/ui/Toast';
 import QRTool from '@/components/QRTool';
 import StyleControls from '@/components/StyleControls';
 import { TypeSelector } from '@/components/inputs/TypeSelector';
-import { generateQRSvg } from '@/utils/svgExport';
+import { generateQRSvg } from '@/packages/qr-export';
 import { DEFAULT_CONFIG } from '@/constants';
 import { QRType, QRConfig, TemplateStyle } from '@/types';
+import { expandAppearanceSections } from './utils/expandAppearanceSections';
 
 // Controls for mock values
 let mockScannabilityStatus = 'pass';
@@ -38,6 +39,9 @@ vi.mock('@/components/QRCanvas', () => ({
  * @param onChange - Callback function to simulate config changes.
  */
 export function expandAllStyleSections(container: HTMLElement, onChange: any) {
+  // 0. Expand the collapsed appearance accordion sections.
+  expandAppearanceSections(container);
+
   // 1. Expand "Advanced Mode" if not already expanded.
   const advancedBtn = within(container).queryByRole('button', { name: /Advanced Mode/i });
   if (advancedBtn && advancedBtn.getAttribute('aria-expanded') === 'false') {

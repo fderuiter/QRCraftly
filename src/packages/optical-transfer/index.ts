@@ -23,30 +23,16 @@
  */
 
 export {
-  createTransferSession,
-  TransferSession,
-  sanitizeStreamConfig,
   verifyHandshakeFrame,
-  PreallocatedFramePool,
-} from './sender';
+  HANDSHAKE_WATCHDOG_MS,
+  type HandshakeVerifierDeps,
+  type HandshakeCheckRequest,
+  type HandshakeFrameVerifier,
+} from './lib/handshake';
 
-export {
-  createReceiverSession,
-  ReceiverSession,
-} from './receiver';
+export { PreallocatedFramePool, shuffleInPlace } from './lib/framePool';
 
-export {
-  type HandshakeInfo,
-  type TransferStats,
-  type StreamFrame,
-  type SenderSessionOptions,
-  type ReceiverSessionOptions,
-} from './lib/contracts';
-
-export {
-  parseSequentialFrame,
-  SequentialReassembler,
-} from './lib/chunking/sequential';
+export { type HandshakeInfo, type TransferStats } from './lib/contracts';
 
 export { FountainEncoder } from './lib/fountain/encoder';
 export { FountainDecoder } from './lib/fountain/decoder';
@@ -61,7 +47,6 @@ export {
   serializeDroplet,
   parseDropletString,
   isFountainDropletString,
-  FOUNTAIN_URI_PREFIX,
 } from './lib/fountain/envelope';
 export { cborEncode, cborDecode, type CborValue } from './lib/fountain/cbor';
 export { encodeBytewordsMinimal, decodeBytewordsMinimal } from './lib/fountain/bytewords';
@@ -79,15 +64,19 @@ export {
   compressForTransfer,
   decompressTransferPayload,
   resolveFountainSymbolSize,
+  resolveTransferDensity,
+  estimateTransferFrames,
+  TRANSFER_DENSITY_PROFILES,
+  DEFAULT_TRANSFER_DENSITY,
   maxDropletStringLength,
   sha256Hex,
   MAX_QR_VERSION,
-  MAX_SYMBOL_SIZE,
-  MIN_SYMBOL_SIZE,
-  MIN_COMPRESSION_SAVING,
   type FountainSessionHeader,
   type FountainSessionOptions,
   type TransferCompression,
+  type TransferDensity,
+  type TransferDensityProfile,
+  type StreamErrorCorrection,
 } from './lib/fountain/session';
 export {
   FountainReassembler,

@@ -27,7 +27,8 @@
  *   useQrcodeAsCanvasEncoder(QRCode);
  */
 import { afterEach, beforeEach, vi } from 'vitest';
-import { setQrCanvasRuntime, fromQrcodePackage } from '../../src/utils/qrCanvasRuntime';
+import { fromQrcodePackage } from '../../src/packages/qr-matrix';
+import { setQrCanvasRuntime } from '../../src/utils/qrCanvasRuntime';
 
 const FAKE_SIZE = 21;
 

@@ -4,32 +4,17 @@ import { PATTERNS, LOW_RELIABILITY_PATTERNS } from '../../constants';
 import { PatternModule } from '../ui/PatternModule';
 import { Alert } from '../ui/Alert';
 
-/**
- *
- */
 interface PatternControlsProps {
-  /**
-   *
-   */
   config: QRConfig;
-  /**
-   *
-   */
   onChange: (updates: Partial<QRConfig>) => void;
 }
 
-/**
- *
- * @param root0
- * @param root0.config
- * @param root0.onChange
- */
 export const PatternControls: React.FC<PatternControlsProps> = ({ config, onChange }) => {
-  const isLowReliability = LOW_RELIABILITY_PATTERNS.includes(config.style as any);
+  const isLowReliability = LOW_RELIABILITY_PATTERNS.includes(config.style);
 
   return (
     <div>
-      <h3 className="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-300">Pattern Style</h3>
+      <h4 className="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-300">Pattern Style</h4>
       
       {isLowReliability && (
         <div className="mb-4" data-testid="pattern-warning-slot">

@@ -40,7 +40,7 @@ import {
 import { drawQRInternal } from '../index';
 import { getLuminanceFromRgb } from '@/utils/colorUtils';
 import { DEFAULT_CONFIG } from '@/constants';
-import { SvgContext } from '@/utils/svgContext';
+import { SvgContext } from '@/packages/qr-export';
 import jsQR from 'jsqr';
 import QRCode from 'qrcode';
 import type { QRConfig, QRModules, QRErrorCorrectionLevel } from '@/types';

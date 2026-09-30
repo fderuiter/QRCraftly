@@ -1,4 +1,3 @@
-/* eslint-disable security/detect-object-injection */
 /*
     QRCraftly
     Copyright (C) 2025 fderuiter
@@ -197,18 +196,61 @@ export async function decompressTransferPayload(data: Uint8Array, compression: T
   return runTransform(data, new DecompressionStream('deflate-raw'));
 }
 
-/** Highest QR version the sender may produce (ISO/IEC 18004). */
-export const MAX_QR_VERSION = 7;
+/** Highest QR version any transfer density may produce (ISO/IEC 18004). */
+export const MAX_QR_VERSION = 20;
 /** Upper bound for a fountain symbol (fragment) in bytes. */
-export const MAX_SYMBOL_SIZE = 100;
+export const MAX_SYMBOL_SIZE = 400;
 /** Lower bound for a fountain symbol (fragment) in bytes. */
 export const MIN_SYMBOL_SIZE = 8;
 
-/** Alphanumeric-mode character capacity per QR version 1-7 (ISO/IEC 18004 Table 7). */
-const ALPHANUMERIC_CAPACITY: Record<'Q' | 'H', readonly number[]> = {
-  Q: [16, 29, 47, 67, 87, 108, 125],
-  H: [10, 20, 35, 50, 64, 84, 93],
+/** QR error correction levels a transfer stream can use. */
+export type StreamErrorCorrection = 'L' | 'M' | 'Q' | 'H';
+
+/** Alphanumeric-mode character capacity per QR version 1-20 (ISO/IEC 18004 Table 7). */
+const ALPHANUMERIC_CAPACITY: Record<StreamErrorCorrection, readonly number[]> = {
+  L: [25, 47, 77, 114, 154, 195, 224, 279, 335, 395, 468, 535, 619, 667, 758, 854, 938, 1046, 1153, 1249],
+  M: [20, 38, 61, 90, 122, 154, 178, 221, 262, 311, 366, 419, 483, 528, 600, 656, 734, 816, 909, 970],
+  Q: [16, 29, 47, 67, 87, 108, 125, 157, 189, 221, 259, 296, 352, 376, 426, 470, 531, 574, 644, 702],
+  H: [10, 20, 35, 50, 64, 84, 93, 122, 143, 174, 200, 227, 259, 283, 321, 365, 408, 452, 493, 557],
 };
+
+/**
+ * How much data each transfer QR carries. Denser codes move more bytes per
+ * frame but need a steadier, sharper camera view. The stream's error
+ * correction comes from the profile, not from the page's QR appearance: the
+ * fountain code already survives lost frames, so per-frame redundancy only has
+ * to cover blur and glare within a frame.
+ */
+export type TransferDensity = 'reliable' | 'balanced' | 'fast';
+
+export interface TransferDensityProfile {
+  /** Highest QR version a droplet may use. */
+  maxVersion: number;
+  /** Error correction level of every droplet QR. */
+  errorCorrectionLevel: StreamErrorCorrection;
+}
+
+export const TRANSFER_DENSITY_PROFILES: Readonly<Record<TransferDensity, TransferDensityProfile>> = {
+  reliable: { maxVersion: 7, errorCorrectionLevel: 'Q' },
+  balanced: { maxVersion: 9, errorCorrectionLevel: 'M' },
+  fast: { maxVersion: 11, errorCorrectionLevel: 'M' },
+};
+
+/** Density used when the sender does not pick one. */
+export const DEFAULT_TRANSFER_DENSITY: TransferDensity = 'balanced';
+
+/**
+ * Narrows an untrusted value to a known transfer density.
+ * @param value Candidate density.
+ * @returns The density, or the default when unknown.
+ */
+export function resolveTransferDensity(value: unknown): TransferDensity {
+  return value === 'reliable' || value === 'balanced' || value === 'fast' ? value : DEFAULT_TRANSFER_DENSITY;
+}
+
+function toStreamEcc(level: string): StreamErrorCorrection {
+  return level === 'L' || level === 'M' || level === 'H' ? level : 'Q';
+}
 
 /**
  * Worst-case length of a serialized droplet string for the given session shape.
@@ -232,9 +274,9 @@ export function maxDropletStringLength(symbolSize: number, k: number, messageLen
  * still fits a QR code of version ≤ `maxVersion` at the given ECC level in
  * alphanumeric mode.
  * @param messageLength Fountain message length in bytes.
- * @param errorCorrectionLevel ECC level; anything other than H is treated as Q.
+ * @param errorCorrectionLevel ECC level L, M, Q or H; anything else is treated as Q.
  * @param requested Optional requested symbol size cap.
- * @param maxVersion Highest allowed QR version (1-7).
+ * @param maxVersion Highest allowed QR version (1-{@link MAX_QR_VERSION}).
  * @returns The chosen symbol size, K and sequence ceiling.
  * @throws RangeError if even the minimum symbol size cannot fit.
  */
@@ -242,9 +284,9 @@ export function resolveFountainSymbolSize(
   messageLength: number,
   errorCorrectionLevel: string,
   requested: number = MAX_SYMBOL_SIZE,
-  maxVersion: number = MAX_QR_VERSION
+  maxVersion: number = TRANSFER_DENSITY_PROFILES.reliable.maxVersion
 ): { symbolSize: number; k: number; maxSeq: number } {
-  const ecc = errorCorrectionLevel === 'H' ? 'H' : 'Q';
+  const ecc = toStreamEcc(errorCorrectionLevel);
   const version = Math.min(MAX_QR_VERSION, Math.max(1, Math.floor(maxVersion)));
   const capacity = ALPHANUMERIC_CAPACITY[ecc][version - 1];
   const ceiling = Math.min(MAX_SYMBOL_SIZE, Math.max(MIN_SYMBOL_SIZE, Math.floor(requested) || MAX_SYMBOL_SIZE));
@@ -260,12 +302,34 @@ export function resolveFountainSymbolSize(
   throw new RangeError(`File is too large to stream within QR version ${version} at ECC ${ecc}.`);
 }
 
+/**
+ * Estimates how many QR frames a receiver must scan to rebuild a file of
+ * `fileSize` bytes, before compression. Robust Soliton decoding typically needs
+ * about 10-20% more droplets than source blocks; the estimate uses 15%.
+ * @param fileSize File size in bytes.
+ * @param density Transfer density.
+ * @returns Symbol size and the estimated frame count.
+ */
+export function estimateTransferFrames(
+  fileSize: number,
+  density: TransferDensity = DEFAULT_TRANSFER_DENSITY
+): { symbolSize: number; k: number; frames: number } {
+  const profile = TRANSFER_DENSITY_PROFILES[density];
+  // Session header (name, type, size, SHA-256) plus CBOR framing: about 64 bytes plus the name.
+  const messageLength = Math.max(1, fileSize) + 128;
+  const { symbolSize, k } = resolveFountainSymbolSize(messageLength, profile.errorCorrectionLevel, MAX_SYMBOL_SIZE, profile.maxVersion);
+  return { symbolSize, k, frames: Math.ceil(k * 1.15) };
+}
+
 /** Inputs for {@link createFountainSession}. */
 export interface FountainSessionOptions {
   fileName: string;
   mimeType: string;
+  /** ECC level of the droplet QR codes (defaults to Q). */
   errorCorrectionLevel?: string;
   requestedSymbolSize?: number;
+  /** Highest QR version a droplet may use (defaults to 7). */
+  maxVersion?: number;
   /** Precomputed SHA-256 of `bytes`, to avoid hashing twice. */
   sha256?: string;
 }
@@ -294,7 +358,8 @@ export async function createFountainSession(
   const { symbolSize, maxSeq } = resolveFountainSymbolSize(
     message.length,
     options.errorCorrectionLevel ?? 'Q',
-    options.requestedSymbolSize
+    options.requestedSymbolSize,
+    options.maxVersion
   );
   return { encoder: new FountainEncoder(message, { blockSize: symbolSize, maxSeq }), header, symbolSize };
 }

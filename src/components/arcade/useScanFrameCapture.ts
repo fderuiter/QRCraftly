@@ -42,5 +42,5 @@ export function useScanFrameCapture(paint: (ctx: CanvasRenderingContext2D) => vo
     if (!ctx) return null;
     paintRef.current(ctx);
     return ctx.getImageData(0, 0, SCAN_FRAME_SIZE, SCAN_FRAME_SIZE);
-  }, []);
+  }, [paintRef]);
 }

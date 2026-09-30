@@ -1,9 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { usePageContext } from 'vike-react/usePageContext';
-import { decryptUrl, extractKeyFromHash } from '@/utils/encryption';
+import { decryptUrl, extractKeyFromHash } from '@/packages/edge-redirect/client';
 import { isDangerousUrl } from '@/utils/security';
 import { normalizeUrl, SafeUrlPipeline } from '@/utils/url';
 import { ShieldAlert, RefreshCw, Lock } from 'lucide-react';
+
+/** Route id of the pre-rendered resolver shell (see ./+onBeforePrerenderStart.ts). */
+const RESOLVER_SHELL_ID = 'shell';
 
 /**
  * Zero-Knowledge Dynamic Link Redirect Resolver Page (/r/:id#key=...).
@@ -15,7 +18,7 @@ import { ShieldAlert, RefreshCw, Lock } from 'lucide-react';
  */
 export default function RedirectResolverPage() {
   const pageContext = usePageContext();
-  const id = pageContext.routeParams?.id;
+  const routeId = pageContext.routeParams?.id;
 
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -24,6 +27,10 @@ export default function RedirectResolverPage() {
     let isMounted = true;
 
     async function resolveAndRedirect() {
+      // In production the edge Worker serves one pre-rendered shell (/r/shell) for every
+      // /r/<id>, so the real id comes from the address bar rather than the route params.
+      const pathMatch = window.location.pathname?.match(/^\/r\/([^/]+)\/?$/);
+      const id = pathMatch && pathMatch[1] !== RESOLVER_SHELL_ID ? decodeURIComponent(pathMatch[1]) : routeId;
       if (!id) {
         if (isMounted) {
           setErrorMessage("Invalid dynamic link identifier.");
@@ -99,10 +106,10 @@ export default function RedirectResolverPage() {
 
         // Navigate safely to the decrypted destination
         window.location.replace(normalized);
-      } catch (err: any) {
+      } catch (err) {
         console.error('[Redirect Resolver Error]', err);
         if (isMounted) {
-          setErrorMessage(err.message || "An error occurred while resolving the encrypted dynamic link.");
+          setErrorMessage((err instanceof Error && err.message) || "An error occurred while resolving the encrypted dynamic link.");
           setIsLoading(false);
         }
       }
@@ -113,7 +120,7 @@ export default function RedirectResolverPage() {
     return () => {
       isMounted = false;
     };
-  }, [id]);
+  }, [routeId]);
 
   if (errorMessage) {
     return (
@@ -143,7 +150,7 @@ export default function RedirectResolverPage() {
     <div className="flex min-h-[60vh] flex-col items-center justify-center p-4 text-center">
       <div className="mb-4 flex size-14 items-center justify-center rounded-full bg-teal-100 text-teal-600 dark:bg-teal-950/60 dark:text-teal-400">
         {isLoading ? (
-          <RefreshCw className="size-7 animate-spin" />
+          <RefreshCw className="size-7 motion-safe:animate-spin" />
         ) : (
           <Lock className="size-7" />
         )}

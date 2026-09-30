@@ -1,37 +1,13 @@
 import React from "react";
 import { CharCount } from "../CharCount";
 
-/**
- *
- */
 export interface BaseFieldProps {
-  /**
-   *
-   */
   label?: string;
-  /**
-   *
-   */
   contextualLabel?: string;
-  /**
-   *
-   */
   id?: string;
-  /**
-   *
-   */
   className?: string; // wrapper className
-  /**
-   *
-   */
   inputClassName?: string; // input element className override
-  /**
-   *
-   */
   labelClassName?: string; // optional override
-  /**
-   *
-   */
   error?: string;
 }
 
@@ -40,61 +16,17 @@ const getLabelClass = (customClass?: string) => {
   return "block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1";
 };
 
-/**
- *
- */
 interface FieldWrapperProps extends BaseFieldProps {
-  /**
-   *
-   */
   showCharCount?: boolean;
-  /**
-   *
-   */
   maxLength?: number;
-  /**
-   *
-   */
   value?: string | number | readonly string[];
-  /**
-   *
-   */
   children: React.ReactNode;
-  /**
-   *
-   */
   inputId: string;
-  /**
-   *
-   */
   errorId?: string;
-  /**
-   *
-   */
   charCountId?: string;
-  /**
-   *
-   */
   isCheckbox?: boolean;
 }
 
-/**
- *
- * @param root0
- * @param root0.inputId
- * @param root0.label
- * @param root0.contextualLabel
- * @param root0.className
- * @param root0.labelClassName
- * @param root0.showCharCount
- * @param root0.maxLength
- * @param root0.value
- * @param root0.children
- * @param root0.error
- * @param root0.errorId
- * @param root0.charCountId
- * @param root0.isCheckbox
- */
 export const FieldWrapper: React.FC<FieldWrapperProps> = ({
   inputId,
   label,

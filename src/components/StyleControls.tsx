@@ -28,6 +28,22 @@ import {
   AdvancedControls,
   LayoutControls
 } from './style-controls';
+import { Accordion, AccordionItem } from './ui/Accordion';
+
+/**
+ * Appearance sections the person has expanded or collapsed during this visit. Held in memory
+ * only (never persisted), so the open sections survive switching QR type without a reload.
+ */
+const sectionOpenState = new Map<string, boolean>([['Pattern & Colors', true]]);
+
+/**
+ * Remembers a section's expanded state for the rest of the visit.
+ * @param title - Section title.
+ * @returns Toggle handler for the section.
+ */
+const rememberSection = (title: string) => (open: boolean) => {
+  sectionOpenState.set(title, open);
+};
 
 /**
  * Props for the StyleControls component.
@@ -50,28 +66,39 @@ interface StyleControlsProps {
  */
 const StyleControls: React.FC<StyleControlsProps> = ({ config, onChange }) => {
   return (
-    <div className="space-y-8">
-      {/* Export Layout (Social Media Templates) */}
-      <LayoutControls config={config} onChange={onChange} />
+    <Accordion>
+      {/* Primary appearance controls: expanded by default. */}
+      <AccordionItem title="Pattern & Colors" headingLevel={3} defaultOpen={sectionOpenState.get('Pattern & Colors') ?? false} onOpenChange={rememberSection('Pattern & Colors')}>
+        <div className="space-y-6 pt-1">
+          <PatternControls config={config} onChange={onChange} />
+          <div className="border-t border-slate-100 pt-5 dark:border-slate-700">
+            <ColorControls config={config} onChange={onChange} />
+          </div>
+        </div>
+      </AccordionItem>
 
-      {/* Border Controls */}
-      <BorderControls config={config} onChange={onChange} />
+      {/* Export layout (social media templates) and border */}
+      <AccordionItem title="Layout & Border" headingLevel={3} defaultOpen={sectionOpenState.get('Layout & Border') ?? false} onOpenChange={rememberSection('Layout & Border')}>
+        <div className="space-y-6 pt-1">
+          <LayoutControls config={config} onChange={onChange} />
+          <div className="border-t border-slate-100 pt-5 dark:border-slate-700">
+            <BorderControls config={config} onChange={onChange} />
+          </div>
+        </div>
+      </AccordionItem>
 
-      {/* Pattern Style */}
-      <PatternControls config={config} onChange={onChange} />
+      <AccordionItem title="Logo" headingLevel={3} defaultOpen={sectionOpenState.get('Logo') ?? false} onOpenChange={rememberSection('Logo')}>
+        <div className="pt-1">
+          <LogoControls config={config} onChange={onChange} />
+          <div className="border-t border-slate-100 pt-5 dark:border-slate-700">
+            <MosaicControls config={config} onChange={onChange} />
+          </div>
+        </div>
+      </AccordionItem>
 
-      {/* Colors */}
-      <ColorControls config={config} onChange={onChange} />
-
-      {/* Logo */}
-      <LogoControls config={config} onChange={onChange} />
-
-      {/* Mosaic QR */}
-      <MosaicControls config={config} onChange={onChange} />
-
-      {/* Advanced Mode */}
+      {/* Advanced Mode (error correction, maze overlay) */}
       <AdvancedControls config={config} onChange={onChange} />
-    </div>
+    </Accordion>
   );
 };
 
@@ -79,8 +106,6 @@ const StyleControls: React.FC<StyleControlsProps> = ({ config, onChange }) => {
  * Comparison function for React.memo.
  * Returns true if the next props are equivalent to the previous props (skipping re-render).
  * It ignores changes to 'value' and 'type' as they don't affect visual style controls.
- * @param prev
- * @param next
  */
 function arePropsEqual(prev: StyleControlsProps, next: StyleControlsProps) {
   // If the onChange handler changed, we must re-render

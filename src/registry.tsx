@@ -34,11 +34,11 @@ const AppearanceControl = () => {
     <section>
       <h2 className="mb-4 text-xs font-bold tracking-wider text-slate-600 uppercase dark:text-slate-400">Appearance</h2>
       {isMounted ? (
-        <Suspense fallback={<div className="h-64 animate-pulse rounded-xl bg-slate-100 dark:bg-slate-800" />}>
+        <Suspense fallback={<div className="h-64 rounded-xl bg-slate-100 motion-safe:animate-pulse dark:bg-slate-800" />}>
           <StyleControls config={config} onChange={updateConfig} />
         </Suspense>
       ) : (
-        <div className="h-64 animate-pulse rounded-xl bg-slate-100 dark:bg-slate-800" />
+        <div className="h-64 rounded-xl bg-slate-100 motion-safe:animate-pulse dark:bg-slate-800" />
       )}
     </section>
   );
@@ -48,17 +48,31 @@ const AdditionalSidebarContent = ({ toolId }: { toolId?: string }) => {
   return <SidebarContent toolId={toolId || 'index'} />;
 };
 
-export const sidebarControls = [
+/**
+ * Where a generator control renders inside the shared tool workspace:
+ * - `primary`: first in the control column (content entry), before the preview on mobile.
+ * - `secondary`: after the preview on mobile, below the primary controls on desktop (appearance).
+ * - `below`: full-width, article-width content below the workspace (how-to, FAQ).
+ */
+export type ControlPlacement = 'primary' | 'secondary' | 'below';
+
+/**
+ * Generator controls in render order, with their workspace placement.
+ */
+export const sidebarControls: Array<{ id: string; placement: ControlPlacement; component: React.ComponentType<{ toolId?: string }> }> = [
   {
     id: 'content',
+    placement: 'primary',
     component: ContentControl,
   },
   {
     id: 'appearance',
+    placement: 'secondary',
     component: AppearanceControl,
   },
   {
     id: 'sidebar-content',
+    placement: 'below',
     component: AdditionalSidebarContent,
   },
 ];

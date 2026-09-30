@@ -17,23 +17,24 @@
 */
 
 import React, { useEffect, useRef, useCallback, useState, useMemo } from 'react';
-import { QRConfig, SocialFormat, TemplateStyle, QRModules, QRType } from '../types';
+import { QRConfig, SocialFormat, TemplateStyle, QRModules } from '../types';
 import { drawQR, drawQRInternal } from '../utils/qrRenderer';
-import { drawWithTemplate, SOCIAL_DIMENSIONS } from '../utils/templateRenderer';
+import { drawWithTemplate, SOCIAL_DIMENSIONS } from '@/packages/qr-export';
 import { useImage } from '../hooks/useImage';
 import { validateConfig } from '@/packages/qr-payload';
 import { Alert } from './ui/Alert';
 import { useOptionalQRStoreSelector } from '../context/QRContext';
-import { generateMaze, getMazeCacheKey, storeMaze } from '@/packages/qr-matrix/maze';
 import { loadMosaicSource } from '@/packages/qr-matrix/mosaic';
-import { getQrCanvasRuntime, type QrEncoder } from '../utils/qrCanvasRuntime';
-import { normalizeUrl, shouldNormalizeUrl } from '../utils/url';
 import {
+  generateMaze,
+  getMazeCacheKey,
+  storeMaze,
   isMazeWorkerRequest,
-  isMazeWorkerResponse,
   assertMazeWorkerResponse,
   type MazeData,
-} from '../utils/mazeContract';
+} from '@/packages/qr-matrix/maze';
+import { buildMatrix, type QrEncoder } from '@/packages/qr-matrix';
+import { getQrCanvasRuntime } from '../utils/qrCanvasRuntime';
 
 /**
  * Props for the QRCanvas component.
@@ -66,6 +67,9 @@ interface QRCanvasProps {
  * @param props.onRendered - Callback when render finishes.
  * @returns The QRCanvas component.
  */
+// Stable fallback so the precompute effect does not re-run on every render when there are no values.
+const NO_ANIMATION_VALUES: string[] = [];
+
 const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
   config,
   size = 1024,
@@ -76,7 +80,7 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
   animationFps
 }, ref) => {
   const activeIsAnimating = isAnimating !== undefined ? isAnimating : (config.isAnimating || false);
-  const activeAnimationValues = animationValues !== undefined ? animationValues : (config.animationValues || []);
+  const activeAnimationValues = animationValues !== undefined ? animationValues : (config.animationValues || NO_ANIMATION_VALUES);
   const activeAnimationFps = animationFps !== undefined ? animationFps : (config.animationFps || 30);
 
   const localCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -164,8 +168,11 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
       try {
         const cached = activeAnimationValues.map((val) => {
           try {
-            const data = QRCode.create(val, { errorCorrectionLevel: config.errorCorrectionLevel });
-            return { value: val, modules: data.modules };
+            const modules = buildMatrix(
+              { type: config.type, value: val, errorCorrectionLevel: config.errorCorrectionLevel },
+              QRCode
+            );
+            return { value: val, modules };
           } catch (e) {
             console.warn("QR precompute failed for value:", val, e);
             return null;
@@ -181,7 +188,7 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
       isMounted = false;
       cachedFramesRef.current = [];
     };
-  }, [activeAnimationValues, config.errorCorrectionLevel]);
+  }, [activeAnimationValues, config.type, config.errorCorrectionLevel]);
 
   // Direct canvas animation loop using requestAnimationFrame, bypassing React updates
   useEffect(() => {
@@ -201,7 +208,7 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
       configRef.current.templateStyle !== TemplateStyle.NONE ||
       configRef.current.socialFormat !== SocialFormat.SQUARE_1_1;
 
-    let displayWidth = activeSize;
+    const displayWidth = activeSize;
     let displayHeight = activeSize;
 
     if (useTemplate) {
@@ -323,11 +330,7 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
 
       worker.onmessage = (e) => {
         // Strictly validate message format at runtime
-        if (!isMazeWorkerResponse(e.data)) {
-          assertMazeWorkerResponse(e.data);
-        } else {
-          assertMazeWorkerResponse(e.data);
-        }
+        assertMazeWorkerResponse(e.data);
 
         const { status, sequenceId, mazeData, error } = e.data;
         if (sequenceId !== mazeSequenceIdRef.current) {
@@ -611,14 +614,7 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
             return;
           }
 
-          let val = currentConfig.value;
-          if (currentConfig.type === QRType.URL && shouldNormalizeUrl(val)) {
-            val = normalizeUrl(val);
-          }
-          const data = QRCode.create(val, {
-            errorCorrectionLevel: currentConfig.errorCorrectionLevel,
-          });
-          const modules: QRModules = data.modules;
+          const modules = buildMatrix(currentConfig, QRCode);
           lastModulesRef.current = modules;
           paintMatrix(modules);
         } catch (e) {

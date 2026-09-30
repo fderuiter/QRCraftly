@@ -9,26 +9,11 @@ import { useImageUpload } from '../../hooks/useImageUpload';
 import { SYSTEM_LIMITS } from '../../constants';
 import { combineIds } from '../../utils/a11y';
 
-/**
- *
- */
 interface LogoControlsProps {
-  /**
-   *
-   */
   config: QRConfig;
-  /**
-   *
-   */
   onChange: (updates: Partial<QRConfig>) => void;
 }
 
-/**
- *
- * @param root0
- * @param root0.config
- * @param root0.onChange
- */
 export const LogoControls: React.FC<LogoControlsProps> = ({ config, onChange }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const uploadButtonRef = useRef<HTMLButtonElement>(null);
@@ -51,7 +36,7 @@ export const LogoControls: React.FC<LogoControlsProps> = ({ config, onChange }) 
   return (
     <div>
       <div className="mb-3 flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Logo</h3>
+        <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Logo</h4>
         {config.logoUrl && (
           <Button variant="error" size="sm" onClick={() => { onChange({ logoUrl: null }); setError(null); }} className="rounded px-2 py-1">
             <X className="mr-1 size-3"/> Remove
@@ -167,9 +152,9 @@ export const LogoControls: React.FC<LogoControlsProps> = ({ config, onChange }) 
       <input
         ref={fileInputRef}
         type="file"
+        aria-label="Upload logo image"
         accept={SYSTEM_LIMITS.SUPPORTED_IMAGE_FORMATS.join(',')}
         className="hidden"
-        aria-label="Upload logo image"
         onChange={handleLogoUpload}
       />
     </div>

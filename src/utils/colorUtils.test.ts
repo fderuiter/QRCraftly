@@ -17,7 +17,7 @@
 */
 
 import { describe, it, expect } from 'vitest';
-import { getContrastRatio, normalizeHex, srgbToLinear, linearToSrgb, getLuminanceFromLinearRgb, getLuminanceFromRgb } from './colorUtils';
+import { getContrastRatio, normalizeHex, hexToRgba, srgbToLinear, linearToSrgb, getLuminanceFromLinearRgb, getLuminanceFromRgb } from './colorUtils';
 
 describe('colorUtils', () => {
   describe('getContrastRatio', () => {
@@ -102,6 +102,18 @@ describe('colorUtils', () => {
       expect(normalizeHex('12345')).toBeNull();
       expect(normalizeHex('#GGGGGG')).toBeNull();
     });
+  });
+});
+
+describe('hexToRgba', () => {
+  it('converts full and shorthand hex to rgba', () => {
+    expect(hexToRgba('#1a2b3c', 0.5)).toBe('rgba(26,43,60,0.5)');
+    expect(hexToRgba('#fff', 0)).toBe('rgba(255,255,255,0)');
+    expect(hexToRgba('0f766e', 1)).toBe('rgba(15,118,110,1)');
+  });
+
+  it('falls back to black for invalid input', () => {
+    expect(hexToRgba('not-a-colour', 0.18)).toBe('rgba(0,0,0,0.18)');
   });
 });
 

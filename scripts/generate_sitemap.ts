@@ -62,7 +62,11 @@ export function shouldExcludePath(posixPath: string): boolean {
     clean.includes('dev-sandbox') ||
     clean.includes('quarantine') ||
     clean.includes('internal') ||
-    clean.includes('@id')
+    clean.includes('@id') ||
+    // Dynamic link resolver shell (/r/shell), served by the edge Worker for /r/<id>
+    clean === '/r' ||
+    clean.startsWith('/r/') ||
+    clean.startsWith('r/')
   ) {
     return true;
   }
@@ -100,12 +104,13 @@ export function getRegistryRoutes(): string[] {
     for (const [key, item] of Object.entries(auxiliaryRegistry)) {
       if (!item) continue;
       let route = '';
-      if ('url' in item && typeof (item as any).url === 'string') {
+      const url = 'url' in item ? item.url : undefined;
+      if (typeof url === 'string') {
         try {
-          const parsed = new URL((item as any).url);
+          const parsed = new URL(url);
           route = parsed.pathname;
         } catch {
-          route = (item as any).url;
+          route = url;
         }
       } else if (item.id) {
         route = item.id === 'index' ? '/' : `/${item.id}`;

@@ -36,6 +36,31 @@ interface InputPanelProps {
   onChange: (updates: Partial<QRConfig>) => void;
 }
 
+/** Human-readable names for QR types, used in announcements and toasts (never raw enum values). */
+const QR_TYPE_LABELS: Record<QRType, string> = {
+  [QRType.URL]: 'URL',
+  [QRType.TEXT]: 'Text',
+  [QRType.WIFI]: 'WiFi',
+  [QRType.EVENT]: 'Event',
+  [QRType.EMAIL]: 'Email',
+  [QRType.VCARD]: 'vCard contact',
+  [QRType.PHONE]: 'Phone',
+  [QRType.SMS]: 'SMS',
+  [QRType.PAYMENT]: 'Payment',
+  [QRType.LOCATION]: 'Location',
+  [QRType.MEETING]: 'Meeting',
+  [QRType.SOCIAL]: 'Social',
+};
+
+/**
+ * Returns the human-readable label for a QR type.
+ * @param type - The QR type.
+ * @returns The display label, falling back to the raw value for unknown types.
+ */
+export function getQRTypeLabel(type: QRType): string {
+  return QR_TYPE_LABELS[type] ?? type;
+}
+
 /**
  * A component that provides input fields for different QR code types.
  * Allows users to enter data for URL, Text, WiFi, Email, vCard, Phone, and SMS.
@@ -55,22 +80,7 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
   // Update live region announcement when type changes
   useEffect(() => {
     // Only announce when type is explicitly changed, don't re-announce on simple re-renders
-    const typeNames: Record<string, string> = {
-      URL: 'URL',
-      TEXT: 'Text',
-      WIFI: 'WiFi',
-      EVENT: 'Event',
-      EMAIL: 'Email',
-      VCARD: 'Contact',
-      PHONE: 'Phone',
-      SMS: 'SMS',
-      PAYMENT: 'Payment',
-      LOCATION: 'Location',
-      MEETING: 'Meeting',
-      SOCIAL: 'Social'
-    };
-    
-    setAnnouncement(`${typeNames[config.type] || config.type} input loaded`);
+    setAnnouncement(`${getQRTypeLabel(config.type)} input loaded`);
   }, [config.type]);
 
   const handleScanSuccess = (decodedData: string) => {
@@ -79,7 +89,6 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
     // Auto-detect the correct QRType based on registry hydrate matchers
     let detectedType = QRType.TEXT;
     for (const key of Object.keys(INPUT_REGISTRY) as QRType[]) {
-      // eslint-disable-next-line security/detect-object-injection
       const entry = INPUT_REGISTRY[key];
       if (entry && entry.canHydrateFn && entry.canHydrateFn(decodedData)) {
         detectedType = key;
@@ -94,7 +103,7 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
 
     addToast({
       type: 'success',
-      message: `Successfully scanned QR code! Type detected: ${detectedType}`,
+      message: `Successfully scanned QR code! Type detected: ${getQRTypeLabel(detectedType)}`,
       duration: 5000,
     });
   };

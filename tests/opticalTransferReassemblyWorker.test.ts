@@ -17,32 +17,24 @@
 */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { loadWorkerModule } from './utils/inThreadWorker';
 
 describe('fileReassemblyWorker ArrayBuffer Slicing & Payload Integrity', () => {
   let postMessageSpy: ReturnType<typeof vi.fn>;
-  let originalPostMessage: typeof globalThis.postMessage;
 
-  beforeEach(async () => {
-    vi.resetModules();
+  beforeEach(() => {
     postMessageSpy = vi.fn();
-    originalPostMessage = (globalThis as any).postMessage;
-    (globalThis as any).postMessage = postMessageSpy;
-    (globalThis as any).self = globalThis;
   });
 
   afterEach(() => {
-    if (originalPostMessage) {
-      (globalThis as any).postMessage = originalPostMessage;
-    } else {
-      delete (globalThis as any).postMessage;
-    }
     vi.restoreAllMocks();
   });
 
+  /** Loads a fresh instance of the real reassembly worker module and captures what it posts. */
   async function loadWorkerHandler() {
-    // Import worker to attach onmessage event listener
-    await import('@/packages/optical-transfer/worker-reassembly');
-    return (globalThis as any).self.onmessage;
+    const worker = await loadWorkerModule(new URL('../src/packages/optical-transfer/worker-reassembly.ts', import.meta.url));
+    worker.scope.postMessage = postMessageSpy;
+    return worker.handle;
   }
 
   function bytesToBase64(bytes: Uint8Array): string {

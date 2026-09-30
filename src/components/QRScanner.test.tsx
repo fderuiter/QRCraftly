@@ -15,7 +15,6 @@ vi.mock('../hooks/useCamera', () => ({
 
 vi.mock('@/packages/optical-scanner/client', () => ({
   useQrScanner: vi.fn(),
-  useAdaptiveScanner: vi.fn(),
 }));
 
 vi.mock('jsqr', () => ({
@@ -97,8 +96,20 @@ describe('QRScanner Component', () => {
   it('renders webcam view by default and starts camera stream', async () => {
     render(<QRScanner onScanSuccess={mockOnScanSuccess} onClose={mockOnClose} />);
 
-    expect(screen.getByRole('button', { name: /webcam/i })).toHaveClass('bg-white');
+    expect(screen.getByRole('button', { name: /webcam/i })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: /file upload/i })).toHaveAttribute('aria-pressed', 'false');
     expect(mockStartStream).toHaveBeenCalled();
+  });
+
+  it('exposes the selected input mode with aria-pressed when switching to file upload', async () => {
+    render(<QRScanner onScanSuccess={mockOnScanSuccess} onClose={mockOnClose} />);
+    fireEvent.click(screen.getByRole('button', { name: /file upload/i }));
+    expect(screen.getByRole('button', { name: /file upload/i })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: /webcam/i })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByRole('group', { name: 'Scanner input' })).toBeInTheDocument();
+    // The file input is not nested inside the dropzone button.
+    const input = screen.getByLabelText('Upload QR code image or video file');
+    expect(input.closest('button')).toBeNull();
   });
 
   it('keeps the video mounted while camera permission is initializing', async () => {

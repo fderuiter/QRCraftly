@@ -4,26 +4,11 @@ import { TextField, SelectField } from "../ui/FormFields";
 import { isDangerousUrl } from "../../utils/security";
 import { FormBlock } from "../ui/FormBlock";
 
-/**
- *
- */
 interface PaymentInputProps {
-  /**
-   *
-   */
   data: PaymentData;
-  /**
-   *
-   */
   onChange: (updates: Partial<PaymentData>) => void;
 }
 
-/**
- *
- * @param root0
- * @param root0.data
- * @param root0.onChange
- */
 export const PaymentInput: React.FC<PaymentInputProps> = ({
   data,
   onChange,

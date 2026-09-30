@@ -1,7 +1,6 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { execSync } from 'child_process';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -30,10 +29,13 @@ export const FORBIDDEN_IMPORTS = [
 
 // 3. Whitelisted files in src/ that are authorized to perform network requests (fetch)
 export const AUTHORIZED_NETWORK_FILES = new Set([
-  'src/utils/svgExport.ts',
+  'src/packages/qr-export/lib/svgExport.ts',
   'src/utils/assetCache.ts',
-  'src/hooks/useRedirector.ts',
-  'src/utils/reputation.ts',
+  'src/packages/edge-redirect/lib/useRedirector.ts',
+  'src/packages/edge-redirect/lib/turnstile.ts',
+  'src/packages/edge-redirect/lib/router.ts',
+  'src/packages/edge-redirect/lib/types.ts',
+  'src/packages/edge-redirect/worker.ts',
   'src/pages/r/@id/+Page.tsx'
 ]);
 

@@ -57,7 +57,6 @@ To prevent injection of arbitrary characters or command payloads into telephone 
 
 To prevent custom SVG logo uploads and native vector exports from exposing users to DOM-XSS and structural XML injection, QRCraftly incorporates two security controls:
 
-- **Pre-Build Storage Privacy AST Auditor**: The build and pre-commit pipelines run static AST analysis (`scripts/storage_privacy_ast_auditor.js`) on source code before compilation. It scans for browser persistent storage operations (`localStorage`, `sessionStorage`, `indexedDB`, `document.cookie`, `caches`) and enforces an explicit allowlist of authorized keys (`qrcraftly:dynamic-redirects`, `qrcraftly:dynamic-consent-accepted`, `qrcraftly:theme`, `__test__`). The `qrcraftly:theme` key stores only the visitor's colour-theme preference (`light`, `dark` or `system`). Any attempts to persist transient QR payload data or use unapproved keys immediately abort the build.
 - **Static Path Tracking**: The build pipeline and pre-commit checks automatically trace data flows across files. They detect and block any unvalidated path where raw/external SVG code might reach rendering/storage sinks without passing through `sanitizeSvg()`.
 - **Mosaic QR Images**: A mosaic design (`QRConfig.mosaicImageUrl`, ADR 0019) goes through the same `useImageUpload` validation, SVG sanitization and resizing as a logo. It is decoded on the device into an in-memory cache of at most four images, never written to browser storage and never sent over the network.
 - **Runtime SVG Sanitization**: Uploaded logos and border images are processed entirely within the client browser to maintain offline privacy. The runtime parser enforces a zero-trust strict safe-element allowlist and zero-tolerance styling:
@@ -66,6 +65,10 @@ To prevent custom SVG logo uploads and native vector exports from exposing users
   - Limits nested data URIs to safe image MIME-types and strips any with active payload markers or script references. This is validated by an optimized, localized helper function within the security utility to ensure clean code and prevent unused export overhead.
   - Strips all inline event handlers (attributes starting with `on`).
   - Neutralizes any remote or dangerous resource requests inside style blocks, style attributes, or `href`/`xlink:href` references while preserving standard layout paths, responsive viewBox attributes, linear gradients, and clip paths.
+
+## Persistent Browser Storage Allowlist
+
+The build and pre-commit pipelines run static AST analysis (`scripts/storage_privacy_ast_auditor.js`) on source code before compilation. It scans for browser persistent storage operations (`localStorage`, `sessionStorage`, `indexedDB`, `document.cookie`, `caches`) and enforces an explicit allowlist of authorized keys (`qrcraftly:dynamic-redirects`, `qrcraftly:dynamic-consent-accepted`, `qrcraftly:theme`, `__test__`). The `qrcraftly:theme` key stores only the visitor's colour-theme preference (`light`, `dark` or `system`). The `qrcraftly:dynamic-redirects` key is the one exception to preference-only storage: when Dynamic Redirection is switched on (it is off in production), it keeps the person's own dynamic links on their device, including each original destination URL in plain text, its decryption key and its admin key. Any attempts to persist transient QR payload data or use unapproved keys immediately abort the build.
 
 ## QR Animation Loops
 
@@ -77,7 +80,7 @@ Maze overlay configurations in `types.ts` (e.g., `isMazeEnabled`, `isMazeBridges
 
 ## JSON-LD Caching & Performance Security
 
-To prevent performance bottlenecks during client-side hydration and SPA navigation, the application caches serialized and escaped JSON-LD schema strings. Since JSON-LD requires synchronous regex replacement of unsafe characters (such as `<` and `>`), caching the computed string primitives protects the main thread from CPU-heavy operations while keeping cache keys lightweight and clean of memory leaks.
+To prevent performance bottlenecks during client-side hydration and SPA navigation, the application caches serialized and escaped JSON-LD schema strings. Since JSON-LD requires synchronous regex replacement of unsafe characters (such as `<` and `>`), caching the computed string primitives protects the main thread from CPU-heavy operations while keeping cache keys lightweight and clean of memory leaks. The escaping itself lives in `safeJsonLdStringify` (`src/utils/security.ts`): it serialises any JSON value and rewrites `<`, `>` and `&` as `\u003c`, `\u003e` and `\u0026`, so schema text can never close the surrounding `<script>` element. `JsonLdScript` (`src/components/ui/JsonLdScript.tsx`) is the component that injects the result.
 
 ## URL Sanitization & DOM-XSS Protection
 
@@ -88,4 +91,4 @@ To prevent DOM-based Cross-Site Scripting (DOM-XSS) via dynamic anchors and `hre
 
 ## Bot Protection & Edge Anti-Abuse (Cloudflare Turnstile)
 
-Dynamic redirect link generation (`/r/[id]`) incorporates Cloudflare Turnstile bot verification to defend against automated abuse, denial-of-wallet attacks, and unauthorized database writes. Client-acquired verification tokens are validated prior to committing new dynamic routes to Cloudflare D1.
+Dynamic redirect link generation (`/r/[id]`) incorporates Cloudflare Turnstile bot verification to defend against automated abuse, denial-of-wallet attacks, and unauthorized database writes. Client-acquired verification tokens are validated prior to committing new dynamic routes to Cloudflare D1. Verification fails closed: production code has no bypass tokens and no fallback secret, so a missing `TURNSTILE_SECRET_KEY` or an unreachable siteverify service rejects registration. Every redirect route is also rate limited through the Cloudflare Rate Limiting binding, writes require an allowlisted `Origin`, bodies are capped at 16 KiB, and only `enc:v1:` ciphertext is accepted, so the API cannot act as a plaintext open redirector. See `docs/public/EDGE_ARCHITECTURE.md` for the full rules.

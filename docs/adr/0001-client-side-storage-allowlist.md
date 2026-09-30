@@ -10,7 +10,7 @@ QR code payloads frequently contain sensitive personal data, such as Wi-Fi passw
 
 ## Decision
 
-We execute all QR code generation, canvas rendering, and scannability evaluation strictly client-side in volatile browser memory. Persistent browser storage (`localStorage`, `sessionStorage`, `IndexedDB`) is restricted to an explicit allowlist of non-sensitive preference keys verified by an AST build auditor (`scripts/storage_privacy_ast_auditor.js`).
+We execute all QR code generation, canvas rendering, and scannability evaluation strictly client-side in volatile browser memory. Persistent browser storage (`localStorage`, `sessionStorage`, `IndexedDB`) is restricted to an explicit allowlist of keys verified by an AST build auditor (`scripts/storage_privacy_ast_auditor.js`).
 
 ## Rationale
 
@@ -21,4 +21,4 @@ Client-side execution eliminates data transit across external networks and ensur
 - Zero backend database liability or exposure to transit intercept attacks for static QR codes.
 - Batch or headless generation cannot be performed server-side without a client rendering context.
 - Unapproved persistent storage keys fail the automated build pipeline closed.
-- The allowlist holds only preference, consent and probe keys: `qrcraftly:dynamic-redirects`, `qrcraftly:dynamic-consent-accepted`, `qrcraftly:theme` (colour-theme preference: `light`, `dark` or `system`) and `__test__`. Adding a key requires updating the auditor, its tests, `AGENTS.md` and the privacy documentation together.
+- The allowlist holds preference, consent and probe keys, plus one data key: `qrcraftly:dynamic-redirects` (the person's own dynamic links: original destination URL in plain text, decryption key and admin key; written only when Dynamic Redirection is switched on, which it is not in production), `qrcraftly:dynamic-consent-accepted`, `qrcraftly:theme` (colour-theme preference: `light`, `dark` or `system`) and `__test__`. Adding a key requires updating the auditor, its tests, `AGENTS.md` and the privacy documentation together.

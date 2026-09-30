@@ -26,7 +26,7 @@ import { safeJsonLdStringify } from '@/utils/security';
  */
 export interface JsonLdScriptProps {
   /** The structured data object to serialize and inject as JSON-LD. */
-  data: any;
+  data: unknown;
 }
 
 /**

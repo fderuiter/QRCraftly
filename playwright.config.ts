@@ -73,9 +73,13 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'], bypassCSP: false },
     },
   ],
-  /* Run your local dev server before starting the tests */
+  /* Serve the production build before starting the tests. Locally this builds
+     first; CI downloads the Build job's `dist` artifact and sets
+     PLAYWRIGHT_USE_EXISTING_BUILD so the app is only built once per run. */
   webServer: process.env.PLAYWRIGHT_TEST_BASE_URL ? undefined : {
-    command: 'pnpm run build && pnpm run preview',
+    command: process.env.PLAYWRIGHT_USE_EXISTING_BUILD === 'true'
+      ? 'pnpm run preview'
+      : 'pnpm run build && pnpm run preview',
     url: 'http://127.0.0.1:3000',
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,

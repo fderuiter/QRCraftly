@@ -30,7 +30,7 @@ test.describe('Automated Workbox Precaching and Offline Readiness', () => {
     // 1. Wait for Service Worker to register, install, and become active
     const isSwActive = await page.evaluate(async () => {
       if (!('serviceWorker' in navigator)) return false;
-      const reg = await navigator.serviceWorker.ready;
+      await navigator.serviceWorker.ready;
       if (navigator.serviceWorker.controller) return true;
       
       // If there is no controller yet, wait for controllerchange
@@ -102,8 +102,9 @@ test.describe('Automated Workbox Precaching and Offline Readiness', () => {
   });
 
   test('Constraint 1: Custom brand logo uploads are transient and fully cleared on page refresh', async ({ page }) => {
-    // 1. Locate the logo file input (the Mosaic panel has its own file input)
-    const fileInput = page.getByLabel('Upload logo image', { exact: true });
+    // 1. Expand the Logo section and locate the logo file input (the section also holds the Mosaic QR upload)
+    await page.getByRole('button', { name: 'Logo', exact: true }).click();
+    const fileInput = page.getByRole('region', { name: 'Logo' }).getByLabel('Upload logo image');
     await expect(fileInput).toBeAttached();
 
     // 2. Simulate uploading a custom brand logo image
@@ -130,7 +131,9 @@ test.describe('Automated Workbox Precaching and Offline Readiness', () => {
   });
 
   test('Constraint 2: Mosaic QR designs are transient and fully cleared on page refresh', async ({ page }) => {
-    const fileInput = page.getByLabel('Upload mosaic design', { exact: true });
+    // Mosaic QR lives in the Logo section of the appearance accordion
+    await page.getByRole('button', { name: 'Logo', exact: true }).click();
+    const fileInput = page.getByRole('region', { name: 'Logo' }).getByLabel('Upload mosaic design', { exact: true });
     await expect(fileInput).toBeAttached();
 
     await fileInput.setInputFiles({

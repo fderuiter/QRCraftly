@@ -18,7 +18,7 @@
 
 import { QRConfig } from '@/types';
 import { LogoMetrics } from './utils';
-import { drawLogoBackground } from '@/utils/canvasHelpers';
+import { drawLogoBackground } from './canvasHelpers';
 
 export const renderLogo = (
   ctx: CanvasRenderingContext2D,

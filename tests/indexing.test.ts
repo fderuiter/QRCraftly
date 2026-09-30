@@ -26,6 +26,9 @@ describe('Search Engine Indexing Prevention & Hybrid Sitemap Generation', () => 
     expect(shouldExcludePath('_error')).toBe(true);
     expect(shouldExcludePath('quarantine')).toBe(true);
     expect(shouldExcludePath('internal')).toBe(true);
+    expect(shouldExcludePath('/r/shell')).toBe(true);
+    expect(shouldExcludePath('/r')).toBe(true);
+    expect(shouldExcludePath('/receipts')).toBe(false);
 
     expect(shouldExcludePath('dist/client/draft/index.html')).toBe(true);
     expect(shouldExcludePath('dist/client/test/route.html')).toBe(true);

@@ -278,7 +278,7 @@ export function scanFile(filePath) {
   try {
     const stats = fs.statSync(absolutePath);
     if (!stats.isFile()) return [];
-  } catch (e) {
+  } catch {
     return [];
   }
 
@@ -426,7 +426,7 @@ function main() {
         .split(/\r?\n/)
         .filter(Boolean);
       filesToScan = gitFiles;
-    } catch (err) {
+    } catch {
       // Fallback: search directory recursively if not in a git repo
       console.warn('⚠️  Could not run git ls-files. Falling back to simple file scan.');
       function walk(dir) {
@@ -461,7 +461,7 @@ function main() {
     try {
       const findings = scanFile(filePath);
       allFindings = allFindings.concat(findings);
-    } catch (e) {
+    } catch {
       // Ignore reading errors of individual files (e.g. deleted files or directories)
     }
   });

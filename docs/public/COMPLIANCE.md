@@ -12,7 +12,8 @@ This application is designed to **support** HIPAA-compliant workflows through a 
 
 - **Local Processing:** All QR code generation happens locally within the user's browser using HTML5 Canvas and JavaScript.
 - **Data Transmission:** The sensitive data you enter to generate a QR code (which may include PHI) remains strictly in your device's memory and is not sent to our servers.
-- **Volatile Memory:** Data entered into the application is cleared when the browser tab is closed or refreshed.
+- **Volatile Memory:** QR content you enter is held only in memory and is cleared when the browser tab is closed or refreshed. The only values written to persistent browser storage are the keys listed under Technical Safeguards below.
+- **Dynamic Link Records (exception, currently switched off):** Dynamic links are built but switched off in production. If they are switched on, each dynamic link you create is saved in `localStorage` under `qrcraftly:dynamic-redirects` so you can manage it later. That record holds the original destination URL in plain text, the decryption key and the admin key for the link, and it stays on your device until you delete the link or clear site data. The server receives only the encrypted destination.
 - **Mosaic QR Images:** An uploaded mosaic design and its decoded pixels are kept only in volatile memory (at most four decoded images) and are never persisted or uploaded.
 - **Animation Loop Frames:** Any cached frames or matrices generated for animation loops are also kept solely in volatile client-side memory.
 - **Playable Maze Overlay:** All coordinates, keep-out boundary zones, scannability-audited finder pattern bridge channels, and solutions computed for the playable maze overlay are processed completely in-memory locally in the user's browser, ensuring absolute privacy and data isolation.
@@ -25,7 +26,7 @@ QRCraftly runs no analytics, telemetry or diagnostics of its own, and keeps no l
   - Cloudflare handles every request for a page or file. Like any web host it processes the IP address, user agent, request path (e.g. `/`, `/about` - which are static) and time, to deliver the site and protect it from attacks, under [Cloudflare's privacy policy](https://www.cloudflare.com/privacypolicy/). The project owner sees only aggregate totals such as request counts in the Cloudflare dashboard.
   - If Cloudflare's bot protection is enabled, it may set a short-lived security cookie. It is not used for tracking.
 - **What is stored on your device:**
-  - Only the colour-theme preference (`qrcraftly:theme`). QR content is never stored.
+  - Only the colour-theme preference (`qrcraftly:theme`). QR content is never stored. Dynamic link records (`qrcraftly:dynamic-redirects`, see above) are written only if Dynamic Redirection is switched on, which it is not in production.
 - **What is NOT Logged:**
   - **User Input:** Since the application runs client-side, the text, URLs, or WiFi passwords (including WPA2-Enterprise EAP method, phase 2 and identity fields) you type are never part of the HTTP request to the server.
   - **Generated Images:** The QR codes created are generated in the browser and never uploaded.

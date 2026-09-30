@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { contentRegistry, auxiliaryRegistry, SchemaType, SchemaCategory, TargetPersona, StrategicValueCategory, hasValidOgImage, isToolContent, getMetadataForPath, legacyRouteRegistry } from './contentRegistry';
+import { contentRegistry, auxiliaryRegistry, SchemaType, SchemaCategory, TargetPersona, StrategicValueCategory, hasValidOgImage, isToolContent, getMetadataForPath, getMetadataForPageContext, legacyRouteRegistry } from './contentRegistry';
 import { CONTAINMENT_PROFILES } from '@/packages/qr-payload';
 
 describe('Content Registry Validation', () => {
@@ -228,5 +228,27 @@ describe('Content Registry Validation', () => {
       expect(meta.imageAlt, `Route '${route}' missing imageAlt`).toBeTypeOf('string');
       expect(meta.imageAlt.length, `Route '${route}' imageAlt empty`).toBeGreaterThan(0);
     });
+  });
+});
+
+describe('page metadata fixes (#978)', () => {
+  it('gives the 404 page its own title instead of the homepage title', () => {
+    const meta = getMetadataForPageContext({ urlPathname: '/does-not-exist', is404: true });
+    expect(meta.title).toBe('404 Page Not Found - QRCraftly');
+    expect(getMetadataForPageContext({ urlPathname: '/gone', abortStatusCode: 404 }).title).toBe(meta.title);
+    expect(getMetadataForPageContext({ urlPathname: '/' }).title).not.toBe(meta.title);
+  });
+
+  it('gives /dynamic-dashboard its own title and description', () => {
+    const meta = getMetadataForPageContext({ urlPathname: '/dynamic-dashboard' });
+    expect(meta.title).toBe('Dynamic Redirection Dashboard - QRCraftly');
+    expect(meta.description).toMatch(/dynamic QR destinations/);
+  });
+
+  it('suffixes the destroy-the-qr title and spells vCard consistently', () => {
+    expect(getMetadataForPageContext({ urlPathname: '/destroy-the-qr' }).title).toMatch(/ - QRCraftly$/);
+    const vcard = getMetadataForPageContext({ urlPathname: '/vcard-qr-code' });
+    expect(vcard.title).toContain('vCard');
+    expect(`${vcard.title} ${vcard.description} ${vcard.imageAlt}`).not.toMatch(/VCard/);
   });
 });

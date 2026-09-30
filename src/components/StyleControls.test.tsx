@@ -21,6 +21,7 @@ import StyleControls from './StyleControls';
 import { DEFAULT_CONFIG } from '../constants';
 import { QRStyle, LogoPaddingStyle, QRErrorCorrectionLevel } from '../types';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { expandAppearanceSections } from '../../tests/utils/expandAppearanceSections';
 import userEvent from '@testing-library/user-event';
 
 describe('StyleControls Component', () => {
@@ -32,6 +33,7 @@ describe('StyleControls Component', () => {
 
   it('renders pattern options', () => {
     render(<StyleControls config={DEFAULT_CONFIG} onChange={mockOnChange} />);
+    expandAppearanceSections();
     expect(screen.getByText(/Standard Industrial/)).toBeInTheDocument();
     expect(screen.getByText(/Modern Soft/)).toBeInTheDocument();
     expect(screen.getByText(/Swiss Dot/)).toBeInTheDocument();
@@ -40,6 +42,7 @@ describe('StyleControls Component', () => {
   it('changes pattern style', async () => {
     const user = userEvent.setup();
     render(<StyleControls config={DEFAULT_CONFIG} onChange={mockOnChange} />);
+    expandAppearanceSections();
 
     // Clicking the "Swiss Dot" pattern button
     const dotsButton = screen.getByText(/Swiss Dot/);
@@ -50,20 +53,20 @@ describe('StyleControls Component', () => {
 
   it('renders pattern preview icons for all styles', () => {
      const { container } = render(<StyleControls config={DEFAULT_CONFIG} onChange={mockOnChange} />);
+     expandAppearanceSections();
 
      // Starburst should have an SVG
-     // eslint-disable-next-line testing-library/no-container, testing-library/no-node-access
      const starPath = container.querySelector('path[d^="M12 2l3.09 6.26"]');
      expect(starPath).toBeInTheDocument();
 
      // Hive uses SVG polygon
-     // eslint-disable-next-line testing-library/no-container, testing-library/no-node-access
      const hiveElements = container.querySelectorAll('polygon[points="50,0 100,25 100,75 50,100 0,75 0,25"]');
      expect(hiveElements.length).toBeGreaterThan(0);
   });
 
   it('updates colors via inputs', () => {
     render(<StyleControls config={DEFAULT_CONFIG} onChange={mockOnChange} />);
+    expandAppearanceSections();
 
     const fgInput = screen.getByLabelText('Foreground');
     fireEvent.change(fgInput, { target: { value: '#ff0000' } });
@@ -80,6 +83,7 @@ describe('StyleControls Component', () => {
 
   it('updates colors via hex text inputs', () => {
     render(<StyleControls config={DEFAULT_CONFIG} onChange={mockOnChange} />);
+    expandAppearanceSections();
 
     const fgHexInput = screen.getByLabelText('Foreground Hex Code');
     fireEvent.change(fgHexInput, { target: { value: '#123456' } });
@@ -98,6 +102,7 @@ describe('StyleControls Component', () => {
   it('updates colors via preset buttons', async () => {
     const user = userEvent.setup();
     render(<StyleControls config={DEFAULT_CONFIG} onChange={mockOnChange} />);
+    expandAppearanceSections();
 
     const presetButtons = screen.getAllByRole('radio', { name: /Classic|Slate|Teal Brand|Royal Blue|Midnight|Forest|Rose|Purple|Cyber/i });
     if (presetButtons.length > 0) {
@@ -114,6 +119,7 @@ describe('StyleControls Component', () => {
     // Low contrast config: white text on white background
     const lowContrastConfig = { ...DEFAULT_CONFIG, fgColor: '#ffffff', bgColor: '#ffffff' };
     render(<StyleControls config={lowContrastConfig} onChange={mockOnChange} />);
+    expandAppearanceSections();
 
     expect(screen.getByText(/Low Contrast/)).toBeInTheDocument();
     
@@ -126,21 +132,30 @@ describe('StyleControls Component', () => {
   it('hides low contrast warning when contrast is good', () => {
     const highContrastConfig = { ...DEFAULT_CONFIG, fgColor: '#000000', bgColor: '#ffffff' };
     render(<StyleControls config={highContrastConfig} onChange={mockOnChange} />);
+    expandAppearanceSections();
 
     expect(screen.queryByText(/Low Contrast/)).not.toBeInTheDocument();
   });
 
   it('renders logo upload section', () => {
       render(<StyleControls config={DEFAULT_CONFIG} onChange={mockOnChange} />);
+      expandAppearanceSections();
       expect(screen.getByText('Upload Logo')).toBeInTheDocument();
+  });
+
+  it('gives the logo and Mosaic QR file inputs distinct accessible names', () => {
+      render(<StyleControls config={DEFAULT_CONFIG} onChange={mockOnChange} />);
+      expandAppearanceSections();
+      expect(screen.getByLabelText('Upload logo image')).toHaveAttribute('type', 'file');
+      expect(screen.getByLabelText('Upload mosaic design')).toHaveAttribute('type', 'file');
   });
 
   it('handles logo upload', async () => {
       const user = userEvent.setup();
       const { container } = render(<StyleControls config={DEFAULT_CONFIG} onChange={mockOnChange} />);
+      expandAppearanceSections();
 
       const file = new File(['(⌐□_□)'], 'chucknorris.png', { type: 'image/png' });
-      // eslint-disable-next-line testing-library/no-container, testing-library/no-node-access
       const fileInput = container.querySelector('input[type="file"]');
 
       const originalFileReader = global.FileReader;
@@ -167,6 +182,7 @@ describe('StyleControls Component', () => {
     const user = userEvent.setup();
     const logoConfig = { ...DEFAULT_CONFIG, logoUrl: 'data:image/png;base64,fake' };
     render(<StyleControls config={logoConfig} onChange={mockOnChange} />);
+    expandAppearanceSections();
 
     expect(screen.getByText('Custom Logo')).toBeInTheDocument();
 
@@ -179,6 +195,7 @@ describe('StyleControls Component', () => {
       const user = userEvent.setup();
       const logoConfig = { ...DEFAULT_CONFIG, logoUrl: 'data:image/png;base64,fake', logoPaddingStyle: 'square' as LogoPaddingStyle };
       render(<StyleControls config={logoConfig} onChange={mockOnChange} />);
+      expandAppearanceSections();
 
       const circleBtn = screen.getByRole('radio', { name: 'Set logo border style to Circle' });
       await user.click(circleBtn.parentElement!);
@@ -192,6 +209,7 @@ describe('StyleControls Component', () => {
   it('updates logo sliders and colors', () => {
       const logoConfig = { ...DEFAULT_CONFIG, logoUrl: 'data:image/png;base64,fake', logoPaddingStyle: 'square' as LogoPaddingStyle };
       render(<StyleControls config={logoConfig} onChange={mockOnChange} />);
+      expandAppearanceSections();
 
       const paddingInput = screen.getByLabelText('Padding');
       fireEvent.change(paddingInput, { target: { value: '2' } });
@@ -209,6 +227,7 @@ describe('StyleControls Component', () => {
   it('hides padding and background color controls when logo padding style is none', () => {
       const logoConfig = { ...DEFAULT_CONFIG, logoUrl: 'data:image/png;base64,fake', logoPaddingStyle: 'none' as LogoPaddingStyle };
       render(<StyleControls config={logoConfig} onChange={mockOnChange} />);
+      expandAppearanceSections();
 
       expect(screen.queryByLabelText('Padding')).not.toBeInTheDocument();
       expect(screen.queryByLabelText('Background Color')).not.toBeInTheDocument();
@@ -220,6 +239,7 @@ describe('StyleControls Component', () => {
   it('toggles advanced mode and changes error correction level', async () => {
       const user = userEvent.setup();
       render(<StyleControls config={DEFAULT_CONFIG} onChange={mockOnChange} />);
+      expandAppearanceSections();
 
       const advancedBtn = screen.getByText('Advanced Mode');
       await user.click(advancedBtn);
@@ -235,6 +255,7 @@ describe('StyleControls Component', () => {
   it('toggles border visibility', async () => {
       const user = userEvent.setup();
       render(<StyleControls config={DEFAULT_CONFIG} onChange={mockOnChange} />);
+      expandAppearanceSections();
 
       // Find the border switch. It's an input with role="switch" in the "Border" section.
       // We can find it by associating with the section or just find the first switch if it's the only one,
@@ -250,6 +271,7 @@ describe('StyleControls Component', () => {
   it('updates border style, width, and color', async () => {
      const borderConfig = { ...DEFAULT_CONFIG, isBorderEnabled: true };
      render(<StyleControls config={borderConfig} onChange={mockOnChange} />);
+     expandAppearanceSections();
 
      const styleSelect = screen.getByLabelText('Style');
      fireEvent.change(styleSelect, { target: { value: 'dashed' } });
@@ -267,6 +289,7 @@ describe('StyleControls Component', () => {
   it('updates border text configuration', async () => {
       const borderConfig = { ...DEFAULT_CONFIG, isBorderEnabled: true };
       render(<StyleControls config={borderConfig} onChange={mockOnChange} />);
+      expandAppearanceSections();
 
       const textInput = screen.getByPlaceholderText('Text on border...');
       fireEvent.change(textInput, { target: { value: 'Scan Me' } });
@@ -288,6 +311,7 @@ describe('StyleControls Component', () => {
       const user = userEvent.setup();
       const borderConfig = { ...DEFAULT_CONFIG, isBorderEnabled: true };
       const { container } = render(<StyleControls config={borderConfig} onChange={mockOnChange} />);
+      expandAppearanceSections();
 
       // Mock FileReader
       const originalFileReader = global.FileReader;
@@ -302,7 +326,6 @@ describe('StyleControls Component', () => {
       // Click "Add Logo" or "Change" - trigger file input interaction
       // The button clicks the hidden input ref. We can just interact with the input directly for testing.
       // There are two file inputs now. The border one is the second one.
-      // eslint-disable-next-line testing-library/no-container, testing-library/no-node-access
       const fileInputs = container.querySelectorAll('input[type="file"]');
       // The first file input is the main logo, the second is the border logo
       // Wait, let's verify if that's guaranteed.
@@ -349,6 +372,7 @@ describe('StyleControls Component', () => {
       const user = userEvent.setup();
       const borderConfig = { ...DEFAULT_CONFIG, isBorderEnabled: true, borderLogoUrl: 'data:fake' };
       render(<StyleControls config={borderConfig} onChange={mockOnChange} />);
+      expandAppearanceSections();
 
       // Should show 'No secondary logo' text if null, but here it is present
       // Find position select.
@@ -378,7 +402,6 @@ describe('StyleControls Component', () => {
 
       // We can find it by looking for the image alt "Secondary Brand Graphic" and finding the button sibling?
       const borderLogoImg = screen.getByAltText('Secondary Brand Graphic');
-      // eslint-disable-next-line testing-library/no-node-access
       const removeBtn = borderLogoImg.nextElementSibling as HTMLElement;
       if (removeBtn) {
           await user.click(removeBtn);

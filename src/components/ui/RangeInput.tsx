@@ -4,52 +4,16 @@ import React from 'react';
  * Helper component for range inputs to display current value.
  */
 interface RangeInputProps {
-  /**
-   *
-   */
   id: string;
-  /**
-   *
-   */
   label: string;
-  /**
-   *
-   */
   value: number;
-  /**
-   *
-   */
   onChange: (value: number) => void;
-  /**
-   *
-   */
   min: number;
-  /**
-   *
-   */
   max: number;
-  /**
-   *
-   */
   step: number;
-  /**
-   *
-   */
   formatValue?: (value: number) => string;
 }
 
-/**
- *
- * @param root0
- * @param root0.id
- * @param root0.label
- * @param root0.value
- * @param root0.onChange
- * @param root0.min
- * @param root0.max
- * @param root0.step
- * @param root0.formatValue
- */
 export const RangeInput: React.FC<RangeInputProps> = ({
   id,
   label,

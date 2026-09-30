@@ -2,10 +2,10 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import Page from './+Page';
-import { useRedirector } from '@/hooks/useRedirector';
+import { useRedirector } from '@/packages/edge-redirect/client';
 
 // Mock the hook
-vi.mock('@/hooks/useRedirector', () => ({
+vi.mock('@/packages/edge-redirect/client', () => ({
   useRedirector: vi.fn(),
 }));
 

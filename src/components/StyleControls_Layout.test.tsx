@@ -19,6 +19,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { expandAppearanceSections } from '../../tests/utils/expandAppearanceSections';
 import StyleControls from './StyleControls';
 import { DEFAULT_CONFIG } from '../constants';
 import { QRConfig, SocialFormat, TemplateStyle } from '../types';
@@ -32,11 +33,13 @@ describe('LayoutControls (via StyleControls)', () => {
 
   it('renders the Export Layout section heading', () => {
     render(<StyleControls config={DEFAULT_CONFIG as QRConfig} onChange={mockOnChange} />);
+    expandAppearanceSections();
     expect(screen.getByText('Export Layout')).toBeInTheDocument();
   });
 
   it('renders aspect-ratio format buttons', () => {
     render(<StyleControls config={DEFAULT_CONFIG as QRConfig} onChange={mockOnChange} />);
+    expandAppearanceSections();
     expect(screen.getByRole('button', { name: /Square format/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Portrait format/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Story format/i })).toBeInTheDocument();
@@ -44,6 +47,7 @@ describe('LayoutControls (via StyleControls)', () => {
 
   it('renders template style buttons', () => {
     render(<StyleControls config={DEFAULT_CONFIG as QRConfig} onChange={mockOnChange} />);
+    expandAppearanceSections();
     expect(screen.getByRole('button', { name: /None template/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Minimalist template/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Gradient template/i })).toBeInTheDocument();
@@ -53,6 +57,7 @@ describe('LayoutControls (via StyleControls)', () => {
   it('calls onChange with STORY_9_16 when Story button is clicked', async () => {
     const user = userEvent.setup();
     render(<StyleControls config={DEFAULT_CONFIG as QRConfig} onChange={mockOnChange} />);
+    expandAppearanceSections();
     await user.click(screen.getByRole('button', { name: /Story format/i }));
     expect(mockOnChange).toHaveBeenCalledWith({ socialFormat: SocialFormat.STORY_9_16 });
   });
@@ -60,6 +65,7 @@ describe('LayoutControls (via StyleControls)', () => {
   it('calls onChange with PORTRAIT_4_5 when Portrait button is clicked', async () => {
     const user = userEvent.setup();
     render(<StyleControls config={DEFAULT_CONFIG as QRConfig} onChange={mockOnChange} />);
+    expandAppearanceSections();
     await user.click(screen.getByRole('button', { name: /Portrait format/i }));
     expect(mockOnChange).toHaveBeenCalledWith({ socialFormat: SocialFormat.PORTRAIT_4_5 });
   });
@@ -67,12 +73,14 @@ describe('LayoutControls (via StyleControls)', () => {
   it('calls onChange with MINIMALIST when Minimalist button is clicked', async () => {
     const user = userEvent.setup();
     render(<StyleControls config={DEFAULT_CONFIG as QRConfig} onChange={mockOnChange} />);
+    expandAppearanceSections();
     await user.click(screen.getByRole('button', { name: /Minimalist template/i }));
     expect(mockOnChange).toHaveBeenCalledWith({ templateStyle: TemplateStyle.MINIMALIST });
   });
 
   it('does NOT show text inputs when templateStyle is NONE', () => {
     render(<StyleControls config={DEFAULT_CONFIG as QRConfig} onChange={mockOnChange} />);
+    expandAppearanceSections();
     expect(screen.queryByRole('textbox', { name: /headline/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('textbox', { name: /subtext/i })).not.toBeInTheDocument();
   });
@@ -83,6 +91,7 @@ describe('LayoutControls (via StyleControls)', () => {
       templateStyle: TemplateStyle.MINIMALIST,
     };
     render(<StyleControls config={config} onChange={mockOnChange} />);
+    expandAppearanceSections();
     expect(screen.getByRole('textbox', { name: /headline/i })).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: /subtext/i })).toBeInTheDocument();
   });
@@ -94,6 +103,7 @@ describe('LayoutControls (via StyleControls)', () => {
       templateHeadline: '',
     };
     render(<StyleControls config={config} onChange={mockOnChange} />);
+    expandAppearanceSections();
     const input = screen.getByRole('textbox', { name: /headline/i });
     fireEvent.change(input, { target: { value: 'Hello' } });
     expect(mockOnChange).toHaveBeenCalledWith({ templateHeadline: 'Hello' });
@@ -106,6 +116,7 @@ describe('LayoutControls (via StyleControls)', () => {
       templateSubtext: '',
     };
     render(<StyleControls config={config} onChange={mockOnChange} />);
+    expandAppearanceSections();
     const input = screen.getByRole('textbox', { name: /subtext/i });
     fireEvent.change(input, { target: { value: '@handle' } });
     expect(mockOnChange).toHaveBeenCalledWith({ templateSubtext: '@handle' });
@@ -117,6 +128,7 @@ describe('LayoutControls (via StyleControls)', () => {
       socialFormat: SocialFormat.STORY_9_16,
     };
     render(<StyleControls config={config} onChange={mockOnChange} />);
+    expandAppearanceSections();
     const storyBtn = screen.getByRole('button', { name: /Story format/i });
     expect(storyBtn).toHaveAttribute('aria-pressed', 'true');
   });
@@ -135,6 +147,7 @@ describe('Advanced Template Settings (via StyleControls)', () => {
 
   it('does NOT show Advanced Settings section when templateStyle is NONE', () => {
     render(<StyleControls config={DEFAULT_CONFIG as QRConfig} onChange={mockOnChange} />);
+    expandAppearanceSections();
     expect(screen.queryByText('Advanced Settings')).not.toBeInTheDocument();
   });
 
@@ -144,6 +157,7 @@ describe('Advanced Template Settings (via StyleControls)', () => {
       templateStyle: TemplateStyle.MINIMALIST,
     };
     render(<StyleControls config={config} onChange={mockOnChange} />);
+    expandAppearanceSections();
     expect(screen.getByText('Advanced Settings')).toBeInTheDocument();
   });
 
@@ -153,6 +167,7 @@ describe('Advanced Template Settings (via StyleControls)', () => {
       templateStyle: TemplateStyle.GRADIENT_BLUR,
     };
     render(<StyleControls config={config} onChange={mockOnChange} />);
+    expandAppearanceSections();
     expect(screen.getByLabelText('QR Scale')).toBeInTheDocument();
     expect(screen.getByLabelText('QR Scale')).toHaveAttribute('type', 'range');
   });
@@ -164,6 +179,7 @@ describe('Advanced Template Settings (via StyleControls)', () => {
       templateQrScale: 1.0,
     };
     render(<StyleControls config={config} onChange={mockOnChange} />);
+    expandAppearanceSections();
     const slider = screen.getByLabelText('QR Scale');
     fireEvent.change(slider, { target: { value: '0.75' } });
     expect(mockOnChange).toHaveBeenCalledWith({ templateQrScale: 0.75 });
@@ -175,6 +191,7 @@ describe('Advanced Template Settings (via StyleControls)', () => {
       templateStyle: TemplateStyle.SOLID_FRAME,
     };
     render(<StyleControls config={config} onChange={mockOnChange} />);
+    expandAppearanceSections();
     expect(
       screen.getByRole('switch', { name: /Override template background color/i })
     ).toBeInTheDocument();
@@ -186,6 +203,7 @@ describe('Advanced Template Settings (via StyleControls)', () => {
       templateStyle: TemplateStyle.SOLID_FRAME,
     };
     render(<StyleControls config={config} onChange={mockOnChange} />);
+    expandAppearanceSections();
     expect(
       screen.getByRole('switch', { name: /Override template text color/i })
     ).toBeInTheDocument();
@@ -199,6 +217,7 @@ describe('Advanced Template Settings (via StyleControls)', () => {
       bgColor: '#aabbcc',
     };
     render(<StyleControls config={config} onChange={mockOnChange} />);
+    expandAppearanceSections();
     const checkbox = screen.getByRole('switch', { name: /Override template background color/i });
     await user.click(checkbox);
     expect(mockOnChange).toHaveBeenCalledWith({ templateBgColor: '#aabbcc' });
@@ -212,6 +231,7 @@ describe('Advanced Template Settings (via StyleControls)', () => {
       templateBgColor: '#1a1a2e',
     };
     render(<StyleControls config={config} onChange={mockOnChange} />);
+    expandAppearanceSections();
     const checkbox = screen.getByRole('switch', { name: /Override template background color/i });
     // Switch should be checked (override active)
     expect(checkbox).toBeChecked();
@@ -267,6 +287,7 @@ describe('Advanced Template Settings (via StyleControls)', () => {
       templateBgColor: '#000000',
     };
     render(<StyleControls config={config} onChange={mockOnChange} />);
+    expandAppearanceSections();
     // The color input for templateBgColor (type=color)
     const colorInput = document.getElementById('templateBgColor') as HTMLInputElement;
     expect(colorInput).toBeInTheDocument();
@@ -281,6 +302,7 @@ describe('Advanced Template Settings (via StyleControls)', () => {
       templateTextColor: '#000000',
     };
     render(<StyleControls config={config} onChange={mockOnChange} />);
+    expandAppearanceSections();
     const colorInput = document.getElementById('templateTextColor') as HTMLInputElement;
     expect(colorInput).toBeInTheDocument();
     fireEvent.change(colorInput, { target: { value: '#0000ff' } });
@@ -312,9 +334,29 @@ describe('Advanced Template Settings (via StyleControls)', () => {
       templateStyle: TemplateStyle.GRADIENT_BLUR,
     };
     render(<StyleControls config={config} onChange={mockOnChange} />);
+    expandAppearanceSections();
     const slider = screen.getByLabelText('QR Scale');
     expect(slider).toHaveAttribute('min', '0.5');
     expect(slider).toHaveAttribute('max', '1.5');
     expect(slider).toHaveAttribute('step', '0.05');
+  });
+});
+
+describe('Appearance sections remember their state during the visit (#802)', () => {
+  it('keeps a section expanded or collapsed after StyleControls remounts, e.g. on QR type change', () => {
+    const first = render(<StyleControls config={DEFAULT_CONFIG as QRConfig} onChange={vi.fn()} />);
+    const toggle = screen.getByRole('button', { name: 'Layout & Border' });
+    if (toggle.getAttribute('aria-expanded') !== 'true') fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    first.unmount();
+
+    const second = render(<StyleControls config={DEFAULT_CONFIG as QRConfig} onChange={vi.fn()} />);
+    const remounted = screen.getByRole('button', { name: 'Layout & Border' });
+    expect(remounted).toHaveAttribute('aria-expanded', 'true');
+    fireEvent.click(remounted);
+    second.unmount();
+
+    render(<StyleControls config={DEFAULT_CONFIG as QRConfig} onChange={vi.fn()} />);
+    expect(screen.getByRole('button', { name: 'Layout & Border' })).toHaveAttribute('aria-expanded', 'false');
   });
 });

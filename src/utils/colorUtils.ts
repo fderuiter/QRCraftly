@@ -33,6 +33,20 @@ export const normalizeHex = (val: string): string | null => {
 };
 
 /**
+ * Converts a hex colour (`#rgb` or `#rrggbb`, `#` optional) to a CSS `rgba()` string.
+ * Invalid input falls back to black at the requested alpha.
+ * @param hex - The input hex string.
+ * @param alpha - Alpha channel (0..1).
+ * @returns The `rgba(r,g,b,a)` string.
+ */
+export const hexToRgba = (hex: string, alpha: number): string => {
+  const normalized = normalizeHex(hex);
+  if (!normalized) return `rgba(0,0,0,${alpha})`;
+  const value = parseInt(normalized.slice(1), 16);
+  return `rgba(${(value >> 16) & 0xff},${(value >> 8) & 0xff},${value & 0xff},${alpha})`;
+};
+
+/**
  * Calculates WCAG relative luminance from raw sRGB channels (0..1).
  *
  * @param r - Red channel normalized (0..1).

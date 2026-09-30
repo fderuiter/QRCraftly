@@ -119,7 +119,7 @@ export function useArenaCanvas(width: number, height: number, onResize?: () => v
     const observer = new ResizeObserver(resize);
     observer.observe(canvas);
     return () => observer.disconnect();
-  }, [width, height]);
+  }, [width, height, onResizeRef]);
 
   const draw = useCallback(
     (paint: (ctx: CanvasRenderingContext2D) => void) => {

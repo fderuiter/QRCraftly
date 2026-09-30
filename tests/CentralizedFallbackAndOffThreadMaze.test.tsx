@@ -8,7 +8,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act, render, screen } from '@testing-library/react';
 import React from 'react';
 import { QRProvider, useQRStore } from '@/context/QRContext';
-import { useAnimatedQrSender } from '@/hooks/useAnimatedQrSender';
+import { useOpticalSender } from '@/packages/optical-transfer/client';
 import QRCanvas from '@/components/QRCanvas';
 import { generateMaze, getCachedMaze, clearMazeCache, getMazeCacheKey } from '@/packages/qr-matrix/maze';
 import { DEFAULT_CONFIG } from '@/constants';
@@ -44,10 +44,12 @@ describe('Centralized Fallback Store & Off-Thread Maze Execution Suite', () => {
       () => {
         const store = useQRStore();
         storeInstance = store;
-        return useAnimatedQrSender({
+        return useOpticalSender({
           config: store.getState().config,
           logoImg: null,
           borderLogoImg: null,
+          renderFrame: vi.fn(),
+          scannabilityFallbackActive: store.getState().isScannabilityFallbackActive,
         });
       },
       { wrapper }
@@ -90,10 +92,12 @@ describe('Centralized Fallback Store & Off-Thread Maze Execution Suite', () => {
       () => {
         const store = useQRStore();
         storeInstance = store;
-        return useAnimatedQrSender({
+        return useOpticalSender({
           config: store.getState().config,
           logoImg: null,
           borderLogoImg: null,
+          renderFrame: vi.fn(),
+          scannabilityFallbackActive: store.getState().isScannabilityFallbackActive,
         });
       },
       { wrapper }

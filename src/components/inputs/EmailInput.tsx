@@ -3,26 +3,11 @@ import { EmailData } from "../../types";
 import { TextField, TextAreaField } from "../ui/FormFields";
 import { CONTAINER_SPACING_CLASSES } from "../ui/styles";
 
-/**
- *
- */
 interface EmailInputProps {
-  /**
-   *
-   */
   data: EmailData;
-  /**
-   *
-   */
   onChange: (updates: Partial<EmailData>) => void;
 }
 
-/**
- *
- * @param root0
- * @param root0.data
- * @param root0.onChange
- */
 export const EmailInput: React.FC<EmailInputProps> = ({ data, onChange }) => {
   return (
     <div className={CONTAINER_SPACING_CLASSES}>

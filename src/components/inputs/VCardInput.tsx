@@ -8,26 +8,11 @@ import {
   SUB_CONTAINER_SPACING_CLASSES,
 } from "../ui/styles";
 
-/**
- *
- */
 interface VCardInputProps {
-  /**
-   *
-   */
   data: VCardData;
-  /**
-   *
-   */
   onChange: (updates: Partial<VCardData>) => void;
 }
 
-/**
- *
- * @param root0
- * @param root0.data
- * @param root0.onChange
- */
 export const VCardInput: React.FC<VCardInputProps> = ({ data, onChange }) => {
   const websiteError = data.website && isDangerousUrl(data.website)
     ? "Unsafe URL scheme or malicious protocol detected."

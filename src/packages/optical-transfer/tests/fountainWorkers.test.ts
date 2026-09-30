@@ -18,7 +18,14 @@
 
 import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest';
 import QRCode from 'qrcode';
-import { createPrng, sha256Hex, encodeSessionMessage, FountainEncoder } from '../index';
+import {
+  createPrng,
+  sha256Hex,
+  encodeSessionMessage,
+  FountainEncoder,
+  TRANSFER_DENSITY_PROFILES,
+  type TransferDensity,
+} from '../index';
 
 type Handler = (event: { data: unknown }) => Promise<void> | void;
 type Posted = { type: string; [key: string]: unknown };
@@ -39,10 +46,19 @@ function randomBytes(length: number, seed: number): Uint8Array {
   return Uint8Array.from({ length }, () => Math.floor(prng() * 256));
 }
 
-async function startFountain(file: Blob, errorCorrectionLevel = 'Q', chunkSize?: number) {
-  await sliceHandler({ data: { type: 'START', payload: { file, fountainMode: true, fps: 15, errorCorrectionLevel, chunkSize } } });
+async function startFountain(
+  file: Blob,
+  options: { errorCorrectionLevel?: string; chunkSize?: number; density?: string } = {}
+) {
+  const { errorCorrectionLevel = 'Q', chunkSize, density } = options;
+  await sliceHandler({ data: { type: 'START', payload: { file, fountainMode: true, fps: 15, errorCorrectionLevel, chunkSize, density } } });
   return posted.find(m => m.type === 'INITIALIZED') as
-    | { totalFrames: number; chunkSize: number; sha256: string; fountain: { k: number; symbolSize: number; compression: string } }
+    | {
+        totalFrames: number;
+        chunkSize: number;
+        sha256: string;
+        fountain: { k: number; symbolSize: number; compression: string; density: TransferDensity };
+      }
     | undefined;
 }
 
@@ -84,10 +100,10 @@ describe('Fountain sender and receiver workers', () => {
     vi.restoreAllMocks();
   });
 
-  it('emits self-describing BC-UR droplets with no handshake frame, within QR version 7', async () => {
+  it('emits self-describing BC-UR droplets with no handshake frame, within QR version 7 when reliable', async () => {
     const text = 'Air-gapped optical transfer, rateless edition. '.repeat(60);
     const file = new File([text], 'notes.txt', { type: 'text/plain' });
-    const init = await startFountain(file);
+    const init = await startFountain(file, { density: 'reliable' });
 
     expect(init?.fountain.compression).toBe('deflate-raw');
     expect(init?.fountain.symbolSize).toBeLessThanOrEqual(100);
@@ -121,16 +137,40 @@ describe('Fountain sender and receiver workers', () => {
     expect(posted.length).toBe(before);
   });
 
-  it('clamps ECC to Q or H and honours a smaller requested symbol size', async () => {
-    await startFountain(new File(['x'.repeat(500)], 'm.txt', { type: 'text/plain' }), 'M');
-    expect(qrCalls.every(c => c.ecc === 'Q')).toBe(true);
-    await sliceHandler({ data: { type: 'STOP' } });
+  it.each(['reliable', 'balanced', 'fast'] as const)(
+    'keeps %s droplets within the density QR version and ECC, whatever the page ECC',
+    async density => {
+      const { maxVersion, errorCorrectionLevel } = TRANSFER_DENSITY_PROFILES[density];
+      const init = await startFountain(new File([randomBytes(6000, 5)], 'd.bin'), { density, errorCorrectionLevel: 'H' });
+      expect(init?.fountain.density).toBe(density);
+      await pump(10);
+      expect(qrCalls.length).toBeGreaterThan(10);
+      for (const call of qrCalls) {
+        expect(call.ecc).toBe(errorCorrectionLevel);
+        expect(call.version).toBeLessThanOrEqual(maxVersion);
+      }
+    }
+  );
 
-    qrCalls = [];
-    posted = [];
-    const init = await startFountain(new File([randomBytes(400, 9)], 'h.bin'), 'H', 12);
+  it('carries more bytes per droplet as density rises', async () => {
+    const sizes: number[] = [];
+    for (const density of ['reliable', 'balanced', 'fast'] as const) {
+      posted = [];
+      const init = await startFountain(new File([randomBytes(6000, 6)], 'd.bin'), { density });
+      sizes.push(init?.fountain.symbolSize ?? 0);
+      await sliceHandler({ data: { type: 'STOP' } });
+    }
+    expect(sizes[0]).toBeLessThan(sizes[1]);
+    expect(sizes[1]).toBeLessThan(sizes[2]);
+  });
+
+  it('defaults unknown densities to balanced and honours a smaller requested symbol size', async () => {
+    const init = await startFountain(new File([randomBytes(400, 9)], 'h.bin'), {
+      chunkSize: 12,
+      density: 'turbo',
+    });
+    expect(init?.fountain.density).toBe('balanced');
     expect(init?.fountain.symbolSize).toBeLessThanOrEqual(12);
-    expect(qrCalls.every(c => c.ecc === 'H' && c.version <= 7)).toBe(true);
   });
 
   it.each([
@@ -154,7 +194,7 @@ describe('Fountain sender and receiver workers', () => {
     const bytes = makeBytes();
     const init = await startFountain(new File([bytes], 'payload.dat', { type: mime }));
     const k = init?.fountain.k ?? 0;
-    await pump(k * 4);
+    await pump(k * 4 + 30);
     const droplets = qrCalls.map(c => c.text);
 
     // Join at frame 9, drop ~35% of frames, and deliver in shuffled order.

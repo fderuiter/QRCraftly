@@ -31,11 +31,7 @@ import { LocationContract } from './generators/location';
 import { MeetingContract } from './generators/meeting';
 import { SocialContract } from './generators/social';
 
-/**
- * Pure, statically initialized dictionary of all 12 QR code generator contracts.
- * Free from side-effects or dynamic runtime mutations.
- */
-export const QR_GENERATORS: Record<QRType, QRGeneratorContract<any>> = {
+const GENERATOR_CONTRACTS = {
   [QRType.WIFI]: WifiContract,
   [QRType.EMAIL]: EmailContract,
   [QRType.VCARD]: VCardContract,
@@ -50,6 +46,27 @@ export const QR_GENERATORS: Record<QRType, QRGeneratorContract<any>> = {
   [QRType.SOCIAL]: SocialContract,
 };
 
+type ContractData<C> = C extends QRGeneratorContract<infer T> ? T : never;
+
+/** The structured payload data type of each QR type (e.g. `WifiData` for `QRType.WIFI`). */
+export type QRPayloadDataMap = { [K in QRType]: ContractData<(typeof GENERATOR_CONTRACTS)[K]> };
+
+/**
+ * Pure, statically initialized dictionary of all 12 QR code generator contracts, keyed by type.
+ * Free from side-effects or dynamic runtime mutations.
+ */
+export const QR_GENERATORS: { readonly [K in QRType]: QRGeneratorContract<QRPayloadDataMap[K]> } = GENERATOR_CONTRACTS;
+
+/**
+ * Looks up a contract for a runtime `type`. The union of contracts collapses to a contract over
+ * `unknown` data; payload shape is validated by the contract itself.
+ * @param type - The QR type, which may come from untrusted input.
+ * @returns The contract, or undefined for an unknown type.
+ */
+function getGenerator(type: QRType): QRGeneratorContract<unknown> | undefined {
+  return Object.prototype.hasOwnProperty.call(QR_GENERATORS, type) ? QR_GENERATORS[type] : undefined;
+}
+
 /**
  * Formats structured payload data into an RFC-compliant QR string according to type.
  *
@@ -57,10 +74,8 @@ export const QR_GENERATORS: Record<QRType, QRGeneratorContract<any>> = {
  * @param data - The type-specific payload data structure.
  * @returns The constructed QR payload string.
  */
-export function formatPayload<T = any>(type: QRType, data: T): string {
-  const generator = Object.prototype.hasOwnProperty.call(QR_GENERATORS, type)
-    ? QR_GENERATORS[type]
-    : undefined;
+export function formatPayload(type: QRType, data: unknown): string {
+  const generator = getGenerator(type);
   if (!generator) {
     throw new Error(`Unsupported QR type: ${type}`);
   }
@@ -73,15 +88,17 @@ export function formatPayload<T = any>(type: QRType, data: T): string {
 /**
  * Parses and hydrates a raw QR payload string into its structured data representation.
  */
+// The overloads return loosely typed data: callers (the package tests) read type-specific fields
+// without narrowing. Use `QR_GENERATORS[type].hydrate` for a typed result.
+/* eslint-disable @typescript-eslint/no-explicit-any */
 export function parsePayload(type: QRType, raw: string): any;
 export function parsePayload(raw: string): { type: QRType; data: any };
-export function parsePayload(typeOrRaw: QRType | string, maybeRaw?: string): any {
+/* eslint-enable @typescript-eslint/no-explicit-any */
+export function parsePayload(typeOrRaw: QRType | string, maybeRaw?: string): unknown {
   if (arguments.length >= 2) {
     const type = typeOrRaw as QRType;
     const raw = typeof maybeRaw === 'string' ? maybeRaw : (maybeRaw == null ? '' : String(maybeRaw));
-    const generator = Object.prototype.hasOwnProperty.call(QR_GENERATORS, type)
-      ? QR_GENERATORS[type]
-      : undefined;
+    const generator = getGenerator(type);
     if (!generator) return null;
     try {
       return generator.hydrate(raw);
@@ -92,11 +109,9 @@ export function parsePayload(typeOrRaw: QRType | string, maybeRaw?: string): any
 
   const raw = typeof typeOrRaw === 'string' ? typeOrRaw : (typeOrRaw == null ? '' : String(typeOrRaw));
   const type = identifyProtocol(raw) || QRType.TEXT;
-  const generator = Object.prototype.hasOwnProperty.call(QR_GENERATORS, type)
-    ? QR_GENERATORS[type]
-    : undefined;
+  const generator = getGenerator(type);
 
-  let data: any;
+  let data: unknown;
   if (generator) {
     try {
       data = generator.hydrate(raw);
@@ -130,9 +145,7 @@ export function validatePayload(raw: string, type?: QRType): string[] {
     violations.push('Payload contains invalid control or zero-width characters');
   }
 
-  const generator = Object.prototype.hasOwnProperty.call(QR_GENERATORS, effectiveType)
-    ? QR_GENERATORS[effectiveType]
-    : undefined;
+  const generator = getGenerator(effectiveType);
 
   if (generator && typeof generator.validate === 'function') {
     try {

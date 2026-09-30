@@ -21,8 +21,7 @@ import { describe, it, expect, vi } from 'vitest';
 import QRCode from 'qrcode';
 import { QRConfig, QRStyle, QRType, QRErrorCorrectionLevel, SocialFormat, TemplateStyle } from '@/types';
 import { drawQRInternal } from '../index';
-import { generateQRSvg } from '@/utils/svgExport';
-import { SvgContext } from '@/utils/svgContext';
+import { generateQRSvg, SvgContext } from '@/packages/qr-export';
 
 describe('Fluid Style Scannability & Optical Readability Suite', () => {
   const createMockCanvasCtx = (width: number, height: number) => {

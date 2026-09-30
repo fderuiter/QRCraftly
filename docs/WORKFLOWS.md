@@ -74,11 +74,11 @@ Push your branch to GitHub and open a pull request targeting the **`main`** bran
 
 GitHub Actions triggers the consolidated CI pipeline on the PR:
 
-1. `setup`: Node.js 22.14.0, pnpm 11.1.3 toolchain verification.
+1. `setup`: Node.js 22.22.2 (from `.nvmrc`; `package.json` `engines` requires `^22.22.2 || >=24.15.0`), pnpm 11.1.3 toolchain verification.
 2. `static-validation`: Storage privacy AST audit, UI catalog checks, markdown audit, TypeScript compiler (`tsc --noEmit`), depcruise module boundaries, ESLint, Knip, contrast checks, Prettier, code duplication check, ShellCheck, secret scanner, and Semgrep.
 3. `test`: Vitest unit tests with strict coverage thresholds.
-4. `e2e`: Playwright cross-browser tests across Chromium, Firefox, and WebKit.
-5. `build`: Production build verification, bundle size budgets, and Lighthouse CI performance audits.
+4. `build`: Production build verification, bundle size budgets, and Lighthouse CI performance audits. Uploads `dist` as a short-lived artifact.
+5. `e2e`: Downloads the `build` job's `dist` and runs Playwright cross-browser tests across Chromium, Firefox, and WebKit against `vite preview` (no second build), then `pnpm run test:e2e:dev` checks that the Vite development server hydrates without runtime errors.
 6. `dependency-audit`: `pnpm audit --audit-level=high`, reported as its own check. No other job depends on it, so a newly published upstream advisory flags the PR without skipping the checks above.
 7. `ci`: the aggregate **`CI`** check. It passes only when jobs 1 to 5 all succeed, and it is the check the `main` ruleset requires.
 

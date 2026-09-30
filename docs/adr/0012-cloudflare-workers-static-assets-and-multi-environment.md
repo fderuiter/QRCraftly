@@ -42,3 +42,9 @@ Cloudflare Workers with Static Assets provides first-class performance and elimi
 - The preview staging URL is canonically documented as `https://dev-qrcraftly.fpderuiter.workers.dev/`.
 - The production URL is canonically documented as `https://qrcraftly.fpderuiter.workers.dev/` and `https://qrcraftly.com`.
 - Redundant and failing `wrangler pages deploy` shell scripts are retired from the repository.
+
+## Addendum: Dynamic Redirect Worker Entry (#928, #973)
+
+- The Pages Functions directory (`functions/`) never ran on Workers Static Assets and has been removed. The dynamic redirect API now lives in the deep module `src/packages/edge-redirect/`, whose `worker.ts` is the Worker entry (`main`) and falls through to the `ASSETS` binding for everything it does not handle.
+- KV is dropped: redirects are stored only in D1, rate limiting uses the Cloudflare Rate Limiting binding, and destinations are never cached, so the free tier covers the feature and updates are visible on the next scan.
+- The entry is not yet wired into `wrangler.jsonc` (no `main`, placeholder D1 `database_id`). The enablement checklist is in `docs/public/EDGE_ARCHITECTURE.md`.

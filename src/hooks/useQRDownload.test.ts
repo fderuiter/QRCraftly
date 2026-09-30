@@ -179,7 +179,7 @@ describe('useQRDownload', () => {
     const res = await result.current.downloadToDevice('png');
     expect(res.success).toBe(false);
     expect(res.error).toBeDefined();
-    expect(res.error.message).toBe('toDataURL throw');
+    expect(res.error?.message).toBe('toDataURL throw');
   });
 
   it('handleSaveAs falls back to downloadToDevice if File System Access API is not available', async () => {

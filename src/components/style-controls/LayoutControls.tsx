@@ -18,7 +18,6 @@
 
 import React from 'react';
 import { Button } from '../ui/Button';
-import { Card } from '../ui/Card';
 import { Square, Smartphone } from 'lucide-react';
 import { QRConfig, SocialFormat, TemplateStyle } from '../../types';
 import { ColorInput } from '../ui/ColorInput';
@@ -29,17 +28,8 @@ import { getContrastRatio } from '../../utils/colorUtils';
 import { MIN_CONTRAST_THRESHOLD } from '../../constants';
 import { ContrastBadge, ContrastBanner } from './ContrastWarning';
 
-/**
- *
- */
 interface LayoutControlsProps {
-  /**
-   *
-   */
   config: QRConfig;
-  /**
-   *
-   */
   onChange: (updates: Partial<QRConfig>) => void;
 }
 
@@ -78,9 +68,6 @@ const TEMPLATE_OPTIONS: Array<{ id: TemplateStyle; label: string }> = [
 /**
  * Controls for choosing the social-media export aspect ratio and template
  * style applied to the QR code canvas.
- * @param root0
- * @param root0.config
- * @param root0.onChange
  */
 export const LayoutControls: React.FC<LayoutControlsProps> = ({ config, onChange }) => {
   const showTextInputs = config.templateStyle !== TemplateStyle.NONE;
@@ -97,8 +84,8 @@ export const LayoutControls: React.FC<LayoutControlsProps> = ({ config, onChange
   const isLowContrast = showAdvanced && contrastRatio < MIN_CONTRAST_THRESHOLD;
 
   return (
-    <Card variant="control">
-      <h3 className="mb-4 text-sm font-semibold text-slate-700 dark:text-slate-300">Export Layout</h3>
+    <section>
+      <h4 className="mb-4 text-sm font-semibold text-slate-700 dark:text-slate-300">Export Layout</h4>
 
       {/* Aspect Ratio Selector */}
       <div className="mb-4">
@@ -118,8 +105,8 @@ export const LayoutControls: React.FC<LayoutControlsProps> = ({ config, onChange
               className="h-auto flex-col rounded-lg px-1 py-2"
             >
               {opt.icon}
-              <span className="mt-1 text-[10px] leading-none font-semibold">{opt.label}</span>
-              <span className="text-[10px] leading-none">{opt.sublabel}</span>
+              <span className="mt-1 text-xs leading-none font-semibold">{opt.label}</span>
+              <span className="text-xs leading-none">{opt.sublabel}</span>
             </Button>
           ))}
         </div>
@@ -150,7 +137,7 @@ export const LayoutControls: React.FC<LayoutControlsProps> = ({ config, onChange
 
       {/* Text Inputs (visible only when a template is active) */}
       {showTextInputs && (
-        <div className="animate-in fade-in slide-in-from-top-2 mt-4 space-y-2 duration-200">
+        <div className="mt-4 space-y-2">
           <TextField
             placeholder="Headline (e.g. Scan Me!)"
             value={config.templateHeadline ?? ''}
@@ -168,7 +155,7 @@ export const LayoutControls: React.FC<LayoutControlsProps> = ({ config, onChange
 
       {/* Advanced Template Settings (visible only when a template is active) */}
       {showAdvanced && (
-        <div className="animate-in fade-in slide-in-from-top-2 mt-4 space-y-4 border-t border-slate-200 pt-4 duration-200 dark:border-slate-700">
+        <div className="mt-4 space-y-4 border-t border-slate-200 pt-4 dark:border-slate-700">
           <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">Advanced Settings</p>
 
           {/* Template Background Color */}
@@ -188,7 +175,7 @@ export const LayoutControls: React.FC<LayoutControlsProps> = ({ config, onChange
                 }
                 aria-label={hasBgOverride ? 'Override template background color - Custom' : 'Override template background color - Inherit'}
                 label={hasBgOverride ? 'Custom' : 'Inherit'}
-                labelClassName="text-[10px] text-slate-500 dark:text-slate-400"
+                labelClassName="text-xs text-slate-500 dark:text-slate-400"
               />
             </div>
             {hasBgOverride && (
@@ -219,7 +206,7 @@ export const LayoutControls: React.FC<LayoutControlsProps> = ({ config, onChange
                 }
                 aria-label={hasTextOverride ? 'Override template text color - Custom' : 'Override template text color - Inherit'}
                 label={hasTextOverride ? 'Custom' : 'Inherit'}
-                labelClassName="text-[10px] text-slate-500 dark:text-slate-400"
+                labelClassName="text-xs text-slate-500 dark:text-slate-400"
               />
             </div>
             {hasTextOverride && (
@@ -255,6 +242,6 @@ export const LayoutControls: React.FC<LayoutControlsProps> = ({ config, onChange
           />
         </div>
       )}
-    </Card>
+    </section>
   );
 };

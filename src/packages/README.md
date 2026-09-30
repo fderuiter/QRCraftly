@@ -43,11 +43,28 @@ Boundary checks run automatically during `pnpm run lint` and CI.
 
 ### `qr-matrix` (`@/packages/qr-matrix`)
 
-- **Purpose**: Full QR code matrix visual orchestration, styles, locator eyes, logo cutouts, alignment pattern zones, and playable maze generation.
+- **Purpose**: Full QR code matrix visual orchestration, styles, locator eyes, logo cutouts, alignment pattern zones, and playable maze generation. Owns the one place a configuration becomes a module matrix (`buildMatrix`) and the Matrix and Maze Workers.
 - **Entry Points**:
-  - `index.ts`: `drawQR`, `drawQRInternal`, `renderBorder`, `renderEyes`, `renderModules`, `renderFluidModules`, `renderLogo`, `renderMaze`, layout and logo math.
+  - `index.ts`: `buildMatrix` (normalizes URL payloads, then encodes), `resolveEncodedValue`, `loadQrEncoder` (lazy `qrcode`), `fromQrcodePackage`, `QrEncoder`, the worker factories `createMatrixWorker` and `createMazeWorker`, `drawQR`, `drawQRInternal`, `renderBorder`, `renderEyes`, `renderModules`, `renderFluidModules`, `renderLogo`, `renderMaze`, layout and logo math.
   - `mosaic.ts`: Mosaic QR engine ([ADR 0019](../../docs/adr/0019-mosaic-qr-module-level-image-tiling.md)): `planMosaic`, `renderMosaic`, `rasterizeMosaic`, `sampleMosaicGrid`, `resolveMosaicThresholds`, `isMosaicFunctionModule`, and the in-memory image cache (`loadMosaicSource`, `getMosaicSource`).
-  - `maze.ts`: `generateMaze`, `getMazeCacheKey`, `getCachedMaze`, `storeMaze`, `clearMazeCache`, `getStyleAdaptiveMazePathWidth`, `renderMaze`, `applyMazeHaloMask`, and bridge validation helpers.
+  - `maze.ts`: `generateMaze`, `getMazeCacheKey`, `getCachedMaze`, `storeMaze`, `clearMazeCache`, `getStyleAdaptiveMazePathWidth`, `renderMaze`, `MazeData`, bridge validation helpers (`isBridgeCell`, `isFinderPatternWithMargin`), and the Maze Worker contract (`isMazeWorkerRequest`, `assertMazeWorkerRequest`, `isMazeWorkerResponse`, `assertMazeWorkerResponse`). The halo mask (`applyMazeHaloMask`) is private to `lib/maze.ts`.
+  - `canvas.ts`: Canvas drawing primitives (`clampCornerRadius`, `drawRoundRect`, `drawPoly`, `drawStar`, `drawRoughRect`, `drawScribble`, and the module shape painters).
+  - `worker-matrix.ts`: Background Web Worker that validates a configuration and serializes its `buildMatrix` output. Spawn it only through `createMatrixWorker()`.
+  - `worker-maze.ts`: Background Web Worker running maze generation and A* pathfinding. Spawn it only through `createMazeWorker()`.
+
+### `qr-export` (`@/packages/qr-export`)
+
+- **Purpose**: Social template composition and self-contained SVG export: a `CanvasRenderingContext2D`-compatible SVG recorder, template frames and text, logo inlining, SVG sanitization and the offscreen scannability check before download.
+- **Entry Points**:
+  - `index.ts`: `generateQRSvg`, `rasterizeSvgToCanvas`, `validateSvgScannability`, `SvgContext`, `drawWithTemplate`, `SOCIAL_DIMENSIONS`.
+
+### `arcade` (`@/packages/arcade`)
+
+- **Purpose**: Headless game logic behind the QR Arcade (`/arcade`): target matrices, the Damage Simulator (blasts, barrages and Reed-Solomon damage analytics), the Arcade Blaster (micro-cell damage grid, projectile and particle physics), and the empirical scan pipeline that checks whether the damaged code still decodes.
+- **Entry Points**:
+  - `index.ts`: `buildTargetMatrix`, `analyzeDamage`, `applyBlast`, `planBarrage`, `MicroGrid`, the physics helpers, mode definitions (`ARCADE_MODES`, `parseArcadeMode`, `arcadeModeHref`) and `EmpiricalScanPipeline`.
+  - `client.ts`: React hooks (`useEmpiricalScan`, `useMediaQuery`, `useReducedMotion`, `useLatestRef`).
+  - `handoff.ts`: In-memory hand-off of a design from the generator to the arcade (`stageArcadeTarget`, `getStagedArcadeTarget`, `clearStagedArcadeTarget`).
 
 ### `optical-scanner` (`@/packages/optical-scanner`)
 
@@ -68,9 +85,25 @@ Boundary checks run automatically during `pnpm run lint` and CI.
 
 - **Purpose**: Air-gapped, one-way optical data transmission via animated QR code streams. Uses a pure TypeScript rateless fountain codec (Luby Transform over $\text{GF}(2)$ with peeling plus Gaussian-elimination fallback) framed as BC-UR `ur:bytes/` parts (CBOR + Bytewords + CRC-32), `deflate-raw` pre-compression, a SHA-256-verified session header, recycled preallocated frame pools, stream lookahead sanitization, and dedicated Web Workers. See [ADR 0014](../../docs/adr/0014-rateless-fountain-codes-for-airgapped-optical-transfer.md).
 - **Entry Points**:
-  - `index.ts`: Primary public API: sender/receiver sessions, handshake helpers, fountain codec primitives (`FountainEncoder`, `FountainDecoder`, `solveGF2`, Robust Soliton helpers), BC-UR envelope (`serializeDroplet`, `parseDropletString`, `cborEncode`/`cborDecode`, Bytewords, `crc32`), session layer (`createFountainSession`, `openFountainSession`, `compressForTransfer`, `resolveFountainSymbolSize`), `FountainReassembler`, `FountainRateTracker`, and contracts.
-  - `sender.ts`: Headless `TransferSession`, fountain mode by default: off-thread droplet generation, recycled frame pool, rate-paced stepping without carousel restarts.
-  - `receiver.ts`: Headless `ReceiverSession`: sniffs fountain droplets and legacy chunks, stream lookahead security validation, SHA-256 verification before `onSuccess`.
-  - `client.ts`: Headless React hooks. `useOpticalSender` broadcasts fountain droplets by default, with no handshake frame and every QR at version 7 or lower. `useOpticalReceiver` provides stateless entry and exposes `fountainStats` telemetry (droplets vs K, rank, FPS, ETA). Also exports UI state types.
+  - `index.ts`: Primary public API: the handshake scannability gate (`verifyHandshakeFrame` with injectable worker/checker factories), `PreallocatedFramePool`, `StreamLookaheadReceiver`, fountain codec primitives (`FountainEncoder`, `FountainDecoder`, `solveGF2`, Robust Soliton helpers), BC-UR envelope (`serializeDroplet`, `parseDropletString`, `cborEncode`/`cborDecode`, Bytewords, `crc32`), session layer (`createFountainSession`, `openFountainSession`, `compressForTransfer`, `resolveFountainSymbolSize`), `FountainReassembler`, `FountainRateTracker`, and contracts.
+  - `client.ts`: Headless React hooks. `useOpticalSender` broadcasts fountain droplets by default, with no handshake frame and every QR at version 7 or lower; the caller injects `renderFrame` and the scannability fallback flag. `useOpticalReceiver` provides stateless entry and exposes `fountainStats` telemetry (droplets vs K, rank, FPS, ETA); the caller injects `camera` and `saveFile`. Also exports UI state types.
   - `worker-slice.ts`: Background Web Worker: hashing, `deflate-raw` compression (skipped when it saves less than 5%), density-bounded symbol sizing, and QR matrix generation for droplets or legacy chunks.
   - `worker-reassembly.ts`: Background Web Worker: fountain reassembly (peeling + GF(2) elimination), decompression and SHA-256 verification, plus legacy chunk reassembly.
+
+### `edge-redirect` (`@/packages/edge-redirect`)
+
+- **Purpose**: Both sides of Zero-Knowledge Redirection. Server side: the hardened `/api/redirect/*` API (ciphertext-only destinations, Turnstile failing closed, Rate Limiting bindings, origin allowlist, body caps) and the `/r/<id>` resolver routing, backed by Cloudflare D1. Not enabled in production yet; see `docs/public/EDGE_ARCHITECTURE.md`.
+- **Entry Points**:
+  - `index.ts`: `handleRedirectApi`, `routeEdgeRequest`, `RESOLVER_SHELL_PATH`, `MemoryRateLimiter`, `verifyTurnstileWithSiteverify`, limits and binding types.
+  - `client.ts`: Browser side: AES-GCM destination encryption with the key kept in the `#key=...` anchor (`generateDecryptionKey`, `encryptUrl`, `decryptUrl`, `isEncrypted`, `extractKeyFromHash`) and the `useRedirector` hook that registers, updates and lists records under the approved `qrcraftly:dynamic-redirects` storage key. The Worker entries never import React; the server shares only the private `isEncrypted` check.
+  - `worker.ts`: Cloudflare Worker entry (`main` in `wrangler.jsonc` once enabled); falls through to the `ASSETS` binding.
+  - `dev.ts`: Vite dev middleware and in-memory `MockD1Database` so `pnpm dev` works without Cloudflare credentials.
+  - `schema.sql`: D1 schema applied with `pnpm exec wrangler d1 execute`.
+
+### `audio-transfer` (`@/packages/audio-transfer`)
+
+- **Purpose**: Air-gapped acoustic data transfer behind the Audio QR page (`/audio-qr`): the FSK chirp modem (sync/zero/one tones, off-thread demodulation of microphone spectra) and the spectrogram QR engine that paints QR modules into the audio spectrum and exports WAV files.
+- **Entry Points**:
+  - `index.ts`: FSK worker contract (`SYNC_FREQ`, `ZERO_FREQ`, `ONE_FREQ`, `assertFskWorkerRequest`, `isFskWorkerResponse`, and friends) and the spectrogram DSP engine (`scheduleSpectrogramQR`, `bufferToWav`).
+  - `client.ts`: React hooks (`useAudioContext`, `useChirpTransceiver`, `useSpectrogramQR`).
+  - `worker.ts`: Dedicated background Web Worker performing FSK demodulation of byte frequency frames. Spawning it is private to the package (`useChirpTransceiver` owns it).

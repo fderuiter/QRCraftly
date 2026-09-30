@@ -17,7 +17,7 @@
 */
 
 import { QRConfig, QRStyle, QRModules } from '@/types';
-import { drawRoundRect, drawRoughRect, drawPoly, drawStar, drawCircularModule, drawCircuitModule, drawStandardModule } from '@/utils/canvasHelpers';
+import { drawRoundRect, drawRoughRect, drawPoly, drawStar, drawCircularModule, drawCircuitModule, drawStandardModule } from './canvasHelpers';
 import { getIsCoveredByLogo, LogoMetrics, iterateMatrix } from './utils';
 import { getLuminance } from '@/utils/colorUtils';
 import { renderFluidModules, isFinderPattern } from './fluid';

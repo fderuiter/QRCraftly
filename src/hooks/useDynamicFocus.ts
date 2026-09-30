@@ -3,7 +3,6 @@ import { announcePolitely } from '../utils/a11y';
 
 /**
  * Helper to retrieve all form fields (inputs, selects, textareas) inside a container.
- * @param container
  */
 function getFormFields(container: HTMLElement): HTMLElement[] {
   return Array.from(
@@ -15,8 +14,6 @@ function getFormFields(container: HTMLElement): HTMLElement[] {
 
 /**
  * Check if two arrays of HTML elements have exactly the same elements.
- * @param arr1
- * @param arr2
  */
 function areElementsEqual(arr1: HTMLElement[], arr2: HTMLElement[]): boolean {
   if (arr1.length !== arr2.length) return false;
@@ -31,7 +28,6 @@ function areElementsEqual(arr1: HTMLElement[], arr2: HTMLElement[]): boolean {
 
 /**
  * Get a clean name for a form element based on its label or attributes.
- * @param element
  */
 function getElementName(element: HTMLElement): string {
   const id = element.id;
@@ -67,10 +63,9 @@ function getElementName(element: HTMLElement): string {
  * A standardized focus-management hook to eliminate manual re-navigation
  * and improve task completion speed for users with visual impairments.
  * Programmatically moves focus to the first interactive field of a newly rendered component.
- * @param dependencies Array of dependencies (kept for backward compatibility, not used for re-binding)
- * @param _dependencies
+ * @param _dependencies Array of dependencies (kept for backward compatibility, not used for re-binding)
  */
-export function useDynamicFocus<T extends HTMLElement = HTMLDivElement>(_dependencies: any[]) {
+export function useDynamicFocus<T extends HTMLElement = HTMLDivElement>(_dependencies: readonly unknown[]) {
   const containerRef = useRef<T>(null);
   
   // Track if we've focused once on mount. Focus shifts must only occur 

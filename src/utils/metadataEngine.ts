@@ -1,12 +1,50 @@
 import { getConfiguredPublicDomain } from './publicEnvironment';
 
+/** A value inside a schema.org JSON-LD document (`undefined` members are dropped when serialised). */
+export type JsonLdValue = string | number | boolean | null | undefined | JsonLdObject | JsonLdValue[];
+
+/** A schema.org JSON-LD node such as `{ "@type": "HowTo", ... }`. */
+export interface JsonLdObject {
+  [key: string]: JsonLdValue;
+}
+
 export const getPublicDomain = (): string => {
   return getConfiguredPublicDomain().replace(/\/+$/, '');
 };
 
+/**
+ * Upper bound on each memoization cache. Paths come from request URLs, so an
+ * unbounded cache would let random paths grow long-lived runtime memory.
+ */
+export const METADATA_CACHE_LIMIT = 512;
+
 const sanitizedPathCache = new Map<string, string>();
 const domainForPathCache = new Map<string, string>();
 const publicUrlCache = new Map<string, string>();
+
+/**
+ * Stores a memoized value, evicting the oldest entry once the cache is full.
+ * @param cache - Target cache.
+ * @param key - Cache key.
+ * @param value - Value to store.
+ */
+const remember = (cache: Map<string, string>, key: string, value: string): void => {
+  if (!cache.has(key) && cache.size >= METADATA_CACHE_LIMIT) {
+    const oldest = cache.keys().next();
+    if (!oldest.done) cache.delete(oldest.value);
+  }
+  cache.set(key, value);
+};
+
+/**
+ * Current sizes of the memoization caches (for bound assertions).
+ * @returns Entry counts per cache.
+ */
+export const getMetadataCacheSizes = (): { sanitizedPath: number; domainForPath: number; publicUrl: number } => ({
+  sanitizedPath: sanitizedPathCache.size,
+  domainForPath: domainForPathCache.size,
+  publicUrl: publicUrlCache.size,
+});
 
 export const resolveDomainForPath = (path: string): string => {
   const domain = getPublicDomain();
@@ -16,7 +54,7 @@ export const resolveDomainForPath = (path: string): string => {
   }
 
   if (!path) {
-    domainForPathCache.set(cacheKey, domain);
+    remember(domainForPathCache, cacheKey, domain);
     return domain;
   }
   
@@ -32,13 +70,13 @@ export const resolveDomainForPath = (path: string): string => {
       const url = new URL(domain);
       url.hostname = `${subdomain}.${url.hostname}`;
       const result = `${url.protocol}//${url.host}`;
-      domainForPathCache.set(cacheKey, result);
+      remember(domainForPathCache, cacheKey, result);
       return result;
     } catch (_e) {
       // Fallback
     }
   }
-  domainForPathCache.set(cacheKey, domain);
+  remember(domainForPathCache, cacheKey, domain);
   return domain;
 };
 
@@ -95,7 +133,7 @@ export const getSanitizedPath = (path: string): string => {
   }
   
   const result = normalizeTrailingSlashes(cleanPath);
-  sanitizedPathCache.set(cacheKey, result);
+  remember(sanitizedPathCache, cacheKey, result);
   return result;
 };
 
@@ -115,7 +153,7 @@ export const resolvePublicUrl = (path: string): string => {
   
   const finalPath = cleanPath === '/' ? '' : cleanPath;
   const result = `${resolvedDomain}${finalPath}`;
-  publicUrlCache.set(cacheKey, result);
+  remember(publicUrlCache, cacheKey, result);
   return result;
 };
 
@@ -159,7 +197,9 @@ export const formatPathName = (segment: string): string => {
     .join(' ');
 };
 
-export const compileBreadcrumbSchema = (path: string): any | null => {
+// The result is free-form JSON-LD that callers index into loosely (see metadataEngine.test.ts).
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const compileBreadcrumbSchema = (path: string): any => {
   if (!path) return null;
 
   // Determine the base path to correctly resolve the home URL for domains and subdomains
@@ -168,7 +208,7 @@ export const compileBreadcrumbSchema = (path: string): any | null => {
 
   const resolvedDomain = resolveDomainForPath(path);
 
-  const breadcrumbItems: any[] = [
+  const breadcrumbItems: JsonLdObject[] = [
     {
       "@type": "ListItem",
       "position": 1,

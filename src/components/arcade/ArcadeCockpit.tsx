@@ -52,14 +52,6 @@ interface ArcadeCockpitProps {
  * drawer at the bottom. From 1024px it becomes a three-pane cockpit: settings and arsenal on
  * the left, the arena in the centre, HUD, actions and telemetry on the right.
  * @param props - The pane contents.
- * @param props.settings
- * @param props.arsenal
- * @param props.arena
- * @param props.quickBar
- * @param props.hints
- * @param props.hud
- * @param props.actions
- * @param props.telemetry
  * @returns The layout.
  */
 export function ArcadeCockpit({ settings, arsenal, arena, quickBar, hints, hud, actions, telemetry }: ArcadeCockpitProps) {

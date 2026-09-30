@@ -22,7 +22,7 @@ import { test, expect } from './fixtures';
  * Isolated Web Worker Recovery E2E Testing
  * 
  * Verifies that the background worker failures are safely intercepted and handled.
- * Ensures the warning badge is shown, telemetry/diagnostics prompt can be answered,
+ * Ensures the warning badge is shown, no diagnostics are reported or asked for,
  * and the export bypass flow allows downloading anyway despite background thread errors.
  */
 
@@ -41,8 +41,8 @@ test.describe('Isolated Web Worker Recovery & Export Bypass', () => {
           const url = String(scriptURL);
           const isScannabilityWorker =
             (url.includes('scannability') || url.includes('worker-') || url.includes('worker.ts') || url.includes('scannabilityWorker')) &&
-            !url.includes('matrixWorker') &&
-            !url.includes('mazeWorker') &&
+            !url.includes('worker-matrix') &&
+            !url.includes('worker-maze') &&
             !url.includes('fileSliceWorker') &&
             !url.includes('imageResizeWorker');
 
@@ -180,8 +180,13 @@ test.describe('Isolated Web Worker Recovery & Export Bypass', () => {
     await expect(alertBadge).toBeVisible({ timeout: 15000 });
     await expect(alertBadge).toContainText(/scan verification failed/i);
 
+    // Exactly one alert announces the failure; no consent popup interrupts it (#800, #802)
+    await expect(page.getByRole('alert')).toHaveCount(1);
+    await expect(page.getByRole('button', { name: /No thanks/i })).toHaveCount(0);
+
     // No diagnostics prompt, and nothing is reported anywhere
     await expect(page.getByText(/Anonymous diagnostics/i)).toHaveCount(0);
     expect(reportRequests).toEqual([]);
+    await expect(page.getByRole('switch', { name: /diagnostics/i })).toHaveCount(0);
   });
 });

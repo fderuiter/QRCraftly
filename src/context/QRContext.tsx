@@ -71,7 +71,6 @@ function shallowEqualConfig(a: QRConfig, b: QRConfig): boolean {
   if (a === b) return true;
   const keys = new Set([...Object.keys(a), ...Object.keys(b)] as (keyof QRConfig)[]);
   for (const key of keys) {
-    // eslint-disable-next-line security/detect-object-injection
     if (!Object.is(a[key], b[key])) return false;
   }
   return true;
@@ -101,7 +100,6 @@ function pickAppearance(config: QRConfig): Partial<QRConfig> {
   const appearance: Partial<QRConfig> = {};
   for (const key of Object.keys(config) as (keyof QRConfig)[]) {
     if (!NON_RETAINED_FIELDS.has(key)) {
-      // eslint-disable-next-line security/detect-object-injection
       (appearance as Record<string, unknown>)[key] = config[key];
     }
   }
@@ -144,7 +142,6 @@ function createQRStore(initialConfig?: Partial<QRConfig>, retainAppearance = fal
       const sanitized = sanitizeConfig({ ...state.config, ...updates });
       if (shallowEqualConfig(sanitized, state.config)) return;
       if (retainAppearance) retainedAppearance = pickAppearance(sanitized);
-      // eslint-disable-next-line security/detect-object-injection
       const resetsFallback = FALLBACK_RESET_FIELDS.some(key => !Object.is(sanitized[key], state.config[key]));
       setState({
         ...state,
@@ -163,11 +160,9 @@ function createQRStore(initialConfig?: Partial<QRConfig>, retainAppearance = fal
       }
     },
     emitSignal: (name, detail) => {
-      // eslint-disable-next-line security/detect-object-injection
       signals[name].forEach(cb => cb(detail));
     },
     registerSignal: (name, callback) => {
-      // eslint-disable-next-line security/detect-object-injection
       const set = signals[name];
       set.add(callback);
       return () => {

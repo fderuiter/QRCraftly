@@ -69,7 +69,7 @@ export const renderBorderDecoration = (
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
-    let tx = displaySize / 2;
+    const tx = displaySize / 2;
     let ty = borderPx / 2;
 
     if (config.borderTextPosition === 'bottom-center') {

@@ -1,9 +1,22 @@
 import { describe, it, expect, vi } from 'vitest';
-import { getSanitizedPath, resolveDomainForPath, resolvePublicUrl } from '../src/utils/metadataEngine';
+import { getSanitizedPath, resolveDomainForPath, resolvePublicUrl, getMetadataCacheSizes, METADATA_CACHE_LIMIT } from '../src/utils/metadataEngine';
 import { safeJsonLdStringify } from '../src/utils/security';
 
 describe('Global Pure-JS Utility Caching', () => {
   describe('Metadata and Path Sanitization Cache', () => {
+    it('bounds every memoization cache so random request paths cannot grow memory', () => {
+      for (let i = 0; i < METADATA_CACHE_LIMIT * 3; i += 1) {
+        const path = `/random-${i}-${Math.random().toString(36).slice(2)}`;
+        expect(getSanitizedPath(path)).toBe(path);
+        resolvePublicUrl(path);
+        resolveDomainForPath(path);
+      }
+      const sizes = getMetadataCacheSizes();
+      expect(sizes.sanitizedPath).toBeLessThanOrEqual(METADATA_CACHE_LIMIT);
+      expect(sizes.publicUrl).toBeLessThanOrEqual(METADATA_CACHE_LIMIT);
+      expect(sizes.domainForPath).toBeLessThanOrEqual(METADATA_CACHE_LIMIT);
+    });
+
     it('caches path sanitization results correctly', () => {
       const path = '/some-path/nested/';
       const result1 = getSanitizedPath(path);

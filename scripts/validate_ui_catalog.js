@@ -14,11 +14,25 @@ const DEFAULT_CATALOG_PATH = path.join(repoRoot, 'docs/public/UI_CATALOG.md');
 const TRACKED_DIRS = [
   'src/components/ui',
   'src/components/inputs',
+  'src/components/style-controls',
+  // Shared feature components directly under src/components (not recursive).
+  'src/components'
+];
+
+/**
+ * Directories whose component edits must be accompanied by a catalog edit in the same change set.
+ * Shared feature components under src/components are validated for registration (validateCatalog)
+ * but, because they change often for behaviour-only reasons, edits to them do not force a catalog edit.
+ */
+const LINEAGE_DIRS = [
+  'src/components/ui',
+  'src/components/inputs',
   'src/components/style-controls'
 ];
 
 /**
- * Validates that all user-facing UI components (.tsx files in src/components/ui/, src/components/inputs/, and src/components/style-controls/)
+ * Validates that all user-facing UI components (.tsx files in src/components/ui/, src/components/inputs/,
+ * src/components/style-controls/ and the shared components directly under src/components/)
  * are documented in docs/public/UI_CATALOG.md with correct file references and descriptions.
  * 
  * @param {string|string[]} uiDir Absolute path(s) to the UI directory
@@ -49,6 +63,21 @@ export function validateCatalog(uiDir = DEFAULT_UI_DIR, catalogPath = DEFAULT_CA
   // Helper: Find directory for heading line
   function findDirForHeading(headingLine, dirs, root) {
     const cleanHeading = headingLine.replace(/\\/g, '/').toLowerCase();
+
+    // Exact match: a backticked directory path in the heading, e.g. (`src/components/ui/`).
+    const backtickedPaths = Array.from(cleanHeading.matchAll(/`([^`]+)`/g), m => m[1].replace(/\/+$/, ''));
+    for (const candidate of backtickedPaths) {
+      const exact = dirs.find(d => path.relative(root, d).replace(/\\/g, '/').toLowerCase() === candidate);
+      if (exact) {
+        return exact;
+      }
+    }
+    // A heading that names an untracked subdirectory of a tracked directory (e.g. `src/components/arcade/`)
+    // documents that subdirectory, not its tracked parent, so it must not fall through to a looser match.
+    const trackedPaths = dirs.map(d => path.relative(root, d).replace(/\\/g, '/').toLowerCase());
+    if (backtickedPaths.some(candidate => trackedPaths.some(tracked => tracked && candidate.startsWith(`${tracked}/`)))) {
+      return null;
+    }
     
     // List of key segments we want to check
     const segments = ['style-controls', 'inputs', 'ui'];
@@ -77,7 +106,7 @@ export function validateCatalog(uiDir = DEFAULT_UI_DIR, catalogPath = DEFAULT_CA
     // Fallback 2: Try exact base name match as whole word or path component (case-insensitive)
     for (const d of dirs) {
       const baseName = path.basename(d).toLowerCase();
-      const escapedBaseName = baseName.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+      const escapedBaseName = baseName.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
       const regex = new RegExp(`(?:\\b|\\/|\\\\)${escapedBaseName}(?:\\b|\\/|\\\\)`);
       if (regex.test(cleanHeading)) {
         return d;
@@ -248,7 +277,7 @@ export function checkLineage(modifiedFiles) {
   // Find modified UI components (.tsx or .test.tsx in tracked directories)
   const changedUiFiles = Array.from(modifiedFiles).filter(file => {
     const normalized = file.replace(/\\/g, '/');
-    const isInTrackedDir = TRACKED_DIRS.some(dir => normalized.startsWith(dir + '/'));
+    const isInTrackedDir = LINEAGE_DIRS.some(dir => normalized.startsWith(dir + '/'));
     return isInTrackedDir && (normalized.endsWith('.tsx') || normalized.endsWith('.test.tsx'));
   });
 
@@ -332,7 +361,7 @@ export function decodeGitPath(filePath) {
   try {
     const uint8Array = new Uint8Array(bytes);
     decoded = new TextDecoder('utf-8', { fatal: true }).decode(uint8Array);
-  } catch (err) {
+  } catch {
     try {
       const uint8Array = new Uint8Array(bytes);
       decoded = new TextDecoder('utf-8', { fatal: false }).decode(uint8Array);

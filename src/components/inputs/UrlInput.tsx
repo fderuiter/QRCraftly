@@ -3,7 +3,8 @@ import { UrlData } from "../../types";
 import { TextField } from "../ui/FormFields";
 import { normalizeUrl } from "../../utils/url";
 import { isDangerousUrl } from "../../utils/security";
-import { useRedirector } from "../../hooks/useRedirector";
+import { useRedirector } from "../../packages/edge-redirect/client";
+import { useTurnstile } from "../../hooks/useTurnstile";
 import { ToggleSwitch } from "../ui/ToggleSwitch";
 import { Modal } from "../ui/Modal";
 import { Button } from "../ui/Button";
@@ -21,10 +22,15 @@ interface UrlInputProps {
 }
 
 /**
- * Feature flag to temporarily suppress dynamic QR code UI until Cloudflare edge infrastructure
- * and mock Vite proxies are fully provisioned (#917 / #928).
+ * Feature flag suppressing the dynamic QR code UI until the edge-redirect Worker is
+ * deployed with its D1, Rate Limiting and Turnstile bindings (#917 / #928). The
+ * enablement checklist lives in docs/public/EDGE_ARCHITECTURE.md; flipping this
+ * also requires allowing https://challenges.cloudflare.com in the CSP.
  */
 const ENABLE_DYNAMIC_TRACKING = false;
+
+/** Public Turnstile site key; the widget is not rendered without it. */
+const TURNSTILE_SITE_KEY: string | undefined = import.meta.env.VITE_TURNSTILE_SITE_KEY;
 
 /**
  * Website URL Input Component with Opt-In Dynamic Tracking.
@@ -46,17 +52,23 @@ export const UrlInput: React.FC<UrlInputProps> = ({ data, onChange }) => {
   const [enableAndroid, setEnableAndroid] = useState(false);
   const [androidUrl, setAndroidUrl] = useState("");
 
-  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const {
+    containerRef: turnstileRef,
+    token: widgetToken,
+    status: turnstileStatus,
+    reset: resetTurnstile,
+  } = useTurnstile(TURNSTILE_SITE_KEY, ENABLE_DYNAMIC_TRACKING && isDynamicMode);
+  // Local `pnpm dev` has no site key; its in-memory API accepts any token (see edge-redirect/dev.ts).
+  const [devToken, setDevToken] = useState<string | null>(null);
+  const turnstileToken = widgetToken ?? devToken;
 
   const urlError = data.url && isDangerousUrl(data.url)
     ? "Unsafe URL scheme or malicious protocol detected."
     : undefined;
 
   // Determine if the currently loaded URL is already a registered dynamic redirect
-  const isCurrentlyTracking = data.url.includes("/api/redirect/");
-  const activeRecord = isCurrentlyTracking
-    ? records.find((r) => r.redirectUrl === data.url)
-    : null;
+  const activeRecord = records.find((r) => r.redirectUrl === data.url) ?? null;
+  const isCurrentlyTracking = activeRecord !== null;
 
   // Sync isDynamicMode when we are viewing a tracking URL
   useEffect(() => {
@@ -149,13 +161,16 @@ export const UrlInput: React.FC<UrlInputProps> = ({ data, onChange }) => {
       return;
     }
 
-    const record = await registerRedirect(normalized, {
+    const result = await registerRedirect(normalized, {
       iosUrl: finalIos,
       androidUrl: finalAndroid,
       turnstileToken: turnstileToken,
     });
-    if (record) {
-      onChange({ url: record.redirectUrl });
+    // Turnstile tokens are single use, success or not.
+    resetTurnstile();
+    setDevToken(null);
+    if (result.ok) {
+      onChange({ url: result.record.redirectUrl });
       addToast({
         type: "success",
         message: "Dynamic redirect registered successfully! The QR code is now trackable.",
@@ -164,8 +179,8 @@ export const UrlInput: React.FC<UrlInputProps> = ({ data, onChange }) => {
     } else {
       addToast({
         type: "error",
-        message: "Failed to register redirection at the serverless edge proxy.",
-        duration: 5000,
+        message: `Failed to register the dynamic link: ${result.message}`,
+        duration: 6000,
       });
     }
   };
@@ -340,7 +355,7 @@ export const UrlInput: React.FC<UrlInputProps> = ({ data, onChange }) => {
                 <div className="flex items-center justify-between text-xs font-semibold text-slate-700 dark:text-slate-300">
                   <span>Bot Safeguard Verification</span>
                   {turnstileToken && (
-                    <span className="text-[10px] font-bold text-teal-600 dark:text-teal-400">✓ Verified</span>
+                    <span className="text-xs font-bold text-teal-600 dark:text-teal-400">✓ Verified</span>
                   )}
                 </div>
                 <div
@@ -348,16 +363,19 @@ export const UrlInput: React.FC<UrlInputProps> = ({ data, onChange }) => {
                   data-testid="turnstile-widget"
                   className="flex flex-col items-center justify-center p-2"
                 >
-                  {!turnstileToken ? (
-                    <button
-                      type="button"
-                      data-testid="turnstile-verify-btn"
-                      onClick={() => setTurnstileToken("valid-turnstile-token")}
-                      className="w-full rounded-md border border-teal-500/50 bg-teal-50 px-3 py-2 text-xs font-medium text-teal-800 transition-colors hover:bg-teal-100 dark:border-teal-800 dark:bg-teal-950/40 dark:text-teal-300 dark:hover:bg-teal-900/60"
-                    >
-                      Complete Turnstile Verification
-                    </button>
-                  ) : (
+                  <div ref={turnstileRef} />
+                  {turnstileStatus === "unconfigured" && import.meta.env.DEV && !devToken && (
+                    <Button variant="secondary" size="sm" fullWidth data-testid="turnstile-dev-bypass" onClick={() => setDevToken("local-dev-token")}>
+                      Skip bot check (local dev only)
+                    </Button>
+                  )}
+                  {turnstileStatus === "unconfigured" && !import.meta.env.DEV && (
+                    <p className="text-xs text-slate-600 dark:text-slate-400">Bot verification is not configured on this deployment.</p>
+                  )}
+                  {turnstileStatus === "error" && (
+                    <p role="alert" className="text-xs text-rose-700 dark:text-rose-400">The bot check could not load. Reload the page and try again.</p>
+                  )}
+                  {turnstileToken && (
                     <div className="flex items-center gap-1.5 font-mono text-xs text-teal-700 dark:text-teal-300">
                       <CheckCircle className="size-4" /> Turnstile Bot Challenge Verified
                     </div>
@@ -373,7 +391,7 @@ export const UrlInput: React.FC<UrlInputProps> = ({ data, onChange }) => {
                 className="flex items-center justify-center gap-2"
               >
                 {isLoading ? (
-                  <RefreshCw className="size-4 animate-spin" />
+                  <RefreshCw className="size-4 motion-safe:animate-spin" />
                 ) : (
                   <ArrowRight className="size-4" />
                 )}

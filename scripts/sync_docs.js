@@ -65,13 +65,13 @@ function parseCatalogSections(catalogContent) {
  * 
  * @param {string[]} uiDirs Array of directory paths
  * @param {string} catalogPath Path to UI_CATALOG.md
- * @param {string} [repoRoot] Optional repository root
+ * @param {string} [_repoRoot] Optional repository root (currently unused)
  * @returns {{ changed: boolean, details: string[] }}
  */
 export function syncUICatalog(
   uiDirs = DEFAULT_UI_DIRS,
   catalogPath = DEFAULT_CATALOG_PATH,
-  repoRoot = defaultRepoRoot
+  _repoRoot = defaultRepoRoot
 ) {
   const details = [];
   if (!fs.existsSync(catalogPath)) {
@@ -84,13 +84,17 @@ export function syncUICatalog(
   // Map directory segments to headings
   const segmentToDir = {};
   for (const dir of uiDirs) {
-    const norm = dir.replace(/\\/g, '/').toLowerCase();
-    if (norm.includes('style-controls')) {
+    // Match on the directory's own name, not the absolute path, so parent folders
+    // (for example a home directory containing "ui") never change the mapping.
+    const base = path.basename(dir.replace(/\\/g, '/').replace(/\/+$/, '')).toLowerCase();
+    if (base === 'style-controls') {
       segmentToDir['style-controls'] = dir;
-    } else if (norm.includes('inputs')) {
+    } else if (base === 'inputs') {
       segmentToDir['inputs'] = dir;
-    } else if (norm.includes('ui')) {
+    } else if (base === 'ui') {
       segmentToDir['ui'] = dir;
+    } else if (base === 'components') {
+      segmentToDir['components'] = dir;
     }
   }
 
@@ -101,7 +105,9 @@ export function syncUICatalog(
 
     const headingLower = section.heading.replace(/\\/g, '/').toLowerCase();
     let targetDir = null;
-    if (headingLower.includes('style-controls')) {
+    if (headingLower.includes('`src/components/`')) {
+      targetDir = segmentToDir['components'];
+    } else if (headingLower.includes('style-controls')) {
       targetDir = segmentToDir['style-controls'];
     } else if (headingLower.includes('inputs')) {
       targetDir = segmentToDir['inputs'];
@@ -204,7 +210,6 @@ export function syncUICatalog(
     let seenEntries = false;
 
     // Separate leading prose from trailing prose
-    let foundNonEmptyAfterHeader = false;
     for (const line of section.lines) {
       if (line.match(entryRegex)) {
         seenEntries = true;

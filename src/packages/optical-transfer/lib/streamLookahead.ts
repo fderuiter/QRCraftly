@@ -40,7 +40,7 @@ export interface StreamLookaheadConfig {
 export class StreamLookaheadReceiver {
   private buffer: string = '';
   private isActive: boolean = true;
-  private timeoutId: any = null;
+  private timeoutId: ReturnType<typeof setTimeout> | null = null;
   private timeoutMs: number;
 
   /**

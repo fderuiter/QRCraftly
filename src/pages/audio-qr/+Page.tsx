@@ -32,10 +32,7 @@ import {
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
-import { useAudioContext } from '@/hooks/useAudioContext';
-import { useChirpTransceiver } from '@/hooks/useChirpTransceiver';
-import { useSpectrogramQR } from '@/hooks/useSpectrogramQR';
-import { bufferToWav } from '@/utils/spectrogramDspEngine';
+import { useAudioContext, useChirpTransceiver, useSpectrogramQR } from '@/packages/audio-transfer/client';
 import { QRProvider } from '@/context/QRContext';
 import { JsonLdScript } from '@/components/ui/JsonLdScript';
 import { contentRegistry } from '@/data/contentRegistry';
@@ -43,8 +40,6 @@ import { generateSchema } from '@/utils/schemaGenerator';
 import { resolveDomainForPath } from '@/utils/metadataEngine';
 import { SidebarContent } from '@/components/SidebarContent';
 import { usePageContext } from 'vike-react/usePageContext';
-
-export { bufferToWav };
 
 /**
  * Acoustic Steganography & Audio QR Code page
@@ -109,29 +104,23 @@ function AudioQRToolInner() {
         </header>
 
         {/* Tab Selection */}
-        <div className="mb-8 flex justify-center border-b border-slate-200 dark:border-slate-800">
-          <button
+        <div className="mb-8 flex flex-wrap justify-center gap-2 border-b border-slate-200 pb-4 dark:border-slate-800" role="group" aria-label="Audio mode">
+          <Button
+            variant="outline"
+            pressed={activeTab === 'chirp'}
             onClick={() => { stopChirpTransmission(); stopChirpListening(); stopSpectrogramQR(); setActiveTab('chirp'); }}
-            className={`flex items-center gap-2 border-b-2 px-6 py-3 text-sm font-semibold transition-all ${
-              activeTab === 'chirp'
-                ? 'border-teal-500 text-teal-600 dark:text-teal-400'
-                : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
-            }`}
           >
-            <Mic className="size-4" />
+            <Mic className="size-4" aria-hidden="true" />
             1. Acoustic Modem (Chirp Transceiver)
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="outline"
+            pressed={activeTab === 'spectrogram'}
             onClick={() => { stopChirpTransmission(); stopChirpListening(); stopSpectrogramQR(); setActiveTab('spectrogram'); }}
-            className={`flex items-center gap-2 border-b-2 px-6 py-3 text-sm font-semibold transition-all ${
-              activeTab === 'spectrogram'
-                ? 'border-teal-500 text-teal-600 dark:text-teal-400'
-                : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
-            }`}
           >
-            <Music className="size-4" />
+            <Music className="size-4" aria-hidden="true" />
             2. Spectrogram QR Art Generator
-          </button>
+          </Button>
         </div>
 
         {/* MAIN LAYOUT */}
@@ -202,7 +191,7 @@ function AudioQRToolInner() {
                         onClick={startChirpListening}
                         disabled={isTransmitting}
                       >
-                        <Mic className="size-4 animate-pulse text-teal-500" />
+                        <Mic className="size-4 text-teal-500 motion-safe:animate-pulse" aria-hidden="true" />
                         Listen/Receive
                       </Button>
                     ) : (
@@ -329,7 +318,7 @@ function AudioQRToolInner() {
                         ? 'border border-emerald-200 bg-emerald-100 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400' 
                         : 'border border-slate-200 bg-slate-100 text-slate-600 dark:border-slate-800 dark:bg-slate-900/30 dark:text-slate-400'
                     }`}>
-                      <span className={`size-1.5 rounded-full ${isListening ? 'animate-pulse bg-emerald-500' : 'bg-slate-400'}`} />
+                      <span className={`size-1.5 rounded-full ${isListening ? 'bg-emerald-500 motion-safe:animate-pulse' : 'bg-slate-400'}`} />
                       {isListening ? 'LISTENING' : 'OFFLINE'}
                     </span>
                   </div>
@@ -375,7 +364,7 @@ function AudioQRToolInner() {
                         ? 'border border-emerald-200 bg-emerald-100 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400' 
                         : 'border border-slate-200 bg-slate-100 text-slate-600 dark:border-slate-800 dark:bg-slate-900/30 dark:text-slate-400'
                     }`}>
-                      <span className={`size-1.5 rounded-full ${isPlayingSpectrogram ? 'animate-pulse bg-emerald-500' : 'bg-slate-400'}`} />
+                      <span className={`size-1.5 rounded-full ${isPlayingSpectrogram ? 'bg-emerald-500 motion-safe:animate-pulse' : 'bg-slate-400'}`} />
                       {isPlayingSpectrogram ? 'DRAWING QR CODE' : 'STANDBY'}
                     </span>
                   </div>

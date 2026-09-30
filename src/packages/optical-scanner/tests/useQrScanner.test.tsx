@@ -20,6 +20,7 @@ function makeLiveVideo(): HTMLVideoElement {
   Object.defineProperty(video, 'srcObject', { value: { id: 'camera' }, writable: true });
   Object.defineProperty(video, 'videoWidth', { value: 640 });
   Object.defineProperty(video, 'videoHeight', { value: 480 });
+  Object.defineProperty(video, 'readyState', { value: 4 });
   return video;
 }
 

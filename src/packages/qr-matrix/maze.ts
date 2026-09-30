@@ -28,3 +28,11 @@ export {
   isFinderPatternWithMargin,
   type MazeData,
 } from './lib/maze';
+export {
+  isMazeWorkerRequest,
+  assertMazeWorkerRequest,
+  isMazeWorkerResponse,
+  assertMazeWorkerResponse,
+  type MazeWorkerRequest,
+  type MazeWorkerResponse,
+} from './lib/mazeContract';
