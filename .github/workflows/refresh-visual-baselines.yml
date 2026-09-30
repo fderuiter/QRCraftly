@@ -1,0 +1,48 @@
+# TEMPORARY: regenerates e2e/visual-regression.spec.ts baselines on the Linux CI
+# runner for the branches listed below and commits them back. Remove this file
+# once the refreshed baselines are reviewed.
+name: Refresh Visual Baselines
+
+on:
+  push:
+    branches:
+      - claude/fix-issues-y2bhhd-visual
+      - claude/fix-issues-y2bhhd-layout
+    paths:
+      - .github/workflows/refresh-visual-baselines.yml
+
+permissions:
+  contents: read
+
+jobs:
+  refresh:
+    name: Refresh Visual Baselines
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Environment
+        uses: ./.github/actions/setup
+
+      - name: Install Playwright Browsers
+        run: pnpm exec playwright install --with-deps
+
+      - name: Regenerate baselines
+        run: pnpm exec playwright test e2e/visual-regression.spec.ts --update-snapshots
+
+      - name: Commit refreshed baselines
+        env:
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898333+github-actions[bot]@users.noreply.github.com"
+          git add e2e/visual-regression.spec.ts-snapshots
+          if git diff --cached --quiet; then
+            echo "Baselines unchanged."
+            exit 0
+          fi
+          git commit -m "test(e2e): refresh visual regression baselines from the CI runner"
+          git push origin "HEAD:refs/heads/$BRANCH"
