@@ -145,6 +145,13 @@ describe('StyleControls Component', () => {
       expect(screen.getByText('Upload Logo')).toBeInTheDocument();
   });
 
+  it('gives the logo and Mosaic QR file inputs distinct accessible names', () => {
+      render(<StyleControls config={DEFAULT_CONFIG} onChange={mockOnChange} />);
+      expandAppearanceSections();
+      expect(screen.getByLabelText('Upload logo image')).toHaveAttribute('type', 'file');
+      expect(screen.getByLabelText('Upload mosaic design')).toHaveAttribute('type', 'file');
+  });
+
   it('handles logo upload', async () => {
       const user = userEvent.setup();
       const { container } = render(<StyleControls config={DEFAULT_CONFIG} onChange={mockOnChange} />);

@@ -167,6 +167,7 @@ export const LogoControls: React.FC<LogoControlsProps> = ({ config, onChange }) 
       <input
         ref={fileInputRef}
         type="file"
+        aria-label="Upload logo image"
         accept={SYSTEM_LIMITS.SUPPORTED_IMAGE_FORMATS.join(',')}
         className="hidden"
         onChange={handleLogoUpload}
