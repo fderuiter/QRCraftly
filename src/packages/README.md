@@ -21,16 +21,6 @@ src/packages/<name>/
 
 Packages may expose several small, purpose-built entry points (such as `index.ts`, `client.ts`, `worker.ts`) rather than funnelling everything through one giant barrel `index.ts`. Barrel files that blindly re-export an entire internal subtree are discouraged; keep entry points focused and hide implementation in subfolders.
 
-## Copy-Me Starter Template
-
-A committed starter template is provided in [`src/packages/example/`](./example/):
-
-- `index.ts`: Public root entry point exporting high-level functions.
-- `lib/impl.ts`: Private implementation file hidden in a subfolder.
-- `tests/example.test.ts`: Test suite verifying behaviour exclusively through `../index`.
-
-Copy this directory when scaffolding a new deep module, or delete it once custom modules are in place.
-
 ## Automated Verification
 
 Run boundary verification at any time:
@@ -56,7 +46,7 @@ Boundary checks run automatically during `pnpm run lint` and CI.
 - **Purpose**: Full QR code matrix visual orchestration, styles, locator eyes, logo cutouts, alignment pattern zones, and playable maze generation.
 - **Entry Points**:
   - `index.ts`: `drawQR`, `drawQRInternal`, `renderBorder`, `renderEyes`, `renderModules`, `renderFluidModules`, `renderLogo`, `renderMaze`, layout and logo math.
-  - `maze.ts`: `generateMaze`, `getMazeCacheKey`, `mazeCache`, `clearMazeCache`, `getStyleAdaptiveMazePathWidth`, `renderMaze`, `applyMazeHaloMask`, and bridge validation helpers.
+  - `maze.ts`: `generateMaze`, `getMazeCacheKey`, `getCachedMaze`, `storeMaze`, `clearMazeCache`, `getStyleAdaptiveMazePathWidth`, `renderMaze`, `applyMazeHaloMask`, and bridge validation helpers.
 
 ### `optical-scanner` (`@/packages/optical-scanner`)
 
@@ -75,11 +65,11 @@ Boundary checks run automatically during `pnpm run lint` and CI.
 
 ### `optical-transfer` (`@/packages/optical-transfer`)
 
-- **Purpose**: Air-gapped unidirectional optical data transmission via animated QR code streams, utilizing pure TypeScript Luby Transform rateless fountain codes over $\text{GF}(2)$, bounded preallocated frame pools, security stream lookahead sanitization, and dedicated Web Workers.
+- **Purpose**: Air-gapped, one-way optical data transmission via animated QR code streams. Uses a pure TypeScript rateless fountain codec (Luby Transform over $\text{GF}(2)$ with peeling plus Gaussian-elimination fallback) framed as BC-UR `ur:bytes/` parts (CBOR + Bytewords + CRC-32), `deflate-raw` pre-compression, a SHA-256-verified session header, recycled preallocated frame pools, stream lookahead sanitization, and dedicated Web Workers. See [ADR 0014](../../docs/adr/0014-rateless-fountain-codes-for-airgapped-optical-transfer.md).
 - **Entry Points**:
-  - `index.ts`: Primary public API, high-level `createOpticalSender`, `createOpticalReceiver`, handshake protocols, fountain codec primitives (`LTEncoder`, `LTDecoder`, `RobustSolitonDistribution`), and contracts.
-  - `sender.ts`: Sender engine abstraction orchestrating file slicing, RAF loop scheduling, dynamic FPS pacing, and fountain droplet generation.
-  - `receiver.ts`: Receiver engine abstraction orchestrating worker-driven reassembly, deduplication, stream lookahead security validation, and complete file extraction.
-  - `client.ts`: Headless React hooks (`useOpticalSender`, `useOpticalReceiver`) and UI state types.
-  - `worker-slice.ts`: Background Web Worker handling non-blocking file slicing, checksum calculation, and droplet encoding.
-  - `worker-reassembly.ts`: Dedicated background Web Worker handling chunk tracking, XOR fountain graph decoding, integrity verification, and blob assembly.
+  - `index.ts`: Primary public API: sender/receiver sessions, handshake helpers, fountain codec primitives (`FountainEncoder`, `FountainDecoder`, `solveGF2`, Robust Soliton helpers), BC-UR envelope (`serializeDroplet`, `parseDropletString`, `cborEncode`/`cborDecode`, Bytewords, `crc32`), session layer (`createFountainSession`, `openFountainSession`, `compressForTransfer`, `resolveFountainSymbolSize`), `FountainReassembler`, `FountainRateTracker`, and contracts.
+  - `sender.ts`: Headless `TransferSession`, fountain mode by default: off-thread droplet generation, recycled frame pool, rate-paced stepping without carousel restarts.
+  - `receiver.ts`: Headless `ReceiverSession`: sniffs fountain droplets and legacy chunks, stream lookahead security validation, SHA-256 verification before `onSuccess`.
+  - `client.ts`: Headless React hooks. `useOpticalSender` broadcasts fountain droplets by default, with no handshake frame and every QR at version 7 or lower. `useOpticalReceiver` provides stateless entry and exposes `fountainStats` telemetry (droplets vs K, rank, FPS, ETA). Also exports UI state types.
+  - `worker-slice.ts`: Background Web Worker: hashing, `deflate-raw` compression (skipped when it saves less than 5%), density-bounded symbol sizing, and QR matrix generation for droplets or legacy chunks.
+  - `worker-reassembly.ts`: Background Web Worker: fountain reassembly (peeling + GF(2) elimination), decompression and SHA-256 verification, plus legacy chunk reassembly.

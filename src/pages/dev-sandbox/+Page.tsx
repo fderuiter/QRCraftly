@@ -2,9 +2,6 @@ import { useState } from 'react';
 import { TextField, SelectField, CheckboxField } from '../../components/ui/FormFields';
 import { ColorInput } from '../../components/ui/ColorInput';
 
-/**
- *
- */
 export default function DevSandbox() {
   const unusedLocal = "some unused value";
   const [text, setText] = useState('');

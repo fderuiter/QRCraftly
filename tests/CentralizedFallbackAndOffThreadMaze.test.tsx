@@ -10,7 +10,7 @@ import React from 'react';
 import { QRProvider, useQRStore } from '@/context/QRContext';
 import { useAnimatedQrSender } from '@/hooks/useAnimatedQrSender';
 import QRCanvas from '@/components/QRCanvas';
-import { generateMaze, mazeCache, clearMazeCache, getMazeCacheKey } from '@/packages/qr-matrix/maze';
+import { generateMaze, getCachedMaze, clearMazeCache, getMazeCacheKey } from '@/packages/qr-matrix/maze';
 import { DEFAULT_CONFIG } from '@/constants';
 import { QRConfig } from '@/types';
 
@@ -129,11 +129,11 @@ describe('Centralized Fallback Store & Off-Thread Maze Execution Suite', () => {
     };
 
     const cacheKey = getMazeCacheKey(mazeConfig, size, mockModules);
-    expect(mazeCache.has(cacheKey)).toBe(false);
+    expect(getCachedMaze(cacheKey)).toBeUndefined();
 
     const generated = generateMaze(mockModules, mazeConfig, size);
     expect(generated).toBeDefined();
-    expect(mazeCache.has(cacheKey)).toBe(true);
+    expect(getCachedMaze(cacheKey)).toBeDefined();
   });
 
   it('AC4: Re-applying previous bridge configurations retrieves pre-computed pathfinding layouts from cache without recalculation overhead', () => {

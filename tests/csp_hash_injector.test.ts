@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { extractInlineScripts, computeCspHash, replaceMetaCSP, updateCsp, validateHeaders, pathToRoute, generateHeadersContent } from '../scripts/csp_hash_injector.js';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { BASE_CSP_PATTERN, extractInlineScripts, computeCspHash, replaceMetaCSP, updateCsp, validateHeaders, pathToRoute, generateHeadersContent } from '../scripts/csp_hash_injector.js';
 
 describe('CSP Hash Injector Unit Tests', () => {
   describe('pathToRoute', () => {
@@ -133,6 +136,37 @@ describe('CSP Hash Injector Unit Tests', () => {
       const largeHeader = "b".repeat(1500);
       const content = `/*\n` + Array(6).fill(`  X-Custom-Header: ${largeHeader}\n`).join("");
       expect(() => validateHeaders(csp, content)).toThrowError(/exceeds Cloudflare's limit of 8,192 bytes/);
+    });
+  });
+
+  describe('BASE_CSP_PATTERN', () => {
+    const directiveSources = (csp: string, name: string): string[] | undefined => {
+      const directive = csp.split(';').map(d => d.trim()).find(d => d.split(/\s+/)[0] === name);
+      return directive?.split(/\s+/).slice(1);
+    };
+
+    it('allows blob: images and blob: media for SVG export and video scanning (#969)', () => {
+      expect(directiveSources(BASE_CSP_PATTERN, 'img-src')).toEqual(["'self'", 'data:', 'blob:']);
+      expect(directiveSources(BASE_CSP_PATTERN, 'media-src')).toEqual(["'self'", 'blob:']);
+    });
+
+    it('keeps blob: sources after inline script hashes are injected (#969)', () => {
+      const routeCsp = updateCsp(BASE_CSP_PATTERN, ["'sha256-abc'"]);
+      expect(directiveSources(routeCsp, 'img-src')).toEqual(["'self'", 'data:', 'blob:']);
+      expect(directiveSources(routeCsp, 'media-src')).toEqual(["'self'", 'blob:']);
+      expect(directiveSources(routeCsp, 'script-src')).toEqual(["'self'", "'sha256-abc'"]);
+    });
+
+    it('allowlists no third-party origins now that Google Fonts is gone (#970)', () => {
+      expect(BASE_CSP_PATTERN).not.toMatch(/https?:/);
+      expect(directiveSources(BASE_CSP_PATTERN, 'font-src')).toEqual(["'self'"]);
+      expect(directiveSources(BASE_CSP_PATTERN, 'style-src')).toEqual(["'self'", "'unsafe-inline'"]);
+    });
+
+    it('matches the meta CSP rendered by src/layouts/Head.tsx byte for byte', () => {
+      const headSource = fs.readFileSync(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../src/layouts/Head.tsx'), 'utf8');
+      const match = /const CONTENT_SECURITY_POLICY = "([^"]+)";/.exec(headSource);
+      expect(match?.[1]).toBe(BASE_CSP_PATTERN);
     });
   });
 });

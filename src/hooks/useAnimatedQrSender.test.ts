@@ -82,7 +82,9 @@ describe('useAnimatedQrSender Hook', () => {
     expect(result.current.progress).toBe(0);
     expect(result.current.fps).toBe(15);
     expect(result.current.chunkSize).toBeLessThan(256);
-    expect(result.current.chunkSize).toBe(180);
+    // Fountain mode is the default: the symbol-size cap is 100 bytes (QR version <= 7).
+    expect(result.current.fountainMode).toBe(true);
+    expect(result.current.chunkSize).toBe(100);
     expect(result.current.currentPass).toBe(1);
   });
 

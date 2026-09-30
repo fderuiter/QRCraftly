@@ -17,114 +17,77 @@
 */
 
 import { DropletMetadata, FountainDroplet } from './contracts';
+import { cborEncode, cborDecode } from './cbor';
+import { decodeBytewordsMinimal, encodeBytewordsMinimal } from './bytewords';
 
-// Precomputed CRC32 lookup table for fast 32-bit checksumming
-const CRC_TABLE = new Uint32Array(256);
-for (let i = 0; i < 256; i++) {
-  let c = i;
-  for (let j = 0; j < 8; j++) {
-    c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
-  }
-  CRC_TABLE[i] = c >>> 0;
-}
-
-/**
- * Computes a 32-bit CRC checksum as an 8-character hex string.
- */
-export function computeCrc32Hex(bytes: Uint8Array): string {
-  let crc = 0xffffffff;
-  const len = bytes.length;
-  for (let i = 0; i < len; i++) {
-    crc = (crc >>> 8) ^ CRC_TABLE[(crc ^ bytes[i]) & 0xff];
-  }
-  return ((crc ^ 0xffffffff) >>> 0).toString(16).padStart(8, '0');
-}
-
-/**
- * Converts a Uint8Array buffer to a Base64 string.
- */
-function bytesToBase64(bytes: Uint8Array): string {
-  if (typeof Buffer !== 'undefined') {
-    return Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength).toString('base64');
-  }
-  let binary = '';
-  const len = bytes.byteLength;
-  for (let i = 0; i < len; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return btoa(binary);
-}
-
-/**
- * Converts a Base64 string to a Uint8Array buffer.
- */
-function base64ToBytes(base64: string): Uint8Array {
-  if (typeof Buffer !== 'undefined') {
-    const buf = Buffer.from(base64, 'base64');
-    return new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength);
-  }
-  const binary = atob(base64);
-  const len = binary.length;
-  const bytes = new Uint8Array(len);
-  for (let i = 0; i < len; i++) {
-    bytes[i] = binary.charCodeAt(i);
-  }
-  return bytes;
-}
-
+/** Canonical (lowercase) BC-UR type prefix for fountain droplets. */
 export const FOUNTAIN_URI_PREFIX = 'ur:bytes/';
 
+/** Upper bound on K accepted from an untrusted droplet header. */
+const MAX_SOURCE_BLOCKS = 1 << 22;
+const MAX_UINT32 = 0xffffffff;
+
 /**
- * Serializes a fountain droplet into a compact, BC-UR aligned URI string.
- * Format: ur:bytes/<seq>-<k>-<filesize>-<checksum>/<payload_base64>
+ * Serializes a droplet as a BC-UR multipart part:
+ * `UR:BYTES/<seq>-<k>/<minimal bytewords of CBOR [seq, k, messageLen, checksum, data]>`.
+ * The string is uppercase so QR encoders can use the denser alphanumeric mode.
+ * @param droplet The droplet to serialize.
+ * @returns The uppercase UR string.
  */
 export function serializeDroplet(droplet: FountainDroplet): string {
-  const meta = `${droplet.seq}-${droplet.k}-${droplet.fileSize}-${droplet.checksum}`;
-  const payload = bytesToBase64(droplet.data);
-  return `${FOUNTAIN_URI_PREFIX}${meta}/${payload}`;
+  const body = cborEncode([droplet.seq, droplet.k, droplet.messageLength, droplet.checksum, droplet.data]);
+  return `${FOUNTAIN_URI_PREFIX}${droplet.seq}-${droplet.k}/${encodeBytewordsMinimal(body)}`.toUpperCase();
 }
 
 /**
- * Checks if an incoming string signature matches a rateless fountain droplet envelope.
+ * Checks (case-insensitively) whether a decoded QR string is a `ur:bytes/` droplet.
+ * @param str Decoded QR text.
+ * @returns True if the text carries the fountain UR prefix.
  */
 export function isFountainDropletString(str: string): boolean {
-  return str.startsWith(FOUNTAIN_URI_PREFIX);
+  return str.length > FOUNTAIN_URI_PREFIX.length && str.slice(0, FOUNTAIN_URI_PREFIX.length).toLowerCase() === FOUNTAIN_URI_PREFIX;
+}
+
+function isUint(value: unknown, max = Number.MAX_SAFE_INTEGER): value is number {
+  return typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= max;
 }
 
 /**
- * Parses a serialized fountain droplet string into its metadata and payload bytes.
- * Returns null if string format is invalid.
+ * Parses and validates a BC-UR multipart droplet string.
+ * @param str Decoded QR text.
+ * @returns Droplet metadata and fragment bytes, or null if malformed or tampered.
  */
 export function parseDropletString(str: string): { meta: DropletMetadata; data: Uint8Array } | null {
   if (!isFountainDropletString(str)) return null;
+  const match = /^(\d{1,10})-(\d{1,10})\/([a-z]+)$/.exec(str.slice(FOUNTAIN_URI_PREFIX.length).toLowerCase());
+  if (!match) return null;
 
-  const content = str.slice(FOUNTAIN_URI_PREFIX.length);
-  const slashIdx = content.indexOf('/');
-  if (slashIdx === -1) return null;
+  const body = decodeBytewordsMinimal(match[3]);
+  if (!body) return null;
 
-  const header = content.slice(0, slashIdx);
-  const payloadBase64 = content.slice(slashIdx + 1);
-
-  const parts = header.split('-');
-  if (parts.length < 4) return null;
-
-  const seq = parseInt(parts[0], 10);
-  const k = parseInt(parts[1], 10);
-  const fileSize = parseInt(parts[2], 10);
-  const checksum = parts[3];
-
-  if (isNaN(seq) || isNaN(k) || isNaN(fileSize) || !checksum) {
-    return null;
-  }
-
+  let decoded;
   try {
-    const data = base64ToBytes(payloadBase64);
-    return {
-      meta: { seq, k, fileSize, checksum },
-      data,
-    };
+    decoded = cborDecode(body);
   } catch {
     return null;
   }
-}
+  if (!Array.isArray(decoded) || decoded.length !== 5) return null;
+  const [seq, k, messageLength, checksum, data] = decoded;
+  if (
+    !isUint(seq, MAX_UINT32) ||
+    seq < 1 ||
+    !isUint(k, MAX_SOURCE_BLOCKS) ||
+    k < 1 ||
+    !isUint(messageLength) ||
+    !isUint(checksum, MAX_UINT32) ||
+    !(data instanceof Uint8Array) ||
+    data.length === 0
+  ) {
+    return null;
+  }
+  if (Number(match[1]) !== seq || Number(match[2]) !== k) return null;
+  // The message must fill exactly k fragments of this size (last one padded).
+  if (messageLength > k * data.length || messageLength <= (k - 1) * data.length) return null;
 
+  return { meta: { seq, k, messageLength, checksum }, data };
+}

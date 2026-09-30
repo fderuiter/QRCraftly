@@ -64,21 +64,9 @@ const A = BLASTER_ARENA;
 
 /** Durability statistics shown in the HUD. */
 interface Durability {
-  /**
-   *
-   */
   intact: number;
-  /**
-   *
-   */
   original: number;
-  /**
-   *
-   */
   destroyed: number;
-  /**
-   *
-   */
   percent: number;
 }
 
@@ -97,49 +85,16 @@ function isInteractiveTarget(target: EventTarget | null): boolean {
   return ['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON', 'A'].includes(target.tagName) || target.getAttribute('role') === 'radio' || target.getAttribute('role') === 'tab';
 }
 
-/**
- *
- */
 interface Scene {
-  /**
-   *
-   */
   grid: MicroGrid;
-  /**
-   *
-   */
   target: ArcadeTarget;
-  /**
-   *
-   */
   palette: ArenaPalette;
-  /**
-   *
-   */
   aim: Point;
-  /**
-   *
-   */
   weapon: BlasterWeaponId;
-  /**
-   *
-   */
   laserOn: boolean;
-  /**
-   *
-   */
   projectiles: readonly Projectile[];
-  /**
-   *
-   */
   particles: readonly Particle[];
-  /**
-   *
-   */
   shake: number;
-  /**
-   *
-   */
   tick: number;
 }
 

@@ -20,7 +20,7 @@ import { QRConfig, QRStyle, QRModules } from '@/types';
 import { drawRoundRect, drawRoughRect, drawPoly, drawStar, drawCircularModule, drawCircuitModule, drawStandardModule } from '@/utils/canvasHelpers';
 import { getIsCoveredByLogo, LogoMetrics, iterateMatrix } from './utils';
 import { getLuminance } from '@/utils/colorUtils';
-import { renderFluidModules, isFinderEyeZone } from './fluid';
+import { renderFluidModules, isFinderPattern } from './fluid';
 
 export interface ModuleRenderOptions {
   /** Optional pre-sampled cell background relative luminance array (length = moduleCount * moduleCount). */
@@ -266,7 +266,7 @@ export const renderModules = (
       for (let i = 0; i < group0Count; i++) {
         const r = group0Rows[i];
         const c = group0Cols[i];
-        if (!isFinderEyeZone(r, c, moduleCount)) {
+        if (!isFinderPattern(r, c, moduleCount)) {
           grid0[r * moduleCount + c] = 1;
         }
       }
@@ -281,7 +281,7 @@ export const renderModules = (
       for (let i = 0; i < group1Count; i++) {
         const r = group1Rows[i];
         const c = group1Cols[i];
-        if (!isFinderEyeZone(r, c, moduleCount)) {
+        if (!isFinderPattern(r, c, moduleCount)) {
           grid1[r * moduleCount + c] = 1;
         }
       }

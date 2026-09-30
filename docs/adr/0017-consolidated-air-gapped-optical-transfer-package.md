@@ -6,7 +6,7 @@ status: accepted
 
 ## Context
 
-Air-gapped screen-to-camera optical file transfer previously suffered from severe architectural entanglement across React hooks, utility workers, and ad-hoc frame memory caching. The sender and receiver subsystems were dispersed across [`src/hooks/useAnimatedQrSender.ts`](../../src/hooks/useAnimatedQrSender.ts) (748 lines), [`src/hooks/useAnimatedQrReceiver.ts`](../../src/hooks/useAnimatedQrReceiver.ts) (787 lines), [`src/utils/fileSliceWorker.ts`](../../src/utils/fileSliceWorker.ts), [`src/utils/fileReassemblyWorker.ts`](../../src/utils/fileReassemblyWorker.ts), [`src/utils/FrameMemoryPool.ts`](../../src/utils/FrameMemoryPool.ts), and [`src/engine/StreamLookahead.ts`](../../src/engine/StreamLookahead.ts).
+Air-gapped screen-to-camera optical file transfer previously suffered from severe architectural entanglement across React hooks, utility workers, and ad-hoc frame memory caching. The sender and receiver subsystems were dispersed across [`src/hooks/useAnimatedQrSender.ts`](../../src/hooks/useAnimatedQrSender.ts) (748 lines), [`src/hooks/useAnimatedQrReceiver.ts`](../../src/hooks/useAnimatedQrReceiver.ts) (787 lines), `src/utils/fileSliceWorker.ts` (since deleted), `src/utils/fileReassemblyWorker.ts` (since deleted), `src/utils/FrameMemoryPool.ts` (since deleted), and [`src/engine/StreamLookahead.ts`](../../src/engine/StreamLookahead.ts).
 
 This monolithic design presented multiple systemic deficiencies:
 
@@ -33,7 +33,7 @@ The package exposes minimal, orthogonal public entry points:
 
 Internal transfer mechanics are strictly encapsulated within `lib/`:
 
-- **`lib/fountain/`**: Zero-dependency Luby Transform codec implementing Robust Soliton degree distributions, droplet symbol generators, and peeling elimination reassembly for stateless stream entry.
+- **`lib/fountain/`**: Zero-dependency Luby Transform codec implementing Robust Soliton degree distributions, droplet symbol generators, peeling with GF(2) Gaussian-elimination fallback, BC-UR `ur:bytes/` framing (CBOR + Bytewords + CRC-32), and the compressed, SHA-256-bound session header for stateless stream entry (see [ADR 0014](./0014-rateless-fountain-codes-for-airgapped-optical-transfer.md)).
 - **`lib/chunking/`**: Backward-compatible sequential chunk partitioning and assembly for legacy stream parity.
 - **`lib/framePool.ts`**: Contiguous typed-array memory buffer (`PreallocatedFramePool`) preventing GC pauses during animation loops.
 - **`lib/streamLookahead.ts`**: Protocol security validator consuming `SafeUrlPipeline` from `src/utils/url.ts`, eliminating duplicate entity decoders.

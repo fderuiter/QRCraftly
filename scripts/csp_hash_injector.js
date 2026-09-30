@@ -9,6 +9,19 @@ const __dirname = path.dirname(__filename);
 const DIST_CLIENT_DIR = path.join(__dirname, '../dist/client');
 
 /**
+ * Base Content Security Policy written into every built page (meta tag) and
+ * into `_headers`. It must stay byte-identical to the meta CSP rendered by
+ * `src/layouts/Head.tsx`; `src/layouts/Head.test.tsx` enforces that.
+ *
+ * - `img-src ... blob:` lets SVG export rasterize its `blob:` object URL for the
+ *   scannability check and lets the logo resize fallback decode uploads (#969).
+ * - `media-src 'self' blob:` lets the optical scanner play uploaded video files
+ *   through `blob:` object URLs (#969).
+ * - No web-font CDN is used, so no third-party style/font origins are allowed (#970).
+ */
+export const BASE_CSP_PATTERN = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';";
+
+/**
  * Recursively search for HTML files in a directory.
  * @param {string} dir - Directory path to search.
  * @returns {string[]} List of HTML file paths.
@@ -214,8 +227,7 @@ export function run() {
   
   console.log(`[CSP Hash Injector] Found ${htmlFiles.length} HTML files.`);
   
-  // Base CSP string to parse (matches original CSP in Head.tsx but can be parsed dynamically)
-  const baseCspPattern = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';";
+  const baseCspPattern = BASE_CSP_PATTERN;
   
   const baseCsp = updateCsp(baseCspPattern, []);
   const routeCspMap = new Map();

@@ -190,13 +190,13 @@ banner "Local Development Environment Setup"
 
 # ── Stage 1: Toolchain Validation ───────────────────────────────────────────
 stage "Toolchain: Node.js & pnpm Validation"
-say "Validating required toolchain versions (Node >= 22.14.0, pnpm >= 11)."
+say "Validating required toolchain versions (Node ^22.22.2 or >= 24.15.0, pnpm >= 11)."
 
 if command -v node >/dev/null 2>&1; then
   NODE_VER=$(node -v)
   say "✓ Detected Node.js: $NODE_VER"
 else
-  warn "Node.js is not found on PATH. Please install Node.js >= 22.14.0."
+  warn "Node.js is not found on PATH. Please install Node.js 22.22.2+ (or 24.15.0+), as pinned in .nvmrc."
 fi
 
 if command -v pnpm >/dev/null 2>&1; then

@@ -48,9 +48,6 @@ const AdditionalSidebarContent = ({ toolId }: { toolId?: string }) => {
   return <SidebarContent toolId={toolId || 'index'} />;
 };
 
-/**
- *
- */
 export const sidebarControls = [
   {
     id: 'content',

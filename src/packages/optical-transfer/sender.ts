@@ -18,7 +18,7 @@
 
 import { PreallocatedFramePool, type CachedFrame, shuffleInPlace } from './lib/framePool';
 import { sanitizeStreamConfig, verifyHandshakeFrame } from './lib/handshake';
-import { SenderSessionOptions, StreamFrame } from './lib/contracts';
+import { SenderSessionOptions, StreamFrame, type SliceWorkerOutgoingMessage } from './lib/contracts';
 
 export {
   sanitizeStreamConfig,
@@ -46,11 +46,15 @@ export class TransferSession {
   public currentFrameIndex: number = 0;
   public isRunning: boolean = false;
   public sha256: string = '';
+  /** Effective symbol size chosen by the worker (fountain) or chunk size (legacy). */
+  public symbolSize: number = 0;
+  /** Rateless BC-UR broadcast (default) versus the legacy handshake carousel. */
+  public readonly fountainMode: boolean;
 
   private worker: Worker | null = null;
-  private framePool: PreallocatedFramePool = new PreallocatedFramePool();
+  private framePool: PreallocatedFramePool = new PreallocatedFramePool(64);
   private callbacks: TransferSessionCallbacks;
-  private timerId: any = null;
+  private timerId: ReturnType<typeof setInterval> | null = null;
   private fps: number;
 
   constructor(file: Blob, options: SenderSessionOptions, callbacks: TransferSessionCallbacks = {}) {
@@ -58,6 +62,40 @@ export class TransferSession {
     this.options = options;
     this.callbacks = callbacks;
     this.fps = options.fps || 15;
+    this.fountainMode = options.fountainMode ?? true;
+  }
+
+  private startPayload() {
+    return {
+      type: 'START' as const,
+      payload: {
+        file: this.file,
+        chunkSize: this.options.chunkSize || (this.fountainMode ? 100 : 180),
+        errorCorrectionLevel: this.options.config.errorCorrectionLevel,
+        fps: this.fps,
+        fountainMode: this.fountainMode,
+      },
+    };
+  }
+
+  /**
+   * Handles a message from the slice worker. Public so the session can be driven
+   * off-thread in tests with a synchronous worker stand-in.
+   * @param message The worker message.
+   */
+  public handleWorkerMessage(message: SliceWorkerOutgoingMessage): void {
+    if (message.type === 'INITIALIZED') {
+      this.totalFrames = message.totalFrames;
+      this.sha256 = message.sha256 || '';
+      this.symbolSize = message.chunkSize;
+      this.callbacks.onInitialized?.(message.totalFrames, message.chunkSize, this.sha256);
+    } else if (message.type === 'FRAME') {
+      this.framePool.storeFrame(message.index, message.size, message.data);
+      const total = message.total || this.totalFrames || 1;
+      this.callbacks.onProgress?.(Math.min(100, Math.round(((message.index + 1) / total) * 100)), message.index + 1, total);
+    } else if (message.type === 'ERROR') {
+      this.callbacks.onError?.(message.message || 'Worker error');
+    }
   }
 
   /**
@@ -70,40 +108,12 @@ export class TransferSession {
 
     const worker = new Worker(new URL('./worker-slice.ts', import.meta.url), { type: 'module' });
 
-    worker.onmessage = (e: MessageEvent) => {
-      const { type, totalFrames: tot, index, total, size, data, sha256, message } = e.data || {};
-
-      if (type === 'INITIALIZED') {
-        this.totalFrames = tot;
-        this.sha256 = sha256 || '';
-        if (this.callbacks.onInitialized) {
-          this.callbacks.onInitialized(tot, this.options.chunkSize || 180, this.sha256);
-        }
-      } else if (type === 'FRAME') {
-        this.framePool.storeFrame(index, size, data);
-        if (this.callbacks.onProgress) {
-          const progress = Math.round(((index + 1) / (total || this.totalFrames || 1)) * 100);
-          this.callbacks.onProgress(progress, index + 1, total || this.totalFrames);
-        }
-      } else if (type === 'ERROR') {
-        if (this.callbacks.onError) {
-          this.callbacks.onError(message || 'Worker error');
-        }
-      }
+    worker.onmessage = (e: MessageEvent<SliceWorkerOutgoingMessage>) => {
+      if (e.data) this.handleWorkerMessage(e.data);
     };
 
     this.worker = worker;
-
-    worker.postMessage({
-      type: 'START',
-      payload: {
-        file: this.file,
-        chunkSize: this.options.chunkSize || 180,
-        errorCorrectionLevel: this.options.config.errorCorrectionLevel,
-        fps: this.fps,
-        fountainMode: !!this.options.fountainMode,
-      },
-    });
+    worker.postMessage(this.startPayload());
   }
 
   /**
@@ -118,7 +128,7 @@ export class TransferSession {
       index: cached.index,
       size: cached.size,
       data: cached.data,
-      isHandshake: cached.index === 0 && !this.options.fountainMode,
+      isHandshake: cached.index === 0 && !this.fountainMode,
     };
 
     if (this.worker) {
@@ -134,21 +144,11 @@ export class TransferSession {
 
     this.framePool.delete(this.currentFrameIndex);
 
-    if (this.totalFrames > 0 && this.currentFrameIndex + 1 >= this.totalFrames) {
+    // Rateless streams never wrap: droplets are emitted until the session stops.
+    if (!this.fountainMode && this.totalFrames > 0 && this.currentFrameIndex + 1 >= this.totalFrames) {
       this.currentFrameIndex = 0;
       this.framePool.clear();
-      if (this.worker) {
-        this.worker.postMessage({
-          type: 'START',
-          payload: {
-            file: this.file,
-            chunkSize: this.options.chunkSize || 180,
-            errorCorrectionLevel: this.options.config.errorCorrectionLevel,
-            fps: this.fps,
-            fountainMode: !!this.options.fountainMode,
-          },
-        });
-      }
+      this.worker?.postMessage(this.startPayload());
     } else {
       this.currentFrameIndex += 1;
     }
