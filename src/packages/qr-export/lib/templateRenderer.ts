@@ -190,7 +190,8 @@ function drawTemplateText(
 }
 
 /**
- * Strategy map for template background rendering.
+ * Resolves the background painter function for a given template style.
+ * Uses an explicit switch statement to avoid dynamic method calls via object properties.
  */
 type BackgroundPainter = (
   ctx: CanvasRenderingContext2D,
@@ -199,12 +200,19 @@ type BackgroundPainter = (
   height: number
 ) => void;
 
-const BACKGROUND_PAINTERS: Record<TemplateStyle, BackgroundPainter> = {
-  [TemplateStyle.NONE]: drawNoneBackground,
-  [TemplateStyle.MINIMALIST]: drawMinimalistBackground,
-  [TemplateStyle.GRADIENT_BLUR]: drawGradientBlurBackground,
-  [TemplateStyle.SOLID_FRAME]: drawSolidFrameBackground,
-};
+function getBackgroundPainter(style: TemplateStyle): BackgroundPainter {
+  switch (style) {
+    case TemplateStyle.MINIMALIST:
+      return drawMinimalistBackground;
+    case TemplateStyle.GRADIENT_BLUR:
+      return drawGradientBlurBackground;
+    case TemplateStyle.SOLID_FRAME:
+      return drawSolidFrameBackground;
+    case TemplateStyle.NONE:
+    default:
+      return drawNoneBackground;
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Main public API
@@ -248,7 +256,7 @@ export function drawWithTemplate(
   ctx.clearRect(0, 0, displayWidth, displayHeight);
 
   // ── 1. Background ──────────────────────────────────────────────────────────
-  const drawBackground = BACKGROUND_PAINTERS[config.templateStyle] ?? drawNoneBackground;
+  const drawBackground = getBackgroundPainter(config.templateStyle);
   drawBackground(ctx, config, displayWidth, displayHeight);
 
   // ── 2. QR Bounding-Box ────────────────────────────────────────────────────

@@ -329,5 +329,14 @@ describe('Security Utils', () => {
           const cleaned = sanitizeSvg(raw);
           expect(cleaned).toContain(safePng);
       });
+
+      it('strips DOCTYPE and ENTITY declarations to guard against XML entity expansion attacks', () => {
+          const raw = `<!DOCTYPE svg [ <!ENTITY xxe "xml bomb"> ]><svg xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" /></svg>`;
+          const cleaned = sanitizeSvg(raw);
+          expect(cleaned).not.toContain('DOCTYPE');
+          expect(cleaned).not.toContain('ENTITY');
+          expect(cleaned).not.toContain('xxe');
+          expect(cleaned).toContain('rect');
+      });
   });
 
