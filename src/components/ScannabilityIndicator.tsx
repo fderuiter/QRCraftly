@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ShieldCheck, Loader2, ShieldX } from 'lucide-react';
 import { ScannabilityStatus, HealthScore } from '../hooks/useScannability';
 import { getExportRiskPolicy } from '../utils/exportRiskPolicy';
+import { Button } from './ui/Button';
 
 interface Props {
   status: ScannabilityStatus;
@@ -151,22 +152,26 @@ export const ScannabilityIndicator: React.FC<Props> = ({
             {(onAutoFixContrast || onResetDefault) && (
               <div className="flex items-center gap-1.5 pt-0.5" data-testid="scannability-recovery-actions">
                 {onAutoFixContrast && (
-                  <button
+                  <Button
                     type="button"
+                    variant="error"
+                    size="sm"
                     onClick={onAutoFixContrast}
-                    className="rounded bg-rose-50 px-2 py-0.5 text-xs font-medium text-rose-700 hover:bg-rose-100 focus:ring-2 focus:ring-rose-500 focus:ring-offset-1 focus:outline-none dark:bg-rose-950/40 dark:text-rose-300 dark:hover:bg-rose-900/60"
+                    className="h-auto px-2 py-0.5 text-xs font-medium"
                   >
                     Auto-Fix Contrast
-                  </button>
+                  </Button>
                 )}
                 {onResetDefault && (
-                  <button
+                  <Button
                     type="button"
+                    variant="outline"
+                    size="sm"
                     onClick={onResetDefault}
-                    className="rounded bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700 hover:bg-slate-200 focus:ring-2 focus:ring-slate-500 focus:ring-offset-1 focus:outline-none dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+                    className="h-auto px-2 py-0.5 text-xs font-medium"
                   >
                     Reset Defaults
-                  </button>
+                  </Button>
                 )}
               </div>
             )}
