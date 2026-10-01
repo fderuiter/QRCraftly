@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
+  calculateClampedDimensions,
   isLowTierDevice,
   isOffThreadSupported,
   processImageOnMainThread
@@ -14,6 +15,28 @@ describe('imageResizeHelper', () => {
     vi.restoreAllMocks();
     global.navigator = originalNavigator;
     global.window = originalWindow;
+  });
+
+  describe('calculateClampedDimensions', () => {
+    it('scales down landscape dimensions when width exceeds maxDim', () => {
+      const result = calculateClampedDimensions(2000, 1000, 1000);
+      expect(result).toEqual({ width: 1000, height: 500 });
+    });
+
+    it('scales down portrait dimensions when height exceeds maxDim', () => {
+      const result = calculateClampedDimensions(1000, 2000, 1000);
+      expect(result).toEqual({ width: 500, height: 1000 });
+    });
+
+    it('retains original dimensions when both dimensions are within maxDim', () => {
+      const result = calculateClampedDimensions(800, 600, 1000);
+      expect(result).toEqual({ width: 800, height: 600 });
+    });
+
+    it('retains dimensions when width and height equal maxDim', () => {
+      const result = calculateClampedDimensions(1000, 1000, 1000);
+      expect(result).toEqual({ width: 1000, height: 1000 });
+    });
   });
 
   describe('isLowTierDevice', () => {

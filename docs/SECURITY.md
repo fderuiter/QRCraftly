@@ -64,7 +64,7 @@ To prevent custom SVG logo uploads and native vector exports from exposing users
   - Discards `<style>` blocks and element `style` attributes entirely if they contain any `@import` reference.
   - Limits nested data URIs to safe image MIME-types and strips any with active payload markers or script references. This is validated by an optimized, localized helper function within the security utility to ensure clean code and prevent unused export overhead.
   - Strips all inline event handlers (attributes starting with `on`).
-  - Neutralizes any remote or dangerous resource requests inside style blocks, style attributes, or `href`/`xlink:href` references while preserving standard layout paths, responsive viewBox attributes, linear gradients, and clip paths.
+  - Neutralizes any remote or dangerous resource requests inside style blocks, style attributes, or `href`/`xlink:href` references using a shared `sanitizeCssUrlMatch` helper callback while preserving standard layout paths, responsive viewBox attributes, linear gradients, and clip paths.
 
 ## Persistent Browser Storage Allowlist
 

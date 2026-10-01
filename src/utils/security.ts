@@ -274,6 +274,24 @@ const isSafeDataUri = (uri: string): boolean => {
 };
 
 /**
+ * Shared replacer function for CSS url(...) references.
+ * Allows safe data URIs and fragment identifiers (#...), neutralizing other external URLs.
+ */
+const sanitizeCssUrlMatch = (match: string, urlContent: string): string => {
+  const trimmedUrl = urlContent.trim();
+  if (trimmedUrl.startsWith('data:')) {
+    if (isSafeDataUri(trimmedUrl)) {
+      return match;
+    }
+    return 'url(#)';
+  }
+  if (trimmedUrl.startsWith('#') || trimmedUrl === '') {
+    return match;
+  }
+  return 'url(#)';
+};
+
+/**
  * Sanitizes an SVG string to prevent DOM-XSS and structural XML injection.
  * Removes all script elements, script events, and external resource requests.
  * Standard presentation attributes, clip paths, linear gradients, and responsive viewBox configurations are allowed.
@@ -332,19 +350,7 @@ export const sanitizeSvg = (svgText: string): string => {
               element.removeAttribute(attr.name);
             } else {
               // Otherwise, sanitize allowed urls (like url(#...)) and nested data URIs
-              const cleanStyle = styleVal.replace(/url\s*\(\s*['"]?([^'")]*)['"]?\s*\)/gi, (match, urlContent) => {
-                const trimmedUrl = urlContent.trim();
-                if (trimmedUrl.startsWith('data:')) {
-                  if (isSafeDataUri(trimmedUrl)) {
-                    return match;
-                  }
-                  return 'url(#)';
-                }
-                if (trimmedUrl.startsWith('#') || trimmedUrl === '') {
-                  return match;
-                }
-                return 'url(#)';
-              });
+              const cleanStyle = styleVal.replace(/url\s*\(\s*['"]?([^'")]*)['"]?\s*\)/gi, sanitizeCssUrlMatch);
               element.setAttribute(attr.name, cleanStyle);
             }
           }
@@ -362,19 +368,7 @@ export const sanitizeSvg = (svgText: string): string => {
         // 6. Sanitize style blocks that do not contain @import
         if (tagName === 'style') {
           const styleContent = element.textContent || '';
-          const cleanContent = styleContent.replace(/url\s*\(\s*['"]?([^'")]*)['"]?\s*\)/gi, (match, urlContent) => {
-            const trimmedUrl = urlContent.trim();
-            if (trimmedUrl.startsWith('data:')) {
-              if (isSafeDataUri(trimmedUrl)) {
-                return match;
-              }
-              return 'url(#)';
-            }
-            if (trimmedUrl.startsWith('#') || trimmedUrl === '') {
-              return match;
-            }
-            return 'url(#)';
-          });
+          const cleanContent = styleContent.replace(/url\s*\(\s*['"]?([^'")]*)['"]?\s*\)/gi, sanitizeCssUrlMatch);
           element.textContent = cleanContent;
         }
       }

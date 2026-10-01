@@ -16,6 +16,8 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { calculateClampedDimensions } from './imageResizeHelper';
+
 /** Worker-only synchronous reader; absent from the DOM lib this project compiles against. */
 declare const FileReaderSync: { new (): { readAsDataURL(blob: Blob): string } } | undefined;
 
@@ -36,13 +38,7 @@ self.onmessage = async (e: MessageEvent<{ file: Blob | File; maxDim: number }>) 
     const originalHeight = bitmap.height;
 
     // Calculate dynamic clamped dimensions
-    let width = originalWidth;
-    let height = originalHeight;
-    if (width > maxDim || height > maxDim) {
-      const ratio = Math.min(maxDim / width, maxDim / height);
-      width = Math.round(width * ratio);
-      height = Math.round(height * ratio);
-    }
+    const { width, height } = calculateClampedDimensions(originalWidth, originalHeight, maxDim);
 
     // Recycle/re-use the OffscreenCanvas context to prevent GC/memory churn
     if (!cachedCanvas) {

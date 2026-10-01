@@ -118,6 +118,29 @@ export const processImageOffThread = (file: File | Blob, maxDim: number): Promis
 };
 
 /**
+ * Calculates dynamic clamped image dimensions while maintaining aspect ratio.
+ *
+ * @param width Original image width
+ * @param height Original image height
+ * @param maxDim Maximum allowed dimension (width or height)
+ * @returns Object containing calculated width and height
+ */
+export const calculateClampedDimensions = (
+  width: number,
+  height: number,
+  maxDim: number
+): { width: number; height: number } => {
+  if (width > maxDim || height > maxDim) {
+    const ratio = Math.min(maxDim / width, maxDim / height);
+    return {
+      width: Math.round(width * ratio),
+      height: Math.round(height * ratio)
+    };
+  }
+  return { width, height };
+};
+
+/**
  * Fallback to resize raster image on the main thread using recycled canvas context.
  */
 export const processImageOnMainThread = (file: File | Blob, maxDim: number): Promise<string> => {
@@ -130,13 +153,7 @@ export const processImageOnMainThread = (file: File | Blob, maxDim: number): Pro
       const originalWidth = img.naturalWidth || img.width;
       const originalHeight = img.naturalHeight || img.height;
 
-      let width = originalWidth;
-      let height = originalHeight;
-      if (width > maxDim || height > maxDim) {
-        const ratio = Math.min(maxDim / width, maxDim / height);
-        width = Math.round(width * ratio);
-        height = Math.round(height * ratio);
-      }
+      const { width, height } = calculateClampedDimensions(originalWidth, originalHeight, maxDim);
 
       try {
         const { canvas, ctx } = getRecycledMainThreadCanvas(width, height);
