@@ -18,7 +18,7 @@
 
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import StyleControls from './StyleControls';
-import { DEFAULT_CONFIG } from '../constants';
+import { DEFAULT_CONFIG, getDefaultStyleConfig } from '../constants';
 import { QRStyle, LogoPaddingStyle, QRErrorCorrectionLevel } from '../types';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { expandAppearanceSections } from '../../tests/utils/expandAppearanceSections';
@@ -407,5 +407,50 @@ describe('StyleControls Component', () => {
           await user.click(removeBtn);
           expect(mockOnChange).toHaveBeenCalledWith({ borderLogoUrl: null });
       }
+  });
+
+  describe('Reset style defaults button', () => {
+    it('renders Reset style defaults button disabled when config matches defaults', () => {
+      render(<StyleControls config={DEFAULT_CONFIG} onChange={mockOnChange} />);
+      const resetButton = screen.getByRole('button', { name: /Reset style defaults/i });
+      expect(resetButton).toBeInTheDocument();
+      expect(resetButton).toBeDisabled();
+    });
+
+    it('enables Reset style defaults button when custom styling is active', () => {
+      const customConfig = { ...DEFAULT_CONFIG, fgColor: '#ff0000', style: QRStyle.FLUID };
+      render(<StyleControls config={customConfig} onChange={mockOnChange} />);
+      const resetButton = screen.getByRole('button', { name: /Reset style defaults/i });
+      expect(resetButton).not.toBeDisabled();
+    });
+
+    it('emits default style updates when reset button is clicked while preserving user content and text fields', async () => {
+      const user = userEvent.setup();
+      const customConfig = {
+        ...DEFAULT_CONFIG,
+        fgColor: '#00ff00',
+        bgColor: '#000000',
+        style: QRStyle.MODERN,
+        value: 'https://example.com/preserve-user-data',
+        borderText: 'My Custom Border',
+        templateHeadline: 'My Custom Headline',
+      };
+
+      render(<StyleControls config={customConfig} onChange={mockOnChange} />);
+      const resetButton = screen.getByRole('button', { name: /Reset style defaults/i });
+      expect(resetButton).not.toBeDisabled();
+
+      await user.click(resetButton);
+
+      const expectedDefaults = getDefaultStyleConfig();
+      expect(mockOnChange).toHaveBeenCalledWith(expectedDefaults);
+
+      // Verify that non-visual content fields are excluded from default style config
+      expect(expectedDefaults).not.toHaveProperty('value');
+      expect(expectedDefaults).not.toHaveProperty('type');
+      expect(expectedDefaults).not.toHaveProperty('borderText');
+      expect(expectedDefaults).not.toHaveProperty('templateHeadline');
+      expect(expectedDefaults).not.toHaveProperty('templateSubtext');
+    });
   });
 });

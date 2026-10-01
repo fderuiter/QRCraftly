@@ -18,7 +18,7 @@ import { getPublicDomain } from "./utils/metadataEngine";
 */
 
 
-import { QRStyle, QRType, QRErrorCorrectionLevel, SocialFormat, TemplateStyle } from './types';
+import { QRConfig, QRStyle, QRType, QRErrorCorrectionLevel, SocialFormat, TemplateStyle } from './types';
 
 /**
  * The default configuration settings for the QR code generator.
@@ -56,6 +56,22 @@ export const DEFAULT_CONFIG = {
   mazeColor: '#3b82f6',
   showMazeSolution: false,
 };
+
+/**
+ * Extracts and returns default visual appearance properties from DEFAULT_CONFIG,
+ * excluding non-visual content fields (value, type, borderText, templateHeadline, templateSubtext).
+ */
+export function getDefaultStyleConfig(): Partial<QRConfig> {
+  const {
+    value: _value,
+    type: _type,
+    borderText: _borderText,
+    templateHeadline: _templateHeadline,
+    templateSubtext: _templateSubtext,
+    ...styleDefaults
+  } = DEFAULT_CONFIG;
+  return styleDefaults;
+}
 
 /**
  * List of available QR code pattern styles with display labels.

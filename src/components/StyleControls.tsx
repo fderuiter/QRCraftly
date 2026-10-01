@@ -18,7 +18,10 @@
 
 
 import React from 'react';
+import { RotateCcw } from 'lucide-react';
 import { QRConfig } from '../types';
+import { getDefaultStyleConfig } from '../constants';
+import { Button } from './ui/Button';
 import {
   BorderControls,
   PatternControls,
@@ -65,40 +68,64 @@ interface StyleControlsProps {
  * @returns The StyleControls component.
  */
 const StyleControls: React.FC<StyleControlsProps> = ({ config, onChange }) => {
+  const defaultStyle = getDefaultStyleConfig();
+  const isCustomStyle = (Object.keys(defaultStyle) as (keyof typeof defaultStyle)[]).some(
+    (key) => config[key] !== defaultStyle[key]
+  );
+
+  const handleReset = () => {
+    onChange(defaultStyle);
+  };
+
   return (
-    <Accordion>
-      {/* Primary appearance controls: expanded by default. */}
-      <AccordionItem title="Pattern & Colors" headingLevel={3} defaultOpen={sectionOpenState.get('Pattern & Colors') ?? false} onOpenChange={rememberSection('Pattern & Colors')}>
-        <div className="space-y-6 pt-1">
-          <PatternControls config={config} onChange={onChange} />
-          <div className="border-t border-slate-100 pt-5 dark:border-slate-700">
-            <ColorControls config={config} onChange={onChange} />
-          </div>
-        </div>
-      </AccordionItem>
+    <div className="space-y-4">
+      <div className="flex justify-end pb-1">
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={!isCustomStyle}
+          onClick={handleReset}
+          className="flex items-center gap-1.5"
+        >
+          <RotateCcw className="size-4" aria-hidden="true" />
+          <span>Reset style defaults</span>
+        </Button>
+      </div>
 
-      {/* Export layout (social media templates) and border */}
-      <AccordionItem title="Layout & Border" headingLevel={3} defaultOpen={sectionOpenState.get('Layout & Border') ?? false} onOpenChange={rememberSection('Layout & Border')}>
-        <div className="space-y-6 pt-1">
-          <LayoutControls config={config} onChange={onChange} />
-          <div className="border-t border-slate-100 pt-5 dark:border-slate-700">
-            <BorderControls config={config} onChange={onChange} />
+      <Accordion>
+        {/* Primary appearance controls: expanded by default. */}
+        <AccordionItem title="Pattern & Colors" headingLevel={3} defaultOpen={sectionOpenState.get('Pattern & Colors') ?? false} onOpenChange={rememberSection('Pattern & Colors')}>
+          <div className="space-y-6 pt-1">
+            <PatternControls config={config} onChange={onChange} />
+            <div className="border-t border-slate-100 pt-5 dark:border-slate-700">
+              <ColorControls config={config} onChange={onChange} />
+            </div>
           </div>
-        </div>
-      </AccordionItem>
+        </AccordionItem>
 
-      <AccordionItem title="Logo" headingLevel={3} defaultOpen={sectionOpenState.get('Logo') ?? false} onOpenChange={rememberSection('Logo')}>
-        <div className="pt-1">
-          <LogoControls config={config} onChange={onChange} />
-          <div className="border-t border-slate-100 pt-5 dark:border-slate-700">
-            <MosaicControls config={config} onChange={onChange} />
+        {/* Export layout (social media templates) and border */}
+        <AccordionItem title="Layout & Border" headingLevel={3} defaultOpen={sectionOpenState.get('Layout & Border') ?? false} onOpenChange={rememberSection('Layout & Border')}>
+          <div className="space-y-6 pt-1">
+            <LayoutControls config={config} onChange={onChange} />
+            <div className="border-t border-slate-100 pt-5 dark:border-slate-700">
+              <BorderControls config={config} onChange={onChange} />
+            </div>
           </div>
-        </div>
-      </AccordionItem>
+        </AccordionItem>
 
-      {/* Advanced Mode (error correction, maze overlay) */}
-      <AdvancedControls config={config} onChange={onChange} />
-    </Accordion>
+        <AccordionItem title="Logo" headingLevel={3} defaultOpen={sectionOpenState.get('Logo') ?? false} onOpenChange={rememberSection('Logo')}>
+          <div className="pt-1">
+            <LogoControls config={config} onChange={onChange} />
+            <div className="border-t border-slate-100 pt-5 dark:border-slate-700">
+              <MosaicControls config={config} onChange={onChange} />
+            </div>
+          </div>
+        </AccordionItem>
+
+        {/* Advanced Mode (error correction, maze overlay) */}
+        <AdvancedControls config={config} onChange={onChange} />
+      </Accordion>
+    </div>
   );
 };
 
