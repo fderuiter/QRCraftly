@@ -72,7 +72,7 @@ export function getQRTypeLabel(type: QRType): string {
  */
 const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
   const { InputComponent, inputProps, flush } = useInputLogic(config, onChange);
-  const containerRef = useDynamicFocus<HTMLDivElement>([config.type]);
+  const containerRef = useDynamicFocus<HTMLDivElement>();
   const [announcement, setAnnouncement] = useState('');
   const [scannerActive, setScannerActive] = useState(false);
   const { addToast } = useToast();

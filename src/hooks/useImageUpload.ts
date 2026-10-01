@@ -67,7 +67,11 @@ export function useImageUpload(): UseImageUploadReturn {
         reader.onload = (event) => {
           const rawSvg = event.target?.result as string;
           const sanitizedSvg = sanitizeSvg(rawSvg);
-          const base64 = btoa(unescape(encodeURIComponent(sanitizedSvg)));
+          const base64 = btoa(
+            encodeURIComponent(sanitizedSvg).replace(/%([0-9A-F]{2})/g, (_, p1) =>
+              String.fromCharCode(parseInt(p1, 16))
+            )
+          );
           const dataUrl = `data:image/svg+xml;base64,${base64}`;
           onSuccess(dataUrl);
         };

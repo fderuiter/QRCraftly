@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { useDynamicFocus } from './useDynamicFocus';
 
 function TestForm({ initialFields, showConditional }: { initialFields: string[], showConditional: boolean }) {
-  const containerRef = useDynamicFocus<HTMLDivElement>([showConditional]);
+  const containerRef = useDynamicFocus<HTMLDivElement>();
   return (
     <div ref={containerRef}>
       {initialFields.includes('ssid') && (

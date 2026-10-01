@@ -1,6 +1,6 @@
 # Input Components
 
-This directory contains modular React components for each specific QR code data type. These components are orchestrated by `src/components/InputPanel.tsx`.
+This directory contains modular React components for each specific QR code data type. These components are orchestrated by `src/components/InputPanel.tsx` (using `useDynamicFocus` for focus management).
 
 ## Component Pattern
 
