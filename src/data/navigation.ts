@@ -23,7 +23,7 @@ import { QRType } from '@/types';
  */
 export interface PrimaryNavItem {
   /** Stable identifier. */
-  id: 'create' | 'send' | 'receive' | 'arcade' | 'about' | 'security';
+  id: 'create' | 'transfer' | 'arcade' | 'about' | 'security';
   /** Visible label, identical on every route family. */
   label: string;
   /** Destination path. */
@@ -58,8 +58,7 @@ export const QR_TYPE_ROUTES: Record<QRType, string> = {
  */
 export const PRIMARY_NAV_ITEMS: readonly PrimaryNavItem[] = [
   { id: 'create', label: 'Create QR', href: '/' },
-  { id: 'send', label: 'Send File', href: '/file-transfer', beta: true },
-  { id: 'receive', label: 'Receive File', href: '/file-transfer/receive', beta: true },
+  { id: 'transfer', label: 'File Transfer', href: '/file-transfer', beta: true },
   { id: 'arcade', label: 'Arcade', href: '/arcade' },
   { id: 'about', label: 'About', href: '/about' },
   { id: 'security', label: 'Security', href: '/security' },
@@ -79,12 +78,14 @@ export function normalizePathname(pathname: string): string {
 
 /**
  * Finds the primary destination that owns a pathname, so it can be marked with
- * `aria-current="page"`. Every generator route belongs to "Create QR".
+ * `aria-current="page"`. Every generator route belongs to "Create QR", and both
+ * `/file-transfer` and `/file-transfer/receive` belong to "File Transfer".
  * @param pathname - The current pathname.
  * @returns The owning item's id, or undefined when no primary destination matches.
  */
 export function getCurrentPrimaryNavId(pathname: string): PrimaryNavItem['id'] | undefined {
   const path = normalizePathname(pathname);
   if (GENERATOR_PATHS.has(path)) return 'create';
+  if (path === '/file-transfer' || path === '/file-transfer/receive') return 'transfer';
   return PRIMARY_NAV_ITEMS.find((item) => item.href === path)?.id;
 }

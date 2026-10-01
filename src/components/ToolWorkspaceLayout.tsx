@@ -146,6 +146,8 @@ export interface ToolWorkspaceHeaderProps {
    * "QRCraftly" home link is followed by a descriptive h1.
    */
   brandIsHeading?: boolean;
+  /** Optional mode switcher control rendered in the header. */
+  modeSwitcher?: React.ReactNode;
   /** Extra header actions rendered before the primary navigation. */
   actions?: React.ReactNode;
   /** Id of the preview region; renders a mobile-only "Jump to preview" link when set. */
@@ -162,6 +164,7 @@ export interface ToolWorkspaceHeaderProps {
  * @param props.subtitle - Description under the heading.
  * @param props.badge - Optional pill after the subtitle.
  * @param props.brandIsHeading - Whether the h1 is the brand link.
+ * @param props.modeSwitcher - Optional mode switcher control.
  * @param props.actions - Extra header actions.
  * @param props.previewId - DOM id of the preview region.
  * @param props.previewJumpLabel - Label of the mobile jump link.
@@ -172,6 +175,7 @@ export function ToolWorkspaceHeader({
   subtitle,
   badge,
   brandIsHeading = false,
+  modeSwitcher,
   actions,
   previewId,
   previewJumpLabel = 'Jump to preview',
@@ -217,6 +221,7 @@ export function ToolWorkspaceHeader({
             <span className="rounded-full bg-teal-100 px-2 py-0.5 text-xs font-semibold text-teal-800 dark:bg-teal-900/60 dark:text-teal-300">{badge}</span>
           )}
         </div>
+        {modeSwitcher && <div className="mt-3 flex items-center">{modeSwitcher}</div>}
         {renderPreviewJump()}
       </div>
       <div className="flex shrink-0 items-center gap-1">

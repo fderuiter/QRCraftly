@@ -3,11 +3,10 @@ import { PRIMARY_NAV_ITEMS, QR_TYPE_ROUTES, getCurrentPrimaryNavId, normalizePat
 import { QRType } from '@/types';
 
 describe('primary navigation model', () => {
-  it('contains the six primary destinations in order', () => {
+  it('contains the five primary destinations in order', () => {
     expect(PRIMARY_NAV_ITEMS.map((item) => item.label)).toEqual([
       'Create QR',
-      'Send File',
-      'Receive File',
+      'File Transfer',
       'Arcade',
       'About',
       'Security',
@@ -23,8 +22,8 @@ describe('primary navigation model', () => {
   it('identifies the current destination', () => {
     expect(getCurrentPrimaryNavId('/')).toBe('create');
     expect(getCurrentPrimaryNavId('/vcard-qr-code/')).toBe('create');
-    expect(getCurrentPrimaryNavId('/file-transfer')).toBe('send');
-    expect(getCurrentPrimaryNavId('/file-transfer/receive')).toBe('receive');
+    expect(getCurrentPrimaryNavId('/file-transfer')).toBe('transfer');
+    expect(getCurrentPrimaryNavId('/file-transfer/receive')).toBe('transfer');
     expect(getCurrentPrimaryNavId('/about?x=1')).toBe('about');
     expect(getCurrentPrimaryNavId('/security#privacy')).toBe('security');
     expect(getCurrentPrimaryNavId('/arcade')).toBe('arcade');
