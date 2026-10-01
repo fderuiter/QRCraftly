@@ -78,7 +78,7 @@ export const DEFAULT_STYLE_CONFIG: Partial<QRConfig> = (() => {
  * excluding non-visual content fields (value, type, borderText, templateHeadline, templateSubtext).
  */
 export function getDefaultStyleConfig(): Partial<QRConfig> {
-  return DEFAULT_STYLE_CONFIG;
+  return { ...DEFAULT_STYLE_CONFIG };
 }
 
 /**
