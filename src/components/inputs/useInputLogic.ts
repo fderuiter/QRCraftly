@@ -145,26 +145,29 @@ export function useInputLogic(
         return;
       }
 
+      const updateStateForType = (type: QRType, nextData: unknown) => {
+        setInputStates((prev) => {
+          if (JSON.stringify(prev[type]) === JSON.stringify(nextData)) {
+            return prev;
+          }
+          return {
+            ...prev,
+            [type]: nextData,
+          };
+        });
+      };
+
       if (entry.hydrateFn && entry.canHydrateFn(config.value)) {
         try {
           const hydrated = entry.hydrateFn(config.value);
-          setInputStates((prev) => ({
-            ...prev,
-            [config.type]: hydrated,
-          }));
+          updateStateForType(config.type, hydrated);
           retainedInputStates[config.type] = hydrated as never;
         } catch (e) {
           console.warn(`Failed to hydrate state for ${config.type} on external change`, e);
-          setInputStates((prev) => ({
-            ...prev,
-            [config.type]: entry.initialState,
-          }));
+          updateStateForType(config.type, entry.initialState);
         }
       } else {
-        setInputStates((prev) => ({
-          ...prev,
-          [config.type]: entry.initialState,
-        }));
+        updateStateForType(config.type, entry.initialState);
       }
     }
   }, [config.type, config.value, onChange]);
