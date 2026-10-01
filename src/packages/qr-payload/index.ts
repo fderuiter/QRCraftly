@@ -31,6 +31,12 @@ export {
   sanitizeConfig,
 } from './lib/validators';
 
+// Type-aware sample fallback payloads
+export {
+  getSamplePayload,
+  SAMPLE_PAYLOADS,
+} from './lib/samplePayloads';
+
 // Protocol & containment profiles
 export {
   identifyProtocol,

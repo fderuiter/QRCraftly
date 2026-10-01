@@ -20,7 +20,7 @@ import { render, screen, fireEvent, within } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { axe } from 'vitest-axe';
 import { ToastProvider } from './ui/Toast';
-import QRTool, { EMPTY_CONTENT_MESSAGE } from './QRTool';
+import QRTool from './QRTool';
 import { DEFAULT_CONFIG } from '@/constants';
 
 // A scannability result left over from the last non-empty value.
@@ -42,23 +42,24 @@ vi.mock('@/hooks/useQRDownload', () => ({
   useQRDownload: () => ({ exportAsset }),
 }));
 
-describe('QRTool with empty content (#976)', () => {
+describe('QRTool with sample fallback empty state', () => {
   beforeEach(() => {
     exportAsset.mockReset();
     window.localStorage.clear();
   });
 
-  it('shows an empty preview state instead of a verified badge', () => {
+  it('shows Sample Preview badge and active canvas instead of verified badge when content is empty', () => {
     render(<ToastProvider><QRTool initialConfig={{ ...DEFAULT_CONFIG, value: '' }} /></ToastProvider>);
 
     const preview = screen.getByRole('region', { name: 'QR Code Preview' });
-    expect(within(preview).getByTestId('qr-empty-state')).toHaveTextContent(EMPTY_CONTENT_MESSAGE);
+    expect(within(preview).getByTestId('sample-preview-badge')).toHaveTextContent('Sample Preview');
+    expect(within(preview).getByTestId('qr-canvas-mock')).toBeInTheDocument();
     expect(within(preview).queryByText(/verified/i)).not.toBeInTheDocument();
     expect(within(preview).queryByText(/Health:/i)).not.toBeInTheDocument();
     expect(within(preview).getByTestId('scannability-indicator-placeholder')).toBeInTheDocument();
   });
 
-  it('marks every export action disabled with an explanation and toasts instead of exporting', () => {
+  it('marks export actions protected and displays alert toast instead of exporting', () => {
     render(<ToastProvider><QRTool initialConfig={{ ...DEFAULT_CONFIG, value: '' }} /></ToastProvider>);
 
     const download = screen.getByRole('button', { name: /^Download$/ });
@@ -67,9 +68,8 @@ describe('QRTool with empty content (#976)', () => {
 
     for (const button of [download, png, copy]) {
       expect(button).toHaveAttribute('aria-disabled', 'true');
-      expect(button).toHaveAccessibleDescription(EMPTY_CONTENT_MESSAGE);
     }
-    // The Download control is not a menu while there is nothing to export.
+    // The Download control is not a menu while in sample mode.
     expect(download).not.toHaveAttribute('aria-haspopup');
 
     fireEvent.click(png);
@@ -77,17 +77,17 @@ describe('QRTool with empty content (#976)', () => {
     expect(screen.getByText(/Enter content to generate a QR code\. Exports are available/)).toBeInTheDocument();
   });
 
-  it('restores the verified status and enabled exports once content exists', () => {
+  it('hides sample preview badge and restores verified status when user provides content', () => {
     render(<ToastProvider><QRTool initialConfig={{ ...DEFAULT_CONFIG, value: 'https://example.com' }} /></ToastProvider>);
 
-    expect(screen.queryByTestId('qr-empty-state')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('sample-preview-badge')).not.toBeInTheDocument();
     expect(screen.getByText('Print simulation verified')).toBeInTheDocument();
     const png = screen.getByRole('button', { name: 'Download QR code as PNG' });
     expect(png).not.toHaveAttribute('aria-disabled');
     expect(screen.getByRole('button', { name: /^Download$/ })).toHaveAttribute('aria-haspopup', 'menu');
   });
 
-  it('has no axe violations in the empty state', async () => {
+  it('has no axe violations in sample preview state', async () => {
     const { container } = render(<ToastProvider><QRTool initialConfig={{ ...DEFAULT_CONFIG, value: '' }} /></ToastProvider>);
     const preview = screen.getByRole('region', { name: 'QR Code Preview' });
     expect(await axe(preview)).toHaveNoViolations();
