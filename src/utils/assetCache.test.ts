@@ -27,20 +27,12 @@ if (typeof globalThis.DOMParser === 'undefined') {
   globalThis.Node = dom.window.Node;
 }
 
-import { getCachedAsset, setCachedAsset, clearAssetCache, convertImageToBase64 } from './assetCache';
+import { getCachedAsset, setCachedAsset, convertImageToBase64 } from './assetCache';
 import { generateQRSvg } from '@/packages/qr-export';
 import { DEFAULT_CONFIG } from '../constants';
 import { QRConfig } from '../types';
 
 describe('Asset Cache Utility', () => {
-  beforeEach(() => {
-    clearAssetCache();
-  });
-
-  afterEach(() => {
-    clearAssetCache();
-  });
-
   it('stores and retrieves cached assets correctly', () => {
     const url = 'https://example.com/logo.png';
     const base64 = 'data:image/png;base64,mocklogo';
@@ -56,22 +48,9 @@ describe('Asset Cache Utility', () => {
     
     // Setting invalid inputs should not crash or cache
     setCachedAsset('', 'data:image/png;base64,mock');
-    setCachedAsset('https://example.com/logo.png', '');
+    setCachedAsset('https://example.com/logo-empty-input.png', '');
     
-    expect(getCachedAsset('https://example.com/logo.png')).toBeNull();
-  });
-
-  it('clears all cached assets when clearAssetCache is called', () => {
-    setCachedAsset('https://example.com/logo1.png', 'data:image/png;base64,mock1');
-    setCachedAsset('https://example.com/logo2.png', 'data:image/png;base64,mock2');
-
-    expect(getCachedAsset('https://example.com/logo1.png')).toBe('data:image/png;base64,mock1');
-    expect(getCachedAsset('https://example.com/logo2.png')).toBe('data:image/png;base64,mock2');
-
-    clearAssetCache();
-
-    expect(getCachedAsset('https://example.com/logo1.png')).toBeNull();
-    expect(getCachedAsset('https://example.com/logo2.png')).toBeNull();
+    expect(getCachedAsset('https://example.com/logo-empty-input.png')).toBeNull();
   });
 
   it('convertImageToBase64 handles invalid images or environments safely without throwing', () => {

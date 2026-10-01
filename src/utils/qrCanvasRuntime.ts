@@ -21,9 +21,7 @@ import { createMatrixWorker, createMazeWorker, loadQrEncoder, type QrEncoder } f
 /**
  * Dependencies of `QRCanvas` that differ between environments.
  *
- * Production uses the defaults below. Environments without real Web Workers
- * (such as jsdom) inject their own through `setQrCanvasRuntime` instead of the
- * component sniffing for a test runner.
+ * Production uses the defaults below.
  */
 export interface QrCanvasRuntime {
   /** Spawns the matrix worker, or returns null to encode on the main thread. */
@@ -40,22 +38,9 @@ const defaultRuntime: QrCanvasRuntime = {
   loadEncoder: loadQrEncoder,
 };
 
-let activeRuntime: QrCanvasRuntime = defaultRuntime;
-
 /**
  * Returns the runtime `QRCanvas` should use right now.
  */
 export function getQrCanvasRuntime(): QrCanvasRuntime {
-  return activeRuntime;
-}
-
-/**
- * Replaces parts of the runtime. Returns a function that restores the previous runtime.
- */
-export function setQrCanvasRuntime(overrides: Partial<QrCanvasRuntime>): () => void {
-  const previous = activeRuntime;
-  activeRuntime = { ...activeRuntime, ...overrides };
-  return () => {
-    activeRuntime = previous;
-  };
+  return defaultRuntime;
 }

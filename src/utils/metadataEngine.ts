@@ -36,16 +36,6 @@ const remember = (cache: Map<string, string>, key: string, value: string): void 
   cache.set(key, value);
 };
 
-/**
- * Current sizes of the memoization caches (for bound assertions).
- * @returns Entry counts per cache.
- */
-export const getMetadataCacheSizes = (): { sanitizedPath: number; domainForPath: number; publicUrl: number } => ({
-  sanitizedPath: sanitizedPathCache.size,
-  domainForPath: domainForPathCache.size,
-  publicUrl: publicUrlCache.size,
-});
-
 export const resolveDomainForPath = (path: string): string => {
   const domain = getPublicDomain();
   const cacheKey = `${domain}::${path}`;

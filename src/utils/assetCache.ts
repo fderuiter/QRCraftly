@@ -38,13 +38,6 @@ export const setCachedAsset = (url: string, base64: string): void => {
 };
 
 /**
- * Clears the in-memory asset cache.
- */
-export const clearAssetCache = (): void => {
-  cache.clear();
-};
-
-/**
  * Helper to convert a loaded HTMLImageElement into a Base64 data-URI using an offscreen canvas.
  * Returns null if the conversion fails (e.g., due to CORS taint, invalid dimensions, or non-browser environments).
  * @param img The loaded HTMLImageElement.

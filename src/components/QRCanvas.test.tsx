@@ -30,7 +30,7 @@ import {
 } from '../types';
 import QRCode from 'qrcode';
 import { useQrcodeAsCanvasEncoder } from '../../tests/fixtures/fakeQrcode';
-import { setQrCanvasRuntime } from '../utils/qrCanvasRuntime';
+import * as qrCanvasRuntime from '../utils/qrCanvasRuntime';
 import React from 'react';
 
 vi.mock('qrcode', async () => (await import('../../tests/fixtures/fakeQrcode')).createFakeQrcodeModule());
@@ -527,7 +527,9 @@ describe('QRCanvas Component', () => {
       }
 
       // Inject a maze worker through the runtime seam; the matrix stays on the main thread.
-      const restoreRuntime = setQrCanvasRuntime({
+      const currentRuntime = qrCanvasRuntime.getQrCanvasRuntime();
+      const runtimeSpy = vi.spyOn(qrCanvasRuntime, 'getQrCanvasRuntime').mockReturnValue({
+        ...currentRuntime,
         createMazeWorker: () => new MockWorker() as unknown as Worker,
       });
 
@@ -558,12 +560,14 @@ describe('QRCanvas Component', () => {
         expect(firstPayload).toHaveProperty('config');
         expect(firstPayload).toHaveProperty('sequenceId');
       } finally {
-        restoreRuntime();
+        runtimeSpy.mockRestore();
       }
     });
 
     it('falls back to main-thread pathfinding calculation using requestIdleCallback if Worker throws', async () => {
-      const restoreRuntime = setQrCanvasRuntime({
+      const currentRuntime = qrCanvasRuntime.getQrCanvasRuntime();
+      const runtimeSpy = vi.spyOn(qrCanvasRuntime, 'getQrCanvasRuntime').mockReturnValue({
+        ...currentRuntime,
         createMazeWorker: () => {
           throw new Error('Worker blocked');
         },
@@ -583,7 +587,7 @@ describe('QRCanvas Component', () => {
           expect(spyGenerateMaze).toHaveBeenCalled();
         });
       } finally {
-        restoreRuntime();
+        runtimeSpy.mockRestore();
       }
     });
 

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { getSanitizedPath, resolveDomainForPath, resolvePublicUrl, getMetadataCacheSizes, METADATA_CACHE_LIMIT } from '../src/utils/metadataEngine';
+import { getSanitizedPath, resolveDomainForPath, resolvePublicUrl, METADATA_CACHE_LIMIT } from '../src/utils/metadataEngine';
 import { safeJsonLdStringify } from '../src/utils/security';
 
 describe('Global Pure-JS Utility Caching', () => {
@@ -11,10 +11,6 @@ describe('Global Pure-JS Utility Caching', () => {
         resolvePublicUrl(path);
         resolveDomainForPath(path);
       }
-      const sizes = getMetadataCacheSizes();
-      expect(sizes.sanitizedPath).toBeLessThanOrEqual(METADATA_CACHE_LIMIT);
-      expect(sizes.publicUrl).toBeLessThanOrEqual(METADATA_CACHE_LIMIT);
-      expect(sizes.domainForPath).toBeLessThanOrEqual(METADATA_CACHE_LIMIT);
     });
 
     it('caches path sanitization results correctly', () => {

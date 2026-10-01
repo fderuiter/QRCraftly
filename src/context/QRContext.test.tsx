@@ -20,7 +20,6 @@ import React from 'react';
 import { render, renderHook, act, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
-  clearRetainedAppearance,
   QRProvider,
   useQRStore,
   useQRStoreSelector,
@@ -416,7 +415,6 @@ describe('useOptionalQRStoreSelector', () => {
 // ---------------------------------------------------------------------------
 describe('QRProvider retainAppearance', () => {
   afterEach(() => {
-    clearRetainedAppearance();
     clearLocalStorage();
   });
 
@@ -444,6 +442,13 @@ describe('QRProvider retainAppearance', () => {
     expect(config.fgColor).toBe('#112233');
     expect(config.socialFormat).toBe(SocialFormat.STORY_9_16);
     expect(config.templateHeadline).toBe(DEFAULT_CONFIG.templateHeadline);
+
+    act(() => {
+      second.result.current.updateConfig({
+        fgColor: DEFAULT_CONFIG.fgColor,
+        socialFormat: DEFAULT_CONFIG.socialFormat,
+      });
+    });
   });
 
   it('does not retain appearance for providers that did not opt in', () => {

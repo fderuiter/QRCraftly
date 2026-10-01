@@ -106,13 +106,6 @@ function pickAppearance(config: QRConfig): Partial<QRConfig> {
   return appearance;
 }
 
-/**
- * Forgets appearance retained from earlier generator routes.
- */
-export function clearRetainedAppearance(): void {
-  retainedAppearance = null;
-}
-
 function createQRStore(initialConfig?: Partial<QRConfig>, retainAppearance = false): QRStore {
   let state: QRState = {
     config: { ...DEFAULT_CONFIG, ...initialConfig, ...(retainAppearance ? retainedAppearance : null) },
