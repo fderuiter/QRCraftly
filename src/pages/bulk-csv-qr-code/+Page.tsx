@@ -28,8 +28,9 @@ import { usePageContext } from 'vike-react/usePageContext';
  */
 export default function Page() {
   const pageContext = usePageContext();
-  const resolvedDomain = resolveDomainForPath(pageContext.urlPathname);
-  const schemaData = generateSchema(contentRegistry['bulk-csv-qr-code'], resolvedDomain, pageContext.urlPathname);
+  const urlPathname = pageContext?.urlPathname ?? '/bulk-csv-qr-code';
+  const resolvedDomain = resolveDomainForPath(urlPathname);
+  const schemaData = generateSchema(contentRegistry['bulk-csv-qr-code'], resolvedDomain, urlPathname);
 
   return <QRTypePage type={QRType.BULK_CSV} title="Bulk CSV Batch QR Code" schemaData={schemaData} toolId="bulk-csv-qr-code" />;
 }
