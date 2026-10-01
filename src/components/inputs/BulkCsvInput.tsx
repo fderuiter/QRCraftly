@@ -318,6 +318,7 @@ export const BulkCsvInput: React.FC<BulkCsvInputProps> = ({ data, onChange }) =>
             </span>
             <input
               type="file"
+              aria-label="Upload CSV or TXT file"
               accept=".csv, .txt, text/csv, text/plain"
               className="sr-only"
               onChange={handleFileUpload}
@@ -342,6 +343,7 @@ export const BulkCsvInput: React.FC<BulkCsvInputProps> = ({ data, onChange }) =>
               Change File
               <input
                 type="file"
+                aria-label="Change CSV or TXT file"
                 accept=".csv, .txt, text/csv, text/plain"
                 className="sr-only"
                 onChange={handleFileUpload}

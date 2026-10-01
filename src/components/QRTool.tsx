@@ -70,6 +70,7 @@ const GENERATOR_LINKS = [
   ['Location QR Code', '/location-qr-code'],
   ['Meeting QR Code', '/meeting-qr-code'],
   ['Social QR Code', '/social-qr-code'],
+  ['Bulk CSV Batch QR Code', '/bulk-csv-qr-code'],
 ] as const;
 
 function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: string }) {

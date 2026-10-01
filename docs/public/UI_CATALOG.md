@@ -45,7 +45,7 @@ These low-level, primitive UI elements are designed to be extremely customizable
 
 These components capture specialized data structures required to construct distinct QR code types. They rely entirely on primitive UI inputs and check free-text fields against the `CONTAINMENT_PROFILES` exported by `@/packages/qr-payload`.
 
-- **BulkCsvInput** (`BulkCsvInput.tsx` / `BulkCsvInput.test.tsx`): Main-thread CSV parsing with PapaParse and batch ZIP package generation with JSZip. Supports column mapping, PNG/SVG format selection, malformed CSV error handling, progress tracking, and zero network calls.
+- **BulkCsvInput** (`BulkCsvInput.tsx` / `BulkCsvInput.test.tsx`): Main-thread CSV parsing with PapaParse and batch ZIP package generation with JSZip. Supports column mapping, PNG/SVG format selection, accessible file upload inputs, malformed CSV error handling, progress tracking, and zero network calls.
 - **EmailInput** (`EmailInput.tsx`): Standard email layout supporting recipient, subject, and body message fields.
 - **EventInput** (`EventInput.tsx`): Calendar appointment configuration form specifying title, times, description, and venue.
 - **LocationInput** (`LocationInput.tsx` / `LocationInput.test.tsx`): High-accuracy coordinate form requiring proper latitude and longitude decimals.
