@@ -20,6 +20,7 @@ import React, { useState, useRef, useCallback, useMemo } from 'react';
 import { Button } from "./ui/Button";
 import { Card } from "./ui/Card";
 import { Alert } from "./ui/Alert";
+import { DEFAULT_CONFIG } from '@/constants';
 import { QRConfig } from '@/types';
 import QRCanvas from '@/components/QRCanvas';
 import { Download, Share2, ChevronDown, CircleHelp, Copy, Check, AlertTriangle } from 'lucide-react';
@@ -104,6 +105,22 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
   // In sample fallback mode, report 'idle' status so stale/verified badges are suppressed
   const scannabilityStatus = isEmpty ? 'idle' : rawScannabilityStatus;
   const health = isEmpty ? undefined : rawHealth;
+
+  const handleAutoFixContrast = useCallback(() => {
+    store.updateConfig({
+      fgColor: '#000000',
+      bgColor: '#ffffff',
+      eyeColor: '#000000',
+    });
+  }, [store]);
+
+  const handleResetDefault = useCallback(() => {
+    store.updateConfig({
+      fgColor: DEFAULT_CONFIG.fgColor,
+      bgColor: DEFAULT_CONFIG.bgColor,
+      eyeColor: DEFAULT_CONFIG.eyeColor,
+    });
+  }, [store]);
 
   
   const handleRendered = useCallback((info: { moduleCount: number, virtualImageData?: ImageData, virtualImageBitmap?: ImageBitmap } = { moduleCount: 0 }) => {
@@ -300,7 +317,12 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
                           Sample Preview
                         </span>
                       )}
-                      <ScannabilityIndicator status={scannabilityStatus} health={health} />
+                      <ScannabilityIndicator
+                        status={scannabilityStatus}
+                        health={health}
+                        onAutoFixContrast={handleAutoFixContrast}
+                        onResetDefault={handleResetDefault}
+                      />
                     </div>
                 </div>
                 {!isEmpty && <StressTestButton />}

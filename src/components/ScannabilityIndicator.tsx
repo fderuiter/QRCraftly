@@ -6,6 +6,8 @@ import { getExportRiskPolicy } from '../utils/exportRiskPolicy';
 interface Props {
   status: ScannabilityStatus;
   health?: HealthScore;
+  onAutoFixContrast?: () => void;
+  onResetDefault?: () => void;
 }
 
 /**
@@ -48,7 +50,12 @@ const getAnnouncementText = (status: ScannabilityStatus, health?: HealthScore): 
  * @param root0.health - The optional health score with warnings.
  * @returns The scannability feedback element.
  */
-export const ScannabilityIndicator: React.FC<Props> = ({ status, health }) => {
+export const ScannabilityIndicator: React.FC<Props> = ({
+  status,
+  health,
+  onAutoFixContrast,
+  onResetDefault,
+}) => {
   const [announcement, setAnnouncement] = useState('');
 
   // Debounce polite announcements by 1000ms so typing does not produce a stream of updates.
@@ -126,24 +133,48 @@ export const ScannabilityIndicator: React.FC<Props> = ({ status, health }) => {
           </span>
         )}
       </div>
-      <div className="mt-1 flex h-5 w-full items-center justify-end">
+      <div className="mt-1 flex w-full flex-col items-end justify-start gap-1 text-right">
         {status === 'digital-pass' && !firstWarning && (
-          <div className="max-w-xs text-right text-xs text-amber-700 dark:text-amber-400">
+          <div className="max-w-xs text-xs text-amber-700 dark:text-amber-400">
             Test with a physical camera before large print runs.
           </div>
         )}
         {status === 'fail' ? (
-          <div
-            role="alert"
-            className={`max-w-xs text-right text-xs text-rose-700 dark:text-rose-400 ${firstWarning ? '' : 'sr-only'}`}
-            data-testid="scannability-alert"
-          >
-            {firstWarning ?? 'Scan verification failed. Adjust colors, pattern, or margin before exporting.'}
-          </div>
+          <>
+            <div
+              role="alert"
+              className={`max-w-xs text-xs text-rose-700 dark:text-rose-400 ${firstWarning ? '' : 'sr-only'}`}
+              data-testid="scannability-alert"
+            >
+              {firstWarning ?? 'Scan verification failed. Adjust colors, pattern, or margin before exporting.'}
+            </div>
+            {(onAutoFixContrast || onResetDefault) && (
+              <div className="flex items-center gap-1.5 pt-0.5" data-testid="scannability-recovery-actions">
+                {onAutoFixContrast && (
+                  <button
+                    type="button"
+                    onClick={onAutoFixContrast}
+                    className="rounded bg-rose-50 px-2 py-0.5 text-xs font-medium text-rose-700 hover:bg-rose-100 focus:ring-2 focus:ring-rose-500 focus:ring-offset-1 focus:outline-none dark:bg-rose-950/40 dark:text-rose-300 dark:hover:bg-rose-900/60"
+                  >
+                    Auto-Fix Contrast
+                  </button>
+                )}
+                {onResetDefault && (
+                  <button
+                    type="button"
+                    onClick={onResetDefault}
+                    className="rounded bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700 hover:bg-slate-200 focus:ring-2 focus:ring-slate-500 focus:ring-offset-1 focus:outline-none dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+                  >
+                    Reset Defaults
+                  </button>
+                )}
+              </div>
+            )}
+          </>
         ) : (
           firstWarning && (
             <div
-              className={`max-w-xs text-right text-xs ${exportRisk === 'unsafe' ? 'text-rose-700 dark:text-rose-400' : 'text-amber-700 dark:text-amber-400'}`}
+              className={`max-w-xs text-xs ${exportRisk === 'unsafe' ? 'text-rose-700 dark:text-rose-400' : 'text-amber-700 dark:text-amber-400'}`}
             >
               {firstWarning}
             </div>
