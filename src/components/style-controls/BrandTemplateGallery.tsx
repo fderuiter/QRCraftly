@@ -296,7 +296,7 @@ export const BrandTemplateGallery: React.FC<BrandTemplateGalleryProps> = ({ conf
                       {template.description}
                     </p>
                   )}
-                  <span className="mt-1 inline-block text-[10px] tracking-wider text-slate-400 uppercase dark:text-slate-500">
+                  <span className="mt-1 inline-block text-[10px] tracking-wider text-slate-600 uppercase dark:text-slate-400">
                     {template.config.style || 'standard'}
                   </span>
                 </div>
