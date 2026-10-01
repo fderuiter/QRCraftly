@@ -20,11 +20,11 @@ import '@testing-library/jest-dom';
 import 'vitest-axe/extend-expect';
 import { terminateScannerWorker } from './src/packages/optical-scanner/scheduler';
 import * as matchers from 'vitest-axe/matchers';
-import { vi, beforeEach, afterEach, expect } from 'vitest';
+import { vi, afterEach, expect } from 'vitest';
 import { InThreadWorker, assertStructuredCloneable } from './tests/utils/inThreadWorker';
 import QRCode from 'qrcode';
 import { fromQrcodePackage } from './src/packages/qr-matrix';
-import * as qrCanvasRuntime from './src/utils/qrCanvasRuntime';
+import { setQrCanvasRuntime } from './src/utils/qrCanvasRuntime';
 
 
 declare module 'vitest' {
@@ -780,15 +780,13 @@ if (typeof URL.revokeObjectURL === 'undefined') {
 // ---------------------------------------------------------------------------
 // QRCanvas runtime: jsdom has no real Web Workers, so the canvas encodes with the
 // real `qrcode` package and builds mazes on the main thread. Tests that need a
-// fake encoder mock getQrCanvasRuntime via Vitest spies.
+// fake encoder inject one locally with setQrCanvasRuntime.
 // ---------------------------------------------------------------------------
 
-beforeEach(() => {
-  vi.spyOn(qrCanvasRuntime, 'getQrCanvasRuntime').mockReturnValue({
-    createMatrixWorker: () => null,
-    createMazeWorker: () => null,
-    loadEncoder: () => fromQrcodePackage(QRCode),
-  });
+setQrCanvasRuntime({
+  createMatrixWorker: () => null,
+  createMazeWorker: () => null,
+  loadEncoder: () => fromQrcodePackage(QRCode),
 });
 
 const originalImage = window.Image;
@@ -800,6 +798,10 @@ afterEach(async () => {
     globalThis.mockWorkerControl.reset();
   }
   terminateScannerWorker();
-  const { clearRetainedInputStates } = await import('./src/components/inputs/useInputLogic');
+  const [{ clearRetainedAppearance }, { clearRetainedInputStates }] = await Promise.all([
+    import('./src/context/QRContext'),
+    import('./src/components/inputs/useInputLogic'),
+  ]);
+  clearRetainedAppearance();
   clearRetainedInputStates();
 });

@@ -28,7 +28,7 @@
  */
 import { afterEach, beforeEach, vi } from 'vitest';
 import { fromQrcodePackage } from '../../src/packages/qr-matrix';
-import * as qrCanvasRuntime from '../../src/utils/qrCanvasRuntime';
+import { setQrCanvasRuntime } from '../../src/utils/qrCanvasRuntime';
 
 const FAKE_SIZE = 21;
 
@@ -56,17 +56,13 @@ export function createFakeQrcodeModule() {
  * Makes `QRCanvas` encode with the given (usually mocked) `qrcode` module for every test in the file.
  */
 export function useQrcodeAsCanvasEncoder(qrcode: Parameters<typeof fromQrcodePackage>[0]): void {
-  let spy: ReturnType<typeof vi.spyOn> | null = null;
+  let restore: (() => void) | null = null;
   beforeEach(() => {
     const encoder = fromQrcodePackage(qrcode);
-    const current = qrCanvasRuntime.getQrCanvasRuntime();
-    spy = vi.spyOn(qrCanvasRuntime, 'getQrCanvasRuntime').mockReturnValue({
-      ...current,
-      loadEncoder: () => encoder,
-    });
+    restore = setQrCanvasRuntime({ loadEncoder: () => encoder });
   });
   afterEach(() => {
-    spy?.mockRestore();
-    spy = null;
+    restore?.();
+    restore = null;
   });
 }

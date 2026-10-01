@@ -1,18 +1,18 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import QRCode from 'qrcode';
 import { fromQrcodePackage, type QrEncoder } from '@/packages/qr-matrix';
-import * as qrCanvasRuntime from './qrCanvasRuntime';
+import { getQrCanvasRuntime, setQrCanvasRuntime } from './qrCanvasRuntime';
 import { QRErrorCorrectionLevel } from '../types';
 
 describe('qrCanvasRuntime', () => {
   it('spawns no workers where Web Workers do not exist', () => {
-    const runtime = qrCanvasRuntime.getQrCanvasRuntime();
+    const runtime = getQrCanvasRuntime();
     expect(runtime.createMatrixWorker()).toBeNull();
     expect(runtime.createMazeWorker()).toBeNull();
   });
 
   it('loads the real qrcode encoder asynchronously by default', async () => {
-    const encoder = await qrCanvasRuntime.getQrCanvasRuntime().loadEncoder();
+    const encoder = await getQrCanvasRuntime().loadEncoder();
     const { modules } = encoder.create('https://qrcraftly.com', { errorCorrectionLevel: QRErrorCorrectionLevel.M });
     expect(modules.size).toBeGreaterThanOrEqual(21);
     // Top-left Finder Pattern corner is always dark
@@ -27,19 +27,15 @@ describe('qrCanvasRuntime', () => {
     }
   });
 
-  it('allows mocking runtime via Vitest spies and restoring previous runtime', () => {
-    const before = qrCanvasRuntime.getQrCanvasRuntime();
+  it('applies overrides and restores the previous runtime', () => {
+    const before = getQrCanvasRuntime();
     const fake: QrEncoder = { create: () => ({ modules: { size: 1, get: () => true } }) };
 
-    const spy = vi.spyOn(qrCanvasRuntime, 'getQrCanvasRuntime').mockReturnValue({
-      ...before,
-      loadEncoder: () => fake,
-    });
+    const restore = setQrCanvasRuntime({ loadEncoder: () => fake });
+    expect(getQrCanvasRuntime().loadEncoder()).toBe(fake);
+    expect(getQrCanvasRuntime().createMatrixWorker).toBe(before.createMatrixWorker);
 
-    expect(qrCanvasRuntime.getQrCanvasRuntime().loadEncoder()).toBe(fake);
-    expect(qrCanvasRuntime.getQrCanvasRuntime().createMatrixWorker).toBe(before.createMatrixWorker);
-
-    spy.mockRestore();
-    expect(qrCanvasRuntime.getQrCanvasRuntime()).toBe(before);
+    restore();
+    expect(getQrCanvasRuntime()).toBe(before);
   });
 });
