@@ -25,6 +25,8 @@ export interface ExportOptions {
   allowUnsafe?: boolean;
   /** When true, forces direct file download to local device instead of invoking Save-As picker. */
   directDownload?: boolean;
+  /** Target pixel size (width) for offscreen high-resolution asset export. */
+  exportSize?: number;
 }
 
 export interface ExportRiskPolicyInput {

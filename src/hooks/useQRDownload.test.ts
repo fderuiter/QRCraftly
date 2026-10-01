@@ -652,4 +652,33 @@ describe('useQRDownload', () => {
       }
     );
   });
+
+  describe('offscreen high-resolution rendering pipeline', () => {
+    it('renders offscreen canvas at specified exportSize (e.g. 2000px)', async () => {
+      const { result } = renderHook(() => useQRDownload(mockQrRef, DEFAULT_CONFIG as QRConfig), { wrapper: ToastProvider });
+      const appendSpy = vi.spyOn(document.body, 'appendChild');
+
+      const status = await result.current.exportAsset('png', { exportSize: 2000, allowUnsafe: true, directDownload: true });
+
+      expect(status.success).toBe(true);
+      expect(status.format).toBe('png');
+      expect(appendSpy).toHaveBeenCalled();
+    });
+
+    it('handles proportional height scaling for non-square social templates', async () => {
+      const storyConfig = {
+        ...(DEFAULT_CONFIG as QRConfig),
+        socialFormat: 'STORY_9_16' as any,
+      };
+
+      const { result } = renderHook(() => useQRDownload(mockQrRef, storyConfig), { wrapper: ToastProvider });
+      const appendSpy = vi.spyOn(document.body, 'appendChild');
+
+      const status = await result.current.exportAsset('png', { exportSize: 1080, allowUnsafe: true, directDownload: true });
+
+      expect(status.success).toBe(true);
+      expect(status.format).toBe('png');
+      expect(appendSpy).toHaveBeenCalled();
+    });
+  });
 });

@@ -20,7 +20,7 @@ import React, { useState, useRef, useCallback } from 'react';
 import { Button } from "./ui/Button";
 import { Card } from "./ui/Card";
 import { Alert } from "./ui/Alert";
-import { QRConfig } from '@/types';
+import { QRConfig, TemplateStyle, SocialFormat } from '@/types';
 import QRCanvas from '@/components/QRCanvas';
 import { Download, Share2, ChevronDown, CircleHelp, Copy, Check, AlertTriangle, QrCode } from 'lucide-react';
 import { Modal } from './ui/Modal';
@@ -38,6 +38,8 @@ import { sidebarControls } from '@/registry';
 import { StressTestButton } from './arcade/StressTestButton';
 import { ToolWorkspaceLayout, ToolWorkspaceHeader } from './ToolWorkspaceLayout';
 import { PLEDGE_TAGLINE } from '@/data/pledge';
+import { SOCIAL_DIMENSIONS } from '@/packages/qr-export';
+import { RangeInput } from './ui/RangeInput';
 
 /** Id of the generator preview region (target of the mobile jump link). */
 const PREVIEW_ID = 'qr-preview';
@@ -79,6 +81,7 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
   
   const [showSafetyGate, setShowSafetyGate] = useState(false);
   const [gateAction, setGateAction] = useState<(() => void | Promise<void>) | null>(null);
+  const [exportResolution, setExportResolution] = useState<number>(1024);
   const qrRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -99,7 +102,20 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
   const scannabilityStatus = isEmpty ? 'idle' : rawScannabilityStatus;
   const health = isEmpty ? undefined : rawHealth;
 
-  
+  const getDensityLabel = (res: number) => {
+    if (res < 800) return 'Standard (Screen)';
+    if (res < 1600) return 'Medium (HD)';
+    if (res < 3000) return 'High (Ultra HD)';
+    return 'Maximum (Print Quality)';
+  };
+
+  const useTemplate = config.templateStyle !== TemplateStyle.NONE || config.socialFormat !== SocialFormat.SQUARE_1_1;
+  let exportHeight = exportResolution;
+  if (useTemplate) {
+    const { width: fw, height: fh } = SOCIAL_DIMENSIONS[config.socialFormat] || { width: 1080, height: 1080 };
+    exportHeight = Math.round((exportResolution * fh) / fw);
+  }
+
   const handleRendered = useCallback((info: { moduleCount: number, virtualImageData?: ImageData, virtualImageBitmap?: ImageBitmap } = { moduleCount: 0 }) => {
     if (info.moduleCount) setModuleCount(info.moduleCount);
     if (info.virtualImageBitmap) {
@@ -178,18 +194,6 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
     }
   }, [addToast]);
 
-  const onCopy = async () => {
-    const action = async (options?: ExportOptions) => {
-      const result = await exportAsset('clipboard', options);
-      if (result.success) {
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      }
-      handleExportResult(result, copyButtonRef);
-    };
-    executeWithSafetyGate(action);
-  };
-
   const notifyEmpty = () => {
     addToast({
       type: 'info',
@@ -203,32 +207,50 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
       notifyEmpty();
       return;
     }
+    const mergedOpts: ExportOptions = { exportSize: exportResolution };
     if (getExportRiskPolicy({ status: scannabilityStatus, health }) === 'unsafe') {
-      setGateAction(() => () => action({ allowUnsafe: true }));
+      setGateAction(() => () => action({ ...mergedOpts, allowUnsafe: true }));
       setShowSafetyGate(true);
     } else {
-      action();
+      action(mergedOpts);
     }
   };
 
+  const onCopy = async () => {
+    const action = async (options?: ExportOptions) => {
+      const opts = { exportSize: exportResolution, ...options };
+      const result = await exportAsset('clipboard', opts);
+      if (result.success) {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }
+      handleExportResult(result, copyButtonRef);
+    };
+    executeWithSafetyGate(action);
+  };
+
   const handleSaveAsFlow = async (format: 'png' | 'jpeg' | 'webp', options?: ExportOptions) => {
-    const result = await exportAsset(format, options);
+    const opts = { exportSize: exportResolution, ...options };
+    const result = await exportAsset(format, opts);
     handleExportResult(result, downloadButtonRef);
   };
 
   const handleSaveSvgFlow = async (options?: ExportOptions) => {
-    const result = await exportAsset('svg', options);
+    const opts = { exportSize: exportResolution, ...options };
+    const result = await exportAsset('svg', opts);
     handleExportResult(result, downloadButtonRef);
   };
 
   const downloadToDeviceFlow = async (format: 'png' | 'jpeg' | 'webp', buttonRef: React.RefObject<HTMLButtonElement | null>, options?: ExportOptions) => {
-    const result = await exportAsset(format, { ...options, directDownload: true });
+    const opts = { exportSize: exportResolution, ...options };
+    const result = await exportAsset(format, { ...opts, directDownload: true });
     handleExportResult(result, buttonRef);
   };
 
   const onShare = async () => {
     const action = async (options?: ExportOptions) => {
-      const result = await exportAsset('share', options);
+      const opts = { exportSize: exportResolution, ...options };
+      const result = await exportAsset('share', opts);
       handleExportResult(result, shareButtonRef);
     };
     executeWithSafetyGate(action);
@@ -307,10 +329,56 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
                   </div>
                 )}
                 
-                <div ref={qrRef} className={isEmpty ? 'hidden' : 'mb-8 flex justify-center'}>
+                <div ref={qrRef} className={isEmpty ? 'hidden' : 'mb-6 flex justify-center'}>
                    {/* Pass debounced config to QRCanvas to prevent heavy rendering on every keystroke */}
                    <QRCanvas ref={canvasRef} onRendered={handleRendered} config={debouncedConfig} className="max-h-[60vh] w-full rounded-lg object-contain shadow-sm" />
                 </div>
+
+                {!isEmpty && (
+                  <div className="mb-6 rounded-xl border border-slate-200 bg-slate-50/50 p-4 dark:border-slate-800 dark:bg-slate-900/50" data-testid="resolution-controls">
+                    <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">Export Resolution</span>
+                        <span className="rounded bg-teal-100 px-1.5 py-0.5 text-[10px] font-semibold text-teal-800 dark:bg-teal-900/60 dark:text-teal-300">
+                          {getDensityLabel(exportResolution)}
+                        </span>
+                      </div>
+                      <span className="font-mono text-xs font-medium text-slate-600 dark:text-slate-400" data-testid="resolution-display">
+                        {exportResolution} × {exportHeight} px
+                      </span>
+                    </div>
+
+                    <RangeInput
+                      id="export-resolution-slider"
+                      label="Dimension Control"
+                      value={exportResolution}
+                      onChange={(val) => setExportResolution(val)}
+                      min={200}
+                      max={4000}
+                      step={50}
+                      formatValue={(val) => `${val}px`}
+                    />
+
+                    <div className="mt-3 flex items-center gap-2">
+                      <span className="text-xs text-slate-500 dark:text-slate-400">Presets:</span>
+                      {[512, 1024, 2000, 4000].map((preset) => (
+                        <button
+                          key={preset}
+                          type="button"
+                          onClick={() => setExportResolution(preset)}
+                          className={`rounded px-2 py-1 text-xs font-medium transition-colors ${
+                            exportResolution === preset
+                              ? 'bg-teal-600 text-white dark:bg-teal-500'
+                              : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
+                          }`}
+                          aria-label={`Set resolution to ${preset}px`}
+                        >
+                          {preset}px
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 <div className="grid w-full grid-cols-1 gap-3">
                    {/* Row 1: Download & Share */}

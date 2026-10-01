@@ -431,7 +431,7 @@ describe('QRTool Component', () => {
     }
   });
 
-  it('handles the quick PNG download', () => {
+  it('handles the quick PNG download', async () => {
      render(<ToastProvider><QRTool /></ToastProvider>);
 
      // Spy on document.createElement but we can't easily mock return value without affecting internal React logic if it uses 'a' tags (it might)
@@ -452,9 +452,10 @@ describe('QRTool Component', () => {
      const saveBtns = screen.getAllByText('Download PNG');
      fireEvent.click(saveBtns[0]);
 
-     expect(HTMLCanvasElement.prototype.toDataURL).toHaveBeenCalledWith('image/png');
-
-     expect(appendSpy).toHaveBeenCalled();
+     await waitFor(() => {
+       expect(HTMLCanvasElement.prototype.toDataURL).toHaveBeenCalledWith('image/png');
+       expect(appendSpy).toHaveBeenCalled();
+     });
      const appendedElement = appendSpy.mock.calls[0][0] as HTMLAnchorElement;
      expect(appendedElement.tagName).toBe('A');
      expect(appendedElement.download).toContain('.png');
@@ -818,6 +819,26 @@ describe('QRTool Component', () => {
             configurable: true
         });
       }
+    });
+
+    it('renders export resolution controls and updates state on preset click and slider change', async () => {
+      render(<ToastProvider><QRTool /></ToastProvider>);
+
+      const resolutionControls = screen.getByTestId('resolution-controls');
+      expect(resolutionControls).toBeInTheDocument();
+
+      const display = screen.getByTestId('resolution-display');
+      expect(display).toHaveTextContent('1024 × 1024 px');
+
+      // Click preset 2000px
+      const preset2000 = screen.getByRole('button', { name: 'Set resolution to 2000px' });
+      fireEvent.click(preset2000);
+      expect(display).toHaveTextContent('2000 × 2000 px');
+
+      // Change slider value
+      const slider = screen.getByRole('slider', { name: 'Dimension Control' });
+      fireEvent.change(slider, { target: { value: '3000' } });
+      expect(display).toHaveTextContent('3000 × 3000 px');
     });
   });
 });

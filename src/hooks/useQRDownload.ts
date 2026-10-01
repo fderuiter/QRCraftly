@@ -18,7 +18,8 @@
 
 import { RefObject, useCallback } from 'react';
 import { QRConfig, TemplateStyle, SocialFormat } from '../types';
-import { generateQRSvg, validateSvgScannability } from '@/packages/qr-export';
+import { generateQRSvg, validateSvgScannability, drawWithTemplate, SOCIAL_DIMENSIONS } from '@/packages/qr-export';
+import { drawQRInternal, buildMatrix, loadQrEncoder, generateMaze, type MazeData } from '@/packages/qr-matrix';
 import { useCapabilities } from './useCapabilities';
 import { performScannabilityCheck } from '../utils/scannabilityChecker';
 import { ExportOptions } from '../utils/exportRiskPolicy';
@@ -80,6 +81,141 @@ export interface UseQRDownloadReturn {
   handleCopy: (options?: ExportOptions) => Promise<ExportStatus>;
 }
 
+/** Helper to load image elements asynchronously for offscreen rendering. */
+function loadImage(url: string | null | undefined): Promise<HTMLImageElement | null> {
+  if (!url) return Promise.resolve(null);
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = url;
+    if (img.complete && img.naturalWidth > 0) {
+      resolve(img);
+      return;
+    }
+    const isJsdom = typeof window !== 'undefined' && window.navigator?.userAgent?.includes('jsdom') === true;
+    if (isJsdom) {
+      setTimeout(() => resolve(img), 0);
+    }
+  });
+}
+
+/** Converts an HTMLCanvasElement or OffscreenCanvas to an image Blob. */
+async function getCanvasBlob(
+  canvas: HTMLCanvasElement | OffscreenCanvas,
+  mimeType: string
+): Promise<Blob | null> {
+  if ('toBlob' in canvas && typeof (canvas as HTMLCanvasElement).toBlob === 'function') {
+    return new Promise((resolve) => (canvas as HTMLCanvasElement).toBlob(resolve, mimeType));
+  } else if ('convertToBlob' in canvas && typeof (canvas as OffscreenCanvas).convertToBlob === 'function') {
+    return (canvas as OffscreenCanvas).convertToBlob({ type: mimeType });
+  }
+  return null;
+}
+
+/**
+ * Renders the QR code onto an offscreen canvas at custom export dimensions.
+ */
+async function renderOffscreenCanvas(
+  config: QRConfig,
+  exportSize: number
+): Promise<HTMLCanvasElement | OffscreenCanvas | null> {
+  const targetWidth = exportSize;
+  const useTemplate =
+    config.templateStyle !== TemplateStyle.NONE ||
+    config.socialFormat !== SocialFormat.SQUARE_1_1;
+
+  let targetHeight = targetWidth;
+  if (useTemplate) {
+    const { width: fw, height: fh } = SOCIAL_DIMENSIONS[config.socialFormat] || { width: 1080, height: 1080 };
+    targetHeight = Math.round((targetWidth * fh) / fw);
+  }
+
+  let canvas: HTMLCanvasElement | OffscreenCanvas | null = null;
+  let ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null = null;
+
+  if (typeof OffscreenCanvas !== 'undefined') {
+    try {
+      const offscreen = new OffscreenCanvas(targetWidth, targetHeight);
+      const testCtx = offscreen.getContext('2d') as OffscreenCanvasRenderingContext2D | null;
+      const canExport = 'convertToBlob' in offscreen || 'toDataURL' in offscreen;
+      if (testCtx && typeof testCtx.clearRect === 'function' && typeof testCtx.fillRect === 'function' && canExport) {
+        canvas = offscreen;
+        ctx = testCtx;
+      }
+    } catch {
+      // Fallback
+    }
+  }
+
+  if (!canvas && typeof document !== 'undefined' && typeof document.createElement === 'function') {
+    try {
+      const htmlCanvas = document.createElement('canvas');
+      htmlCanvas.width = targetWidth;
+      htmlCanvas.height = targetHeight;
+      const testCtx = htmlCanvas.getContext('2d');
+      if (testCtx && typeof testCtx.clearRect === 'function') {
+        canvas = htmlCanvas;
+        ctx = testCtx;
+      }
+    } catch (err) {
+      console.warn('Canvas allocation failed, falling back to display canvas:', err);
+      return null;
+    }
+  }
+
+  if (!canvas || !ctx) {
+    return null;
+  }
+
+  try {
+    const encoder = await loadQrEncoder();
+    const modules = buildMatrix(config, encoder);
+    const logoImg = await loadImage(config.logoUrl);
+    const borderLogoImg = config.isBorderEnabled ? await loadImage(config.borderLogoUrl) : null;
+    let mazeData: MazeData | null = null;
+
+    if (config.isMazeEnabled) {
+      mazeData = generateMaze(modules, config, modules.size);
+    }
+
+    ctx.clearRect(0, 0, targetWidth, targetHeight);
+
+    if (useTemplate) {
+      drawWithTemplate(
+        ctx as unknown as CanvasRenderingContext2D,
+        modules,
+        config,
+        logoImg,
+        borderLogoImg,
+        targetWidth,
+        targetHeight,
+        modules.size,
+        false,
+        mazeData
+      );
+    } else {
+      drawQRInternal(
+        ctx as unknown as CanvasRenderingContext2D,
+        modules,
+        config,
+        logoImg,
+        borderLogoImg,
+        targetWidth,
+        modules.size,
+        false,
+        mazeData
+      );
+    }
+
+    return canvas;
+  } catch (err) {
+    console.warn('Offscreen rendering failed, falling back to display canvas:', err);
+    return null;
+  }
+}
+
 /**
  * Hook to handle downloading, sharing, and copying of the QR code.
  * Extracts this logic from the main component to reduce cognitive load.
@@ -97,21 +233,24 @@ export function useQRDownload(
    * Validates the canvas readability against simulated optical noise.
    * Social templates and decorative poster frames bypass full-canvas matrix decode.
    */
-  const validateScannability = useCallback((canvas: HTMLCanvasElement): boolean => {
-    if (config.templateStyle !== TemplateStyle.NONE || config.socialFormat !== SocialFormat.SQUARE_1_1) {
-      return true;
-    }
-    try {
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return false;
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const result = performScannabilityCheck(imageData, canvas.width, canvas.height, true);
-      return result.success;
-    } catch (err) {
-      console.error('Scannability validation failed:', err);
-      return false;
-    }
-  }, [config.templateStyle, config.socialFormat]);
+  const validateScannability = useCallback(
+    (canvas: HTMLCanvasElement | OffscreenCanvas): boolean => {
+      if (config.templateStyle !== TemplateStyle.NONE || config.socialFormat !== SocialFormat.SQUARE_1_1) {
+        return true;
+      }
+      try {
+        const ctx = canvas.getContext('2d') as CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null;
+        if (!ctx) return false;
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const result = performScannabilityCheck(imageData, canvas.width, canvas.height, true);
+        return result.success;
+      } catch (err) {
+        console.error('Scannability validation failed:', err);
+        return false;
+      }
+    },
+    [config.templateStyle, config.socialFormat]
+  );
 
   /**
    * Helper function to normalize file extensions.
@@ -127,11 +266,14 @@ export function useQRDownload(
    * @param ext - The file extension.
    * @returns The generated filename string.
    */
-  const getFilename = useCallback((ext: string) => {
-    const type = config.type.toLowerCase();
-    const date = new Date().toISOString().split('T')[0];
-    return `${type}-qr-code-qrcraftly-${date}.${ext}`;
-  }, [config.type]);
+  const getFilename = useCallback(
+    (ext: string) => {
+      const type = config.type.toLowerCase();
+      const date = new Date().toISOString().split('T')[0];
+      return `${type}-qr-code-qrcraftly-${date}.${ext}`;
+    },
+    [config.type]
+  );
 
   /**
    * Downloads the current QR code canvas content to the user's device.
@@ -139,28 +281,49 @@ export function useQRDownload(
    * @param format - The desired image format.
    * @param options - Optional export options (e.g. allowUnsafe to bypass scannability pre-flight checks).
    */
-  const downloadToDevice = useCallback(async (format: 'png' | 'jpeg' | 'webp', options?: ExportOptions): Promise<ExportStatus> => {
-    const canvas = qrRef.current?.querySelector('canvas');
-    if (canvas) {
-      if (!options?.allowUnsafe && !validateScannability(canvas)) {
-        return { success: false, format, error: new Error('SCAN_VALIDATION_FAILED') };
+  const downloadToDevice = useCallback(
+    async (format: 'png' | 'jpeg' | 'webp', options?: ExportOptions): Promise<ExportStatus> => {
+      let canvas: HTMLCanvasElement | OffscreenCanvas | null = null;
+      if (options?.exportSize) {
+        canvas = await renderOffscreenCanvas(config, options.exportSize);
       }
-      try {
-        const url = canvas.toDataURL(`image/${format}`);
-        const link = document.createElement('a');
-        const ext = getExtension(format);
-        link.download = getFilename(ext);
-        link.href = url;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        return { success: true, format };
-      } catch (err) {
-        return { success: false, format, error: toError(err) };
+      if (!canvas) {
+        canvas = qrRef.current?.querySelector('canvas') || null;
       }
-    }
-    return { success: false, format, error: new Error('Canvas not found') };
-  }, [qrRef, getFilename, validateScannability]);
+
+      if (canvas) {
+        if (!options?.allowUnsafe && !validateScannability(canvas)) {
+          return { success: false, format, error: new Error('SCAN_VALIDATION_FAILED') };
+        }
+        try {
+          const mimeType = `image/${format}`;
+          let url: string;
+          if ('toDataURL' in canvas && typeof (canvas as HTMLCanvasElement).toDataURL === 'function') {
+            url = (canvas as HTMLCanvasElement).toDataURL(mimeType);
+          } else {
+            const blob = await getCanvasBlob(canvas, mimeType);
+            if (!blob) throw new Error('Failed to create image blob');
+            url = URL.createObjectURL(blob);
+          }
+          const link = document.createElement('a');
+          const ext = getExtension(format);
+          link.download = getFilename(ext);
+          link.href = url;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          if (url.startsWith('blob:')) {
+            URL.revokeObjectURL(url);
+          }
+          return { success: true, format };
+        } catch (err) {
+          return { success: false, format, error: toError(err) };
+        }
+      }
+      return { success: false, format, error: new Error('Canvas not found') };
+    },
+    [qrRef, config, getFilename, validateScannability]
+  );
 
   /**
    * Handles saving the QR code image, attempting to use the File System Access API
@@ -168,102 +331,130 @@ export function useQRDownload(
    * @param format - The desired image format.
    * @param options - Optional export options (e.g. allowUnsafe to bypass scannability pre-flight checks).
    */
-  const handleSaveAs = useCallback(async (format: 'png' | 'jpeg' | 'webp', options?: ExportOptions): Promise<ExportStatus> => {
-    const canvas = qrRef.current?.querySelector('canvas');
-    if (!canvas) return { success: false, format, error: new Error('Canvas not found') };
+  const handleSaveAs = useCallback(
+    async (format: 'png' | 'jpeg' | 'webp', options?: ExportOptions): Promise<ExportStatus> => {
+      let canvas: HTMLCanvasElement | OffscreenCanvas | null = null;
+      if (options?.exportSize) {
+        canvas = await renderOffscreenCanvas(config, options.exportSize);
+      }
+      if (!canvas) {
+        canvas = qrRef.current?.querySelector('canvas') || null;
+      }
 
-    if (!options?.allowUnsafe && !validateScannability(canvas)) {
-      return { success: false, format, error: new Error('SCAN_VALIDATION_FAILED') };
-    }
+      if (!canvas) return { success: false, format, error: new Error('Canvas not found') };
 
-    // Check if the browser supports the File System Access API (e.g., Chrome, Edge Desktop)
-    if (canSaveFilePicker) {
-      try {
-        const blob = await new Promise<Blob | null>((resolve) =>
-          canvas.toBlob(resolve, `image/${format}`)
-        );
+      if (!options?.allowUnsafe && !validateScannability(canvas)) {
+        return { success: false, format, error: new Error('SCAN_VALIDATION_FAILED') };
+      }
 
-        if (!blob) throw new Error('Failed to create image blob');
+      // Check if the browser supports the File System Access API (e.g., Chrome, Edge Desktop)
+      if (canSaveFilePicker) {
+        try {
+          const mimeType = `image/${format}`;
+          const blob = await getCanvasBlob(canvas, mimeType);
 
-        const ext = getExtension(format);
+          if (!blob) throw new Error('Failed to create image blob');
 
-        if (!window.showSaveFilePicker) throw new Error('File System Access API unavailable');
-        const handle = await window.showSaveFilePicker({
-          suggestedName: getFilename(ext),
-          types: [{
-            description: 'QR Code Image',
-            accept: { [`image/${format}`]: [`.${ext}`] },
-          }],
-        });
+          const ext = getExtension(format);
 
-        const writable = await handle.createWritable();
-        await writable.write(blob);
-        await writable.close();
-        return { success: true, format };
-      } catch (err) {
-        // If user aborted the picker, return failure but identify abort.
-        if (typeof err === 'object' && err !== null && 'name' in err && err.name === 'AbortError') {
-          return { success: false, format, error: toError(err) };
+          if (!window.showSaveFilePicker) throw new Error('File System Access API unavailable');
+          const handle = await window.showSaveFilePicker({
+            suggestedName: getFilename(ext),
+            types: [
+              {
+                description: 'QR Code Image',
+                accept: { [mimeType]: [`.${ext}`] },
+              },
+            ],
+          });
+
+          const writable = await handle.createWritable();
+          await writable.write(blob);
+          await writable.close();
+          return { success: true, format };
+        } catch (err) {
+          // If user aborted the picker, return failure but identify abort.
+          if (typeof err === 'object' && err !== null && 'name' in err && err.name === 'AbortError') {
+            return { success: false, format, error: toError(err) };
+          }
+
+          console.warn('File System Access API failed, falling back to standard download:', err);
+          return downloadToDevice(format, options);
         }
-
-        console.warn('File System Access API failed, falling back to standard download:', err);
+      } else {
+        // Fallback for browsers that don't support showSaveFilePicker (Safari, Firefox, Mobile)
         return downloadToDevice(format, options);
       }
-    } else {
-      // Fallback for browsers that don't support showSaveFilePicker (Safari, Firefox, Mobile)
-      return downloadToDevice(format, options);
-    }
-  }, [qrRef, getFilename, downloadToDevice, canSaveFilePicker, validateScannability]);
+    },
+    [qrRef, config, getFilename, downloadToDevice, canSaveFilePicker, validateScannability]
+  );
 
   /**
    * Copies the QR code image directly to the clipboard.
    * @param options - Optional export options (e.g. allowUnsafe to bypass scannability pre-flight checks).
    * @returns A boolean indicating if the copy operation was successful.
    */
-  const handleCopy = useCallback(async (options?: ExportOptions): Promise<ExportStatus> => {
-    const canvas = qrRef.current?.querySelector('canvas');
-    if (!canvas) return { success: false, format: 'clipboard', error: new Error('Canvas not found') };
-
-    if (!options?.allowUnsafe && !validateScannability(canvas)) {
-      return { success: false, format: 'clipboard', error: new Error('SCAN_VALIDATION_FAILED') };
-    }
-
-    try {
-      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
-      if (!blob) return { success: false, format: 'clipboard', error: new Error('Blob creation failed') };
-
-      // Note: ClipboardItem is not supported in all browsers, but works in modern ones
-      // We check for ClipboardItem to avoid throwing errors on older devices
-      if (typeof ClipboardItem !== 'undefined') {
-        const item = new ClipboardItem({ 'image/png': blob });
-        await navigator.clipboard.write([item]);
-        return { success: true, format: 'clipboard' };
+  const handleCopy = useCallback(
+    async (options?: ExportOptions): Promise<ExportStatus> => {
+      let canvas: HTMLCanvasElement | OffscreenCanvas | null = null;
+      if (options?.exportSize) {
+        canvas = await renderOffscreenCanvas(config, options.exportSize);
       }
-      return { success: false, format: 'clipboard', error: new Error('ClipboardItem not supported') };
-    } catch (err) {
-      console.warn('Failed to copy to clipboard:', err);
-      return { success: false, format: 'clipboard', error: toError(err) };
-    }
-  }, [qrRef, validateScannability]);
+      if (!canvas) {
+        canvas = qrRef.current?.querySelector('canvas') || null;
+      }
+
+      if (!canvas) return { success: false, format: 'clipboard', error: new Error('Canvas not found') };
+
+      if (!options?.allowUnsafe && !validateScannability(canvas)) {
+        return { success: false, format: 'clipboard', error: new Error('SCAN_VALIDATION_FAILED') };
+      }
+
+      try {
+        const blob = await getCanvasBlob(canvas, 'image/png');
+        if (!blob) return { success: false, format: 'clipboard', error: new Error('Blob creation failed') };
+
+        // Note: ClipboardItem is not supported in all browsers, but works in modern ones
+        // We check for ClipboardItem to avoid throwing errors on older devices
+        if (typeof ClipboardItem !== 'undefined') {
+          const item = new ClipboardItem({ 'image/png': blob });
+          await navigator.clipboard.write([item]);
+          return { success: true, format: 'clipboard' };
+        }
+        return { success: false, format: 'clipboard', error: new Error('ClipboardItem not supported') };
+      } catch (err) {
+        console.warn('Failed to copy to clipboard:', err);
+        return { success: false, format: 'clipboard', error: toError(err) };
+      }
+    },
+    [qrRef, config, validateScannability]
+  );
 
   /**
    * Uses the Web Share API to share the QR code image directly to other apps.
    * Falls back to downloading if sharing is not supported.
    * @param options - Optional export options (e.g. allowUnsafe to bypass scannability pre-flight checks).
    */
-  const handleShare = useCallback(async (options?: ExportOptions): Promise<ExportStatus> => {
-    const canvas = qrRef.current?.querySelector('canvas');
-    if (!canvas) return { success: false, format: 'share', error: new Error('Canvas not found') };
+  const handleShare = useCallback(
+    async (options?: ExportOptions): Promise<ExportStatus> => {
+      let canvas: HTMLCanvasElement | OffscreenCanvas | null = null;
+      if (options?.exportSize) {
+        canvas = await renderOffscreenCanvas(config, options.exportSize);
+      }
+      if (!canvas) {
+        canvas = qrRef.current?.querySelector('canvas') || null;
+      }
 
-    if (!options?.allowUnsafe && !validateScannability(canvas)) {
-      return { success: false, format: 'share', error: new Error('SCAN_VALIDATION_FAILED') };
-    }
+      if (!canvas) return { success: false, format: 'share', error: new Error('Canvas not found') };
 
-    return new Promise<ExportStatus>((resolve) => {
-      canvas.toBlob(async (blob) => {
+      if (!options?.allowUnsafe && !validateScannability(canvas)) {
+        return { success: false, format: 'share', error: new Error('SCAN_VALIDATION_FAILED') };
+      }
+
+      try {
+        const blob = await getCanvasBlob(canvas, 'image/png');
         if (!blob) {
-          resolve({ success: false, format: 'share', error: new Error('Blob creation failed') });
-          return;
+          return { success: false, format: 'share', error: new Error('Blob creation failed') };
         }
 
         const file = new File([blob], 'qrcode.png', { type: 'image/png' });
@@ -275,19 +466,22 @@ export function useQRDownload(
               text: 'Here is a QR code I created with QRCraftly!',
               files: [file],
             });
-            resolve({ success: true, format: 'share' });
+            return { success: true, format: 'share' };
           } catch (error) {
             console.log('Error sharing:', error);
-            resolve({ success: false, format: 'share', error: toError(error) });
+            return { success: false, format: 'share', error: toError(error) };
           }
         } else {
           // Fallback for devices that don't support sharing files
           const fallbackRes = await downloadToDevice('png', options);
-          resolve({ ...fallbackRes, format: 'share', fallbackTriggered: true });
+          return { ...fallbackRes, format: 'share', fallbackTriggered: true };
         }
-      }, 'image/png');
-    });
-  }, [qrRef, downloadToDevice, canShare, validateScannability]);
+      } catch (err) {
+        return { success: false, format: 'share', error: toError(err) };
+      }
+    },
+    [qrRef, config, downloadToDevice, canShare, validateScannability]
+  );
 
   /**
    * Generates a vector SVG file from the current QR configuration and triggers
@@ -296,37 +490,40 @@ export function useQRDownload(
    * verified for scannability.
    * @param options - Optional export options (e.g. allowUnsafe to bypass scannability pre-flight checks).
    */
-  const handleSaveSvg = useCallback(async (options?: ExportOptions): Promise<ExportStatus> => {
-    try {
-      let logoOmitted = false;
-      const svgString = await generateQRSvg(config, {
-        onLogoOmitted: () => {
-          logoOmitted = true;
-        },
-      });
+  const handleSaveSvg = useCallback(
+    async (options?: ExportOptions): Promise<ExportStatus> => {
+      try {
+        let logoOmitted = false;
+        const svgString = await generateQRSvg(config, {
+          onLogoOmitted: () => {
+            logoOmitted = true;
+          },
+        });
 
-      if (!options?.allowUnsafe) {
-        const isScannable = await validateSvgScannability(svgString, config, options);
-        if (!isScannable) {
-          return { success: false, format: 'svg', error: new Error('SCAN_VALIDATION_FAILED') };
+        if (!options?.allowUnsafe) {
+          const isScannable = await validateSvgScannability(svgString, config, options);
+          if (!isScannable) {
+            return { success: false, format: 'svg', error: new Error('SCAN_VALIDATION_FAILED') };
+          }
         }
-      }
 
-      const blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.download = getFilename('svg');
-      link.href = url;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-      return { success: true, format: 'svg', logoOmitted };
-    } catch (err) {
-      console.warn('SVG export failed:', err);
-      return { success: false, format: 'svg', error: toError(err) };
-    }
-  }, [config, getFilename]);
+        const blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.download = getFilename('svg');
+        link.href = url;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        return { success: true, format: 'svg', logoOmitted };
+      } catch (err) {
+        console.warn('SVG export failed:', err);
+        return { success: false, format: 'svg', error: toError(err) };
+      }
+    },
+    [config, getFilename]
+  );
 
   /**
    * Unified QR export engine seam that coordinates all asset exports.
