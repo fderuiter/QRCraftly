@@ -16,6 +16,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import type { QRStyle } from '@/types';
 import type { EccLevel } from './lib/matrix';
 
 /**
@@ -33,6 +34,18 @@ export interface ArcadeTarget {
   bgColor: string;
   /** Finder pattern colour. */
   eyeColor: string;
+  /** Playable maze overlay toggle. */
+  isMazeEnabled?: boolean;
+  /** Finder pattern bridges toggle. */
+  isMazeBridgesEnabled?: boolean;
+  /** Maze path width multiplier. */
+  mazePathWidth?: number;
+  /** Maze path color hex string. */
+  mazeColor?: string;
+  /** Show solved maze path toggle. */
+  showMazeSolution?: boolean;
+  /** QR style. */
+  style?: QRStyle;
 }
 
 /**

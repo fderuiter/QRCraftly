@@ -21,6 +21,10 @@ import { RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { TextField } from '@/components/ui/TextField';
+import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
+import { ColorInput } from '@/components/ui/ColorInput';
+import { RangeInput } from '@/components/ui/RangeInput';
+import { getStyleAdaptiveMazePathWidth } from '@/packages/qr-matrix/maze';
 import { ECC_LEVELS, ECC_RECOVERY, EccLevel } from '@/packages/arcade';
 import type { ArcadeTarget } from '@/packages/arcade/handoff';
 import { ChoiceGroup } from './ChoiceGroup';
@@ -102,6 +106,57 @@ export function TargetSettings({ target, onChange, onResetToGenerator, hasGenera
           ? 'Uses the design, colours and content from your generator session.'
           : 'No generator design in this tab yet: resets to the default high-contrast code.'}
       </p>
+
+      {/* Maze Overlay Controls */}
+      <div className="border-t border-slate-200 pt-4 dark:border-slate-700">
+        <div className="mb-3">
+          <ToggleSwitch
+            id="arcade-is-maze-enabled"
+            label="Playable Maze Overlay"
+            checked={!!target.isMazeEnabled}
+            onChange={(checked) => onChange({ isMazeEnabled: checked })}
+          />
+          <p className="mt-1 pl-12 text-xs text-slate-600 dark:text-slate-400">
+            Generates a solvable maze on empty modules and quiet zones without changing data modules.
+          </p>
+        </div>
+
+        {target.isMazeEnabled && (
+          <div className="space-y-4 pl-12">
+            <ToggleSwitch
+              id="arcade-is-maze-bridges-enabled"
+              label="Finder Pattern Bridges"
+              checked={target.isMazeBridgesEnabled !== false}
+              onChange={(checked) => onChange({ isMazeBridgesEnabled: checked })}
+            />
+
+            <RangeInput
+              id="arcade-maze-path-width"
+              label="Maze Path Width"
+              value={getStyleAdaptiveMazePathWidth(target.style, target.mazePathWidth)}
+              min={0.10}
+              max={0.50}
+              step={0.01}
+              formatValue={(val) => `${Math.round(val * 100)}%`}
+              onChange={(val) => onChange({ mazePathWidth: val })}
+            />
+
+            <ColorInput
+              id="arcade-maze-color"
+              label="Maze Path Color"
+              value={target.mazeColor || '#3b82f6'}
+              onChange={(val) => onChange({ mazeColor: val })}
+            />
+
+            <ToggleSwitch
+              id="arcade-show-maze-solution"
+              label="Show Maze Solution"
+              checked={!!target.showMazeSolution}
+              onChange={(checked) => onChange({ showMazeSolution: checked })}
+            />
+          </div>
+        )}
+      </div>
     </Card>
   );
 }

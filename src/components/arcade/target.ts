@@ -35,6 +35,12 @@ export function targetFromConfig(config: QRConfig): ArcadeTarget {
     fgColor: config.fgColor,
     bgColor: config.bgColor,
     eyeColor: config.eyeColor || config.fgColor,
+    isMazeEnabled: config.isMazeEnabled,
+    isMazeBridgesEnabled: config.isMazeBridgesEnabled,
+    mazePathWidth: config.mazePathWidth,
+    mazeColor: config.mazeColor,
+    showMazeSolution: config.showMazeSolution,
+    style: config.style,
   };
 }
 
