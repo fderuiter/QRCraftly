@@ -20,11 +20,17 @@ import { QRType, WifiEncryption, CryptoNetwork, SocialPlatform } from '@/types';
 import { formatPayload } from './registry';
 
 /**
- * Default type-aware sample fallback payload generator data for all 12 QR types.
+ * Default type-aware sample fallback payload generator data for all 13 QR types.
  */
 export const SAMPLE_PAYLOADS: Record<QRType, string> = {
   [QRType.URL]: 'https://qrcraftly.com',
   [QRType.TEXT]: 'Welcome to QRCraftly! Customize colors, frames, and patterns.',
+  [QRType.BULK_CSV]: formatPayload(QRType.BULK_CSV, {
+    csvContent: 'url,name\nhttps://qrcraftly.com,QRCraftly',
+    payloadColumn: 'url',
+    filenameColumn: 'name',
+    exportFormat: 'png',
+  }),
   [QRType.WIFI]: formatPayload(QRType.WIFI, {
     ssid: 'QRCraftly_Guest',
     password: 'examplepass123',
