@@ -18,7 +18,6 @@
 
 import React, { useState, useEffect, useCallback, ChangeEvent } from 'react';
 import Papa from 'papaparse';
-import JSZip from 'jszip';
 import { BulkCsvData, QRConfig, QRType } from '@/types';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
@@ -226,6 +225,7 @@ export const BulkCsvInput: React.FC<BulkCsvInputProps> = ({ data, onChange }) =>
     setTotalCount(targetRows.length);
 
     try {
+      const { default: JSZip } = await import('jszip');
       const zip = new JSZip();
       const usedFilenames = new Set<string>();
 

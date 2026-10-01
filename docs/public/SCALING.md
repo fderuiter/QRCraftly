@@ -60,10 +60,10 @@ To maintain high throughput and minimize edge server compute costs, QRCraftly re
 
 ### A. Network Payload & Bandwidth
 
-CI enforces a **700 KB gzipped** limit on the total size of every file in `dist/client` (`scripts/check-bundle-size.js`, run after `pnpm build` in the CI build job; `pnpm build` itself does not check it).
+CI enforces a **750 KB gzipped** limit on the total size of every file in `dist/client` (`scripts/check-bundle-size.js`, run after `pnpm build` in the CI build job; `pnpm build` itself does not check it).
 
 - **Average Bundle Size (Estimated):** ~500 KB (gzipped)
-- **Worst Case Bundle Size:** 700 KB gzipped (the CI limit)
+- **Worst Case Bundle Size:** 750 KB gzipped (the CI limit)
 
 **Scenario: 10,000 Daily Users**
 $$ 10,000 \text{ users} \times 0.5 \text{ MB} = 5,000 \text{ MB} = 5 \text{ GB / day} $$
