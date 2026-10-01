@@ -286,9 +286,12 @@ export const sanitizeSvg = (svgText: string): string => {
 
   try {
     // Strip DOCTYPE and ENTITY declarations to prevent XML internal entity expansion (XML bomb / XXE) attacks
-    const safeSvgText = svgText
-      .replace(/<!ENTITY[\s\S]*?>/gi, '')
-      .replace(/<!DOCTYPE[\s\S]*?>/gi, '');
+    let safeSvgText = svgText;
+    if (/<(?:!DOCTYPE|!ENTITY)/i.test(svgText) || svgText.includes('<!DOCTYPE') || svgText.includes('<!ENTITY')) {
+      safeSvgText = svgText
+        .replace(/<!ENTITY[\s\S]*?>/gi, '')
+        .replace(/<!DOCTYPE[\s\S]*?>/gi, '');
+    }
 
     const parser = new DOMParser();
     const doc = parser.parseFromString(safeSvgText, 'image/svg+xml');
