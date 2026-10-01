@@ -68,14 +68,16 @@ interface StyleControlsProps {
  * @returns The StyleControls component.
  */
 const StyleControls: React.FC<StyleControlsProps> = ({ config, onChange }) => {
-  const defaultStyle = getDefaultStyleConfig();
-  const isCustomStyle = (Object.keys(defaultStyle) as (keyof typeof defaultStyle)[]).some(
-    (key) => config[key] !== defaultStyle[key]
-  );
+  const isCustomStyle = React.useMemo(() => {
+    const defaultStyle = getDefaultStyleConfig();
+    return (Object.keys(defaultStyle) as (keyof typeof defaultStyle)[]).some(
+      (key) => config[key] !== defaultStyle[key]
+    );
+  }, [config]);
 
-  const handleReset = () => {
-    onChange(defaultStyle);
-  };
+  const handleReset = React.useCallback(() => {
+    onChange(getDefaultStyleConfig());
+  }, [onChange]);
 
   return (
     <div className="space-y-4">

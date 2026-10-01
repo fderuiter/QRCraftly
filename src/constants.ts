@@ -58,10 +58,10 @@ export const DEFAULT_CONFIG = {
 };
 
 /**
- * Extracts and returns default visual appearance properties from DEFAULT_CONFIG,
+ * Pre-extracted default visual appearance properties from DEFAULT_CONFIG,
  * excluding non-visual content fields (value, type, borderText, templateHeadline, templateSubtext).
  */
-export function getDefaultStyleConfig(): Partial<QRConfig> {
+export const DEFAULT_STYLE_CONFIG: Partial<QRConfig> = (() => {
   const {
     value: _value,
     type: _type,
@@ -71,6 +71,14 @@ export function getDefaultStyleConfig(): Partial<QRConfig> {
     ...styleDefaults
   } = DEFAULT_CONFIG;
   return styleDefaults;
+})();
+
+/**
+ * Returns default visual appearance properties from DEFAULT_CONFIG,
+ * excluding non-visual content fields (value, type, borderText, templateHeadline, templateSubtext).
+ */
+export function getDefaultStyleConfig(): Partial<QRConfig> {
+  return DEFAULT_STYLE_CONFIG;
 }
 
 /**
