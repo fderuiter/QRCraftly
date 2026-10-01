@@ -68,7 +68,7 @@ export function useImageUpload(): UseImageUploadReturn {
           const rawSvg = event.target?.result as string;
           const sanitizedSvg = sanitizeSvg(rawSvg);
           const base64 = btoa(
-            encodeURIComponent(sanitizedSvg).replace(/%([0-9A-F]{2})/g, (_, p1) =>
+            encodeURIComponent(sanitizedSvg).replace(/%([0-9a-fA-F]{2})/gi, (_, p1) =>
               String.fromCharCode(parseInt(p1, 16))
             )
           );

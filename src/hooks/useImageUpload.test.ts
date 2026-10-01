@@ -77,7 +77,7 @@ describe('useImageUpload', () => {
     expect(spySanitize).toHaveBeenCalledWith('<svg><script>alert(1)</script></svg>');
     const expectedBase64 = btoa(
       encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" />').replace(
-        /%([0-9A-F]{2})/g,
+        /%([0-9a-fA-F]{2})/gi,
         (_, p1) => String.fromCharCode(parseInt(p1, 16))
       )
     );
