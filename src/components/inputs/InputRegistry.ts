@@ -17,6 +17,7 @@ import {
   LocationData,
   MeetingData,
   SocialData,
+  BulkCsvData,
 } from "../../types";
 import { QR_GENERATORS } from "@/packages/qr-payload";
 
@@ -32,6 +33,7 @@ import { EventInput } from "./EventInput";
 import { LocationInput } from "./LocationInput";
 import { MeetingInput } from "./MeetingInput";
 import { SocialInput } from "./SocialInput";
+import { BulkCsvInput } from "./BulkCsvInput";
 
 export type InputDataMap = {
   [QRType.URL]: UrlData;
@@ -46,6 +48,7 @@ export type InputDataMap = {
   [QRType.LOCATION]: LocationData;
   [QRType.MEETING]: MeetingData;
   [QRType.SOCIAL]: SocialData;
+  [QRType.BULK_CSV]: BulkCsvData;
 };
 
 interface InputRegistryEntry<T> {
@@ -196,5 +199,17 @@ export const INPUT_REGISTRY: Registry = {
     constructFn: QR_GENERATORS[QRType.SOCIAL].construct,
     hydrateFn: QR_GENERATORS[QRType.SOCIAL].hydrate,
     canHydrateFn: QR_GENERATORS[QRType.SOCIAL].matches,
+  },
+  [QRType.BULK_CSV]: {
+    Component: BulkCsvInput,
+    initialState: {
+      csvContent: "",
+      payloadColumn: "",
+      filenameColumn: "",
+      exportFormat: "png",
+    } as BulkCsvData,
+    constructFn: QR_GENERATORS[QRType.BULK_CSV].construct,
+    hydrateFn: QR_GENERATORS[QRType.BULK_CSV].hydrate,
+    canHydrateFn: QR_GENERATORS[QRType.BULK_CSV].matches,
   },
 };

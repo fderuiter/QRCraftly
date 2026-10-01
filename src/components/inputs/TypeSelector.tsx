@@ -15,6 +15,7 @@ import {
   MapPin,
   Video,
   Share2,
+  FileSpreadsheet,
 } from "lucide-react";
 
 /**
@@ -38,6 +39,7 @@ const ITEMS = [
   { type: QRType.LOCATION, icon: MapPin, label: "Location" },
   { type: QRType.MEETING, icon: Video, label: "Meeting" },
   { type: QRType.SOCIAL, icon: Share2, label: "Social" },
+  { type: QRType.BULK_CSV, icon: FileSpreadsheet, label: "Bulk CSV Batch" },
 ];
 
 const LINK_BASE =

@@ -48,6 +48,7 @@ export enum QRType {
   LOCATION = 'LOCATION',
   MEETING = 'MEETING',
   SOCIAL = 'SOCIAL',
+  BULK_CSV = 'BULK_CSV',
 }
 
 /**
@@ -431,5 +432,22 @@ export enum TemplateStyle {
   GRADIENT_BLUR = 'gradient_blur',
   SOLID_FRAME = 'solid_frame',
 }
+
+/**
+ * Data structure for Bulk CSV Batch QR generation.
+ */
+export interface BulkCsvData {
+  /** Raw CSV string content. */
+  csvContent: string;
+  /** Selected column for the QR code payload. */
+  payloadColumn: string;
+  /** Selected column for the image filename. */
+  filenameColumn: string;
+  /** Output file format ('png' or 'svg'). */
+  exportFormat: 'png' | 'svg';
+  /** Original file name. */
+  fileName?: string;
+}
+
 
 

@@ -503,6 +503,24 @@ export const contentRegistry: Record<string, ToolContent> = {
       ]
     }
   },
+  "bulk-csv-qr-code": {
+    "id": "bulk-csv-qr-code",
+    "name": "Bulk CSV Batch QR Code Generator",
+    "url": getPublicDomain() + "/bulk-csv-qr-code",
+    "description": "Generate bulk batch QR codes from CSV or TXT files directly in your browser. Download as ZIP archive.",
+    "seoTitle": "Free Bulk CSV Batch QR Code Generator | Privacy First - QRCraftly",
+    "image": "/og-image.png?type=bulk-csv",
+    "imageAlt": "Preview of Bulk CSV Batch QR Code Generator tool",
+    "features": [
+      "Batch CSV QR Generation",
+      "ZIP Package Download",
+      "Zero Network Privacy"
+    ],
+    "schemaType": [SchemaType.SoftwareApplication, SchemaType.WebApplication],
+    "schemaCategory": SchemaCategory.UtilitiesApplication,
+    "personas": [TargetPersona.SecurityConsciousEnterprise],
+    "valueProposition": StrategicValueCategory.ZeroTransitPrivacySovereignty
+  },
   "text-qr-code": {
     "id": "text-qr-code",
     "name": "Text QR Code Generator",

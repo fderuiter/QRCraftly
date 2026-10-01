@@ -24,6 +24,22 @@ import type { Plugin } from 'vite';
 import { createDevRedirectMiddleware } from './src/packages/edge-redirect/dev';
 
 /**
+ * Strips unused XMLHttpRequest references from papaparse to maintain zero-network
+ * client bundle compliance AST security audits.
+ */
+const sanitizePapaParse = (): Plugin => ({
+  name: 'qrcraftly:sanitize-papaparse',
+  transform(code, id) {
+    if (id.includes('papaparse')) {
+      return {
+        code: code.replace(/new\s+XMLHttpRequest/g, 'undefined').replace(/XMLHttpRequest/g, 'undefined'),
+        map: null,
+      };
+    }
+  },
+});
+
+/**
  * Serves `/api/redirect/*` from an in-memory mock D1 during `pnpm dev`, so dynamic
  * links can be created and resolved locally without Cloudflare credentials (#928).
  * Production uses the Worker entry `src/packages/edge-redirect/worker.ts`.
@@ -54,6 +70,7 @@ export default defineConfig(() => {
         react(),
         vike(),
         devRedirectApi(),
+        sanitizePapaParse(),
       ],
       esbuild: {
         target: 'es2022'

@@ -17,6 +17,7 @@ This application is designed to **support** HIPAA-compliant workflows through a 
 - **Mosaic QR Images:** An uploaded mosaic design and its decoded pixels are kept only in volatile memory (at most four decoded images) and are never persisted or uploaded.
 - **Animation Loop Frames:** Any cached frames or matrices generated for animation loops are also kept solely in volatile client-side memory.
 - **Playable Maze Overlay:** All coordinates, keep-out boundary zones, scannability-audited finder pattern bridge channels, and solutions computed for the playable maze overlay are processed completely in-memory locally in the user's browser, ensuring absolute privacy and data isolation.
+- **Bulk CSV Batch Processing:** CSV upload parsing using PapaParse, QR matrix building, and ZIP package creation using JSZip occur strictly inside browser memory on the main thread, executing zero network requests and revoking Blob memory upon download completion.
 
 ### 2. Logging & Metrics Policy
 

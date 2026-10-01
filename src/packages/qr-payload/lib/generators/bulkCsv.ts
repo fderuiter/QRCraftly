@@ -1,0 +1,47 @@
+/*
+    QRCraftly
+    Copyright (C) 2025-2026 fderuiter
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
+import { BulkCsvData, QRType, QRGeneratorContract } from '@/types';
+
+/**
+ * Constructs the bulk CSV string.
+ */
+export const constructBulkCsvString = (data: BulkCsvData): string => {
+  if (!data) return '';
+  return data.csvContent || '';
+};
+
+/**
+ * Hydrates BulkCsvData from a raw string.
+ */
+export const hydrateBulkCsvData = (raw: string): BulkCsvData => {
+  return {
+    csvContent: raw || '',
+    payloadColumn: '',
+    filenameColumn: '',
+    exportFormat: 'png',
+  };
+};
+
+export const BulkCsvContract: QRGeneratorContract<BulkCsvData> = {
+  type: QRType.BULK_CSV,
+  construct: constructBulkCsvString,
+  hydrate: hydrateBulkCsvData,
+  matches: () => false,
+  validate: () => [],
+};

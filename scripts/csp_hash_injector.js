@@ -189,7 +189,8 @@ export function generateHeadersContent(existingHeadersContent, baseCsp, routeCsp
 
   for (const [route, info] of routeCspMap.entries()) {
     if (route === '/*') continue;
-    
+    if (info.routeCsp === baseCsp) continue;
+
     if (!routesMap.has(route)) {
       routesMap.set(route, []);
     }
@@ -228,27 +229,32 @@ export function run() {
   console.log(`[CSP Hash Injector] Found ${htmlFiles.length} HTML files.`);
   
   const baseCspPattern = BASE_CSP_PATTERN;
-  
-  const baseCsp = updateCsp(baseCspPattern, []);
   const routeCspMap = new Map();
   let totalHashesProcessed = 0;
-  
+  const routeHashesList = [];
+
   for (const filePath of htmlFiles) {
     const relativePath = path.relative(DIST_CLIENT_DIR, filePath);
     const route = pathToRoute(relativePath);
     const html = fs.readFileSync(filePath, 'utf8');
     const inlineScripts = extractInlineScripts(html, true);
-    
+
     const fileHashes = inlineScripts.map(script => computeCspHash(script));
     totalHashesProcessed += fileHashes.length;
-    
+    routeHashesList.push(fileHashes);
+
     const routeCsp = updateCsp(baseCspPattern, fileHashes);
     routeCspMap.set(route, { filePath, relativePath, hashes: fileHashes, routeCsp });
-    
+
     const updatedHtml = replaceMetaCSP(html, routeCsp);
     fs.writeFileSync(filePath, updatedHtml, 'utf8');
     console.log(`[CSP Hash Injector] Updated meta CSP in ${relativePath} for route "${route}"`);
   }
+
+  const commonHashes = routeHashesList.length > 0
+    ? routeHashesList[0].filter(h => routeHashesList.every(arr => arr.includes(h)))
+    : [];
+  const baseCsp = updateCsp(baseCspPattern, commonHashes);
   
   console.log(`[CSP Hash Injector] Total inline script hashes processed across routes: ${totalHashesProcessed}`);
   

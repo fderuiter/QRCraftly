@@ -32,6 +32,8 @@ export function getQrTypeLabel(type: QRType): string {
       return 'Meeting';
     case QRType.SOCIAL:
       return 'Social';
+    case QRType.BULK_CSV:
+      return 'Bulk CSV Batch';
     default:
       return type;
   }
@@ -53,6 +55,7 @@ const DESCRIBERS: { [K in QRType]: (data: QRPayloadDataMap[K]) => string } = {
   [QRType.LOCATION]: (data) => (data.latitude && data.longitude ? `${data.latitude}, ${data.longitude}` : ''),
   [QRType.MEETING]: (data) => data.url || '',
   [QRType.SOCIAL]: (data) => (data.handle ? `@${data.handle}` : ''),
+  [QRType.BULK_CSV]: (data) => data.fileName || 'Bulk CSV Batch',
 };
 
 function describePayload<K extends QRType>(type: K, value: string): string {

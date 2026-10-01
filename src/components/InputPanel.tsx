@@ -50,6 +50,7 @@ const QR_TYPE_LABELS: Record<QRType, string> = {
   [QRType.LOCATION]: 'Location',
   [QRType.MEETING]: 'Meeting',
   [QRType.SOCIAL]: 'Social',
+  [QRType.BULK_CSV]: 'Bulk CSV Batch',
 };
 
 /**
