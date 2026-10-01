@@ -47,6 +47,9 @@ export default defineConfig({
     /* Most projects bypass CSP so specs can instrument pages freely; the
        `chromium-csp` project below enforces the real policy (see #969). */
     bypassCSP: true,
+    launchOptions: {
+      args: ['--disable-dev-shm-usage', '--no-sandbox', '--disable-gpu'],
+    },
   },
   projects: [
     {

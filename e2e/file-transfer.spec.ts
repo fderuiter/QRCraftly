@@ -150,6 +150,7 @@ test.describe('Optical file transfer', () => {
       await sender.getByLabel('Choose a file to send').setInputFiles(second);
       await sender.getByRole('button', { name: 'Start file transfer' }).click();
       await receiver.getByRole('button', { name: 'Receive another file' }).click();
+      await expect(receiver.getByTestId('inline-complete-panel')).not.toBeVisible();
       await expect(receiver.getByRole('button', { name: 'Deactivate camera scanner' })).toBeVisible();
       await relayUntilComplete(sender, receiver);
       await expectDownloadedCopy(receiver, second);
