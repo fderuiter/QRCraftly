@@ -48,5 +48,5 @@ Each claim above is backed by something in the repository, so a change that brea
 
 ## Things that would change this page
 
-- **Dynamic (editable) QR codes.** The code for a Cloudflare-backed redirect service with scan counts exists but is switched off (`ENABLE_DYNAMIC_TRACKING` in `src/components/inputs/UrlInput.tsx`) and has no backend in production. Turning it on would mean a server stores redirect targets and counts scans, so this page and the site copy must be updated before it ships.
+- **Dynamic (editable) QR codes.** QRCraftly does not offer them. A redirect service would mean a server stores redirect targets and counts scans, so the code for one was removed ([ADR 0022](adr/0022-no-dynamic-qr-codes-client-side-only.md)). Bringing it back would need a new decision and an update to this page first.
 - **Cloudflare dashboard settings.** Web Analytics, Workers Logs and Logpush are account settings, not code. Web Analytics would be blocked by the CSP anyway, but logs kept by Cloudflare on our behalf would need to be disclosed here.

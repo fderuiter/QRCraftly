@@ -8,45 +8,32 @@ audience: developers # internal developer documentation, not published on /secur
 ## Executive Summary
 
 **Projected Capacity:** Effectively Unlimited Daily Users
-**Bottleneck:** Deployment frequency (Builds/month) and Serverless Edge Worker quotas, not Static Asset Bandwidth.
+**Bottleneck:** Deployment frequency (Builds/month), not Static Asset Bandwidth.
 
-_Streamlined and secured QR code generation and edge redirection capabilities._
+_Streamlined and secured client-side QR code generation._
 
-QRCraftly is architected as a **Hybrid Edge-Native Application** combining **Client-Side Heavy Processing** with **Serverless Edge Compute**. Hosted on Cloudflare Workers with Static Assets, the core static QR generation, matrix math, and image rendering are offloaded entirely to browser Web Workers on the user's device. Dynamic features—dynamic link redirection (`/r/[id]`) and scan counting—use an optional Cloudflare Worker entry backed by Cloudflare D1 (currently disabled; see `EDGE_ARCHITECTURE.md`).
+QRCraftly is a **Static, Client-Side Application**. Hosted on Cloudflare Workers with Static Assets, it serves pre-rendered files only; QR generation, matrix math and image rendering run entirely on the user's device, much of it in browser Web Workers. There is no server code, database or redirect service ([ADR 0022](../adr/0022-no-dynamic-qr-codes-client-side-only.md)).
 
 ## Architecture & Resource Usage
 
-### 1. Architecture: Hybrid Edge-Native Model
+### 1. Architecture: Static Assets, Client-Side Compute
 
-- **Framework:** Vike (Vite + React) served by Cloudflare Workers with Static Assets. The optional Worker entry (`src/packages/edge-redirect/worker.ts`) handles only `/api/redirect/*` and `/r/*`.
-- **Rendering Model:** Static pre-rendering (SSG) for every route. There is no edge SSR; the dynamic link resolver is a pre-rendered shell (`/r/shell`) that the Worker serves for each `/r/<id>`.
-- **Client Processing:** Core QR code generation, canvas rendering, matrix contrast auditing, and zero-knowledge Web Crypto AES-GCM operations occur 100% locally in browser Web Workers (`scannabilityWorker.ts`, `optical-scanner/worker.ts`).
-- **Serverless Edge Compute & Database Persistence:** Dynamic link resolution (`/r/[id]`) routes requests through Cloudflare Workers, retrieving encrypted destinations from Cloudflare D1 (no KV, no destination caching) while updating scan analytics asynchronously (`UPDATE redirects SET scans = scans + 1 WHERE id = ?`).
+- **Framework:** Vike (Vite + React) served by Cloudflare Workers with Static Assets, with no Worker script (`wrangler.jsonc` has no `main` entry).
+- **Rendering Model:** Static pre-rendering (SSG) for every route. There is no edge SSR.
+- **Client Processing:** Core QR code generation, canvas rendering and matrix contrast auditing occur 100% locally in the browser, with heavy work in Web Workers (`src/packages/scannability/worker.ts`, `src/packages/optical-scanner/worker.ts`).
 
 ### 2. Hosting & Infrastructure Limits: Cloudflare Workers
 
 The application leverages Cloudflare's distributed edge infrastructure. System limits and operational impacts are structured as follows:
 
-| Resource                      | Free Tier Limit        | QRCraftly Usage                                   | Impact & Scale Mitigation                                       |
-| :---------------------------- | :--------------------- | :------------------------------------------------ | :-------------------------------------------------------------- |
-| **Static Requests**           | Unlimited              | ~10-15 per session                                | **None** (Absorbed by Cloudflare CDN)                           |
-| **Bandwidth**                 | Unlimited              | ~500KB per session                                | **None** (Cached globally at edge)                              |
-| **Serverless Edge Functions** | 100,000 requests / day | Used for Edge SSR & dynamic redirects (`/r/[id]`) | **Edge Quota Limit** (Scales seamlessly with Workers Paid tier) |
-| **Cloudflare D1 SQL Reads**   | 5,000,000 rows / day   | Querying dynamic redirect records                 | **High Throughput** (one primary-key read per scan, no KV)      |
-| **Cloudflare D1 SQL Writes**  | 100,000 rows / day     | Dynamic link creation & scan count increments     | **Optimized** (Non-blocking background batch/scan pipeline)     |
-| **Concurrent Users**          | Unlimited              | Offloaded to client & edge nodes                  | **None**                                                        |
-| **Builds / Deploys**          | 500 / month            | ~1 per deploy                                     | **Operational Constraint**                                      |
+| Resource             | Free Tier Limit | QRCraftly Usage     | Impact & Scale Mitigation             |
+| :------------------- | :-------------- | :------------------ | :------------------------------------ |
+| **Static Requests**  | Unlimited       | ~10-15 per session  | **None** (Absorbed by Cloudflare CDN) |
+| **Bandwidth**        | Unlimited       | ~500KB per session  | **None** (Cached globally at edge)    |
+| **Concurrent Users** | Unlimited       | Offloaded to client | **None**                              |
+| **Builds / Deploys** | 500 / month     | ~1 per deploy       | **Operational Constraint**            |
 
-### 3. Serverless Edge Compute Quotas & D1 Storage Behavior
-
-> **Not deployed.** The edge compute and D1 items below describe the switched-off dynamic redirect design. Production runs no Worker script, database or scan counting.
-
-- **Cloudflare Workers Execution Quotas:** Serverless Workers enforce a 10ms CPU time limit per request on the Free Tier (and 30s wall-clock CPU time on Paid Tiers). Because heavy cryptographic and matrix operations are offloaded to client browser Web Workers, edge function CPU time per redirect remains under 2ms.
-- **D1 Relational Storage Behaviors:** Dynamic redirect mappings (`id`, `redirect_url`, `ios_url`, `android_url`, `scans`, `created_at`) are stored in Cloudflare D1 SQLite database tables. Destinations are stored as `enc:v1:` ciphertext and are not cached (no KV), so an update is visible on the next scan; each scan costs one primary-key read and one scan-count write.
-- **Scan Aggregation & Telemetry Pipeline:** Scan analytics updates are executed asynchronously using non-blocking edge invocation handlers (`context.waitUntil()`). This ensures that database write operations (`UPDATE redirects SET scans = scans + 1 WHERE id = ?`) do not block client redirect latency or cause request queue bottlenecks under high concurrency.
-- **Turnstile Bot Mitigation & Write Quota Defense:** Dynamic link creation endpoints incorporate Cloudflare Turnstile bot verification. Verifying tokens at edge ingress protects the 100,000 daily D1 write quota against automated brute-force attempts and synthetic traffic exhaustion.
-
-### 4. Client-Side Performance Optimizations
+### 3. Client-Side Performance Optimizations
 
 To maintain high throughput and minimize edge server compute costs, QRCraftly relies on advanced browser APIs:
 
@@ -73,10 +60,9 @@ $$ 1,000,000 \text{ users} \times 0.5 \text{ MB} = 500,000 \text{ MB} = 500 \tex
 
 _Status:_ Cloudflare absorbs this bandwidth cost completely on the CDN layer.
 
-### B. Compute Power & Edge Workload Distribution
+### B. Compute Power
 
-- **Static QR Creation:** Executed on the user's client hardware (~50ms CPU time per render). For 1 million static QR users, 100% of compute load is distributed across 1 million client CPUs, resulting in **0ms server CPU overhead**.
-- **Dynamic Link Redirection (`/r/[id]`):** Serviced at Cloudflare edge worker locations with an average execution duration of **1-2ms per request**. Up to 100,000 daily redirects are supported on Cloudflare's free edge tier, with seamless linear scaling on Workers Paid plans ($5/mo for 10M requests).
+- **QR Creation:** Executed on the user's client hardware (~50ms CPU time per render). For 1 million users, 100% of compute load is distributed across 1 million client CPUs, resulting in **0ms server CPU overhead**.
 
 ### C. Operational Constraints (Builds)
 
@@ -87,10 +73,10 @@ The primary build deployment limit:
 
 $$ \frac{500 \text{ builds}}{30 \text{ days}} \approx 16.6 \text{ builds/day} $$
 
-_Mitigation:_ This affects developer deploy frequency, not end-user capacity. If exceeded, new code deployments are paused until the next billing cycle, while existing static assets and edge workers remain fully operational.
+_Mitigation:_ This affects developer deploy frequency, not end-user capacity. If exceeded, new code deployments are paused until the next billing cycle, while existing static assets remain fully operational.
 
 ## Conclusion
 
-QRCraftly's hybrid edge-native architecture efficiently splits computational responsibilities between browser Web Workers and Cloudflare serverless edge infrastructure. By keeping static QR matrix generation strictly client-side, serverless edge compute and D1 relational database capacity are preserved exclusively for dynamic URL redirection and scan analytics.
+QRCraftly runs all computation in the browser and serves only static files, so capacity grows with the number of visitors' devices rather than with server resources. The only shared limit is the number of builds per month.
 
-**Recommendation:** Maintain the current Cloudflare Workers infrastructure. Upgrading to Cloudflare Workers Paid ($5/month) expands dynamic redirect capacity to over 10,000,000 requests per month whenever enterprise dynamic link volume exceeds standard free tier limits.
+**Recommendation:** Maintain the current Cloudflare Workers Static Assets hosting. No paid tier is needed for end-user capacity.

@@ -833,16 +833,6 @@ export const contentRegistry: Record<string, ToolContent> = {
 };
 
 export const auxiliaryRegistry: Record<string, AuxiliaryContent> = {
-  "dynamic-dashboard": {
-    "id": "dynamic-dashboard",
-    "name": "Dynamic Redirection Dashboard",
-    "seoTitle": "Dynamic Redirection Dashboard - QRCraftly",
-    "description": "Manage your dynamic QR destinations, update target URLs, and view cumulative scan statistics in real-time.",
-    "image": "/og-image.png?type=dashboard",
-    "imageAlt": "QRCraftly Dynamic Redirection Dashboard",
-    "personas": [TargetPersona.SecurityConsciousEnterprise],
-    "valueProposition": StrategicValueCategory.ZeroTransitPrivacySovereignty
-  },
   "file-transfer/receive": {
     "id": "file-transfer/receive",
     "name": "Offline Animated QR File Receiver",
@@ -939,16 +929,6 @@ export function getLegacyRedirect(path: string): LegacyRouteContent | undefined 
 export function getMetadataForPath(path: string): { title: string; description: string; image: string; imageAlt: string } {
   const pathLookup = getRegistryKeyForPath(path);
 
-    if (pathLookup.startsWith("r/")) {
-      const id = pathLookup.slice(2);
-      return {
-        title: id ? `Dynamic Redirect (${id}) | QRCraftly` : "Zero-Knowledge Dynamic Link | QRCraftly",
-        description: id ? `Secure client-side decrypted redirect for dynamic link ${id}.` : "Secure zero-knowledge encrypted dynamic link redirection portal.",
-        image: "/og-image.png",
-        imageAlt: "Zero-Knowledge Dynamic Link | QRCraftly",
-      };
-    }
-  
   if (contentRegistry[pathLookup]) {
     const item = contentRegistry[pathLookup];
     return {

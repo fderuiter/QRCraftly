@@ -22,7 +22,7 @@ Read the full pledge, and exactly what is and isn't collected, in [docs/PLEDGE.m
   - **Mosaic QR**: Upload a design and tile it across the whole code. Each module takes the image colour under it while keeping its dark or light value, so the code still scans (Halftone or Tiles layout, adjustable Scan Contrast; see [ADR 0019](docs/adr/0019-mosaic-qr-module-level-image-tiling.md)).
   - **Upload Limits**: Supported custom logo formats are image/jpeg, image/png, image/webp, image/svg+xml. Maximum file size is 2MB.
 - **Privacy First**: Client-side architecture. All sensitive data processing happens locally in your browser with volatile in-memory guarantees; no user payloads are sent to any server, and there is no analytics or diagnostics reporting.
-- **Dynamic Redirection (built, switched off)**: Code for Cloudflare edge redirection with zero-knowledge AES-GCM client encryption (decryption keys only in `#key=...` anchor fragments) is in the repository, but the UI flags are off and it has no production backend; production serves static assets only. See [EDGE_ARCHITECTURE.md](docs/public/EDGE_ARCHITECTURE.md) and [docs/PLEDGE.md](docs/PLEDGE.md#things-that-would-change-this-page).
+- **Static Codes Only**: Every code holds its content directly, so it keeps working without QRCraftly and nobody can track or switch it off. There are no dynamic (redirect) codes and no server; production serves static assets only. See [ADR 0022](docs/adr/0022-no-dynamic-qr-codes-client-side-only.md).
 - **Scan to Fill**: Scan an existing QR code with the webcam or from an image file to load its content into the matching input form. Decoding runs in the browser.
 - **Air-Gapped File Transfer (Beta)**: Send a file from one device to another as an animated stream of QR codes (`/file-transfer`) and receive it with a camera (`/file-transfer/receive`). No network, Bluetooth or USB is involved.
 - **QR Arcade**: Stress-test a QR design by damaging it and watching whether a real scanner still decodes it (`/arcade`).
@@ -173,8 +173,8 @@ Lighthouse CI runs on every Pull Request to audit performance, accessibility, be
     - `QRTool.tsx`: The main container component that integrates inputs, controls, and canvas.
     - `QRScanner.tsx`: Webcam and file-upload QR scanner used by the input panel.
     - `arcade/`: Components for the QR Arcade page.
-  - `packages/`: Deep modules with small public entry points (`qr-matrix`, `qr-export`, `qr-payload`, `scannability`, `optical-scanner`, `optical-transfer`, `edge-redirect`, `arcade`). See [src/packages/README.md](src/packages/README.md).
-  - `hooks/`: React hooks (camera, image upload, download, audio, dynamic redirects).
+  - `packages/`: Deep modules with small public entry points (`qr-matrix`, `qr-export`, `qr-payload`, `scannability`, `optical-scanner`, `optical-transfer`, `arcade`). See [src/packages/README.md](src/packages/README.md).
+  - `hooks/`: React hooks (camera, image upload, download).
   - `layouts/`: Application layouts.
     - `LayoutDefault.tsx`: The main layout wrapper.
     - `Head.tsx`: Manages document head elements.

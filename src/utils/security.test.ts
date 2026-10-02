@@ -106,7 +106,7 @@ describe('Security Utils', () => {
     });
 
     it('allows relative path URLs starting with /', () => {
-      expect(sanitizeHref('/api/redirect/123')).toBe('/api/redirect/123');
+      expect(sanitizeHref('/file-transfer/receive')).toBe('/file-transfer/receive');
     });
 
     it('neutralizes javascript: URLs and returns #', () => {

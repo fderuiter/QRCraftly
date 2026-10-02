@@ -209,7 +209,6 @@ describe('Content Registry Validation', () => {
       '/arcade',
       '/destroy-the-qr',
       '/game',
-      '/dynamic-dashboard',
       '/security',
       '/file-transfer',
       '/email-qr-code',
@@ -236,12 +235,6 @@ describe('page metadata fixes (#978)', () => {
     expect(meta.title).toBe('404 Page Not Found - QRCraftly');
     expect(getMetadataForPageContext({ urlPathname: '/gone', abortStatusCode: 404 }).title).toBe(meta.title);
     expect(getMetadataForPageContext({ urlPathname: '/' }).title).not.toBe(meta.title);
-  });
-
-  it('gives /dynamic-dashboard its own title and description', () => {
-    const meta = getMetadataForPageContext({ urlPathname: '/dynamic-dashboard' });
-    expect(meta.title).toBe('Dynamic Redirection Dashboard - QRCraftly');
-    expect(meta.description).toMatch(/dynamic QR destinations/);
   });
 
   it('suffixes the destroy-the-qr title and spells vCard consistently', () => {

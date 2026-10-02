@@ -21,14 +21,7 @@ const BANNED_APIS = new Set(['fetch', 'WebSocket', 'XMLHttpRequest', 'sendBeacon
 // chunk cannot unlock network access. WebSocket, XMLHttpRequest and sendBeacon
 // have no exemption anywhere.
 
-// A fetch call is authorized when its URL argument statically starts with one of
-// these first-party API prefixes (string literal, template head, or the left-most
-// operand of a string concatenation).
-export const AUTHORIZED_FETCH_URL_PREFIXES = [
-  '/api/redirect/' // Dynamic redirect registration, update, stats and resolution (src/hooks/useRedirector, /r/[id])
-];
-
-// A fetch call with a dynamic URL is authorized when the nearest enclosing
+// A fetch call is authorized when the nearest enclosing
 // function contains one of these exact string literals, which identify the
 // audited source function after minification.
 export const AUTHORIZED_FETCH_SCOPE_LITERALS = [
@@ -99,20 +92,6 @@ const isFunctionLike = node =>
   ts.isConstructorDeclaration(node);
 
 /**
- * Returns the static string prefix of a URL expression, or null when it has none.
- */
-function staticUrlPrefix(node) {
-  if (!node) return null;
-  if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) return node.text;
-  if (ts.isTemplateExpression(node)) return node.head.text;
-  if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.PlusToken) {
-    return staticUrlPrefix(node.left);
-  }
-  if (ts.isParenthesizedExpression(node)) return staticUrlPrefix(node.expression);
-  return null;
-}
-
-/**
  * Collects the text of every string/template literal inside a node.
  */
 function collectStringLiterals(root) {
@@ -135,19 +114,6 @@ function collectStringLiterals(root) {
  * @returns {boolean}
  */
 export function isAuthorizedFetchSite(node) {
-  // Walk up to the call that uses this reference as its callee, if any.
-  let callee = node;
-  if (ts.isIdentifier(node) && ts.isPropertyAccessExpression(node.parent) && node.parent.name === node) {
-    callee = node.parent;
-  }
-  const call = callee.parent;
-  if (call && ts.isCallExpression(call) && call.expression === callee) {
-    const prefix = staticUrlPrefix(call.arguments[0]);
-    if (prefix !== null && AUTHORIZED_FETCH_URL_PREFIXES.some(allowed => prefix.startsWith(allowed))) {
-      return true;
-    }
-  }
-
   let scope = node.parent;
   while (scope && !isFunctionLike(scope)) {
     scope = scope.parent;

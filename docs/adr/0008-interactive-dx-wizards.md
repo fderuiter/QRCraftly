@@ -6,11 +6,11 @@ status: accepted
 
 ## Context
 
-Setting up local development environments, provisioning Cloudflare edge infrastructure (D1 SQLite databases and related resources), and configuring GitHub Actions CI/CD secrets involve manual, multi-step browser workflows. These tasks are prone to human error, missed configuration keys, and repetitive friction across team members and autonomous agents.
+Setting up local development environments, provisioning Cloudflare edge infrastructure, and configuring GitHub Actions CI/CD secrets involve manual, multi-step browser workflows. These tasks are prone to human error, missed configuration keys, and repetitive friction across team members and autonomous agents.
 
 While bash scripts provide an interactive, lightweight interface for terminal guidance (opening URLs, capturing hidden secrets, and upserting environment files), executing interactive bash scripts on Windows systems can fail when run directly through PowerShell or Command Prompt.
 
-> **Current state:** the site is deployed as a Cloudflare Worker with Static Assets by Workers Builds ([ADR 0012](./0012-cloudflare-workers-static-assets-and-multi-environment.md), [ADR 0018](./0018-release-pr-tag-driven-publishing.md)), not as a Cloudflare Pages project, and it uses no KV namespace. `scripts/wizards/setup-cloudflare.sh` walks through the Worker and Workers Builds settings, the D1 database and the Turnstile widget.
+> **Current state:** the site is deployed as a Cloudflare Worker with Static Assets by Workers Builds ([ADR 0012](./0012-cloudflare-workers-static-assets-and-multi-environment.md), [ADR 0018](./0018-release-pr-tag-driven-publishing.md)), not as a Cloudflare Pages project, and it uses no KV namespace. `scripts/wizards/setup-cloudflare.sh` walks through the API token and the Worker and Workers Builds settings. Production is static assets only, so there is no database or Turnstile step ([ADR 0022](./0022-no-dynamic-qr-codes-client-side-only.md)).
 
 ## Decision
 

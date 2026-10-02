@@ -41,12 +41,9 @@ describe('Pre-Build Storage Privacy AST Auditor Guardrail', () => {
       tempCleanFile,
       `
       export function handlePreferences() {
-        const consent = localStorage.getItem('qrcraftly:dynamic-consent-accepted');
-        localStorage.setItem('qrcraftly:dynamic-consent-accepted', 'true');
-        
-        const redirects = localStorage.getItem('qrcraftly:dynamic-redirects');
-        localStorage.setItem('qrcraftly:dynamic-redirects', JSON.stringify([]));
-        
+        const templates = localStorage.getItem('qrcraftly:brand-templates');
+        localStorage.setItem('qrcraftly:brand-templates', JSON.stringify([]));
+
         const theme = localStorage.getItem('qrcraftly:theme');
         localStorage.setItem('qrcraftly:theme', 'dark');
 
@@ -66,19 +63,17 @@ describe('Pre-Build Storage Privacy AST Auditor Guardrail', () => {
   describe('ALLOWED_STORAGE_KEYS', () => {
     it('contains all authorized persistent storage keys', () => {
       expect(ALLOWED_STORAGE_KEYS.has('qr-telemetry-opt-in')).toBe(false);
-      expect(ALLOWED_STORAGE_KEYS.has('qrcraftly:dynamic-redirects')).toBe(true);
-      expect(ALLOWED_STORAGE_KEYS.has('qrcraftly:dynamic-consent-accepted')).toBe(true);
+      expect(ALLOWED_STORAGE_KEYS.has('qrcraftly:dynamic-redirects')).toBe(false);
+      expect(ALLOWED_STORAGE_KEYS.has('qrcraftly:dynamic-consent-accepted')).toBe(false);
       expect(ALLOWED_STORAGE_KEYS.has('qrcraftly:theme')).toBe(true);
       expect(ALLOWED_STORAGE_KEYS.has('qrcraftly:brand-templates')).toBe(true);
       expect(ALLOWED_STORAGE_KEYS.has('__test__')).toBe(true);
     });
 
-    it('allows only the documented preference, consent and probe keys', () => {
+    it('allows only the documented preference, template and probe keys', () => {
       expect([...ALLOWED_STORAGE_KEYS].sort()).toEqual([
         '__test__',
         'qrcraftly:brand-templates',
-        'qrcraftly:dynamic-consent-accepted',
-        'qrcraftly:dynamic-redirects',
         'qrcraftly:theme',
       ]);
     });
