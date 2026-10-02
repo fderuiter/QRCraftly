@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { BASE_CSP_PATTERN, extractInlineScripts, computeCspHash, replaceMetaCSP, updateCsp, validateHeaders, pathToRoute, generateHeadersContent } from '../scripts/csp_hash_injector.js';
+import { BASE_CSP_PATTERN, extractInlineScripts, computeCspHash, replaceMetaCSP, updateCsp, validateHeaders, pathToRoute, generateHeadersContent, commonHashes } from '../scripts/csp_hash_injector.js';
 
 describe('CSP Hash Injector Unit Tests', () => {
   describe('pathToRoute', () => {
@@ -40,6 +40,34 @@ describe('CSP Hash Injector Unit Tests', () => {
       const globalBlock = generated.split('\n\n').find(b => b.startsWith('/*'));
       expect(globalBlock).not.toContain('sha256-hashIndex');
       expect(globalBlock).not.toContain('sha256-hashAbout');
+    });
+  });
+
+  describe('commonHashes', () => {
+    it('returns only the hashes every route shares', () => {
+      expect(commonHashes([["'a'", "'b'"], ["'b'", "'a'", "'c'"], ["'a'", "'b'"]])).toEqual(["'a'", "'b'"]);
+      expect(commonHashes([["'a'"], ["'b'"]])).toEqual([]);
+      expect(commonHashes([])).toEqual([]);
+    });
+  });
+
+  describe('generateHeadersContent route deduplication', () => {
+    it('omits route rules whose CSP equals the global rule and keeps routes that need more', () => {
+      const shared = "'sha256-shared'";
+      const baseCsp = updateCsp(BASE_CSP_PATTERN, [shared]);
+      const routeCspMap = new Map();
+      routeCspMap.set('/', { routeCsp: baseCsp, hashes: [shared] });
+      routeCspMap.set('/about', { routeCsp: baseCsp, hashes: [shared] });
+      const extraCsp = updateCsp(BASE_CSP_PATTERN, [shared, "'sha256-extra'"]);
+      routeCspMap.set('/game', { routeCsp: extraCsp, hashes: [shared, "'sha256-extra'"] });
+
+      const generated = generateHeadersContent('/*\n  X-Frame-Options: DENY\n', baseCsp, routeCspMap);
+      const routes = generated.split(/\r?\n\r?\n/).map(block => block.split(/\r?\n/)[0]);
+
+      expect(routes).toEqual(['/*', '/game']);
+      expect(generated).toContain(`/*\n  Content-Security-Policy: ${baseCsp}\n  X-Frame-Options: DENY`);
+      expect(generated).toContain(`/game\n  Content-Security-Policy: ${extraCsp}`);
+      expect(() => validateHeaders(baseCsp, generated)).not.toThrow();
     });
   });
 

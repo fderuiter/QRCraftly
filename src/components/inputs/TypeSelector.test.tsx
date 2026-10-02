@@ -10,8 +10,8 @@ describe("TypeSelector link navigation", () => {
     render(<TypeSelector currentType={QRType.URL} />);
     const nav = screen.getByRole("navigation", { name: "QR code types" });
     const list = within(nav).getByRole("list");
-    expect(within(list).getAllByRole("listitem")).toHaveLength(12);
-    expect(within(nav).getAllByRole("link")).toHaveLength(12);
+    expect(within(list).getAllByRole("listitem")).toHaveLength(13);
+    expect(within(nav).getAllByRole("link")).toHaveLength(13);
   });
 
   it("does not use tab semantics or roving tabIndex", () => {

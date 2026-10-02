@@ -30,6 +30,7 @@ import { TextContract } from './generators/text';
 import { LocationContract } from './generators/location';
 import { MeetingContract } from './generators/meeting';
 import { SocialContract } from './generators/social';
+import { BulkCsvContract } from './generators/bulkCsv';
 
 const GENERATOR_CONTRACTS = {
   [QRType.WIFI]: WifiContract,
@@ -44,6 +45,7 @@ const GENERATOR_CONTRACTS = {
   [QRType.LOCATION]: LocationContract,
   [QRType.MEETING]: MeetingContract,
   [QRType.SOCIAL]: SocialContract,
+  [QRType.BULK_CSV]: BulkCsvContract,
 };
 
 type ContractData<C> = C extends QRGeneratorContract<infer T> ? T : never;

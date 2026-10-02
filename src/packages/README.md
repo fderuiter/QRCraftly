@@ -100,6 +100,12 @@ Boundary checks run automatically during `pnpm run lint` and CI.
   - `dev.ts`: Vite dev middleware and in-memory `MockD1Database` so `pnpm dev` works without Cloudflare credentials.
   - `schema.sql`: D1 schema applied with `pnpm exec wrangler d1 execute`.
 
+### `bulk-csv` (`@/packages/bulk-csv`)
+
+- **Purpose**: Dependency-free building blocks for the Bulk CSV Batch generator (`/bulk-csv-qr-code`). Everything runs in memory with no network access; the app loads this package only in the code-split Bulk CSV chunk.
+- **Entry Points**:
+  - `index.ts`: RFC 4180 CSV parser with a header row (`parseCsv`, `CsvParseError`, `MAX_BULK_CSV_ROWS`, `MAX_BULK_CSV_CHARS`: quoted fields, `""` escapes, CRLF/LF/CR, embedded line breaks, BOM stripping, bounded row count), a minimal ZIP writer (`createZip`: stored entries, CRC-32 from `@/packages/optical-transfer`, central directory, UTF-8 names via general purpose bit 11) and file name helpers (`sanitizeFileStem`, `allocateFileName`).
+
 ### `audio-transfer` (`@/packages/audio-transfer`)
 
 - **Purpose**: Air-gapped acoustic data transfer behind the Audio QR page (`/audio-qr`): the FSK chirp modem (sync/zero/one tones, off-thread demodulation of microphone spectra) and the spectrogram QR engine that paints QR modules into the audio spectrum and exports WAV files.

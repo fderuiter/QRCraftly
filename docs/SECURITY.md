@@ -18,6 +18,8 @@ Our application utilizes a multi-layered Content Security Policy (CSP) enforced 
 
 The base policy lives in two places that must stay byte-identical: the meta tag in `src/layouts/Head.tsx` and `BASE_CSP_PATTERN` in `scripts/csp_hash_injector.js`. A unit test fails the build if they drift apart.
 
+In the generated `_headers` file, the global `/*` rule carries the inline script hashes that every page shares, and a route gets its own `Content-Security-Policy` rule only when it needs more hashes than that. One rule per route would push the file past Cloudflare's 8 KB `_headers` limit, which `scripts/csp_hash_injector.js` enforces at build time.
+
 - **No third-party origins:** The app no longer loads web fonts from Google Fonts; text renders with the system font stack (Tailwind's default `font-sans` and `font-mono`). Every directive therefore allows only `'self'`, plus the `data:` and `blob:` schemes where they are needed. No visitor IP address or referrer is sent to a font CDN. If a brand typeface is added later, bundle it with the app (for example from an `@fontsource` package) and keep `font-src 'self'`.
 - **`img-src 'self' data: blob:`:** SVG export rasterizes its `blob:` object URL to check that the code scans, and the logo resize fallback decodes uploads through `blob:` URLs.
 - **`media-src 'self' blob:`:** The optical scanner plays uploaded video files through `blob:` object URLs.
@@ -41,6 +43,7 @@ Please use the [GitHub Security Advisory](https://github.com/fderuiter/QRCraftly
   - Data leaks (e.g., data being sent to a server).
   - XSS vulnerabilities.
   - Improper configuration of the client-side generator.
+  - Bulk CSV processing & batch ZIP generation privacy boundary violations.
 - **Out of Scope:**
   - Physical security of the user's device.
   - Browser-level vulnerabilities.
