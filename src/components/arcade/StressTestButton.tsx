@@ -17,6 +17,7 @@
 */
 
 import React from 'react';
+import { Gamepad2 } from 'lucide-react';
 import { navigate } from 'vike/client/router';
 import { Button } from '@/components/ui/Button';
 import { useQRStore } from '@/context/QRContext';
@@ -33,10 +34,10 @@ export function StressTestButton() {
   const store = useQRStore();
   return (
     <Button
-      variant="outline"
+      variant="ghost"
       size="sm"
       fullWidth
-      className="mb-4"
+      className="mt-3 gap-2"
       onClick={() => {
         stageArcadeTarget(targetFromConfig(store.getState().config));
         Promise.resolve(navigate('/arcade')).catch(() => {
@@ -44,6 +45,7 @@ export function StressTestButton() {
         });
       }}
     >
+      <Gamepad2 className="size-4" aria-hidden="true" />
       Stress Test in Arcade
     </Button>
   );

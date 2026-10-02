@@ -63,16 +63,15 @@ describe('QRTool with sample fallback empty state', () => {
     render(<ToastProvider><QRTool initialConfig={{ ...DEFAULT_CONFIG, value: '' }} /></ToastProvider>);
 
     const download = screen.getByRole('button', { name: /^Download$/ });
-    const png = screen.getByRole('button', { name: 'Download QR code as PNG' });
     const copy = screen.getByRole('button', { name: /Copy QR code/ });
 
-    for (const button of [download, png, copy]) {
+    for (const button of [download, copy]) {
       expect(button).toHaveAttribute('aria-disabled', 'true');
     }
     // The Download control is not a menu while in sample mode.
     expect(download).not.toHaveAttribute('aria-haspopup');
 
-    fireEvent.click(png);
+    fireEvent.click(download);
     expect(exportAsset).not.toHaveBeenCalled();
     expect(screen.getByText(/Enter content to generate a QR code\. Exports are available/)).toBeInTheDocument();
   });
@@ -82,9 +81,9 @@ describe('QRTool with sample fallback empty state', () => {
 
     expect(screen.queryByTestId('sample-preview-badge')).not.toBeInTheDocument();
     expect(screen.getByText('Print simulation verified')).toBeInTheDocument();
-    const png = screen.getByRole('button', { name: 'Download QR code as PNG' });
-    expect(png).not.toHaveAttribute('aria-disabled');
-    expect(screen.getByRole('button', { name: /^Download$/ })).toHaveAttribute('aria-haspopup', 'menu');
+    const download = screen.getByRole('button', { name: /^Download$/ });
+    expect(download).not.toHaveAttribute('aria-disabled');
+    expect(download).toHaveAttribute('aria-haspopup', 'menu');
   });
 
   it('has no axe violations in sample preview state', async () => {

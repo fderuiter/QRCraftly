@@ -28,8 +28,8 @@ export interface PrimaryNavItem {
   label: string;
   /** Destination path. */
   href: string;
-  /** Marks a feature that is still in beta. */
-  beta?: boolean;
+  /** Pill shown after the label for unfinished features. */
+  tag?: 'Beta';
 }
 
 /**
@@ -53,16 +53,33 @@ export const QR_TYPE_ROUTES: Record<QRType, string> = {
 };
 
 /**
- * The single primary-navigation data model shared by the product shell, the generator
- * and the file-transfer sender and receiver. It feeds both the inline desktop links and the
- * narrow-layout drawer.
+ * The single primary-navigation data model rendered by the app shell header on every route.
+ * It feeds both the inline desktop links and the narrow-screen menu. Security, the pledge
+ * and the generator list live in the app shell footer.
  */
 export const PRIMARY_NAV_ITEMS: readonly PrimaryNavItem[] = [
   { id: 'create', label: 'Create QR', href: '/' },
-  { id: 'transfer', label: 'File Transfer', href: '/file-transfer', beta: true },
+  { id: 'transfer', label: 'File Transfer', href: '/file-transfer', tag: 'Beta' },
   { id: 'arcade', label: 'Arcade', href: '/arcade' },
   { id: 'about', label: 'About', href: '/about' },
   { id: 'security', label: 'Security', href: '/security' },
+];
+
+/** Generator links listed in the app shell footer, one per QR type route. */
+export const GENERATOR_FOOTER_LINKS: readonly (readonly [label: string, href: string])[] = [
+  ['URL QR Code', QR_TYPE_ROUTES[QRType.URL]],
+  ['Text QR Code', QR_TYPE_ROUTES[QRType.TEXT]],
+  ['WiFi QR Code', QR_TYPE_ROUTES[QRType.WIFI]],
+  ['vCard QR Code', QR_TYPE_ROUTES[QRType.VCARD]],
+  ['Email QR Code', QR_TYPE_ROUTES[QRType.EMAIL]],
+  ['Phone QR Code', QR_TYPE_ROUTES[QRType.PHONE]],
+  ['SMS QR Code', QR_TYPE_ROUTES[QRType.SMS]],
+  ['Payment QR Code', QR_TYPE_ROUTES[QRType.PAYMENT]],
+  ['Event QR Code', QR_TYPE_ROUTES[QRType.EVENT]],
+  ['Location QR Code', QR_TYPE_ROUTES[QRType.LOCATION]],
+  ['Meeting QR Code', QR_TYPE_ROUTES[QRType.MEETING]],
+  ['Social QR Code', QR_TYPE_ROUTES[QRType.SOCIAL]],
+  ['Bulk CSV QR Codes', QR_TYPE_ROUTES[QRType.BULK_CSV]],
 ];
 
 const GENERATOR_PATHS = new Set<string>(Object.values(QR_TYPE_ROUTES));

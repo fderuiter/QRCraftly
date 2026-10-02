@@ -56,8 +56,9 @@ describe('Error Page Integration Tests', () => {
     const goHomeLink = screen.getByRole('link', { name: /Go Home/i });
     expect(goHomeLink).toBeInTheDocument();
     expect(goHomeLink).toHaveAttribute('href', '/');
-    expect(screen.getByRole('navigation', { name: /Primary navigation/i })).toBeInTheDocument();
-    expect(screen.getByRole('contentinfo')).toBeInTheDocument();
+    // Site navigation and the footer come from the app shell, never from the page.
+    expect(screen.queryByRole('navigation', { name: /Primary navigation/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('contentinfo')).not.toBeInTheDocument();
   });
 
   it('handles 500 status correctly', () => {

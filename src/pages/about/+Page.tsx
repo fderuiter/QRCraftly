@@ -18,14 +18,14 @@
 
 
 import React from 'react';
-import { Shield, Database, Code, ArrowLeft, Zap, Wifi, Ban } from 'lucide-react';
+import { Shield, Database, Code, Zap, Wifi, Ban } from 'lucide-react';
 import { PLEDGE_COMMITMENT, PLEDGE_HEADLINE } from '@/data/pledge';
 import { JsonLdScript } from '@/components/ui/JsonLdScript';
 import { contentRegistry } from '@/data/contentRegistry';
 import { generateSchema } from '@/utils/schemaGenerator';
 import { resolveDomainForPath } from '@/utils/metadataEngine';
 import { usePageContext } from 'vike-react/usePageContext';
-import { ProductShell } from '@/components/ProductShell';
+import { ButtonLink } from '@/components/ui/Button';
 
 const GithubIcon: React.FC<{ className?: string }> = ({ className }) => (
   <svg
@@ -60,24 +60,14 @@ export default function Page() {
   const schemaData = generateSchema(contentRegistry['about'], resolvedDomain, urlPathname);
 
   return (
-    <ProductShell>
+    <>
     <div className="mx-auto max-w-5xl px-4 py-12">
       <JsonLdScript data={schemaData} />
-      <nav className="mb-8">
-
-        <a
-          href="/"
-          className="inline-flex items-center gap-2 text-slate-600 transition-colors hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
-        >
-          <ArrowLeft className="size-5" />
-          Back to Home
-        </a>
-      </nav>
       <header className="mb-16 text-center">
-        <h1 className="mb-4 text-4xl font-bold text-slate-900 dark:text-white">
+        <h1 className="mb-4 text-4xl font-bold text-fg">
           About QRCraftly
         </h1>
-        <p className="mx-auto max-w-2xl text-lg text-slate-600 dark:text-slate-300">
+        <p className="mx-auto max-w-2xl text-lg text-fg-muted">
           A privacy-focused QR code generator built with modern web technologies.
           Entirely free, with no ads and no login required.
         </p>
@@ -86,42 +76,42 @@ export default function Page() {
       <section className="mb-16">
         <h2 className="sr-only">Why Choose QRCraftly?</h2>
         <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-2xl border border-slate-100 bg-white p-6 text-center shadow-sm dark:border-slate-700 dark:bg-slate-800">
-            <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-xl bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+          <div className="rounded-2xl border border-line bg-surface-raised p-6 text-center shadow-sm">
+            <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-xl bg-accent-soft text-accent">
               <Zap className="size-6" />
             </div>
-            <h3 className="mb-2 text-lg font-semibold text-slate-900 dark:text-white">Free & No Login</h3>
-            <p className="text-slate-600 dark:text-slate-400">
+            <h3 className="mb-2 text-lg font-semibold text-fg">Free & No Login</h3>
+            <p className="text-fg-muted">
               QRCraftly is completely free to use. No sign-up, no login, and no hidden fees. Just generate your QR codes instantly.
             </p>
           </div>
 
-          <div className="rounded-2xl border border-slate-100 bg-white p-6 text-center shadow-sm dark:border-slate-700 dark:bg-slate-800">
-            <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-xl bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400">
+          <div className="rounded-2xl border border-line bg-surface-raised p-6 text-center shadow-sm">
+            <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-xl bg-accent-soft text-accent">
               <Shield className="size-6" />
             </div>
-            <h3 className="mb-2 text-lg font-semibold text-slate-900 dark:text-white">No Third-Party Tracking</h3>
-            <p className="text-slate-600 dark:text-slate-400">
+            <h3 className="mb-2 text-lg font-semibold text-fg">No Third-Party Tracking</h3>
+            <p className="text-fg-muted">
               No analytics, tracking cookies, tracking pixels or third-party scripts. Our host, Cloudflare, only sees ordinary page requests, never your QR content.
             </p>
           </div>
 
-          <div className="rounded-2xl border border-slate-100 bg-white p-6 text-center shadow-sm dark:border-slate-700 dark:bg-slate-800">
-            <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-xl bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400">
+          <div className="rounded-2xl border border-line bg-surface-raised p-6 text-center shadow-sm">
+            <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-xl bg-accent-soft text-accent">
               <Database className="size-6" />
             </div>
-            <h3 className="mb-2 text-lg font-semibold text-slate-900 dark:text-white">Privacy First</h3>
-            <p className="text-slate-600 dark:text-slate-400">
+            <h3 className="mb-2 text-lg font-semibold text-fg">Privacy First</h3>
+            <p className="text-fg-muted">
               Your content is processed entirely in your browser and is never sent to a server. Nothing is reported back, ever.
             </p>
           </div>
 
-          <div className="rounded-2xl border border-slate-100 bg-white p-6 text-center shadow-sm dark:border-slate-700 dark:bg-slate-800">
-            <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-xl bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400">
+          <div className="rounded-2xl border border-line bg-surface-raised p-6 text-center shadow-sm">
+            <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-xl bg-accent-soft text-accent">
               <Code className="size-6" />
             </div>
-            <h3 className="mb-2 text-lg font-semibold text-slate-900 dark:text-white">Open Source</h3>
-            <p className="text-slate-600 dark:text-slate-400">
+            <h3 className="mb-2 text-lg font-semibold text-fg">Open Source</h3>
+            <p className="text-fg-muted">
               Our code is open for inspection and contribution. We believe in transparency.
             </p>
           </div>
@@ -129,56 +119,45 @@ export default function Page() {
       </section>
 
       <section className="mb-16 text-center">
-        <h2 className="mb-4 text-2xl font-bold text-slate-900 dark:text-white">Specialized Generators</h2>
-        <p className="mx-auto mb-6 max-w-2xl text-lg text-slate-600 dark:text-slate-300">
+        <h2 className="mb-4 text-2xl font-bold text-fg">Specialized Generators</h2>
+        <p className="mx-auto mb-6 max-w-2xl text-lg text-fg-muted">
           Looking for a specific use case? Try our dedicated tools.
         </p>
-        <a
-          href="/wifi-qr-code"
-          className="inline-flex items-center gap-2 rounded-xl bg-teal-700 px-6 py-3 font-medium text-white shadow-lg shadow-teal-900/20 transition-colors hover:bg-teal-800"
-        >
-          <Wifi className="size-5" />
+        <ButtonLink href="/wifi-qr-code" variant="primary" size="lg">
+          <Wifi className="size-5" aria-hidden="true" />
           Create WiFi QR Code
-        </a>
+        </ButtonLink>
       </section>
 
       <section
         aria-labelledby="about-pledge"
         className="mb-16 rounded-2xl border border-teal-100 bg-teal-50 p-8 text-center md:p-12 dark:border-teal-800/40 dark:bg-teal-900/20"
       >
-        <div className="mx-auto mb-6 flex size-16 items-center justify-center rounded-2xl border border-teal-100 bg-white shadow-sm dark:border-teal-700/50 dark:bg-slate-800">
-          <Ban className="size-8 text-teal-700 dark:text-teal-400" aria-hidden="true" />
+        <div className="mx-auto mb-6 flex size-16 items-center justify-center rounded-2xl border border-teal-100 bg-surface-raised shadow-sm dark:border-teal-700/50">
+          <Ban className="size-8 text-accent" aria-hidden="true" />
         </div>
-        <h2 id="about-pledge" className="mb-4 text-3xl font-bold text-slate-900 dark:text-white">{PLEDGE_HEADLINE}</h2>
-        <p className="mx-auto mb-8 max-w-2xl text-lg leading-relaxed text-slate-600 dark:text-slate-300">{PLEDGE_COMMITMENT}</p>
-        <a
-          href="/free-forever"
-          className="inline-flex items-center gap-2 rounded-xl bg-teal-700 px-6 py-3 font-medium text-white shadow-lg shadow-teal-900/20 transition-colors hover:bg-teal-800"
-        >
+        <h2 id="about-pledge" className="mb-4 text-3xl font-bold text-fg">{PLEDGE_HEADLINE}</h2>
+        <p className="mx-auto mb-8 max-w-2xl text-lg leading-relaxed text-fg-muted">{PLEDGE_COMMITMENT}</p>
+        <ButtonLink href="/free-forever" variant="primary" size="lg">
           Read the QRCraftly Pledge
-        </a>
+        </ButtonLink>
       </section>
 
-      <section className="mb-12 rounded-2xl border border-slate-200 bg-slate-50 p-8 text-center dark:border-slate-700 dark:bg-slate-800/50">
-        <h2 className="mb-4 text-2xl font-bold text-slate-900 dark:text-white">
+      <section className="mb-12 rounded-2xl border border-line bg-slate-50 p-8 text-center dark:bg-slate-800/50">
+        <h2 className="mb-4 text-2xl font-bold text-fg">
           Open Source License
         </h2>
-        <p className="mx-auto mb-8 max-w-2xl text-slate-600 dark:text-slate-300">
+        <p className="mx-auto mb-8 max-w-2xl text-fg-muted">
           QRCraftly is released under the <strong>GNU Affero General Public License v3.0 (AGPL-3.0)</strong>.
           This ensures that the software remains free and open source for everyone.
         </p>
-        <a
-          href="https://github.com/fderuiter/QRCraftly"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-6 py-3 font-medium text-white transition-colors hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100"
-        >
+        <ButtonLink href="https://github.com/fderuiter/QRCraftly" target="_blank" rel="noopener noreferrer" variant="outline" size="lg">
           <GithubIcon className="size-5" />
           View on GitHub
-        </a>
+        </ButtonLink>
       </section>
 
     </div>
-    </ProductShell>
+    </>
   );
 }

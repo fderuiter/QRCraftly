@@ -48,7 +48,7 @@ Internal transfer mechanics are strictly encapsulated within `lib/`:
 
 - Both `/file-transfer` and `/file-transfer/receive` display visual "Beta" pills in page headers.
 - An advisory `Alert` banner is embedded to inform users of optical alignment and lighting constraints.
-- Navigation links in `ProductShell.tsx` and `QRTool.tsx` carry an explicit "Beta" pill indicator.
+- The Send File and Receive File links in the primary navigation (`src/data/navigation.ts`, rendered by `AppShell.tsx`) carry an explicit "Beta" pill indicator.
 
 ## Consequences
 

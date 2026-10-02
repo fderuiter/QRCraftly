@@ -19,7 +19,6 @@
 import React from 'react';
 import { usePageContext } from 'vike-react/usePageContext';
 import { ArcadeApp } from '@/components/arcade/ArcadeApp';
-import { ProductShell } from '@/components/ProductShell';
 import { SidebarContent } from '@/components/SidebarContent';
 import { JsonLdScript } from '@/components/ui/JsonLdScript';
 import { contentRegistry } from '@/data/contentRegistry';
@@ -37,12 +36,12 @@ export default function Page() {
   const schemaData = generateSchema(contentRegistry['arcade'], resolveDomainForPath(urlPathname), urlPathname);
 
   return (
-    <ProductShell>
+    <>
       <JsonLdScript data={schemaData} />
       <ArcadeApp />
       <div className="mx-auto max-w-3xl px-4 pb-12">
         <SidebarContent toolId="arcade" />
       </div>
-    </ProductShell>
+    </>
   );
 }

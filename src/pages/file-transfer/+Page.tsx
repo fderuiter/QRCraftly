@@ -171,7 +171,7 @@ function FileTransferToolInner() {
           <>
             {/* File Selection & Pacing Section */}
             <section className="space-y-4">
-              <h2 className="flex items-center gap-2 text-xs font-bold tracking-wider text-slate-600 uppercase dark:text-slate-400">
+              <h2 className="flex items-center gap-2 text-xs font-bold tracking-wider text-fg-muted uppercase">
                 <Upload className="size-4 text-teal-600" aria-hidden="true" />
                 1. Choose a File
               </h2>
@@ -184,14 +184,14 @@ function FileTransferToolInner() {
                   onDrop={handleDrop}
                   className={`flex min-h-24 w-full min-w-0 flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed p-3 transition-colors ${
                     isTransferring
-                      ? 'cursor-not-allowed border-slate-200 bg-slate-50/50 opacity-60 dark:border-slate-800 dark:bg-slate-950/20'
+                      ? 'cursor-not-allowed border-line bg-slate-50/50 opacity-60 dark:bg-slate-950/20'
                       : isDraggingFile
                         ? 'cursor-copy border-teal-500 bg-teal-50 dark:bg-teal-950/30'
-                        : 'cursor-pointer border-slate-200 bg-slate-50/50 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950/20 dark:hover:bg-slate-950/40'
+                        : 'cursor-pointer border-line bg-slate-50/50 hover:bg-slate-50 dark:bg-slate-950/20 dark:hover:bg-slate-950/40'
                   }`}
                 >
                   <FileUp className="size-6 text-slate-400" aria-hidden="true" />
-                  <span className="max-w-full truncate text-xs font-medium text-slate-600 dark:text-slate-400">
+                  <span className="max-w-full truncate text-xs font-medium text-fg-muted">
                     {selectedFile ? selectedFile.name : 'Choose file or drag & drop'}
                   </span>
                   <input
@@ -218,24 +218,24 @@ function FileTransferToolInner() {
               </div>
 
               {selectedFile && (
-                <div className="space-y-2 rounded-xl border border-slate-100 bg-slate-50 p-4 text-xs dark:border-slate-800 dark:bg-slate-800/30">
+                <div className="space-y-2 rounded-xl border border-line-subtle bg-slate-50 p-4 text-xs dark:bg-slate-800/30">
                   <div className="flex justify-between gap-3">
                     <span className="text-slate-500">Name:</span>
-                    <span className="max-w-45 truncate font-semibold text-slate-700 dark:text-slate-300">{selectedFile.name}</span>
+                    <span className="max-w-45 truncate font-semibold text-fg-soft">{selectedFile.name}</span>
                   </div>
                   <div className="flex justify-between gap-3">
                     <span className="text-slate-500">Size:</span>
-                    <span className="font-mono text-slate-700 dark:text-slate-300">{(selectedFile.size / 1024 / 1024).toFixed(2)} MB</span>
+                    <span className="font-mono text-fg-soft">{(selectedFile.size / 1024 / 1024).toFixed(2)} MB</span>
                   </div>
                 </div>
               )}
             </section>
 
-            <div className="h-px bg-slate-100 dark:bg-slate-800" />
+            <div className="h-px bg-surface-hover" />
 
             {/* Live Streaming Speed / Pacing controls */}
             <section className="space-y-6">
-              <h2 className="flex items-center gap-2 text-xs font-bold tracking-wider text-slate-600 uppercase dark:text-slate-400">
+              <h2 className="flex items-center gap-2 text-xs font-bold tracking-wider text-fg-muted uppercase">
                 <Sliders className="size-4 text-teal-600" aria-hidden="true" />
                 2. Transfer Settings
               </h2>
@@ -252,7 +252,7 @@ function FileTransferToolInner() {
               />
 
               <div className="space-y-2">
-                <span id="density-label" className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                <span id="density-label" className="block text-sm font-medium text-fg-soft">
                   QR density
                 </span>
                 <div role="group" aria-labelledby="density-label" className="grid grid-cols-3 gap-1 rounded-xl bg-slate-100 p-1 dark:bg-slate-800/80">
@@ -270,9 +270,9 @@ function FileTransferToolInner() {
                     </Button>
                   ))}
                 </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400">{activeDensityHint}</p>
+                <p className="text-xs text-fg-muted">{activeDensityHint}</p>
               </div>
-              <p className="text-xs text-slate-600 dark:text-slate-400" data-testid="fountain-symbol-info">
+              <p className="text-xs text-fg-muted" data-testid="fountain-symbol-info">
                 {fountainInfo
                   ? `Each QR carries ${fountainInfo.symbolSize} bytes (${fountainInfo.compression === 'deflate-raw' ? 'compressed' : 'uncompressed'}). The receiver needs about ${Math.ceil(fountainInfo.k * 1.15)} frames, ${formatDuration((fountainInfo.k * 1.15) / fps)} at ${fps} frames/sec.`
                   : estimate
@@ -296,7 +296,7 @@ function FileTransferToolInner() {
         secondary={
           /* Style Customization Section */
           <section className="space-y-4">
-            <h2 className="text-xs font-bold tracking-wider text-slate-600 uppercase dark:text-slate-400">
+            <h2 className="text-xs font-bold tracking-wider text-fg-muted uppercase">
               3. QR Appearance
             </h2>
             <StyleControls config={config} onChange={store.updateConfig} />
@@ -305,14 +305,14 @@ function FileTransferToolInner() {
         preview={
             <Card>
               <div className="mb-6 flex flex-wrap items-center justify-between gap-2">
-                <h2 className="font-semibold text-slate-700 dark:text-slate-200">
+                <h2 className="font-semibold text-fg-soft">
                   Transfer QR
                 </h2>
                 <div className="flex items-center gap-2">
                   <span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-xs font-bold ${
                     isTransferring 
-                      ? 'border border-emerald-200 bg-emerald-100 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400' 
-                      : 'border border-slate-200 bg-slate-100 text-slate-600 dark:border-slate-800 dark:bg-slate-900/30 dark:text-slate-400'
+                      ? 'border border-success-line bg-success-soft text-emerald-700 dark:text-emerald-400' 
+                      : 'border border-line bg-slate-100 text-fg-muted dark:bg-slate-900/30'
                   }`}>
                     <span aria-hidden="true" className={`size-1.5 rounded-full ${isTransferring ? 'bg-emerald-500 motion-safe:animate-pulse' : 'bg-slate-400'}`} />
                     {isTransferring ? 'Transmitting' : 'Idle'}
@@ -362,7 +362,7 @@ function FileTransferToolInner() {
                     <span className="flex items-center gap-1 font-medium text-slate-500">
                       <Activity className="size-3.5 text-teal-600" aria-hidden="true" /> {fountainInfo ? 'First pass:' : 'Progress:'}
                     </span>
-                    <span className="font-mono font-bold text-slate-800 dark:text-slate-200">{senderPercent}%</span>
+                    <span className="font-mono font-bold text-fg">{senderPercent}%</span>
                   </div>
                   
                   <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
@@ -371,25 +371,25 @@ function FileTransferToolInner() {
 
                   <div className="grid grid-cols-2 gap-4 pt-2">
                     <div>
-                      <div className="text-slate-500 dark:text-slate-400">{fountainInfo ? 'Frames shown' : `Current QR (Pass ${currentPass})`}</div>
-                      <div className="font-mono text-sm font-semibold text-slate-700 dark:text-slate-300" data-testid="sender-frames">
+                      <div className="text-fg-muted">{fountainInfo ? 'Frames shown' : `Current QR (Pass ${currentPass})`}</div>
+                      <div className="font-mono text-sm font-semibold text-fg-soft" data-testid="sender-frames">
                         {fountainInfo ? `${currentFrameIndex} of ~${framesNeeded}` : `${currentFrameIndex} / ${totalFrames}`}
                         {!fountainInfo && (
-                          <span className="ml-1 text-xs text-teal-700 dark:text-teal-400">
+                          <span className="ml-1 text-xs text-accent">
                             {currentPass === 1 ? '(Seq)' : '(Shuffled)'}
                           </span>
                         )}
                       </div>
                     </div>
                     <div>
-                      <div className="flex items-center gap-1 text-slate-500 dark:text-slate-400">
+                      <div className="flex items-center gap-1 text-fg-muted">
                         <Cpu className="size-3 text-teal-500" aria-hidden="true" /> Frame buffer
                       </div>
-                      <div className="font-mono text-sm font-semibold text-slate-700 dark:text-slate-300">{transferStats.frameBufferMemory}</div>
+                      <div className="font-mono text-sm font-semibold text-fg-soft">{transferStats.frameBufferMemory}</div>
                     </div>
                   </div>
                   {fountainInfo && (
-                    <p className="text-slate-600 dark:text-slate-400">
+                    <p className="text-fg-muted">
                       The stream keeps going after the first pass so a receiver can join late or miss frames. Stop once the receiver shows Transfer Complete.
                     </p>
                   )}
@@ -400,7 +400,7 @@ function FileTransferToolInner() {
               <div className="mb-4 flex items-center justify-center rounded-2xl border border-slate-100 bg-slate-50 p-4 sm:p-6 dark:border-slate-900 dark:bg-slate-950/50">
                 <canvas
                   ref={canvasRef}
-                  className="aspect-square max-h-[60vh] w-full rounded-lg bg-white object-contain shadow-sm dark:bg-slate-900"
+                  className="aspect-square max-h-[60vh] w-full rounded-lg bg-surface object-contain shadow-sm"
                   role="img"
                   aria-label="Transfer QR code"
                   width={512}

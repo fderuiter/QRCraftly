@@ -2,6 +2,166 @@
 
 @variant dark (&:where(.dark, .dark *));
 
+/*
+ * Design tokens (#1045). Components use these semantic names (`bg-surface`, `text-fg-muted`,
+ * `border-line`, `bg-action`, `ring-focus` ...) instead of raw palette steps. Colour roles
+ * are CSS variables: the `.dark` block below swaps their values, so a component needs no
+ * `dark:` variant for them. Contrast pairs are checked by scripts/contrast_check.js, and
+ * scripts/design_token_audit.js keeps raw palette colours out of src/components/ui/.
+ */
+@theme {
+  /* Brand scale (teal). */
+  --color-brand-50: var(--color-teal-50);
+  --color-brand-100: var(--color-teal-100);
+  --color-brand-200: var(--color-teal-200);
+  --color-brand-300: var(--color-teal-300);
+  --color-brand-400: var(--color-teal-400);
+  --color-brand-500: var(--color-teal-500);
+  --color-brand-600: var(--color-teal-600);
+  --color-brand-700: var(--color-teal-700);
+  --color-brand-800: var(--color-teal-800);
+  --color-brand-900: var(--color-teal-900);
+  --color-brand-950: var(--color-teal-950);
+
+  /* Surfaces: page background, panels and cards, popovers and menus, wells. */
+  --color-page: var(--color-slate-50);
+  --color-surface: var(--color-white);
+  --color-surface-raised: var(--color-white);
+  --color-surface-sunken: var(--color-slate-50);
+  --color-surface-hover: var(--color-slate-100);
+  --color-scrim: rgb(0 0 0 / 0.5);
+
+  /* Borders: dividers, component outlines, and form controls (3:1 against surface). */
+  --color-line-subtle: var(--color-slate-100);
+  --color-line: var(--color-slate-200);
+  --color-line-strong: var(--color-slate-600);
+
+  /* Text: headings, body, secondary. */
+  --color-fg: var(--color-slate-900);
+  --color-fg-soft: var(--color-slate-700);
+  --color-fg-muted: var(--color-slate-600);
+
+  /* Accent (brand text, icons and tints) and the filled primary action. */
+  --color-accent: var(--color-teal-700);
+  --color-accent-strong: var(--color-teal-800);
+  --color-accent-soft: var(--color-teal-50);
+  --color-accent-line: var(--color-teal-200);
+  --color-action: var(--color-teal-700);
+  --color-action-hover: var(--color-teal-800);
+  --color-on-action: var(--color-white);
+
+  /* Status roles. Danger is rose only; info uses the accent. */
+  --color-success: var(--color-emerald-800);
+  --color-success-soft: var(--color-emerald-50);
+  --color-success-line: var(--color-emerald-200);
+  --color-warning: var(--color-amber-800);
+  --color-warning-soft: var(--color-amber-50);
+  --color-warning-line: var(--color-amber-200);
+  --color-danger: var(--color-rose-700);
+  --color-danger-soft: var(--color-rose-50);
+  --color-danger-line: var(--color-rose-200);
+  --color-danger-action: var(--color-rose-700);
+  --color-danger-action-hover: var(--color-rose-800);
+
+  /* The one keyboard-focus colour (at least 3:1 on every surface). */
+  --color-focus: var(--color-teal-700);
+
+  /* Type scale: 12px is the floor for any text in the UI. */
+  --text-xs: 0.75rem;
+  --text-xs--line-height: calc(1 / 0.75);
+  --text-sm: 0.875rem;
+  --text-sm--line-height: calc(1.25 / 0.875);
+  --text-base: 1rem;
+  --text-base--line-height: calc(1.5 / 1);
+  --text-lg: 1.125rem;
+  --text-lg--line-height: calc(1.75 / 1.125);
+  --text-xl: 1.25rem;
+  --text-xl--line-height: calc(1.75 / 1.25);
+  --text-2xl: 1.5rem;
+  --text-2xl--line-height: calc(2 / 1.5);
+  --text-3xl: 1.875rem;
+  --text-3xl--line-height: calc(2.25 / 1.875);
+  --text-4xl: 2.25rem;
+  --text-4xl--line-height: calc(2.5 / 2.25);
+
+  /* System font stacks only: no web fonts, no font CDN. */
+  --font-display:
+    ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
+  --font-mono:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
+    'Courier New', monospace;
+
+  /* Radius. */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1rem;
+
+  /* Elevation: raised cards, overlays (menus, popovers, toasts), modals. */
+  --shadow-raised: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-overlay:
+    0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  --shadow-modal: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+  /* Effects: the scanner's laser line and the dimmed area around a camera viewfinder. */
+  --shadow-glow: 0 0 8px var(--color-teal-400);
+  --shadow-spotlight: 0 0 0 100vmax rgb(0 0 0 / 0.6);
+
+  /* Motion: use with `duration-(--duration-base) ease-standard`. */
+  --duration-fast: 150ms;
+  --duration-base: 200ms;
+  --duration-slow: 300ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-emphasized: cubic-bezier(0.3, 0, 0, 1.3);
+}
+
+@layer base {
+  .dark {
+    --color-page: var(--color-slate-950);
+    --color-surface: var(--color-slate-900);
+    --color-surface-raised: var(--color-slate-800);
+    --color-surface-sunken: var(--color-slate-950);
+    --color-surface-hover: var(--color-slate-800);
+
+    --color-line-subtle: var(--color-slate-800);
+    --color-line: var(--color-slate-700);
+    --color-line-strong: var(--color-slate-400);
+
+    --color-fg: var(--color-slate-100);
+    --color-fg-soft: var(--color-slate-300);
+    --color-fg-muted: var(--color-slate-400);
+
+    --color-accent: var(--color-teal-400);
+    --color-accent-strong: var(--color-teal-300);
+    --color-accent-soft: var(--color-teal-950);
+    --color-accent-line: var(--color-teal-800);
+
+    --color-success: var(--color-emerald-300);
+    --color-success-soft: color-mix(
+      in oklab,
+      var(--color-emerald-900) 30%,
+      transparent
+    );
+    --color-success-line: var(--color-emerald-800);
+    --color-warning: var(--color-amber-400);
+    --color-warning-soft: color-mix(
+      in oklab,
+      var(--color-amber-950) 30%,
+      transparent
+    );
+    --color-warning-line: var(--color-amber-900);
+    --color-danger: var(--color-rose-400);
+    --color-danger-soft: color-mix(
+      in oklab,
+      var(--color-rose-900) 30%,
+      transparent
+    );
+    --color-danger-line: var(--color-rose-800);
+
+    --color-focus: var(--color-teal-400);
+  }
+}
+
 @layer base {
   :focus {
     @apply outline-none;
@@ -15,13 +175,13 @@
     @apply outline-none;
   }
 
-  /* Standard keyboard-focused elements should use brand-compliant indigo-600 / indigo-500 */
+  /* Keyboard focus: an offset ring in the focus token, distinct from the filled tint used for selection */
   :focus-visible,
   :focus-visible + .peer,
   :focus-visible ~ .peer {
     outline: 2px solid transparent !important;
     outline-offset: 2px !important;
-    @apply ring-2 ring-indigo-600 ring-offset-2 dark:ring-indigo-500 dark:ring-offset-slate-900;
+    @apply ring-2 ring-focus ring-offset-2 ring-offset-surface;
   }
 
   @media (forced-colors: active) {

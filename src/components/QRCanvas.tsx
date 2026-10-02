@@ -780,13 +780,13 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
                   msg = 'SMS phone number contains invalid characters, letters, or line-breaks.';
                 }
                 return (
-                  <p key={i} className="text-sm font-medium text-rose-700 dark:text-rose-400">
+                  <p key={i} className="text-sm font-medium text-danger">
                     {msg}
                   </p>
                 );
               })}
             </div>
-            <p className="mt-2 max-w-xs text-xs text-slate-500 dark:text-slate-400">
+            <p className="mt-2 max-w-xs text-xs text-fg-muted">
               Please correct the input above to safely resume QR code generation.
             </p>
           </Alert>

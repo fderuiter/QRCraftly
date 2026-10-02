@@ -458,19 +458,7 @@ test.describe('PNG download', () => {
     expect(download.suggestedFilename()).toMatch(/\.png$/i);
   });
 
-  test('"Download PNG" button triggers a PNG download', async ({ page }) => {
-    const [download] = await Promise.all([
-      page.waitForEvent('download'),
-      (async () => {
-        await page.getByRole('button', { name: 'Download', exact: true }).click();
-        await page.getByRole('menuitem', { name: /PNG/i }).click();
-      })(),
-    ]);
-
-    expect(download.suggestedFilename()).toMatch(/\.png$/i);
-  });
-
-  test('"Download PNG" in Story format triggers a PNG download', async ({ page }) => {
+  test('PNG download in Story format triggers a download', async ({ page }) => {
     await page.getByRole('button', { name: /Select Story format/i }).click();
 
     const [download] = await Promise.all([

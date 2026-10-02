@@ -54,7 +54,7 @@ export const Alert: React.FC<AlertProps> = (props) => {
     onDismiss,
   } = props;
   const baseClasses = 'flex items-start gap-3 p-3 border rounded-lg text-sm';
-  const colorClasses = getNotificationColors(variant, true);
+  const colorClasses = getNotificationColors(variant);
 
   return (
     <div role={role || 'alert'} aria-live={ariaLive} className={mergeClasses(baseClasses, colorClasses, className)}>

@@ -85,11 +85,11 @@ export const LayoutControls: React.FC<LayoutControlsProps> = ({ config, onChange
 
   return (
     <section>
-      <h4 className="mb-4 text-sm font-semibold text-slate-700 dark:text-slate-300">Export Layout</h4>
+      <h4 className="mb-4 text-sm font-semibold text-fg-soft">Export Layout</h4>
 
       {/* Aspect Ratio Selector */}
       <div className="mb-4">
-        <p className="mb-2 text-xs font-medium text-slate-500 dark:text-slate-400">Aspect Ratio</p>
+        <p className="mb-2 text-xs font-medium text-fg-muted">Aspect Ratio</p>
         <div
           className="grid grid-cols-3 gap-2"
           role="group"
@@ -114,7 +114,7 @@ export const LayoutControls: React.FC<LayoutControlsProps> = ({ config, onChange
 
       {/* Template Style Selector */}
       <div>
-        <p className="mb-2 text-xs font-medium text-slate-500 dark:text-slate-400">Template</p>
+        <p className="mb-2 text-xs font-medium text-fg-muted">Template</p>
         <div
           className="grid grid-cols-2 gap-2"
           role="group"
@@ -155,14 +155,14 @@ export const LayoutControls: React.FC<LayoutControlsProps> = ({ config, onChange
 
       {/* Advanced Template Settings (visible only when a template is active) */}
       {showAdvanced && (
-        <div className="mt-4 space-y-4 border-t border-slate-200 pt-4 dark:border-slate-700">
-          <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">Advanced Settings</p>
+        <div className="mt-4 space-y-4 border-t border-line pt-4">
+          <p className="text-xs font-semibold text-fg-muted">Advanced Settings</p>
 
           {/* Template Background Color */}
           <div>
             <div className="mb-2 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="text-xs text-slate-500 dark:text-slate-400">Template Background</span>
+                <span className="text-xs text-fg-muted">Template Background</span>
                 <ContrastBadge isVisible={isLowContrast} contrastRatio={contrastRatio} decimalPrecision={1} data-testid="layout-bg-warning" />
               </div>
               <ToggleSwitch
@@ -175,7 +175,7 @@ export const LayoutControls: React.FC<LayoutControlsProps> = ({ config, onChange
                 }
                 aria-label={hasBgOverride ? 'Override template background color - Custom' : 'Override template background color - Inherit'}
                 label={hasBgOverride ? 'Custom' : 'Inherit'}
-                labelClassName="text-xs text-slate-500 dark:text-slate-400"
+                labelClassName="text-xs text-fg-muted"
               />
             </div>
             {hasBgOverride && (
@@ -193,7 +193,7 @@ export const LayoutControls: React.FC<LayoutControlsProps> = ({ config, onChange
           <div>
             <div className="mb-2 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="text-xs text-slate-500 dark:text-slate-400">Template Text Color</span>
+                <span className="text-xs text-fg-muted">Template Text Color</span>
                 <ContrastBadge isVisible={isLowContrast} contrastRatio={contrastRatio} decimalPrecision={1} data-testid="layout-text-warning" />
               </div>
               <ToggleSwitch
@@ -206,7 +206,7 @@ export const LayoutControls: React.FC<LayoutControlsProps> = ({ config, onChange
                 }
                 aria-label={hasTextOverride ? 'Override template text color - Custom' : 'Override template text color - Inherit'}
                 label={hasTextOverride ? 'Custom' : 'Inherit'}
-                labelClassName="text-xs text-slate-500 dark:text-slate-400"
+                labelClassName="text-xs text-fg-muted"
               />
             </div>
             {hasTextOverride && (

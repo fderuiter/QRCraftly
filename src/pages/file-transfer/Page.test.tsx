@@ -121,7 +121,6 @@ describe('File Transfer Page & Pipeline', () => {
   it('renders the file-transfer page with options, headers and single canvas', () => {
     render(<Page />);
 
-    expect(screen.getByText('QRCraftly')).toBeInTheDocument();
     expect(screen.getByText('Send a File by QR Code')).toBeInTheDocument();
     
     // Sliders exist

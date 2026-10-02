@@ -16,7 +16,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { render, screen, within, fireEvent } from '@testing-library/react';
+import { act, render, screen, within, fireEvent } from '@testing-library/react';
 import { renderToString } from 'react-dom/server';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ToastProvider } from './ui/Toast';
@@ -49,7 +49,7 @@ describe('Generator workspace structure (#795, #802)', { timeout: 20000 }, () =>
     expect(screen.getByRole('link', { name: 'Preview & download' })).toHaveAttribute('href', '#qr-preview');
   });
 
-  it('renders how-to/FAQ and the site footer outside the tool column at article width', () => {
+  it('renders how-to/FAQ outside the tool column at article width', () => {
     render(<ToastProvider><QRTool toolId="wifi-qr-code" /></ToastProvider>);
     const settings = screen.getByRole('complementary', { name: 'QR Code Settings' });
     const educational = document.getElementById('content-section');
@@ -57,7 +57,6 @@ describe('Generator workspace structure (#795, #802)', { timeout: 20000 }, () =>
     expect(settings).not.toContainElement(educational);
     expect(screen.getByRole('region', { name: 'QR Code Preview' })).not.toContainElement(educational);
     expect(educational?.parentElement).toHaveClass('max-w-3xl');
-    expect(settings).not.toContainElement(screen.getByRole('contentinfo'));
   });
 
   it('groups appearance into disclosure sections that expose state and keep their content mounted', async () => {
@@ -105,5 +104,21 @@ describe('Generator workspace structure (#795, #802)', { timeout: 20000 }, () =>
     const faqs = content.faqs && content.faqs.length > 0 ? content.faqs : contentRegistry['index'].faqs ?? [];
     expect(faqs.length).toBeGreaterThan(0);
     expect(html).toContain(faqs[0].question.replace(/&/g, '&amp;').replace(/'/g, '&#x27;'));
+  });
+
+  it('has one export row that steps aside on phones while a text field has focus', async () => {
+    render(<ToastProvider><QRTool initialConfig={{ value: 'https://example.com' }} /></ToastProvider>);
+    const row = screen.getByTestId('export-actions');
+    expect(within(row).getAllByRole('button', { name: /^Download$/ })).toHaveLength(1);
+    expect(screen.getAllByRole('button', { name: /^Download$/ })).toHaveLength(1);
+    expect(row).not.toHaveClass('max-md:hidden');
+
+    const field = document.createElement('input');
+    document.body.appendChild(field);
+    act(() => field.focus());
+    expect(row).toHaveClass('max-md:hidden');
+    act(() => field.blur());
+    expect(row).not.toHaveClass('max-md:hidden');
+    field.remove();
   });
 });

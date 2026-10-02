@@ -17,7 +17,7 @@
 */
 
 import { usePageContext } from 'vike-react/usePageContext';
-import { ProductShell } from '@/components/ProductShell';
+import { ButtonLink } from '@/components/ui/Button';
 
 /**
  * Error Page Component
@@ -31,8 +31,8 @@ export default function Page() {
   const is404 = pageContext.is404;
 
   return (
-    <ProductShell>
-    <div className="flex min-h-[60vh] flex-col items-center justify-center px-4 text-center text-slate-700 dark:text-slate-200">
+    <>
+    <div className="flex min-h-[60vh] flex-col items-center justify-center px-4 text-center text-fg-soft">
       {is404 ? (
         <>
           <h1 className="mb-4 text-4xl font-bold">404 - Page Not Found</h1>
@@ -44,10 +44,10 @@ export default function Page() {
           <p className="mb-8">Something went wrong on our end.</p>
         </>
       )}
-      <a href="/" className="rounded bg-teal-700 px-4 py-2 text-white transition-colors hover:bg-teal-800">
+      <ButtonLink href="/" variant="primary">
         Go Home
-      </a>
+      </ButtonLink>
     </div>
-    </ProductShell>
+    </>
   );
 }

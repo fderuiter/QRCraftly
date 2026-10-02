@@ -16,11 +16,11 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { useCallback, useId, useRef, useState } from 'react';
-import { Menu as MenuIcon, X } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Menu as MenuIcon } from 'lucide-react';
 import { usePageContext } from 'vike-react/usePageContext';
 import { Button } from './Button';
-import { usePopoverDismiss } from '@/hooks/usePopoverDismiss';
+import { Modal } from './Modal';
 import { isDangerousUrl } from '@/utils/security';
 import { PRIMARY_NAV_ITEMS, PrimaryNavItem, getCurrentPrimaryNavId } from '@/data/navigation';
 
@@ -35,36 +35,52 @@ function useCurrentPathname(): string {
   return typeof window !== 'undefined' ? window.location.pathname : '/';
 }
 
-const BETA_BADGE_CLASSES =
-  'rounded-full bg-teal-100 px-1.5 py-0.5 text-xs font-semibold text-teal-800 dark:bg-teal-900/60 dark:text-teal-300';
+const TAG_CLASSES = 'rounded-full bg-accent-soft px-1.5 py-0.5 text-xs font-semibold text-accent-strong';
 
 const LINK_BASE_CLASSES =
-  'flex min-h-11 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold transition-colors hover:bg-slate-100 hover:text-teal-700 dark:hover:bg-slate-800 dark:hover:text-teal-400';
+  'relative flex min-h-11 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold transition-colors hover:bg-surface-hover hover:text-accent';
 
-const LINK_IDLE_CLASSES = 'text-slate-600 dark:text-slate-300';
-const LINK_CURRENT_CLASSES = 'text-teal-800 underline decoration-2 underline-offset-4 dark:text-teal-300';
+/* Inline links get an underline that grows in from the centre (motion-safe) on the current page. */
+const INLINE_INDICATOR_CLASSES =
+  'after:absolute after:inset-x-3 after:bottom-1 after:h-0.5 after:origin-center after:rounded-full after:bg-accent after:transition-transform motion-safe:after:duration-base motion-reduce:after:transition-none';
+
+const LINK_IDLE_CLASSES = 'text-fg-muted after:scale-x-0';
+const LINK_CURRENT_CLASSES = 'text-accent-strong after:scale-x-100';
 
 /**
  * One navigation link, marked with `aria-current="page"` when it owns the current route.
  * @param root0 - Component properties.
  * @param root0.item - The destination.
  * @param root0.isCurrent - Whether it is the current page.
+ * @param root0.inline - Whether it sits in the inline desktop bar (animated indicator) or the menu.
  * @param root0.onNavigate - Called when the link is activated.
  * @returns The list item, or nothing when the destination is not a safe URL.
  */
-function NavLink({ item, isCurrent, onNavigate }: { item: PrimaryNavItem; isCurrent: boolean; onNavigate?: () => void }) {
+function NavLink({
+  item,
+  isCurrent,
+  inline = false,
+  onNavigate,
+}: {
+  item: PrimaryNavItem;
+  isCurrent: boolean;
+  inline?: boolean;
+  onNavigate?: () => void;
+}) {
   const { href } = item;
   if (!isDangerousUrl(href)) {
+    const stateClasses = isCurrent ? LINK_CURRENT_CLASSES : LINK_IDLE_CLASSES;
+    const menuCurrent = !inline && isCurrent ? 'bg-accent-soft' : '';
     return (
       <li>
         <a
           href={href}
           aria-current={isCurrent ? 'page' : undefined}
           onClick={onNavigate}
-          className={`${LINK_BASE_CLASSES} ${isCurrent ? LINK_CURRENT_CLASSES : LINK_IDLE_CLASSES}`}
+          className={`${LINK_BASE_CLASSES} ${inline ? INLINE_INDICATOR_CLASSES : 'min-h-12'} ${stateClasses} ${menuCurrent}`.trim()}
         >
           <span>{item.label}</span>
-          {item.beta && <span className={BETA_BADGE_CLASSES}>Beta</span>}
+          {item.tag && <span className={TAG_CLASSES}>{item.tag}</span>}
         </a>
       </li>
     );
@@ -73,71 +89,55 @@ function NavLink({ item, isCurrent, onNavigate }: { item: PrimaryNavItem; isCurr
 }
 
 /**
- * Properties for {@link PrimaryNav}.
- */
-interface PrimaryNavProps {
-  /**
-   * `responsive` shows the links inline from the `md` breakpoint and a menu button below it
-   * (product shell). `compact` always uses the menu button (narrow tool sidebars).
-   */
-  layout?: 'responsive' | 'compact';
-}
-
-/**
- * Site-wide primary navigation built from the shared `PRIMARY_NAV_ITEMS` data model, so
- * every route family offers the same destinations with the same labels. Below the inline
- * breakpoint every destination moves into a disclosure panel (not an ARIA menu: these are
- * ordinary links in the Tab order). The panel closes on Escape (restoring focus to its
- * button), on a pointer press outside and when focus leaves it. Targets are at least 44px.
- * @param props - Navigation properties.
- * @param props.layout - `responsive` (inline links from `md` up) or `compact` (menu button only).
+ * Site-wide primary navigation built from the shared `PRIMARY_NAV_ITEMS` data model and
+ * rendered once, in the app shell header. From the `lg` breakpoint every destination is an
+ * inline link; below it a menu button opens a dialog listing the same links, which traps
+ * focus, closes with Escape or a backdrop press and returns focus to the button.
+ * Targets are at least 44px (48px in the menu).
  * @returns The primary navigation landmark.
  */
-export function PrimaryNav({ layout = 'responsive' }: PrimaryNavProps) {
+export function PrimaryNav() {
   const pathname = useCurrentPathname();
   const currentId = getCurrentPrimaryNavId(pathname);
   const [open, setOpen] = useState(false);
-  const panelId = useId();
-  const containerRef = useRef<HTMLDivElement>(null);
-  const buttonRef = useRef<HTMLButtonElement>(null);
   const close = useCallback(() => setOpen(false), []);
-  usePopoverDismiss({ open, containerRef, triggerRef: buttonRef, onClose: close });
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const wasOpen = useRef(false);
 
-  const isResponsive = layout === 'responsive';
+  // Return focus to the menu button whenever the dialog closes (Safari never focuses a clicked button).
+  useEffect(() => {
+    if (wasOpen.current && !open) buttonRef.current?.focus();
+    wasOpen.current = open;
+  }, [open]);
 
   return (
     <nav aria-label="Primary navigation" className="flex items-center">
-      {isResponsive && (
-        <ul className="hidden items-center gap-1 md:flex">
-          {PRIMARY_NAV_ITEMS.map((item) => (
-            <NavLink key={item.id} item={item} isCurrent={item.id === currentId} />
-          ))}
-        </ul>
-      )}
-      <div ref={containerRef} className={`relative ${isResponsive ? 'md:hidden' : ''}`.trim()}>
-        <Button
-          ref={buttonRef}
-          variant="icon"
-          size="icon"
-          className="min-h-11 min-w-11 rounded-full"
-          aria-label="Site menu"
-          aria-expanded={open}
-          aria-controls={panelId}
-          onClick={() => setOpen((isOpen) => !isOpen)}
-        >
-          {open ? <X className="size-5" aria-hidden="true" /> : <MenuIcon className="size-5" aria-hidden="true" />}
-        </Button>
-        {open && (
-          <ul
-            id={panelId}
-            className="absolute top-full right-0 z-40 mt-2 w-56 max-w-[calc(100vw-2rem)] space-y-1 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl dark:border-slate-700 dark:bg-slate-900"
-          >
+      <ul className="hidden items-center gap-0.5 lg:flex">
+        {PRIMARY_NAV_ITEMS.map((item) => (
+          <NavLink key={item.id} item={item} isCurrent={item.id === currentId} inline />
+        ))}
+      </ul>
+      <Button
+        ref={buttonRef}
+        variant="icon"
+        size="icon"
+        className="min-h-11 min-w-11 rounded-full lg:hidden"
+        aria-label="Site menu"
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        onClick={() => setOpen(true)}
+      >
+        <MenuIcon className="size-5" aria-hidden="true" />
+      </Button>
+      <Modal isOpen={open} onClose={close} title="Menu" dismissOnBackdropClick>
+        <nav aria-label="Site menu">
+          <ul className="space-y-1">
             {PRIMARY_NAV_ITEMS.map((item) => (
               <NavLink key={item.id} item={item} isCurrent={item.id === currentId} onNavigate={close} />
             ))}
           </ul>
-        )}
-      </div>
+        </nav>
+      </Modal>
     </nav>
   );
 }

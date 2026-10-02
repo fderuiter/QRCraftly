@@ -97,11 +97,12 @@ describe('ToolWorkspaceLayout', () => {
     expect(scroller.scrollTop).toBe(0);
   });
 
-  it('renders a descriptive h1, a home link and a mobile jump link to the preview', async () => {
+  it('renders a descriptive h1 and a mobile jump link, leaving site navigation to the app shell to the preview', async () => {
     mockMatchMedia(false);
     const { container } = renderWorkspace();
     expect(screen.getByRole('heading', { level: 1, name: 'Send a File by QR Code' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'QRCraftly Home' })).toHaveAttribute('href', '/');
+    expect(screen.queryByRole('link', { name: 'QRCraftly Home' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('navigation', { name: 'Primary navigation' })).not.toBeInTheDocument();
     const jump = screen.getByRole('link', { name: 'Jump to preview' });
     expect(jump).toHaveAttribute('href', '#tool-preview');
     expect(jump).toHaveClass('md:hidden');

@@ -126,8 +126,8 @@ describe('ColorInput Component Accessibility', () => {
     );
 
     const textInput = screen.getByLabelText(/test styles hex code/i);
-    // Should have ERROR_INPUT_CLASSES class (border-rose-500)
-    expect(textInput).toHaveClass('border-rose-500');
+    // Should have ERROR_INPUT_CLASSES class (border-danger)
+    expect(textInput).toHaveClass('border-danger');
   });
 
   it('should support visually hiding the input label while keeping it programmatically accessible with sr-only', () => {

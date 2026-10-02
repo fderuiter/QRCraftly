@@ -63,8 +63,8 @@ export const Card: React.FC<CardProps> = ({
   padding,
   rounded,
 }) => {
-  const resolvedBg = bg ?? (variant === 'control' ? 'bg-slate-50 dark:bg-slate-800/50' : 'bg-white dark:bg-slate-900');
-  const resolvedBorder = border ?? (variant === 'control' ? 'border border-slate-200 dark:border-slate-700' : 'border border-slate-200 dark:border-slate-800');
+  const resolvedBg = bg ?? (variant === 'control' ? 'bg-surface-sunken' : 'bg-surface');
+  const resolvedBorder = border ?? 'border border-line';
   const resolvedShadow = shadow ?? (variant === 'control' ? 'shadow-none' : 'shadow-2xl');
   const resolvedPadding = padding ?? (variant === 'control' ? 'p-4' : 'p-8');
   const resolvedRounded = rounded ?? (variant === 'control' ? 'rounded-xl' : 'rounded-3xl');
