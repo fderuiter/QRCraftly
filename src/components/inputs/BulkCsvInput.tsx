@@ -16,11 +16,24 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import React, { useState, useEffect, useCallback, ChangeEvent } from 'react';
-import Papa from 'papaparse';
+import React, { useState, useEffect, useMemo, ChangeEvent } from 'react';
+import {
+  parseCsv,
+  createZip,
+  sanitizeFileStem,
+  allocateFileName,
+  CsvParseError,
+  MAX_BULK_CSV_ROWS,
+  MAX_BULK_CSV_CHARS,
+  type CsvRow,
+  type CsvTable,
+  type ZipEntry,
+} from '@/packages/bulk-csv';
 import { BulkCsvData, QRConfig, QRType } from '@/types';
+import { Alert } from '../ui/Alert';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
+import { SelectField } from '../ui/FormFields';
 import { useToast } from '../ui/Toast';
 import { useQRStoreSelector } from '@/context/QRContext';
 import { generateQRSvg, rasterizeSvgToCanvas } from '@/packages/qr-export';
@@ -32,20 +45,51 @@ export interface BulkCsvInputProps {
   onChange: (updates: Partial<BulkCsvData>) => void;
 }
 
-interface ParsedRow {
-  [key: string]: string;
-}
-
 interface RowError {
   rowIndex: number;
   message: string;
 }
 
+/** Row count above which the main-thread processing warning is shown. */
+const LARGE_BATCH_WARNING_ROWS = 100;
+const PNG_EXPORT_SIZE = 1000;
+const PAYLOAD_COLUMN_PATTERN = /url|link|payload|data|qr/i;
+const FILENAME_COLUMN_PATTERN = /name|id|label|title|filename/i;
+
+type ParseOutcome = { table: CsvTable; error: null } | { table: null; error: string };
+
+const EMPTY_OUTCOME: ParseOutcome = {
+  table: { headers: [], rows: [], totalRows: 0, truncated: false },
+  error: null,
+};
+
+function parseContent(csvContent: string): ParseOutcome {
+  if (!csvContent) return EMPTY_OUTCOME;
+  try {
+    return { table: parseCsv(csvContent, { maxRows: MAX_BULK_CSV_ROWS }), error: null };
+  } catch (err) {
+    if (err instanceof CsvParseError) return { table: null, error: err.message };
+    throw err;
+  }
+}
+
+function isExportFormat(value: string): value is BulkCsvData['exportFormat'] {
+  return value === 'png' || value === 'svg';
+}
+
+function pickColumn(columns: string[], pattern: RegExp): string {
+  return columns.find((col) => pattern.test(col)) ?? columns[0] ?? '';
+}
+
+function hasPayload(row: CsvRow, payloadCol: string): boolean {
+  return (row[payloadCol] ?? '').trim() !== '';
+}
+
 /**
- * Utility to convert an offscreen canvas to a Uint8Array PNG buffer.
- * Falls back to base64 decoding for test/jsdom environments where toBlob may return null.
+ * Encodes a canvas as PNG bytes. Uses `toBlob`, and falls back to decoding the
+ * data URL where `toBlob` is unavailable or yields nothing (for example jsdom).
  */
-async function canvasToUint8Array(canvas: HTMLCanvasElement): Promise<Uint8Array> {
+async function canvasToPngBytes(canvas: HTMLCanvasElement): Promise<Uint8Array> {
   const blob = await new Promise<Blob | null>((resolve) => {
     try {
       canvas.toBlob(resolve, 'image/png');
@@ -53,142 +97,75 @@ async function canvasToUint8Array(canvas: HTMLCanvasElement): Promise<Uint8Array
       resolve(null);
     }
   });
-
-  if (blob) {
-    const arrayBuffer = await blob.arrayBuffer();
-    return new Uint8Array(arrayBuffer);
-  }
+  if (blob) return new Uint8Array(await blob.arrayBuffer());
 
   const dataUrl = canvas.toDataURL('image/png');
-  const commaIdx = dataUrl.indexOf(',');
-  const base64 = commaIdx !== -1 ? dataUrl.substring(commaIdx + 1) : dataUrl;
-  const binaryString = typeof window !== 'undefined' && window.atob
-    ? window.atob(base64)
-    : Buffer.from(base64, 'base64').toString('binary');
-  const bytes = new Uint8Array(binaryString.length);
-  for (let i = 0; i < binaryString.length; i++) {
-    bytes[i] = binaryString.charCodeAt(i);
-  }
-  return bytes;
+  const binary = atob(dataUrl.slice(dataUrl.indexOf(',') + 1));
+  return Uint8Array.from(binary, (ch) => ch.charCodeAt(0));
 }
 
 /**
- * Sanitizes filenames to prevent illegal filesystem characters.
+ * Bulk CSV Batch input: parses an uploaded CSV in memory, lets the user map the
+ * payload and file name columns, and downloads one ZIP of PNG or SVG QR codes.
+ * Nothing is persisted or sent over the network.
  */
-function sanitizeFilename(name: string): string {
-  const sanitized = name.replace(/[\\/?:*"><|]/g, '_').trim();
-  return sanitized.length > 0 ? sanitized : 'qr_code';
-}
-
 export const BulkCsvInput: React.FC<BulkCsvInputProps> = ({ data, onChange }) => {
   const currentConfig = useQRStoreSelector((state) => state.config);
   const { addToast } = useToast();
 
-  const [columns, setColumns] = useState<string[]>([]);
-  const [rows, setRows] = useState<ParsedRow[]>([]);
   const [rowErrors, setRowErrors] = useState<RowError[]>([]);
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [completedCount, setCompletedCount] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
 
-  // Parse CSV when data.csvContent changes
+  const outcome = useMemo(() => parseContent(data.csvContent), [data.csvContent]);
+  const columns = useMemo(() => outcome.table?.headers ?? [], [outcome]);
+  const rows = useMemo(() => outcome.table?.rows ?? [], [outcome]);
+
+  const payloadCol = columns.includes(data.payloadColumn)
+    ? data.payloadColumn
+    : pickColumn(columns, PAYLOAD_COLUMN_PATTERN);
+  const filenameCol = columns.includes(data.filenameColumn)
+    ? data.filenameColumn
+    : pickColumn(columns, FILENAME_COLUMN_PATTERN);
+  const exportFormat = data.exportFormat || 'png';
+  const rowCount = rows.length;
+
+  // Store the detected column defaults so the selection survives re-renders.
   useEffect(() => {
-    if (!data.csvContent) {
-      setColumns([]);
-      setRows([]);
-      setRowErrors([]);
+    if (columns.length === 0) return;
+    const updates: Partial<BulkCsvData> = {};
+    if (payloadCol !== data.payloadColumn) updates.payloadColumn = payloadCol;
+    if (filenameCol !== data.filenameColumn) updates.filenameColumn = filenameCol;
+    if (Object.keys(updates).length > 0) onChange(updates);
+  }, [columns, payloadCol, filenameCol, data.payloadColumn, data.filenameColumn, onChange]);
+
+  const handleFileUpload = async (e: ChangeEvent<HTMLInputElement>) => {
+    const input = e.target;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+
+    if (file.size > MAX_BULK_CSV_CHARS) {
+      addToast({
+        type: 'error',
+        message: `${file.name} is too large. The limit is ${MAX_BULK_CSV_CHARS / (1024 * 1024)} MB.`,
+        duration: 5000,
+      });
       return;
     }
 
-    const parseResults = Papa.parse<ParsedRow>(data.csvContent, {
-      header: true,
-      skipEmptyLines: 'greedy',
-      dynamicTyping: false,
-    });
-
-    let detectedFields = parseResults.meta.fields || [];
-    const parsedData = parseResults.data || [];
-
-    // Fallback for files without standard headers
-    if (detectedFields.length === 0 && parsedData.length > 0) {
-      const firstRow = parsedData[0];
-      if (firstRow && typeof firstRow === 'object') {
-        detectedFields = Object.keys(firstRow);
-      }
+    try {
+      const content = await file.text();
+      onChange({ csvContent: content, fileName: file.name });
+      addToast({ type: 'success', message: `Successfully loaded ${file.name}`, duration: 3000 });
+    } catch {
+      addToast({ type: 'error', message: `Failed to read file ${file.name}`, duration: 5000 });
     }
-
-    setColumns(detectedFields);
-    setRows(parsedData);
-
-    // Auto-select initial payload and filename columns if not set
-    if (detectedFields.length > 0) {
-      const defaultPayload =
-        detectedFields.find((col) => /url|link|payload|data|qr/i.test(col)) || detectedFields[0];
-      const defaultFilename =
-        detectedFields.find((col) => /name|id|label|title|filename/i.test(col)) || detectedFields[0];
-
-      if (!data.payloadColumn || !detectedFields.includes(data.payloadColumn)) {
-        onChange({ payloadColumn: defaultPayload });
-      }
-      if (!data.filenameColumn || !detectedFields.includes(data.filenameColumn)) {
-        onChange({ filenameColumn: defaultFilename });
-      }
-    }
-  }, [data.csvContent, data.payloadColumn, data.filenameColumn, onChange]);
-
-  // Validate rows when payload column or rows change
-  const validateRows = useCallback(
-    (parsedRows: ParsedRow[], payloadCol: string): RowError[] => {
-      const errors: RowError[] = [];
-      if (!payloadCol) return errors;
-
-      parsedRows.forEach((row, index) => {
-        const value = row[payloadCol];
-        if (value === undefined || value === null || String(value).trim() === '') {
-          errors.push({
-            rowIndex: index + 1,
-            message: `Row ${index + 1}: Empty value in payload column '${payloadCol}'`,
-          });
-        }
-      });
-      return errors;
-    },
-    []
-  );
-
-  const handleFileUpload = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const content = event.target?.result as string;
-      onChange({
-        csvContent: content,
-        fileName: file.name,
-      });
-      addToast({
-        type: 'success',
-        message: `Successfully loaded ${file.name}`,
-        duration: 3000,
-      });
-    };
-    reader.onerror = () => {
-      addToast({
-        type: 'error',
-        message: `Failed to read file ${file.name}`,
-        duration: 5000,
-      });
-    };
-    reader.readAsText(file);
   };
 
   const startBatchGeneration = async (validRowsOnly = false) => {
-    const payloadCol = data.payloadColumn || columns[0];
-    const filenameCol = data.filenameColumn || columns[0];
-    const exportFormat = data.exportFormat || 'png';
-
     if (!payloadCol) {
       addToast({
         type: 'error',
@@ -198,80 +175,63 @@ export const BulkCsvInput: React.FC<BulkCsvInputProps> = ({ data, onChange }) =>
       return;
     }
 
-    // Check for row errors if not already filtered
-    const currentErrors = validateRows(rows, payloadCol);
+    const currentErrors: RowError[] = [];
+    rows.forEach((row, index) => {
+      if (!hasPayload(row, payloadCol)) {
+        currentErrors.push({
+          rowIndex: index + 1,
+          message: `Row ${index + 1}: Empty value in payload column '${payloadCol}'`,
+        });
+      }
+    });
     if (!validRowsOnly && currentErrors.length > 0) {
       setRowErrors(currentErrors);
       setShowErrorModal(true);
       return;
     }
 
-    // Filter target rows
-    const targetRows = validRowsOnly
-      ? rows.filter((row) => row[payloadCol] && String(row[payloadCol]).trim() !== '')
-      : rows;
-
+    const targetRows = rows.filter((row) => hasPayload(row, payloadCol));
     if (targetRows.length === 0) {
-      addToast({
-        type: 'error',
-        message: 'No valid rows found to generate QR codes.',
-        duration: 4000,
-      });
+      addToast({ type: 'error', message: 'No valid rows found to generate QR codes.', duration: 4000 });
       return;
     }
 
+    setShowErrorModal(false);
     setIsGenerating(true);
     setCompletedCount(0);
     setTotalCount(targetRows.length);
 
     try {
-      const { default: JSZip } = await import('jszip');
-      const zip = new JSZip();
-      const usedFilenames = new Set<string>();
+      const entries: ZipEntry[] = [];
+      const usedNames = new Set<string>();
 
       for (let i = 0; i < targetRows.length; i++) {
         const row = targetRows[i];
-        const rawPayload = String(row[payloadCol] || '').trim();
-        const rawFilename = String(row[filenameCol] || `qr_${i + 1}`).trim();
-
-        const baseName = sanitizeFilename(rawFilename);
-        let finalFilename = `${baseName}.${exportFormat}`;
-        let dupCount = 1;
-        while (usedFilenames.has(finalFilename)) {
-          finalFilename = `${baseName}_${dupCount}.${exportFormat}`;
-          dupCount++;
-        }
-        usedFilenames.add(finalFilename);
-
-        // Build QR config for row
+        const stem = sanitizeFileStem(row[filenameCol] ?? '', `qr_${i + 1}`);
+        const name = allocateFileName(stem, exportFormat, usedNames);
         const rowConfig: QRConfig = {
           ...currentConfig,
-          value: rawPayload,
+          value: (row[payloadCol] ?? '').trim(),
           type: QRType.URL,
         };
 
         const svgString = await generateQRSvg(rowConfig);
-
         if (exportFormat === 'svg') {
-          zip.file(finalFilename, svgString);
+          entries.push({ name, data: svgString });
         } else {
-          const canvas = await rasterizeSvgToCanvas(svgString, 1000, 1000);
-          const uint8 = await canvasToUint8Array(canvas);
-          zip.file(finalFilename, uint8);
+          const canvas = await rasterizeSvgToCanvas(svgString, PNG_EXPORT_SIZE, PNG_EXPORT_SIZE);
+          entries.push({ name, data: await canvasToPngBytes(canvas) });
         }
 
         setCompletedCount(i + 1);
-
-        // Yield to main thread briefly for UI/progress updates
+        // Yield to the main thread so the progress dialog can repaint.
         await new Promise((resolve) => setTimeout(resolve, 0));
       }
 
-      const zipBytes = await zip.generateAsync({ type: 'uint8array' });
       const zipFileName = data.fileName
         ? `${data.fileName.replace(/\.[^/.]+$/, '')}-qrcodes.zip`
         : 'qr-codes-batch.zip';
-
-      triggerFileDownload(zipBytes, zipFileName, 'application/zip');
+      triggerFileDownload(createZip(entries), zipFileName, 'application/zip');
 
       addToast({
         type: 'success',
@@ -287,21 +247,21 @@ export const BulkCsvInput: React.FC<BulkCsvInputProps> = ({ data, onChange }) =>
       });
     } finally {
       setIsGenerating(false);
-      setShowErrorModal(false);
     }
   };
 
-  const detectedPayloadDefault = columns.find((col) => /url|link|payload|data|qr/i.test(col)) || columns[0] || '';
-  const detectedFilenameDefault = columns.find((col) => /name|id|label|title|filename/i.test(col)) || columns[0] || '';
-
-  const payloadCol = data.payloadColumn || detectedPayloadDefault;
-  const filenameCol = data.filenameColumn || detectedFilenameDefault;
-  const exportFormat = data.exportFormat || 'png';
-  const rowCount = rows.length;
+  const fileInput = (label: string) => (
+    <input
+      type="file"
+      aria-label={label}
+      accept=".csv, .txt, text/csv, text/plain"
+      className="sr-only"
+      onChange={handleFileUpload}
+    />
+  );
 
   return (
     <div className="space-y-6">
-      {/* Upload Zone */}
       {!data.csvContent ? (
         <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 p-8 text-center dark:border-slate-700 dark:bg-slate-800/50">
           <FileSpreadsheet className="size-12 text-teal-600 dark:text-teal-400" />
@@ -309,20 +269,15 @@ export const BulkCsvInput: React.FC<BulkCsvInputProps> = ({ data, onChange }) =>
             Upload CSV or TXT File
           </h3>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-            Upload a `.csv` or `.txt` file with up to 100 rows for bulk QR code generation.
+            Upload a `.csv` or `.txt` file with a header row. Up to {MAX_BULK_CSV_ROWS} rows are
+            processed, entirely in your browser.
           </p>
           <label className="mt-4 cursor-pointer">
             <span className="inline-flex items-center gap-2 rounded-lg bg-teal-700 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-teal-800 focus:ring-2 focus:ring-teal-500 focus:outline-hidden">
               <Upload className="size-4" />
               Choose File
             </span>
-            <input
-              type="file"
-              aria-label="Upload CSV or TXT file"
-              accept=".csv, .txt, text/csv, text/plain"
-              className="sr-only"
-              onChange={handleFileUpload}
-            />
+            {fileInput('Upload CSV or TXT file')}
           </label>
         </div>
       ) : (
@@ -341,99 +296,71 @@ export const BulkCsvInput: React.FC<BulkCsvInputProps> = ({ data, onChange }) =>
             </div>
             <label className="cursor-pointer text-xs font-medium text-teal-700 hover:underline dark:text-teal-400">
               Change File
-              <input
-                type="file"
-                aria-label="Change CSV or TXT file"
-                accept=".csv, .txt, text/csv, text/plain"
-                className="sr-only"
-                onChange={handleFileUpload}
-              />
+              {fileInput('Change CSV or TXT file')}
             </label>
           </div>
 
-          {/* Warning Banner for >100 rows */}
-          {rowCount > 100 && (
-            <div
-              role="alert"
-              className="flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-800/50 dark:bg-amber-950/40 dark:text-amber-200"
-            >
-              <AlertTriangle className="size-4 shrink-0 text-amber-600 dark:text-amber-400" />
-              <div>
-                <p className="font-semibold">Main Thread Processing Warning</p>
-                <p className="mt-0.5">
-                  This CSV file contains {rowCount} rows (exceeding 100 rows). Processing large
-                  batches directly in the browser may cause brief UI unresponsiveness.
-                </p>
-              </div>
-            </div>
+          {outcome.error && (
+            <Alert variant="error" title="Could not read this CSV">
+              {outcome.error}
+            </Alert>
           )}
 
-          {/* Column Mappings & Options */}
+          {outcome.table?.truncated && (
+            <Alert variant="warning" title="Row limit reached">
+              This file has {outcome.table.totalRows} rows. Only the first {MAX_BULK_CSV_ROWS} are
+              used in one batch; split the file to generate the rest.
+            </Alert>
+          )}
+
+          {rowCount > LARGE_BATCH_WARNING_ROWS && (
+            <Alert variant="warning" title="Main Thread Processing Warning">
+              This CSV file contains {rowCount} rows (exceeding {LARGE_BATCH_WARNING_ROWS} rows).
+              Processing large batches directly in the browser may cause brief UI unresponsiveness.
+            </Alert>
+          )}
+
           <div className="grid gap-4 sm:grid-cols-3">
-            <div>
-              <label
-                htmlFor="bulk-payload-column"
-                className="block text-xs font-semibold text-slate-700 dark:text-slate-300"
-              >
-                Payload Column (QR Content)
-              </label>
-              <select
-                id="bulk-payload-column"
-                value={payloadCol}
-                onChange={(e) => onChange({ payloadColumn: e.target.value })}
-                className="mt-1 w-full rounded-lg border border-slate-300 bg-white p-2 text-xs text-slate-900 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 focus:outline-hidden dark:border-slate-600 dark:bg-slate-700 dark:text-white"
-              >
-                {columns.map((col) => (
-                  <option key={col} value={col}>
-                    {col}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <SelectField
+              id="bulk-payload-column"
+              label="Payload Column (QR Content)"
+              value={payloadCol}
+              onChange={(e) => onChange({ payloadColumn: e.target.value })}
+            >
+              {columns.map((col) => (
+                <option key={col} value={col}>
+                  {col}
+                </option>
+              ))}
+            </SelectField>
 
-            <div>
-              <label
-                htmlFor="bulk-filename-column"
-                className="block text-xs font-semibold text-slate-700 dark:text-slate-300"
-              >
-                Filename Column
-              </label>
-              <select
-                id="bulk-filename-column"
-                value={filenameCol}
-                onChange={(e) => onChange({ filenameColumn: e.target.value })}
-                className="mt-1 w-full rounded-lg border border-slate-300 bg-white p-2 text-xs text-slate-900 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 focus:outline-hidden dark:border-slate-600 dark:bg-slate-700 dark:text-white"
-              >
-                {columns.map((col) => (
-                  <option key={col} value={col}>
-                    {col}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <SelectField
+              id="bulk-filename-column"
+              label="Filename Column"
+              value={filenameCol}
+              onChange={(e) => onChange({ filenameColumn: e.target.value })}
+            >
+              {columns.map((col) => (
+                <option key={col} value={col}>
+                  {col}
+                </option>
+              ))}
+            </SelectField>
 
-            <div>
-              <label
-                htmlFor="bulk-export-format"
-                className="block text-xs font-semibold text-slate-700 dark:text-slate-300"
-              >
-                Image Format
-              </label>
-              <select
-                id="bulk-export-format"
-                value={exportFormat}
-                onChange={(e) =>
-                  onChange({ exportFormat: e.target.value as 'png' | 'svg' })
-                }
-                className="mt-1 w-full rounded-lg border border-slate-300 bg-white p-2 text-xs text-slate-900 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 focus:outline-hidden dark:border-slate-600 dark:bg-slate-700 dark:text-white"
-              >
-                <option value="png">PNG Vector/Raster</option>
-                <option value="svg">SVG Vector Image</option>
-              </select>
-            </div>
+            <SelectField
+              id="bulk-export-format"
+              label="Image Format"
+              value={exportFormat}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (isExportFormat(value)) onChange({ exportFormat: value });
+              }}
+            >
+              <option value="png">PNG Image</option>
+              <option value="svg">SVG Vector Image</option>
+            </SelectField>
           </div>
 
-          {/* Action Button */}
           <div className="pt-2">
             <Button
               variant="primary"
@@ -455,7 +382,6 @@ export const BulkCsvInput: React.FC<BulkCsvInputProps> = ({ data, onChange }) =>
         </div>
       )}
 
-      {/* Malformed Row Error Dialog */}
       <Modal
         isOpen={showErrorModal}
         onClose={() => setShowErrorModal(false)}
@@ -467,8 +393,8 @@ export const BulkCsvInput: React.FC<BulkCsvInputProps> = ({ data, onChange }) =>
             Found {rowErrors.length} row(s) with missing payload values:
           </div>
           <div className="max-h-48 overflow-y-auto rounded-lg bg-slate-100 p-3 font-mono text-xs dark:bg-slate-800">
-            {rowErrors.map((err, idx) => (
-              <p key={idx} className="text-rose-600 dark:text-rose-400">
+            {rowErrors.map((err) => (
+              <p key={err.rowIndex} className="text-rose-600 dark:text-rose-400">
                 {err.message}
               </p>
             ))}
@@ -480,36 +406,36 @@ export const BulkCsvInput: React.FC<BulkCsvInputProps> = ({ data, onChange }) =>
             <Button variant="outline" size="sm" onClick={() => setShowErrorModal(false)}>
               Cancel
             </Button>
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={() => startBatchGeneration(true)}
-            >
+            <Button variant="primary" size="sm" onClick={() => startBatchGeneration(true)}>
               Skip Bad Rows & Continue
             </Button>
           </div>
         </div>
       </Modal>
 
-      {/* Progress Dialog */}
-      <Modal
-        isOpen={isGenerating}
-        onClose={() => {}}
-        title="Generating Batch QR Codes"
-      >
+      <Modal isOpen={isGenerating} onClose={() => {}} title="Generating Batch QR Codes">
         <div className="space-y-4 py-2 text-center">
           <div className="flex justify-center">
             <Loader2 className="size-10 animate-spin text-teal-600 dark:text-teal-400" />
           </div>
-          <p className="text-base font-semibold text-slate-900 dark:text-white" id="batch-progress-status">
+          <p
+            className="text-base font-semibold text-slate-900 dark:text-white"
+            id="batch-progress-status"
+            aria-live="polite"
+          >
             {completedCount} of {totalCount} QR codes generated
           </p>
-          <div className="h-2.5 w-full rounded-full bg-slate-200 dark:bg-slate-700">
+          <div
+            role="progressbar"
+            aria-labelledby="batch-progress-status"
+            aria-valuemin={0}
+            aria-valuemax={totalCount}
+            aria-valuenow={completedCount}
+            className="h-2.5 w-full rounded-full bg-slate-200 dark:bg-slate-700"
+          >
             <div
               className="h-2.5 rounded-full bg-teal-600 transition-all duration-300 dark:bg-teal-400"
-              style={{
-                width: `${totalCount > 0 ? (completedCount / totalCount) * 100 : 0}%`,
-              }}
+              style={{ width: `${totalCount > 0 ? (completedCount / totalCount) * 100 : 0}%` }}
             />
           </div>
         </div>

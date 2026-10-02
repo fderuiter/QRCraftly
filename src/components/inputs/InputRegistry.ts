@@ -33,7 +33,7 @@ import { EventInput } from "./EventInput";
 import { LocationInput } from "./LocationInput";
 import { MeetingInput } from "./MeetingInput";
 import { SocialInput } from "./SocialInput";
-import { BulkCsvInput } from "./BulkCsvInput";
+import { LazyBulkCsvInput } from "./LazyBulkCsvInput";
 
 export type InputDataMap = {
   [QRType.URL]: UrlData;
@@ -201,13 +201,13 @@ export const INPUT_REGISTRY: Registry = {
     canHydrateFn: QR_GENERATORS[QRType.SOCIAL].matches,
   },
   [QRType.BULK_CSV]: {
-    Component: BulkCsvInput,
+    Component: LazyBulkCsvInput,
     initialState: {
       csvContent: "",
       payloadColumn: "",
       filenameColumn: "",
       exportFormat: "png",
-    } as BulkCsvData,
+    },
     constructFn: QR_GENERATORS[QRType.BULK_CSV].construct,
     hydrateFn: QR_GENERATORS[QRType.BULK_CSV].hydrate,
     canHydrateFn: QR_GENERATORS[QRType.BULK_CSV].matches,

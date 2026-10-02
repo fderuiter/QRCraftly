@@ -20,9 +20,32 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { BulkCsvInput } from './BulkCsvInput';
+import { LazyBulkCsvInput } from './LazyBulkCsvInput';
 import { BulkCsvData } from '@/types';
 import { QRProvider } from '@/context/QRContext';
 import * as downloadManager from '@/utils/downloadManager';
+import { MAX_BULK_CSV_ROWS } from '@/packages/bulk-csv';
+
+/** Lists the entry names in the central directory of a stored ZIP archive. */
+function zipEntryNames(bytes: Uint8Array): string[] {
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const end = bytes.length - 22;
+  const count = view.getUint16(end + 10, true);
+  let pos = view.getUint32(end + 16, true);
+  const names: string[] = [];
+  for (let i = 0; i < count; i++) {
+    const nameLen = view.getUint16(pos + 28, true);
+    names.push(new TextDecoder().decode(bytes.subarray(pos + 46, pos + 46 + nameLen)));
+    pos += 46 + nameLen + view.getUint16(pos + 30, true) + view.getUint16(pos + 32, true);
+  }
+  return names;
+}
+
+function downloadedZip(): Uint8Array {
+  const call = vi.mocked(downloadManager.triggerFileDownload).mock.calls[0];
+  expect(call).toBeDefined();
+  return call[0];
+}
 
 // Spy on file download trigger
 vi.spyOn(downloadManager, 'triggerFileDownload').mockImplementation(() => {});
@@ -95,7 +118,7 @@ describe('BulkCsvInput Component', () => {
 
     renderWithProvider(<BulkCsvInput data={data} onChange={vi.fn()} />);
 
-    expect(screen.getByText('Main Thread Processing Warning')).toBeInTheDocument();
+    expect(screen.getByText(/Main Thread Processing Warning/)).toBeInTheDocument();
     expect(screen.getByText(/exceeding 100 rows/)).toBeInTheDocument();
   });
 
@@ -145,6 +168,7 @@ describe('BulkCsvInput Component', () => {
         'application/zip'
       );
     });
+    expect(zipEntryNames(downloadedZip())).toEqual(['Code1.svg', 'Code2.svg']);
   });
 
   it('generates ZIP batch and triggers file download for valid CSV rows in PNG format', async () => {
@@ -171,5 +195,80 @@ describe('BulkCsvInput Component', () => {
         'application/zip'
       );
     });
+  });
+
+  it('skips rows without a payload and de-duplicates file names after confirmation', async () => {
+    const csvContent = 'URL,Name\nhttps://example.com/1,Same\n,Empty\nhttps://example.com/3,same\nhttps://example.com/4,a/b';
+    const data: BulkCsvData = {
+      ...initialData,
+      csvContent,
+      payloadColumn: 'URL',
+      filenameColumn: 'Name',
+      exportFormat: 'svg',
+    };
+
+    renderWithProvider(<BulkCsvInput data={data} onChange={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Generate Batch' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Skip Bad Rows & Continue' }));
+
+    await waitFor(() => {
+      expect(downloadManager.triggerFileDownload).toHaveBeenCalledWith(
+        expect.any(Uint8Array),
+        'qr-codes-batch.zip',
+        'application/zip'
+      );
+    });
+    expect(zipEntryNames(downloadedZip())).toEqual(['Same.svg', 'same_2.svg', 'a_b.svg']);
+  });
+
+  it(`warns and keeps only the first ${MAX_BULK_CSV_ROWS} rows of a larger file`, () => {
+    const lines = Array.from({ length: MAX_BULK_CSV_ROWS + 20 }, (_, i) => `https://example.com/${i},N${i}`);
+    const data: BulkCsvData = { ...initialData, csvContent: `URL,Name\n${lines.join('\n')}` };
+
+    renderWithProvider(<BulkCsvInput data={data} onChange={vi.fn()} />);
+
+    expect(screen.getByText(/Row limit reached/)).toBeInTheDocument();
+    expect(screen.getByText(`${MAX_BULK_CSV_ROWS} rows found • 2 columns detected`)).toBeInTheDocument();
+  });
+
+  it('shows a parse error for malformed CSV and disables generation', () => {
+    const data: BulkCsvData = { ...initialData, csvContent: 'URL,Name\n"https://example.com,unterminated' };
+
+    renderWithProvider(<BulkCsvInput data={data} onChange={vi.fn()} />);
+
+    expect(screen.getByText(/Could not read this CSV/)).toBeInTheDocument();
+    expect(screen.getByText(/Unterminated quoted field/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Generate Batch' })).toBeDisabled();
+  });
+
+  it('stores the detected column defaults', async () => {
+    const onChange = vi.fn();
+    const data: BulkCsvData = { ...initialData, csvContent: 'id,link\n1,https://example.com' };
+
+    renderWithProvider(<BulkCsvInput data={data} onChange={onChange} />);
+
+    await waitFor(() => {
+      expect(onChange).toHaveBeenCalledWith({ payloadColumn: 'link', filenameColumn: 'id' });
+    });
+  });
+
+  it('reads an uploaded file into memory', async () => {
+    const onChange = vi.fn();
+    renderWithProvider(<BulkCsvInput data={initialData} onChange={onChange} />);
+
+    const file = new File(['URL,Name\nhttps://example.com,One'], 'batch.csv', { type: 'text/csv' });
+    fireEvent.change(screen.getByLabelText('Upload CSV or TXT file'), { target: { files: [file] } });
+
+    await waitFor(() => {
+      expect(onChange).toHaveBeenCalledWith({
+        csvContent: 'URL,Name\nhttps://example.com,One',
+        fileName: 'batch.csv',
+      });
+    });
+  });
+
+  it('loads the batch generator lazily through the registry wrapper', async () => {
+    renderWithProvider(<LazyBulkCsvInput data={initialData} onChange={vi.fn()} />);
+    expect(await screen.findByText('Upload CSV or TXT File')).toBeInTheDocument();
   });
 });

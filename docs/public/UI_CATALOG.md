@@ -45,9 +45,10 @@ These low-level, primitive UI elements are designed to be extremely customizable
 
 These components capture specialized data structures required to construct distinct QR code types. They rely entirely on primitive UI inputs and check free-text fields against the `CONTAINMENT_PROFILES` exported by `@/packages/qr-payload`.
 
-- **BulkCsvInput** (`BulkCsvInput.tsx` / `BulkCsvInput.test.tsx`): Main-thread CSV parsing with PapaParse and dynamic on-demand JSZip batch ZIP package generation. Supports column mapping, PNG/SVG format selection, accessible file upload inputs, malformed CSV error handling, progress tracking, and zero network calls.
+- **BulkCsvInput** (`BulkCsvInput.tsx` / `BulkCsvInput.test.tsx`): Bulk CSV Batch form, code-split behind `LazyBulkCsvInput.tsx` so it loads only on that type. Parses the CSV and writes the ZIP with `@/packages/bulk-csv` in memory (at most 500 rows). Supports column mapping, PNG/SVG format selection, accessible file upload inputs, malformed CSV and missing-payload handling, progress tracking, and zero network calls.
 - **EmailInput** (`EmailInput.tsx`): Standard email layout supporting recipient, subject, and body message fields.
 - **EventInput** (`EventInput.tsx`): Calendar appointment configuration form specifying title, times, description, and venue.
+- **LazyBulkCsvInput** (`LazyBulkCsvInput.tsx`): Registry entry for the Bulk CSV Batch type. Renders a placeholder during prerendering and hydration, then loads the batch generator chunk on the client.
 - **LocationInput** (`LocationInput.tsx` / `LocationInput.test.tsx`): High-accuracy coordinate form requiring proper latitude and longitude decimals.
 - **MeetingInput** (`MeetingInput.tsx` / `MeetingInput.test.tsx`): Specialized input fields to enter URL links and meeting passwords.
 - **PaymentInput** (`PaymentInput.tsx`): Cryptocurrency checkout fields validating address formats and value sizes.

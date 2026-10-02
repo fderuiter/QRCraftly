@@ -20,8 +20,19 @@ import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import Page from './+Page';
 
+interface SchemaNode {
+  '@type'?: string | string[];
+  softwareVersion?: string;
+  author?: unknown;
+  step?: unknown[];
+}
+
+function isSchemaGraph(value: unknown): value is { '@context': string; '@graph': SchemaNode[] } {
+  return typeof value === 'object' && value !== null && '@graph' in value && Array.isArray(value['@graph']);
+}
+
 vi.mock('../../components/QRTool', () => ({
-  default: ({ initialConfig }: any) => (
+  default: ({ initialConfig }: { initialConfig?: { type?: string } }) => (
     <div data-testid="qr-tool-mock">
       QRTool with type: {initialConfig?.type}
     </div>
@@ -41,25 +52,26 @@ describe('Bulk CSV QR Code Page', () => {
     const { container } = render(<Page />);
     const script = container.querySelector('script[type="application/ld+json"]');
     expect(script).toBeInTheDocument();
-    const json = JSON.parse(script?.textContent || '{}');
+    const json: unknown = JSON.parse(script?.textContent || '{}');
+    if (!isSchemaGraph(json)) throw new Error('Expected a JSON-LD @graph');
     expect(json['@context']).toBe('https://schema.org');
     expect(json['@graph']).toBeDefined();
     expect(json['@graph'].length).toBeGreaterThanOrEqual(2); // WebApplication and HowTo
 
-    const webApp = json['@graph'].find((item: any) =>
+    const webApp = json['@graph'].find((item) =>
       Array.isArray(item['@type']) &&
       item['@type'].includes('SoftwareApplication') &&
       item['@type'].includes('WebApplication')
     );
     expect(webApp).toBeDefined();
 
-    expect(webApp.softwareVersion).toBe('0.1.0');
-    expect(webApp.author).toEqual({
+    expect(webApp?.softwareVersion).toBe('0.1.0');
+    expect(webApp?.author).toEqual({
       '@id': 'https://qrcraftly.com/#organization'
     });
 
-    const howTo = json['@graph'].find((item: any) => item['@type'] === 'HowTo');
+    const howTo = json['@graph'].find((item) => item['@type'] === 'HowTo');
     expect(howTo).toBeDefined();
-    expect(howTo.step).toHaveLength(3);
+    expect(howTo?.step).toHaveLength(3);
   });
 });
