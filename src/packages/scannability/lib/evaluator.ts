@@ -243,6 +243,7 @@ export function createScannabilityEvaluator(options: ScannabilityEvaluatorConfig
   let offscreenDegraded = false;
   let watchdog: { handle: number; seq: number } | null = null;
   let flight: Flight | null = null;
+  let retiring: { owner: ScannabilityWorkerHandle; handle: number } | null = null;
 
   // --- answer bookkeeping ----------------------------------------------------
 
@@ -360,6 +361,29 @@ export function createScannabilityEvaluator(options: ScannabilityEvaluatorConfig
     worker = null;
   }
 
+  function finishRetire() {
+    if (!retiring) return;
+    clock.clearTimeout(retiring.handle);
+    retiring.owner.terminate();
+    retiring = null;
+  }
+
+  /**
+   * Terminates the worker once its in-flight frame is answered, or after the watchdog
+   * window. Killing a worker while it draws a transferred ImageBitmap can crash WebKit's
+   * web process on hosts without GPU sync support, taking the whole page down.
+   */
+  function retireWorker() {
+    const owner = worker;
+    worker = null;
+    if (!owner) return;
+    if (!busy) {
+      owner.terminate();
+      return;
+    }
+    retiring = { owner, handle: clock.setTimeout(finishRetire, SCANNABILITY_WATCHDOG_MS) };
+  }
+
   function post(owner: ScannabilityWorkerHandle, seq: number, moduleCount: number | undefined, frame: PixelFrame | ImageBitmap, size: ScannabilityCanvas) {
     const base = {
       width: size.width,
@@ -412,6 +436,10 @@ export function createScannabilityEvaluator(options: ScannabilityEvaluatorConfig
   }
 
   function handleWorkerError(owner: ScannabilityWorkerHandle | null, reason: unknown) {
+    if (owner && owner === retiring?.owner) {
+      finishRetire();
+      return;
+    }
     if (!owner || owner !== worker) return;
     console.error('Worker error, transitioning immediately to fail state:', reason);
     dropWorker();
@@ -423,6 +451,10 @@ export function createScannabilityEvaluator(options: ScannabilityEvaluatorConfig
   }
 
   function handleMessage(owner: ScannabilityWorkerHandle | null, data: unknown) {
+    if (owner && owner === retiring?.owner) {
+      finishRetire();
+      return;
+    }
     if (!owner || owner !== worker || destroyed) return;
     if (!isWorkerResponse(data)) {
       console.error('Worker response validation failed:', data);
@@ -681,7 +713,7 @@ export function createScannabilityEvaluator(options: ScannabilityEvaluatorConfig
       if (destroyed) return;
       destroyed = true;
       clearWatchdog();
-      dropWorker();
+      retireWorker();
       busy = false;
       startedAt = null;
       flight = null;
