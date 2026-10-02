@@ -34,8 +34,8 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   /* Retry on CI only */
   retries: process.env.CI ? 2 : 0,
-  /* Limit worker concurrency on CI (2 workers for 2 vCPU runner). */
-  workers: process.env.CI ? 2 : undefined,
+  /* Opt out of parallel tests on CI. */
+  workers: process.env.CI ? 1 : undefined,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: 'list',
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
@@ -52,12 +52,7 @@ export default defineConfig({
     {
       name: 'chromium',
       testIgnore: CSP_ENFORCED_SPECS,
-      use: {
-        ...devices['Desktop Chrome'],
-        launchOptions: {
-          args: ['--disable-dev-shm-usage', '--no-sandbox', '--disable-gpu'],
-        },
-      },
+      use: { ...devices['Desktop Chrome'] },
     },
     {
       name: 'firefox',
@@ -75,13 +70,7 @@ export default defineConfig({
          source fail here instead of only in production. */
       name: 'chromium-csp',
       testMatch: CSP_ENFORCED_SPECS,
-      use: {
-        ...devices['Desktop Chrome'],
-        bypassCSP: false,
-        launchOptions: {
-          args: ['--disable-dev-shm-usage', '--no-sandbox', '--disable-gpu'],
-        },
-      },
+      use: { ...devices['Desktop Chrome'], bypassCSP: false },
     },
   ],
   /* Serve the production build before starting the tests. Locally this builds
