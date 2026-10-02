@@ -69,3 +69,4 @@ export { constructTextString, hydrateTextData } from './lib/generators/text';
 export { constructLocationString, hydrateLocationData } from './lib/generators/location';
 export { MeetingContract, constructMeetingString, hydrateMeetingData } from './lib/generators/meeting';
 export { constructSocialString, hydrateSocialData } from './lib/generators/social';
+export { BulkCsvContract, constructBulkCsvString, hydrateBulkCsvData } from './lib/generators/bulkCsv';

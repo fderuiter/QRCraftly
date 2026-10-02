@@ -110,7 +110,7 @@ describe('Modular Accessibility Test Helpers & Full Panel Sweep', () => {
   it('exposes QR types as ordinary links in document order without arrow-key interception', () => {
     render(<TypeSelector currentType={QRType.URL} />);
     const links = screen.getAllByRole('link');
-    expect(links.length).toBe(12);
+    expect(links.length).toBe(13);
     expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
 
     links.forEach((link) => {

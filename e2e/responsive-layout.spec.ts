@@ -33,6 +33,7 @@ const ROUTES = [
   '/location-qr-code',
   '/meeting-qr-code',
   '/social-qr-code',
+  '/bulk-csv-qr-code',
   '/about',
   '/security',
   '/file-transfer',
