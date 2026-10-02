@@ -15,7 +15,6 @@ import {
   MapPin,
   Video,
   Share2,
-  FileSpreadsheet,
 } from "lucide-react";
 
 /**
@@ -26,6 +25,11 @@ interface TypeSelectorProps {
   currentType: QRType;
 }
 
+/**
+ * Single-code types, four per row. Bulk CSV is a batch tool rather than a single-code type, so it is
+ * linked from the generator list instead: a thirteenth item would add a row and push the content
+ * field below the first screen on small phones (#795).
+ */
 const ITEMS = [
   { type: QRType.URL, icon: Link, label: "URL" },
   { type: QRType.TEXT, icon: Type, label: "Text" },
@@ -39,7 +43,6 @@ const ITEMS = [
   { type: QRType.LOCATION, icon: MapPin, label: "Location" },
   { type: QRType.MEETING, icon: Video, label: "Meeting" },
   { type: QRType.SOCIAL, icon: Share2, label: "Social" },
-  { type: QRType.BULK_CSV, icon: FileSpreadsheet, label: "Bulk CSV Batch" },
 ];
 
 const LINK_BASE =
