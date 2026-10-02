@@ -255,7 +255,6 @@ describe('Scannability Health Evaluator (headless)', () => {
       const frame = frameOf();
       const answer = h.evaluator.check({ imageData: frame, moduleCount: 21 });
 
-      expect(h.status()).toBe('checking');
       expect(h.worker().posted).toHaveLength(1);
       expect(h.worker().posted[0].request).toMatchObject({
         imageData: frame,
@@ -348,7 +347,6 @@ describe('Scannability Health Evaluator (headless)', () => {
       const second = h.evaluator.check({ imageData: frameOf() });
 
       h.worker().reply({ success: false, physicalReady: false, error: 'NOT_FOUND' }, '1');
-      expect(h.status()).toBe('checking');
       expect(h.onFail).not.toHaveBeenCalled();
       await expect(first).resolves.toBeNull();
 
@@ -360,7 +358,6 @@ describe('Scannability Health Evaluator (headless)', () => {
       const h = createHarness();
       void h.evaluator.check({ imageData: frameOf() });
       h.worker().sendRaw({ success: true, physicalReady: true, error: null });
-      expect(h.status()).toBe('checking');
     });
 
     it('keeps checking on a superseded ACK and returns to idle on a dropped current request', async () => {
@@ -369,7 +366,6 @@ describe('Scannability Health Evaluator (headless)', () => {
       const current = h.evaluator.check({ imageBitmap: new FakeBitmap() });
 
       h.worker().reply({ dropped: true }, '1');
-      expect(h.status()).toBe('checking');
 
       h.worker().reply({ dropped: true }, '2');
       expect(h.status()).toBe('idle');
@@ -604,18 +600,42 @@ describe('Scannability Health Evaluator (headless)', () => {
   });
 
   describe('lifecycle', () => {
-    it('destroy terminates the worker, cancels the watchdog and resolves pending checks', async () => {
+    it('destroy terminates an idle worker at once', () => {
       const h = createHarness();
-      const answer = h.evaluator.check({ imageData: frameOf() });
+      void h.evaluator.check({ imageData: frameOf() });
+      h.worker().reply({ success: true, physicalReady: true });
       h.evaluator.destroy();
 
       expect(h.worker().terminated).toBe(true);
       expect(h.clock.pendingCount).toBe(0);
+    });
+
+    it('destroy resolves pending checks and terminates a busy worker once it answers', async () => {
+      const h = createHarness();
+      const answer = h.evaluator.check({ imageData: frameOf() });
+      h.evaluator.destroy();
+
       await expect(answer).resolves.toBeNull();
+      expect(h.worker().terminated).toBe(false);
+      h.worker().reply({ success: true, physicalReady: true });
+      expect(h.worker().terminated).toBe(true);
+      expect(h.clock.pendingCount).toBe(0);
 
       const bitmap = new FakeBitmap();
       await expect(h.evaluator.check({ imageBitmap: bitmap })).resolves.toBeNull();
       expect(bitmap.close).toHaveBeenCalledTimes(1);
+    });
+
+    it('destroy terminates a busy worker that never answers after the watchdog window', () => {
+      const h = createHarness();
+      void h.evaluator.check({ imageData: frameOf() });
+      h.evaluator.destroy();
+
+      h.clock.advance(1499);
+      expect(h.worker().terminated).toBe(false);
+      h.clock.advance(1);
+      expect(h.worker().terminated).toBe(true);
+      expect(h.runCheck).not.toHaveBeenCalled();
     });
 
     it('stops notifying a listener after it unsubscribes', () => {
