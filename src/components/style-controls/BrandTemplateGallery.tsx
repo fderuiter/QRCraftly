@@ -208,7 +208,9 @@ export const BrandTemplateGallery: React.FC<BrandTemplateGalleryProps> = ({ conf
 
       {/* Tab Switcher */}
       <div className="flex rounded-lg bg-slate-100 p-1 dark:bg-slate-800" role="tablist">
-        <button
+        <Button
+          variant="ghost"
+          size="none"
           role="tab"
           aria-selected={activeTab === 'presets'}
           onClick={() => setActiveTab('presets')}
@@ -219,8 +221,10 @@ export const BrandTemplateGallery: React.FC<BrandTemplateGalleryProps> = ({ conf
           }`}
         >
           Curated Presets ({PREBUILT_TEMPLATES.length})
-        </button>
-        <button
+        </Button>
+        <Button
+          variant="ghost"
+          size="none"
           role="tab"
           aria-selected={activeTab === 'custom'}
           onClick={() => setActiveTab('custom')}
@@ -231,7 +235,7 @@ export const BrandTemplateGallery: React.FC<BrandTemplateGalleryProps> = ({ conf
           }`}
         >
           My Templates ({customTemplates.length}/{MAX_CUSTOM_TEMPLATES})
-        </button>
+        </Button>
       </div>
 
       {/* Gallery Cards Container */}

@@ -8,8 +8,10 @@ export const BRAND_TEMPLATES_STORAGE_KEY = 'qrcraftly:brand-templates';
 export const MAX_CUSTOM_TEMPLATES = 50;
 
 /**
- * Fields that carry QR content or user input text.
+ * Fields that carry QR content, user input text or user-uploaded images.
  * MUST NEVER be overwritten by applying a template or saved in template style configs.
+ * Uploaded images stay in volatile memory only (docs/public/COMPLIANCE.md), so a
+ * template never persists or imports a logo, border logo, background or mosaic image.
  */
 export const CONTENT_FIELDS: ReadonlySet<keyof QRConfig> = new Set<keyof QRConfig>([
   'value',
@@ -19,6 +21,10 @@ export const CONTENT_FIELDS: ReadonlySet<keyof QRConfig> = new Set<keyof QRConfi
   'borderText',
   'templateHeadline',
   'templateSubtext',
+  'logoUrl',
+  'borderLogoUrl',
+  'backgroundImageUrl',
+  'mosaicImageUrl',
 ]);
 
 /**

@@ -165,6 +165,23 @@ describe('Brand Template Gallery & Persistence System', () => {
       expect((extracted as Record<string, unknown>).type).toBeUndefined();
       expect((extracted as Record<string, unknown>).borderText).toBeUndefined();
     });
+
+    it('never saves or applies user-uploaded images', () => {
+      const images = {
+        logoUrl: 'data:image/png;base64,bG9nbw==',
+        borderLogoUrl: 'data:image/png;base64,Ym9yZGVy',
+        backgroundImageUrl: 'data:image/png;base64,Ymc=',
+        mosaicImageUrl: 'data:image/png;base64,bW9zYWlj',
+      };
+      const extracted = extractStyleConfig({ ...DEFAULT_CONFIG, ...images, logoSize: 0.3 });
+      expect(extracted.logoSize).toBe(0.3);
+      for (const key of Object.keys(images)) {
+        expect((extracted as Record<string, unknown>)[key]).toBeUndefined();
+      }
+
+      const updates = applyTemplateToConfig(DEFAULT_CONFIG, images);
+      expect(updates).toEqual({});
+    });
   });
 
   describe('JSON Export & Strict Schema Validation Import', () => {
