@@ -9,7 +9,6 @@
   ],
   "project": [
     "src/**/*.{ts,tsx}!",
-    "!src/packages/edge-redirect/{dev.ts,lib/mockD1.ts,tests/**}!",
     "!src/packages/*/tests/**!",
     "scripts/**/*.{js,cjs,ts}!",
     "tests/**/*.{ts,tsx}",

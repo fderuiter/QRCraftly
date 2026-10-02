@@ -30,13 +30,7 @@ export const FORBIDDEN_IMPORTS = [
 // 3. Whitelisted files in src/ that are authorized to perform network requests (fetch)
 export const AUTHORIZED_NETWORK_FILES = new Set([
   'src/packages/qr-export/lib/svgExport.ts',
-  'src/utils/assetCache.ts',
-  'src/packages/edge-redirect/lib/useRedirector.ts',
-  'src/packages/edge-redirect/lib/turnstile.ts',
-  'src/packages/edge-redirect/lib/router.ts',
-  'src/packages/edge-redirect/lib/types.ts',
-  'src/packages/edge-redirect/worker.ts',
-  'src/pages/r/@id/+Page.tsx'
+  'src/utils/assetCache.ts'
 ]);
 
 /**

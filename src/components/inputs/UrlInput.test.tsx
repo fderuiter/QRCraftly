@@ -50,11 +50,4 @@ describe('UrlInput', () => {
     expect(alertMessage.textContent).toContain('Unsafe URL scheme or malicious protocol detected.');
   });
 
-  it('does not render the dynamic tracking toggle when dynamic tracking is suppressed', () => {
-    window.localStorage.setItem('qrcraftly:dynamic-consent-accepted', 'true');
-    render(<UrlInput data={{ url: 'https://example.com' }} onChange={mockOnChange} />);
-
-    expect(screen.queryByLabelText('Dynamic QR (Trackable Redirect)')).not.toBeInTheDocument();
-    expect(screen.queryByText('Dual-Platform App Store Destinations (Optional)')).not.toBeInTheDocument();
-  });
 });

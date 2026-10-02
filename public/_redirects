@@ -3,3 +3,6 @@
 /destroy-the-qr/ /arcade?mode=blaster 301
 /game /arcade?mode=simulator 301
 /game/ /arcade?mode=simulator 301
+# Dynamic QR codes were removed (#1088); the old dashboard sends visitors to the generator.
+/dynamic-dashboard / 301
+/dynamic-dashboard/ / 301

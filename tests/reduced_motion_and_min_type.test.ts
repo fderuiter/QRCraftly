@@ -14,8 +14,6 @@ const TINY_TEXT = /\btext-\[(?:[0-9]|1[01])px\]/;
 describe('Reduced motion guards (WCAG 2.3.3)', () => {
   it.each([
     'src/components/inputs/UrlInput.tsx',
-    'src/pages/r/@id/+Page.tsx',
-    'src/pages/dynamic-dashboard/+Page.tsx',
   ])('%s gates every animation behind motion-safe:', file => {
     const offending = read(file)
       .split(/\r?\n/)

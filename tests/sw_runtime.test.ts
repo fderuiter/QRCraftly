@@ -175,13 +175,11 @@ describe('generated service worker runtime', () => {
     expect(await sw.fetchEvent('/assets/app-2.js')).toBe('v2');
   });
 
-  it('never answers dynamic redirect links or API calls', async () => {
+  it('never answers API calls', async () => {
     const sw = loadWorker({ caches });
     await sw.dispatch('install');
-    expect(await sw.fetchEvent('/r/abc123', 'navigate')).toBeUndefined();
-    expect(await sw.fetchEvent('/r', 'navigate')).toBeUndefined();
-    expect(await sw.fetchEvent('/api/redirect/register', 'cors', 'POST')).toBeUndefined();
-    expect(await sw.fetchEvent('/api/redirect/abc', 'navigate')).toBeUndefined();
+    expect(await sw.fetchEvent('/api/anything', 'cors', 'POST')).toBeUndefined();
+    expect(await sw.fetchEvent('/api/anything', 'navigate')).toBeUndefined();
   });
 
   it('serves precached pages from the cache', async () => {

@@ -22,12 +22,6 @@ describe('Service Worker API Navigation Bypass Unit Suite', () => {
     expect(apiCheckIndex).toBeLessThan(getMethodCheckIndex);
   });
 
-  it('should never serve dynamic link resolver pages (/r/<id>) from the SW cache', () => {
-    const swScriptContent = fs.readFileSync(swScriptPath, 'utf8');
-    // The generated worker returns early for every BYPASS_PREFIXES entry before any respondWith.
-    expect(swScriptContent).toMatch(/const BYPASS_PREFIXES = \[[^\]]*'\/r\/'[^\]]*\];/);
-  });
-
   it('should bypass service worker handling for all HTTP methods targeting API routes', () => {
     // Extract fetch listener body from generate_sw.cjs logic
     const swScriptContent = fs.readFileSync(swScriptPath, 'utf8');
@@ -58,9 +52,9 @@ describe('Service Worker API Navigation Bypass Unit Suite', () => {
     const apiRoutes = [
       { url: 'https://qrcraftly.com/api', method: 'GET' },
       { url: 'https://qrcraftly.com/api/', method: 'GET' },
-      { url: 'https://qrcraftly.com/api/redirect/12345', method: 'GET', mode: 'navigate' },
-      { url: 'https://qrcraftly.com/api/redirect/register', method: 'POST' },
-      { url: 'https://qrcraftly.com/api/redirect/update', method: 'PUT' },
+      { url: 'https://qrcraftly.com/api/anything/12345', method: 'GET', mode: 'navigate' },
+      { url: 'https://qrcraftly.com/api/anything', method: 'POST' },
+      { url: 'https://qrcraftly.com/api/anything', method: 'PUT' },
       { url: 'https://qrcraftly.com/api/telemetry', method: 'POST' },
     ];
 

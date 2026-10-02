@@ -46,7 +46,7 @@ QRCraftly's output must be objectively the most polished in class. Scannability 
 
 ### P3 — Simplicity wins for the core flow
 
-The path from landing to downloading a customized QR code must require zero account creation, zero configuration, and zero learning. Advanced features (Air-Gapped Transfer, Audio QR, the QR Arcade, and Dynamic Redirection if it is switched on) are opt-in surfaces that do not interrupt the primary flow.
+The path from landing to downloading a customized QR code must require zero account creation, zero configuration, and zero learning. Advanced features (Air-Gapped Transfer, Audio QR, and the QR Arcade) are opt-in surfaces that do not interrupt the primary flow.
 
 ### P4 — Accessibility and compliance are first-class
 
@@ -74,7 +74,7 @@ The product runs identically on every modern browser across desktop and mobile. 
 
 ### 5.3 — The Developer / Technical Power User
 
-**Needs**: Advanced QR data types (vCard RFC 6350, cryptocurrency, calendar events, GPS), fine-grained error-correction control, SVG export for programmatic manipulation, and access to experimental features (zero-knowledge dynamic links, air-gapped optical transfer).
+**Needs**: Advanced QR data types (vCard RFC 6350, cryptocurrency, calendar events, GPS), fine-grained error-correction control, SVG export for programmatic manipulation, and access to experimental features (air-gapped optical transfer).
 
 **Success**: QRCraftly handles every data type they need and exposes the raw architectural capability of the platform.
 
@@ -147,14 +147,6 @@ User-facing at `/file-transfer` (send) and `/file-transfer/receive` (receive), l
 
 - At `/arcade` (the old `/game` and `/destroy-the-qr` links redirect here): damage a QR design in the Blaster or the Damage Simulator while Reed-Solomon analytics and a real scanner report whether it still decodes.
 
-### 6.9 Dynamic Redirection `[INTERNAL]`
-
-Architecture exists; not yet user-facing.
-
-- **Mechanism**: The browser encrypts the destination with AES-GCM and keeps the key in the URL fragment (`#key=...`), so the edge stores only ciphertext in Cloudflare D1. See [`docs/public/EDGE_ARCHITECTURE.md`](docs/public/EDGE_ARCHITECTURE.md).
-- **Status**: Switched off. The UI flags `ENABLE_DYNAMIC_TRACKING` and `ENABLE_DYNAMIC_DASHBOARD` are `false`, and production serves static assets only until D1 and Turnstile are provisioned.
-- **Product intent**: Not decided. See the note under Section 9.
-
 ---
 
 ## 7. Privacy & Compliance Architecture
@@ -164,12 +156,10 @@ This section is **non-negotiable**. Any feature proposal must be evaluated again
 | Invariant                                 | Enforcement Mechanism                                                                                 |
 | ----------------------------------------- | ----------------------------------------------------------------------------------------------------- |
 | User payloads never transmitted to server | Client-side Canvas / Web Worker generation only                                                       |
-| No QR content stored server-side          | QR content is held in browser memory only and is gone when the tab closes (see the exception below)   |
+| No QR content stored server-side          | QR content is held in browser memory only and is gone when the tab closes                             |
 | No user input in URL query parameters     | Architectural constraint; prevents history/proxy leakage                                              |
 | Storage keys explicitly allowlisted       | Pre-build AST auditor (`scripts/storage_privacy_ast_auditor.js`) blocks unapproved keys at build time |
 | No analytics, telemetry or ads            | [The QRCraftly Pledge](docs/PLEDGE.md); CSP `connect-src 'self'` and the bundle network audit         |
-
-**Exception: dynamic links.** If Dynamic Redirection is switched on, each dynamic link the person creates is saved in `localStorage` under `qrcraftly:dynamic-redirects` so they can manage it later. That record holds the original destination URL in plain text, the decryption key and the admin key, and it stays until the person deletes it or clears site data. The feature is switched off today, so nothing is written under this key in production.
 
 HIPAA Technical Safeguard alignment is documented in [`docs/public/COMPLIANCE.md`](docs/public/COMPLIANCE.md). This is a _technical_ safeguard; organizational HIPAA certification remains the responsibility of the deploying organization.
 
@@ -202,16 +192,14 @@ HIPAA Technical Safeguard alignment is documented in [`docs/public/COMPLIANCE.md
 
 The following are explicitly **out of scope** and should not be planned, specced, or built without a deliberate product decision to revise this list:
 
-| Non-Goal                                               | Rationale                                                                                                                                                                                                                                                                       |
-| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Dynamic / trackable QR redirection                     | Any server-side redirection requires storing a destination URL server-side and logging scan events, which cannot be reconciled with the privacy-first invariant. Not removed: an encrypted implementation is built but switched off (Section 6.9); see the open decision below. |
-| Server-side QR generation                              | Violates the privacy-first invariant; payloads must never leave the client                                                                                                                                                                                                      |
-| Native mobile apps (iOS / Android)                     | Web-first strategy; responsive PWA is sufficient                                                                                                                                                                                                                                |
-| Batch / bulk QR generation via API or CSV upload       | Adds infrastructure complexity without a clear user persona match today                                                                                                                                                                                                         |
-| Ads, analytics, telemetry or diagnostics reporting     | Violates [the QRCraftly Pledge](docs/PLEDGE.md): the project shuts down before it becomes ad supported                                                                                                                                                                          |
-| Server-side storage of user QR codes or cloud accounts | Violates volatile memory guarantee                                                                                                                                                                                                                                              |
-
-> **Open decision: Dynamic Redirection.** This document lists dynamic redirection as a non-goal (Section 9) and as part of the paid tier (Section 11), while the code is built but switched off (Section 6.9). Whether to enable it for everyone, keep it for the paid self-hosted tier, or remove it is a product decision that has not been made yet.
+| Non-Goal                                               | Rationale                                                                                                                                                                                                                                                  |
+| ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Dynamic / trackable QR redirection                     | Any server-side redirection requires storing a destination URL server-side and logging scan events, which cannot be reconciled with the privacy-first invariant. Decided and removed in [ADR 0022](docs/adr/0022-no-dynamic-qr-codes-client-side-only.md). |
+| Server-side QR generation                              | Violates the privacy-first invariant; payloads must never leave the client                                                                                                                                                                                 |
+| Native mobile apps (iOS / Android)                     | Web-first strategy; responsive PWA is sufficient                                                                                                                                                                                                           |
+| Batch / bulk QR generation via API or CSV upload       | Adds infrastructure complexity without a clear user persona match today                                                                                                                                                                                    |
+| Ads, analytics, telemetry or diagnostics reporting     | Violates [the QRCraftly Pledge](docs/PLEDGE.md): the project shuts down before it becomes ad supported                                                                                                                                                     |
+| Server-side storage of user QR codes or cloud accounts | Violates volatile memory guarantee                                                                                                                                                                                                                         |
 
 ---
 
@@ -257,7 +245,7 @@ QRCraftly is **open-source under AGPL-3.0**. The base product is free forever fo
 The planned commercial tier is **open-core**:
 
 - **Free (open-source)**: Full QR generation studio, all data types, all visual customization, Air-Gapped Transfer — all features that run entirely in-browser.
-- **Paid (self-hosted / white-label license)**: Organizations that want to self-host QRCraftly, remove attribution, use a custom domain, access the Dynamic Redirection backend (built but switched off; see Section 6.9) with their own Cloudflare D1 database, and receive commercial support.
+- **Paid (self-hosted / white-label license)**: Organizations that want to self-host QRCraftly, remove attribution, use a custom domain, and receive commercial support.
 
 > No SaaS subscription or per-code pricing is planned at this stage. Revisit at `v1.0`.
 

@@ -9,11 +9,4 @@
     // Unknown paths get a real 404 status with the prerendered 404.html page.
     "not_found_handling": "404-page",
   },
-  "d1_databases": [
-    {
-      "binding": "DB",
-      "database_name": "qrcraftly-db",
-      "database_id": "qrcraftly-d1-id",
-    },
-  ],
 }

