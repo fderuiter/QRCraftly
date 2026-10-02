@@ -96,7 +96,7 @@ test.describe('Isolated Web Worker Recovery & Export Bypass', () => {
     }).toBe(true);
   });
 
-  test('Requirement 1 & 2: Mock Worker background thread exception and verify red scannability warning badge with alert role', async ({ page }) => {
+  test('Requirement 1 & 2: Mock Worker background thread exception and verify the failing verdict and its alert', async ({ page }) => {
     // Dispatch simulated background process failure message event
     await page.evaluate(() => {
       (window as any).simulateFailure = true;
@@ -110,8 +110,8 @@ test.describe('Isolated Web Worker Recovery & Export Bypass', () => {
 
     // Assert that a red warning badge with an alert role displays on the page with 15-second polling threshold
     const alertBadge = page.getByRole('alert');
-    await expect(alertBadge).toBeVisible({ timeout: 15000 });
-    await expect(alertBadge).toContainText(/scan verification failed/i);
+    await expect(alertBadge).toContainText(/won't scan reliably/i, { timeout: 15000 });
+    await expect(page.getByTestId('scannability-verdict')).toHaveText("Won't scan reliably");
   });
 
   test('Requirement 3 & 4: Triggering download during background error displays warning modal and allows bypass', async ({ page }) => {
@@ -128,8 +128,8 @@ test.describe('Isolated Web Worker Recovery & Export Bypass', () => {
 
     // Verify warning badge is visible
     const alertBadge = page.getByRole('alert');
-    await expect(alertBadge).toBeVisible({ timeout: 15000 });
-    await expect(alertBadge).toContainText(/scan verification failed/i);
+    await expect(alertBadge).toContainText(/won't scan reliably/i, { timeout: 15000 });
+    await expect(page.getByTestId('scannability-verdict')).toHaveText("Won't scan reliably");
 
     // Click the download command to open export format menu
     const downloadButton = page.getByRole('button', { name: 'Download', exact: true });
@@ -177,8 +177,8 @@ test.describe('Isolated Web Worker Recovery & Export Bypass', () => {
 
     // Verify scannability alert/badge is active
     const alertBadge = page.getByRole('alert');
-    await expect(alertBadge).toBeVisible({ timeout: 15000 });
-    await expect(alertBadge).toContainText(/scan verification failed/i);
+    await expect(alertBadge).toContainText(/won't scan reliably/i, { timeout: 15000 });
+    await expect(page.getByTestId('scannability-verdict')).toHaveText("Won't scan reliably");
 
     // Exactly one alert announces the failure; no consent popup interrupts it (#800, #802)
     await expect(page.getByRole('alert')).toHaveCount(1);

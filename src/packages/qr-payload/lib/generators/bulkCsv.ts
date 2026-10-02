@@ -16,14 +16,16 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { previewRow } from '@/packages/bulk-csv';
 import { BulkCsvData, QRType, QRGeneratorContract } from '@/types';
 
 /**
- * Constructs the bulk CSV string.
+ * Constructs the live preview payload: the first row's value in the payload column,
+ * not the whole CSV, which would overflow a QR code (#1110). Empty when no row has one.
  */
 export const constructBulkCsvString = (data: BulkCsvData): string => {
   if (!data) return '';
-  return data.csvContent || '';
+  return previewRow(data.csvContent || '', data.payloadColumn || '')?.payload ?? '';
 };
 
 /**

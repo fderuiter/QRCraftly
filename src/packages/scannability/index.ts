@@ -28,6 +28,8 @@ export type { ModuleContrastAuditResult, LowContrastCell } from './lib/contrastA
 
 export { calculateScannabilityHealth } from './lib/scoring';
 export { getExportRiskPolicy } from './lib/exportRiskPolicy';
+export { getScanVerdict, getScanAdvice, getScanChecks, RELIABLE_SCORE } from './lib/verdict';
+export type { ScanVerdict, ScanFix, ScanAdvice } from './lib/verdict';
 export { performScannabilityCheck } from './lib/checker';
 export { auditModuleContrast } from './lib/contrastAudit';
 export { calculateBlurRadius, applyOpticalSimulationMath } from './lib/opticalSimulation';

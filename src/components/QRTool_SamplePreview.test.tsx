@@ -80,11 +80,11 @@ describe('QRTool with sample fallback empty state', () => {
     expect(screen.getByText(/Enter content to generate a QR code\. Exports are available/)).toBeInTheDocument();
   });
 
-  it('hides sample preview badge and restores verified status when user provides content', () => {
+  it('hides sample preview badge and restores the verdict when user provides content', () => {
     render(<ToastProvider><QRTool initialConfig={{ ...DEFAULT_CONFIG, value: 'https://example.com' }} /></ToastProvider>);
 
     expect(screen.queryByTestId('sample-preview-badge')).not.toBeInTheDocument();
-    expect(screen.getByText('Print simulation verified')).toBeInTheDocument();
+    expect(screen.getByTestId('scannability-verdict')).toHaveTextContent('Scans reliably');
     const download = screen.getByRole('button', { name: /^Download$/ });
     expect(download).not.toHaveAttribute('aria-disabled');
     expect(download).toHaveAttribute('aria-haspopup', 'menu');

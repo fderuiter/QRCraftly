@@ -21,16 +21,27 @@ import { BulkCsvContract, constructBulkCsvString, hydrateBulkCsvData } from '../
 import { QRType } from '@/types';
 
 describe('BulkCsvContract', () => {
-  it('constructs CSV string correctly', () => {
-    const csvContent = 'a,b\n1,2';
-    expect(
-      constructBulkCsvString({
-        csvContent,
-        payloadColumn: 'a',
-        filenameColumn: 'b',
-        exportFormat: 'png',
-      })
-    ).toBe(csvContent);
+  const data = (csvContent: string, payloadColumn = '') => ({
+    csvContent,
+    payloadColumn,
+    filenameColumn: '',
+    exportFormat: 'png' as const,
+  });
+
+  it('previews the first row with a payload, not the whole CSV (#1110)', () => {
+    const csv = 'name,url\nA,\nB,https://b.example\nC,https://c.example';
+    expect(constructBulkCsvString(data(csv, 'url'))).toBe('https://b.example');
+    expect(constructBulkCsvString(data(csv, 'name'))).toBe('A');
+  });
+
+  it('falls back to the detected payload column when none is chosen', () => {
+    expect(constructBulkCsvString(data('id,link\n1,https://a.example'))).toBe('https://a.example');
+  });
+
+  it('is empty for an empty or unreadable CSV, or one with no payloads', () => {
+    expect(constructBulkCsvString(data(''))).toBe('');
+    expect(constructBulkCsvString(data('url\n"unterminated'))).toBe('');
+    expect(constructBulkCsvString(data('url,name\n,A', 'url'))).toBe('');
   });
 
   it('hydrates BulkCsvData correctly', () => {
