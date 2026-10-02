@@ -831,6 +831,10 @@ describe('QRTool Component', () => {
   });
 
   describe('Scannability Recovery Actions', () => {
+    // The failing check settles after the worker round trip and the main-thread fallback:
+    // about 0.6s locally and well past the 1s findBy default on loaded CI runners.
+    const SCANNABILITY_FAIL_TIMEOUT_MS = 5000;
+
     it('updates configuration when user clicks Auto-Fix Contrast recovery button', async () => {
       vi.mocked(jsQR).mockReturnValue(null); // Force scan verification failure
 
@@ -844,7 +848,7 @@ describe('QRTool Component', () => {
       fireEvent.click(screen.getByTestId('mock-trigger-rendered'));
 
       // Wait for recovery buttons to appear on fail
-      const autoFixBtn = await screen.findByRole('button', { name: 'Auto-Fix Contrast' });
+      const autoFixBtn = await screen.findByRole('button', { name: 'Auto-Fix Contrast' }, { timeout: SCANNABILITY_FAIL_TIMEOUT_MS });
       expect(autoFixBtn).toBeInTheDocument();
 
       fireEvent.click(autoFixBtn);
@@ -869,7 +873,7 @@ describe('QRTool Component', () => {
 
       fireEvent.click(screen.getByTestId('mock-trigger-rendered'));
 
-      const resetBtn = await screen.findByRole('button', { name: 'Reset Defaults' });
+      const resetBtn = await screen.findByRole('button', { name: 'Reset Defaults' }, { timeout: SCANNABILITY_FAIL_TIMEOUT_MS });
       expect(resetBtn).toBeInTheDocument();
 
       fireEvent.click(resetBtn);
