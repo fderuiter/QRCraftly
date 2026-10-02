@@ -1,4 +1,5 @@
 import { getPublicDomain, getSanitizedPath } from "../utils/metadataEngine";
+import { toolFaqs } from "./toolFaqs";
 
 export enum SchemaType {
   SoftwareApplication = "SoftwareApplication",
@@ -32,6 +33,10 @@ export interface ToolContent {
   url: string;
   description: string;
   seoTitle?: string;
+  /** Visible H1 on generator pages; falls back to the page's own title. */
+  heading?: string;
+  /** Opening paragraph shown above the how-to steps. */
+  intro?: string;
   image: string;
   imageAlt: string;
   ogImage?: string;
@@ -173,6 +178,7 @@ export const contentRegistry: Record<string, ToolContent> = {
     "url": getPublicDomain() + "/email-qr-code",
     "description": "Create QR codes that open a pre-filled email. Set recipient, subject, and body. Ideal for feedback, support, or contact.",
     "seoTitle": "Free Email QR Code Generator | Pre-filled Emails - QRCraftly",
+    "heading": "Free Email QR Code Generator",
     "image": "/og-image.png?type=email",
     "imageAlt": "Preview of the Email QR Code Generator tool",
     "features": [
@@ -184,6 +190,7 @@ export const contentRegistry: Record<string, ToolContent> = {
     "schemaCategory": SchemaCategory.UtilitiesApplication,
     "personas": [TargetPersona.HealthcareLegal],
     "valueProposition": StrategicValueCategory.ZeroTransitPrivacySovereignty,
+    "faqs": toolFaqs["email-qr-code"],
     "howTo": {
       "name": "How to Create an Email QR Code",
       "description": "Generate a QR code that opens a drafted email.",
@@ -209,6 +216,7 @@ export const contentRegistry: Record<string, ToolContent> = {
     "url": getPublicDomain() + "/event-qr-code",
     "description": "Generate Event QR codes to save calendar events instantly. Set your event title, date, location, and details. Fast, free, and secure.",
     "seoTitle": "Free Event QR Code Generator | Save Calendar Events - QRCraftly",
+    "heading": "Free Calendar Event QR Code Generator",
     "image": "/og-image.png?type=event",
     "imageAlt": "Preview of the Event QR Code Generator tool",
     "features": [
@@ -220,6 +228,7 @@ export const contentRegistry: Record<string, ToolContent> = {
     "schemaCategory": SchemaCategory.UtilitiesApplication,
     "personas": [TargetPersona.SecurityConsciousEnterprise],
     "valueProposition": StrategicValueCategory.ZeroTransitPrivacySovereignty,
+    "faqs": toolFaqs["event-qr-code"],
     "howTo": {
       "name": "How to Create an Event QR Code",
       "description": "Generate a QR code that prompts users to add an event to their calendar.",
@@ -243,8 +252,10 @@ export const contentRegistry: Record<string, ToolContent> = {
     "id": "index",
     "name": "QRCraftly",
     "url": getPublicDomain(),
-    "description": "Generate beautiful, custom QR codes for free. No sign-up required. Secure, client-side generation.",
-    "seoTitle": "QRCraftly - Free Custom QR Code Generator",
+    "description": "Make free QR codes that never expire. No sign-up, no ads, no tracking: every code is made in your browser. Add colours, logos and image mosaics.",
+    "seoTitle": "Free QR Code Generator: No Sign-up, Never Expires | QRCraftly",
+    "heading": "Free QR Code Generator",
+    "intro": "QRCraftly makes static QR codes that work forever: no trial that switches your printed codes off, no account, no watermark and no ads. Everything is generated in your browser, so your links, Wi-Fi passwords and contact details never reach our servers. Style your code with colours, shapes, a logo or your own image, and check that it scans before you download it.",
     "image": "/og-image.png",
     "imageAlt": "Preview of the QRCraftly Free QR Code Generator",
     "features": [
@@ -272,20 +283,11 @@ export const contentRegistry: Record<string, ToolContent> = {
         },
         {
           "name": "Download QR Code",
-          "text": "Save your custom QR code in PNG, JPEG, or WebP format."
+          "text": "Save your custom QR code as a PNG, JPEG or WebP image, or as an SVG vector file."
         }
       ]
     },
-    "faqs": [
-      {
-        "question": "Is it free to generate?",
-        "answer": "Yes, our tool is 100% free with no hidden fees."
-      },
-      {
-        "question": "Do QR codes expire?",
-        "answer": "No, standard static QR codes do not expire."
-      }
-    ]
+    "faqs": toolFaqs["index"]
   },
   "location-qr-code": {
     "id": "location-qr-code",
@@ -293,6 +295,7 @@ export const contentRegistry: Record<string, ToolContent> = {
     "url": getPublicDomain() + "/location-qr-code",
     "description": "Create QR codes for geographical map coordinates. Set latitude and longitude for easy physical navigation. Fast, free, and secure.",
     "seoTitle": "Free Location QR Code Generator | Map Coordinates - QRCraftly",
+    "heading": "Free Location QR Code Generator",
     "image": "/og-image.png?type=location",
     "imageAlt": "Preview of the Location QR Code Generator tool",
     "features": [
@@ -304,6 +307,7 @@ export const contentRegistry: Record<string, ToolContent> = {
     "schemaCategory": SchemaCategory.UtilitiesApplication,
     "personas": [TargetPersona.HealthcareLegal],
     "valueProposition": StrategicValueCategory.ZeroTransitPrivacySovereignty,
+    "faqs": toolFaqs["location-qr-code"],
     "howTo": {
       "name": "How to Create a Location QR Code",
       "description": "Generate a QR code that opens a location in maps.",
@@ -329,6 +333,7 @@ export const contentRegistry: Record<string, ToolContent> = {
     "url": getPublicDomain() + "/meeting-qr-code",
     "description": "Generate QR codes for virtual meetings. Paste meeting join links for Zoom, Microsoft Teams, and Google Meet. Fast, free, and secure.",
     "seoTitle": "Free Virtual Meeting QR Code Generator | Zoom & Teams - QRCraftly",
+    "heading": "Free Meeting QR Code Generator",
     "image": "/og-image.png?type=meeting",
     "imageAlt": "Preview of the Meeting QR Code Generator tool",
     "features": [
@@ -340,6 +345,7 @@ export const contentRegistry: Record<string, ToolContent> = {
     "schemaCategory": SchemaCategory.UtilitiesApplication,
     "personas": [TargetPersona.SecurityConsciousEnterprise],
     "valueProposition": StrategicValueCategory.ZeroTransitPrivacySovereignty,
+    "faqs": toolFaqs["meeting-qr-code"],
     "howTo": {
       "name": "How to Create a Meeting QR Code",
       "description": "Generate a QR code that directs users to a virtual meeting.",
@@ -365,6 +371,7 @@ export const contentRegistry: Record<string, ToolContent> = {
     "url": getPublicDomain() + "/payment-qr-code",
     "description": "Create secure crypto payment QR codes for Bitcoin, Ethereum, Solana, and more. Accept payments easily.",
     "seoTitle": "Free Crypto Payment QR Code Generator | Bitcoin, Ethereum - QRCraftly",
+    "heading": "Free Crypto Payment QR Code Generator",
     "image": "/og-image.png?type=payment",
     "imageAlt": "Preview of the Payment QR Code Generator tool",
     "features": [
@@ -376,6 +383,7 @@ export const contentRegistry: Record<string, ToolContent> = {
     "schemaCategory": SchemaCategory.BusinessApplication,
     "personas": [TargetPersona.SecurityConsciousEnterprise],
     "valueProposition": StrategicValueCategory.ZeroTransitPrivacySovereignty,
+    "faqs": toolFaqs["payment-qr-code"],
     "howTo": {
       "name": "How to Create a Payment QR Code",
       "description": "Generate a QR code to receive cryptocurrency payments.",
@@ -401,6 +409,7 @@ export const contentRegistry: Record<string, ToolContent> = {
     "url": getPublicDomain() + "/phone-qr-code",
     "description": "Create QR codes that dial a phone number when scanned. Ideal for business cards, flyers, and advertisements.",
     "seoTitle": "Free Phone QR Code Generator | Click-to-Call - QRCraftly",
+    "heading": "Free Phone QR Code Generator",
     "image": "/og-image.png?type=phone",
     "imageAlt": "Preview of the Phone QR Code Generator tool",
     "features": [
@@ -412,6 +421,7 @@ export const contentRegistry: Record<string, ToolContent> = {
     "schemaCategory": SchemaCategory.UtilitiesApplication,
     "personas": [TargetPersona.HealthcareLegal],
     "valueProposition": StrategicValueCategory.ZeroTransitPrivacySovereignty,
+    "faqs": toolFaqs["phone-qr-code"],
     "howTo": {
       "name": "How to Create a Phone QR Code",
       "description": "Create a QR code that prompts the user to dial a number.",
@@ -437,6 +447,7 @@ export const contentRegistry: Record<string, ToolContent> = {
     "url": getPublicDomain() + "/sms-qr-code",
     "description": "Generate QR codes that open a pre-filled SMS message. Set recipient and message body. Perfect for opt-ins and support.",
     "seoTitle": "Free SMS QR Code Generator | Pre-filled Text Messages - QRCraftly",
+    "heading": "Free SMS QR Code Generator",
     "image": "/og-image.png?type=sms",
     "imageAlt": "Preview of the SMS QR Code Generator tool",
     "features": [
@@ -448,6 +459,7 @@ export const contentRegistry: Record<string, ToolContent> = {
     "schemaCategory": SchemaCategory.UtilitiesApplication,
     "personas": [TargetPersona.HealthcareLegal],
     "valueProposition": StrategicValueCategory.ZeroTransitPrivacySovereignty,
+    "faqs": toolFaqs["sms-qr-code"],
     "howTo": {
       "name": "How to Create an SMS QR Code",
       "description": "Generate a QR code that opens a drafted text message.",
@@ -473,6 +485,7 @@ export const contentRegistry: Record<string, ToolContent> = {
     "url": getPublicDomain() + "/social-qr-code",
     "description": "Create QR codes linking directly to your social media profiles on Instagram, Twitter, or TikTok. Fast, free, and secure.",
     "seoTitle": "Free Social Media QR Code Generator | Connect Profiles - QRCraftly",
+    "heading": "Free Social Media QR Code Generator",
     "image": "/og-image.png?type=social",
     "imageAlt": "Preview of the Social QR Code Generator tool",
     "features": [
@@ -484,6 +497,7 @@ export const contentRegistry: Record<string, ToolContent> = {
     "schemaCategory": SchemaCategory.SocialNetworkingApplication,
     "personas": [TargetPersona.SecurityConsciousEnterprise],
     "valueProposition": StrategicValueCategory.ZeroTransitPrivacySovereignty,
+    "faqs": toolFaqs["social-qr-code"],
     "howTo": {
       "name": "How to Create a Social QR Code",
       "description": "Generate a QR code that links directly to your social profile.",
@@ -509,6 +523,7 @@ export const contentRegistry: Record<string, ToolContent> = {
     "url": getPublicDomain() + "/text-qr-code",
     "description": "Convert any text into a QR code instantly. Free, secure, and customizable. Perfect for sharing messages, notes, or codes.",
     "seoTitle": "Free Text QR Code Generator | Convert Text to QR - QRCraftly",
+    "heading": "Free Text QR Code Generator",
     "image": "/og-image.png?type=text",
     "imageAlt": "Preview of the Text QR Code Generator tool",
     "features": [
@@ -520,6 +535,7 @@ export const contentRegistry: Record<string, ToolContent> = {
     "schemaCategory": SchemaCategory.UtilitiesApplication,
     "personas": [TargetPersona.HealthcareLegal, TargetPersona.SecurityConsciousEnterprise],
     "valueProposition": StrategicValueCategory.ZeroTransitPrivacySovereignty,
+    "faqs": toolFaqs["text-qr-code"],
     "howTo": {
       "name": "How to Create a Text QR Code",
       "description": "Convert plain text into a scannable QR code.",
@@ -545,6 +561,7 @@ export const contentRegistry: Record<string, ToolContent> = {
     "url": getPublicDomain() + "/vcard-qr-code",
     "description": "Generate vCard QR codes for digital business cards. Share contact details easily. Compatible with all smartphones.",
     "seoTitle": "Free vCard QR Code Generator | Digital Business Cards - QRCraftly",
+    "heading": "Free vCard QR Code Generator",
     "image": "/og-image.png?type=vcard",
     "imageAlt": "Preview of the vCard QR Code Generator tool",
     "features": [
@@ -556,6 +573,7 @@ export const contentRegistry: Record<string, ToolContent> = {
     "schemaCategory": SchemaCategory.BusinessApplication,
     "personas": [TargetPersona.HealthcareLegal, TargetPersona.SecurityConsciousEnterprise],
     "valueProposition": StrategicValueCategory.ZeroTransitPrivacySovereignty,
+    "faqs": toolFaqs["vcard-qr-code"],
     "howTo": {
       "name": "How to Create a vCard QR Code",
       "description": "Create a digital business card that can be scanned to save contact info.",
@@ -581,6 +599,7 @@ export const contentRegistry: Record<string, ToolContent> = {
     "url": getPublicDomain() + "/wifi-qr-code",
     "description": "Create a QR code for your WiFi network. Allow guests to connect instantly without typing passwords. Secure and free.",
     "seoTitle": "Free WiFi QR Code Generator | Connect Without Password - QRCraftly",
+    "heading": "Free WiFi QR Code Generator",
     "image": "/og-image.png?type=wifi",
     "imageAlt": "Preview of the WiFi QR Code Generator tool",
     "features": [
@@ -592,6 +611,7 @@ export const contentRegistry: Record<string, ToolContent> = {
     "schemaCategory": SchemaCategory.UtilitiesApplication,
     "personas": [TargetPersona.SecurityConsciousEnterprise],
     "valueProposition": StrategicValueCategory.ZeroTransitPrivacySovereignty,
+    "faqs": toolFaqs["wifi-qr-code"],
     "howTo": {
       "name": "How to Create a WiFi QR Code",
       "description": "Generate a QR code to share your WiFi network instantly.",
