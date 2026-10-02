@@ -98,7 +98,9 @@ test.describe('Optical file transfer', () => {
       // The receiver joins after the stream has started and misses a quarter of the frames.
       await openSender(sender, file);
       await expect(sender.getByTestId('fountain-symbol-info')).toContainText('bytes (uncompressed)');
-      await sender.waitForTimeout(1_000);
+      await expect
+        .poll(async () => Number(/^(\d+)/.exec((await sender.getByTestId('sender-frames').textContent()) ?? '')?.[1] ?? 0))
+        .toBeGreaterThanOrEqual(5);
       await openReceiver(receiver);
       await relayUntilComplete(sender, receiver, { drop: n => n % 4 === 0 });
 

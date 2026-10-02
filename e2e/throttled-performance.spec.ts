@@ -97,8 +97,8 @@ test.describe('Throttled Interactive Performance Testing', () => {
           const styleButton = page.getByLabel(style.ariaLabel);
           await styleButton.click({ force: true });
 
-          // Wait to allow all layout computation, canvas drawing, and async queues to settle
-          await page.waitForTimeout(500);
+          // Wait until the main thread goes idle: layout, canvas drawing and async queues have settled.
+          await page.evaluate(() => new Promise<void>(resolve => requestIdleCallback(() => resolve(), { timeout: 5_000 })));
 
           // Fetch captured main-thread long tasks from the window observer, filtering out CDP setup artifacts (> 2000ms)
           const longTasks = (await page.evaluate(() => {

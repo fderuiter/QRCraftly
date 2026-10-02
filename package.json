@@ -23,7 +23,6 @@
     "customizable"
   ],
   "scripts": {
-    "predev": "node scripts/compile_docs_manifest.js",
     "dev": "vite",
     "prebuild": "node scripts/storage_privacy_ast_auditor.js",
     "build": "node scripts/compile_docs_manifest.js --check && vite build && pnpm run postbuild",
