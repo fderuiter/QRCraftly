@@ -1,5 +1,5 @@
-import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import { axe } from 'vitest-axe';
 import { Button, ButtonLink } from './Button';
 
@@ -72,6 +72,88 @@ describe('ButtonLink', () => {
 
   it('has no axe violations', async () => {
     const { container } = render(<ButtonLink href="/">Go Home</ButtonLink>);
+    expect(await axe(container)).toHaveNoViolations();
+  });
+});
+
+describe('Button loading state', () => {
+  it('marks the button busy, keeps its accessible name and ignores clicks', () => {
+    const onClick = vi.fn();
+    render(
+      <Button loading onClick={onClick}>
+        Download
+      </Button>,
+    );
+    const button = screen.getByRole('button', { name: 'Download' });
+    expect(button).toHaveAttribute('aria-busy', 'true');
+    expect(button.className).toContain('text-transparent!');
+    expect(button.querySelector('[aria-hidden="true"] span')).toHaveClass('motion-safe:animate-spin');
+    fireEvent.click(button);
+    expect(onClick).not.toHaveBeenCalled();
+  });
+
+  it('clicks normally when not loading', () => {
+    const onClick = vi.fn();
+    render(<Button onClick={onClick}>Download</Button>);
+    const button = screen.getByRole('button', { name: 'Download' });
+    expect(button).not.toHaveAttribute('aria-busy');
+    fireEvent.click(button);
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('has no axe violations while loading', async () => {
+    const { container } = render(<Button loading>Save</Button>);
+    expect(await axe(container)).toHaveNoViolations();
+  });
+});
+
+describe('Button icon-only and shape', () => {
+  it.each([
+    ['xs', 'size-6'],
+    ['sm', 'size-8'],
+    ['md', 'size-10'],
+    ['lg', 'size-11'],
+  ] as const)('sizes an icon-only %s button as a square %s', (size, cls) => {
+    render(
+      <Button iconOnly aria-label="Close" size={size} variant="icon">
+        <svg aria-hidden="true" />
+      </Button>,
+    );
+    expect(screen.getByRole('button', { name: 'Close' })).toHaveClass(cls);
+  });
+
+  it('rounds the button fully with shape="round"', () => {
+    render(
+      <Button iconOnly aria-label="Theme" shape="round" size="lg" variant="icon">
+        <svg aria-hidden="true" />
+      </Button>,
+    );
+    expect(screen.getByRole('button', { name: 'Theme' })).toHaveClass('rounded-full');
+  });
+
+  it('presses with the standard scale only when motion is allowed', () => {
+    render(<Button>Press</Button>);
+    expect(screen.getByRole('button', { name: 'Press' })).toHaveClass('motion-safe:active:scale-98');
+  });
+
+  it('styles the danger and dropzone variants with tokens', () => {
+    render(
+      <>
+        <Button variant="danger">Delete</Button>
+        <Button variant="dropzone">Upload</Button>
+      </>,
+    );
+    expect(screen.getByRole('button', { name: 'Delete' })).toHaveClass('text-danger', 'hover:bg-danger-soft');
+    expect(screen.getByRole('button', { name: 'Upload' })).toHaveClass('border-dashed', 'data-dragover:border-accent');
+  });
+
+  it('has no axe violations as an icon-only link', async () => {
+    const { container } = render(
+      <ButtonLink href="/how-to" iconOnly aria-label="How to use" variant="icon" size="lg" shape="round">
+        <svg aria-hidden="true" />
+      </ButtonLink>,
+    );
+    expect(screen.getByRole('link', { name: 'How to use' })).toHaveClass('size-11', 'rounded-full');
     expect(await axe(container)).toHaveNoViolations();
   });
 });

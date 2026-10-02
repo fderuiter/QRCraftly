@@ -18,6 +18,7 @@
 
 import React, { Suspense, useEffect, useState } from 'react';
 import type { BulkCsvInputProps } from './BulkCsvInput';
+import { Skeleton } from '../ui/Skeleton';
 
 // Code-split: the CSV parser, ZIP writer and batch UI load only when the Bulk CSV
 // type is opened, so every other page keeps its JavaScript budget.
@@ -25,12 +26,7 @@ const BulkCsvInput = React.lazy(() =>
   import('./BulkCsvInput').then((module) => ({ default: module.BulkCsvInput }))
 );
 
-const Placeholder = () => (
-  <div
-    aria-hidden="true"
-    className="h-48 rounded-xl bg-slate-100 motion-safe:animate-pulse dark:bg-slate-800"
-  />
-);
+const Placeholder = () => <Skeleton className="h-48" />;
 
 /**
  * Registry entry for the Bulk CSV Batch type. Renders a placeholder during

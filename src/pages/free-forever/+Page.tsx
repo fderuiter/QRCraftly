@@ -17,6 +17,7 @@
 */
 
 
+import { Eyebrow } from '@/components/ui/SectionHeading';
 import { Ban, EyeOff, Laptop, Gift } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { JsonLdScript } from '@/components/ui/JsonLdScript';
@@ -58,7 +59,7 @@ export default function Page() {
         <JsonLdScript data={schemaData} />
 
         <header className="mb-12 text-center">
-          <p className="mb-3 text-sm font-semibold tracking-wider text-accent uppercase">The QRCraftly Pledge</p>
+          <Eyebrow tone="accent" className="mb-3 justify-center">The QRCraftly Pledge</Eyebrow>
           <h1 className="mb-6 text-4xl font-bold text-fg md:text-5xl">{PLEDGE_HEADLINE}</h1>
           <p className="mx-auto mb-4 max-w-2xl text-xl font-medium text-fg">{PLEDGE_LEAD}</p>
           <p className="mx-auto max-w-2xl text-lg leading-relaxed text-fg-muted">{PLEDGE_WHY}</p>

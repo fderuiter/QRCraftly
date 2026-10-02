@@ -508,7 +508,7 @@ describe('QRTool Component', () => {
       });
 
       render(<ToastProvider><QRTool /></ToastProvider>);
-      const shareBtn = screen.getByTitle('Share');
+      const shareBtn = screen.getByRole('button', { name: 'Share QR code' });
       fireEvent.click(shareBtn);
 
       await waitFor(() => {
@@ -615,7 +615,7 @@ describe('QRTool Component', () => {
 
       try {
         render(<ToastProvider><QRTool /></ToastProvider>);
-        const copyBtn = screen.getByTitle('Copy Image');
+        const copyBtn = screen.getByRole('button', { name: 'Copy QR code to clipboard' });
 
         // Set focus to the copy button to simulate keyboard/user focus
         copyBtn.focus();
@@ -740,7 +740,7 @@ describe('QRTool Component', () => {
 
       try {
         render(<ToastProvider><QRTool /></ToastProvider>);
-        const shareBtn = screen.getByTitle('Share');
+        const shareBtn = screen.getByRole('button', { name: 'Share QR code' });
 
         // Focus the share button
         shareBtn.focus();
@@ -874,7 +874,7 @@ describe('Generator workspace structure (#795, #802)', { timeout: 20000 }, () =>
 
     fireEvent.click(layout);
     expect(layout).toHaveAttribute('aria-expanded', 'true');
-    const headline = screen.getByRole('button', { name: /Minimalist template/i });
+    const headline = screen.getByRole('radio', { name: /Minimalist template/i });
     fireEvent.click(headline);
     const headlineInput = screen.getByLabelText('Template headline');
     fireEvent.change(headlineInput, { target: { value: 'Scan me' } });

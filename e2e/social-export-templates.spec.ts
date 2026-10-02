@@ -62,22 +62,22 @@ test.describe('Export Layout section', () => {
 
   test('renders Aspect Ratio label and three format buttons', async ({ page }) => {
     await expect(page.getByText('Aspect Ratio')).toBeVisible();
-    await expect(page.getByRole('button', { name: /Select Square format/i })).toBeVisible();
-    await expect(page.getByRole('button', { name: /Select Portrait format/i })).toBeVisible();
-    await expect(page.getByRole('button', { name: /Select Story format/i })).toBeVisible();
+    await expect(page.getByRole('radio', { name: /Select Square format/i })).toBeVisible();
+    await expect(page.getByRole('radio', { name: /Select Portrait format/i })).toBeVisible();
+    await expect(page.getByRole('radio', { name: /Select Story format/i })).toBeVisible();
   });
 
   test('renders Template label and four style buttons', async ({ page }) => {
     await expect(page.getByText('Template', { exact: true })).toBeVisible();
-    await expect(page.getByRole('button', { name: /Select None template/i })).toBeVisible();
-    await expect(page.getByRole('button', { name: /Select Minimalist template/i })).toBeVisible();
-    await expect(page.getByRole('button', { name: /Select Gradient template/i })).toBeVisible();
-    await expect(page.getByRole('button', { name: /Select Solid Frame template/i })).toBeVisible();
+    await expect(page.getByRole('radio', { name: /Select None template/i })).toBeVisible();
+    await expect(page.getByRole('radio', { name: /Select Minimalist template/i })).toBeVisible();
+    await expect(page.getByRole('radio', { name: /Select Gradient template/i })).toBeVisible();
+    await expect(page.getByRole('radio', { name: /Select Solid Frame template/i })).toBeVisible();
   });
 
-  test('Square and None are selected by default (aria-pressed=true)', async ({ page }) => {
-    await expect(page.getByRole('button', { name: /Select Square format/i })).toHaveAttribute('aria-pressed', 'true');
-    await expect(page.getByRole('button', { name: /Select None template/i })).toHaveAttribute('aria-pressed', 'true');
+  test('Square and None are selected by default (aria-checked=true)', async ({ page }) => {
+    await expect(page.getByRole('radio', { name: /Select Square format/i })).toHaveAttribute('aria-checked', 'true');
+    await expect(page.getByRole('radio', { name: /Select None template/i })).toHaveAttribute('aria-checked', 'true');
   });
 });
 
@@ -87,27 +87,27 @@ test.describe('Export Layout section', () => {
 
 test.describe('Aspect Ratio selection', () => {
   test('clicking Portrait marks it as pressed and deselects Square', async ({ page }) => {
-    await page.getByRole('button', { name: /Select Portrait format/i }).click();
+    await page.getByRole('radio', { name: /Select Portrait format/i }).click();
 
-    await expect(page.getByRole('button', { name: /Select Portrait format/i })).toHaveAttribute('aria-pressed', 'true');
-    await expect(page.getByRole('button', { name: /Select Square format/i })).toHaveAttribute('aria-pressed', 'false');
-    await expect(page.getByRole('button', { name: /Select Story format/i })).toHaveAttribute('aria-pressed', 'false');
+    await expect(page.getByRole('radio', { name: /Select Portrait format/i })).toHaveAttribute('aria-checked', 'true');
+    await expect(page.getByRole('radio', { name: /Select Square format/i })).toHaveAttribute('aria-checked', 'false');
+    await expect(page.getByRole('radio', { name: /Select Story format/i })).toHaveAttribute('aria-checked', 'false');
   });
 
   test('clicking Story marks it as pressed', async ({ page }) => {
-    await page.getByRole('button', { name: /Select Story format/i }).click();
+    await page.getByRole('radio', { name: /Select Story format/i }).click();
 
-    await expect(page.getByRole('button', { name: /Select Story format/i })).toHaveAttribute('aria-pressed', 'true');
-    await expect(page.getByRole('button', { name: /Select Square format/i })).toHaveAttribute('aria-pressed', 'false');
-    await expect(page.getByRole('button', { name: /Select Portrait format/i })).toHaveAttribute('aria-pressed', 'false');
+    await expect(page.getByRole('radio', { name: /Select Story format/i })).toHaveAttribute('aria-checked', 'true');
+    await expect(page.getByRole('radio', { name: /Select Square format/i })).toHaveAttribute('aria-checked', 'false');
+    await expect(page.getByRole('radio', { name: /Select Portrait format/i })).toHaveAttribute('aria-checked', 'false');
   });
 
   test('clicking Square after Story restores Square as pressed', async ({ page }) => {
-    await page.getByRole('button', { name: /Select Story format/i }).click();
-    await page.getByRole('button', { name: /Select Square format/i }).click();
+    await page.getByRole('radio', { name: /Select Story format/i }).click();
+    await page.getByRole('radio', { name: /Select Square format/i }).click();
 
-    await expect(page.getByRole('button', { name: /Select Square format/i })).toHaveAttribute('aria-pressed', 'true');
-    await expect(page.getByRole('button', { name: /Select Story format/i })).toHaveAttribute('aria-pressed', 'false');
+    await expect(page.getByRole('radio', { name: /Select Square format/i })).toHaveAttribute('aria-checked', 'true');
+    await expect(page.getByRole('radio', { name: /Select Story format/i })).toHaveAttribute('aria-checked', 'false');
   });
 });
 
@@ -124,7 +124,7 @@ test.describe('Canvas aspect ratio reflects selected format', () => {
   });
 
   test('canvas wrapper aspect-ratio changes to 1080/1350 for Portrait', async ({ page }) => {
-    await page.getByRole('button', { name: /Select Portrait format/i }).click();
+    await page.getByRole('radio', { name: /Select Portrait format/i }).click();
 
     // Wait for re-render
     const canvas = page.locator('canvas');
@@ -135,7 +135,7 @@ test.describe('Canvas aspect ratio reflects selected format', () => {
   });
 
   test('canvas wrapper aspect-ratio changes to 1080/1920 for Story', async ({ page }) => {
-    await page.getByRole('button', { name: /Select Story format/i }).click();
+    await page.getByRole('radio', { name: /Select Story format/i }).click();
 
     const wrapper = page.locator('.aspect-\\[9\\/16\\]').first();
     await expect(wrapper).toHaveClass(/aspect-\[9\/16\]/);
@@ -158,7 +158,7 @@ test.describe('Canvas internal pixel dimensions', () => {
   });
 
   test('canvas height is 1350/1080 × width after switching to Portrait', async ({ page }) => {
-    await page.getByRole('button', { name: /Select Portrait format/i }).click();
+    await page.getByRole('radio', { name: /Select Portrait format/i }).click();
     await page.waitForFunction(() => {
       const c = document.querySelector('canvas');
       return c && c.width !== c.height;
@@ -169,7 +169,7 @@ test.describe('Canvas internal pixel dimensions', () => {
   });
 
   test('canvas height is 1920/1080 × width after switching to Story', async ({ page }) => {
-    await page.getByRole('button', { name: /Select Story format/i }).click();
+    await page.getByRole('radio', { name: /Select Story format/i }).click();
     await page.waitForFunction(() => {
       const c = document.querySelector('canvas');
       return c && c.width !== c.height;
@@ -185,31 +185,31 @@ test.describe('Canvas internal pixel dimensions', () => {
 
 test.describe('Template style selection', () => {
   test('clicking Minimalist marks it as pressed and deselects None', async ({ page }) => {
-    await page.getByRole('button', { name: /Select Minimalist template/i }).click();
+    await page.getByRole('radio', { name: /Select Minimalist template/i }).click();
 
-    await expect(page.getByRole('button', { name: /Select Minimalist template/i })).toHaveAttribute('aria-pressed', 'true');
-    await expect(page.getByRole('button', { name: /Select None template/i })).toHaveAttribute('aria-pressed', 'false');
+    await expect(page.getByRole('radio', { name: /Select Minimalist template/i })).toHaveAttribute('aria-checked', 'true');
+    await expect(page.getByRole('radio', { name: /Select None template/i })).toHaveAttribute('aria-checked', 'false');
   });
 
   test('clicking Gradient marks it as pressed', async ({ page }) => {
-    await page.getByRole('button', { name: /Select Gradient template/i }).click();
+    await page.getByRole('radio', { name: /Select Gradient template/i }).click();
 
-    await expect(page.getByRole('button', { name: /Select Gradient template/i })).toHaveAttribute('aria-pressed', 'true');
-    await expect(page.getByRole('button', { name: /Select None template/i })).toHaveAttribute('aria-pressed', 'false');
+    await expect(page.getByRole('radio', { name: /Select Gradient template/i })).toHaveAttribute('aria-checked', 'true');
+    await expect(page.getByRole('radio', { name: /Select None template/i })).toHaveAttribute('aria-checked', 'false');
   });
 
   test('clicking Solid Frame marks it as pressed', async ({ page }) => {
-    await page.getByRole('button', { name: /Select Solid Frame template/i }).click();
+    await page.getByRole('radio', { name: /Select Solid Frame template/i }).click();
 
-    await expect(page.getByRole('button', { name: /Select Solid Frame template/i })).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByRole('radio', { name: /Select Solid Frame template/i })).toHaveAttribute('aria-checked', 'true');
   });
 
   test('clicking None after Minimalist restores None as pressed', async ({ page }) => {
-    await page.getByRole('button', { name: /Select Minimalist template/i }).click();
-    await page.getByRole('button', { name: /Select None template/i }).click();
+    await page.getByRole('radio', { name: /Select Minimalist template/i }).click();
+    await page.getByRole('radio', { name: /Select None template/i }).click();
 
-    await expect(page.getByRole('button', { name: /Select None template/i })).toHaveAttribute('aria-pressed', 'true');
-    await expect(page.getByRole('button', { name: /Select Minimalist template/i })).toHaveAttribute('aria-pressed', 'false');
+    await expect(page.getByRole('radio', { name: /Select None template/i })).toHaveAttribute('aria-checked', 'true');
+    await expect(page.getByRole('radio', { name: /Select Minimalist template/i })).toHaveAttribute('aria-checked', 'false');
   });
 });
 
@@ -224,37 +224,37 @@ test.describe('Headline and subtext inputs', () => {
   });
 
   test('headline and subtext inputs appear when Minimalist is selected', async ({ page }) => {
-    await page.getByRole('button', { name: /Select Minimalist template/i }).click();
+    await page.getByRole('radio', { name: /Select Minimalist template/i }).click();
 
     await expect(page.getByLabel('Template headline')).toBeVisible();
     await expect(page.getByLabel('Template subtext')).toBeVisible();
   });
 
   test('headline and subtext inputs appear when Gradient is selected', async ({ page }) => {
-    await page.getByRole('button', { name: /Select Gradient template/i }).click();
+    await page.getByRole('radio', { name: /Select Gradient template/i }).click();
 
     await expect(page.getByLabel('Template headline')).toBeVisible();
     await expect(page.getByLabel('Template subtext')).toBeVisible();
   });
 
   test('headline and subtext inputs appear when Solid Frame is selected', async ({ page }) => {
-    await page.getByRole('button', { name: /Select Solid Frame template/i }).click();
+    await page.getByRole('radio', { name: /Select Solid Frame template/i }).click();
 
     await expect(page.getByLabel('Template headline')).toBeVisible();
     await expect(page.getByLabel('Template subtext')).toBeVisible();
   });
 
   test('inputs are hidden again when switching back to None', async ({ page }) => {
-    await page.getByRole('button', { name: /Select Minimalist template/i }).click();
+    await page.getByRole('radio', { name: /Select Minimalist template/i }).click();
     await expect(page.getByLabel('Template headline')).toBeVisible();
 
-    await page.getByRole('button', { name: /Select None template/i }).click();
+    await page.getByRole('radio', { name: /Select None template/i }).click();
     await expect(page.getByLabel('Template headline')).not.toBeVisible();
     await expect(page.getByLabel('Template subtext')).not.toBeVisible();
   });
 
   test('headline input accepts text and reflects the value', async ({ page }) => {
-    await page.getByRole('button', { name: /Select Minimalist template/i }).click();
+    await page.getByRole('radio', { name: /Select Minimalist template/i }).click();
 
     const headlineInput = page.getByLabel('Template headline');
     await headlineInput.fill('Scan Me!');
@@ -262,7 +262,7 @@ test.describe('Headline and subtext inputs', () => {
   });
 
   test('subtext input accepts text and reflects the value', async ({ page }) => {
-    await page.getByRole('button', { name: /Select Gradient template/i }).click();
+    await page.getByRole('radio', { name: /Select Gradient template/i }).click();
 
     const subtextInput = page.getByLabel('Template subtext');
     await subtextInput.fill('@qrcraftly');
@@ -270,13 +270,13 @@ test.describe('Headline and subtext inputs', () => {
   });
 
   test('headline input has correct placeholder text', async ({ page }) => {
-    await page.getByRole('button', { name: /Select Solid Frame template/i }).click();
+    await page.getByRole('radio', { name: /Select Solid Frame template/i }).click();
 
     await expect(page.getByLabel('Template headline')).toHaveAttribute('placeholder', /Headline/i);
   });
 
   test('subtext input has correct placeholder text', async ({ page }) => {
-    await page.getByRole('button', { name: /Select Solid Frame template/i }).click();
+    await page.getByRole('radio', { name: /Select Solid Frame template/i }).click();
 
     await expect(page.getByLabel('Template subtext')).toHaveAttribute('placeholder', /Subtext/i);
   });
@@ -288,46 +288,46 @@ test.describe('Headline and subtext inputs', () => {
 
 test.describe('Live QR canvas after format/template changes', () => {
   test('QR canvas is visible after switching to Portrait format', async ({ page }) => {
-    await page.getByRole('button', { name: /Select Portrait format/i }).click();
+    await page.getByRole('radio', { name: /Select Portrait format/i }).click();
 
     await expect(page.getByRole('img', { name: /QR Code for/i })).toBeVisible();
     await expect(page.getByRole('img', { name: /Scan to view content/i })).toBeVisible();
   });
 
   test('QR canvas is visible after switching to Story format', async ({ page }) => {
-    await page.getByRole('button', { name: /Select Story format/i }).click();
+    await page.getByRole('radio', { name: /Select Story format/i }).click();
 
     await expect(page.getByRole('img', { name: /QR Code for/i })).toBeVisible();
     await expect(page.getByRole('img', { name: /Scan to view content/i })).toBeVisible();
   });
 
   test('QR canvas is visible after selecting Minimalist template', async ({ page }) => {
-    await page.getByRole('button', { name: /Select Minimalist template/i }).click();
+    await page.getByRole('radio', { name: /Select Minimalist template/i }).click();
 
     await expect(page.getByRole('img', { name: /QR Code for/i })).toBeVisible();
   });
 
   test('QR canvas is visible after selecting Gradient Blur template', async ({ page }) => {
-    await page.getByRole('button', { name: /Select Gradient template/i }).click();
+    await page.getByRole('radio', { name: /Select Gradient template/i }).click();
 
     await expect(page.getByRole('img', { name: /QR Code for/i })).toBeVisible();
   });
 
   test('QR canvas is visible after selecting Solid Frame template', async ({ page }) => {
-    await page.getByRole('button', { name: /Select Solid Frame template/i }).click();
+    await page.getByRole('radio', { name: /Select Solid Frame template/i }).click();
 
     await expect(page.getByRole('img', { name: /QR Code for/i })).toBeVisible();
   });
 
   test('QR canvas still visible after Story format + Minimalist template combination', async ({ page }) => {
-    await page.getByRole('button', { name: /Select Story format/i }).click();
-    await page.getByRole('button', { name: /Select Minimalist template/i }).click();
+    await page.getByRole('radio', { name: /Select Story format/i }).click();
+    await page.getByRole('radio', { name: /Select Minimalist template/i }).click();
 
     await expect(page.getByRole('img', { name: /QR Code for/i })).toBeVisible();
   });
 
   test('QR canvas updates when headline text is entered', async ({ page }) => {
-    await page.getByRole('button', { name: /Select Minimalist template/i }).click();
+    await page.getByRole('radio', { name: /Select Minimalist template/i }).click();
     await page.getByLabel('Template headline').fill('Hello World');
 
     // Canvas should still be alive with a scannable image
@@ -341,8 +341,8 @@ test.describe('Live QR canvas after format/template changes', () => {
 
 test.describe('Format and template persist across QR type changes', () => {
   test('selected format is preserved when switching QR type to Text', async ({ page }) => {
-    await page.getByRole('button', { name: /Select Story format/i }).click();
-    await expect(page.getByRole('button', { name: /Select Story format/i })).toHaveAttribute('aria-pressed', 'true');
+    await page.getByRole('radio', { name: /Select Story format/i }).click();
+    await expect(page.getByRole('radio', { name: /Select Story format/i })).toHaveAttribute('aria-checked', 'true');
 
     // Switch QR type
     await page.getByRole('navigation', { name: 'QR code types' }).getByRole('link', { name: 'Event' }).click();
@@ -351,18 +351,18 @@ test.describe('Format and template persist across QR type changes', () => {
     await page.getByText('Export Layout').waitFor({ state: 'visible' });
 
     // Story should still be selected after type change
-    await expect(page.getByRole('button', { name: /Select Story format/i })).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByRole('radio', { name: /Select Story format/i })).toHaveAttribute('aria-checked', 'true');
   });
 
   test('selected template is preserved when switching QR type', async ({ page }) => {
-    await page.getByRole('button', { name: /Select Gradient template/i }).click();
-    await expect(page.getByRole('button', { name: /Select Gradient template/i })).toHaveAttribute('aria-pressed', 'true');
+    await page.getByRole('radio', { name: /Select Gradient template/i }).click();
+    await expect(page.getByRole('radio', { name: /Select Gradient template/i })).toHaveAttribute('aria-checked', 'true');
 
     await page.getByRole('navigation', { name: 'QR code types' }).getByRole('link', { name: 'Location' }).click();
     await page.waitForURL(/\/location-qr-code$/);
     await page.getByText('Export Layout').waitFor({ state: 'visible' });
 
-    await expect(page.getByRole('button', { name: /Select Gradient template/i })).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByRole('radio', { name: /Select Gradient template/i })).toHaveAttribute('aria-checked', 'true');
   });
 });
 
@@ -389,7 +389,7 @@ test.describe('SVG download', () => {
   });
 
   test('SVG download in Story format still produces a download', async ({ page }) => {
-    await page.getByRole('button', { name: /Select Story format/i }).click();
+    await page.getByRole('radio', { name: /Select Story format/i }).click();
 
     const [download] = await Promise.all([
       page.waitForEvent('download'),
@@ -408,7 +408,7 @@ test.describe('SVG download', () => {
   });
 
   test('SVG with Minimalist template still produces a download', async ({ page }) => {
-    await page.getByRole('button', { name: /Select Minimalist template/i }).click();
+    await page.getByRole('radio', { name: /Select Minimalist template/i }).click();
 
     const [download] = await Promise.all([
       page.waitForEvent('download'),
@@ -445,7 +445,7 @@ test.describe('PNG download', () => {
   });
 
   test('PNG download in Portrait format triggers a download', async ({ page }) => {
-    await page.getByRole('button', { name: /Select Portrait format/i }).click();
+    await page.getByRole('radio', { name: /Select Portrait format/i }).click();
 
     const [download] = await Promise.all([
       page.waitForEvent('download'),
@@ -459,7 +459,7 @@ test.describe('PNG download', () => {
   });
 
   test('PNG download in Story format triggers a download', async ({ page }) => {
-    await page.getByRole('button', { name: /Select Story format/i }).click();
+    await page.getByRole('radio', { name: /Select Story format/i }).click();
 
     const [download] = await Promise.all([
       page.waitForEvent('download'),
@@ -478,44 +478,44 @@ test.describe('PNG download', () => {
 // ---------------------------------------------------------------------------
 
 test.describe('Keyboard accessibility for layout controls', () => {
-  test('format buttons have aria-pressed attribute', async ({ page }) => {
-    const squareBtn = page.getByRole('button', { name: /Select Square format/i });
-    const portraitBtn = page.getByRole('button', { name: /Select Portrait format/i });
-    const storyBtn = page.getByRole('button', { name: /Select Story format/i });
+  test('format buttons have aria-checked attribute', async ({ page }) => {
+    const squareBtn = page.getByRole('radio', { name: /Select Square format/i });
+    const portraitBtn = page.getByRole('radio', { name: /Select Portrait format/i });
+    const storyBtn = page.getByRole('radio', { name: /Select Story format/i });
 
-    // All buttons should have aria-pressed defined
-    await expect(squareBtn).toHaveAttribute('aria-pressed');
-    await expect(portraitBtn).toHaveAttribute('aria-pressed');
-    await expect(storyBtn).toHaveAttribute('aria-pressed');
+    // All buttons should have aria-checked defined
+    await expect(squareBtn).toHaveAttribute('aria-checked');
+    await expect(portraitBtn).toHaveAttribute('aria-checked');
+    await expect(storyBtn).toHaveAttribute('aria-checked');
   });
 
-  test('template buttons have aria-pressed attribute', async ({ page }) => {
+  test('template buttons have aria-checked attribute', async ({ page }) => {
     for (const name of ['None', 'Minimalist', 'Gradient', 'Solid Frame']) {
-      const btn = page.getByRole('button', { name: new RegExp(`Select ${name} template`, 'i') });
-      await expect(btn).toHaveAttribute('aria-pressed');
+      const btn = page.getByRole('radio', { name: new RegExp(`Select ${name} template`, 'i') });
+      await expect(btn).toHaveAttribute('aria-checked');
     }
   });
 
   test('format buttons are keyboard-focusable', async ({ page }) => {
-    const storyBtn = page.getByRole('button', { name: /Select Story format/i });
+    const storyBtn = page.getByRole('radio', { name: /Select Story format/i });
     await storyBtn.focus();
     await expect(storyBtn).toBeFocused();
   });
 
   test('pressing Enter on a format button activates it', async ({ page }) => {
-    const storyBtn = page.getByRole('button', { name: /Select Story format/i });
+    const storyBtn = page.getByRole('radio', { name: /Select Story format/i });
     await storyBtn.focus();
     await storyBtn.press('Enter');
 
-    await expect(storyBtn).toHaveAttribute('aria-pressed', 'true');
+    await expect(storyBtn).toHaveAttribute('aria-checked', 'true');
   });
 
   test('pressing Enter on a template button activates it', async ({ page }) => {
-    const minimalistBtn = page.getByRole('button', { name: /Select Minimalist template/i });
+    const minimalistBtn = page.getByRole('radio', { name: /Select Minimalist template/i });
     await minimalistBtn.focus();
     await minimalistBtn.press('Enter');
 
-    await expect(minimalistBtn).toHaveAttribute('aria-pressed', 'true');
+    await expect(minimalistBtn).toHaveAttribute('aria-checked', 'true');
   });
 });
 
@@ -524,13 +524,13 @@ test.describe('Keyboard accessibility for layout controls', () => {
 // ---------------------------------------------------------------------------
 
 test.describe('ARIA roles and groups', () => {
-  test('Aspect Ratio button group has role="group" with label', async ({ page }) => {
-    const group = page.getByRole('group', { name: /Aspect Ratio/i });
+  test('Aspect Ratio options form a labelled radiogroup', async ({ page }) => {
+    const group = page.getByRole('radiogroup', { name: /Aspect Ratio/i });
     await expect(group).toBeVisible();
   });
 
-  test('Template Style button group has role="group" with label', async ({ page }) => {
-    const group = page.getByRole('group', { name: /Template Style/i });
+  test('Template options form a labelled radiogroup', async ({ page }) => {
+    const group = page.getByRole('radiogroup', { name: 'Template', exact: true });
     await expect(group).toBeVisible();
   });
 });

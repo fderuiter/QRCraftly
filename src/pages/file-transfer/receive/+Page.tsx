@@ -18,8 +18,14 @@
 
 import React, { useState, useCallback, useRef } from 'react';
 import { createFountainSession } from '@/packages/optical-transfer';
-import { Play, Square, Camera, AlertTriangle, Activity, Cpu, Trash2, CheckCircle2, Upload } from 'lucide-react';
+import { Play, Square, Camera, AlertTriangle, Activity, Cpu, Trash2, CheckCircle2, Upload, ScanLine } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { Badge } from '@/components/ui/Badge';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { Progress } from '@/components/ui/Progress';
+import { SectionHeading } from '@/components/ui/SectionHeading';
+import { SegmentedControl } from '@/components/ui/SegmentedControl';
+import { Tooltip } from '@/components/ui/Tooltip';
 import { Card } from '@/components/ui/Card';
 import { Alert } from '@/components/ui/Alert';
 import { ToolWorkspaceLayout, ToolWorkspaceHeader } from '@/components/ToolWorkspaceLayout';
@@ -230,6 +236,7 @@ function FileTransferReceiveInner() {
   return (
     <div className="w-full">
       <ToolWorkspaceLayout
+        previewFocusable
         controlsLabel="Receiver Settings and Controls"
         previewLabel="Camera Capture Viewport"
         previewId="receiver-viewport"
@@ -247,38 +254,34 @@ function FileTransferReceiveInner() {
           <>
             {/* Connection / Status Section */}
             <section className="space-y-4">
-              <h2 className="flex items-center gap-2 text-xs font-bold tracking-wider text-fg-muted uppercase">
-                <Camera className="size-4 text-teal-600" />
-                1. Scan Transfer QR
-              </h2>
+              <SectionHeading icon={<Camera className="size-4 text-accent" aria-hidden="true" />} eyebrow="1. Scan Transfer QR" />
 
               {/* Dual-Mode Pill Switcher */}
-              <div
-                className="grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1 dark:bg-slate-800/80"
-                role="group"
-                aria-label="Receiver Input Mode"
-              >
-                <Button
-                  variant="outline"
-                  size="sm"
-                  pressed={receiverMode === 'camera'}
-                  onClick={() => setReceiverMode('camera')}
-                  className="min-h-11 gap-2 text-xs font-semibold"
-                >
-                  <Camera className="size-4" aria-hidden="true" />
-                  Camera Feed
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  pressed={receiverMode === 'file'}
-                  onClick={() => setReceiverMode('file')}
-                  className="min-h-11 gap-2 text-xs font-semibold"
-                >
-                  <Upload className="size-4" aria-hidden="true" />
-                  Video File
-                </Button>
-              </div>
+              <SegmentedControl<'camera' | 'file'>
+                label="Receiver Input Mode"
+                value={receiverMode}
+                onChange={setReceiverMode}
+                options={[
+                  {
+                    value: 'camera',
+                    label: (
+                      <>
+                        <Camera className="size-4" aria-hidden="true" />
+                        Camera Feed
+                      </>
+                    ),
+                  },
+                  {
+                    value: 'file',
+                    label: (
+                      <>
+                        <Upload className="size-4" aria-hidden="true" />
+                        Video File
+                      </>
+                    ),
+                  },
+                ]}
+              />
 
               <div className="flex flex-col gap-3">
                 {securityAlert && (
@@ -348,15 +351,11 @@ function FileTransferReceiveInner() {
                         Deactivate Scanner
                       </Button>
                     )}
-                    <Button
-                      variant="outline"
-                      onClick={handleClear}
-                      title="Clear transfer progress"
-                      aria-label="Clear transfer progress"
-                      className="px-3"
-                    >
-                      <Trash2 className="size-4" />
-                    </Button>
+                    <Tooltip content="Clear transfer progress">
+                      <Button variant="outline" iconOnly onClick={handleClear} aria-label="Clear transfer progress">
+                        <Trash2 className="size-4" aria-hidden="true" />
+                      </Button>
+                    </Tooltip>
                   </div>
                 ) : (
                   <div className="space-y-3">
@@ -407,15 +406,11 @@ function FileTransferReceiveInner() {
                         <Upload className="size-4" />
                         {videoFile ? 'Replace Video' : 'Select Video File'}
                       </Button>
-                      <Button
-                        variant="outline"
-                        onClick={handleClear}
-                        title="Clear transfer progress"
-                        aria-label="Clear transfer progress"
-                        className="px-3"
-                      >
-                        <Trash2 className="size-4" />
-                      </Button>
+                      <Tooltip content="Clear transfer progress">
+                        <Button variant="outline" iconOnly onClick={handleClear} aria-label="Clear transfer progress">
+                          <Trash2 className="size-4" aria-hidden="true" />
+                        </Button>
+                      </Tooltip>
                     </div>
                   </div>
                 )}
@@ -439,10 +434,7 @@ function FileTransferReceiveInner() {
           <>
             {/* Live Progress Metrics */}
             <section className="space-y-4">
-              <h2 className="flex items-center gap-2 text-xs font-bold tracking-wider text-fg-muted uppercase">
-                <Activity className="size-4 text-teal-600" />
-                2. Transfer Progress
-              </h2>
+              <SectionHeading icon={<Activity className="size-4 text-accent" aria-hidden="true" />} eyebrow="2. Transfer Progress" />
 
               {compilationStatus && (
                 <div className="flex items-center gap-2 rounded-xl border border-teal-100 bg-teal-50/50 p-4 text-xs text-teal-800 motion-safe:animate-pulse dark:border-teal-900/60 dark:bg-teal-950/20 dark:text-teal-400" data-testid="compilation-status">
@@ -458,16 +450,7 @@ function FileTransferReceiveInner() {
                     <span className="font-mono font-bold text-fg">{fountainPercent}%</span>
                   </div>
 
-                  <div
-                    className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800"
-                    role="progressbar"
-                    aria-label="Decoding rank"
-                    aria-valuemin={0}
-                    aria-valuemax={fountainStats.k}
-                    aria-valuenow={fountainStats.rank}
-                  >
-                    <div className="h-full bg-teal-600 transition-all duration-150" style={{ width: `${fountainPercent}%` }} />
-                  </div>
+                  <Progress size="sm" label="Decoding rank" value={fountainStats.rank} max={fountainStats.k} />
 
                   <dl className="grid grid-cols-2 gap-4 pt-2">
                     <div>
@@ -515,9 +498,11 @@ function FileTransferReceiveInner() {
                   </div>
                 </div>
               ) : (
-                <div className="rounded-xl border border-dashed border-line p-6 text-center text-sm text-slate-400">
-                  Ready to scan. Start an animated QR file transfer from the sender.
-                </div>
+                <EmptyState
+                  illustration={<ScanLine className="size-6" />}
+                  title="Ready to scan"
+                  body="Start an animated QR file transfer from the sender."
+                />
               )}
             </section>
 
@@ -527,42 +512,39 @@ function FileTransferReceiveInner() {
 
                 {/* Quick Testing Simulation Controls */}
                 <section className="space-y-4">
-                  <h2 className="flex items-center gap-2 text-xs font-bold tracking-wider text-fg-muted uppercase">
-                    <Cpu className="size-4 text-teal-600" />
-                    3. Simulation & Validation Testing
-                  </h2>
+                  <SectionHeading icon={<Cpu className="size-4 text-accent" aria-hidden="true" />} eyebrow="3. Simulation & Validation Testing" />
 
                   <div className="grid grid-cols-1 gap-2">
                     <Button
                       variant="outline"
                       onClick={simulateOutOfOrder}
-                      className="justify-start text-left text-xs"
+                      className="justify-start text-left"
                     >
-                      <Activity className="mr-2 size-4 text-teal-600" />
+                      <Activity className="size-4 text-accent" aria-hidden="true" />
                       Simulate Out-of-Order (10 blocks)
                     </Button>
                     <Button
                       variant="outline"
                       onClick={simulateFountainStream}
-                      className="justify-start text-left text-xs"
+                      className="justify-start text-left"
                     >
-                      <Activity className="mr-2 size-4 text-teal-600" />
+                      <Activity className="size-4 text-accent" aria-hidden="true" />
                       Simulate Fountain Stream (mid-stream, 30% loss)
                     </Button>
                     <Button
                       variant="outline"
                       onClick={simulateRestrictedSchema}
-                      className="justify-start text-left text-xs text-amber-600 dark:text-amber-400"
+                      className="justify-start text-left text-warning"
                     >
-                      <AlertTriangle className="mr-2 size-4" />
+                      <AlertTriangle className="size-4" aria-hidden="true" />
                       Simulate Dangerous Scheme (javascript:)
                     </Button>
                     <Button
                       variant="outline"
                       onClick={simulateSplitRestricted}
-                      className="justify-start text-left text-xs text-danger"
+                      className="justify-start text-left text-danger"
                     >
-                      <AlertTriangle className="mr-2 size-4" />
+                      <AlertTriangle className="size-4" aria-hidden="true" />
                       Simulate Split Threat (java + script:)
                     </Button>
                   </div>
@@ -579,14 +561,10 @@ function FileTransferReceiveInner() {
                   {receiverMode === 'camera' ? 'Camera Viewport' : 'Video Viewport'}
                 </h2>
                 <div className="flex items-center gap-2">
-                  <span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-xs font-bold ${
-                    isScanning 
-                      ? 'border border-success-line bg-success-soft text-emerald-700 dark:text-emerald-400' 
-                      : 'border border-line bg-slate-100 text-fg-muted dark:bg-slate-900/30'
-                  }`}>
-                    <span aria-hidden="true" className={`size-1.5 rounded-full ${isScanning ? 'bg-emerald-500 motion-safe:animate-pulse' : 'bg-slate-400'}`} />
+                  <Badge tone={isScanning ? 'success' : 'neutral'}>
+                    <span aria-hidden="true" className={`size-1.5 rounded-full ${isScanning ? 'bg-success motion-safe:animate-pulse' : 'bg-line-strong'}`} />
                     {isScanning ? 'Active Scanning' : 'Idle'}
-                  </span>
+                  </Badge>
                 </div>
               </div>
 
@@ -690,7 +668,7 @@ function FileTransferReceiveInner() {
                 )}
               </div>
 
-              <div className="mt-4 text-center text-xs leading-relaxed text-slate-400">
+              <div className="mt-4 text-center text-xs leading-relaxed text-fg-muted">
                 Position the transfer QR inside the guide. Use good lighting and avoid glare for faster scanning.
               </div>
             </Card>

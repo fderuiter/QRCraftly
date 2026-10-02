@@ -16,6 +16,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { SectionHeading } from './ui/SectionHeading';
 import type { ReactNode } from 'react';
 import { QrCode } from 'lucide-react';
 import { isDangerousUrl } from '@/utils/security';
@@ -106,15 +107,15 @@ export function AppFooter() {
           <p className="mt-3 max-w-sm text-sm text-fg-muted">Private, browser-based tools for creating and sharing QR codes.</p>
         </div>
         <nav aria-label="QR generators">
-          <h2 className="mb-3 text-xs font-semibold tracking-wider text-fg uppercase">Generators</h2>
+          <SectionHeading eyebrow="Generators" tone="strong" className="mb-3" />
           <FooterLinks links={GENERATOR_FOOTER_LINKS} className="grid grid-cols-2 gap-x-5 gap-y-2 text-sm text-fg-muted" />
         </nav>
         <nav aria-label="Tools">
-          <h2 className="mb-3 text-xs font-semibold tracking-wider text-fg uppercase">Tools</h2>
+          <SectionHeading eyebrow="Tools" tone="strong" className="mb-3" />
           <FooterLinks links={TOOL_LINKS} className="space-y-2 text-sm text-fg-muted" />
         </nav>
         <nav aria-label="Company">
-          <h2 className="mb-3 text-xs font-semibold tracking-wider text-fg uppercase">Company</h2>
+          <SectionHeading eyebrow="Company" tone="strong" className="mb-3" />
           <FooterLinks links={COMPANY_LINKS} className="space-y-2 text-sm text-fg-muted" />
           <ul className="mt-2 text-sm text-fg-muted">
             <li>

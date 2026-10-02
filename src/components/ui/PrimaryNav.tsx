@@ -21,6 +21,7 @@ import { Menu as MenuIcon } from 'lucide-react';
 import { usePageContext } from 'vike-react/usePageContext';
 import { Button } from './Button';
 import { Modal } from './Modal';
+import { Badge } from './Badge';
 import { isDangerousUrl } from '@/utils/security';
 import { PRIMARY_NAV_ITEMS, PrimaryNavItem, getCurrentPrimaryNavId } from '@/data/navigation';
 
@@ -34,8 +35,6 @@ function useCurrentPathname(): string {
   if (pageContext?.urlPathname) return pageContext.urlPathname;
   return typeof window !== 'undefined' ? window.location.pathname : '/';
 }
-
-const TAG_CLASSES = 'rounded-full bg-accent-soft px-1.5 py-0.5 text-xs font-semibold text-accent-strong';
 
 const LINK_BASE_CLASSES =
   'relative flex min-h-11 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold transition-colors hover:bg-surface-hover hover:text-accent';
@@ -80,7 +79,7 @@ function NavLink({
           className={`${LINK_BASE_CLASSES} ${inline ? INLINE_INDICATOR_CLASSES : 'min-h-12'} ${stateClasses} ${menuCurrent}`.trim()}
         >
           <span>{item.label}</span>
-          {item.tag && <span className={TAG_CLASSES}>{item.tag}</span>}
+          {item.tag && <Badge tone="beta">{item.tag}</Badge>}
         </a>
       </li>
     );
@@ -120,8 +119,10 @@ export function PrimaryNav() {
       <Button
         ref={buttonRef}
         variant="icon"
-        size="icon"
-        className="min-h-11 min-w-11 rounded-full lg:hidden"
+        iconOnly
+        size="lg"
+        shape="round"
+        className="lg:hidden"
         aria-label="Site menu"
         aria-haspopup="dialog"
         aria-expanded={open}

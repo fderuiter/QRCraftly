@@ -55,7 +55,7 @@ test.describe('QR Code Scannability via Headless Browser', () => {
     }).toBe(testUrl);
 
     // Now test a different style if we can click it.
-    const dotsButton = page.getByRole('button', { name: 'Dots', exact: true });
+    const dotsButton = page.getByRole('radio', { name: 'Select Dots pattern' });
     if (await dotsButton.isVisible()) {
         await dotsButton.click();
         await expect.poll(async () => {
@@ -71,8 +71,11 @@ test.describe('QR Code Scannability via Headless Browser', () => {
     await page.goto('/');
     await page.waitForSelector('main[data-hydrated="true"]');
 
-    const fluidRadio = page.locator('input[type="radio"][value="fluid"]');
-    await fluidRadio.check({ force: true });
+    const patternSection = page.getByRole('button', { name: 'Pattern & Colors' });
+    if ((await patternSection.getAttribute('aria-expanded')) !== 'true') await patternSection.click();
+    const fluidRadio = page.getByRole('radio', { name: 'Select Fluid Ink pattern' });
+    await fluidRadio.click();
+    await expect(fluidRadio).toHaveAttribute('aria-checked', 'true');
 
     // Any passing verdict ("Scans reliably" or "Scans, but fragile"), never "Won't scan reliably".
     const verdict = page.getByTestId('scannability-verdict');

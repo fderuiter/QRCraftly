@@ -232,7 +232,12 @@ describe('Modular Accessibility Test Helpers & Full Panel Sweep', () => {
     expect(screen.getByPlaceholderText('Subtext (e.g. @yourhandle)')).toBeInTheDocument();
 
     // Query all interactive/focusable elements
-    const interactiveSelector = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+    // Radio groups and tab lists use a roving tab stop: their other options are tabindex -1 on purpose.
+    const interactiveSelector = 'a[href], button:not([disabled]):not([tabindex="-1"]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+    container.querySelectorAll('[role="radiogroup"], [role="tablist"]').forEach((group) => {
+      const stops = Array.from(group.querySelectorAll<HTMLElement>('[role="radio"], [role="tab"]')).filter((el) => el.tabIndex === 0);
+      expect(stops).toHaveLength(1);
+    });
     const interactiveElements = Array.from(container.querySelectorAll(interactiveSelector));
 
     // Confirm that every interactive element is visible, has valid dimensions, and is included in keyboard focus order

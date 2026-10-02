@@ -2,8 +2,8 @@ import React, { useMemo } from 'react';
 import { QRConfig } from '../../types';
 import { PRESET_COLORS, MIN_CONTRAST_THRESHOLD } from '../../constants';
 import { getContrastRatio } from '../../utils/colorUtils';
-import { Check } from 'lucide-react';
 import { ColorInput } from '../ui/ColorInput';
+import { SegmentedControl } from '../ui/SegmentedControl';
 import { ContrastBadge, ContrastBanner } from './ContrastWarning';
 
 interface ColorControlsProps {
@@ -20,6 +20,9 @@ export const ColorControls: React.FC<ColorControlsProps> = ({ config, onChange }
 
   const isLowContrast = contrastRatios.fg < MIN_CONTRAST_THRESHOLD || contrastRatios.eye < MIN_CONTRAST_THRESHOLD;
   const worstContrast = Math.min(contrastRatios.fg, contrastRatios.eye);
+  const selectedPreset = PRESET_COLORS.find(
+    (preset) => config.fgColor === preset.fg && config.bgColor === preset.bg && config.eyeColor === preset.eye
+  );
 
   return (
     <div>
@@ -29,35 +32,22 @@ export const ColorControls: React.FC<ColorControlsProps> = ({ config, onChange }
       </div>
 
 
-      <div
-        className="mb-5 grid grid-cols-3 gap-2"
-        role="radiogroup"
-        aria-label="Color Presets"
-      >
-        {PRESET_COLORS.map((preset) => {
-          const isSelected = config.fgColor === preset.fg && config.bgColor === preset.bg && config.eyeColor === preset.eye;
-          const applyPreset = () => onChange({ fgColor: preset.fg, bgColor: preset.bg, eyeColor: preset.eye });
-          return (
-            <label
-              key={preset.label}
-              className={`relative flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border-2 p-1.5 text-xs transition-colors focus-within:ring-2 focus-within:ring-focus focus-within:ring-offset-1 dark:focus-within:ring-offset-slate-900 ${
-                isSelected
-                  ? 'border-teal-700 bg-accent-soft font-semibold text-teal-900 dark:border-teal-300 dark:text-teal-100'
-                  : 'border-line bg-surface-raised font-medium text-fg-soft hover:border-slate-400 dark:hover:border-slate-500'
-              }`}
-            >
-              <input
-                type="radio"
-                name="color-preset"
-                value={preset.label}
-                checked={isSelected}
-                onChange={applyPreset}
-                onClick={applyPreset}
-                className="sr-only"
-                aria-label={`Select ${preset.label} theme`}
-              />
+      <SegmentedControl<string>
+        appearance="tiles"
+        label="Color Presets"
+        className="mb-5 grid-cols-3"
+        value={selectedPreset?.label ?? ''}
+        onChange={(label) => {
+          const preset = PRESET_COLORS.find((p) => p.label === label);
+          if (preset) onChange({ fgColor: preset.fg, bgColor: preset.bg, eyeColor: preset.eye });
+        }}
+        options={PRESET_COLORS.map((preset) => ({
+          value: preset.label,
+          ariaLabel: `Select ${preset.label} theme`,
+          label: (
+            <>
               {/* Use SVG presentation attributes instead of inline styles for CSP compliance */}
-              <svg viewBox="0 0 40 40" className="size-7 shrink-0 rounded ring-1 ring-slate-300 dark:ring-slate-600" aria-hidden="true">
+              <svg viewBox="0 0 40 40" className="size-7 shrink-0 rounded ring-1 ring-line-strong" aria-hidden="true">
                 {/* Background */}
                 <rect width="40" height="40" fill={preset.bg} />
                 {/* Foreground Ring (Simulating Modules) */}
@@ -66,13 +56,10 @@ export const ColorControls: React.FC<ColorControlsProps> = ({ config, onChange }
                 <rect x="11" y="11" width="18" height="18" rx="1" fill={preset.eye} />
               </svg>
               <span className="min-w-0 leading-tight">{preset.label}</span>
-              {isSelected && (
-                <Check className="absolute top-0.5 right-0.5 size-3.5 text-teal-700 dark:text-teal-300" aria-hidden="true" />
-              )}
-            </label>
-          );
-        })}
-      </div>
+            </>
+          ),
+        }))}
+      />
 
       <div className="grid grid-cols-2 gap-4">
         <ColorInput

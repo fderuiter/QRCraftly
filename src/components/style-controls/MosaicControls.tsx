@@ -68,23 +68,19 @@ export const MosaicControls: React.FC<MosaicControlsProps> = ({ config, onChange
         {config.mosaicImageUrl && (
           <Button
             variant="error"
-            size="sm"
+            size="xs"
             onClick={() => { onChange({ mosaicImageUrl: null }); setError(null); }}
-            className="rounded px-2 py-1"
             aria-label="Remove mosaic image"
           >
-            <X className="mr-1 size-3" /> Remove
+            <X className="size-3.5" aria-hidden="true" /> Remove
           </Button>
         )}
       </div>
 
       {!config.mosaicImageUrl ? (
         <Button
-          variant="outline"
-          size="none"
-          type="button"
+          variant="dropzone"
           onClick={() => fileInputRef.current?.click()}
-          className="group flex w-full cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-6 hover:border-teal-400 hover:bg-teal-50 focus-visible:ring-2 focus-visible:ring-focus focus-visible:outline-none dark:hover:border-teal-600 dark:hover:bg-teal-900/10"
           aria-describedby={combineIds('mosaic-upload-help', error && 'mosaic-upload-error')}
         >
           <Upload className="mb-2 size-5" aria-hidden="true" />

@@ -84,7 +84,8 @@ export const LocationInput: React.FC<LocationInputProps> = ({
         onClick={handleGetCurrentLocation}
         disabled={isLoading}
         aria-busy={isLoading}
-        className="w-full text-xs"
+        size="sm"
+        fullWidth
         data-testid="use-current-location"
       >
         {isLoading ? "Fetching location…" : "Use Current Location"}

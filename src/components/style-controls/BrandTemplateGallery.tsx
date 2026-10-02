@@ -13,6 +13,10 @@ import {
   MAX_CUSTOM_TEMPLATES,
 } from '../../utils/brandTemplateManager';
 import { Button } from '../ui/Button';
+import { Badge } from '../ui/Badge';
+import { EmptyState } from '../ui/EmptyState';
+import { SegmentedControl } from '../ui/SegmentedControl';
+import { Tooltip } from '../ui/Tooltip';
 import { Modal } from '../ui/Modal';
 import { TextField } from '../ui/TextField';
 
@@ -172,7 +176,6 @@ export const BrandTemplateGallery: React.FC<BrandTemplateGalleryProps> = ({ conf
           variant="primary"
           size="sm"
           onClick={handleOpenSaveModal}
-          className="gap-1.5"
           aria-label="Save current visual settings as brand template"
         >
           <BookmarkPlus className="size-4" />
@@ -183,7 +186,6 @@ export const BrandTemplateGallery: React.FC<BrandTemplateGalleryProps> = ({ conf
           variant="outline"
           size="sm"
           onClick={handleImportClick}
-          className="gap-1.5"
           aria-label="Import template from JSON file"
         >
           <Upload className="size-4" />
@@ -196,10 +198,8 @@ export const BrandTemplateGallery: React.FC<BrandTemplateGalleryProps> = ({ conf
         <div
           role="status"
           aria-live="polite"
-          className={`rounded-lg px-3 py-2 text-xs font-medium transition-all ${
-            feedback.type === 'error'
-              ? 'bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300'
-              : 'bg-teal-50 text-accent-strong dark:bg-teal-950/50'
+          className={`rounded-lg px-3 py-2 text-sm font-medium ${
+            feedback.type === 'error' ? 'bg-danger-soft text-danger' : 'bg-accent-soft text-accent-strong'
           }`}
         >
           {feedback.text}
@@ -207,39 +207,26 @@ export const BrandTemplateGallery: React.FC<BrandTemplateGalleryProps> = ({ conf
       )}
 
       {/* Tab Switcher */}
-      <div className="flex rounded-lg bg-surface-hover p-1" role="tablist">
-        <Button
-          variant="ghost"
-          size="none"
-          role="tab"
-          aria-selected={activeTab === 'presets'}
-          onClick={() => setActiveTab('presets')}
-          className={`flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
-            activeTab === 'presets'
-              ? 'bg-white text-fg shadow-xs dark:bg-slate-700'
-              : 'text-fg-muted hover:text-fg'
-          }`}
-        >
-          Curated Presets ({PREBUILT_TEMPLATES.length})
-        </Button>
-        <Button
-          variant="ghost"
-          size="none"
-          role="tab"
-          aria-selected={activeTab === 'custom'}
-          onClick={() => setActiveTab('custom')}
-          className={`flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
-            activeTab === 'custom'
-              ? 'bg-white text-fg shadow-xs dark:bg-slate-700'
-              : 'text-fg-muted hover:text-fg'
-          }`}
-        >
-          My Templates ({customTemplates.length}/{MAX_CUSTOM_TEMPLATES})
-        </Button>
-      </div>
+      <SegmentedControl<'presets' | 'custom'>
+        kind="tablist"
+        label="Template collections"
+        value={activeTab}
+        onChange={setActiveTab}
+        tabId={(tab) => `brand-templates-tab-${tab}`}
+        controls={() => 'brand-templates-panel'}
+        options={[
+          { value: 'presets', label: `Curated Presets (${PREBUILT_TEMPLATES.length})` },
+          { value: 'custom', label: `My Templates (${customTemplates.length}/${MAX_CUSTOM_TEMPLATES})` },
+        ]}
+      />
 
       {/* Gallery Cards Container */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div
+        id="brand-templates-panel"
+        role="tabpanel"
+        aria-labelledby={`brand-templates-tab-${activeTab}`}
+        className="grid grid-cols-1 gap-3 sm:grid-cols-2"
+      >
         {(activeTab === 'presets' ? PREBUILT_TEMPLATES : customTemplates).map((template) => {
           const isSelected = selectedId === template.id;
           const bg = template.config.bgColor || '#ffffff';
@@ -286,13 +273,13 @@ export const BrandTemplateGallery: React.FC<BrandTemplateGalleryProps> = ({ conf
                 {/* Name & Metadata */}
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
-                    <h4 className="truncate text-xs font-semibold text-fg">
+                    <h4 className="truncate text-sm font-semibold text-fg">
                       {template.name}
                     </h4>
                     {isSelected && (
-                      <span className="inline-flex items-center gap-0.5 rounded-full bg-accent-soft px-1.5 py-0.5 text-xs font-medium text-accent-strong">
-                        <Check className="size-2.5" /> Active
-                      </span>
+                      <Badge tone="brand">
+                        <Check className="size-3" aria-hidden="true" /> Active
+                      </Badge>
                     )}
                   </div>
                   {template.description && (
@@ -300,9 +287,7 @@ export const BrandTemplateGallery: React.FC<BrandTemplateGalleryProps> = ({ conf
                       {template.description}
                     </p>
                   )}
-                  <span className="mt-1 inline-block text-xs tracking-wider text-fg-muted uppercase">
-                    {template.config.style || 'standard'}
-                  </span>
+                  <Badge className="mt-1 capitalize">{template.config.style || 'standard'}</Badge>
                 </div>
               </div>
 
@@ -312,44 +297,48 @@ export const BrandTemplateGallery: React.FC<BrandTemplateGalleryProps> = ({ conf
                   variant="secondary"
                   size="sm"
                   onClick={() => handleApply(template)}
-                  className="text-xs"
                   aria-label={`Apply ${template.name} template`}
                 >
                   Apply
                 </Button>
 
                 <div className="flex items-center gap-1">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleExport(template)}
-                    title="Export JSON"
-                    aria-label={`Export ${template.name} as JSON`}
-                  >
-                    <Download className="size-3.5" />
-                  </Button>
+                  <Tooltip content="Export JSON">
+                    <Button
+                      variant="ghost"
+                      iconOnly
+                      size="sm"
+                      onClick={() => handleExport(template)}
+                      aria-label={`Export ${template.name} as JSON`}
+                    >
+                      <Download className="size-4" aria-hidden="true" />
+                    </Button>
+                  </Tooltip>
 
                   {!template.isPrebuilt && (
                     <>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleOpenRenameModal(template)}
-                        title="Rename Template"
-                        aria-label={`Rename ${template.name}`}
-                      >
-                        <Edit3 className="size-3.5" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDelete(template)}
-                        title="Delete Template"
-                        aria-label={`Delete ${template.name}`}
-                        className="text-rose-500 hover:text-rose-700 dark:text-rose-400"
-                      >
-                        <Trash2 className="size-3.5" />
-                      </Button>
+                      <Tooltip content="Rename template">
+                        <Button
+                          variant="ghost"
+                          iconOnly
+                          size="sm"
+                          onClick={() => handleOpenRenameModal(template)}
+                          aria-label={`Rename ${template.name}`}
+                        >
+                          <Edit3 className="size-4" aria-hidden="true" />
+                        </Button>
+                      </Tooltip>
+                      <Tooltip content="Delete template">
+                        <Button
+                          variant="danger"
+                          iconOnly
+                          size="sm"
+                          onClick={() => handleDelete(template)}
+                          aria-label={`Delete ${template.name}`}
+                        >
+                          <Trash2 className="size-4" aria-hidden="true" />
+                        </Button>
+                      </Tooltip>
                     </>
                   )}
                 </div>
@@ -359,23 +348,18 @@ export const BrandTemplateGallery: React.FC<BrandTemplateGalleryProps> = ({ conf
         })}
 
         {activeTab === 'custom' && customTemplates.length === 0 && (
-          <div className="col-span-full rounded-xl border border-dashed border-line p-6 text-center">
-            <Sparkles className="mx-auto size-8 text-slate-300 dark:text-slate-600" />
-            <p className="mt-2 text-xs font-medium text-fg-muted">
-              No custom templates saved yet.
-            </p>
-            <p className="mt-1 text-xs text-fg-muted">
-              Customize colors, patterns, and borders, then click "Save as Template" or import a team JSON file.
-            </p>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleOpenSaveModal}
-              className="mt-3"
-            >
-              Save Current Style
-            </Button>
-          </div>
+          <EmptyState
+            className="col-span-full"
+            level={4}
+            illustration={<Sparkles className="size-6" />}
+            title="No custom templates saved yet."
+            body={'Customize colors, patterns, and borders, then click "Save as Template" or import a team JSON file.'}
+            action={
+              <Button variant="outline" size="sm" onClick={handleOpenSaveModal}>
+                Save Current Style
+              </Button>
+            }
+          />
         )}
       </div>
 

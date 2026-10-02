@@ -37,7 +37,7 @@ import {
 import { useEmpiricalScan, useLatestRef, useReducedMotion } from '@/packages/arcade/client';
 import type { ArcadeTarget } from '@/packages/arcade/handoff';
 import { ArcadeCockpit } from './ArcadeCockpit';
-import { ChoiceGroup } from './ChoiceGroup';
+import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { DefeatModal } from './DefeatModal';
 import { ScanHud } from './ScanHud';
 import { ArenaPalette, useArenaCanvas, useArenaPalette } from './useArenaCanvas';
@@ -261,7 +261,7 @@ export function SimulatorMode({ target, settings, announce }: ModeProps) {
     if (chosen) announce(`${chosen.name} selected, ${chosen.area} blast.`);
   };
 
-  const weaponChoices = SIMULATOR_WEAPONS.map((w) => ({ id: w.id, label: w.name }));
+  const weaponChoices = SIMULATOR_WEAPONS.map((w) => ({ value: w.id, label: w.name }));
 
   return (
     <>
@@ -270,15 +270,14 @@ export function SimulatorMode({ target, settings, announce }: ModeProps) {
         arsenal={
           <Card variant="control" className="space-y-3">
             <h2 className="text-sm font-bold text-fg">Blast weapon</h2>
-            <ChoiceGroup<SimulatorWeaponId>
-              kind="radiogroup"
+            <SegmentedControl<SimulatorWeaponId>
+              appearance="tiles"
               label="Blast weapon"
-              className="flex flex-col gap-2"
-              itemClassName="justify-start text-left"
-              choices={SIMULATOR_WEAPONS.map((w) => ({
-                id: w.id,
+              className="grid-cols-1"
+              options={SIMULATOR_WEAPONS.map((w) => ({
+                value: w.id,
                 label: (
-                  <span className="flex w-full flex-col items-start">
+                  <span className="flex w-full flex-col items-start text-left">
                     <span className="font-bold">{w.name} <span className="font-normal">({w.area})</span></span>
                     <span className="text-xs font-normal">{w.description}</span>
                   </span>
@@ -325,12 +324,11 @@ export function SimulatorMode({ target, settings, announce }: ModeProps) {
           </div>
         }
         quickBar={
-          <ChoiceGroup<SimulatorWeaponId>
-            kind="radiogroup"
+          <SegmentedControl<SimulatorWeaponId>
+            appearance="tiles"
             label="Weapon"
-            className="grid grid-cols-2 gap-2 sm:grid-cols-4"
-            itemClassName="min-h-11"
-            choices={weaponChoices}
+            className="grid-cols-2 sm:grid-cols-4"
+            options={weaponChoices}
             value={weaponId}
             onChange={selectWeapon}
           />

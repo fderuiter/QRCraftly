@@ -16,6 +16,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { Progress } from '../ui/Progress';
 import React, { useState, useEffect, useMemo, ChangeEvent } from 'react';
 import {
   parseCsv,
@@ -426,19 +427,7 @@ export const BulkCsvInput: React.FC<BulkCsvInputProps> = ({ data, onChange }) =>
           >
             {completedCount} of {totalCount} QR codes generated
           </p>
-          <div
-            role="progressbar"
-            aria-labelledby="batch-progress-status"
-            aria-valuemin={0}
-            aria-valuemax={totalCount}
-            aria-valuenow={completedCount}
-            className="h-2.5 w-full rounded-full bg-slate-200 dark:bg-slate-700"
-          >
-            <div
-              className="h-2.5 rounded-full bg-teal-600 transition-all duration-300 dark:bg-teal-400"
-              style={{ width: `${totalCount > 0 ? (completedCount / totalCount) * 100 : 0}%` }}
-            />
-          </div>
+          <Progress labelledBy="batch-progress-status" value={completedCount} max={totalCount} />
         </div>
       </Modal>
     </div>

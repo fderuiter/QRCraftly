@@ -16,6 +16,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { Badge } from './ui/Badge';
 import React, { useEffect, useRef } from 'react';
 import { Eye } from 'lucide-react';
 import { isDangerousUrl } from '@/utils/security';
@@ -41,6 +42,12 @@ export interface ToolWorkspaceLayoutProps {
   previewLabel: string;
   /** DOM id of the preview region, used by "jump to preview" links. */
   previewId?: string;
+  /**
+   * Makes the desktop preview scroller a tab stop. Set it when the preview holds no
+   * focusable controls (only a canvas), so keyboard users can still scroll it (axe
+   * `scrollable-region-focusable`).
+   */
+  previewFocusable?: boolean;
 }
 
 /**
@@ -68,6 +75,7 @@ export function ToolWorkspaceLayout({
   controlsLabel,
   previewLabel,
   previewId,
+  previewFocusable = false,
 }: ToolWorkspaceLayoutProps) {
   const previewScrollRef = useRef<HTMLDivElement>(null);
 
@@ -110,6 +118,11 @@ export function ToolWorkspaceLayout({
           ref={previewScrollRef}
           className="relative flex flex-col items-center p-4 md:sticky md:top-0 md:h-dvh md:overflow-y-auto md:px-8 md:py-6"
           data-testid="tool-workspace-preview-scroller"
+          // A preview without controls (a canvas) must still be scrollable from the keyboard,
+          // so it becomes a named, focusable group.
+          role={previewFocusable ? 'group' : undefined}
+          aria-label={previewFocusable ? `${previewLabel}, scrollable` : undefined}
+          tabIndex={previewFocusable ? 0 : undefined}
         >
           {/* Decorative glow, clipped so it never widens the page or creates a scroll area. */}
           <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-clip opacity-40 dark:opacity-20">
@@ -196,7 +209,7 @@ export function ToolWorkspaceHeader({
         <div className="flex flex-wrap items-center gap-2">
           <p className="text-sm text-fg-muted">{subtitle}</p>
           {badge && (
-            <span className="rounded-full bg-accent-soft px-2 py-0.5 text-xs font-semibold text-accent-strong">{badge}</span>
+            <Badge tone="beta">{badge}</Badge>
           )}
         </div>
         {modeSwitcher && <div className="mt-3 flex items-center">{modeSwitcher}</div>}

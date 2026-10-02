@@ -105,7 +105,7 @@ describe('StyleControls Component', () => {
 
     const presetButtons = screen.getAllByRole('radio', { name: /Classic|Slate|Teal Brand|Royal Blue|Midnight|Forest|Rose|Purple|Cyber/i });
     if (presetButtons.length > 0) {
-        await user.click(presetButtons[1].parentElement!);
+        await user.click(presetButtons[1]);
         expect(mockOnChange).toHaveBeenCalledWith(expect.objectContaining({
             fgColor: expect.any(String),
             bgColor: expect.any(String),
@@ -197,11 +197,11 @@ describe('StyleControls Component', () => {
       expandAppearanceSections();
 
       const circleBtn = screen.getByRole('radio', { name: 'Set logo border style to Circle' });
-      await user.click(circleBtn.parentElement!);
+      await user.click(circleBtn);
       expect(mockOnChange).toHaveBeenCalledWith({ logoPaddingStyle: 'circle' });
 
       const noneBtn = screen.getByRole('radio', { name: 'Set logo border style to None' });
-      await user.click(noneBtn.parentElement!);
+      await user.click(noneBtn);
       expect(mockOnChange).toHaveBeenCalledWith({ logoPaddingStyle: 'none' });
   });
 
@@ -301,7 +301,7 @@ describe('StyleControls Component', () => {
          expect(mockOnChange).toHaveBeenCalledWith({ borderTextPosition: 'top-center' });
       }
 
-      const textColorInput = screen.getByTitle('Text Color');
+      const textColorInput = screen.getByLabelText('Border Text Color');
       fireEvent.change(textColorInput, { target: { value: '#112233' } });
       expect(mockOnChange).toHaveBeenCalledWith({ borderTextColor: '#112233' });
   });
@@ -462,7 +462,6 @@ describe('StyleControls Accessibility', () => {
 
   it('Advanced Mode toggle should have correct aria attributes', () => {
     render(<StyleControls config={DEFAULT_CONFIG} onChange={mockOnChange} />);
-    expandAppearanceSections();
 
     // Find the Advanced Mode toggle button
     const advancedToggle = screen.getByRole('button', { name: /Advanced Mode/i });
@@ -486,7 +485,7 @@ describe('StyleControls Accessibility', () => {
     expect(panel).toContainElement(screen.getByText('Error Correction Level').closest('div')?.parentElement || null);
   });
 
-  it('logo upload trigger has focus ring classes, aria-describedby, and handles accessibility correctly', async () => {
+  it('logo upload trigger is a drop zone with aria-describedby, and handles accessibility correctly', async () => {
     const user = userEvent.setup();
     const { container } = render(<StyleControls config={DEFAULT_CONFIG} onChange={mockOnChange} />);
     expandAppearanceSections();
@@ -495,10 +494,8 @@ describe('StyleControls Accessibility', () => {
     const uploadButton = screen.getByRole('button', { name: /Upload Logo/i });
     expect(uploadButton).toBeInTheDocument();
 
-    // Check focus-visible ring style classes
-    expect(uploadButton).toHaveClass('focus-visible:ring-2');
-    expect(uploadButton).toHaveClass('focus-visible:ring-focus');
-    expect(uploadButton).toHaveClass('focus-visible:outline-none');
+    // A catalog drop zone (the keyboard focus ring comes from the global :focus-visible style)
+    expect(uploadButton).toHaveClass('border-dashed');
 
     // Initially aria-describedby points to the helper text ID
     expect(uploadButton).toHaveAttribute('aria-describedby', 'logo-upload-help');
@@ -541,25 +538,25 @@ describe('LayoutControls (via StyleControls)', () => {
   it('renders aspect-ratio format buttons', () => {
     render(<StyleControls config={DEFAULT_CONFIG as QRConfig} onChange={mockOnChange} />);
     expandAppearanceSections();
-    expect(screen.getByRole('button', { name: /Square format/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Portrait format/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Story format/i })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: /Square format/i })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: /Portrait format/i })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: /Story format/i })).toBeInTheDocument();
   });
 
   it('renders template style buttons', () => {
     render(<StyleControls config={DEFAULT_CONFIG as QRConfig} onChange={mockOnChange} />);
     expandAppearanceSections();
-    expect(screen.getByRole('button', { name: /None template/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Minimalist template/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Gradient template/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Solid Frame template/i })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: /None template/i })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: /Minimalist template/i })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: /Gradient template/i })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: /Solid Frame template/i })).toBeInTheDocument();
   });
 
   it('calls onChange with STORY_9_16 when Story button is clicked', async () => {
     const user = userEvent.setup();
     render(<StyleControls config={DEFAULT_CONFIG as QRConfig} onChange={mockOnChange} />);
     expandAppearanceSections();
-    await user.click(screen.getByRole('button', { name: /Story format/i }));
+    await user.click(screen.getByRole('radio', { name: /Story format/i }));
     expect(mockOnChange).toHaveBeenCalledWith({ socialFormat: SocialFormat.STORY_9_16 });
   });
 
@@ -567,7 +564,7 @@ describe('LayoutControls (via StyleControls)', () => {
     const user = userEvent.setup();
     render(<StyleControls config={DEFAULT_CONFIG as QRConfig} onChange={mockOnChange} />);
     expandAppearanceSections();
-    await user.click(screen.getByRole('button', { name: /Portrait format/i }));
+    await user.click(screen.getByRole('radio', { name: /Portrait format/i }));
     expect(mockOnChange).toHaveBeenCalledWith({ socialFormat: SocialFormat.PORTRAIT_4_5 });
   });
 
@@ -575,7 +572,7 @@ describe('LayoutControls (via StyleControls)', () => {
     const user = userEvent.setup();
     render(<StyleControls config={DEFAULT_CONFIG as QRConfig} onChange={mockOnChange} />);
     expandAppearanceSections();
-    await user.click(screen.getByRole('button', { name: /Minimalist template/i }));
+    await user.click(screen.getByRole('radio', { name: /Minimalist template/i }));
     expect(mockOnChange).toHaveBeenCalledWith({ templateStyle: TemplateStyle.MINIMALIST });
   });
 
@@ -623,15 +620,15 @@ describe('LayoutControls (via StyleControls)', () => {
     expect(mockOnChange).toHaveBeenCalledWith({ templateSubtext: '@handle' });
   });
 
-  it('marks the currently active format button as pressed', () => {
+  it('marks the currently active format as checked', () => {
     const config: QRConfig = {
       ...(DEFAULT_CONFIG as QRConfig),
       socialFormat: SocialFormat.STORY_9_16,
     };
     render(<StyleControls config={config} onChange={mockOnChange} />);
     expandAppearanceSections();
-    const storyBtn = screen.getByRole('button', { name: /Story format/i });
-    expect(storyBtn).toHaveAttribute('aria-pressed', 'true');
+    const storyBtn = screen.getByRole('radio', { name: /Story format/i });
+    expect(storyBtn).toHaveAttribute('aria-checked', 'true');
   });
 });
 

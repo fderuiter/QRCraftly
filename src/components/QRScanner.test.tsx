@@ -96,17 +96,17 @@ describe('QRScanner Component', () => {
   it('renders webcam view by default and starts camera stream', async () => {
     render(<QRScanner onScanSuccess={mockOnScanSuccess} onClose={mockOnClose} />);
 
-    expect(screen.getByRole('button', { name: /webcam/i })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByRole('button', { name: /file upload/i })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByRole('radio', { name: /webcam/i })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByRole('radio', { name: /file upload/i })).toHaveAttribute('aria-checked', 'false');
     expect(mockStartStream).toHaveBeenCalled();
   });
 
-  it('exposes the selected input mode with aria-pressed when switching to file upload', async () => {
+  it('exposes the selected input mode with aria-checked when switching to file upload', async () => {
     render(<QRScanner onScanSuccess={mockOnScanSuccess} onClose={mockOnClose} />);
-    fireEvent.click(screen.getByRole('button', { name: /file upload/i }));
-    expect(screen.getByRole('button', { name: /file upload/i })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByRole('button', { name: /webcam/i })).toHaveAttribute('aria-pressed', 'false');
-    expect(screen.getByRole('group', { name: 'Scanner input' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('radio', { name: /file upload/i }));
+    expect(screen.getByRole('radio', { name: /file upload/i })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByRole('radio', { name: /webcam/i })).toHaveAttribute('aria-checked', 'false');
+    expect(screen.getByRole('radiogroup', { name: 'Scanner input' })).toBeInTheDocument();
     // The file input is not nested inside the dropzone button.
     const input = screen.getByLabelText('Upload QR code image or video file');
     expect(input.closest('button')).toBeNull();
@@ -190,7 +190,7 @@ describe('QRScanner Component', () => {
 
     render(<QRScanner onScanSuccess={mockOnScanSuccess} onClose={mockOnClose} />);
 
-    const fileTab = screen.getByRole('button', { name: /file upload/i });
+    const fileTab = screen.getByRole('radio', { name: /file upload/i });
     fireEvent.click(fileTab);
 
     expect(screen.getByText(/drag & drop qr image or video/i)).toBeInTheDocument();
@@ -224,7 +224,7 @@ describe('QRScanner Component', () => {
 
     render(<QRScanner onScanSuccess={mockOnScanSuccess} onClose={mockOnClose} />);
 
-    const fileTab = screen.getByRole('button', { name: /file upload/i });
+    const fileTab = screen.getByRole('radio', { name: /file upload/i });
     fireEvent.click(fileTab);
 
     // Mock jsQR returning null (no QR code found)
@@ -274,7 +274,7 @@ describe('QRScanner Component', () => {
 
     render(<QRScanner onScanSuccess={mockOnScanSuccess} onClose={mockOnClose} />);
 
-    const fileTab = screen.getByRole('button', { name: /file upload/i });
+    const fileTab = screen.getByRole('radio', { name: /file upload/i });
     fireEvent.click(fileTab);
 
     // Mock first upload as successful, second as failure, and third as success
@@ -377,7 +377,7 @@ describe('QRScanner Component', () => {
 
       render(<QRScanner onScanSuccess={mockOnScanSuccess} onClose={mockOnClose} />);
 
-      const fileTab = screen.getByRole('button', { name: /file upload/i });
+      const fileTab = screen.getByRole('radio', { name: /file upload/i });
       fireEvent.click(fileTab);
 
       // Mock successful jsQR decoding
@@ -445,7 +445,7 @@ describe('QRScanner Component', () => {
 
       render(<QRScanner onScanSuccess={mockOnScanSuccess} onClose={mockOnClose} />);
 
-      const fileTab = screen.getByRole('button', { name: /file upload/i });
+      const fileTab = screen.getByRole('radio', { name: /file upload/i });
       fireEvent.click(fileTab);
 
       // Mock successful jsQR decoding
@@ -523,7 +523,7 @@ describe('QRScanner Component', () => {
 
       render(<QRScanner onScanSuccess={mockOnScanSuccess} onClose={mockOnClose} />);
 
-      const fileTab = screen.getByRole('button', { name: /file upload/i });
+      const fileTab = screen.getByRole('radio', { name: /file upload/i });
       fireEvent.click(fileTab);
 
       const mockFile = new File(['dummy binary video data'], 'test.mkv', { type: 'video/x-matroska' });
@@ -635,7 +635,7 @@ describe('QRScanner Component', () => {
 
       render(<QRScanner onScanSuccess={mockOnScanSuccess} onClose={mockOnClose} />);
 
-      const fileTab = screen.getByRole('button', { name: /file upload/i });
+      const fileTab = screen.getByRole('radio', { name: /file upload/i });
       await act(async () => {
         fireEvent.click(fileTab);
       });
@@ -688,7 +688,7 @@ describe('QRScanner Component', () => {
 
       // 2. Mount QRScanner in file mode and verify file processing works
       render(<QRScanner onScanSuccess={mockOnScanSuccess} onClose={mockOnClose} />);
-      const fileTab = screen.getByRole('button', { name: /file upload/i });
+      const fileTab = screen.getByRole('radio', { name: /file upload/i });
       fireEvent.click(fileTab);
 
       vi.mocked(jsQR).mockReturnValue({ data: 'https://post-unmount-scan.com' } as any);
@@ -705,7 +705,7 @@ describe('QRScanner Component', () => {
     it('immediately aborts active file processing when switching modes from file to webcam', async () => {
       render(<QRScanner onScanSuccess={mockOnScanSuccess} onClose={mockOnClose} />);
 
-      const fileTab = screen.getByRole('button', { name: /file upload/i });
+      const fileTab = screen.getByRole('radio', { name: /file upload/i });
       fireEvent.click(fileTab);
 
       vi.mocked(jsQR).mockReturnValue({ data: 'stale result' } as any);
@@ -716,7 +716,7 @@ describe('QRScanner Component', () => {
       fireEvent.change(fileInput, { target: { files: [mockFile] } });
 
       // Switch to webcam mode mid-processing
-      const webcamTab = screen.getByRole('button', { name: /webcam/i });
+      const webcamTab = screen.getByRole('radio', { name: /webcam/i });
       fireEvent.click(webcamTab);
 
       // Verify scan success callback was not invoked with stale result
@@ -758,7 +758,7 @@ describe('QRScanner Component', () => {
       mockStartStream.mockClear();
 
       // Click the active 'Webcam' tab header
-      const webcamTab = screen.getByRole('button', { name: /webcam/i });
+      const webcamTab = screen.getByRole('radio', { name: /webcam/i });
       await act(async () => {
         fireEvent.click(webcamTab);
       });
@@ -785,7 +785,7 @@ describe('QRScanner Component', () => {
 
       expect(mockStartStream).toHaveBeenCalledTimes(1);
 
-      const fileTab = screen.getByRole('button', { name: /file upload/i });
+      const fileTab = screen.getByRole('radio', { name: /file upload/i });
       await act(async () => {
         fireEvent.click(fileTab);
       });

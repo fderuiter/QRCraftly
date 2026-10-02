@@ -69,9 +69,10 @@ export const Alert: React.FC<AlertProps> = (props) => {
       {onDismiss && (
         <Button
           variant="ghost"
-          size="none"
+          iconOnly
+          size="sm"
           onClick={onDismiss}
-          className="-mt-1 -mr-1 ml-auto size-8 shrink-0 rounded-md"
+          className="-mt-1 -mr-1 ml-auto shrink-0"
           aria-label="Dismiss alert"
         >
           <X className="size-4" aria-hidden="true" />

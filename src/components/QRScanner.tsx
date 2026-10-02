@@ -3,6 +3,7 @@ import { Camera, Upload, AlertTriangle, X, RefreshCw, FileImage } from 'lucide-r
 import { useCamera } from '../hooks/useCamera';
 import { useQrScanner } from '@/packages/optical-scanner/client';
 import { Button } from './ui/Button';
+import { SegmentedControl } from './ui/SegmentedControl';
 
 /**
  * Error-like check that also accepts `DOMException`s, which are not `Error` instances in
@@ -339,17 +340,12 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
           aria-label="Upload QR code image or video file"
         />
         <Button
-          variant="ghost"
-          size="none"
+          variant="dropzone"
+          data-dragover={dragOver || undefined}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
           onClick={handleSelectFileClick}
-          className={`size-full flex-col rounded-lg border-2 border-dashed p-6 text-center ${
-            dragOver
-              ? 'border-teal-500 bg-teal-50/50 dark:bg-teal-950/20'
-              : 'border-line hover:border-slate-400 dark:hover:border-slate-600'
-          }`}
         >
           {fileProcessing ? (
             <span className="flex flex-col items-center">
@@ -358,18 +354,18 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
             </span>
           ) : (
             <span className="flex flex-col items-center">
-              <FileImage className="mb-3 size-10 text-slate-400" aria-hidden="true" />
+              <FileImage className="mb-3 size-10 text-fg-muted" aria-hidden="true" />
               <span className="text-sm font-semibold text-fg-soft">
                 Drag & Drop QR Image or Video
               </span>
-              <span className="mt-1 max-w-xs text-xs text-fg-muted">
+              <span className="mt-1 max-w-xs text-sm text-fg-muted">
                 or click here to select a file from your device.
               </span>
             </span>
           )}
 
           {fileError && (
-            <span className="mt-4 flex max-w-xs items-center gap-2 rounded-lg bg-rose-50 px-3 py-2 text-xs font-semibold text-danger dark:bg-rose-950/30">
+            <span className="mt-4 flex max-w-xs items-center gap-2 rounded-lg bg-danger-soft px-3 py-2 text-sm font-semibold text-danger">
               <AlertTriangle className="size-4 shrink-0" aria-hidden="true" />
               <span>{fileError}</span>
             </span>
@@ -382,51 +378,45 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
   return (
     <div className="overflow-hidden rounded-xl border border-line bg-surface shadow-sm">
       {/* Scanner Mode Selector Header */}
-      <div className="flex items-center justify-between border-b border-line-subtle bg-slate-50 p-3 dark:bg-slate-900/50">
-        <div className="flex gap-1.5" role="group" aria-label="Scanner input">
-          <Button
-            variant="outline"
-            size="sm"
-            pressed={mode === 'webcam'}
-            onClick={() => {
-              if (fileAbortControllerRef.current) {
-                fileAbortControllerRef.current.abort();
-                fileAbortControllerRef.current = null;
-              }
-              setMode('webcam');
-              setIsWebcamActive(true);
-              setFileError(null);
-              setFileProcessing(false);
-            }}
-            className="gap-1 text-xs"
-          >
-            <Camera className="size-3.5" aria-hidden="true" />
-            Webcam
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            pressed={mode === 'file'}
-            onClick={() => {
-              if (fileAbortControllerRef.current) {
-                fileAbortControllerRef.current.abort();
-                fileAbortControllerRef.current = null;
-              }
-              setMode('file');
-              setIsWebcamActive(false);
-              setFileError(null);
-              setFileProcessing(false);
-            }}
-            className="gap-1 text-xs"
-          >
-            <Upload className="size-3.5" aria-hidden="true" />
-            File Upload
-          </Button>
-        </div>
+      <div className="flex items-center justify-between gap-2 border-b border-line-subtle bg-surface-sunken p-3">
+        <SegmentedControl<'webcam' | 'file'>
+          label="Scanner input"
+          value={mode}
+          onChange={(next) => {
+            if (fileAbortControllerRef.current) {
+              fileAbortControllerRef.current.abort();
+              fileAbortControllerRef.current = null;
+            }
+            setMode(next);
+            setIsWebcamActive(next === 'webcam');
+            setFileError(null);
+            setFileProcessing(false);
+          }}
+          options={[
+            {
+              value: 'webcam',
+              label: (
+                <>
+                  <Camera className="size-4" aria-hidden="true" />
+                  Webcam
+                </>
+              ),
+            },
+            {
+              value: 'file',
+              label: (
+                <>
+                  <Upload className="size-4" aria-hidden="true" />
+                  File Upload
+                </>
+              ),
+            },
+          ]}
+        />
 
         {onClose && (
-          <Button variant="icon" size="icon" onClick={onClose} aria-label="Close scanner" className="size-8 rounded-full">
-            <X className="size-4" />
+          <Button variant="icon" iconOnly size="sm" shape="round" onClick={onClose} aria-label="Close scanner">
+            <X className="size-4" aria-hidden="true" />
           </Button>
         )}
       </div>

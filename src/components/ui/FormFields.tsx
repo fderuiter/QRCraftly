@@ -152,7 +152,7 @@ export const CheckboxField: React.FC<CheckboxFieldProps> = ({
       <input
         id={inputId}
         type="checkbox"
-        className="rounded border-line-strong bg-surface text-action"
+        className="size-5 shrink-0 rounded border-line-strong bg-surface text-action"
         aria-invalid={!!error}
         {...props}
         aria-describedby={describedBy}
