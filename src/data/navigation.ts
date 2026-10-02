@@ -49,6 +49,7 @@ export const QR_TYPE_ROUTES: Record<QRType, string> = {
   [QRType.LOCATION]: '/location-qr-code',
   [QRType.MEETING]: '/meeting-qr-code',
   [QRType.SOCIAL]: '/social-qr-code',
+  [QRType.BULK_CSV]: '/bulk-csv-qr-code',
 };
 
 /**

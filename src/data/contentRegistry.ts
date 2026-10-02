@@ -517,6 +517,52 @@ export const contentRegistry: Record<string, ToolContent> = {
       ]
     }
   },
+  "bulk-csv-qr-code": {
+    "id": "bulk-csv-qr-code",
+    "name": "Bulk CSV Batch QR Code Generator",
+    "url": getPublicDomain() + "/bulk-csv-qr-code",
+    "description": "Generate bulk batch QR codes from CSV or TXT files directly in your browser. Download as ZIP archive.",
+    "seoTitle": "Free Bulk CSV Batch QR Code Generator | Privacy First - QRCraftly",
+    "image": "/og-image.png?type=bulk-csv",
+    "imageAlt": "Preview of Bulk CSV Batch QR Code Generator tool",
+    "features": [
+      "Batch CSV QR Generation",
+      "ZIP Package Download",
+      "Zero Network Privacy"
+    ],
+    "schemaType": [SchemaType.SoftwareApplication, SchemaType.WebApplication],
+    "schemaCategory": SchemaCategory.UtilitiesApplication,
+    "personas": [TargetPersona.SecurityConsciousEnterprise],
+    "valueProposition": StrategicValueCategory.ZeroTransitPrivacySovereignty,
+    "howTo": {
+      "name": "How to Generate Bulk QR Codes from a CSV File",
+      "description": "Upload a CSV file, map payload and filename columns, and download generated QR codes as a ZIP package.",
+      "steps": [
+        {
+          "name": "Upload File",
+          "text": "Choose or drop your .csv or .txt file into the bulk CSV upload area."
+        },
+        {
+          "name": "Map Columns",
+          "text": "Select which CSV column contains the QR payload and which column specifies output filenames."
+        },
+        {
+          "name": "Export ZIP Archive",
+          "text": "Select PNG or SVG export format and click Generate ZIP Package to download your batch."
+        }
+      ]
+    },
+    "faqs": [
+      {
+        "question": "Is my CSV file uploaded to a server?",
+        "answer": "No. Your CSV file is parsed and processed entirely inside your browser using client-side JavaScript. What you upload never leaves your device."
+      },
+      {
+        "question": "What formats are supported for batch QR code export?",
+        "answer": "You can export your batch QR codes in PNG raster or SVG vector format packaged inside a single downloadable ZIP archive."
+      }
+    ]
+  },
   "text-qr-code": {
     "id": "text-qr-code",
     "name": "Text QR Code Generator",
