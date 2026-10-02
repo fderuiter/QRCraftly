@@ -56,12 +56,19 @@ export interface ClearWorkerMessage {
   type: 'CLEAR' | 'RESET';
 }
 
+/** Ignore a fountain session that already finished (from `COMPLETE.session`), e.g. after "Receive another". */
+export interface IgnoreSessionMessage {
+  type: 'IGNORE_SESSION';
+  session: string;
+}
+
 export type FileReassemblyIncomingMessage =
   | InitWorkerMessage
   | ChunkWorkerMessage
   | FountainWorkerMessage
   | LegacyReassemblyMessage
-  | ClearWorkerMessage;
+  | ClearWorkerMessage
+  | IgnoreSessionMessage;
 
 let allocatedBuffer: Uint8Array | null = null;
 let totalChunksCount: number | null = null;
@@ -83,7 +90,8 @@ function resetWorkerState(): void {
   knownChunkSize = null;
   receivedIndices = new Set();
   handshakeMetadata = null;
-  fountainReassembler = null;
+  // Reset rather than drop the reassembler: it remembers the finished session and ignores its droplets.
+  fountainReassembler?.reset();
   fountainFinalizing = false;
 }
 
@@ -125,6 +133,7 @@ async function handleFountainDroplet(droplet: string): Promise<void> {
         },
         compression: header.compression,
         isFountain: true,
+        session: reassembler.finishedSessionKey,
       },
       [bufCopy.buffer]
     );
@@ -153,6 +162,12 @@ self.onmessage = async (e: MessageEvent<FileReassemblyIncomingMessage>) => {
   try {
     if (data.type === 'CLEAR' || data.type === 'RESET') {
       resetWorkerState();
+      return;
+    }
+
+    if (data.type === 'IGNORE_SESSION') {
+      if (!fountainReassembler) fountainReassembler = new FountainReassembler();
+      fountainReassembler.ignoreSession(data.session);
       return;
     }
 
