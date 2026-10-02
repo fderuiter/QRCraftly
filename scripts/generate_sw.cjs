@@ -94,15 +94,6 @@ const SCHEMA_VERSION = ${SW_SCHEMA_VERSION};
 const PRECACHE_ASSETS = ${JSON.stringify(precacheManifest, null, 2)};
 const PRECACHED_PATHS = new Set(PRECACHE_ASSETS.map((asset) => asset.url));
 
-// Paths the service worker must never answer: API calls and dynamic
-// redirect links (/r/<id>) always go to the network.
-const BYPASS_PREFIXES = ['/api/', '/r/'];
-
-function isBypassed(pathname) {
-  if (pathname === '/api' || pathname === '/r') return true;
-  return BYPASS_PREFIXES.some((prefix) => pathname.startsWith(prefix));
-}
-
 // Pages are precached under their canonical URL (/about, not
 // /about/index.html), because the host answers the .html path with a redirect
 // and a redirected response can't be used for a navigation.
@@ -229,10 +220,6 @@ self.addEventListener('fetch', (event) => {
   // Requests targeting API routes must bypass local service worker fetch interception
   // and pass directly to the network across all HTTP methods.
   if (url.pathname.startsWith('/api/') || url.pathname === '/api') {
-    return;
-  }
-
-  if (isBypassed(url.pathname)) {
     return;
   }
 

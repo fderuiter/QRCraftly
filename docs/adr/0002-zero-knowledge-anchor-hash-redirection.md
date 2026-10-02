@@ -1,8 +1,11 @@
 ---
-status: accepted
+status: superseded
+superseded_by: 0022
 ---
 
 # Zero-Knowledge Anchor Hash Encryption for Dynamic Redirection
+
+> Superseded by [ADR 0022](./0022-no-dynamic-qr-codes-client-side-only.md): dynamic QR codes were removed and QRCraftly makes static codes only. This record is kept for history.
 
 ## Context
 

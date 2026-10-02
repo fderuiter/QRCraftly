@@ -6,7 +6,7 @@ status: accepted
 
 ## Context
 
-As QRCraftly expands with complex optical simulations, scannability health evaluation, SVG/canvas matrix generation, and dynamic edge redirection, unbounded internal imports and barrel files risk creating tight coupling, hidden dependency cycles, and fragile pass-through abstractions.
+As QRCraftly expands with complex optical simulations, scannability health evaluation, and SVG/canvas matrix generation, unbounded internal imports and barrel files risk creating tight coupling, hidden dependency cycles, and fragile pass-through abstractions.
 
 ## Decision
 

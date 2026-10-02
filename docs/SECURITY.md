@@ -68,7 +68,7 @@ To prevent custom SVG logo uploads and native vector exports from exposing users
 
 ## Persistent Browser Storage Allowlist
 
-The build and pre-commit pipelines run static AST analysis (`scripts/storage_privacy_ast_auditor.js`) on source code before compilation. It scans for browser persistent storage operations (`localStorage`, `sessionStorage`, `indexedDB`, `document.cookie`, `caches`) and enforces an explicit allowlist of authorized keys (`qrcraftly:dynamic-redirects`, `qrcraftly:dynamic-consent-accepted`, `qrcraftly:theme`, `qrcraftly:brand-templates`, `__test__`). The `qrcraftly:theme` key stores only the visitor's colour-theme preference (`light`, `dark` or `system`). The `qrcraftly:brand-templates` key stores user-saved visual brand templates (capped at 50 templates; visual styling parameters only, never QR payload content, border or template text, or uploaded images). The `qrcraftly:dynamic-redirects` key is the one exception to preference-only storage: when Dynamic Redirection is switched on (it is off in production), it keeps the person's own dynamic links on their device, including each original destination URL in plain text, its decryption key and its admin key. Any attempts to persist transient QR payload data or use unapproved keys immediately abort the build.
+The build and pre-commit pipelines run static AST analysis (`scripts/storage_privacy_ast_auditor.js`) on source code before compilation. It scans for browser persistent storage operations (`localStorage`, `sessionStorage`, `indexedDB`, `document.cookie`, `caches`) and enforces an explicit allowlist of authorized keys (`qrcraftly:theme`, `qrcraftly:brand-templates`, `__test__`). The `qrcraftly:theme` key stores only the visitor's colour-theme preference (`light`, `dark` or `system`). The `qrcraftly:brand-templates` key stores user-saved visual brand templates (capped at 50 templates; visual styling parameters only, never QR payload content, border or template text, or uploaded images). Any attempts to persist transient QR payload data or use unapproved keys immediately abort the build.
 
 ## QR Animation Loops
 
@@ -84,11 +84,11 @@ To prevent performance bottlenecks during client-side hydration and SPA navigati
 
 ## URL Sanitization & DOM-XSS Protection
 
-To prevent DOM-based Cross-Site Scripting (DOM-XSS) via dynamic anchors and `href` bindings of user-controlled or edge proxy URLs, we enforce strict URL sanitization:
+To prevent DOM-based Cross-Site Scripting (DOM-XSS) via dynamic anchors and `href` bindings of user-controlled URLs, we enforce strict URL sanitization:
 
 - **Anchor Link Sanitization (`sanitizeHref`)**: Dynamic values destined for anchor `href` attributes are passed through `sanitizeHref` to ensure they only use safe, permitted schemes. This forces all URLs to start with safe, whitelisted prefixes: `http://`, `https://`, or relative paths starting with `/`. Any unsafe schemes (such as `javascript:`, `data:`, or `vbscript:`) are neutralized and fallback to `#`.
 - **HTML Meta-Character Escaping (`escapeHtml`)**: In addition to scheme enforcement, values rendered as text nodes or embedded inside anchor tag `href` links are escaped. This safely converts characters like `&`, `<`, `>`, `"`, and `'` into their respective HTML entity equivalents (`&amp;`, `&lt;`, `&gt;`, `&quot;`, `&#39;`), entirely neutralizing DOM reinterpretation risks and ensuring robust DOM-XSS protection.
 
-## Bot Protection & Edge Anti-Abuse (Cloudflare Turnstile)
+## No Server API
 
-Dynamic redirect link generation (`/r/[id]`) incorporates Cloudflare Turnstile bot verification to defend against automated abuse, denial-of-wallet attacks, and unauthorized database writes. Client-acquired verification tokens are validated prior to committing new dynamic routes to Cloudflare D1. Verification fails closed: production code has no bypass tokens and no fallback secret, so a missing `TURNSTILE_SECRET_KEY` or an unreachable siteverify service rejects registration. Every redirect route is also rate limited through the Cloudflare Rate Limiting binding, writes require an allowlisted `Origin`, bodies are capped at 16 KiB, and only `enc:v1:` ciphertext is accepted, so the API cannot act as a plaintext open redirector. See `docs/public/EDGE_ARCHITECTURE.md` for the full rules.
+QRCraftly has no server code and no API: production serves static files only, and there are no dynamic (redirect) QR codes ([ADR 0022](adr/0022-no-dynamic-qr-codes-client-side-only.md)). There is therefore no database, bot check or rate limiter to defend. `scripts/bundle_ast_audit.js` fails the build if compiled code calls any same-origin `/api/` path.

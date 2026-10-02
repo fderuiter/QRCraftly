@@ -1,6 +1,6 @@
 # QRCraftly
 
-A client-side QR code studio and zero-knowledge dynamic edge routing platform designed to generate customized, scannable QR codes without transmitting user payloads across the network.
+A client-side QR code studio designed to generate customized, scannable QR codes without transmitting user payloads across the network.
 
 ## Language
 
@@ -44,9 +44,9 @@ _Avoid_: Centre dot, data dot, halftone pixel
 
 ### Privacy & Compliance
 
-**Zero-Knowledge Redirection**:
-A dynamic routing architecture where target destinations are encrypted client-side and the decryption key resides only in the client anchor hash fragment.
-_Avoid_: Private redirect, secure forwarding, server-side masking
+**Static QR Code**:
+A QR code whose content is encoded directly in its modules, with no redirect service in between. QRCraftly makes only static codes; dynamic (redirect-based) codes were removed ([ADR 0022](docs/adr/0022-no-dynamic-qr-codes-client-side-only.md)).
+_Avoid_: Offline QR code, permanent QR code
 
 **Storage Allowlist**:
 The explicit set of persistent browser storage keys permitted in client memory.

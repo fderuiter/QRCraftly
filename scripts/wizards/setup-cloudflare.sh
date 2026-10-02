@@ -184,17 +184,17 @@ finish() {
 # Replace the example below. Set TOTAL_STAGES to match the stages you write.
 # ──────────────────────────────────────────────────────────────────────────
 
-TOTAL_STAGES=4
+TOTAL_STAGES=2
 
 banner "Cloudflare Edge Infrastructure Setup"
 
 # ── Stage 1: Account ID & API Token ─────────────────────────────────────────
 stage "Cloudflare: Account ID & API Token"
 say "We will configure your Cloudflare Account ID and an API token for Wrangler."
-say "The token needs Edit permissions for Workers Scripts and D1."
+say "The token needs Edit permission for Workers Scripts."
 open_url "https://dash.cloudflare.com/profile/api-tokens"
 step "Click 'Create Token' → 'Create Custom Token'."
-step "Set Permissions: Account -> Workers Scripts (Edit), D1 (Edit)."
+step "Set Permissions: Account -> Workers Scripts (Edit)."
 step "Copy your Account ID from the Cloudflare Dashboard sidebar / URL."
 ask CLOUDFLARE_ACCOUNT_ID "Paste Cloudflare Account ID:"
 step "Create and copy the generated API Token."
@@ -217,30 +217,6 @@ say "Workers Builds builds every push; main is the production branch."
 open_url "https://dash.cloudflare.com/?to=/:account/workers-and-pages"
 step "Open the 'qrcraftly' Worker (or create it and connect this GitHub repository)."
 step "Settings -> Build: confirm the production branch is 'main' and branch previews are on."
-
-# ── Stage 3: D1 SQL Database ────────────────────────────────────────────────
-stage "Cloudflare: D1 SQL Database"
-say "Dynamic links store only encrypted destinations in Cloudflare D1."
-say "Dynamic links stay switched off until docs/public/EDGE_ARCHITECTURE.md's enablement checklist is done."
-step "Create the database: pnpm exec wrangler d1 create qrcraftly-db"
-step "Apply the schema: pnpm exec wrangler d1 execute qrcraftly-db --remote --file=src/packages/edge-redirect/schema.sql"
-step "Copy the printed database_id (UUID format) into wrangler.jsonc."
-ask CLOUDFLARE_D1_DATABASE_ID "Paste D1 Database ID (Enter keeps existing or local mock):"
-if [[ -n "$CLOUDFLARE_D1_DATABASE_ID" ]]; then
-  write_env CLOUDFLARE_D1_DATABASE_ID "$CLOUDFLARE_D1_DATABASE_ID"
-fi
-
-# ── Stage 4: Turnstile ──────────────────────────────────────────────────────
-stage "Cloudflare: Turnstile"
-say "Creating a dynamic link requires a Cloudflare Turnstile check."
-open_url "https://dash.cloudflare.com/?to=/:account/turnstile"
-step "Add a widget for qrcraftly.com and qrcraftly.fpderuiter.workers.dev."
-step "Store the secret on the Worker: pnpm exec wrangler secret put TURNSTILE_SECRET_KEY"
-step "Set the site key as the Workers Builds build variable VITE_TURNSTILE_SITE_KEY."
-ask VITE_TURNSTILE_SITE_KEY "Paste the Turnstile site key (public; Enter to skip):"
-if [[ -n "$VITE_TURNSTILE_SITE_KEY" ]]; then
-  write_env VITE_TURNSTILE_SITE_KEY "$VITE_TURNSTILE_SITE_KEY"
-fi
 
 finish
 

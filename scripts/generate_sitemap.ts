@@ -65,15 +65,7 @@ export function shouldExcludePath(posixPath: string): boolean {
     clean.includes('dev-sandbox') ||
     clean.includes('quarantine') ||
     clean.includes('internal') ||
-    clean.includes('@id') ||
-    // Dynamic redirects are switched off in production (#928), so the dashboard only
-    // shows an "unavailable" notice and carries a noindex tag.
-    clean.startsWith('/dynamic-dashboard') ||
-    clean.startsWith('dynamic-dashboard') ||
-    // Dynamic link resolver shell (/r/shell), served by the edge Worker for /r/<id>
-    clean === '/r' ||
-    clean.startsWith('/r/') ||
-    clean.startsWith('r/')
+    clean.includes('@id')
   ) {
     return true;
   }

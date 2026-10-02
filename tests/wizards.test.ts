@@ -18,15 +18,13 @@ describe('Interactive DX Wizards', () => {
     expect(wizards).toContain('setup-local-dev.sh');
   });
 
-  it('matches the Workers Static Assets deployment (no Pages project, no KV namespace)', () => {
+  it('matches the static-only Workers Static Assets deployment (no Pages project, KV, D1 or Turnstile)', () => {
     const content = fs.readFileSync(path.join(wizardsDir, 'setup-cloudflare.sh'), 'utf8');
     const stagesSection = content.split('# STAGES:')[1] || '';
     expect(stagesSection).not.toMatch(/Pages project|CLOUDFLARE_PAGES_PROJECT_NAME/);
     expect(stagesSection).not.toMatch(/\bKV\b|CLOUDFLARE_KV_NAMESPACE_ID/);
-    expect(stagesSection).toContain('wrangler d1 create qrcraftly-db');
-    expect(stagesSection).toContain('src/packages/edge-redirect/schema.sql');
-    expect(stagesSection).toContain('TURNSTILE_SECRET_KEY');
-    expect(stagesSection).toContain('VITE_TURNSTILE_SITE_KEY');
+    expect(stagesSection).not.toMatch(/\bD1\b|d1 create/);
+    expect(stagesSection).not.toMatch(/TURNSTILE/);
   });
 
   const wizardFiles = ['setup-cloudflare.sh', 'setup-github-ci.sh', 'setup-local-dev.sh'];

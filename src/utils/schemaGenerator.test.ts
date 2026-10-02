@@ -294,7 +294,6 @@ describe('schemaGenerator', () => {
     const publicRoutes = [
       'audio-qr',
       'arcade',
-      'dynamic-dashboard',
       'security',
       'file-transfer',
       'email-qr-code',
