@@ -247,7 +247,7 @@ function FileTransferReceiveInner() {
           <>
             {/* Connection / Status Section */}
             <section className="space-y-4">
-              <h2 className="flex items-center gap-2 text-xs font-bold tracking-wider text-slate-600 uppercase dark:text-slate-400">
+              <h2 className="flex items-center gap-2 text-xs font-bold tracking-wider text-fg-muted uppercase">
                 <Camera className="size-4 text-teal-600" />
                 1. Scan Transfer QR
               </h2>
@@ -376,15 +376,15 @@ function FileTransferReceiveInner() {
                       className={`flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-4 text-center transition-colors ${
                         isDragging
                           ? 'border-teal-500 bg-teal-50/50 dark:border-teal-400 dark:bg-teal-950/30'
-                          : 'border-slate-200 hover:border-teal-500 dark:border-slate-800 dark:hover:border-teal-400'
+                          : 'border-line hover:border-teal-500 dark:hover:border-teal-400'
                       }`}
                       data-testid="sidebar-dropzone"
                     >
-                      <Upload className="mb-2 size-6 text-teal-600 dark:text-teal-400" />
-                      <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">
+                      <Upload className="mb-2 size-6 text-accent" />
+                      <p className="text-xs font-semibold text-fg-soft">
                         {videoFile ? videoFile.name : 'Drop video file here or click to browse'}
                       </p>
-                      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                      <p className="mt-1 text-xs text-fg-muted">
                         {videoFile ? `${(videoFile.size / (1024 * 1024)).toFixed(2)} MB` : 'MP4, WebM, MOV, etc.'}
                       </p>
                       <input
@@ -439,7 +439,7 @@ function FileTransferReceiveInner() {
           <>
             {/* Live Progress Metrics */}
             <section className="space-y-4">
-              <h2 className="flex items-center gap-2 text-xs font-bold tracking-wider text-slate-600 uppercase dark:text-slate-400">
+              <h2 className="flex items-center gap-2 text-xs font-bold tracking-wider text-fg-muted uppercase">
                 <Activity className="size-4 text-teal-600" />
                 2. Transfer Progress
               </h2>
@@ -455,7 +455,7 @@ function FileTransferReceiveInner() {
                 <div className="space-y-3 rounded-xl border border-slate-100 bg-slate-50/50 p-4 text-xs dark:border-slate-900 dark:bg-slate-900/40" data-testid="fountain-telemetry">
                   <div className="flex items-center justify-between">
                     <span className="font-medium text-slate-500">Decoded:</span>
-                    <span className="font-mono font-bold text-slate-800 dark:text-slate-200">{fountainPercent}%</span>
+                    <span className="font-mono font-bold text-fg">{fountainPercent}%</span>
                   </div>
 
                   <div
@@ -471,26 +471,26 @@ function FileTransferReceiveInner() {
 
                   <dl className="grid grid-cols-2 gap-4 pt-2">
                     <div>
-                      <dt className="text-slate-500 dark:text-slate-400">Frames scanned</dt>
-                      <dd className="font-mono text-sm font-semibold text-slate-700 dark:text-slate-300" data-testid="fountain-droplets">
+                      <dt className="text-fg-muted">Frames scanned</dt>
+                      <dd className="font-mono text-sm font-semibold text-fg-soft" data-testid="fountain-droplets">
                         {fountainStats.dropletsReceived}
                       </dd>
                     </div>
                     <div>
-                      <dt className="text-slate-500 dark:text-slate-400">Blocks decoded</dt>
-                      <dd className="font-mono text-sm font-semibold text-slate-700 dark:text-slate-300" data-testid="fountain-rank">
+                      <dt className="text-fg-muted">Blocks decoded</dt>
+                      <dd className="font-mono text-sm font-semibold text-fg-soft" data-testid="fountain-rank">
                         {fountainStats.rank} / {fountainStats.k}
                       </dd>
                     </div>
                     <div>
-                      <dt className="text-slate-500 dark:text-slate-400">Scan rate</dt>
-                      <dd className="font-mono text-sm font-semibold text-slate-700 dark:text-slate-300" data-testid="fountain-fps">
+                      <dt className="text-fg-muted">Scan rate</dt>
+                      <dd className="font-mono text-sm font-semibold text-fg-soft" data-testid="fountain-fps">
                         {fountainStats.fps.toFixed(1)} fps
                       </dd>
                     </div>
                     <div>
-                      <dt className="text-slate-500 dark:text-slate-400">Time left</dt>
-                      <dd className="font-mono text-sm font-semibold text-slate-700 dark:text-slate-300" data-testid="fountain-eta">
+                      <dt className="text-fg-muted">Time left</dt>
+                      <dd className="font-mono text-sm font-semibold text-fg-soft" data-testid="fountain-eta">
                         {formatEta(fountainStats.etaSeconds)}
                       </dd>
                     </div>
@@ -500,7 +500,7 @@ function FileTransferReceiveInner() {
                 <div className="space-y-3 rounded-xl border border-slate-100 bg-slate-50/50 p-4 text-xs dark:border-slate-900 dark:bg-slate-900/40" data-testid="legacy-progress">
                   <div className="flex items-center justify-between">
                     <span className="font-medium text-slate-500">Progress:</span>
-                    <span className="font-mono font-bold text-slate-800 dark:text-slate-200">{progressPercent}%</span>
+                    <span className="font-mono font-bold text-fg">{progressPercent}%</span>
                   </div>
 
                   <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
@@ -508,14 +508,14 @@ function FileTransferReceiveInner() {
                   </div>
 
                   <div className="pt-2">
-                    <div className="text-slate-500 dark:text-slate-400">Received</div>
-                    <div className="font-mono text-sm font-semibold text-slate-700 dark:text-slate-300">
+                    <div className="text-fg-muted">Received</div>
+                    <div className="font-mono text-sm font-semibold text-fg-soft">
                       {receivedCount} / {totalChunks} parts
                     </div>
                   </div>
                 </div>
               ) : (
-                <div className="rounded-xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-400 dark:border-slate-800">
+                <div className="rounded-xl border border-dashed border-line p-6 text-center text-sm text-slate-400">
                   Ready to scan. Start an animated QR file transfer from the sender.
                 </div>
               )}
@@ -523,11 +523,11 @@ function FileTransferReceiveInner() {
 
             {import.meta.env.DEV && (
               <>
-                <div className="h-px bg-slate-100 dark:bg-slate-800" />
+                <div className="h-px bg-surface-hover" />
 
                 {/* Quick Testing Simulation Controls */}
                 <section className="space-y-4">
-                  <h2 className="flex items-center gap-2 text-xs font-bold tracking-wider text-slate-600 uppercase dark:text-slate-400">
+                  <h2 className="flex items-center gap-2 text-xs font-bold tracking-wider text-fg-muted uppercase">
                     <Cpu className="size-4 text-teal-600" />
                     3. Simulation & Validation Testing
                   </h2>
@@ -560,7 +560,7 @@ function FileTransferReceiveInner() {
                     <Button
                       variant="outline"
                       onClick={simulateSplitRestricted}
-                      className="justify-start text-left text-xs text-red-600 dark:text-red-400"
+                      className="justify-start text-left text-xs text-danger"
                     >
                       <AlertTriangle className="mr-2 size-4" />
                       Simulate Split Threat (java + script:)
@@ -575,14 +575,14 @@ function FileTransferReceiveInner() {
         preview={
             <Card className="overflow-hidden">
               <div className="mb-6 flex items-center justify-between">
-                <h2 className="font-semibold text-slate-700 dark:text-slate-200">
+                <h2 className="font-semibold text-fg-soft">
                   {receiverMode === 'camera' ? 'Camera Viewport' : 'Video Viewport'}
                 </h2>
                 <div className="flex items-center gap-2">
                   <span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-xs font-bold ${
                     isScanning 
-                      ? 'border border-emerald-200 bg-emerald-100 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400' 
-                      : 'border border-slate-200 bg-slate-100 text-slate-600 dark:border-slate-800 dark:bg-slate-900/30 dark:text-slate-400'
+                      ? 'border border-success-line bg-success-soft text-emerald-700 dark:text-emerald-400' 
+                      : 'border border-line bg-slate-100 text-fg-muted dark:bg-slate-900/30'
                   }`}>
                     <span aria-hidden="true" className={`size-1.5 rounded-full ${isScanning ? 'bg-emerald-500 motion-safe:animate-pulse' : 'bg-slate-400'}`} />
                     {isScanning ? 'Active Scanning' : 'Idle'}
@@ -680,7 +680,7 @@ function FileTransferReceiveInner() {
                 {/* Target Frame Overlay */}
                 {isScanning && (
                   <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                    <div className="relative size-64 rounded-3xl border-2 border-dashed border-teal-500/80 bg-transparent shadow-[0_0_0_100vmax_rgba(0,0,0,0.6)]">
+                    <div className="relative size-64 rounded-3xl border-2 border-dashed border-teal-500/80 bg-transparent shadow-spotlight">
                       <div className="absolute top-0 left-0 size-6 -translate-1 rounded-tl-lg border-t-4 border-l-4 border-teal-400" />
                       <div className="absolute top-0 right-0 size-6 translate-x-1 -translate-y-1 rounded-tr-lg border-t-4 border-r-4 border-teal-400" />
                       <div className="absolute bottom-0 left-0 size-6 -translate-x-1 translate-y-1 rounded-bl-lg border-b-4 border-l-4 border-teal-400" />

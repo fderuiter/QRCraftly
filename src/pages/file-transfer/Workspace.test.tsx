@@ -73,8 +73,9 @@ describe('File transfer workspaces (#796, #978)', () => {
     expect(follows(viewport, progress)).toBe(true);
   });
 
-  it('both routes can switch to the other through the transfer mode switcher', () => {
+  it('both routes can switch to the other through the transfer mode switcher, leaving site navigation to the app shell', () => {
     render(<ToastProvider><ReceiverPage /></ToastProvider>);
+    expect(screen.queryByRole('navigation', { name: 'Primary navigation' })).not.toBeInTheDocument();
     const modeNav = screen.getByRole('navigation', { name: 'Transfer mode' });
     expect(within(modeNav).getByRole('link', { name: /Send File/ })).toHaveAttribute('href', '/file-transfer');
     expect(within(modeNav).getByRole('link', { name: /Receive File/ })).toHaveAttribute('href', '/file-transfer/receive');

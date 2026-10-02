@@ -407,7 +407,7 @@ export function BlasterMode({ target, settings, announce }: ModeProps) {
         settings={settings}
         arsenal={
           <Card variant="control" className="space-y-3">
-            <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100">Blaster weapons</h2>
+            <h2 className="text-sm font-bold text-fg">Blaster weapons</h2>
             <ChoiceGroup<BlasterWeaponId>
               kind="radiogroup"
               label="Blaster weapons"
@@ -433,7 +433,7 @@ export function BlasterMode({ target, settings, announce }: ModeProps) {
           </Card>
         }
         arena={
-          <div className="mx-auto w-full max-w-[min(100%,34rem)] rounded-2xl border-2 border-slate-200 bg-white p-2 dark:border-slate-800 dark:bg-slate-900">
+          <div className="mx-auto w-full max-w-[min(100%,34rem)] rounded-2xl border-2 border-line bg-surface p-2">
             <canvas
               ref={canvasRef}
               width={A.width}
@@ -441,7 +441,7 @@ export function BlasterMode({ target, settings, announce }: ModeProps) {
               tabIndex={0}
               role="img"
               aria-label="Arcade blaster arena. Aim with the pointer and click or tap to fire; keys 1, 2 and 3 switch weapons and Space fires."
-              className="block aspect-[5/6] w-full cursor-crosshair rounded-lg focus-visible:ring-2 focus-visible:ring-teal-600 focus-visible:outline-none"
+              className="block aspect-[5/6] w-full cursor-crosshair rounded-lg focus-visible:ring-2 focus-visible:ring-focus focus-visible:outline-none"
               style={{ touchAction: 'none' }}
               data-testid="arcade-blaster-canvas"
               onPointerMove={(event) => {
@@ -490,7 +490,7 @@ export function BlasterMode({ target, settings, announce }: ModeProps) {
           </div>
         }
         hints={
-          <p className="text-center text-xs text-slate-600 dark:text-slate-400">
+          <p className="text-center text-xs text-fg-muted">
             Move the pointer to aim · click or Space to fire · 1, 2, 3 switch weapons · arrow keys aim when the arena is focused
           </p>
         }
@@ -498,8 +498,8 @@ export function BlasterMode({ target, settings, announce }: ModeProps) {
         actions={
           <Card variant="control" className="space-y-3">
             <div className="flex items-baseline justify-between">
-              <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100">Durability</h2>
-              <span className="font-mono text-2xl font-black text-slate-900 dark:text-slate-100" data-testid="arcade-durability">
+              <h2 className="text-sm font-bold text-fg">Durability</h2>
+              <span className="font-mono text-2xl font-black text-fg" data-testid="arcade-durability">
                 {durability.percent}%
               </span>
             </div>
@@ -516,16 +516,16 @@ export function BlasterMode({ target, settings, announce }: ModeProps) {
                 style={{ width: `${durability.percent}%` }}
               />
             </div>
-            <dl className="grid grid-cols-2 gap-2 text-center text-xs text-slate-600 dark:text-slate-400">
+            <dl className="grid grid-cols-2 gap-2 text-center text-xs text-fg-muted">
               <div>
                 <dt>Intact micro-cells</dt>
-                <dd className="font-mono text-sm font-bold text-slate-800 dark:text-slate-200" data-testid="arcade-intact">
+                <dd className="font-mono text-sm font-bold text-fg" data-testid="arcade-intact">
                   {durability.intact} / {durability.original}
                 </dd>
               </div>
               <div>
                 <dt>Blasted away</dt>
-                <dd className="font-mono text-sm font-bold text-slate-800 dark:text-slate-200" data-testid="arcade-blasted">
+                <dd className="font-mono text-sm font-bold text-fg" data-testid="arcade-blasted">
                   {durability.destroyed}
                 </dd>
               </div>
@@ -538,12 +538,12 @@ export function BlasterMode({ target, settings, announce }: ModeProps) {
         }
         telemetry={
           <Card variant="control">
-            <h2 className="mb-3 text-sm font-bold text-slate-800 dark:text-slate-100">Telemetry</h2>
-            <dl className="grid grid-cols-2 gap-3 text-xs text-slate-600 dark:text-slate-400">
-              <div><dt>QR grid</dt><dd className="font-bold text-slate-800 dark:text-slate-200">{matrix.size} × {matrix.size}</dd></div>
-              <div><dt>Micro grid</dt><dd className="font-bold text-slate-800 dark:text-slate-200">{grid.size} × {grid.size}</dd></div>
-              <div><dt>Damaged modules</dt><dd className="font-bold text-slate-800 dark:text-slate-200">{analysis.damagedCount}</dd></div>
-              <div><dt>Decoder</dt><dd className="font-bold text-slate-800 dark:text-slate-200">{scan.isNative ? 'BarcodeDetector' : 'Web Worker'}</dd></div>
+            <h2 className="mb-3 text-sm font-bold text-fg">Telemetry</h2>
+            <dl className="grid grid-cols-2 gap-3 text-xs text-fg-muted">
+              <div><dt>QR grid</dt><dd className="font-bold text-fg">{matrix.size} × {matrix.size}</dd></div>
+              <div><dt>Micro grid</dt><dd className="font-bold text-fg">{grid.size} × {grid.size}</dd></div>
+              <div><dt>Damaged modules</dt><dd className="font-bold text-fg">{analysis.damagedCount}</dd></div>
+              <div><dt>Decoder</dt><dd className="font-bold text-fg">{scan.isNative ? 'BarcodeDetector' : 'Web Worker'}</dd></div>
             </dl>
           </Card>
         }

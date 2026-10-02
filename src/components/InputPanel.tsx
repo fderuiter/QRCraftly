@@ -110,7 +110,7 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Live Region for Screen Readers */}
       <div 
         aria-live="polite" 

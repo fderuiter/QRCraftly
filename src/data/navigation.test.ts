@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { PRIMARY_NAV_ITEMS, QR_TYPE_ROUTES, getCurrentPrimaryNavId, normalizePathname } from './navigation';
+import { GENERATOR_FOOTER_LINKS, PRIMARY_NAV_ITEMS, QR_TYPE_ROUTES, getCurrentPrimaryNavId, normalizePathname } from './navigation';
 import { QRType } from '@/types';
 
 describe('primary navigation model', () => {
@@ -11,6 +11,11 @@ describe('primary navigation model', () => {
       'About',
       'Security',
     ]);
+    expect(PRIMARY_NAV_ITEMS.find((item) => item.id === 'transfer')?.tag).toBe('Beta');
+  });
+
+  it('lists one footer link per generator route', () => {
+    expect(GENERATOR_FOOTER_LINKS.map(([, href]) => href).sort()).toEqual(Object.values(QR_TYPE_ROUTES).sort());
   });
 
   it('maps every QR type to a route', () => {

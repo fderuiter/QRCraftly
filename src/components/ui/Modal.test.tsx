@@ -155,7 +155,7 @@ describe('Modal Component Accessibility and Behavior', () => {
 
       // The outer container has the backdrop classes and presentation role
       const outerContainer = document.body.querySelector('[role="presentation"]') as HTMLElement;
-      expect(outerContainer).toHaveClass('bg-black/50');
+      expect(outerContainer).toHaveClass('bg-scrim');
       expect(outerContainer).toHaveAttribute('role', 'presentation');
       expect(outerContainer).not.toHaveAttribute('role', 'dialog');
 

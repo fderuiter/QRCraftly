@@ -269,7 +269,7 @@ export function SimulatorMode({ target, settings, announce }: ModeProps) {
         settings={settings}
         arsenal={
           <Card variant="control" className="space-y-3">
-            <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100">Blast weapon</h2>
+            <h2 className="text-sm font-bold text-fg">Blast weapon</h2>
             <ChoiceGroup<SimulatorWeaponId>
               kind="radiogroup"
               label="Blast weapon"
@@ -291,7 +291,7 @@ export function SimulatorMode({ target, settings, announce }: ModeProps) {
           </Card>
         }
         arena={
-          <div className="mx-auto w-full max-w-[min(100%,32rem)] rounded-2xl border-2 border-slate-200 bg-white p-2 dark:border-slate-800 dark:bg-slate-900">
+          <div className="mx-auto w-full max-w-[min(100%,32rem)] rounded-2xl border-2 border-line bg-surface p-2">
             <canvas
               ref={canvasRef}
               width={BOARD}
@@ -299,7 +299,7 @@ export function SimulatorMode({ target, settings, announce }: ModeProps) {
               tabIndex={0}
               role="img"
               aria-label={`Damage simulator board, ${matrix.size} by ${matrix.size} modules. Click or drag to strike with the ${weapon.name}; with the keyboard, move with the arrow keys and strike with Enter or Space.`}
-              className="block aspect-square w-full cursor-crosshair rounded-lg focus-visible:ring-2 focus-visible:ring-teal-600 focus-visible:outline-none"
+              className="block aspect-square w-full cursor-crosshair rounded-lg focus-visible:ring-2 focus-visible:ring-focus focus-visible:outline-none"
               style={{ touchAction: 'none' }}
               data-testid="arcade-simulator-canvas"
               onPointerDown={(event) => {
@@ -336,7 +336,7 @@ export function SimulatorMode({ target, settings, announce }: ModeProps) {
           />
         }
         hints={
-          <p className="text-center text-xs text-slate-600 dark:text-slate-400">
+          <p className="text-center text-xs text-fg-muted">
             Click or drag to strike. Keyboard: focus the board, move with the arrow keys, strike with Enter or Space.
           </p>
         }
@@ -355,14 +355,14 @@ export function SimulatorMode({ target, settings, announce }: ModeProps) {
         }
         telemetry={
           <Card variant="control">
-            <h2 className="mb-3 text-sm font-bold text-slate-800 dark:text-slate-100">Telemetry</h2>
-            <dl className="grid grid-cols-2 gap-3 text-xs text-slate-600 dark:text-slate-400">
-              <div><dt>QR grid</dt><dd className="font-bold text-slate-800 dark:text-slate-200">{matrix.size} × {matrix.size}</dd></div>
-              <div><dt>Total modules</dt><dd className="font-bold text-slate-800 dark:text-slate-200">{analysis.totalModules}</dd></div>
-              <div><dt>Damage budget</dt><dd className="font-bold text-slate-800 dark:text-slate-200">{analysis.budget} modules</dd></div>
-              <div><dt>Destroyed</dt><dd className="font-bold text-slate-800 dark:text-slate-200">{analysis.damagedCount} modules</dd></div>
-              <div><dt>Block damage</dt><dd className="font-bold text-slate-800 dark:text-slate-200">{analysis.blockDamage.join(' · ')}</dd></div>
-              <div><dt>Blast maths</dt><dd className="font-bold text-slate-800 dark:text-slate-200">{latency} ms</dd></div>
+            <h2 className="mb-3 text-sm font-bold text-fg">Telemetry</h2>
+            <dl className="grid grid-cols-2 gap-3 text-xs text-fg-muted">
+              <div><dt>QR grid</dt><dd className="font-bold text-fg">{matrix.size} × {matrix.size}</dd></div>
+              <div><dt>Total modules</dt><dd className="font-bold text-fg">{analysis.totalModules}</dd></div>
+              <div><dt>Damage budget</dt><dd className="font-bold text-fg">{analysis.budget} modules</dd></div>
+              <div><dt>Destroyed</dt><dd className="font-bold text-fg">{analysis.damagedCount} modules</dd></div>
+              <div><dt>Block damage</dt><dd className="font-bold text-fg">{analysis.blockDamage.join(' · ')}</dd></div>
+              <div><dt>Blast maths</dt><dd className="font-bold text-fg">{latency} ms</dd></div>
             </dl>
           </Card>
         }

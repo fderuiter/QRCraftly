@@ -64,16 +64,17 @@ test.describe('Primary navigation at 320px', () => {
       await page.goto(path);
       await page.waitForSelector('main[data-hydrated="true"]');
 
-      const menuButton = page.getByRole('button', { name: 'Site menu' });
+      const menuButton = page.getByRole('button', { name: 'Site menu', includeHidden: true });
       await menuButton.click();
       await expect(menuButton).toHaveAttribute('aria-expanded', 'true');
-      const nav = page.getByRole('navigation', { name: 'Primary navigation' });
+      const menu = page.getByRole('dialog', { name: 'Menu' });
       for (const label of ['Create QR', 'File Transfer', 'Arcade', 'About', 'Security']) {
-        await expect(nav.getByRole('link', { name: new RegExp(`^${label}`) })).toBeVisible();
+        await expect(menu.getByRole('link', { name: new RegExp(`^${label}`) })).toBeVisible();
       }
 
       // Escape closes and restores focus
       await page.keyboard.press('Escape');
+      await expect(menu).toBeHidden();
       await expect(menuButton).toHaveAttribute('aria-expanded', 'false');
       await expect(menuButton).toBeFocused();
 
@@ -87,7 +88,7 @@ test.describe('Primary navigation at 320px', () => {
     await page.goto('/security');
     await page.waitForSelector('main[data-hydrated="true"]');
     await page.getByRole('button', { name: 'Site menu' }).click();
-    await expect(page.getByRole('navigation', { name: 'Primary navigation' }).getByRole('link', { name: 'Security' })).toHaveAttribute('aria-current', 'page');
+    await expect(page.getByRole('dialog', { name: 'Menu' }).getByRole('link', { name: 'Security' })).toHaveAttribute('aria-current', 'page');
   });
 });
 

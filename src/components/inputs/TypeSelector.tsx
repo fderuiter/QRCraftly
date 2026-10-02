@@ -39,15 +39,15 @@ const ITEMS = [
   { type: QRType.LOCATION, icon: MapPin, label: "Location" },
   { type: QRType.MEETING, icon: Video, label: "Meeting" },
   { type: QRType.SOCIAL, icon: Share2, label: "Social" },
-  { type: QRType.BULK_CSV, icon: FileSpreadsheet, label: "Bulk CSV Batch" },
+  { type: QRType.BULK_CSV, icon: FileSpreadsheet, label: "Bulk CSV Batch", wide: true },
 ];
 
 const LINK_BASE =
-  "flex min-h-11 w-full flex-col items-center justify-center gap-1 rounded-lg border p-2 text-xs font-medium transition-colors";
+  "flex min-h-11 w-full items-center justify-center gap-1 rounded-lg border px-2 py-1.5 text-xs font-medium transition-colors";
 const LINK_CURRENT =
-  "border-teal-700 bg-teal-50 font-semibold text-teal-800 shadow-sm ring-1 ring-teal-700 dark:border-teal-300 dark:bg-teal-950 dark:text-teal-100 dark:ring-teal-300";
+  "border-teal-700 bg-accent-soft font-semibold text-teal-800 shadow-sm ring-1 ring-teal-700 dark:border-teal-300 dark:text-teal-100 dark:ring-teal-300";
 const LINK_IDLE =
-  "border-transparent text-slate-700 hover:bg-slate-200/60 hover:text-slate-900 dark:text-slate-200 dark:hover:bg-slate-700/50 dark:hover:text-white";
+  "border-transparent text-fg-soft hover:bg-slate-200/60 hover:text-fg dark:hover:bg-slate-700/50";
 
 /**
  * QR type navigation. Each type has its own route, so the choices are ordinary links in a
@@ -62,20 +62,21 @@ const LINK_IDLE =
 export const TypeSelector: React.FC<TypeSelectorProps> = ({ currentType }) => {
   return (
     <nav aria-label="QR code types">
-      <ul className="grid grid-cols-4 gap-2 rounded-xl bg-slate-100 p-2 transition-colors duration-300 dark:bg-slate-800">
+      <ul className="grid grid-cols-4 gap-1.5 rounded-xl bg-surface-hover p-2 transition-colors duration-300">
         {ITEMS.map((item) => {
           const isCurrent = currentType === item.type;
           const href = QR_TYPE_ROUTES[item.type];
           if (!isDangerousUrl(href)) {
             return (
-              <li key={item.type}>
+              // The batch tool spans the last row with its label beside the icon.
+              <li key={item.type} className={item.wide ? "col-span-4" : undefined}>
                 <a
                   href={href}
                   aria-current={isCurrent ? "page" : undefined}
-                  className={`${LINK_BASE} ${isCurrent ? LINK_CURRENT : LINK_IDLE}`}
+                  className={`${LINK_BASE} ${item.wide ? "gap-2" : "flex-col"} ${isCurrent ? LINK_CURRENT : LINK_IDLE}`}
                 >
                   <item.icon className="size-4" aria-hidden="true" />
-                  <span className="w-full text-center break-words whitespace-normal">{item.label}</span>
+                  <span className={item.wide ? undefined : "w-full text-center break-words whitespace-normal"}>{item.label}</span>
                 </a>
               </li>
             );

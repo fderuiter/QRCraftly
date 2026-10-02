@@ -49,14 +49,14 @@ export function AccordionItem({ title, children, defaultOpen = false, headingLev
         setIsOpen(next);
         onOpenChange?.(next);
       }}
-      className="flex min-h-11 w-full justify-between! rounded-none px-5 py-4 text-left hover:bg-slate-50 dark:hover:bg-slate-700/40"
+      className="flex min-h-11 w-full justify-between! rounded-none px-5 py-4 text-left hover:bg-surface-hover"
       aria-expanded={isOpen}
       aria-controls={panelId}
     >
-      <span className="font-semibold text-slate-800 dark:text-slate-200">{title}</span>
+      <span className="font-semibold text-fg">{title}</span>
       <ChevronDown
         aria-hidden="true"
-        className={`size-5 text-slate-500 motion-safe:transition-transform dark:text-slate-400 ${isOpen ? 'rotate-180' : ''}`}
+        className={`size-5 text-fg-muted motion-safe:transition-transform ${isOpen ? 'rotate-180' : ''}`}
       />
     </Button>
   );
@@ -64,14 +64,14 @@ export function AccordionItem({ title, children, defaultOpen = false, headingLev
   const Heading = headingLevel ? (`h${headingLevel}` as const) : null;
 
   return (
-    <div className="mb-4 overflow-hidden rounded-xl border border-slate-200 bg-white transition-colors duration-300 dark:border-slate-700 dark:bg-slate-800">
+    <div className="mb-4 overflow-hidden rounded-xl border border-line bg-surface-raised transition-colors duration-(--duration-slow)">
       {Heading ? <Heading className="m-0 text-base">{button}</Heading> : button}
       <div
         id={panelId}
         role="region"
         aria-labelledby={buttonId}
         hidden={!isOpen}
-        className="px-5 pb-4 text-slate-600 dark:text-slate-400"
+        className="px-5 pb-4 text-fg-muted"
       >
         {children}
       </div>

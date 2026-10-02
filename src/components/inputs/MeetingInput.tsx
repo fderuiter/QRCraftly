@@ -53,20 +53,20 @@ export const MeetingInput: React.FC<MeetingInputProps> = ({
       />
 
       {data.url && parsed.service !== "unknown" && (
-        <div className="space-y-1 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs dark:border-slate-700 dark:bg-slate-800/60">
+        <div className="space-y-1 rounded-lg border border-line bg-slate-50 p-3 text-xs dark:bg-slate-800/60">
           {serviceLabel && (
-            <p className="font-semibold text-teal-700 dark:text-teal-400">
+            <p className="font-semibold text-accent">
               {serviceLabel} link detected
             </p>
           )}
           {parsed.meetingId && (
-            <p className="text-slate-600 dark:text-slate-300">
+            <p className="text-fg-muted">
               <span className="font-medium">Meeting ID:</span>{" "}
               {parsed.meetingId}
             </p>
           )}
           {parsed.passcode && (
-            <p className="text-slate-600 dark:text-slate-300">
+            <p className="text-fg-muted">
               <span className="font-medium">Passcode:</span> {parsed.passcode}
             </p>
           )}

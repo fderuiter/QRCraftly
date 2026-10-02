@@ -134,7 +134,7 @@ const ToastItem = (props: { toast: ToastMessage; onRemove: (id: string) => void 
     return () => clearTimeout(timer);
   }, [toast, onRemove, isHovered, isFocused]);
 
-  const colors = getNotificationColors(toast.type, false);
+  const colors = getNotificationColors(toast.type);
 
   return (
     <div 
@@ -148,7 +148,7 @@ const ToastItem = (props: { toast: ToastMessage; onRemove: (id: string) => void 
           setIsFocused(false);
         }
       }}
-      className={mergeClasses("pointer-events-auto flex w-full max-w-md translate-y-0 transform items-center gap-3 rounded-xl border p-4 opacity-100 shadow-lg transition-all duration-300 ease-in-out", colors)}
+      className={mergeClasses("pointer-events-auto flex w-full max-w-md translate-y-0 transform items-center gap-3 rounded-xl border p-4 opacity-100 shadow-overlay transition-all duration-(--duration-slow) ease-standard", colors)}
     >
       {React.createElement(getNotificationIcon(toast.type), { className: "size-5 flex-shrink-0" })}
       <p className="flex-1 text-sm font-medium">{toast.message}</p>
@@ -168,7 +168,7 @@ const ToastItem = (props: { toast: ToastMessage; onRemove: (id: string) => void 
         variant="ghost"
         size="icon" 
         onClick={() => onRemove(toast.id)}
-        className="rounded-lg p-1 hover:bg-black/5 dark:hover:bg-white/10"
+        className="rounded-lg p-1 hover:bg-surface-hover"
         aria-label="Close notification"
       >
         <X className="size-4" />

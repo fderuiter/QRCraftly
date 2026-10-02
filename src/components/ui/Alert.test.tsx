@@ -9,8 +9,8 @@ describe('Alert Component', () => {
     const alertEl = screen.getByRole('alert');
     expect(alertEl).toBeInTheDocument();
     expect(alertEl).toHaveTextContent('Warning message content');
-    expect(alertEl.className).toContain('bg-amber-50');
-    expect(alertEl.className).toContain('border-amber-200');
+    expect(alertEl.className).toContain('bg-warning-soft');
+    expect(alertEl.className).toContain('border-warning-line');
   });
 
   it('renders error variant with correct title and colors', () => {
@@ -22,8 +22,8 @@ describe('Alert Component', () => {
 
     const alertEl = screen.getByRole('alert');
     expect(alertEl).toHaveTextContent('Critical Error: Something went wrong');
-    expect(alertEl.className).toContain('bg-rose-50');
-    expect(alertEl.className).toContain('border-rose-200');
+    expect(alertEl.className).toContain('bg-danger-soft');
+    expect(alertEl.className).toContain('border-danger-line');
   });
 
   it('correctly resolves and merges custom className without concatenation bugs', () => {
@@ -36,11 +36,11 @@ describe('Alert Component', () => {
     const alertEl = screen.getByRole('alert');
     // Ensure the classes are properly space-separated and contains the custom class
     expect(alertEl.className).toContain('my-custom-class');
-    expect(alertEl.className).toContain('border-amber-200');
+    expect(alertEl.className).toContain('border-warning-line');
     
     // Check that there is no mashed/concatenated string like "border-amber-200my-custom-class"
-    expect(alertEl.className).not.toContain('border-amber-200my-custom-class');
-    expect(alertEl.className).not.toContain('text-amber-400my-custom-class');
+    expect(alertEl.className).not.toContain('border-warning-linemy-custom-class');
+    expect(alertEl.className).not.toContain('text-warningmy-custom-class');
   });
 
   it('renders info variant with correct colors and dismiss button', () => {
@@ -52,8 +52,8 @@ describe('Alert Component', () => {
     );
 
     const alertEl = screen.getByRole('alert');
-    expect(alertEl.className).toContain('bg-blue-50');
-    expect(alertEl.className).toContain('border-blue-200');
+    expect(alertEl.className).toContain('bg-accent-soft');
+    expect(alertEl.className).toContain('border-accent-line');
 
     const dismissBtn = screen.getByRole('button', { name: 'Dismiss alert' });
     expect(dismissBtn).toBeInTheDocument();

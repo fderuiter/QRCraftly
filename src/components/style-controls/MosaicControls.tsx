@@ -64,7 +64,7 @@ export const MosaicControls: React.FC<MosaicControlsProps> = ({ config, onChange
   return (
     <div>
       <div className="mb-3 flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Mosaic</h3>
+        <h3 className="text-sm font-semibold text-fg-soft">Mosaic</h3>
         {config.mosaicImageUrl && (
           <Button
             variant="error"
@@ -84,35 +84,35 @@ export const MosaicControls: React.FC<MosaicControlsProps> = ({ config, onChange
           size="none"
           type="button"
           onClick={() => fileInputRef.current?.click()}
-          className="group flex w-full cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-6 hover:border-teal-400 hover:bg-teal-50 focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:outline-none dark:hover:border-teal-600 dark:hover:bg-teal-900/10"
+          className="group flex w-full cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-6 hover:border-teal-400 hover:bg-teal-50 focus-visible:ring-2 focus-visible:ring-focus focus-visible:outline-none dark:hover:border-teal-600 dark:hover:bg-teal-900/10"
           aria-describedby={combineIds('mosaic-upload-help', error && 'mosaic-upload-error')}
         >
           <Upload className="mb-2 size-5" aria-hidden="true" />
           <span className="text-sm font-medium">Upload Mosaic Design</span>
-          <span id="mosaic-upload-help" className="mt-1 text-xs text-slate-600 dark:text-slate-400">
+          <span id="mosaic-upload-help" className="mt-1 text-xs text-fg-muted">
             Tiles your image into the code. It stays on this device.
           </span>
-          {error && <span id="mosaic-upload-error" role="alert" className="mt-2 text-xs text-rose-700 dark:text-rose-400">{error}</span>}
+          {error && <span id="mosaic-upload-error" role="alert" className="mt-2 text-xs text-danger">{error}</span>}
         </Button>
       ) : (
         <Card variant="control" className="space-y-5">
           <div className="flex items-center gap-4">
             <img src={config.mosaicImageUrl} alt="Mosaic design" width={48} height={48} className="size-12 rounded-md border border-slate-200 object-cover shadow-sm" />
-            <p className="flex-1 text-xs text-slate-500 dark:text-slate-400">
+            <p className="flex-1 text-xs text-fg-muted">
               Error correction is set to High. Check the scan badge before you print.
             </p>
           </div>
 
           <fieldset>
-            <legend className="mb-2 block text-xs font-medium text-slate-500 dark:text-slate-400">Mosaic Layout</legend>
+            <legend className="mb-2 block text-xs font-medium text-fg-muted">Mosaic Layout</legend>
             <div className="grid grid-cols-2 gap-2">
               {MOSAIC_MODES.map((option) => (
                 <label
                   key={option.id}
-                  className={`flex cursor-pointer flex-col items-center gap-1 rounded-lg border p-2 text-xs focus-within:ring-2 focus-within:ring-teal-500 ${
+                  className={`flex cursor-pointer flex-col items-center gap-1 rounded-lg border p-2 text-xs focus-within:ring-2 focus-within:ring-focus ${
                     mode === option.id
-                      ? 'border-teal-500 bg-teal-50 text-teal-800 dark:bg-teal-900/20 dark:text-teal-300'
-                      : 'border-slate-200 text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800'
+                      ? 'border-teal-500 bg-teal-50 text-accent-strong dark:bg-teal-900/20'
+                      : 'border-line text-fg-muted hover:bg-surface-hover'
                   }`}
                 >
                   <input
@@ -125,7 +125,7 @@ export const MosaicControls: React.FC<MosaicControlsProps> = ({ config, onChange
                   />
                   <option.icon className="size-4" aria-hidden="true" />
                   <span className="font-medium">{option.label}</span>
-                  <span className="text-[11px] opacity-80">{option.hint}</span>
+                  <span className="text-xs opacity-80">{option.hint}</span>
                 </label>
               ))}
             </div>

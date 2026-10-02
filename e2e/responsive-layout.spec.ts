@@ -102,7 +102,8 @@ test.describe('Content-first mobile generator (#795)', () => {
 
       // Preview and download stay one tap away.
       await page.getByRole('link', { name: 'Preview & download' }).click();
-      await expect(page.getByRole('button', { name: 'Download QR code as PNG' })).toBeInViewport();
+      await expect(page.getByTestId('qr-stage')).toBeInViewport();
+      await expect(page.getByRole('button', { name: 'Download', exact: true })).toBeInViewport();
     });
   }
 
@@ -174,4 +175,92 @@ test.describe('File transfer workspaces on phones (#796)', () => {
     await expect(page).toHaveURL(/\/file-transfer\/?$/);
     await expect(page.getByRole('heading', { level: 1, name: 'Send a File by QR Code' })).toBeVisible();
   });
+});
+
+/** Primary destinations every page must reach, as visible link names. */
+const PRIMARY_LINKS = [/^Create QR$/, /^File Transfer/, /^Arcade$/, /^About$/, /^Security$/];
+
+test.describe('One app shell on every route (#1049)', () => {
+  test.describe('desktop 1440px', () => {
+    test.use({ viewport: { width: 1440, height: 900 } });
+
+    for (const route of ROUTES) {
+      test(`${route} has the shared header, inline nav and footer`, async ({ page }) => {
+        await gotoHydrated(page, route);
+        await expect(page.getByTestId('app-header')).toHaveCount(1);
+        await expect(page.getByTestId('app-footer')).toHaveCount(1);
+        await expect(page.getByRole('banner')).toHaveCount(1);
+        await expect(page.getByRole('contentinfo')).toHaveCount(1);
+        const nav = page.getByRole('navigation', { name: 'Primary navigation' });
+        await expect(nav).toHaveCount(1);
+        for (const name of PRIMARY_LINKS) {
+          await expect(nav.getByRole('link', { name })).toBeVisible();
+        }
+        await expect(page.getByRole('button', { name: 'Site menu' })).toBeHidden();
+      });
+    }
+
+    test('every route shares one page background in light and dark', async ({ page }) => {
+      for (const scheme of ['light', 'dark'] as const) {
+        await page.emulateMedia({ colorScheme: scheme });
+        const backgrounds = new Set<string>();
+        for (const route of ['/', '/about', '/security', '/arcade', '/file-transfer', '/this-page-does-not-exist']) {
+          await gotoHydrated(page, route);
+          backgrounds.add(await page.getByTestId('app-shell').evaluate((el) => getComputedStyle(el).backgroundColor));
+        }
+        expect([...backgrounds], `${scheme} backgrounds`).toHaveLength(1);
+      }
+    });
+  });
+
+  test.describe('phone 390px', () => {
+    test.use({ viewport: { width: 390, height: 844 } });
+
+    for (const route of ROUTES) {
+      test(`${route} reaches every section in one tap from the menu`, async ({ page }) => {
+        await gotoHydrated(page, route);
+        await expect(page.getByTestId('app-header')).toHaveCount(1);
+        await expect(page.getByTestId('app-footer')).toHaveCount(1);
+        const button = page.getByRole('button', { name: 'Site menu' });
+        const box = await button.boundingBox();
+        expect(box!.width).toBeGreaterThanOrEqual(44);
+        expect(box!.height).toBeGreaterThanOrEqual(44);
+        await button.click();
+        const dialog = page.getByRole('dialog', { name: 'Menu' });
+        for (const name of PRIMARY_LINKS) {
+          const link = dialog.getByRole('link', { name });
+          await expect(link).toBeVisible();
+          expect((await link.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+        }
+        await page.keyboard.press('Escape');
+        await expect(dialog).toBeHidden();
+        await expect(button).toBeFocused();
+      });
+    }
+
+    test('the menu traps focus', async ({ page }) => {
+      await gotoHydrated(page, '/about');
+      await page.getByRole('button', { name: 'Site menu' }).click();
+      const dialog = page.getByRole('dialog', { name: 'Menu' });
+      await expect(dialog).toBeVisible();
+      for (let i = 0; i < 10; i += 1) {
+        await page.keyboard.press('Tab');
+        expect(await dialog.evaluate((el) => el.contains(document.activeElement))).toBe(true);
+      }
+    });
+  });
+});
+
+test.describe('Retired routes (#1049)', () => {
+  for (const [legacy, mode] of [
+    ['/game', 'simulator'],
+    ['/destroy-the-qr', 'blaster'],
+  ] as const) {
+    test(`${legacy} has no page of its own and redirects through _redirects`, async ({ request }) => {
+      const response = await request.get(legacy, { maxRedirects: 0 });
+      expect(response.status()).toBe(301);
+      expect(response.headers()['location']).toBe(`/arcade?mode=${mode}`);
+    });
+  }
+
 });

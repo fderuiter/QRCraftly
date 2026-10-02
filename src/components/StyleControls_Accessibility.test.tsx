@@ -63,7 +63,7 @@ describe('StyleControls Accessibility', () => {
 
     // Check focus-visible ring style classes
     expect(uploadButton).toHaveClass('focus-visible:ring-2');
-    expect(uploadButton).toHaveClass('focus-visible:ring-teal-500');
+    expect(uploadButton).toHaveClass('focus-visible:ring-focus');
     expect(uploadButton).toHaveClass('focus-visible:outline-none');
 
     // Initially aria-describedby points to the helper text ID

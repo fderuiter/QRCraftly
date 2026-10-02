@@ -57,7 +57,7 @@ interface TargetSettingsProps {
 export function TargetSettings({ target, onChange, onResetToGenerator, hasGeneratorDesign }: TargetSettingsProps) {
   return (
     <Card variant="control" className="space-y-4">
-      <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100">Target QR</h2>
+      <h2 className="text-sm font-bold text-fg">Target QR</h2>
       <TextField
         id="arcade-target-payload"
         label="Target QR content"
@@ -68,7 +68,7 @@ export function TargetSettings({ target, onChange, onResetToGenerator, hasGenera
         spellCheck={false}
       />
       <div>
-        <span aria-hidden="true" className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
+        <span aria-hidden="true" className="mb-1 block text-sm font-medium text-fg-soft">
           Error correction level
         </span>
         <ChoiceGroup<EccLevel>
@@ -83,12 +83,12 @@ export function TargetSettings({ target, onChange, onResetToGenerator, hasGenera
           value={target.ecc}
           onChange={(ecc) => onChange({ ecc })}
         />
-        <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
+        <p className="mt-1 text-xs text-fg-muted">
           Level {target.ecc} recovers about {Math.round(ECC_RECOVERY[target.ecc] * 100)}% of damaged modules.
         </p>
       </div>
       <div>
-        <span className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Content presets</span>
+        <span className="mb-1 block text-sm font-medium text-fg-soft">Content presets</span>
         <div className="grid grid-cols-2 gap-2">
           {PRESETS.map((preset) => (
             <Button key={preset.label} variant="outline" size="sm" pressed={target.payload === preset.value} onClick={() => onChange({ payload: preset.value })}>
@@ -101,14 +101,14 @@ export function TargetSettings({ target, onChange, onResetToGenerator, hasGenera
         <RefreshCw className="size-4" aria-hidden="true" />
         Reset to Generator QR
       </Button>
-      <p className="text-xs text-slate-600 dark:text-slate-400">
+      <p className="text-xs text-fg-muted">
         {hasGeneratorDesign
           ? 'Uses the design, colours and content from your generator session.'
           : 'No generator design in this tab yet: resets to the default high-contrast code.'}
       </p>
 
       {/* Maze Overlay Controls */}
-      <div className="border-t border-slate-200 pt-4 dark:border-slate-700">
+      <div className="border-t border-line pt-4">
         <div className="mb-3">
           <ToggleSwitch
             id="arcade-is-maze-enabled"
@@ -116,7 +116,7 @@ export function TargetSettings({ target, onChange, onResetToGenerator, hasGenera
             checked={!!target.isMazeEnabled}
             onChange={(checked) => onChange({ isMazeEnabled: checked })}
           />
-          <p className="mt-1 pl-12 text-xs text-slate-600 dark:text-slate-400">
+          <p className="mt-1 pl-12 text-xs text-fg-muted">
             Generates a solvable maze on empty modules and quiet zones without changing data modules.
           </p>
         </div>

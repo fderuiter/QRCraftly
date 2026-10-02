@@ -76,7 +76,6 @@ describe('File Transfer Receive Page & Pipeline', () => {
       </ToastProvider>
     );
 
-    expect(screen.getByText('QRCraftly')).toBeInTheDocument();
     expect(screen.getByText('Receive a File by QR Code')).toBeInTheDocument();
     expect(screen.getByText('Ready to scan. Start an animated QR file transfer from the sender.')).toBeInTheDocument();
     

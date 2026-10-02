@@ -21,6 +21,43 @@ import path from 'path';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import vike from 'vike/plugin';
+import type { Plugin } from 'vite';
+import type { Connect } from 'vite';
+
+/**
+ * Applies the static rules in `public/_redirects` (the file Cloudflare serves them from) in
+ * `pnpm dev` and `pnpm preview`, so retired routes such as `/game` redirect locally and in
+ * the Playwright suite exactly as they do in production.
+ * @returns Connect middleware answering matching paths with the rule's status and location.
+ */
+const redirectsFileMiddleware = (): Connect.NextHandleFunction => {
+  const file = path.join(process.cwd(), 'public', '_redirects');
+  const rules = new Map<string, { to: string; status: number }>();
+  if (fs.existsSync(file)) {
+    for (const line of fs.readFileSync(file, 'utf8').split(/\r?\n/)) {
+      const [from, to, status] = line.trim().split(/\s+/);
+      if (!from || from.startsWith('#') || !to) continue;
+      rules.set(from, { to, status: Number(status) || 302 });
+    }
+  }
+  return (req, res, next) => {
+    const rule = rules.get((req.url ?? '').split('?')[0]);
+    if (!rule) return next();
+    res.statusCode = rule.status;
+    res.setHeader('Location', rule.to);
+    res.end();
+  };
+};
+
+const redirectsFile = (): Plugin => ({
+  name: 'qrcraftly:redirects-file',
+  configureServer(server) {
+    server.middlewares.use(redirectsFileMiddleware());
+  },
+  configurePreviewServer(server) {
+    server.middlewares.use(redirectsFileMiddleware());
+  },
+});
 
 /**
  * Vite configuration file.
@@ -44,6 +81,7 @@ export default defineConfig(() => {
       plugins: [
         react(),
         vike(),
+        redirectsFile(),
       ],
       esbuild: {
         target: 'es2022'
