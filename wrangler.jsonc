@@ -1,6 +1,11 @@
 {
+  "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "qrcraftly",
   "compatibility_date": "2024-09-23",
+  // Production is served at qrcraftly.fpderuiter.workers.dev (and qrcraftly.com), and every
+  // non-production branch built by Workers Builds gets a <branch>-qrcraftly preview URL.
+  "workers_dev": true,
+  "preview_urls": true,
   "assets": {
     "directory": "dist/client",
     // Serve /about/index.html at /about and 308 /about/ to /about, so every URL

@@ -15,7 +15,7 @@ Please list all pre-existing UI elements or utilities from the [UI Component Reg
 - [ ] **Catalog Audit:** I have reviewed the [UI Component Registry & Catalog](docs/public/UI_CATALOG.md) and verified that no existing component matches the functionality of my additions.
 - [ ] **No Slider Duplication:** I have NOT introduced any duplicate range slider logic or custom slider components; any sliders added in this PR reuse the pre-existing `RangeInput`.
 - [ ] **No Button Duplication:** I have NOT introduced custom buttons; all buttons utilize standard `Button` primitives from `src/components/ui/`.
-- [ ] **No Custom Color Math:** I have NOT written custom hex validation, relative luminance formulas, sRGB conversion, or contrast math. I have imported these from `src/utils/colorUtils.ts` or `src/utils/contrastAudit.ts` where necessary.
+- [ ] **No Custom Color Math:** I have NOT written custom hex validation, relative luminance formulas, sRGB conversion, or contrast math. I have imported these from `src/utils/colorUtils.ts` or the scannability package (`auditModuleContrast` from `src/packages/scannability`) where necessary.
 
 ### Verification:
 - [ ] This PR targets `main` and its title follows [Conventional Commits](https://www.conventionalcommits.org/).

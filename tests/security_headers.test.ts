@@ -48,10 +48,8 @@ describe('public/_headers security headers', () => {
     expect(readPermissionsPolicy().get('microphone')).toBe('()');
   });
 
-  it('keeps the camera available for the optical scanner', () => {
-    const camera = readPermissionsPolicy().get('camera');
-    expect(camera).toBeDefined();
-    expect(camera).not.toBe('()');
+  it('keeps the camera available to the site itself only, for the optical scanner', () => {
+    expect(readPermissionsPolicy().get('camera')).toBe('(self)');
   });
 
   it('keeps payment disabled', () => {
