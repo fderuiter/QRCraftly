@@ -140,26 +140,26 @@ export function pathToRoute(relativePath) {
 }
 
 /**
- * Returns the script hashes present on every route, in the order of the first route.
- * These belong in the global `/*` rule so routes needing nothing more can omit their
- * own rule and keep `_headers` under Cloudflare's 8 KB limit.
+ * Returns every inline script hash used by any route, deduplicated, in first-seen order.
+ * They all go in the one global `/*` rule. Cloudflare joins the values of a header set by
+ * several matching rules with a comma, and a browser enforces each comma-separated policy, so
+ * a second, route-level CSP rule would be intersected with the global one and block the
+ * route's extra scripts (#1109). Each page's meta CSP still lists only its own hashes.
  * @param {string[][]} routeHashesList - Script hashes of each route.
- * @returns {string[]} Hashes shared by all routes.
+ * @returns {string[]} The union of all route hashes.
  */
-export function commonHashes(routeHashesList) {
-  if (routeHashesList.length === 0) return [];
-  return routeHashesList[0].filter(h => routeHashesList.every(hashes => hashes.includes(h)));
+export function allHashes(routeHashesList) {
+  return [...new Set(routeHashesList.flat())];
 }
 
 /**
- * Generate _headers file content with route-scoped Content-Security-Policy rules.
- * Routes whose CSP equals the base CSP get no rule of their own; the `/*` rule covers them.
+ * Generate _headers file content with exactly one Content-Security-Policy rule, on `/*`.
+ * Any CSP lines already in the file are dropped so no route ends up with two policies.
  * @param {string} existingHeadersContent - Raw content of existing _headers file.
- * @param {string} baseCsp - Base CSP string with only the hashes shared by every route.
- * @param {Map<string, { routeCsp: string, hashes: string[] }>} routeCspMap - Map of route -> { routeCsp, hashes }.
+ * @param {string} baseCsp - CSP string carrying the hashes of every route.
  * @returns {string} Updated _headers file content.
  */
-export function generateHeadersContent(existingHeadersContent, baseCsp, routeCspMap) {
+export function generateHeadersContent(existingHeadersContent, baseCsp) {
   const routesMap = new Map();
   
   if (existingHeadersContent) {
@@ -199,19 +199,6 @@ export function generateHeadersContent(existingHeadersContent, baseCsp, routeCsp
 
   const globalHeaders = routesMap.get('/*');
   globalHeaders.unshift(`  Content-Security-Policy: ${baseCsp}`);
-
-  for (const [route, info] of routeCspMap.entries()) {
-    if (route === '/*') continue;
-    if (info.routeCsp === baseCsp) continue;
-    
-    if (!routesMap.has(route)) {
-      routesMap.set(route, []);
-    }
-    const routeHeaders = routesMap.get(route);
-    const filteredHeaders = routeHeaders.filter(h => !h.trim().toLowerCase().startsWith('content-security-policy:'));
-    filteredHeaders.unshift(`  Content-Security-Policy: ${info.routeCsp}`);
-    routesMap.set(route, filteredHeaders);
-  }
 
   const sortedRoutes = Array.from(routesMap.keys()).sort((a, b) => {
     if (a === '/*') return -1;
@@ -265,8 +252,8 @@ export function run() {
   
   console.log(`[CSP Hash Injector] Total inline script hashes processed across routes: ${totalHashesProcessed}`);
 
-  // Hashes every page needs go in the global rule; only routes that need more get their own.
-  const baseCsp = updateCsp(baseCspPattern, commonHashes(Array.from(routeCspMap.values(), info => info.hashes)));
+  // One global rule carries every route's hashes, so each response gets exactly one CSP header.
+  const baseCsp = updateCsp(baseCspPattern, allHashes(Array.from(routeCspMap.values(), info => info.hashes)));
   
   // Update _headers file
   const headersPath = path.join(DIST_CLIENT_DIR, '_headers');
@@ -275,9 +262,9 @@ export function run() {
     existingHeadersContent = fs.readFileSync(headersPath, 'utf8');
   }
   
-  const newHeadersContent = generateHeadersContent(existingHeadersContent, baseCsp, routeCspMap);
+  const newHeadersContent = generateHeadersContent(existingHeadersContent, baseCsp);
   fs.writeFileSync(headersPath, newHeadersContent, 'utf8');
-  console.log('[CSP Hash Injector] Updated _headers file with route-scoped Content-Security-Policy rules');
+  console.log('[CSP Hash Injector] Updated _headers file with one global Content-Security-Policy rule');
 
   // --- VALIDATION GATE ---
   console.log('[CSP Hash Injector] Validating headers against Cloudflare limits...');
@@ -372,6 +359,15 @@ export function validateHeaders(csp, headersContent) {
     if (currentRouteHeadersSize > 8192) {
       throw new Error(`Route "${currentRoute}" total headers size (${currentRouteHeadersSize} bytes) exceeds Cloudflare limit of 8,192 bytes!`);
     }
+  }
+
+  // Cloudflare joins a header set by several matching rules into one comma-separated value,
+  // which browsers enforce as separate policies, so only one rule may set the CSP (#1109).
+  const cspRoutes = Object.keys(routeHeaders).filter(route =>
+    routeHeaders[route].some(h => h.name.toLowerCase() === 'content-security-policy')
+  );
+  if (cspRoutes.length > 1) {
+    throw new Error(`Content-Security-Policy is set by ${cspRoutes.length} _headers rules (${cspRoutes.join(', ')}); only the global /* rule may set it.`);
   }
 
   return {
