@@ -25,7 +25,6 @@ Read the full pledge, and exactly what is and isn't collected, in [docs/PLEDGE.m
 - **Dynamic Redirection (built, switched off)**: Code for Cloudflare edge redirection with zero-knowledge AES-GCM client encryption (decryption keys only in `#key=...` anchor fragments) is in the repository, but the UI flags are off and it has no production backend; production serves static assets only. See [EDGE_ARCHITECTURE.md](docs/public/EDGE_ARCHITECTURE.md) and [docs/PLEDGE.md](docs/PLEDGE.md#things-that-would-change-this-page).
 - **Scan to Fill**: Scan an existing QR code with the webcam or from an image file to load its content into the matching input form. Decoding runs in the browser.
 - **Air-Gapped File Transfer (Beta)**: Send a file from one device to another as an animated stream of QR codes (`/file-transfer`) and receive it with a camera (`/file-transfer/receive`). No network, Bluetooth or USB is involved.
-- **Audio QR**: Encode data as audible chirps or as a spectrogram that renders a scannable QR code (`/audio-qr`), using the Web Audio API.
 - **QR Arcade**: Stress-test a QR design by damaging it and watching whether a real scanner still decodes it (`/arcade`).
 - **Advanced Architecture**:
   - **Scannability Web Workers**: Real-time QR code scannability, module-aligned relative luminance audits, and orientation decoding run off-thread, passing pixel data as transferable `ArrayBuffer`s (zero-copy) so the UI stays responsive. The camera scanner recycles its frame buffers through a `DoubleBufferPool`.
@@ -174,7 +173,7 @@ Lighthouse CI runs on every Pull Request to audit performance, accessibility, be
     - `QRTool.tsx`: The main container component that integrates inputs, controls, and canvas.
     - `QRScanner.tsx`: Webcam and file-upload QR scanner used by the input panel.
     - `arcade/`: Components for the QR Arcade page.
-  - `packages/`: Deep modules with small public entry points (`qr-matrix`, `qr-export`, `qr-payload`, `scannability`, `optical-scanner`, `optical-transfer`, `audio-transfer`, `edge-redirect`, `arcade`). See [src/packages/README.md](src/packages/README.md).
+  - `packages/`: Deep modules with small public entry points (`qr-matrix`, `qr-export`, `qr-payload`, `scannability`, `optical-scanner`, `optical-transfer`, `edge-redirect`, `arcade`). See [src/packages/README.md](src/packages/README.md).
   - `hooks/`: React hooks (camera, image upload, download, audio, dynamic redirects).
   - `layouts/`: Application layouts.
     - `LayoutDefault.tsx`: The main layout wrapper.
@@ -184,7 +183,6 @@ Lighthouse CI runs on every Pull Request to audit performance, accessibility, be
     - `about/+Page.tsx`: The about page.
     - `wifi-qr-code/+Page.tsx` and the other `*-qr-code/` folders: One page per QR type.
     - `file-transfer/+Page.tsx` and `file-transfer/receive/+Page.tsx`: Air-gapped file sender and receiver.
-    - `audio-qr/+Page.tsx`: Audio QR.
     - `arcade/+Page.tsx`: QR Arcade (`/game` and `/destroy-the-qr` redirect here).
     - `+config.ts`: Global Vike configuration.
   - `types.ts`: TypeScript definitions for application state and data structures.

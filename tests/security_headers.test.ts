@@ -44,8 +44,8 @@ describe('public/_headers security headers', () => {
     expect(readPermissionsPolicy().get('geolocation')).toBe('(self)');
   });
 
-  it('lets the site itself use the microphone for audio QR receive (#970)', () => {
-    expect(readPermissionsPolicy().get('microphone')).toBe('(self)');
+  it('keeps the microphone disabled, since no feature uses it', () => {
+    expect(readPermissionsPolicy().get('microphone')).toBe('()');
   });
 
   it('keeps the camera available for the optical scanner', () => {

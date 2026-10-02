@@ -37,7 +37,6 @@ const ROUTES = [
   '/security',
   '/file-transfer',
   '/file-transfer/receive',
-  '/audio-qr',
   '/dynamic-dashboard',
   '/arcade',
   '/this-page-does-not-exist',

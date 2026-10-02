@@ -25,7 +25,7 @@ The base policy lives in two places that must stay byte-identical: the meta tag 
 
 ## Permissions Policy
 
-`public/_headers` sends `Permissions-Policy: camera=*, microphone=(self), geolocation=(self), payment=()`. The camera is available for the optical scanner. The microphone is limited to the site itself, for Audio QR receive, and so is geolocation, for "Use Current Location" on the Location QR type. Payment is disabled. An empty allowlist `()` turns a feature off for the site itself too, so never use `()` for a feature the app calls. `tests/security_headers.test.ts` checks these values.
+`public/_headers` sends `Permissions-Policy: camera=*, microphone=(), geolocation=(self), payment=()`. The camera is available for the optical scanner. Geolocation is limited to the site itself, for "Use Current Location" on the Location QR type. The microphone and payment are disabled, since no feature uses them. An empty allowlist `()` turns a feature off for the site itself too, so never use `()` for a feature the app calls. `tests/security_headers.test.ts` checks these values.
 
 ## Reporting a Vulnerability
 

@@ -676,53 +676,6 @@ export const contentRegistry: Record<string, ToolContent> = {
       ]
     }
   },
-  "audio-qr": {
-    "id": "audio-qr",
-    "name": "Audio QR & Acoustic Steganography",
-    "url": getPublicDomain() + "/audio-qr",
-    "description": "Convert data into audible sound chirps or generate a spectrogram audio file that visualizes as a scannable QR code using the Web Audio API.",
-    "seoTitle": "Acoustic Steganography & Audio QR | Convert Data to Sound - QRCraftly",
-    "image": "/og-image.png?type=audio-qr",
-    "imageAlt": "Preview of the Acoustic Steganography & Audio QR tool",
-    "features": [
-      "Acoustic Modem & BFSK Chirp Transceiver",
-      "Spectrogram QR Sound Synthesis",
-      "Real-time Waterfall FFT Analyzer",
-      "Client-Side Web Audio Processing"
-    ],
-    "schemaType": [SchemaType.SoftwareApplication, SchemaType.WebApplication],
-    "schemaCategory": SchemaCategory.UtilitiesApplication,
-    "personas": [TargetPersona.SecurityConsciousEnterprise],
-    "valueProposition": StrategicValueCategory.AsynchronousWebWorkerDiagnostics,
-    "howTo": {
-      "name": "How to Transmit and Visualize Audio QR Codes",
-      "description": "Encode text or binary messages into acoustic chirp signals or synthesize audio spectrograms.",
-      "steps": [
-        {
-          "name": "Select Protocol",
-          "text": "Choose between the Acoustic Modem (Chirp Transceiver) or Spectrogram QR Art Generator."
-        },
-        {
-          "name": "Enter Text Payload",
-          "text": "Type the text message or payload you wish to encode into sound waves."
-        },
-        {
-          "name": "Transmit or Export",
-          "text": "Play acoustic chirps over your speaker or export a high-fidelity WAV file for spectrogram scanning."
-        }
-      ]
-    },
-    "faqs": [
-      {
-        "question": "How does acoustic QR transmission work?",
-        "answer": "Data is converted into binary frequency-shift keying (BFSK) sound chirps played via the Web Audio API and received using microphone FFT spectral analysis."
-      },
-      {
-        "question": "What is a spectrogram QR code?",
-        "answer": "A spectrogram QR code synthesizes sine wave harmonics corresponding to QR matrix rows, rendering a scannable visual QR code when viewed on an audio spectrum analyzer."
-      }
-    ]
-  },
   "arcade": {
     "id": "arcade",
     "name": "QR Arcade & Durability Lab",
