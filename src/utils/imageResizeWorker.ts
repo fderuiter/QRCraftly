@@ -16,7 +16,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { calculateClampedDimensions } from './imageResizeHelper';
+import { calculateClampedDimensions } from './imageDimensions';
 
 /** Worker-only synchronous reader; absent from the DOM lib this project compiles against. */
 declare const FileReaderSync: { new (): { readAsDataURL(blob: Blob): string } } | undefined;
