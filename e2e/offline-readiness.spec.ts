@@ -68,7 +68,7 @@ test.describe('Automated Workbox Precaching and Offline Readiness', () => {
       await page.waitForSelector('main[data-hydrated="true"]', { timeout: 10000 });
       const title = page.locator('h1');
       await expect(title).toBeVisible();
-      await expect(title).toContainText('QRCraftly');
+      await expect(title).toContainText('Free QR Code Generator');
     } finally {
       // Reset offline state
       await context.setOffline(false);

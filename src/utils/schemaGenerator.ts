@@ -1,6 +1,9 @@
 import { ToolContent, AuxiliaryContent, getContentForPath, getContentById } from '../data/contentRegistry';
 import { resolveDomainForPath, resolvePublicUrl, JsonLdObject } from './metadataEngine';
 
+/** Released package version, injected by Vite from package.json. */
+const APP_VERSION: string = typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : '0.0.0';
+
 /**
  * Dynamically generates structured schema.org JSON-LD graph data directly from central content registry.
  * Eliminates static route config import maps.
@@ -91,9 +94,8 @@ export function generateSchema(
     "url": publicUrl,
     "applicationCategory": categoryValue,
     "operatingSystem": "All",
-    "softwareVersion": "0.1.0",
+    "softwareVersion": APP_VERSION,
     "image": `${domain}/og-image.png`,
-    "datePublished": "2025-01-01",
     "author": {
       "@id": `${domain}/#organization`
     },
@@ -116,22 +118,10 @@ export function generateSchema(
   const graph: JsonLdObject[] = [appEntity];
 
   if (toolContent.howTo) {
-    let extension = 'png';
-    const imagePath = content.image || content.ogImage;
-    if (typeof imagePath === 'string') {
-      const withoutQuery = imagePath.split('?')[0];
-      const dotIndex = withoutQuery.lastIndexOf('.');
-      if (dotIndex !== -1) {
-        extension = withoutQuery.slice(dotIndex + 1);
-      }
-    }
-    const imageUrl = `${domain}/assets/images/completed/${content.id}.${extension}`;
-
     const howToObj: JsonLdObject = {
       "@type": "HowTo",
       "name": toolContent.howTo.name,
       "description": toolContent.howTo.description,
-      "image": imageUrl,
       "totalTime": "PT1M",
       "estimatedCost": {
         "@type": "MonetaryAmount",

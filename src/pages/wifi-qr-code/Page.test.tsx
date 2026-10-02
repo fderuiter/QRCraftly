@@ -46,15 +46,17 @@ describe('WiFi QR Code Page', () => {
     const json = JSON.parse(script?.textContent || '{}');
     expect(json['@context']).toBe('https://schema.org');
     expect(json['@graph']).toBeDefined();
-    expect(json['@graph']).toHaveLength(2); // WebApplication and HowTo
+    expect(json['@graph']).toHaveLength(3); // WebApplication, HowTo and FAQPage
+    const faq = json['@graph'].find((item: any) => item['@type'] === 'FAQPage');
+    expect(faq.mainEntity.length).toBeGreaterThanOrEqual(4);
 
     const webApp = json['@graph'].find((item: any) => Array.isArray(item['@type']) && item['@type'].includes('SoftwareApplication') && item['@type'].includes('WebApplication'));
     expect(webApp).toBeDefined();
 
     // Check for critical SEO properties
-    expect(webApp.softwareVersion).toBe('0.1.0');
+    expect(webApp.softwareVersion).toBe(__APP_VERSION__);
     expect(webApp.image).toBe('https://qrcraftly.com/og-image.png');
-    expect(webApp.datePublished).toBe('2025-01-01');
+    expect(webApp.datePublished).toBeUndefined();
     expect(webApp.browserRequirements).toBe('Requires JavaScript. Works in all modern browsers.');
     expect(webApp.author).toEqual({
       '@id': 'https://qrcraftly.com/#organization'
