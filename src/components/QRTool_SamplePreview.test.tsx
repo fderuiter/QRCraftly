@@ -15,36 +15,91 @@
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
-
-import { render, screen } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { render, screen, fireEvent, within } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { axe } from 'vitest-axe';
 import { ToastProvider } from './ui/Toast';
 import QRTool from './QRTool';
 import { DEFAULT_CONFIG } from '@/constants';
-import { QRType, QRStyle } from '@/types';
+import { QRType } from '@/types';
 import { getSamplePayload } from '@/packages/qr-payload';
 
-const mockCanvasRender = vi.fn();
-
-vi.mock('./QRCanvas', () => ({
-  default: (props: { config: { type: QRType; value: string; fgColor: string; style: QRStyle } }) => {
-    mockCanvasRender(props.config);
-    return <canvas data-testid="qr-canvas-mock" data-encoded-value={props.config.value} data-style={props.config.style} />;
-  },
-}));
-
+// The sample fallback needs its own module mocks: a scannability result left
+// over from the last non-empty value, and a spy on the export hook.
 vi.mock('@/hooks/useScannability', () => ({
   useScannability: () => ({
-    status: 'idle',
-    health: undefined,
+    status: 'physical-pass',
+    health: { score: 100, warnings: [] },
     checkScannability: vi.fn(),
     workerRecoveryActive: false,
   }),
 }));
 
+vi.mock('./QRCanvas', () => ({
+  default: (props: { config: { value: string } }) => (
+    <canvas data-testid="qr-canvas-mock" data-encoded-value={props.config.value} />
+  ),
+}));
+
+const exportAsset = vi.fn();
+vi.mock('@/hooks/useQRDownload', () => ({
+  useQRDownload: () => ({ exportAsset }),
+}));
+
+describe('QRTool with sample fallback empty state', () => {
+  beforeEach(() => {
+    exportAsset.mockReset();
+    window.localStorage.clear();
+  });
+
+  it('shows Sample Preview badge and active canvas instead of verified badge when content is empty', () => {
+    render(<ToastProvider><QRTool initialConfig={{ ...DEFAULT_CONFIG, value: '' }} /></ToastProvider>);
+
+    const preview = screen.getByRole('region', { name: 'QR Code Preview' });
+    expect(within(preview).getByTestId('sample-preview-badge')).toHaveTextContent('Sample Preview');
+    expect(within(preview).getByTestId('qr-canvas-mock')).toBeInTheDocument();
+    expect(within(preview).queryByText(/verified/i)).not.toBeInTheDocument();
+    expect(within(preview).queryByText(/Health:/i)).not.toBeInTheDocument();
+    expect(within(preview).getByTestId('scannability-indicator-placeholder')).toBeInTheDocument();
+  });
+
+  it('marks export actions protected and displays alert toast instead of exporting', () => {
+    render(<ToastProvider><QRTool initialConfig={{ ...DEFAULT_CONFIG, value: '' }} /></ToastProvider>);
+
+    const download = screen.getByRole('button', { name: /^Download$/ });
+    const copy = screen.getByRole('button', { name: /Copy QR code/ });
+
+    for (const button of [download, copy]) {
+      expect(button).toHaveAttribute('aria-disabled', 'true');
+    }
+    // The Download control is not a menu while in sample mode.
+    expect(download).not.toHaveAttribute('aria-haspopup');
+
+    fireEvent.click(download);
+    expect(exportAsset).not.toHaveBeenCalled();
+    expect(screen.getByText(/Enter content to generate a QR code\. Exports are available/)).toBeInTheDocument();
+  });
+
+  it('hides sample preview badge and restores verified status when user provides content', () => {
+    render(<ToastProvider><QRTool initialConfig={{ ...DEFAULT_CONFIG, value: 'https://example.com' }} /></ToastProvider>);
+
+    expect(screen.queryByTestId('sample-preview-badge')).not.toBeInTheDocument();
+    expect(screen.getByText('Print simulation verified')).toBeInTheDocument();
+    const download = screen.getByRole('button', { name: /^Download$/ });
+    expect(download).not.toHaveAttribute('aria-disabled');
+    expect(download).toHaveAttribute('aria-haspopup', 'menu');
+  });
+
+  it('has no axe violations in sample preview state', async () => {
+    const { container } = render(<ToastProvider><QRTool initialConfig={{ ...DEFAULT_CONFIG, value: '' }} /></ToastProvider>);
+    const preview = screen.getByRole('region', { name: 'QR Code Preview' });
+    expect(await axe(preview)).toHaveNoViolations();
+    expect(container).toBeTruthy();
+  });
+});
+
 describe('Type-Aware Fallback Sample Payload Engine Integration', () => {
   it('renders type-specific sample payload in QRCanvas when config value is empty', () => {
-    mockCanvasRender.mockClear();
     render(<ToastProvider><QRTool initialConfig={{ ...DEFAULT_CONFIG, value: '', type: QRType.WIFI }} /></ToastProvider>);
 
     expect(screen.getByTestId('sample-preview-badge')).toBeInTheDocument();
@@ -56,7 +111,6 @@ describe('Type-Aware Fallback Sample Payload Engine Integration', () => {
   });
 
   it('updates sample preview value when initial QRType differs', () => {
-    mockCanvasRender.mockClear();
     render(<ToastProvider><QRTool initialConfig={{ ...DEFAULT_CONFIG, value: '', type: QRType.VCARD }} /></ToastProvider>);
 
     const canvas = screen.getByTestId('qr-canvas-mock');
@@ -65,7 +119,6 @@ describe('Type-Aware Fallback Sample Payload Engine Integration', () => {
   });
 
   it('deactivates sample preview mode as soon as non-empty custom value is present', () => {
-    mockCanvasRender.mockClear();
     render(<ToastProvider><QRTool initialConfig={{ ...DEFAULT_CONFIG, value: 'https://mycustomsite.com', type: QRType.URL }} /></ToastProvider>);
 
     expect(screen.queryByTestId('sample-preview-badge')).not.toBeInTheDocument();

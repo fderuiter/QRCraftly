@@ -571,6 +571,39 @@ describe('FountainReassembler & telemetry', () => {
     expect(reassembler.snapshot()).toBeNull();
   });
 
+  it('ignores the finished session after a reset until another session is accepted', async () => {
+    const a = await createFountainSession(randomBytes(200, 31), { fileName: 'a.bin', mimeType: 'application/octet-stream' });
+    const b = await createFountainSession(randomBytes(200, 32), { fileName: 'b.bin', mimeType: 'application/octet-stream' });
+    const reassembler = new FountainReassembler();
+    let index = 0;
+    while (!reassembler.isComplete) reassembler.ingest(a.encoder.dropletStringForIndex(index++));
+    expect((await reassembler.finalize()).header.fileName).toBe('a.bin');
+
+    // A camera still pointed at the finished stream must not start receiving the same file again.
+    reassembler.reset();
+    for (let i = 0; i < 20; i++) expect(reassembler.ingest(a.encoder.dropletStringForIndex(i))).toBeNull();
+    expect(reassembler.snapshot()).toBeNull();
+
+    expect(reassembler.ingest(b.encoder.dropletStringForIndex(0))).toMatchObject({ k: b.encoder.k, dropletsReceived: 1 });
+    reassembler.reset();
+    expect(reassembler.ingest(a.encoder.dropletStringForIndex(0))).toMatchObject({ k: a.encoder.k, dropletsReceived: 1 });
+  });
+
+  it('carries the finished session over to a fresh reassembler', async () => {
+    const a = await createFountainSession(randomBytes(200, 33), { fileName: 'a.bin', mimeType: 'application/octet-stream' });
+    const first = new FountainReassembler();
+    expect(first.finishedSessionKey).toBeNull();
+    let index = 0;
+    while (!first.isComplete) first.ingest(a.encoder.dropletStringForIndex(index++));
+    await first.finalize();
+    const key = first.finishedSessionKey;
+    expect(key).toEqual(expect.any(String));
+
+    const next = new FountainReassembler();
+    next.ignoreSession(key!);
+    expect(next.ingest(a.encoder.dropletStringForIndex(0))).toBeNull();
+  });
+
   it('computes FPS over a sliding window and an ETA', () => {
     const tracker = new FountainRateTracker(1000);
     expect(tracker.fps(0)).toBe(0);

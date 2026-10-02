@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { BASE_CSP_PATTERN, extractInlineScripts, computeCspHash, replaceMetaCSP, updateCsp, validateHeaders, pathToRoute, generateHeadersContent, commonHashes } from '../scripts/csp_hash_injector.js';
+import { BASE_CSP_PATTERN, extractInlineScripts, computeCspHash, replaceMetaCSP, updateCsp, validateHeaders, pathToRoute, generateHeadersContent, allHashes } from '../scripts/csp_hash_injector.js';
 
 describe('CSP Hash Injector Unit Tests', () => {
   describe('pathToRoute', () => {
@@ -16,58 +16,23 @@ describe('CSP Hash Injector Unit Tests', () => {
   });
 
   describe('generateHeadersContent', () => {
-    it('should generate distinct route blocks without accumulating script hashes in /* global rule', () => {
-      const baseCsp = "default-src 'self'; script-src 'self';";
-      const existingHeaders = `/*\n  X-Frame-Options: DENY\n  Strict-Transport-Security: max-age=63072000\n`;
-      
-      const routeCspMap = new Map();
-      routeCspMap.set('/', {
-        routeCsp: "default-src 'self'; script-src 'self' 'sha256-hashIndex';",
-        hashes: ["'sha256-hashIndex'"]
-      });
-      routeCspMap.set('/about', {
-        routeCsp: "default-src 'self'; script-src 'self' 'sha256-hashAbout';",
-        hashes: ["'sha256-hashAbout'"]
-      });
+    it('writes one global CSP rule and drops CSP lines from other rules (#1109)', () => {
+      const baseCsp = updateCsp(BASE_CSP_PATTERN, ["'sha256-index'", "'sha256-about'"]);
+      const existingHeaders = `/*\n  X-Frame-Options: DENY\n  Strict-Transport-Security: max-age=63072000\n\n/about\n  Content-Security-Policy: default-src 'none';\n  X-Robots-Tag: noindex\n`;
 
-      const generated = generateHeadersContent(existingHeaders, baseCsp, routeCspMap);
+      const generated = generateHeadersContent(existingHeaders, baseCsp);
 
-      expect(generated).toContain('/*\n  Content-Security-Policy: default-src \'self\'; script-src \'self\';\n  X-Frame-Options: DENY');
-      expect(generated).toContain('/\n  Content-Security-Policy: default-src \'self\'; script-src \'self\' \'sha256-hashIndex\';');
-      expect(generated).toContain('/about\n  Content-Security-Policy: default-src \'self\'; script-src \'self\' \'sha256-hashAbout\';');
-      
-      // Ensure global /* does NOT contain route-scoped hashes
-      const globalBlock = generated.split('\n\n').find(b => b.startsWith('/*'));
-      expect(globalBlock).not.toContain('sha256-hashIndex');
-      expect(globalBlock).not.toContain('sha256-hashAbout');
-    });
-  });
-
-  describe('commonHashes', () => {
-    it('returns only the hashes every route shares', () => {
-      expect(commonHashes([["'a'", "'b'"], ["'b'", "'a'", "'c'"], ["'a'", "'b'"]])).toEqual(["'a'", "'b'"]);
-      expect(commonHashes([["'a'"], ["'b'"]])).toEqual([]);
-      expect(commonHashes([])).toEqual([]);
-    });
-  });
-
-  describe('generateHeadersContent route deduplication', () => {
-    it('omits route rules whose CSP equals the global rule and keeps routes that need more', () => {
-      const shared = "'sha256-shared'";
-      const baseCsp = updateCsp(BASE_CSP_PATTERN, [shared]);
-      const routeCspMap = new Map();
-      routeCspMap.set('/', { routeCsp: baseCsp, hashes: [shared] });
-      routeCspMap.set('/about', { routeCsp: baseCsp, hashes: [shared] });
-      const extraCsp = updateCsp(BASE_CSP_PATTERN, [shared, "'sha256-extra'"]);
-      routeCspMap.set('/game', { routeCsp: extraCsp, hashes: [shared, "'sha256-extra'"] });
-
-      const generated = generateHeadersContent('/*\n  X-Frame-Options: DENY\n', baseCsp, routeCspMap);
-      const routes = generated.split(/\r?\n\r?\n/).map(block => block.split(/\r?\n/)[0]);
-
-      expect(routes).toEqual(['/*', '/game']);
       expect(generated).toContain(`/*\n  Content-Security-Policy: ${baseCsp}\n  X-Frame-Options: DENY`);
-      expect(generated).toContain(`/game\n  Content-Security-Policy: ${extraCsp}`);
+      expect(generated).toContain('/about\n  X-Robots-Tag: noindex');
+      expect(generated.match(/Content-Security-Policy:/g)).toHaveLength(1);
       expect(() => validateHeaders(baseCsp, generated)).not.toThrow();
+    });
+  });
+
+  describe('allHashes', () => {
+    it('returns every route hash once, in first-seen order', () => {
+      expect(allHashes([["'a'", "'b'"], ["'b'", "'a'", "'c'"], ["'d'"]])).toEqual(["'a'", "'b'", "'c'", "'d'"]);
+      expect(allHashes([])).toEqual([]);
     });
   });
 
@@ -157,6 +122,11 @@ describe('CSP Hash Injector Unit Tests', () => {
       const tooLongHeader = "b".repeat(2001);
       const content = `/*\n  Custom-Header: ${tooLongHeader}\n`;
       expect(() => validateHeaders(csp, content)).toThrowError(/exceeds 2,000 characters/);
+    });
+
+    it('rejects a _headers file where more than one rule sets the CSP (#1109)', () => {
+      const headers = "/*\n  Content-Security-Policy: default-src 'self';\n\n/about\n  Content-Security-Policy: default-src 'self';\n";
+      expect(() => validateHeaders(headers)).toThrow(/set by 2 _headers rules/);
     });
 
     it('should throw error if total headers exceed 8192 bytes', () => {

@@ -77,6 +77,8 @@ interface ReassemblyWorkerMessage {
   error?: string;
   handshake?: HandshakeInfo | null;
   isFountain?: boolean;
+  /** Key of the fountain session that just completed. */
+  session?: string | null;
   rank?: number;
   dropletsReceived?: number;
 }
@@ -119,6 +121,8 @@ export function useOpticalReceiver({
   const rateTrackerRef = useRef(new FountainRateTracker());
 
   const workerRef = useRef<Worker | null>(null);
+  /** The last fountain session received, so a fresh worker ignores its droplets. */
+  const finishedSessionRef = useRef<string | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const lookaheadRef = useRef<StreamLookaheadReceiver | null>(null);
   const processedIndicesRef = useRef<Set<number>>(new Set());
@@ -188,7 +192,8 @@ export function useOpticalReceiver({
   }, []);
 
   const handleWorkerComplete = useCallback(async (message: ReassemblyWorkerMessage) => {
-    const { buffer, handshake: workerHandshake, isFountain } = message;
+    const { buffer, handshake: workerHandshake, isFountain, session } = message;
+    if (session) finishedSessionRef.current = session;
     if (isFountain && workerHandshake) {
       // Stateless entry: the session header replaces the handshake frame.
       handshakeRef.current = workerHandshake;
@@ -251,6 +256,8 @@ export function useOpticalReceiver({
         resetAfterWorkerError(e.message || 'Background worker error.');
       };
 
+      // A camera still pointed at the stream that just finished must not receive it again.
+      if (finishedSessionRef.current) worker.postMessage({ type: 'IGNORE_SESSION', session: finishedSessionRef.current });
       workerRef.current = worker;
     }
     return workerRef.current;

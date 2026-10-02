@@ -48,6 +48,12 @@ const SESSION_SWITCH_THRESHOLD = 8;
 export class FountainReassembler {
   private decoder = new FountainDecoder();
   private foreignStreak = 0;
+  private currentSession: string | null = null;
+  /**
+   * The last session that finished. Its droplets are ignored until a droplet from another session
+   * is accepted, so a camera still pointed at the finished stream can't receive the same file again.
+   */
+  private finishedSession: string | null = null;
 
   /**
    * True once all source blocks are resolved and {@link finalize} can run.
@@ -82,6 +88,9 @@ export class FountainReassembler {
     if (this.decoder.isComplete) return null;
     const parsed = parseDropletString(text);
     if (!parsed) return null;
+    const { k, messageLength, checksum } = parsed.meta;
+    const session = `${k}:${messageLength}:${checksum}:${parsed.data.length}`;
+    if (session === this.finishedSession) return null;
 
     if (!this.decoder.matchesSession(parsed.meta, parsed.data.length)) {
       this.foreignStreak += 1;
@@ -93,6 +102,8 @@ export class FountainReassembler {
     const before = this.decoder.dropletsReceived;
     this.decoder.ingest(parsed.meta, parsed.data);
     if (this.decoder.dropletsReceived === before) return null;
+    this.currentSession = session;
+    this.finishedSession = null;
     return this.snapshot();
   }
 
@@ -104,15 +115,34 @@ export class FountainReassembler {
   public async finalize(): Promise<{ data: Uint8Array; header: FountainSessionHeader }> {
     const message = this.decoder.finalize();
     if (!message) throw new Error('Fountain decoding is not complete.');
-    return openFountainSession(message);
+    const opened = await openFountainSession(message);
+    this.finishedSession = this.currentSession;
+    return opened;
   }
 
   /**
-   * Clears all state for a new stream.
+   * Key of the last finished session, or null. Pass it to {@link ignoreSession} on a new reassembler.
+   * @returns The session key or null.
+   */
+  public get finishedSessionKey(): string | null {
+    return this.finishedSession;
+  }
+
+  /**
+   * Ignores droplets of a session that already finished until a droplet from another session is accepted.
+   * @param key A {@link finishedSessionKey} value.
+   */
+  public ignoreSession(key: string): void {
+    this.finishedSession = key;
+  }
+
+  /**
+   * Clears all state for a new stream. The finished session is kept, so its droplets stay ignored.
    */
   public reset(): void {
     this.decoder.reset();
     this.foreignStreak = 0;
+    this.currentSession = null;
   }
 }
 

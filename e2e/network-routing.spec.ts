@@ -1,6 +1,12 @@
 import { test, expect } from './fixtures';
 
 test.describe('Context-Level Network Routing & Worker Interception', () => {
+  // context.route() does not see requests a service worker answers. Once the app's service
+  // worker controls the page, Firefox sent /unauthorized/test through it, the fixture never
+  // blocked it and the expected failure "passed" (#1108). Block service workers so every
+  // request reaches the router.
+  test.use({ serviceWorkers: 'block' });
+
   test.beforeEach(async ({ page, context }) => {
     // Dynamically serve the temp-test-worker.js script using Playwright routing to bypass any disk/server issues
     await context.route('**/assets/temp-test-worker.js', (route) => {

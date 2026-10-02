@@ -16,6 +16,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { setTimeout as delay } from 'node:timers/promises';
 import type { BrowserContext, Page } from '@playwright/test';
 
 /**
@@ -148,7 +149,7 @@ export async function relayFrames(sender: Page, receiver: Page, options: RelayOp
       }
     }
     if (await options.until()) return seen;
-    await sender.waitForTimeout(15);
+    await delay(15);
   }
   throw new Error(`Optical relay timed out after ${options.timeoutMs} ms (${seen} sender frames seen)`);
 }

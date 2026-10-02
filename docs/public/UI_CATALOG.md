@@ -72,12 +72,12 @@ Unified appearance control modules that manage and present customization options
 - **AdvancedControls** (`AdvancedControls.tsx`): Advanced generator settings panel managing Error Correction Level options.
 - **BorderControls** (`BorderControls.tsx` / `BorderControls.test.tsx`): Controls options for border thickness, padding, and corner radius around outputs.
 - **BrandTemplateGallery** (`BrandTemplateGallery.tsx` / `BrandTemplateGallery.test.tsx`): Curated preset gallery and custom persistent brand template management panel with 1-click JSON export/import. Saved templates keep style settings only (no QR content, text or uploaded images); the Presets / My Templates tabs use `Button`, and all text uses semantic tokens at `text-xs` or larger.
-- **ColorControls** (`ColorControls.tsx`): Consolidates pickers and presets for foreground, background, and corner eye accents. Presets are a three-column radio grid with visible names and a bold border plus check mark on the selected preset.
+- **ColorControls** (`ColorControls.tsx` / `ColorControls.test.tsx`): Consolidates pickers and presets for foreground, background, and corner eye accents. Presets are a three-column radio grid with visible names and a bold border plus check mark on the selected preset.
 - **ContrastWarning** (`ContrastWarning.tsx`): Dynamic accessibility banner that displays contrast warnings if combinations fall below WCAG parameters.
 - **LayoutControls** (`LayoutControls.tsx` / `LayoutControls.test.tsx`): Controls size, padding, margin, and output format.
 - **LogoControls** (`LogoControls.tsx`): Coordinates uploading custom logos (hidden file input labelled "Upload logo image"), configuring scaling boundaries, and adjusting background-mask thresholds.
 - **MosaicControls** (`MosaicControls.tsx` / `MosaicControls.test.tsx`): Controls for Mosaic QR (ADR 0019): tiles an uploaded design into the QR modules while every module keeps its dark or light value. The image is processed on this device only.
-- **PatternControls** (`PatternControls.tsx`): Pattern-style selector that conditionally displays one assertive scannability warning for low-reliability patterns, avoiding duplicate screen-reader announcements.
+- **PatternControls** (`PatternControls.tsx` / `PatternControls.test.tsx`): Pattern-style selector that conditionally displays one assertive scannability warning for low-reliability patterns, avoiding duplicate screen-reader announcements.
 
 ---
 

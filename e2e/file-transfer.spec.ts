@@ -98,7 +98,9 @@ test.describe('Optical file transfer', () => {
       // The receiver joins after the stream has started and misses a quarter of the frames.
       await openSender(sender, file);
       await expect(sender.getByTestId('fountain-symbol-info')).toContainText('bytes (uncompressed)');
-      await sender.waitForTimeout(1_000);
+      await expect
+        .poll(async () => Number(/^(\d+)/.exec((await sender.getByTestId('sender-frames').textContent()) ?? '')?.[1] ?? 0))
+        .toBeGreaterThanOrEqual(5);
       await openReceiver(receiver);
       await relayUntilComplete(sender, receiver, { drop: n => n % 4 === 0 });
 
@@ -154,6 +156,25 @@ test.describe('Optical file transfer', () => {
       await expect(receiver.getByRole('button', { name: 'Deactivate camera scanner' })).toBeVisible();
       await relayUntilComplete(sender, receiver);
       await expectDownloadedCopy(receiver, second);
+    });
+
+    test('does not receive the same file again while the camera still sees it', async ({ page: receiver, context }) => {
+      await installSyntheticCamera(context);
+      const sender = await context.newPage();
+      const file = { name: 'again.txt', mimeType: 'text/plain', buffer: Buffer.from('same file\n'.repeat(60)) };
+      await openSender(sender, file);
+      await openReceiver(receiver);
+      await relayUntilComplete(sender, receiver);
+      await expectDownloadedCopy(receiver, file);
+
+      // The sender keeps looping the finished file while the receiver gets ready for the next one.
+      await receiver.getByRole('button', { name: 'Receive another file' }).click();
+      await expect(receiver.getByRole('button', { name: 'Deactivate camera scanner' })).toBeVisible();
+      const deadline = Date.now() + 4_000;
+      await relayFrames(sender, receiver, { until: async () => Date.now() > deadline || (await isComplete(receiver)()), timeoutMs: 10_000 });
+      await expect(receiver.getByTestId('inline-complete-panel')).not.toBeVisible();
+      // No droplet of the finished stream was accepted, so no decode progress is shown.
+      await expect(receiver.getByTestId('fountain-rank')).toHaveCount(0);
     });
 
     test('works between two phone-sized screens', async ({ browser }) => {
