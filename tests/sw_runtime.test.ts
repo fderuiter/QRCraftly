@@ -1,9 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createRequire } from 'module';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 
 const require = createRequire(import.meta.url);
-const { buildSwContent } = require('../scripts/generate_sw.cjs') as {
+const { buildSwContent, toPrecacheUrl, readRedirectSources } = require('../scripts/generate_sw.cjs') as {
   buildSwContent: (manifest: Array<{ url: string; revision: string }>, hash: string) => string;
+  toPrecacheUrl: (relativePath: string) => string;
+  readRedirectSources: (redirectsFile: string) => Set<string>;
 };
 
 type Listener = (event: FakeEvent) => void;
@@ -18,7 +23,7 @@ interface FakeEvent {
 const ORIGIN = 'https://qrcraftly.com';
 
 /** In-memory CacheStorage keyed by cache name, then by pathname. */
-function createCacheStorage(initial: Record<string, Record<string, string>> = {}) {
+function createCacheStorage(initial: Record<string, Record<string, unknown>> = {}) {
   const store = new Map<string, Map<string, unknown>>();
   for (const [name, entries] of Object.entries(initial)) {
     store.set(name, new Map(Object.entries(entries)));
@@ -62,20 +67,22 @@ function loadWorker(options: {
   hash?: string;
   caches: ReturnType<typeof createCacheStorage>;
   fetchImpl?: (req: unknown) => Promise<unknown>;
+  /** Simulates a worker from an earlier build already controlling the site. */
+  hasActiveWorker?: boolean;
 }) {
   const listeners = new Map<string, Listener>();
   const self = {
     location: { origin: ORIGIN },
     addEventListener: (type: string, fn: Listener) => listeners.set(type, fn),
     skipWaiting: vi.fn(),
+    registration: { active: options.hasActiveWorker ? {} : null },
     clients: { claim: vi.fn(async () => undefined) },
   };
   const fetchImpl = options.fetchImpl ?? (async (req: unknown) => `fetched:${(req as { url: string }).url}`);
   const source = buildSwContent(
     options.manifest ?? [
       { url: '/', revision: 'a' },
-      { url: '/index.html', revision: 'a' },
-      { url: '/about/index.html', revision: 'b' },
+      { url: '/about', revision: 'b' },
       { url: '/index.pageContext.json', revision: 'c' },
       { url: '/assets/app-123.js', revision: 'd' },
     ],
@@ -116,7 +123,22 @@ describe('generated service worker runtime', () => {
     const sw = loadWorker({ caches });
     await sw.dispatch('install');
     expect(sw.self.skipWaiting).not.toHaveBeenCalled();
-    expect(caches.store.get('qrcraftly-precache-new')?.has('/about/index.html')).toBe(true);
+    expect(caches.store.get('qrcraftly-precache-new')?.has('/about')).toBe(true);
+  });
+
+  it('takes over at once from a worker that predates canonical page URLs (#1086)', async () => {
+    const sw = loadWorker({ caches, hasActiveWorker: true });
+    await sw.dispatch('install');
+    expect(sw.self.skipWaiting).toHaveBeenCalledTimes(1);
+  });
+
+  it('waits as usual when the active worker already uses canonical page URLs', async () => {
+    const first = loadWorker({ caches });
+    await first.dispatch('install');
+    await first.dispatch('activate');
+    const next = loadWorker({ caches, hash: 'next', hasActiveWorker: true });
+    await next.dispatch('install');
+    expect(next.self.skipWaiting).not.toHaveBeenCalled();
   });
 
   it('activates the waiting worker only when the page asks for it', async () => {
@@ -165,8 +187,19 @@ describe('generated service worker runtime', () => {
   it('serves precached pages from the cache', async () => {
     const sw = loadWorker({ caches });
     await sw.dispatch('install');
-    expect(await sw.fetchEvent('/about', 'navigate')).toBe('network:/about/index.html');
+    expect(await sw.fetchEvent('/about', 'navigate')).toBe('network:/about');
+    expect(await sw.fetchEvent('/about/', 'navigate')).toBe('network:/about');
+    expect(await sw.fetchEvent('/about/index.html', 'navigate')).toBe('network:/about');
     expect(await sw.fetchEvent('/', 'navigate')).toBe('network:/');
+    expect(await sw.fetchEvent('/index.html', 'navigate')).toBe('network:/');
+  });
+
+  it('never answers a navigation with a redirected response (#1086)', async () => {
+    caches = createCacheStorage({
+      'qrcraftly-precache-old': { '/about': { redirected: true } },
+    });
+    const sw = loadWorker({ caches });
+    expect(await sw.fetchEvent('/about', 'navigate')).toBe(`fetched:${ORIGIN}/about`);
   });
 
   it('sends unknown navigations to the network instead of serving the homepage', async () => {
@@ -199,5 +232,28 @@ describe('generated service worker runtime', () => {
     const sw = loadWorker({ caches });
     expect(await sw.dispatch('fetch', { request: { url: 'https://example.com/a.js', method: 'GET' } })).toBeUndefined();
     expect(await sw.fetchEvent('/about', 'navigate', 'POST')).toBeUndefined();
+  });
+});
+
+describe('service worker precache manifest', () => {
+  it('precaches pages under the URL the host serves with a 200', () => {
+    expect(toPrecacheUrl('index.html')).toBe('/');
+    expect(toPrecacheUrl('arcade/index.html')).toBe('/arcade');
+    expect(toPrecacheUrl('file-transfer/receive/index.html')).toBe('/file-transfer/receive');
+    expect(toPrecacheUrl('404.html')).toBe('/404');
+    expect(toPrecacheUrl('arcade/index.pageContext.json')).toBe('/arcade/index.pageContext.json');
+    expect(toPrecacheUrl('assets/chunks/a.js')).toBe('/assets/chunks/a.js');
+  });
+
+  it('reads redirect sources so retired routes are not precached as redirects', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sw-redirects-'));
+    const file = path.join(dir, '_redirects');
+    fs.writeFileSync(file, '# comment\r\n/game /arcade?mode=simulator 301\r\n/game/ /arcade?mode=simulator 301\n\n');
+    try {
+      expect(Array.from(readRedirectSources(file))).toEqual(['/game']);
+      expect(readRedirectSources(path.join(dir, 'missing')).size).toBe(0);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
