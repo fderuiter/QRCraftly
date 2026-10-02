@@ -152,11 +152,23 @@ jobs:
 
   # JOB E2E: Playwright Cross-Browser Tests
   # Runs against the exact `dist` the Build job produced, so CI builds the app once.
+  # Runs inside the official Playwright image so browsers and their system
+  # libraries are preinstalled: `playwright install --with-deps` on a bare runner
+  # took up to 20 minutes of apt downloads and cancelled the job. The image also
+  # renders the visual baselines reproducibly, so they can be regenerated locally
+  # with the same image. Keep its tag equal to the locked @playwright/test version
+  # (checked by tests/e2e_container_version.test.ts).
   e2e:
     name: E2E Tests
     needs: build
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
+    container:
+      image: mcr.microsoft.com/playwright:v1.62.1-noble
+      options: --ipc=host
+    env:
+      # Firefox refuses to start as root when HOME belongs to another user.
+      HOME: /root
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -170,9 +182,6 @@ jobs:
         with:
           name: dist
           path: dist/
-
-      - name: Install Playwright Browsers
-        run: pnpm exec playwright install --with-deps
 
       - name: Run Playwright tests
         env:
