@@ -68,7 +68,7 @@ test.describe('Export Layout section', () => {
   });
 
   test('renders Template label and four style buttons', async ({ page }) => {
-    await expect(page.getByText('Template')).toBeVisible();
+    await expect(page.getByText('Template', { exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: /Select None template/i })).toBeVisible();
     await expect(page.getByRole('button', { name: /Select Minimalist template/i })).toBeVisible();
     await expect(page.getByRole('button', { name: /Select Gradient template/i })).toBeVisible();
