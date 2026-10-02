@@ -41,8 +41,11 @@ describe("TypeSelector link navigation", () => {
   it("styles the current link with a non-colour cue in both themes", () => {
     render(<TypeSelector currentType={QRType.TEXT} />);
     const current = screen.getByRole("link", { name: "Text" });
-    expect(current.className).toContain("ring-1");
-    expect(current.className).toContain("dark:border-teal-300");
+    // A filled tint in theme tokens plus a check badge, distinct from the focus ring.
+    expect(current.className).toContain("bg-accent-soft");
+    expect(current.className).toContain("border-accent-strong");
+    expect(current.querySelector("svg.lucide-check")).not.toBeNull();
+    expect(screen.getByRole("link", { name: "URL" }).querySelector("svg.lucide-check")).toBeNull();
   });
 
   it("does not intercept arrow keys", () => {

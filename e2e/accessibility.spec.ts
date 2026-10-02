@@ -1,6 +1,7 @@
 import { test, expect } from './fixtures';
 import { Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { ROUTES, gotoHydrated } from './utils/routes';
 
 /**
  * Custom auditing helper that filters out native browser color input artifacts.
@@ -60,3 +61,23 @@ test.describe('Accessibility Suite', () => {
     expect(warningScan.violations).toEqual([]);
   });
 });
+
+/*
+ * Every route in both colour themes (#1057). The theme follows the system preference by
+ * default, so emulating `prefers-color-scheme` switches it before the first paint.
+ */
+for (const colorScheme of ['light', 'dark'] as const) {
+  test.describe(`Axe audit of every route (${colorScheme} theme)`, () => {
+    test.use({ colorScheme });
+
+    for (const route of ROUTES) {
+      test(`${route} has no WCAG A/AA violations`, async ({ page }) => {
+        await gotoHydrated(page, route);
+        await page.waitForLoadState('networkidle');
+        await expect(page.locator('html')).toHaveAttribute('data-theme', colorScheme);
+        const results = await runAccessibilityScan(page);
+        expect(results.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`)).toEqual([]);
+      });
+    }
+  });
+}

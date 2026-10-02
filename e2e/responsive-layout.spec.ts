@@ -18,29 +18,7 @@
 
 import { test, expect } from './fixtures';
 import type { Page } from '@playwright/test';
-
-/** Every prerendered route, plus an unknown path for the 404 page. */
-const ROUTES = [
-  '/',
-  '/text-qr-code',
-  '/wifi-qr-code',
-  '/vcard-qr-code',
-  '/email-qr-code',
-  '/phone-qr-code',
-  '/sms-qr-code',
-  '/payment-qr-code',
-  '/event-qr-code',
-  '/location-qr-code',
-  '/meeting-qr-code',
-  '/social-qr-code',
-  '/bulk-csv-qr-code',
-  '/about',
-  '/security',
-  '/file-transfer',
-  '/file-transfer/receive',
-  '/arcade',
-  '/this-page-does-not-exist',
-];
+import { ROUTES, gotoHydrated } from './utils/routes';
 
 /** Common phone viewports: iPhone SE, iPhone 12-15, Android (Pixel 7 class), small Android. */
 const PHONE_VIEWPORTS = [
@@ -49,11 +27,6 @@ const PHONE_VIEWPORTS = [
   { name: 'Android Chrome 412x915', width: 412, height: 915 },
   { name: 'Small Android 320x568', width: 320, height: 568 },
 ];
-
-async function gotoHydrated(page: Page, path: string) {
-  await page.goto(path);
-  await page.waitForSelector('main[data-hydrated="true"]');
-}
 
 /** Elements inside the tool workspace that scroll on their own (nested scroll areas). */
 async function nestedScrollers(page: Page): Promise<string[]> {
