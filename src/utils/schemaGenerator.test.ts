@@ -292,7 +292,6 @@ describe('schemaGenerator', () => {
 
   it('generates complete schema directly from route path strings for all public tool routes', () => {
     const publicRoutes = [
-      'audio-qr',
       'arcade',
       'security',
       'file-transfer',

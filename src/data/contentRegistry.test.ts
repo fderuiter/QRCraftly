@@ -80,11 +80,11 @@ describe('Content Registry Validation', () => {
     const validSchemaTypes = Object.values(SchemaType);
     const validSchemaCategories = Object.values(SchemaCategory);
 
-    // Verify exactly 19 registered pages exist and are fully populated (the two retired games
+    // Verify exactly 18 registered pages exist and are fully populated (the two retired games
     // were consolidated into "arcade"; their routes live in legacyRouteRegistry; "free-forever"
     // is the no-ads pledge page)
     const registryKeys = Object.keys(contentRegistry);
-    expect(registryKeys.length).toBe(19);
+    expect(registryKeys.length).toBe(18);
 
     registryKeys.forEach((key) => {
       const tool = contentRegistry[key];
@@ -148,7 +148,7 @@ describe('Content Registry Validation', () => {
 
   it('should generate valid WebApplication, HowTo, and FAQPage schemas for all promoted standalone public tools', async () => {
     const { generateSchema } = await import('../utils/schemaGenerator');
-    const promotedTools = ['audio-qr', 'arcade', 'security'];
+    const promotedTools = ['arcade', 'security'];
 
     promotedTools.forEach((toolId) => {
       const tool = contentRegistry[toolId];
@@ -206,7 +206,6 @@ describe('Content Registry Validation', () => {
 
   it('should resolve complete path metadata including image parameters for all public routes', () => {
     const testRoutes = [
-      '/audio-qr',
       '/arcade',
       '/destroy-the-qr',
       '/game',

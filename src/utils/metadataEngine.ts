@@ -179,7 +179,6 @@ export const formatPathName = (segment: string): string => {
     'wifi-qr-code': 'WiFi QR Code',
     'bulk-csv-qr-code': 'Bulk CSV Batch QR Code',
     'about': 'About',
-    'audio-qr': 'Audio QR',
     'destroy-the-qr': 'Destroy the QR',
     'game': 'QR Damage Simulator Game',
     'arcade': 'QR Arcade',

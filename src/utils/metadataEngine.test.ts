@@ -169,7 +169,6 @@ describe('metadataEngine', () => {
     it('applies override for known path segments', () => {
       expect(formatPathName('wifi-qr-code')).toBe('WiFi QR Code');
       expect(formatPathName('about')).toBe('About');
-      expect(formatPathName('audio-qr')).toBe('Audio QR');
       expect(formatPathName('destroy-the-qr')).toBe('Destroy the QR');
       expect(formatPathName('game')).toBe('QR Damage Simulator Game');
       expect(formatPathName('security')).toBe('Security & Privacy');
