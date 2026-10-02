@@ -16,6 +16,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import React, { useEffect } from 'react';
 import { ToastProvider } from "./ui/Toast";
 import { render, screen, fireEvent, waitFor, cleanup, within } from '@testing-library/react';
 import QRTool from './QRTool';
@@ -29,9 +30,17 @@ vi.mock('jsqr', () => ({
 // Mock QRCanvas because it uses canvas which is hard to test in jsdom,
 // and we want to test App logic not the library
 vi.mock('./QRCanvas', () => ({
-  default: () => {
-    // We create a canvas element so that interactions like toDataURL work if queried
-    return <div data-testid="qr-canvas-mock"><canvas data-testid="mock-canvas" /></div>;
+  default: ({ onRendered }: { onRendered?: (info: any) => void }) => {
+    return (
+      <div data-testid="qr-canvas-mock">
+        <canvas data-testid="mock-canvas" />
+        <button
+          type="button"
+          data-testid="mock-trigger-rendered"
+          onClick={() => onRendered?.({ moduleCount: 25, virtualImageData: new ImageData(new Uint8ClampedArray(40000), 100, 100) })}
+        />
+      </div>
+    );
   }
 }));
 
@@ -818,6 +827,63 @@ describe('QRTool Component', () => {
             configurable: true
         });
       }
+    });
+  });
+
+  describe('Scannability Recovery Actions', () => {
+    // The failing check settles after the worker round trip and the main-thread fallback:
+    // about 0.6s locally and well past the 1s findBy default on loaded CI runners.
+    const SCANNABILITY_FAIL_TIMEOUT_MS = 5000;
+
+    it('updates configuration when user clicks Auto-Fix Contrast recovery button', async () => {
+      vi.mocked(jsQR).mockReturnValue(null); // Force scan verification failure
+
+      render(
+        <ToastProvider>
+          <QRTool initialConfig={{ fgColor: '#cccccc', eyeColor: '#cccccc', bgColor: '#ffffff' }} />
+        </ToastProvider>
+      );
+
+      // Trigger canvas render in mock
+      fireEvent.click(screen.getByTestId('mock-trigger-rendered'));
+
+      // Wait for recovery buttons to appear on fail
+      const autoFixBtn = await screen.findByRole('button', { name: 'Auto-Fix Contrast' }, { timeout: SCANNABILITY_FAIL_TIMEOUT_MS });
+      expect(autoFixBtn).toBeInTheDocument();
+
+      fireEvent.click(autoFixBtn);
+
+      // Verify that colors are updated to high-contrast defaults (#000000 / #ffffff)
+      await waitFor(() => {
+        const fgInput = screen.getByLabelText('Foreground');
+        const bgInput = screen.getByLabelText('Background');
+        expect(fgInput).toHaveValue('#000000');
+        expect(bgInput).toHaveValue('#ffffff');
+      });
+    });
+
+    it('updates configuration when user clicks Reset Defaults recovery button', async () => {
+      vi.mocked(jsQR).mockReturnValue(null); // Force scan verification failure
+
+      render(
+        <ToastProvider>
+          <QRTool initialConfig={{ fgColor: '#e0e0e0', eyeColor: '#e0e0e0', bgColor: '#ffffff' }} />
+        </ToastProvider>
+      );
+
+      fireEvent.click(screen.getByTestId('mock-trigger-rendered'));
+
+      const resetBtn = await screen.findByRole('button', { name: 'Reset Defaults' }, { timeout: SCANNABILITY_FAIL_TIMEOUT_MS });
+      expect(resetBtn).toBeInTheDocument();
+
+      fireEvent.click(resetBtn);
+
+      await waitFor(() => {
+        const fgInput = screen.getByLabelText('Foreground');
+        const bgInput = screen.getByLabelText('Background');
+        expect(fgInput).toHaveValue('#000000');
+        expect(bgInput).toHaveValue('#ffffff');
+      });
     });
   });
 });

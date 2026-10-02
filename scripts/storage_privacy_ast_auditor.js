@@ -17,6 +17,7 @@ export const ALLOWED_STORAGE_KEYS = new Set([
   'qrcraftly:dynamic-redirects',
   'qrcraftly:dynamic-consent-accepted',
   'qrcraftly:theme',
+  'qrcraftly:brand-templates',
   '__test__'
 ]);
 

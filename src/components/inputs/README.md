@@ -60,6 +60,10 @@ export const WifiInput: React.FC<WifiInputProps> = ({ data, onChange }) => {
 
 Input data never leaves the browser. `src/types.ts` has no telemetry or reporting schema, and new input types must not add one (see [the QRCraftly Pledge](../../../docs/PLEDGE.md)).
 
+## Brand Design Templates
+
+`src/types.ts` defines `BrandTemplate` and `BrandTemplateExportPayload` interfaces for visual style templates. Templates store visual properties only (colors, pattern styles, borders, logo formatting) and never contain user QR payload input.
+
 ## QR Animation Configurations
 
 The centralized config structure in `src/types.ts` has optional fields for `animationValues`, `isAnimating`, and `animationFps` to drive high-performance frame playbacks in the canvas.

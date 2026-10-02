@@ -13,6 +13,7 @@ This application is designed to **support** HIPAA-compliant workflows through a 
 - **Local Processing:** All QR code generation happens locally within the user's browser using HTML5 Canvas and JavaScript.
 - **Data Transmission:** The sensitive data you enter to generate a QR code (which may include PHI) remains strictly in your device's memory and is not sent to our servers.
 - **Volatile Memory:** QR content you enter is held only in memory and is cleared when the browser tab is closed or refreshed. The only values written to persistent browser storage are the keys listed under Technical Safeguards below.
+- **Brand Template Gallery Records:** Custom brand design templates saved by users are persisted in browser `localStorage` under `qrcraftly:brand-templates` (capped at 50 templates). Stored template records contain visual style settings only (colors, pattern styles, borders, logo size and padding) and never store QR payload content, border or template text, or uploaded images such as logos and mosaic pictures.
 - **Dynamic Link Records (exception, currently switched off):** Dynamic links are built but switched off in production. If they are switched on, each dynamic link you create is saved in `localStorage` under `qrcraftly:dynamic-redirects` so you can manage it later. That record holds the original destination URL in plain text, the decryption key and the admin key for the link, and it stays on your device until you delete the link or clear site data. The server receives only the encrypted destination.
 - **Mosaic QR Images:** An uploaded mosaic design and its decoded pixels are kept only in volatile memory (at most four decoded images) and are never persisted or uploaded.
 - **Animation Loop Frames:** Any cached frames or matrices generated for animation loops are also kept solely in volatile client-side memory.
@@ -37,7 +38,7 @@ QRCraftly runs no analytics, telemetry or diagnostics of its own, and keeps no l
 
 - **HTTPS:** All connections are secured via HTTPS.
 - **State Isolation:** The application does not store user input in URL query parameters (e.g., `?data=...`), ensuring that sensitive data does not leak into browser history, proxy logs, or server access logs.
-- **Pre-Build Storage Privacy AST Auditor:** Automated static analysis (`scripts/storage_privacy_ast_auditor.js`) inspects all browser persistent storage calls prior to compilation. Detected storage operations are validated against an explicit allowlist of authorized preference and consent identifiers (`qrcraftly:dynamic-redirects`, `qrcraftly:dynamic-consent-accepted`, `qrcraftly:theme`, `__test__`), preventing unapproved storage patterns or transient QR payload data from reaching persistent storage.
+- **Pre-Build Storage Privacy AST Auditor:** Automated static analysis (`scripts/storage_privacy_ast_auditor.js`) inspects all browser persistent storage calls prior to compilation. Detected storage operations are validated against an explicit allowlist of authorized preference, theme, and brand template identifiers (`qrcraftly:dynamic-redirects`, `qrcraftly:dynamic-consent-accepted`, `qrcraftly:theme`, `qrcraftly:brand-templates`, `__test__`), preventing unapproved storage patterns or transient QR payload data from reaching persistent storage.
 
 ## Certification Note
 

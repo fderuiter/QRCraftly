@@ -222,11 +222,13 @@ describe('useScannability (app wiring)', () => {
     }
   });
 
-  it('terminates the worker on unmount', () => {
+  it('terminates the worker on unmount once its in-flight check answers', () => {
     const { result, unmount } = renderHook(() => useScannability(makeCanvasRef(), defaultConfig), { wrapper });
     act(() => result.current.checkScannability());
     const worker = getActiveWorker()!;
     unmount();
+    expect(worker.terminate).not.toHaveBeenCalled();
+    worker.dispatchMessage({ success: true, physicalReady: true, configId: '1' });
     expect(worker.terminate).toHaveBeenCalled();
   });
 });

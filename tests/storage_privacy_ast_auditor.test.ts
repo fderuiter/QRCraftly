@@ -69,12 +69,14 @@ describe('Pre-Build Storage Privacy AST Auditor Guardrail', () => {
       expect(ALLOWED_STORAGE_KEYS.has('qrcraftly:dynamic-redirects')).toBe(true);
       expect(ALLOWED_STORAGE_KEYS.has('qrcraftly:dynamic-consent-accepted')).toBe(true);
       expect(ALLOWED_STORAGE_KEYS.has('qrcraftly:theme')).toBe(true);
+      expect(ALLOWED_STORAGE_KEYS.has('qrcraftly:brand-templates')).toBe(true);
       expect(ALLOWED_STORAGE_KEYS.has('__test__')).toBe(true);
     });
 
     it('allows only the documented preference, consent and probe keys', () => {
       expect([...ALLOWED_STORAGE_KEYS].sort()).toEqual([
         '__test__',
+        'qrcraftly:brand-templates',
         'qrcraftly:dynamic-consent-accepted',
         'qrcraftly:dynamic-redirects',
         'qrcraftly:theme',
