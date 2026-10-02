@@ -22,6 +22,9 @@ process.env.VITE_DOMAIN = resolvedDomain;
 const { resolvePublicUrl, getSanitizedPath } = await import('../src/utils/metadataEngine');
 const { contentRegistry, auxiliaryRegistry, getLegacyRedirect } = await import('../src/data/contentRegistry');
 
+const { execBinary } = await import('./utils/execHelper.js');
+
+const REPO_ROOT = path.resolve(__dirname, '..');
 const DIST_DIR = path.resolve(__dirname, '../dist/client');
 const OUTPUT_FILE = process.env.SITEMAP_OUTPUT_PATH || path.join(DIST_DIR, 'sitemap.xml');
 
@@ -63,6 +66,10 @@ export function shouldExcludePath(posixPath: string): boolean {
     clean.includes('quarantine') ||
     clean.includes('internal') ||
     clean.includes('@id') ||
+    // Dynamic redirects are switched off in production (#928), so the dashboard only
+    // shows an "unavailable" notice and carries a noindex tag.
+    clean.startsWith('/dynamic-dashboard') ||
+    clean.startsWith('dynamic-dashboard') ||
     // Dynamic link resolver shell (/r/shell), served by the edge Worker for /r/<id>
     clean === '/r' ||
     clean.startsWith('/r/') ||
@@ -157,6 +164,41 @@ export function getPreRenderedHtmlRoutes(distDir: string = DIST_DIR): string[] {
   return routes;
 }
 
+let historyAvailable: boolean | null = null;
+
+/**
+ * Whether the checkout has full git history. A shallow clone (as CI builders often make)
+ * would stamp every page with the latest commit date, so lastmod is omitted instead.
+ * @returns True when per-path commit dates are trustworthy.
+ */
+function hasFullHistory(): boolean {
+  if (historyAvailable === null) {
+    try {
+      historyAvailable = execBinary('git', ['rev-parse', '--is-shallow-repository'], { cwd: REPO_ROOT, stdio: ['ignore', 'pipe', 'ignore'] }).trim() === 'false';
+    } catch {
+      historyAvailable = false;
+    }
+  }
+  return historyAvailable;
+}
+
+/**
+ * Returns the last commit date (YYYY-MM-DD) touching the page source for a route.
+ * @param cleanPath - Sanitized route such as `/` or `/wifi-qr-code`.
+ * @returns The date, or null when it cannot be determined reliably.
+ */
+export function getLastModified(cleanPath: string): string | null {
+  if (!hasFullHistory()) return null;
+  const pageDir = cleanPath === '/' || cleanPath === '' ? 'src/pages/index' : `src/pages${cleanPath}`;
+  if (!fs.existsSync(path.join(REPO_ROOT, pageDir))) return null;
+  try {
+    const iso = execBinary('git', ['log', '-1', '--format=%cI', '--', pageDir], { cwd: REPO_ROOT, stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+    return /^\d{4}-\d{2}-\d{2}/.test(iso) ? iso.slice(0, 10) : null;
+  } catch {
+    return null;
+  }
+}
+
 export function generateSitemap() {
   if (!fs.existsSync(DIST_DIR)) {
     console.warn(`[Sitemap] Directory ${DIST_DIR} does not exist. Creating output directory.`);
@@ -199,8 +241,11 @@ export function generateSitemap() {
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&apos;');
 
+    const lastmod = getLastModified(cleanPath);
+    const lastmodTag = lastmod ? `\n    <lastmod>${lastmod}</lastmod>` : '';
+
     urls.push(`  <url>
-    <loc>${escapedUrl}</loc>
+    <loc>${escapedUrl}</loc>${lastmodTag}
     <changefreq>weekly</changefreq>
     <priority>${priority}</priority>
   </url>`);
