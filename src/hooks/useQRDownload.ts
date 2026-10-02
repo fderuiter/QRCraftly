@@ -85,18 +85,27 @@ export interface UseQRDownloadReturn {
 function loadImage(url: string | null | undefined): Promise<HTMLImageElement | null> {
   if (!url) return Promise.resolve(null);
   return new Promise((resolve) => {
+    let settled = false;
+    const done = (img: HTMLImageElement | null) => {
+      if (!settled) {
+        settled = true;
+        resolve(img);
+      }
+    };
     const img = new Image();
     img.crossOrigin = 'anonymous';
-    img.onload = () => resolve(img);
-    img.onerror = () => resolve(null);
+    img.onload = () => done(img);
+    img.onerror = () => done(null);
     img.src = url;
     if (img.complete && img.naturalWidth > 0) {
-      resolve(img);
+      done(img);
       return;
     }
     const isJsdom = typeof window !== 'undefined' && window.navigator?.userAgent?.includes('jsdom') === true;
     if (isJsdom) {
-      setTimeout(() => resolve(img), 0);
+      setTimeout(() => done(img), 0);
+    } else {
+      setTimeout(() => done(null), 3000);
     }
   });
 }
@@ -239,17 +248,60 @@ export function useQRDownload(
         return true;
       }
       try {
-        const ctx = canvas.getContext('2d') as CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null;
+        const displayCanvas = qrRef.current?.querySelector('canvas');
+        const targetCanvas = (displayCanvas as HTMLCanvasElement) || canvas;
+        const ctx = targetCanvas.getContext('2d') as CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null;
         if (!ctx) return false;
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const result = performScannabilityCheck(imageData, canvas.width, canvas.height, true);
+
+        let sampleWidth = targetCanvas.width;
+        let sampleHeight = targetCanvas.height;
+        let imageData: ImageData;
+
+        if (sampleWidth > 300 || sampleHeight > 300) {
+          const scale = Math.min(300 / sampleWidth, 300 / sampleHeight);
+          sampleWidth = Math.max(1, Math.round(sampleWidth * scale));
+          sampleHeight = Math.max(1, Math.round(sampleHeight * scale));
+
+          let tmpCanvas: HTMLCanvasElement | OffscreenCanvas | null = null;
+          let tmpCtx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null = null;
+
+          if (typeof OffscreenCanvas !== 'undefined') {
+            try {
+              const off = new OffscreenCanvas(sampleWidth, sampleHeight);
+              tmpCtx = off.getContext('2d') as OffscreenCanvasRenderingContext2D | null;
+              if (tmpCtx) tmpCanvas = off;
+            } catch {
+              // Fallback
+            }
+          }
+          if (!tmpCanvas && typeof document !== 'undefined' && typeof document.createElement === 'function') {
+            const htmlCanv = document.createElement('canvas');
+            htmlCanv.width = sampleWidth;
+            htmlCanv.height = sampleHeight;
+            tmpCtx = htmlCanv.getContext('2d');
+            if (tmpCtx) tmpCanvas = htmlCanv;
+          }
+
+          if (tmpCanvas && tmpCtx) {
+            tmpCtx.drawImage(targetCanvas as CanvasImageSource, 0, 0, sampleWidth, sampleHeight);
+            imageData = tmpCtx.getImageData(0, 0, sampleWidth, sampleHeight);
+          } else {
+            imageData = ctx.getImageData(0, 0, targetCanvas.width, targetCanvas.height);
+            sampleWidth = targetCanvas.width;
+            sampleHeight = targetCanvas.height;
+          }
+        } else {
+          imageData = ctx.getImageData(0, 0, sampleWidth, sampleHeight);
+        }
+
+        const result = performScannabilityCheck(imageData, sampleWidth, sampleHeight, true);
         return result.success;
       } catch (err) {
         console.error('Scannability validation failed:', err);
         return false;
       }
     },
-    [config.templateStyle, config.socialFormat]
+    [qrRef, config.templateStyle, config.socialFormat]
   );
 
   /**
