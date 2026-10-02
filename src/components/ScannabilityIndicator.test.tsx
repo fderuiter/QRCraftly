@@ -133,4 +133,57 @@ describe('ScannabilityIndicator Component', () => {
     rerender(<ScannabilityIndicator status="fail" health={{ score: 30, warnings: ['Low contrast'] }} />);
     expect(await axe(container)).toHaveNoViolations();
   });
+
+  it('renders recovery action buttons when status is fail and callbacks are provided', () => {
+    const handleAutoFix = vi.fn();
+    const handleReset = vi.fn();
+
+    render(
+      <ScannabilityIndicator
+        status="fail"
+        health={{ score: 30, warnings: ['Low contrast'] }}
+        onAutoFixContrast={handleAutoFix}
+        onResetDefault={handleReset}
+      />
+    );
+
+    const autoFixBtn = screen.getByRole('button', { name: 'Auto-Fix Contrast' });
+    const resetBtn = screen.getByRole('button', { name: 'Reset Defaults' });
+
+    expect(autoFixBtn).toBeInTheDocument();
+    expect(resetBtn).toBeInTheDocument();
+
+    fireEvent.click(autoFixBtn);
+    expect(handleAutoFix).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(resetBtn);
+    expect(handleReset).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not render recovery action buttons when callbacks are omitted or status is not fail', () => {
+    const handleAutoFix = vi.fn();
+    const handleReset = vi.fn();
+
+    const { rerender } = render(
+      <ScannabilityIndicator
+        status="fail"
+        health={{ score: 30, warnings: ['Low contrast'] }}
+      />
+    );
+
+    expect(screen.queryByRole('button', { name: 'Auto-Fix Contrast' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Reset Defaults' })).not.toBeInTheDocument();
+
+    rerender(
+      <ScannabilityIndicator
+        status="physical-pass"
+        health={{ score: 100, warnings: [] }}
+        onAutoFixContrast={handleAutoFix}
+        onResetDefault={handleReset}
+      />
+    );
+
+    expect(screen.queryByRole('button', { name: 'Auto-Fix Contrast' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Reset Defaults' })).not.toBeInTheDocument();
+  });
 });

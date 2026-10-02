@@ -20,6 +20,7 @@ import React, { useState, useRef, useCallback, useMemo } from 'react';
 import { Button } from "./ui/Button";
 import { Card } from "./ui/Card";
 import { Alert } from "./ui/Alert";
+import { DEFAULT_CONFIG } from '@/constants';
 import { QRConfig, TemplateStyle, SocialFormat } from '@/types';
 import QRCanvas from '@/components/QRCanvas';
 import { Download, Share2, ChevronDown, CircleHelp, Copy, Check, AlertTriangle } from 'lucide-react';
@@ -115,6 +116,22 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
   const scannabilityStatus = isEmpty ? 'idle' : rawScannabilityStatus;
   const health = isEmpty ? undefined : rawHealth;
 
+  const handleAutoFixContrast = useCallback(() => {
+    store.updateConfig({
+      fgColor: '#000000',
+      bgColor: '#ffffff',
+      eyeColor: '#000000',
+    });
+  }, [store]);
+
+  const handleResetDefault = useCallback(() => {
+    store.updateConfig({
+      fgColor: DEFAULT_CONFIG.fgColor,
+      bgColor: DEFAULT_CONFIG.bgColor,
+      eyeColor: DEFAULT_CONFIG.eyeColor,
+    });
+  }, [store]);
+
   const getDensityLabel = (res: number) => {
     if (res < 800) return 'Standard (Screen)';
     if (res < 1600) return 'Medium (HD)';
@@ -128,7 +145,6 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
     const { width: fw, height: fh } = SOCIAL_DIMENSIONS[config.socialFormat] || { width: 1080, height: 1080 };
     exportHeight = Math.round((exportResolution * fh) / fw);
   }
-
   const handleRendered = useCallback((info: { moduleCount: number, virtualImageData?: ImageData, virtualImageBitmap?: ImageBitmap } = { moduleCount: 0 }) => {
     if (info.moduleCount) setModuleCount(info.moduleCount);
     if (info.virtualImageBitmap) {
@@ -329,7 +345,12 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
                           Sample Preview
                         </span>
                       )}
-                      <ScannabilityIndicator status={scannabilityStatus} health={health} />
+                      <ScannabilityIndicator
+                        status={scannabilityStatus}
+                        health={health}
+                        onAutoFixContrast={handleAutoFixContrast}
+                        onResetDefault={handleResetDefault}
+                      />
                     </div>
                 </div>
                 {!isEmpty && <StressTestButton />}

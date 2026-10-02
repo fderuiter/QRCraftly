@@ -432,4 +432,33 @@ export enum TemplateStyle {
   SOLID_FRAME = 'solid_frame',
 }
 
+/**
+ * Represents a brand design template containing visual styling properties.
+ */
+export interface BrandTemplate {
+  /** Unique identifier for the template. */
+  id: string;
+  /** User-friendly name of the template. */
+  name: string;
+  /** Optional description or category label. */
+  description?: string;
+  /** ISO timestamp when template was created. */
+  createdAt?: string;
+  /** ISO timestamp when template was last updated. */
+  updatedAt?: string;
+  /** Indicates whether this is a system pre-built template preset. */
+  isPrebuilt?: boolean;
+  /** Partial QRConfig containing visual style fields only. */
+  config: Partial<QRConfig>;
+}
+
+/**
+ * The standard structure for brand template export/import JSON files.
+ */
+export interface BrandTemplateExportPayload {
+  version: string;
+  type: 'qrcraftly-brand-template';
+  template: BrandTemplate;
+}
+
 

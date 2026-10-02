@@ -27,6 +27,41 @@ function computeHash(filePath) {
   return hashSum.digest('hex').substring(0, 8);
 }
 
+// Version 2: pages are precached by canonical URL (fix for #1086).
+const SW_SCHEMA_VERSION = 2;
+
+/**
+ * Maps a dist/client file to the URL the service worker precaches it under.
+ * Cloudflare Static Assets (html_handling "drop-trailing-slash") serves
+ * about/index.html at /about and redirects /about/index.html there, so pages
+ * are cached under the URL the host answers with a 200, never a redirect.
+ * @param {string} relativePath POSIX path relative to dist/client.
+ * @returns {string} Precache URL.
+ */
+function toPrecacheUrl(relativePath) {
+  if (relativePath === 'index.html') return '/';
+  if (relativePath.endsWith('/index.html')) return '/' + relativePath.slice(0, -'/index.html'.length);
+  if (relativePath.endsWith('.html')) return '/' + relativePath.slice(0, -'.html'.length);
+  return '/' + relativePath;
+}
+
+/**
+ * Reads the source paths of the _redirects rules, without trailing slashes.
+ * @param {string} redirectsFile Path to the built _redirects file.
+ * @returns {Set<string>} Paths the host redirects.
+ */
+function readRedirectSources(redirectsFile) {
+  if (!fs.existsSync(redirectsFile)) return new Set();
+  const sources = fs
+    .readFileSync(redirectsFile, 'utf8')
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith('#'))
+    .map((line) => line.split(/\s+/)[0])
+    .map((source) => (source.length > 1 ? source.replace(/\/+$/, '') : source));
+  return new Set(sources);
+}
+
 /**
  * Builds the service worker source for a given precache manifest.
  *
@@ -51,6 +86,11 @@ const CACHE_NAME = CACHE_PREFIX + '${buildHash}';
 const META_CACHE = 'qrcraftly-meta';
 const META_KEY = '/__qrcraftly_cache_history__';
 const CACHE_HISTORY_LIMIT = 2;
+// Bumped when a worker fix must reach visitors whose current worker can't
+// load a page (and so can't show the update prompt). A newer schema takes
+// over at once instead of waiting.
+const SCHEMA_KEY = '/__qrcraftly_sw_schema__';
+const SCHEMA_VERSION = ${SW_SCHEMA_VERSION};
 const PRECACHE_ASSETS = ${JSON.stringify(precacheManifest, null, 2)};
 const PRECACHED_PATHS = new Set(PRECACHE_ASSETS.map((asset) => asset.url));
 
@@ -63,9 +103,13 @@ function isBypassed(pathname) {
   return BYPASS_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 }
 
-function toHtmlPath(pathname) {
-  if (pathname.endsWith('.html')) return pathname;
-  return pathname.endsWith('/') ? pathname + 'index.html' : pathname + '/index.html';
+// Pages are precached under their canonical URL (/about, not
+// /about/index.html), because the host answers the .html path with a redirect
+// and a redirected response can't be used for a navigation.
+function toPageUrl(pathname) {
+  let page = pathname.replace(/\\/index\\.html$/, '/').replace(/\\.html$/, '');
+  if (page.length > 1 && page.endsWith('/')) page = page.slice(0, -1);
+  return page || '/';
 }
 
 async function readCacheHistory() {
@@ -80,6 +124,23 @@ async function readCacheHistory() {
   }
 }
 
+async function readSchemaVersion() {
+  try {
+    const meta = await caches.open(META_CACHE);
+    const response = await meta.match(SCHEMA_KEY);
+    if (!response) return 0;
+    const version = await response.json();
+    return typeof version === 'number' ? version : 0;
+  } catch (err) {
+    return 0;
+  }
+}
+
+async function writeSchemaVersion() {
+  const meta = await caches.open(META_CACHE);
+  await meta.put(SCHEMA_KEY, new Response(JSON.stringify(SCHEMA_VERSION), { headers: { 'Content-Type': 'application/json' } }));
+}
+
 async function writeCacheHistory(history) {
   const meta = await caches.open(META_CACHE);
   await meta.put(META_KEY, new Response(JSON.stringify(history), { headers: { 'Content-Type': 'application/json' } }));
@@ -87,15 +148,18 @@ async function writeCacheHistory(history) {
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return Promise.all(
+    (async () => {
+      const cache = await caches.open(CACHE_NAME);
+      await Promise.all(
         PRECACHE_ASSETS.map((asset) => {
           return cache.add(asset.url).catch((err) => {
             console.warn('Failed to precache asset:', asset.url, err);
           });
         })
       );
-    })
+      const replacesOlderSchema = Boolean(self.registration && self.registration.active) && (await readSchemaVersion()) < SCHEMA_VERSION;
+      if (replacesOlderSchema) self.skipWaiting();
+    })()
   );
 });
 
@@ -118,6 +182,7 @@ self.addEventListener('activate', (event) => {
           .map((name) => caches.delete(name))
       );
       await writeCacheHistory(Array.from(keep));
+      await writeSchemaVersion();
       await self.clients.claim();
     })()
   );
@@ -130,10 +195,12 @@ async function matchPrecache(pathname) {
 }
 
 async function handleNavigation(request, url) {
-  const htmlPath = toHtmlPath(url.pathname);
-  if (PRECACHED_PATHS.has(url.pathname) || PRECACHED_PATHS.has(htmlPath)) {
-    const cached = (await matchPrecache(url.pathname)) || (await matchPrecache(htmlPath));
-    if (cached) return cached;
+  const pageUrl = toPageUrl(url.pathname);
+  if (PRECACHED_PATHS.has(pageUrl)) {
+    const cached = await matchPrecache(pageUrl);
+    // Browsers reject a redirected response for a navigation, so let the
+    // network answer (and redirect) instead.
+    if (cached && !cached.redirected) return cached;
   }
   try {
     // Unknown routes go to the network so the server can answer with the
@@ -141,7 +208,7 @@ async function handleNavigation(request, url) {
     return await fetch(request);
   } catch (err) {
     // Offline: fall back to the cached shell so the app still boots.
-    const shell = (await matchPrecache('/')) || (await matchPrecache('/index.html'));
+    const shell = await matchPrecache('/');
     if (shell) return shell;
     throw err;
   }
@@ -191,6 +258,7 @@ function generateSW() {
   }
 
   const allFiles = getFilesRecursively(DIST_DIR);
+  const redirectedPaths = readRedirectSources(path.join(DIST_DIR, '_redirects'));
   const precacheManifest = [];
 
   allFiles.forEach(file => {
@@ -201,6 +269,8 @@ function generateSW() {
       relativePath === 'sw.js' ||
       relativePath === 'sitemap.xml' ||
       relativePath === 'robots.txt' ||
+      relativePath === '_headers' ||
+      relativePath === '_redirects' ||
       relativePath.startsWith('.vite')
     ) {
       return;
@@ -208,17 +278,13 @@ function generateSW() {
 
     const hash = computeHash(file);
     // Standardize URL to start with a forward slash
-    const url = '/' + relativePath.replace(/\\/g, '/');
+    const url = toPrecacheUrl(relativePath.replace(/\\/g, '/'));
+    // A page the host redirects (a retired route) would be cached as a redirect.
+    if (redirectedPaths.has(url)) return;
     precacheManifest.push({
       url,
       revision: hash
     });
-    if (relativePath === 'index.html') {
-      precacheManifest.push({
-        url: '/',
-        revision: hash
-      });
-    }
   });
 
   // Calculate a unique build hash from the files
@@ -234,4 +300,4 @@ if (require.main === module) {
   generateSW();
 }
 
-module.exports = { buildSwContent };
+module.exports = { buildSwContent, toPrecacheUrl, readRedirectSources };
