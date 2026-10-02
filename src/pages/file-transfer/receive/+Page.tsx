@@ -28,6 +28,7 @@ import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { Card } from '@/components/ui/Card';
 import { Alert } from '@/components/ui/Alert';
+import { BetaNotice } from '@/components/BetaNotice';
 import { ToolWorkspaceLayout, ToolWorkspaceHeader } from '@/components/ToolWorkspaceLayout';
 import { TransferModeSwitcher } from '@/components/TransferModeSwitcher';
 import { useToast } from '@/components/ui/Toast';
@@ -86,7 +87,6 @@ function FileTransferReceiveInner() {
   const camera = useCamera();
 
   const [isDragging, setIsDragging] = useState(false);
-  const [showBetaAlert, setShowBetaAlert] = useState(true);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Use the unified animated QR receiver hook
@@ -124,6 +124,8 @@ function FileTransferReceiveInner() {
 
   const isFountainComplete = fountainStats !== null && receiverSuccess;
   const isComplete = isFountainComplete || (totalChunks !== null && chunks.size === totalChunks);
+  // Clearing only makes sense once something has been received or loaded.
+  const hasProgress = chunks.size > 0 || totalChunks !== null || fountainStats !== null || videoFile !== null || isComplete;
 
   // Drag and drop handlers for video file upload
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -351,11 +353,13 @@ function FileTransferReceiveInner() {
                         Deactivate Scanner
                       </Button>
                     )}
-                    <Tooltip content="Clear transfer progress">
-                      <Button variant="outline" iconOnly onClick={handleClear} aria-label="Clear transfer progress">
-                        <Trash2 className="size-4" aria-hidden="true" />
-                      </Button>
-                    </Tooltip>
+                    {hasProgress && (
+                      <Tooltip content="Clear transfer progress">
+                        <Button variant="outline" iconOnly onClick={handleClear} aria-label="Clear transfer progress">
+                          <Trash2 className="size-4" aria-hidden="true" />
+                        </Button>
+                      </Tooltip>
+                    )}
                   </div>
                 ) : (
                   <div className="space-y-3">
@@ -406,11 +410,13 @@ function FileTransferReceiveInner() {
                         <Upload className="size-4" />
                         {videoFile ? 'Replace Video' : 'Select Video File'}
                       </Button>
-                      <Tooltip content="Clear transfer progress">
-                        <Button variant="outline" iconOnly onClick={handleClear} aria-label="Clear transfer progress">
-                          <Trash2 className="size-4" aria-hidden="true" />
-                        </Button>
-                      </Tooltip>
+                      {hasProgress && (
+                        <Tooltip content="Clear transfer progress">
+                          <Button variant="outline" iconOnly onClick={handleClear} aria-label="Clear transfer progress">
+                            <Trash2 className="size-4" aria-hidden="true" />
+                          </Button>
+                        </Tooltip>
+                      )}
                     </div>
                   </div>
                 )}
@@ -419,15 +425,7 @@ function FileTransferReceiveInner() {
             </section>
 
             {/* Beta notice after the primary actions so they stay in the first mobile viewport. */}
-            {showBetaAlert && (
-              <Alert
-                variant="info"
-                role="note"
-                onDismiss={() => setShowBetaAlert(false)}
-              >
-                <span className="font-semibold">Beta Feature:</span> Air-gapped file transfer streams binary data across screen and camera. For optimal transmission, ensure consistent lighting, minimize display glare, and keep devices steady.
-              </Alert>
-            )}
+            <BetaNotice />
           </>
         }
         secondary={
@@ -569,7 +567,7 @@ function FileTransferReceiveInner() {
               </div>
 
               {/* Video frame box with targeting guide or dropzone */}
-              <div className={`relative w-full overflow-hidden rounded-2xl border border-slate-100 bg-slate-950 p-0 dark:border-slate-900 ${isComplete ? '' : 'aspect-square'}`}>
+              <div className={`relative w-full overflow-hidden rounded-2xl ${receiverMode === 'camera' && !isScanning && !isComplete ? '' : 'border border-line-subtle bg-slate-950'} ${isComplete ? '' : 'aspect-square'}`}>
                 {isComplete ? (
                   <div className="flex size-full flex-col items-center justify-center gap-4 bg-slate-900 p-6 text-center text-slate-100 dark:bg-slate-950" data-testid="inline-complete-panel">
                     <div className="rounded-full bg-emerald-500/10 p-3 text-emerald-400">
@@ -649,9 +647,26 @@ function FileTransferReceiveInner() {
                     </div>
                   </div>
                 ) : (
-                  <div className="flex size-full flex-col items-center justify-center gap-3 text-slate-400">
-                    <Camera className="size-12 opacity-40" />
-                    <p className="text-sm">Camera inactive</p>
+                  <div className="relative size-full" data-testid="camera-empty-state">
+                    <EmptyState
+                      className="size-full"
+                      illustration={<Camera className="size-6" />}
+                      title="Camera is off"
+                      body="Start the camera, then point it at the animated QR on the sending screen."
+                      action={
+                        <Button variant="primary" onClick={startCameraSession}>
+                          <Play className="size-4" aria-hidden="true" />
+                          Start camera
+                        </Button>
+                      }
+                    />
+                    {/* Viewfinder corners. */}
+                    <div aria-hidden="true" className="pointer-events-none absolute inset-6">
+                      <div className="absolute top-0 left-0 size-8 rounded-tl-lg border-t-4 border-l-4 border-accent" />
+                      <div className="absolute top-0 right-0 size-8 rounded-tr-lg border-t-4 border-r-4 border-accent" />
+                      <div className="absolute bottom-0 left-0 size-8 rounded-bl-lg border-b-4 border-l-4 border-accent" />
+                      <div className="absolute right-0 bottom-0 size-8 rounded-br-lg border-r-4 border-b-4 border-accent" />
+                    </div>
                   </div>
                 )}
 

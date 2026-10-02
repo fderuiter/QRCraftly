@@ -20,11 +20,15 @@ import React from 'react';
 import { Play, Square, Upload, FileUp, Cpu, Sliders, Activity } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { Progress } from '@/components/ui/Progress';
 import { SectionHeading } from '@/components/ui/SectionHeading';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { Card } from '@/components/ui/Card';
 import { RangeInput } from '@/components/ui/RangeInput';
 import { Alert } from '@/components/ui/Alert';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { BetaNotice } from '@/components/BetaNotice';
+import { QrIllustration } from '@/components/QrIllustration';
 import StyleControls from '@/components/StyleControls';
 import { QRProvider, useQRStore, useQRStoreSelector } from '@/context/QRContext';
 import { useImage } from '@/hooks/useImage';
@@ -66,7 +70,6 @@ function formatDuration(seconds: number): string {
  */
 function FileTransferToolInner() {
   const [isDraggingFile, setIsDraggingFile] = React.useState(false);
-  const [showBetaAlert, setShowBetaAlert] = React.useState(true);
   const config = useQRStoreSelector(s => s.config);
   const scannabilityFallbackActive = useQRStoreSelector(s => s.isScannabilityFallbackActive);
   const store = useQRStore();
@@ -121,9 +124,10 @@ function FileTransferToolInner() {
   const senderPercent = fountainInfo
     ? Math.min(100, Math.round((currentFrameIndex / Math.max(1, framesNeeded)) * 100))
     : progress;
+  const hasFile = selectedFile !== null || isTransferring;
   const activeDensityHint = DENSITY_OPTIONS.find(option => option.value === density)?.hint ?? '';
 
-  const handleDragOver = (event: React.DragEvent<HTMLLabelElement>) => {
+  const handleDragOver = (event: React.DragEvent<HTMLElement>) => {
     event.preventDefault();
     if (!isTransferring) {
       event.dataTransfer.dropEffect = 'copy';
@@ -131,13 +135,13 @@ function FileTransferToolInner() {
     }
   };
 
-  const handleDragLeave = (event: React.DragEvent<HTMLLabelElement>) => {
+  const handleDragLeave = (event: React.DragEvent<HTMLElement>) => {
     if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
       setIsDraggingFile(false);
     }
   };
 
-  const handleDrop = (event: React.DragEvent<HTMLLabelElement>) => {
+  const handleDrop = (event: React.DragEvent<HTMLElement>) => {
     event.preventDefault();
     setIsDraggingFile(false);
 
@@ -185,13 +189,13 @@ function FileTransferToolInner() {
                   onDrop={handleDrop}
                   className={`flex min-h-24 w-full min-w-0 flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed p-3 transition-colors ${
                     isTransferring
-                      ? 'cursor-not-allowed border-line bg-slate-50/50 opacity-60 dark:bg-slate-950/20'
+                      ? 'cursor-not-allowed border-line bg-surface-sunken opacity-60'
                       : isDraggingFile
-                        ? 'cursor-copy border-teal-500 bg-teal-50 dark:bg-teal-950/30'
-                        : 'cursor-pointer border-line bg-slate-50/50 hover:bg-slate-50 dark:bg-slate-950/20 dark:hover:bg-slate-950/40'
+                        ? 'cursor-copy border-accent bg-accent-soft'
+                        : 'cursor-pointer border-line bg-surface-sunken hover:bg-surface-hover'
                   }`}
                 >
-                  <FileUp className="size-6 text-slate-400" aria-hidden="true" />
+                  <FileUp className="size-6 text-fg-muted" aria-hidden="true" />
                   <span className="max-w-full truncate text-xs font-medium text-fg-muted">
                     {selectedFile ? selectedFile.name : 'Choose file or drag & drop'}
                   </span>
@@ -219,13 +223,13 @@ function FileTransferToolInner() {
               </div>
 
               {selectedFile && (
-                <div className="space-y-2 rounded-xl border border-line-subtle bg-slate-50 p-4 text-xs dark:bg-slate-800/30">
+                <div className="space-y-2 rounded-xl border border-line-subtle bg-surface-sunken p-4 text-xs">
                   <div className="flex justify-between gap-3">
-                    <span className="text-slate-500">Name:</span>
+                    <span className="text-fg-muted">Name:</span>
                     <span className="max-w-45 truncate font-semibold text-fg-soft">{selectedFile.name}</span>
                   </div>
                   <div className="flex justify-between gap-3">
-                    <span className="text-slate-500">Size:</span>
+                    <span className="text-fg-muted">Size:</span>
                     <span className="font-mono text-fg-soft">{(selectedFile.size / 1024 / 1024).toFixed(2)} MB</span>
                   </div>
                 </div>
@@ -272,15 +276,7 @@ function FileTransferToolInner() {
             </section>
 
             {/* Beta notice after the primary actions so they stay in the first mobile viewport. */}
-            {showBetaAlert && (
-              <Alert
-                variant="info"
-                role="note"
-                onDismiss={() => setShowBetaAlert(false)}
-              >
-                <span className="font-semibold">Beta Feature:</span> Air-gapped file transfer streams binary data across screen and camera. For optimal transmission, ensure consistent lighting, minimize display glare, and keep devices steady.
-              </Alert>
-            )}
+            <BetaNotice />
           </>
         }
         secondary={
@@ -296,22 +292,46 @@ function FileTransferToolInner() {
                 <h2 className="font-semibold text-fg-soft">
                   Transfer QR
                 </h2>
-                <div className="flex items-center gap-2">
+                {hasFile && (
                   <Badge tone={isTransferring ? 'success' : 'neutral'}>
                     <span aria-hidden="true" className={`size-1.5 rounded-full ${isTransferring ? 'bg-success motion-safe:animate-pulse' : 'bg-line-strong'}`} />
-                    {isTransferring ? 'Transmitting' : 'Idle'}
+                    {isTransferring ? 'Transmitting' : 'Ready'}
                   </Badge>
-                </div>
+                )}
               </div>
 
+              {!hasFile && (
+                <div
+                  onDragEnter={handleDragOver}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  data-testid="send-empty-state"
+                >
+                  <EmptyState
+                    level={3}
+                    className={`aspect-square transition-colors ${isDraggingFile ? 'border-accent bg-accent-soft' : ''}`}
+                    illustration={<QrIllustration className={`size-7 text-accent ${isDraggingFile ? 'motion-safe:animate-pulse' : ''}`} />}
+                    title="Drop a file to beam it"
+                    body="It plays as animated QR codes for the other device's camera. Nothing is uploaded."
+                    action={
+                      <Button variant="primary" onClick={() => fileInputRef.current?.click()}>
+                        <FileUp className="size-4" aria-hidden="true" />
+                        Choose a file
+                      </Button>
+                    }
+                  />
+                </div>
+              )}
+
               {/* Start / Stop comes before the stream so it follows the settings directly on mobile. */}
-              <div className="mb-4 flex gap-3">
+              <div className={`mb-4 flex gap-3 ${hasFile ? '' : 'hidden'}`}>
                 {!isTransferring ? (
                   <Button
                     variant="primary"
                     fullWidth
                     onClick={startTransfer}
-                    disabled={!selectedFile || isVerifyingHandshake}
+                    disabled={isVerifyingHandshake}
                     aria-label="Start file transfer"
                   >
                     <Play className="size-4" aria-hidden="true" />
@@ -341,17 +361,15 @@ function FileTransferToolInner() {
 
               {/* Active Transfer Stats */}
               {isTransferring && (
-                <div className="mb-4 space-y-3 rounded-xl border border-slate-100 bg-slate-50/50 p-4 text-xs dark:border-slate-900 dark:bg-slate-900/40" data-testid="sender-progress">
+                <div className="mb-4 space-y-3 rounded-xl border border-line-subtle bg-surface-sunken p-4 text-xs" data-testid="sender-progress">
                   <div className="flex items-center justify-between">
-                    <span className="flex items-center gap-1 font-medium text-slate-500">
-                      <Activity className="size-3.5 text-teal-600" aria-hidden="true" /> {fountainInfo ? 'First pass:' : 'Progress:'}
+                    <span className="flex items-center gap-1 font-medium text-fg-muted">
+                      <Activity className="size-3.5 text-accent" aria-hidden="true" /> {fountainInfo ? 'First pass:' : 'Progress:'}
                     </span>
                     <span className="font-mono font-bold text-fg">{senderPercent}%</span>
                   </div>
                   
-                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
-                    <div className="h-full bg-teal-600 motion-safe:transition-all motion-safe:duration-150" style={{ width: `${senderPercent}%` }} />
-                  </div>
+                  <Progress size="sm" label="Transfer progress" value={senderPercent} />
 
                   <div className="grid grid-cols-2 gap-4 pt-2">
                     <div>
@@ -367,7 +385,7 @@ function FileTransferToolInner() {
                     </div>
                     <div>
                       <div className="flex items-center gap-1 text-fg-muted">
-                        <Cpu className="size-3 text-teal-500" aria-hidden="true" /> Frame buffer
+                        <Cpu className="size-3 text-accent" aria-hidden="true" /> Frame buffer
                       </div>
                       <div className="font-mono text-sm font-semibold text-fg-soft">{transferStats.frameBufferMemory}</div>
                     </div>
@@ -381,7 +399,7 @@ function FileTransferToolInner() {
               )}
 
               {/* Recycled UI Canvas Container */}
-              <div className="mb-4 flex items-center justify-center rounded-2xl border border-slate-100 bg-slate-50 p-4 sm:p-6 dark:border-slate-900 dark:bg-slate-950/50">
+              <div className={`mb-4 flex items-center justify-center rounded-2xl border border-line-subtle bg-surface-sunken p-4 sm:p-6 ${hasFile ? '' : 'hidden'}`}>
                 <canvas
                   ref={canvasRef}
                   className="aspect-square max-h-[60vh] w-full rounded-lg bg-surface object-contain shadow-sm"
@@ -392,10 +410,12 @@ function FileTransferToolInner() {
                 />
               </div>
 
-              {/* Visual notice informing user about high-density stream style sanitization */}
-              <Alert variant="info" role="note" title="Stream Style Preset Active">
-                Styling options are automatically streamlined (center logos, borders, and complex module geometries are suppressed) on high-density data chunk frames to ensure maximum scannability.
-              </Alert>
+              {/* Shown once there is a stream to style: transfer frames drop decoration so every frame scans. */}
+              {hasFile && (
+                <p className="text-xs text-fg-muted">
+                  Logos, borders and complex patterns are left off transfer frames so every frame scans.
+                </p>
+              )}
             </Card>
         }
       />

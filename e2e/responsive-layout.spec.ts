@@ -123,6 +123,9 @@ test.describe('File transfer workspaces on phones (#796)', () => {
 
       await gotoHydrated(page, '/file-transfer');
       expect(await nestedScrollers(page)).toEqual([]);
+      // Before a file is chosen the preview is a drop zone; Start appears with the file.
+      await expect(page.getByRole('heading', { name: 'Drop a file to beam it' })).toBeVisible();
+      await page.getByLabel('Choose a file to send').setInputFiles({ name: 'note.txt', mimeType: 'text/plain', buffer: Buffer.from('hello') });
       const start = await page.getByRole('button', { name: 'Start file transfer' }).boundingBox();
       const canvas = await page.getByRole('img', { name: 'Transfer QR code' }).boundingBox();
       expect(start!.y).toBeLessThan(canvas!.y);
