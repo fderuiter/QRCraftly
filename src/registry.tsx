@@ -14,7 +14,7 @@ const ContentControl = () => {
   const { updateConfig } = store;
   return (
     <section>
-      <h2 className="mb-3 text-xs font-bold tracking-wider text-fg-muted uppercase">Content</h2>
+      <h2 className="mb-4 text-xs font-bold tracking-wider text-slate-600 uppercase dark:text-slate-400">Content</h2>
       <InputPanel config={config} onChange={updateConfig} />
     </section>
   );
@@ -32,13 +32,13 @@ const AppearanceControl = () => {
 
   return (
     <section>
-      <h2 className="mb-3 text-xs font-bold tracking-wider text-fg-muted uppercase">Appearance</h2>
+      <h2 className="mb-4 text-xs font-bold tracking-wider text-slate-600 uppercase dark:text-slate-400">Appearance</h2>
       {isMounted ? (
-        <Suspense fallback={<div className="h-64 rounded-xl bg-surface-hover motion-safe:animate-pulse" />}>
+        <Suspense fallback={<div className="h-64 rounded-xl bg-slate-100 motion-safe:animate-pulse dark:bg-slate-800" />}>
           <StyleControls config={config} onChange={updateConfig} />
         </Suspense>
       ) : (
-        <div className="h-64 rounded-xl bg-surface-hover motion-safe:animate-pulse" />
+        <div className="h-64 rounded-xl bg-slate-100 motion-safe:animate-pulse dark:bg-slate-800" />
       )}
     </section>
   );
