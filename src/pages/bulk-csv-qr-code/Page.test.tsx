@@ -65,7 +65,7 @@ describe('Bulk CSV QR Code Page', () => {
     );
     expect(webApp).toBeDefined();
 
-    expect(webApp?.softwareVersion).toBe('0.1.0');
+    expect(webApp?.softwareVersion).toBe(__APP_VERSION__);
     expect(webApp?.author).toEqual({
       '@id': 'https://qrcraftly.com/#organization'
     });
