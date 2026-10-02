@@ -227,7 +227,7 @@ QRCraftly is healthy and growing when all of the following trend in the right di
 | Lighthouse Accessibility                           | >= 95                                                    | >= 90 (`lighthouserc.json`)                 |
 | Lighthouse SEO                                     | >= 90                                                    | >= 95 (`lighthouserc.json`)                 |
 | Lighthouse Best Practices                          | >= 90                                                    | >= 90 (`lighthouserc.json`)                 |
-| Client bundle size                                 | <= 750 KB gzipped (all files in `dist/client`)           | Same limit (`scripts/check-bundle-size.js`) |
+| Client bundle size                                 | <= 700 KB gzipped (all files in `dist/client`)           | Same limit (`scripts/check-bundle-size.js`) |
 | Scannability pass rate (Print Simulation Verified) | >= 95% across all pattern styles in CI visual regression | No CI check measures this rate              |
 
 ### Product Engagement
