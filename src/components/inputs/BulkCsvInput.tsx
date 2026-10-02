@@ -25,9 +25,13 @@ import {
   CsvParseError,
   MAX_BULK_CSV_ROWS,
   MAX_BULK_CSV_CHARS,
-  type CsvRow,
   type CsvTable,
   type ZipEntry,
+  previewRow,
+  pickColumn,
+  hasPayload,
+  PAYLOAD_COLUMN_PATTERN,
+  FILENAME_COLUMN_PATTERN,
 } from '@/packages/bulk-csv';
 import { BulkCsvData, QRConfig, QRType } from '@/types';
 import { Alert } from '../ui/Alert';
@@ -53,8 +57,6 @@ interface RowError {
 /** Row count above which the main-thread processing warning is shown. */
 const LARGE_BATCH_WARNING_ROWS = 100;
 const PNG_EXPORT_SIZE = 1000;
-const PAYLOAD_COLUMN_PATTERN = /url|link|payload|data|qr/i;
-const FILENAME_COLUMN_PATTERN = /name|id|label|title|filename/i;
 
 type ParseOutcome = { table: CsvTable; error: null } | { table: null; error: string };
 
@@ -75,14 +77,6 @@ function parseContent(csvContent: string): ParseOutcome {
 
 function isExportFormat(value: string): value is BulkCsvData['exportFormat'] {
   return value === 'png' || value === 'svg';
-}
-
-function pickColumn(columns: string[], pattern: RegExp): string {
-  return columns.find((col) => pattern.test(col)) ?? columns[0] ?? '';
-}
-
-function hasPayload(row: CsvRow, payloadCol: string): boolean {
-  return (row[payloadCol] ?? '').trim() !== '';
 }
 
 /**
@@ -131,6 +125,7 @@ export const BulkCsvInput: React.FC<BulkCsvInputProps> = ({ data, onChange }) =>
     : pickColumn(columns, FILENAME_COLUMN_PATTERN);
   const exportFormat = data.exportFormat || 'png';
   const rowCount = rows.length;
+  const preview = useMemo(() => previewRow(data.csvContent, payloadCol), [data.csvContent, payloadCol]);
 
   // Store the detected column defaults so the selection survives re-renders.
   useEffect(() => {
@@ -360,6 +355,12 @@ export const BulkCsvInput: React.FC<BulkCsvInputProps> = ({ data, onChange }) =>
               <option value="svg">SVG Vector Image</option>
             </SelectField>
           </div>
+
+          <p className="text-xs text-slate-600 dark:text-slate-400" data-testid="bulk-preview-row">
+            {preview
+              ? `Preview: row ${preview.rowNumber} of ${preview.rowCount}. Each row becomes its own QR code in the ZIP.`
+              : 'No row has a value in the payload column, so there is nothing to preview.'}
+          </p>
 
           <div className="pt-2">
             <Button

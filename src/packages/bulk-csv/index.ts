@@ -23,6 +23,7 @@
  * - RFC 4180 CSV parser with a header row and a bounded row count.
  * - Minimal ZIP writer (stored entries, CRC-32, UTF-8 names).
  * - Cross-platform file name helpers for the archive entries.
+ * - Column detection and the row the live preview encodes.
  */
 
 export {
@@ -36,3 +37,11 @@ export {
 } from './lib/csv';
 export { createZip, type ZipEntry, type CreateZipOptions } from './lib/zip';
 export { sanitizeFileStem, allocateFileName } from './lib/fileNames';
+export {
+  previewRow,
+  pickColumn,
+  hasPayload,
+  PAYLOAD_COLUMN_PATTERN,
+  FILENAME_COLUMN_PATTERN,
+  type BulkCsvPreview,
+} from './lib/preview';
