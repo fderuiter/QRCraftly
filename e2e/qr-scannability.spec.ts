@@ -67,17 +67,18 @@ test.describe('QR Code Scannability via Headless Browser', () => {
     }
   });
 
-  test('verifies scannability feedback indicator for Fluid Ink across default and dense payloads', async ({ page }) => {
+  test('shows a passing scannability verdict for Fluid Ink across default and dense payloads', async ({ page }) => {
     await page.goto('/');
     await page.waitForSelector('main[data-hydrated="true"]');
 
     const fluidRadio = page.locator('input[type="radio"][value="fluid"]');
     await fluidRadio.check({ force: true });
 
-    const feedbackWrapper = page.locator('[data-testid="scannability-feedback-wrapper"]');
+    // Any passing verdict ("Scans reliably" or "Scans, but fragile"), never "Won't scan reliably".
+    const verdict = page.getByTestId('scannability-verdict');
     await expect.poll(async () => {
-      const text = await feedbackWrapper.textContent().catch(() => '');
-      return text.includes('verified');
+      const text = (await verdict.textContent().catch(() => '')) ?? '';
+      return text.startsWith('Scans');
     }, { timeout: 15000, intervals: [500] }).toBe(true);
 
     const longUrl = 'https://example.com/very/long/url/with/lots/of/parameters?foo=bar&baz=qux&utm_source=test&utm_medium=email&utm_campaign=winter_sale_2026_qrcraftly_verification';
@@ -85,8 +86,8 @@ test.describe('QR Code Scannability via Headless Browser', () => {
     await input.fill(longUrl);
 
     await expect.poll(async () => {
-      const text = await feedbackWrapper.textContent().catch(() => '');
-      return text.includes('verified');
+      const text = (await verdict.textContent().catch(() => '')) ?? '';
+      return text.startsWith('Scans');
     }, { timeout: 15000, intervals: [500] }).toBe(true);
   });
 });

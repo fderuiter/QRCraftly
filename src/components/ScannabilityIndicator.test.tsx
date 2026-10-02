@@ -13,80 +13,118 @@ describe('ScannabilityIndicator Component', () => {
     vi.useRealTimers();
   });
 
-  it('renders immediate visual elements for physical-pass status', () => {
+  it('shows one green verdict with a meter for a clean print-simulation pass', () => {
     render(<ScannabilityIndicator status="physical-pass" health={{ score: 100, warnings: [] }} />);
-    
-    // Visual indicators are present immediately
-    expect(screen.getByText('Print simulation verified')).toBeInTheDocument();
-    expect(screen.getByText('Health: 100')).toBeInTheDocument();
+
+    const pill = screen.getByTestId('scannability-pill');
+    expect(screen.getByTestId('scannability-verdict')).toHaveTextContent('Scans reliably');
+    expect(pill).toHaveClass('text-success');
+    expect(screen.getByTestId('scannability-meter')).toHaveTextContent('100');
+    expect(pill).toHaveAccessibleName('Scans reliably, health score 100 of 100');
   });
 
-  it('explains screen verification without presenting it as an export failure', () => {
-    render(<ScannabilityIndicator status="digital-pass" health={{ score: 100, warnings: [] }} />);
-
-    expect(screen.getByText('Screen scan verified')).toBeInTheDocument();
-    expect(screen.getByText('Test with a physical camera before large print runs.')).toBeInTheDocument();
+  it.each([
+    ['physical-pass', 95, [], 'Scans reliably', 'text-success'],
+    ['physical-pass', 90, [], 'Scans reliably', 'text-success'],
+    ['physical-pass', 89, [], 'Scans, but fragile', 'text-warning'],
+    ['physical-pass', 95, ['Contrast ratio is low'], 'Scans, but fragile', 'text-warning'],
+    ['digital-pass', 100, [], 'Scans, but fragile', 'text-warning'],
+    ['digital-pass', 60, [], 'Scans, but fragile', 'text-warning'],
+    ['fail', 95, [], "Won't scan reliably", 'text-danger'],
+    ['fail', 30, ['Contrast ratio is critically low'], "Won't scan reliably", 'text-danger'],
+  ] as const)('maps %s with score %i and warnings %j to "%s"', (status, score, warnings, label, tone) => {
+    render(<ScannabilityIndicator status={status} health={{ score, warnings: [...warnings] }} />);
+    expect(screen.getByTestId('scannability-verdict')).toHaveTextContent(label);
+    expect(screen.getByTestId('scannability-pill')).toHaveClass(tone);
   });
 
-  it('aligns the score badge with the safe threshold at exactly 80', () => {
-    render(<ScannabilityIndicator status="digital-pass" health={{ score: 80, warnings: ['Review before printing'] }} />);
-
-    expect(screen.getByText('Health: 80')).toHaveClass('bg-emerald-100');
-    expect(screen.getByText('Review before printing')).toHaveClass('text-amber-700');
+  it('never says "verified", whatever the state', () => {
+    for (const status of ['physical-pass', 'digital-pass', 'fail'] as const) {
+      const { container, unmount } = render(<ScannabilityIndicator status={status} health={{ score: 73, warnings: ['Local contrast drop detected across 4 module zones'] }} />);
+      expect(container.textContent).not.toMatch(/verified/i);
+      unmount();
+    }
   });
 
-  it('renders immediate visual elements for fail status with warning text', () => {
-    const health = { score: 40, warnings: ['Low contrast'] };
-    render(<ScannabilityIndicator status="fail" health={health} />);
+  it('explains the top issue in plain words and offers a fix in the details panel', () => {
+    const onFix = vi.fn();
+    render(
+      <ScannabilityIndicator
+        status="physical-pass"
+        health={{ score: 73, warnings: ['Local contrast drop detected across 4 module zones'] }}
+        errorCorrectionLevel="M"
+        onFix={onFix}
+      />
+    );
 
-    expect(screen.getByText('Scan verification failed')).toBeInTheDocument();
-    expect(screen.getByText('Health: 40')).toBeInTheDocument();
-    expect(screen.getByText('Low contrast')).toBeInTheDocument();
+    const pill = screen.getByTestId('scannability-pill');
+    expect(pill).toHaveAttribute('aria-expanded', 'false');
+    fireEvent.click(pill);
+    expect(pill).toHaveAttribute('aria-expanded', 'true');
+
+    const details = screen.getByTestId('scannability-details');
+    expect(details).toHaveTextContent('Print simulation: passed');
+    expect(screen.getByTestId('scannability-advice')).toHaveTextContent('Some modules blur together when printed');
+    expect(details.textContent).not.toMatch(/module zone/);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Use high error correction' }));
+    expect(onFix).toHaveBeenCalledWith('raise-error-correction');
+    expect(screen.queryByTestId('scannability-details')).not.toBeInTheDocument();
+  });
+
+  it('suggests a bolder pattern when error correction is already high', () => {
+    render(
+      <ScannabilityIndicator
+        status="physical-pass"
+        health={{ score: 73, warnings: ['Local contrast drop detected across 4 module zones'] }}
+        errorCorrectionLevel="H"
+        onFix={vi.fn()}
+      />
+    );
+    fireEvent.click(screen.getByTestId('scannability-pill'));
+    expect(screen.getByRole('button', { name: 'Use the standard pattern' })).toBeInTheDocument();
+  });
+
+  it('closes the details panel on Escape and returns focus to the pill', () => {
+    render(<ScannabilityIndicator status="digital-pass" health={{ score: 85, warnings: [] }} />);
+    const pill = screen.getByTestId('scannability-pill');
+    fireEvent.click(pill);
+    expect(screen.getByTestId('scannability-details')).toHaveTextContent('test with a phone camera before printing');
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByTestId('scannability-details')).not.toBeInTheDocument();
+    expect(document.activeElement).toBe(pill);
   });
 
   it('debounces screen reader announcements by 1000ms', () => {
     const { rerender } = render(<ScannabilityIndicator status="checking" />);
 
     const liveRegion = screen.getByRole('status');
-    expect(liveRegion).toBeInTheDocument();
-    
-    // Initially, during inputs, the announcement is cleared/empty
     expect(liveRegion.textContent).toBe('');
 
-    // Advance 500ms - still empty (since debounce is 1000ms)
     act(() => {
       vi.advanceTimersByTime(500);
     });
     expect(liveRegion.textContent).toBe('');
 
-    // Now update props again before 1000ms completes (active input continues)
     rerender(<ScannabilityIndicator status="physical-pass" health={{ score: 95, warnings: [] }} />);
     expect(liveRegion.textContent).toBe('');
 
-    // Advance another 500ms (total 1000ms elapsed since start, but only 500ms since last change)
     act(() => {
       vi.advanceTimersByTime(500);
     });
     expect(liveRegion.textContent).toBe('');
 
-    // Now let 1000ms pass without any input/prop change
     act(() => {
       vi.advanceTimersByTime(1000);
     });
-    expect(liveRegion.textContent).toBe('Scannability status: Print simulation verified. Health score: 95.');
+    expect(liveRegion.textContent).toBe('Scannability: Scans reliably. Health score: 95 of 100.');
   });
 
-  it('is not a tab stop and does not register a global Alt+S shortcut', () => {
+  it('does not register a global Alt+S shortcut', () => {
     render(<ScannabilityIndicator status="physical-pass" health={{ score: 100, warnings: [] }} />);
-    const wrapper = screen.getByTestId('scannability-feedback-wrapper');
-
-    expect(wrapper).not.toHaveAttribute('tabindex');
-    expect(wrapper.querySelector('[tabindex]')).toBeNull();
-
     const event = new KeyboardEvent('keydown', { key: 's', altKey: true, bubbles: true, cancelable: true });
     fireEvent(window, event);
     expect(event.defaultPrevented).toBe(false);
-    expect(document.activeElement).not.toBe(wrapper);
   });
 
   it('keeps exactly one polite status region, including while idle', () => {
@@ -100,90 +138,68 @@ describe('ScannabilityIndicator Component', () => {
 
   it('announces a failure once through a single alert, not through the polite region', () => {
     const { rerender } = render(<ScannabilityIndicator status="checking" />);
-    rerender(<ScannabilityIndicator status="fail" health={{ score: 40, warnings: ['Low contrast'] }} />);
+    rerender(<ScannabilityIndicator status="fail" health={{ score: 40, warnings: ['Contrast ratio is low'] }} />);
 
     const alerts = screen.getAllByRole('alert');
     expect(alerts).toHaveLength(1);
-    expect(alerts[0]).toHaveTextContent('Low contrast');
+    expect(alerts[0]).toHaveTextContent("Won't scan reliably. The colours are a little close.");
 
     act(() => {
       vi.advanceTimersByTime(2000);
     });
     expect(screen.getByRole('status').textContent).toBe('');
-    // The visible badge carries no live role of its own.
-    expect(screen.getByText('Scan verification failed').closest('[role]')?.getAttribute('role')).not.toBe('alert');
-    expect(document.querySelector('[aria-live="off"]')).toBeNull();
+    // The visible pill carries no live role of its own.
+    expect(screen.getByTestId('scannability-pill')).not.toHaveAttribute('role');
   });
 
   it('still raises an alert for a failure without warnings', () => {
     render(<ScannabilityIndicator status="fail" />);
-    expect(screen.getByRole('alert')).toHaveTextContent(/Scan verification failed/i);
+    expect(screen.getByRole('alert')).toHaveTextContent(/camera could not read this design/i);
   });
 
-  it('does not raise an alert for non-failing warnings', () => {
-    render(<ScannabilityIndicator status="digital-pass" health={{ score: 85, warnings: ['Review before printing'] }} />);
+  it('does not raise an alert for a fragile pass', () => {
+    render(<ScannabilityIndicator status="digital-pass" health={{ score: 85, warnings: ['Contrast ratio is low'] }} />);
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-    expect(screen.getByText('Review before printing')).toBeInTheDocument();
   });
 
-  it('has no axe violations in pass and fail states', async () => {
+  it('has no axe violations in pass, fail and open-panel states', async () => {
     vi.useRealTimers();
     const { container, rerender } = render(<ScannabilityIndicator status="physical-pass" health={{ score: 100, warnings: [] }} />);
     expect(await axe(container)).toHaveNoViolations();
-    rerender(<ScannabilityIndicator status="fail" health={{ score: 30, warnings: ['Low contrast'] }} />);
+    rerender(<ScannabilityIndicator status="fail" health={{ score: 30, warnings: ['Contrast ratio is critically low'] }} onFix={vi.fn()} onResetDefault={vi.fn()} />);
+    expect(await axe(container)).toHaveNoViolations();
+    fireEvent.click(screen.getByTestId('scannability-pill'));
     expect(await axe(container)).toHaveNoViolations();
   });
 
-  it('renders recovery action buttons when status is fail and callbacks are provided', () => {
-    const handleAutoFix = vi.fn();
-    const handleReset = vi.fn();
+  it('offers a fix and a colour reset when the design will not scan', () => {
+    const onFix = vi.fn();
+    const onReset = vi.fn();
 
     render(
       <ScannabilityIndicator
         status="fail"
-        health={{ score: 30, warnings: ['Low contrast'] }}
-        onAutoFixContrast={handleAutoFix}
-        onResetDefault={handleReset}
+        health={{ score: 30, warnings: ['Contrast ratio is critically low'] }}
+        onFix={onFix}
+        onResetDefault={onReset}
       />
     );
+    fireEvent.click(screen.getByTestId('scannability-pill'));
+    fireEvent.click(screen.getByRole('button', { name: 'Use black on white' }));
+    expect(onFix).toHaveBeenCalledWith('increase-contrast');
 
-    const autoFixBtn = screen.getByRole('button', { name: 'Auto-Fix Contrast' });
-    const resetBtn = screen.getByRole('button', { name: 'Reset Defaults' });
-
-    expect(autoFixBtn).toBeInTheDocument();
-    expect(resetBtn).toBeInTheDocument();
-
-    fireEvent.click(autoFixBtn);
-    expect(handleAutoFix).toHaveBeenCalledTimes(1);
-
-    fireEvent.click(resetBtn);
-    expect(handleReset).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByTestId('scannability-pill'));
+    fireEvent.click(screen.getByRole('button', { name: 'Reset colours' }));
+    expect(onReset).toHaveBeenCalledTimes(1);
   });
 
-  it('does not render recovery action buttons when callbacks are omitted or status is not fail', () => {
-    const handleAutoFix = vi.fn();
-    const handleReset = vi.fn();
+  it('offers no actions for a reliable design or without callbacks', () => {
+    const { rerender } = render(<ScannabilityIndicator status="fail" health={{ score: 30, warnings: ['Contrast ratio is low'] }} />);
+    fireEvent.click(screen.getByTestId('scannability-pill'));
+    expect(screen.queryByTestId('scannability-recovery-actions')).not.toBeInTheDocument();
 
-    const { rerender } = render(
-      <ScannabilityIndicator
-        status="fail"
-        health={{ score: 30, warnings: ['Low contrast'] }}
-      />
-    );
-
-    expect(screen.queryByRole('button', { name: 'Auto-Fix Contrast' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Reset Defaults' })).not.toBeInTheDocument();
-
-    rerender(
-      <ScannabilityIndicator
-        status="physical-pass"
-        health={{ score: 100, warnings: [] }}
-        onAutoFixContrast={handleAutoFix}
-        onResetDefault={handleReset}
-      />
-    );
-
-    expect(screen.queryByRole('button', { name: 'Auto-Fix Contrast' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Reset Defaults' })).not.toBeInTheDocument();
+    rerender(<ScannabilityIndicator status="physical-pass" health={{ score: 100, warnings: [] }} onFix={vi.fn()} onResetDefault={vi.fn()} />);
+    expect(screen.queryByTestId('scannability-recovery-actions')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('scannability-advice')).not.toBeInTheDocument();
   });
 });

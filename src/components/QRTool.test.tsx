@@ -776,7 +776,7 @@ describe('QRTool Component', () => {
     // about 0.6s locally and well past the 1s findBy default on loaded CI runners.
     const SCANNABILITY_FAIL_TIMEOUT_MS = 5000;
 
-    it('updates configuration when user clicks Auto-Fix Contrast recovery button', async () => {
+    it('updates configuration when user applies the suggested contrast fix', async () => {
       vi.mocked(jsQR).mockReturnValue(null); // Force scan verification failure
 
       render(
@@ -788,9 +788,9 @@ describe('QRTool Component', () => {
       // Trigger canvas render in mock
       fireEvent.click(screen.getByTestId('mock-trigger-rendered'));
 
-      // Wait for recovery buttons to appear on fail
-      const autoFixBtn = await screen.findByRole('button', { name: 'Auto-Fix Contrast' }, { timeout: SCANNABILITY_FAIL_TIMEOUT_MS });
-      expect(autoFixBtn).toBeInTheDocument();
+      // Wait for the failing verdict, then open its details panel
+      fireEvent.click(await screen.findByRole('button', { name: /Won't scan reliably/ }, { timeout: SCANNABILITY_FAIL_TIMEOUT_MS }));
+      const autoFixBtn = screen.getByRole('button', { name: 'Use black on white' });
 
       fireEvent.click(autoFixBtn);
 
@@ -803,7 +803,7 @@ describe('QRTool Component', () => {
       });
     });
 
-    it('updates configuration when user clicks Reset Defaults recovery button', async () => {
+    it('updates configuration when user resets the colours', async () => {
       vi.mocked(jsQR).mockReturnValue(null); // Force scan verification failure
 
       render(
@@ -814,8 +814,8 @@ describe('QRTool Component', () => {
 
       fireEvent.click(screen.getByTestId('mock-trigger-rendered'));
 
-      const resetBtn = await screen.findByRole('button', { name: 'Reset Defaults' }, { timeout: SCANNABILITY_FAIL_TIMEOUT_MS });
-      expect(resetBtn).toBeInTheDocument();
+      fireEvent.click(await screen.findByRole('button', { name: /Won't scan reliably/ }, { timeout: SCANNABILITY_FAIL_TIMEOUT_MS }));
+      const resetBtn = screen.getByRole('button', { name: 'Reset colours' });
 
       fireEvent.click(resetBtn);
 

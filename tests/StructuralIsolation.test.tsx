@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { ScannabilityIndicator } from '../src/components/ScannabilityIndicator';
 import { PatternControls } from '../src/components/style-controls/PatternControls';
@@ -12,34 +12,33 @@ import { QRStyle, QRConfig } from '../src/types';
 describe('Structural Isolation and Reserved Space for QR Preview', () => {
   
   describe('Requirement 1: Scannability Feedback Wrapper Height', () => {
-    it('renders with a fixed-height wrapper of 52px when idle to prevent layout shift', () => {
+    it('reserves a fixed 32px slot when idle to prevent layout shift', () => {
       render(<ScannabilityIndicator status="idle" />);
       const placeholder = screen.getByTestId('scannability-indicator-placeholder');
       expect(placeholder).toBeInTheDocument();
-      expect(placeholder).toHaveClass('h-13');
+      expect(placeholder).toHaveClass('h-8');
     });
 
-    it('renders with a fixed-height wrapper of 52px when checking/active to prevent layout shift', () => {
+    it('keeps the same 32px slot while checking', () => {
       render(<ScannabilityIndicator status="checking" />);
       const wrapper = screen.getByTestId('scannability-feedback-wrapper');
       expect(wrapper).toBeInTheDocument();
-      expect(wrapper).toHaveClass('h-13');
+      expect(wrapper).toHaveClass('h-8');
     });
 
-    it('retains the same 52px height wrapper when transitioning to scannability warning text (score < 100)', () => {
+    it('keeps the same 32px slot for a failing verdict and opens its details as an overlay', () => {
       const lowScannabilityHealth = {
         score: 40,
         warnings: ['Low contrast between modules and background'],
       };
-      
+
       render(<ScannabilityIndicator status="fail" health={lowScannabilityHealth} />);
       const wrapper = screen.getByTestId('scannability-feedback-wrapper');
-      expect(wrapper).toBeInTheDocument();
-      expect(wrapper).toHaveClass('h-13');
-      
-      const alertMessage = screen.getByRole('alert');
-      expect(alertMessage).toBeInTheDocument();
-      expect(alertMessage).toHaveTextContent('Low contrast between modules and background');
+      expect(wrapper).toHaveClass('h-8');
+
+      fireEvent.click(screen.getByTestId('scannability-pill'));
+      expect(wrapper).toHaveClass('h-8');
+      expect(screen.getByTestId('scannability-details')).toHaveClass('absolute');
     });
   });
 

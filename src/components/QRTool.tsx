@@ -20,8 +20,8 @@ import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react'
 import { Button } from "./ui/Button";
 import { Card } from "./ui/Card";
 import { Alert } from "./ui/Alert";
-import { DEFAULT_CONFIG } from '@/constants';
-import { QRConfig, SocialFormat } from '@/types';
+import { DEFAULT_CONFIG, SYSTEM_LIMITS } from '@/constants';
+import { QRConfig, SocialFormat, QRStyle, QRErrorCorrectionLevel } from '@/types';
 import QRCanvas from '@/components/QRCanvas';
 import { Download, Share2, ChevronDown, CircleHelp, Copy, Check, AlertTriangle } from 'lucide-react';
 import { Modal } from './ui/Modal';
@@ -40,7 +40,7 @@ import { StressTestButton } from './arcade/StressTestButton';
 import { ToolWorkspaceLayout, ToolWorkspaceHeader } from './ToolWorkspaceLayout';
 import { contentRegistry } from '@/data/contentRegistry';
 import { MiniPreview } from './MiniPreview';
-import type { ExportRisk } from '@/packages/scannability';
+import { getScanVerdict, type ScanFix, type ScanVerdict } from '@/packages/scannability';
 
 /** One-line promise under every generator heading. */
 const GENERATOR_SUBTITLE = 'No sign-up, no ads, never expires.';
@@ -48,11 +48,12 @@ const GENERATOR_SUBTITLE = 'No sign-up, no ads, never expires.';
 /** Id of the generator preview region (target of the mobile jump link). */
 const PREVIEW_ID = 'qr-preview';
 
-/** Scan-safety dot shown in the mobile action bar, keyed by export risk. */
-const STATUS_DOT_CLASSES: Record<ExportRisk, string> = {
-  safe: 'bg-success',
-  caution: 'bg-warning',
-  unsafe: 'bg-danger',
+/** Scan-safety dot shown in the mobile action bar, in the same tone as the verdict pill. */
+const STATUS_DOT_CLASSES: Record<ScanVerdict, string> = {
+  checking: 'bg-line-strong',
+  reliable: 'bg-success',
+  fragile: 'bg-warning',
+  unreliable: 'bg-danger',
 };
 
 const TEXT_ENTRY = 'input, textarea, select';
@@ -128,12 +129,16 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
   const scannabilityStatus = isEmpty ? 'idle' : rawScannabilityStatus;
   const health = isEmpty ? undefined : rawHealth;
 
-  const handleAutoFixContrast = useCallback(() => {
-    store.updateConfig({
-      fgColor: '#000000',
-      bgColor: '#ffffff',
-      eyeColor: '#000000',
-    });
+  const handleFix = useCallback((fix: ScanFix) => {
+    if (fix === 'raise-error-correction') {
+      store.updateConfig({ errorCorrectionLevel: QRErrorCorrectionLevel.H });
+    } else if (fix === 'standard-pattern') {
+      store.updateConfig({ style: QRStyle.STANDARD });
+    } else if (fix === 'smaller-logo') {
+      store.updateConfig({ logoSize: SYSTEM_LIMITS.MAX_LOGO_SIZE });
+    } else {
+      store.updateConfig({ fgColor: '#000000', bgColor: '#ffffff', eyeColor: '#000000' });
+    }
   }, [store]);
 
   const handleResetDefault = useCallback(() => {
@@ -337,7 +342,8 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
                    <ScannabilityIndicator
                      status={scannabilityStatus}
                      health={health}
-                     onAutoFixContrast={handleAutoFixContrast}
+                     errorCorrectionLevel={config.errorCorrectionLevel}
+                     onFix={handleFix}
                      onResetDefault={handleResetDefault}
                    />
                    </div>
@@ -364,7 +370,7 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
                 >
                    <span
                      aria-hidden="true"
-                     className={`size-2.5 shrink-0 rounded-full md:hidden ${STATUS_DOT_CLASSES[getExportRiskPolicy({ status: scannabilityStatus, health })]}`}
+                     className={`size-2.5 shrink-0 rounded-full md:hidden ${STATUS_DOT_CLASSES[getScanVerdict({ status: scannabilityStatus, health }) ?? 'checking']}`}
                      data-testid="export-status-dot"
                    />
                    {isEmpty ? (
