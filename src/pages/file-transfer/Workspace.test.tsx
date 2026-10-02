@@ -73,13 +73,10 @@ describe('File transfer workspaces (#796, #978)', () => {
     expect(follows(viewport, progress)).toBe(true);
   });
 
-  it('both routes can switch to the other on mobile through the primary navigation', () => {
+  it('both routes can switch to the other through the transfer mode switcher', () => {
     render(<ToastProvider><ReceiverPage /></ToastProvider>);
-    const header = screen.getByRole('complementary', { name: 'Receiver Settings and Controls' });
-    // The compact primary navigation is a disclosure on narrow layouts that lists both routes.
-    fireEvent.click(within(header).getByRole('button', { name: 'Site menu' }));
-    const nav = screen.getByRole('navigation', { name: 'Primary navigation' });
-    expect(within(nav).getByRole('link', { name: /Send File/ })).toHaveAttribute('href', '/file-transfer');
-    expect(within(nav).getByRole('link', { name: /Receive File/ })).toHaveAttribute('href', '/file-transfer/receive');
+    const modeNav = screen.getByRole('navigation', { name: 'Transfer mode' });
+    expect(within(modeNav).getByRole('link', { name: /Send File/ })).toHaveAttribute('href', '/file-transfer');
+    expect(within(modeNav).getByRole('link', { name: /Receive File/ })).toHaveAttribute('href', '/file-transfer/receive');
   });
 });

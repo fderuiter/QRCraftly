@@ -23,6 +23,7 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Alert } from '@/components/ui/Alert';
 import { ToolWorkspaceLayout, ToolWorkspaceHeader } from '@/components/ToolWorkspaceLayout';
+import { TransferModeSwitcher } from '@/components/TransferModeSwitcher';
 import { useToast } from '@/components/ui/Toast';
 import { useOpticalReceiver } from '@/packages/optical-transfer/client';
 import { useCamera } from '@/hooks/useCamera';
@@ -237,6 +238,7 @@ function FileTransferReceiveInner() {
             title="Receive a File by QR Code"
             subtitle="Scan an animated transfer QR with your camera or a video."
             badge="Beta"
+            modeSwitcher={<TransferModeSwitcher currentMode="receive" />}
             previewId="receiver-viewport"
             previewJumpLabel="Jump to camera"
           />

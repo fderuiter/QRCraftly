@@ -85,8 +85,7 @@ describe('QRTool Component', () => {
     expect(menuButton).toHaveAttribute('aria-expanded', 'true');
     const nav = screen.getByRole('navigation', { name: 'Primary navigation' });
     expect(within(nav).getByRole('link', { name: /Create QR/ })).toHaveAttribute('href', '/');
-    expect(within(nav).getByRole('link', { name: /Send File/ })).toHaveAttribute('href', '/file-transfer');
-    expect(within(nav).getByRole('link', { name: /Receive File/ })).toHaveAttribute('href', '/file-transfer/receive');
+    expect(within(nav).getByRole('link', { name: /File Transfer/ })).toHaveAttribute('href', '/file-transfer');
     expect(within(nav).getByRole('link', { name: 'Arcade' })).toHaveAttribute('href', '/arcade');
     expect(within(nav).getByRole('link', { name: 'About' })).toHaveAttribute('href', '/about');
     expect(within(nav).getByRole('link', { name: 'Security' })).toHaveAttribute('href', '/security');

@@ -16,13 +16,13 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useMemo } from 'react';
 import { Button } from "./ui/Button";
 import { Card } from "./ui/Card";
 import { Alert } from "./ui/Alert";
 import { QRConfig, TemplateStyle, SocialFormat } from '@/types';
 import QRCanvas from '@/components/QRCanvas';
-import { Download, Share2, ChevronDown, CircleHelp, Copy, Check, AlertTriangle, QrCode } from 'lucide-react';
+import { Download, Share2, ChevronDown, CircleHelp, Copy, Check, AlertTriangle } from 'lucide-react';
 import { Modal } from './ui/Modal';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useQRDownload, ExportStatus, ExportOptions } from '@/hooks/useQRDownload';
@@ -32,6 +32,7 @@ import { useToast } from './ui/Toast';
 import { useScannability } from '@/hooks/useScannability';
 import { ScannabilityIndicator } from '@/components/ScannabilityIndicator';
 import { QRProvider, useQRStore, useQRStoreSelector } from '@/context/QRContext';
+import { getSamplePayload } from '@/packages/qr-payload';
 import { Menu } from './ui/Menu';
 import { useCapabilities } from '@/hooks/useCapabilities';
 import { sidebarControls } from '@/registry';
@@ -90,15 +91,20 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
   const copyButtonRef = useRef<HTMLButtonElement>(null);
   const shareButtonRef = useRef<HTMLButtonElement>(null);
   const photosButtonRef = useRef<HTMLButtonElement>(null);
-  const { exportAsset } = useQRDownload(qrRef, config);
+  const isEmpty = !config.value || !config.value.trim();
+  const samplePayload = useMemo(() => getSamplePayload(config.type), [config.type]);
+  const effectiveConfig = useMemo(() => (
+    isEmpty ? { ...config, value: samplePayload } : config
+  ), [config, isEmpty, samplePayload]);
+
+  const { exportAsset } = useQRDownload(qrRef, effectiveConfig);
   const [copied, setCopied] = useState(false);
   const { canShare } = useCapabilities();
 
   // Scannability
-  const { status: rawScannabilityStatus, checkScannability, health: rawHealth, workerRecoveryActive } = useScannability(canvasRef, config);
+  const { status: rawScannabilityStatus, checkScannability, health: rawHealth, workerRecoveryActive } = useScannability(canvasRef, effectiveConfig);
 
-  // With no content there is no QR code: never report a stale "verified" result or health score.
-  const isEmpty = !config.value;
+  // In sample fallback mode, report 'idle' status so stale/verified badges are suppressed
   const scannabilityStatus = isEmpty ? 'idle' : rawScannabilityStatus;
   const health = isEmpty ? undefined : rawHealth;
 
@@ -125,8 +131,8 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
     }
   }, [setModuleCount, checkScannability]);
 
-  // Debounce the config for QRCanvas to prevent lag during rapid typing or style changes.
-  const debouncedConfig = useDebounce(config, 100);
+  // Debounce the effective config for QRCanvas to prevent lag during rapid typing or style changes.
+  const debouncedConfig = useDebounce(effectiveConfig, 100);
 
   const handleExportResult = useCallback((result: ExportStatus, buttonRef?: React.RefObject<HTMLButtonElement | null>) => {
     // 1. Focus Recovery: return focus to the originating button control
@@ -306,7 +312,18 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
              <Card>
                 <div className="mb-6 flex items-center justify-between gap-2">
                     <h2 className="font-semibold text-slate-700 dark:text-slate-200">Live Preview</h2>
-                    <ScannabilityIndicator status={scannabilityStatus} health={health} />
+                    <div className="flex items-center gap-2">
+                      {isEmpty && (
+                        <span
+                          id={EMPTY_STATE_ID}
+                          data-testid="sample-preview-badge"
+                          className="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-800 dark:bg-amber-900/50 dark:text-amber-300"
+                        >
+                          Sample Preview
+                        </span>
+                      )}
+                      <ScannabilityIndicator status={scannabilityStatus} health={health} />
+                    </div>
                 </div>
                 {!isEmpty && <StressTestButton />}
                 
@@ -318,18 +335,7 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
                    </div>
                 )}
 
-                {isEmpty && (
-                  <div
-                    id={EMPTY_STATE_ID}
-                    className="mb-8 flex aspect-square w-full flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed border-slate-300 p-6 text-center dark:border-slate-700"
-                    data-testid="qr-empty-state"
-                  >
-                    <QrCode className="size-12 text-slate-400 dark:text-slate-500" aria-hidden="true" />
-                    <p className="text-sm font-medium text-slate-600 dark:text-slate-300">{EMPTY_CONTENT_MESSAGE}</p>
-                  </div>
-                )}
-                
-                <div ref={qrRef} className={isEmpty ? 'hidden' : 'mb-6 flex justify-center'}>
+                <div ref={qrRef} className="mb-8 flex justify-center">
                    {/* Pass debounced config to QRCanvas to prevent heavy rendering on every keystroke */}
                    <QRCanvas ref={canvasRef} onRendered={handleRendered} config={debouncedConfig} className="max-h-[60vh] w-full rounded-lg object-contain shadow-sm" />
                 </div>
@@ -362,19 +368,17 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
                     <div className="mt-3 flex items-center gap-2">
                       <span className="text-xs text-slate-500 dark:text-slate-400">Presets:</span>
                       {[512, 1024, 2000, 4000].map((preset) => (
-                        <button
+                        <Button
                           key={preset}
-                          type="button"
+                          variant="outline"
+                          size="sm"
+                          pressed={exportResolution === preset}
                           onClick={() => setExportResolution(preset)}
-                          className={`rounded px-2 py-1 text-xs font-medium transition-colors ${
-                            exportResolution === preset
-                              ? 'bg-teal-600 text-white dark:bg-teal-500'
-                              : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
-                          }`}
+                          className="px-2 py-1 text-xs"
                           aria-label={`Set resolution to ${preset}px`}
                         >
                           {preset}px
-                        </button>
+                        </Button>
                       ))}
                     </div>
                   </div>

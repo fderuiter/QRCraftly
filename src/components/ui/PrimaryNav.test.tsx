@@ -34,7 +34,7 @@ describe('PrimaryNav', () => {
     expect(button).toHaveAttribute('aria-expanded', 'true');
     const panel = document.getElementById(button.getAttribute('aria-controls') as string) as HTMLElement;
     expect(within(panel).getAllByRole('link')).toHaveLength(PRIMARY_NAV_ITEMS.length);
-    expect(within(panel).getByRole('link', { name: /Receive File/ })).toHaveAttribute('href', '/file-transfer/receive');
+    expect(within(panel).getByRole('link', { name: /File Transfer/ })).toHaveAttribute('href', '/file-transfer');
   });
 
   it('marks the current destination with aria-current="page"', () => {
@@ -43,6 +43,13 @@ describe('PrimaryNav', () => {
     openMenu();
     expect(screen.getByRole('link', { name: 'Security' })).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('link', { name: 'About' })).not.toHaveAttribute('aria-current');
+  });
+
+  it('marks File Transfer as active for both sender and receiver routes', () => {
+    mockPathname = '/file-transfer/receive';
+    render(<PrimaryNav layout="compact" />);
+    openMenu();
+    expect(screen.getByRole('link', { name: /File Transfer/ })).toHaveAttribute('aria-current', 'page');
   });
 
   it('treats every generator route as "Create QR"', () => {
