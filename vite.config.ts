@@ -16,6 +16,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import fs from 'fs';
 import path from 'path';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
@@ -41,7 +42,12 @@ const devRedirectApi = (): Plugin => ({
  * Configures the development server, plugins, environment variables, and path aliases.
  */
 export default defineConfig(() => {
+    const { version } = JSON.parse(fs.readFileSync(path.resolve(__dirname, 'package.json'), 'utf8')) as { version: string };
     return {
+      define: {
+        // Released package version, used as softwareVersion in structured data.
+        __APP_VERSION__: JSON.stringify(version),
+      },
       server: {
         port: 3000,
         host: '0.0.0.0', // Allow access from outside the container
