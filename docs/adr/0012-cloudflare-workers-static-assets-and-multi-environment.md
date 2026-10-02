@@ -24,7 +24,7 @@ We standardize QRCraftly's edge architecture on **Cloudflare Workers with Static
 
 2. **Native Edge Branch Routing**:
    - **Production (`main` branch)**: Routes to `https://qrcraftly.fpderuiter.workers.dev/` (and production custom domains like `qrcraftly.com`).
-   - **Preview Staging (`dev` branch)**: Routes to `https://dev-qrcraftly.fpderuiter.workers.dev/` with automatic `X-Robots-Tag: noindex` protection.
+   - **Preview Staging (`dev` branch, retired by ADR 0020)**: Routed to `https://dev-qrcraftly.fpderuiter.workers.dev/`. Branch previews below replace it.
    - **Pull Requests**: Provisioned as ephemeral branch previews matching `https://<branch>-qrcraftly.fpderuiter.workers.dev/`.
    - Domain routing is handled at Cloudflare's edge based on Git branch lineage, making branch collision or production overwrite impossible.
 
@@ -38,8 +38,8 @@ Cloudflare Workers with Static Assets provides first-class performance and elimi
 
 ## Consequences
 
-- `wrangler.jsonc` specifies `"assets": { "directory": "dist/client", "binding": "ASSETS" }`.
-- The preview staging URL is canonically documented as `https://dev-qrcraftly.fpderuiter.workers.dev/`.
+- `wrangler.jsonc` specifies `"assets": { "directory": "dist/client" }` with no binding.
+- Previews are canonically documented as `https://<branch>-qrcraftly.fpderuiter.workers.dev/` (the `dev-qrcraftly` staging host was retired with the `dev` branch).
 - The production URL is canonically documented as `https://qrcraftly.fpderuiter.workers.dev/` and `https://qrcraftly.com`.
 - Redundant and failing `wrangler pages deploy` shell scripts are retired from the repository.
 

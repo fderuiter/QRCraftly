@@ -190,7 +190,7 @@ banner "Cloudflare Edge Infrastructure Setup"
 
 # ── Stage 1: Account ID & API Token ─────────────────────────────────────────
 stage "Cloudflare: Account ID & API Token"
-say "We will configure your Cloudflare Account ID and an API token for Wrangler."
+say "We will save your Cloudflare Account ID and an API token to .env for running Wrangler locally."
 say "The token needs Edit permission for Workers Scripts."
 open_url "https://dash.cloudflare.com/profile/api-tokens"
 step "Click 'Create Token' → 'Create Custom Token'."
@@ -200,14 +200,14 @@ ask CLOUDFLARE_ACCOUNT_ID "Paste Cloudflare Account ID:"
 step "Create and copy the generated API Token."
 ask_secret CLOUDFLARE_API_TOKEN "Paste Cloudflare API Token:"
 
+# Stored in the local .env for Wrangler only. GitHub Actions never deploys, so these are not
+# pushed to repository secrets; Workers Builds holds its own credentials.
 if [[ -n "$CLOUDFLARE_ACCOUNT_ID" ]]; then
   write_env CLOUDFLARE_ACCOUNT_ID "$CLOUDFLARE_ACCOUNT_ID"
-  set_secret CLOUDFLARE_ACCOUNT_ID "$CLOUDFLARE_ACCOUNT_ID"
 fi
 
 if [[ -n "$CLOUDFLARE_API_TOKEN" ]]; then
   write_env CLOUDFLARE_API_TOKEN "$CLOUDFLARE_API_TOKEN"
-  set_secret CLOUDFLARE_API_TOKEN "$CLOUDFLARE_API_TOKEN"
 fi
 
 # ── Stage 2: Worker & Workers Builds ────────────────────────────────────────

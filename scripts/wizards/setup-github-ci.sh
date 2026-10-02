@@ -203,31 +203,22 @@ else
   warn "gh CLI is not installed on PATH."
   say "You can install gh or manage secrets manually in the GitHub dashboard."
 fi
-open_url "https://github.com/fderuiter/QRCraftly/settings/secrets/actions"
+open_url "https://github.com/fderuiter/QRCraftly-web/settings/secrets/actions"
 pause "Press Enter after confirming GitHub repository settings access."
 
-# ── Stage 2: Configure CI Deployment Secrets ────────────────────────────────
-stage "GitHub: Provision Deployment Secrets"
-say "Configuring Cloudflare credentials required for automated deployment workflows."
-
-ask CLOUDFLARE_ACCOUNT_ID "Paste Cloudflare Account ID:"
-ask_secret CLOUDFLARE_API_TOKEN "Paste Cloudflare API Token:"
-
-if [[ -n "$CLOUDFLARE_ACCOUNT_ID" ]]; then
-  write_env CLOUDFLARE_ACCOUNT_ID "$CLOUDFLARE_ACCOUNT_ID"
-  set_secret CLOUDFLARE_ACCOUNT_ID "$CLOUDFLARE_ACCOUNT_ID"
-fi
-
-if [[ -n "$CLOUDFLARE_API_TOKEN" ]]; then
-  write_env CLOUDFLARE_API_TOKEN "$CLOUDFLARE_API_TOKEN"
-  set_secret CLOUDFLARE_API_TOKEN "$CLOUDFLARE_API_TOKEN"
-fi
+# ── Stage 2: No Deployment Secrets ──────────────────────────────────────────
+stage "GitHub: No Deployment Secrets Needed"
+say "GitHub Actions is the quality gate (lint, tests, E2E, build, audits); it never deploys."
+say "Cloudflare Workers Builds owns deployment and its credentials, so Actions needs no Cloudflare secrets."
+step "If CLOUDFLARE_ACCOUNT_ID or CLOUDFLARE_API_TOKEN are still listed as Actions secrets, delete them:"
+step "no workflow reads them."
+open_url "https://github.com/fderuiter/QRCraftly-web/settings/secrets/actions"
+pause "Press Enter once no Cloudflare deploy secrets remain."
 
 # ── Stage 3: Workflow Actions Verification ──────────────────────────────────
 stage "GitHub: CI Workflows Verification"
-say "Check the repository Actions tab to verify build, test, and deploy workflows."
-open_url "https://github.com/fderuiter/QRCraftly/actions"
-step "Verify workflow permissions allow 'read/write' for deployment & attestation steps."
+say "Check the repository Actions tab to verify the build and test workflows."
+open_url "https://github.com/fderuiter/QRCraftly-web/actions"
 step "Run or inspect the latest workflow run."
 pause "Press Enter once CI workflows are verified."
 
