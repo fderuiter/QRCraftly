@@ -35,6 +35,58 @@ import {
 } from '@/packages/qr-matrix/maze';
 import { buildMatrix, type QrEncoder } from '@/packages/qr-matrix';
 import { getQrCanvasRuntime } from '../utils/qrCanvasRuntime';
+import { motionAllowed } from '../hooks/usePresence';
+
+/** Length of the preview crossfade in ms (#1054). */
+const CROSSFADE_MS = 150;
+/** The ghost canvas of the frame currently fading out, per preview canvas. */
+const fadingGhosts = new WeakMap<HTMLCanvasElement, HTMLCanvasElement>();
+
+/**
+ * Crossfades the preview when the QR or its design changes: copies the current frame into a
+ * ghost canvas laid over the preview and fades the ghost out, while the caller draws the new
+ * frame on the real canvas straight away (the correct frame is never delayed). Skipped under
+ * reduced motion, for the first frame, when the frame size changes and without the Web
+ * Animations API. The ghost removes itself when the fade ends, leaving today's render.
+ * @param canvas - The preview canvas, before it is redrawn.
+ * @returns Call it after drawing: it drops the fade when the frame size changed.
+ */
+function crossfadeFrom(canvas: HTMLCanvasElement): () => void {
+  fadingGhosts.get(canvas)?.remove();
+  fadingGhosts.delete(canvas);
+  const container = canvas.parentElement;
+  const none = () => {};
+  if (!container || canvas.width === 0 || canvas.height === 0 || !motionAllowed()) return none;
+  const ghost = document.createElement('canvas');
+  if (typeof ghost.animate !== 'function') return none;
+  ghost.width = canvas.width;
+  ghost.height = canvas.height;
+  const ctx = ghost.getContext('2d');
+  if (!ctx) return none;
+  try {
+    ctx.drawImage(canvas, 0, 0);
+  } catch {
+    return none;
+  }
+  ghost.setAttribute('aria-hidden', 'true');
+  ghost.className = 'pointer-events-none absolute inset-0 size-full';
+  container.appendChild(ghost);
+  fadingGhosts.set(canvas, ghost);
+  const animation = ghost.animate([{ opacity: 1 }, { opacity: 0 }], {
+    duration: CROSSFADE_MS,
+    easing: 'cubic-bezier(0.2, 0, 0, 1)',
+    fill: 'forwards',
+  });
+  const cleanUp = () => {
+    ghost.remove();
+    if (fadingGhosts.get(canvas) === ghost) fadingGhosts.delete(canvas);
+  };
+  animation.onfinish = cleanUp;
+  animation.oncancel = cleanUp;
+  return () => {
+    if (canvas.width !== ghost.width || canvas.height !== ghost.height) animation.cancel();
+  };
+}
 
 /**
  * Props for the QRCanvas component.
@@ -459,6 +511,9 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+    // Fade the previous frame out over the new one; the new frame is drawn at once below.
+    const settleCrossfade = crossfadeFrom(canvas);
+
     const currentConfig = configRef.current;
     const currentLogoImg = logoImgRef.current;
     const currentBorderLogoImg = borderLogoImgRef.current;
@@ -502,6 +557,7 @@ const QRCanvas = React.forwardRef<HTMLCanvasElement, QRCanvasProps>(({
       canvas.height = activeSize * pixelRatio;
       drawQR(ctx, modules, currentConfig, currentLogoImg, currentBorderLogoImg, activeSize, computedMazeDataRef.current);
     }
+    settleCrossfade();
 
     if (currentOnRendered) {
       const runVirtualRender = () => {

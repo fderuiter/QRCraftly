@@ -4,6 +4,7 @@ import { X } from 'lucide-react';
 import { Button } from './Button';
 import { useScrollLock } from '../../hooks/useScrollLock';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { usePresence } from '../../hooks/usePresence';
 
 interface ModalProps {
   /**
@@ -54,6 +55,9 @@ export const Modal: React.FC<ModalProps> = ({
     setMounted(true);
   }, []);
 
+  // Stays mounted briefly after closing so the exit animation can play (instant under reduced motion).
+  const { mounted: present, closing } = usePresence(isOpen);
+
   useScrollLock(isOpen);
   useFocusTrap(containerRef, isOpen && mounted);
 
@@ -94,7 +98,7 @@ export const Modal: React.FC<ModalProps> = ({
     };
   }, [isOpen, mounted]);
 
-  if (!isOpen) return null;
+  if (!present) return null;
   if (!mounted) return null;
 
   const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -106,19 +110,21 @@ export const Modal: React.FC<ModalProps> = ({
   return createPortal(
     <div 
       ref={containerRef}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-scrim p-4 transition-opacity" 
+      className="fixed inset-0 z-50 flex items-center justify-center bg-scrim p-4 data-closed:pointer-events-none motion-safe:animate-fade-in motion-safe:data-closed:animate-fade-out"
       role="presentation"
+      data-closed={closing || undefined}
+      inert={closing || undefined}
       onClick={handleBackdropClick}
     >
       <div 
         role="dialog" 
         aria-modal="true" 
         aria-labelledby={titleId}
-        className="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-xl bg-surface shadow-modal"
+        className="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-xl bg-surface shadow-modal motion-safe:animate-pop-in motion-safe:in-data-closed:animate-pop-out"
       >
         <div className="flex items-center justify-between border-b border-line-subtle px-6 py-4">
           <h2 id={titleId} className="text-lg font-semibold text-fg">{title}</h2>
-          <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close modal" className="shrink-0">
+          <Button variant="ghost" iconOnly size="sm" onClick={onClose} aria-label="Close modal" className="shrink-0">
             <X className="size-5" />
           </Button>
         </div>

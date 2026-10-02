@@ -42,21 +42,19 @@ export function AccordionItem({ title, children, defaultOpen = false, headingLev
   const button = (
     <Button
       id={buttonId}
-      variant="ghost"
-      size="none"
+      variant="disclosure"
       onClick={() => {
         const next = !isOpen;
         setIsOpen(next);
         onOpenChange?.(next);
       }}
-      className="flex min-h-11 w-full justify-between! rounded-none px-5 py-4 text-left hover:bg-surface-hover"
       aria-expanded={isOpen}
       aria-controls={panelId}
     >
       <span className="font-semibold text-fg">{title}</span>
       <ChevronDown
         aria-hidden="true"
-        className={`size-5 text-fg-muted motion-safe:transition-transform ${isOpen ? 'rotate-180' : ''}`}
+        className={`size-5 shrink-0 text-fg-muted motion-safe:transition-transform motion-safe:duration-(--duration-base) ${isOpen ? 'rotate-180' : ''}`}
       />
     </Button>
   );
@@ -71,9 +69,12 @@ export function AccordionItem({ title, children, defaultOpen = false, headingLev
         role="region"
         aria-labelledby={buttonId}
         hidden={!isOpen}
-        className="px-5 pb-4 text-fg-muted"
+        className="disclosure-panel text-fg-muted"
       >
-        {children}
+        {/* The row animates 0fr to 1fr (see .disclosure-panel in index.css); the padding lives inside it. */}
+        <div>
+          <div className="px-5 pb-4">{children}</div>
+        </div>
       </div>
     </div>
   );
