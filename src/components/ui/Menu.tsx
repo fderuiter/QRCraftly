@@ -167,11 +167,11 @@ export function Menu({ id, items, renderTrigger, triggerRef: externalTriggerRef,
           tabIndex={-1}
           aria-labelledby={triggerId}
           onKeyDown={onMenuKeyDown}
-          className="absolute inset-x-0 top-full z-50 mt-2 overflow-hidden rounded-xl border border-slate-100 bg-white py-1 shadow-xl dark:border-slate-700 dark:bg-slate-800"
+          className="absolute inset-x-0 top-full z-50 mt-2 overflow-hidden rounded-xl border border-line bg-surface-raised py-1 shadow-overlay"
         >
           {items.map((item, index) => (
             <React.Fragment key={item.id}>
-              {item.separatorBefore && <div role="separator" className="my-1 h-px bg-slate-100 dark:bg-slate-700" />}
+              {item.separatorBefore && <div role="separator" className="my-1 h-px bg-line" />}
               <Button
                 ref={(el) => {
                   itemRefs.current[index] = el;

@@ -22,13 +22,13 @@ import { ToastProvider } from '../components/ui/Toast';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { ThemeProvider } from '../context/ThemeContext';
 import { ServiceWorkerUpdatePrompt } from '../components/ServiceWorkerUpdatePrompt';
+import { AppShell } from '../components/AppShell';
 
 /**
  * LayoutDefault Component
  *
- * Provides the default layout structure for the application.
- * It sets up the main container with full height, background color, text color,
- * and font settings. It also handles scrolling behavior for mobile vs desktop.
+ * Provides the default layout for every route: theme and toast providers, the service worker
+ * update prompt and the single app shell (header, main landmark, footer).
  * @param props - The component props.
  * @param props.children - The child components to render within the layout.
  * @returns The layout wrapper.
@@ -43,22 +43,9 @@ export default function LayoutDefault({ children }: { children: React.ReactNode 
     <ThemeProvider>
     <ToastProvider>
       <ServiceWorkerUpdatePrompt enabled={!import.meta.env.DEV} />
-      <a
-        href="#main-content"
-        className="sr-only transition-all focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:rounded-lg focus:border-2 focus:border-teal-700 focus:bg-white focus:px-4 focus:py-2 focus:text-teal-700 focus:shadow-lg focus:outline-none dark:focus:bg-slate-800 dark:focus:text-teal-400"
-      >
-        Skip to main content
-      </a>
-      <main
-        id="main-content"
-        tabIndex={-1}
-        className="flex min-h-screen flex-col bg-slate-50 font-sans text-slate-700 antialiased focus:outline-none dark:bg-slate-900 dark:text-slate-200"
-        data-hydrated={hydrated}
-      >
-        <ErrorBoundary>
-          {children}
-        </ErrorBoundary>
-      </main>
+      <AppShell hydrated={hydrated}>
+        <ErrorBoundary>{children}</ErrorBoundary>
+      </AppShell>
     </ToastProvider>
     </ThemeProvider>
   );

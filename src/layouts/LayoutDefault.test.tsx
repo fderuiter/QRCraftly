@@ -21,7 +21,6 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import LayoutDefault from './LayoutDefault';
 import { useToast } from '../components/ui/Toast';
-import { ThemeToggle } from '../components/ui/ThemeToggle';
 
 const ProblematicComponent = () => {
   throw new Error('Simulated fatal rendering error');
@@ -40,9 +39,13 @@ describe('LayoutDefault', () => {
     window.localStorage.clear();
     const { rerender } = render(
       <LayoutDefault>
-        <ThemeToggle />
+        <p>Page one</p>
       </LayoutDefault>
     );
+    // The app shell (one header with the theme toggle, one main, one footer) wraps every page.
+    expect(screen.getAllByRole('banner')).toHaveLength(1);
+    expect(screen.getAllByRole('contentinfo')).toHaveLength(1);
+    expect(screen.getByRole('main')).toHaveTextContent('Page one');
     const toggle = screen.getByRole('button', { name: /^Theme: System/ });
     fireEvent.click(toggle); // light
     fireEvent.click(toggle); // dark
@@ -52,7 +55,6 @@ describe('LayoutDefault', () => {
     rerender(
       <LayoutDefault>
         <NotificationTrigger />
-        <ThemeToggle />
       </LayoutDefault>
     );
     expect(screen.getByRole('button', { name: /^Theme: Dark/ })).toBeInTheDocument();

@@ -17,9 +17,7 @@
 */
 
 import React, { useEffect, useRef } from 'react';
-import { QrCode, Eye } from 'lucide-react';
-import { PrimaryNav } from './ui/PrimaryNav';
-import { ThemeToggle } from './ui/ThemeToggle';
+import { Eye } from 'lucide-react';
 import { isDangerousUrl } from '@/utils/security';
 
 /** Media query matching the desktop workspace breakpoint (Tailwind `md`). */
@@ -29,7 +27,7 @@ export const DESKTOP_WORKSPACE_QUERY = '(min-width: 48rem)';
  * Props for {@link ToolWorkspaceLayout}.
  */
 export interface ToolWorkspaceLayoutProps {
-  /** Tool header (brand, page heading, navigation). Sticky only on desktop. */
+  /** Tool header (page heading and tool actions). Sticky only on desktop. */
   header: React.ReactNode;
   /** Primary controls, shown first on every viewport. */
   controls: React.ReactNode;
@@ -90,14 +88,14 @@ export function ToolWorkspaceLayout({
 
   return (
     <div
-      className="relative grid w-full grid-cols-1 bg-slate-50 transition-colors duration-300 md:grid-cols-[30rem_minmax(0,1fr)] md:grid-rows-[auto_1fr] dark:bg-slate-950"
+      className="relative grid w-full grid-cols-1 bg-page transition-colors duration-300 md:grid-cols-[30rem_minmax(0,1fr)] md:grid-rows-[auto_1fr]"
       data-testid="tool-workspace"
     >
       <aside
         aria-label={controlsLabel}
-        className="relative z-10 flex min-w-0 flex-col border-slate-200 bg-white transition-colors duration-300 md:col-start-1 md:row-start-1 md:border-r dark:border-slate-800 dark:bg-slate-900"
+        className="relative z-10 flex min-w-0 flex-col border-line bg-surface transition-colors duration-300 md:col-start-1 md:row-start-1 md:border-r"
       >
-        <div className="z-20 border-b border-slate-100 bg-white transition-colors duration-300 md:sticky md:top-0 dark:border-slate-800 dark:bg-slate-900">
+        <div className="z-20 border-b border-line-subtle bg-surface transition-colors duration-300 md:sticky md:top-0">
           {header}
         </div>
         <div className="space-y-8 p-4 sm:p-6">{controls}</div>
@@ -110,7 +108,7 @@ export function ToolWorkspaceLayout({
       >
         <div
           ref={previewScrollRef}
-          className="relative flex flex-col items-center p-4 md:sticky md:top-0 md:h-dvh md:overflow-y-auto md:p-8"
+          className="relative flex flex-col items-center p-4 md:sticky md:top-0 md:h-dvh md:overflow-y-auto md:px-8 md:py-6"
           data-testid="tool-workspace-preview-scroller"
         >
           {/* Decorative glow, clipped so it never widens the page or creates a scroll area. */}
@@ -118,12 +116,12 @@ export function ToolWorkspaceLayout({
             <div className="absolute top-0 left-0 size-96 -translate-1/2 rounded-full bg-teal-200 blur-3xl transition-colors duration-300 dark:bg-teal-900"></div>
             <div className="absolute right-0 bottom-0 size-96 translate-1/2 rounded-full bg-slate-300 blur-3xl transition-colors duration-300 dark:bg-slate-800"></div>
           </div>
-          <div className="relative z-10 w-full max-w-md">{preview}</div>
+          <div className="relative z-10 w-full max-w-md lg:max-w-xl xl:max-w-2xl">{preview}</div>
         </div>
       </section>
 
       {secondary && (
-        <div className="min-w-0 border-slate-200 bg-white transition-colors duration-300 md:col-start-1 md:row-start-2 md:border-r dark:border-slate-800 dark:bg-slate-900">
+        <div className="min-w-0 border-line bg-surface transition-colors duration-300 md:col-start-1 md:row-start-2 md:border-r">
           <div className="space-y-8 p-4 pb-12 sm:p-6 sm:pb-12">{secondary}</div>
         </div>
       )}
@@ -141,14 +139,9 @@ export interface ToolWorkspaceHeaderProps {
   subtitle: string;
   /** Optional pill shown after the subtitle, e.g. "Beta". */
   badge?: string;
-  /**
-   * When true the h1 sits inside the home link (generator branding); otherwise a small
-   * "QRCraftly" home link is followed by a descriptive h1.
-   */
-  brandIsHeading?: boolean;
-  /** Optional mode switcher control rendered in the header. */
+  /** Optional mode switcher control rendered under the heading. */
   modeSwitcher?: React.ReactNode;
-  /** Extra header actions rendered before the primary navigation. */
+  /** Tool actions shown beside the heading (for example a help link). */
   actions?: React.ReactNode;
   /** Id of the preview region; renders a mobile-only "Jump to preview" link when set. */
   previewId?: string;
@@ -157,13 +150,12 @@ export interface ToolWorkspaceHeaderProps {
 }
 
 /**
- * Header shared by every tool workspace: home link, page heading, primary navigation,
- * theme toggle and, on mobile, a jump link to the preview.
+ * Header shared by every tool workspace: page heading, tool actions and, on mobile, a jump
+ * link to the preview. Site navigation and the theme toggle live in the app shell header.
  * @param props - Header content.
  * @param props.title - Page heading text.
  * @param props.subtitle - Description under the heading.
  * @param props.badge - Optional pill after the subtitle.
- * @param props.brandIsHeading - Whether the h1 is the brand link.
  * @param props.modeSwitcher - Optional mode switcher control.
  * @param props.actions - Extra header actions.
  * @param props.previewId - DOM id of the preview region.
@@ -174,7 +166,6 @@ export function ToolWorkspaceHeader({
   title,
   subtitle,
   badge,
-  brandIsHeading = false,
   modeSwitcher,
   actions,
   previewId,
@@ -188,7 +179,7 @@ export function ToolWorkspaceHeader({
       return (
         <a
           href={previewHref}
-          className="mt-2 inline-flex min-h-11 items-center gap-1.5 rounded-lg text-sm font-semibold text-teal-700 underline-offset-2 hover:underline md:hidden dark:text-teal-400"
+          className="mt-2 inline-flex min-h-11 items-center gap-1.5 rounded-lg text-sm font-semibold text-accent underline-offset-2 hover:underline md:hidden"
         >
           <Eye className="size-4" aria-hidden="true" />
           {previewJumpLabel}
@@ -201,34 +192,17 @@ export function ToolWorkspaceHeader({
   return (
     <header className="flex items-start justify-between gap-2 p-4 sm:p-6">
       <div className="min-w-0">
-        {brandIsHeading ? (
-          <a href="/" aria-label="QRCraftly Home" className="mb-1 flex items-center gap-2 text-teal-700 transition-opacity hover:opacity-80 dark:text-teal-400">
-            <QrCode className="size-6 shrink-0" aria-hidden="true" />
-            <h1 className="text-xl font-bold tracking-tight text-slate-700 dark:text-slate-100">{title}</h1>
-          </a>
-        ) : (
-          <>
-            <a href="/" aria-label="QRCraftly Home" className="mb-1 inline-flex items-center gap-2 text-sm font-semibold text-teal-700 transition-opacity hover:opacity-80 dark:text-teal-400">
-              <QrCode className="size-5 shrink-0" aria-hidden="true" />
-              <span>QRCraftly</span>
-            </a>
-            <h1 className="text-xl font-bold tracking-tight text-slate-700 dark:text-slate-100">{title}</h1>
-          </>
-        )}
+        <h1 className="text-xl font-bold tracking-tight text-fg">{title}</h1>
         <div className="flex flex-wrap items-center gap-2">
-          <p className="text-sm text-slate-600 dark:text-slate-400">{subtitle}</p>
+          <p className="text-sm text-fg-muted">{subtitle}</p>
           {badge && (
-            <span className="rounded-full bg-teal-100 px-2 py-0.5 text-xs font-semibold text-teal-800 dark:bg-teal-900/60 dark:text-teal-300">{badge}</span>
+            <span className="rounded-full bg-accent-soft px-2 py-0.5 text-xs font-semibold text-accent-strong">{badge}</span>
           )}
         </div>
         {modeSwitcher && <div className="mt-3 flex items-center">{modeSwitcher}</div>}
         {renderPreviewJump()}
       </div>
-      <div className="flex shrink-0 items-center gap-1">
-        {actions}
-        <PrimaryNav layout="compact" />
-        <ThemeToggle />
-      </div>
+      {actions && <div className="flex shrink-0 items-center gap-1">{actions}</div>}
     </header>
   );
 }

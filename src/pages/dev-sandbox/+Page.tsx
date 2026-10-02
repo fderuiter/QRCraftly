@@ -11,7 +11,7 @@ export default function DevSandbox() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-12 p-8">
-      <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">UI Components Sandbox</h1>
+      <h1 className="text-2xl font-bold text-fg">UI Components Sandbox</h1>
 
       <section className="space-y-6">
         <h2 className="border-b pb-2 text-xl font-semibold">TextField</h2>
@@ -128,7 +128,7 @@ function DevSandboxDuplicate() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-12 p-8">
-      <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">UI Components Sandbox</h1>
+      <h1 className="text-2xl font-bold text-fg">UI Components Sandbox</h1>
 
       <section className="space-y-6">
         <h2 className="border-b pb-2 text-xl font-semibold">TextField</h2>

@@ -58,7 +58,7 @@ describe('Free Forever (pledge) Page', () => {
   it('has a single h1 and ordered heading levels', () => {
     const { container } = render(<Page />);
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
-    const main = container.querySelector('main') as HTMLElement;
+    const main = container;
     const levels = Array.from(main.querySelectorAll('h1, h2, h3, h4, h5, h6')).map((h) => Number(h.tagName[1]));
     for (let i = 1; i < levels.length; i++) {
       expect(levels[i] - levels[i - 1]).toBeLessThanOrEqual(1);

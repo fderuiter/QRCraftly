@@ -30,8 +30,9 @@ describe('About Page', () => {
     // Check existing content
     expect(screen.getByText(/Privacy-focused QR code generator/i)).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /Free & No Login/i })).toBeInTheDocument();
-    expect(screen.getByRole('navigation', { name: /Primary navigation/i })).toBeInTheDocument();
-    expect(screen.getByRole('contentinfo')).toBeInTheDocument();
+    // Site navigation and the footer come from the app shell, never from the page.
+    expect(screen.queryByRole('navigation', { name: /Primary navigation/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('contentinfo')).not.toBeInTheDocument();
   });
 
   it('contains a link to the WiFi QR Code generator for better SEO discovery', () => {
@@ -54,7 +55,7 @@ describe('About Page', () => {
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
     expect(screen.queryByRole('heading', { name: /About About/i })).not.toBeInTheDocument();
 
-    const main = container.querySelector('main main, main') as HTMLElement;
+    const main = container;
     const levels = Array.from(main.querySelectorAll('h1, h2, h3, h4, h5, h6')).map((h) => Number(h.tagName[1]));
     for (let i = 1; i < levels.length; i++) {
       expect(levels[i] - levels[i - 1]).toBeLessThanOrEqual(1);

@@ -30,8 +30,8 @@ export class ErrorBoundary extends Component<Props, State> {
         return this.props.fallback;
       }
       return (
-        <div className="flex min-h-[50vh] flex-col items-center justify-center p-8 text-center text-slate-700 dark:text-slate-200">
-          <h2 role="alert" className="mb-4 text-3xl font-bold text-rose-700 dark:text-rose-400">Application Error</h2>
+        <div className="flex min-h-[50vh] flex-col items-center justify-center p-8 text-center text-fg-soft">
+          <h2 role="alert" className="mb-4 text-3xl font-bold text-danger">Application Error</h2>
           <p className="mb-8 text-lg">We're sorry, but something went wrong while rendering this page.</p>
           <Button
             variant="primary"

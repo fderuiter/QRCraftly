@@ -167,7 +167,7 @@ export const BrandTemplateGallery: React.FC<BrandTemplateGalleryProps> = ({ conf
   return (
     <div className="space-y-4">
       {/* Action Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3 dark:border-slate-800">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line-subtle pb-3">
         <Button
           variant="primary"
           size="sm"
@@ -199,7 +199,7 @@ export const BrandTemplateGallery: React.FC<BrandTemplateGalleryProps> = ({ conf
           className={`rounded-lg px-3 py-2 text-xs font-medium transition-all ${
             feedback.type === 'error'
               ? 'bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300'
-              : 'bg-teal-50 text-teal-800 dark:bg-teal-950/50 dark:text-teal-200'
+              : 'bg-teal-50 text-accent-strong dark:bg-teal-950/50'
           }`}
         >
           {feedback.text}
@@ -207,7 +207,7 @@ export const BrandTemplateGallery: React.FC<BrandTemplateGalleryProps> = ({ conf
       )}
 
       {/* Tab Switcher */}
-      <div className="flex rounded-lg bg-slate-100 p-1 dark:bg-slate-800" role="tablist">
+      <div className="flex rounded-lg bg-surface-hover p-1" role="tablist">
         <Button
           variant="ghost"
           size="none"
@@ -216,8 +216,8 @@ export const BrandTemplateGallery: React.FC<BrandTemplateGalleryProps> = ({ conf
           onClick={() => setActiveTab('presets')}
           className={`flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
             activeTab === 'presets'
-              ? 'bg-white text-slate-900 shadow-xs dark:bg-slate-700 dark:text-slate-100'
-              : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
+              ? 'bg-white text-fg shadow-xs dark:bg-slate-700'
+              : 'text-fg-muted hover:text-fg'
           }`}
         >
           Curated Presets ({PREBUILT_TEMPLATES.length})
@@ -230,8 +230,8 @@ export const BrandTemplateGallery: React.FC<BrandTemplateGalleryProps> = ({ conf
           onClick={() => setActiveTab('custom')}
           className={`flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
             activeTab === 'custom'
-              ? 'bg-white text-slate-900 shadow-xs dark:bg-slate-700 dark:text-slate-100'
-              : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
+              ? 'bg-white text-fg shadow-xs dark:bg-slate-700'
+              : 'text-fg-muted hover:text-fg'
           }`}
         >
           My Templates ({customTemplates.length}/{MAX_CUSTOM_TEMPLATES})
@@ -254,7 +254,7 @@ export const BrandTemplateGallery: React.FC<BrandTemplateGalleryProps> = ({ conf
               className={`group relative flex flex-col justify-between rounded-xl border p-3 transition-all ${
                 isSelected
                   ? 'border-teal-600 bg-teal-50/30 ring-2 ring-teal-600 dark:border-teal-400 dark:bg-teal-950/20 dark:ring-teal-400'
-                  : 'border-slate-200 bg-white hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700'
+                  : 'border-line bg-surface hover:border-line'
               }`}
             >
               {/* Card Top: Swatch & Info */}
@@ -286,28 +286,28 @@ export const BrandTemplateGallery: React.FC<BrandTemplateGalleryProps> = ({ conf
                 {/* Name & Metadata */}
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
-                    <h4 className="truncate text-xs font-semibold text-slate-800 dark:text-slate-100">
+                    <h4 className="truncate text-xs font-semibold text-fg">
                       {template.name}
                     </h4>
                     {isSelected && (
-                      <span className="inline-flex items-center gap-0.5 rounded-full bg-teal-100 px-1.5 py-0.5 text-[10px] font-medium text-teal-800 dark:bg-teal-900 dark:text-teal-200">
+                      <span className="inline-flex items-center gap-0.5 rounded-full bg-accent-soft px-1.5 py-0.5 text-xs font-medium text-accent-strong">
                         <Check className="size-2.5" /> Active
                       </span>
                     )}
                   </div>
                   {template.description && (
-                    <p className="line-clamp-2 text-[11px] text-slate-500 dark:text-slate-400">
+                    <p className="line-clamp-2 text-xs text-fg-muted">
                       {template.description}
                     </p>
                   )}
-                  <span className="mt-1 inline-block text-[10px] tracking-wider text-slate-600 uppercase dark:text-slate-400">
+                  <span className="mt-1 inline-block text-xs tracking-wider text-fg-muted uppercase">
                     {template.config.style || 'standard'}
                   </span>
                 </div>
               </div>
 
               {/* Card Bottom: Actions */}
-              <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-2 dark:border-slate-800">
+              <div className="mt-3 flex items-center justify-between border-t border-line-subtle pt-2">
                 <Button
                   variant="secondary"
                   size="sm"
@@ -359,12 +359,12 @@ export const BrandTemplateGallery: React.FC<BrandTemplateGalleryProps> = ({ conf
         })}
 
         {activeTab === 'custom' && customTemplates.length === 0 && (
-          <div className="col-span-full rounded-xl border border-dashed border-slate-200 p-6 text-center dark:border-slate-800">
+          <div className="col-span-full rounded-xl border border-dashed border-line p-6 text-center">
             <Sparkles className="mx-auto size-8 text-slate-300 dark:text-slate-600" />
-            <p className="mt-2 text-xs font-medium text-slate-600 dark:text-slate-300">
+            <p className="mt-2 text-xs font-medium text-fg-muted">
               No custom templates saved yet.
             </p>
-            <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-500">
+            <p className="mt-1 text-xs text-fg-muted">
               Customize colors, patterns, and borders, then click "Save as Template" or import a team JSON file.
             </p>
             <Button
@@ -386,7 +386,7 @@ export const BrandTemplateGallery: React.FC<BrandTemplateGalleryProps> = ({ conf
         title="Save Brand Template"
       >
         <form onSubmit={handleSaveSubmit} className="space-y-4">
-          <p className="text-xs text-slate-600 dark:text-slate-300">
+          <p className="text-xs text-fg-muted">
             Save your active visual settings (colors, pattern style, borders, logo configuration) as a reusable template.
           </p>
 
@@ -400,12 +400,12 @@ export const BrandTemplateGallery: React.FC<BrandTemplateGalleryProps> = ({ conf
           />
 
           <div>
-            <label htmlFor="template-description-input" className="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">
+            <label htmlFor="template-description-input" className="mb-1 block text-xs font-medium text-fg-soft">
               Description (Optional)
             </label>
             <textarea
               id="template-description-input"
-              className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs text-slate-800 transition-colors focus:border-teal-600 focus:outline-hidden dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-teal-400"
+              className="w-full rounded-xl border border-line bg-surface-raised p-2.5 text-xs text-fg transition-colors focus:border-teal-600 focus:outline-hidden dark:focus:border-teal-400"
               rows={2}
               placeholder="e.g. Official brand colors for marketing campaigns"
               value={saveDescription}
@@ -415,7 +415,7 @@ export const BrandTemplateGallery: React.FC<BrandTemplateGalleryProps> = ({ conf
           </div>
 
           {saveError && (
-            <p className="text-xs font-medium text-rose-600 dark:text-rose-400" role="alert">
+            <p className="text-xs font-medium text-danger" role="alert">
               {saveError}
             </p>
           )}
@@ -447,7 +447,7 @@ export const BrandTemplateGallery: React.FC<BrandTemplateGalleryProps> = ({ conf
           />
 
           {renameError && (
-            <p className="text-xs font-medium text-rose-600 dark:text-rose-400" role="alert">
+            <p className="text-xs font-medium text-danger" role="alert">
               {renameError}
             </p>
           )}

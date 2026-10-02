@@ -135,7 +135,7 @@ test.describe('Isolated Web Worker Recovery & Export Bypass', () => {
     const downloadButton = page.getByRole('button', { name: 'Download', exact: true });
     await expect(downloadButton).toBeVisible();
     // Wait for the button to transition to the error variant style (bg-rose-50, bg-rose-700, or text-rose-700)
-    await expect(downloadButton).toHaveClass(/bg-rose-50|bg-rose-700|text-rose-700/);
+    await expect(downloadButton).toHaveClass(/bg-danger-action|bg-danger-soft|text-danger/);
     await downloadButton.click();
 
     // Select export format to trigger safety gate

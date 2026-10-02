@@ -56,7 +56,7 @@ export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange
   return (
     <section>
       <div className="mb-4 flex items-center justify-between">
-        <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Border</h4>
+        <h4 className="text-sm font-semibold text-fg-soft">Border</h4>
         <ToggleSwitch
           id="enable-border"
           label="Enable Border"
@@ -102,9 +102,9 @@ export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange
           />
 
           {/* Border Content Section */}
-          <div className="border-t border-slate-200 pt-2 dark:border-slate-700">
+          <div className="border-t border-line pt-2">
             <div className="mb-2 flex items-baseline justify-between">
-              <p className="text-xs font-medium text-slate-700 dark:text-slate-300">Content</p>
+              <p className="text-xs font-medium text-fg-soft">Content</p>
               <ContrastBadge isVisible={isLowBorderContrast} contrastRatio={borderTextContrast} decimalPrecision={1} />
             </div>
 
@@ -149,7 +149,7 @@ export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange
                 {config.borderLogoUrl ? (
                   <img src={config.borderLogoUrl} alt="Secondary Brand Graphic" width={32} height={32} className="size-8 rounded border border-slate-200 bg-white object-contain" />
                 ) : (
-                  <span className="text-xs text-slate-500 italic dark:text-slate-400">No secondary logo</span>
+                  <span className="text-xs text-fg-muted italic">No secondary logo</span>
                 )}
                 {config.borderLogoUrl && (
                   <Button
@@ -168,7 +168,7 @@ export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange
                 variant="ghost"
                 size="sm"
                 onClick={() => borderLogoInputRef.current?.click()}
-                className="text-teal-600 hover:bg-teal-50 hover:text-teal-700 dark:text-teal-400"
+                className="text-accent hover:bg-teal-50 hover:text-teal-700"
               >
                 <Upload className="mr-1 size-3" />
                 {config.borderLogoUrl ? 'Change' : 'Add Logo'}
@@ -181,7 +181,7 @@ export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange
                 onChange={handleBorderLogoUpload}
               />
             </div>
-            {error && <div role="alert" className="mt-1 text-xs text-rose-700 dark:text-rose-400">{error}</div>}
+            {error && <div role="alert" className="mt-1 text-xs text-danger">{error}</div>}
             {config.borderLogoUrl && (
               <div className="mt-2">
                 <SelectField

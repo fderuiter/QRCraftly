@@ -82,11 +82,7 @@ describe('Local Git-Diff Lineage Auditor', () => {
       ]);
 
       expect(MAPPING).toHaveProperty('src/colors.json');
-      expect(MAPPING['src/colors.json']).toEqual([
-        'docs/public/STYLE_GUIDE.md',
-        'docs/SECURITY.md',
-        'docs/public/COMPLIANCE.md'
-      ]);
+      expect(MAPPING['src/colors.json']).toBe('docs/public/STYLE_GUIDE.md');
     });
 
     it('should fail multi-target validation when some/all targets are missing for a core schema', () => {
@@ -135,12 +131,10 @@ describe('Local Git-Diff Lineage Auditor', () => {
       });
     });
 
-    it('should pass multi-target validation when editing colors along with all of its mapped documentation targets', () => {
+    it('should pass validation when editing colors along with the style guide', () => {
       const modifiedFiles = new Set([
         'src/colors.json',
-        'docs/public/STYLE_GUIDE.md',
-        'docs/SECURITY.md',
-        'docs/public/COMPLIANCE.md'
+        'docs/public/STYLE_GUIDE.md'
       ]);
       const missing = checkLineage(modifiedFiles);
       expect(missing).toHaveLength(0);

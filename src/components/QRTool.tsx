@@ -16,19 +16,18 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import React, { useState, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import { Button } from "./ui/Button";
 import { Card } from "./ui/Card";
 import { Alert } from "./ui/Alert";
 import { DEFAULT_CONFIG } from '@/constants';
-import { QRConfig } from '@/types';
+import { QRConfig, SocialFormat } from '@/types';
 import QRCanvas from '@/components/QRCanvas';
 import { Download, Share2, ChevronDown, CircleHelp, Copy, Check, AlertTriangle } from 'lucide-react';
 import { Modal } from './ui/Modal';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useQRDownload, ExportStatus, ExportOptions } from '@/hooks/useQRDownload';
 import { getExportRiskPolicy } from '@/utils/exportRiskPolicy';
-import { isDangerousUrl } from '@/utils/security';
 import { useToast } from './ui/Toast';
 import { useScannability } from '@/hooks/useScannability';
 import { ScannabilityIndicator } from '@/components/ScannabilityIndicator';
@@ -39,14 +38,35 @@ import { useCapabilities } from '@/hooks/useCapabilities';
 import { sidebarControls } from '@/registry';
 import { StressTestButton } from './arcade/StressTestButton';
 import { ToolWorkspaceLayout, ToolWorkspaceHeader } from './ToolWorkspaceLayout';
-import { PLEDGE_TAGLINE } from '@/data/pledge';
 import { contentRegistry } from '@/data/contentRegistry';
+import { MiniPreview } from './MiniPreview';
+import type { ExportRisk } from '@/packages/scannability';
 
 /** One-line promise under every generator heading. */
 const GENERATOR_SUBTITLE = 'No sign-up, no ads, never expires.';
 
 /** Id of the generator preview region (target of the mobile jump link). */
 const PREVIEW_ID = 'qr-preview';
+
+/** Scan-safety dot shown in the mobile action bar, keyed by export risk. */
+const STATUS_DOT_CLASSES: Record<ExportRisk, string> = {
+  safe: 'bg-success',
+  caution: 'bg-warning',
+  unsafe: 'bg-danger',
+};
+
+const TEXT_ENTRY = 'input, textarea, select';
+
+/**
+ * From md up the preview is a sticky, viewport-height column, so the QR is sized by the
+ * screen height: 18rem is left for the site header, the heading and status row, the export row and padding, which
+ * keeps the QR and the Download control on screen without scrolling (#1050).
+ */
+const STAGE_SIZE_CLASSES: Record<SocialFormat, string> = {
+  [SocialFormat.SQUARE_1_1]: 'md:max-w-[calc(100dvh_-_18rem)]',
+  [SocialFormat.PORTRAIT_4_5]: 'md:max-w-[calc((100dvh_-_18rem)*0.8)]',
+  [SocialFormat.STORY_9_16]: 'md:max-w-[calc((100dvh_-_18rem)*0.5625)]',
+};
 /** Id of the empty-preview explanation referenced by disabled export buttons. */
 const EMPTY_STATE_ID = 'qr-empty-state';
 /** Message shown when there is nothing to export yet. */
@@ -61,22 +81,6 @@ export const EMPTY_CONTENT_MESSAGE = 'Enter content to generate a QR code.';
 const primaryControls = sidebarControls.filter((c) => c.placement === 'primary');
 const secondaryControls = sidebarControls.filter((c) => c.placement === 'secondary');
 const belowControls = sidebarControls.filter((c) => c.placement === 'below');
-
-const GENERATOR_LINKS = [
-  ['URL QR Code', '/'],
-  ['Text QR Code', '/text-qr-code'],
-  ['WiFi QR Code', '/wifi-qr-code'],
-  ['vCard QR Code', '/vcard-qr-code'],
-  ['Email QR Code', '/email-qr-code'],
-  ['Phone QR Code', '/phone-qr-code'],
-  ['SMS QR Code', '/sms-qr-code'],
-  ['Payment QR Code', '/payment-qr-code'],
-  ['Event QR Code', '/event-qr-code'],
-  ['Location QR Code', '/location-qr-code'],
-  ['Meeting QR Code', '/meeting-qr-code'],
-  ['Social QR Code', '/social-qr-code'],
-  ['Bulk CSV Batch QR Code', '/bulk-csv-qr-code'],
-] as const;
 
 function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: string }) {
   // Keyword-led H1 from the content registry (e.g. "Free WiFi QR Code Generator"); the brand
@@ -96,7 +100,6 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
   const downloadButtonRef = useRef<HTMLButtonElement>(null);
   const copyButtonRef = useRef<HTMLButtonElement>(null);
   const shareButtonRef = useRef<HTMLButtonElement>(null);
-  const photosButtonRef = useRef<HTMLButtonElement>(null);
   const isEmpty = !config.value || !config.value.trim();
   const samplePayload = useMemo(() => getSamplePayload(config.type), [config.type]);
   const effectiveConfig = useMemo(() => (
@@ -105,6 +108,17 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
 
   const { exportAsset } = useQRDownload(qrRef, effectiveConfig);
   const [copied, setCopied] = useState(false);
+  // The mobile action bar steps aside while the on-screen keyboard is up.
+  const [inputFocused, setInputFocused] = useState(false);
+  useEffect(() => {
+    const update = () => setInputFocused(document.activeElement instanceof Element && document.activeElement.matches(TEXT_ENTRY));
+    document.addEventListener('focusin', update);
+    document.addEventListener('focusout', update);
+    return () => {
+      document.removeEventListener('focusin', update);
+      document.removeEventListener('focusout', update);
+    };
+  }, []);
   const { canShare } = useCapabilities();
 
   // Scannability
@@ -252,11 +266,6 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
     handleExportResult(result, downloadButtonRef);
   };
 
-  const downloadToDeviceFlow = async (format: 'png' | 'jpeg' | 'webp', buttonRef: React.RefObject<HTMLButtonElement | null>, options?: ExportOptions) => {
-    const result = await exportAsset(format, { ...options, directDownload: true });
-    handleExportResult(result, buttonRef);
-  };
-
   const onShare = async () => {
     const action = async (options?: ExportOptions) => {
       const result = await exportAsset('share', options);
@@ -270,7 +279,7 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
       <Modal isOpen={showSafetyGate} onClose={() => setShowSafetyGate(false)} title="Scan Safety Warning">
         <div className="flex flex-col items-center gap-4 text-center">
           <AlertTriangle className="size-12 text-amber-500" />
-          <p className="text-slate-700 dark:text-slate-300">
+          <p className="text-fg-soft">
             This QR code might fail to scan in real-world conditions. We recommend adjusting colors, pattern, or margin for better contrast.
           </p>
           <div className="mt-4 flex w-full gap-3">
@@ -290,13 +299,12 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
           <ToolWorkspaceHeader
             title={heading}
             subtitle={GENERATOR_SUBTITLE}
-            brandIsHeading={heading === 'QRCraftly'}
             previewId={PREVIEW_ID}
             previewJumpLabel="Preview & download"
             actions={
               <a
                 href="#content-section"
-                className="flex min-h-11 min-w-11 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
+                className="flex min-h-11 min-w-11 items-center justify-center rounded-full text-fg-muted transition-colors hover:bg-surface-hover"
                 title="How to use"
                 aria-label="How to use"
               >
@@ -312,29 +320,29 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
           <Control.component key={Control.id} toolId={toolId} />
         ))}
         preview={
-             <Card>
-                <div className="mb-6 flex items-center justify-between gap-2">
-                    <h2 className="font-semibold text-slate-700 dark:text-slate-200">Live Preview</h2>
-                    <div className="flex items-center gap-2">
-                      {isEmpty && (
-                        <span
-                          id={EMPTY_STATE_ID}
-                          data-testid="sample-preview-badge"
-                          className="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-800 dark:bg-amber-900/50 dark:text-amber-300"
-                        >
-                          Sample Preview
-                        </span>
-                      )}
-                      <ScannabilityIndicator
-                        status={scannabilityStatus}
-                        health={health}
-                        onAutoFixContrast={handleAutoFixContrast}
-                        onResetDefault={handleResetDefault}
-                      />
-                    </div>
+             <Card padding="p-5">
+                {/* Heading and status share one row; the heading never wraps and the status drops below it only when there is no room. */}
+                <div className="mb-3 flex flex-wrap items-start justify-between gap-x-3" data-testid="preview-status">
+                   <h2 className="py-1 font-semibold whitespace-nowrap text-fg-soft">Live Preview</h2>
+                   <div className="flex items-start gap-2">
+                   {isEmpty && (
+                     <span
+                       id={EMPTY_STATE_ID}
+                       data-testid="sample-preview-badge"
+                       className="mt-1 inline-flex items-center rounded-full bg-warning-soft px-2.5 py-0.5 text-xs font-semibold text-warning"
+                     >
+                       Sample Preview
+                     </span>
+                   )}
+                   <ScannabilityIndicator
+                     status={scannabilityStatus}
+                     health={health}
+                     onAutoFixContrast={handleAutoFixContrast}
+                     onResetDefault={handleResetDefault}
+                   />
+                   </div>
                 </div>
-                {!isEmpty && <StressTestButton />}
-                
+
                 {workerRecoveryActive && (
                    <div className="mb-4">
                       <Alert variant="warning" title="System Warning">
@@ -343,104 +351,103 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
                    </div>
                 )}
 
-                <div ref={qrRef} className="mb-8 flex justify-center">
+                {/* Preview stage: the QR is the largest thing on the page. */}
+                <div ref={qrRef} className="mb-4 flex justify-center rounded-xl bg-surface-sunken p-3 md:p-2" data-testid="qr-stage">
                    {/* Pass debounced config to QRCanvas to prevent heavy rendering on every keystroke */}
-                   <QRCanvas ref={canvasRef} onRendered={handleRendered} config={debouncedConfig} className="max-h-[60vh] w-full rounded-lg object-contain shadow-sm" />
+                   <QRCanvas ref={canvasRef} onRendered={handleRendered} config={debouncedConfig} className={`rounded-lg shadow-raised ${STAGE_SIZE_CLASSES[debouncedConfig.socialFormat] ?? STAGE_SIZE_CLASSES[SocialFormat.SQUARE_1_1]}`} />
                 </div>
 
-                <div className="grid w-full grid-cols-1 gap-3">
-                   {/* Row 1: Download & Share */}
-                   <div className="flex gap-2">
-                       {isEmpty ? (
-                         <Button
-                            ref={downloadButtonRef}
-                            variant="primary"
-                            fullWidth
-                            className="flex-1"
-                            aria-disabled="true"
-                            aria-describedby={EMPTY_STATE_ID}
-                            onClick={notifyEmpty}
-                         >
-                            <Download className="size-4" aria-hidden="true" />
-                            Download
-                            <ChevronDown className="ml-auto size-4 opacity-80" aria-hidden="true" />
-                         </Button>
-                       ) : (
-                       <Menu
-                          id="download-format"
-                          className="flex-1"
-                          triggerRef={downloadButtonRef}
-                          items={[
-                            { id: 'png', label: <><span aria-hidden="true" className="size-1.5 rounded-full bg-teal-500"></span> PNG (High Quality)</>, onSelect: () => executeWithSafetyGate((opts) => handleSaveAsFlow('png', opts)) },
-                            { id: 'jpeg', label: <><span aria-hidden="true" className="size-1.5 rounded-full bg-blue-500"></span> JPEG (Compact)</>, onSelect: () => executeWithSafetyGate((opts) => handleSaveAsFlow('jpeg', opts)) },
-                            { id: 'webp', label: <><span aria-hidden="true" className="size-1.5 rounded-full bg-purple-500"></span> WebP (Modern)</>, onSelect: () => executeWithSafetyGate((opts) => handleSaveAsFlow('webp', opts)) },
-                            { id: 'svg', separatorBefore: true, label: <><span aria-hidden="true" className="size-1.5 rounded-full bg-orange-500"></span> SVG (Vector)</>, onSelect: () => executeWithSafetyGate((opts) => handleSaveSvgFlow(opts)) },
-                          ]}
-                          renderTrigger={(triggerProps) => (
-                            <Button
-                              {...triggerProps}
-                              variant={getExportRiskPolicy({ status: scannabilityStatus, health }) === 'unsafe' ? 'error' : 'primary'}
-                              fullWidth
-                            >
-                              <Download className="size-4" aria-hidden="true" />
-                              Download
-                              <ChevronDown className="ml-auto size-4 opacity-80" aria-hidden="true" />
-                            </Button>
-                          )}
-                       />
-                       )}
-                       
-                       <Button
-                          ref={copyButtonRef}
-                          variant="secondary"
-                          onClick={onCopy}
-                          className="w-12 px-0"
-                          title="Copy Image"
-                          aria-label={copied ? "Copied to clipboard" : "Copy QR code to clipboard"}
-                          aria-disabled={isEmpty ? 'true' : undefined}
-                          aria-describedby={isEmpty ? EMPTY_STATE_ID : undefined}
-                       >
-                          {copied ? <Check className="size-5 text-emerald-500" aria-hidden="true" /> : <Copy className="size-5" aria-hidden="true" />}
-                       </Button>
+                {/* One export row. Below md it docks to the bottom of the screen as a sticky action bar. */}
+                <div
+                   className={`fixed inset-x-0 bottom-0 z-30 flex items-center gap-2 border-t border-line bg-surface/95 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-overlay backdrop-blur md:static md:z-auto md:border-0 md:bg-transparent md:p-0 md:shadow-none md:backdrop-blur-none ${inputFocused ? 'max-md:hidden' : ''}`}
+                   data-testid="export-actions"
+                >
+                   <span
+                     aria-hidden="true"
+                     className={`size-2.5 shrink-0 rounded-full md:hidden ${STATUS_DOT_CLASSES[getExportRiskPolicy({ status: scannabilityStatus, health })]}`}
+                     data-testid="export-status-dot"
+                   />
+                   {isEmpty ? (
+                     <Button
+                        ref={downloadButtonRef}
+                        variant="primary"
+                        fullWidth
+                        className="flex-1 max-md:min-h-12"
+                        aria-disabled="true"
+                        aria-describedby={EMPTY_STATE_ID}
+                        onClick={notifyEmpty}
+                     >
+                        <Download className="size-4" aria-hidden="true" />
+                        Download
+                        <ChevronDown className="ml-auto size-4 opacity-80" aria-hidden="true" />
+                     </Button>
+                   ) : (
+                   <Menu
+                      id="download-format"
+                      className="flex-1"
+                      triggerRef={downloadButtonRef}
+                      items={[
+                        { id: 'png', label: <><span aria-hidden="true" className="size-1.5 rounded-full bg-teal-500"></span> PNG (High Quality)</>, onSelect: () => executeWithSafetyGate((opts) => handleSaveAsFlow('png', opts)) },
+                        { id: 'jpeg', label: <><span aria-hidden="true" className="size-1.5 rounded-full bg-blue-500"></span> JPEG (Compact)</>, onSelect: () => executeWithSafetyGate((opts) => handleSaveAsFlow('jpeg', opts)) },
+                        { id: 'webp', label: <><span aria-hidden="true" className="size-1.5 rounded-full bg-purple-500"></span> WebP (Modern)</>, onSelect: () => executeWithSafetyGate((opts) => handleSaveAsFlow('webp', opts)) },
+                        { id: 'svg', separatorBefore: true, label: <><span aria-hidden="true" className="size-1.5 rounded-full bg-orange-500"></span> SVG (Vector)</>, onSelect: () => executeWithSafetyGate((opts) => handleSaveSvgFlow(opts)) },
+                      ]}
+                      renderTrigger={(triggerProps) => (
+                        <Button
+                          {...triggerProps}
+                          variant={getExportRiskPolicy({ status: scannabilityStatus, health }) === 'unsafe' ? 'error' : 'primary'}
+                          fullWidth
+                          className="max-md:min-h-12"
+                        >
+                          <Download className="size-4" aria-hidden="true" />
+                          Download
+                          <ChevronDown className="ml-auto size-4 opacity-80" aria-hidden="true" />
+                        </Button>
+                      )}
+                   />
+                   )}
 
-                       {canShare && (
-                         <Button 
-                            ref={shareButtonRef}
-                            variant="secondary"
-                            onClick={onShare}
-                            className="w-12 px-0"
-                            title="Share"
-                            aria-label="Share QR code"
-                            aria-disabled={isEmpty ? 'true' : undefined}
-                            aria-describedby={isEmpty ? EMPTY_STATE_ID : undefined}
-                         >
-                            <Share2 className="size-5" aria-hidden="true" />
-                         </Button>
-                       )}
-                   </div>
-
-                   {/* Row 2: Quick PNG download */}
-                   <Button 
-                      ref={photosButtonRef}
-                      variant="outline"
-                      fullWidth
-                      onClick={() => executeWithSafetyGate((opts) => downloadToDeviceFlow('png', photosButtonRef, opts))}
-                      aria-label="Download QR code as PNG"
+                   <Button
+                      ref={copyButtonRef}
+                      variant="secondary"
+                      onClick={onCopy}
+                      className="w-12 shrink-0 px-0 max-md:min-h-12"
+                      title="Copy Image"
+                      aria-label={copied ? "Copied to clipboard" : "Copy QR code to clipboard"}
                       aria-disabled={isEmpty ? 'true' : undefined}
                       aria-describedby={isEmpty ? EMPTY_STATE_ID : undefined}
                    >
-                      <Download className="size-4" aria-hidden="true" />
-                      Download PNG
+                      {copied ? <Check className="size-5 text-success" aria-hidden="true" /> : <Copy className="size-5" aria-hidden="true" />}
                    </Button>
 
+                   {canShare && (
+                     <Button
+                        ref={shareButtonRef}
+                        variant="secondary"
+                        onClick={onShare}
+                        className="w-12 shrink-0 px-0 max-md:min-h-12"
+                        title="Share"
+                        aria-label="Share QR code"
+                        aria-disabled={isEmpty ? 'true' : undefined}
+                        aria-describedby={isEmpty ? EMPTY_STATE_ID : undefined}
+                     >
+                        <Share2 className="size-5" aria-hidden="true" />
+                     </Button>
+                   )}
                 </div>
+
+                {/* Tertiary: playful side feature, after the export row. */}
+                {!isEmpty && <StressTestButton />}
              </Card>
         }
       />
+      <MiniPreview sourceRef={canvasRef} targetId={PREVIEW_ID} renderKey={debouncedConfig} />
+      {/* Keeps the last content clear of the mobile action bar. */}
+      <div aria-hidden="true" className="h-20 md:hidden" />
 
       {/* Educational content: full width below the workspace, at article width. */}
       {belowControls.length > 0 && (
-        <div className="border-t border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+        <div className="border-t border-line bg-surface">
           <div className="mx-auto max-w-3xl px-4 pb-4 sm:px-6">
             {belowControls.map((Control) => (
               <Control.component key={Control.id} toolId={toolId} />
@@ -449,51 +456,6 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
         </div>
       )}
 
-      <footer className="border-t border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950">
-        <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
-          <nav aria-label="Site Map">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <h2 className="mb-3 text-xs font-semibold tracking-wider text-slate-900 uppercase dark:text-slate-200">Generators</h2>
-                <ul className="space-y-2 text-sm text-slate-600 dark:text-slate-400">
-                  {GENERATOR_LINKS.map(([label, href]) => {
-                    if (!isDangerousUrl(href)) {
-                      return <li key={href}><a href={href} className="transition-colors hover:text-teal-700 dark:hover:text-teal-400">{label}</a></li>;
-                    }
-                    return null;
-                  })}
-                  <li>
-                    <a href="/file-transfer" className="inline-flex items-center gap-1.5 font-semibold text-teal-700 transition-colors hover:text-teal-800 dark:text-teal-300 dark:hover:text-teal-200">
-                      <span>File Share (Send)</span>
-                      <span className="rounded-full bg-teal-100 px-1.5 py-0.5 text-xs font-semibold text-teal-800 dark:bg-teal-900/60 dark:text-teal-300">Beta</span>
-                    </a>
-                  </li>
-                  <li>
-                    <a href="/file-transfer/receive" className="inline-flex items-center gap-1.5 font-semibold text-teal-700 transition-colors hover:text-teal-800 dark:text-teal-300 dark:hover:text-teal-200">
-                      <span>File Share (Receive)</span>
-                      <span className="rounded-full bg-teal-100 px-1.5 py-0.5 text-xs font-semibold text-teal-800 dark:bg-teal-900/60 dark:text-teal-300">Beta</span>
-                    </a>
-                  </li>
-                </ul>
-              </div>
-              <div>
-                <h2 className="mb-3 text-xs font-semibold tracking-wider text-slate-900 uppercase dark:text-slate-200">Company</h2>
-                <ul className="space-y-2 text-sm text-slate-600 dark:text-slate-400">
-                  <li><a href="/about" className="transition-colors hover:text-teal-700 dark:hover:text-teal-400">About</a></li>
-                  <li><a href="/free-forever" className="transition-colors hover:text-teal-700 dark:hover:text-teal-400">No-Ads Pledge</a></li>
-                  <li><a href="/security#security" className="transition-colors hover:text-teal-700 dark:hover:text-teal-400">Security Policy</a></li>
-                  <li><a href="/security#compliance" className="transition-colors hover:text-teal-700 dark:hover:text-teal-400">Privacy Architecture</a></li>
-                  <li><a href="https://github.com/fderuiter/QRCraftly" target="_blank" rel="noopener noreferrer" className="transition-colors hover:text-teal-700 dark:hover:text-teal-400">GitHub</a></li>
-                </ul>
-              </div>
-            </div>
-          </nav>
-        </div>
-        <p className="mx-auto max-w-7xl border-t border-slate-200 px-4 py-5 text-xs text-slate-500 sm:px-6 dark:border-slate-800 dark:text-slate-400">
-          <a href="/free-forever" className="font-medium text-slate-600 hover:text-teal-700 dark:text-slate-300 dark:hover:text-teal-400">{PLEDGE_TAGLINE}</a>{' '}
-          &copy; {new Date().getFullYear()} QRCraftly. Open Source.
-        </p>
-      </footer>
     </div>
   );
 }

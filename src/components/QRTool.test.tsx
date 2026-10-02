@@ -78,27 +78,16 @@ describe('QRTool Component', () => {
 
   it('renders without crashing', () => {
     render(<ToastProvider><QRTool /></ToastProvider>);
-    expect(screen.getByText('QRCraftly')).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 1, name: 'Free QR Code Generator' })).toBeInTheDocument();
     expect(screen.getByText('No sign-up, no ads, never expires.')).toBeInTheDocument();
     expect(screen.queryByText('Active')).not.toBeInTheDocument();
   });
 
-  it('exposes every primary destination from the site menu', () => {
+  it('leaves site navigation, the theme toggle and the footer to the app shell', () => {
     render(<ToastProvider><QRTool /></ToastProvider>);
-
-    const menuButton = screen.getByRole('button', { name: 'Site menu' });
-    expect(menuButton).toHaveAttribute('aria-expanded', 'false');
-
-    fireEvent.click(menuButton);
-
-    expect(menuButton).toHaveAttribute('aria-expanded', 'true');
-    const nav = screen.getByRole('navigation', { name: 'Primary navigation' });
-    expect(within(nav).getByRole('link', { name: /Create QR/ })).toHaveAttribute('href', '/');
-    expect(within(nav).getByRole('link', { name: /File Transfer/ })).toHaveAttribute('href', '/file-transfer');
-    expect(within(nav).getByRole('link', { name: 'Arcade' })).toHaveAttribute('href', '/arcade');
-    expect(within(nav).getByRole('link', { name: 'About' })).toHaveAttribute('href', '/about');
-    expect(within(nav).getByRole('link', { name: 'Security' })).toHaveAttribute('href', '/security');
+    expect(screen.queryByRole('navigation', { name: 'Primary navigation' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Theme: / })).not.toBeInTheDocument();
+    expect(screen.queryByRole('contentinfo')).not.toBeInTheDocument();
   });
 
   it('offers "Stress Test in Arcade" in the live preview card', () => {
@@ -113,13 +102,6 @@ describe('QRTool Component', () => {
     expect(screen.getByRole('link', { name: 'How to use' })).toHaveAttribute('href', '#content-section');
   });
 
-  it('lists each file transfer route only once in the footer site map', () => {
-    render(<ToastProvider><QRTool /></ToastProvider>);
-    const siteMap = screen.getByRole('navigation', { name: 'Site Map' });
-    expect(within(siteMap).getAllByRole('link', { name: /File Share \(Send\)/ })).toHaveLength(1);
-    expect(within(siteMap).getAllByRole('link', { name: /File Share \(Receive\)/ })).toHaveLength(1);
-  });
-
   it('applies initial config if provided', () => {
       const initialConfig = { value: 'https://initial-test.com' };
       render(<ToastProvider><QRTool initialConfig={initialConfig} /></ToastProvider>);
@@ -129,11 +111,10 @@ describe('QRTool Component', () => {
       expect(urlInput).toBeInTheDocument();
   });
 
-  it('renders the shared theme toggle and no page-local dark wrapper', () => {
+  it('renders no page-local dark wrapper', () => {
     const { container } = render(<ToastProvider><QRTool /></ToastProvider>);
     const appDiv = container.firstChild as HTMLElement;
     expect(appDiv).not.toHaveClass('dark');
-    expect(screen.getByRole('button', { name: /^Theme: / })).toBeInTheDocument();
   });
 
   it('renders InputPanel and StyleControls', () => {
@@ -164,7 +145,7 @@ describe('QRTool Component', () => {
     expect(screen.getByText('JPEG (Compact)')).toBeInTheDocument();
     expect(screen.getByText('WebP (Modern)')).toBeInTheDocument();
     expect(screen.queryByText('Scan Safety Warning')).not.toBeInTheDocument();
-    expect(downloadButton).toHaveClass('bg-teal-700');
+    expect(downloadButton).toHaveClass('bg-action');
   });
 
   it.each([
@@ -180,7 +161,7 @@ describe('QRTool Component', () => {
     );
 
     const downloadButton = screen.getByRole('button', { name: /^Download$/ });
-    expect(downloadButton).toHaveClass('bg-rose-700');
+    expect(downloadButton).toHaveClass('bg-danger-action');
 
     fireEvent.click(downloadButton);
     expect(screen.queryByText('Scan Safety Warning')).not.toBeInTheDocument();
@@ -191,7 +172,6 @@ describe('QRTool Component', () => {
 
   it.each([
     'Copy QR code to clipboard',
-    'Download QR code as PNG',
   ])('uses the unsafe export policy for %s', (name) => {
     render(
       <ToastProvider>
@@ -202,46 +182,6 @@ describe('QRTool Component', () => {
     fireEvent.click(screen.getByRole('button', { name }));
 
     expect(screen.getByText('Scan Safety Warning')).toBeInTheDocument();
-  });
-
-  it('when scannability is unsafe and user clicks "Export Anyway", asset downloads successfully without SCAN_VALIDATION_FAILED error toast', async () => {
-    vi.mocked(jsQR).mockReturnValue(null); // Force scan verification failure
-    const appendSpy = vi.spyOn(document.body, 'appendChild');
-    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click');
-
-    render(
-      <ToastProvider>
-        <QRTool initialConfig={{ fgColor: '#eeeeee', eyeColor: '#eeeeee', bgColor: '#ffffff' }} />
-      </ToastProvider>
-    );
-
-    // 1. Trigger quick PNG download
-    const downloadBtn = screen.getByRole('button', { name: 'Download QR code as PNG' });
-    fireEvent.click(downloadBtn);
-
-    // 2. Scan Safety Warning modal opens
-    expect(screen.getByText('Scan Safety Warning')).toBeInTheDocument();
-
-    // 3. Click "Export Anyway"
-    const exportAnywayBtn = screen.getByRole('button', { name: 'Export Anyway' });
-    fireEvent.click(exportAnywayBtn);
-
-    // 4. Modal closes
-    await waitFor(() => {
-      expect(screen.queryByText('Scan Safety Warning')).not.toBeInTheDocument();
-    });
-
-    // 5. Download was triggered
-    expect(appendSpy).toHaveBeenCalled();
-    expect(clickSpy).toHaveBeenCalled();
-
-    // 6. Success toast is displayed, NO SCAN_VALIDATION_FAILED error toast
-    await waitFor(() => {
-      expect(screen.queryByText(/SCAN_VALIDATION_FAILED/i)).not.toBeInTheDocument();
-      const statuses = screen.getAllByRole('status');
-      const hasSuccess = statuses.some(s => s.textContent?.includes('QR code exported successfully as PNG!'));
-      expect(hasSuccess).toBe(true);
-    });
   });
 
   it('when scannability is unsafe and user clicks "Export Anyway" from the dropdown menu, download succeeds with allowUnsafe bypass', async () => {
@@ -440,7 +380,7 @@ describe('QRTool Component', () => {
     }
   });
 
-  it('handles the quick PNG download', () => {
+  it('downloads a PNG from the Download menu', () => {
      render(<ToastProvider><QRTool /></ToastProvider>);
 
      // Spy on document.createElement but we can't easily mock return value without affecting internal React logic if it uses 'a' tags (it might)
@@ -458,8 +398,8 @@ describe('QRTool Component', () => {
      // To verify click, we can spy on HTMLAnchorElement.prototype.click
      const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click');
 
-     const saveBtns = screen.getAllByText('Download PNG');
-     fireEvent.click(saveBtns[0]);
+     fireEvent.click(screen.getByRole('button', { name: /^Download$/ }));
+     fireEvent.click(screen.getByText('PNG (High Quality)'));
 
      expect(HTMLCanvasElement.prototype.toDataURL).toHaveBeenCalledWith('image/png');
 
@@ -701,15 +641,15 @@ describe('QRTool Component', () => {
       }
     });
 
-    it('restores focus and triggers a polite success toast when Download PNG is triggered', async () => {
+    it('restores focus and triggers a polite success toast when PNG download is triggered from the menu', async () => {
       render(<ToastProvider><QRTool /></ToastProvider>);
-      const photosBtn = screen.getByLabelText('Download QR code as PNG');
+      const downloadBtn = screen.getByRole('button', { name: /^Download$/ });
 
-      // Set focus to the save to photos button
-      photosBtn.focus();
-      expect(document.activeElement).toBe(photosBtn);
+      downloadBtn.focus();
+      expect(document.activeElement).toBe(downloadBtn);
 
-      fireEvent.click(photosBtn);
+      fireEvent.click(downloadBtn);
+      fireEvent.click(screen.getByText('PNG (High Quality)'));
 
       // Verify success toast exists with role="status" and message
       await waitFor(() => {
@@ -718,8 +658,8 @@ describe('QRTool Component', () => {
         expect(hasText).toBe(true);
       });
 
-      // Verify focus is restored to the photos button
-      expect(document.activeElement).toBe(photosBtn);
+      // Verify focus is restored to the Download button
+      expect(document.activeElement).toBe(downloadBtn);
     });
 
     it('restores focus and triggers a polite success toast when SVG download is triggered from the menu', async () => {
