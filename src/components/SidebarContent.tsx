@@ -33,6 +33,16 @@ export function SidebarContent({ toolId }: SidebarContentProps) {
   return (
     <div id="content-section" className="mt-12 border-t border-slate-100 pt-8 text-slate-700 dark:border-slate-800 dark:text-slate-300">
       
+      {content.intro && (
+        <section className="mb-10">
+          <h2 className="mb-3 text-2xl font-bold text-slate-800 dark:text-slate-100">A QR code generator that stays free</h2>
+          <p className="mb-3 text-sm leading-relaxed">{content.intro}</p>
+          <a href="/free-forever" className="text-sm font-semibold text-teal-700 underline-offset-2 hover:underline dark:text-teal-400">
+            Read the no-ads pledge
+          </a>
+        </section>
+      )}
+
       {content.name && content.name !== 'QRCraftly' && (
         <section className="mb-10">
           <h2 className="mb-3 text-2xl font-bold text-slate-800 dark:text-slate-100">{getAboutHeading(content.name)}</h2>

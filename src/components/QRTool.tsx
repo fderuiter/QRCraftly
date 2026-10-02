@@ -39,6 +39,10 @@ import { sidebarControls } from '@/registry';
 import { StressTestButton } from './arcade/StressTestButton';
 import { ToolWorkspaceLayout, ToolWorkspaceHeader } from './ToolWorkspaceLayout';
 import { PLEDGE_TAGLINE } from '@/data/pledge';
+import { contentRegistry } from '@/data/contentRegistry';
+
+/** One-line promise under every generator heading. */
+const GENERATOR_SUBTITLE = 'No sign-up, no ads, never expires.';
 
 /** Id of the generator preview region (target of the mobile jump link). */
 const PREVIEW_ID = 'qr-preview';
@@ -74,6 +78,9 @@ const GENERATOR_LINKS = [
 ] as const;
 
 function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: string }) {
+  // Keyword-led H1 from the content registry (e.g. "Free WiFi QR Code Generator"); the brand
+  // stays in the header link and the <title>.
+  const heading = contentRegistry[toolId]?.heading ?? title ?? 'QRCraftly';
   const config = useQRStoreSelector(s => s.config);
   const store = useQRStore();
   const setModuleCount = store.setModuleCount;
@@ -264,9 +271,9 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
         previewId={PREVIEW_ID}
         header={
           <ToolWorkspaceHeader
-            title={title || 'QRCraftly'}
-            subtitle="Design beautiful QR codes in seconds."
-            brandIsHeading
+            title={heading}
+            subtitle={GENERATOR_SUBTITLE}
+            brandIsHeading={heading === 'QRCraftly'}
             previewId={PREVIEW_ID}
             previewJumpLabel="Preview & download"
             actions={
