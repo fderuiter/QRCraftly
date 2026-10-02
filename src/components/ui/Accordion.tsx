@@ -1,4 +1,4 @@
-import React, { useState, useId } from 'react';
+import React, { useState, useId, useEffect, useRef } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { Button } from './Button';
 
@@ -23,7 +23,8 @@ interface AccordionItemProps {
 /**
  * A single disclosure section: a button exposing `aria-expanded`/`aria-controls` and a labelled
  * region. Collapsed panels are hidden with the `hidden` attribute rather than unmounted, so
- * form state inside them is kept and the content remains in server-rendered HTML.
+ * form state inside them is kept and the content remains in server-rendered HTML. A URL hash
+ * that points inside a collapsed panel opens it and scrolls the target into view.
  * @param props - Component props.
  * @param props.title - Visible label of the disclosure button.
  * @param props.children - Content.
@@ -38,6 +39,29 @@ export function AccordionItem({ title, children, defaultOpen = false, headingLev
   const id = useId();
   const buttonId = `accordion-button-${id}`;
   const panelId = panelIdProp ?? `accordion-panel-${id}`;
+  const rootRef = useRef<HTMLDivElement>(null);
+  const onOpenChangeRef = useRef(onOpenChange);
+  useEffect(() => {
+    onOpenChangeRef.current = onOpenChange;
+  });
+
+  // A link to something inside a collapsed panel (such as a heading anchor) opens it.
+  useEffect(() => {
+    const openForHash = () => {
+      const targetId = decodeURIComponent(window.location.hash.slice(1));
+      const target = targetId ? document.getElementById(targetId) : null;
+      const panel = rootRef.current?.querySelector(':scope > [role="region"]');
+      if (!target || !panel?.contains(target) || !panel.hasAttribute('hidden')) return;
+      setIsOpen(true);
+      onOpenChangeRef.current?.(true);
+      // Scroll once the panel is shown and again when its height animation ends.
+      requestAnimationFrame(() => target.scrollIntoView());
+      panel.addEventListener('transitionend', () => target.scrollIntoView(), { once: true });
+    };
+    openForHash();
+    window.addEventListener('hashchange', openForHash);
+    return () => window.removeEventListener('hashchange', openForHash);
+  }, []);
 
   const button = (
     <Button
@@ -62,7 +86,7 @@ export function AccordionItem({ title, children, defaultOpen = false, headingLev
   const Heading = headingLevel ? (`h${headingLevel}` as const) : null;
 
   return (
-    <div className="mb-4 overflow-hidden rounded-xl border border-line bg-surface-raised transition-colors duration-(--duration-slow)">
+    <div ref={rootRef} className="mb-4 overflow-hidden rounded-xl border border-line bg-surface-raised transition-colors duration-(--duration-slow)">
       {Heading ? <Heading className="m-0 text-base">{button}</Heading> : button}
       <div
         id={panelId}

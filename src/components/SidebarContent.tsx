@@ -70,8 +70,8 @@ export function SidebarContent({ toolId }: SidebarContentProps) {
           {content.howTo.description && <p className="mb-5 text-sm text-fg-muted">{content.howTo.description}</p>}
           <div className="space-y-4">
             {content.howTo.steps.map((step, idx) => (
-              <div key={idx} className="flex gap-4 rounded-xl border border-line bg-slate-50 p-4 dark:bg-slate-800/50">
-                <div className="flex size-8 flex-shrink-0 items-center justify-center rounded-full bg-teal-100 text-sm font-bold text-accent dark:bg-teal-900/50">
+              <div key={idx} className="flex gap-4 rounded-xl border border-line bg-surface-sunken p-4">
+                <div className="flex size-8 flex-shrink-0 items-center justify-center rounded-full bg-accent-soft text-sm font-bold text-accent">
                   {idx + 1}
                 </div>
                 <div>

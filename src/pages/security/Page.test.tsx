@@ -1,5 +1,7 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
+import { axe } from 'vitest-axe';
+import docsManifest from '../../data/docs_manifest.json';
 import Page from './+Page';
 
 describe('Security Page', () => {
@@ -45,7 +47,7 @@ describe('Security Page', () => {
     expect(securityHeading?.textContent).toContain('CI/CD Security Governance');
 
     // Check link in security section pointing to COMPLIANCE.md is rewritten to #compliance
-    const complianceLink = container.querySelector('a[href="#compliance"]');
+    const complianceLink = container.querySelector('#security-doc a[href="#compliance"]');
     expect(complianceLink).not.toBeNull();
     expect(complianceLink?.textContent).toBe('COMPLIANCE.md');
   });
@@ -67,5 +69,52 @@ describe('Security Page', () => {
       expect(body).not.toBeNull();
       expect(body).toHaveClass('[&_pre]:overflow-x-auto');
     });
+  });
+
+  it('opens with a short summary of what happens to your data (#1056)', () => {
+    const { container } = render(<Page />);
+    const summary = container.querySelector('section#summary');
+    expect(summary).not.toBeNull();
+    // The summary is the first section of the article.
+    expect(container.querySelector('article section')).toBe(summary);
+    const items = within(summary as HTMLElement).getAllByRole('listitem');
+    expect(items.map((item) => item.querySelector('p')?.textContent)).toEqual([
+      'Generated on your device',
+      'Nothing uploaded',
+      'No tracking cookies or trackers',
+      'Cloudflare keeps standard request logs',
+    ]);
+    // Heading, lead and summary stay within 150 words.
+    const header = container.querySelector('article header')?.textContent ?? '';
+    const words = `${header} ${summary?.textContent ?? ''}`.split(/\s+/).filter(Boolean);
+    expect(words.length).toBeLessThanOrEqual(150);
+  });
+
+  it('collapses each policy document by default but keeps it in the HTML', () => {
+    const { container } = render(<Page />);
+    expect(docsManifest.map((doc) => doc.id).sort()).toEqual(['compliance', 'security']);
+    for (const id of ['security', 'compliance']) {
+      const body = container.querySelector(`#${id}-doc`);
+      expect(body?.innerHTML.length).toBeGreaterThan(1000);
+      expect(body?.closest('[role="region"]')).toHaveAttribute('hidden');
+    }
+  });
+
+  it('lists every H2 section in the table of contents', () => {
+    render(<Page />);
+    const toc = screen.getAllByRole('navigation', { name: 'On this page' })[0];
+    expect(within(toc).getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual([
+      '#summary',
+      '#security',
+      '#compliance',
+      '#report',
+      '#content-section',
+    ]);
+  });
+
+  it('uses brand tokens only and has no axe violations', async () => {
+    const { container } = render(<Page />);
+    expect(container.innerHTML).not.toMatch(/indigo|(?:bg|text|border)-(?:slate|teal)-\d/);
+    expect(await axe(container)).toHaveNoViolations();
   });
 });

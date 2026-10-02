@@ -28,6 +28,8 @@ export interface SanitizedHtmlProps {
   html: string;
   /** Optional class name to apply to the wrapper element. */
   className?: string;
+  /** Optional id of the wrapper element. */
+  id?: string;
   /** The HTML tag to use for the wrapper element. Defaults to 'div'. */
   as?: 'div' | 'span' | 'section' | 'article';
 }
@@ -38,16 +40,19 @@ export interface SanitizedHtmlProps {
  * @param props - The component props.
  * @param props.html - The raw HTML string.
  * @param props.className - CSS class name for styling.
+ * @param props.id - Optional id of the wrapper element.
  * @param props.as - The tag name for the wrapper element.
  * @returns The rendered HTML wrapper element with sanitized contents.
  */
 export const SanitizedHtml: React.FC<SanitizedHtmlProps> = ({
   html,
   className,
+  id,
   as: Component = 'div',
 }) => {
   return (
     <Component
+      id={id}
       className={className}
       dangerouslySetInnerHTML={{ __html: html }}
     />

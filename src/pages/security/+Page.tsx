@@ -1,8 +1,12 @@
-import { ShieldCheck, ShieldAlert, FileText } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { CloudCog, CloudUpload, Cookie, MonitorSmartphone, ShieldCheck } from 'lucide-react';
 import { SanitizedHtml } from '@/components/ui/SanitizedHtml';
 import docsManifest from '../../data/docs_manifest.json';
+import { AccordionItem } from '@/components/ui/Accordion';
 import { ButtonLink } from '@/components/ui/Button';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { JsonLdScript } from '@/components/ui/JsonLdScript';
+import { ArticleHeading, ArticleLayout, type ArticleSection } from '@/components/ArticleLayout';
 import { contentRegistry } from '@/data/contentRegistry';
 import { generateSchema } from '@/utils/schemaGenerator';
 import { resolveDomainForPath } from '@/utils/metadataEngine';
@@ -12,26 +16,135 @@ import { usePageContext } from 'vike-react/usePageContext';
 /**
  * Typography for compiled Markdown. The project does not ship `@tailwindcss/typography`, so
  * `prose` classes would be inert; these descendant utilities style the manifest HTML
- * explicitly and keep long code, tables and URLs inside the card on narrow screens.
+ * explicitly and keep long code, tables and URLs inside the column on narrow screens.
  */
 const DOC_PROSE_CLASSES = [
   'min-w-0 max-w-none text-base leading-relaxed text-fg-soft [overflow-wrap:anywhere]',
-  '[&_h3]:mt-8 [&_h3]:mb-3 [&_h3]:text-xl [&_h3]:font-bold [&_h3]:text-slate-900 dark:[&_h3]:text-white',
-  '[&_h4]:mt-6 [&_h4]:mb-2 [&_h4]:text-lg [&_h4]:font-semibold [&_h4]:text-slate-900 dark:[&_h4]:text-slate-100',
-  '[&_h5]:mt-4 [&_h5]:mb-2 [&_h5]:font-semibold [&_h5]:text-slate-900 dark:[&_h5]:text-slate-100',
+  '[&_h3]:mt-8 [&_h3]:mb-3 [&_h3]:text-xl [&_h3]:font-bold [&_h3]:text-fg [&_h3]:scroll-mt-6',
+  '[&_h4]:mt-6 [&_h4]:mb-2 [&_h4]:text-lg [&_h4]:font-semibold [&_h4]:text-fg [&_h4]:scroll-mt-6',
+  '[&_h5]:mt-4 [&_h5]:mb-2 [&_h5]:font-semibold [&_h5]:text-fg',
   '[&_p]:my-3 [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-6 [&_li]:my-1',
-  '[&_a]:font-medium [&_a]:text-teal-700 [&_a]:underline [&_a]:underline-offset-2 dark:[&_a]:text-teal-400',
-  '[&_strong]:font-semibold [&_strong]:text-slate-900 dark:[&_strong]:text-slate-100',
-  '[&_hr]:my-8 [&_hr]:border-slate-200 dark:[&_hr]:border-slate-700',
-  '[&_code]:rounded [&_code]:bg-slate-100 [&_code]:px-1 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-sm dark:[&_code]:bg-slate-900',
-  '[&_pre]:my-4 [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:bg-slate-900 [&_pre]:p-4 [&_pre]:text-sm [&_pre]:text-slate-100 [&_pre_code]:bg-transparent [&_pre_code]:p-0',
+  '[&_a]:font-medium [&_a]:text-accent [&_a]:underline [&_a]:underline-offset-2',
+  '[&_strong]:font-semibold [&_strong]:text-fg',
+  '[&_hr]:my-8 [&_hr]:border-line',
+  '[&_code]:rounded [&_code]:bg-surface-hover [&_code]:px-1 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-sm',
+  '[&_pre]:my-4 [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:bg-surface-sunken [&_pre]:p-4 [&_pre]:text-sm [&_pre_code]:bg-transparent [&_pre_code]:p-0',
   '[&_table]:my-4 [&_table]:block [&_table]:w-full [&_table]:overflow-x-auto [&_table]:text-sm',
-  '[&_th]:border-b [&_th]:border-slate-300 [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:font-semibold dark:[&_th]:border-slate-600',
-  '[&_td]:border-b [&_td]:border-slate-100 [&_td]:px-3 [&_td]:py-2 [&_td]:align-top dark:[&_td]:border-slate-800',
+  '[&_th]:border-b [&_th]:border-line-strong [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:font-semibold',
+  '[&_td]:border-b [&_td]:border-line-subtle [&_td]:px-3 [&_td]:py-2 [&_td]:align-top',
 ].join(' ');
 
 /**
- * Security & Privacy Transparency Page Component.
+ * The published documents from `docs/`, in page order. Their HTML comes from the docs
+ * manifest while the page is prerendered; `Page.test.tsx` checks that every manifest
+ * document is listed here.
+ */
+const DOC_SECTIONS: readonly ArticleSection[] = [
+  { id: 'security', label: 'Security policy' },
+  { id: 'compliance', label: 'Privacy and compliance' },
+];
+
+/**
+ * The compiled documents are about 8 KB gzipped. They are rendered into the prerendered
+ * HTML only: the browser bundle leaves the manifest out (the condition is false in a
+ * production client build) and hydrates each document from the HTML already on the page.
+ */
+const PRERENDER_DOCS: ReadonlyMap<string, string> | null =
+  import.meta.env.SSR || import.meta.env.MODE === 'test' ? new Map(docsManifest.map((doc) => [doc.id, doc.html])) : null;
+
+/**
+ * Reads a document's HTML: from the manifest while prerendering, otherwise from the
+ * prerendered element itself. After a client-side navigation there is no prerendered
+ * element, so the page reloads to fetch the static HTML.
+ * @param id - Document id.
+ * @returns The document HTML, or null while the page reloads.
+ */
+function usePrerenderedDoc(id: string): string | null {
+  const [html] = useState(() => PRERENDER_DOCS?.get(id) ?? (typeof document === 'undefined' ? null : document.getElementById(`${id}-doc`)?.innerHTML ?? null));
+  useEffect(() => {
+    if (html === null) window.location.reload();
+  }, [html]);
+  return html;
+}
+
+function DocSection({ id, label }: ArticleSection) {
+  const html = usePrerenderedDoc(id);
+  return (
+    <section id={id} aria-labelledby={`${id}-title`} className="mb-10 min-w-0 scroll-mt-6">
+      <ArticleHeading id={id}>
+        <span id={`${id}-title`}>{label}</span>
+      </ArticleHeading>
+      <AccordionItem title={`Read the full ${label.toLowerCase()}`}>
+        {html === null ? (
+          <Skeleton shape="text" className="h-24" />
+        ) : (
+          <SanitizedHtml id={`${id}-doc`} html={html} className={DOC_PROSE_CLASSES} />
+        )}
+      </AccordionItem>
+    </section>
+  );
+}
+
+/** The four plain claims at the top of the page. Each one is backed by the details below. */
+const SUMMARY = [
+  { icon: MonitorSmartphone, title: 'Generated on your device', text: 'Your browser builds every QR code and file transfer itself.' },
+  { icon: CloudUpload, title: 'Nothing uploaded', text: 'What you type, scan or send never leaves this device.' },
+  { icon: Cookie, title: 'No tracking cookies or trackers', text: 'No analytics, pixels, fingerprinting or third-party scripts.' },
+  { icon: CloudCog, title: 'Cloudflare keeps standard request logs', text: 'Our host sees page requests (IP address, browser, page, time), never your content.' },
+] as const;
+
+/**
+ * Counts the requests this page has made since it loaded, using `PerformanceObserver`.
+ * The count stays in the page and is never sent anywhere.
+ * @returns The total and third-party request counts, or null where unsupported.
+ */
+function useRequestCount(): { total: number; external: number } | null {
+  const [count, setCount] = useState<{ total: number; external: number } | null>(null);
+  useEffect(() => {
+    if (typeof PerformanceObserver === 'undefined' || typeof performance.getEntriesByType !== 'function') return;
+    let total = 0;
+    let external = 0;
+    const add = (entries: PerformanceEntryList) => {
+      for (const entry of entries) {
+        total += 1;
+        if (!entry.name.startsWith(window.location.origin)) external += 1;
+      }
+      setCount({ total, external });
+    };
+    add(performance.getEntriesByType('resource'));
+    const observer = new PerformanceObserver((list) => add(list.getEntries()));
+    observer.observe({ type: 'resource' });
+    return () => observer.disconnect();
+  }, []);
+  return count;
+}
+
+function RequestCounter() {
+  const count = useRequestCount();
+  return (
+    <p className="mt-4 rounded-xl border border-line bg-surface-sunken p-4 text-sm text-fg-soft" data-testid="request-counter">
+      <span className="font-semibold text-fg">Check it yourself.</span> Open your browser&apos;s developer tools, choose
+      Network, then make a QR code: no request carries your content.{' '}
+      {count && (
+        <span aria-live="polite">
+          This page has loaded {count.total} files since it opened, {count.external} of them from other sites.
+        </span>
+      )}
+    </p>
+  );
+}
+
+const SECTIONS: readonly ArticleSection[] = [
+  { id: 'summary', label: 'What happens to your data' },
+  ...DOC_SECTIONS,
+  { id: 'report', label: 'Report a vulnerability' },
+  { id: 'content-section', label: 'Questions' },
+];
+
+/**
+ * Security & Privacy page: a short summary of what happens to your data, the security
+ * policy and privacy documents (collapsed, but in the HTML), and how to report a problem.
+ * @returns The security page.
  */
 export default function Page() {
   const pageContext = usePageContext();
@@ -42,60 +155,53 @@ export default function Page() {
   return (
     <>
       <JsonLdScript data={schemaData} />
-      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6">
-        
-        <header className="mb-16 text-center">
-          <h1 className="mb-4 text-4xl font-bold text-fg">
-            Security & Privacy Transparency Hub
-          </h1>
-          <p className="mx-auto max-w-2xl text-lg text-fg-muted">
-            We believe in complete transparency. Our architecture ensures your data remains yours, with privacy-first processing.
-          </p>
-        </header>
-
-        <div className="mb-16 grid grid-cols-1 gap-8 md:grid-cols-2 md:gap-12">
-          {docsManifest.map(doc => {
-            return (
-              <section key={doc.id} id={doc.id} className="min-w-0 scroll-mt-6 rounded-2xl border border-line bg-surface-raised p-5 shadow-sm sm:p-8">
-                <div className="mb-6 flex min-w-0 items-center gap-3">
-                  <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent">
-                    <FileText className="size-6" aria-hidden="true" />
-                  </div>
-                  <h2 className="m-0 min-w-0 text-2xl font-bold text-fg">{doc.title}</h2>
+      <ArticleLayout
+        title="Security & Privacy Transparency Hub"
+        lead="What QRCraftly does with your data, in plain words, and the full policies behind it."
+        sections={SECTIONS}
+      >
+        <section id="summary" aria-labelledby="summary-title" className="mb-10 scroll-mt-6">
+          <ArticleHeading id="summary">
+            <span id="summary-title">What happens to your data</span>
+          </ArticleHeading>
+          <ul className="grid gap-3 sm:grid-cols-2">
+            {SUMMARY.map(({ icon: Icon, title, text }) => (
+              <li key={title} className="flex gap-3 rounded-xl border border-line bg-surface p-4">
+                <Icon className="mt-0.5 size-5 shrink-0 text-accent" aria-hidden="true" />
+                <div>
+                  <p className="font-semibold text-fg">{title}</p>
+                  <p className="text-sm text-fg-muted">{text}</p>
                 </div>
-                <SanitizedHtml html={doc.html} className={DOC_PROSE_CLASSES} />
-              </section>
-            );
-          })}
-        </div>
-
-        <section className="relative overflow-hidden rounded-2xl border border-accent-line bg-accent-soft p-6 text-center sm:p-8 md:p-12">
-          <div className="relative z-10">
-            <div className="mx-auto mb-6 flex size-16 rotate-3 items-center justify-center rounded-2xl border border-accent-line bg-surface-raised shadow-raised motion-safe:transition-transform motion-safe:duration-(--duration-slow) motion-safe:hover:rotate-12">
-              <ShieldAlert className="size-8 text-accent" aria-hidden="true" />
-            </div>
-            <h2 className="mb-4 text-3xl font-bold text-fg">Report a Vulnerability</h2>
-            <p className="mx-auto mb-8 max-w-2xl text-lg leading-relaxed text-fg-muted">
-              Security is our top priority. If you have discovered a security vulnerability, we want to hear from you immediately through our secure channel.
-            </p>
-            <ButtonLink
-              href="https://github.com/fderuiter/QRCraftly/security/advisories/new"
-              target="_blank"
-              rel="noopener noreferrer"
-              variant="primary"
-              size="lg"
-              className="max-w-full"
-            >
-              <ShieldCheck className="size-6" aria-hidden="true" />
-              Secure Disclosure Portal
-            </ButtonLink>
-          </div>
+              </li>
+            ))}
+          </ul>
+          <RequestCounter />
         </section>
 
-        <div className="mx-auto max-w-3xl pt-12">
-          <SidebarContent toolId="security" />
-        </div>
-      </div>
+        {DOC_SECTIONS.map((doc) => (
+          <DocSection key={doc.id} {...doc} />
+        ))}
+
+        <section id="report" aria-labelledby="report-title" className="mb-10 scroll-mt-6">
+          <ArticleHeading id="report">
+            <span id="report-title">Report a vulnerability</span>
+          </ArticleHeading>
+          <p className="mb-4 text-fg-soft">
+            Found a security problem? Report it privately through GitHub&apos;s security advisories so it can be fixed before it is public.
+          </p>
+          <ButtonLink
+            href="https://github.com/fderuiter/QRCraftly/security/advisories/new"
+            target="_blank"
+            rel="noopener noreferrer"
+            variant="primary"
+          >
+            <ShieldCheck className="size-5" aria-hidden="true" />
+            Secure Disclosure Portal
+          </ButtonLink>
+        </section>
+
+        <SidebarContent toolId="security" />
+      </ArticleLayout>
     </>
   );
 }

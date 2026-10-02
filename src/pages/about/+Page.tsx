@@ -18,14 +18,16 @@
 
 
 import React from 'react';
-import { Shield, Database, Code, Zap, Wifi, Ban } from 'lucide-react';
+import { Download, Keyboard, QrCode } from 'lucide-react';
 import { PLEDGE_COMMITMENT, PLEDGE_HEADLINE } from '@/data/pledge';
+import { GENERATOR_FOOTER_LINKS, TOOL_LINKS } from '@/data/navigation';
 import { JsonLdScript } from '@/components/ui/JsonLdScript';
 import { contentRegistry } from '@/data/contentRegistry';
 import { generateSchema } from '@/utils/schemaGenerator';
 import { resolveDomainForPath } from '@/utils/metadataEngine';
 import { usePageContext } from 'vike-react/usePageContext';
 import { ButtonLink } from '@/components/ui/Button';
+import { ArticleHeading, ArticleLayout, type ArticleSection } from '@/components/ArticleLayout';
 
 const GithubIcon: React.FC<{ className?: string }> = ({ className }) => (
   <svg
@@ -45,13 +47,26 @@ const GithubIcon: React.FC<{ className?: string }> = ({ className }) => (
   </svg>
 );
 
+const SECTIONS: readonly ArticleSection[] = [
+  { id: 'why', label: 'Why QRCraftly exists' },
+  { id: 'how-it-works', label: 'How it works' },
+  { id: 'pledge', label: 'The pledge' },
+  { id: 'tools', label: 'Every tool' },
+  { id: 'open-source', label: 'Open source' },
+];
+
+const STEPS = [
+  { icon: Keyboard, title: 'You type', text: 'A link, Wi-Fi details, a contact or a file. It stays in this tab.' },
+  { icon: QrCode, title: 'Your browser draws it', text: 'The code is encoded and styled on your device, with no server in between.' },
+  { icon: Download, title: 'You keep it', text: 'Download, copy or share the file. It is a static code, so it never expires.' },
+] as const;
+
+const LINK_CLASSES = 'font-medium text-accent underline-offset-2 hover:underline';
+
 /**
- * About Page Component
- *
- * Displays information about the QRCraftly project, including its core values
- * (Privacy, No Database, Open Source, Free Use), the no-ads pledge and licensing information.
- * Includes a link to the GitHub repository.
- * @returns The About page layout.
+ * About page: why QRCraftly exists, how it works, the no-ads pledge, every tool and the
+ * licence, in the shared article layout.
+ * @returns The About page.
  */
 export default function Page() {
   const pageContext = usePageContext();
@@ -61,103 +76,78 @@ export default function Page() {
 
   return (
     <>
-    <div className="mx-auto max-w-5xl px-4 py-12">
       <JsonLdScript data={schemaData} />
-      <header className="mb-16 text-center">
-        <h1 className="mb-4 text-4xl font-bold text-fg">
-          About QRCraftly
-        </h1>
-        <p className="mx-auto max-w-2xl text-lg text-fg-muted">
-          A privacy-focused QR code generator built with modern web technologies.
-          Entirely free, with no ads and no login required.
-        </p>
-      </header>
-
-      <section className="mb-16">
-        <h2 className="sr-only">Why Choose QRCraftly?</h2>
-        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-2xl border border-line bg-surface-raised p-6 text-center shadow-sm">
-            <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-xl bg-accent-soft text-accent">
-              <Zap className="size-6" />
-            </div>
-            <h3 className="mb-2 text-lg font-semibold text-fg">Free & No Login</h3>
-            <p className="text-fg-muted">
-              QRCraftly is completely free to use. No sign-up, no login, and no hidden fees. Just generate your QR codes instantly.
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-line bg-surface-raised p-6 text-center shadow-sm">
-            <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-xl bg-accent-soft text-accent">
-              <Shield className="size-6" />
-            </div>
-            <h3 className="mb-2 text-lg font-semibold text-fg">No Third-Party Tracking</h3>
-            <p className="text-fg-muted">
-              No analytics, tracking cookies, tracking pixels or third-party scripts. Our host, Cloudflare, only sees ordinary page requests, never your QR content.
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-line bg-surface-raised p-6 text-center shadow-sm">
-            <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-xl bg-accent-soft text-accent">
-              <Database className="size-6" />
-            </div>
-            <h3 className="mb-2 text-lg font-semibold text-fg">Privacy First</h3>
-            <p className="text-fg-muted">
-              Your content is processed entirely in your browser and is never sent to a server. Nothing is reported back, ever.
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-line bg-surface-raised p-6 text-center shadow-sm">
-            <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-xl bg-accent-soft text-accent">
-              <Code className="size-6" />
-            </div>
-            <h3 className="mb-2 text-lg font-semibold text-fg">Open Source</h3>
-            <p className="text-fg-muted">
-              Our code is open for inspection and contribution. We believe in transparency.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <section className="mb-16 text-center">
-        <h2 className="mb-4 text-2xl font-bold text-fg">Specialized Generators</h2>
-        <p className="mx-auto mb-6 max-w-2xl text-lg text-fg-muted">
-          Looking for a specific use case? Try our dedicated tools.
-        </p>
-        <ButtonLink href="/wifi-qr-code" variant="primary" size="lg">
-          <Wifi className="size-5" aria-hidden="true" />
-          Create WiFi QR Code
-        </ButtonLink>
-      </section>
-
-      <section
-        aria-labelledby="about-pledge"
-        className="mb-16 rounded-2xl border border-teal-100 bg-teal-50 p-8 text-center md:p-12 dark:border-teal-800/40 dark:bg-teal-900/20"
+      <ArticleLayout
+        title="About QRCraftly"
+        lead="A privacy-focused QR code generator that runs in your browser. Free, with no ads and no sign-up."
+        sections={SECTIONS}
       >
-        <div className="mx-auto mb-6 flex size-16 items-center justify-center rounded-2xl border border-teal-100 bg-surface-raised shadow-sm dark:border-teal-700/50">
-          <Ban className="size-8 text-accent" aria-hidden="true" />
-        </div>
-        <h2 id="about-pledge" className="mb-4 text-3xl font-bold text-fg">{PLEDGE_HEADLINE}</h2>
-        <p className="mx-auto mb-8 max-w-2xl text-lg leading-relaxed text-fg-muted">{PLEDGE_COMMITMENT}</p>
-        <ButtonLink href="/free-forever" variant="primary" size="lg">
-          Read the QRCraftly Pledge
-        </ButtonLink>
-      </section>
+        <section id="why" aria-labelledby="why-title" className="mb-10 scroll-mt-6 space-y-3 text-fg-soft">
+          <ArticleHeading id="why"><span id="why-title">Why QRCraftly exists</span></ArticleHeading>
+          <p>
+            Many free QR code generators are not free for long. They send your codes through their own servers, then
+            switch them off when a trial ends, or fill the page with ads and trackers.
+          </p>
+          <p>
+            QRCraftly makes static codes: what you encode is written into the code itself, so it keeps working without
+            us. QRCraftly is completely free to use. No sign-up, no login and no hidden fees.
+          </p>
+        </section>
 
-      <section className="mb-12 rounded-2xl border border-line bg-slate-50 p-8 text-center dark:bg-slate-800/50">
-        <h2 className="mb-4 text-2xl font-bold text-fg">
-          Open Source License
-        </h2>
-        <p className="mx-auto mb-8 max-w-2xl text-fg-muted">
-          QRCraftly is released under the <strong>GNU Affero General Public License v3.0 (AGPL-3.0)</strong>.
-          This ensures that the software remains free and open source for everyone.
-        </p>
-        <ButtonLink href="https://github.com/fderuiter/QRCraftly" target="_blank" rel="noopener noreferrer" variant="outline" size="lg">
-          <GithubIcon className="size-5" />
-          View on GitHub
-        </ButtonLink>
-      </section>
+        <section id="how-it-works" aria-labelledby="how-it-works-title" className="mb-10 scroll-mt-6">
+          <ArticleHeading id="how-it-works"><span id="how-it-works-title">How it works</span></ArticleHeading>
+          <ol className="grid gap-3 sm:grid-cols-3">
+            {STEPS.map(({ icon: Icon, title, text }, index) => (
+              <li key={title} className="rounded-xl border border-line bg-surface p-4">
+                <div className="mb-2 flex items-center gap-2">
+                  <span className="flex size-7 items-center justify-center rounded-full bg-accent-soft text-sm font-bold text-accent" aria-hidden="true">
+                    {index + 1}
+                  </span>
+                  <Icon className="size-5 text-accent" aria-hidden="true" />
+                </div>
+                <h3 className="font-semibold text-fg">{title}</h3>
+                <p className="text-sm text-fg-muted">{text}</p>
+              </li>
+            ))}
+          </ol>
+          <p className="mt-3 text-sm text-fg-muted">
+            No analytics, tracking cookies or third-party scripts. Our host, Cloudflare, only sees ordinary page
+            requests, never your QR content. <a href="/security" className={LINK_CLASSES}>How we keep it that way</a>
+          </p>
+        </section>
 
-    </div>
+        <section id="pledge" aria-labelledby="pledge-title" className="mb-10 scroll-mt-6 border-l-4 border-accent pl-4">
+          <ArticleHeading id="pledge"><span id="pledge-title">The pledge</span></ArticleHeading>
+          <p className="mb-2 font-semibold text-fg">{PLEDGE_HEADLINE}</p>
+          <p className="mb-4 text-fg-soft">{PLEDGE_COMMITMENT}</p>
+          <ButtonLink href="/free-forever" variant="primary">
+            Read the QRCraftly Pledge
+          </ButtonLink>
+        </section>
+
+        <section id="tools" aria-labelledby="tools-title" className="mb-10 scroll-mt-6">
+          <ArticleHeading id="tools"><span id="tools-title">Every tool</span></ArticleHeading>
+          <ul className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-3">
+            {[...GENERATOR_FOOTER_LINKS, ...TOOL_LINKS].map(([label, href]) => (
+              <li key={href}>
+                <a href={href} className={LINK_CLASSES}>{label}</a>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        <section id="open-source" aria-labelledby="open-source-title" className="mb-10 scroll-mt-6 text-fg-soft">
+          <ArticleHeading id="open-source"><span id="open-source-title">Open source</span></ArticleHeading>
+          <p className="mb-4">
+            QRCraftly is released under the <strong>GNU Affero General Public License v3.0 (AGPL-3.0)</strong>. The code
+            is open for inspection and contribution. We believe in transparency.
+          </p>
+          <ButtonLink href="https://github.com/fderuiter/QRCraftly" target="_blank" rel="noopener noreferrer" variant="outline">
+            <GithubIcon className="size-5" />
+            View on GitHub
+          </ButtonLink>
+        </section>
+      </ArticleLayout>
     </>
   );
 }

@@ -82,6 +82,13 @@ export const GENERATOR_FOOTER_LINKS: readonly (readonly [label: string, href: st
   ['Bulk CSV QR Codes', QR_TYPE_ROUTES[QRType.BULK_CSV]],
 ];
 
+/** The tools beyond the generators, listed in the footer, on About and on the 404 page. */
+export const TOOL_LINKS: readonly (readonly [label: string, href: string])[] = [
+  ['Send a File', '/file-transfer'],
+  ['Receive a File', '/file-transfer/receive'],
+  ['QR Arcade', '/arcade'],
+];
+
 const GENERATOR_PATHS = new Set<string>(Object.values(QR_TYPE_ROUTES));
 
 /**

@@ -92,6 +92,22 @@ test.describe('Primary navigation at 320px', () => {
   });
 });
 
+test.describe('Security page (#1056)', () => {
+  test('keeps its prerendered policies after client-side navigation', async ({ page }) => {
+    await page.goto('/about');
+    await page.waitForSelector('main[data-hydrated="true"]');
+    await page.getByRole('link', { name: 'How we keep it that way' }).click();
+    await expect(page).toHaveURL(/\/security$/);
+    await expect(page.locator('#security-doc')).toContainText('Content Security Policy');
+  });
+
+  test('a deep link opens the collapsed policy and scrolls to the heading', async ({ page }) => {
+    await page.goto('/security#compliance-hipaa-compliance-alignment');
+    await page.waitForSelector('main[data-hydrated="true"]');
+    await expect(page.locator('#compliance-hipaa-compliance-alignment')).toBeInViewport();
+  });
+});
+
 test.describe('Download menu keyboard support', () => {
   test('formats can be chosen without a pointer and Escape restores focus', async ({ page }) => {
     await page.goto('/');

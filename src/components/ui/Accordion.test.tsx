@@ -56,3 +56,17 @@ describe('Accordion Component Accessibility', () => {
     expect(results).toHaveNoViolations();
   });
 });
+
+describe('Accordion hash links', () => {
+  it('opens when the URL hash points inside a collapsed panel', () => {
+    window.history.replaceState(null, '', '#deep-target');
+    Element.prototype.scrollIntoView = () => {};
+    render(
+      <AccordionItem title="Details">
+        <h3 id="deep-target">Deep heading</h3>
+      </AccordionItem>
+    );
+    expect(screen.getByRole('button', { name: 'Details' })).toHaveAttribute('aria-expanded', 'true');
+    window.history.replaceState(null, '', window.location.pathname);
+  });
+});
