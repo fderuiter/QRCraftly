@@ -110,7 +110,7 @@ describe('PrimaryNav', () => {
     const nav = screen.getByRole('navigation', { name: 'Primary navigation' });
     within(nav).getAllByRole('link').forEach((link) => expect(link.className).toContain('min-h-11'));
     const button = openMenu();
-    expect(button.className).toContain('min-h-11');
+    expect(button.className).toContain('size-11');
     within(menuDialog()).getAllByRole('link').forEach((link) => expect(link.className).toContain('min-h-12'));
   });
 

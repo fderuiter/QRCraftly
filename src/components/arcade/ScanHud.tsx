@@ -16,6 +16,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { Eyebrow } from '@/components/ui/SectionHeading';
 import React from 'react';
 import { ShieldAlert, ShieldCheck, ScanLine, AlertTriangle } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
@@ -143,7 +144,7 @@ export function ScanHud({ analysis, empirical, isNative }: ScanHudProps) {
         </h2>
         <EmpiricalBadge state={empirical} />
         <div className="mt-3 rounded-lg border border-line bg-surface p-3">
-          <span className="block text-xs font-bold tracking-wider text-fg-muted uppercase">Live readout</span>
+          <Eyebrow>Live readout</Eyebrow>
           <p className="truncate font-mono text-xs font-semibold text-fg" data-testid="arcade-readout">
             {empirical.status === 'scannable' && empirical.decoded ? empirical.decoded : <span className="text-rose-700 italic dark:text-rose-300">[No data decoded]</span>}
           </p>

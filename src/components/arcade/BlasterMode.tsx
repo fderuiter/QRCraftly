@@ -52,7 +52,7 @@ import {
 import { useEmpiricalScan, useLatestRef, useReducedMotion } from '@/packages/arcade/client';
 import type { ArcadeTarget } from '@/packages/arcade/handoff';
 import { ArcadeCockpit } from './ArcadeCockpit';
-import { ChoiceGroup } from './ChoiceGroup';
+import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { DefeatModal } from './DefeatModal';
 import { ScanHud } from './ScanHud';
 import type { ModeProps } from './SimulatorMode';
@@ -399,7 +399,7 @@ export function BlasterMode({ target, settings, announce }: ModeProps) {
   };
 
   const durabilityTone = healthTone(durability.percent);
-  const weaponChoices = BLASTER_WEAPONS.map((w) => ({ id: w.id, label: `${w.shortcut} ${w.name}`, ariaLabel: w.name }));
+  const weaponChoices = BLASTER_WEAPONS.map((w) => ({ value: w.id, label: `${w.shortcut} ${w.name}`, ariaLabel: w.name }));
 
   return (
     <>
@@ -408,16 +408,15 @@ export function BlasterMode({ target, settings, announce }: ModeProps) {
         arsenal={
           <Card variant="control" className="space-y-3">
             <h2 className="text-sm font-bold text-fg">Blaster weapons</h2>
-            <ChoiceGroup<BlasterWeaponId>
-              kind="radiogroup"
+            <SegmentedControl<BlasterWeaponId>
+              appearance="tiles"
               label="Blaster weapons"
-              className="flex flex-col gap-2"
-              itemClassName="justify-start text-left"
-              choices={BLASTER_WEAPONS.map((w) => ({
-                id: w.id,
+              className="grid-cols-1"
+              options={BLASTER_WEAPONS.map((w) => ({
+                value: w.id,
                 ariaLabel: w.name,
                 label: (
-                  <span className="flex w-full flex-col items-start">
+                  <span className="flex w-full flex-col items-start text-left">
                     <span className="font-bold">
                       <kbd className="mr-1 rounded border border-current px-1 font-mono text-xs">{w.shortcut}</kbd>
                       {w.name}
@@ -477,12 +476,11 @@ export function BlasterMode({ target, settings, announce }: ModeProps) {
         }
         quickBar={
           <div className="space-y-2">
-            <ChoiceGroup<BlasterWeaponId>
-              kind="radiogroup"
+            <SegmentedControl<BlasterWeaponId>
+              appearance="tiles"
               label="Weapon"
-              className="grid grid-cols-3 gap-2"
-              itemClassName="min-h-11"
-              choices={weaponChoices}
+              className="grid-cols-3"
+              options={weaponChoices}
               value={weapon}
               onChange={selectWeapon}
             />

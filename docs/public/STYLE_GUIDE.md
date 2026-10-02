@@ -53,7 +53,7 @@ Other tokens in the same block:
 - **Type scale**: `text-xs` (12px, the floor for any text) through `text-4xl`, with line heights. `font-display` and `font-mono` are system font stacks; there are no web fonts.
 - **Radius**: `rounded-sm`, `rounded-md`, `rounded-lg`, `rounded-xl`, `rounded-2xl` and `rounded-full`.
 - **Elevation**: `shadow-raised` (cards, primary buttons), `shadow-overlay` (menus, toasts), `shadow-modal` (dialogs), plus the effects `shadow-glow` (scanner laser) and `shadow-spotlight` (camera viewfinder).
-- **Motion**: `duration-(--duration-fast)` 150ms, `duration-(--duration-base)` 200ms, `duration-(--duration-slow)` 300ms, and the easings `ease-standard` and `ease-emphasized`.
+- **Motion**: `duration-(--duration-fast)` 120ms, `duration-(--duration-base)` 200ms, `duration-(--duration-slow)` 320ms, the easings `ease-standard` and `ease-emphasized`, and the enter and exit animations below. See [Motion](#5-motion).
 
 `src/colors.json` records the hex values of the palette steps behind these roles for the contrast checker (`scripts/contrast_check.js`), which checks every text and non-text token pair in both themes.
 
@@ -80,4 +80,34 @@ Pre-configured palettes for generated QR codes ensure high contrast, aesthetic b
 1. **WCAG 2.1 SC 1.4.3 Contrast (Text)**: Maintain a minimum contrast ratio of 4.5:1 for standard body text and 3:1 for large headings against background surfaces.
 2. **WCAG 2.1 SC 1.4.11 Non-Text Contrast**: Visual boundaries, active toggle states, form borders, and focus rings must maintain at least a 3:1 contrast ratio against adjacent backgrounds.
 3. **Keyboard Focus Rings**: Interactive elements must feature unambiguous, high-contrast focus indicators (`ring-2 ring-focus ring-offset-2`, an offset ring that stays distinct from the filled tint used for selected states) when focused via keyboard navigation, while suppressing outline rings on mouse click via `:focus:not(:focus-visible)`.
-4. **Motion Preferences**: Animations and transitions must respect `prefers-reduced-motion: reduce`.
+4. **Motion Preferences**: Animations and transitions must respect `prefers-reduced-motion: reduce` (see [Motion](#5-motion)).
+
+---
+
+## 5. Motion
+
+Motion explains a change; it never decorates. Every animation uses the motion tokens and is instant under `prefers-reduced-motion: reduce`.
+
+| Token                                   | Value | Use                                                    |
+| :-------------------------------------- | :---- | :----------------------------------------------------- |
+| `duration-(--duration-fast)`            | 120ms | Hover and press feedback, menus, tooltips, dialog exit |
+| `duration-(--duration-base)`            | 200ms | Dialogs, toasts, accordion panels, view transitions    |
+| `duration-(--duration-slow)`            | 320ms | Larger layout changes                                  |
+| `ease-standard`                         | curve | Most transitions and every exit                        |
+| `ease-emphasized`                       | curve | Entrances that should feel quick to settle             |
+| `animate-fade-in`, `animate-fade-out`   | base  | Dialog backdrop                                        |
+| `animate-pop-in`, `animate-pop-out`     | base  | Dialogs and check badges (scale from 98%)              |
+| `animate-rise-in`, `animate-rise-out`   | fast  | Menus and tooltips (4px rise)                          |
+| `animate-slide-in`, `animate-slide-out` | base  | Toasts                                                 |
+
+Rules:
+
+- **Reduced motion**: put every animation class behind `motion-safe:` (for example `motion-safe:animate-pop-in`). The global rule in `index.css` also cuts animation and transition durations to near zero and switches off view transitions when the user asks for reduced motion.
+- **Exit animations**: overlays stay mounted for their exit with `usePresence` (`src/hooks/usePresence.ts`), which marks them `data-closed` and `inert` while the exit plays, so style the exit with the `data-closed:` variant. Under reduced motion, and wherever `matchMedia` is missing (server rendering, unit tests), they unmount at once.
+- **Press**: buttons press in with `motion-safe:active:scale-98`, built into `Button`. Do not add other scale values.
+- **Accordion panels**: the `.disclosure-panel` class animates grid rows from 0fr to 1fr. Collapsed panels keep the `hidden` attribute, so they leave the accessibility tree at once.
+- **QR preview**: when the code or its design changes, the preview crossfades for about 150ms. The new frame is drawn at once; the old frame is only an overlay that fades out above it, so the crossfade never delays the final frame.
+- **Type switches**: moving between QR type pages uses a same-document view transition where the browser supports it (`src/utils/typeViewTransition.ts`). It is progressive enhancement: other browsers navigate unchanged, and the old frame is never held for more than a second.
+- **Budget**: motion is CSS first. Do not add an animation library.
+
+`e2e/motion.spec.ts` checks the dialog, menu, accordion, crossfade and view transition with motion allowed and with `reducedMotion: 'reduce'`.

@@ -1,8 +1,9 @@
 import React from 'react';
-import { QRConfig } from '../../types';
+import { QRConfig, QRStyle } from '../../types';
 import { PATTERNS, LOW_RELIABILITY_PATTERNS } from '../../constants';
 import { PatternModule } from '../ui/PatternModule';
 import { Alert } from '../ui/Alert';
+import { SegmentedControl } from '../ui/SegmentedControl';
 
 interface PatternControlsProps {
   config: QRConfig;
@@ -24,38 +25,27 @@ export const PatternControls: React.FC<PatternControlsProps> = ({ config, onChan
         </div>
       )}
 
-      <div
-        className="grid grid-cols-4 gap-3"
-        role="radiogroup"
-        aria-label="Pattern Style"
-      >
-        {PATTERNS.map((pattern) => (
-          <label
-            key={pattern.id}
-            className={`inline-flex h-auto cursor-pointer flex-col items-center justify-center rounded-xl border-2 p-3 font-medium transition-colors focus-within:ring-2 focus-within:ring-focus ${
-              config.style === pattern.id
-                ? 'border-teal-500 bg-teal-50 text-accent hover:bg-teal-100 dark:bg-slate-800 dark:hover:bg-slate-700'
-                : 'border-transparent bg-surface-raised text-fg-soft hover:bg-slate-50 dark:hover:bg-slate-700/50'
-            }`}
-          >
-            <input
-              type="radio"
-              name="pattern-style"
-              value={pattern.id}
-              checked={config.style === pattern.id}
-              onChange={() => onChange({ style: pattern.id })}
-              className="sr-only"
-              aria-label={`Select ${pattern.label} pattern`}
-            />
-            <div className="mb-2 grid size-8 grid-cols-2 gap-0.5 p-1" aria-hidden="true">
-              {[1, 2, 3, 4].map((i) => (
-                <PatternModule key={i} style={pattern.id} />
-              ))}
-            </div>
-            <span className="text-center text-xs leading-tight font-medium">{pattern.label}</span>
-          </label>
-        ))}
-      </div>
+      <SegmentedControl<QRStyle>
+        appearance="tiles"
+        label="Pattern Style"
+        className="grid-cols-4"
+        value={config.style}
+        onChange={(style) => onChange({ style })}
+        options={PATTERNS.map((pattern) => ({
+          value: pattern.id,
+          ariaLabel: `Select ${pattern.label} pattern`,
+          label: (
+            <>
+              <span className="grid size-8 grid-cols-2 gap-0.5 p-1" aria-hidden="true">
+                {[1, 2, 3, 4].map((i) => (
+                  <PatternModule key={i} style={pattern.id} />
+                ))}
+              </span>
+              <span className="leading-tight">{pattern.label}</span>
+            </>
+          ),
+        }))}
+      />
     </div>
   );
 };

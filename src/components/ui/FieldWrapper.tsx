@@ -47,7 +47,7 @@ export const FieldWrapper: React.FC<FieldWrapperProps> = ({
       <div className={className}>
         <label
           htmlFor={inputId}
-          className={`flex cursor-pointer items-center gap-2 ${getLabelClass(labelClassName).replace("mb-1", "")}`}
+          className={`flex min-h-6 cursor-pointer items-center gap-2 ${getLabelClass(labelClassName).replace("mb-1", "")}`}
         >
           {children}
           {label && <span>{label}</span>}

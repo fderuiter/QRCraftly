@@ -125,8 +125,8 @@ describe('File Transfer Page & Pipeline', () => {
     
     // Sliders exist
     expect(screen.getByLabelText('Transfer speed')).toBeInTheDocument();
-    const density = screen.getByRole('group', { name: 'QR density' });
-    expect(within(density).getByRole('button', { name: 'Balanced' })).toHaveAttribute('aria-pressed', 'true');
+    const density = screen.getByRole('radiogroup', { name: 'QR density' });
+    expect(within(density).getByRole('radio', { name: 'Balanced' })).toHaveAttribute('aria-checked', 'true');
 
     // Canvas exists
     const canvas = screen.getByRole('img', { name: /transfer qr/i });
@@ -294,13 +294,13 @@ describe('File Transfer Page & Pipeline', () => {
     const balanced = bytesPerQr();
 
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Reliable' }));
+      fireEvent.click(screen.getByRole('radio', { name: 'Reliable' }));
     });
-    expect(screen.getByRole('button', { name: 'Reliable' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('radio', { name: 'Reliable' })).toHaveAttribute('aria-checked', 'true');
     expect(bytesPerQr()).toBeLessThan(balanced);
 
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Fast' }));
+      fireEvent.click(screen.getByRole('radio', { name: 'Fast' }));
     });
     expect(bytesPerQr()).toBeGreaterThan(balanced);
   });

@@ -475,7 +475,7 @@ describe('InputPanel Component', () => {
 
     // Scan QR Code button should be hidden, and webcam select button from QRScanner should be visible
     expect(scanBtn).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /webcam/i })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: /webcam/i })).toBeInTheDocument();
 
     // Close button of QRScanner should close it and restore manual input
     const closeBtn = screen.getByLabelText(/close scanner/i);

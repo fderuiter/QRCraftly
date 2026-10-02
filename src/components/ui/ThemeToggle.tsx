@@ -18,6 +18,7 @@
 
 import { Monitor, Moon, Sun } from 'lucide-react';
 import { Button } from './Button';
+import { Tooltip } from './Tooltip';
 import { useTheme } from '@/context/ThemeContext';
 import { ThemePreference, nextThemePreference } from '@/utils/theme';
 
@@ -51,16 +52,19 @@ export function ThemeToggle({ className = '' }: { className?: string }) {
   const label = getThemeToggleLabel(preference);
 
   return (
-    <Button
-      variant="icon"
-      size="icon"
-      onClick={cyclePreference}
-      className={`min-h-11 min-w-11 rounded-full ${className}`.trim()}
-      title={label}
-      aria-label={label}
-      data-theme-preference={preference}
-    >
-      <Icon className="size-5" aria-hidden="true" />
-    </Button>
+    <Tooltip content={label} side="bottom">
+      <Button
+        variant="icon"
+        iconOnly
+        size="lg"
+        shape="round"
+        onClick={cyclePreference}
+        className={className}
+        aria-label={label}
+        data-theme-preference={preference}
+      >
+        <Icon className="size-5" aria-hidden="true" />
+      </Button>
+    </Tooltip>
   );
 }

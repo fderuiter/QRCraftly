@@ -19,6 +19,9 @@
 import React from 'react';
 import { Play, Square, Upload, FileUp, Cpu, Sliders, Activity } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { Badge } from '@/components/ui/Badge';
+import { SectionHeading } from '@/components/ui/SectionHeading';
+import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { Card } from '@/components/ui/Card';
 import { RangeInput } from '@/components/ui/RangeInput';
 import { Alert } from '@/components/ui/Alert';
@@ -154,6 +157,7 @@ function FileTransferToolInner() {
   return (
     <div className="w-full">
       <ToolWorkspaceLayout
+        previewFocusable
         controlsLabel="Settings and Styling"
         previewLabel="Transfer QR"
         previewId="transfer-preview"
@@ -171,10 +175,7 @@ function FileTransferToolInner() {
           <>
             {/* File Selection & Pacing Section */}
             <section className="space-y-4">
-              <h2 className="flex items-center gap-2 text-xs font-bold tracking-wider text-fg-muted uppercase">
-                <Upload className="size-4 text-teal-600" aria-hidden="true" />
-                1. Choose a File
-              </h2>
+              <SectionHeading icon={<Upload className="size-4 text-accent" aria-hidden="true" />} eyebrow="1. Choose a File" />
               
               <div className="flex flex-col gap-3">
                 <label
@@ -209,7 +210,7 @@ function FileTransferToolInner() {
                     variant="outline"
                     onClick={simulate50MBFile}
                     disabled={isTransferring}
-                    className="w-full text-xs"
+                    fullWidth
                   >
                     <Cpu className="size-4" />
                     Simulate 50MB High-Load File
@@ -235,10 +236,7 @@ function FileTransferToolInner() {
 
             {/* Live Streaming Speed / Pacing controls */}
             <section className="space-y-6">
-              <h2 className="flex items-center gap-2 text-xs font-bold tracking-wider text-fg-muted uppercase">
-                <Sliders className="size-4 text-teal-600" aria-hidden="true" />
-                2. Transfer Settings
-              </h2>
+              <SectionHeading icon={<Sliders className="size-4 text-accent" aria-hidden="true" />} eyebrow="2. Transfer Settings" />
 
               <RangeInput
                 id="fps-slider"
@@ -255,21 +253,13 @@ function FileTransferToolInner() {
                 <span id="density-label" className="block text-sm font-medium text-fg-soft">
                   QR density
                 </span>
-                <div role="group" aria-labelledby="density-label" className="grid grid-cols-3 gap-1 rounded-xl bg-slate-100 p-1 dark:bg-slate-800/80">
-                  {DENSITY_OPTIONS.map(option => (
-                    <Button
-                      key={option.value}
-                      variant="outline"
-                      size="sm"
-                      pressed={density === option.value}
-                      disabled={isTransferring}
-                      onClick={() => setDensity(option.value)}
-                      className="min-h-11 text-xs font-semibold"
-                    >
-                      {option.label}
-                    </Button>
-                  ))}
-                </div>
+                <SegmentedControl<TransferDensity>
+                  labelledBy="density-label"
+                  value={density}
+                  onChange={setDensity}
+                  disabled={isTransferring}
+                  options={DENSITY_OPTIONS.map((option) => ({ value: option.value, label: option.label }))}
+                />
                 <p className="text-xs text-fg-muted">{activeDensityHint}</p>
               </div>
               <p className="text-xs text-fg-muted" data-testid="fountain-symbol-info">
@@ -296,9 +286,7 @@ function FileTransferToolInner() {
         secondary={
           /* Style Customization Section */
           <section className="space-y-4">
-            <h2 className="text-xs font-bold tracking-wider text-fg-muted uppercase">
-              3. QR Appearance
-            </h2>
+            <SectionHeading eyebrow="3. QR Appearance" />
             <StyleControls config={config} onChange={store.updateConfig} />
           </section>
         }
@@ -309,14 +297,10 @@ function FileTransferToolInner() {
                   Transfer QR
                 </h2>
                 <div className="flex items-center gap-2">
-                  <span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-xs font-bold ${
-                    isTransferring 
-                      ? 'border border-success-line bg-success-soft text-emerald-700 dark:text-emerald-400' 
-                      : 'border border-line bg-slate-100 text-fg-muted dark:bg-slate-900/30'
-                  }`}>
-                    <span aria-hidden="true" className={`size-1.5 rounded-full ${isTransferring ? 'bg-emerald-500 motion-safe:animate-pulse' : 'bg-slate-400'}`} />
+                  <Badge tone={isTransferring ? 'success' : 'neutral'}>
+                    <span aria-hidden="true" className={`size-1.5 rounded-full ${isTransferring ? 'bg-success motion-safe:animate-pulse' : 'bg-line-strong'}`} />
                     {isTransferring ? 'Transmitting' : 'Idle'}
-                  </span>
+                  </Badge>
                 </div>
               </div>
 

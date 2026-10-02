@@ -1,4 +1,5 @@
 import { contentRegistry } from '@/data/contentRegistry';
+import { SectionHeading } from './ui/SectionHeading';
 import { Accordion, AccordionItem } from './ui/Accordion';
 
 interface SidebarContentProps {
@@ -49,11 +50,11 @@ export function SidebarContent({ toolId }: SidebarContentProps) {
           {content.description && <p className="mb-4 text-sm leading-relaxed">{content.description}</p>}
           {content.features && content.features.length > 0 && (
             <>
-              <h3 className="mt-6 mb-3 text-sm font-bold tracking-wider text-slate-500 uppercase">Key Features</h3>
+              <SectionHeading eyebrow="Key Features" level={3} className="mt-6 mb-3" />
               <ul className="list-none space-y-2 text-sm">
                 {content.features.map((feature: string, idx: number) => (
                   <li key={idx} className="flex items-start">
-                    <span className="mr-2 text-teal-500">•</span>
+                    <span className="mr-2 text-accent" aria-hidden="true">•</span>
                     {feature.trim()}
                   </li>
                 ))}

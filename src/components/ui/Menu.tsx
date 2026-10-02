@@ -19,6 +19,7 @@
 import React, { KeyboardEvent, ReactNode, RefObject, useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from './Button';
 import { usePopoverDismiss } from '@/hooks/usePopoverDismiss';
+import { usePresence } from '@/hooks/usePresence';
 
 /**
  * One action in a {@link Menu}.
@@ -92,6 +93,8 @@ export function Menu({ id, items, renderTrigger, triggerRef: externalTriggerRef,
   const menuId = `${id}-menu`;
 
   const close = useCallback(() => setOpen(false), []);
+  // Closed items stay briefly (inert) for the exit animation; instant under reduced motion.
+  const { mounted, closing } = usePresence(open, 120);
   usePopoverDismiss({ open, containerRef, triggerRef, onClose: close });
 
   useEffect(() => {
@@ -160,14 +163,16 @@ export function Menu({ id, items, renderTrigger, triggerRef: externalTriggerRef,
         'aria-expanded': open,
         'aria-controls': menuId,
       })}
-      {open && (
+      {mounted && (
         <div
           id={menuId}
           role="menu"
           tabIndex={-1}
           aria-labelledby={triggerId}
           onKeyDown={onMenuKeyDown}
-          className="absolute inset-x-0 top-full z-50 mt-2 overflow-hidden rounded-xl border border-line bg-surface-raised py-1 shadow-overlay"
+          data-closed={closing || undefined}
+          inert={closing || undefined}
+          className="absolute inset-x-0 top-full z-50 mt-2 overflow-hidden rounded-xl border border-line bg-surface-raised py-1 shadow-overlay motion-safe:animate-rise-in motion-safe:data-closed:animate-rise-out"
         >
           {items.map((item, index) => (
             <React.Fragment key={item.id}>
@@ -179,7 +184,6 @@ export function Menu({ id, items, renderTrigger, triggerRef: externalTriggerRef,
                 role="menuitem"
                 variant="menuitem"
                 tabIndex={-1}
-                className="min-h-11"
                 onClick={() => select(item)}
               >
                 {item.label}

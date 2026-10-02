@@ -17,7 +17,7 @@
 */
 
 import React from 'react';
-import { Button } from '../ui/Button';
+import { SegmentedControl } from '../ui/SegmentedControl';
 import { Square, Smartphone } from 'lucide-react';
 import { QRConfig, SocialFormat, TemplateStyle } from '../../types';
 import { ColorInput } from '../ui/ColorInput';
@@ -38,14 +38,14 @@ const FORMAT_OPTIONS: Array<{ id: SocialFormat; label: string; sublabel: string;
     id: SocialFormat.SQUARE_1_1,
     label: 'Square',
     sublabel: '1:1',
-    icon: <Square className="size-4" />,
+    icon: <Square className="size-4" aria-hidden="true" />,
   },
   {
     id: SocialFormat.PORTRAIT_4_5,
     label: 'Portrait',
     sublabel: '4:5',
     icon: (
-      <svg viewBox="0 0 12 15" className="h-5 w-4" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <svg viewBox="0 0 12 15" className="h-5 w-4" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
         <rect x="1" y="1" width="10" height="13" rx="1" />
       </svg>
     ),
@@ -54,7 +54,7 @@ const FORMAT_OPTIONS: Array<{ id: SocialFormat; label: string; sublabel: string;
     id: SocialFormat.STORY_9_16,
     label: 'Story',
     sublabel: '9:16',
-    icon: <Smartphone className="h-5 w-4" />,
+    icon: <Smartphone className="h-5 w-4" aria-hidden="true" />,
   },
 ];
 
@@ -89,50 +89,42 @@ export const LayoutControls: React.FC<LayoutControlsProps> = ({ config, onChange
 
       {/* Aspect Ratio Selector */}
       <div className="mb-4">
-        <p className="mb-2 text-xs font-medium text-fg-muted">Aspect Ratio</p>
-        <div
-          className="grid grid-cols-3 gap-2"
-          role="group"
-          aria-label="Aspect Ratio"
-        >
-          {FORMAT_OPTIONS.map((opt) => (
-            <Button
-              key={opt.id}
-              variant="outline"
-              onClick={() => onChange({ socialFormat: opt.id })}
-              pressed={config.socialFormat === opt.id}
-              aria-label={`Select ${opt.label} format (${opt.sublabel})`}
-              className="h-auto flex-col rounded-lg px-1 py-2"
-            >
-              {opt.icon}
-              <span className="mt-1 text-xs leading-none font-semibold">{opt.label}</span>
-              <span className="text-xs leading-none">{opt.sublabel}</span>
-            </Button>
-          ))}
-        </div>
+        <p id="aspect-ratio-label" className="mb-2 text-sm font-medium text-fg-muted">Aspect Ratio</p>
+        <SegmentedControl<SocialFormat>
+          appearance="tiles"
+          labelledBy="aspect-ratio-label"
+          className="grid-cols-3"
+          value={config.socialFormat}
+          onChange={(socialFormat) => onChange({ socialFormat })}
+          options={FORMAT_OPTIONS.map((opt) => ({
+            value: opt.id,
+            ariaLabel: `Select ${opt.label} format (${opt.sublabel})`,
+            label: (
+              <>
+                {opt.icon}
+                <span className="leading-none">{opt.label}</span>
+                <span className="text-xs leading-none font-normal">{opt.sublabel}</span>
+              </>
+            ),
+          }))}
+        />
       </div>
 
       {/* Template Style Selector */}
       <div>
-        <p className="mb-2 text-xs font-medium text-fg-muted">Template</p>
-        <div
-          className="grid grid-cols-2 gap-2"
-          role="group"
-          aria-label="Template Style"
-        >
-          {TEMPLATE_OPTIONS.map((opt) => (
-            <Button
-              key={opt.id}
-              variant="outline"
-              onClick={() => onChange({ templateStyle: opt.id })}
-              pressed={config.templateStyle === opt.id}
-              aria-label={`Select ${opt.label} template`}
-              className="h-auto rounded-lg p-2 text-xs"
-            >
-              {opt.label}
-            </Button>
-          ))}
-        </div>
+        <p id="template-style-label" className="mb-2 text-sm font-medium text-fg-muted">Template</p>
+        <SegmentedControl<TemplateStyle>
+          appearance="tiles"
+          labelledBy="template-style-label"
+          className="grid-cols-2"
+          value={config.templateStyle}
+          onChange={(templateStyle) => onChange({ templateStyle })}
+          options={TEMPLATE_OPTIONS.map((opt) => ({
+            value: opt.id,
+            ariaLabel: `Select ${opt.label} template`,
+            label: opt.label,
+          }))}
+        />
       </div>
 
       {/* Text Inputs (visible only when a template is active) */}

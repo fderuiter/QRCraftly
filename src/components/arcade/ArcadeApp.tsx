@@ -20,7 +20,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Gamepad2 } from 'lucide-react';
 import { ARCADE_MODES, ArcadeMode, arcadeModeHref, parseArcadeMode } from '@/packages/arcade';
 import { BlasterMode } from './BlasterMode';
-import { ChoiceGroup } from './ChoiceGroup';
+import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { SimulatorMode } from './SimulatorMode';
 import { TargetSettings } from './TargetSettings';
 import { useArcadeTarget } from './useArcadeTarget';
@@ -98,13 +98,11 @@ export function ArcadeApp() {
             </p>
           </div>
         </div>
-        <ChoiceGroup<ArcadeMode>
+        <SegmentedControl<ArcadeMode>
           kind="tablist"
           label="Arcade mode"
-          className="grid grid-cols-2 gap-2 lg:w-auto"
-          itemClassName="min-h-11"
-          size="md"
-          choices={ARCADE_MODES.map((m) => ({ id: m.id, label: m.label }))}
+          className="lg:w-auto"
+          options={ARCADE_MODES.map((m) => ({ value: m.id, label: m.label }))}
           value={mode}
           onChange={changeMode}
           tabId={tabId}

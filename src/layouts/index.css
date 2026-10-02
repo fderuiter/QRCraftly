@@ -107,12 +107,73 @@
   --shadow-glow: 0 0 8px var(--color-teal-400);
   --shadow-spotlight: 0 0 0 100vmax rgb(0 0 0 / 0.6);
 
-  /* Motion: use with `duration-(--duration-base) ease-standard`. */
-  --duration-fast: 150ms;
+  /*
+   * Motion (#1054): use with `duration-(--duration-base) ease-standard`. Fast is for
+   * presses and small state changes, base for menus, toasts and disclosures, slow for
+   * dialogs and page-level changes. Everything is instant under prefers-reduced-motion.
+   */
+  --duration-fast: 120ms;
   --duration-base: 200ms;
-  --duration-slow: 300ms;
+  --duration-slow: 320ms;
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
   --ease-emphasized: cubic-bezier(0.3, 0, 0, 1.3);
+
+  /* Enter and exit animations: `motion-safe:animate-pop-in data-closed:animate-pop-out`. */
+  --animate-fade-in: fade-in var(--duration-base) var(--ease-standard) both;
+  --animate-fade-out: fade-out var(--duration-base) var(--ease-standard) both;
+  --animate-pop-in: pop-in var(--duration-base) var(--ease-emphasized) both;
+  --animate-pop-out: pop-out var(--duration-fast) var(--ease-standard) both;
+  --animate-rise-in: rise-in var(--duration-fast) var(--ease-standard) both;
+  --animate-rise-out: rise-out var(--duration-fast) var(--ease-standard) both;
+  --animate-slide-in: slide-in var(--duration-base) var(--ease-emphasized) both;
+  --animate-slide-out: slide-out var(--duration-base) var(--ease-standard) both;
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes fade-out {
+    to {
+      opacity: 0;
+    }
+  }
+  @keyframes pop-in {
+    from {
+      opacity: 0;
+      scale: 0.98;
+    }
+  }
+  @keyframes pop-out {
+    to {
+      opacity: 0;
+      scale: 0.98;
+    }
+  }
+  @keyframes rise-in {
+    from {
+      opacity: 0;
+      translate: 0 4px;
+    }
+  }
+  @keyframes rise-out {
+    to {
+      opacity: 0;
+      translate: 0 4px;
+    }
+  }
+  @keyframes slide-in {
+    from {
+      opacity: 0;
+      translate: 0 0.75rem;
+    }
+  }
+  @keyframes slide-out {
+    to {
+      opacity: 0;
+      translate: 0 0.75rem;
+    }
+  }
 }
 
 @layer base {
@@ -199,6 +260,12 @@
    * should still prefer `motion-safe:` variants for decorative motion.
    */
   @media (prefers-reduced-motion: reduce) {
+    ::view-transition-group(*),
+    ::view-transition-old(*),
+    ::view-transition-new(*) {
+      animation: none !important;
+    }
+
     *,
     *::before,
     *::after {
@@ -208,4 +275,40 @@
       scroll-behavior: auto !important;
     }
   }
+}
+
+@layer components {
+  /*
+   * Disclosure panel (Accordion): the row height animates from 0fr to 1fr. Collapsed panels
+   * keep the `hidden` attribute, so they leave the accessibility tree at once; `display`
+   * flips at the end of the collapse (allow-discrete) and `@starting-style` starts the expand
+   * from 0fr. Browsers without these features open and close instantly.
+   */
+  .disclosure-panel {
+    display: grid;
+    grid-template-rows: 1fr;
+    transition:
+      grid-template-rows var(--duration-base) var(--ease-standard),
+      display var(--duration-base) allow-discrete;
+  }
+  .disclosure-panel[hidden] {
+    display: none;
+    grid-template-rows: 0fr;
+  }
+  @starting-style {
+    .disclosure-panel:not([hidden]) {
+      grid-template-rows: 0fr;
+    }
+  }
+  .disclosure-panel > * {
+    min-height: 0;
+    overflow: hidden;
+  }
+}
+
+/* Same-document view transition when switching QR types (progressive enhancement). */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: var(--duration-base);
+  animation-timing-function: var(--ease-standard);
 }

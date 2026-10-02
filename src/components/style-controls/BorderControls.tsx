@@ -154,9 +154,10 @@ export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange
                 {config.borderLogoUrl && (
                   <Button
                     variant="error"
-                    size="icon"
+                    iconOnly
+                    size="xs"
+                    shape="round"
                     onClick={() => { onChange({ borderLogoUrl: null }); setError(null); }}
-                    className="size-auto min-w-0 rounded-full p-1"
                     aria-label="Remove border logo"
                   >
                     <X className="size-3" />
@@ -165,12 +166,11 @@ export const BorderControls: React.FC<BorderControlsProps> = ({ config, onChange
               </div>
               <Button
                 ref={borderLogoUploadButtonRef}
-                variant="ghost"
+                variant="secondary"
                 size="sm"
                 onClick={() => borderLogoInputRef.current?.click()}
-                className="text-accent hover:bg-teal-50 hover:text-teal-700"
               >
-                <Upload className="mr-1 size-3" />
+                <Upload className="size-3.5" aria-hidden="true" />
                 {config.borderLogoUrl ? 'Change' : 'Add Logo'}
               </Button>
               <input

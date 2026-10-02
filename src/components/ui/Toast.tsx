@@ -3,6 +3,7 @@ import { X } from 'lucide-react';
 import { Button } from './Button';
 import { getNotificationColors, getNotificationIcon } from '../../utils/notificationStyles';
 import { mergeClasses } from './styles';
+import { EXIT_DURATION_MS, motionAllowed } from '../../hooks/usePresence';
 
 /**
  * Type of the toast notification message.
@@ -36,6 +37,10 @@ interface ToastMessage {
   /**
    * Optional action button shown next to the message.
    */
+  /**
+   * Set while the toast plays its exit animation (it is inert and about to be removed).
+   */
+  closing?: boolean;
   action?: {
     /**
      * Visible button label.
@@ -95,7 +100,14 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const removeToast = useCallback((id: string) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
+    const drop = () => setToasts((prev) => prev.filter((t) => t.id !== id));
+    if (!motionAllowed()) {
+      drop();
+      return;
+    }
+    // Slide and fade out first; under reduced motion (above) it goes at once.
+    setToasts((prev) => prev.map((t) => (t.id === id ? { ...t, closing: true } : t)));
+    setTimeout(drop, EXIT_DURATION_MS);
   }, []);
 
   return (
@@ -123,7 +135,7 @@ const ToastItem = (props: { toast: ToastMessage; onRemove: (id: string) => void 
   const [isFocused, setIsFocused] = useState(false);
 
   useEffect(() => {
-    if (toast.persistent || isHovered || isFocused) {
+    if (toast.persistent || toast.closing || isHovered || isFocused) {
       return;
     }
 
@@ -140,6 +152,8 @@ const ToastItem = (props: { toast: ToastMessage; onRemove: (id: string) => void 
     <div 
       role={toast.type === 'error' || toast.type === 'warning' ? 'alert' : 'status'}
       tabIndex={0}
+      data-closed={toast.closing || undefined}
+      inert={toast.closing || undefined}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onFocus={() => setIsFocused(true)}
@@ -148,7 +162,7 @@ const ToastItem = (props: { toast: ToastMessage; onRemove: (id: string) => void 
           setIsFocused(false);
         }
       }}
-      className={mergeClasses("pointer-events-auto flex w-full max-w-md translate-y-0 transform items-center gap-3 rounded-xl border p-4 opacity-100 shadow-overlay transition-all duration-(--duration-slow) ease-standard", colors)}
+      className={mergeClasses("pointer-events-auto flex w-full max-w-md items-center gap-3 rounded-xl border p-4 shadow-overlay motion-safe:animate-slide-in data-closed:pointer-events-none motion-safe:data-closed:animate-slide-out", colors)}
     >
       {React.createElement(getNotificationIcon(toast.type), { className: "size-5 flex-shrink-0" })}
       <p className="flex-1 text-sm font-medium">{toast.message}</p>
@@ -166,9 +180,9 @@ const ToastItem = (props: { toast: ToastMessage; onRemove: (id: string) => void 
       )}
       <Button
         variant="ghost"
-        size="icon" 
+        iconOnly
+        size="sm"
         onClick={() => onRemove(toast.id)}
-        className="rounded-lg p-1 hover:bg-surface-hover"
         aria-label="Close notification"
       >
         <X className="size-4" />

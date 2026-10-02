@@ -40,7 +40,7 @@ async function openSender(sender: Page, file: TransferFile, density?: 'Reliable'
   await sender.goto('/file-transfer');
   await sender.waitForSelector('main[data-hydrated="true"]');
   await sender.getByLabel('Choose a file to send').setInputFiles(file);
-  if (density) await sender.getByRole('button', { name: density, exact: true }).click();
+  if (density) await sender.getByRole('radio', { name: density, exact: true }).click();
   await sender.getByRole('button', { name: 'Start file transfer' }).click();
   await expect(sender.getByRole('button', { name: 'Stop file transfer' })).toBeVisible({ timeout: 20_000 });
 }

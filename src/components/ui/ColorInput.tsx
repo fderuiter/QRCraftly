@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { Tooltip } from './Tooltip';
 import { normalizeHex } from '../../utils/colorUtils';
 import { FieldWrapper } from './FieldWrapper';
 import { mergeClasses, ERROR_INPUT_CLASSES } from './styles';
@@ -65,6 +66,20 @@ export const ColorInput: React.FC<ColorInputProps> = ({
   };
 
   const errorId = error ? `${id}-error` : undefined;
+  const swatch = (
+    <input
+      id={id}
+      type="color"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      disabled={disabled}
+      className={`${sizeClass} rounded border-0 bg-transparent p-0 disabled:opacity-50 ${
+        disabled ? 'cursor-not-allowed' : 'cursor-pointer'
+      }`}
+      aria-invalid={!!error}
+      aria-describedby={error ? errorId : undefined}
+    />
+  );
   const cleanLabel = label?.trim();
 
   return (
@@ -76,26 +91,14 @@ export const ColorInput: React.FC<ColorInputProps> = ({
       labelClassName={hideLabel ? "sr-only" : undefined}
     >
       <div className="-m-1 flex items-center gap-2 rounded-lg p-1">
-        <input
-          id={id}
-          type="color"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          disabled={disabled}
-          className={`${sizeClass} rounded border-0 bg-transparent p-0 disabled:opacity-50 ${
-            disabled ? 'cursor-not-allowed' : 'cursor-pointer'
-          }`}
-          title={title}
-          aria-invalid={!!error}
-          aria-describedby={error ? errorId : undefined}
-        />
+        {title ? <Tooltip content={title}>{swatch}</Tooltip> : swatch}
         <input
           type="text"
           value={textValue}
           onChange={handleTextChange}
           disabled={disabled}
           className={mergeClasses(
-            "w-24 rounded border border-transparent bg-transparent px-1 py-0.5 font-mono text-xs text-fg-muted transition-colors hover:border-line-strong disabled:opacity-50 disabled:cursor-not-allowed",
+            "w-24 rounded border border-transparent bg-transparent px-1 py-0.5 font-mono text-sm text-fg-muted transition-colors hover:border-line-strong disabled:opacity-50 disabled:cursor-not-allowed",
             error ? ERROR_INPUT_CLASSES : undefined
           )}
           aria-label={cleanLabel ? `${cleanLabel} Hex Code` : "Hex Code"}

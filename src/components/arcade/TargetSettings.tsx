@@ -27,7 +27,7 @@ import { RangeInput } from '@/components/ui/RangeInput';
 import { getStyleAdaptiveMazePathWidth } from '@/packages/qr-matrix/maze';
 import { ECC_LEVELS, ECC_RECOVERY, EccLevel } from '@/packages/arcade';
 import type { ArcadeTarget } from '@/packages/arcade/handoff';
-import { ChoiceGroup } from './ChoiceGroup';
+import { SegmentedControl } from '@/components/ui/SegmentedControl';
 
 const PRESETS: readonly { label: string; value: string }[] = [
   { label: 'QRCraftly', value: 'https://qrcraftly.com' },
@@ -71,12 +71,12 @@ export function TargetSettings({ target, onChange, onResetToGenerator, hasGenera
         <span aria-hidden="true" className="mb-1 block text-sm font-medium text-fg-soft">
           Error correction level
         </span>
-        <ChoiceGroup<EccLevel>
-          kind="radiogroup"
+        <SegmentedControl<EccLevel>
+          appearance="tiles"
           label="Error correction level"
-          className="grid grid-cols-4 gap-2"
-          choices={ECC_LEVELS.map((level) => ({
-            id: level,
+          className="grid-cols-4"
+          options={ECC_LEVELS.map((level) => ({
+            value: level,
             label: level,
             ariaLabel: `Level ${level} (${Math.round(ECC_RECOVERY[level] * 100)}% recovery)`,
           }))}

@@ -59,9 +59,11 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(
             <Button
               type="button"
               variant="ghost"
-              size="icon"
+              iconOnly
+              size="xs"
+              shape="round"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute top-1/2 right-2 flex size-6 min-h-0 min-w-0 -translate-y-1/2 items-center justify-center rounded-full p-1 text-fg-muted"
+              className="absolute top-1/2 right-2 -translate-y-1/2"
               aria-label={showPassword ? 'Hide password' : 'Show password'}
             >
               {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}

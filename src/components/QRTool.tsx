@@ -17,7 +17,9 @@
 */
 
 import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react';
-import { Button } from "./ui/Button";
+import { Button, ButtonLink } from "./ui/Button";
+import { Badge } from "./ui/Badge";
+import { Tooltip } from "./ui/Tooltip";
 import { Card } from "./ui/Card";
 import { Alert } from "./ui/Alert";
 import { DEFAULT_CONFIG, SYSTEM_LIMITS } from '@/constants';
@@ -107,7 +109,17 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
     isEmpty ? { ...config, value: samplePayload } : config
   ), [config, isEmpty, samplePayload]);
 
-  const { exportAsset } = useQRDownload(qrRef, effectiveConfig);
+  const { exportAsset: runExport } = useQRDownload(qrRef, effectiveConfig);
+  // Which export is encoding right now; its button shows a loading state until it finishes.
+  const [busyExport, setBusyExport] = useState<'download' | 'copy' | 'share' | null>(null);
+  const exportAsset = useCallback(async (format: Parameters<typeof runExport>[0], options?: ExportOptions) => {
+    setBusyExport(format === 'clipboard' ? 'copy' : format === 'share' ? 'share' : 'download');
+    try {
+      return await runExport(format, options);
+    } finally {
+      setBusyExport(null);
+    }
+  }, [runExport]);
   const [copied, setCopied] = useState(false);
   // The mobile action bar steps aside while the on-screen keyboard is up.
   const [inputFocused, setInputFocused] = useState(false);
@@ -283,7 +295,7 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
     <div className="w-full" id="top">
       <Modal isOpen={showSafetyGate} onClose={() => setShowSafetyGate(false)} title="Scan Safety Warning">
         <div className="flex flex-col items-center gap-4 text-center">
-          <AlertTriangle className="size-12 text-amber-500" />
+          <AlertTriangle className="size-12 text-warning" aria-hidden="true" />
           <p className="text-fg-soft">
             This QR code might fail to scan in real-world conditions. We recommend adjusting colors, pattern, or margin for better contrast.
           </p>
@@ -307,14 +319,11 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
             previewId={PREVIEW_ID}
             previewJumpLabel="Preview & download"
             actions={
-              <a
-                href="#content-section"
-                className="flex min-h-11 min-w-11 items-center justify-center rounded-full text-fg-muted transition-colors hover:bg-surface-hover"
-                title="How to use"
-                aria-label="How to use"
-              >
-                <CircleHelp className="size-5" aria-hidden="true" />
-              </a>
+              <Tooltip content="How to use" side="bottom">
+                <ButtonLink href="#content-section" variant="icon" iconOnly size="lg" shape="round" aria-label="How to use">
+                  <CircleHelp className="size-5" aria-hidden="true" />
+                </ButtonLink>
+              </Tooltip>
             }
           />
         }
@@ -331,13 +340,9 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
                    <h2 className="py-1 font-semibold whitespace-nowrap text-fg-soft">Live Preview</h2>
                    <div className="flex items-start gap-2">
                    {isEmpty && (
-                     <span
-                       id={EMPTY_STATE_ID}
-                       data-testid="sample-preview-badge"
-                       className="mt-1 inline-flex items-center rounded-full bg-warning-soft px-2.5 py-0.5 text-xs font-semibold text-warning"
-                     >
+                     <Badge id={EMPTY_STATE_ID} tone="warning" data-testid="sample-preview-badge" className="mt-1">
                        Sample Preview
-                     </span>
+                     </Badge>
                    )}
                    <ScannabilityIndicator
                      status={scannabilityStatus}
@@ -377,8 +382,9 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
                      <Button
                         ref={downloadButtonRef}
                         variant="primary"
+                        size="bar"
                         fullWidth
-                        className="flex-1 max-md:min-h-12"
+                        className="flex-1"
                         aria-disabled="true"
                         aria-describedby={EMPTY_STATE_ID}
                         onClick={notifyEmpty}
@@ -402,8 +408,9 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
                         <Button
                           {...triggerProps}
                           variant={getExportRiskPolicy({ status: scannabilityStatus, health }) === 'unsafe' ? 'error' : 'primary'}
+                          size="bar"
                           fullWidth
-                          className="max-md:min-h-12"
+                          loading={busyExport === 'download'}
                         >
                           <Download className="size-4" aria-hidden="true" />
                           Download
@@ -413,32 +420,38 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
                    />
                    )}
 
-                   <Button
-                      ref={copyButtonRef}
-                      variant="secondary"
-                      onClick={onCopy}
-                      className="w-12 shrink-0 px-0 max-md:min-h-12"
-                      title="Copy Image"
-                      aria-label={copied ? "Copied to clipboard" : "Copy QR code to clipboard"}
-                      aria-disabled={isEmpty ? 'true' : undefined}
-                      aria-describedby={isEmpty ? EMPTY_STATE_ID : undefined}
-                   >
-                      {copied ? <Check className="size-5 text-success" aria-hidden="true" /> : <Copy className="size-5" aria-hidden="true" />}
-                   </Button>
-
-                   {canShare && (
+                   <Tooltip content="Copy image">
                      <Button
-                        ref={shareButtonRef}
+                        ref={copyButtonRef}
                         variant="secondary"
-                        onClick={onShare}
-                        className="w-12 shrink-0 px-0 max-md:min-h-12"
-                        title="Share"
-                        aria-label="Share QR code"
+                        size="bar"
+                        iconOnly
+                        onClick={onCopy}
+                        loading={busyExport === 'copy'}
+                        aria-label={copied ? "Copied to clipboard" : "Copy QR code to clipboard"}
                         aria-disabled={isEmpty ? 'true' : undefined}
                         aria-describedby={isEmpty ? EMPTY_STATE_ID : undefined}
                      >
-                        <Share2 className="size-5" aria-hidden="true" />
+                        {copied ? <Check className="size-5 text-success" aria-hidden="true" /> : <Copy className="size-5" aria-hidden="true" />}
                      </Button>
+                   </Tooltip>
+
+                   {canShare && (
+                     <Tooltip content="Share">
+                       <Button
+                          ref={shareButtonRef}
+                          variant="secondary"
+                          size="bar"
+                          iconOnly
+                          onClick={onShare}
+                          loading={busyExport === 'share'}
+                          aria-label="Share QR code"
+                          aria-disabled={isEmpty ? 'true' : undefined}
+                          aria-describedby={isEmpty ? EMPTY_STATE_ID : undefined}
+                       >
+                          <Share2 className="size-5" aria-hidden="true" />
+                       </Button>
+                     </Tooltip>
                    )}
                 </div>
 

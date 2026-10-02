@@ -2,6 +2,22 @@ import React, { Suspense } from 'react';
 import InputPanel from '@/components/InputPanel';
 import { SidebarContent } from '@/components/SidebarContent';
 import { useQRStore, useQRStoreSelector } from '@/context/QRContext';
+import { SectionHeading } from '@/components/ui/SectionHeading';
+import { Skeleton } from '@/components/ui/Skeleton';
+
+/**
+ * Stand-in for the appearance controls while their chunk loads: the open "Pattern & Colors"
+ * section and the collapsed section headers below it, at their final heights.
+ * @returns The loading placeholder.
+ */
+const AppearanceSkeleton = () => (
+  <div className="space-y-4">
+    <Skeleton className="h-96" />
+    <Skeleton className="h-14" />
+    <Skeleton className="h-14" />
+    <Skeleton className="h-14" />
+  </div>
+);
 
 const StyleControls = React.lazy(() => import('@/components/StyleControls'));
 
@@ -14,7 +30,7 @@ const ContentControl = () => {
   const { updateConfig } = store;
   return (
     <section>
-      <h2 className="mb-4 text-xs font-bold tracking-wider text-slate-600 uppercase dark:text-slate-400">Content</h2>
+      <SectionHeading eyebrow="Content" className="mb-4" />
       <InputPanel config={config} onChange={updateConfig} />
     </section>
   );
@@ -32,13 +48,13 @@ const AppearanceControl = () => {
 
   return (
     <section>
-      <h2 className="mb-4 text-xs font-bold tracking-wider text-slate-600 uppercase dark:text-slate-400">Appearance</h2>
+      <SectionHeading eyebrow="Appearance" className="mb-4" />
       {isMounted ? (
-        <Suspense fallback={<div className="h-64 rounded-xl bg-slate-100 motion-safe:animate-pulse dark:bg-slate-800" />}>
+        <Suspense fallback={<AppearanceSkeleton />}>
           <StyleControls config={config} onChange={updateConfig} />
         </Suspense>
       ) : (
-        <div className="h-64 rounded-xl bg-slate-100 motion-safe:animate-pulse dark:bg-slate-800" />
+        <AppearanceSkeleton />
       )}
     </section>
   );
