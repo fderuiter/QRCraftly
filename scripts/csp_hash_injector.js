@@ -140,9 +140,22 @@ export function pathToRoute(relativePath) {
 }
 
 /**
+ * Returns the script hashes present on every route, in the order of the first route.
+ * These belong in the global `/*` rule so routes needing nothing more can omit their
+ * own rule and keep `_headers` under Cloudflare's 8 KB limit.
+ * @param {string[][]} routeHashesList - Script hashes of each route.
+ * @returns {string[]} Hashes shared by all routes.
+ */
+export function commonHashes(routeHashesList) {
+  if (routeHashesList.length === 0) return [];
+  return routeHashesList[0].filter(h => routeHashesList.every(hashes => hashes.includes(h)));
+}
+
+/**
  * Generate _headers file content with route-scoped Content-Security-Policy rules.
+ * Routes whose CSP equals the base CSP get no rule of their own; the `/*` rule covers them.
  * @param {string} existingHeadersContent - Raw content of existing _headers file.
- * @param {string} baseCsp - Base CSP string without route script hashes.
+ * @param {string} baseCsp - Base CSP string with only the hashes shared by every route.
  * @param {Map<string, { routeCsp: string, hashes: string[] }>} routeCspMap - Map of route -> { routeCsp, hashes }.
  * @returns {string} Updated _headers file content.
  */
@@ -190,7 +203,7 @@ export function generateHeadersContent(existingHeadersContent, baseCsp, routeCsp
   for (const [route, info] of routeCspMap.entries()) {
     if (route === '/*') continue;
     if (info.routeCsp === baseCsp) continue;
-
+    
     if (!routesMap.has(route)) {
       routesMap.set(route, []);
     }
@@ -229,34 +242,31 @@ export function run() {
   console.log(`[CSP Hash Injector] Found ${htmlFiles.length} HTML files.`);
   
   const baseCspPattern = BASE_CSP_PATTERN;
+  
   const routeCspMap = new Map();
   let totalHashesProcessed = 0;
-  const routeHashesList = [];
-
+  
   for (const filePath of htmlFiles) {
     const relativePath = path.relative(DIST_CLIENT_DIR, filePath);
     const route = pathToRoute(relativePath);
     const html = fs.readFileSync(filePath, 'utf8');
     const inlineScripts = extractInlineScripts(html, true);
-
+    
     const fileHashes = inlineScripts.map(script => computeCspHash(script));
     totalHashesProcessed += fileHashes.length;
-    routeHashesList.push(fileHashes);
-
+    
     const routeCsp = updateCsp(baseCspPattern, fileHashes);
     routeCspMap.set(route, { filePath, relativePath, hashes: fileHashes, routeCsp });
-
+    
     const updatedHtml = replaceMetaCSP(html, routeCsp);
     fs.writeFileSync(filePath, updatedHtml, 'utf8');
     console.log(`[CSP Hash Injector] Updated meta CSP in ${relativePath} for route "${route}"`);
   }
-
-  const commonHashes = routeHashesList.length > 0
-    ? routeHashesList[0].filter(h => routeHashesList.every(arr => arr.includes(h)))
-    : [];
-  const baseCsp = updateCsp(baseCspPattern, commonHashes);
   
   console.log(`[CSP Hash Injector] Total inline script hashes processed across routes: ${totalHashesProcessed}`);
+
+  // Hashes every page needs go in the global rule; only routes that need more get their own.
+  const baseCsp = updateCsp(baseCspPattern, commonHashes(Array.from(routeCspMap.values(), info => info.hashes)));
   
   // Update _headers file
   const headersPath = path.join(DIST_CLIENT_DIR, '_headers');
