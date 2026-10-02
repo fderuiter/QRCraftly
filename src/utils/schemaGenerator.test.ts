@@ -71,11 +71,16 @@ describe('schemaGenerator', () => {
     expect(app.name).toBe(dummyContent.name);
     expect(app.applicationCategory).toBe('UtilitiesApplication');
     expect(app.featureList).toBe('Asynchronous Web Worker Diagnostics, WPA, WPA2');
+    // Real package version, no placeholder publish date.
+    expect(app.softwareVersion).toBe(__APP_VERSION__);
+    expect(app.softwareVersion).not.toBe('0.1.0');
+    expect(app.datePublished).toBeUndefined();
     
     // Check HowTo
     const howTo = schema['@graph'].find((g: any) => g['@type'] === 'HowTo');
     expect(howTo).toBeDefined();
-    expect(howTo.image).toBe('https://qrcraftly.com/assets/images/completed/wifi.png');
+    // No HowTo image is published: the old /assets/images/completed/ URLs never existed.
+    expect(howTo.image).toBeUndefined();
     expect(howTo.supply).toBeDefined();
     expect(howTo.supply[0].name).toBe('Internet connection');
 
@@ -92,7 +97,8 @@ describe('schemaGenerator', () => {
 
     const howTo = schema['@graph'].find((g: any) => g['@type'] === 'HowTo');
     expect(howTo).toBeDefined();
-    expect(howTo.image).toBe('https://test.domain.com/assets/images/completed/wifi.png');
+    // No HowTo image is published: the old /assets/images/completed/ URLs never existed.
+    expect(howTo.image).toBeUndefined();
   });
 
   it('handles howTo without supply or faq list', () => {
@@ -260,34 +266,6 @@ describe('schemaGenerator', () => {
     ]);
   });
 
-  it('resolves image extension from page configuration metadata', () => {
-    const wifiToolContent: ToolContent = {
-      id: 'wifi-qr-code',
-      name: 'WiFi QR Code Generator',
-      description: 'wifi desc',
-      url: 'https://qrcraftly.com/wifi-qr-code',
-      image: '/og-image.png?type=wifi',
-      imageAlt: 'WiFi QR Code Generator',
-      features: [],
-      schemaType: SchemaType.WebApplication,
-      schemaCategory: SchemaCategory.UtilitiesApplication,
-      personas: [TargetPersona.SecurityConsciousEnterprise],
-      valueProposition: StrategicValueCategory.ZeroTransitPrivacySovereignty,
-      howTo: {
-        name: 'Steps',
-        description: 'Steps to do wifi',
-        steps: [{ name: 'SSID', text: 'SSID name' }]
-      }
-    };
-
-    const schema = generateSchema(wifiToolContent);
-    const howTo = schema['@graph'].find((g: any) => g['@type'] === 'HowTo');
-    expect(howTo).toBeDefined();
-    // wifi-qr-code +config image property is '/og-image.png?type=wifi'
-    // so extension is png
-    expect(howTo.image).toBe('https://qrcraftly.com/assets/images/completed/wifi-qr-code.png');
-  });
-
   it('handles empty or undefined personas on about page and standard tool', () => {
     // 1. About Page without personas
     const aboutNoPersonas = { ...aboutContent, personas: undefined } as any;
@@ -310,33 +288,6 @@ describe('schemaGenerator', () => {
     const schemaToolEmpty = generateSchema(toolEmptyPersonas);
     const appEmpty = schemaToolEmpty['@graph'].find((g: any) => Array.isArray(g['@type']) && g['@type'].includes('SoftwareApplication'));
     expect(appEmpty.audience).toBeUndefined();
-  });
-
-  it('handles image paths with no dot extension correctly', () => {
-    const textToolContent: ToolContent = {
-      id: 'text-qr-code',
-      name: 'Text QR Code Generator',
-      description: 'text desc',
-      url: 'https://qrcraftly.com/text-qr-code',
-      image: 'no_dot_extension',
-      imageAlt: 'Test no dot extension',
-      features: [],
-      schemaType: SchemaType.WebApplication,
-      schemaCategory: SchemaCategory.UtilitiesApplication,
-      personas: [TargetPersona.SecurityConsciousEnterprise],
-      valueProposition: StrategicValueCategory.ZeroTransitPrivacySovereignty,
-      howTo: {
-        name: 'Steps',
-        description: 'Steps to do text',
-        steps: [{ name: 'Text', text: 'Enter text' }]
-      }
-    };
-
-    const schema = generateSchema(textToolContent);
-    const howTo = schema['@graph'].find((g: any) => g['@type'] === 'HowTo');
-    expect(howTo).toBeDefined();
-    // Since image is 'no_dot_extension' (no dot), extension falls back to 'png'
-    expect(howTo.image).toBe('https://qrcraftly.com/assets/images/completed/text-qr-code.png');
   });
 
   it('generates complete schema directly from route path strings for all public tool routes', () => {

@@ -79,7 +79,8 @@ describe('QRTool Component', () => {
   it('renders without crashing', () => {
     render(<ToastProvider><QRTool /></ToastProvider>);
     expect(screen.getByText('QRCraftly')).toBeInTheDocument();
-    expect(screen.getByText('Design beautiful QR codes in seconds.')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Free QR Code Generator' })).toBeInTheDocument();
+    expect(screen.getByText('No sign-up, no ads, never expires.')).toBeInTheDocument();
     expect(screen.queryByText('Active')).not.toBeInTheDocument();
   });
 
