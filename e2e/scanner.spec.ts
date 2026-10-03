@@ -261,7 +261,10 @@ test.describe('Camera scanner with a scripted fake camera', () => {
       await expect(page.locator('#url-input')).toHaveValue(CODE);
     });
 
-    test('releases the camera while the tab is hidden and resumes when it is shown (#1097)', async ({ page, context }) => {
+    test('releases the camera while the tab is hidden and resumes when it is shown (#1097)', async ({ page, context, browserName }) => {
+      // WebKit refuses the canvas-stream fake camera (the scanner shows its denied card), as in the
+      // file-transfer spec's synthetic camera; the hidden-tab behaviour is unit-tested in cameraSession.test.ts.
+      test.skip(browserName === 'webkit', 'canvas-stream fake camera does not stream in WebKit');
       await installFakeCamera(context);
       await openGenerator(page);
       await showOnCamera(page, null);
