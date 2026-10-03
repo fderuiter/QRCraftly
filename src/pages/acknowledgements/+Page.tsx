@@ -16,6 +16,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import type { ReactNode } from 'react';
 import shippedPackages, { licensesFile } from 'virtual:shipped-packages';
 import { ArticleHeading, ArticleLayout, type ArticleSection } from '@/components/ArticleLayout';
 import { isDangerousUrl } from '@/utils/security';
@@ -28,6 +29,26 @@ const SECTIONS: readonly ArticleSection[] = [
 
 const LINK_CLASSES = 'font-medium text-accent underline-offset-2 hover:underline';
 const REPOSITORY = 'https://github.com/fderuiter/QRCraftly-web';
+
+/**
+ * A link to a URL that comes from build data, or plain text when the URL is missing or unsafe.
+ * @param props - Link properties.
+ * @param props.href - Destination.
+ * @param props.external - Whether to open in a new tab.
+ * @param props.children - Link text.
+ * @returns The link, or its text alone.
+ */
+function DataLink({ href, external = false, children }: { href?: string; external?: boolean; children: ReactNode }) {
+  if (href === undefined) return <>{children}</>;
+  if (!isDangerousUrl(href)) {
+    return external ? (
+      <a href={href} target="_blank" rel="noopener noreferrer" className={LINK_CLASSES}>{children}</a>
+    ) : (
+      <a href={href} className={LINK_CLASSES}>{children}</a>
+    );
+  }
+  return <>{children}</>;
+}
 
 /**
  * Open-source acknowledgements: every third-party package whose code ships to the browser, with
@@ -58,11 +79,7 @@ export default function Page() {
               {shippedPackages.map((pkg) => (
                 <tr key={pkg.name}>
                   <th scope="row" className="px-4 py-2 font-normal break-all">
-                    {pkg.url && !isDangerousUrl(pkg.url) ? (
-                      <a href={pkg.url} target="_blank" rel="noopener noreferrer" className={LINK_CLASSES}>{pkg.name}</a>
-                    ) : (
-                      pkg.name
-                    )}
+                    <DataLink href={pkg.url} external>{pkg.name}</DataLink>
                     {pkg.bundledIn && <span className="block text-xs break-normal text-fg-muted">Included in the build output of {pkg.bundledIn}.</span>}
                     {pkg.note && <span className="block text-xs break-normal text-fg-muted">{pkg.note}</span>}
                   </th>
@@ -83,7 +100,7 @@ export default function Page() {
         <ArticleHeading id="license-texts"><span id="license-texts-title">License texts</span></ArticleHeading>
         <p>
           The full text of each license, with its copyright notice and any NOTICE file, is in{' '}
-          <a href={licensesFile} className={LINK_CLASSES}>third-party-licenses.txt</a>, generated from the same build.
+          <DataLink href={licensesFile}>third-party-licenses.txt</DataLink>, generated from the same build.
         </p>
       </section>
 
