@@ -20,6 +20,5 @@
  * Page-specific configuration for the 404 Error page.
  */
 export default {
-    image: '/og-image.png?type=error',
     imageAlt: '404 Page Not Found - QRCraftly'
 }

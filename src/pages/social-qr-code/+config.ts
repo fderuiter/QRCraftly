@@ -20,6 +20,5 @@
  * Page-specific configuration for the Social QR Code page.
  */
 export default {
-    image: '/og-image.png?type=social',
     imageAlt: 'Preview of the Social QR Code Generator tool'
 }

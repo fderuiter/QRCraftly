@@ -22,6 +22,5 @@
  * Sets the SEO title and description.
  */
 export default {
-    image: '/og-image.png',
     imageAlt: 'Preview of the QRCraftly Free QR Code Generator'
 }

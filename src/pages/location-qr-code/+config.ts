@@ -20,6 +20,5 @@
  * Page-specific configuration for the Location QR Code page.
  */
 export default {
-    image: '/og-image.png?type=location',
     imageAlt: 'Preview of the Location QR Code Generator tool'
 }

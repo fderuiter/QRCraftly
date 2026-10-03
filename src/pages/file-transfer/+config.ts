@@ -17,6 +17,5 @@
 */
 
 export default {
-    image: '/og-image.png?type=file-transfer',
     imageAlt: 'Preview of the High-Performance Animated QR File Transfer tool'
 }

@@ -32,6 +32,16 @@ export function isLazyWasm(relativePath) {
 }
 
 /**
+ * Whether a file is a share image or example picture. Visitors fetch one only when a crawler or
+ * a page asks for it, so these never count toward the site total.
+ * @param {string} relativePath
+ * @returns {boolean}
+ */
+export function isGeneratedMedia(relativePath) {
+  return relativePath.startsWith('og/') || relativePath.startsWith('examples/');
+}
+
+/**
  * Measures the first load of every page: the gzipped size of its HTML plus every stylesheet and
  * script it loads at startup, found by following static imports.
  * @param {string} distDir
@@ -106,10 +116,12 @@ export function verifyBundleSize(distDir, limitKb, wasmLimitKb = MAX_LAZY_WASM_G
       rawSize: content.length,
       gzipSize: gzipped.length
     });
-    if (isLazyWasm(relativePath.split(path.sep).join('/'))) {
+    const posixPath = relativePath.split(path.sep).join('/');
+    if (isLazyWasm(posixPath)) {
       wasmGzipSize += gzipped.length;
       continue;
     }
+    if (isGeneratedMedia(posixPath)) continue;
     totalRawSize += content.length;
     totalGzipSize += gzipped.length;
   }

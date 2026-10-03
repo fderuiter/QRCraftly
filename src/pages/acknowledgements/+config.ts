@@ -22,6 +22,5 @@
  * Title and description come from the acknowledgements entry in auxiliaryRegistry.
  */
 export default {
-    image: '/og-image.png?type=acknowledgements',
     imageAlt: 'Open-source acknowledgements - QRCraftly'
 }

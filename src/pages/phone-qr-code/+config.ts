@@ -20,6 +20,5 @@
  * Page-specific configuration for the Phone QR Code page.
  */
 export default {
-    image: '/og-image.png?type=phone',
     imageAlt: 'Preview of the Phone QR Code Generator tool'
 }

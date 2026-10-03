@@ -58,3 +58,20 @@ describe('SidebarContent FAQs and intro', () => {
     expect(screen.getByRole('link', { name: 'Read the no-ads pledge' })).toHaveAttribute('href', '/free-forever');
   });
 });
+
+describe('SidebarContent internal linking (#1031)', () => {
+  it('shows breadcrumbs, an example picture with alt text and related generator pages', () => {
+    render(<SidebarContent toolId="wifi-qr-code" />);
+    expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toBeInTheDocument();
+    const example = screen.getByRole('img', { name: /Example of a QR code made with the WiFi QR Code Generator/ });
+    expect(example).toHaveAttribute('src', '/examples/wifi-qr-code.svg');
+    const related = screen.getByRole('heading', { level: 2, name: 'More QR code types' }).parentElement as HTMLElement;
+    expect(related.querySelectorAll('a')).toHaveLength(4);
+  });
+
+  it('leaves the example and related list off pages that are not generators', () => {
+    render(<SidebarContent toolId="security" />);
+    expect(screen.queryByRole('img')).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'More QR code types' })).not.toBeInTheDocument();
+  });
+});

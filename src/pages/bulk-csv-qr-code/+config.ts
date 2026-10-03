@@ -20,6 +20,5 @@
  * Page-specific configuration for the Bulk CSV Batch QR Code page.
  */
 export default {
-    image: '/og-image.png?type=bulk-csv',
     imageAlt: 'Preview of Bulk CSV Batch QR Code Generator tool'
 }

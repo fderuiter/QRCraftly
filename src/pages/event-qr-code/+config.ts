@@ -20,6 +20,5 @@
  * Page-specific configuration for the Event QR Code page.
  */
 export default {
-    image: '/og-image.png?type=event',
     imageAlt: 'Preview of the Event QR Code Generator tool'
 }
