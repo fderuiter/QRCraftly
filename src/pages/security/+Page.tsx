@@ -53,16 +53,27 @@ const PRERENDER_DOCS: ReadonlyMap<string, string> | null =
   import.meta.env.SSR || import.meta.env.MODE === 'test' ? new Map(docsManifest.map((doc) => [doc.id, doc.html])) : null;
 
 /**
+ * True when the document itself was loaded at the current path, so a reload would return
+ * the same HTML. It guards against a reload loop when the offline service worker serves
+ * the app shell in place of this page.
+ * @returns Whether this page was a full document load.
+ */
+function isFullLoadOfThisPage(): boolean {
+  const [entry] = performance.getEntriesByType('navigation');
+  return entry !== undefined && new URL(entry.name).pathname === window.location.pathname;
+}
+
+/**
  * Reads a document's HTML: from the manifest while prerendering, otherwise from the
  * prerendered element itself. After a client-side navigation there is no prerendered
- * element, so the page reloads to fetch the static HTML.
+ * element, so the page reloads once to fetch the static HTML.
  * @param id - Document id.
- * @returns The document HTML, or null while the page reloads.
+ * @returns The document HTML, or null while the page reloads or when it is unavailable.
  */
 function usePrerenderedDoc(id: string): string | null {
   const [html] = useState(() => PRERENDER_DOCS?.get(id) ?? (typeof document === 'undefined' ? null : document.getElementById(`${id}-doc`)?.innerHTML ?? null));
   useEffect(() => {
-    if (html === null) window.location.reload();
+    if (html === null && !isFullLoadOfThisPage()) window.location.reload();
   }, [html]);
   return html;
 }
