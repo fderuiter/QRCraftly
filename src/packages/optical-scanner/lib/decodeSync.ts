@@ -1,4 +1,7 @@
-import jsQR from 'jsqr';
+import jsQR, { type QRCode } from 'jsqr';
+// Types only: `scripts/bench_scanner.ts` loads this file from older git refs, so it imports nothing
+// but jsQR at runtime.
+import type { DecodedCode, ScanCorners } from './contracts';
 
 /** Scale of the retry pass for frames the full-resolution pass could not read. */
 const RETRY_SCALE = 0.6;
@@ -52,6 +55,27 @@ export function downscaleRgba(
   return { data: out, width: outW, height: outH };
 }
 
+/** Maps a point of a transformed image back to the frame it was cut from. */
+interface Transform {
+  offsetX: number;
+  offsetY: number;
+  scaleX: number;
+  scaleY: number;
+}
+
+const IDENTITY: Transform = { offsetX: 0, offsetY: 0, scaleX: 1, scaleY: 1 };
+
+/** Converts a jsQR result into a {@link DecodedCode}, its corners mapped through `transform`. */
+function toDecodedCode(code: QRCode, transform: Transform = IDENTITY): DecodedCode {
+  const { topLeftCorner, topRightCorner, bottomRightCorner, bottomLeftCorner } = code.location;
+  const map = ({ x, y }: { x: number; y: number }) => ({
+    x: transform.offsetX + x * transform.scaleX,
+    y: transform.offsetY + y * transform.scaleY,
+  });
+  const corners: ScanCorners = [map(topLeftCorner), map(topRightCorner), map(bottomRightCorner), map(bottomLeftCorner)];
+  return { text: code.data, bytes: Uint8Array.from(code.binaryData), corners };
+}
+
 /**
  * Decodes one frame with jsQR in up to three passes: dark-on-light at full
  * resolution, dark-on-light at {@link RETRY_SCALE}, then both polarities at full
@@ -61,18 +85,26 @@ export function downscaleRgba(
  * @param data RGBA pixels.
  * @param width Frame width.
  * @param height Frame height.
- * @returns The decoded text, or null.
+ * @returns The decoded code (text, bytes and corners in the frame's pixels), or null.
  */
-export function decodeRgbaFrame(data: Uint8ClampedArray, width: number, height: number): string | null {
+export function decodeRgbaCode(data: Uint8ClampedArray, width: number, height: number): DecodedCode | null {
   try {
     const direct = jsQR(data, width, height, { inversionAttempts: 'dontInvert' });
-    if (direct) return direct.data;
+    if (direct) return toDecodedCode(direct);
     if (width >= MIN_RETRY_DIMENSION && height >= MIN_RETRY_DIMENSION) {
       const small = downscaleRgba(data, width, height, RETRY_SCALE);
       const retried = jsQR(small.data, small.width, small.height, { inversionAttempts: 'dontInvert' });
-      if (retried) return retried.data;
+      if (retried) {
+        return toDecodedCode(retried, {
+          offsetX: 0,
+          offsetY: 0,
+          scaleX: width / small.width,
+          scaleY: height / small.height,
+        });
+      }
     }
-    return jsQR(data, width, height, { inversionAttempts: 'attemptBoth' })?.data ?? null;
+    const both = jsQR(data, width, height, { inversionAttempts: 'attemptBoth' });
+    return both ? toDecodedCode(both) : null;
   } catch {
     return null;
   }
@@ -112,14 +144,14 @@ export function cameraStrategyFor(sequenceId: number): CameraDecodeStrategy {
   return CAMERA_STRATEGIES[index];
 }
 
-/** Copies the centred square of an RGBA frame. */
+/** Copies the centred square of an RGBA frame and says where it was cut from. */
 function cropCentre(
   data: Uint8ClampedArray,
   width: number,
   height: number
-): { data: Uint8ClampedArray; width: number; height: number } {
+): { data: Uint8ClampedArray; width: number; height: number; left: number; top: number } {
   const side = Math.min(width, height);
-  if (side === width && side === height) return { data, width, height };
+  if (side === width && side === height) return { data, width, height, left: 0, top: 0 };
   const left = Math.floor((width - side) / 2);
   const top = Math.floor((height - side) / 2);
   const out = new Uint8ClampedArray(side * side * 4);
@@ -127,7 +159,7 @@ function cropCentre(
     const from = ((top + y) * width + left) * 4;
     out.set(data.subarray(from, from + side * 4), y * side * 4);
   }
-  return { data: out, width: side, height: side };
+  return { data: out, width: side, height: side, left, top };
 }
 
 /**
@@ -163,16 +195,17 @@ export function estimateNoise(data: Uint8ClampedArray, width: number, height: nu
  * @param width Frame width.
  * @param height Frame height.
  * @param strategy The strategy for this frame, from {@link cameraStrategyFor}.
- * @returns The decoded text, or null.
+ * @returns The decoded code (corners in the frame's pixels), or null.
  */
-export function decodeCameraFrame(
+export function decodeCameraCode(
   data: Uint8ClampedArray,
   width: number,
   height: number,
   strategy: CameraDecodeStrategy
-): string | null {
+): DecodedCode | null {
   try {
-    let image = strategy === 'frame' ? { data, width, height } : cropCentre(data, width, height);
+    const cut = strategy === 'frame' ? { data, width, height, left: 0, top: 0 } : cropCentre(data, width, height);
+    let image = { data: cut.data, width: cut.width, height: cut.height };
     const longest = Math.max(image.width, image.height);
     if (strategy === 'frame' && longest > FRAME_PASS_MAX_DIMENSION) {
       image = downscaleRgba(image.data, image.width, image.height, FRAME_PASS_MAX_DIMENSION / longest);
@@ -191,19 +224,39 @@ export function decodeCameraFrame(
       }
       image = { ...image, data: inverted };
     }
-    return jsQR(image.data, image.width, image.height, { inversionAttempts: 'dontInvert' })?.data ?? null;
+    const code = jsQR(image.data, image.width, image.height, { inversionAttempts: 'dontInvert' });
+    if (!code) return null;
+    return toDecodedCode(code, {
+      offsetX: cut.left,
+      offsetY: cut.top,
+      scaleX: cut.width / image.width,
+      scaleY: cut.height / image.height,
+    });
   } catch {
     return null;
   }
 }
 
 /**
- * Decodes raw RGBA pixel data on the calling thread (see {@link decodeRgbaFrame}).
+ * Text-only form of {@link decodeCameraCode}.
+ * @returns The decoded text, or null.
+ */
+export function decodeCameraFrame(
+  data: Uint8ClampedArray,
+  width: number,
+  height: number,
+  strategy: CameraDecodeStrategy
+): string | null {
+  return decodeCameraCode(data, width, height, strategy)?.text ?? null;
+}
+
+/**
+ * Decodes raw RGBA pixel data on the calling thread (see {@link decodeRgbaCode}).
  */
 export function decodeImageDataSync(
   imageData: ImageData | { data: Uint8ClampedArray },
   width: number,
   height: number
-): string | null {
-  return decodeRgbaFrame(imageData.data, width, height);
+): DecodedCode | null {
+  return decodeRgbaCode(imageData.data, width, height);
 }

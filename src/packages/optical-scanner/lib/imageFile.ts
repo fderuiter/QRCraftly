@@ -3,10 +3,11 @@
  *
  * A photo or screenshot is decoded at its native size capped at {@link FILE_SCAN_SIZES}[0] first,
  * where small codes in large photos still have enough pixels, then downscaled, where jsQR copes
- * better with large, blurry or noisy codes. Each size gets the multi-pass decoder.
+ * better with large, blurry or noisy codes. Each size gets the zxing reader when the worker has it
+ * (ADR 0023), otherwise jsQR's multi-pass decoder.
  */
-import { getDownscaledDimensions } from './contracts';
-import { decodeRgbaFrame } from './decodeSync';
+import { getDownscaledDimensions, mapCorners, type DecodedCode } from './contracts';
+import { decodeRgbaCode } from './decodeSync';
 
 /** The sizes (longest side, px) an image file is decoded at, in order. */
 export const FILE_SCAN_SIZES = [2048, 1024] as const;
@@ -33,20 +34,29 @@ export interface PixelContext {
   getImageData(sx: number, sy: number, sw: number, sh: number): ImageData;
 }
 
+/** Decodes RGBA pixels: jsQR's multi-pass decoder, or the zxing reader in the worker. */
+export type RgbaDecoder = (
+  data: Uint8ClampedArray,
+  width: number,
+  height: number
+) => DecodedCode | null | Promise<DecodedCode | null>;
+
 /**
  * Decodes a QR code in a decoded image at each of {@link FILE_SCAN_SIZES}.
  * @param image The decoded image (EXIF orientation already applied).
  * @param width Its width.
  * @param height Its height.
  * @param createContext Returns a 2D context of the given size (an `OffscreenCanvas` in the worker).
- * @returns The decoded text, or null.
+ * @param decode The pixel decoder (jsQR's multi-pass decoder by default).
+ * @returns The decoded code, its corners in the image's own pixels, or null.
  */
-export function decodeImageAtSizes(
+export async function decodeImageAtSizes(
   image: CanvasImageSource,
   width: number,
   height: number,
-  createContext: (width: number, height: number) => PixelContext | null
-): string | null {
+  createContext: (width: number, height: number) => PixelContext | null,
+  decode: RgbaDecoder = decodeRgbaCode
+): Promise<DecodedCode | null> {
   let previous = '';
   for (const maxDimension of FILE_SCAN_SIZES) {
     const size = getDownscaledDimensions(width, height, maxDimension);
@@ -56,8 +66,8 @@ export function decodeImageAtSizes(
     const context = createContext(size.width, size.height);
     if (!context) throw new Error('Failed to create canvas context.');
     context.drawImage(image, 0, 0, size.width, size.height);
-    const code = decodeRgbaFrame(context.getImageData(0, 0, size.width, size.height).data, size.width, size.height);
-    if (code) return code;
+    const code = await decode(context.getImageData(0, 0, size.width, size.height).data, size.width, size.height);
+    if (code) return { ...code, corners: mapCorners(code.corners, width / size.width, height / size.height) };
   }
   return null;
 }

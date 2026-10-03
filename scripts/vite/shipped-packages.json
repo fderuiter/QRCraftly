@@ -12,5 +12,6 @@
   "tailwindcss",
   "vike",
   "vike-react",
-  "vite"
+  "vite",
+  "zxing-wasm"
 ]

@@ -3,12 +3,50 @@
  * for the Optical Detection Engine package.
  */
 
+/** A point in the scanned frame or image, in its pixels. */
+export interface ScanPoint {
+  x: number;
+  y: number;
+}
+
+/** The four corners of a code: top-left, top-right, bottom-right, bottom-left (as the code reads). */
+export type ScanCorners = readonly [ScanPoint, ScanPoint, ScanPoint, ScanPoint];
+
+/**
+ * Which decoder read a code: the platform's `BarcodeDetector`, the zxing-cpp WebAssembly reader
+ * (ADR 0023) or the pure-JavaScript jsQR fallback.
+ */
+export type ScanDecoder = 'native' | 'zxing' | 'jsqr';
+
+/** One decoded code, byte-exact (#1099). */
+export interface DecodedCode {
+  /** The payload as text. */
+  text: string;
+  /** The payload bytes exactly as encoded, when the decoder reports them (the native detector does not). */
+  bytes: Uint8Array | null;
+  /** Where the code is, in the coordinates of the frame or image that was scanned, when known. */
+  corners: ScanCorners | null;
+}
+
+/** Message type of the compiled zxing reader posted to the scanner worker (ADR 0023). */
+export const ZXING_MODULE_MESSAGE = 'zxing-module';
+
+/** Where a camera frame posted to the worker was cut from, in the camera's own pixels. */
+export interface ScanRegion {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 export interface ScannerRequest {
   image: ImageBitmap;
   width: number;
   height: number;
   sequenceId: number;
   epochId?: number;
+  /** The part of the camera frame `image` shows (the whole frame when omitted). */
+  region?: ScanRegion;
 }
 
 export interface ScannerResponse {
@@ -18,15 +56,80 @@ export interface ScannerResponse {
   error?: string | null;
   buffer?: ArrayBuffer;
   epochId?: number;
+  /** Payload bytes of a decoded code. */
+  decodedBytes?: Uint8Array | null;
+  /** Corners of a decoded code as x0, y0, ... x3, y3, in the camera frame's (or image's) pixels. */
+  corners?: number[] | null;
+  /** The decoder that read the code. */
+  decoder?: ScanDecoder;
 }
 
 export type ScanSource = File | Blob | ImageData | ImageBitmap | HTMLCanvasElement;
 
 export interface ScanResult {
   status: 'pass' | 'fail';
+  /** The decoded text, or null. */
   data: string | null;
   error?: string | null;
   durationMs: number;
+  /** The payload bytes exactly as encoded, when the decoder reports them. */
+  bytes?: Uint8Array | null;
+  /** Where the code is in the scanned image. */
+  corners?: ScanCorners | null;
+  /** The decoder that read the code. */
+  source?: ScanDecoder;
+}
+
+/** Flattens corners for a worker message. */
+export function cornersToArray(corners: ScanCorners | null): number[] | null {
+  return corners ? corners.flatMap((point) => [point.x, point.y]) : null;
+}
+
+/** Rebuilds corners from a worker message (eight finite numbers), or null. */
+export function cornersFromArray(values: readonly number[] | null | undefined): ScanCorners | null {
+  if (!values || values.length !== 8 || !values.every((value) => Number.isFinite(value))) return null;
+  return [
+    { x: values[0], y: values[1] },
+    { x: values[2], y: values[3] },
+    { x: values[4], y: values[5] },
+    { x: values[6], y: values[7] },
+  ];
+}
+
+/**
+ * Maps corners from a resized or cut-out image back to the image it came from:
+ * `x' = offsetX + x * scaleX` (and likewise for y).
+ */
+export function mapCorners(
+  corners: ScanCorners | null,
+  scaleX: number,
+  scaleY: number,
+  offsetX = 0,
+  offsetY = 0
+): ScanCorners | null {
+  if (!corners) return null;
+  const map = (point: ScanPoint): ScanPoint => ({ x: offsetX + point.x * scaleX, y: offsetY + point.y * scaleY });
+  return [map(corners[0]), map(corners[1]), map(corners[2]), map(corners[3])];
+}
+
+const DECODERS: readonly ScanDecoder[] = ['native', 'zxing', 'jsqr'];
+
+/** Checks the optional rich-result fields of a worker response. */
+function richFieldsError(d: Record<string, unknown>): string | null {
+  if (d.decodedBytes !== undefined && d.decodedBytes !== null && !(d.decodedBytes instanceof Uint8Array)) {
+    return 'Scanner response decodedBytes must be a Uint8Array or null';
+  }
+  if (
+    d.corners !== undefined &&
+    d.corners !== null &&
+    !(Array.isArray(d.corners) && d.corners.length === 8 && d.corners.every((n) => typeof n === 'number'))
+  ) {
+    return 'Scanner response corners must be eight numbers or null';
+  }
+  if (d.decoder !== undefined && !DECODERS.includes(d.decoder as ScanDecoder)) {
+    return 'Scanner response decoder must be native, zxing or jsqr';
+  }
+  return null;
 }
 
 export interface ScanOptions {
@@ -112,7 +215,19 @@ export function isValidScannerRequest(data: unknown): data is ScannerRequest {
   if (typeof d.height !== 'number' || !Number.isFinite(d.height) || d.height <= 0) return false;
   if (typeof d.sequenceId !== 'number' || !Number.isFinite(d.sequenceId)) return false;
   if (d.epochId !== undefined && (typeof d.epochId !== 'number' || !Number.isFinite(d.epochId))) return false;
+  if (d.region !== undefined && !isScanRegion(d.region)) return false;
   return true;
+}
+
+/** Whether a value is a {@link ScanRegion} with a positive size. */
+function isScanRegion(value: unknown): value is ScanRegion {
+  if (typeof value !== 'object' || value === null) return false;
+  const r = value as Record<string, unknown>;
+  return (
+    [r.x, r.y, r.width, r.height].every((n) => typeof n === 'number' && Number.isFinite(n)) &&
+    (r.width as number) > 0 &&
+    (r.height as number) > 0
+  );
 }
 
 /**
@@ -138,6 +253,9 @@ export function assertScannerRequest(data: unknown): asserts data is ScannerRequ
   if (d.epochId !== undefined && (typeof d.epochId !== 'number' || !Number.isFinite(d.epochId))) {
     throw new Error('Scanner request epochId must be a valid number');
   }
+  if (d.region !== undefined && !isScanRegion(d.region)) {
+    throw new Error('Scanner request region must have finite coordinates and a positive size');
+  }
 }
 
 /**
@@ -151,6 +269,7 @@ export function isValidScannerResponse(data: unknown): data is ScannerResponse {
   if (d.decodedData !== undefined && d.decodedData !== null && typeof d.decodedData !== 'string') return false;
   if (d.error !== undefined && d.error !== null && typeof d.error !== 'string') return false;
   if (d.epochId !== undefined && (typeof d.epochId !== 'number' || !Number.isFinite(d.epochId))) return false;
+  if (richFieldsError(d) !== null) return false;
   return true;
 }
 
@@ -180,5 +299,7 @@ export function assertScannerResponse(data: unknown): asserts data is ScannerRes
   if (d.epochId !== undefined && (typeof d.epochId !== 'number' || !Number.isFinite(d.epochId))) {
     throw new Error('Scanner response epochId must be a valid number');
   }
+  const richError = richFieldsError(d);
+  if (richError) throw new Error(richError);
 }
 

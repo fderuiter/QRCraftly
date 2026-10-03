@@ -14,6 +14,8 @@ We run scannability analysis off the main thread in dedicated Web Workers using 
 
 > **Current state:** the scannability worker lives in `src/packages/scannability/worker.ts` (spawned by `src/packages/scannability/lib/workerFactory.ts`) and transfers each pixel buffer to the worker and back for reuse. The scanner worker `src/utils/scannerWorker.ts` was deleted ([ADR 0016](./0016-consolidated-optical-detection-engine.md)); camera and file decoding run in `src/packages/optical-scanner/worker.ts`, and only the optical scanner recycles frames through the pre-allocated `DoubleBufferPool` (`src/packages/optical-scanner/lib/bufferPool.ts`).
 
+> **Amendment (#1104):** the optical scanner now decodes with the platform `BarcodeDetector`, then zxing-wasm in its worker, with jsQR as the fallback ([ADR 0023](./0023-zxing-wasm-scanner-decoder.md)). This ADR still governs the scannability worker.
+
 ## Rationale
 
 Off-thread execution preserves a fluid 60 FPS main thread during rapid user input. Recycling pre-allocated memory buffers via transferable objects eliminates runtime garbage collection pauses without the cold-start overhead of WebAssembly.

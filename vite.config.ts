@@ -23,6 +23,7 @@ import react from '@vitejs/plugin-react';
 import vike from 'vike/plugin';
 import type { Plugin } from 'vite';
 import type { Connect } from 'vite';
+import { zxingNoNetwork } from './scripts/vite/zxingNoNetwork';
 import { shippedPackages } from './scripts/vite/thirdPartyLicenses';
 
 /**
@@ -84,6 +85,7 @@ export default defineConfig(() => {
         react(),
         vike(),
         redirectsFile(),
+        zxingNoNetwork(),
         licenses.plugin,
       ],
       esbuild: {
@@ -95,7 +97,8 @@ export default defineConfig(() => {
         }
       },
       worker: {
-        plugins: () => [licenses.workerPlugin()],
+        // The scanner worker bundles the zxing-wasm glue (ADR 0023).
+        plugins: () => [zxingNoNetwork(), licenses.workerPlugin()],
       },
       build: {
         target: "es2022",

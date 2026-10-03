@@ -5,10 +5,11 @@ import os from 'node:os';
 import path from 'node:path';
 
 const require = createRequire(import.meta.url);
-const { buildSwContent, toPrecacheUrl, readRedirectSources } = require('../scripts/generate_sw.cjs') as {
+const { buildSwContent, toPrecacheUrl, readRedirectSources, isRuntimeCached } = require('../scripts/generate_sw.cjs') as {
   buildSwContent: (manifest: Array<{ url: string; revision: string }>, hash: string) => string;
   toPrecacheUrl: (relativePath: string) => string;
   readRedirectSources: (redirectsFile: string) => Set<string>;
+  isRuntimeCached: (relativePath: string) => boolean;
 };
 
 type Listener = (event: FakeEvent) => void;
@@ -226,6 +227,25 @@ describe('generated service worker runtime', () => {
     expect(await sw.fetchEvent('/index.pageContext.json')).toBe('network:/index.pageContext.json');
   });
 
+  it('caches the scanner wasm on first use and serves it from the cache afterwards (ADR 0023)', async () => {
+    const response = { ok: true, body: 'wasm', clone: () => 'cached-wasm' };
+    const fetchImpl = vi.fn(async () => response);
+    const sw = loadWorker({ caches, fetchImpl, hash: 'new' });
+    await sw.dispatch('install');
+
+    expect(await sw.fetchEvent('/assets/zxing_reader-abc.wasm')).toBe(response);
+    expect(await sw.fetchEvent('/assets/zxing_reader-abc.wasm')).toBe('cached-wasm');
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not cache a failed wasm response', async () => {
+    const fetchImpl = vi.fn(async () => ({ ok: false, clone: () => 'broken' }));
+    const sw = loadWorker({ caches, fetchImpl });
+    await sw.fetchEvent('/assets/zxing_reader-abc.wasm');
+    await sw.fetchEvent('/assets/zxing_reader-abc.wasm');
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+  });
+
   it('ignores cross-origin and non-GET requests', async () => {
     const sw = loadWorker({ caches });
     expect(await sw.dispatch('fetch', { request: { url: 'https://example.com/a.js', method: 'GET' } })).toBeUndefined();
@@ -241,6 +261,11 @@ describe('service worker precache manifest', () => {
     expect(toPrecacheUrl('404.html')).toBe('/404');
     expect(toPrecacheUrl('arcade/index.pageContext.json')).toBe('/arcade/index.pageContext.json');
     expect(toPrecacheUrl('assets/chunks/a.js')).toBe('/assets/chunks/a.js');
+  });
+
+  it('leaves the lazily loaded wasm reader out of the precache', () => {
+    expect(isRuntimeCached('assets/zxing_reader-abc.wasm')).toBe(true);
+    expect(isRuntimeCached('assets/chunks/a.js')).toBe(false);
   });
 
   it('reads redirect sources so retired routes are not precached as redirects', () => {

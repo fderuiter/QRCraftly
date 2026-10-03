@@ -14,7 +14,8 @@ export const ALLOWED_DEPENDENCIES = new Set([
   'react',
   'react-dom',
   'vike',
-  'vike-react'
+  'vike-react',
+  'zxing-wasm' // Scanner decoder (ADR 0023); its network loaders are stripped at build time (scripts/vite/zxingNoNetwork.ts)
 ]);
 
 // 2. Forbidden imports / patterns to detect bypasses
@@ -29,7 +30,8 @@ export const FORBIDDEN_IMPORTS = [
 
 // 3. Whitelisted files in src/ that are authorized to perform network requests (fetch)
 export const AUTHORIZED_NETWORK_FILES = new Set([
-  'src/packages/qr-export/lib/svgExport.ts'
+  'src/packages/qr-export/lib/svgExport.ts',
+  'src/packages/optical-scanner/lib/zxingModule.ts' // Same-origin GET of the scanner's own zxing-wasm reader (ADR 0023)
 ]);
 
 /**

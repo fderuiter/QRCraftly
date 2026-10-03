@@ -1,7 +1,16 @@
-import { ScanSource, ScanResult, ScanOptions, getDownscaledDimensions } from './contracts';
-import { dispatchWorkerRequest } from './workerRunner';
+import {
+  getDownscaledDimensions,
+  mapCorners,
+  type DecodedCode,
+  type ScanDecoder,
+  type ScanOptions,
+  type ScanResult,
+  type ScanSource,
+} from './contracts';
+import { dispatchWorkerRequest, whenReaderOffered } from './workerRunner';
 import { decodeImageDataSync } from './decodeSync';
 import { decodeImageAtSizes, FILE_SCAN_MESSAGE, type FileScanRequest } from './imageFile';
+import { getNativeQrDetector, type NativeQrDetector } from './nativeDetector';
 
 /** A large photo gets the multi-pass decoder at two sizes; allow a slow phone time for that. */
 const FILE_SCAN_TIMEOUT_MS = 10_000;
@@ -10,6 +19,12 @@ let fileSequenceId = 1_000_000;
 
 const NO_CODE_IN_IMAGE = 'No QR code detected in this image. Try a clearer or higher-contrast QR code image.';
 const NOT_AN_IMAGE = 'Only images can be scanned. Use a photo or screenshot of the QR code.';
+
+/** A decode and the decoder that produced it. */
+interface Decoded {
+  code: DecodedCode | null;
+  source: ScanDecoder;
+}
 
 /** A decoded image and how to release it. */
 interface LoadedImage {
@@ -49,7 +64,7 @@ async function loadImage(file: Blob): Promise<LoadedImage> {
 }
 
 /** Main-thread fallback when the worker cannot decode the file (no OffscreenCanvas, hung, crashed). */
-async function decodeImageFileHere(file: Blob): Promise<string | null> {
+async function decodeImageFileHere(file: Blob): Promise<DecodedCode | null> {
   if (typeof document === 'undefined') {
     throw new Error('File decoding requires DOM environment');
   }
@@ -71,18 +86,65 @@ function mayBeImage(file: Blob): boolean {
   return file.type === '' || file.type.startsWith('image/');
 }
 
+/** Decodes an image file with the platform's detector (EXIF orientation applied). */
+async function detectInImageFile(detector: NativeQrDetector, file: Blob): Promise<DecodedCode | null> {
+  const loaded = await loadImage(file);
+  try {
+    if (typeof ImageBitmap !== 'undefined' && loaded.image instanceof ImageBitmap) {
+      return await detector.detect(loaded.image);
+    }
+    if (typeof HTMLImageElement !== 'undefined' && loaded.image instanceof HTMLImageElement) {
+      return await detector.detect(loaded.image);
+    }
+    return null;
+  } finally {
+    loaded.close();
+  }
+}
+
 /**
- * Decodes an image file in the scanner worker, or here when the worker cannot. Concurrent calls
- * are independent: a newer file does not fail because an older one is still being decoded.
+ * Decodes an image file: with the platform's detector when it reads QR codes (#1099), otherwise in
+ * the scanner worker (zxing, then jsQR), or here when the worker cannot. Concurrent calls are
+ * independent: a newer file does not fail because an older one is still being decoded.
  */
-async function scanImageFile(file: Blob, signal?: AbortSignal): Promise<string | null> {
+async function scanImageFile(file: Blob, signal?: AbortSignal): Promise<Decoded> {
+  const detector = await getNativeQrDetector();
+  if (detector) return { code: await detectInImageFile(detector, file), source: 'native' };
+
   fileSequenceId += 1;
   const request: FileScanRequest = { type: FILE_SCAN_MESSAGE, file, sequenceId: fileSequenceId };
-  const result = await dispatchWorkerRequest(request, [], { signal, timeoutMs: FILE_SCAN_TIMEOUT_MS });
-  if (result.decoded || signal?.aborted) return result.decoded;
+  const worker = dispatchWorkerRequest(request, [], {
+    signal,
+    timeoutMs: FILE_SCAN_TIMEOUT_MS,
+    // Post the file after the zxing reader, so the worker knows to wait for it.
+    before: whenReaderOffered,
+  });
+  const result = await worker;
+  if (result.code || signal?.aborted) return { code: result.code ?? null, source: result.decoder ?? 'jsqr' };
   // No error: the worker read the image and found no code. Otherwise it could not decode it.
-  if (!result.error) return null;
-  return decodeImageFileHere(file);
+  if (!result.error) return { code: null, source: result.decoder ?? 'jsqr' };
+  return { code: await decodeImageFileHere(file), source: 'jsqr' };
+}
+
+/** Builds a scan result from a decode. */
+function toScanResult(decoded: Decoded, start: number, noCodeError: string): ScanResult {
+  const { code, source } = decoded;
+  return {
+    status: code ? 'pass' : 'fail',
+    data: code?.text ?? null,
+    error: code ? null : noCodeError,
+    durationMs: performance.now() - start,
+    bytes: code?.bytes ?? null,
+    corners: code?.corners ?? null,
+    source,
+  };
+}
+
+/** The platform detector's answer for an in-memory source, or undefined when there is no detector. */
+async function detectNatively(source: ImageData | ImageBitmap | HTMLCanvasElement): Promise<Decoded | undefined> {
+  const detector = await getNativeQrDetector();
+  if (!detector) return undefined;
+  return { code: await detector.detect(source), source: 'native' };
 }
 
 /**
@@ -102,16 +164,20 @@ export async function scanSource(source: ScanSource, options: ScanOptions = {}):
   }
 
   try {
+    // 1-3. Pixels already in memory: the platform's detector when it reads QR codes, else jsQR here.
+    const inMemory =
+      (typeof ImageData !== 'undefined' && source instanceof ImageData) ||
+      (typeof HTMLCanvasElement !== 'undefined' && source instanceof HTMLCanvasElement) ||
+      (typeof ImageBitmap !== 'undefined' && source instanceof ImageBitmap);
+    if (inMemory) {
+      const native = await detectNatively(source);
+      if (native) return toScanResult(native, start, 'NO_QR_DETECTED');
+    }
+
     // 1. Direct ImageData
     if (typeof ImageData !== 'undefined' && source instanceof ImageData) {
-      const decoded = decodeImageDataSync(source, source.width, source.height);
-      const durationMs = performance.now() - start;
-      return {
-        status: decoded ? 'pass' : 'fail',
-        data: decoded,
-        error: decoded ? null : 'NO_QR_DETECTED',
-        durationMs,
-      };
+      const code = decodeImageDataSync(source, source.width, source.height);
+      return toScanResult({ code, source: 'jsqr' }, start, 'NO_QR_DETECTED');
     }
 
     // 2. HTMLCanvasElement
@@ -121,14 +187,8 @@ export async function scanSource(source: ScanSource, options: ScanOptions = {}):
         throw new Error('Failed to acquire canvas 2D rendering context');
       }
       const imgData = ctx.getImageData(0, 0, source.width, source.height);
-      const decoded = decodeImageDataSync(imgData, source.width, source.height);
-      const durationMs = performance.now() - start;
-      return {
-        status: decoded ? 'pass' : 'fail',
-        data: decoded,
-        error: decoded ? null : 'NO_QR_DETECTED',
-        durationMs,
-      };
+      const code = decodeImageDataSync(imgData, source.width, source.height);
+      return toScanResult({ code, source: 'jsqr' }, start, 'NO_QR_DETECTED');
     }
 
     // 3. ImageBitmap
@@ -161,14 +221,10 @@ export async function scanSource(source: ScanSource, options: ScanOptions = {}):
         throw new Error('Failed to extract pixels from ImageBitmap');
       }
 
-      const decoded = decodeImageDataSync(imgData, dWidth, dHeight);
-      const durationMs = performance.now() - start;
-      return {
-        status: decoded ? 'pass' : 'fail',
-        data: decoded,
-        error: decoded ? null : 'NO_QR_DETECTED',
-        durationMs,
-      };
+      const found = decodeImageDataSync(imgData, dWidth, dHeight);
+      // Corners back in the bitmap's own pixels.
+      const code = found && { ...found, corners: mapCorners(found.corners, source.width / dWidth, source.height / dHeight) };
+      return toScanResult({ code, source: 'jsqr' }, start, 'NO_QR_DETECTED');
     }
 
     // 4. Image File or Blob
@@ -180,12 +236,7 @@ export async function scanSource(source: ScanSource, options: ScanOptions = {}):
       if (signal?.aborted) {
         return { status: 'fail', data: null, error: 'ABORTED', durationMs: performance.now() - start };
       }
-      return {
-        status: decoded ? 'pass' : 'fail',
-        data: decoded,
-        error: decoded ? null : NO_CODE_IN_IMAGE,
-        durationMs: performance.now() - start,
-      };
+      return toScanResult(decoded, start, NO_CODE_IN_IMAGE);
     }
 
     throw new Error('Unsupported scan source type');

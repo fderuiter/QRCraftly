@@ -27,7 +27,7 @@ import { THEME_INIT_SCRIPT } from '@/utils/theme';
  * Content Security Policy rendered as a meta tag on every page.
  * Kept byte-identical to `BASE_CSP_PATTERN` in `scripts/csp_hash_injector.js`.
  */
-const CONTENT_SECURITY_POLICY = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';";
+const CONTENT_SECURITY_POLICY = "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';";
 
 /**
  * HeadDefault Component
@@ -123,6 +123,8 @@ export default function HeadDefault() {
         script-src 'unsafe-inline' with per-page SHA-256 hashes).
         - script-src 'unsafe-inline': Required for JSON-LD scripts and Vike hydration in SSG;
           removed by the build-time hash injector.
+        - script-src 'wasm-unsafe-eval': Lets the scanner compile its self-hosted zxing-wasm
+          reader (ADR 0023). It allows WebAssembly compilation only, never JavaScript eval.
         - style-src 'unsafe-inline': Still required for React inline style attributes
           (dynamic preview styles). No third-party style hosts.
         - font-src 'self': No web-font CDN; the app renders with the system font stack.

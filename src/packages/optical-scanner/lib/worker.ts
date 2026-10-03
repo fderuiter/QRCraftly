@@ -1,7 +1,18 @@
-import { cameraStrategyFor, decodeCameraFrame, decodeRgbaFrame } from './decodeSync';
-import { isValidScannerRequest, assertScannerResponse, type ScannerResponse } from './contracts';
+import { cameraStrategyFor, decodeCameraCode, decodeRgbaCode } from './decodeSync';
+import {
+  isValidScannerRequest,
+  assertScannerResponse,
+  cornersToArray,
+  mapCorners,
+  type DecodedCode,
+  type ScanDecoder,
+  type ScannerResponse,
+  type ScanRegion,
+  ZXING_MODULE_MESSAGE,
+} from './contracts';
 import { decodeImageAtSizes, FILE_SCAN_MESSAGE, FILE_SCAN_UNREADABLE, FILE_SCAN_UNSUPPORTED } from './imageFile';
 import { createStaleFrameGuard } from './frameGuard';
+import { decodeWithZxing, installZxing, whenZxingSettled, zxingState } from './zxingReader';
 
 const yieldToEventLoop = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 
@@ -32,6 +43,18 @@ const workerScope: WorkerScope = {
   },
 };
 
+/** The fields a decoded code adds to a response. */
+function codeFields(code: DecodedCode | null, decoder: ScanDecoder): Partial<ScannerResponse> {
+  if (!code) return { decodedData: null };
+  return { decodedData: code.text, decodedBytes: code.bytes, corners: cornersToArray(code.corners), decoder };
+}
+
+/** Maps a code found in a cut-out (and possibly resized) frame back to the camera frame. */
+function toCameraFrame(code: DecodedCode | null, width: number, height: number, region?: ScanRegion): DecodedCode | null {
+  if (!code || !region) return code;
+  return { ...code, corners: mapCorners(code.corners, region.width / width, region.height / height, region.x, region.y) };
+}
+
 /**
  * Every message shape this worker accepts (image file scan, raw buffer / ImageData scan, camera
  * ImageBitmap scan). Fields are optional and checked before use.
@@ -39,6 +62,8 @@ const workerScope: WorkerScope = {
 interface ScannerWorkerMessage {
   type?: string;
   file?: unknown;
+  module?: unknown;
+  region?: ScanRegion;
   epochId?: number;
   buffer?: unknown;
   imageData?: { data: Uint8ClampedArray | ArrayLike<number> };
@@ -60,10 +85,16 @@ async function scanImageFile(file: unknown, sequenceId: number): Promise<void> {
     let bitmap: ImageBitmap | null = null;
     try {
       bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
-      const code = decodeImageAtSizes(bitmap, bitmap.width, bitmap.height, (width, height) =>
-        new OffscreenCanvas(width, height).getContext('2d', { willReadFrequently: true })
+      // A reader still being instantiated is worth the wait: it reads far more photos than jsQR.
+      const useZxing = await whenZxingSettled();
+      const code = await decodeImageAtSizes(
+        bitmap,
+        bitmap.width,
+        bitmap.height,
+        (width, height) => new OffscreenCanvas(width, height).getContext('2d', { willReadFrequently: true }),
+        useZxing ? decodeWithZxing : decodeRgbaCode
       );
-      response = { status: code ? 'pass' : 'fail', sequenceId, decodedData: code };
+      response = { status: code ? 'pass' : 'fail', sequenceId, ...codeFields(code, useZxing ? 'zxing' : 'jsqr') };
     } catch {
       response = { status: 'fail', sequenceId, error: FILE_SCAN_UNREADABLE };
     } finally {
@@ -78,6 +109,14 @@ self.onmessage = async (e: MessageEvent<ScannerWorkerMessage | null>) => {
   const payload = e.data;
   if (!payload) return;
   const epochId = payload.epochId;
+
+  // 0. The compiled zxing reader, posted once by the main thread (ADR 0023). No answer is sent.
+  if (payload.type === ZXING_MODULE_MESSAGE) {
+    if (typeof WebAssembly !== 'undefined' && payload.module instanceof WebAssembly.Module) {
+      void installZxing(payload.module);
+    }
+    return;
+  }
 
   // 1. Uploaded image file
   if (payload.type === FILE_SCAN_MESSAGE && typeof payload.sequenceId === 'number') {
@@ -101,12 +140,12 @@ self.onmessage = async (e: MessageEvent<ScannerWorkerMessage | null>) => {
       return;
     }
 
-    const code = decodeRgbaFrame(data, requestWidth, requestHeight);
+    const code = decodeRgbaCode(data, requestWidth, requestHeight);
 
     const response = {
       status: code ? ('pass' as const) : ('fail' as const),
       sequenceId,
-      decodedData: code,
+      ...codeFields(code, 'jsqr'),
       buffer: requestBuffer ?? undefined,
       epochId,
     };
@@ -143,7 +182,7 @@ self.onmessage = async (e: MessageEvent<ScannerWorkerMessage | null>) => {
     return;
   }
 
-  const { image, width, height, sequenceId } = payload;
+  const { image, width, height, sequenceId, region } = payload;
 
   if (!frameGuard.admit(epochId, sequenceId)) {
     try {
@@ -204,13 +243,19 @@ self.onmessage = async (e: MessageEvent<ScannerWorkerMessage | null>) => {
       console.error('Failed to close image after drawing:', err);
     }
 
-    // One bounded jsQR pass per camera frame; consecutive frames rotate strategies (#1096).
-    const code = decodeCameraFrame(imageData.data, width, height, cameraStrategyFor(sequenceId));
+    // The zxing reader when it is ready (ADR 0023); otherwise one bounded jsQR pass per frame,
+    // consecutive frames rotating strategies (#1096). The engine already cut the frame to match.
+    const decoder: ScanDecoder = zxingState() === 'ready' ? 'zxing' : 'jsqr';
+    const found =
+      decoder === 'zxing'
+        ? await decodeWithZxing(imageData.data, width, height)
+        : decodeCameraCode(imageData.data, width, height, cameraStrategyFor(sequenceId));
+    const code = toCameraFrame(found, width, height, region);
 
     const response = {
       status: code ? ('pass' as const) : ('fail' as const),
       sequenceId,
-      decodedData: code,
+      ...codeFields(code, decoder),
       epochId,
     };
     assertScannerResponse(response);

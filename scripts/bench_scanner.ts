@@ -29,6 +29,7 @@
  *   --filter <text>   Only fixtures whose id contains the text (e.g. `noise`, `no-code`).
  *   --by-category     Also print one row per corpus category.
  *   --budget <ms>     Exit non-zero when any camera frame takes longer (default: report only).
+ *   --no-zxing        Skip the zxing-wasm rows (they always use the working tree's reader).
  *
  * Timing depends on the machine, so this is not a CI gate: run it on demand or from the
  * manual / nightly "Scanner benchmark" workflow. `decodeSync.ts` must keep importing only
@@ -40,6 +41,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import jsQR from 'jsqr';
 import { execBinary } from './utils/execHelper.js';
 import { generateCorpus, type CorpusFrame } from '../tests/utils/scannerCorpus.ts';
+import * as reader from '../src/packages/optical-scanner/reader.ts';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DECODER_PATH = 'src/packages/optical-scanner/lib/decodeSync.ts';
@@ -51,6 +53,7 @@ const CAMERA_FRAMES = 4;
 /** The decoder exports a strategy may use; older refs have only some of them. */
 interface DecoderModule {
   decodeRgbaFrame?: (data: Uint8ClampedArray, width: number, height: number) => string | null;
+  decodeRgbaCode?: (data: Uint8ClampedArray, width: number, height: number) => { text: string } | null;
   decodeCameraFrame?: (data: Uint8ClampedArray, width: number, height: number, pass: string) => string | null;
   cameraStrategyFor?: (sequenceId: number) => string;
 }
@@ -63,7 +66,7 @@ interface FrameRun {
 
 interface Strategy {
   name: string;
-  run(frame: CorpusFrame): FrameRun;
+  run(frame: CorpusFrame): FrameRun | Promise<FrameRun>;
 }
 
 interface Options {
@@ -71,16 +74,18 @@ interface Options {
   filter?: string;
   byCategory: boolean;
   budget?: number;
+  zxing: boolean;
 }
 
 function parseArgs(argv: string[]): Options {
-  const options: Options = { refs: [], byCategory: false };
+  const options: Options = { refs: [], byCategory: false, zxing: true };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === '--ref') options.refs.push(argv[++i]);
     else if (arg === '--filter') options.filter = argv[++i];
     else if (arg === '--by-category') options.byCategory = true;
     else if (arg === '--budget') options.budget = Number(argv[++i]);
+    else if (arg === '--no-zxing') options.zxing = false;
     else if (arg === '--') continue;
     else throw new Error(`Unknown option: ${arg}`);
   }
@@ -106,6 +111,78 @@ async function loadDecoder(ref: string): Promise<DecoderModule> {
   return import(`${pathToFileURL(file).href}?ref=${encodeURIComponent(ref)}`);
 }
 
+async function timedAsync<T>(fn: () => Promise<T>): Promise<{ value: T; ms: number }> {
+  const start = performance.now();
+  const value = await fn();
+  return { value, ms: performance.now() - start };
+}
+
+/** Copies a region of an RGBA frame, downscaled (nearest pixel) so its longest side is at most `max`. */
+function cutRegion(
+  frame: CorpusFrame,
+  region: { x: number; y: number; width: number; height: number },
+  max: number
+): { data: Uint8ClampedArray; width: number; height: number } {
+  const scale = Math.min(1, max / Math.max(region.width, region.height));
+  const width = Math.round(region.width * scale);
+  const height = Math.round(region.height * scale);
+  const data = new Uint8ClampedArray(width * height * 4);
+  for (let y = 0; y < height; y++) {
+    const sy = region.y + Math.floor(y / scale);
+    for (let x = 0; x < width; x++) {
+      const from = (sy * frame.width + region.x + Math.floor(x / scale)) * 4;
+      data.set(frame.data.subarray(from, from + 4), (y * width + x) * 4);
+    }
+  }
+  return { data, width, height };
+}
+
+/**
+ * The zxing-wasm reader rows (ADR 0023), using the working tree's reader seam. The camera row
+ * mirrors the engine: odd frames cut the centre square at native resolution (up to 1280 px), even
+ * frames take the whole frame downscaled to 1280 px.
+ */
+async function zxingStrategies(): Promise<Strategy[]> {
+  const wasm = fs.readFileSync(path.join(REPO_ROOT, 'node_modules/zxing-wasm/dist/reader/zxing_reader.wasm'));
+  (globalThis as { ImageData?: unknown }).ImageData ??= class {
+    constructor(
+      public data: Uint8ClampedArray,
+      public width: number,
+      public height: number
+    ) {}
+  };
+  if (!(await reader.installZxing(await WebAssembly.compile(wasm)))) throw new Error('zxing-wasm failed to instantiate');
+  const decode = (image: { data: Uint8ClampedArray; width: number; height: number }) =>
+    reader.decodeWithZxing(image.data, image.width, image.height) as Promise<{ text: string } | null>;
+  return [
+    {
+      name: 'zxing-wasm (whole frame)',
+      run: async (frame) => {
+        const { value, ms } = await timedAsync(() => decode(frame));
+        return { times: [ms], decoded: value?.text ?? null };
+      },
+    },
+    {
+      name: 'zxing-wasm camera rotation (region, whole frame)',
+      run: async (frame) => {
+        const times: number[] = [];
+        const side = Math.min(frame.width, frame.height);
+        const regions = [
+          { x: Math.floor((frame.width - side) / 2), y: Math.floor((frame.height - side) / 2), width: side, height: side },
+          { x: 0, y: 0, width: frame.width, height: frame.height },
+        ];
+        for (const region of regions) {
+          const image = cutRegion(frame, region, 1280);
+          const { value, ms } = await timedAsync(() => decode(image));
+          times.push(ms);
+          if (value) return { times, decoded: value.text };
+        }
+        return { times, decoded: null };
+      },
+    },
+  ];
+}
+
 function strategiesFor(decoder: DecoderModule): Strategy[] {
   const strategies: Strategy[] = [
     {
@@ -116,7 +193,11 @@ function strategiesFor(decoder: DecoderModule): Strategy[] {
       },
     },
   ];
-  const { decodeRgbaFrame, decodeCameraFrame, cameraStrategyFor } = decoder;
+  const { decodeCameraFrame, cameraStrategyFor, decodeRgbaCode } = decoder;
+  // Newer refs return the rich `decodeRgbaCode` result only.
+  const decodeRgbaFrame =
+    decoder.decodeRgbaFrame ??
+    (decodeRgbaCode && ((data: Uint8ClampedArray, width: number, height: number) => decodeRgbaCode(data, width, height)?.text ?? null));
   if (decodeRgbaFrame) {
     strategies.push({
       name: 'multi-pass (decodeRgbaFrame)',
@@ -189,12 +270,14 @@ async function main(): Promise<void> {
     const decoder = await loadDecoder(ref);
     const rows: Row[] = [];
     const categoryRows: Row[] = [];
-    for (const strategy of strategiesFor(decoder)) {
+    const strategies = strategiesFor(decoder);
+    if (options.zxing && ref === options.refs[0]) strategies.push(...(await zxingStrategies()));
+    for (const strategy of strategies) {
       const row: Row = { label: strategy.name, decoded: 0, total: withCode, times: [], framesToDecode: [] };
       const byCategory = new Map<string, Row>();
       const slowest: Array<{ id: string; ms: number }> = [];
       for (const frame of corpus) {
-        const result = strategy.run(frame);
+        const result = await strategy.run(frame);
         row.times.push(...result.times);
         const max = Math.max(...result.times);
         slowest.push({ id: frame.id, ms: max });
