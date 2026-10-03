@@ -51,7 +51,7 @@ describe('useQrScanner adapter', () => {
   it('proxies scan results and batched status into React state without exposing the worker', async () => {
     const onScanSuccess = vi.fn();
     const videoRef = { current: makeLiveVideo() };
-    const { result } = renderHook(() => useQrScanner({ videoRef, onScanSuccess }));
+    const { result } = renderHook(() => useQrScanner({ videoRef, onScanSuccess, confirmations: 1 }));
 
     expect(result.current).not.toHaveProperty('workerRef');
     expect(result.current.status).toBe('idle');
@@ -72,7 +72,7 @@ describe('useQrScanner adapter', () => {
       });
     });
     await flushFrames(20);
-    expect(onScanSuccess).toHaveBeenCalledWith('HELLO');
+    expect(onScanSuccess).toHaveBeenCalledWith('HELLO', expect.objectContaining({ text: 'HELLO', source: 'jsqr' }));
 
     await flushFrames(250);
     expect(result.current.latencyHistory.length).toBeGreaterThan(0);
@@ -132,7 +132,7 @@ describe('useQrScanner adapter', () => {
       await flushFrames(100);
 
       expect(tracks.filter((track) => track.live)).toHaveLength(1);
-      expect(result.current.state).toEqual({ status: 'streaming' });
+      expect(result.current.state.status).toBe('streaming');
       expect(result.current.isScanning).toBe(true);
       expect(posted.length).toBeGreaterThan(0);
 

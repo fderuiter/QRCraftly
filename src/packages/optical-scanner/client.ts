@@ -5,17 +5,32 @@ import {
   createCameraScannerEngine,
   type CameraScannerEngine,
   type CameraScannerEngineMetrics,
+  type CameraScanResult,
 } from './lib/cameraEngine';
 import {
   createCameraSession,
+  type CameraDevice,
   type CameraSession,
   type CameraSessionStartOptions,
   type CameraSessionState,
 } from './lib/cameraSession';
 
-export type { CameraSessionState, CameraSessionStartOptions } from './lib/cameraSession';
+export type {
+  CameraDevice,
+  CameraInfo,
+  CameraProblemStatus,
+  CameraSessionState,
+  CameraSessionStartOptions,
+} from './lib/cameraSession';
+export type { CameraScanResult } from './lib/cameraEngine';
 
 const IDLE_CAMERA: CameraSessionState = { status: 'idle' };
+
+/**
+ * The camera the user last switched to, remembered in memory for this page only (#1100). It is
+ * never written to storage, so it is forgotten on reload.
+ */
+let chosenCameraId: string | undefined;
 
 /** Interval at which high-frequency engine diagnostics are flushed into React state. */
 const STATE_FLUSH_INTERVAL_MS = 250;
@@ -30,9 +45,10 @@ export interface UseQrScannerOptions {
    */
   videoRef?: React.RefObject<HTMLVideoElement | null>;
   /**
-   * Callback invoked when a QR code is successfully decoded from the stream.
+   * Callback invoked when a QR code is decoded from the stream and confirmed: its text and the full
+   * result (payload bytes, corners, which decoder read it).
    */
-  onScanSuccess?: (data: string) => void;
+  onScanSuccess?: (data: string, result: CameraScanResult) => void;
   /**
    * Callback invoked when a stream frame fails to decode or has an error.
    */
@@ -45,6 +61,16 @@ export interface UseQrScannerOptions {
    * Maximum sleep delay between frame capture executions in milliseconds.
    */
   maxSamplingDelay?: number;
+  /**
+   * Agreeing decodes needed before a camera result is reported (default 2, within 500 ms; the
+   * platform detector needs one). Read once, when scanning first starts.
+   */
+  confirmations?: 1 | 2;
+  /**
+   * How long the same payload is not reported again, in milliseconds (default 3000; 0 reports every
+   * decode). Read once, when scanning first starts.
+   */
+  repeatHoldMs?: number;
 }
 
 /**
@@ -65,6 +91,14 @@ export interface UseQrScannerResult {
   stop: () => void;
   /** The element the camera is shown in: the one passed in, or one the hook owns. */
   videoRef: React.RefObject<HTMLVideoElement | null>;
+  /** The cameras the user can switch to, listed once the camera streams. */
+  cameras: CameraDevice[];
+  /** Switches to another camera (the old one is released first) and remembers it for this page. */
+  switchCamera: (deviceId: string) => Promise<void>;
+  /** Turns the torch on or off where the camera has one; resolves whether it worked. */
+  setTorch: (on: boolean) => Promise<boolean>;
+  /** Zooms where the camera supports it; resolves whether it worked. */
+  setZoom: (value: number) => Promise<boolean>;
   /**
    * Whether the background frame-sampling loop is currently active.
    */
@@ -107,12 +141,15 @@ export function useQrScanner({
   onScanFail,
   minSamplingDelay = 16,
   maxSamplingDelay = 1000,
+  confirmations,
+  repeatHoldMs,
 }: UseQrScannerOptions = {}): UseQrScannerResult {
   const [isScanning, setIsScanning] = useState<boolean>(false);
   const [status, setStatus] = useState<ScannerStatus>('idle');
   const [samplingDelay, setSamplingDelay] = useState<number>(INITIAL_SAMPLING_DELAY);
   const [latencyHistory, setLatencyHistory] = useState<number[]>([]);
   const [cameraState, setCameraState] = useState<CameraSessionState>(IDLE_CAMERA);
+  const [cameras, setCameras] = useState<CameraDevice[]>([]);
   const ownVideoRef = useRef<HTMLVideoElement | null>(null);
   const resolvedVideoRef = videoRef ?? ownVideoRef;
 
@@ -127,6 +164,7 @@ export function useQrScanner({
     dirty: false,
   });
   const boundsRef = useRef({ minSamplingDelay, maxSamplingDelay });
+  const acceptanceRef = useRef({ confirmations, repeatHoldMs });
   const engineRef = useRef<CameraScannerEngine | null>(null);
   const sessionRef = useRef<CameraSession | null>(null);
 
@@ -134,10 +172,11 @@ export function useQrScanner({
     if (engineRef.current) return engineRef.current;
     const engine = createCameraScannerEngine({
       ...boundsRef.current,
+      ...acceptanceRef.current,
       getSource: () => latest.current.videoRef?.current ?? null,
     });
     engine.subscribe({
-      onScanSuccess: (data) => latest.current.onScanSuccess?.(data),
+      onScanSuccess: (data, result) => latest.current.onScanSuccess?.(data, result),
       onScanFail: (error) => latest.current.onScanFail?.(error),
       onStatusChange: (next) => {
         pending.current.status = next;
@@ -204,7 +243,43 @@ export function useQrScanner({
     return session;
   }, [startScanning, stopScanning]);
 
-  const start = useCallback((options?: CameraSessionStartOptions) => getSession().start(options), [getSession]);
+  const start = useCallback(
+    async (options?: CameraSessionStartOptions) => {
+      const session = getSession();
+      const remembered = options?.deviceId === undefined ? chosenCameraId : undefined;
+      await session.start({ ...options, deviceId: options?.deviceId ?? remembered });
+      // The remembered camera is gone (unplugged): forget it and open the default one.
+      if (remembered && session.getState().status === 'unsupported') {
+        chosenCameraId = undefined;
+        await session.start({ ...options, deviceId: undefined });
+      }
+    },
+    [getSession]
+  );
+
+  const switchCamera = useCallback(
+    (deviceId: string) => {
+      chosenCameraId = deviceId;
+      return getSession().start({ deviceId });
+    },
+    [getSession]
+  );
+
+  const setTorch = useCallback((on: boolean) => sessionRef.current?.setTorch(on) ?? Promise.resolve(false), []);
+  const setZoom = useCallback((value: number) => sessionRef.current?.setZoom(value) ?? Promise.resolve(false), []);
+
+  // Device names are only readable once permission is granted, so list the cameras when streaming.
+  const streaming = cameraState.status === 'streaming';
+  useEffect(() => {
+    if (!streaming) return undefined;
+    let cancelled = false;
+    void sessionRef.current?.listCameras().then((list) => {
+      if (!cancelled) setCameras(list);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [streaming]);
 
   const stop = useCallback(() => {
     sessionRef.current?.stop();
@@ -219,6 +294,10 @@ export function useQrScanner({
     start,
     stop,
     videoRef: resolvedVideoRef,
+    cameras,
+    switchCamera,
+    setTorch,
+    setZoom,
     isScanning,
     status,
     samplingDelay,

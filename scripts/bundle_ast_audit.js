@@ -26,7 +26,8 @@ const BANNED_APIS = new Set(['fetch', 'WebSocket', 'XMLHttpRequest', 'sendBeacon
 // audited source function after minification.
 export const AUTHORIZED_FETCH_SCOPE_LITERALS = [
   'FileReader error', // Logo/image URL loading that is routed through sanitizeSvg (svgExport)
-  "pageContext couldn't be fetched because an error occurred on the server-side" // Vike client router pageContext.json requests
+  "pageContext couldn't be fetched because an error occurred on the server-side", // Vike client router pageContext.json requests
+  'zxing-reader-wasm unavailable, scanning with jsQR:' // Scanner: same-origin fetch of its own zxing-wasm reader (ADR 0023)
 ];
 
 // Generated files (paths relative to dist/, POSIX separators) in which `fetch`

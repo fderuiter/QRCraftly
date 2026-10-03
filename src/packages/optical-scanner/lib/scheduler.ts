@@ -1,13 +1,14 @@
 import { DoubleBufferPool } from './bufferPool';
 import { systemClock, type ScannerClock } from './clock';
 
-export interface SchedulerOptions {
+export interface SchedulerOptions<TDetail = unknown> {
   minSamplingDelay?: number;
   maxSamplingDelay?: number;
   onStatusChange?: (status: 'idle' | 'checking' | 'pass' | 'fail') => void;
   onDelayChange?: (delay: number) => void;
   onLatencyHistoryChange?: (history: number[]) => void;
-  onScanSuccess?: (data: string) => void;
+  /** A decoded frame; `detail` is whatever the caller passed to `endFrame` with it. */
+  onScanSuccess?: (data: string, detail?: TDetail) => void;
   onScanFail?: (error?: string) => void;
   onWatchdogTriggered?: (elapsed: number) => void;
   /** Time source; defaults to the system clock. Tests inject a fake clock. */
@@ -29,7 +30,7 @@ const RISE_SMOOTHING = 0.5;
  * Backpressure-driven adaptive sampling controller.
  * Modulates frame rate based on worker latency and trips recovery upon starvation stalls.
  */
-export class AdaptiveFrameScheduler {
+export class AdaptiveFrameScheduler<TDetail = unknown> {
   public pool: DoubleBufferPool;
   private minSamplingDelay: number;
   private maxSamplingDelay: number;
@@ -42,7 +43,7 @@ export class AdaptiveFrameScheduler {
   private sequenceId = 0;
   private completedSequenceId = 0;
   private startTimeMap = new Map<number, number>();
-  private options: SchedulerOptions;
+  private options: SchedulerOptions<TDetail>;
   private watchdogTimeout = DEFAULT_WATCHDOG_TIMEOUT_MS;
   /** Last sign of life from the worker (any answer, stale ones included). */
   private lastHeartbeat: number | null = null;
@@ -52,7 +53,7 @@ export class AdaptiveFrameScheduler {
   private pauseStartTime: number | null = null;
   private handleVisibilityChange: (() => void) | null = null;
 
-  constructor(options: SchedulerOptions = {}) {
+  constructor(options: SchedulerOptions<TDetail> = {}) {
     this.options = options;
     this.clock = options.clock ?? systemClock;
     this.minSamplingDelay = options.minSamplingDelay ?? 16;
@@ -193,7 +194,8 @@ export class AdaptiveFrameScheduler {
     status: 'pass' | 'fail',
     decodedData?: string | null,
     error?: string | null,
-    recycledBuffer?: ArrayBuffer
+    recycledBuffer?: ArrayBuffer,
+    detail?: TDetail
   ) {
     if (recycledBuffer) {
       this.pool.release(recycledBuffer);
@@ -230,7 +232,7 @@ export class AdaptiveFrameScheduler {
 
       if (status === 'pass') {
         if (decodedData) {
-          this.options.onScanSuccess?.(decodedData);
+          this.options.onScanSuccess?.(decodedData, detail);
         }
       } else if (status === 'fail') {
         this.options.onScanFail?.(error || undefined);

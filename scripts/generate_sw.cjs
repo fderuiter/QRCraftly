@@ -27,6 +27,19 @@ function computeHash(filePath) {
   return hashSum.digest('hex').substring(0, 8);
 }
 
+// Files cached on first use instead of precached: the scanner's zxing-wasm
+// reader (about 400 KB gzipped, ADR 0023) is only needed by visitors who scan.
+const RUNTIME_CACHED_EXTENSION = '.wasm';
+
+/**
+ * Whether a dist/client file is cached on first use rather than precached.
+ * @param {string} relativePath POSIX path relative to dist/client.
+ * @returns {boolean} True for the lazily loaded WebAssembly reader.
+ */
+function isRuntimeCached(relativePath) {
+  return relativePath.endsWith(RUNTIME_CACHED_EXTENSION);
+}
+
 // Version 2: pages are precached by canonical URL (fix for #1086).
 const SW_SCHEMA_VERSION = 2;
 
@@ -91,6 +104,7 @@ const CACHE_HISTORY_LIMIT = 2;
 // over at once instead of waiting.
 const SCHEMA_KEY = '/__qrcraftly_sw_schema__';
 const SCHEMA_VERSION = ${SW_SCHEMA_VERSION};
+const RUNTIME_CACHED_EXTENSION = ${JSON.stringify(RUNTIME_CACHED_EXTENSION)};
 const PRECACHE_ASSETS = ${JSON.stringify(precacheManifest, null, 2)};
 const PRECACHED_PATHS = new Set(PRECACHE_ASSETS.map((asset) => asset.url));
 
@@ -208,6 +222,17 @@ async function handleNavigation(request, url) {
 async function handleRequest(request, url) {
   const cached = await matchPrecache(url.pathname);
   if (cached) return cached;
+  if (url.pathname.endsWith(RUNTIME_CACHED_EXTENSION)) {
+    // The scanner's WebAssembly reader is too large to precache for every
+    // visitor, so it is cached the first time the scanner loads it. Its file
+    // name carries a content hash, so a cached copy is never stale.
+    const response = await fetch(request);
+    if (response && response.ok) {
+      const cache = await caches.open(CACHE_NAME);
+      await cache.put(url.pathname, response.clone());
+    }
+    return response;
+  }
   // pageContext.json and any other uncached asset: network only, never a
   // substitute from another route.
   return fetch(request);
@@ -258,7 +283,8 @@ function generateSW() {
       relativePath === 'robots.txt' ||
       relativePath === '_headers' ||
       relativePath === '_redirects' ||
-      relativePath.startsWith('.vite')
+      relativePath.startsWith('.vite') ||
+      isRuntimeCached(relativePath.replace(/\\/g, '/'))
     ) {
       return;
     }
@@ -287,4 +313,4 @@ if (require.main === module) {
   generateSW();
 }
 
-module.exports = { buildSwContent, toPrecacheUrl, readRedirectSources };
+module.exports = { buildSwContent, toPrecacheUrl, readRedirectSources, isRuntimeCached };

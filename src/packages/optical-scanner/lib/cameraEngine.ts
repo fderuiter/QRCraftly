@@ -1,7 +1,19 @@
-import { getDownscaledDimensions, isValidScannerResponse, type ScannerStatus } from './contracts';
+import {
+  cornersFromArray,
+  getDownscaledDimensions,
+  isValidScannerResponse,
+  mapCorners,
+  type DecodedCode,
+  type ScanCorners,
+  type ScanDecoder,
+  type ScannerStatus,
+  type ScanRegion,
+} from './contracts';
 import { AdaptiveFrameScheduler, DEFAULT_WATCHDOG_TIMEOUT_MS } from './scheduler';
-import { cameraStrategyFor, decodeCameraFrame } from './decodeSync';
+import { cameraStrategyFor, decodeCameraCode } from './decodeSync';
 import { systemClock, type ScannerClock } from './clock';
+import { getNativeQrDetector } from './nativeDetector';
+import { createResultGate, DEFAULT_REPEAT_HOLD_MS } from './resultGate';
 import {
   connectSharedScannerWorker,
   type ScannerWorkerFactory,
@@ -18,6 +30,12 @@ const WATCHDOG_TIMEOUT_MS = DEFAULT_WATCHDOG_TIMEOUT_MS;
 const MAX_WORKER_RESTARTS = 3;
 /** Longest edge of a frame posted to the worker. */
 const WORKER_MAX_DIMENSION = 1280;
+/**
+ * Longest edge of the centre region posted to the worker. The region under the reticle is cut at
+ * the camera's native resolution up to this size, so a small code in a 1920x1080 frame keeps every
+ * pixel instead of losing a third of them to the whole-frame downscale (#1099).
+ */
+const REGION_MAX_DIMENSION = 1280;
 /** Longest edge of a frame decoded on the main thread (kept smaller to protect the UI thread). */
 const MAIN_THREAD_MAX_DIMENSION = 800;
 const DEFAULT_FRAME_WIDTH = 640;
@@ -54,8 +72,11 @@ export interface CameraFramePixels {
  * Turns the current frame of a source into worker or main-thread input.
  */
 export interface CameraFrameGrabber {
-  /** Captures a downscaled, transferable bitmap for the worker. */
-  grabBitmap(source: CameraFrameSource, width: number, height: number): Promise<ImageBitmap>;
+  /**
+   * Captures a transferable bitmap for the worker: `region` of the frame (the whole frame when
+   * omitted), scaled to `width` x `height`.
+   */
+  grabBitmap(source: CameraFrameSource, width: number, height: number, region?: ScanRegion): Promise<ImageBitmap>;
   /** Captures downscaled RGBA pixels for the main-thread fallback, or null when no canvas exists. */
   grabPixels(source: CameraFrameSource, width: number, height: number): CameraFramePixels | null;
 }
@@ -67,13 +88,27 @@ export interface CameraScannerEngineOptions {
   maxSamplingDelay?: number;
 }
 
+/** A code the camera read, as `onScanSuccess` reports it (#1099). */
+export interface CameraScanResult extends DecodedCode {
+  /** The decoder that read it. */
+  source: ScanDecoder;
+  /** How long the frame took to decode, in milliseconds. */
+  durationMs: number;
+}
+
+/** Reads QR codes straight from the camera source on the main thread (the platform's detector). */
+export interface CameraCodeDetector {
+  detect(source: CameraFrameSource): Promise<DecodedCode | null>;
+}
+
 export interface CameraScannerEngineMetrics {
   samplingDelay: number;
   latencyHistory: number[];
 }
 
 export interface CameraScannerEngineEvents {
-  onScanSuccess?: (data: string) => void;
+  /** A confirmed code: its text, and the full result (bytes, corners, decoder). */
+  onScanSuccess?: (data: string, result: CameraScanResult) => void;
   onScanFail?: (error?: string) => void;
   onStatusChange?: (status: ScannerStatus) => void;
   onMetricsChange?: (metrics: CameraScannerEngineMetrics) => void;
@@ -92,7 +127,24 @@ export interface CameraScannerEngineConfig extends CameraScannerEngineOptions {
    * Main-thread decoder used after worker fallback; defaults to one jsQR pass per frame, rotating
    * strategies by `sequenceId` like the worker does.
    */
-  decodeSync?: (pixels: CameraFramePixels, width: number, height: number, sequenceId: number) => string | null;
+  decodeSync?: (
+    pixels: CameraFramePixels,
+    width: number,
+    height: number,
+    sequenceId: number
+  ) => DecodedCode | string | null;
+  /**
+   * The platform's QR detector. When there is one, frames never go to the worker. Defaults to the
+   * page's `BarcodeDetector` if it reads QR codes; pass null to always use the worker.
+   */
+  detector?: CameraCodeDetector | null;
+  /**
+   * Agreeing decodes needed before a result is emitted (default 2, within 500 ms). Results from
+   * the platform detector need one. Pass 1 for streams where every frame differs (file transfer).
+   */
+  confirmations?: 1 | 2;
+  /** How long the same payload is not emitted again, in milliseconds (default 3000; 0 = every decode). */
+  repeatHoldMs?: number;
 }
 
 /**
@@ -128,17 +180,38 @@ function isVideoElement(source: CameraFrameSource): source is CameraFrameSource 
   return typeof HTMLVideoElement !== 'undefined' && source instanceof HTMLVideoElement;
 }
 
+/** The page's `BarcodeDetector` as a {@link CameraCodeDetector}, or null when it cannot read QR codes. */
+async function defaultDetector(): Promise<CameraCodeDetector | null> {
+  const native = await getNativeQrDetector();
+  if (!native) return null;
+  return { detect: (source) => (isVideoElement(source) ? native.detect(source) : Promise.resolve(null)) };
+}
+
+/** The part of a frame each decode strategy looks at: the centre square, or the whole frame. */
+function regionFor(sequenceId: number, width: number, height: number): ScanRegion {
+  if (cameraStrategyFor(sequenceId) === 'frame') return { x: 0, y: 0, width, height };
+  const side = Math.min(width, height);
+  return { x: Math.floor((width - side) / 2), y: Math.floor((height - side) / 2), width: side, height: side };
+}
+
+function asDecodedCode(value: DecodedCode | string): DecodedCode {
+  return typeof value === 'string' ? { text: value, bytes: null, corners: null } : value;
+}
+
 /**
  * Default grabber backed by `createImageBitmap` and a reusable 2D canvas.
  */
 function createDefaultGrabber(): CameraFrameGrabber {
   let canvas: HTMLCanvasElement | null = null;
   return {
-    grabBitmap: (source, width, height) => {
+    grabBitmap: (source, width, height, region) => {
       if (!isVideoElement(source) || typeof createImageBitmap !== 'function') {
         return Promise.reject(new Error('Frame source cannot be captured as an ImageBitmap'));
       }
-      return createImageBitmap(source, { resizeWidth: width, resizeHeight: height, resizeQuality: 'low' });
+      const options: ImageBitmapOptions = { resizeWidth: width, resizeHeight: height, resizeQuality: 'low' };
+      if (!region) return createImageBitmap(source, options);
+      // Only the region is copied out of the video frame.
+      return createImageBitmap(source, region.x, region.y, region.width, region.height, options);
     },
     grabPixels: (source, width, height) => {
       if (!isVideoElement(source) || typeof document === 'undefined') return null;
@@ -169,8 +242,12 @@ export function createCameraScannerEngine(config: CameraScannerEngineConfig): Ca
   const decodeSync =
     config.decodeSync ??
     ((pixels: CameraFramePixels, width: number, height: number, sequenceId: number) =>
-      decodeCameraFrame(pixels.data, width, height, cameraStrategyFor(sequenceId)));
+      decodeCameraCode(pixels.data, width, height, cameraStrategyFor(sequenceId)));
   const { getSource } = config;
+  const gate = createResultGate({
+    confirmations: config.confirmations ?? 2,
+    holdMs: config.repeatHoldMs ?? DEFAULT_REPEAT_HOLD_MS,
+  });
 
   const listeners = new Set<CameraScannerEngineEvents>();
   const emit = (notify: (events: CameraScannerEngineEvents) => void) => {
@@ -178,6 +255,9 @@ export function createCameraScannerEngine(config: CameraScannerEngineConfig): Ca
   };
 
   let worker: ScannerWorkerHandle | null = null;
+  /** The platform detector: undefined until the page has been checked for one. */
+  let detector: CameraCodeDetector | null | undefined = config.detector;
+  let detectorCheck: Promise<void> | null = null;
   let epoch = 0;
   let restartAttempts = 0;
   let useMainThread = false;
@@ -188,14 +268,18 @@ export function createCameraScannerEngine(config: CameraScannerEngineConfig): Ca
   let frameId: number | null = null;
   let boundSource: { source: CameraFrameSource; handlers: Array<[SourceEvent, () => void]> } | null = null;
 
-  const scheduler = new AdaptiveFrameScheduler({
+  const scheduler = new AdaptiveFrameScheduler<CameraScanResult>({
     minSamplingDelay: config.minSamplingDelay,
     maxSamplingDelay: config.maxSamplingDelay,
     clock,
     onStatusChange: (status) => emit((e) => e.onStatusChange?.(status)),
     onDelayChange: () => emit((e) => e.onMetricsChange?.(getMetrics())),
     onLatencyHistoryChange: () => emit((e) => e.onMetricsChange?.(getMetrics())),
-    onScanSuccess: (data) => emit((e) => e.onScanSuccess?.(data)),
+    onScanSuccess: (data, result) => {
+      const scan = result ?? { text: data, bytes: null, corners: null, source: 'jsqr', durationMs: 0 };
+      if (!gate.offer(data, scan.source, clock.now())) return;
+      emit((e) => e.onScanSuccess?.(data, scan));
+    },
     onScanFail: (error) => emit((e) => e.onScanFail?.(error ?? undefined)),
     onWatchdogTriggered: () => recoverWorker(),
   });
@@ -227,7 +311,24 @@ export function createCameraScannerEngine(config: CameraScannerEngineConfig): Ca
     if (payload.status === 'pass' || payload.error !== 'STALE_FRAME') {
       markWorkerHealthy();
     }
-    scheduler.endFrame(payload.sequenceId, payload.status, payload.decodedData, payload.error, payload.buffer);
+    const corners: ScanCorners | null = cornersFromArray(payload.corners);
+    const result: CameraScanResult | undefined =
+      payload.status === 'pass' && payload.decodedData
+        ? {
+            text: payload.decodedData,
+            bytes: payload.decodedBytes ?? null,
+            corners,
+            source: payload.decoder ?? 'jsqr',
+            durationMs: frameDuration(payload.sequenceId),
+          }
+        : undefined;
+    scheduler.endFrame(payload.sequenceId, payload.status, payload.decodedData, payload.error, payload.buffer, result);
+  }
+
+  /** Time since a frame was captured, from the scheduler's own bookkeeping. */
+  function frameDuration(sequenceId: number): number {
+    const started = scheduler.getStartTimeMap().get(sequenceId);
+    return started === undefined ? 0 : clock.now() - started;
   }
 
   function spawnWorker() {
@@ -301,10 +402,16 @@ export function createCameraScannerEngine(config: CameraScannerEngineConfig): Ca
     const frame = pixels;
     clock.setTimeout(() => {
       try {
-        const decoded = decodeSync(frame, dims.width, dims.height, seqId);
-        if (decoded) {
+        const found = decodeSync(frame, dims.width, dims.height, seqId);
+        if (found) {
           restartAttempts = 0;
-          scheduler.endFrame(seqId, 'pass', decoded, null);
+          const code = asDecodedCode(found);
+          scheduler.endFrame(seqId, 'pass', code.text, null, undefined, {
+            ...code,
+            corners: mapCorners(code.corners, width / dims.width, height / dims.height),
+            source: 'jsqr',
+            durationMs: frameDuration(seqId),
+          });
         } else {
           scheduler.endFrame(seqId, 'fail', null, null);
         }
@@ -315,10 +422,38 @@ export function createCameraScannerEngine(config: CameraScannerEngineConfig): Ca
     }, 0);
   }
 
+  function decodeNatively(active: CameraCodeDetector, source: CameraFrameSource, seqId: number) {
+    active
+      .detect(source)
+      .then((code) => {
+        if (code) {
+          scheduler.endFrame(seqId, 'pass', code.text, null, undefined, {
+            ...code,
+            source: 'native',
+            durationMs: frameDuration(seqId),
+          });
+        } else {
+          scheduler.endFrame(seqId, 'fail', null, null);
+        }
+      })
+      .catch((err: unknown) => {
+        // A detector that cannot read this source (or broke) hands over to the worker for good.
+        console.warn('Native QR detector failed, switching to the scanner worker:', err);
+        detector = null;
+        if (!worker && !useMainThread) spawnWorker();
+        scheduler.endFrame(seqId, 'fail', null, 'NATIVE_DETECTOR_ERROR');
+      });
+  }
+
   function decodeOnWorker(source: CameraFrameSource, seqId: number, width: number, height: number) {
-    const dims = getDownscaledDimensions(width, height, WORKER_MAX_DIMENSION);
+    const region = regionFor(seqId, width, height);
+    const dims = getDownscaledDimensions(
+      region.width,
+      region.height,
+      region.width === width && region.height === height ? WORKER_MAX_DIMENSION : REGION_MAX_DIMENSION
+    );
     grabber
-      .grabBitmap(source, dims.width, dims.height)
+      .grabBitmap(source, dims.width, dims.height, region)
       .then((image) => {
         const target = worker;
         if (!target) {
@@ -328,7 +463,7 @@ export function createCameraScannerEngine(config: CameraScannerEngineConfig): Ca
         }
         try {
           target.postFrame(
-            { image, width: dims.width, height: dims.height, sequenceId: seqId, epochId: epoch },
+            { image, width: dims.width, height: dims.height, sequenceId: seqId, epochId: epoch, region },
             [image]
           );
         } catch (err) {
@@ -346,6 +481,8 @@ export function createCameraScannerEngine(config: CameraScannerEngineConfig): Ca
   function captureFrame(force = false): boolean {
     const source = getSource();
     if (!source) return false;
+    // Until the page has been checked for a platform detector, no decoder is chosen.
+    if (detector === undefined) return false;
     // A stream that has not delivered its first frame yet cannot be captured.
     if (typeof source.readyState === 'number' && source.readyState < HAVE_CURRENT_DATA) return false;
     if (!force && scheduler.getInFlight()) return false;
@@ -355,7 +492,9 @@ export function createCameraScannerEngine(config: CameraScannerEngineConfig): Ca
     const seqId = scheduler.beginFrame(force);
     if (seqId === null) return false;
 
-    if (useMainThread || !worker) {
+    if (detector) {
+      decodeNatively(detector, source, seqId);
+    } else if (useMainThread || !worker) {
       decodeOnMainThread(source, seqId, width, height);
     } else {
       decodeOnWorker(source, seqId, width, height);
@@ -460,15 +599,32 @@ export function createCameraScannerEngine(config: CameraScannerEngineConfig): Ca
     scheduleNextTick();
   }
 
+  /** Uses the platform detector when there is one, otherwise the worker (spawned once). */
+  function chooseDecoder() {
+    if (detector === undefined) {
+      detectorCheck ??= defaultDetector().then(
+        (found) => {
+          detector = found;
+          if (!found && running && !worker && !useMainThread) spawnWorker();
+        },
+        () => {
+          detector = null;
+          if (running && !worker && !useMainThread) spawnWorker();
+        }
+      );
+      return;
+    }
+    if (!detector && !worker && !useMainThread) spawnWorker();
+  }
+
   function start() {
     if (destroyed) return;
     restartAttempts = 0;
     epoch = nextEpoch();
+    gate.reset();
     scheduler.setWatchdogTimeout(WATCHDOG_TIMEOUT_MS);
     scheduler.start();
-    if (!worker && !useMainThread) {
-      spawnWorker();
-    }
+    chooseDecoder();
     if (!running) {
       running = true;
       loopSuspended = false;

@@ -28,7 +28,14 @@
 import { setTimeout as delay } from 'node:timers/promises';
 import type { Page, TestInfo } from '@playwright/test';
 import { test, expect } from './fixtures';
-import { codeScene, installFakeCamera, liveCameraTracks, showOnCamera, throttleCpu } from '../tests/utils/fakeCamera';
+import {
+  codeScene,
+  installFakeCamera,
+  liveCameraTracks,
+  requestedCameraConstraints,
+  showOnCamera,
+  throttleCpu,
+} from '../tests/utils/fakeCamera';
 import { renderPhoto, withExifOrientation } from '../tests/utils/photoFixture';
 
 const CODE = 'https://qrcraftly.com/scanned';
@@ -82,7 +89,8 @@ async function decodeTime(page: Page, timeout = 15_000): Promise<number> {
 /**
  * Resources the page fetched between the timer's start and the decode (resource timing), other
  * than the app's own code: applying the decoded content starts the generator's matrix worker,
- * whose script is a same-origin `/assets/` file, exactly as typing the same content would.
+ * whose script is a same-origin `/assets/` file, exactly as typing the same content would, and the
+ * scanner may load its own zxing-wasm reader from `/assets/` (ADR 0023).
  */
 async function requestsDuringScan(page: Page): Promise<string[]> {
   return page.evaluate(() => {
@@ -93,7 +101,7 @@ async function requestsDuringScan(page: Page): Promise<string[]> {
       .getEntriesByType('resource')
       .filter((entry) => entry.startTime >= startedAt && entry.startTime <= decodedAt)
       .map((entry) => entry.name)
-      .filter((name) => !/^https?:\/\/[^/]+\/assets\/[\w.-]+\.js$/.test(name) || !name.startsWith(location.origin));
+      .filter((name) => !/^https?:\/\/[^/]+\/assets\/[\w.-]+\.(?:js|wasm)$/.test(name) || !name.startsWith(location.origin));
   });
 }
 
@@ -153,6 +161,27 @@ test.describe('Camera scanner with a scripted fake camera', () => {
       await showOnCamera(page, null);
       await openScanner(page);
       await expect.poll(() => liveCameraTracks(page)).toBe(1);
+      await page.getByRole('button', { name: 'Close scanner' }).click();
+      await expect.poll(() => liveCameraTracks(page)).toBe(0);
+    });
+
+    test('asks for an HD back camera at 30 fps (#1100)', async ({ page, context }) => {
+      await installFakeCamera(context);
+      await openGenerator(page);
+      await showOnCamera(page, null);
+      await openScanner(page);
+      await expect.poll(() => liveCameraTracks(page)).toBe(1);
+
+      const [first] = await requestedCameraConstraints(page);
+      expect(first).toMatchObject({
+        audio: false,
+        video: {
+          facingMode: { ideal: 'environment' },
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+          frameRate: { ideal: 30 },
+        },
+      });
       await page.getByRole('button', { name: 'Close scanner' }).click();
       await expect.poll(() => liveCameraTracks(page)).toBe(0);
     });

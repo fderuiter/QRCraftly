@@ -152,7 +152,7 @@ describe('CSP Hash Injector Unit Tests', () => {
       const routeCsp = updateCsp(BASE_CSP_PATTERN, ["'sha256-abc'"]);
       expect(directiveSources(routeCsp, 'img-src')).toEqual(["'self'", 'data:', 'blob:']);
       expect(directiveSources(routeCsp, 'media-src')).toEqual(["'self'", 'blob:']);
-      expect(directiveSources(routeCsp, 'script-src')).toEqual(["'self'", "'sha256-abc'"]);
+      expect(directiveSources(routeCsp, 'script-src')).toEqual(["'self'", "'wasm-unsafe-eval'", "'sha256-abc'"]);
     });
 
     it('allowlists no third-party origins now that Google Fonts is gone (#970)', () => {

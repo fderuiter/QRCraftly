@@ -154,6 +154,10 @@ export function useOpticalReceiver({
     // An animated stream changes frame every ~66 ms, so sampling may never back off
     // to the single-code scanner's 1 fps floor. The worker's backpressure still bounds load.
     maxSamplingDelay: STREAM_MAX_SAMPLING_DELAY_MS,
+    // Every frame of a transfer stream is a different payload with its own checksum, and a repeated
+    // frame is harmless: take each decode at once instead of waiting for a second agreeing one.
+    confirmations: 1,
+    repeatHoldMs: 0,
   });
   const cameraError = 'error' in cameraState ? cameraState.error : null;
 

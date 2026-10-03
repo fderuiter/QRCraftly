@@ -125,7 +125,7 @@ pnpm run lint
 ```
 
 **Bundle Size Check:**
-CI fails if the gzipped size of all files in `dist/client` exceeds 720 KB (`scripts/check-bundle-size.js`). `pnpm build` does not run this check; run it yourself after a build:
+CI fails if the gzipped size of all files in `dist/client` exceeds 745 KB (`scripts/check-bundle-size.js`; the scanner's lazily loaded `.wasm` reader has its own 450 KB budget). `pnpm build` does not run this check; run it yourself after a build:
 
 ```bash
 pnpm build
@@ -189,7 +189,7 @@ Lighthouse CI runs on every Pull Request to audit performance, accessibility, be
   - `constants.ts`: Default configurations and preset data.
 - `scripts/`: Utility scripts.
   - `contrast_check.js`: Checks WCAG contrast compliance for UI elements.
-  - `check-bundle-size.js`: Gzipped client bundle budget (720 KB), run in CI.
+  - `check-bundle-size.js`: Gzipped client bundle budget (745 KB, plus a separate 450 KB budget for the lazily loaded scanner WebAssembly), run in CI.
   - `storage_privacy_ast_auditor.js`: Blocks browser storage keys that are not on the allowlist.
 - `tests/`: Vitest tests for the repository scripts and CI tooling.
 - `public/`: Static assets (favicon, etc.).

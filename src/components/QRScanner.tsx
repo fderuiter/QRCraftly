@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Camera, Upload, AlertTriangle, X, RefreshCw, FileImage } from 'lucide-react';
-import { useQrScanner } from '@/packages/optical-scanner/client';
+import { useQrScanner, type CameraProblemStatus, type CameraSessionState } from '@/packages/optical-scanner/client';
 import { Button } from './ui/Button';
+import { ScannerCameraControls } from './ScannerCameraControls';
 import { EmptyState } from './ui/EmptyState';
 import { SegmentedControl } from './ui/SegmentedControl';
 
@@ -11,6 +12,58 @@ import { SegmentedControl } from './ui/SegmentedControl';
  */
 const isErrorLike = (value: unknown): value is Error =>
   typeof value === 'object' && value !== null && 'name' in value && 'message' in value;
+
+/** What each camera problem is called and how to get past it (#1100). */
+const CAMERA_PROBLEMS: Record<CameraProblemStatus, { title: string; body: string; retry: boolean }> = {
+  denied: { title: 'Camera Access Denied', body: 'You can still scan a QR code from a photo or screenshot.', retry: false },
+  unavailable: {
+    title: 'No Camera Found',
+    body: 'This device has no camera the browser can use. You can still scan a QR code from a photo or screenshot.',
+    retry: false,
+  },
+  busy: {
+    title: 'Camera In Use',
+    body: 'Another app or browser tab is using the camera. Close it and try again, or scan a photo or screenshot instead.',
+    retry: true,
+  },
+  unsupported: {
+    title: 'Camera Not Supported',
+    body: 'This camera cannot stream at a size the scanner can use. Try another camera, or scan a photo or screenshot.',
+    retry: true,
+  },
+  error: { title: 'Camera Unavailable', body: 'You can still scan a QR code from a photo or screenshot.', retry: true },
+};
+
+type CameraProblem = Extract<CameraSessionState, { error: Error }>;
+
+const isCameraProblem = (state: CameraSessionState): state is CameraProblem => 'error' in state;
+
+/** Two-finger pinch on the viewfinder sets the zoom (touch screens). */
+function usePinchZoom(zoom: { min: number; max: number; value: number } | null, setZoom: (value: number) => void) {
+  const pointers = React.useRef(new Map<number, { x: number; y: number }>());
+  const start = React.useRef<{ distance: number; zoom: number } | null>(null);
+  const distance = () => {
+    const [a, b] = [...pointers.current.values()];
+    return a && b ? Math.hypot(a.x - b.x, a.y - b.y) : 0;
+  };
+  const onPointerDown = (event: React.PointerEvent) => {
+    if (!zoom || event.pointerType !== 'touch') return;
+    pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    if (pointers.current.size === 2) start.current = { distance: distance(), zoom: zoom.value };
+  };
+  const onPointerMove = (event: React.PointerEvent) => {
+    if (!zoom || !pointers.current.has(event.pointerId)) return;
+    pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    const from = start.current;
+    if (!from || from.distance === 0 || pointers.current.size !== 2) return;
+    setZoom(Math.min(zoom.max, Math.max(zoom.min, from.zoom * (distance() / from.distance))));
+  };
+  const onPointerEnd = (event: React.PointerEvent) => {
+    pointers.current.delete(event.pointerId);
+    if (pointers.current.size < 2) start.current = null;
+  };
+  return { onPointerDown, onPointerMove, onPointerUp: onPointerEnd, onPointerCancel: onPointerEnd };
+}
 
 /**
  * QRScannerProps definition.
@@ -45,7 +98,17 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
   const fileAbortControllerRef = useRef<AbortController | null>(null);
 
   // The scan session owns the camera stream, the video element's source and the frame loop.
-  const { state: camera, start, stop, videoRef, scanFile } = useQrScanner({
+  const {
+    state: camera,
+    start,
+    stop,
+    videoRef,
+    scanFile,
+    cameras,
+    switchCamera,
+    setTorch,
+    setZoom,
+  } = useQrScanner({
     onScanSuccess: (data) => {
       onScanSuccess(data);
       if (!continuous) {
@@ -174,17 +237,21 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
     fileInputRef.current?.click();
   };
 
+  const streamingCamera = camera.status === 'streaming' ? camera.camera : null;
+  const pinch = usePinchZoom(streamingCamera?.zoom ?? null, (value) => void setZoom(value));
+
   // Render webcam viewfinder state
   const renderCameraProblem = () => {
-    if (camera.status !== 'denied' && camera.status !== 'unavailable' && camera.status !== 'error') return null;
+    if (!isCameraProblem(camera)) return null;
     const denied = camera.status === 'denied';
+    const problem = CAMERA_PROBLEMS[camera.status];
     // Lead with the way that works without a camera; permission help is secondary.
     return (
       <div className="absolute inset-0 flex flex-col gap-3 overflow-y-auto bg-surface p-4">
         <EmptyState
           illustration={<FileImage className="size-6" />}
-          title={denied ? 'Camera Access Denied' : 'Camera Unavailable'}
-          body="You can still scan a QR code from a photo or screenshot."
+          title={problem.title}
+          body={problem.body}
           action={
             <Button
               variant="primary"
@@ -207,6 +274,14 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
             </Button>
           </div>
         )}
+        {problem.retry && (
+          <div className="flex justify-center">
+            <Button variant="ghost" size="sm" onClick={handleRetryCamera}>
+              <RefreshCw className="size-3.5" aria-hidden="true" />
+              Try the camera again
+            </Button>
+          </div>
+        )}
       </div>
     );
   };
@@ -215,11 +290,15 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
   // element to attach the camera to, including after a retried permission request.
   const renderWebcamViewfinder = () => {
     return (
-      <div className="relative size-full bg-black">
-        {/* Live video feed */}
+      <div
+        className={`relative size-full bg-black ${streamingCamera?.zoom ? 'touch-none' : ''}`}
+        {...pinch}
+      >
+        {/* Live video feed. Only a user-facing camera is mirrored, and only on screen: the decoder
+            always reads the frames as the camera sees them. */}
         <video
           ref={videoRef}
-          className="size-full object-cover"
+          className={`size-full object-cover ${streamingCamera?.facing === 'user' ? '-scale-x-100' : ''}`}
           autoPlay
           playsInline
           muted
@@ -344,6 +423,15 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
       <div className="relative flex aspect-video max-h-[350px] min-h-65 w-full items-center justify-center bg-slate-100 md:aspect-[4/3] dark:bg-slate-950/40">
         {mode === 'webcam' ? renderWebcamViewfinder() : renderFileViewfinder()}
       </div>
+      {mode === 'webcam' && streamingCamera && (
+        <ScannerCameraControls
+          camera={streamingCamera}
+          cameras={cameras}
+          onSwitchCamera={(deviceId) => void switchCamera(deviceId)}
+          onTorch={(on) => void setTorch(on)}
+          onZoom={(value) => void setZoom(value)}
+        />
+      )}
     </div>
   );
 };

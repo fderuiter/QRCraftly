@@ -217,6 +217,9 @@ export function corpusSpecs(): Array<{ id: string; category: string; spec: Corpu
     entries.push({ id: `${category}/${detail}`, category, spec });
 
   for (const modulePx of [2, 3, 4, 6, 10]) add('module-size', `${modulePx}px`, { text: URL_TEXT, modulePx });
+  // A small code in a 1080p camera frame: readable only from the native-resolution region of
+  // interest, since downscaling the whole frame to 1280 px leaves modules of 1.3 px (#1099).
+  add('module-size', '2px-1080p', { text: URL_TEXT, modulePx: 2, width: 1920, height: 1080 });
   for (const version of [1, 5, 10, 15, 20, 25]) {
     add('version', `v${version}`, {
       text: textForVersion(version),

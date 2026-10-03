@@ -28,6 +28,7 @@
 import fs from 'fs';
 import type { Page } from '@playwright/test';
 import { test, expect } from './fixtures';
+import { codeScene, installFakeCamera, showOnCamera } from '../tests/utils/fakeCamera';
 
 interface RecordedViolation {
   directive: string;
@@ -102,5 +103,24 @@ test.describe('Content Security Policy enforced', () => {
 
     const blobViolations = (await readViolations(page)).filter((v) => v.blockedURI.startsWith('blob') || v.blockedURI === 'blob');
     expect(blobViolations).toEqual([]);
+  });
+
+  test('the scanner compiles its self-hosted zxing reader under the CSP (ADR 0023)', async ({ page, context }) => {
+    const warnings: string[] = [];
+    page.on('console', (message) => {
+      if (/zxing-reader-wasm unavailable/.test(message.text())) warnings.push(message.text());
+    });
+    const wasm = page.waitForResponse((response) => /\/assets\/.*zxing_reader[\w.-]*\.wasm$/.test(response.url()));
+    await installFakeCamera(context);
+    await page.reload();
+    await page.waitForSelector('main[data-hydrated="true"]');
+
+    await showOnCamera(page, codeScene('https://qrcraftly.com/csp'));
+    await page.getByRole('button', { name: 'Scan QR Code' }).click();
+    expect((await wasm).ok()).toBe(true);
+    await expect(page.locator('#url-input')).toHaveValue('https://qrcraftly.com/csp');
+
+    expect(warnings).toEqual([]);
+    expect(await readViolations(page)).toEqual([]);
   });
 });

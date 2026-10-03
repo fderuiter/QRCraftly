@@ -55,4 +55,17 @@ describe('Bundle Size Verification Script Tests', () => {
     // Verify results
     expect(result.exceeds).toBe(true);
   });
+
+  it('budgets the lazily loaded wasm reader separately from the site total (ADR 0023)', () => {
+    fs.writeFileSync(path.join(TEMP_TEST_DIR, 'app.js'), 'console.log(1);');
+    fs.writeFileSync(path.join(TEMP_TEST_DIR, 'reader.wasm'), 'B'.repeat(5000));
+
+    const result = verifyBundleSize(TEMP_TEST_DIR, 1, 10);
+    expect(result.exceeds).toBe(false);
+    expect(result.wasmGzipSize).toBeGreaterThan(0);
+    expect(result.wasmExceeds).toBe(false);
+    expect(result.reports).toHaveLength(2);
+
+    expect(verifyBundleSize(TEMP_TEST_DIR, 1, 0.01).wasmExceeds).toBe(true);
+  });
 });

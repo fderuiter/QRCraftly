@@ -51,7 +51,7 @@ describe('QRScanner Component', () => {
   const decode = async (data: string) => {
     const options: UseQrScannerOptions | undefined = vi.mocked(useQrScanner).mock.lastCall?.[0];
     await act(async () => {
-      options?.onScanSuccess?.(data);
+      options?.onScanSuccess?.(data, { text: data, bytes: null, corners: null, source: 'jsqr', durationMs: 0 });
     });
   };
 
@@ -115,7 +115,15 @@ describe('QRScanner Component', () => {
     expect(screen.getByRole('radio', { name: /webcam/i })).toHaveAttribute('aria-checked', 'true');
     expect(screen.getByRole('radio', { name: /file upload/i })).toHaveAttribute('aria-checked', 'false');
     await settle();
-    expect(getUserMedia).toHaveBeenCalledWith({ video: { facingMode: 'environment' }, audio: false });
+    expect(getUserMedia).toHaveBeenCalledWith({
+      video: {
+        facingMode: { ideal: 'environment' },
+        width: { ideal: 1920 },
+        height: { ideal: 1080 },
+        frameRate: { ideal: 30, max: 30 },
+      },
+      audio: false,
+    });
     expect(liveTracks()).toBe(1);
   });
 
@@ -264,7 +272,7 @@ describe('QRScanner Component', () => {
     deny('NotFoundError');
     render(<QRScanner onScanSuccess={mockOnScanSuccess} onClose={mockOnClose} />);
 
-    expect(await screen.findByText('Camera Unavailable')).toBeInTheDocument();
+    expect(await screen.findByText('No Camera Found')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Scan from an image instead' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /retry permission/i })).not.toBeInTheDocument();
   });
@@ -273,7 +281,102 @@ describe('QRScanner Component', () => {
     Object.defineProperty(navigator, 'mediaDevices', { value: undefined, configurable: true, writable: true });
     render(<QRScanner onScanSuccess={mockOnScanSuccess} onClose={mockOnClose} />);
 
-    expect(await screen.findByText('Camera Unavailable')).toBeInTheDocument();
+    expect(await screen.findByText('No Camera Found')).toBeInTheDocument();
+  });
+
+  it('explains a camera in use by another app and retries it (#1100)', async () => {
+    deny('NotReadableError');
+    render(<QRScanner onScanSuccess={mockOnScanSuccess} onClose={mockOnClose} />);
+
+    expect(await screen.findByText('Camera In Use')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /retry permission/i })).not.toBeInTheDocument();
+    getUserMedia.mockImplementation(openTrack);
+    fireEvent.click(screen.getByRole('button', { name: 'Try the camera again' }));
+    await settle();
+    expect(screen.queryByText('Camera In Use')).not.toBeInTheDocument();
+    expect(liveTracks()).toBe(1);
+  });
+
+  describe('camera controls (#1100)', () => {
+    /** Opens a camera that reports the given Image Capture capabilities and settings. */
+    const capableCamera = (capabilities: Record<string, unknown>, settings: Record<string, unknown> = {}) => {
+      const applied: Array<Record<string, unknown>> = [];
+      getUserMedia.mockImplementation(async () => {
+        const stream = await openTrack();
+        const [track] = stream.getTracks();
+        Object.assign(track, {
+          getCapabilities: () => capabilities,
+          getSettings: () => settings,
+          applyConstraints: async ({ advanced }: { advanced: Array<Record<string, unknown>> }) => {
+            applied.push(...advanced);
+            Object.assign(settings, ...advanced);
+          },
+        });
+        return stream;
+      });
+      return applied;
+    };
+    const withCameras = (labels: string[]) => {
+      const devices = labels.map((label, index) => ({ kind: 'videoinput', deviceId: `cam-${index}`, label }));
+      Object.defineProperty(navigator, 'mediaDevices', {
+        value: { getUserMedia, enumerateDevices: async () => devices },
+        configurable: true,
+        writable: true,
+      });
+    };
+
+    it('shows no controls for a camera without torch, zoom or a second camera', async () => {
+      render(<QRScanner onScanSuccess={mockOnScanSuccess} onClose={mockOnClose} />);
+      await settle();
+      expect(screen.queryByRole('button', { name: /torch/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('slider', { name: 'Zoom' })).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('Camera')).not.toBeInTheDocument();
+    });
+
+    it('offers the torch and zoom only when the camera supports them, accessibly', async () => {
+      const applied = capableCamera({ torch: true, zoom: { min: 1, max: 4, step: 0.5 } }, { zoom: 1, deviceId: 'cam-0' });
+      withCameras(['Back Camera', 'Front Camera']);
+      const { container } = render(<QRScanner onScanSuccess={mockOnScanSuccess} onClose={mockOnClose} />);
+      await settle();
+      await settle();
+
+      const torch = await screen.findByRole('button', { name: /torch/i });
+      expect(torch).toHaveAttribute('aria-pressed', 'false');
+      fireEvent.click(torch);
+      await settle();
+      expect(applied).toContainEqual({ torch: true });
+      expect(screen.getByRole('button', { name: /torch/i })).toHaveAttribute('aria-pressed', 'true');
+
+      fireEvent.change(screen.getByRole('slider', { name: 'Zoom' }), { target: { value: '2.5' } });
+      await settle();
+      expect(applied).toContainEqual({ zoom: 2.5 });
+
+      expect(screen.getByLabelText('Camera')).toHaveValue('cam-0');
+      expect(await axe(container)).toHaveNoViolations();
+    });
+
+    it('switches cameras without leaving the old one running', async () => {
+      capableCamera({}, { deviceId: 'cam-0' });
+      withCameras(['Back Camera', 'Front Camera']);
+      render(<QRScanner onScanSuccess={mockOnScanSuccess} onClose={mockOnClose} />);
+      await settle();
+      await settle();
+
+      fireEvent.change(await screen.findByLabelText('Camera'), { target: { value: 'cam-1' } });
+      await settle();
+      expect(getUserMedia).toHaveBeenLastCalledWith(
+        expect.objectContaining({ video: expect.objectContaining({ deviceId: { exact: 'cam-1' } }) })
+      );
+      expect(liveTracks()).toBe(1);
+      expect(tracks).toHaveLength(2);
+    });
+
+    it('mirrors the preview of a user-facing camera only', async () => {
+      capableCamera({}, { facingMode: 'user' });
+      render(<QRScanner onScanSuccess={mockOnScanSuccess} onClose={mockOnClose} />);
+      await settle();
+      expect(screen.getByLabelText('Webcam feed')).toHaveClass('-scale-x-100');
+    });
   });
 
   it('allows switching to file upload mode via the tab and processes images', async () => {
@@ -447,11 +550,10 @@ describe('QRScanner Component', () => {
 
     it('lets a second file replace the first without an error', async () => {
       const answered: string[] = [];
-      let requests = 0;
       globalThis.mockWorkerControl.setInterceptor((msg, worker) => {
-        // The first file takes longer than the second.
-        requests += 1;
-        const name = requests === 1 ? 'first' : 'second';
+        // The first file takes longer than the second. A file cancelled before it was posted is
+        // never sent at all.
+        const name = msg.file?.name === 'a.png' ? 'first' : 'second';
         setTimeout(() => {
           answered.push(name);
           worker.dispatchMessage({ status: 'pass', sequenceId: msg.sequenceId, decodedData: name });
@@ -465,7 +567,11 @@ describe('QRScanner Component', () => {
       fireEvent.change(fileInput, { target: { files: [new File(['a'], 'a.png', { type: 'image/png' })] } });
       fireEvent.change(fileInput, { target: { files: [new File(['b'], 'b.png', { type: 'image/png' })] } });
 
-      await waitFor(() => expect(answered).toHaveLength(2));
+      await waitFor(() => expect(answered).toContain('second'));
+      // Give a first answer, if the first file was posted, time to arrive and be ignored.
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 80));
+      });
       expect(mockOnScanSuccess).toHaveBeenCalledTimes(1);
       expect(mockOnScanSuccess).toHaveBeenCalledWith('second');
       expect(screen.queryByText(/already being processed/i)).not.toBeInTheDocument();

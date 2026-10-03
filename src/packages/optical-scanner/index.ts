@@ -16,10 +16,16 @@ export {
   type CameraFrameSource,
   type CameraFrameGrabber,
   type CameraFramePixels,
+  type CameraScanResult,
+  type CameraCodeDetector,
 } from './lib/cameraEngine';
 
 export {
   createCameraSession,
+  cameraConstraints,
+  type CameraInfo,
+  type CameraDevice,
+  type CameraMediaDevices,
   type CameraSession,
   type CameraSessionConfig,
   type CameraSessionState,
@@ -32,10 +38,21 @@ export {
 /** The camera-frame decoder: one bounded jsQR pass per frame, rotating strategies (#1096). */
 export {
   decodeCameraFrame,
+  decodeCameraCode,
   cameraStrategyFor,
   estimateNoise,
   type CameraDecodeStrategy,
 } from './lib/decodeSync';
+
+/** The platform's `BarcodeDetector`, first in the decoder chain (#1099). */
+export { createNativeQrDetector, type NativeQrDetector } from './lib/nativeDetector';
+
+/** Multi-frame confirmation and repeat hold for camera results (#1099). */
+export {
+  createResultGate,
+  type ResultGate,
+  type ResultGateOptions,
+} from './lib/resultGate';
 
 /** Per-session frame staleness, as the shared scanner worker judges it (#1095). */
 export { createStaleFrameGuard, type StaleFrameGuard } from './lib/frameGuard';
@@ -51,6 +68,11 @@ export {
 export {
   type ScanSource,
   type ScanResult,
+  type ScanCorners,
+  type ScanPoint,
+  type ScanDecoder,
+  type ScanRegion,
+  type DecodedCode,
   type ScanOptions,
   type ScannerStatus,
   type ScannerRequest,

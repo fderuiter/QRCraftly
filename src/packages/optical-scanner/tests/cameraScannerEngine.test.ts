@@ -12,6 +12,7 @@ import {
   type CameraFrameSource,
   type CameraScannerEngine,
   type CameraScannerEngineConfig,
+  type CameraScanResult,
   type ScannerClock,
   type ScannerRequest,
   type ScannerResponse,
@@ -188,6 +189,10 @@ function createHarness(overrides: Partial<CameraScannerEngineConfig> = {}) {
     createWorker,
     grabber,
     decodeSync,
+    // Most tests drive one frame at a time; confirmation and the platform detector have their own tests.
+    detector: null,
+    confirmations: 1,
+    repeatHoldMs: 0,
     ...overrides,
   });
   const unsubscribe = engine.subscribe(events);
@@ -248,7 +253,7 @@ describe('Camera Scanner Engine (headless)', () => {
 
       h.currentWorker()?.replyLatest({ status: 'pass', decodedData: 'https://qrcraftly.com' });
 
-      expect(h.events.onScanSuccess).toHaveBeenCalledWith('https://qrcraftly.com');
+      expect(h.events.onScanSuccess).toHaveBeenCalledWith('https://qrcraftly.com', expect.objectContaining({ text: 'https://qrcraftly.com' }));
       expect(h.events.onStatusChange).toHaveBeenCalledWith('checking');
       expect(h.events.onStatusChange).toHaveBeenLastCalledWith('pass');
     });
@@ -265,16 +270,31 @@ describe('Camera Scanner Engine (headless)', () => {
       expect(h.events.onStatusChange).toHaveBeenLastCalledWith('fail');
     });
 
-    it('downscales large camera frames before posting them to the worker', async () => {
+    it('posts the centre region and the downscaled whole frame in turn (#1099)', async () => {
       const h = createHarness();
       h.source.videoWidth = 3840;
       h.source.videoHeight = 2160;
       h.engine.start();
+      await h.answerNextFrame(10, { status: 'fail' });
+      await h.answerNextFrame(10, { status: 'fail' });
+
+      const [centre, whole] = h.currentWorker()?.frames ?? [];
+      expect(centre?.region).toEqual({ x: 840, y: 0, width: 2160, height: 2160 });
+      expect([centre?.width, centre?.height]).toEqual([1280, 1280]);
+      expect(whole?.region).toEqual({ x: 0, y: 0, width: 3840, height: 2160 });
+      expect([whole?.width, whole?.height]).toEqual([1280, 720]);
+    });
+
+    it('cuts the centre region at native resolution from a 1080p camera (#1099)', async () => {
+      const h = createHarness();
+      h.source.videoWidth = 1920;
+      h.source.videoHeight = 1080;
+      h.engine.start();
       await h.step(16);
 
-      const frame = h.currentWorker()?.frames[0];
-      expect(frame?.width).toBe(1280);
-      expect(frame?.height).toBe(720);
+      const centre = h.currentWorker()?.frames[0];
+      expect(centre?.region).toEqual({ x: 420, y: 0, width: 1080, height: 1080 });
+      expect([centre?.width, centre?.height]).toEqual([1080, 1080]);
     });
 
     it('ignores malformed worker responses', async () => {
@@ -315,7 +335,85 @@ describe('Camera Scanner Engine (headless)', () => {
       h.currentWorker()?.reply(first, { status: 'pass', decodedData: 'OLD' });
 
       expect(h.events.onScanSuccess).toHaveBeenCalledTimes(1);
-      expect(h.events.onScanSuccess).toHaveBeenCalledWith('NEW');
+      expect(h.events.onScanSuccess).toHaveBeenCalledWith('NEW', expect.objectContaining({ text: 'NEW' }));
+    });
+  });
+
+  describe('platform detector first (#1099)', () => {
+    it('reads frames with the native detector and never spawns or posts to the worker', async () => {
+      const detect = vi.fn(async () => ({ text: 'NATIVE', bytes: null, corners: null }));
+      const h = createHarness({ detector: { detect }, confirmations: 2, repeatHoldMs: 3000 });
+      h.engine.start();
+      await h.step(16);
+      await h.step(4);
+
+      expect(detect).toHaveBeenCalledWith(h.source);
+      expect(h.workers).toHaveLength(0);
+      // Native results are trusted on one frame, even with two confirmations required.
+      expect(h.events.onScanSuccess).toHaveBeenCalledTimes(1);
+      expect(h.events.onScanSuccess).toHaveBeenCalledWith('NATIVE', expect.objectContaining({ source: 'native' }));
+    });
+
+    it('hands over to the worker for good when the detector fails', async () => {
+      const detect = vi.fn(async () => {
+        throw new DOMException('Source not supported', 'NotSupportedError');
+      });
+      const h = createHarness({ detector: { detect } });
+      h.engine.start();
+      await h.step(16);
+      await h.step(4);
+      expect(h.workers).toHaveLength(1);
+
+      await h.answerNextFrame(10, { status: 'pass', decodedData: 'FROM-WORKER', decoder: 'zxing' });
+      expect(h.events.onScanSuccess).toHaveBeenCalledWith('FROM-WORKER', expect.objectContaining({ source: 'zxing' }));
+      expect(detect).toHaveBeenCalledTimes(1);
+    });
+
+    it('reports bytes, corners and the decoder from the worker', async () => {
+      const h = createHarness();
+      h.engine.start();
+      await h.answerNextFrame(12, {
+        status: 'pass',
+        decodedData: 'AB',
+        decodedBytes: new Uint8Array([65, 66]),
+        corners: [10, 10, 50, 10, 50, 50, 10, 50],
+        decoder: 'zxing',
+      });
+
+      const [, result] = h.events.onScanSuccess.mock.calls[0] as unknown as [string, CameraScanResult];
+      expect(Array.from(result.bytes ?? [])).toEqual([65, 66]);
+      expect(result.corners?.[2]).toEqual({ x: 50, y: 50 });
+      expect(result.source).toBe('zxing');
+      expect(result.durationMs).toBe(12);
+    });
+  });
+
+  describe('multi-frame confirmation (#1099)', () => {
+    it('does not emit a single decode, and emits once two agree within 500 ms', async () => {
+      const h = createHarness({ confirmations: 2, repeatHoldMs: 3000 });
+      h.engine.start();
+      await h.answerNextFrame(10, { status: 'pass', decodedData: 'MISREAD' });
+      await h.answerNextFrame(10, { status: 'pass', decodedData: 'REAL' });
+      expect(h.events.onScanSuccess).not.toHaveBeenCalled();
+
+      await h.answerNextFrame(10, { status: 'pass', decodedData: 'REAL' });
+      expect(h.events.onScanSuccess).toHaveBeenCalledTimes(1);
+      expect(h.events.onScanSuccess).toHaveBeenCalledWith('REAL', expect.objectContaining({ text: 'REAL' }));
+    });
+
+    it('emits a payload that stays in view once per hold period in continuous scanning', async () => {
+      const h = createHarness({ confirmations: 2, repeatHoldMs: 3000 });
+      h.engine.start();
+      for (let frame = 0; frame < 40; frame++) {
+        await h.answerNextFrame(10, { status: 'pass', decodedData: 'HELD' });
+      }
+      const firstPeriod = h.events.onScanSuccess.mock.calls.length;
+      expect(firstPeriod).toBe(1);
+
+      await h.step(3000);
+      await h.answerNextFrame(10, { status: 'pass', decodedData: 'HELD' });
+      await h.answerNextFrame(10, { status: 'pass', decodedData: 'HELD' });
+      expect(h.events.onScanSuccess).toHaveBeenCalledTimes(2);
     });
   });
 
@@ -383,7 +481,7 @@ describe('Camera Scanner Engine (headless)', () => {
       const second = h.currentWorker();
       expect(second?.frames.length).toBeGreaterThan(0);
       second?.replyLatest({ status: 'pass', decodedData: 'RECOVERED' });
-      expect(h.events.onScanSuccess).toHaveBeenCalledWith('RECOVERED');
+      expect(h.events.onScanSuccess).toHaveBeenCalledWith('RECOVERED', expect.objectContaining({ text: 'RECOVERED' }));
     });
 
     it('drops late responses from a replaced worker', async () => {
@@ -411,7 +509,7 @@ describe('Camera Scanner Engine (headless)', () => {
 
       await h.step(1100);
       h.currentWorker()?.replyLatest({ status: 'pass', decodedData: 'AFTER-CRASH' });
-      expect(h.events.onScanSuccess).toHaveBeenCalledWith('AFTER-CRASH');
+      expect(h.events.onScanSuccess).toHaveBeenCalledWith('AFTER-CRASH', expect.objectContaining({ text: 'AFTER-CRASH' }));
     });
 
     it('never restarts a slow worker that keeps answering (#1096)', async () => {
@@ -481,7 +579,7 @@ describe('Camera Scanner Engine (headless)', () => {
       expect(h.decodeSync).toHaveBeenCalled();
       const [, width, height] = h.decodeSync.mock.calls[0];
       expect(Math.max(width, height)).toBeLessThanOrEqual(800);
-      expect(h.events.onScanSuccess).toHaveBeenCalledWith('MAIN-THREAD');
+      expect(h.events.onScanSuccess).toHaveBeenCalledWith('MAIN-THREAD', expect.objectContaining({ text: 'MAIN-THREAD' }));
       expect(h.workers).toHaveLength(4);
     });
 
@@ -494,7 +592,7 @@ describe('Camera Scanner Engine (headless)', () => {
       await h.step(1);
 
       expect(h.workers).toHaveLength(0);
-      expect(h.events.onScanSuccess).toHaveBeenCalledWith('NO-WORKER');
+      expect(h.events.onScanSuccess).toHaveBeenCalledWith('NO-WORKER', expect.objectContaining({ text: 'NO-WORKER' }));
     });
   });
 
@@ -554,7 +652,7 @@ describe('Camera Scanner Engine (headless)', () => {
       h.engine.start();
       await h.step(16);
       h.currentWorker()?.replyLatest({ status: 'pass', decodedData: 'FRESH' });
-      expect(h.events.onScanSuccess).toHaveBeenCalledWith('FRESH');
+      expect(h.events.onScanSuccess).toHaveBeenCalledWith('FRESH', expect.objectContaining({ text: 'FRESH' }));
       expect(h.workers).toHaveLength(1);
     });
 
@@ -678,7 +776,7 @@ describe('Camera Scanner Engine (headless)', () => {
       const clock = new FakeClock();
       const source = new FakeSource();
       const worker = createSharedWorker(clock, 20);
-      const config = { getSource: () => source, clock, grabber, createWorker: worker.factory };
+      const config = { getSource: () => source, clock, grabber, createWorker: worker.factory, detector: null, confirmations: 1 as const };
 
       const first = createCameraScannerEngine(config);
       first.start();
@@ -694,7 +792,7 @@ describe('Camera Scanner Engine (headless)', () => {
       second.start();
       await run(clock, 60);
 
-      expect(onScanSuccess).toHaveBeenCalledWith('REOPENED');
+      expect(onScanSuccess).toHaveBeenCalledWith('REOPENED', expect.objectContaining({ text: 'REOPENED' }));
       expect(worker.state.posted - postedBefore).toBe(1);
       expect(worker.state.stale).toBe(0);
       second.destroy();
@@ -704,7 +802,7 @@ describe('Camera Scanner Engine (headless)', () => {
       const clock = new FakeClock();
       const source = new FakeSource();
       const worker = createSharedWorker(clock, 20);
-      const engine = createCameraScannerEngine({ getSource: () => source, clock, grabber, createWorker: worker.factory });
+      const engine = createCameraScannerEngine({ getSource: () => source, clock, grabber, createWorker: worker.factory, detector: null, confirmations: 1 as const });
       const onScanSuccess = vi.fn();
       engine.subscribe({ onScanSuccess });
 

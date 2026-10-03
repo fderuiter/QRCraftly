@@ -30,6 +30,7 @@
  *   real sensor's.
  * - `liveTracks()` counts the camera tracks that are still running, so specs can
  *   check that the camera is released.
+ * - `constraints()` returns what each `getUserMedia` call asked for.
  *
  * The real scanner (engine, worker, jsQR) reads these pixels exactly as it would read
  * a camera, headless, without `.y4m` files. Used by the scanner spec and, through
@@ -75,6 +76,8 @@ export interface FakeCameraApi {
   show(scene: FakeCameraScene | null): Promise<void>;
   liveTracks(): number;
   requests(): number;
+  /** The constraints of each `getUserMedia` call, oldest first. */
+  constraints(): MediaStreamConstraints[];
 }
 
 declare global {
@@ -96,6 +99,7 @@ export async function installFakeCamera(context: BrowserContext, options: FakeCa
       let scene: FakeCameraScene | null = null;
       let image: HTMLImageElement | null = null;
       let requests = 0;
+      const requested: MediaStreamConstraints[] = [];
       const tracks: MediaStreamTrack[] = [];
 
       /** Pre-rendered frames for the current scene; noisy scenes cycle through several. */
@@ -203,14 +207,16 @@ export async function installFakeCamera(context: BrowserContext, options: FakeCa
         },
         liveTracks: () => tracks.filter((track) => track.readyState === 'live').length,
         requests: () => requests,
+        constraints: () => requested,
       };
       Object.defineProperty(window, '__cam', { configurable: true, value: api });
 
       const mediaDevices = navigator.mediaDevices ?? ({} as MediaDevices);
       Object.defineProperty(mediaDevices, 'getUserMedia', {
         configurable: true,
-        value: async () => {
+        value: async (constraints: MediaStreamConstraints = {}) => {
           requests += 1;
+          requested.push(JSON.parse(JSON.stringify(constraints)));
           if (deny) {
             throw new DOMException('Permission denied', 'NotAllowedError');
           }
@@ -254,6 +260,11 @@ export async function showOnCamera(page: Page, scene: FakeCameraScene | null): P
 /** Number of fake camera tracks that are still live (not stopped). */
 export async function liveCameraTracks(page: Page): Promise<number> {
   return page.evaluate(() => window.__cam?.liveTracks() ?? 0);
+}
+
+/** The constraints of each `getUserMedia` call the page made, oldest first. */
+export async function requestedCameraConstraints(page: Page): Promise<MediaStreamConstraints[]> {
+  return page.evaluate(() => window.__cam?.constraints() ?? []);
 }
 
 /** Slows the page's CPU (Chromium only, through CDP), like a mid-range phone. Pass 1 to restore. */

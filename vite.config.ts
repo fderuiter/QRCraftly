@@ -23,6 +23,7 @@ import react from '@vitejs/plugin-react';
 import vike from 'vike/plugin';
 import type { Plugin } from 'vite';
 import type { Connect } from 'vite';
+import { zxingNoNetwork } from './scripts/vite/zxingNoNetwork';
 
 /**
  * Applies the static rules in `public/_redirects` (the file Cloudflare serves them from) in
@@ -82,7 +83,12 @@ export default defineConfig(() => {
         react(),
         vike(),
         redirectsFile(),
+        zxingNoNetwork(),
       ],
+      worker: {
+        // The scanner worker bundles the zxing-wasm glue (ADR 0023).
+        plugins: () => [zxingNoNetwork()],
+      },
       esbuild: {
         target: 'es2022'
       },

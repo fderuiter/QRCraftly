@@ -74,6 +74,20 @@ The camera stream used to be acquired by the app's `useCamera` hook and attached
 - **`src/hooks/useCamera.ts` is deleted.** `QRScanner` and `useOpticalReceiver` use the session; the receiver no longer takes an injected `camera` and exposes `cameraError` instead.
 - **Tests**: `tests/cameraSession.test.ts` covers idempotency, superseded requests, error mapping and visibility; the component test checks one live track under StrictMode and none after unmount or 20 quick remounts; `e2e/scanner.spec.ts` checks the denied fallback and that hiding the tab releases the camera in every browser.
 
+### 7. Decoder Chain and Result Confirmation (amendment, issues #1099 and #1104)
+
+- **Three decoders, best first** ([ADR 0023](./0023-zxing-wasm-scanner-decoder.md)): the platform `BarcodeDetector` when it reads QR codes (`lib/nativeDetector.ts`; camera frames then never reach the worker), zxing-wasm in the worker (`lib/zxingReader.ts`, compiled on the main thread by `lib/zxingModule.ts` and exposed to the worker through the `reader` entry point), and jsQR as the fallback.
+- **Region of interest.** Odd frames send the centre square at native resolution (up to 1280px) with `createImageBitmap(video, sx, sy, sw, sh)`; even frames send the whole frame downscaled to 1280px. The worker maps corners back to frame coordinates.
+- **Confirmation** (`lib/resultGate.ts`): two agreeing decodes within 500 ms, one for the platform detector, and a 3 s hold before the same payload is emitted again. `useOpticalReceiver` passes `confirmations: 1, repeatHoldMs: 0`.
+- **Rich results.** `ScanResult` and the camera callback carry `bytes`, `corners` and `source`; the worker response adds `decodedBytes`, `corners` and `decoder`.
+- **Tests**: [`src/packages/optical-scanner/tests/decoderChain.test.ts`](../../src/packages/optical-scanner/tests/decoderChain.test.ts) runs the real zxing reader in Node over the corpus, the gate and the native path.
+
+### 8. Camera Controls (amendment, issue #1100)
+
+- **Constraints.** The session asks for 1080p at 30 fps, steps down to 720p and then no size on `OverconstrainedError`, and applies continuous focus when the camera supports it (`cameraConstraints`).
+- **States.** `busy` (another app holds the camera) and `unsupported` (no mode fits) join `denied`, `unavailable` and `error`; `streaming` carries `camera` (device, facing, torch, zoom).
+- **Controls.** `listCameras`, `switchCamera`, `setTorch` and `setZoom`, surfaced by `ScannerCameraControls` under the viewfinder, each only when supported. The chosen camera is remembered in memory for the page only, never in storage. The preview is mirrored only for a front camera.
+
 ## Rationale
 
 - **Deep Module Principle**: Encapsulating high internal complexity (Web Workers, transferable buffers, canvas contexts, adaptive frame pacing, and image decoding) behind narrow public entry points (`scan`, `useQrScanner`) simplifies callers and eliminates abstraction leaks.
