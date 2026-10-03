@@ -118,6 +118,7 @@ test.describe('Content Security Policy enforced', () => {
     await showOnCamera(page, codeScene('https://qrcraftly.com/csp'));
     await page.getByRole('button', { name: 'Scan QR Code' }).click();
     expect((await wasm).ok()).toBe(true);
+    await page.getByRole('button', { name: 'Edit in generator' }).click();
     await expect(page.locator('#url-input')).toHaveValue('https://qrcraftly.com/csp');
 
     expect(warnings).toEqual([]);
