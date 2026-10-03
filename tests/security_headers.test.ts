@@ -67,4 +67,10 @@ describe('public/_headers security headers', () => {
   it('allowlists no third-party font hosts (#970)', () => {
     expect(fs.readFileSync(HEADERS_PATH, 'utf8')).not.toMatch(/fonts\.(googleapis|gstatic)\.com/);
   });
+
+  it('keeps workers.dev preview and production URLs out of search results; only qrcraftly.com is indexed (#1028)', () => {
+    const content = fs.readFileSync(HEADERS_PATH, 'utf8');
+    expect(content).toMatch(/^https:\/\/:subdomain\.fpderuiter\.workers\.dev\/\*\r?\n\s+X-Robots-Tag: noindex$/m);
+    expect(readGlobalHeaders().has('x-robots-tag')).toBe(false);
+  });
 });

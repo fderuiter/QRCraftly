@@ -155,7 +155,7 @@ export const LayoutControls: React.FC<LayoutControlsProps> = ({ config, onChange
             <div className="mb-2 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="text-xs text-fg-muted">Template Background</span>
-                <ContrastBadge isVisible={isLowContrast} contrastRatio={contrastRatio} decimalPrecision={1} data-testid="layout-bg-warning" />
+                <ContrastBadge isVisible={isLowContrast} contrastRatio={contrastRatio} decimalPrecision={1} announce={false} data-testid="layout-bg-warning" />
               </div>
               <ToggleSwitch
                 id="override-bg-color"
@@ -186,7 +186,7 @@ export const LayoutControls: React.FC<LayoutControlsProps> = ({ config, onChange
             <div className="mb-2 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="text-xs text-fg-muted">Template Text Color</span>
-                <ContrastBadge isVisible={isLowContrast} contrastRatio={contrastRatio} decimalPrecision={1} data-testid="layout-text-warning" />
+                <ContrastBadge isVisible={isLowContrast} contrastRatio={contrastRatio} decimalPrecision={1} announce={false} data-testid="layout-text-warning" />
               </div>
               <ToggleSwitch
                 id="override-text-color"

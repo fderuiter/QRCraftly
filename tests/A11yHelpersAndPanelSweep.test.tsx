@@ -133,8 +133,8 @@ describe('Modular Accessibility Test Helpers & Full Panel Sweep', () => {
       <StyleControls config={highContrastConfig} onChange={mockOnChange} />
     );
 
-    // Confirm warning banner is not visible initially
-    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    // The banner's live region is already mounted and silent, so the warning is announced when it appears
+    expect(screen.getByRole('status')).toHaveTextContent('');
 
     // Rerender with low contrast styling configuration (e.g. white foreground on white background)
     const lowContrastConfig: QRConfig = {
@@ -147,9 +147,10 @@ describe('Modular Accessibility Test Helpers & Full Panel Sweep', () => {
 
     // Assert screen-reader live region exists, is polite, and is populated with the warning alert
     const statusAlert = screen.getByRole('status');
-    expect(statusAlert).toBeInTheDocument();
-    expect(statusAlert.parentElement).toHaveAttribute('aria-live', 'polite');
+    expect(statusAlert).toHaveAttribute('aria-live', 'polite');
     expect(statusAlert).toHaveTextContent(/Warning: The contrast ratio is low/);
+    // One live region only: the warning card inside it is a static note, so it is not read twice (#800)
+    expect(statusAlert.querySelector('[aria-live], [role="status"], [role="alert"]')).toBeNull();
   });
 
   // Requirement 4 / AC 4: SVG Meta-tag Inspection (Title & Description tags)
