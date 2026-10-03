@@ -26,7 +26,7 @@ ADR 0004 still governs the scannability worker in `src/packages/scannability`, w
 
 - `script-src` adds `'wasm-unsafe-eval'`. It allows WebAssembly compilation only, never JavaScript `eval` ([SECURITY.md](../SECURITY.md)).
 - The reader is about 400 KB gzipped. It is loaded only when someone scans with no platform detector, so the service worker caches it on first use instead of precaching it, and `scripts/check-bundle-size.js` gives it its own budget outside the site total.
-- The reader's JavaScript glue adds about 15 KB gzipped to the scanner worker, so the site budget rises from 720 KB to 745 KB.
+- The reader's JavaScript glue adds about 15 KB gzipped to the scanner worker, so the site budget rises by 25 KB (to 760 KB, after the acknowledgements page took it to 735 KB).
 - `scripts/bundle_ast_audit.js` authorizes the one same-origin `fetch` of the reader by its warning text; no other network call is allowed.
 - A zxing-wasm upgrade that changes the glue fails the build until the no-network rewrite is reviewed (`tests/zxing_no_network.test.ts`).
 - Browsers without WebAssembly, or a stricter CSP, keep working with jsQR.

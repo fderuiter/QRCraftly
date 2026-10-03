@@ -29,3 +29,11 @@ declare namespace Vike {
 
 /** Package version from package.json, replaced at build time (see `define` in vite.config.ts). */
 declare const __APP_VERSION__: string;
+
+/** Third-party packages that ship to the browser, generated at build time (see `scripts/vite/thirdPartyLicenses.ts`). */
+declare module 'virtual:shipped-packages' {
+  /** Site path of the full license texts. */
+  export const licensesFile: string;
+  const packages: readonly import('../scripts/vite/thirdPartyLicenses').ShippedPackageSummary[];
+  export default packages;
+}

@@ -24,6 +24,7 @@ import vike from 'vike/plugin';
 import type { Plugin } from 'vite';
 import type { Connect } from 'vite';
 import { zxingNoNetwork } from './scripts/vite/zxingNoNetwork';
+import { shippedPackages } from './scripts/vite/thirdPartyLicenses';
 
 /**
  * Applies the static rules in `public/_redirects` (the file Cloudflare serves them from) in
@@ -65,6 +66,7 @@ const redirectsFile = (): Plugin => ({
  * Configures the development server, plugins, environment variables, and path aliases.
  */
 export default defineConfig(() => {
+    const licenses = shippedPackages();
     const { version } = JSON.parse(fs.readFileSync(path.resolve(__dirname, 'package.json'), 'utf8')) as { version: string };
     return {
       define: {
@@ -84,11 +86,8 @@ export default defineConfig(() => {
         vike(),
         redirectsFile(),
         zxingNoNetwork(),
+        licenses.plugin,
       ],
-      worker: {
-        // The scanner worker bundles the zxing-wasm glue (ADR 0023).
-        plugins: () => [zxingNoNetwork()],
-      },
       esbuild: {
         target: 'es2022'
       },
@@ -96,6 +95,10 @@ export default defineConfig(() => {
         esbuildOptions: {
           target: 'es2022'
         }
+      },
+      worker: {
+        // The scanner worker bundles the zxing-wasm glue (ADR 0023).
+        plugins: () => [zxingNoNetwork(), licenses.workerPlugin()],
       },
       build: {
         target: "es2022",

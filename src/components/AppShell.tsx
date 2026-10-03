@@ -32,6 +32,7 @@ const COMPANY_LINKS = [
   ['No-Ads Pledge', '/free-forever'],
   ['Security Policy', '/security#security'],
   ['Privacy Architecture', '/security#compliance'],
+  ['Open-Source Licenses', '/acknowledgements'],
 ] as const;
 
 /**

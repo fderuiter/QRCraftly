@@ -125,7 +125,7 @@ pnpm run lint
 ```
 
 **Bundle Size Check:**
-CI fails if the gzipped size of all files in `dist/client` exceeds 745 KB (`scripts/check-bundle-size.js`; the scanner's lazily loaded `.wasm` reader has its own 450 KB budget). `pnpm build` does not run this check; run it yourself after a build:
+CI fails if the gzipped size of all files in `dist/client` exceeds 760 KB (`scripts/check-bundle-size.js`; the scanner's lazily loaded `.wasm` reader has its own 450 KB budget). `pnpm build` does not run this check; run it yourself after a build:
 
 ```bash
 pnpm build
@@ -181,6 +181,7 @@ Lighthouse CI runs on every Pull Request to audit performance, accessibility, be
   - `pages/`: Page-level components (Vike routing).
     - `index/+Page.tsx`: The home page.
     - `about/+Page.tsx`: The about page.
+    - `acknowledgements/+Page.tsx`: Open-source packages the site ships, with their licenses.
     - `wifi-qr-code/+Page.tsx` and the other `*-qr-code/` folders: One page per QR type.
     - `file-transfer/+Page.tsx` and `file-transfer/receive/+Page.tsx`: Air-gapped file sender and receiver.
     - `arcade/+Page.tsx`: QR Arcade (`/game` and `/destroy-the-qr` redirect here).
@@ -189,7 +190,8 @@ Lighthouse CI runs on every Pull Request to audit performance, accessibility, be
   - `constants.ts`: Default configurations and preset data.
 - `scripts/`: Utility scripts.
   - `contrast_check.js`: Checks WCAG contrast compliance for UI elements.
-  - `check-bundle-size.js`: Gzipped client bundle budget (745 KB, plus a separate 450 KB budget for the lazily loaded scanner WebAssembly), run in CI.
+  - `check-bundle-size.js`: Gzipped client bundle budget (760 KB, plus a separate 450 KB budget for the lazily loaded scanner WebAssembly), run in CI.
+  - `vite/thirdPartyLicenses.ts`: Builds the acknowledgements data and checks `vite/shipped-packages.json` against the client bundle (`pnpm run licenses:sync` rewrites the list).
   - `storage_privacy_ast_auditor.js`: Blocks browser storage keys that are not on the allowlist.
 - `tests/`: Vitest tests for the repository scripts and CI tooling.
 - `public/`: Static assets (favicon, etc.).
@@ -210,6 +212,7 @@ To maintain security and reduce repository noise, QRCraftly uses **Dependabot** 
 - **Grouped Updates**: Non-security routine updates are consolidated into logical groups (e.g., `dev-dependencies`, `production-dependencies`) to minimize PR volume.
 - **Security Priority**: Critical security patches bypass routine grouping and are issued as isolated PRs for immediate visibility.
 - **Review Process**: All dependency update PRs require human review. Before merging, ensure the CI pipeline (the `CI` check, which covers static validation, unit tests, E2E tests, and the build with its bundle size check) has passed successfully.
+- **Open-source acknowledgements**: The `/acknowledgements` page lists every third-party package whose code ships to the browser, with its version and license text, read from the installed packages at build time. `scripts/vite/shipped-packages.json` names those packages, and every build checks it against the client bundle (pages, web workers and CSS). When an update adds or removes a shipped package, the build fails with a `Fix:` hint: run `pnpm run licenses:sync`, check the new package's license and commit the updated list.
 - **Package Manager**: QRCraftly strictly mandates **pnpm**. Dependabot is configured to respect `pnpm-lock.yaml`. Never use `npm install` or `yarn` when manually updating dependencies.
 
 ## Technologies Used

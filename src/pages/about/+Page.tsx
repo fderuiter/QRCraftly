@@ -148,6 +148,10 @@ export default function Page() {
             QRCraftly is released under the <strong>GNU Affero General Public License v3.0 (AGPL-3.0)</strong>. The code
             is open for inspection and contribution. We believe in transparency.
           </p>
+          <p className="mb-4">
+            QRCraftly is built on open-source packages too.{' '}
+            <a href="/acknowledgements" className={LINK_CLASSES}>See every package it ships and its license</a>
+          </p>
           <ButtonLink href="https://github.com/fderuiter/QRCraftly" target="_blank" rel="noopener noreferrer" variant="outline">
             <GithubIcon className="size-5" />
             View on GitHub

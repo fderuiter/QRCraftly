@@ -7,7 +7,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const DIST_DIR = path.resolve(__dirname, '../dist/client');
-export const MAX_GZIPPED_SIZE_KB = 745;
+export const MAX_GZIPPED_SIZE_KB = 760;
 // The scanner's zxing-wasm reader (ADR 0023) is fetched only when someone scans and is never
 // precached, so it has its own budget instead of counting against the site's.
 export const MAX_LAZY_WASM_GZIPPED_SIZE_KB = 450;

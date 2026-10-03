@@ -184,6 +184,7 @@ export const formatPathName = (segment: string): string => {
     'arcade': 'QR Arcade',
     'security': 'Security & Privacy',
     'free-forever': 'Free Forever',
+    'acknowledgements': 'Open-Source Acknowledgements',
   };
 
   if (overrides[segment]) {

@@ -1,0 +1,17 @@
+[
+  "@brillout/json-serializer",
+  "@brillout/picocolors",
+  "@rollup/plugin-commonjs",
+  "dijkstrajs",
+  "jsqr",
+  "lucide-react",
+  "qrcode",
+  "react",
+  "react-dom",
+  "scheduler",
+  "tailwindcss",
+  "vike",
+  "vike-react",
+  "vite",
+  "zxing-wasm"
+]
