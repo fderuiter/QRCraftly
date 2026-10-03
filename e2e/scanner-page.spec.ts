@@ -85,6 +85,10 @@ test.describe('Scanning a pasted screenshot', () => {
     await page.getByRole('button', { name: 'Paste image' }).click();
     await expect(page.getByTestId('scan-result-host')).toHaveText('qrcraftly.com', { timeout: 15_000 });
     await page.getByRole('button', { name: 'Scan another' }).click();
+    // Let the offline service worker finish precaching the site, which it does in the background.
+    await page.evaluate(async () => {
+      await navigator.serviceWorker?.ready;
+    });
     await page.waitForLoadState('networkidle');
 
     // From opening the image input to showing the result sheet, nothing goes over the network.
