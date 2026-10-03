@@ -366,13 +366,13 @@ describe('Camera Scanner Engine (headless)', () => {
   });
 
   describe('watchdog recovery', () => {
-    it('recreates the worker after a 1500ms stall and keeps scanning', async () => {
+    it('recreates a worker that stays silent for 5 s and keeps scanning', async () => {
       const h = createHarness();
       h.engine.start();
       await h.step(16);
       const first = h.currentWorker();
 
-      await h.step(1400);
+      await h.step(4900);
       expect(h.workers).toHaveLength(1);
 
       await h.step(300);
@@ -393,7 +393,7 @@ describe('Camera Scanner Engine (headless)', () => {
       const first = h.currentWorker();
       const staleFrame = first?.frames[0];
 
-      await h.step(1700);
+      await h.step(5200);
       expect(h.workers).toHaveLength(2);
 
       if (staleFrame) first?.reply(staleFrame, { status: 'pass', decodedData: 'LATE' });
@@ -414,25 +414,35 @@ describe('Camera Scanner Engine (headless)', () => {
       expect(h.events.onScanSuccess).toHaveBeenCalledWith('AFTER-CRASH');
     });
 
-    it('backs off the watchdog exponentially between consecutive restarts', async () => {
+    it('never restarts a slow worker that keeps answering (#1096)', async () => {
+      const h = createHarness();
+      h.engine.start();
+      // A throttled phone decoding grainy frames: every answer takes 1.8 s.
+      for (let i = 0; i < 12; i++) {
+        await h.answerNextFrame(1800, { status: 'fail' });
+      }
+      expect(h.workers).toHaveLength(1);
+      expect(h.workers[0].terminated).toBe(false);
+      expect(h.decodeSync).not.toHaveBeenCalled();
+    });
+
+    it('restarts a worker that never answers with the same 5 s budget every time', async () => {
       const h = createHarness();
       h.engine.start();
       await h.step(16);
 
-      // First stall: 1500ms budget.
-      await h.step(1600);
+      await h.step(5200);
       expect(h.workers).toHaveLength(2);
-
-      // Second generation stalls too: its budget has doubled to 3000ms.
+      const restartedAt = h.clock.now();
       await h.step(1100);
       expect(h.workers[1].frames.length).toBe(1);
-      await h.step(1500);
+      await h.step(restartedAt + 4700 - h.clock.now());
       expect(h.workers).toHaveLength(2);
-      await h.step(600);
+      await h.step(700);
       expect(h.workers).toHaveLength(3);
     });
 
-    it('resets the backoff once a worker answers again', async () => {
+    it('resets the restart count once a worker answers again', async () => {
       const h = createHarness();
       h.engine.start();
       await h.step(16);
@@ -443,11 +453,14 @@ describe('Camera Scanner Engine (headless)', () => {
       await h.step(1100);
       h.currentWorker()?.replyLatest({ status: 'fail' });
 
-      // A fresh stall is detected with the base 1500ms budget again.
+      // Three more consecutive failures are allowed before the main-thread fallback.
       await h.step(100);
-      const beforeStall = h.workers.length;
-      await h.step(1700);
-      expect(h.workers.length).toBe(beforeStall + 1);
+      h.currentWorker()?.crash();
+      h.currentWorker()?.crash();
+      h.currentWorker()?.crash();
+      expect(h.workers).toHaveLength(6);
+      h.currentWorker()?.crash();
+      expect(h.workers).toHaveLength(6);
     });
 
     it('falls back to main-thread decoding after three failed restarts', async () => {

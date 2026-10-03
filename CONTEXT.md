@@ -95,7 +95,7 @@ A consolidated deep module encapsulating real-time webcam frame acquisition, mul
 _Avoid_: Camera frame provider, QR scanner helper, scanner utility
 
 **Camera Scanner Engine**:
-The headless component of the Optical Detection Engine that owns the live camera frame loop, adaptive sampling, backpressure, downscaling, and the private scanner worker (epochs, 1500ms watchdog, three-retry exponential backoff, and main-thread fallback). React code reaches it only through the `useQrScanner` adapter hook.
+The headless component of the Optical Detection Engine that owns the live camera frame loop, adaptive sampling, backpressure, downscaling, and the private scanner worker (epochs, one bounded decode pass per frame, a 5000ms hang watchdog, three restarts, and main-thread fallback). React code reaches it only through the `useQrScanner` adapter hook.
 _Avoid_: Camera frame provider, scanner loop hook, worker ref
 
 **Adaptive Frame Scheduler**:

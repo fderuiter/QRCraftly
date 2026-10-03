@@ -133,9 +133,9 @@ describe('OpticalScannerHarness Unit & Integration Tests', () => {
     const seqId = harness.pushFrame(mockPixels, 10, 10);
     expect(seqId).toBe(1);
 
-    // Advance time past the 1500ms watchdog threshold to t=2600ms
-    nowTime = 2600;
-    vi.advanceTimersByTime(1600);
+    // Advance time past the 5000ms hang budget to t=6200ms
+    nowTime = 6200;
+    vi.advanceTimersByTime(5200);
 
     // Watchdog automatic timer fired during advanceTimersByTime
     expect(watchdogTriggered).toBe(true);

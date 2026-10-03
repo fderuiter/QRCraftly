@@ -15,6 +15,15 @@ export interface SchedulerOptions {
 }
 
 const WATCHDOG_POLL_MS = 100;
+/**
+ * Default hang budget: how long the worker may stay silent with a frame in flight. One jsQR pass
+ * on a slow phone can take a second or two, so only a far longer silence counts as a hang (#1096).
+ */
+export const DEFAULT_WATCHDOG_TIMEOUT_MS = 5000;
+/** Target sampling delay as a multiple of the median decode latency. */
+const LATENCY_HEADROOM = 1.2;
+/** Share of the gap to a higher target closed per frame. */
+const RISE_SMOOTHING = 0.5;
 
 /**
  * Backpressure-driven adaptive sampling controller.
@@ -34,7 +43,9 @@ export class AdaptiveFrameScheduler {
   private completedSequenceId = 0;
   private startTimeMap = new Map<number, number>();
   private options: SchedulerOptions;
-  private watchdogTimeout = 1500;
+  private watchdogTimeout = DEFAULT_WATCHDOG_TIMEOUT_MS;
+  /** Last sign of life from the worker (any answer, stale ones included). */
+  private lastHeartbeat: number | null = null;
 
   // Background tab visibility tracking state
   private isPaused = false;
@@ -59,7 +70,8 @@ export class AdaptiveFrameScheduler {
     this.completedSequenceId = 0;
     this.startTimeMap.clear();
     this.latencyHistory = [];
-    this.watchdogTimeout = 1500;
+    this.watchdogTimeout = DEFAULT_WATCHDOG_TIMEOUT_MS;
+    this.lastHeartbeat = null;
     this.setupVisibilityListener();
     this.startWatchdog();
   }
@@ -232,25 +244,18 @@ export class AdaptiveFrameScheduler {
           ? (sorted[mid - 1] + sorted[mid]) / 2
           : sorted[mid];
 
-      let nextDelay = this.samplingDelay;
-
-      if (medianLatency > 100) {
-        nextDelay = Math.min(
-          this.maxSamplingDelay,
-          Math.max(this.samplingDelay + 50, medianLatency * 1.5)
-        );
-      } else if (medianLatency < 40) {
-        const baselineDelay = 33;
-        const targetDelay = Math.max(this.minSamplingDelay, baselineDelay);
-        const excess = this.samplingDelay - targetDelay;
-        const step = Math.max(10, Math.round(excess * 0.5));
-        nextDelay = Math.max(this.minSamplingDelay, this.samplingDelay - step);
-      } else if (this.samplingDelay > medianLatency) {
-        // Moderate decodes (dense codes take 40-100 ms) recover towards their own latency;
-        // otherwise one slow burst would pin sampling at the maximum delay for good.
-        nextDelay = Math.max(this.minSamplingDelay, Math.round((this.samplingDelay + medianLatency) / 2));
-      }
-
+      // Pace towards the measured latency (#1096): the target is 1.2x the 5-frame median, so the
+      // worker is busy a little under half the time. Rising is smoothed (one slow frame cannot
+      // spike the delay); falling is immediate, so sampling speeds up as soon as decodes do.
+      // The old rule added 50 ms on every slow frame and ratcheted towards 1 fps.
+      const target = Math.min(
+        this.maxSamplingDelay,
+        Math.max(this.minSamplingDelay, Math.round(medianLatency * LATENCY_HEADROOM))
+      );
+      const nextDelay =
+        target >= this.samplingDelay
+          ? Math.min(this.maxSamplingDelay, Math.round(this.samplingDelay + (target - this.samplingDelay) * RISE_SMOOTHING))
+          : target;
       this.samplingDelay = nextDelay;
       this.options.onDelayChange?.(nextDelay);
       this.options.onStatusChange?.(status);
@@ -276,14 +281,20 @@ export class AdaptiveFrameScheduler {
     return this.watchdogTimeout;
   }
 
+  /** Records a sign of life from the worker; the watchdog measures silence from the latest one. */
+  public heartbeat() {
+    this.lastHeartbeat = this.clock.now();
+  }
+
   public checkWatchdog(): boolean {
     if (this.isPaused) {
       return false;
     }
     if (this.inFlight && this.inFlightStart !== null) {
-      const elapsed = this.clock.now() - this.inFlightStart;
+      const since = this.lastHeartbeat !== null ? Math.max(this.inFlightStart, this.lastHeartbeat) : this.inFlightStart;
+      const elapsed = this.clock.now() - since;
       if (elapsed > this.watchdogTimeout) {
-        console.warn(`Watchdog: Worker starvation detected (${elapsed.toFixed(0)}ms > ${this.watchdogTimeout}ms). Recreating worker.`);
+        console.warn(`Watchdog: Worker silent for ${elapsed.toFixed(0)}ms (> ${this.watchdogTimeout}ms). Recreating worker.`);
         this.triggerRecovery(elapsed);
         return true;
       }

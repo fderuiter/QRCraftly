@@ -79,6 +79,125 @@ export function decodeRgbaFrame(data: Uint8ClampedArray, width: number, height: 
 }
 
 /**
+ * One camera-frame decode strategy. The camera loop sees a new frame every few tens of
+ * milliseconds, so each frame gets exactly one jsQR pass and consecutive frames rotate
+ * through the strategies (#1096):
+ * - `centre`: the centre square of the frame (where the viewfinder reticle is) at native
+ *   resolution, for small or distant codes;
+ * - `frame`: the whole frame, downscaled to at most {@link FRAME_PASS_MAX_DIMENSION};
+ * - `inverted`: the centre square again, looking for light-on-dark codes only.
+ */
+export type CameraDecodeStrategy = 'centre' | 'frame' | 'inverted';
+
+/** The rotation: the centre crop every other frame, the whole frame and an inverted pass in between. */
+const CAMERA_STRATEGIES: readonly CameraDecodeStrategy[] = ['centre', 'frame', 'centre', 'inverted'];
+/** Longest edge of the whole-frame passes. */
+const FRAME_PASS_MAX_DIMENSION = 800;
+/**
+ * Sensor-noise levels (median grey difference between neighbouring pixels) above which a pass
+ * decodes a box-downscaled copy instead. jsQR's binarizer turns grain into thousands of finder
+ * pattern candidates: on a 1280x720 frame with +/-14 grey levels of noise one pass takes seconds.
+ * Averaging 2x2 (or 3x3) pixels cuts the noise enough to keep a pass in the tens of milliseconds.
+ */
+const NOISY_LEVEL = 6;
+const VERY_NOISY_LEVEL = 11;
+
+/**
+ * Picks the strategy for a camera frame.
+ * @param sequenceId The frame's sequence number within its scan session (1, 2, ...).
+ * @returns The pass to run on that frame.
+ */
+export function cameraStrategyFor(sequenceId: number): CameraDecodeStrategy {
+  const index = (((Math.floor(sequenceId) - 1) % CAMERA_STRATEGIES.length) + CAMERA_STRATEGIES.length) % CAMERA_STRATEGIES.length;
+  return CAMERA_STRATEGIES[index];
+}
+
+/** Copies the centred square of an RGBA frame. */
+function cropCentre(
+  data: Uint8ClampedArray,
+  width: number,
+  height: number
+): { data: Uint8ClampedArray; width: number; height: number } {
+  const side = Math.min(width, height);
+  if (side === width && side === height) return { data, width, height };
+  const left = Math.floor((width - side) / 2);
+  const top = Math.floor((height - side) / 2);
+  const out = new Uint8ClampedArray(side * side * 4);
+  for (let y = 0; y < side; y++) {
+    const from = ((top + y) * width + left) * 4;
+    out.set(data.subarray(from, from + side * 4), y * side * 4);
+  }
+  return { data: out, width: side, height: side };
+}
+
+/**
+ * Estimates sensor noise as the median absolute green-channel difference between horizontal
+ * neighbours on a sample of rows. Codes and edges are a small share of neighbour pairs, so the
+ * median tracks the grain of flat areas.
+ * @returns The noise level in grey levels (0 for a clean frame).
+ */
+export function estimateNoise(data: Uint8ClampedArray, width: number, height: number): number {
+  const histogram = new Uint32Array(256);
+  const rowStep = Math.max(1, Math.floor(height / 48));
+  let count = 0;
+  for (let y = rowStep >> 1; y < height; y += rowStep) {
+    let i = y * width * 4 + 1;
+    const end = i + (width - 1) * 4;
+    for (; i < end; i += 8) {
+      histogram[Math.abs(data[i] - data[i + 4])] += 1;
+      count += 1;
+    }
+  }
+  let seen = 0;
+  for (let level = 0; level < 256; level++) {
+    seen += histogram[level];
+    if (seen * 2 >= count) return level;
+  }
+  return 0;
+}
+
+/**
+ * Decodes one camera frame with a single jsQR pass (see {@link CameraDecodeStrategy}). Noisy frames
+ * are box-downscaled first so a grainy low-light frame cannot stall the worker for seconds.
+ * @param data RGBA pixels.
+ * @param width Frame width.
+ * @param height Frame height.
+ * @param strategy The strategy for this frame, from {@link cameraStrategyFor}.
+ * @returns The decoded text, or null.
+ */
+export function decodeCameraFrame(
+  data: Uint8ClampedArray,
+  width: number,
+  height: number,
+  strategy: CameraDecodeStrategy
+): string | null {
+  try {
+    let image = strategy === 'frame' ? { data, width, height } : cropCentre(data, width, height);
+    const longest = Math.max(image.width, image.height);
+    if (strategy === 'frame' && longest > FRAME_PASS_MAX_DIMENSION) {
+      image = downscaleRgba(image.data, image.width, image.height, FRAME_PASS_MAX_DIMENSION / longest);
+    }
+    const noise = estimateNoise(image.data, image.width, image.height);
+    if (noise >= NOISY_LEVEL && Math.min(image.width, image.height) >= MIN_RETRY_DIMENSION) {
+      image = downscaleRgba(image.data, image.width, image.height, noise >= VERY_NOISY_LEVEL ? 1 / 3 : 0.5);
+    }
+    if (strategy === 'inverted') {
+      // jsQR 1.4's `onlyInvert` never builds the inverted image, so invert the pixels here.
+      const inverted = image.data === data ? new Uint8ClampedArray(image.data) : image.data;
+      for (let i = 0; i < inverted.length; i += 4) {
+        inverted[i] = 255 - inverted[i];
+        inverted[i + 1] = 255 - inverted[i + 1];
+        inverted[i + 2] = 255 - inverted[i + 2];
+      }
+      image = { ...image, data: inverted };
+    }
+    return jsQR(image.data, image.width, image.height, { inversionAttempts: 'dontInvert' })?.data ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Decodes raw RGBA pixel data on the calling thread (see {@link decodeRgbaFrame}).
  */
 export function decodeImageDataSync(

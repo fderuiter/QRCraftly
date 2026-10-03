@@ -28,7 +28,7 @@
 import { setTimeout as delay } from 'node:timers/promises';
 import type { Page, TestInfo } from '@playwright/test';
 import { test, expect } from './fixtures';
-import { codeScene, installFakeCamera, liveCameraTracks, showOnCamera } from '../tests/utils/fakeCamera';
+import { codeScene, installFakeCamera, liveCameraTracks, showOnCamera, throttleCpu } from '../tests/utils/fakeCamera';
 
 const CODE = 'https://qrcraftly.com/scanned';
 const SUCCESS_TOAST = 'Successfully scanned QR code';
@@ -36,6 +36,10 @@ const SUCCESS_TOAST = 'Successfully scanned QR code';
 const BASELINE_BUDGET_MS = 1000;
 /** PR CI budget for a scanner reopened after a long session with no code (#1095, #1103). */
 const REOPEN_BUDGET_MS = 2000;
+/** A code that appears after 10 s with no code, at 4x CPU throttling, decodes within this (#1096). */
+const THROTTLED_APPEAR_BUDGET_MS = 1000;
+/** Generous bound for a grainy code at 6x CPU throttling; the point there is no worker restart. */
+const NOISY_THROTTLED_BUDGET_MS = 5000;
 /** How long the scanner looks at nothing before it is closed and reopened. */
 const LONG_SESSION_MS = 20_000;
 
@@ -169,6 +173,48 @@ test.describe('Camera scanner with a scripted fake camera', () => {
       report(testInfo, `reopened after ${LONG_SESSION_MS / 1000} s with no code`, reopened);
       expect(reopened).toBeLessThan(REOPEN_BUDGET_MS);
       expect(reopened).toBeLessThan(Math.max(2 * baseline, BASELINE_BUDGET_MS));
+    });
+
+    test('keeps sampling at full speed on a slow device (4x CPU throttle)', async ({ page, context }, testInfo) => {
+      test.setTimeout(60_000);
+      await installFakeCamera(context);
+      await openGenerator(page);
+      // Light sensor noise, as indoors: frames with no code cost a full decode each.
+      await showOnCamera(page, { noise: 6 });
+      await throttleCpu(page, 4);
+      await openScanner(page);
+      await expect.poll(() => liveCameraTracks(page)).toBe(1);
+
+      // Ten seconds of frames with no code used to back sampling off towards 1 fps (#1096).
+      await delay(10_000);
+      await startDecodeTimer(page);
+      await showOnCamera(page, codeScene(CODE, { noise: 6 }));
+      const ms = await decodeTime(page);
+      report(testInfo, 'code appears after 10 s with no code, 4x throttle', ms);
+      expect(ms).toBeLessThan(THROTTLED_APPEAR_BUDGET_MS);
+    });
+
+    test('does not restart a slow but working decoder on grainy frames (6x CPU throttle)', async ({ page, context }, testInfo) => {
+      test.setTimeout(60_000);
+      const watchdog: string[] = [];
+      page.on('console', (message) => {
+        if (/watchdog/i.test(message.text())) watchdog.push(message.text());
+      });
+      await installFakeCamera(context);
+      await openGenerator(page);
+      await showOnCamera(page, { noise: 14 });
+      await throttleCpu(page, 6);
+      await openScanner(page);
+      await expect.poll(() => liveCameraTracks(page)).toBe(1);
+      await delay(8_000);
+      expect(watchdog).toEqual([]);
+
+      await startDecodeTimer(page);
+      await showOnCamera(page, codeScene(CODE, { noise: 14 }));
+      const ms = await decodeTime(page);
+      report(testInfo, 'grainy code, 6x throttle', ms);
+      expect(ms).toBeLessThan(NOISY_THROTTLED_BUDGET_MS);
+      expect(watchdog).toEqual([]);
     });
 
     test('decodes small modules and inverted codes', async ({ page, context }, testInfo) => {

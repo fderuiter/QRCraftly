@@ -1,4 +1,4 @@
-import { decodeRgbaFrame } from './decodeSync';
+import { cameraStrategyFor, decodeCameraFrame, decodeRgbaFrame } from './decodeSync';
 import { isValidScannerRequest, assertScannerResponse, getDownscaledDimensions } from './contracts';
 import { createStaleFrameGuard } from './frameGuard';
 
@@ -408,7 +408,8 @@ self.onmessage = async (e: MessageEvent<ScannerWorkerMessage | null>) => {
       console.error('Failed to close image after drawing:', err);
     }
 
-    const code = decodeRgbaFrame(imageData.data, width, height);
+    // One bounded jsQR pass per camera frame; consecutive frames rotate strategies (#1096).
+    const code = decodeCameraFrame(imageData.data, width, height, cameraStrategyFor(sequenceId));
 
     const response = {
       status: code ? ('pass' as const) : ('fail' as const),

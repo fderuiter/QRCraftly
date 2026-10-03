@@ -124,9 +124,9 @@ describe('Integrated Optical Scanner Test Harness - Integration Suite', () => {
     const seq1 = harness.pushFrame(mockPixels, 10, 10);
     expect(seq1).toBe(1);
 
-    // Advance fake time past 1500ms starvation threshold
-    nowTime = 6800;
-    vi.advanceTimersByTime(1800);
+    // Advance fake time past the 5000ms hang budget
+    nowTime = 10200;
+    vi.advanceTimersByTime(5200);
 
     expect(watchdogFired).toBe(true);
     expect(workerRecreated).toBe(true);

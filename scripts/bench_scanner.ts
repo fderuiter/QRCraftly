@@ -52,7 +52,7 @@ const CAMERA_FRAMES = 4;
 interface DecoderModule {
   decodeRgbaFrame?: (data: Uint8ClampedArray, width: number, height: number) => string | null;
   decodeCameraFrame?: (data: Uint8ClampedArray, width: number, height: number, pass: string) => string | null;
-  cameraPassFor?: (sequenceId: number) => string;
+  cameraStrategyFor?: (sequenceId: number) => string;
 }
 
 interface FrameRun {
@@ -116,7 +116,7 @@ function strategiesFor(decoder: DecoderModule): Strategy[] {
       },
     },
   ];
-  const { decodeRgbaFrame, decodeCameraFrame, cameraPassFor } = decoder;
+  const { decodeRgbaFrame, decodeCameraFrame, cameraStrategyFor } = decoder;
   if (decodeRgbaFrame) {
     strategies.push({
       name: 'multi-pass (decodeRgbaFrame)',
@@ -126,13 +126,13 @@ function strategiesFor(decoder: DecoderModule): Strategy[] {
       },
     });
   }
-  if (decodeCameraFrame && cameraPassFor) {
+  if (decodeCameraFrame && cameraStrategyFor) {
     strategies.push({
       name: `camera rotation (decodeCameraFrame, <= ${CAMERA_FRAMES} frames)`,
       run: (frame) => {
         const times: number[] = [];
         for (let sequenceId = 1; sequenceId <= CAMERA_FRAMES; sequenceId++) {
-          const { value, ms } = timed(() => decodeCameraFrame(frame.data, frame.width, frame.height, cameraPassFor(sequenceId)));
+          const { value, ms } = timed(() => decodeCameraFrame(frame.data, frame.width, frame.height, cameraStrategyFor(sequenceId)));
           times.push(ms);
           if (value) return { times, decoded: value };
         }

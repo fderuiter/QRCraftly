@@ -255,3 +255,9 @@ export async function showOnCamera(page: Page, scene: FakeCameraScene | null): P
 export async function liveCameraTracks(page: Page): Promise<number> {
   return page.evaluate(() => window.__cam?.liveTracks() ?? 0);
 }
+
+/** Slows the page's CPU (Chromium only, through CDP), like a mid-range phone. Pass 1 to restore. */
+export async function throttleCpu(page: Page, rate: number): Promise<void> {
+  const session = await page.context().newCDPSession(page);
+  await session.send('Emulation.setCPUThrottlingRate', { rate });
+}
