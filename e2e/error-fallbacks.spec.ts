@@ -66,7 +66,8 @@ test.describe('Error Fallbacks and Recovery E2E Tests', () => {
     await expect(page.locator('#url-input')).toBeVisible();
 
     // 3. Once the chunk is served intact again (e.g. the deploy finished), reloading restores the app
-    await page.unroute('**/*.js', breakLazyChunk);
+    // Wait for any chunk request still in the handler, so it can't fulfill an unrouted request.
+    await page.unrouteAll({ behavior: 'wait' });
     await page.reload();
 
     const mainElement = page.locator('main[data-hydrated="true"]');
