@@ -23,6 +23,7 @@ import { auxiliaryRegistry } from '@/data/contentRegistry';
 import { guides, readingMinutes } from '@/data/guides';
 import { generateGuideIndexSchema } from '@/utils/schemaGenerator';
 import { resolveDomainForPath } from '@/utils/metadataEngine';
+import { isDangerousUrl } from '@/utils/security';
 import { usePageContext } from 'vike-react/usePageContext';
 
 /**
@@ -42,19 +43,25 @@ export default function Page() {
           Plain answers to the questions people ask when a QR code lets them down, with sources. No sign-up, no ads, and nothing tracked.
         </p>
         <ul className="list-none space-y-4">
-          {guides.map((guide) => (
-            <li key={guide.slug} className="rounded-xl border border-line bg-surface p-5">
-              <h2 className="text-xl font-bold text-fg">
-                <a href={`/guides/${guide.slug}`} className="text-accent underline-offset-2 hover:underline">
-                  {guide.title}
-                </a>
-              </h2>
-              <p className="mt-2 text-sm text-fg-soft">{guide.description}</p>
-              <p className="mt-2 text-xs text-fg-muted">
-                <time dateTime={guide.dateModified}>{formatGuideDate(guide.dateModified)}</time> · {readingMinutes(guide)} min read
-              </p>
-            </li>
-          ))}
+          {guides.map((guide) => {
+            const href = `/guides/${guide.slug}`;
+            if (!isDangerousUrl(href)) {
+              return (
+                <li key={guide.slug} className="rounded-xl border border-line bg-surface p-5">
+                  <h2 className="text-xl font-bold text-fg">
+                    <a href={href} className="text-accent underline-offset-2 hover:underline">
+                      {guide.title}
+                    </a>
+                  </h2>
+                  <p className="mt-2 text-sm text-fg-soft">{guide.description}</p>
+                  <p className="mt-2 text-xs text-fg-muted">
+                    <time dateTime={guide.dateModified}>{formatGuideDate(guide.dateModified)}</time> · {readingMinutes(guide)} min read
+                  </p>
+                </li>
+              );
+            }
+            return null;
+          })}
         </ul>
       </div>
     </>

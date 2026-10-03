@@ -206,13 +206,19 @@ export function GuideArticle({ guide, urlPathname }: { guide: Guide; urlPathname
                 Keep reading
               </h2>
               <ul className="list-none space-y-2 text-sm">
-                {related.map((other) => (
-                  <li key={other.slug}>
-                    <a href={`/guides/${other.slug}`} className={LINK_CLASSES}>
-                      {other.title}
-                    </a>
-                  </li>
-                ))}
+                {related.map((other) => {
+                  const href = `/guides/${other.slug}`;
+                  if (!isDangerousUrl(href)) {
+                    return (
+                      <li key={other.slug}>
+                        <a href={href} className={LINK_CLASSES}>
+                          {other.title}
+                        </a>
+                      </li>
+                    );
+                  }
+                  return null;
+                })}
                 <li>
                   <a href="/guides" className={LINK_CLASSES}>
                     All guides
