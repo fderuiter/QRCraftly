@@ -1,6 +1,6 @@
 import { getDownscaledDimensions, isValidScannerResponse, type ScannerStatus } from './contracts';
-import { AdaptiveFrameScheduler } from './scheduler';
-import { decodeImageDataSync } from './decodeSync';
+import { AdaptiveFrameScheduler, DEFAULT_WATCHDOG_TIMEOUT_MS } from './scheduler';
+import { cameraStrategyFor, decodeCameraFrame } from './decodeSync';
 import { systemClock, type ScannerClock } from './clock';
 import {
   connectSharedScannerWorker,
@@ -8,11 +8,13 @@ import {
   type ScannerWorkerHandle,
 } from './workerRunner';
 
-/** Base starvation watchdog budget for one in-flight worker frame. */
-const WATCHDOG_TIMEOUT_MS = 1500;
-/** Upper bound for the exponentially backed-off watchdog budget. */
-const MAX_WATCHDOG_TIMEOUT_MS = 6000;
-/** Consecutive worker restarts allowed before the engine switches to main-thread decoding. */
+/**
+ * Hang budget: how long the worker may stay silent with a frame in flight before it is replaced.
+ * Each frame costs one bounded jsQR pass, so a slow but healthy worker answers well within it;
+ * only a real hang or crash restarts the worker (#1096).
+ */
+const WATCHDOG_TIMEOUT_MS = DEFAULT_WATCHDOG_TIMEOUT_MS;
+/** Consecutive hangs or crashes allowed before the engine switches to main-thread decoding. */
 const MAX_WORKER_RESTARTS = 3;
 /** Longest edge of a frame posted to the worker. */
 const WORKER_MAX_DIMENSION = 1280;
@@ -86,8 +88,11 @@ export interface CameraScannerEngineConfig extends CameraScannerEngineOptions {
   clock?: ScannerClock;
   /** Frame grabber; defaults to `createImageBitmap` and a 2D canvas. */
   grabber?: CameraFrameGrabber;
-  /** Main-thread decoder used after worker fallback; defaults to jsQR. */
-  decodeSync?: (pixels: CameraFramePixels, width: number, height: number) => string | null;
+  /**
+   * Main-thread decoder used after worker fallback; defaults to one jsQR pass per frame, rotating
+   * strategies by `sequenceId` like the worker does.
+   */
+  decodeSync?: (pixels: CameraFramePixels, width: number, height: number, sequenceId: number) => string | null;
 }
 
 /**
@@ -108,6 +113,16 @@ export interface CameraScannerEngine {
   /** Latest sampling metrics. */
   getMetrics(): CameraScannerEngineMetrics;
 }
+
+/**
+ * Page-wide epoch counter. Every scan session and every worker generation gets a new, larger
+ * epoch, so the shared worker can tell a new session's frame 1 from a stale frame (#1095).
+ */
+let lastEpoch = 0;
+const nextEpoch = (): number => {
+  lastEpoch += 1;
+  return lastEpoch;
+};
 
 function isVideoElement(source: CameraFrameSource): source is CameraFrameSource & HTMLVideoElement {
   return typeof HTMLVideoElement !== 'undefined' && source instanceof HTMLVideoElement;
@@ -151,7 +166,10 @@ export function createCameraScannerEngine(config: CameraScannerEngineConfig): Ca
   const clock = config.clock ?? systemClock;
   const createWorker = config.createWorker ?? connectSharedScannerWorker;
   const grabber = config.grabber ?? createDefaultGrabber();
-  const decodeSync = config.decodeSync ?? decodeImageDataSync;
+  const decodeSync =
+    config.decodeSync ??
+    ((pixels: CameraFramePixels, width: number, height: number, sequenceId: number) =>
+      decodeCameraFrame(pixels.data, width, height, cameraStrategyFor(sequenceId)));
   const { getSource } = config;
 
   const listeners = new Set<CameraScannerEngineEvents>();
@@ -196,6 +214,8 @@ export function createCameraScannerEngine(config: CameraScannerEngineConfig): Ca
 
   function handleWorkerMessage(owner: ScannerWorkerHandle, payload: unknown) {
     if (owner !== worker) return;
+    // Any answer, even a stale or invalid one, shows the worker is alive.
+    scheduler.heartbeat();
     if (!isValidScannerResponse(payload)) {
       console.error('Invalid scanner response payload:', payload);
       return;
@@ -246,7 +266,7 @@ export function createCameraScannerEngine(config: CameraScannerEngineConfig): Ca
   function recoverWorker() {
     if (destroyed || useMainThread) return;
     restartAttempts += 1;
-    epoch += 1;
+    epoch = nextEpoch();
     discardWorker();
 
     if (restartAttempts > MAX_WORKER_RESTARTS) {
@@ -257,12 +277,10 @@ export function createCameraScannerEngine(config: CameraScannerEngineConfig): Ca
       return;
     }
 
-    const nextTimeout = Math.min(MAX_WATCHDOG_TIMEOUT_MS, WATCHDOG_TIMEOUT_MS * 2 ** restartAttempts);
     console.warn(
       `Watchdog: Recreating scanner worker. Attempt ${restartAttempts} of ${MAX_WORKER_RESTARTS} consecutive retries.`
     );
-    scheduler.setWatchdogTimeout(nextTimeout);
-    scheduler.triggerRecovery(nextTimeout, false);
+    scheduler.triggerRecovery(WATCHDOG_TIMEOUT_MS, false);
     spawnWorker();
   }
 
@@ -283,7 +301,7 @@ export function createCameraScannerEngine(config: CameraScannerEngineConfig): Ca
     const frame = pixels;
     clock.setTimeout(() => {
       try {
-        const decoded = decodeSync(frame, dims.width, dims.height);
+        const decoded = decodeSync(frame, dims.width, dims.height, seqId);
         if (decoded) {
           restartAttempts = 0;
           scheduler.endFrame(seqId, 'pass', decoded, null);
@@ -445,7 +463,7 @@ export function createCameraScannerEngine(config: CameraScannerEngineConfig): Ca
   function start() {
     if (destroyed) return;
     restartAttempts = 0;
-    epoch += 1;
+    epoch = nextEpoch();
     scheduler.setWatchdogTimeout(WATCHDOG_TIMEOUT_MS);
     scheduler.start();
     if (!worker && !useMainThread) {

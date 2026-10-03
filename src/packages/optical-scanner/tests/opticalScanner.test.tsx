@@ -164,8 +164,8 @@ describe('Optical Detection Engine — Deep Module Seam Tests', () => {
       scheduler.start();
       scheduler.beginFrame();
 
-      // Advance clock past 1500ms watchdog threshold
-      vi.advanceTimersByTime(1600);
+      // Advance clock past the 5000ms hang budget
+      vi.advanceTimersByTime(5200);
 
       expect(onWatchdog).toHaveBeenCalled();
       expect(scheduler.getInFlight()).toBe(false); // Backpressure released

@@ -7,6 +7,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   createCameraScannerEngine,
+  createStaleFrameGuard,
   type CameraFrameGrabber,
   type CameraFrameSource,
   type CameraScannerEngine,
@@ -365,13 +366,13 @@ describe('Camera Scanner Engine (headless)', () => {
   });
 
   describe('watchdog recovery', () => {
-    it('recreates the worker after a 1500ms stall and keeps scanning', async () => {
+    it('recreates a worker that stays silent for 5 s and keeps scanning', async () => {
       const h = createHarness();
       h.engine.start();
       await h.step(16);
       const first = h.currentWorker();
 
-      await h.step(1400);
+      await h.step(4900);
       expect(h.workers).toHaveLength(1);
 
       await h.step(300);
@@ -392,7 +393,7 @@ describe('Camera Scanner Engine (headless)', () => {
       const first = h.currentWorker();
       const staleFrame = first?.frames[0];
 
-      await h.step(1700);
+      await h.step(5200);
       expect(h.workers).toHaveLength(2);
 
       if (staleFrame) first?.reply(staleFrame, { status: 'pass', decodedData: 'LATE' });
@@ -413,25 +414,35 @@ describe('Camera Scanner Engine (headless)', () => {
       expect(h.events.onScanSuccess).toHaveBeenCalledWith('AFTER-CRASH');
     });
 
-    it('backs off the watchdog exponentially between consecutive restarts', async () => {
+    it('never restarts a slow worker that keeps answering (#1096)', async () => {
+      const h = createHarness();
+      h.engine.start();
+      // A throttled phone decoding grainy frames: every answer takes 1.8 s.
+      for (let i = 0; i < 12; i++) {
+        await h.answerNextFrame(1800, { status: 'fail' });
+      }
+      expect(h.workers).toHaveLength(1);
+      expect(h.workers[0].terminated).toBe(false);
+      expect(h.decodeSync).not.toHaveBeenCalled();
+    });
+
+    it('restarts a worker that never answers with the same 5 s budget every time', async () => {
       const h = createHarness();
       h.engine.start();
       await h.step(16);
 
-      // First stall: 1500ms budget.
-      await h.step(1600);
+      await h.step(5200);
       expect(h.workers).toHaveLength(2);
-
-      // Second generation stalls too: its budget has doubled to 3000ms.
+      const restartedAt = h.clock.now();
       await h.step(1100);
       expect(h.workers[1].frames.length).toBe(1);
-      await h.step(1500);
+      await h.step(restartedAt + 4700 - h.clock.now());
       expect(h.workers).toHaveLength(2);
-      await h.step(600);
+      await h.step(700);
       expect(h.workers).toHaveLength(3);
     });
 
-    it('resets the backoff once a worker answers again', async () => {
+    it('resets the restart count once a worker answers again', async () => {
       const h = createHarness();
       h.engine.start();
       await h.step(16);
@@ -442,11 +453,14 @@ describe('Camera Scanner Engine (headless)', () => {
       await h.step(1100);
       h.currentWorker()?.replyLatest({ status: 'fail' });
 
-      // A fresh stall is detected with the base 1500ms budget again.
+      // Three more consecutive failures are allowed before the main-thread fallback.
       await h.step(100);
-      const beforeStall = h.workers.length;
-      await h.step(1700);
-      expect(h.workers.length).toBe(beforeStall + 1);
+      h.currentWorker()?.crash();
+      h.currentWorker()?.crash();
+      h.currentWorker()?.crash();
+      expect(h.workers).toHaveLength(6);
+      h.currentWorker()?.crash();
+      expect(h.workers).toHaveLength(6);
     });
 
     it('falls back to main-thread decoding after three failed restarts', async () => {
@@ -609,6 +623,100 @@ describe('Camera Scanner Engine (headless)', () => {
       available = true;
       await h.step(100);
       expect(h.currentWorker()?.frames).toHaveLength(1);
+    });
+  });
+
+  describe('sessions sharing one worker (#1095)', () => {
+    /**
+     * Stand-in for the page's shared scanner worker: one stale-frame guard (the real one the
+     * worker uses) serves every engine, and every admitted frame is answered after `latencyMs`.
+     */
+    function createSharedWorker(clock: FakeClock, latencyMs: number) {
+      const guard = createStaleFrameGuard();
+      const state = { codeVisible: false, posted: 0, stale: 0 };
+      const factory: ScannerWorkerFactory = (handlers) => {
+        let attached = true;
+        return {
+          postFrame: (request) => {
+            state.posted += 1;
+            const admitted = guard.admit(request.epochId, request.sequenceId);
+            if (!admitted) state.stale += 1;
+            const answer: Partial<ScannerResponse> = !admitted
+              ? { status: 'fail', error: 'STALE_FRAME' }
+              : state.codeVisible
+                ? { status: 'pass', decodedData: 'REOPENED' }
+                : { status: 'fail' };
+            clock.setTimeout(() => {
+              if (attached) handlers.onMessage({ sequenceId: request.sequenceId, epochId: request.epochId, ...answer });
+            }, admitted ? latencyMs : 1);
+          },
+          release: () => {
+            attached = false;
+          },
+          terminate: () => {
+            attached = false;
+          },
+        };
+      };
+      return { factory, state };
+    }
+
+    const grabber: CameraFrameGrabber = {
+      grabBitmap: (_source, width, height) => Promise.resolve({ width, height, close: () => {} }),
+      grabPixels: (_source, width, height) => ({ data: new Uint8ClampedArray(width * height * 4) }),
+    };
+
+    async function run(clock: FakeClock, ms: number) {
+      for (let elapsed = 0; elapsed < ms; elapsed += 4) {
+        clock.advance(4);
+        await Promise.resolve();
+        await Promise.resolve();
+      }
+    }
+
+    it('decodes the first frame of a reopened scanner after a long session with no code', async () => {
+      const clock = new FakeClock();
+      const source = new FakeSource();
+      const worker = createSharedWorker(clock, 20);
+      const config = { getSource: () => source, clock, grabber, createWorker: worker.factory };
+
+      const first = createCameraScannerEngine(config);
+      first.start();
+      await run(clock, 20_000);
+      expect(worker.state.posted).toBeGreaterThan(200);
+      first.destroy();
+
+      worker.state.codeVisible = true;
+      const postedBefore = worker.state.posted;
+      const second = createCameraScannerEngine(config);
+      const onScanSuccess = vi.fn();
+      second.subscribe({ onScanSuccess });
+      second.start();
+      await run(clock, 60);
+
+      expect(onScanSuccess).toHaveBeenCalledWith('REOPENED');
+      expect(worker.state.posted - postedBefore).toBe(1);
+      expect(worker.state.stale).toBe(0);
+      second.destroy();
+    });
+
+    it('decodes at once when the same engine is stopped and started again', async () => {
+      const clock = new FakeClock();
+      const source = new FakeSource();
+      const worker = createSharedWorker(clock, 20);
+      const engine = createCameraScannerEngine({ getSource: () => source, clock, grabber, createWorker: worker.factory });
+      const onScanSuccess = vi.fn();
+      engine.subscribe({ onScanSuccess });
+
+      engine.start();
+      await run(clock, 5_000);
+      engine.stop();
+      worker.state.codeVisible = true;
+      engine.start();
+      await run(clock, 60);
+
+      expect(onScanSuccess).toHaveBeenCalledTimes(1);
+      expect(worker.state.stale).toBe(0);
     });
   });
 });

@@ -68,12 +68,12 @@ Boundary checks run automatically during `pnpm run lint` and CI.
 
 ### `optical-scanner` (`@/packages/optical-scanner`)
 
-- **Purpose**: Consolidated off-thread barcode decoding for live camera video streams, static images, and video files with adaptive backpressure throttling and watchdog fault recovery.
+- **Purpose**: Consolidated off-thread barcode decoding for live camera streams and image files (photos and screenshots) with adaptive backpressure throttling and watchdog fault recovery.
 - **Entry Points**:
   - `index.ts`: Public API, polymorphic `scan(source, options)` for files/images, the headless Camera Scanner Engine (`createCameraScannerEngine`), scanner contracts, and downscaling math.
-  - `client.ts`: Thin React adapter hook (`useQrScanner`) over the Camera Scanner Engine, plus file drag-and-drop scanning.
+  - `client.ts`: Thin React adapter hook (`useQrScanner`) over the Camera Session (`state`, `start`, `stop`, `videoRef`: the one owner of the camera stream) and the Camera Scanner Engine, plus file drag-and-drop scanning.
   - `scheduler.ts`: Secondary entry point exposing `AdaptiveFrameScheduler`, `DoubleBufferPool`, and `terminateScannerWorker` (shared file-scan worker teardown). Worker spawning is private to the package.
-  - `worker.ts`: Dedicated background Web Worker performing WebCodecs demuxing, EBML parsing, and jsQR optical decoding.
+  - `worker.ts`: Dedicated background Web Worker that decodes camera frames (one bounded jsQR pass each) and image files (`createImageBitmap` with EXIF orientation, then jsQR at 2048 px and 1024 px).
 
 ### `qr-payload` (`@/packages/qr-payload`)
 
@@ -86,7 +86,7 @@ Boundary checks run automatically during `pnpm run lint` and CI.
 - **Purpose**: Air-gapped, one-way optical data transmission via animated QR code streams. Uses a pure TypeScript rateless fountain codec (Luby Transform over $\text{GF}(2)$ with peeling plus Gaussian-elimination fallback) framed as BC-UR `ur:bytes/` parts (CBOR + Bytewords + CRC-32), `deflate-raw` pre-compression, a SHA-256-verified session header, recycled preallocated frame pools, stream lookahead sanitization, and dedicated Web Workers. See [ADR 0014](../../docs/adr/0014-rateless-fountain-codes-for-airgapped-optical-transfer.md).
 - **Entry Points**:
   - `index.ts`: Primary public API: the handshake scannability gate (`verifyHandshakeFrame` with injectable worker/checker factories), `PreallocatedFramePool`, `StreamLookaheadReceiver`, fountain codec primitives (`FountainEncoder`, `FountainDecoder`, `solveGF2`, Robust Soliton helpers), BC-UR envelope (`serializeDroplet`, `parseDropletString`, `cborEncode`/`cborDecode`, Bytewords, `crc32`), session layer (`createFountainSession`, `openFountainSession`, `compressForTransfer`, `resolveFountainSymbolSize`), `FountainReassembler`, `FountainRateTracker`, and contracts.
-  - `client.ts`: Headless React hooks. `useOpticalSender` broadcasts fountain droplets by default, with no handshake frame and every QR at version 7 or lower; the caller injects `renderFrame` and the scannability fallback flag. `useOpticalReceiver` provides stateless entry and exposes `fountainStats` telemetry (droplets vs K, rank, FPS, ETA); the caller injects `camera` and `saveFile`. Also exports UI state types.
+  - `client.ts`: Headless React hooks. `useOpticalSender` broadcasts fountain droplets by default, with no handshake frame and every QR at version 7 or lower; the caller injects `renderFrame` and the scannability fallback flag. `useOpticalReceiver` provides stateless entry and exposes `fountainStats` telemetry (droplets vs K, rank, FPS, ETA); the caller injects `saveFile`; the camera comes from `useQrScanner`'s Camera Session and its error is exposed as `cameraError`. Also exports UI state types.
   - `worker-slice.ts`: Background Web Worker: hashing, `deflate-raw` compression (skipped when it saves less than 5%), density-bounded symbol sizing, and QR matrix generation for droplets or legacy chunks.
   - `worker-reassembly.ts`: Background Web Worker: fountain reassembly (peeling + GF(2) elimination), decompression and SHA-256 verification, plus legacy chunk reassembly.
 

@@ -1,6 +1,5 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Camera, Upload, AlertTriangle, X, RefreshCw, FileImage } from 'lucide-react';
-import { useCamera } from '../hooks/useCamera';
 import { useQrScanner } from '@/packages/optical-scanner/client';
 import { Button } from './ui/Button';
 import { EmptyState } from './ui/EmptyState';
@@ -36,131 +35,49 @@ export interface QRScannerProps {
  * @returns React functional component.
  */
 export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, continuous = false }) => {
-  const {
-    permissionState,
-    isInitializing,
-    startStream,
-    stopStream,
-  } = useCamera();
-
   const [mode, setMode] = useState<'webcam' | 'file'>('webcam');
   const [isWebcamActive, setIsWebcamActive] = useState<boolean>(true);
   const [fileError, setFileError] = useState<string | null>(null);
   const [fileProcessing, setFileProcessing] = useState(false);
   const [dragOver, setDragOver] = useState(false);
 
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const videoElementRef = useRef<HTMLVideoElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const activeWorkerRef = useRef<Worker | null>(null);
   const fileAbortControllerRef = useRef<AbortController | null>(null);
 
-  const setVideoRef = useCallback((node: HTMLVideoElement | null) => {
-    videoRef.current = node;
-    if (node) {
-      videoElementRef.current = node;
-    }
-  }, []);
-
-  // Defensive hardware flush sequence for DOM-specific video elements
-  const flushVideoHardware = useCallback(() => {
-    const video = videoElementRef.current || videoRef.current;
-    if (video) {
-      try {
-        if (typeof video.pause === 'function') {
-          video.pause();
-        }
-        video.srcObject = null;
-        if (typeof video.removeAttribute === 'function') {
-          video.removeAttribute('src');
-        }
-        if (typeof video.load === 'function') {
-          video.load();
-        }
-      } catch {
-        // Safe catch for unmounted or detached video elements
-      }
-    }
-  }, []);
-
-  // Initialize Adaptive Scanner hook from deep module
-  const { startScanning, stopScanning, scanFile } = useQrScanner({
-    videoRef,
+  // The scan session owns the camera stream, the video element's source and the frame loop.
+  const { state: camera, start, stop, videoRef, scanFile } = useQrScanner({
     onScanSuccess: (data) => {
       onScanSuccess(data);
       if (!continuous) {
+        stop();
         setIsWebcamActive(false);
-        stopStream();
-        stopScanning();
-        flushVideoHardware();
       }
-    },
-    onScanFail: () => {
-      // Background scan frame decode failure, normal and expected
     },
   });
 
-  // Safe play helper to handle play promise in all environments
-  const safePlay = (video: HTMLVideoElement) => {
-    if (typeof video.play !== 'function') return;
-    const playPromise = video.play();
-    if (playPromise !== undefined && typeof playPromise.catch === 'function') {
-      playPromise.catch(() => {
-        // Safe catch for play interruption
-      });
-    }
-  };
-
-  // Start webcam stream when in webcam mode and webcam session is active
+  // Run the camera while the webcam tab is active. start() and stop() are idempotent, so this is
+  // safe when React runs the effect twice (StrictMode) or remounts the scanner quickly.
   useEffect(() => {
-    const controller = new AbortController();
-
-    if (mode === 'webcam' && isWebcamActive) {
-      const initCamera = async () => {
-        const activeStream = await startStream();
-        if (controller.signal.aborted) {
-          stopStream();
-          flushVideoHardware();
-          return;
-        }
-        if (activeStream && videoRef.current) {
-          videoRef.current.srcObject = activeStream;
-          safePlay(videoRef.current);
-          startScanning();
-        }
-      };
-
-      initCamera();
-    } else {
-      flushVideoHardware();
-      stopStream();
-      stopScanning();
+    if (mode !== 'webcam' || !isWebcamActive) {
+      stop();
+      return undefined;
     }
+    void start();
+    return () => stop();
+  }, [mode, isWebcamActive, start, stop]);
 
+  // Cancel a file scan that is still running when the scanner closes.
+  useEffect(() => {
     return () => {
-      controller.abort();
-      if (fileAbortControllerRef.current) {
-        fileAbortControllerRef.current.abort();
-        fileAbortControllerRef.current = null;
-      }
-      flushVideoHardware();
-      stopStream();
-      stopScanning();
-      if (activeWorkerRef.current) {
-        activeWorkerRef.current = null;
-      }
+      fileAbortControllerRef.current?.abort();
+      fileAbortControllerRef.current = null;
     };
-  }, [mode, isWebcamActive, startStream, stopStream, startScanning, stopScanning, flushVideoHardware]);
+  }, []);
 
   // Handle manual retry for camera permission/access
-  const handleRetryCamera = async () => {
+  const handleRetryCamera = () => {
     setIsWebcamActive(true);
-    const activeStream = await startStream();
-    if (activeStream && videoRef.current) {
-      videoRef.current.srcObject = activeStream;
-      safePlay(videoRef.current);
-      startScanning();
-    }
+    void start();
   };
 
   // Platform-specific instructions for resolving camera permission issues
@@ -245,12 +162,10 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
     setDragOver(false);
     const file = e.dataTransfer.files?.[0];
     if (file) {
-      const isVideo = file.name.toLowerCase().endsWith('.webm') || file.name.toLowerCase().endsWith('.mkv') || file.type.startsWith('video/');
-      const isImage = file.type.startsWith('image/');
-      if (isImage || isVideo) {
+      if (file.type.startsWith('image/')) {
         processFile(file);
       } else {
-        setFileError('Please drop an image or video file.');
+        setFileError('Please drop an image file.');
       }
     }
   };
@@ -260,53 +175,57 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
   };
 
   // Render webcam viewfinder state
-  const renderWebcamViewfinder = () => {
-    if (permissionState === 'denied' || permissionState === 'unavailable') {
-      // Lead with the way that works without a camera; permission help is secondary.
-      return (
-        <div className="flex size-full flex-col gap-3 overflow-y-auto p-4">
-          <EmptyState
-            illustration={<FileImage className="size-6" />}
-            title={permissionState === 'denied' ? 'Camera Access Denied' : 'Camera Unavailable'}
-            body="You can still scan a QR code from a photo or screenshot."
-            action={
-              <Button
-                variant="primary"
-                onClick={() => {
-                  setMode('file');
-                  setIsWebcamActive(false);
-                }}
-              >
-                <Upload className="size-4" aria-hidden="true" />
-                Scan from an image instead
-              </Button>
-            }
-          />
-          {permissionState === 'denied' && (
-            <div className="flex flex-col items-center gap-2 text-center text-xs text-fg-muted">
-              <p className="max-w-sm">To use the camera: {getPlatformInstructions()}</p>
-              <Button variant="ghost" size="sm" onClick={handleRetryCamera}>
-                <RefreshCw className="size-3.5" aria-hidden="true" />
-                Retry Permission
-              </Button>
-            </div>
-          )}
-        </div>
-      );
-    }
+  const renderCameraProblem = () => {
+    if (camera.status !== 'denied' && camera.status !== 'unavailable' && camera.status !== 'error') return null;
+    const denied = camera.status === 'denied';
+    // Lead with the way that works without a camera; permission help is secondary.
+    return (
+      <div className="absolute inset-0 flex flex-col gap-3 overflow-y-auto bg-surface p-4">
+        <EmptyState
+          illustration={<FileImage className="size-6" />}
+          title={denied ? 'Camera Access Denied' : 'Camera Unavailable'}
+          body="You can still scan a QR code from a photo or screenshot."
+          action={
+            <Button
+              variant="primary"
+              onClick={() => {
+                setMode('file');
+                setIsWebcamActive(false);
+              }}
+            >
+              <Upload className="size-4" aria-hidden="true" />
+              Scan from an image instead
+            </Button>
+          }
+        />
+        {denied && (
+          <div className="flex flex-col items-center gap-2 text-center text-xs text-fg-muted">
+            <p className="max-w-sm">To use the camera: {getPlatformInstructions()}</p>
+            <Button variant="ghost" size="sm" onClick={handleRetryCamera}>
+              <RefreshCw className="size-3.5" aria-hidden="true" />
+              Retry Permission
+            </Button>
+          </div>
+        )}
+      </div>
+    );
+  };
 
+  // Render webcam viewfinder state. The video element stays mounted so the session always has an
+  // element to attach the camera to, including after a retried permission request.
+  const renderWebcamViewfinder = () => {
     return (
       <div className="relative size-full bg-black">
         {/* Live video feed */}
         <video
-          ref={setVideoRef}
+          ref={videoRef}
           className="size-full object-cover"
           autoPlay
           playsInline
           muted
           aria-label="Webcam feed"
         />
-        {isInitializing && (
+        {camera.status === 'requesting' && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 p-6 text-white">
             <RefreshCw className="mb-3 size-8 text-teal-400 motion-safe:animate-spin" aria-hidden="true" />
             <p className="text-sm font-medium">Initializing camera stream...</p>
@@ -322,6 +241,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
         <div className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-black/60 px-3 py-1 text-xs font-medium text-white backdrop-blur-sm">
           Align QR code inside frame
         </div>
+        {renderCameraProblem()}
       </div>
     );
   };
@@ -332,11 +252,11 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
       <>
         <input
           type="file"
-          accept="image/*, .webm, .mkv, video/webm, video/x-matroska"
+          accept="image/*"
           className="hidden"
           ref={fileInputRef}
           onChange={handleFileChange}
-          aria-label="Upload QR code image or video file"
+          aria-label="Upload QR code image file"
         />
         <Button
           variant="dropzone"
@@ -355,7 +275,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
             <span className="flex flex-col items-center">
               <FileImage className="mb-3 size-10 text-fg-muted" aria-hidden="true" />
               <span className="text-sm font-semibold text-fg-soft">
-                Drag & Drop QR Image or Video
+                Drag & Drop QR Image
               </span>
               <span className="mt-1 max-w-xs text-sm text-fg-muted">
                 or click here to select a file from your device.

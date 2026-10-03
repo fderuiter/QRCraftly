@@ -79,8 +79,11 @@ export function useFocusTrap(containerRef: RefObject<HTMLElement | null>, isActi
       document.removeEventListener('keydown', handleKeyDown);
       if (previouslyFocused && typeof previouslyFocused.focus === 'function') {
         previouslyFocused.focus();
+        // Retry once after paint for browsers that drop the first call, but never take focus
+        // back from an element another component focused on purpose in the meantime.
         requestAnimationFrame(() => {
-          if (previouslyFocused && typeof previouslyFocused.focus === 'function') {
+          const active = document.activeElement;
+          if (active === null || active === document.body || container.contains(active)) {
             previouslyFocused.focus();
           }
         });

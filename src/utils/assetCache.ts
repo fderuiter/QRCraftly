@@ -76,16 +76,3 @@ export const convertImageToBase64 = (img: HTMLImageElement): string | null => {
   }
 };
 
-/**
- * Fetches a same-origin asset's ArrayBuffer on demand.
- * This is the authorized network utility for WASM assets, so UI components never call fetch directly.
- * @param url The URL of the asset to fetch.
- */
-export const fetchWasmAsset = async (url: string): Promise<ArrayBuffer> => {
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error('Failed to download WebAssembly demuxer assets');
-  }
-  return response.arrayBuffer();
-};
-

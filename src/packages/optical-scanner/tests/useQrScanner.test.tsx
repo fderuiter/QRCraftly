@@ -6,6 +6,7 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
+import React, { useEffect } from 'react';
 import { useQrScanner } from '../client';
 import { terminateScannerWorker } from '../scheduler';
 
@@ -76,14 +77,10 @@ describe('useQrScanner adapter', () => {
     await flushFrames(250);
     expect(result.current.latencyHistory.length).toBeGreaterThan(0);
 
-    const telemetry = vi.fn();
-    window.addEventListener('scanner-telemetry-dispatch', telemetry);
     act(() => result.current.stopScanning());
-    window.removeEventListener('scanner-telemetry-dispatch', telemetry);
 
     expect(result.current.isScanning).toBe(false);
     expect(result.current.status).toBe('idle');
-    expect(telemetry).toHaveBeenCalledTimes(1);
   });
 
   it('stops sampling and detaches from the worker on unmount', async () => {
@@ -101,5 +98,49 @@ describe('useQrScanner adapter', () => {
 
     await flushFrames(5000);
     expect(posted.length).toBe(1);
+  });
+
+  it('opens one camera and starts sampling when a StrictMode effect starts it twice (#1097)', async () => {
+    const tracks: Array<{ live: boolean }> = [];
+    const getUserMedia = vi.fn(async () => {
+      const track = { live: true };
+      tracks.push(track);
+      return {
+        getTracks: () => [{ stop: () => { track.live = false; } }],
+      };
+    });
+    const originalMediaDevices = navigator.mediaDevices;
+    Object.defineProperty(navigator, 'mediaDevices', { value: { getUserMedia }, configurable: true, writable: true });
+    const video = makeLiveVideo();
+    video.play = vi.fn(async () => {});
+    video.pause = vi.fn();
+    const videoRef = { current: video };
+
+    try {
+      const { result, unmount } = renderHook(
+        () => {
+          const scanner = useQrScanner({ videoRef });
+          const { start, stop } = scanner;
+          useEffect(() => {
+            void start();
+            return () => stop();
+          }, [start, stop]);
+          return scanner;
+        },
+        { wrapper: React.StrictMode }
+      );
+      await flushFrames(100);
+
+      expect(tracks.filter((track) => track.live)).toHaveLength(1);
+      expect(result.current.state).toEqual({ status: 'streaming' });
+      expect(result.current.isScanning).toBe(true);
+      expect(posted.length).toBeGreaterThan(0);
+
+      unmount();
+      expect(tracks.filter((track) => track.live)).toHaveLength(0);
+      expect(video.srcObject).toBeNull();
+    } finally {
+      Object.defineProperty(navigator, 'mediaDevices', { value: originalMediaDevices, configurable: true, writable: true });
+    }
   });
 });

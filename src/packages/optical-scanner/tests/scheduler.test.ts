@@ -89,7 +89,7 @@ describe('AdaptiveFrameScheduler', () => {
     expect(scheduler.getLatencyHistory()).toEqual([]);
 
     scheduler.start();
-    expect(scheduler.getWatchdogTimeout()).toBe(1500);
+    expect(scheduler.getWatchdogTimeout()).toBe(5000);
 
     scheduler.setWatchdogTimeout(2000);
     expect(scheduler.getWatchdogTimeout()).toBe(2000);
@@ -189,60 +189,64 @@ describe('AdaptiveFrameScheduler', () => {
     expect(scheduler.getSamplingDelay()).toBeLessThanOrEqual(delayBeforeSpike);
   });
 
-  it('should recover from maximum sampling delay to baseline within 1.5 seconds under healthy conditions', () => {
-    const scheduler = new AdaptiveFrameScheduler({
-      minSamplingDelay: 16,
-      maxSamplingDelay: 1000,
-    });
+  it('settles near 1.2x a steady decode latency instead of ratcheting to the maximum (#1096)', () => {
+    const scheduler = new AdaptiveFrameScheduler({ minSamplingDelay: 16, maxSamplingDelay: 1000 });
     scheduler.start();
 
-    // Force sampling delay to max (1000ms) via sustained high latency
+    const delays: number[] = [];
+    for (let i = 0; i < 30; i++) {
+      const seq = scheduler.beginFrame(true);
+      mockTime += 150;
+      scheduler.endFrame(seq!, 'fail', null, null);
+      delays.push(scheduler.getSamplingDelay());
+    }
+    // The old rule added 50 ms per slow frame and reached 1000 ms after about 16 frames.
+    expect(Math.max(...delays)).toBeLessThanOrEqual(250);
+    expect(scheduler.getSamplingDelay()).toBeGreaterThanOrEqual(150);
+    expect(new Set(delays.slice(-10)).size).toBe(1);
+  });
+
+  it('rises gradually, so one slow burst does not pin sampling at the maximum', () => {
+    const scheduler = new AdaptiveFrameScheduler({ minSamplingDelay: 16, maxSamplingDelay: 1000 });
+    scheduler.start();
     for (let i = 0; i < 5; i++) {
       const seq = scheduler.beginFrame(true);
-      mockTime += 700;
-      scheduler.endFrame(seq!, 'pass', 'data', null);
+      mockTime += 2000;
+      scheduler.endFrame(seq!, 'fail', null, null);
     }
-    expect(scheduler.getSamplingDelay()).toBe(1000);
+    expect(scheduler.getSamplingDelay()).toBeLessThanOrEqual(1000);
+    expect(scheduler.getSamplingDelay()).toBeGreaterThan(500);
+  });
 
-    // Now simulate healthy condition (10ms latency per frame)
-    // First, complete frames until median latency drops below 40ms and recovery begins
-    let seq = scheduler.beginFrame(true);
-    while (scheduler.getSamplingDelay() === 1000) {
+  it('returns to the minimum delay as soon as the median latency is healthy again', () => {
+    const scheduler = new AdaptiveFrameScheduler({ minSamplingDelay: 16, maxSamplingDelay: 1000 });
+    scheduler.start();
+    for (let i = 0; i < 10; i++) {
+      const seq = scheduler.beginFrame(true);
+      mockTime += 900;
+      scheduler.endFrame(seq!, 'fail', null, null);
+    }
+    expect(scheduler.getSamplingDelay()).toBeGreaterThanOrEqual(990);
+
+    // Three fast frames turn the 5-frame median healthy.
+    for (let i = 0; i < 3; i++) {
+      const seq = scheduler.beginFrame(true);
       mockTime += 10;
       scheduler.endFrame(seq!, 'pass', 'data', null);
-      seq = scheduler.beginFrame(true);
     }
-
-    // Measure total sampling delay time elapsed during recovery back to baseline (<= 33ms)
-    let totalRecoveryTimeMs = 0;
-    while (scheduler.getSamplingDelay() > 33) {
-      const currentDelay = scheduler.getSamplingDelay();
-      totalRecoveryTimeMs += currentDelay;
-
-      mockTime += 10;
-      scheduler.endFrame(seq!, 'pass', 'data', null);
-      seq = scheduler.beginFrame(true);
-    }
-    // Clean up last unused frame request
-    if (seq !== null) {
-      scheduler.endFrame(seq, 'pass', 'data', null);
-    }
-
-    expect(scheduler.getSamplingDelay()).toBeLessThanOrEqual(33);
-    // Recovery time from 1000ms back to baseline must be strictly under 1500ms (1.5 seconds)
-    expect(totalRecoveryTimeMs).toBeLessThan(1500);
+    expect(scheduler.getSamplingDelay()).toBe(16);
   });
 
   it('recovers from the maximum delay when decodes settle at a moderate 40-100 ms', () => {
     const scheduler = new AdaptiveFrameScheduler({ minSamplingDelay: 16, maxSamplingDelay: 1000 });
     scheduler.start();
 
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 10; i++) {
       const seq = scheduler.beginFrame(true);
-      mockTime += 700;
+      mockTime += 900;
       scheduler.endFrame(seq!, 'fail', null, null);
     }
-    expect(scheduler.getSamplingDelay()).toBe(1000);
+    expect(scheduler.getSamplingDelay()).toBeGreaterThanOrEqual(990);
 
     // Dense QR codes decode in about 70 ms: the delay must fall back towards that, not stay at 1 fps.
     for (let i = 0; i < 20; i++) {
@@ -250,8 +254,22 @@ describe('AdaptiveFrameScheduler', () => {
       mockTime += 70;
       scheduler.endFrame(seq!, 'fail', null, null);
     }
-    expect(scheduler.getSamplingDelay()).toBeLessThanOrEqual(80);
-    expect(scheduler.getSamplingDelay()).toBeGreaterThanOrEqual(70);
+    expect(scheduler.getSamplingDelay()).toBe(84);
+  });
+
+  it('measures the hang budget from the last heartbeat, not from when the frame started', () => {
+    const onWatchdogTriggered = vi.fn();
+    const scheduler = new AdaptiveFrameScheduler({ onWatchdogTriggered });
+    scheduler.start();
+    scheduler.beginFrame();
+    mockTime += 4000;
+    scheduler.heartbeat();
+    mockTime += 4000;
+    expect(scheduler.checkWatchdog()).toBe(false);
+    mockTime += 1100;
+    expect(scheduler.checkWatchdog()).toBe(true);
+    expect(onWatchdogTriggered).toHaveBeenCalledTimes(1);
+    scheduler.stop();
   });
 
   it('should handle watchdog checking and triggers', () => {
@@ -262,7 +280,9 @@ describe('AdaptiveFrameScheduler', () => {
     expect(scheduler.checkWatchdog()).toBe(false);
 
     scheduler.beginFrame();
-    mockTime += 2000;
+    mockTime += 4900;
+    expect(scheduler.checkWatchdog()).toBe(false);
+    mockTime += 200;
 
     // On-demand watchdog check
     expect(scheduler.checkWatchdog()).toBe(true);
@@ -282,8 +302,8 @@ describe('AdaptiveFrameScheduler', () => {
     scheduler.start();
     scheduler.beginFrame();
 
-    mockTime += 2000;
-    vi.advanceTimersByTime(2000); // Trigger setInterval
+    mockTime += 5200;
+    vi.advanceTimersByTime(5200); // Trigger setInterval
     expect(onWatchdogTriggered).toHaveBeenCalled();
 
     scheduler.stop();

@@ -23,16 +23,16 @@ We consolidate the entire optical detection pipeline into a unified deep module 
 
 The package exposes minimal, orthogonal public seams:
 
-- **`index.ts` (Headless Entry Point)**: Exposes polymorphic `scan(source, options)` supporting `ImageData`, `HTMLCanvasElement`, `ImageBitmap`, and `File`/`Blob` (static images and WebM/MKV video files), alongside public type definitions and runtime validation contracts.
-- **`index.ts` also exposes the Camera Scanner Engine** (`createCameraScannerEngine`): the headless owner of the camera frame loop, adaptive sampling, backpressure, downscaling, worker epochs, the 1500ms watchdog, three-retry exponential backoff and main-thread fallback (see section 4).
+- **`index.ts` (Headless Entry Point)**: Exposes polymorphic `scan(source, options)` supporting `ImageData`, `HTMLCanvasElement`, `ImageBitmap`, and `File`/`Blob` (image files only since issue #1098), alongside public type definitions and runtime validation contracts.
+- **`index.ts` also exposes the Camera Scanner Engine** (`createCameraScannerEngine`): the headless owner of the camera frame loop, adaptive sampling, backpressure, downscaling, worker epochs, the hang watchdog, worker restarts and main-thread fallback (see sections 4 and 5).
 - **`client.ts` (React Hook Seam)**: Exposes `useQrScanner`, a thin React adapter over the Camera Scanner Engine that creates it lazily, keeps its sampling bounds in sync, batches its events into React state, destroys it on unmount, and provides a unified `scanFile(file)` method. It does not expose the worker.
-- **`worker.ts` (Web Worker Seam)**: The dedicated off-thread Web Worker entry point consolidating WebCodecs video demuxing, EBML parsing, and pure JavaScript jsQR optical decoding (`attemptBoth`).
+- **`worker.ts` (Web Worker Seam)**: The dedicated off-thread Web Worker entry point: pure JavaScript jsQR decoding of camera frames and of image files, which it decodes itself with `createImageBitmap` (EXIF orientation applied). The WebCodecs demuxer and EBML parser it once held were removed with video-file scanning (issue #1098).
 
 ### 2. Private Internal Subsystem (`lib/`)
 
 All complex internal mechanics are strictly hidden inside `lib/` and are inaccessible to outside callers:
 
-- **`lib/sourceExtractor.ts`**: Unified extraction pipeline for all `ScanSource` types. Handles native HTML5 video frame stepping (24 FPS), WASM WebM demuxer fallback, global file concurrency locking, and client-side telemetry dispatches.
+- **`lib/sourceExtractor.ts`**: Unified extraction pipeline for all `ScanSource` types. An image file is sent to the worker (`lib/imageFile.ts`: native size capped at 2048px, then 1024px) and decoded on the main thread only when the worker cannot. Video files are refused. (Native video frame stepping, the stub WASM demuxer, the global file lock and the unused `scanner-telemetry-dispatch` events were removed in issue #1098.)
 - **`lib/scheduler.ts`**: `AdaptiveFrameScheduler` managing in-flight frame tracking, round-trip execution latency histories, dynamic sleep interval pacing, and immediate 1500ms starvation watchdog triggers.
 - **`lib/bufferPool.ts`**: `DoubleBufferPool` managing transferable zero-copy `ArrayBuffer` instances to prevent runtime garbage collection pauses.
 - **`lib/cameraEngine.ts`**: The Camera Scanner Engine (section 4).
@@ -51,14 +51,32 @@ The camera hook originally mixed worker lifecycle, watchdog recovery, adaptive s
 
 - **Interface**: `createCameraScannerEngine({ getSource, minSamplingDelay, maxSamplingDelay })` returns `start`, `stop`, `destroy`, `setOptions`, `getMetrics` and `subscribe(events)` with typed `onScanSuccess`, `onScanFail`, `onStatusChange` (`idle | checking | pass | fail`) and `onMetricsChange` (`samplingDelay`, `latencyHistory`) listeners.
 - **Sealed worker**: the worker handle, epoch counter, message listeners and termination are private to the engine. Messages from a replaced worker generation or an earlier session are discarded by epoch.
-- **Recovery policy**: a frame in flight longer than the watchdog budget (1500ms) or a worker `error`/`messageerror` recreates the worker with a doubled budget (3000ms, then capped at 6000ms). Any valid, non-stale worker answer resets the counter and budget. After three consecutive restarts fail, or when the worker factory throws, the engine decodes on the main thread (frames capped at 800px) without changing its interface.
+- **Recovery policy** (superseded by section 5): a frame in flight longer than the watchdog budget (1500ms) or a worker `error`/`messageerror` recreated the worker with a doubled budget (3000ms, then capped at 6000ms). Any valid, non-stale worker answer reset the counter and budget. After three consecutive restarts fail, or when the worker factory throws, the engine decodes on the main thread (frames capped at 800px) without changing its interface.
 - **Dependency injection instead of test hooks**: the worker factory (`ScannerWorkerFactory`), clock (`ScannerClock`), frame grabber and main-thread decoder are injectable. The package no longer attaches `terminateSharedScannerWorker`/`resetSharedScannerWorker` to `globalThis`, and the camera path no longer switches to synchronous state updates under test.
 - **Tests**: [`src/packages/optical-scanner/tests/cameraScannerEngine.test.ts`](../../src/packages/optical-scanner/tests/cameraScannerEngine.test.ts) drives the engine headlessly (node environment, fake frame source, fake workers, fake clock). [`src/packages/optical-scanner/tests/useQrScanner.test.tsx`](../../src/packages/optical-scanner/tests/useQrScanner.test.tsx) is a small adapter smoke test.
 - **Duplicated frame provider**: the standalone `FrameProvider.ts` camera loop was already deleted (section 3); the engine is now the only camera frame loop.
 
+### 5. Per-Session Staleness, Bounded Decodes and Hang-Only Watchdog (amendment, issues #1095 and #1096)
+
+Measured with the scanner test harness (#1103), the engine got slower exactly when scanning was hardest:
+
+- **Staleness is per scan session.** The shared worker kept one module-wide `latestSequenceId`, while every session numbers its frames from 1, so a scanner reopened after a long session had its frames answered `STALE_FRAME` for seconds. Epochs are now unique across the page (one counter for every engine and worker generation), and the worker judges staleness per `(epochId, sequenceId)` (`lib/frameGuard.ts`). Within a session, older frames are still rejected.
+- **One bounded jsQR pass per camera frame.** `decodeCameraFrame` (`lib/decodeSync.ts`) runs a single pass and consecutive frames rotate strategies: the native-resolution centre square, the whole frame downscaled to 800px, and an inverted pass (jsQR 1.4's `onlyInvert` is broken, so the pixels are inverted first). Frames whose sensor noise exceeds a threshold are box-downscaled before the pass, because jsQR spends seconds on grainy frames. The multi-pass `decodeRgbaFrame` remains for one-shot image files. `pnpm run bench:scanner` measures both over the corpus.
+- **Pacing converges.** The sampling delay targets 1.2x the 5-frame median latency, closing half the gap per frame when rising and dropping to the target at once when decodes speed up. The old rule added 50ms on every slow frame and reached the 1000ms maximum (about 1 fps).
+- **The watchdog catches hangs only.** One 5000ms budget, measured from the worker's last answer, replaces the 1500ms / 3000ms / 6000ms backoff. A slow but answering worker is never restarted; after three consecutive hangs or crashes the engine still falls back to the main thread, where it runs the same one-pass rotation.
+
+### 6. One Owner for the Camera: the Camera Session (amendment, issue #1097)
+
+The camera stream used to be acquired by the app's `useCamera` hook and attached, played and torn down separately by each caller (the scanner component and the file-transfer receiver), with the engine started and stopped beside it. Under StrictMode or a quick remount these steps interleaved: the viewfinder could stay black, or a camera could keep running after the scanner closed.
+
+- **`lib/cameraSession.ts`** owns the whole lifecycle: `getUserMedia`, attaching the stream to the video element, `play()`, starting the engine, and on `stop()` stopping every track, detaching the element and stopping the engine. `start()` while requesting or streaming does nothing, and a request superseded by `stop()` or a newer `start()` stops its tracks as soon as the browser answers. The session releases the camera while the tab is hidden and reacquires it when the tab is shown.
+- **`useQrScanner`** returns `state` (`idle | requesting | streaming | denied | unavailable | error`, the last three with the error), `start(options?)`, `stop()` and `videoRef`. `startScanning` / `stopScanning` remain for a source the caller attaches itself (the receiver's recorded video file).
+- **`src/hooks/useCamera.ts` is deleted.** `QRScanner` and `useOpticalReceiver` use the session; the receiver no longer takes an injected `camera` and exposes `cameraError` instead.
+- **Tests**: `tests/cameraSession.test.ts` covers idempotency, superseded requests, error mapping and visibility; the component test checks one live track under StrictMode and none after unmount or 20 quick remounts; `e2e/scanner.spec.ts` checks the denied fallback and that hiding the tab releases the camera in every browser.
+
 ## Rationale
 
-- **Deep Module Principle**: Encapsulating high internal complexity (Web Workers, transferable buffers, canvas contexts, adaptive frame pacing, and demuxing) behind narrow public entry points (`scan`, `useQrScanner`) simplifies callers and eliminates abstraction leaks.
+- **Deep Module Principle**: Encapsulating high internal complexity (Web Workers, transferable buffers, canvas contexts, adaptive frame pacing, and image decoding) behind narrow public entry points (`scan`, `useQrScanner`) simplifies callers and eliminates abstraction leaks.
 - **Single Test Surface**: Consolidating file and camera decoding into one module provides a unified test surface ([`tests/opticalScannerIntegration.test.tsx`](../../tests/opticalScannerIntegration.test.tsx) and [`src/packages/optical-scanner/tests/opticalScanner.test.tsx`](../../src/packages/optical-scanner/tests/opticalScanner.test.tsx)).
 - **Duplication Reduction**: Deleting `FrameProvider.ts` dropped repository-wide code duplication to **2.40%**, well beneath the 3.00% invariant limit.
 

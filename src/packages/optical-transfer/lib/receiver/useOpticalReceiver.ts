@@ -39,19 +39,10 @@ type ReceiverToast = {
   duration?: number;
 };
 
-/** The camera capability the receiver scans from. Injected by the page (e.g. the app's `useCamera`). */
-export interface ReceiverCamera {
-  stream: MediaStream | null;
-  startStream: () => Promise<MediaStream | null>;
-  stopStream: () => void;
-}
-
 /** Hands a verified file to the user. Injected by the page (e.g. the app's download manager). */
 export type ReceivedFileSaver = (data: Uint8Array, fileName: string, mimeType: string) => void;
 
 export interface UseOpticalReceiverOptions {
-  /** Camera stream controls. */
-  camera: ReceiverCamera;
   /** Saves a verified file. */
   saveFile: ReceivedFileSaver;
   addToast?: (toast: ReceiverToast) => void;
@@ -93,7 +84,6 @@ const FILE_RECEIVED_MESSAGE = 'File completely received & offline binary reconst
  * and data reassembly for the receiver.
  */
 export function useOpticalReceiver({
-  camera,
   saveFile,
   addToast,
   handshakeRequired = true,
@@ -150,14 +140,22 @@ export function useOpticalReceiver({
     lookaheadRef.current = new StreamLookaheadReceiver({ mode: streamMode });
   }, [streamMode]);
 
-  // Callers may pass a fresh camera object each render; keep the controls stable.
-  const cameraRef = useRef(camera);
-  useEffect(() => {
-    cameraRef.current = camera;
-  }, [camera]);
-  const { stream } = camera;
-  const startStream = useCallback(() => cameraRef.current.startStream(), []);
-  const stopStream = useCallback(() => cameraRef.current.stopStream(), []);
+  // The scanner's Camera Session owns the camera stream (#1097); frames go to handleFrame.
+  const handleFrameRef = useRef<(decodedText: string) => void>(() => {});
+  const {
+    state: cameraState,
+    start: startCamera,
+    stop: stopStream,
+    startScanning: startAdaptiveScanning,
+    stopScanning: stopAdaptiveScanning,
+  } = useQrScanner({
+    videoRef,
+    onScanSuccess: (data) => handleFrameRef.current(data),
+    // An animated stream changes frame every ~66 ms, so sampling may never back off
+    // to the single-code scanner's 1 fps floor. The worker's backpressure still bounds load.
+    maxSamplingDelay: STREAM_MAX_SAMPLING_DELAY_MS,
+  });
+  const cameraError = 'error' in cameraState ? cameraState.error : null;
 
   /** Saves a verified file under its announced name and tells the user. */
   const deliverFile = useCallback((data: Uint8Array, hs: HandshakeInfo | null, fallbackPrefix: string) => {
@@ -513,52 +511,51 @@ export function useOpticalReceiver({
     }
   }, [receiverSuccess, isVerifying, handshakeRequired, haltScanning, streamMode, receiverError, addToast, initWorker]);
 
-  const { startScanning: startAdaptiveScanning, stopScanning: stopAdaptiveScanning } = useQrScanner({
-    videoRef,
-    onScanSuccess: (data) => {
-      handleFrame(data);
-    },
-    // An animated stream changes frame every ~66 ms, so sampling may never back off
-    // to the single-code scanner's 1 fps floor. The worker's backpressure still bounds load.
-    maxSamplingDelay: STREAM_MAX_SAMPLING_DELAY_MS,
-  });
+  useEffect(() => {
+    handleFrameRef.current = (data) => {
+      void handleFrame(data);
+    };
+  }, [handleFrame]);
 
   useEffect(() => {
+    // Camera mode is started by startCameraSession: the session attaches the stream and runs the
+    // frame loop itself. This effect plays a loaded video file and stops whatever ran before.
     const video = videoRef.current;
-    if (isScanning) {
-      if (receiverMode === 'camera' && stream && video) {
-        video.srcObject = stream;
-        if (typeof video.removeAttribute === 'function') {
-          video.removeAttribute('src');
-        }
-        playQuietly(video);
-        startAdaptiveScanning();
-      } else if (receiverMode === 'file' && videoObjectUrl && video) {
-        video.srcObject = null;
-        if (video.src !== videoObjectUrl) {
-          video.src = videoObjectUrl;
-        }
-        video.loop = true;
-        playQuietly(video);
-        startAdaptiveScanning();
+    if (isScanning && receiverMode === 'file' && videoObjectUrl && video) {
+      video.srcObject = null;
+      if (video.src !== videoObjectUrl) {
+        video.src = videoObjectUrl;
       }
-    } else {
+      video.loop = true;
+      playQuietly(video);
+      startAdaptiveScanning();
+    } else if (!isScanning) {
+      stopStream();
       stopAdaptiveScanning();
       flushVideoHardware();
     }
-  }, [isScanning, stream, receiverMode, videoObjectUrl, startAdaptiveScanning, stopAdaptiveScanning, flushVideoHardware]);
+  }, [isScanning, receiverMode, videoObjectUrl, stopStream, startAdaptiveScanning, stopAdaptiveScanning, flushVideoHardware]);
+
+  // Report the camera session's outcome: a toast once it streams, back to idle when it fails.
+  const cameraStatus = cameraState.status;
+  useEffect(() => {
+    if (cameraStatus === 'streaming') {
+      addToastRef.current?.({ type: 'success', message: 'Camera scanner activated.', duration: 3000 });
+    } else if (cameraStatus === 'denied' || cameraStatus === 'unavailable' || cameraStatus === 'error') {
+      setIsScanning(false);
+    }
+  }, [cameraStatus]);
 
   const startCameraSession = useCallback(async () => {
     setSecurityAlert(null);
     processedIndicesRef.current.clear();
     hasShownMissingHandshakeToastRef.current = false;
     initWorker();
-    const activeStream = await startStream();
-    if (activeStream) {
-      setIsScanning(true);
-      addToast?.({ type: 'success', message: 'Camera scanner activated.', duration: 3000 });
-    }
-  }, [startStream, addToast, initWorker]);
+    setIsScanning(true);
+    const video = videoRef.current;
+    if (video?.hasAttribute('src')) video.removeAttribute('src');
+    await startCamera();
+  }, [startCamera, initWorker]);
 
   const stopCameraSession = useCallback(() => {
     setIsScanning(false);
@@ -602,6 +599,8 @@ export function useOpticalReceiver({
     isVerifying,
     downloadTriggered,
     isScanning,
+    /** Why the camera could not be started (denied, missing, in use), or null. */
+    cameraError,
     reassembledData,
     videoRef,
     lookaheadRef,

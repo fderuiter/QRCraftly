@@ -25,7 +25,6 @@ const BANNED_APIS = new Set(['fetch', 'WebSocket', 'XMLHttpRequest', 'sendBeacon
 // function contains one of these exact string literals, which identify the
 // audited source function after minification.
 export const AUTHORIZED_FETCH_SCOPE_LITERALS = [
-  'Failed to download WebAssembly demuxer assets', // Same-origin WASM demuxer assets (fetchWasmAsset)
   'FileReader error', // Logo/image URL loading that is routed through sanitizeSvg (svgExport)
   "pageContext couldn't be fetched because an error occurred on the server-side" // Vike client router pageContext.json requests
 ];

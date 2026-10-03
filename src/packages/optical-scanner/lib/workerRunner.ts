@@ -71,30 +71,28 @@ function markWorkerHealthy(): void {
   consecutiveRestarts = 0;
 }
 
-export interface DispatchWorkerFrameOptions {
-  imageData?: ImageData;
+export interface DispatchWorkerRequestOptions {
   timeoutMs?: number;
   signal?: AbortSignal;
 }
 
-export interface DispatchWorkerFrameResult {
+export interface DispatchWorkerRequestResult {
   decoded: string | null;
-  buffer?: ArrayBuffer;
   error?: string | null;
 }
 
 /**
- * Dispatches an ArrayBuffer frame to the background worker with a bounded watchdog timeout,
- * automatic worker recreation upon hung execution, and clean listener detachment.
+ * Posts one request to the shared worker and resolves with its answer (matched by `sequenceId`),
+ * with a bounded watchdog timeout, worker recreation after a hang or crash, and clean listener
+ * detachment. It never rejects: failures resolve with an `error` code.
  */
-export function dispatchWorkerFrame(
-  buffer: ArrayBuffer,
-  width: number,
-  height: number,
-  sequenceId: number,
-  options: DispatchWorkerFrameOptions = {}
-): Promise<DispatchWorkerFrameResult> {
-  const { imageData, timeoutMs = 1500, signal } = options;
+export function dispatchWorkerRequest(
+  message: { sequenceId: number },
+  transfer: Transferable[],
+  options: DispatchWorkerRequestOptions = {}
+): Promise<DispatchWorkerRequestResult> {
+  const { timeoutMs = 1500, signal } = options;
+  const { sequenceId } = message;
 
   return new Promise((resolve) => {
     let worker: Worker | null = null;
@@ -105,113 +103,66 @@ export function dispatchWorkerFrame(
     }
 
     if (!worker || signal?.aborted) {
-      resolve({ decoded: null, buffer, error: signal?.aborted ? 'ABORTED' : 'WORKER_UNAVAILABLE' });
+      resolve({ decoded: null, error: signal?.aborted ? 'ABORTED' : 'WORKER_UNAVAILABLE' });
       return;
     }
 
     let isDone = false;
     let timerId: ReturnType<typeof setTimeout> | null = null;
 
-    const cleanup = () => {
+    const finish = (result: DispatchWorkerRequestResult) => {
+      if (isDone) return;
+      isDone = true;
       if (timerId) {
         clearTimeout(timerId);
         timerId = null;
       }
       signal?.removeEventListener('abort', onAbort);
-      if (worker) {
-        try {
-          if (typeof worker.removeEventListener === 'function') {
-            worker.removeEventListener('message', handleMessage);
-            worker.removeEventListener('error', handleError);
-          } else {
-            // Test doubles without addEventListener: fall back to the handler properties.
-            const legacyWorker: Pick<Worker, 'onmessage' | 'onerror'> = worker;
-            legacyWorker.onmessage = null;
-            legacyWorker.onerror = null;
-          }
-        } catch {
-          // Ignore listener removal errors
-        }
+      try {
+        worker?.removeEventListener('message', handleMessage);
+        worker?.removeEventListener('error', handleError);
+      } catch {
+        // Ignore listener removal errors
       }
+      resolve(result);
     };
 
     const handleMessage = (e: MessageEvent) => {
       const payload = e.data;
-      if (!isValidScannerResponse(payload)) return;
-      if (payload.sequenceId !== sequenceId) return;
-
-      if (!isDone) {
-        isDone = true;
-        cleanup();
-        markWorkerHealthy();
-        resolve({
-          decoded: (payload.status === 'pass' ? payload.decodedData : null) ?? null,
-          buffer: payload.buffer ?? buffer,
-          error: payload.error ?? null,
-        });
-      }
+      if (!isValidScannerResponse(payload) || payload.sequenceId !== sequenceId) return;
+      markWorkerHealthy();
+      finish({
+        decoded: (payload.status === 'pass' ? payload.decodedData : null) ?? null,
+        error: payload.error ?? null,
+      });
     };
 
     const handleError = (err: unknown) => {
-      console.warn('Worker error during frame dispatch:', err);
-      if (!isDone) {
-        isDone = true;
-        cleanup();
-        recreateScannerWorker();
-        resolve({ decoded: null, buffer, error: 'WORKER_ERROR' });
-      }
+      if (isDone) return;
+      console.warn('Worker error during scan request:', err);
+      finish({ decoded: null, error: 'WORKER_ERROR' });
+      recreateScannerWorker();
     };
 
-    const onAbort = () => {
-      if (!isDone) {
-        isDone = true;
-        cleanup();
-        resolve({ decoded: null, buffer, error: 'ABORTED' });
-      }
-    };
+    const onAbort = () => finish({ decoded: null, error: 'ABORTED' });
 
     // Watchdog timeout to prevent unbounded hang
     timerId = setTimeout(() => {
-      if (!isDone) {
-        isDone = true;
-        cleanup();
-        console.warn(`Watchdog: Off-thread frame ${sequenceId} timed out after ${timeoutMs}ms.`);
-        recreateScannerWorker();
-        resolve({ decoded: null, buffer, error: 'WATCHDOG_TIMEOUT' });
-      }
+      if (isDone) return;
+      console.warn(`Watchdog: Off-thread scan request ${sequenceId} timed out after ${timeoutMs}ms.`);
+      finish({ decoded: null, error: 'WATCHDOG_TIMEOUT' });
+      recreateScannerWorker();
     }, timeoutMs);
 
     signal?.addEventListener('abort', onAbort);
 
     try {
-      if (typeof worker.addEventListener === 'function') {
-        worker.addEventListener('message', handleMessage);
-        worker.addEventListener('error', handleError);
-      } else {
-        // Test doubles without addEventListener: fall back to the handler properties.
-        const legacyWorker: Pick<Worker, 'onmessage' | 'onerror'> = worker;
-        legacyWorker.onmessage = handleMessage;
-        legacyWorker.onerror = handleError;
-      }
-
-      const messagePayload: { buffer: ArrayBuffer; width: number; height: number; sequenceId: number; imageData?: ImageData } = {
-        buffer,
-        width,
-        height,
-        sequenceId,
-      };
-      if (imageData) {
-        messagePayload.imageData = imageData;
-      }
-
-      worker.postMessage(messagePayload, [buffer]);
+      worker.addEventListener('message', handleMessage);
+      worker.addEventListener('error', handleError);
+      worker.postMessage(message, transfer);
     } catch (postErr) {
       console.error('Failed to postMessage to scanner worker:', postErr);
-      if (!isDone) {
-        isDone = true;
-        cleanup();
-        resolve({ decoded: null, buffer, error: 'DISPATCH_ERROR' });
-      }
+      finish({ decoded: null, error: 'DISPATCH_ERROR' });
     }
   });
 }

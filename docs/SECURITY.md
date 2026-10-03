@@ -22,7 +22,7 @@ In the generated `_headers` file, only the global `/*` rule sets `Content-Securi
 
 - **No third-party origins:** The app no longer loads web fonts from Google Fonts; text renders with the system font stack (Tailwind's default `font-sans` and `font-mono`). Every directive therefore allows only `'self'`, plus the `data:` and `blob:` schemes where they are needed. No visitor IP address or referrer is sent to a font CDN. If a brand typeface is added later, bundle it with the app (for example from an `@fontsource` package) and keep `font-src 'self'`.
 - **`img-src 'self' data: blob:`:** SVG export rasterizes its `blob:` object URL to check that the code scans, and the logo resize fallback decodes uploads through `blob:` URLs.
-- **`media-src 'self' blob:`:** The optical scanner plays uploaded video files through `blob:` object URLs.
+- **`media-src 'self' blob:`:** The file-transfer receiver plays recorded video files through `blob:` object URLs. (The generator's scanner reads images only.)
 - **Regression coverage:** The `chromium-csp` Playwright project runs `e2e/csp-enforcement.spec.ts` against the built app with `bypassCSP: false`, so a policy that breaks SVG export fails in CI. The other projects still bypass CSP.
 
 ## Permissions Policy

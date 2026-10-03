@@ -3,34 +3,62 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { act, render, screen, fireEvent, waitFor } from '@testing-library/react';
 import React from 'react';
 import { QRScanner } from './QRScanner';
-import { useCamera } from '../hooks/useCamera';
-import { useQrScanner } from '@/packages/optical-scanner/client';
-import { scan } from '@/packages/optical-scanner';
+import { useQrScanner, type UseQrScannerOptions } from '@/packages/optical-scanner/client';
 import jsQR from 'jsqr';
 import { axe } from 'vitest-axe';
 
-// Mock hooks and external libraries
-vi.mock('../hooks/useCamera', () => ({
-  useCamera: vi.fn(),
-}));
-
-vi.mock('@/packages/optical-scanner/client', () => ({
-  useQrScanner: vi.fn(),
-}));
+// The real hook and Camera Session run against a fake camera; the spy only records the options
+// so a test can deliver a decoded code.
+vi.mock('@/packages/optical-scanner/client', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/packages/optical-scanner/client')>();
+  return { ...actual, useQrScanner: vi.fn(actual.useQrScanner) };
+});
 
 vi.mock('jsqr', () => ({
   default: vi.fn(),
 }));
 
+/** A camera track that records whether it was stopped. */
+interface FakeTrack {
+  readyState: 'live' | 'ended';
+  stop: () => void;
+}
+
 describe('QRScanner Component', () => {
   const mockOnScanSuccess = vi.fn();
   const mockOnClose = vi.fn();
-  const mockStartStream = vi.fn();
-  const mockStopStream = vi.fn();
-  const mockStartScanning = vi.fn();
-  const mockStopScanning = vi.fn();
-  const mockScanFile = vi.fn().mockImplementation((file: File, options?: any) => scan(file, options));
-  let originalImage: any;
+  let originalImage: typeof Image;
+  let originalMediaDevices: MediaDevices | undefined;
+  let tracks: FakeTrack[];
+  let getUserMedia: ReturnType<typeof vi.fn<(constraints?: MediaStreamConstraints) => Promise<MediaStream>>>;
+
+  /** Each successful request opens one new live track. */
+  const openTrack = async (): Promise<MediaStream> => {
+    const track: FakeTrack = {
+      readyState: 'live',
+      stop: () => {
+        track.readyState = 'ended';
+      },
+    };
+    tracks.push(track);
+    const stream: Pick<MediaStream, 'getTracks'> = { getTracks: () => [track as unknown as MediaStreamTrack] };
+    return stream as MediaStream;
+  };
+  const liveTracks = () => tracks.filter((track) => track.readyState === 'live').length;
+  const deny = (name: string) => getUserMedia.mockRejectedValue(new DOMException('Camera refused', name));
+
+  /** Delivers a decoded code the way the scanner engine does. */
+  const decode = async (data: string) => {
+    const options: UseQrScannerOptions | undefined = vi.mocked(useQrScanner).mock.lastCall?.[0];
+    await act(async () => {
+      options?.onScanSuccess?.(data);
+    });
+  };
+
+  /** Lets pending camera requests settle. */
+  const settle = () => act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
 
   beforeEach(() => {
     if (globalThis.mockWorkerControl) {
@@ -62,27 +90,13 @@ describe('QRScanner Component', () => {
         height: 100,
       }),
     } as any);
+    vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined);
+    vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => {});
 
-    vi.mocked(useCamera).mockReturnValue({
-      permissionState: 'prompt',
-      stream: null,
-      error: null,
-      isInitializing: false,
-      startStream: mockStartStream,
-      stopStream: mockStopStream,
-    });
-
-    vi.mocked(useQrScanner).mockReturnValue({
-      isScanning: false,
-      status: 'idle',
-      samplingDelay: 33,
-      latencyHistory: [],
-      startScanning: mockStartScanning,
-      stopScanning: mockStopScanning,
-      scanFile: mockScanFile,
-    });
-
-    mockStartStream.mockResolvedValue({ getTracks: () => [] } as any);
+    tracks = [];
+    getUserMedia = vi.fn(openTrack);
+    originalMediaDevices = navigator.mediaDevices;
+    Object.defineProperty(navigator, 'mediaDevices', { value: { getUserMedia }, configurable: true, writable: true });
   });
 
   afterEach(() => {
@@ -90,16 +104,19 @@ describe('QRScanner Component', () => {
       globalThis.mockWorkerControl.reset();
     }
     global.Image = originalImage;
+    Object.defineProperty(navigator, 'mediaDevices', { value: originalMediaDevices, configurable: true, writable: true });
     vi.restoreAllMocks();
     vi.clearAllMocks();
   });
 
-  it('renders webcam view by default and starts camera stream', async () => {
+  it('renders webcam view by default and opens the rear camera', async () => {
     render(<QRScanner onScanSuccess={mockOnScanSuccess} onClose={mockOnClose} />);
 
     expect(screen.getByRole('radio', { name: /webcam/i })).toHaveAttribute('aria-checked', 'true');
     expect(screen.getByRole('radio', { name: /file upload/i })).toHaveAttribute('aria-checked', 'false');
-    expect(mockStartStream).toHaveBeenCalled();
+    await settle();
+    expect(getUserMedia).toHaveBeenCalledWith({ video: { facingMode: 'environment' }, audio: false });
+    expect(liveTracks()).toBe(1);
   });
 
   it('exposes the selected input mode with aria-checked when switching to file upload', async () => {
@@ -109,73 +126,154 @@ describe('QRScanner Component', () => {
     expect(screen.getByRole('radio', { name: /webcam/i })).toHaveAttribute('aria-checked', 'false');
     expect(screen.getByRole('radiogroup', { name: 'Scanner input' })).toBeInTheDocument();
     // The file input is not nested inside the dropzone button.
-    const input = screen.getByLabelText('Upload QR code image or video file');
+    const input = screen.getByLabelText('Upload QR code image file');
     expect(input.closest('button')).toBeNull();
   });
 
-  it('keeps the video mounted while camera permission is initializing', async () => {
-    let resolveStream: (stream: MediaStream) => void = () => {};
-    const streamPromise = new Promise<MediaStream>((resolve) => {
-      resolveStream = resolve;
-    });
-    mockStartStream.mockReturnValue(streamPromise);
-
-    let isInitializing = false;
-    vi.mocked(useCamera).mockImplementation(() => ({
-      permissionState: 'prompt',
-      stream: null,
-      error: null,
-      isInitializing,
-      startStream: mockStartStream,
-      stopStream: mockStopStream,
-    }));
-
-    const { rerender } = render(
-      <QRScanner onScanSuccess={mockOnScanSuccess} onClose={mockOnClose} />
+  it('keeps the video mounted while camera permission is pending, then shows the stream', async () => {
+    let grant: () => void = () => {};
+    getUserMedia.mockImplementationOnce(
+      () => new Promise<MediaStream>((resolve) => {
+        grant = () => resolve(openTrack());
+      })
     );
-    const video = screen.getByLabelText('Webcam feed') as HTMLVideoElement;
-
-    isInitializing = true;
-    rerender(<QRScanner onScanSuccess={mockOnScanSuccess} onClose={mockOnClose} />);
-
-    expect(screen.getByLabelText('Webcam feed')).toBe(video);
-    expect(screen.getByText('Initializing camera stream...')).toBeInTheDocument();
-
-    const activeStream = { getTracks: () => [] } as unknown as MediaStream;
-    await act(async () => {
-      resolveStream(activeStream);
-      await streamPromise;
-    });
-
-    expect(video.srcObject).toBe(activeStream);
-    expect(mockStartScanning).toHaveBeenCalled();
-  });
-
-  it('renders troubleshooting card immediately upon camera permission denial', async () => {
-    vi.mocked(useCamera).mockReturnValue({
-      permissionState: 'denied',
-      stream: null,
-      error: new Error('Permission denied'),
-      isInitializing: false,
-      startStream: mockStartStream,
-      stopStream: mockStopStream,
-    });
 
     render(<QRScanner onScanSuccess={mockOnScanSuccess} onClose={mockOnClose} />);
+    const video = screen.getByLabelText('Webcam feed') as HTMLVideoElement;
+    expect(await screen.findByText('Initializing camera stream...')).toBeInTheDocument();
 
-    expect(screen.getByText('Camera Access Denied')).toBeInTheDocument();
+    await act(async () => {
+      grant();
+    });
+    await settle();
+
+    expect(screen.getByLabelText('Webcam feed')).toBe(video);
+    expect(screen.queryByText('Initializing camera stream...')).not.toBeInTheDocument();
+    expect(video.srcObject).not.toBeNull();
+    expect(liveTracks()).toBe(1);
+  });
+
+  describe('one owner for the camera (#1097)', () => {
+    it('opens exactly one camera under StrictMode and none after unmount', async () => {
+      const { unmount } = render(
+        <React.StrictMode>
+          <QRScanner onScanSuccess={mockOnScanSuccess} onClose={mockOnClose} />
+        </React.StrictMode>
+      );
+      await settle();
+      expect(liveTracks()).toBe(1);
+      expect((screen.getByLabelText('Webcam feed') as HTMLVideoElement).srcObject).not.toBeNull();
+
+      unmount();
+      await settle();
+      expect(liveTracks()).toBe(0);
+    });
+
+    it('leaves no camera running after 20 quick mount and unmount cycles', async () => {
+      for (let i = 0; i < 20; i++) {
+        const { unmount } = render(<QRScanner onScanSuccess={mockOnScanSuccess} onClose={mockOnClose} />);
+        // Every other cycle unmounts before the browser answers the camera request.
+        if (i % 2 === 0) await settle();
+        unmount();
+      }
+      await settle();
+      expect(tracks.length).toBeGreaterThanOrEqual(10);
+      expect(liveTracks()).toBe(0);
+    });
+
+    it('does not ask for the camera again on a re-render', async () => {
+      const { rerender } = render(<QRScanner onScanSuccess={mockOnScanSuccess} />);
+      await settle();
+      rerender(<QRScanner onScanSuccess={mockOnScanSuccess} />);
+      await settle();
+      expect(getUserMedia).toHaveBeenCalledTimes(1);
+      expect(liveTracks()).toBe(1);
+    });
+
+    it('releases the camera after a successful scan in non-continuous mode and reopens it from the Webcam tab', async () => {
+      render(<QRScanner onScanSuccess={mockOnScanSuccess} onClose={mockOnClose} continuous={false} />);
+      await settle();
+      expect(liveTracks()).toBe(1);
+
+      await decode('https://example.com/qr1');
+      expect(mockOnScanSuccess).toHaveBeenCalledWith('https://example.com/qr1');
+      expect(liveTracks()).toBe(0);
+      expect((screen.getByLabelText('Webcam feed') as HTMLVideoElement).srcObject).toBeNull();
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole('radio', { name: /webcam/i }));
+      });
+      await settle();
+      expect(liveTracks()).toBe(1);
+    });
+
+    it('keeps the camera open when continuous scanning is enabled', async () => {
+      render(<QRScanner onScanSuccess={mockOnScanSuccess} continuous={true} />);
+      await settle();
+
+      await decode('https://example.com/qr3');
+      expect(mockOnScanSuccess).toHaveBeenCalledWith('https://example.com/qr3');
+      expect(liveTracks()).toBe(1);
+    });
+
+    it('releases the camera when switching to file upload', async () => {
+      render(<QRScanner onScanSuccess={mockOnScanSuccess} />);
+      await settle();
+      expect(liveTracks()).toBe(1);
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole('radio', { name: /file upload/i }));
+      });
+      expect(liveTracks()).toBe(0);
+    });
+  });
+
+  it('leads with the image fallback when camera permission is denied, and retries', async () => {
+    deny('NotAllowedError');
+    render(<QRScanner onScanSuccess={mockOnScanSuccess} onClose={mockOnClose} />);
+
+    expect(await screen.findByText('Camera Access Denied')).toBeInTheDocument();
     // Troubleshooting card should have specific instructions
     expect(screen.getByText(/Open iOS Settings|Open Android Settings|Open macOS System Settings|Open Windows Settings|Click the padlock/)).toBeInTheDocument();
-    
+
     // The image fallback leads (#1055): it is the first action, before the permission help.
     const switchBtn = screen.getByRole('button', { name: 'Scan from an image instead' });
     const retry = screen.getByRole('button', { name: /retry permission/i });
     expect(switchBtn.compareDocumentPosition(retry) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(await axe(switchBtn.closest('div.flex.size-full') as HTMLElement)).toHaveNoViolations();
+    expect(await axe(switchBtn.closest('div.absolute') as HTMLElement)).toHaveNoViolations();
 
-    // Clicking switches the mode to file
-    fireEvent.click(switchBtn);
+    // Granting on retry replaces the card with the camera.
+    getUserMedia.mockImplementation(openTrack);
+    await act(async () => {
+      fireEvent.click(retry);
+    });
+    await settle();
+    expect(screen.queryByText('Camera Access Denied')).not.toBeInTheDocument();
+    expect(liveTracks()).toBe(1);
+  });
+
+  it('switches to file upload from the denied card', async () => {
+    deny('NotAllowedError');
+    render(<QRScanner onScanSuccess={mockOnScanSuccess} onClose={mockOnClose} />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Scan from an image instead' }));
     expect(screen.getByText(/drag & drop qr image/i)).toBeInTheDocument();
+  });
+
+  it('explains a missing camera without offering a permission retry', async () => {
+    deny('NotFoundError');
+    render(<QRScanner onScanSuccess={mockOnScanSuccess} onClose={mockOnClose} />);
+
+    expect(await screen.findByText('Camera Unavailable')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Scan from an image instead' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /retry permission/i })).not.toBeInTheDocument();
+  });
+
+  it('explains a browser without a camera API', async () => {
+    Object.defineProperty(navigator, 'mediaDevices', { value: undefined, configurable: true, writable: true });
+    render(<QRScanner onScanSuccess={mockOnScanSuccess} onClose={mockOnClose} />);
+
+    expect(await screen.findByText('Camera Unavailable')).toBeInTheDocument();
   });
 
   it('allows switching to file upload mode via the tab and processes images', async () => {
@@ -196,14 +294,14 @@ describe('QRScanner Component', () => {
     const fileTab = screen.getByRole('radio', { name: /file upload/i });
     fireEvent.click(fileTab);
 
-    expect(screen.getByText(/drag & drop qr image or video/i)).toBeInTheDocument();
+    expect(screen.getByText(/drag & drop qr image/i)).toBeInTheDocument();
 
     // Mock successful jsQR decoding
     vi.mocked(jsQR).mockReturnValue({ data: 'https://qrcraftly.com' } as any);
 
     // Mock FileReader and Image loading
     const mockFile = new File(['dummy content'], 'test.png', { type: 'image/png' });
-    const fileInput = screen.getByLabelText(/upload qr code image or video file/i);
+    const fileInput = screen.getByLabelText(/upload qr code image file/i);
 
     // Trigger file change
     fireEvent.change(fileInput, { target: { files: [mockFile] } });
@@ -234,7 +332,7 @@ describe('QRScanner Component', () => {
     vi.mocked(jsQR).mockReturnValue(null);
 
     const mockFile = new File(['dummy content'], 'test.png', { type: 'image/png' });
-    const fileInput = screen.getByLabelText(/upload qr code image or video file/i);
+    const fileInput = screen.getByLabelText(/upload qr code image file/i);
 
     fireEvent.change(fileInput, { target: { files: [mockFile] } });
 
@@ -248,9 +346,8 @@ describe('QRScanner Component', () => {
     let uploadIndex = 0;
     globalThis.mockWorkerControl.setInterceptor((msg, worker) => {
       setTimeout(() => {
-        if (msg.sequenceId === 1) {
-          uploadIndex++;
-        }
+        // One worker request per uploaded file.
+        uploadIndex++;
         if (uploadIndex === 1) {
           worker.dispatchMessage({
             status: 'pass',
@@ -292,7 +389,7 @@ describe('QRScanner Component', () => {
     });
 
     const mockFile = new File(['dummy content'], 'test.png', { type: 'image/png' });
-    const fileInput = screen.getByLabelText(/upload qr code image or video file/i) as HTMLInputElement;
+    const fileInput = screen.getByLabelText(/upload qr code image file/i) as HTMLInputElement;
 
     // First upload
     fireEvent.change(fileInput, { target: { files: [mockFile] } });
@@ -334,343 +431,49 @@ describe('QRScanner Component', () => {
     vi.mocked(jsQR).mockReset();
   });
 
-  describe('WebM & MKV Video Importing and Decoding', () => {
-    let originalCanPlayType: any;
-    let originalURL: any;
-    let originalFetch: any;
-    let originalWorker: any;
+  describe('image files only (#1098)', () => {
+    it('accepts images only and turns away a dropped video', async () => {
+      render(<QRScanner onScanSuccess={mockOnScanSuccess} onClose={mockOnClose} />);
+      fireEvent.click(screen.getByRole('radio', { name: /file upload/i }));
 
-    beforeEach(() => {
-      originalCanPlayType = HTMLVideoElement.prototype.canPlayType;
-      originalURL = global.URL;
-      originalFetch = global.fetch;
-      originalWorker = global.Worker;
+      expect(screen.getByLabelText('Upload QR code image file')).toHaveAttribute('accept', 'image/*');
+      const video = new File(['video'], 'clip.mp4', { type: 'video/mp4' });
+      fireEvent.drop(screen.getByText(/drag & drop qr image/i), { dataTransfer: { files: [video] } });
 
-      global.URL.createObjectURL = vi.fn().mockReturnValue('blob:dummy');
-      global.URL.revokeObjectURL = vi.fn();
+      expect(screen.getByText('Please drop an image file.')).toBeInTheDocument();
+      expect(screen.queryByText(/processing file/i)).not.toBeInTheDocument();
+      expect(mockOnScanSuccess).not.toHaveBeenCalled();
     });
 
-    afterEach(() => {
-      HTMLVideoElement.prototype.canPlayType = originalCanPlayType;
-      global.URL = originalURL;
-      global.fetch = originalFetch;
-      global.Worker = originalWorker;
-    });
-
-    it('uses native decoding when WebM container is natively supported', async () => {
-      // Mock native support
-      HTMLVideoElement.prototype.canPlayType = vi.fn().mockReturnValue('probably');
-
-      let mockVideoInstance: any = null;
-      let currentTimeVal = 0;
-      const originalCreateElement = document.createElement;
-      vi.spyOn(document, 'createElement').mockImplementation(function(this: any, tagName, options) {
-        const el = originalCreateElement.call(this || document, tagName, options);
-        if (tagName === 'video') {
-          Object.defineProperties(el, {
-            videoWidth: { get: () => 640, configurable: true },
-            videoHeight: { get: () => 480, configurable: true },
-            duration: { get: () => 1.0, configurable: true },
-            currentTime: { get: () => currentTimeVal, set: (val) => { currentTimeVal = val; }, configurable: true },
-          });
-          mockVideoInstance = el;
-        }
-        return el;
+    it('lets a second file replace the first without an error', async () => {
+      const answered: string[] = [];
+      let requests = 0;
+      globalThis.mockWorkerControl.setInterceptor((msg, worker) => {
+        // The first file takes longer than the second.
+        requests += 1;
+        const name = requests === 1 ? 'first' : 'second';
+        setTimeout(() => {
+          answered.push(name);
+          worker.dispatchMessage({ status: 'pass', sequenceId: msg.sequenceId, decodedData: name });
+        }, name === 'first' ? 60 : 10);
       });
 
       render(<QRScanner onScanSuccess={mockOnScanSuccess} onClose={mockOnClose} />);
+      fireEvent.click(screen.getByRole('radio', { name: /file upload/i }));
+      const fileInput = screen.getByLabelText('Upload QR code image file');
 
-      const fileTab = screen.getByRole('radio', { name: /file upload/i });
-      fireEvent.click(fileTab);
+      fireEvent.change(fileInput, { target: { files: [new File(['a'], 'a.png', { type: 'image/png' })] } });
+      fireEvent.change(fileInput, { target: { files: [new File(['b'], 'b.png', { type: 'image/png' })] } });
 
-      // Mock successful jsQR decoding
-      vi.mocked(jsQR).mockReturnValue({ data: 'F|0|1|native' } as any);
-
-      const mockFile = new File(['dummy video data'], 'test.webm', { type: 'video/webm' });
-      mockFile.arrayBuffer = () => Promise.resolve(new ArrayBuffer(41));
-      const fileInput = screen.getByLabelText(/upload qr code image or video file/i);
-
-      // Trigger file change
-      fireEvent.change(fileInput, { target: { files: [mockFile] } });
-
-      // Simulate video metadata load and seeking
-      setTimeout(() => {
-        if (mockVideoInstance && mockVideoInstance.onloadedmetadata) {
-          mockVideoInstance.onloadedmetadata();
-        }
-      }, 10);
-
-      setTimeout(() => {
-        if (mockVideoInstance && mockVideoInstance.onseeked) {
-          mockVideoInstance.onseeked();
-        }
-      }, 50);
-
-      // Seek beyond duration to end video frame extraction
-      setTimeout(() => {
-        if (mockVideoInstance) {
-          mockVideoInstance.currentTime = 2.0;
-          if (mockVideoInstance.onseeked) {
-            mockVideoInstance.onseeked();
-          }
-        }
-      }, 100);
-
-      await waitFor(() => {
-        expect(mockOnScanSuccess).toHaveBeenCalledWith('F|0|1|native');
-      });
-    });
-
-    it('disposes of all memory resources including event handlers, scheduler, double buffers, and revokes URLs during cleanup', async () => {
-      // Mock native support
-      HTMLVideoElement.prototype.canPlayType = vi.fn().mockReturnValue('probably');
-
-      let mockVideoInstance: any = null;
-      let currentTimeVal = 0;
-      const originalCreateElement = document.createElement;
-      const originalRevokeObjectURL = URL.revokeObjectURL;
-      const mockRevokeObjectURL = vi.fn();
-      URL.revokeObjectURL = mockRevokeObjectURL;
-
-      vi.spyOn(document, 'createElement').mockImplementation(function(this: any, tagName, options) {
-        const el = originalCreateElement.call(this || document, tagName, options);
-        if (tagName === 'video') {
-          Object.defineProperties(el, {
-            videoWidth: { get: () => 640, configurable: true },
-            videoHeight: { get: () => 480, configurable: true },
-            duration: { get: () => 1.0, configurable: true },
-            currentTime: { get: () => currentTimeVal, set: (val) => { currentTimeVal = val; }, configurable: true },
-          });
-          mockVideoInstance = el;
-        }
-        return el;
-      });
-
-      render(<QRScanner onScanSuccess={mockOnScanSuccess} onClose={mockOnClose} />);
-
-      const fileTab = screen.getByRole('radio', { name: /file upload/i });
-      fireEvent.click(fileTab);
-
-      // Mock successful jsQR decoding
-      vi.mocked(jsQR).mockReturnValue({ data: 'F|0|1|disposed' } as any);
-
-      const mockFile = new File(['dummy video data for disposal'], 'test.webm', { type: 'video/webm' });
-      mockFile.arrayBuffer = () => Promise.resolve(new ArrayBuffer(41));
-      const fileInput = screen.getByLabelText(/upload qr code image or video file/i);
-
-      // Trigger file change
-      fireEvent.change(fileInput, { target: { files: [mockFile] } });
-
-      // Simulate video metadata load and seeking
-      await waitFor(() => {
-        expect(mockVideoInstance).not.toBeNull();
-      });
-
-      // At this point, metadata is loaded
-      if (mockVideoInstance && mockVideoInstance.onloadedmetadata) {
-        await act(async () => {
-          mockVideoInstance.onloadedmetadata();
-        });
-      }
-
-      // Check event handlers are registered
-      expect(mockVideoInstance.onseeked).toBeDefined();
-      expect(mockVideoInstance.onerror).toBeDefined();
-
-      // Trigger seeked which decodes and triggers scan success, which immediately triggers cleanup
-      if (mockVideoInstance && mockVideoInstance.onseeked) {
-        await act(async () => {
-          await mockVideoInstance.onseeked();
-        });
-      }
-
-      await waitFor(() => {
-        expect(mockOnScanSuccess).toHaveBeenCalledWith('F|0|1|disposed');
-      });
-
-      // Check event handlers are set to null (Requirement 1)
-      expect(mockVideoInstance.onloadedmetadata).toBeNull();
-      expect(mockVideoInstance.onseeked).toBeNull();
-      expect(mockVideoInstance.onerror).toBeNull();
-
-      // Check that the object URL was revoked (Requirement 4)
-      expect(mockRevokeObjectURL).toHaveBeenCalled();
-
-      // Restore
-      URL.revokeObjectURL = originalRevokeObjectURL;
-      document.createElement = originalCreateElement;
-    });
-
-    it('triggers WebAssembly on-demand download and Web Worker demuxing on unsupported systems (e.g. Safari / MKV)', async () => {
-      // Mock lack of native support
-      HTMLVideoElement.prototype.canPlayType = vi.fn().mockReturnValue('');
-
-      // Mock fetch to simulate downloading WASM on-demand
-      const mockFetch = vi.fn().mockResolvedValue({
-        ok: true,
-        arrayBuffer: () => Promise.resolve(new ArrayBuffer(41)),
-      });
-      global.fetch = mockFetch;
-
-      // Mock Worker
-      const mockPostMessage = vi.fn();
-      const mockWorkerInstance = {
-        postMessage: mockPostMessage,
-        onmessage: null as any,
-        onerror: null as any,
-        terminate: vi.fn(),
-      };
-      global.Worker = vi.fn().mockImplementation(function() {
-        return mockWorkerInstance;
-      }) as any;
-
-      render(<QRScanner onScanSuccess={mockOnScanSuccess} onClose={mockOnClose} />);
-
-      const fileTab = screen.getByRole('radio', { name: /file upload/i });
-      fireEvent.click(fileTab);
-
-      const mockFile = new File(['dummy binary video data'], 'test.mkv', { type: 'video/x-matroska' });
-      mockFile.arrayBuffer = () => Promise.resolve(new ArrayBuffer(41));
-      const fileInput = screen.getByLabelText(/upload qr code image or video file/i);
-
-      // Trigger file change
-      fireEvent.change(fileInput, { target: { files: [mockFile] } });
-
-      // Verify that WebAssembly assets are fetched on-demand
-      await waitFor(() => {
-        expect(mockFetch).toHaveBeenCalledWith('/webm-demuxer.wasm');
-      });
-
-      // Verify Web Worker creation and initialization with zero-copy transferred buffers
-      await waitFor(() => {
-        expect(global.Worker).toHaveBeenCalled();
-        expect(mockPostMessage).toHaveBeenCalled();
-      });
-
-      // Simulate worker decoding frame chunks and finishing
-      setTimeout(() => {
-        if (mockWorkerInstance.onmessage) {
-          mockWorkerInstance.onmessage({ data: { type: 'frame_decoded', data: 'F|0|1|wasm' } });
-        }
-      }, 10);
-
-      setTimeout(() => {
-        if (mockWorkerInstance.onmessage) {
-          mockWorkerInstance.onmessage({ data: { type: 'done' } });
-        }
-      }, 50);
-
-      await waitFor(() => {
-        expect(mockOnScanSuccess).toHaveBeenCalledWith('F|0|1|wasm');
-      });
+      await waitFor(() => expect(answered).toHaveLength(2));
+      expect(mockOnScanSuccess).toHaveBeenCalledTimes(1);
+      expect(mockOnScanSuccess).toHaveBeenCalledWith('second');
+      expect(screen.queryByText(/already being processed/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/processing file/i)).not.toBeInTheDocument();
     });
   });
 
-  describe('Defensive Hardware Flush Sequence', () => {
-    it('executes hardware flush (pause, srcObject null, remove src, load) upon component unmount', async () => {
-      const mockPause = vi.fn();
-      const mockLoad = vi.fn();
-      const mockRemoveAttribute = vi.fn();
-
-      vi.spyOn(HTMLVideoElement.prototype, 'pause').mockImplementation(mockPause);
-      vi.spyOn(HTMLVideoElement.prototype, 'load').mockImplementation(mockLoad);
-      vi.spyOn(HTMLVideoElement.prototype, 'removeAttribute').mockImplementation(mockRemoveAttribute);
-
-      const { unmount } = render(<QRScanner onScanSuccess={mockOnScanSuccess} onClose={mockOnClose} />);
-
-      await act(async () => {
-        unmount();
-      });
-
-      expect(mockPause).toHaveBeenCalled();
-      expect(mockRemoveAttribute).toHaveBeenCalledWith('src');
-      expect(mockLoad).toHaveBeenCalled();
-      expect(mockStopStream).toHaveBeenCalled();
-    });
-
-    it('flushes video element when non-continuous scan completes successfully', async () => {
-      const mockPause = vi.fn();
-      const mockLoad = vi.fn();
-      const mockRemoveAttribute = vi.fn();
-
-      vi.spyOn(HTMLVideoElement.prototype, 'pause').mockImplementation(mockPause);
-      vi.spyOn(HTMLVideoElement.prototype, 'load').mockImplementation(mockLoad);
-      vi.spyOn(HTMLVideoElement.prototype, 'removeAttribute').mockImplementation(mockRemoveAttribute);
-
-      let capturedOnScanSuccess: ((data: string) => void) | undefined;
-      vi.mocked(useQrScanner).mockImplementation((options: any) => {
-        capturedOnScanSuccess = options.onScanSuccess;
-        return {
-          isScanning: true,
-          status: 'checking',
-          samplingDelay: 33,
-          latencyHistory: [],
-          startScanning: mockStartScanning,
-          stopScanning: mockStopScanning,
-          scanFile: mockScanFile,
-        };
-      });
-
-      render(<QRScanner onScanSuccess={mockOnScanSuccess} onClose={mockOnClose} continuous={false} />);
-
-      await act(async () => {
-        if (capturedOnScanSuccess) {
-          capturedOnScanSuccess('https://scanned-qr.com');
-        }
-      });
-
-      expect(mockOnScanSuccess).toHaveBeenCalledWith('https://scanned-qr.com');
-      expect(mockStopStream).toHaveBeenCalled();
-      expect(mockStopScanning).toHaveBeenCalled();
-      expect(mockPause).toHaveBeenCalled();
-      expect(mockRemoveAttribute).toHaveBeenCalledWith('src');
-      expect(mockLoad).toHaveBeenCalled();
-    });
-
-    it('flushes video element hardware when switching from webcam to file upload mode', async () => {
-      const mockPause = vi.fn();
-      const mockLoad = vi.fn();
-      const mockRemoveAttribute = vi.fn();
-
-      vi.spyOn(HTMLVideoElement.prototype, 'pause').mockImplementation(mockPause);
-      vi.spyOn(HTMLVideoElement.prototype, 'load').mockImplementation(mockLoad);
-      vi.spyOn(HTMLVideoElement.prototype, 'removeAttribute').mockImplementation(mockRemoveAttribute);
-
-      render(<QRScanner onScanSuccess={mockOnScanSuccess} onClose={mockOnClose} />);
-
-      const fileTab = screen.getByRole('radio', { name: /file upload/i });
-      await act(async () => {
-        fireEvent.click(fileTab);
-      });
-
-      expect(mockPause).toHaveBeenCalled();
-      expect(mockRemoveAttribute).toHaveBeenCalledWith('src');
-      expect(mockLoad).toHaveBeenCalled();
-      expect(mockStopStream).toHaveBeenCalled();
-      expect(mockStopScanning).toHaveBeenCalled();
-    });
-
-    it('remains stable through 20 consecutive mount and unmount cycles', async () => {
-      const mockPause = vi.fn();
-      const mockLoad = vi.fn();
-      const mockRemoveAttribute = vi.fn();
-
-      vi.spyOn(HTMLVideoElement.prototype, 'pause').mockImplementation(mockPause);
-      vi.spyOn(HTMLVideoElement.prototype, 'load').mockImplementation(mockLoad);
-      vi.spyOn(HTMLVideoElement.prototype, 'removeAttribute').mockImplementation(mockRemoveAttribute);
-
-      for (let i = 0; i < 20; i++) {
-        const { unmount } = render(<QRScanner onScanSuccess={mockOnScanSuccess} onClose={mockOnClose} />);
-        await act(async () => {
-          unmount();
-        });
-      }
-
-      expect(mockPause.mock.calls.length).toBeGreaterThanOrEqual(20);
-      expect(mockLoad.mock.calls.length).toBeGreaterThanOrEqual(20);
-      expect(mockRemoveAttribute).toHaveBeenCalledWith('src');
-    });
-
+  describe('file scanning around the camera', () => {
     it('allows file-upload component to mount and process files after scanner unmounts', async () => {
       globalThis.mockWorkerControl.setInterceptor((msg: any, worker: any) => {
         setTimeout(() => {
@@ -696,7 +499,7 @@ describe('QRScanner Component', () => {
 
       vi.mocked(jsQR).mockReturnValue({ data: 'https://post-unmount-scan.com' } as any);
       const mockFile = new File(['dummy content'], 'test.png', { type: 'image/png' });
-      const fileInput = screen.getByLabelText(/upload qr code image or video file/i);
+      const fileInput = screen.getByLabelText(/upload qr code image file/i);
 
       fireEvent.change(fileInput, { target: { files: [mockFile] } });
 
@@ -714,7 +517,7 @@ describe('QRScanner Component', () => {
       vi.mocked(jsQR).mockReturnValue({ data: 'stale result' } as any);
 
       const mockFile = new File(['dummy file'], 'test.png', { type: 'image/png' });
-      const fileInput = screen.getByLabelText(/upload qr code image or video file/i);
+      const fileInput = screen.getByLabelText(/upload qr code image file/i);
 
       fireEvent.change(fileInput, { target: { files: [mockFile] } });
 
@@ -722,106 +525,12 @@ describe('QRScanner Component', () => {
       const webcamTab = screen.getByRole('radio', { name: /webcam/i });
       fireEvent.click(webcamTab);
 
-      // Verify scan success callback was not invoked with stale result
+      // Give the abandoned scan time to finish (it would land well within this), then verify the
+      // scan success callback was not invoked with the stale result.
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      });
       expect(mockOnScanSuccess).not.toHaveBeenCalledWith('stale result');
-    });
-  });
-
-  describe('Reactive Webcam Session State Machine', () => {
-    let capturedOnScanSuccess: ((data: string) => void) | undefined;
-
-    beforeEach(() => {
-      vi.mocked(useQrScanner).mockImplementation((options: any) => {
-        capturedOnScanSuccess = options.onScanSuccess;
-        return {
-          isScanning: false,
-          status: 'idle',
-          samplingDelay: 33,
-          latencyHistory: [],
-          startScanning: mockStartScanning,
-          stopScanning: mockStopScanning,
-          scanFile: mockScanFile,
-        };
-      });
-    });
-
-    it('restarts camera stream when clicking active Webcam tab header after a successful scan', async () => {
-      render(<QRScanner onScanSuccess={mockOnScanSuccess} onClose={mockOnClose} />);
-
-      expect(mockStartStream).toHaveBeenCalledTimes(1);
-
-      // Simulate QR code detection in non-continuous mode
-      await act(async () => {
-        capturedOnScanSuccess?.('https://example.com/qr1');
-      });
-
-      expect(mockOnScanSuccess).toHaveBeenCalledWith('https://example.com/qr1');
-      expect(mockStopStream).toHaveBeenCalled();
-
-      mockStartStream.mockClear();
-
-      // Click the active 'Webcam' tab header
-      const webcamTab = screen.getByRole('radio', { name: /webcam/i });
-      await act(async () => {
-        fireEvent.click(webcamTab);
-      });
-
-      // Stream should be restarted
-      expect(mockStartStream).toHaveBeenCalledTimes(1);
-    });
-
-    it('immediately stops camera hardware stream upon successful scan in non-continuous mode', async () => {
-      render(<QRScanner onScanSuccess={mockOnScanSuccess} continuous={false} />);
-
-      expect(mockStartStream).toHaveBeenCalledTimes(1);
-
-      await act(async () => {
-        capturedOnScanSuccess?.('https://example.com/qr2');
-      });
-
-      expect(mockStopStream).toHaveBeenCalled();
-      expect(mockStopScanning).toHaveBeenCalled();
-    });
-
-    it('stops webcam stream and frees system resources when navigating to file upload view', async () => {
-      render(<QRScanner onScanSuccess={mockOnScanSuccess} />);
-
-      expect(mockStartStream).toHaveBeenCalledTimes(1);
-
-      const fileTab = screen.getByRole('radio', { name: /file upload/i });
-      await act(async () => {
-        fireEvent.click(fileTab);
-      });
-
-      expect(mockStopStream).toHaveBeenCalled();
-      expect(mockStopScanning).toHaveBeenCalled();
-    });
-
-    it('executes camera initialization effect exactly once per active session transition', async () => {
-      const { rerender } = render(<QRScanner onScanSuccess={mockOnScanSuccess} />);
-
-      expect(mockStartStream).toHaveBeenCalledTimes(1);
-
-      // Re-render with same props
-      rerender(<QRScanner onScanSuccess={mockOnScanSuccess} />);
-
-      // Should not call startStream again
-      expect(mockStartStream).toHaveBeenCalledTimes(1);
-    });
-
-    it('preserves active stream when continuous scanning is enabled', async () => {
-      render(<QRScanner onScanSuccess={mockOnScanSuccess} continuous={true} />);
-
-      expect(mockStartStream).toHaveBeenCalledTimes(1);
-
-      mockStopStream.mockClear();
-
-      await act(async () => {
-        capturedOnScanSuccess?.('https://example.com/qr3');
-      });
-
-      expect(mockOnScanSuccess).toHaveBeenCalledWith('https://example.com/qr3');
-      expect(mockStopStream).not.toHaveBeenCalled();
     });
   });
 });

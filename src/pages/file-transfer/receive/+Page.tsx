@@ -33,7 +33,6 @@ import { ToolWorkspaceLayout, ToolWorkspaceHeader } from '@/components/ToolWorks
 import { TransferModeSwitcher } from '@/components/TransferModeSwitcher';
 import { useToast } from '@/components/ui/Toast';
 import { useOpticalReceiver } from '@/packages/optical-transfer/client';
-import { useCamera } from '@/hooks/useCamera';
 import { triggerFileDownload } from '@/utils/downloadManager';
 import { QRProvider } from '@/context/QRContext';
 
@@ -84,7 +83,6 @@ function describeCameraError(error: Error): string {
 
 function FileTransferReceiveInner() {
   const { addToast } = useToast();
-  const camera = useCamera();
 
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -96,6 +94,7 @@ function FileTransferReceiveInner() {
     securityAlert,
     receiverError,
     isScanning,
+    cameraError,
     videoRef,
     handleClear,
     handleFrame,
@@ -114,7 +113,6 @@ function FileTransferReceiveInner() {
     handleFileUpload,
     reassembledData,
   } = useOpticalReceiver({
-    camera,
     saveFile: triggerFileDownload,
     addToast,
     // Legacy F| chunks still need an H| handshake; fountain droplets carry their own verified session header.
@@ -310,10 +308,10 @@ function FileTransferReceiveInner() {
                   </div>
                 )}
 
-                {receiverMode === 'camera' && camera.error && !isScanning && (
+                {receiverMode === 'camera' && cameraError && !isScanning && (
                   <div data-testid="camera-error">
                     <Alert variant="error" title="Camera unavailable">
-                      <p>{describeCameraError(camera.error)}</p>
+                      <p>{describeCameraError(cameraError)}</p>
                       <p className="mt-2">
                         No camera? Record the sender&apos;s screen with another device and open the recording under Video File.
                       </p>
