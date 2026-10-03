@@ -17,6 +17,5 @@
 */
 
 export default {
-    image: '/og-image.png?type=file-transfer-receive',
     imageAlt: 'Preview of the High-Performance Animated QR File Receiver'
 }

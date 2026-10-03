@@ -1,6 +1,19 @@
 import { ToolContent, AuxiliaryContent, getContentForPath, getContentById } from '../data/contentRegistry';
 import { resolveDomainForPath, resolvePublicUrl, JsonLdObject } from './metadataEngine';
 
+/**
+ * Absolute URL of a page's share image, on the page's own domain. The registry holds the
+ * per-page image written at build time (`/og/<id>.png`).
+ * @param image - The registry's image path or URL.
+ * @param domain - The page's public domain.
+ * @returns The absolute image URL.
+ */
+function imageUrl(image: string | undefined, domain: string): string {
+  if (!image) return `${domain}/og-image.png`;
+  if (/^https?:\/\//.test(image)) return image;
+  return `${domain}${image.startsWith('/') ? '' : '/'}${image}`;
+}
+
 /** Released package version, injected by Vite from package.json. */
 const APP_VERSION: string = typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : '0.0.0';
 
@@ -95,7 +108,7 @@ export function generateSchema(
     "applicationCategory": categoryValue,
     "operatingSystem": "All",
     "softwareVersion": APP_VERSION,
-    "image": `${domain}/og-image.png`,
+    "image": imageUrl(content.image, domain),
     "author": {
       "@id": `${domain}/#organization`
     },

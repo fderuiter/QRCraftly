@@ -22,6 +22,5 @@
  * Sets the SEO title and description tailored for WiFi functionality.
  */
 export default {
-    image: '/og-image.png?type=wifi',
     imageAlt: 'Preview of the WiFi QR Code Generator tool'
 }

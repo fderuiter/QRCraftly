@@ -22,6 +22,5 @@
  * Sets the SEO title and description.
  */
 export default {
-    image: '/og-image.png?type=about',
     imageAlt: 'About QRCraftly - Privacy & Open Source'
 }

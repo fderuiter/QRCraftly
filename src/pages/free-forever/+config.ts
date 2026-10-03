@@ -22,6 +22,5 @@
  * Title and description come from the pledge entry in contentRegistry.
  */
 export default {
-    image: '/og-image.png?type=free-forever',
     imageAlt: 'The QRCraftly Pledge: no ads, no tracking, free forever'
 }

@@ -21,6 +21,5 @@
  */
 export default {
     // Custom Open Graph image for this specific tool
-    image: '/og-image.png?type=text',
     imageAlt: 'Preview of the Text QR Code Generator tool'
 }

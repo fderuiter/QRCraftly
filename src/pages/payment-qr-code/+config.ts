@@ -20,6 +20,5 @@
  * Page-specific configuration for the Payment QR Code page.
  */
 export default {
-    image: '/og-image.png?type=payment',
     imageAlt: 'Preview of the Payment QR Code Generator tool'
 }

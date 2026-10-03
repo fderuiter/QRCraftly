@@ -20,6 +20,5 @@
  * Page-specific configuration for the SMS QR Code page.
  */
 export default {
-    image: '/og-image.png?type=sms',
     imageAlt: 'Preview of the SMS QR Code Generator tool'
 }

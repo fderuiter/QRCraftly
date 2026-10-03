@@ -9,7 +9,7 @@ describe('schemaGenerator', () => {
     name: 'WiFi QR Code Generator',
     description: 'Generate free wifi qr code',
     url: 'https://qrcraftly.com/wifi',
-    image: '/og-image.png?type=wifi',
+    image: '/og/wifi-qr-code.png',
     imageAlt: 'WiFi QR Code Generator',
     features: ['WPA', 'WPA2'],
     schemaType: [SchemaType.SoftwareApplication, SchemaType.WebApplication],
@@ -93,7 +93,7 @@ describe('schemaGenerator', () => {
     const schema = generateSchema(dummyContent, 'https://test.domain.com', '/request-path');
     const app = schema['@graph'].find((g: any) => Array.isArray(g['@type']) && g['@type'].includes('WebApplication'));
     expect(app.url).toContain('/request-path');
-    expect(app.image).toBe('https://test.domain.com/og-image.png');
+    expect(app.image).toBe('https://test.domain.com/og/wifi-qr-code.png');
 
     const howTo = schema['@graph'].find((g: any) => g['@type'] === 'HowTo');
     expect(howTo).toBeDefined();

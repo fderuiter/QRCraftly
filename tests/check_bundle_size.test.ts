@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { randomBytes } from 'node:crypto';
 import { getFiles, measurePageLoads, verifyBundleSize } from '../scripts/check-bundle-size.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -67,6 +68,16 @@ describe('Bundle Size Verification Script Tests', () => {
     expect(result.reports).toHaveLength(2);
 
     expect(verifyBundleSize(TEMP_TEST_DIR, 1, 0.01).wasmExceeds).toBe(true);
+  });
+
+  it('leaves generated share images and example pictures out of the site total (#1030)', () => {
+    fs.writeFileSync(path.join(TEMP_TEST_DIR, 'app.js'), 'console.log(1);');
+    fs.mkdirSync(path.join(TEMP_TEST_DIR, 'og'), { recursive: true });
+    fs.mkdirSync(path.join(TEMP_TEST_DIR, 'examples'), { recursive: true });
+    fs.writeFileSync(path.join(TEMP_TEST_DIR, 'og', 'wifi.png'), randomBytes(5000));
+    fs.writeFileSync(path.join(TEMP_TEST_DIR, 'examples', 'wifi.svg'), randomBytes(5000));
+
+    expect(verifyBundleSize(TEMP_TEST_DIR, 1).exceeds).toBe(false);
   });
 
   it('measures the first load of a page from its HTML, stylesheet and startup scripts only (#1106)', () => {

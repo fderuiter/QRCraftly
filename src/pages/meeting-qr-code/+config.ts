@@ -20,6 +20,5 @@
  * Page-specific configuration for the Meeting QR Code page.
  */
 export default {
-    image: '/og-image.png?type=meeting',
     imageAlt: 'Preview of the Meeting QR Code Generator tool'
 }

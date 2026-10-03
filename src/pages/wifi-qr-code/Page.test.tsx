@@ -55,7 +55,7 @@ describe('WiFi QR Code Page', () => {
 
     // Check for critical SEO properties
     expect(webApp.softwareVersion).toBe(__APP_VERSION__);
-    expect(webApp.image).toBe('https://qrcraftly.com/og-image.png');
+    expect(webApp.image).toBe('https://qrcraftly.com/og/wifi-qr-code.png');
     expect(webApp.datePublished).toBeUndefined();
     expect(webApp.browserRequirements).toBe('Requires JavaScript. Works in all modern browsers.');
     expect(webApp.author).toEqual({

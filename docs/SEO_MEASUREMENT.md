@@ -31,3 +31,9 @@ Once a month:
 3. Move pages with many impressions but a CTR well below their position's norm into a title and description rewrite queue.
 4. Check **Pages** for new "Crawled, currently not indexed" or "Duplicate" reasons and file an issue for each pattern.
 5. Check Bing Webmaster Tools → **IndexNow** to confirm Crawler Hints is still submitting URLs after deploys.
+
+## Share images and internal links
+
+Every page that points its `image` at `/og/<id>.png` gets a 1200 by 630 share image when `pnpm build` runs (`scripts/generate_social_images.ts`, run by `postbuild`). It shows the page heading beside a real QR code of the page's own address, so a shared link previews as something that scans. The images are plain Node with no image library and no system fonts, so they are byte-for-byte reproducible. Each generator page also gets `dist/client/examples/<id>.svg`, a QR code of its sample data, shown in the page with descriptive alt text. Neither folder counts toward the bundle-size total, since only a crawler or an image tag fetches them.
+
+Generator pages show a breadcrumb trail that mirrors the `BreadcrumbList` data and a "More QR code types" list. The list comes from `getRelatedTypePages` in `src/data/relatedPages.ts`: each page links to the four generators after it, wrapping round, so every generator is linked from at least four others.

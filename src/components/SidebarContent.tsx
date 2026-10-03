@@ -1,4 +1,6 @@
 import { contentRegistry } from '@/data/contentRegistry';
+import { getExampleImage, getRelatedTypePages } from '@/data/relatedPages';
+import { Breadcrumbs } from './Breadcrumbs';
 import { SectionHeading } from './ui/SectionHeading';
 import { Accordion, AccordionItem } from './ui/Accordion';
 
@@ -31,9 +33,13 @@ export function SidebarContent({ toolId }: SidebarContentProps) {
     ? content.faqs 
     : contentRegistry['index'].faqs;
 
+  const example = getExampleImage(toolId);
+  const related = getRelatedTypePages(toolId);
+
   return (
     <div id="content-section" className="mt-12 border-t border-line-subtle pt-8 text-fg-soft">
-      
+      <Breadcrumbs pageId={toolId} />
+
       {content.intro && (
         <section className="mb-10">
           <h2 className="mb-3 text-2xl font-bold text-fg">A QR code generator that stays free</h2>
@@ -48,6 +54,17 @@ export function SidebarContent({ toolId }: SidebarContentProps) {
         <section className="mb-10">
           <h2 className="mb-3 text-2xl font-bold text-fg">{getAboutHeading(content.name)}</h2>
           {content.description && <p className="mb-4 text-sm leading-relaxed">{content.description}</p>}
+          {example && (
+            <img
+              src={example.src}
+              alt={example.alt}
+              width={160}
+              height={160}
+              loading="lazy"
+              decoding="async"
+              className="mb-4 size-40 rounded-lg border border-line bg-surface"
+            />
+          )}
           {content.features && content.features.length > 0 && (
             <>
               <SectionHeading eyebrow="Key Features" level={3} className="mt-6 mb-3" />
@@ -81,6 +98,23 @@ export function SidebarContent({ toolId }: SidebarContentProps) {
               </div>
             ))}
           </div>
+        </section>
+      )}
+
+      {related.length > 0 && (
+        <section className="mb-10" aria-labelledby="related-types-heading">
+          <h2 id="related-types-heading" className="mb-3 text-2xl font-bold text-fg">
+            More QR code types
+          </h2>
+          <ul className="list-none space-y-2 text-sm">
+            {related.map((page) => (
+              <li key={page.id}>
+                <a href={page.href} className="font-semibold text-accent underline-offset-2 hover:underline">
+                  {page.name}
+                </a>
+              </li>
+            ))}
+          </ul>
         </section>
       )}
 

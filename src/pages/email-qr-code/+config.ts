@@ -20,6 +20,5 @@
  * Page-specific configuration for the Email QR Code page.
  */
 export default {
-    image: '/og-image.png?type=email',
     imageAlt: 'Preview of the Email QR Code Generator tool'
 }
