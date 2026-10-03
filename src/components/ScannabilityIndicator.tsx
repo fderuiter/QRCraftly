@@ -110,6 +110,7 @@ export const ScannabilityIndicator: React.FC<Props> = ({
   onResetDefault,
 }) => {
   const [announcement, setAnnouncement] = useState('');
+  const [failureMessage, setFailureMessage] = useState('');
   const [open, setOpen] = useState(false);
   const panelId = useId();
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -118,16 +119,28 @@ export const ScannabilityIndicator: React.FC<Props> = ({
   const verdict = getScanVerdict({ status, health });
   const advice = getScanAdvice({ status, health, errorCorrectionLevel });
   const fix = advice?.fix;
+  // Any "won't scan" verdict is a failure, whether the camera check failed or a critical warning was raised.
+  const isFailure = verdict === 'unreliable';
 
   // Debounce polite announcements by 1000ms so typing does not produce a stream of updates.
   // Failures are announced by the alert element below instead, never by this region.
   useEffect(() => {
-    const text = status === 'fail' ? '' : getAnnouncementText(verdict, health);
+    const text = isFailure ? '' : getAnnouncementText(verdict, health);
     setAnnouncement('');
     if (!text) return;
     const timer = setTimeout(() => setAnnouncement(text), 1000);
     return () => clearTimeout(timer);
-  }, [status, health, verdict]);
+  }, [isFailure, health, verdict]);
+
+  // The failure alert keeps its text while a re-check runs, so a design that still fails is not
+  // announced again on every edit; it changes only when a check settles on a different result.
+  const failureText = isFailure
+    ? `${VERDICT_LABELS.unreliable}. ${advice?.message ?? 'Adjust colours, pattern, or margin before exporting.'}`
+    : '';
+  useEffect(() => {
+    if (verdict === 'checking') return;
+    setFailureMessage(failureText);
+  }, [verdict, failureText]);
 
   // Close the details panel on Escape (returning focus to the pill) or a press outside it.
   useEffect(() => {
@@ -149,16 +162,22 @@ export const ScannabilityIndicator: React.FC<Props> = ({
     };
   }, [open]);
 
-  const politeRegion = (
-    <div className="sr-only" role="status" aria-live="polite" data-testid="scannability-status-region">
-      {announcement}
-    </div>
+  // Both live regions stay mounted across every state, so screen readers track them reliably.
+  const liveRegions = (
+    <>
+      <div className="sr-only" role="status" aria-live="polite" data-testid="scannability-status-region">
+        {announcement}
+      </div>
+      <div className="sr-only" role="alert" data-testid="scannability-alert">
+        {failureMessage}
+      </div>
+    </>
   );
 
   if (!verdict) {
     return (
       <div className="inline-block h-8 w-auto" data-testid="scannability-indicator-placeholder">
-        {politeRegion}
+        {liveRegions}
       </div>
     );
   }
@@ -180,7 +199,7 @@ export const ScannabilityIndicator: React.FC<Props> = ({
 
   return (
     <div ref={wrapperRef} className="relative h-8" data-testid="scannability-feedback-wrapper">
-      {politeRegion}
+      {liveRegions}
 
       {verdict === 'checking' ? (
         <div className={pillClasses}>{pillContent}</div>
@@ -247,12 +266,6 @@ export const ScannabilityIndicator: React.FC<Props> = ({
               )}
             </div>
           )}
-        </div>
-      )}
-
-      {status === 'fail' && (
-        <div role="alert" className="sr-only" data-testid="scannability-alert">
-          {`${VERDICT_LABELS.unreliable}. ${advice?.message ?? 'Adjust colours, pattern, or margin before exporting.'}`}
         </div>
       )}
     </div>

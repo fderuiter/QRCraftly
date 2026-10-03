@@ -68,7 +68,8 @@ describe('Structural Isolation and Reserved Space for QR Preview', () => {
       const slot = screen.getByTestId('pattern-warning-slot');
       expect(slot).toBeInTheDocument();
       
-      const warningText = screen.getByRole('alert');
+      // A static note: the scannability verdict is what screen readers announce (#800)
+      const warningText = screen.getByRole('note');
       expect(warningText).toBeInTheDocument();
       expect(warningText).toHaveTextContent(/complex and may reduce scannability/);
     });
