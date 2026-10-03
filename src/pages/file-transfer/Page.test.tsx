@@ -29,6 +29,9 @@ const mainThreadVerdict = vi.hoisted(() => ({ success: true }));
 vi.mock('@/packages/scannability', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/packages/scannability')>()),
   createScannabilityWorker: () => null,
+}));
+vi.mock('@/packages/scannability/checker', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/packages/scannability/checker')>()),
   performScannabilityCheck: (): ScannabilityResult => ({ success: mainThreadVerdict.success, physicalReady: mainThreadVerdict.success }),
 }));
 

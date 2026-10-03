@@ -1,13 +1,23 @@
 import fs from 'fs';
 import path from 'path';
 import zlib from 'zlib';
+import { createRequire } from 'module';
 import { fileURLToPath } from 'url';
+
+const require = createRequire(import.meta.url);
+// The service worker generator already knows how to follow a page's startup assets.
+const { readAssetReferences } = require('./generate_sw.cjs');
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const DIST_DIR = path.resolve(__dirname, '../dist/client');
-export const MAX_GZIPPED_SIZE_KB = 775;
+// What one visitor downloads to open one page (#1106): its HTML, the CSS and the scripts it loads
+// at startup (static imports, not lazy chunks, workers or the wasm reader). The worst page is the
+// number that matters for load time, so this is the budget that catches JavaScript bloat.
+export const MAX_PAGE_FIRST_LOAD_KB = 260;
+// A loose backstop on everything in dist/client, so a pile of new pages cannot grow it unseen.
+export const MAX_GZIPPED_SIZE_KB = 900;
 // The scanner's zxing-wasm reader (ADR 0023) is fetched only when someone scans and is never
 // precached, so it has its own budget instead of counting against the site's.
 export const MAX_LAZY_WASM_GZIPPED_SIZE_KB = 450;
@@ -19,6 +29,34 @@ export const MAX_LAZY_WASM_GZIPPED_SIZE_KB = 450;
  */
 export function isLazyWasm(relativePath) {
   return relativePath.endsWith('.wasm');
+}
+
+/**
+ * Measures the first load of every page: the gzipped size of its HTML plus every stylesheet and
+ * script it loads at startup, found by following static imports.
+ * @param {string} distDir
+ * @returns {Array<{page: string, files: number, gzipSize: number}>} Pages, largest first.
+ */
+export function measurePageLoads(distDir) {
+  const gzipOf = (relativePath) => zlib.gzipSync(fs.readFileSync(path.join(distDir, relativePath))).length;
+  const posix = (file) => path.relative(distDir, file).split(path.sep).join('/');
+  const pages = getFiles(distDir).map(posix).filter((file) => file.endsWith('.html'));
+  return pages
+    .map((page) => {
+      const loaded = new Set();
+      const queue = [page];
+      while (queue.length > 0) {
+        const next = queue.pop();
+        if (loaded.has(next) || !fs.existsSync(path.join(distDir, next))) continue;
+        loaded.add(next);
+        if (next.endsWith('.css')) continue;
+        for (const ref of readAssetReferences(next, fs.readFileSync(path.join(distDir, next), 'utf8'))) queue.push(ref);
+      }
+      let gzipSize = 0;
+      for (const file of loaded) gzipSize += gzipOf(file);
+      return { page, files: loaded.size, gzipSize };
+    })
+    .sort((a, b) => b.gzipSize - a.gzipSize);
 }
 
 /**
@@ -105,8 +143,27 @@ export function runCheck() {
     }
 
     console.log('-'.repeat(91));
+
+    const pageLoads = measurePageLoads(DIST_DIR);
+    console.log('\nFirst load per page (HTML + startup scripts + CSS, gzipped):\n');
+    for (const load of pageLoads) {
+      console.log(
+        `${('/' + load.page.replace(/index\.html$/, '').replace(/\.html$/, '')).padEnd(40)} | ${String(load.files).padStart(3)} files | ${(load.gzipSize / 1024).toFixed(2).padStart(7)} KB`
+      );
+    }
+    const worstPage = pageLoads[0];
     console.log(
-      `Grand Total Raw Size:     ${(result.totalRawSize / 1024).toFixed(2)} KB`
+      `\nWorst page first load: ${worstPage ? (worstPage.gzipSize / 1024).toFixed(2) : '0'} KB (budget ${MAX_PAGE_FIRST_LOAD_KB}.00 KB)`
+    );
+    if (worstPage && worstPage.gzipSize > MAX_PAGE_FIRST_LOAD_KB * 1024) {
+      console.error(
+        `\n❌ ERROR: The first load of /${worstPage.page} (${(worstPage.gzipSize / 1024).toFixed(2)} KB gzipped) exceeds the ${MAX_PAGE_FIRST_LOAD_KB} KB per-page budget!`
+      );
+      process.exit(1);
+    }
+
+    console.log(
+      `\nGrand Total Raw Size:     ${(result.totalRawSize / 1024).toFixed(2)} KB`
     );
     console.log(
       `Grand Total Gzipped Size: ${(result.totalGzipSize / 1024).toFixed(2)} KB`
@@ -130,7 +187,7 @@ export function runCheck() {
       process.exit(1);
     }
 
-    console.log(`\n✅ Gzipped transfer size is well within the ${MAX_GZIPPED_SIZE_KB} KB budget!`);
+    console.log(`\n✅ Every page is within its first-load budget and the site is within its ${MAX_GZIPPED_SIZE_KB} KB ceiling!`);
     process.exit(0);
   } catch (err) {
     console.error('Error running bundle size check:', err);

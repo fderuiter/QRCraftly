@@ -17,12 +17,8 @@
 */
 
 import { describe, it, expect } from 'vitest';
-import {
-  evaluateScannability,
-  calculateScannabilityHealth,
-  getExportRiskPolicy,
-  performScannabilityCheck,
-} from '../index';
+import { calculateScannabilityHealth, getExportRiskPolicy } from '../index';
+import { evaluateScannability, performScannabilityCheck } from '../checker';
 import { QRConfig, QRType, QRErrorCorrectionLevel, QRStyle, SocialFormat, TemplateStyle } from '@/types';
 import { DEFAULT_CONFIG } from '@/constants';
 

@@ -18,7 +18,7 @@
 
 import type { QRConfig } from '@/types';
 import { assertWorkerRequest, isWorkerResponse } from './sharedContract';
-import { performScannabilityCheck, type PixelFrame, type ScannabilityResult } from './checker';
+import type { PixelFrame, ScannabilityResult } from './checker';
 import { calculateScannabilityHealth, type HealthScore } from './scoring';
 import { getExportRiskPolicy, type ExportRisk, type ScannabilityStatus } from './exportRiskPolicy';
 import { releaseImageHandle } from './imageHandle';
@@ -117,7 +117,7 @@ export interface ScannabilityEvaluatorConfig {
   frames?: ScannabilityFrameReader;
   /** Whether the optical simulation should be skipped (automation); defaults to `navigator.webdriver`. */
   isTest?: () => boolean;
-  /** Main-thread check; defaults to the same step sequence the worker runs. */
+  /** Main-thread check; defaults to the same step sequence the worker runs, loaded on first use. */
   runCheck?: (frame: PixelFrame, isTest: boolean, moduleCount?: number) => ScannabilityResult;
 }
 
@@ -206,8 +206,21 @@ const defaultFrameReader: ScannabilityFrameReader = {
 
 const detectAutomation = () => typeof navigator !== 'undefined' && !!navigator.webdriver;
 
-const defaultRunCheck = (frame: PixelFrame, isTest: boolean, moduleCount?: number) =>
-  performScannabilityCheck(frame, frame.width, frame.height, isTest, moduleCount);
+type RunCheck = (frame: PixelFrame, isTest: boolean, moduleCount?: number) => ScannabilityResult;
+
+let defaultRunCheck: Promise<RunCheck> | null = null;
+
+/**
+ * The main-thread check, loaded on first use: it bundles the jsQR decoder, which the worker
+ * already carries, so pages only download it when a check has to run on the main thread.
+ */
+function loadDefaultRunCheck(): Promise<RunCheck> {
+  defaultRunCheck ??= import('./checker').then(
+    ({ performScannabilityCheck }): RunCheck =>
+      (frame, isTest, moduleCount) => performScannabilityCheck(frame, frame.width, frame.height, isTest, moduleCount)
+  );
+  return defaultRunCheck;
+}
 
 const positive = (value: number | undefined) => (value && value > 0 ? value : undefined);
 
@@ -222,7 +235,7 @@ export function createScannabilityEvaluator(options: ScannabilityEvaluatorConfig
   const frames = options.frames ?? defaultFrameReader;
   const createWorker = options.createWorker ?? connectScannabilityWorker;
   const isTest = options.isTest ?? detectAutomation;
-  const runCheck = options.runCheck ?? defaultRunCheck;
+  const injectedRunCheck = options.runCheck;
   const listeners = new Set<(assessment: ScannabilityAssessment) => void>();
   const pending = new Map<number, (assessment: ScannabilityAssessment | null) => void>();
 
@@ -535,9 +548,28 @@ export function createScannabilityEvaluator(options: ScannabilityEvaluatorConfig
 
   function runOnMainThread(seq: number, pixels: PixelFrame, moduleCount: number | undefined, workerHealthy: boolean) {
     if (!isCurrent(seq)) return;
+    if (injectedRunCheck) {
+      finishOnMainThread(seq, () => injectedRunCheck(pixels, isTest(), moduleCount), workerHealthy);
+      return;
+    }
+    loadDefaultRunCheck().then(
+      (runCheck) => finishOnMainThread(seq, () => runCheck(pixels, isTest(), moduleCount), workerHealthy),
+      (err: unknown) =>
+        finishOnMainThread(
+          seq,
+          () => {
+            throw err;
+          },
+          workerHealthy
+        )
+    );
+  }
+
+  function finishOnMainThread(seq: number, check: () => ScannabilityResult, workerHealthy: boolean) {
+    if (!isCurrent(seq)) return;
     let result: ScannabilityResult;
     try {
-      result = runCheck(pixels, isTest(), moduleCount);
+      result = check();
     } catch (err) {
       console.error('Main-thread fallback processing failed:', err);
       if (isCurrent(seq)) {

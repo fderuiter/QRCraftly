@@ -18,7 +18,7 @@
 
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
-import { useDebounce } from './useDebounce';
+import { useDebounce, useLeadingDebounce } from './useDebounce';
 
 describe('useDebounce', () => {
   beforeEach(() => {
@@ -85,5 +85,64 @@ describe('useDebounce', () => {
       vi.advanceTimersByTime(200); // Total 500ms from second update
     });
     expect(result.current).toBe('update2');
+  });
+});
+
+describe('useLeadingDebounce', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('applies a change that follows a quiet spell on the next task, without the delay', () => {
+    const { result, rerender } = renderHook(({ value }) => useLeadingDebounce(value, 100), {
+      initialProps: { value: 'a' },
+    });
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+
+    rerender({ value: 'b' });
+    expect(result.current).toBe('a');
+    act(() => {
+      vi.advanceTimersByTime(0);
+    });
+    expect(result.current).toBe('b');
+  });
+
+  it('holds back a burst of changes until it pauses', () => {
+    const { result, rerender } = renderHook(({ value }) => useLeadingDebounce(value, 100), {
+      initialProps: { value: 0 },
+    });
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+
+    rerender({ value: 1 });
+    act(() => {
+      vi.advanceTimersByTime(0);
+    });
+    expect(result.current).toBe(1);
+
+    // Two quick changes in a row: only the last one lands, after the delay.
+    act(() => {
+      vi.advanceTimersByTime(20);
+    });
+    rerender({ value: 2 });
+    act(() => {
+      vi.advanceTimersByTime(20);
+    });
+    rerender({ value: 3 });
+    act(() => {
+      vi.advanceTimersByTime(99);
+    });
+    expect(result.current).toBe(1);
+    act(() => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(result.current).toBe(3);
   });
 });

@@ -429,7 +429,7 @@ describe('QRTool Component', () => {
     }
   });
 
-  it('downloads a PNG from the Download menu', () => {
+  it('downloads a PNG from the Download menu', async () => {
      render(<ToastProvider><QRTool /></ToastProvider>);
 
      // Spy on document.createElement but we can't easily mock return value without affecting internal React logic if it uses 'a' tags (it might)
@@ -449,7 +449,8 @@ describe('QRTool Component', () => {
 
      downloadAs('PNG');
 
-     expect(HTMLCanvasElement.prototype.toDataURL).toHaveBeenCalledWith('image/png');
+     // The export check loads on demand, so the download follows a moment later.
+     await waitFor(() => expect(HTMLCanvasElement.prototype.toDataURL).toHaveBeenCalledWith('image/png'));
 
      expect(appendSpy).toHaveBeenCalled();
      const appendedElement = appendSpy.mock.calls[0][0] as HTMLAnchorElement;

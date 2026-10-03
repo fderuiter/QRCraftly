@@ -23,7 +23,7 @@ import { getQRTypeLabel } from '@/data/qrTypeLabels';
 import { DEFAULT_CONFIG } from '../constants';
 import { QRType, QRConfig, WifiEncryption, WifiData, EmailData } from '../types';
 import { FIXTURES } from '../../tests/fixtures/data';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest';
 import { WifiInput, EmailInput } from './inputs';
 import { ToastProvider } from './ui/Toast';
 import type { QRScannerProps } from './QRScanner';
@@ -692,6 +692,12 @@ describe('InputPanel UX', () => {
 
 
 describe('InputPanel scanner dialog (#978, #1101, #1102)', () => {
+  // The scanner loads on demand; loading it once up front keeps the first dialog test from
+  // racing the import on a busy machine.
+  beforeAll(async () => {
+    await import('./QRScanner');
+  }, 30000);
+
   beforeEach(() => {
     scannerMock.simulate = true;
   });
@@ -709,7 +715,8 @@ describe('InputPanel scanner dialog (#978, #1101, #1102)', () => {
 
     const dialog = screen.getByRole('dialog', { name: 'Scan a QR code' });
     expect(dialog).toHaveAttribute('aria-modal', 'true');
-    expect(screen.getByRole('button', { name: 'Simulate scan' })).toBeInTheDocument();
+    // The scanner loads on demand, so it arrives a moment after the dialog opens.
+    expect(await screen.findByRole('button', { name: 'Simulate scan' })).toBeInTheDocument();
     await waitFor(() => expect(dialog.contains(document.activeElement)).toBe(true));
 
     fireEvent.keyDown(document, { key: 'Escape' });
@@ -731,7 +738,7 @@ describe('InputPanel scanner dialog (#978, #1101, #1102)', () => {
     expect(getQRTypeLabel(QRType.VCARD)).toBe('vCard contact');
   });
 
-  it('names the detected type, not the raw enum value, and loads an empty generator without Undo', () => {
+  it('names the detected type, not the raw enum value, and loads an empty generator without Undo', async () => {
     const onChange = vi.fn();
     render(
       <ToastProvider>
@@ -739,14 +746,14 @@ describe('InputPanel scanner dialog (#978, #1101, #1102)', () => {
       </ToastProvider>
     );
     fireEvent.click(screen.getByRole('button', { name: /scan qr code/i }));
-    fireEvent.click(screen.getByRole('button', { name: 'Simulate scan' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Simulate scan' }));
     expect(onChange).toHaveBeenCalledWith({ type: QRType.VCARD, value: expect.stringContaining('Ada Lovelace') });
     expect(screen.getByText(/scanned vCard contact code/)).toBeInTheDocument();
     expect(screen.queryByText(/VCARD code/)).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Undo' })).not.toBeInTheDocument();
   });
 
-  it('offers Undo when a scan replaces existing content (#1101)', () => {
+  it('offers Undo when a scan replaces existing content (#1101)', async () => {
     const onChange = vi.fn();
     render(
       <ToastProvider>
@@ -754,7 +761,7 @@ describe('InputPanel scanner dialog (#978, #1101, #1102)', () => {
       </ToastProvider>
     );
     fireEvent.click(screen.getByRole('button', { name: /scan qr code/i }));
-    fireEvent.click(screen.getByRole('button', { name: 'Simulate scan' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Simulate scan' }));
     fireEvent.click(screen.getByRole('button', { name: 'Undo' }));
     expect(onChange).toHaveBeenLastCalledWith({ type: QRType.TEXT, value: 'My draft' });
   });

@@ -1,6 +1,6 @@
 /*
     QRCraftly
-    Copyright (C) 2025-2026 fderuiter
+    Copyright (C) 2025 fderuiter
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as published
@@ -16,4 +16,9 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-export { performScannabilityCheck } from '@/packages/scannability';
+/*
+ * CRC-32 on its own entry point, for callers (the Bulk CSV zip writer) that need only the checksum.
+ * The root entry also carries the handshake and its jsQR decoder, which generator pages should
+ * not download (#1041).
+ */
+export { crc32 } from './lib/fountain/crc32';

@@ -40,6 +40,62 @@ function isRuntimeCached(relativePath) {
   return relativePath.endsWith(RUNTIME_CACHED_EXTENSION);
 }
 
+// What a first visit precaches (#1058): the homepage shell and the assets it loads, so the app
+// boots offline after one visit. Every other page, chunk and worker is cached the first time it
+// is requested, so a visitor on mobile data does not download the whole site in the background.
+const SHELL_PAGE = 'index.html';
+const SHELL_EXTRAS = [
+  'index.pageContext.json',
+  'manifest.json',
+  'favicon.png',
+  'icon-192x192.png',
+  'icon-192x192-maskable.png',
+  'icon-512x512.png',
+  'icon-512x512-maskable.png',
+];
+
+/**
+ * Reads the hashed assets a built file references: `/assets/...` URLs in HTML, and the static
+ * (not dynamic) relative imports of a JavaScript module.
+ * @param {string} relativePath POSIX path relative to dist/client.
+ * @param {string} source File contents.
+ * @returns {string[]} POSIX paths relative to dist/client.
+ */
+function readAssetReferences(relativePath, source) {
+  const found = [];
+  if (relativePath.endsWith('.html')) {
+    for (const match of source.matchAll(/(?:href|src)="\/(assets\/[^"?#]+\.(?:js|css))"/g)) found.push(match[1]);
+  } else if (relativePath.endsWith('.js')) {
+    const dir = path.posix.dirname(relativePath);
+    for (const match of source.matchAll(/(?:from|import)\s*["'](\.{1,2}\/[^"']+\.js)["']/g)) {
+      found.push(path.posix.normalize(path.posix.join(dir, match[1])));
+    }
+  }
+  return found;
+}
+
+/**
+ * Picks the files a first visit precaches: the homepage, everything it loads at startup (found
+ * by following static imports), and the install files. Lazily imported chunks, workers, other
+ * pages and developer-only routes are left to the runtime cache.
+ * @param {string[]} files POSIX paths relative to dist/client that exist in the build.
+ * @param {(relativePath: string) => string} readText Reads a built text file.
+ * @returns {Set<string>} The shell, as POSIX paths relative to dist/client.
+ */
+function selectShell(files, readText) {
+  const available = new Set(files);
+  const shell = new Set();
+  const queue = [SHELL_PAGE];
+  while (queue.length > 0) {
+    const next = queue.pop();
+    if (!available.has(next) || shell.has(next)) continue;
+    shell.add(next);
+    for (const ref of readAssetReferences(next, readText(next))) queue.push(ref);
+  }
+  for (const extra of SHELL_EXTRAS) if (available.has(extra)) shell.add(extra);
+  return shell;
+}
+
 // Version 2: pages are precached by canonical URL (fix for #1086).
 const SW_SCHEMA_VERSION = 2;
 
@@ -199,6 +255,18 @@ async function matchPrecache(pathname) {
   return caches.match(pathname, { ignoreSearch: true, ignoreVary: true });
 }
 
+// Stores a good answer under a canonical key. Redirects and errors are never kept.
+async function remember(key, response) {
+  if (response && response.ok && !response.redirected) {
+    try {
+      const cache = await caches.open(CACHE_NAME);
+      await cache.put(key, response.clone());
+    } catch (err) {
+      // A full or unavailable cache must never break the page.
+    }
+  }
+}
+
 async function handleNavigation(request, url) {
   const pageUrl = toPageUrl(url.pathname);
   if (PRECACHED_PATHS.has(pageUrl)) {
@@ -208,11 +276,15 @@ async function handleNavigation(request, url) {
     if (cached && !cached.redirected) return cached;
   }
   try {
-    // Unknown routes go to the network so the server can answer with the
-    // right page or a real 404.
-    return await fetch(request);
+    // Other pages are not precached: the network answers (so the server can
+    // send the right page or a real 404) and a good answer is kept for offline.
+    const response = await fetch(request);
+    await remember(pageUrl, response);
+    return response;
   } catch (err) {
-    // Offline: fall back to the cached shell so the app still boots.
+    // Offline: a page seen before, else the cached shell so the app still boots.
+    const seen = await matchPrecache(pageUrl);
+    if (seen && !seen.redirected) return seen;
     const shell = await matchPrecache('/');
     if (shell) return shell;
     throw err;
@@ -222,19 +294,27 @@ async function handleNavigation(request, url) {
 async function handleRequest(request, url) {
   const cached = await matchPrecache(url.pathname);
   if (cached) return cached;
-  if (url.pathname.endsWith(RUNTIME_CACHED_EXTENSION)) {
-    // The scanner's WebAssembly reader is too large to precache for every
-    // visitor, so it is cached the first time the scanner loads it. Its file
-    // name carries a content hash, so a cached copy is never stale.
+  if (url.pathname.startsWith('/assets/')) {
+    // Chunks, workers and the scanner's WebAssembly reader are not precached, so they are
+    // kept the first time they load. Their file names carry a content hash, so a cached
+    // copy is never stale.
     const response = await fetch(request);
-    if (response && response.ok) {
-      const cache = await caches.open(CACHE_NAME);
-      await cache.put(url.pathname, response.clone());
-    }
+    await remember(url.pathname, response);
     return response;
   }
-  // pageContext.json and any other uncached asset: network only, never a
-  // substitute from another route.
+  if (url.pathname.endsWith('.pageContext.json')) {
+    // Client-side navigation data: the network first, so it is never stale, and the last
+    // good copy when offline. Never a substitute from another route.
+    try {
+      const response = await fetch(request);
+      await remember(url.pathname, response);
+      return response;
+    } catch (err) {
+      const seen = await matchPrecache(url.pathname);
+      if (seen) return seen;
+      throw err;
+    }
+  }
   return fetch(request);
 }
 
@@ -272,26 +352,16 @@ function generateSW() {
   const allFiles = getFilesRecursively(DIST_DIR);
   const redirectedPaths = readRedirectSources(path.join(DIST_DIR, '_redirects'));
   const precacheManifest = [];
+  const relativeFiles = allFiles.map((file) => path.relative(DIST_DIR, file).replace(/\\/g, '/'));
+  const shell = selectShell(relativeFiles, (relativePath) => fs.readFileSync(path.join(DIST_DIR, relativePath), 'utf8'));
 
   allFiles.forEach(file => {
-    const relativePath = path.relative(DIST_DIR, file);
-    
-    // Skip service worker itself, sitemap, robots, or config files
-    if (
-      relativePath === 'sw.js' ||
-      relativePath === 'sitemap.xml' ||
-      relativePath === 'robots.txt' ||
-      relativePath === '_headers' ||
-      relativePath === '_redirects' ||
-      relativePath.startsWith('.vite') ||
-      isRuntimeCached(relativePath.replace(/\\/g, '/'))
-    ) {
-      return;
-    }
+    const relativePath = path.relative(DIST_DIR, file).replace(/\\/g, '/');
+    if (!shell.has(relativePath) || isRuntimeCached(relativePath)) return;
 
     const hash = computeHash(file);
     // Standardize URL to start with a forward slash
-    const url = toPrecacheUrl(relativePath.replace(/\\/g, '/'));
+    const url = toPrecacheUrl(relativePath);
     // A page the host redirects (a retired route) would be cached as a redirect.
     if (redirectedPaths.has(url)) return;
     precacheManifest.push({
@@ -313,4 +383,4 @@ if (require.main === module) {
   generateSW();
 }
 
-module.exports = { buildSwContent, toPrecacheUrl, readRedirectSources, isRuntimeCached };
+module.exports = { buildSwContent, toPrecacheUrl, readRedirectSources, isRuntimeCached, selectShell, readAssetReferences };

@@ -16,11 +16,10 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { RefObject, useCallback } from 'react';
+import { RefObject, useCallback, useEffect } from 'react';
 import { QRConfig, TemplateStyle, SocialFormat } from '../types';
 import { generateQRSvg, validateSvgScannability } from '@/packages/qr-export';
 import { useCapabilities } from './useCapabilities';
-import { performScannabilityCheck } from '../utils/scannabilityChecker';
 import { ExportOptions } from '../utils/exportRiskPolicy';
 
 /**
@@ -42,6 +41,23 @@ const toError = (err: unknown): Error => {
 };
 
 export type { ExportOptions };
+
+/**
+ * The export check bundles the jsQR decoder, so it is loaded on demand rather than with the page.
+ * The hook warms it up once the browser is idle, so a copy or share keeps its user gesture.
+ */
+const loadScannabilityCheck = () => import('@/packages/scannability/checker');
+
+/** Loads the export check once the main thread is idle after the page has loaded. */
+function warmScannabilityCheck(): () => void {
+  const load = () => void loadScannabilityCheck().catch(() => undefined);
+  if (typeof window.requestIdleCallback === 'function') {
+    const handle = window.requestIdleCallback(load, { timeout: 5000 });
+    return () => window.cancelIdleCallback(handle);
+  }
+  const handle = window.setTimeout(load, 2000);
+  return () => window.clearTimeout(handle);
+}
 
 /** Export choices from the Download options, on top of the safety-gate options. */
 export interface AssetOptions extends ExportOptions {
@@ -120,11 +136,13 @@ export function useQRDownload(
 ): UseQRDownloadReturn {
   const { canSaveFilePicker, canShare } = useCapabilities();
 
+  useEffect(() => warmScannabilityCheck(), []);
+
   /**
    * Validates the canvas readability against simulated optical noise.
    * Social templates and decorative poster frames bypass full-canvas matrix decode.
    */
-  const validateScannability = useCallback((canvas: HTMLCanvasElement): boolean => {
+  const validateScannability = useCallback(async (canvas: HTMLCanvasElement): Promise<boolean> => {
     if (config.templateStyle !== TemplateStyle.NONE || config.socialFormat !== SocialFormat.SQUARE_1_1) {
       return true;
     }
@@ -132,6 +150,7 @@ export function useQRDownload(
       const ctx = canvas.getContext('2d');
       if (!ctx) return false;
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const { performScannabilityCheck } = await loadScannabilityCheck();
       const result = performScannabilityCheck(imageData, canvas.width, canvas.height, true);
       return result.success;
     } catch (err) {
@@ -171,7 +190,7 @@ export function useQRDownload(
   const downloadToDevice = useCallback(async (format: 'png' | 'jpeg' | 'webp', options?: AssetOptions): Promise<ExportStatus> => {
     const canvas = qrRef.current?.querySelector('canvas');
     if (canvas) {
-      if (!options?.allowUnsafe && !validateScannability(canvas)) {
+      if (!options?.allowUnsafe && !(await validateScannability(canvas))) {
         return { success: false, format, error: new Error('SCAN_VALIDATION_FAILED') };
       }
       try {
@@ -201,7 +220,7 @@ export function useQRDownload(
     const canvas = qrRef.current?.querySelector('canvas');
     if (!canvas) return { success: false, format, error: new Error('Canvas not found') };
 
-    if (!options?.allowUnsafe && !validateScannability(canvas)) {
+    if (!options?.allowUnsafe && !(await validateScannability(canvas))) {
       return { success: false, format, error: new Error('SCAN_VALIDATION_FAILED') };
     }
 
@@ -253,7 +272,7 @@ export function useQRDownload(
     const canvas = qrRef.current?.querySelector('canvas');
     if (!canvas) return { success: false, format: 'clipboard', error: new Error('Canvas not found') };
 
-    if (!options?.allowUnsafe && !validateScannability(canvas)) {
+    if (!options?.allowUnsafe && !(await validateScannability(canvas))) {
       return { success: false, format: 'clipboard', error: new Error('SCAN_VALIDATION_FAILED') };
     }
 
@@ -284,7 +303,7 @@ export function useQRDownload(
     const canvas = qrRef.current?.querySelector('canvas');
     if (!canvas) return { success: false, format: 'share', error: new Error('Canvas not found') };
 
-    if (!options?.allowUnsafe && !validateScannability(canvas)) {
+    if (!options?.allowUnsafe && !(await validateScannability(canvas))) {
       return { success: false, format: 'share', error: new Error('SCAN_VALIDATION_FAILED') };
     }
 

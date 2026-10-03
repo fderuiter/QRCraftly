@@ -127,4 +127,73 @@ test.describe('Throttled Interactive Performance Testing', () => {
         await client.send('Emulation.setCPUThrottlingRate', { rate: 1 });
     });
   }
+
+  test('the preview updates quickly after typing and after a pattern switch at 4x CPU slowdown (#1058)', async ({ page }) => {
+    test.setTimeout(90000);
+    const client = await page.context().newCDPSession(page);
+
+    await page.goto('/');
+    await page.waitForSelector('main[data-hydrated="true"]');
+    const urlInput = page.locator('#url-input');
+    await urlInput.waitFor({ state: 'visible' });
+    await urlInput.fill('https://qr.cr');
+    const canvas = page.locator('canvas[role="img"]').first();
+    await canvas.waitFor();
+
+    // Compares the preview as a 48 px thumbnail each frame, so the check stays cheap, and reports
+    // how long the preview takes to change after `act` runs.
+    const measure = async (act: () => Promise<void>) => {
+      await page.evaluate(() => {
+        const thumb = document.createElement('canvas');
+        thumb.width = 48;
+        thumb.height = 48;
+        const ctx = thumb.getContext('2d', { willReadFrequently: true });
+        if (!ctx) throw new Error('no 2d context');
+        const read = () => {
+          const preview = document.querySelector<HTMLCanvasElement>('canvas[role="img"]');
+          if (!preview) throw new Error('no preview canvas');
+          ctx.clearRect(0, 0, 48, 48);
+          ctx.drawImage(preview, 0, 0, 48, 48);
+          return ctx.getImageData(0, 0, 48, 48).data.join(',');
+        };
+        const w = window as unknown as { __read: () => string; __before: string; __start: number };
+        w.__read = read;
+        w.__before = read();
+        w.__start = performance.now();
+      });
+      await act();
+      return page.evaluate(
+        () =>
+          new Promise<number>((resolve, reject) => {
+            const w = window as unknown as { __read: () => string; __before: string; __start: number };
+            const tick = () => {
+              if (w.__read() !== w.__before) resolve(performance.now() - w.__start);
+              else if (performance.now() - w.__start > 3000) reject(new Error('the preview never changed'));
+              else requestAnimationFrame(tick);
+            };
+            tick();
+          })
+      );
+    };
+
+    await client.send('Emulation.setCPUThrottlingRate', { rate: 4 });
+    try {
+      // Warm up once so lazy code and the first paint are not counted.
+      await page.getByLabel('Select Cyber Circuit pattern').click({ force: true });
+      await page.evaluate(() => new Promise<void>((resolve) => requestIdleCallback(() => resolve(), { timeout: 5_000 })));
+
+      const typing = await measure(() => urlInput.press('x'));
+      await page.evaluate(() => new Promise<void>((resolve) => requestIdleCallback(() => resolve(), { timeout: 5_000 })));
+      const pattern = await measure(() => page.getByLabel('Select Starburst pattern').click({ force: true }));
+      console.log(`[4x] typing -> new preview ${typing.toFixed(0)} ms, pattern switch -> new preview ${pattern.toFixed(0)} ms`);
+
+      // Measured locally at 4x: typing 500-900 ms, a pattern switch 220-540 ms (the goals in #1058
+      // are 100 and 120 ms). These ceilings are a regression guard with room for a busy CI runner,
+      // not the goal: they catch the preview becoming slower, for example a debounce put back.
+      expect(typing).toBeLessThan(1500);
+      expect(pattern).toBeLessThan(1200);
+    } finally {
+      await client.send('Emulation.setCPUThrottlingRate', { rate: 1 });
+    }
+  });
 });

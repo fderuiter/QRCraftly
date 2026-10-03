@@ -37,8 +37,9 @@ Boundary checks run automatically during `pnpm run lint` and CI.
 
 - **Purpose**: Zero-copy off-thread Web Worker scannability audits, contrast checks, and optical simulation.
 - **Entry Points**:
-  - `index.ts`: Public API: the headless Scannability Health Evaluator (`createScannabilityEvaluator`, one `ScannabilityAssessment` answer with status, health, export risk and recovery state), the pure `evaluateScannability`/`performScannabilityCheck` runners, `createScannabilityWorker()`, worker contracts, and optical blur/contrast math.
+  - `index.ts`: Public API: the headless Scannability Health Evaluator (`createScannabilityEvaluator`, one `ScannabilityAssessment` answer with status, health, export risk and recovery state), `createScannabilityWorker()`, worker contracts, and optical blur/contrast math.
   - `client.ts`: Thin React adapter hook (`useScannability`) over the evaluator. App capabilities (failure reporting, module count) are injected; the package never imports app layers.
+  - `checker.ts`: The pure `performScannabilityCheck`/`evaluateScannability` runners. They bundle the jsQR decoder, so pages load this entry with `import()` when they need it (exports, the evaluator's main-thread fallback) and the root entry stays free of it (#1041).
   - `worker.ts`: Dedicated background Web Worker performing real-time contrast auditing and optical decoding.
 
 ### `qr-matrix` (`@/packages/qr-matrix`)
@@ -87,6 +88,7 @@ Boundary checks run automatically during `pnpm run lint` and CI.
 - **Entry Points**:
   - `index.ts`: Primary public API: the handshake scannability gate (`verifyHandshakeFrame` with injectable worker/checker factories), `PreallocatedFramePool`, `StreamLookaheadReceiver`, fountain codec primitives (`FountainEncoder`, `FountainDecoder`, `solveGF2`, Robust Soliton helpers), BC-UR envelope (`serializeDroplet`, `parseDropletString`, `cborEncode`/`cborDecode`, Bytewords, `crc32`), session layer (`createFountainSession`, `openFountainSession`, `compressForTransfer`, `resolveFountainSymbolSize`), `FountainReassembler`, `FountainRateTracker`, and contracts.
   - `client.ts`: Headless React hooks. `useOpticalSender` broadcasts fountain droplets by default, with no handshake frame and every QR at version 7 or lower; the caller injects `renderFrame` and the scannability fallback flag. `useOpticalReceiver` provides stateless entry and exposes `fountainStats` telemetry (droplets vs K, rank, FPS, ETA); the caller injects `saveFile`; the camera comes from `useQrScanner`'s Camera Session and its error is exposed as `cameraError`. Also exports UI state types.
+  - `checksum.ts`: `crc32` alone, for callers such as the Bulk CSV zip writer that must not pull in the handshake gate and its jsQR decoder.
   - `worker-slice.ts`: Background Web Worker: hashing, `deflate-raw` compression (skipped when it saves less than 5%), density-bounded symbol sizing, and QR matrix generation for droplets or legacy chunks.
   - `worker-reassembly.ts`: Background Web Worker: fountain reassembly (peeling + GF(2) elimination), decompression and SHA-256 verification, plus legacy chunk reassembly.
 

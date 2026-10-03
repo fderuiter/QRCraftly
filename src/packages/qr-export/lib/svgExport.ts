@@ -24,7 +24,6 @@ import { getQrTypeLabel, getQrTypeDescription } from '@/utils/a11y';
 import { SafeUrlPipeline, normalizeUrl } from '@/utils/url';
 import { getCachedAsset } from '@/utils/assetCache';
 import { sanitizeSvg } from '@/utils/security';
-import { performScannabilityCheck } from '@/utils/scannabilityChecker';
 
 import { buildMatrix, loadQrEncoder, type ModuleRenderOptions } from '@/packages/qr-matrix';
 import { loadMosaicSource } from '@/packages/qr-matrix/mosaic';
@@ -318,6 +317,7 @@ export async function validateSvgScannability(
   if (!ctx) return false;
 
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const { performScannabilityCheck } = await import('@/packages/scannability/checker');
   const result = performScannabilityCheck(imageData, canvas.width, canvas.height, true);
   return result.success;
 }
