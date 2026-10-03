@@ -1,9 +1,11 @@
 import { decodeRgbaFrame } from './decodeSync';
 import { isValidScannerRequest, assertScannerResponse, getDownscaledDimensions } from './contracts';
+import { createStaleFrameGuard } from './frameGuard';
 
 const yieldToEventLoop = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 
-let latestSequenceId = -1;
+/** Camera frame staleness, judged per scan session (epoch), not across sessions (#1095). */
+const frameGuard = createStaleFrameGuard();
 let offscreenCanvas: OffscreenCanvas | null = null;
 let offscreenCtx: OffscreenCanvasRenderingContext2D | null = null;
 const canceledTaskIds = new Set<string>();
@@ -347,7 +349,7 @@ self.onmessage = async (e: MessageEvent<ScannerWorkerMessage | null>) => {
 
   const { image, width, height, sequenceId } = payload;
 
-  if (sequenceId < latestSequenceId) {
+  if (!frameGuard.admit(epochId, sequenceId)) {
     try {
       image.close();
     } catch (err) {
@@ -363,11 +365,10 @@ self.onmessage = async (e: MessageEvent<ScannerWorkerMessage | null>) => {
     workerScope.postMessage(response);
     return;
   }
-  latestSequenceId = sequenceId;
 
   await yieldToEventLoop();
 
-  if (sequenceId < latestSequenceId) {
+  if (!frameGuard.isCurrent(epochId, sequenceId)) {
     try {
       image.close();
     } catch (err) {

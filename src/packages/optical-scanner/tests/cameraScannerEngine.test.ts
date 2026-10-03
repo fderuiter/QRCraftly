@@ -17,6 +17,7 @@ import {
   type ScannerWorkerFactory,
   type ScannerWorkerHandlers,
 } from '../index';
+import { createStaleFrameGuard } from '../lib/frameGuard';
 
 /** Deterministic clock: timers and display frames fire only when the test advances time. */
 class FakeClock implements ScannerClock {
@@ -609,6 +610,100 @@ describe('Camera Scanner Engine (headless)', () => {
       available = true;
       await h.step(100);
       expect(h.currentWorker()?.frames).toHaveLength(1);
+    });
+  });
+
+  describe('sessions sharing one worker (#1095)', () => {
+    /**
+     * Stand-in for the page's shared scanner worker: one stale-frame guard (the real one the
+     * worker uses) serves every engine, and every admitted frame is answered after `latencyMs`.
+     */
+    function createSharedWorker(clock: FakeClock, latencyMs: number) {
+      const guard = createStaleFrameGuard();
+      const state = { codeVisible: false, posted: 0, stale: 0 };
+      const factory: ScannerWorkerFactory = (handlers) => {
+        let attached = true;
+        return {
+          postFrame: (request) => {
+            state.posted += 1;
+            const admitted = guard.admit(request.epochId, request.sequenceId);
+            if (!admitted) state.stale += 1;
+            const answer: Partial<ScannerResponse> = !admitted
+              ? { status: 'fail', error: 'STALE_FRAME' }
+              : state.codeVisible
+                ? { status: 'pass', decodedData: 'REOPENED' }
+                : { status: 'fail' };
+            clock.setTimeout(() => {
+              if (attached) handlers.onMessage({ sequenceId: request.sequenceId, epochId: request.epochId, ...answer });
+            }, admitted ? latencyMs : 1);
+          },
+          release: () => {
+            attached = false;
+          },
+          terminate: () => {
+            attached = false;
+          },
+        };
+      };
+      return { factory, state };
+    }
+
+    const grabber: CameraFrameGrabber = {
+      grabBitmap: (_source, width, height) => Promise.resolve({ width, height, close: () => {} }),
+      grabPixels: (_source, width, height) => ({ data: new Uint8ClampedArray(width * height * 4) }),
+    };
+
+    async function run(clock: FakeClock, ms: number) {
+      for (let elapsed = 0; elapsed < ms; elapsed += 4) {
+        clock.advance(4);
+        await Promise.resolve();
+        await Promise.resolve();
+      }
+    }
+
+    it('decodes the first frame of a reopened scanner after a long session with no code', async () => {
+      const clock = new FakeClock();
+      const source = new FakeSource();
+      const worker = createSharedWorker(clock, 20);
+      const config = { getSource: () => source, clock, grabber, createWorker: worker.factory };
+
+      const first = createCameraScannerEngine(config);
+      first.start();
+      await run(clock, 20_000);
+      expect(worker.state.posted).toBeGreaterThan(200);
+      first.destroy();
+
+      worker.state.codeVisible = true;
+      const postedBefore = worker.state.posted;
+      const second = createCameraScannerEngine(config);
+      const onScanSuccess = vi.fn();
+      second.subscribe({ onScanSuccess });
+      second.start();
+      await run(clock, 60);
+
+      expect(onScanSuccess).toHaveBeenCalledWith('REOPENED');
+      expect(worker.state.posted - postedBefore).toBe(1);
+      expect(worker.state.stale).toBe(0);
+      second.destroy();
+    });
+
+    it('decodes at once when the same engine is stopped and started again', async () => {
+      const clock = new FakeClock();
+      const source = new FakeSource();
+      const worker = createSharedWorker(clock, 20);
+      const engine = createCameraScannerEngine({ getSource: () => source, clock, grabber, createWorker: worker.factory });
+      const onScanSuccess = vi.fn();
+      engine.subscribe({ onScanSuccess });
+
+      engine.start();
+      await run(clock, 5_000);
+      engine.stop();
+      worker.state.codeVisible = true;
+      engine.start();
+      await run(clock, 60);
+
+      expect(onScanSuccess).toHaveBeenCalledTimes(1);
+      expect(worker.state.stale).toBe(0);
     });
   });
 });

@@ -25,6 +25,7 @@
  * the generator. Budgets are generous so they do not flake on a CI runner; the
  * numbers are attached to each test as `time-to-decode` annotations.
  */
+import { setTimeout as delay } from 'node:timers/promises';
 import type { Page, TestInfo } from '@playwright/test';
 import { test, expect } from './fixtures';
 import { codeScene, installFakeCamera, liveCameraTracks, showOnCamera } from '../tests/utils/fakeCamera';
@@ -33,6 +34,10 @@ const CODE = 'https://qrcraftly.com/scanned';
 const SUCCESS_TOAST = 'Successfully scanned QR code';
 /** PR CI budget for decoding a code that is in view when the scanner opens (#1103). */
 const BASELINE_BUDGET_MS = 1000;
+/** PR CI budget for a scanner reopened after a long session with no code (#1095, #1103). */
+const REOPEN_BUDGET_MS = 2000;
+/** How long the scanner looks at nothing before it is closed and reopened. */
+const LONG_SESSION_MS = 20_000;
 
 declare global {
   interface Window {
@@ -145,6 +150,25 @@ test.describe('Camera scanner with a scripted fake camera', () => {
       await expect.poll(() => liveCameraTracks(page)).toBe(1);
       await page.getByRole('button', { name: 'Close scanner' }).click();
       await expect.poll(() => liveCameraTracks(page)).toBe(0);
+    });
+
+    test('decodes at once when reopened after a long session with no code', async ({ page, context }, testInfo) => {
+      await installFakeCamera(context);
+      await openGenerator(page);
+      const baseline = await scanWith(page);
+      report(testInfo, 'baseline', baseline);
+
+      // The shared worker served a long session with no code (#1095): the next one must not wait.
+      await page.locator('#url-input').fill('https://example.com/');
+      await showOnCamera(page, null);
+      await openScanner(page);
+      await delay(LONG_SESSION_MS);
+      await page.getByRole('button', { name: 'Close scanner' }).click();
+
+      const reopened = await scanWith(page);
+      report(testInfo, `reopened after ${LONG_SESSION_MS / 1000} s with no code`, reopened);
+      expect(reopened).toBeLessThan(REOPEN_BUDGET_MS);
+      expect(reopened).toBeLessThan(Math.max(2 * baseline, BASELINE_BUDGET_MS));
     });
 
     test('decodes small modules and inverted codes', async ({ page, context }, testInfo) => {

@@ -109,6 +109,16 @@ export interface CameraScannerEngine {
   getMetrics(): CameraScannerEngineMetrics;
 }
 
+/**
+ * Page-wide epoch counter. Every scan session and every worker generation gets a new, larger
+ * epoch, so the shared worker can tell a new session's frame 1 from a stale frame (#1095).
+ */
+let lastEpoch = 0;
+const nextEpoch = (): number => {
+  lastEpoch += 1;
+  return lastEpoch;
+};
+
 function isVideoElement(source: CameraFrameSource): source is CameraFrameSource & HTMLVideoElement {
   return typeof HTMLVideoElement !== 'undefined' && source instanceof HTMLVideoElement;
 }
@@ -246,7 +256,7 @@ export function createCameraScannerEngine(config: CameraScannerEngineConfig): Ca
   function recoverWorker() {
     if (destroyed || useMainThread) return;
     restartAttempts += 1;
-    epoch += 1;
+    epoch = nextEpoch();
     discardWorker();
 
     if (restartAttempts > MAX_WORKER_RESTARTS) {
@@ -445,7 +455,7 @@ export function createCameraScannerEngine(config: CameraScannerEngineConfig): Ca
   function start() {
     if (destroyed) return;
     restartAttempts = 0;
-    epoch += 1;
+    epoch = nextEpoch();
     scheduler.setWatchdogTimeout(WATCHDOG_TIMEOUT_MS);
     scheduler.start();
     if (!worker && !useMainThread) {
