@@ -1,5 +1,6 @@
 import { contentRegistry } from '@/data/contentRegistry';
 import { getExampleImage, getRelatedTypePages } from '@/data/relatedPages';
+import { typeGuides } from '@/data/typeGuides';
 import { isDangerousUrl } from '@/utils/security';
 import { Breadcrumbs } from './Breadcrumbs';
 import { SectionHeading } from './ui/SectionHeading';
@@ -20,6 +21,31 @@ export function getAboutHeading(name: string): string {
 }
 
 /**
+ * A titled bullet list in a generator page's long-form guide.
+ * @param root0 - Component properties.
+ * @param root0.heading - Section heading.
+ * @param root0.items - List entries.
+ * @returns The section.
+ */
+function GuideList({ heading, items }: { heading: string; items: readonly string[] }) {
+  return (
+    <section className="mb-10">
+      <h2 className="mb-3 text-2xl font-bold text-fg">{heading}</h2>
+      <ul className="list-none space-y-2 text-sm">
+        {items.map((item) => (
+          <li key={item} className="flex items-start">
+            <span className="mr-2 text-accent" aria-hidden="true">
+              •
+            </span>
+            {item}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+/**
  * Renders the overview, how-to and FAQ sections for a tool's registry entry.
  * @param root0 - Component properties.
  * @param root0.toolId - Content registry id.
@@ -36,15 +62,17 @@ export function SidebarContent({ toolId }: SidebarContentProps) {
 
   const example = getExampleImage(toolId);
   const related = getRelatedTypePages(toolId);
+  const guide = typeGuides[toolId];
+  const intro = content.intro ?? guide?.intro;
 
   return (
     <div id="content-section" className="mt-12 border-t border-line-subtle pt-8 text-fg-soft">
       <Breadcrumbs pageId={toolId} />
 
-      {content.intro && (
+      {intro && (
         <section className="mb-10">
           <h2 className="mb-3 text-2xl font-bold text-fg">A QR code generator that stays free</h2>
-          <p className="mb-3 text-sm leading-relaxed">{content.intro}</p>
+          <p className="mb-3 text-sm leading-relaxed">{intro}</p>
           <a href="/free-forever" className="text-sm font-semibold text-accent underline-offset-2 hover:underline">
             Read the no-ads pledge
           </a>
@@ -54,7 +82,7 @@ export function SidebarContent({ toolId }: SidebarContentProps) {
       {content.name && content.name !== 'QRCraftly' && (
         <section className="mb-10">
           <h2 className="mb-3 text-2xl font-bold text-fg">{getAboutHeading(content.name)}</h2>
-          {content.description && <p className="mb-4 text-sm leading-relaxed">{content.description}</p>}
+          {content.description && !guide && <p className="mb-4 text-sm leading-relaxed">{content.description}</p>}
           {example && (
             <img
               src={example.src}
@@ -102,6 +130,42 @@ export function SidebarContent({ toolId }: SidebarContentProps) {
         </section>
       )}
 
+      {guide && (
+        <>
+          <section className="mb-10">
+            <h2 className="mb-3 text-2xl font-bold text-fg">What happens when someone scans it</h2>
+            {guide.scanned.map((paragraph) => (
+              <p key={paragraph} className="mb-3 text-sm leading-relaxed">
+                {paragraph}
+              </p>
+            ))}
+          </section>
+          <GuideList heading="Use cases" items={guide.useCases} />
+          <GuideList heading="Tips for printing and sharing" items={guide.printing} />
+          <GuideList heading="Check it before you share it" items={guide.checks} />
+          <section className="mb-10">
+            <h2 className="mb-3 text-2xl font-bold text-fg">Privacy: where your data goes</h2>
+            <p className="mb-3 text-sm leading-relaxed">{guide.privacy}</p>
+            <a href="/security" className="text-sm font-semibold text-accent underline-offset-2 hover:underline">
+              How QRCraftly keeps data in your browser
+            </a>
+          </section>
+        </>
+      )}
+
+      {displayFaqs && displayFaqs.length > 0 && (
+        <section className="mb-10">
+          <h2 className="mb-5 text-2xl font-bold text-fg">Frequently Asked Questions</h2>
+          <Accordion>
+            {displayFaqs.map((q, idx) => (
+              <AccordionItem key={idx} title={q.question}>
+                {q.answer}
+              </AccordionItem>
+            ))}
+          </Accordion>
+        </section>
+      )}
+
       {related.length > 0 && (
         <section className="mb-10" aria-labelledby="related-types-heading">
           <h2 id="related-types-heading" className="mb-3 text-2xl font-bold text-fg">
@@ -121,19 +185,6 @@ export function SidebarContent({ toolId }: SidebarContentProps) {
               return null;
             })}
           </ul>
-        </section>
-      )}
-
-      {displayFaqs && displayFaqs.length > 0 && (
-        <section className="mb-10">
-          <h2 className="mb-5 text-2xl font-bold text-fg">Frequently Asked Questions</h2>
-          <Accordion>
-            {displayFaqs.map((q, idx) => (
-              <AccordionItem key={idx} title={q.question}>
-                {q.answer}
-              </AccordionItem>
-            ))}
-          </Accordion>
         </section>
       )}
     </div>
