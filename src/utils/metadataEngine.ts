@@ -186,6 +186,14 @@ export const formatPathName = (segment: string): string => {
     'free-forever': 'Free Forever',
     'acknowledgements': 'Open-Source Acknowledgements',
     'qr-code-scanner': 'QR Code Scanner',
+    'qr-code-checker': 'QR Code Checker',
+    'mosaic-qr-code': 'Image (Mosaic) QR Code',
+    'qr-code-with-logo': 'QR Code with Logo',
+    'google-review-qr-code': 'Google Review QR Code',
+    'menu-qr-code': 'Menu QR Code',
+    'instagram-qr-code': 'Instagram QR Code',
+    'whatsapp-qr-code': 'WhatsApp QR Code',
+    'pdf-qr-code': 'PDF QR Code',
   };
 
   if (overrides[segment]) {

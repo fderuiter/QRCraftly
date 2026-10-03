@@ -17,7 +17,7 @@ const DIST_DIR = path.resolve(__dirname, '../dist/client');
 // number that matters for load time, so this is the budget that catches JavaScript bloat.
 export const MAX_PAGE_FIRST_LOAD_KB = 260;
 // A loose backstop on everything in dist/client, so a pile of new pages cannot grow it unseen.
-export const MAX_GZIPPED_SIZE_KB = 900;
+export const MAX_GZIPPED_SIZE_KB = 1000;
 // The scanner's zxing-wasm reader (ADR 0023) is fetched only when someone scans and is never
 // precached, so it has its own budget instead of counting against the site's.
 export const MAX_LAZY_WASM_GZIPPED_SIZE_KB = 450;

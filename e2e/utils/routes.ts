@@ -40,6 +40,14 @@ export const ROUTES = [
   '/file-transfer/receive',
   '/arcade',
   '/qr-code-scanner',
+  '/qr-code-checker',
+  '/mosaic-qr-code',
+  '/qr-code-with-logo',
+  '/google-review-qr-code',
+  '/menu-qr-code',
+  '/instagram-qr-code',
+  '/whatsapp-qr-code',
+  '/pdf-qr-code',
   '/this-page-does-not-exist',
 ] as const;
 

@@ -16,6 +16,8 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import { landingPageContent } from './landingPageContent';
+
 /** The long-form sections of a generator page, below the tool (#1029). */
 export interface TypeGuide {
   /** Opening paragraph, 40 to 60 words: what the generator makes, and the no-ads pledge in one line. */
@@ -32,7 +34,13 @@ export interface TypeGuide {
   privacy: string;
 }
 
+/** The long-form guides of the landing pages that preset the generator (#1035, #1037). */
+const landingGuides: Record<string, TypeGuide> = Object.fromEntries(
+  Object.entries(landingPageContent).flatMap(([id, copy]) => (copy.guide ? [[id, copy.guide]] : [])),
+);
+
 export const typeGuides: Record<string, TypeGuide> = {
+  ...landingGuides,
   'wifi-qr-code': {
     intro:
       'Turn your network name and password into a QR code that guests scan to join your Wi-Fi without typing a thing. It is free, with no sign-up and no ads, and your password is encoded in your browser and never sent anywhere.',

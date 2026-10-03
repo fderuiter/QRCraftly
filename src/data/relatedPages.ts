@@ -18,6 +18,7 @@
 
 import { QRType } from '@/types';
 import { contentRegistry } from '@/data/contentRegistry';
+import { LANDING_PAGE_IDS } from '@/data/landingPages';
 
 /** The generator page of each QR type, by registry id. */
 export const TYPE_PAGE_TYPES: Readonly<Record<string, QRType>> = {
@@ -45,22 +46,35 @@ export interface RelatedPage {
 }
 
 /**
- * Picks the other generator pages to link from a page: the ones that follow it in the registry
+ * Picks the other pages of a group to link from a page: the ones that follow it in the group's
  * order, wrapping round, so every page links onward and every page is linked to.
+ * @param ids - Registry ids of the group, in order.
  * @param id - Registry id of the current page.
  * @param count - How many pages to return.
- * @returns Related generator pages, never including the page itself.
+ * @returns Related pages, never including the page itself.
  */
-export function getRelatedTypePages(id: string, count = 4): RelatedPage[] {
-  const start = TYPE_PAGE_IDS.indexOf(id);
-  if (start < 0) return [];
+function followingPages(ids: readonly string[], id: string, count: number): RelatedPage[] {
+  const start = ids.indexOf(id);
   const related: RelatedPage[] = [];
-  for (let step = 1; related.length < count && step <= TYPE_PAGE_IDS.length; step++) {
-    const relatedId = TYPE_PAGE_IDS[(start + step) % TYPE_PAGE_IDS.length];
+  for (let step = 1; related.length < count && step <= ids.length; step++) {
+    const relatedId = ids[(start + step) % ids.length];
     if (relatedId === id) continue;
     related.push({ id: relatedId, name: contentRegistry[relatedId].name, href: relatedId === 'index' ? '/' : `/${relatedId}` });
   }
   return related;
+}
+
+/**
+ * Picks the other generator pages to link from a page. A generator page links to the generator
+ * pages that follow it, and a landing page (#1035, #1037) to the landing pages that follow it.
+ * @param id - Registry id of the current page.
+ * @param count - How many pages to return.
+ * @returns Related pages, never including the page itself.
+ */
+export function getRelatedTypePages(id: string, count = 4): RelatedPage[] {
+  if (TYPE_PAGE_IDS.includes(id)) return followingPages(TYPE_PAGE_IDS, id, count);
+  if (LANDING_PAGE_IDS.includes(id)) return followingPages(LANDING_PAGE_IDS, id, count);
+  return [];
 }
 
 /**

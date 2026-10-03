@@ -493,3 +493,26 @@ describe('stageGeneratorContent (#1101)', () => {
     expect(text.result.current.getState().config.value).toBe('Scanned note');
   });
 });
+
+describe('presetConfig (#1035, #1037)', () => {
+  it('wins over appearance retained from an earlier route and applies on a fresh visit', () => {
+    clearRetainedAppearance();
+    const earlier = renderHook(() => useQRStore(), {
+      wrapper: ({ children }: { children: React.ReactNode }) => <QRProvider retainAppearance>{children}</QRProvider>,
+    });
+    act(() => earlier.result.current.updateConfig({ errorCorrectionLevel: QRErrorCorrectionLevel.L }));
+    earlier.unmount();
+
+    const landing = renderHook(() => useQRStore(), {
+      wrapper: ({ children }: { children: React.ReactNode }) => (
+        <QRProvider retainAppearance presetConfig={{ errorCorrectionLevel: QRErrorCorrectionLevel.H, value: 'https://wa.me/' }}>
+          {children}
+        </QRProvider>
+      ),
+    });
+    expect(landing.result.current.getState().config.errorCorrectionLevel).toBe(QRErrorCorrectionLevel.H);
+    expect(landing.result.current.getState().config.value).toBe('https://wa.me/');
+    landing.unmount();
+    clearRetainedAppearance();
+  });
+});

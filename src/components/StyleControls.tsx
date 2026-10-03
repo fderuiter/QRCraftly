@@ -17,7 +17,7 @@
 */
 
 
-import React from 'react';
+import React, { createContext, useContext } from 'react';
 import { QRConfig } from '../types';
 import {
   BorderControls,
@@ -39,6 +39,12 @@ const sectionOpenState = new Map<string, boolean>([
   ['Brand Templates', true],
   ['Pattern & Colors', true]
 ]);
+
+/**
+ * Appearance sections a landing page asks to start expanded (for example Logo on the logo
+ * page). A section the person already opened or closed this visit keeps that choice.
+ */
+export const PresetOpenSections = createContext<readonly string[]>([]);
 
 /**
  * Remembers a section's expanded state for the rest of the visit.
@@ -69,6 +75,7 @@ interface StyleControlsProps {
  * @returns The StyleControls component.
  */
 const StyleControls: React.FC<StyleControlsProps> = ({ config, onChange }) => {
+  const presetOpen = useContext(PresetOpenSections);
   return (
     <Accordion>
       {/* Brand Template Gallery */}
@@ -79,7 +86,7 @@ const StyleControls: React.FC<StyleControlsProps> = ({ config, onChange }) => {
       </AccordionItem>
 
       {/* Primary appearance controls: expanded by default. */}
-      <AccordionItem title="Pattern & Colors" headingLevel={3} defaultOpen={sectionOpenState.get('Pattern & Colors') ?? false} onOpenChange={rememberSection('Pattern & Colors')}>
+      <AccordionItem title="Pattern & Colors" headingLevel={3} defaultOpen={sectionOpenState.get('Pattern & Colors') ?? presetOpen.includes('Pattern & Colors')} onOpenChange={rememberSection('Pattern & Colors')}>
         <div className="space-y-6 pt-1">
           <PatternControls config={config} onChange={onChange} />
           <div className="border-t border-line pt-5">
@@ -89,7 +96,7 @@ const StyleControls: React.FC<StyleControlsProps> = ({ config, onChange }) => {
       </AccordionItem>
 
       {/* Export layout (social media templates) and border */}
-      <AccordionItem title="Layout & Border" headingLevel={3} defaultOpen={sectionOpenState.get('Layout & Border') ?? false} onOpenChange={rememberSection('Layout & Border')}>
+      <AccordionItem title="Layout & Border" headingLevel={3} defaultOpen={sectionOpenState.get('Layout & Border') ?? presetOpen.includes('Layout & Border')} onOpenChange={rememberSection('Layout & Border')}>
         <div className="space-y-6 pt-1">
           <LayoutControls config={config} onChange={onChange} />
           <div className="border-t border-line pt-5">
@@ -98,7 +105,7 @@ const StyleControls: React.FC<StyleControlsProps> = ({ config, onChange }) => {
         </div>
       </AccordionItem>
 
-      <AccordionItem title="Logo" headingLevel={3} defaultOpen={sectionOpenState.get('Logo') ?? false} onOpenChange={rememberSection('Logo')}>
+      <AccordionItem title="Logo" headingLevel={3} defaultOpen={sectionOpenState.get('Logo') ?? presetOpen.includes('Logo')} onOpenChange={rememberSection('Logo')}>
         <div className="pt-1">
           <LogoControls config={config} onChange={onChange} />
           <div className="border-t border-line pt-5">

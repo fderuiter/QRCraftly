@@ -248,3 +248,35 @@ export function encodePng(canvas: PixelCanvas): Buffer {
     chunk('IEND', new Uint8Array(0)),
   ]);
 }
+
+/**
+ * Encodes an RGBA image as a truecolour PNG (alpha ignored: the image is opaque).
+ * @param width - Width in pixels.
+ * @param height - Height in pixels.
+ * @param rgba - Pixels, four bytes each, row by row.
+ * @returns The PNG file bytes.
+ */
+export function encodeRgbPng(width: number, height: number, rgba: Uint8Array | Uint8ClampedArray): Buffer {
+  const header = Buffer.alloc(13);
+  header.writeUInt32BE(width, 0);
+  header.writeUInt32BE(height, 4);
+  header[8] = 8; // bit depth
+  header[9] = 2; // truecolour
+  const raw = Buffer.alloc((width * 3 + 1) * height);
+  for (let row = 0; row < height; row++) {
+    const base = row * (width * 3 + 1);
+    raw[base] = 0; // filter: none
+    for (let col = 0; col < width; col++) {
+      const from = (row * width + col) * 4;
+      raw[base + 1 + col * 3] = rgba[from];
+      raw[base + 2 + col * 3] = rgba[from + 1];
+      raw[base + 3 + col * 3] = rgba[from + 2];
+    }
+  }
+  return Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    chunk('IHDR', header),
+    chunk('IDAT', zlib.deflateSync(raw, { level: 9 })),
+    chunk('IEND', new Uint8Array(0)),
+  ]);
+}
