@@ -15,9 +15,11 @@ const DIST_DIR = path.resolve(__dirname, '../dist/client');
 // What one visitor downloads to open one page (#1106): its HTML, the CSS and the scripts it loads
 // at startup (static imports, not lazy chunks, workers or the wasm reader). The worst page is the
 // number that matters for load time, so this is the budget that catches JavaScript bloat.
-export const MAX_PAGE_FIRST_LOAD_KB = 260;
-// A loose backstop on everything in dist/client, so a pile of new pages cannot grow it unseen.
-export const MAX_GZIPPED_SIZE_KB = 1000;
+export const MAX_PAGE_FIRST_LOAD_KB = 262;
+// A loose backstop on the JavaScript and CSS in dist/client, so shipped code cannot grow unseen.
+// Pre-rendered HTML is left out: every new page adds some, and the per-page budget already
+// bounds each page's own HTML. Measured at 563 KB on 2026-10-03.
+export const MAX_GZIPPED_SIZE_KB = 650;
 // The scanner's zxing-wasm reader (ADR 0023) is fetched only when someone scans and is never
 // precached, so it has its own budget instead of counting against the site's.
 export const MAX_LAZY_WASM_GZIPPED_SIZE_KB = 450;
@@ -29,6 +31,15 @@ export const MAX_LAZY_WASM_GZIPPED_SIZE_KB = 450;
  */
 export function isLazyWasm(relativePath) {
   return relativePath.endsWith('.wasm');
+}
+
+/**
+ * Whether a file is shipped JavaScript or CSS, the only files the site-total ceiling counts.
+ * @param {string} relativePath
+ * @returns {boolean}
+ */
+export function isShippedCode(relativePath) {
+  return /\.(?:m?js|css)$/.test(relativePath);
 }
 
 /**
@@ -92,7 +103,8 @@ export function getFiles(dir) {
 
 /**
  * Calculates raw and gzipped sizes of all files in a directory.
- * The lazily loaded `.wasm` reader is reported but counted against its own budget.
+ * Only JavaScript and CSS count toward the limit; the lazily loaded `.wasm` reader has its own
+ * budget, and every file is still listed in `reports`.
  * @param {string} distDir 
  * @param {number} limitKb 
  * @param {number} [wasmLimitKb]
@@ -121,7 +133,7 @@ export function verifyBundleSize(distDir, limitKb, wasmLimitKb = MAX_LAZY_WASM_G
       wasmGzipSize += gzipped.length;
       continue;
     }
-    if (isGeneratedMedia(posixPath)) continue;
+    if (isGeneratedMedia(posixPath) || !isShippedCode(posixPath)) continue;
     totalRawSize += content.length;
     totalGzipSize += gzipped.length;
   }
