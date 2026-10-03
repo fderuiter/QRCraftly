@@ -68,12 +68,12 @@ Boundary checks run automatically during `pnpm run lint` and CI.
 
 ### `optical-scanner` (`@/packages/optical-scanner`)
 
-- **Purpose**: Consolidated off-thread barcode decoding for live camera video streams, static images, and video files with adaptive backpressure throttling and watchdog fault recovery.
+- **Purpose**: Consolidated off-thread barcode decoding for live camera streams and image files (photos and screenshots) with adaptive backpressure throttling and watchdog fault recovery.
 - **Entry Points**:
   - `index.ts`: Public API, polymorphic `scan(source, options)` for files/images, the headless Camera Scanner Engine (`createCameraScannerEngine`), scanner contracts, and downscaling math.
   - `client.ts`: Thin React adapter hook (`useQrScanner`) over the Camera Session (`state`, `start`, `stop`, `videoRef`: the one owner of the camera stream) and the Camera Scanner Engine, plus file drag-and-drop scanning.
   - `scheduler.ts`: Secondary entry point exposing `AdaptiveFrameScheduler`, `DoubleBufferPool`, and `terminateScannerWorker` (shared file-scan worker teardown). Worker spawning is private to the package.
-  - `worker.ts`: Dedicated background Web Worker performing WebCodecs demuxing, EBML parsing, and jsQR optical decoding.
+  - `worker.ts`: Dedicated background Web Worker that decodes camera frames (one bounded jsQR pass each) and image files (`createImageBitmap` with EXIF orientation, then jsQR at 2048 px and 1024 px).
 
 ### `qr-payload` (`@/packages/qr-payload`)
 

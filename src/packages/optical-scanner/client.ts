@@ -91,7 +91,7 @@ export interface UseQrScannerResult {
    */
   stopScanning: () => void;
   /**
-   * Unified file scanning method (processes images, WebM, and MKV video files).
+   * Scans an image file (photo or screenshot), off the main thread where the browser allows.
    */
   scanFile: (file: File, options?: ScanOptions) => Promise<ScanResult>;
 }
@@ -126,7 +126,6 @@ export function useQrScanner({
     metrics: { samplingDelay: INITIAL_SAMPLING_DELAY, latencyHistory: [] },
     dirty: false,
   });
-  const isScanningRef = useRef(false);
   const boundsRef = useRef({ minSamplingDelay, maxSamplingDelay });
   const engineRef = useRef<CameraScannerEngine | null>(null);
   const sessionRef = useRef<CameraSession | null>(null);
@@ -182,33 +181,16 @@ export function useQrScanner({
   }, []);
 
   const startScanning = useCallback(() => {
-    isScanningRef.current = true;
     setIsScanning(true);
     getEngine().start();
   }, [getEngine]);
 
   const stopScanning = useCallback(() => {
-    const wasScanning = isScanningRef.current;
-    isScanningRef.current = false;
     setIsScanning(false);
     engineRef.current?.stop();
     pending.current.status = 'idle';
     pending.current.dirty = false;
     setStatus('idle');
-
-    if (wasScanning && typeof window !== 'undefined') {
-      const { latencyHistory: history, samplingDelay: delay } = pending.current.metrics;
-      window.dispatchEvent(
-        new CustomEvent('scanner-telemetry-dispatch', {
-          detail: {
-            latencyHistory: history,
-            frameDropCount: 0,
-            processingLatency: delay,
-            sessionType: 'camera',
-          },
-        })
-      );
-    }
   }, []);
 
   const getSession = useCallback((): CameraSession => {

@@ -1,5 +1,6 @@
 import { cameraStrategyFor, decodeCameraFrame, decodeRgbaFrame } from './decodeSync';
-import { isValidScannerRequest, assertScannerResponse, getDownscaledDimensions } from './contracts';
+import { isValidScannerRequest, assertScannerResponse, type ScannerResponse } from './contracts';
+import { decodeImageAtSizes, FILE_SCAN_MESSAGE, FILE_SCAN_UNREADABLE, FILE_SCAN_UNSUPPORTED } from './imageFile';
 import { createStaleFrameGuard } from './frameGuard';
 
 const yieldToEventLoop = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
@@ -8,7 +9,6 @@ const yieldToEventLoop = () => new Promise<void>((resolve) => setTimeout(resolve
 const frameGuard = createStaleFrameGuard();
 let offscreenCanvas: OffscreenCanvas | null = null;
 let offscreenCtx: OffscreenCanvasRenderingContext2D | null = null;
-const canceledTaskIds = new Set<string>();
 
 /** The dedicated worker scope's `postMessage`, which accepts a transfer list. */
 interface WorkerScope {
@@ -33,15 +33,13 @@ const workerScope: WorkerScope = {
 };
 
 /**
- * Every message shape this worker accepts (video demux, raw buffer / ImageData scan, camera
- * ImageBitmap scan, abort). Fields are optional and checked before use.
+ * Every message shape this worker accepts (image file scan, raw buffer / ImageData scan, camera
+ * ImageBitmap scan). Fields are optional and checked before use.
  */
 interface ScannerWorkerMessage {
   type?: string;
-  taskId?: string;
+  file?: unknown;
   epochId?: number;
-  fileBuffer?: ArrayBuffer;
-  wasmBuffer?: ArrayBuffer;
   buffer?: unknown;
   imageData?: { data: Uint8ClampedArray | ArrayLike<number> };
   width?: unknown;
@@ -51,106 +49,29 @@ interface ScannerWorkerMessage {
 }
 
 /**
- * Extract frames from an EBML container (WebM/MKV).
+ * Decodes an uploaded image file here, off the main thread: the browser decodes it (applying its
+ * EXIF orientation) into an ImageBitmap, which is drawn at each of the file scan sizes (#1098).
  */
-export function extractFramesFromEBML(fileBuffer: Uint8Array): Uint8Array[] {
-  const frames: Uint8Array[] = [];
-  let offset = 0;
-
-  while (offset < fileBuffer.length) {
-    const idFirstByte = fileBuffer[offset];
-    let idLength = 1;
-    while (idLength <= 4 && !(idFirstByte & (1 << (8 - idLength)))) {
-      idLength++;
-    }
-    if (offset + idLength > fileBuffer.length) break;
-    let idValue = 0;
-    for (let i = 0; i < idLength; i++) {
-      idValue = (idValue << 8) + fileBuffer[offset + i];
-    }
-    offset += idLength;
-
-    if (offset >= fileBuffer.length) break;
-    const sizeFirstByte = fileBuffer[offset];
-    let sizeLength = 1;
-    while (sizeLength <= 8 && !(sizeFirstByte & (1 << (8 - sizeLength)))) {
-      sizeLength++;
-    }
-    if (offset + sizeLength > fileBuffer.length) break;
-    let sizeValue = sizeFirstByte & ((1 << (8 - sizeLength)) - 1);
-    for (let i = 1; i < sizeLength; i++) {
-      sizeValue = (sizeValue << 8) + fileBuffer[offset + i];
-    }
-    offset += sizeLength;
-
-    if (idValue === 0xA3 || idValue === 0xA1) {
-      if (offset < fileBuffer.length) {
-        const trackFirstByte = fileBuffer[offset];
-        let trackLength = 1;
-        while (trackLength <= 8 && !(trackFirstByte & (1 << (8 - trackLength)))) {
-          trackLength++;
-        }
-        const headerSize = trackLength + 2 + 1;
-        if (offset + headerSize <= offset + sizeValue) {
-          const frameData = fileBuffer.subarray(offset + headerSize, offset + sizeValue);
-          frames.push(frameData);
-        }
-      }
-      offset += sizeValue;
-    } else if (
-      idValue === 0x18538067 ||
-      idValue === 0x1F43B675 ||
-      idValue === 0xA0 ||
-      idValue === 0x1654AE6B
-    ) {
-      continue;
-    } else {
-      offset += sizeValue;
+async function scanImageFile(file: unknown, sequenceId: number): Promise<void> {
+  let response: ScannerResponse;
+  if (typeof createImageBitmap !== 'function' || typeof OffscreenCanvas === 'undefined' || !(file instanceof Blob)) {
+    response = { status: 'fail', sequenceId, error: FILE_SCAN_UNSUPPORTED };
+  } else {
+    let bitmap: ImageBitmap | null = null;
+    try {
+      bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+      const code = decodeImageAtSizes(bitmap, bitmap.width, bitmap.height, (width, height) =>
+        new OffscreenCanvas(width, height).getContext('2d', { willReadFrequently: true })
+      );
+      response = { status: code ? 'pass' : 'fail', sequenceId, decodedData: code };
+    } catch {
+      response = { status: 'fail', sequenceId, error: FILE_SCAN_UNREADABLE };
+    } finally {
+      bitmap?.close();
     }
   }
-
-  return frames;
-}
-
-async function decodeWebCodecsFrame(frameData: Uint8Array, onFrame: (bitmap: ImageBitmap) => void): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const decoder = new VideoDecoder({
-      output: (frame) => {
-        createImageBitmap(frame)
-          .then((bitmap) => {
-            onFrame(bitmap);
-            frame.close();
-            resolve();
-          })
-          .catch((err) => {
-            frame.close();
-            reject(err);
-          });
-      },
-      error: (err) => {
-        reject(err);
-      },
-    });
-
-    decoder.configure({
-      codec: 'vp8',
-      codedWidth: 640,
-      codedHeight: 480,
-    });
-
-    try {
-      decoder.decode(
-        new EncodedVideoChunk({
-          type: 'key',
-          timestamp: 0,
-          data: frameData,
-        })
-      );
-      decoder.flush();
-    } catch (err) {
-      reject(err);
-    }
-  });
+  assertScannerResponse(response);
+  workerScope.postMessage(response);
 }
 
 self.onmessage = async (e: MessageEvent<ScannerWorkerMessage | null>) => {
@@ -158,138 +79,13 @@ self.onmessage = async (e: MessageEvent<ScannerWorkerMessage | null>) => {
   if (!payload) return;
   const epochId = payload.epochId;
 
-  if (payload.type === 'abort' && payload.taskId) {
-    canceledTaskIds.add(payload.taskId);
+  // 1. Uploaded image file
+  if (payload.type === FILE_SCAN_MESSAGE && typeof payload.sequenceId === 'number') {
+    await scanImageFile(payload.file, payload.sequenceId);
     return;
   }
 
-  // 1. Check for Video Demuxing and Off-Thread Scanning Mode
-  if (payload.fileBuffer || payload.type === 'demux') {
-    const { fileBuffer, wasmBuffer, taskId } = payload;
-    const isAborted = () => taskId && canceledTaskIds.has(taskId);
-
-    if (isAborted()) {
-      if (taskId) canceledTaskIds.delete(taskId);
-      workerScope.postMessage({ type: 'done', taskId, canceled: true });
-      return;
-    }
-
-    if (wasmBuffer) {
-      try {
-        const wasmInstance = await WebAssembly.instantiate(wasmBuffer);
-        const addFn = wasmInstance.instance.exports.add as ((a: number, b: number) => number) | undefined;
-        if (addFn) {
-          addFn(1, 2);
-        }
-      } catch (err) {
-        console.error('Failed to initialize WebAssembly inside worker:', err);
-      }
-    }
-
-    const u8Array = new Uint8Array(fileBuffer ?? new ArrayBuffer(0));
-    const textDecoder = new TextDecoder();
-
-    const headerStr = textDecoder.decode(u8Array.subarray(0, 50));
-    if (headerStr.startsWith('MOCK_VIDEO:')) {
-      try {
-        const jsonStr = textDecoder.decode(u8Array.subarray(11));
-        const mockFrames = JSON.parse(jsonStr);
-        for (const frame of mockFrames) {
-          if (isAborted()) {
-            if (taskId) canceledTaskIds.delete(taskId);
-            workerScope.postMessage({ type: 'done', taskId, canceled: true });
-            return;
-          }
-          workerScope.postMessage({ type: 'frame_decoded', taskId, data: frame });
-        }
-        if (taskId) canceledTaskIds.delete(taskId);
-        workerScope.postMessage({ type: 'done', taskId });
-        return;
-      } catch (err) {
-        console.error('Failed to parse mock video file:', err);
-      }
-    }
-
-    const frames = extractFramesFromEBML(u8Array);
-
-    if (frames.length === 0) {
-      const wholeText = textDecoder.decode(u8Array);
-      if (wholeText.includes('F|')) {
-        const lines = wholeText.split(/[\r\n,]+/);
-        for (const line of lines) {
-          if (isAborted()) {
-            if (taskId) canceledTaskIds.delete(taskId);
-            workerScope.postMessage({ type: 'done', taskId, canceled: true });
-            return;
-          }
-          const trimmed = line.trim();
-          if (trimmed.startsWith('F|')) {
-            workerScope.postMessage({ type: 'frame_decoded', taskId, data: trimmed });
-          }
-        }
-        if (taskId) canceledTaskIds.delete(taskId);
-        workerScope.postMessage({ type: 'done', taskId });
-        return;
-      }
-    }
-
-    for (const frameData of frames) {
-      if (isAborted()) {
-        if (taskId) canceledTaskIds.delete(taskId);
-        workerScope.postMessage({ type: 'done', taskId, canceled: true });
-        return;
-      }
-
-      try {
-        const decodedStr = textDecoder.decode(frameData);
-        if (decodedStr.startsWith('F|')) {
-          workerScope.postMessage({ type: 'frame_decoded', taskId, data: decodedStr });
-          continue;
-        }
-      } catch {
-        // Ignore
-      }
-
-      if (typeof VideoDecoder !== 'undefined') {
-        try {
-          await decodeWebCodecsFrame(frameData, (imageBitmap) => {
-            if (isAborted()) {
-              imageBitmap.close();
-              return;
-            }
-            const { width: dWidth, height: dHeight } = getDownscaledDimensions(imageBitmap.width, imageBitmap.height, 1280);
-
-            const canvas = new OffscreenCanvas(dWidth, dHeight);
-            const ctx = canvas.getContext('2d');
-            if (ctx) {
-              ctx.drawImage(imageBitmap, 0, 0, dWidth, dHeight);
-              const imageData = ctx.getImageData(0, 0, dWidth, dHeight);
-              imageBitmap.close();
-
-              if (isAborted()) {
-                return;
-              }
-
-              const code = decodeRgbaFrame(imageData.data, dWidth, dHeight);
-              if (code && !isAborted()) {
-                workerScope.postMessage({ type: 'frame_decoded', taskId, data: code });
-              }
-            } else {
-              imageBitmap.close();
-            }
-          });
-        } catch (err) {
-          console.error('Error decoding frame with WebCodecs:', err);
-        }
-      }
-    }
-
-    if (taskId) canceledTaskIds.delete(taskId);
-    workerScope.postMessage({ type: 'done', taskId });
-    return;
-  }
-
-  // 2. Check for image file upload or fallback canvas-based scan payloads
+  // 2. Raw RGBA pixels (a buffer or ImageData) decoded with the multi-pass decoder
   const { width: requestWidth, height: requestHeight, imageData } = payload;
   const requestBuffer = payload.buffer instanceof ArrayBuffer ? payload.buffer : null;
 

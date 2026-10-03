@@ -91,7 +91,7 @@ An off-thread Web Worker acknowledgement confirming a stale scan frame was dropp
 _Avoid_: Stale frame response, dropped signal, busy unlock event
 
 **Optical Detection Engine**:
-A consolidated deep module encapsulating real-time webcam frame acquisition, multi-format media decoding (images, WebM, MKV), transferable buffer recycling, and off-thread Web Worker barcode decoding behind a unified entry-point seam.
+A consolidated deep module encapsulating real-time webcam frame acquisition, image-file decoding (photos and screenshots, decoded in the worker with their EXIF orientation), and off-thread Web Worker barcode decoding behind a unified entry-point seam. It does not read video files.
 _Avoid_: Camera frame provider, QR scanner helper, scanner utility
 
 **Camera Scanner Engine**:

@@ -110,10 +110,10 @@ describe('Dependency Compliance Guardrail', () => {
       expect(violations.length).toBe(0);
     });
 
-    it('should ignore whitelisted files (like assetCache.ts) even if they use fetch', () => {
-      // assetCache.ts is a real whitelisted file that calls fetch() for same-origin WASM assets;
+    it('should ignore whitelisted files (like svgExport.ts) even if they use fetch', () => {
+      // svgExport.ts is a real whitelisted file that calls fetch() for logo images it then sanitizes;
       // it should not return any "Unauthorized Network Call" violations.
-      const tempWhitelistedFile = path.resolve('src/utils/assetCache.ts');
+      const tempWhitelistedFile = path.resolve('src/packages/qr-export/lib/svgExport.ts');
       const violations = scanFileForCompliance(tempWhitelistedFile);
       
       const unauthorizedCalls = violations.filter(v => v.type === 'Unauthorized Network Call');

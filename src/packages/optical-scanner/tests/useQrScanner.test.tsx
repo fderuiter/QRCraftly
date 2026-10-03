@@ -77,14 +77,10 @@ describe('useQrScanner adapter', () => {
     await flushFrames(250);
     expect(result.current.latencyHistory.length).toBeGreaterThan(0);
 
-    const telemetry = vi.fn();
-    window.addEventListener('scanner-telemetry-dispatch', telemetry);
     act(() => result.current.stopScanning());
-    window.removeEventListener('scanner-telemetry-dispatch', telemetry);
 
     expect(result.current.isScanning).toBe(false);
     expect(result.current.status).toBe('idle');
-    expect(telemetry).toHaveBeenCalledTimes(1);
   });
 
   it('stops sampling and detaches from the worker on unmount', async () => {

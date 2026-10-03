@@ -32,7 +32,7 @@ describe('bundle_ast_audit call-site authorization', () => {
   });
 
   it('allows a dynamic fetch only when its own function carries an authorized literal', () => {
-    const ok = 'async function w(t){const r=await fetch(t);if(!r.ok)throw new Error("Failed to download WebAssembly demuxer assets");return r}';
+    const ok = 'async function w(t){const r=await fetch(t);if(!r.ok)throw new Error("FileReader error");return r}';
     expect(audit('client/assets/d.js', ok)).toEqual([]);
   });
 
@@ -44,12 +44,12 @@ describe('bundle_ast_audit call-site authorization', () => {
   });
 
   it('rejects fetch when the authorized literal lives in a different function of the same chunk', () => {
-    const code = 'function a(){throw new Error("Failed to download WebAssembly demuxer assets")}\nfunction leak(u){return fetch(u)}';
+    const code = 'function a(){throw new Error("FileReader error")}\nfunction leak(u){return fetch(u)}';
     expect(audit('client/assets/f.js', code)).toHaveLength(1);
   });
 
   it('still rejects WebSocket, XMLHttpRequest and sendBeacon everywhere, including authorized sites', () => {
-    const code = 'function w(){new WebSocket("wss://x");new XMLHttpRequest();navigator.sendBeacon("/x","d");throw new Error("Failed to download WebAssembly demuxer assets")}';
+    const code = 'function w(){new WebSocket("wss://x");new XMLHttpRequest();navigator.sendBeacon("/x","d");throw new Error("FileReader error")}';
     const names = audit('client/assets/h.js', code).map(v => v.apiName).sort();
     expect(names).toEqual(['WebSocket', 'XMLHttpRequest', 'sendBeacon']);
   });

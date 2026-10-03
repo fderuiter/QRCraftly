@@ -23,16 +23,16 @@ We consolidate the entire optical detection pipeline into a unified deep module 
 
 The package exposes minimal, orthogonal public seams:
 
-- **`index.ts` (Headless Entry Point)**: Exposes polymorphic `scan(source, options)` supporting `ImageData`, `HTMLCanvasElement`, `ImageBitmap`, and `File`/`Blob` (static images and WebM/MKV video files), alongside public type definitions and runtime validation contracts.
+- **`index.ts` (Headless Entry Point)**: Exposes polymorphic `scan(source, options)` supporting `ImageData`, `HTMLCanvasElement`, `ImageBitmap`, and `File`/`Blob` (image files only since issue #1098), alongside public type definitions and runtime validation contracts.
 - **`index.ts` also exposes the Camera Scanner Engine** (`createCameraScannerEngine`): the headless owner of the camera frame loop, adaptive sampling, backpressure, downscaling, worker epochs, the hang watchdog, worker restarts and main-thread fallback (see sections 4 and 5).
 - **`client.ts` (React Hook Seam)**: Exposes `useQrScanner`, a thin React adapter over the Camera Scanner Engine that creates it lazily, keeps its sampling bounds in sync, batches its events into React state, destroys it on unmount, and provides a unified `scanFile(file)` method. It does not expose the worker.
-- **`worker.ts` (Web Worker Seam)**: The dedicated off-thread Web Worker entry point consolidating WebCodecs video demuxing, EBML parsing, and pure JavaScript jsQR optical decoding (`attemptBoth`).
+- **`worker.ts` (Web Worker Seam)**: The dedicated off-thread Web Worker entry point: pure JavaScript jsQR decoding of camera frames and of image files, which it decodes itself with `createImageBitmap` (EXIF orientation applied). The WebCodecs demuxer and EBML parser it once held were removed with video-file scanning (issue #1098).
 
 ### 2. Private Internal Subsystem (`lib/`)
 
 All complex internal mechanics are strictly hidden inside `lib/` and are inaccessible to outside callers:
 
-- **`lib/sourceExtractor.ts`**: Unified extraction pipeline for all `ScanSource` types. Handles native HTML5 video frame stepping (24 FPS), WASM WebM demuxer fallback, global file concurrency locking, and client-side telemetry dispatches.
+- **`lib/sourceExtractor.ts`**: Unified extraction pipeline for all `ScanSource` types. An image file is sent to the worker (`lib/imageFile.ts`: native size capped at 2048px, then 1024px) and decoded on the main thread only when the worker cannot. Video files are refused. (Native video frame stepping, the stub WASM demuxer, the global file lock and the unused `scanner-telemetry-dispatch` events were removed in issue #1098.)
 - **`lib/scheduler.ts`**: `AdaptiveFrameScheduler` managing in-flight frame tracking, round-trip execution latency histories, dynamic sleep interval pacing, and immediate 1500ms starvation watchdog triggers.
 - **`lib/bufferPool.ts`**: `DoubleBufferPool` managing transferable zero-copy `ArrayBuffer` instances to prevent runtime garbage collection pauses.
 - **`lib/cameraEngine.ts`**: The Camera Scanner Engine (section 4).
@@ -76,7 +76,7 @@ The camera stream used to be acquired by the app's `useCamera` hook and attached
 
 ## Rationale
 
-- **Deep Module Principle**: Encapsulating high internal complexity (Web Workers, transferable buffers, canvas contexts, adaptive frame pacing, and demuxing) behind narrow public entry points (`scan`, `useQrScanner`) simplifies callers and eliminates abstraction leaks.
+- **Deep Module Principle**: Encapsulating high internal complexity (Web Workers, transferable buffers, canvas contexts, adaptive frame pacing, and image decoding) behind narrow public entry points (`scan`, `useQrScanner`) simplifies callers and eliminates abstraction leaks.
 - **Single Test Surface**: Consolidating file and camera decoding into one module provides a unified test surface ([`tests/opticalScannerIntegration.test.tsx`](../../tests/opticalScannerIntegration.test.tsx) and [`src/packages/optical-scanner/tests/opticalScanner.test.tsx`](../../src/packages/optical-scanner/tests/opticalScanner.test.tsx)).
 - **Duplication Reduction**: Deleting `FrameProvider.ts` dropped repository-wide code duplication to **2.40%**, well beneath the 3.00% invariant limit.
 

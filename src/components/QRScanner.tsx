@@ -162,12 +162,10 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
     setDragOver(false);
     const file = e.dataTransfer.files?.[0];
     if (file) {
-      const isVideo = file.name.toLowerCase().endsWith('.webm') || file.name.toLowerCase().endsWith('.mkv') || file.type.startsWith('video/');
-      const isImage = file.type.startsWith('image/');
-      if (isImage || isVideo) {
+      if (file.type.startsWith('image/')) {
         processFile(file);
       } else {
-        setFileError('Please drop an image or video file.');
+        setFileError('Please drop an image file.');
       }
     }
   };
@@ -254,11 +252,11 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
       <>
         <input
           type="file"
-          accept="image/*, .webm, .mkv, video/webm, video/x-matroska"
+          accept="image/*"
           className="hidden"
           ref={fileInputRef}
           onChange={handleFileChange}
-          aria-label="Upload QR code image or video file"
+          aria-label="Upload QR code image file"
         />
         <Button
           variant="dropzone"
@@ -277,7 +275,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
             <span className="flex flex-col items-center">
               <FileImage className="mb-3 size-10 text-fg-muted" aria-hidden="true" />
               <span className="text-sm font-semibold text-fg-soft">
-                Drag & Drop QR Image or Video
+                Drag & Drop QR Image
               </span>
               <span className="mt-1 max-w-xs text-sm text-fg-muted">
                 or click here to select a file from your device.

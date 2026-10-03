@@ -29,6 +29,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import type { Page, TestInfo } from '@playwright/test';
 import { test, expect } from './fixtures';
 import { codeScene, installFakeCamera, liveCameraTracks, showOnCamera, throttleCpu } from '../tests/utils/fakeCamera';
+import { renderPhoto, withExifOrientation } from '../tests/utils/photoFixture';
 
 const CODE = 'https://qrcraftly.com/scanned';
 const SUCCESS_TOAST = 'Successfully scanned QR code';
@@ -243,6 +244,21 @@ test.describe('Camera scanner with a scripted fake camera', () => {
       await page.getByRole('button', { name: 'Scan from an image instead' }).click();
       await expect(page.getByRole('radio', { name: /file upload/i })).toHaveAttribute('aria-checked', 'true');
       expect(await liveCameraTracks(page)).toBe(0);
+    });
+
+    test('decodes a 12 MP phone photo with an EXIF orientation from the file upload (#1098)', async ({ page, context }, testInfo) => {
+      test.setTimeout(60_000);
+      await installFakeCamera(context);
+      await openGenerator(page);
+      await openScanner(page);
+      await page.getByRole('radio', { name: /file upload/i }).click();
+      // A portrait phone photo: stored 3000x4000 with EXIF orientation 6 (shown rotated 90 degrees).
+      const photo = withExifOrientation(await renderPhoto(page, CODE, { width: 3000, height: 4000 }), 6);
+      await startDecodeTimer(page);
+      await page.getByLabel('Upload QR code image file').setInputFiles({ name: 'photo.jpg', mimeType: 'image/jpeg', buffer: photo });
+      const ms = await decodeTime(page, 20_000);
+      report(testInfo, '12 MP photo upload with EXIF orientation 6', ms);
+      await expect(page.locator('#url-input')).toHaveValue(CODE);
     });
 
     test('releases the camera while the tab is hidden and resumes when it is shown (#1097)', async ({ page, context }) => {

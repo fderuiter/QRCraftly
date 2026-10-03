@@ -1,341 +1,88 @@
 import { ScanSource, ScanResult, ScanOptions, getDownscaledDimensions } from './contracts';
-import { sharedBufferPool } from './bufferPool';
-import { getScannerWorker, dispatchWorkerFrame } from './workerRunner';
+import { dispatchWorkerRequest } from './workerRunner';
 import { decodeImageDataSync } from './decodeSync';
+import { decodeImageAtSizes, FILE_SCAN_MESSAGE, type FileScanRequest } from './imageFile';
 
-// Global lock to prevent parallel uploaded file processing (Constraint)
-let isProcessingFileGlobal = false;
+/** A large photo gets the multi-pass decoder at two sizes; allow a slow phone time for that. */
+const FILE_SCAN_TIMEOUT_MS = 10_000;
+/** File scans number their requests apart from camera frames, which share the worker. */
+let fileSequenceId = 1_000_000;
 
-/**
- * Loads an image file using FileReader and Image element.
- */
-function loadImageFromFile(file: Blob): Promise<HTMLImageElement> {
+const NO_CODE_IN_IMAGE = 'No QR code detected in this image. Try a clearer or higher-contrast QR code image.';
+const NOT_AN_IMAGE = 'Only images can be scanned. Use a photo or screenshot of the QR code.';
+
+/** A decoded image and how to release it. */
+interface LoadedImage {
+  image: CanvasImageSource;
+  width: number;
+  height: number;
+  close: () => void;
+}
+
+/** Loads an image with FileReader and an image element (browsers without `createImageBitmap`). */
+function loadImageElement(file: Blob): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = () => {
       const img = new Image();
       img.onload = () => resolve(img);
       img.onerror = () => reject(new Error('Failed to load image file.'));
-      img.src = event.target?.result as string;
+      img.src = typeof reader.result === 'string' ? reader.result : '';
     };
     reader.onerror = () => reject(new Error('Failed to read file.'));
     reader.readAsDataURL(file);
   });
 }
 
-function isContainerSupportedNatively(file: File): boolean {
-  if (typeof document === 'undefined') return false;
-  const video = document.createElement('video');
-  const type = file.type || (file.name.toLowerCase().endsWith('.mkv') ? 'video/x-matroska' : 'video/webm');
-  const support = video.canPlayType(type);
-  return support === 'probably' || support === 'maybe';
-}
-
-async function processVideoNatively(
-  file: File,
-  signal?: AbortSignal
-): Promise<{ decoded: string | null; latencyHistory: number[]; lastLatency: number }> {
-  const latencyHistory: number[] = [];
-  let lastLatency = 0;
-
-  return new Promise<{ decoded: string | null; latencyHistory: number[]; lastLatency: number }>((resolve, reject) => {
-    const video = document.createElement('video');
-    video.muted = true;
-    video.playsInline = true;
-    const url = URL.createObjectURL(file);
-    if (!url || !url.startsWith('blob:') || !/^blob:[a-zA-Z0-9\-:\/\.]+$/.test(url)) {
-      reject(new Error('Unsafe video URL pattern detected'));
-      return;
-    }
-    video.src = url;
-
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-
-    let isCleanedUp = false;
-    const cleanUp = () => {
-      if (isCleanedUp) return;
-      isCleanedUp = true;
-      video.onloadedmetadata = null;
-      video.onseeked = null;
-      video.onerror = null;
-      sharedBufferPool.clear();
-      video.pause();
-      video.removeAttribute('src');
-      video.load();
-      URL.revokeObjectURL(url);
-    };
-
-    const handleAbort = () => {
-      cleanUp();
-      resolve({ decoded: null, latencyHistory, lastLatency });
-    };
-
-    if (signal?.aborted) {
-      cleanUp();
-      resolve({ decoded: null, latencyHistory, lastLatency });
-      return;
-    }
-
-    signal?.addEventListener('abort', handleAbort);
-
-    video.onloadedmetadata = async () => {
-      if (signal?.aborted) {
-        signal?.removeEventListener('abort', handleAbort);
-        cleanUp();
-        resolve({ decoded: null, latencyHistory, lastLatency });
-        return;
-      }
-
-      const width = video.videoWidth || 640;
-      const height = video.videoHeight || 480;
-      const { width: dWidth, height: dHeight } = getDownscaledDimensions(width, height, 1280);
-      canvas.width = dWidth;
-      canvas.height = dHeight;
-
-      if (!ctx) {
-        signal?.removeEventListener('abort', handleAbort);
-        cleanUp();
-        reject(new Error('Failed to create canvas context'));
-        return;
-      }
-
-      const duration = video.duration || 0;
-      if (duration === 0) {
-        signal?.removeEventListener('abort', handleAbort);
-        cleanUp();
-        resolve({ decoded: null, latencyHistory, lastLatency });
-        return;
-      }
-
-      if (duration > 10) {
-        signal?.removeEventListener('abort', handleAbort);
-        cleanUp();
-        reject(new Error('Video duration exceeds 10 seconds limit.'));
-        return;
-      }
-
-      const fps = 24;
-      const step = 1 / fps;
-      let currentTime = 0;
-      let decodedQR: string | null = null;
-      let fileSequenceId = 1000000;
-
-      sharedBufferPool.resize(dWidth, dHeight);
-
-      const seekAndCapture = () => {
-        if (signal?.aborted || currentTime > duration || decodedQR) {
-          signal?.removeEventListener('abort', handleAbort);
-          cleanUp();
-          resolve({ decoded: decodedQR, latencyHistory, lastLatency });
-          return;
-        }
-        video.currentTime = currentTime;
-      };
-
-      video.onseeked = async () => {
-        if (signal?.aborted || decodedQR) {
-          signal?.removeEventListener('abort', handleAbort);
-          cleanUp();
-          resolve({ decoded: decodedQR, latencyHistory, lastLatency });
-          return;
-        }
-
-        try {
-          ctx.drawImage(video, 0, 0, dWidth, dHeight);
-          const imageData = ctx.getImageData(0, 0, dWidth, dHeight);
-
-          const pooledBuffer = sharedBufferPool.acquire();
-          const view = new Uint8ClampedArray(pooledBuffer);
-          view.set(imageData.data);
-
-          const seqId = fileSequenceId++;
-          const start = performance.now();
-          const { decoded, buffer: recycledBuffer } = await dispatchWorkerFrame(
-            pooledBuffer,
-            dWidth,
-            dHeight,
-            seqId,
-            { signal, timeoutMs: 1500 }
-          );
-          const runDuration = performance.now() - start;
-
-          lastLatency = runDuration;
-          latencyHistory.push(runDuration);
-
-          if (recycledBuffer) {
-            sharedBufferPool.release(recycledBuffer);
-          }
-
-          if (signal?.aborted) {
-            signal?.removeEventListener('abort', handleAbort);
-            cleanUp();
-            resolve({ decoded: null, latencyHistory, lastLatency });
-            return;
-          }
-
-          if (decoded) {
-            decodedQR = decoded;
-            signal?.removeEventListener('abort', handleAbort);
-            cleanUp();
-            resolve({ decoded, latencyHistory, lastLatency });
-            return;
-          }
-        } catch (e) {
-          console.error('Error drawing native video frame:', e);
-        }
-        currentTime += step;
-        seekAndCapture();
-      };
-
-      video.onerror = () => {
-        signal?.removeEventListener('abort', handleAbort);
-        cleanUp();
-        if (!signal?.aborted) {
-          reject(new Error('Failed to load video natively'));
-        } else {
-          resolve({ decoded: null, latencyHistory, lastLatency });
-        }
-      };
-
-      seekAndCapture();
-    };
-
-    video.onerror = () => {
-      signal?.removeEventListener('abort', handleAbort);
-      cleanUp();
-      if (!signal?.aborted) {
-        reject(new Error('Failed to load video metadata'));
-      } else {
-        resolve({ decoded: null, latencyHistory, lastLatency });
-      }
-    };
-  });
-}
-
-async function processVideoWithDemuxer(file: File, signal?: AbortSignal): Promise<string | null> {
-  if (signal?.aborted) return null;
-
-  const { fetchWasmAsset } = await import('@/utils/assetCache');
-  const wasmBuffer = await fetchWasmAsset('/webm-demuxer.wasm');
-  const fileBuffer = await file.arrayBuffer();
-
-  if (signal?.aborted) return null;
-
-  return new Promise<string | null>((resolve, reject) => {
-    let worker: Worker | null = null;
+/** Decodes the file into pixels on this thread, applying its EXIF orientation. */
+async function loadImage(file: Blob): Promise<LoadedImage> {
+  if (typeof createImageBitmap === 'function') {
     try {
-      worker = getScannerWorker();
+      const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+      return { image: bitmap, width: bitmap.width, height: bitmap.height, close: () => bitmap.close() };
     } catch {
-      worker = null;
+      throw new Error('Failed to load image file.');
     }
+  }
+  const img = await loadImageElement(file);
+  return { image: img, width: img.naturalWidth || img.width, height: img.naturalHeight || img.height, close: () => {} };
+}
 
-    if (!worker) {
-      reject(new Error('Background worker not available.'));
-      return;
-    }
+/** Main-thread fallback when the worker cannot decode the file (no OffscreenCanvas, hung, crashed). */
+async function decodeImageFileHere(file: Blob): Promise<string | null> {
+  if (typeof document === 'undefined') {
+    throw new Error('File decoding requires DOM environment');
+  }
+  const loaded = await loadImage(file);
+  try {
+    return decodeImageAtSizes(loaded.image, loaded.width, loaded.height, (width, height) => {
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      return canvas.getContext('2d', { willReadFrequently: true });
+    });
+  } finally {
+    loaded.close();
+  }
+}
 
-    const taskId = `demux-${Date.now()}-${Math.random()}`;
-    let isDone = false;
-    let watchdogTimer: ReturnType<typeof setTimeout> | null = null;
+/** Whether a file can be an image. Files with no type (some pickers) are tried anyway. */
+function mayBeImage(file: Blob): boolean {
+  return file.type === '' || file.type.startsWith('image/');
+}
 
-    const detachListeners = () => {
-      if (watchdogTimer) {
-        clearTimeout(watchdogTimer);
-        watchdogTimer = null;
-      }
-      signal?.removeEventListener('abort', handleAbort);
-      if (worker) {
-        try {
-          if (typeof worker.removeEventListener === 'function') {
-            worker.removeEventListener('message', handleMessage);
-            worker.removeEventListener('error', handleError);
-          } else {
-            // Test doubles without addEventListener: fall back to the handler properties.
-            const legacyWorker: Pick<Worker, 'onmessage' | 'onerror'> = worker;
-            legacyWorker.onmessage = null;
-            legacyWorker.onerror = null;
-          }
-        } catch {
-          // Ignore listener detachment errors
-        }
-      }
-    };
-
-    const handleAbort = () => {
-      if (isDone) return;
-      isDone = true;
-      worker?.postMessage({ type: 'abort', taskId });
-      detachListeners();
-      resolve(null);
-    };
-
-    if (signal?.aborted) {
-      handleAbort();
-      return;
-    }
-
-    signal?.addEventListener('abort', handleAbort);
-
-    // Watchdog: 10s maximum timeout for 10s video demuxing
-    watchdogTimer = setTimeout(() => {
-      if (!isDone) {
-        isDone = true;
-        console.warn(`Watchdog: Demuxer task ${taskId} timed out.`);
-        worker?.postMessage({ type: 'abort', taskId });
-        detachListeners();
-        resolve(decodedResult);
-      }
-    }, 10000);
-
-    let decodedResult: string | null = null;
-
-    const handleMessage = (event: MessageEvent) => {
-      const msg = event.data;
-      if (msg && msg.taskId && msg.taskId !== taskId) {
-        return;
-      }
-      if (signal?.aborted) {
-        handleAbort();
-        return;
-      }
-      if (msg && msg.type === 'frame_decoded') {
-        if (!signal?.aborted && msg.data) {
-          decodedResult = msg.data;
-        }
-      } else if (msg && msg.type === 'done') {
-        if (!isDone) {
-          isDone = true;
-          detachListeners();
-          resolve(decodedResult);
-        }
-      }
-    };
-
-    const handleError = (err: unknown) => {
-      if (!isDone) {
-        isDone = true;
-        detachListeners();
-        if (!signal?.aborted) {
-          reject(err);
-        } else {
-          resolve(null);
-        }
-      }
-    };
-
-    if (typeof worker.addEventListener === 'function') {
-      worker.addEventListener('message', handleMessage);
-      worker.addEventListener('error', handleError);
-    } else {
-      // Test doubles without addEventListener: fall back to the handler properties.
-      const legacyWorker: Pick<Worker, 'onmessage' | 'onerror'> = worker;
-      legacyWorker.onmessage = handleMessage;
-      legacyWorker.onerror = handleError;
-    }
-
-    worker.postMessage({ type: 'demux', fileBuffer, wasmBuffer, taskId }, [fileBuffer, wasmBuffer]);
-  });
+/**
+ * Decodes an image file in the scanner worker, or here when the worker cannot. Concurrent calls
+ * are independent: a newer file does not fail because an older one is still being decoded.
+ */
+async function scanImageFile(file: Blob, signal?: AbortSignal): Promise<string | null> {
+  fileSequenceId += 1;
+  const request: FileScanRequest = { type: FILE_SCAN_MESSAGE, file, sequenceId: fileSequenceId };
+  const result = await dispatchWorkerRequest(request, [], { signal, timeoutMs: FILE_SCAN_TIMEOUT_MS });
+  if (result.decoded || signal?.aborted) return result.decoded;
+  // No error: the worker read the image and found no code. Otherwise it could not decode it.
+  if (!result.error) return null;
+  return decodeImageFileHere(file);
 }
 
 /**
@@ -424,143 +171,21 @@ export async function scanSource(source: ScanSource, options: ScanOptions = {}):
       };
     }
 
-    // 4. File or Blob
+    // 4. Image File or Blob
     if (typeof Blob !== 'undefined' && source instanceof Blob) {
-      if (isProcessingFileGlobal) {
-        throw new Error('An uploaded file is already being processed.');
+      if (!mayBeImage(source)) {
+        throw new Error(NOT_AN_IMAGE);
       }
-      isProcessingFileGlobal = true;
-
-      let latencyHistory: number[] = [];
-      let lastLatency = 0;
-      const frameDropCount = 0;
-
-      try {
-        const file = source as File;
-        const fileName = file.name || 'blob';
-        const fileType = file.type || '';
-        const isVideo = fileType.startsWith('video/') || /\.(mp4|webm|mkv|mov|avi)$/i.test(fileName);
-
-        if (isVideo) {
-          if (file.size > 50 * 1024 * 1024) {
-            throw new Error('Video file exceeds 50MB limit.');
-          }
-
-          const isNative = isContainerSupportedNatively(file);
-          let decoded: string | null = null;
-
-          if (isNative) {
-            const videoResult = await processVideoNatively(file, signal);
-            decoded = videoResult.decoded;
-            latencyHistory = videoResult.latencyHistory;
-            lastLatency = videoResult.lastLatency;
-          } else {
-            decoded = await processVideoWithDemuxer(file, signal);
-          }
-
-          if (signal?.aborted) {
-            return { status: 'fail', data: null, error: 'ABORTED', durationMs: performance.now() - start };
-          }
-
-          const durationMs = performance.now() - start;
-          return {
-            status: decoded ? 'pass' : 'fail',
-            data: decoded,
-            error: decoded ? null : 'No QR code detected in this video.',
-            durationMs,
-          };
-        }
-
-        // Static Image File
-        if (typeof document === 'undefined') {
-          throw new Error('File decoding requires DOM environment');
-        }
-
-        const img = await loadImageFromFile(file);
-        if (signal?.aborted) {
-          return { status: 'fail', data: null, error: 'ABORTED', durationMs: performance.now() - start };
-        }
-
-        const { width: dWidth, height: dHeight } = getDownscaledDimensions(img.width, img.height, 1024);
-        const canvas = document.createElement('canvas');
-        canvas.width = dWidth;
-        canvas.height = dHeight;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-          throw new Error('Failed to create canvas context.');
-        }
-        ctx.drawImage(img, 0, 0, dWidth, dHeight);
-        const imageData = ctx.getImageData(0, 0, dWidth, dHeight);
-
-        let decodedResult: string | null = null;
-
-        // Try off-thread worker decoding with bounded timeout
-        const buffer1024 = imageData.data.buffer.slice(0);
-        const runStart = performance.now();
-        const result = await dispatchWorkerFrame(buffer1024, dWidth, dHeight, 1, {
-          imageData,
-          signal,
-          timeoutMs: 1500,
-        });
-        const duration = performance.now() - runStart;
-        lastLatency = duration;
-        latencyHistory.push(duration);
-
-        if (result.decoded) {
-          decodedResult = result.decoded;
-        } else if (result.error === 'WATCHDOG_TIMEOUT' || result.error === 'WORKER_ERROR' || result.error === 'WORKER_UNAVAILABLE') {
-          // Automatic main-thread fallback if worker timed out or crashed
-          decodedResult = decodeImageDataSync(imageData, dWidth, dHeight);
-        }
-
-        // Higher-resolution second pass if first pass produced no code
-        if (!decodedResult && !signal?.aborted) {
-          const { width: fWidth, height: fHeight } = getDownscaledDimensions(img.width, img.height, 2048);
-          canvas.width = fWidth;
-          canvas.height = fHeight;
-          ctx.drawImage(img, 0, 0, fWidth, fHeight);
-          const imageDataFull = ctx.getImageData(0, 0, fWidth, fHeight);
-          const bufferFull = imageDataFull.data.buffer.slice(0);
-
-          const fullResult = await dispatchWorkerFrame(bufferFull, fWidth, fHeight, 2, {
-            imageData: imageDataFull,
-            signal,
-            timeoutMs: 1500,
-          });
-
-          if (fullResult.decoded) {
-            decodedResult = fullResult.decoded;
-          } else if (fullResult.error === 'WATCHDOG_TIMEOUT' || fullResult.error === 'WORKER_ERROR' || fullResult.error === 'WORKER_UNAVAILABLE') {
-            decodedResult = decodeImageDataSync(imageDataFull, fWidth, fHeight);
-          }
-        }
-
-        if (signal?.aborted) {
-          return { status: 'fail', data: null, error: 'ABORTED', durationMs: performance.now() - start };
-        }
-
-        const durationMs = performance.now() - start;
-        return {
-          status: decodedResult ? 'pass' : 'fail',
-          data: decodedResult,
-          error: decodedResult ? null : 'No QR code detected in this image. Try a clearer or higher-contrast QR code image.',
-          durationMs,
-        };
-      } finally {
-        isProcessingFileGlobal = false;
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(
-            new CustomEvent('scanner-telemetry-dispatch', {
-              detail: {
-                latencyHistory,
-                frameDropCount,
-                processingLatency: lastLatency,
-                sessionType: 'file',
-              },
-            })
-          );
-        }
+      const decoded = await scanImageFile(source, signal);
+      if (signal?.aborted) {
+        return { status: 'fail', data: null, error: 'ABORTED', durationMs: performance.now() - start };
       }
+      return {
+        status: decoded ? 'pass' : 'fail',
+        data: decoded,
+        error: decoded ? null : NO_CODE_IN_IMAGE,
+        durationMs: performance.now() - start,
+      };
     }
 
     throw new Error('Unsupported scan source type');

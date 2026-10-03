@@ -92,33 +92,13 @@ describe('Optical Detection Engine — Unified Package Integration Tests', () =>
     expect(sharedBufferPool.getPoolSize()).toBe(2);
   });
 
-  // 4. Telemetry dispatching
-  it('should dispatch scanner-telemetry-dispatch custom event when scan session stops', () => {
-    const videoNode = makeVideoRef();
-    const videoRef = { current: videoNode };
+  // 4. Images only (#1098)
+  it('turns away video files: the scanner reads images only', async () => {
+    const file = new File(['not an image'], 'clip.mp4', { type: 'video/mp4' });
+    const res = await scan(file);
 
-    const telemetrySpy = vi.fn();
-    window.addEventListener('scanner-telemetry-dispatch', telemetrySpy);
-
-    const { result } = renderHook(() =>
-      useQrScanner({
-        videoRef,
-      })
-    );
-
-    act(() => {
-      result.current.startScanning();
-      result.current.stopScanning();
-    });
-
-    expect(telemetrySpy).toHaveBeenCalled();
-    const event = telemetrySpy.mock.calls[0][0] as CustomEvent;
-    expect(event.detail).toHaveProperty('latencyHistory');
-    expect(event.detail).toHaveProperty('frameDropCount');
-    expect(event.detail).toHaveProperty('processingLatency');
-    expect(event.detail).toHaveProperty('sessionType', 'camera');
-
-    window.removeEventListener('scanner-telemetry-dispatch', telemetrySpy);
+    expect(res.status).toBe('fail');
+    expect(res.error).toMatch(/only images can be scanned/i);
   });
 
   // 5. AbortSignal integration tests
