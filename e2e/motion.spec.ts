@@ -102,15 +102,17 @@ test.describe('Reduced motion', () => {
     expect(await dialogCount(page)).toBe(0);
   });
 
-  test('accordion panels and the download menu change instantly', async ({ page }) => {
+  test('accordion panels and the download options change instantly', async ({ page }) => {
     await gotoHydrated(page, '/');
     await expandPatternSection(page);
     expect(await longestTransitionMs(page, '.disclosure-panel:not([hidden])')).toBeLessThan(1);
 
-    await page.getByRole('button', { name: 'Download', exact: true }).click();
-    await expect(page.getByRole('menu')).toBeVisible();
+    await page.getByRole('button', { name: 'Download options' }).click();
+    const options = page.getByRole('group', { name: 'Download options' });
+    await expect(options).toBeVisible();
+    expect(await options.evaluate((el) => getComputedStyle(el).animationName)).toBe('none');
     await page.keyboard.press('Escape');
-    expect(await page.evaluate(() => document.querySelectorAll('[role="menu"]').length)).toBe(0);
+    await expect(options).toHaveCount(0);
   });
 
   test('type switches and preview updates do not animate', async ({ page }) => {

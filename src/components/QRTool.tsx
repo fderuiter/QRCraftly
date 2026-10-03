@@ -23,19 +23,20 @@ import { Tooltip } from "./ui/Tooltip";
 import { Card } from "./ui/Card";
 import { Alert } from "./ui/Alert";
 import { DEFAULT_CONFIG, SYSTEM_LIMITS } from '@/constants';
-import { QRConfig, SocialFormat, QRStyle, QRErrorCorrectionLevel } from '@/types';
+import { QRConfig, SocialFormat, QRStyle, QRErrorCorrectionLevel, QRType } from '@/types';
 import QRCanvas from '@/components/QRCanvas';
 import { Download, Share2, ChevronDown, CircleHelp, Copy, Check, AlertTriangle } from 'lucide-react';
+import { ExportOptions as DownloadOptions, FORMAT_LABELS, clampSize, type DownloadFormat } from './ExportOptions';
+import { usePopoverDismiss } from '@/hooks/usePopoverDismiss';
 import { Modal } from './ui/Modal';
 import { useDebounce } from '@/hooks/useDebounce';
-import { useQRDownload, ExportStatus, ExportOptions } from '@/hooks/useQRDownload';
+import { useQRDownload, ExportStatus, AssetOptions, type ExportFormat } from '@/hooks/useQRDownload';
 import { getExportRiskPolicy } from '@/utils/exportRiskPolicy';
 import { useToast } from './ui/Toast';
 import { useScannability } from '@/hooks/useScannability';
 import { ScannabilityIndicator } from '@/components/ScannabilityIndicator';
 import { QRProvider, useQRStore, useQRStoreSelector } from '@/context/QRContext';
-import { getSamplePayload } from '@/packages/qr-payload';
-import { Menu } from './ui/Menu';
+import { getSamplePayload, hydrateWifiData } from '@/packages/qr-payload';
 import { useCapabilities } from '@/hooks/useCapabilities';
 import { sidebarControls } from '@/registry';
 import { StressTestButton } from './arcade/StressTestButton';
@@ -75,6 +76,30 @@ const EMPTY_STATE_ID = 'qr-empty-state';
 /** Message shown when there is nothing to export yet. */
 export const EMPTY_CONTENT_MESSAGE = 'Enter content to generate a QR code.';
 
+/** Last download choices, kept in memory only (no storage key) while the tab is open. */
+const lastDownload: { format: DownloadFormat; size: number } = { format: 'png', size: 2048 };
+
+/** How long a finished export shows its check mark. */
+const DONE_MS = 2000;
+
+/**
+ * Suggests a file name from the QR type and a harmless hint from the content: the host of
+ * a URL or the network name of a WiFi code, for example `wifi-HomeNetwork`.
+ * @param config - Current configuration.
+ * @returns A file name without extension.
+ */
+export function suggestFilename(config: Pick<QRConfig, 'type' | 'value'>): string {
+  let hint = '';
+  try {
+    if (config.type === QRType.URL) hint = new URL(config.value).hostname.replace(/^www\./, '');
+    if (config.type === QRType.WIFI) hint = hydrateWifiData(config.value).ssid;
+  } catch {
+    // Not a complete URL or WiFi code yet.
+  }
+  hint = hint.replace(/[^\w.-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40);
+  return `${config.type.toLowerCase()}-${hint || 'qr-code'}`;
+}
+
 /**
  * Renders the QR code generator interface with configuration controls, preview, and export actions.
  * @param title - Optional title used for the generator heading and branding.
@@ -111,20 +136,36 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
 
   const { exportAsset: runExport } = useQRDownload(qrRef, effectiveConfig);
   // Which export is encoding right now; its button shows a loading state until it finishes.
-  const [busyExport, setBusyExport] = useState<'download' | 'copy' | 'share' | null>(null);
-  const exportAsset = useCallback(async (format: Parameters<typeof runExport>[0], options?: ExportOptions) => {
-    setBusyExport(format === 'clipboard' ? 'copy' : format === 'share' ? 'share' : 'download');
+  const [busyExport, setBusyExport] = useState<ExportFormat | null>(null);
+  const exportAsset = useCallback(async (format: ExportFormat, options?: AssetOptions) => {
+    setBusyExport(format);
     try {
       return await runExport(format, options);
     } finally {
       setBusyExport(null);
     }
   }, [runExport]);
-  const [copied, setCopied] = useState(false);
+  // The export that just finished: its button shows a check and the status region says so.
+  const [done, setDone] = useState<{ format: ExportFormat; message: string } | null>(null);
+  useEffect(() => {
+    if (!done) return;
+    const timer = setTimeout(() => setDone(null), DONE_MS);
+    return () => clearTimeout(timer);
+  }, [done]);
+  const [format, setFormat] = useState<DownloadFormat>(lastDownload.format);
+  const [size, setSize] = useState(lastDownload.size);
+  const [customFilename, setCustomFilename] = useState<string | null>(null);
+  const filename = customFilename ?? suggestFilename(config);
+  const [optionsOpen, setOptionsOpen] = useState(false);
+  const exportRowRef = useRef<HTMLDivElement>(null);
+  const optionsButtonRef = useRef<HTMLButtonElement>(null);
+  const closeOptions = useCallback(() => setOptionsOpen(false), []);
+  usePopoverDismiss({ open: optionsOpen, containerRef: exportRowRef, triggerRef: optionsButtonRef, onClose: closeOptions });
   // The mobile action bar steps aside while the on-screen keyboard is up.
   const [inputFocused, setInputFocused] = useState(false);
   useEffect(() => {
-    const update = () => setInputFocused(document.activeElement instanceof Element && document.activeElement.matches(TEXT_ENTRY));
+    // Fields in the Download options sit inside the bar, so they must not hide it.
+    const update = () => setInputFocused(document.activeElement instanceof Element && document.activeElement.matches(TEXT_ENTRY) && !exportRowRef.current?.contains(document.activeElement));
     document.addEventListener('focusin', update);
     document.addEventListener('focusout', update);
     return () => {
@@ -174,83 +215,51 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
   // Debounce the effective config for QRCanvas to prevent lag during rapid typing or style changes.
   const debouncedConfig = useDebounce(effectiveConfig, 100);
 
-  const handleExportResult = useCallback((result: ExportStatus, buttonRef?: React.RefObject<HTMLButtonElement | null>) => {
-    // 1. Focus Recovery: return focus to the originating button control
-    if (buttonRef && buttonRef.current) {
-      buttonRef.current.focus();
-    }
-
-    // 2. Dispatch polite success/error toast notifications
+  /**
+   * Returns focus to the button that started an export and reports the result: success
+   * shows on the button itself and in the polite status region, errors raise a toast.
+   */
+  const handleExportResult = useCallback((result: ExportStatus, buttonRef: React.RefObject<HTMLButtonElement | null>, message: string) => {
+    buttonRef.current?.focus();
     if (result.success) {
-      if (result.format === 'clipboard') {
+      if (result.fallbackTriggered) {
+        addToast({ type: 'info', message: 'Sharing is not supported on this device/browser. The image will be downloaded instead.', duration: 5000 });
+      }
+      if (result.logoOmitted) {
         addToast({
-          type: 'success',
-          message: 'QR code copied to clipboard!',
-          duration: 5000,
-        });
-      } else if (result.format === 'share') {
-        if (result.fallbackTriggered) {
-          addToast({
-            type: 'info',
-            message: 'Sharing is not supported on this device/browser. The image will be downloaded instead.',
-            duration: 5000,
-          });
-        } else {
-          addToast({
-            type: 'success',
-            message: 'QR code shared successfully!',
-            duration: 5000,
-          });
-        }
-      } else if (result.format === 'svg') {
-        if (result.logoOmitted) {
-          addToast({
-            type: 'warning',
-            message: 'The remote logo was omitted from the SVG export due to connection or security limits. Try uploading a local image file instead.',
-            duration: 7000,
-          });
-        } else {
-          addToast({
-            type: 'success',
-            message: 'QR code exported successfully as SVG!',
-            duration: 5000,
-          });
-        }
-      } else {
-        // png, jpeg, webp
-        const upperFormat = result.format ? result.format.toUpperCase() : 'image';
-        addToast({
-          type: 'success',
-          message: `QR code exported successfully as ${upperFormat}!`,
-          duration: 5000,
+          type: 'warning',
+          message: 'The remote logo was omitted from the SVG export due to connection or security limits. Try uploading a local image file instead.',
+          duration: 7000,
         });
       }
-    } else {
-      // Failed or aborted
-      // Check if it's user abort
-      if (result.error && result.error.name === 'AbortError') {
-        // User cancelled, usually no toast needed or just a gentle warning
-        return;
-      }
-      addToast({
-        type: 'error',
-        message: result.error?.message || `Failed to export QR code as ${result.format || 'image'}.`,
-        duration: 5000,
-      });
+      if (result.format) setDone({ format: result.format, message });
+      return;
     }
+    // A cancelled picker or share sheet needs no message.
+    if (result.error?.name === 'AbortError') return;
+    addToast({
+      type: 'error',
+      message: result.error?.message || `Failed to export QR code as ${result.format || 'image'}.`,
+      duration: 5000,
+    });
   }, [addToast]);
 
-  const onCopy = async () => {
-    const action = async (options?: ExportOptions) => {
-      const result = await exportAsset('clipboard', options);
-      if (result.success) {
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      }
-      handleExportResult(result, copyButtonRef);
-    };
-    executeWithSafetyGate(action);
+  const exportWith = (target: ExportFormat, buttonRef: React.RefObject<HTMLButtonElement | null>, message: string) => {
+    executeWithSafetyGate(async (options) => {
+      const result = await exportAsset(target, { ...options, size: clampSize(size), filename });
+      handleExportResult(result, buttonRef, message);
+    });
   };
+
+  const onDownload = () => {
+    lastDownload.format = format;
+    lastDownload.size = clampSize(size);
+    exportWith(format, downloadButtonRef, `${FORMAT_LABELS[format]} downloaded`);
+  };
+  const onCopy = () => exportWith('clipboard', copyButtonRef, 'Copied');
+  const onCopySvg = () => exportWith('svg-copy', optionsButtonRef, 'SVG code copied');
+  const onShare = () => exportWith('share', shareButtonRef, 'Shared');
+  const copied = done?.format === 'clipboard';
 
   const notifyEmpty = () => {
     addToast({
@@ -260,7 +269,7 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
     });
   };
 
-  const executeWithSafetyGate = (action: (options?: ExportOptions) => void | Promise<void>) => {
+  const executeWithSafetyGate = (action: (options?: AssetOptions) => void | Promise<void>) => {
     if (isEmpty) {
       notifyEmpty();
       return;
@@ -271,24 +280,6 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
     } else {
       action();
     }
-  };
-
-  const handleSaveAsFlow = async (format: 'png' | 'jpeg' | 'webp', options?: ExportOptions) => {
-    const result = await exportAsset(format, options);
-    handleExportResult(result, downloadButtonRef);
-  };
-
-  const handleSaveSvgFlow = async (options?: ExportOptions) => {
-    const result = await exportAsset('svg', options);
-    handleExportResult(result, downloadButtonRef);
-  };
-
-  const onShare = async () => {
-    const action = async (options?: ExportOptions) => {
-      const result = await exportAsset('share', options);
-      handleExportResult(result, shareButtonRef);
-    };
-    executeWithSafetyGate(action);
   };
 
   return (
@@ -370,69 +361,79 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
 
                 {/* One export row. Below md it docks to the bottom of the screen as a sticky action bar. */}
                 <div
-                   className={`fixed inset-x-0 bottom-0 z-30 flex items-center gap-2 border-t border-line bg-surface/95 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-overlay backdrop-blur md:static md:z-auto md:border-0 md:bg-transparent md:p-0 md:shadow-none md:backdrop-blur-none ${inputFocused ? 'max-md:hidden' : ''}`}
+                   ref={exportRowRef}
+                   className={`fixed inset-x-0 bottom-0 z-30 flex items-center gap-2 border-t border-line bg-surface/95 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-overlay backdrop-blur md:relative md:z-auto md:border-0 md:bg-transparent md:p-0 md:shadow-none md:backdrop-blur-none ${inputFocused ? 'max-md:hidden' : ''}`}
                    data-testid="export-actions"
                 >
+                   <span role="status" className="sr-only">{done?.message ?? ''}</span>
                    <span
                      aria-hidden="true"
                      className={`size-2.5 shrink-0 rounded-full md:hidden ${STATUS_DOT_CLASSES[getScanVerdict({ status: scannabilityStatus, health }) ?? 'checking']}`}
                      data-testid="export-status-dot"
                    />
-                   {isEmpty ? (
-                     <Button
-                        ref={downloadButtonRef}
-                        variant="primary"
-                        size="bar"
-                        fullWidth
-                        className="flex-1"
-                        aria-disabled="true"
-                        aria-describedby={EMPTY_STATE_ID}
-                        onClick={notifyEmpty}
-                     >
-                        <Download className="size-4" aria-hidden="true" />
-                        Download
-                        <ChevronDown className="ml-auto size-4 opacity-80" aria-hidden="true" />
-                     </Button>
-                   ) : (
-                   <Menu
-                      id="download-format"
+                   <Button
+                      ref={downloadButtonRef}
+                      variant={!isEmpty && getExportRiskPolicy({ status: scannabilityStatus, health }) === 'unsafe' ? 'error' : 'primary'}
+                      size="bar"
                       className="flex-1"
-                      triggerRef={downloadButtonRef}
-                      items={[
-                        { id: 'png', label: <><span aria-hidden="true" className="size-1.5 rounded-full bg-teal-500"></span> PNG (High Quality)</>, onSelect: () => executeWithSafetyGate((opts) => handleSaveAsFlow('png', opts)) },
-                        { id: 'jpeg', label: <><span aria-hidden="true" className="size-1.5 rounded-full bg-blue-500"></span> JPEG (Compact)</>, onSelect: () => executeWithSafetyGate((opts) => handleSaveAsFlow('jpeg', opts)) },
-                        { id: 'webp', label: <><span aria-hidden="true" className="size-1.5 rounded-full bg-purple-500"></span> WebP (Modern)</>, onSelect: () => executeWithSafetyGate((opts) => handleSaveAsFlow('webp', opts)) },
-                        { id: 'svg', separatorBefore: true, label: <><span aria-hidden="true" className="size-1.5 rounded-full bg-orange-500"></span> SVG (Vector)</>, onSelect: () => executeWithSafetyGate((opts) => handleSaveSvgFlow(opts)) },
-                      ]}
-                      renderTrigger={(triggerProps) => (
-                        <Button
-                          {...triggerProps}
-                          variant={getExportRiskPolicy({ status: scannabilityStatus, health }) === 'unsafe' ? 'error' : 'primary'}
-                          size="bar"
-                          fullWidth
-                          loading={busyExport === 'download'}
-                        >
+                      loading={busyExport === format}
+                      aria-disabled={isEmpty ? 'true' : undefined}
+                      aria-describedby={isEmpty ? EMPTY_STATE_ID : undefined}
+                      onClick={isEmpty ? notifyEmpty : onDownload}
+                   >
+                      {done && done.format === format ? (
+                        <>
+                          <Check className="size-4 motion-safe:animate-pop-in" aria-hidden="true" />
+                          Downloaded
+                        </>
+                      ) : (
+                        <>
                           <Download className="size-4" aria-hidden="true" />
-                          Download
-                          <ChevronDown className="ml-auto size-4 opacity-80" aria-hidden="true" />
-                        </Button>
+                          Download {FORMAT_LABELS[format]}
+                        </>
                       )}
-                   />
+                   </Button>
+                   <Tooltip content="Download options">
+                     <Button
+                        ref={optionsButtonRef}
+                        variant="secondary"
+                        size="bar"
+                        iconOnly
+                        aria-label="Download options"
+                        aria-expanded={optionsOpen}
+                        aria-controls={optionsOpen ? 'download-options' : undefined}
+                        onClick={() => setOptionsOpen((open) => !open)}
+                     >
+                        <ChevronDown className={`size-5 motion-safe:transition-transform ${optionsOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
+                     </Button>
+                   </Tooltip>
+                   {optionsOpen && (
+                     <DownloadOptions
+                        id="download-options"
+                        format={format}
+                        onFormatChange={setFormat}
+                        size={size}
+                        onSizeChange={setSize}
+                        filename={filename}
+                        onFilenameChange={setCustomFilename}
+                        onCopySvg={onCopySvg}
+                        copySvgBusy={busyExport === 'svg-copy'}
+                     />
                    )}
 
-                   <Tooltip content="Copy image">
+                   <Tooltip content={copied ? 'Copied' : 'Copy image'}>
                      <Button
                         ref={copyButtonRef}
                         variant="secondary"
                         size="bar"
                         iconOnly
                         onClick={onCopy}
-                        loading={busyExport === 'copy'}
-                        aria-label={copied ? "Copied to clipboard" : "Copy QR code to clipboard"}
+                        loading={busyExport === 'clipboard'}
+                        aria-label={copied ? "Copied" : "Copy QR code to clipboard"}
                         aria-disabled={isEmpty ? 'true' : undefined}
                         aria-describedby={isEmpty ? EMPTY_STATE_ID : undefined}
                      >
-                        {copied ? <Check className="size-5 text-success" aria-hidden="true" /> : <Copy className="size-5" aria-hidden="true" />}
+                        {copied ? <Check className="size-5 text-success motion-safe:animate-pop-in" aria-hidden="true" /> : <Copy className="size-5" aria-hidden="true" />}
                      </Button>
                    </Tooltip>
 
@@ -445,7 +446,7 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
                           iconOnly
                           onClick={onShare}
                           loading={busyExport === 'share'}
-                          aria-label="Share QR code"
+                          aria-label={done?.format === 'share' ? 'Shared' : 'Share QR code'}
                           aria-disabled={isEmpty ? 'true' : undefined}
                           aria-describedby={isEmpty ? EMPTY_STATE_ID : undefined}
                        >

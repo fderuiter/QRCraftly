@@ -41,9 +41,9 @@ test.describe('QR preview is the hero on desktop (#1050)', () => {
       expect(box!.height).toBeGreaterThanOrEqual(min);
       // Fully visible, with the export control on screen too, without scrolling.
       expect(box!.y + box!.height).toBeLessThanOrEqual(height);
-      await expect(page.getByRole('button', { name: 'Download', exact: true })).toBeInViewport({ ratio: 1 });
+      await expect(page.getByRole('button', { name: 'Download PNG' })).toBeInViewport({ ratio: 1 });
 
-      await expect(page.getByRole('button', { name: 'Download', exact: true })).toHaveCount(1);
+      await expect(page.getByRole('button', { name: 'Download PNG' })).toHaveCount(1);
       await expect(page.getByRole('button', { name: /as PNG/ })).toHaveCount(0);
 
       // The preview heading stays on one line.
@@ -66,7 +66,7 @@ test.describe('Mobile action bar and mini preview (#1051)', () => {
       await gotoHydrated(page, '/');
 
       const bar = page.getByTestId('export-actions');
-      const download = page.getByRole('button', { name: 'Download', exact: true });
+      const download = page.getByRole('button', { name: 'Download PNG' });
       await expect(download).toBeInViewport();
       const barBox = (await bar.boundingBox())!;
       expect(barBox.y + barBox.height).toBeCloseTo(viewport.height, 0);
@@ -111,6 +111,7 @@ test.describe('Mobile action bar and mini preview (#1051)', () => {
     await page.getByRole('button', { name: 'Pattern & Colors' }).scrollIntoViewIfNeeded();
     await expect(page.getByTestId('mini-preview')).toBeHidden();
     const position = await page.getByTestId('export-actions').evaluate((el) => getComputedStyle(el).position);
-    expect(position).toBe('static');
+    // In flow (relative only to anchor the Download options panel), not docked.
+    expect(position).toBe('relative');
   });
 });

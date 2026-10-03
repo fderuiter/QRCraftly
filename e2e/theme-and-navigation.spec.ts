@@ -108,25 +108,28 @@ test.describe('Security page (#1056)', () => {
   });
 });
 
-test.describe('Download menu keyboard support', () => {
-  test('formats can be chosen without a pointer and Escape restores focus', async ({ page }) => {
+test.describe('Download options keyboard support (#1052)', () => {
+  test('a format can be chosen without a pointer and Escape restores focus', async ({ page }) => {
     await page.goto('/');
     await page.waitForSelector('main[data-hydrated="true"]');
-    const trigger = page.getByRole('button', { name: 'Download', exact: true });
-    await expect(trigger).toHaveAttribute('aria-haspopup', 'menu');
+    const trigger = page.getByRole('button', { name: 'Download options' });
     await trigger.focus();
+    await page.keyboard.press('Enter');
+    await expect(trigger).toHaveAttribute('aria-expanded', 'true');
 
-    await page.keyboard.press('ArrowDown');
-    await expect(page.getByRole('menuitem', { name: /PNG/ })).toBeFocused();
-    await page.keyboard.press('End');
-    await expect(page.getByRole('menuitem', { name: /SVG/ })).toBeFocused();
+    const options = page.getByRole('group', { name: 'Download options' });
+    await page.keyboard.press('Tab');
+    await expect(options.getByRole('radio', { name: 'PNG' })).toBeFocused();
+    await page.keyboard.press('ArrowRight');
+    await expect(options.getByRole('radio', { name: 'SVG' })).toBeFocused();
+    await expect(page.getByRole('button', { name: 'Download SVG' })).toBeVisible();
     await page.keyboard.press('Escape');
-    await expect(page.getByRole('menu')).toHaveCount(0);
+    await expect(options).toHaveCount(0);
     await expect(trigger).toBeFocused();
 
     await page.keyboard.press('Enter');
-    await expect(page.getByRole('menuitem', { name: /PNG/ })).toBeFocused();
+    await expect(options).toBeVisible();
     await page.mouse.click(5, 5);
-    await expect(page.getByRole('menu')).toHaveCount(0);
+    await expect(options).toHaveCount(0);
   });
 });

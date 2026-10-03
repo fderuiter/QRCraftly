@@ -76,7 +76,7 @@ test.describe('Content-first mobile generator (#795)', () => {
       // Preview and download stay one tap away.
       await page.getByRole('link', { name: 'Preview & download' }).click();
       await expect(page.getByTestId('qr-stage')).toBeInViewport();
-      await expect(page.getByRole('button', { name: 'Download', exact: true })).toBeInViewport();
+      await expect(page.getByRole('button', { name: 'Download PNG' })).toBeInViewport();
     });
   }
 

@@ -78,17 +78,10 @@ describe('Modular Accessibility Test Helpers & Full Panel Sweep', () => {
       </ToastProvider>
     );
 
-    // Locate the primary Download menu button
-    const downloadBtn = screen.getByRole('button', { name: /^Download$/ });
-
-    // Open download menu (focus moves to the first item) and choose a format
+    // Locate the primary Download button and export from it
+    const downloadBtn = screen.getByRole('button', { name: /^Download (PNG|SVG|JPEG|WebP)$/ });
+    downloadBtn.focus();
     fireEvent.click(downloadBtn);
-    const pngOption = screen.getByRole('menuitem', { name: /PNG \(High Quality\)/i });
-    expect(document.activeElement).toBe(pngOption);
-    fireEvent.click(pngOption);
-
-    // Choosing an item closes the menu and returns focus to its trigger
-    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
 
     // Verify warning dialog is open
     expect(screen.getByText('Scan Safety Warning')).toBeInTheDocument();
@@ -102,7 +95,7 @@ describe('Modular Accessibility Test Helpers & Full Panel Sweep', () => {
       expect(screen.queryByText('Scan Safety Warning')).not.toBeInTheDocument();
     });
 
-    // Verify focus is restored to the element that opened the dialog (the menu trigger)
+    // Verify focus is restored to the element that opened the dialog (the Download button)
     expect(document.activeElement).toBe(downloadBtn);
   });
 
