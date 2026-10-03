@@ -1,5 +1,6 @@
 import { contentRegistry } from '@/data/contentRegistry';
 import { getExampleImage, getRelatedTypePages } from '@/data/relatedPages';
+import { isDangerousUrl } from '@/utils/security';
 import { Breadcrumbs } from './Breadcrumbs';
 import { SectionHeading } from './ui/SectionHeading';
 import { Accordion, AccordionItem } from './ui/Accordion';
@@ -107,13 +108,18 @@ export function SidebarContent({ toolId }: SidebarContentProps) {
             More QR code types
           </h2>
           <ul className="list-none space-y-2 text-sm">
-            {related.map((page) => (
-              <li key={page.id}>
-                <a href={page.href} className="font-semibold text-accent underline-offset-2 hover:underline">
-                  {page.name}
-                </a>
-              </li>
-            ))}
+            {related.map((page) => {
+              if (!isDangerousUrl(page.href)) {
+                return (
+                  <li key={page.id}>
+                    <a href={page.href} className="font-semibold text-accent underline-offset-2 hover:underline">
+                      {page.name}
+                    </a>
+                  </li>
+                );
+              }
+              return null;
+            })}
           </ul>
         </section>
       )}

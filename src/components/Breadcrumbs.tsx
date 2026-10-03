@@ -1,3 +1,4 @@
+import { isDangerousUrl } from '@/utils/security';
 import { formatPathName } from '@/utils/metadataEngine';
 
 interface BreadcrumbsProps {
@@ -24,18 +25,23 @@ export function Breadcrumbs({ pageId }: BreadcrumbsProps) {
         </li>
         {segments.map((segment, index) => {
           const last = index === segments.length - 1;
+          const href = `/${segments.slice(0, index + 1).join('/')}`;
+          if (!last && !isDangerousUrl(href)) {
+            return (
+              <li key={segment} className="flex items-center gap-x-2">
+                <span aria-hidden="true">/</span>
+                <a href={href} className="underline-offset-2 hover:underline">
+                  {formatPathName(segment)}
+                </a>
+              </li>
+            );
+          }
           return (
             <li key={segment} className="flex items-center gap-x-2">
               <span aria-hidden="true">/</span>
-              {last ? (
-                <span aria-current="page" className="font-medium text-fg">
-                  {formatPathName(segment)}
-                </span>
-              ) : (
-                <a href={`/${segments.slice(0, index + 1).join('/')}`} className="underline-offset-2 hover:underline">
-                  {formatPathName(segment)}
-                </a>
-              )}
+              <span aria-current={last ? 'page' : undefined} className="font-medium text-fg">
+                {formatPathName(segment)}
+              </span>
             </li>
           );
         })}
