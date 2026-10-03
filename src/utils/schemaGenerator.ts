@@ -1,3 +1,4 @@
+import type { Guide } from '../data/guides';
 import { ToolContent, AuxiliaryContent, getContentForPath, getContentById } from '../data/contentRegistry';
 import { resolveDomainForPath, resolvePublicUrl, JsonLdObject } from './metadataEngine';
 
@@ -181,5 +182,54 @@ export function generateSchema(
   return {
     "@context": "https://schema.org",
     "@graph": graph
+  };
+}
+
+/**
+ * Builds the Article JSON-LD for one guide, with the QRCraftly organization as author and publisher.
+ * @param guide - The guide being rendered.
+ * @param domain - Origin the page is served from.
+ * @returns A schema.org graph.
+ */
+export function generateGuideSchema(guide: Guide, domain: string): JsonLdObject {
+  const url = resolvePublicUrl(`/guides/${guide.slug}`);
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Article",
+        "headline": guide.title,
+        "description": guide.description,
+        "url": url,
+        "mainEntityOfPage": url,
+        "datePublished": guide.datePublished,
+        "dateModified": guide.dateModified,
+        "inLanguage": "en",
+        "author": { "@id": `${domain}/#organization` },
+        "publisher": { "@id": `${domain}/#organization` },
+        "citation": guide.sources.map(source => source.url)
+      }
+    ]
+  };
+}
+
+/**
+ * Builds the CollectionPage JSON-LD for the guides index.
+ * @param description - Index page description.
+ * @param domain - Origin the page is served from.
+ * @returns A schema.org graph.
+ */
+export function generateGuideIndexSchema(description: string, domain: string): JsonLdObject {
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "CollectionPage",
+        "name": "QR code guides",
+        "description": description,
+        "url": resolvePublicUrl('/guides'),
+        "publisher": { "@id": `${domain}/#organization` }
+      }
+    ]
   };
 }

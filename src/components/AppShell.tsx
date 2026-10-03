@@ -29,6 +29,7 @@ const FOOTER_LINK_CLASSES = 'transition-colors hover:text-accent';
 
 const COMPANY_LINKS = [
   ['About', '/about'],
+  ['Guides', '/guides'],
   ['No-Ads Pledge', '/free-forever'],
   ['Security Policy', '/security#security'],
   ['Privacy Architecture', '/security#compliance'],

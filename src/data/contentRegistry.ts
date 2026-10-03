@@ -943,6 +943,36 @@ export const auxiliaryRegistry: Record<string, AuxiliaryContent> = {
     "personas": [TargetPersona.SecurityConsciousEnterprise],
     "valueProposition": StrategicValueCategory.ZeroTransitPrivacySovereignty
   },
+  "guides": {
+    "id": "guides",
+    "name": "QR Code Guides",
+    "seoTitle": "QR Code Guides: Plain Answers With Sources - QRCraftly",
+    "description": "Plain-language guides on why QR codes stop working, static versus dynamic codes and more, with sources. Free, ad-free and nothing tracked.",
+    "image": "/og/guides.png",
+    "imageAlt": "QR code guides - QRCraftly",
+    "personas": [TargetPersona.SecurityConsciousEnterprise],
+    "valueProposition": StrategicValueCategory.ZeroTransitPrivacySovereignty
+  },
+  "guides/why-qr-codes-stop-working": {
+    "id": "guides/why-qr-codes-stop-working",
+    "name": "Why your QR code stopped working (and how to make one that never will)",
+    "seoTitle": "Why Your QR Code Stopped Working (and How to Fix It for Good) | QRCraftly",
+    "description": "QR codes do not expire by themselves. Find out whether yours was switched off, points at a dead page or is just hard to scan, and how to make one that lasts.",
+    "image": "/og/guides-why-qr-codes-stop-working.png",
+    "imageAlt": "Why QR codes stop working - QRCraftly",
+    "personas": [TargetPersona.SecurityConsciousEnterprise],
+    "valueProposition": StrategicValueCategory.ZeroTransitPrivacySovereignty
+  },
+  "guides/static-vs-dynamic-qr-codes": {
+    "id": "guides/static-vs-dynamic-qr-codes",
+    "name": "Static vs dynamic QR codes: what you give up and what you pay",
+    "seoTitle": "Static vs Dynamic QR Codes: What You Give Up and What You Pay | QRCraftly",
+    "description": "A plain comparison of static and dynamic QR codes: editing, scan counts, cost, privacy and what happens if the provider disappears, with a way to keep both.",
+    "image": "/og/guides-static-vs-dynamic-qr-codes.png",
+    "imageAlt": "Static vs dynamic QR codes - QRCraftly",
+    "personas": [TargetPersona.SecurityConsciousEnterprise],
+    "valueProposition": StrategicValueCategory.ZeroTransitPrivacySovereignty
+  },
   "file-transfer/receive": {
     "id": "file-transfer/receive",
     "name": "Offline Animated QR File Receiver",
