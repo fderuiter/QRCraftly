@@ -22,6 +22,7 @@ process.env.VITE_DOMAIN = resolvedDomain;
 const { resolvePublicUrl, getSanitizedPath } = await import('../src/utils/metadataEngine');
 const { contentRegistry, auxiliaryRegistry, getLegacyRedirect } = await import('../src/data/contentRegistry');
 
+const { getGuide } = await import('../src/data/guides');
 const { execBinary } = await import('./utils/execHelper.js');
 
 const REPO_ROOT = path.resolve(__dirname, '..');
@@ -180,6 +181,9 @@ function hasFullHistory(): boolean {
  * @returns The date, or null when it cannot be determined reliably.
  */
 export function getLastModified(cleanPath: string): string | null {
+  const guideSlug = /^\/guides\/([^/]+)$/.exec(cleanPath)?.[1];
+  const guide = guideSlug ? getGuide(guideSlug) : undefined;
+  if (guide) return guide.dateModified;
   if (!hasFullHistory()) return null;
   const pageDir = cleanPath === '/' || cleanPath === '' ? 'src/pages/index' : `src/pages${cleanPath}`;
   if (!fs.existsSync(path.join(REPO_ROOT, pageDir))) return null;

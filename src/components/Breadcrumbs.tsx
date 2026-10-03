@@ -31,7 +31,7 @@ export function Breadcrumbs({ pageId }: BreadcrumbsProps) {
               return (
                 <li key={segment} className="flex items-center gap-x-2">
                   <span aria-hidden="true">/</span>
-                  <a href={href} className="underline-offset-2 hover:underline">
+                  <a href={href} className="inline-block py-1 underline-offset-2 hover:underline">
                     {formatPathName(segment)}
                   </a>
                 </li>
