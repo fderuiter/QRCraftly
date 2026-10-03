@@ -127,7 +127,7 @@ test.describe('Canvas aspect ratio reflects selected format', () => {
     await page.getByRole('radio', { name: /Select Portrait format/i }).click();
 
     // Wait for re-render
-    const canvas = page.locator('canvas');
+    const canvas = page.locator('canvas:not([aria-hidden])');
     await expect(canvas).toBeVisible();
 
     const wrapper = page.locator('.aspect-\\[4\\/5\\]').first();

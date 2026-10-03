@@ -8,6 +8,15 @@ import { ROUTES, gotoHydrated } from './utils/routes';
  * This prevents false-positive WCAG failures from empty or default color picker frames.
  */
 async function runAccessibilityScan(page: Page) {
+  // Let enter animations (the dialog fade and pop-in) finish, so axe measures final colours.
+  await page.evaluate(() =>
+    Promise.all(
+      document
+        .getAnimations()
+        .filter((animation) => Number.isFinite(Number(animation.effect?.getComputedTiming().endTime)))
+        .map((animation) => animation.finished.catch(() => undefined)),
+    ),
+  );
   const accessibilityScanResults = await new AxeBuilder({ page })
     .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
     .exclude('input[type="color"]') // Filter out native browser color pickers
