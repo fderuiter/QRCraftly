@@ -22,6 +22,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   clearRetainedAppearance,
   QRProvider,
+  stageGeneratorContent,
   useQRStore,
   useQRStoreSelector,
   useOptionalQRStoreSelector,
@@ -463,5 +464,32 @@ describe('QRProvider retainAppearance', () => {
     });
     expect(Object.keys(window.localStorage)).not.toContain('fgColor');
     expect(JSON.stringify({ ...window.localStorage })).not.toContain('#010203');
+  });
+});
+
+describe('stageGeneratorContent (#1101)', () => {
+  const generatorWrapper = (type: QRType) =>
+    ({ children }: { children: React.ReactNode }) => (
+      <QRProvider initialConfig={{ type }} retainAppearance>{children}</QRProvider>
+    );
+
+  it('opens the next generator of the same type with the scanned content, once', () => {
+    stageGeneratorContent({ type: QRType.WIFI, value: 'WIFI:T:WPA;S:Home;P:pw;;' });
+    const first = renderHook(() => useQRStore(), { wrapper: generatorWrapper(QRType.WIFI) });
+    expect(first.result.current.getState().config.value).toBe('WIFI:T:WPA;S:Home;P:pw;;');
+    first.unmount();
+
+    const second = renderHook(() => useQRStore(), { wrapper: generatorWrapper(QRType.WIFI) });
+    expect(second.result.current.getState().config.value).toBe(DEFAULT_CONFIG.value);
+  });
+
+  it('is ignored by a generator of another type and never stored', () => {
+    stageGeneratorContent({ type: QRType.TEXT, value: 'Scanned note' });
+    const other = renderHook(() => useQRStore(), { wrapper: generatorWrapper(QRType.URL) });
+    expect(other.result.current.getState().config.value).toBe(DEFAULT_CONFIG.value);
+    expect(JSON.stringify({ ...window.localStorage })).not.toContain('Scanned note');
+    other.unmount();
+    const text = renderHook(() => useQRStore(), { wrapper: generatorWrapper(QRType.TEXT) });
+    expect(text.result.current.getState().config.value).toBe('Scanned note');
   });
 });

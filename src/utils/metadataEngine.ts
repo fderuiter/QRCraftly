@@ -185,6 +185,7 @@ export const formatPathName = (segment: string): string => {
     'security': 'Security & Privacy',
     'free-forever': 'Free Forever',
     'acknowledgements': 'Open-Source Acknowledgements',
+    'qr-code-scanner': 'QR Code Scanner',
   };
 
   if (overrides[segment]) {

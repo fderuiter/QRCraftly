@@ -39,7 +39,6 @@ import {
 import { renderPhoto, withExifOrientation } from '../tests/utils/photoFixture';
 
 const CODE = 'https://qrcraftly.com/scanned';
-const SUCCESS_TOAST = 'Successfully scanned QR code';
 /** PR CI budget for decoding a code that is in view when the scanner opens (#1103). */
 const BASELINE_BUDGET_MS = 1000;
 /** PR CI budget for a scanner reopened after a long session with no code (#1095, #1103). */
@@ -57,24 +56,28 @@ declare global {
   }
 }
 
-/** Starts the clock and watches for the next "scanned" toast. */
+/**
+ * Starts the clock and watches for the next found code: the reticle locking onto it, or the
+ * result sheet when there are no corners to lock onto (#1101).
+ */
 async function startDecodeTimer(page: Page): Promise<void> {
-  await page.evaluate((text) => {
+  await page.evaluate(() => {
     const timer = { startedAt: performance.now(), decodedAt: null as number | null };
     window.__decode = timer;
-    const observer = new MutationObserver((records) => {
-      for (const record of records) {
-        for (const node of record.addedNodes) {
-          if (node.textContent?.includes(text)) {
-            timer.decodedAt = performance.now();
-            observer.disconnect();
-            return;
-          }
-        }
+    const observer = new MutationObserver(() => {
+      if (document.querySelector('[data-locked="true"], [data-testid="scan-result"]')) {
+        timer.decodedAt = performance.now();
+        observer.disconnect();
       }
     });
-    observer.observe(document.body, { childList: true, subtree: true, characterData: true });
-  }, SUCCESS_TOAST);
+    observer.observe(document.body, { childList: true, subtree: true, attributes: true });
+  });
+}
+
+/** Opens the result in the generator and checks the content arrived. */
+async function editInGenerator(page: Page, code = CODE): Promise<void> {
+  await page.getByRole('button', { name: 'Edit in generator' }).click();
+  await expect(page.locator('#url-input')).toHaveValue(code);
 }
 
 /** Waits for the decode the timer is watching and returns the elapsed milliseconds. */
@@ -125,7 +128,8 @@ async function scanWith(page: Page, scene: Parameters<typeof codeScene>[1] = {})
   await startDecodeTimer(page);
   await openScanner(page);
   const ms = await decodeTime(page);
-  await expect(page.locator('#url-input')).toHaveValue(CODE);
+  await expect(page.getByTestId('scan-result-host')).toHaveText('qrcraftly.com');
+  await editInGenerator(page);
   return ms;
 }
 
@@ -141,8 +145,9 @@ test.describe('Camera scanner with a scripted fake camera', () => {
       const baseline = await scanWith(page);
       report(testInfo, 'baseline', baseline);
       expect(baseline).toBeLessThan(BASELINE_BUDGET_MS);
-      // A successful scan closes the scanner and stops the camera.
+      // A found code stops the camera, and opening it in the generator closes the scanner.
       await expect.poll(() => liveCameraTracks(page)).toBe(0);
+      await expect(page.getByRole('dialog')).toHaveCount(0);
 
       // Nothing goes over the network between opening the scanner and the decode, and nothing the
       // page requests afterwards (its own code, the service worker's precache) carries the payload.
@@ -268,10 +273,11 @@ test.describe('Camera scanner with a scripted fake camera', () => {
       await openGenerator(page);
       await openScanner(page);
 
-      await expect(page.getByText('Camera Access Denied')).toBeVisible();
+      await expect(page.getByRole('heading', { name: 'Camera Access Denied' })).toBeVisible();
+      await expect(page.getByRole('alert')).toContainText('Camera Access Denied');
       await expect(page.getByRole('button', { name: /retry permission/i })).toBeVisible();
       await page.getByRole('button', { name: 'Scan from an image instead' }).click();
-      await expect(page.getByRole('radio', { name: /file upload/i })).toHaveAttribute('aria-checked', 'true');
+      await expect(page.getByRole('radio', { name: 'Image' })).toHaveAttribute('aria-checked', 'true');
       expect(await liveCameraTracks(page)).toBe(0);
     });
 
@@ -280,14 +286,14 @@ test.describe('Camera scanner with a scripted fake camera', () => {
       await installFakeCamera(context);
       await openGenerator(page);
       await openScanner(page);
-      await page.getByRole('radio', { name: /file upload/i }).click();
+      await page.getByRole('radio', { name: 'Image' }).click();
       // A portrait phone photo: stored 3000x4000 with EXIF orientation 6 (shown rotated 90 degrees).
       const photo = withExifOrientation(await renderPhoto(page, CODE, { width: 3000, height: 4000 }), 6);
       await startDecodeTimer(page);
       await page.getByLabel('Upload QR code image file').setInputFiles({ name: 'photo.jpg', mimeType: 'image/jpeg', buffer: photo });
       const ms = await decodeTime(page, 20_000);
       report(testInfo, '12 MP photo upload with EXIF orientation 6', ms);
-      await expect(page.locator('#url-input')).toHaveValue(CODE);
+      await editInGenerator(page);
     });
 
     test('releases the camera while the tab is hidden and resumes when it is shown (#1097)', async ({ page, context, browserName }) => {
@@ -314,7 +320,7 @@ test.describe('Camera scanner with a scripted fake camera', () => {
 
       // The resumed camera still scans.
       await showOnCamera(page, codeScene(CODE));
-      await expect(page.locator('#url-input')).toHaveValue(CODE, { timeout: 10_000 });
+      await expect(page.getByTestId('scan-result')).toBeVisible({ timeout: 10_000 });
       await expect.poll(() => liveCameraTracks(page)).toBe(0);
     });
   });

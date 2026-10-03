@@ -246,4 +246,16 @@ describe('Modal Component Accessibility and Behavior', () => {
       expect(handleClose).toHaveBeenCalledTimes(1);
     });
   });
+
+  it('offers a large size that fills the screen on phones, with a custom close label', async () => {
+    const { getByRole } = render(
+      <Modal isOpen={true} onClose={() => {}} title="Scan a QR code" size="lg" closeLabel="Close scanner">
+        <div>Viewfinder</div>
+      </Modal>
+    );
+    const dialog = getByRole('dialog', { name: 'Scan a QR code' });
+    expect(dialog).toHaveClass('h-full', 'max-w-3xl');
+    expect(getByRole('button', { name: 'Close scanner' })).toBeInTheDocument();
+    expect(await axe(document.body)).toHaveNoViolations();
+  });
 });

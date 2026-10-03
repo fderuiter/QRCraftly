@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useSyncExternalStore } from 'react';
+import React, { createContext, useContext, useEffect, useState, useSyncExternalStore } from 'react';
 import { QRConfig } from '@/types';
 import { DEFAULT_CONFIG } from '@/constants';
 import { sanitizeConfig } from '@/packages/qr-payload';
@@ -113,9 +113,33 @@ export function clearRetainedAppearance(): void {
   retainedAppearance = null;
 }
 
+/**
+ * Content a scan asked to open in the generator (#1101), kept in volatile module memory for
+ * the client-side navigation to the generator route. Never persisted or put in the URL.
+ */
+let stagedContent: Pick<QRConfig, 'type' | 'value'> | null = null;
+
+/**
+ * Hands scanned content to the next generator route that opens for its type.
+ * @param content - The QR type and the raw content.
+ */
+export function stageGeneratorContent(content: Pick<QRConfig, 'type' | 'value'>): void {
+  stagedContent = { ...content };
+}
+
+/** Staged content for a generator route of this type, or null. */
+function stagedContentFor(type: QRConfig['type'] | undefined): Pick<QRConfig, 'type' | 'value'> | null {
+  return stagedContent && stagedContent.type === type ? stagedContent : null;
+}
+
 function createQRStore(initialConfig?: Partial<QRConfig>, retainAppearance = false): QRStore {
   let state: QRState = {
-    config: { ...DEFAULT_CONFIG, ...initialConfig, ...(retainAppearance ? retainedAppearance : null) },
+    config: {
+      ...DEFAULT_CONFIG,
+      ...initialConfig,
+      ...(retainAppearance ? retainedAppearance : null),
+      ...(retainAppearance ? stagedContentFor(initialConfig?.type ?? DEFAULT_CONFIG.type) : null),
+    },
     moduleCount: 0,
     isScannabilityFallbackActive: false,
   };
@@ -190,6 +214,12 @@ function createQRStore(initialConfig?: Partial<QRConfig>, retainAppearance = fal
  */
 export const QRProvider = ({ children, initialConfig, retainAppearance = false }: { children: React.ReactNode, initialConfig?: Partial<QRConfig>, retainAppearance?: boolean }) => {
   const [store] = useState(() => createQRStore(initialConfig, retainAppearance));
+
+  // Staged content is read once: clear it after the first generator mounts with it. (Clearing
+  // here, not in the state initialiser, keeps StrictMode's double initialiser call safe.)
+  useEffect(() => {
+    if (retainAppearance && stagedContentFor(store.getState().config.type)) stagedContent = null;
+  }, [store, retainAppearance]);
 
   return (
     <QRStoreContext.Provider value={store}>

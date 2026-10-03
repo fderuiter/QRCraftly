@@ -17,14 +17,16 @@
 */
 
 import React, { useState, useEffect } from 'react';
-import { QRConfig, QRType } from '../types';
+import { QRConfig } from '../types';
 import { TypeSelector, useInputLogic } from './inputs';
 import { useDynamicFocus } from '../hooks/useDynamicFocus';
 import { Button } from './ui/Button';
 import { Camera } from 'lucide-react';
 import { QRScanner } from './QRScanner';
+import { Modal } from './ui/Modal';
 import { useToast } from './ui/Toast';
-import { INPUT_REGISTRY } from './inputs/InputRegistry';
+import { getQRTypeLabel } from '@/data/qrTypeLabels';
+import type { ScanDescription } from './scanner/describeScan';
 
 /**
  * Props for the InputPanel component.
@@ -34,32 +36,6 @@ interface InputPanelProps {
   config: Pick<QRConfig, 'type' | 'value'>;
   /** Callback to update the configuration. */
   onChange: (updates: Partial<QRConfig>) => void;
-}
-
-/** Human-readable names for QR types, used in announcements and toasts (never raw enum values). */
-const QR_TYPE_LABELS: Record<QRType, string> = {
-  [QRType.URL]: 'URL',
-  [QRType.TEXT]: 'Text',
-  [QRType.WIFI]: 'WiFi',
-  [QRType.EVENT]: 'Event',
-  [QRType.EMAIL]: 'Email',
-  [QRType.VCARD]: 'vCard contact',
-  [QRType.PHONE]: 'Phone',
-  [QRType.SMS]: 'SMS',
-  [QRType.PAYMENT]: 'Payment',
-  [QRType.LOCATION]: 'Location',
-  [QRType.MEETING]: 'Meeting',
-  [QRType.SOCIAL]: 'Social',
-  [QRType.BULK_CSV]: 'Bulk CSV Batch',
-};
-
-/**
- * Returns the human-readable label for a QR type.
- * @param type - The QR type.
- * @returns The display label, falling back to the raw value for unknown types.
- */
-export function getQRTypeLabel(type: QRType): string {
-  return QR_TYPE_LABELS[type] ?? type;
 }
 
 /**
@@ -76,6 +52,8 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
   const containerRef = useDynamicFocus<HTMLDivElement>([config.type]);
   const [announcement, setAnnouncement] = useState('');
   const [scannerActive, setScannerActive] = useState(false);
+  // Each opening is a fresh scanner, even when it reopens during the previous close animation.
+  const [scanSession, setScanSession] = useState(0);
   const { addToast } = useToast();
 
   // Update live region announcement when type changes
@@ -84,28 +62,18 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
     setAnnouncement(`${getQRTypeLabel(config.type)} input loaded`);
   }, [config.type]);
 
-  const handleScanSuccess = (decodedData: string) => {
+  // A scan opens in the generator only from the result sheet, and never silently: replaced
+  // content can be restored from the toast (#1101).
+  const handleEditScan = (scan: ScanDescription) => {
     setScannerActive(false);
-
-    // Auto-detect the correct QRType based on registry hydrate matchers
-    let detectedType = QRType.TEXT;
-    for (const key of Object.keys(INPUT_REGISTRY) as QRType[]) {
-      const entry = INPUT_REGISTRY[key];
-      if (entry && entry.canHydrateFn && entry.canHydrateFn(decodedData)) {
-        detectedType = key;
-        break;
-      }
-    }
-
-    onChange({
-      type: detectedType,
-      value: decodedData,
-    });
-
+    const previous = { type: config.type, value: config.value };
+    const replacing = previous.value.trim() !== '' && previous.value !== scan.text;
+    onChange({ type: scan.type, value: scan.text });
     addToast({
       type: 'success',
-      message: `Successfully scanned QR code! Type detected: ${getQRTypeLabel(detectedType)}`,
-      duration: 5000,
+      message: `Loaded the scanned ${getQRTypeLabel(scan.type)} code into the generator.`,
+      duration: replacing ? 10000 : 5000,
+      action: replacing ? { label: 'Undo', onClick: () => onChange(previous) } : undefined,
     });
   };
 
@@ -132,32 +100,28 @@ const InputPanel: React.FC<InputPanelProps> = ({ config, onChange }) => {
         // pressed right after typing acts on what was typed.
         onBlur={flush}
       >
-        {scannerActive ? (
-          <QRScanner
-            onScanSuccess={handleScanSuccess}
-            onClose={() => setScannerActive(false)}
-          />
-        ) : (
-          InputComponent && (
-            <InputComponent {...inputProps} />
-          )
-        )}
+        {InputComponent && <InputComponent {...inputProps} />}
       </div>
 
-      {/* Scanner Control Button */}
-      {!scannerActive && (
-        <div className="flex justify-end">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setScannerActive(true)}
-            className="flex items-center gap-2"
-          >
-            <Camera className="size-4" />
-            Scan QR Code
-          </Button>
-        </div>
-      )}
+      {/* Scanner: a dialog that returns focus to this button when it closes (#1102). */}
+      <div className="flex justify-end">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            setScanSession((session) => session + 1);
+            setScannerActive(true);
+          }}
+          className="flex items-center gap-2"
+          aria-haspopup="dialog"
+        >
+          <Camera className="size-4" aria-hidden="true" />
+          Scan QR Code
+        </Button>
+      </div>
+      <Modal isOpen={scannerActive} onClose={() => setScannerActive(false)} title="Scan a QR code" size="lg" closeLabel="Close scanner">
+        <QRScanner key={scanSession} onEdit={handleEditScan} />
+      </Modal>
     </div>
   );
 };

@@ -16,9 +16,10 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import { axe } from 'vitest-axe';
-import InputPanel, { getQRTypeLabel } from './InputPanel';
+import InputPanel from './InputPanel';
+import { getQRTypeLabel } from '@/data/qrTypeLabels';
 import { DEFAULT_CONFIG } from '../constants';
 import { QRType, QRConfig, WifiEncryption, WifiData, EmailData } from '../types';
 import { FIXTURES } from '../../tests/fixtures/data';
@@ -26,6 +27,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { WifiInput, EmailInput } from './inputs';
 import { ToastProvider } from './ui/Toast';
 import type { QRScannerProps } from './QRScanner';
+import { describeScan } from './scanner/describeScan';
 
 /**
  * The scan-toast tests swap the camera scanner for a button that reports a fixed
@@ -37,7 +39,7 @@ vi.mock('./QRScanner', async importOriginal => {
   const actual = await importOriginal<typeof import('./QRScanner')>();
   const Scanner = (props: QRScannerProps) =>
     scannerMock.simulate ? (
-      <button type="button" onClick={() => props.onScanSuccess('BEGIN:VCARD\nVERSION:3.0\nFN:Ada Lovelace\nEND:VCARD')}>
+      <button type="button" onClick={() => props.onEdit?.(describeScan('BEGIN:VCARD\nVERSION:3.0\nFN:Ada Lovelace\nEND:VCARD'))}>
         Simulate scan
       </button>
     ) : (
@@ -464,25 +466,6 @@ describe('InputPanel Component', () => {
       expect(screen.getByText('5 / 2500')).toBeInTheDocument();
   });
 
-  it('toggles the QR scanner when clicking the Scan QR Code button', () => {
-    renderPanel();
-
-    const scanBtn = screen.getByRole('button', { name: /scan qr code/i });
-    expect(scanBtn).toBeInTheDocument();
-
-    // Click to open scanner
-    fireEvent.click(scanBtn);
-
-    // Scan QR Code button should be hidden, and webcam select button from QRScanner should be visible
-    expect(scanBtn).not.toBeInTheDocument();
-    expect(screen.getByRole('radio', { name: /webcam/i })).toBeInTheDocument();
-
-    // Close button of QRScanner should close it and restore manual input
-    const closeBtn = screen.getByLabelText(/close scanner/i);
-    fireEvent.click(closeBtn);
-
-    expect(screen.getByRole('button', { name: /scan qr code/i })).toBeInTheDocument();
-  });
 });
 
 describe('Input Character Counts', () => {
@@ -708,7 +691,7 @@ describe('InputPanel UX', () => {
 });
 
 
-describe('InputPanel scan toast (#978)', () => {
+describe('InputPanel scanner dialog (#978, #1101, #1102)', () => {
   beforeEach(() => {
     scannerMock.simulate = true;
   });
@@ -717,6 +700,29 @@ describe('InputPanel scan toast (#978)', () => {
     scannerMock.simulate = false;
   });
 
+  it('opens the scanner as a dialog that takes focus, closes on Escape and returns focus (#1102)', async () => {
+    renderPanel();
+
+    const scanBtn = screen.getByRole('button', { name: /scan qr code/i });
+    scanBtn.focus();
+    fireEvent.click(scanBtn);
+
+    const dialog = screen.getByRole('dialog', { name: 'Scan a QR code' });
+    expect(dialog).toHaveAttribute('aria-modal', 'true');
+    expect(screen.getByRole('button', { name: 'Simulate scan' })).toBeInTheDocument();
+    await waitFor(() => expect(dialog.contains(document.activeElement)).toBe(true));
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(document.activeElement).toBe(scanBtn);
+  });
+
+  it('closes the scanner from its close button', async () => {
+    renderPanel();
+    fireEvent.click(screen.getByRole('button', { name: /scan qr code/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Close scanner' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  });
   it('names every QR type in human-readable form', () => {
     for (const type of Object.values(QRType)) {
       expect(getQRTypeLabel(type)).toBeTruthy();
@@ -725,15 +731,31 @@ describe('InputPanel scan toast (#978)', () => {
     expect(getQRTypeLabel(QRType.VCARD)).toBe('vCard contact');
   });
 
-  it('shows the detected type with its display name, not the raw enum value', () => {
+  it('names the detected type, not the raw enum value, and loads an empty generator without Undo', () => {
+    const onChange = vi.fn();
     render(
       <ToastProvider>
-        <InputPanel config={{ ...DEFAULT_CONFIG }} onChange={vi.fn()} />
+        <InputPanel config={{ ...DEFAULT_CONFIG, value: '' }} onChange={onChange} />
       </ToastProvider>
     );
     fireEvent.click(screen.getByRole('button', { name: /scan qr code/i }));
     fireEvent.click(screen.getByRole('button', { name: 'Simulate scan' }));
-    expect(screen.getByText(/Type detected: vCard contact/)).toBeInTheDocument();
-    expect(screen.queryByText(/Type detected: VCARD/)).not.toBeInTheDocument();
+    expect(onChange).toHaveBeenCalledWith({ type: QRType.VCARD, value: expect.stringContaining('Ada Lovelace') });
+    expect(screen.getByText(/scanned vCard contact code/)).toBeInTheDocument();
+    expect(screen.queryByText(/VCARD code/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Undo' })).not.toBeInTheDocument();
+  });
+
+  it('offers Undo when a scan replaces existing content (#1101)', () => {
+    const onChange = vi.fn();
+    render(
+      <ToastProvider>
+        <InputPanel config={{ ...DEFAULT_CONFIG, type: QRType.TEXT, value: 'My draft' }} onChange={onChange} />
+      </ToastProvider>
+    );
+    fireEvent.click(screen.getByRole('button', { name: /scan qr code/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Simulate scan' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Undo' }));
+    expect(onChange).toHaveBeenLastCalledWith({ type: QRType.TEXT, value: 'My draft' });
   });
 });

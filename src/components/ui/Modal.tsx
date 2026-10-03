@@ -27,7 +27,25 @@ interface ModalProps {
    * Whether clicking on the backdrop should close the modal.
    */
   dismissOnBackdropClick?: boolean;
+  /**
+   * `md` (default) is a compact dialog. `lg` fills the screen on phones and is a large dialog
+   * on wider screens, for content such as a camera viewfinder.
+   */
+  size?: 'md' | 'lg';
+  /**
+   * Accessible name of the close button.
+   */
+  closeLabel?: string;
 }
+
+const SIZE_CLASSES = {
+  md: { backdrop: 'p-4', panel: 'max-h-[90vh] max-w-md rounded-xl', body: 'p-6' },
+  lg: {
+    backdrop: 'p-0 sm:p-4',
+    panel: 'h-full max-h-none max-w-3xl sm:h-auto sm:max-h-[95vh] sm:rounded-xl',
+    body: 'p-0 sm:p-4',
+  },
+} as const;
 
 /**
  * Modal component that renders a modal dialog with an optional backdrop dismissal.
@@ -37,6 +55,8 @@ interface ModalProps {
  * @param root0.title The title of the modal.
  * @param root0.children The content of the modal.
  * @param root0.dismissOnBackdropClick Whether clicking on the backdrop should close the modal.
+ * @param root0.size Compact (`md`) or large (`lg`, full screen on phones).
+ * @param root0.closeLabel Accessible name of the close button.
  * @returns The rendered modal element or null.
  */
 export const Modal: React.FC<ModalProps> = ({ 
@@ -44,8 +64,11 @@ export const Modal: React.FC<ModalProps> = ({
   onClose, 
   title, 
   children,
-  dismissOnBackdropClick = false
+  dismissOnBackdropClick = false,
+  size = 'md',
+  closeLabel = 'Close modal',
 }) => {
+  const sizeClasses = SIZE_CLASSES[size];
   const containerRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
   // Unique per instance so two dialogs never share a labelling id.
@@ -110,7 +133,7 @@ export const Modal: React.FC<ModalProps> = ({
   return createPortal(
     <div 
       ref={containerRef}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-scrim p-4 data-closed:pointer-events-none motion-safe:animate-fade-in motion-safe:data-closed:animate-fade-out"
+      className={`fixed inset-0 z-50 flex items-center justify-center bg-scrim ${sizeClasses.backdrop} data-closed:pointer-events-none motion-safe:animate-fade-in motion-safe:data-closed:animate-fade-out`}
       role="presentation"
       data-closed={closing || undefined}
       inert={closing || undefined}
@@ -120,15 +143,15 @@ export const Modal: React.FC<ModalProps> = ({
         role="dialog" 
         aria-modal="true" 
         aria-labelledby={titleId}
-        className="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-xl bg-surface shadow-modal motion-safe:animate-pop-in motion-safe:in-data-closed:animate-pop-out"
+        className={`flex w-full flex-col overflow-hidden bg-surface shadow-modal motion-safe:animate-pop-in motion-safe:in-data-closed:animate-pop-out ${sizeClasses.panel}`}
       >
         <div className="flex items-center justify-between border-b border-line-subtle px-6 py-4">
           <h2 id={titleId} className="text-lg font-semibold text-fg">{title}</h2>
-          <Button variant="ghost" iconOnly size="sm" onClick={onClose} aria-label="Close modal" className="shrink-0">
+          <Button variant="ghost" iconOnly size="sm" onClick={onClose} aria-label={closeLabel} className="shrink-0">
             <X className="size-5" />
           </Button>
         </div>
-        <div className="overflow-y-auto p-6">
+        <div className={`overflow-y-auto ${sizeClasses.body}`}>
           {children}
         </div>
       </div>

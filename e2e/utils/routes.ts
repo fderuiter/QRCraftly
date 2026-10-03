@@ -39,6 +39,7 @@ export const ROUTES = [
   '/file-transfer',
   '/file-transfer/receive',
   '/arcade',
+  '/qr-code-scanner',
   '/this-page-does-not-exist',
 ] as const;
 

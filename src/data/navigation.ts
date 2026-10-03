@@ -84,6 +84,7 @@ export const GENERATOR_FOOTER_LINKS: readonly (readonly [label: string, href: st
 
 /** The tools beyond the generators, listed in the footer, on About and on the 404 page. */
 export const TOOL_LINKS: readonly (readonly [label: string, href: string])[] = [
+  ['QR Code Scanner', '/qr-code-scanner'],
   ['Send a File', '/file-transfer'],
   ['Receive a File', '/file-transfer/receive'],
   ['QR Arcade', '/arcade'],
