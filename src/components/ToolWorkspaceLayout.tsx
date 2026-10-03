@@ -20,6 +20,7 @@ import { Badge } from './ui/Badge';
 import React, { useEffect, useRef } from 'react';
 import { Eye } from 'lucide-react';
 import { isDangerousUrl } from '@/utils/security';
+import { PanelErrorBoundary } from './ErrorBoundary';
 
 /** Media query matching the desktop workspace breakpoint (Tailwind `md`). */
 export const DESKTOP_WORKSPACE_QUERY = '(min-width: 48rem)';
@@ -52,6 +53,7 @@ export interface ToolWorkspaceLayoutProps {
 
 /**
  * Shared responsive workspace used by the QR generator, file sender and file receiver.
+ * Each panel has its own error boundary, so a crash in one panel leaves the others working.
  *
  * Mobile contract: normal document flow in one column (controls, preview, secondary controls),
  * no viewport-height panes and no nested scroll containers, so the document is the only
@@ -106,7 +108,9 @@ export function ToolWorkspaceLayout({
         <div className="z-20 border-b border-line-subtle bg-surface transition-colors duration-300 md:sticky md:top-0">
           {header}
         </div>
-        <div className="space-y-8 p-4 sm:p-6">{controls}</div>
+        <div className="space-y-8 p-4 sm:p-6">
+          <PanelErrorBoundary>{controls}</PanelErrorBoundary>
+        </div>
       </aside>
 
       <section
@@ -129,13 +133,17 @@ export function ToolWorkspaceLayout({
             <div className="absolute top-0 left-0 size-96 -translate-1/2 rounded-full bg-teal-200 blur-3xl transition-colors duration-300 dark:bg-teal-900"></div>
             <div className="absolute right-0 bottom-0 size-96 translate-1/2 rounded-full bg-slate-300 blur-3xl transition-colors duration-300 dark:bg-slate-800"></div>
           </div>
-          <div className="relative z-10 w-full max-w-md lg:max-w-xl xl:max-w-2xl">{preview}</div>
+          <div className="relative z-10 w-full max-w-md lg:max-w-xl xl:max-w-2xl">
+            <PanelErrorBoundary>{preview}</PanelErrorBoundary>
+          </div>
         </div>
       </section>
 
       {secondary && (
         <div className="min-w-0 border-line bg-surface transition-colors duration-300 md:col-start-1 md:row-start-2 md:border-r">
-          <div className="space-y-8 p-4 pb-12 sm:p-6 sm:pb-12">{secondary}</div>
+          <div className="space-y-8 p-4 pb-12 sm:p-6 sm:pb-12">
+            <PanelErrorBoundary>{secondary}</PanelErrorBoundary>
+          </div>
         </div>
       )}
     </div>

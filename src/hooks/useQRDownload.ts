@@ -43,6 +43,36 @@ const toError = (err: unknown): Error => {
 
 export type { ExportOptions };
 
+/** Export choices from the Download options, on top of the safety-gate options. */
+export interface AssetOptions extends ExportOptions {
+  /** Width in pixels of a raster export; defaults to the preview canvas width. */
+  size?: number;
+  /** File name without extension; defaults to `<type>-qr-code-qrcraftly-<date>`. */
+  filename?: string;
+}
+
+/** Every export the hook performs. `svg-copy` copies the SVG markup as text. */
+export type ExportFormat = 'png' | 'jpeg' | 'webp' | 'svg' | 'clipboard' | 'share' | 'svg-copy';
+
+/**
+ * Returns the canvas to encode: the preview itself, or a copy scaled to `size` pixels wide.
+ * Upscaling keeps module edges crisp (no smoothing); downscaling smooths.
+ * @param canvas - The preview canvas.
+ * @param size - Target width in pixels.
+ * @returns The canvas to export.
+ */
+function scaledCanvas(canvas: HTMLCanvasElement, size?: number): HTMLCanvasElement {
+  if (!size || size === canvas.width || !canvas.width) return canvas;
+  const out = document.createElement('canvas');
+  out.width = size;
+  out.height = Math.round((size * canvas.height) / canvas.width);
+  const ctx = out.getContext('2d');
+  if (!ctx) return canvas;
+  ctx.imageSmoothingEnabled = size < canvas.width;
+  ctx.drawImage(canvas, 0, 0, out.width, out.height);
+  return out;
+}
+
 /**
  * Return type for the useQRDownload hook.
  */
@@ -50,7 +80,7 @@ export interface ExportStatus {
   /** Indicates whether the export operation succeeded. */
   success: boolean;
   /** Format of the exported asset. */
-  format?: 'png' | 'jpeg' | 'webp' | 'svg' | 'clipboard' | 'share';
+  format?: ExportFormat;
   /** Error object if export failed. */
   error?: Error;
   /** Indicates whether a fallback export mechanism was triggered. */
@@ -64,18 +94,15 @@ export interface ExportStatus {
  */
 export interface UseQRDownloadReturn {
   /** Unified seam for all asset exports. */
-  exportAsset: (
-    format: 'png' | 'jpeg' | 'webp' | 'svg' | 'clipboard' | 'share',
-    options?: ExportOptions
-  ) => Promise<ExportStatus>;
+  exportAsset: (format: ExportFormat, options?: AssetOptions) => Promise<ExportStatus>;
   /** Downloads the canvas image to local device storage. */
-  downloadToDevice: (format: 'png' | 'jpeg' | 'webp', options?: ExportOptions) => Promise<ExportStatus>;
+  downloadToDevice: (format: 'png' | 'jpeg' | 'webp', options?: AssetOptions) => Promise<ExportStatus>;
   /** Opens native Save-As file picker if supported, with direct download fallback. */
-  handleSaveAs: (format: 'png' | 'jpeg' | 'webp', options?: ExportOptions) => Promise<ExportStatus>;
+  handleSaveAs: (format: 'png' | 'jpeg' | 'webp', options?: AssetOptions) => Promise<ExportStatus>;
   /** Generates and downloads vector SVG QR code. */
-  handleSaveSvg: (options?: ExportOptions) => Promise<ExportStatus>;
+  handleSaveSvg: (options?: AssetOptions) => Promise<ExportStatus>;
   /** Shares QR code image via Web Share API. */
-  handleShare: (options?: ExportOptions) => Promise<ExportStatus>;
+  handleShare: (options?: AssetOptions) => Promise<ExportStatus>;
   /** Copies QR code image to system clipboard. */
   handleCopy: (options?: ExportOptions) => Promise<ExportStatus>;
 }
@@ -127,7 +154,9 @@ export function useQRDownload(
    * @param ext - The file extension.
    * @returns The generated filename string.
    */
-  const getFilename = useCallback((ext: string) => {
+  const getFilename = useCallback((ext: string, base?: string) => {
+    const chosen = base?.replace(/[^\w.-]+/g, '-').slice(0, 80);
+    if (chosen) return `${chosen}.${ext}`;
     const type = config.type.toLowerCase();
     const date = new Date().toISOString().split('T')[0];
     return `${type}-qr-code-qrcraftly-${date}.${ext}`;
@@ -139,17 +168,17 @@ export function useQRDownload(
    * @param format - The desired image format.
    * @param options - Optional export options (e.g. allowUnsafe to bypass scannability pre-flight checks).
    */
-  const downloadToDevice = useCallback(async (format: 'png' | 'jpeg' | 'webp', options?: ExportOptions): Promise<ExportStatus> => {
+  const downloadToDevice = useCallback(async (format: 'png' | 'jpeg' | 'webp', options?: AssetOptions): Promise<ExportStatus> => {
     const canvas = qrRef.current?.querySelector('canvas');
     if (canvas) {
       if (!options?.allowUnsafe && !validateScannability(canvas)) {
         return { success: false, format, error: new Error('SCAN_VALIDATION_FAILED') };
       }
       try {
-        const url = canvas.toDataURL(`image/${format}`);
+        const url = scaledCanvas(canvas, options?.size).toDataURL(`image/${format}`);
         const link = document.createElement('a');
         const ext = getExtension(format);
-        link.download = getFilename(ext);
+        link.download = getFilename(ext, options?.filename);
         link.href = url;
         document.body.appendChild(link);
         link.click();
@@ -168,7 +197,7 @@ export function useQRDownload(
    * @param format - The desired image format.
    * @param options - Optional export options (e.g. allowUnsafe to bypass scannability pre-flight checks).
    */
-  const handleSaveAs = useCallback(async (format: 'png' | 'jpeg' | 'webp', options?: ExportOptions): Promise<ExportStatus> => {
+  const handleSaveAs = useCallback(async (format: 'png' | 'jpeg' | 'webp', options?: AssetOptions): Promise<ExportStatus> => {
     const canvas = qrRef.current?.querySelector('canvas');
     if (!canvas) return { success: false, format, error: new Error('Canvas not found') };
 
@@ -180,7 +209,7 @@ export function useQRDownload(
     if (canSaveFilePicker) {
       try {
         const blob = await new Promise<Blob | null>((resolve) =>
-          canvas.toBlob(resolve, `image/${format}`)
+          scaledCanvas(canvas, options?.size).toBlob(resolve, `image/${format}`)
         );
 
         if (!blob) throw new Error('Failed to create image blob');
@@ -189,7 +218,7 @@ export function useQRDownload(
 
         if (!window.showSaveFilePicker) throw new Error('File System Access API unavailable');
         const handle = await window.showSaveFilePicker({
-          suggestedName: getFilename(ext),
+          suggestedName: getFilename(ext, options?.filename),
           types: [{
             description: 'QR Code Image',
             accept: { [`image/${format}`]: [`.${ext}`] },
@@ -251,7 +280,7 @@ export function useQRDownload(
    * Falls back to downloading if sharing is not supported.
    * @param options - Optional export options (e.g. allowUnsafe to bypass scannability pre-flight checks).
    */
-  const handleShare = useCallback(async (options?: ExportOptions): Promise<ExportStatus> => {
+  const handleShare = useCallback(async (options?: AssetOptions): Promise<ExportStatus> => {
     const canvas = qrRef.current?.querySelector('canvas');
     if (!canvas) return { success: false, format: 'share', error: new Error('Canvas not found') };
 
@@ -260,13 +289,13 @@ export function useQRDownload(
     }
 
     return new Promise<ExportStatus>((resolve) => {
-      canvas.toBlob(async (blob) => {
+      scaledCanvas(canvas, options?.size).toBlob(async (blob) => {
         if (!blob) {
           resolve({ success: false, format: 'share', error: new Error('Blob creation failed') });
           return;
         }
 
-        const file = new File([blob], 'qrcode.png', { type: 'image/png' });
+        const file = new File([blob], getFilename('png', options?.filename ?? 'qrcode'), { type: 'image/png' });
 
         if (canShare && navigator.canShare({ files: [file] })) {
           try {
@@ -287,7 +316,7 @@ export function useQRDownload(
         }
       }, 'image/png');
     });
-  }, [qrRef, downloadToDevice, canShare, validateScannability]);
+  }, [qrRef, downloadToDevice, canShare, validateScannability, getFilename]);
 
   /**
    * Generates a vector SVG file from the current QR configuration and triggers
@@ -296,37 +325,52 @@ export function useQRDownload(
    * verified for scannability.
    * @param options - Optional export options (e.g. allowUnsafe to bypass scannability pre-flight checks).
    */
-  const handleSaveSvg = useCallback(async (options?: ExportOptions): Promise<ExportStatus> => {
+  const buildSvg = useCallback(async (options?: AssetOptions): Promise<{ svg: string; logoOmitted: boolean } | null> => {
+    let logoOmitted = false;
+    const svg = await generateQRSvg(config, {
+      onLogoOmitted: () => {
+        logoOmitted = true;
+      },
+    });
+    if (!options?.allowUnsafe && !(await validateSvgScannability(svg, config, options))) return null;
+    return { svg, logoOmitted };
+  }, [config]);
+
+  const handleSaveSvg = useCallback(async (options?: AssetOptions): Promise<ExportStatus> => {
     try {
-      let logoOmitted = false;
-      const svgString = await generateQRSvg(config, {
-        onLogoOmitted: () => {
-          logoOmitted = true;
-        },
-      });
+      const built = await buildSvg(options);
+      if (!built) return { success: false, format: 'svg', error: new Error('SCAN_VALIDATION_FAILED') };
 
-      if (!options?.allowUnsafe) {
-        const isScannable = await validateSvgScannability(svgString, config, options);
-        if (!isScannable) {
-          return { success: false, format: 'svg', error: new Error('SCAN_VALIDATION_FAILED') };
-        }
-      }
-
-      const blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+      const blob = new Blob([built.svg], { type: 'image/svg+xml;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.download = getFilename('svg');
+      link.download = getFilename('svg', options?.filename);
       link.href = url;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
-      return { success: true, format: 'svg', logoOmitted };
+      return { success: true, format: 'svg', logoOmitted: built.logoOmitted };
     } catch (err) {
       console.warn('SVG export failed:', err);
       return { success: false, format: 'svg', error: toError(err) };
     }
-  }, [config, getFilename]);
+  }, [buildSvg, getFilename]);
+
+  /**
+   * Copies the SVG markup to the clipboard as text, for pasting into design tools or code.
+   * @param options - Optional export options.
+   */
+  const handleCopySvg = useCallback(async (options?: AssetOptions): Promise<ExportStatus> => {
+    try {
+      const built = await buildSvg(options);
+      if (!built) return { success: false, format: 'svg-copy', error: new Error('SCAN_VALIDATION_FAILED') };
+      await navigator.clipboard.writeText(built.svg);
+      return { success: true, format: 'svg-copy', logoOmitted: built.logoOmitted };
+    } catch (err) {
+      return { success: false, format: 'svg-copy', error: toError(err) };
+    }
+  }, [buildSvg]);
 
   /**
    * Unified QR export engine seam that coordinates all asset exports.
@@ -336,10 +380,7 @@ export function useQRDownload(
    * @param options - Optional export options (e.g. allowUnsafe to bypass scannability pre-flight checks).
    */
   const exportAsset = useCallback(
-    async (
-      format: 'png' | 'jpeg' | 'webp' | 'svg' | 'clipboard' | 'share',
-      options?: ExportOptions
-    ): Promise<ExportStatus> => {
+    async (format: ExportFormat, options?: AssetOptions): Promise<ExportStatus> => {
       switch (format) {
         case 'png':
         case 'jpeg':
@@ -353,11 +394,13 @@ export function useQRDownload(
           return handleCopy(options);
         case 'share':
           return handleShare(options);
+        case 'svg-copy':
+          return handleCopySvg(options);
         default:
           return { success: false, format, error: new Error(`Unsupported export format: ${format}`) };
       }
     },
-    [downloadToDevice, handleSaveAs, handleSaveSvg, handleCopy, handleShare]
+    [downloadToDevice, handleSaveAs, handleSaveSvg, handleCopy, handleShare, handleCopySvg]
   );
 
   return { exportAsset, downloadToDevice, handleSaveAs, handleSaveSvg, handleShare, handleCopy };

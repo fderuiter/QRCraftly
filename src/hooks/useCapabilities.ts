@@ -30,8 +30,14 @@ export function useCapabilities(): Capabilities {
 
     const canSaveFilePicker = 'showSaveFilePicker' in window && typeof window.showSaveFilePicker === 'function';
     
-    const canShare = 'share' in navigator && typeof navigator.share === 'function' && 
-                     'canShare' in navigator && typeof navigator.canShare === 'function';
+    // Sharing is offered only where the browser can share an image file, not just text.
+    let canShare = false;
+    try {
+      canShare = typeof navigator.share === 'function' && typeof navigator.canShare === 'function' &&
+        navigator.canShare({ files: [new File([''], 'qr.png', { type: 'image/png' })] });
+    } catch {
+      canShare = false;
+    }
 
     setCapabilities({
       engine,

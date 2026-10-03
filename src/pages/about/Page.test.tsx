@@ -16,38 +16,31 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
+import { axe } from 'vitest-axe';
 import Page from './+Page';
 
 describe('About Page', () => {
   it('renders the About page content', () => {
     render(<Page />);
 
-    // Check main heading
     expect(screen.getByRole('heading', { level: 1, name: /About QRCraftly/i })).toBeInTheDocument();
-
-    // Check existing content
-    expect(screen.getByText(/Privacy-focused QR code generator/i)).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /Free & No Login/i })).toBeInTheDocument();
+    expect(screen.getByText(/privacy-focused QR code generator/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: 'How it works' })).toBeInTheDocument();
     // Site navigation and the footer come from the app shell, never from the page.
     expect(screen.queryByRole('navigation', { name: /Primary navigation/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('contentinfo')).not.toBeInTheDocument();
   });
 
-  it('contains a link to the WiFi QR Code generator for better SEO discovery', () => {
-    render(<Page />);
-
-    // Check for the new section heading
-    expect(screen.getByRole('heading', { name: /Specialized Generators/i })).toBeInTheDocument();
-
-    // Check for the descriptive text
-    expect(screen.getByText(/Looking for a specific use case/i)).toBeInTheDocument();
-
-    // Check for the internal link
-    const wifiLink = screen.getByRole('link', { name: /Create WiFi QR Code/i });
-    expect(wifiLink).toBeInTheDocument();
-    expect(wifiLink).toHaveAttribute('href', '/wifi-qr-code');
+  it('links to every tool (#1056)', () => {
+    const { container } = render(<Page />);
+    const tools = container.querySelector('section#tools') as HTMLElement;
+    const hrefs = within(tools).getAllByRole('link').map((link) => link.getAttribute('href'));
+    for (const href of ['/', '/wifi-qr-code', '/bulk-csv-qr-code', '/file-transfer', '/file-transfer/receive', '/arcade']) {
+      expect(hrefs).toContain(href);
+    }
+    expect(screen.getByRole('link', { name: /WiFi QR Code/i })).toHaveAttribute('href', '/wifi-qr-code');
   });
 
   it('has a single h1, no "About About" heading and ordered h2/h3 levels', () => {
@@ -55,17 +48,17 @@ describe('About Page', () => {
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
     expect(screen.queryByRole('heading', { name: /About About/i })).not.toBeInTheDocument();
 
-    const main = container;
-    const levels = Array.from(main.querySelectorAll('h1, h2, h3, h4, h5, h6')).map((h) => Number(h.tagName[1]));
+    const levels = Array.from(container.querySelectorAll('h1, h2, h3, h4, h5, h6')).map((h) => Number(h.tagName[1]));
     for (let i = 1; i < levels.length; i++) {
       expect(levels[i] - levels[i - 1]).toBeLessThanOrEqual(1);
     }
   });
 
-  it('does not repeat hero or feature copy further down the page', () => {
-    render(<Page />);
+  it('does not repeat copy, uses one accent and has no axe violations', async () => {
+    const { container } = render(<Page />);
     expect(screen.getAllByText(/QRCraftly is completely free to use/i)).toHaveLength(1);
     expect(screen.getAllByText(/We believe in transparency/i)).toHaveLength(1);
-    expect(screen.queryByText(/Learn about QRCraftly's mission/i)).not.toBeInTheDocument();
+    expect(container.innerHTML).not.toMatch(/indigo|amber|rose|text-center|(?:bg|text|border)-(?:slate|teal)-\d/);
+    expect(await axe(container)).toHaveNoViolations();
   });
 });

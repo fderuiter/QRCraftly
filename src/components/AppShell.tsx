@@ -23,7 +23,7 @@ import { isDangerousUrl } from '@/utils/security';
 import { PrimaryNav } from './ui/PrimaryNav';
 import { ThemeToggle } from './ui/ThemeToggle';
 import { PLEDGE_TAGLINE } from '@/data/pledge';
-import { GENERATOR_FOOTER_LINKS } from '@/data/navigation';
+import { GENERATOR_FOOTER_LINKS, TOOL_LINKS } from '@/data/navigation';
 
 const FOOTER_LINK_CLASSES = 'transition-colors hover:text-accent';
 
@@ -32,12 +32,6 @@ const COMPANY_LINKS = [
   ['No-Ads Pledge', '/free-forever'],
   ['Security Policy', '/security#security'],
   ['Privacy Architecture', '/security#compliance'],
-] as const;
-
-const TOOL_LINKS = [
-  ['Send a File', '/file-transfer'],
-  ['Receive a File', '/file-transfer/receive'],
-  ['QR Arcade', '/arcade'],
 ] as const;
 
 /**

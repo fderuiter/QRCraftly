@@ -3,6 +3,7 @@ import { Camera, Upload, AlertTriangle, X, RefreshCw, FileImage } from 'lucide-r
 import { useCamera } from '../hooks/useCamera';
 import { useQrScanner } from '@/packages/optical-scanner/client';
 import { Button } from './ui/Button';
+import { EmptyState } from './ui/EmptyState';
 import { SegmentedControl } from './ui/SegmentedControl';
 
 /**
@@ -261,37 +262,35 @@ export const QRScanner: React.FC<QRScannerProps> = ({ onScanSuccess, onClose, co
   // Render webcam viewfinder state
   const renderWebcamViewfinder = () => {
     if (permissionState === 'denied' || permissionState === 'unavailable') {
+      // Lead with the way that works without a camera; permission help is secondary.
       return (
-        <div className="flex size-full flex-col justify-between p-5 text-center text-fg">
-          <div className="flex flex-col items-center gap-3">
-            <AlertTriangle className="size-10 text-amber-500" />
-            <h3 className="text-base font-bold">
-              {permissionState === 'denied' ? 'Camera Access Denied' : 'Camera Unavailable'}
-            </h3>
-            <p className="max-w-sm text-xs text-fg-muted">
-              {getPlatformInstructions()}
-            </p>
-          </div>
-          <div className="mx-auto mt-4 flex w-full max-w-sm flex-col gap-2">
-            {permissionState === 'denied' && (
-              <Button variant="outline" size="sm" onClick={handleRetryCamera} fullWidth>
-                <RefreshCw className="mr-1.5 size-3.5" />
+        <div className="flex size-full flex-col gap-3 overflow-y-auto p-4">
+          <EmptyState
+            illustration={<FileImage className="size-6" />}
+            title={permissionState === 'denied' ? 'Camera Access Denied' : 'Camera Unavailable'}
+            body="You can still scan a QR code from a photo or screenshot."
+            action={
+              <Button
+                variant="primary"
+                onClick={() => {
+                  setMode('file');
+                  setIsWebcamActive(false);
+                }}
+              >
+                <Upload className="size-4" aria-hidden="true" />
+                Scan from an image instead
+              </Button>
+            }
+          />
+          {permissionState === 'denied' && (
+            <div className="flex flex-col items-center gap-2 text-center text-xs text-fg-muted">
+              <p className="max-w-sm">To use the camera: {getPlatformInstructions()}</p>
+              <Button variant="ghost" size="sm" onClick={handleRetryCamera}>
+                <RefreshCw className="size-3.5" aria-hidden="true" />
                 Retry Permission
               </Button>
-            )}
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={() => {
-                setMode('file');
-                setIsWebcamActive(false);
-              }}
-              fullWidth
-            >
-              <Upload className="mr-1.5 size-3.5" />
-              Switch to File Mode
-            </Button>
-          </div>
+            </div>
+          )}
         </div>
       );
     }

@@ -18,6 +18,7 @@
 
 import { render, screen, cleanup } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { axe } from 'vitest-axe';
 import Page from './+Page';
 
 // Hoist the mock functions
@@ -59,6 +60,17 @@ describe('Error Page Integration Tests', () => {
     // Site navigation and the footer come from the app shell, never from the page.
     expect(screen.queryByRole('navigation', { name: /Primary navigation/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('contentinfo')).not.toBeInTheDocument();
+  });
+
+  it('offers quick links to at least six tools and says nothing was tracked (#1055)', async () => {
+    mockUsePageContext.mockReturnValue({ is404: true });
+    const { container } = render(<Page />);
+    const nav = screen.getByRole('navigation', { name: 'Popular tools' });
+    const hrefs = Array.from(nav.querySelectorAll('a')).map((a) => a.getAttribute('href'));
+    expect(hrefs.length).toBeGreaterThanOrEqual(6);
+    expect(hrefs).toEqual(expect.arrayContaining(['/', '/wifi-qr-code', '/file-transfer']));
+    expect(screen.getByText(/Nothing was uploaded or tracked/)).toBeInTheDocument();
+    expect(await axe(container)).toHaveNoViolations();
   });
 
   it('handles 500 status correctly', () => {

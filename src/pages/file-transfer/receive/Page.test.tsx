@@ -122,7 +122,7 @@ describe('File Transfer Receive Page & Pipeline', () => {
       fireEvent.click(deactivateButton);
     });
 
-    expect(screen.getByText('Camera inactive')).toBeInTheDocument();
+    expect(screen.getByText('Camera is off')).toBeInTheDocument();
   });
 
   it('explains a blocked camera and offers the video file route', async () => {
@@ -207,7 +207,7 @@ describe('File Transfer Receive Page & Pipeline', () => {
     expect(screen.getByText(/Dangerous protocol detected and blocked: javascript:/i)).toBeInTheDocument();
     
     // Scanner is inactive
-    expect(screen.getByText('Camera inactive')).toBeInTheDocument();
+    expect(screen.getByText('Camera is off')).toBeInTheDocument();
   });
 
   it('lookahead receiver intercepts and terminates a split protocol threat across frames', async () => {
@@ -230,7 +230,7 @@ describe('File Transfer Receive Page & Pipeline', () => {
 
     expect(screen.getByText(/Security Intercepted/i)).toBeInTheDocument();
     expect(screen.getByText(/MaliciousStreamError: Detected dangerous protocol prefix "javascript:" split across frames./i)).toBeInTheDocument();
-    expect(screen.getByText('Camera inactive')).toBeInTheDocument();
+    expect(screen.getByText('Camera is off')).toBeInTheDocument();
   });
 
   it('no longer offers a Compatibility mode toggle and always keeps text safety checks on', async () => {

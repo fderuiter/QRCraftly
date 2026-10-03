@@ -66,14 +66,12 @@ describe('QRTool with sample fallback empty state', () => {
   it('marks export actions protected and displays alert toast instead of exporting', () => {
     render(<ToastProvider><QRTool initialConfig={{ ...DEFAULT_CONFIG, value: '' }} /></ToastProvider>);
 
-    const download = screen.getByRole('button', { name: /^Download$/ });
+    const download = screen.getByRole('button', { name: /^Download (PNG|SVG|JPEG|WebP)$/ });
     const copy = screen.getByRole('button', { name: /Copy QR code/ });
 
     for (const button of [download, copy]) {
       expect(button).toHaveAttribute('aria-disabled', 'true');
     }
-    // The Download control is not a menu while in sample mode.
-    expect(download).not.toHaveAttribute('aria-haspopup');
 
     fireEvent.click(download);
     expect(exportAsset).not.toHaveBeenCalled();
@@ -85,9 +83,8 @@ describe('QRTool with sample fallback empty state', () => {
 
     expect(screen.queryByTestId('sample-preview-badge')).not.toBeInTheDocument();
     expect(screen.getByTestId('scannability-verdict')).toHaveTextContent('Scans reliably');
-    const download = screen.getByRole('button', { name: /^Download$/ });
+    const download = screen.getByRole('button', { name: /^Download (PNG|SVG|JPEG|WebP)$/ });
     expect(download).not.toHaveAttribute('aria-disabled');
-    expect(download).toHaveAttribute('aria-haspopup', 'menu');
   });
 
   it('has no axe violations in sample preview state', async () => {

@@ -23,6 +23,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import jsQR from 'jsqr';
 import { renderToString } from 'react-dom/server';
 import { contentRegistry } from '@/data/contentRegistry';
+import { axe } from 'vitest-axe';
 
 vi.mock('jsqr', () => ({
   default: vi.fn(),
@@ -44,6 +45,22 @@ vi.mock('./QRCanvas', () => ({
     );
   }
 }));
+
+/** The Download button, whatever format it currently exports. */
+const downloadButton = () => screen.getByRole('button', { name: /^Download (PNG|SVG|JPEG|WebP)$/ });
+
+/**
+ * Picks a format in the Download options, then presses Download.
+ * @param label - Format label as shown in the options.
+ */
+function downloadAs(label: 'PNG' | 'JPEG' | 'WebP' | 'SVG') {
+  fireEvent.click(screen.getByRole('button', { name: 'Download options' }));
+  fireEvent.click(screen.getByRole('radio', { name: label }));
+  fireEvent.click(screen.getByRole('button', { name: `Download ${label}` }));
+}
+
+/** Text of the export row's polite status region. */
+const exportStatus = () => within(screen.getByTestId('export-actions')).getByRole('status').textContent;
 
 describe('QRTool Component', () => {
   // Store original globals
@@ -137,37 +154,82 @@ describe('QRTool Component', () => {
     expect(canvasMocks[0]).toBeInTheDocument();
   });
 
-  it('shows download menu when download button is clicked', () => {
-    render(<ToastProvider><QRTool /></ToastProvider>);
-    const downloadButton = screen.getByRole('button', { name: /^Download$/ });
-    fireEvent.click(downloadButton);
+  it('offers format, size, print, file name and Copy as SVG in the Download options (#1052)', async () => {
+    render(<ToastProvider><QRTool initialConfig={{ value: 'https://www.example.com/path' }} /></ToastProvider>);
+    expect(downloadButton()).toHaveClass('bg-action');
+    const options = screen.getByRole('button', { name: 'Download options' });
+    expect(options).toHaveAttribute('aria-expanded', 'false');
+    fireEvent.click(options);
+    expect(options).toHaveAttribute('aria-expanded', 'true');
 
-    expect(screen.getByText('PNG (High Quality)')).toBeInTheDocument();
-    expect(screen.getByText('JPEG (Compact)')).toBeInTheDocument();
-    expect(screen.getByText('WebP (Modern)')).toBeInTheDocument();
-    expect(screen.queryByText('Scan Safety Warning')).not.toBeInTheDocument();
-    expect(downloadButton).toHaveClass('bg-action');
+    const panel = screen.getByRole('group', { name: 'Download options' });
+    expect(within(panel).getAllByRole('radio').map((r) => r.textContent)).toEqual(['PNG', 'SVG', 'JPEG', 'WebP', 'Screen', 'Print', 'Poster', 'Custom']);
+    fireEvent.click(within(panel).getByRole('radio', { name: 'PNG' }));
+    fireEvent.click(within(panel).getByRole('radio', { name: 'Print' }));
+    expect(screen.getByTestId('print-hint')).toHaveTextContent('2048 px wide. Prints 17.3 cm (6.8 in) wide at 300 dpi and scans from about 1.7 m.');
+    expect(within(panel).getByLabelText('File name')).toHaveValue('url-example.com');
+    expect(within(panel).getByRole('button', { name: 'Copy as SVG' })).toBeInTheDocument();
+
+    // SVG has no pixel size.
+    fireEvent.click(within(panel).getByRole('radio', { name: 'SVG' }));
+    expect(within(panel).getByText(/SVG is vector/)).toBeInTheDocument();
+    expect(screen.queryByTestId('print-hint')).not.toBeInTheDocument();
+    expect(downloadButton()).toHaveTextContent('Download SVG');
+    expect(await axe(screen.getByTestId('export-actions'))).toHaveNoViolations();
+
+    // Escape closes the options and returns focus to their button.
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByRole('group', { name: 'Download options' })).not.toBeInTheDocument();
+    expect(document.activeElement).toBe(options);
+    downloadAs('PNG');
   });
 
-  it.each([
-    'PNG (High Quality)',
-    'JPEG (Compact)',
-    'WebP (Modern)',
-    'SVG (Vector)',
-  ])('waits until unsafe %s export is selected before showing the safety warning', (format) => {
+  it('exports a PNG at the selected pixel size with the chosen file name, and confirms on the button (#1052)', async () => {
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click');
+    const appendSpy = vi.spyOn(document.body, 'appendChild');
+    const drawImage = vi.fn();
+    render(<ToastProvider><QRTool initialConfig={{ value: 'https://example.com' }} /></ToastProvider>);
+    // Canvases created from now on are the scaled export copies.
+    const createElement = document.createElement.bind(document);
+    vi.spyOn(document, 'createElement').mockImplementation((tag: string, options?: ElementCreationOptions) => {
+      const el = createElement(tag, options);
+      if (tag === 'canvas') {
+        Object.defineProperty(el, 'getContext', { value: () => ({ drawImage, imageSmoothingEnabled: true }) });
+      }
+      return el;
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Download options' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'PNG' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Poster' }));
+    fireEvent.change(screen.getByLabelText('File name'), { target: { value: 'my code' } });
+    fireEvent.click(downloadButton());
+
+    await waitFor(() => expect(clickSpy).toHaveBeenCalled());
+    const scaled = drawImage.mock.calls[0];
+    // drawImage(source, x, y, width, height): the copy is 4096 px wide.
+    expect(scaled[3]).toBe(4096);
+    const link = appendSpy.mock.calls.map((c) => c[0]).find((n): n is HTMLAnchorElement => n instanceof HTMLAnchorElement);
+    expect(link?.download).toBe('my-code.png');
+    expect(await screen.findByRole('button', { name: 'Downloaded' })).toBeInTheDocument();
+    expect(exportStatus()).toBe('PNG downloaded');
+    // No success toast.
+    expect(screen.queryByText(/exported successfully/)).not.toBeInTheDocument();
+  });
+
+  it.each(['PNG', 'JPEG', 'WebP', 'SVG'] as const)('waits until an unsafe %s export is started before showing the safety warning', (format) => {
     render(
       <ToastProvider>
         <QRTool initialConfig={{ fgColor: '#eeeeee', eyeColor: '#eeeeee', bgColor: '#ffffff' }} />
       </ToastProvider>
     );
 
-    const downloadButton = screen.getByRole('button', { name: /^Download$/ });
-    expect(downloadButton).toHaveClass('bg-danger-action');
+    expect(downloadButton()).toHaveClass('bg-danger-action');
 
-    fireEvent.click(downloadButton);
+    fireEvent.click(screen.getByRole('button', { name: 'Download options' }));
+    fireEvent.click(screen.getByRole('radio', { name: format }));
     expect(screen.queryByText('Scan Safety Warning')).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByText(format));
+    fireEvent.click(screen.getByRole('button', { name: `Download ${format}` }));
     expect(screen.getByText('Scan Safety Warning')).toBeInTheDocument();
   });
 
@@ -196,13 +258,8 @@ describe('QRTool Component', () => {
       </ToastProvider>
     );
 
-    // 1. Open download dropdown menu
-    const menuButton = screen.getByRole('button', { name: /^Download$/ });
-    fireEvent.click(menuButton);
-
-    // 2. Click PNG option
-    const pngOption = screen.getByText('PNG (High Quality)');
-    fireEvent.click(pngOption);
+    // 1-2. Start a PNG download
+    downloadAs('PNG');
 
     // 3. Scan Safety Warning modal opens
     expect(screen.getByText('Scan Safety Warning')).toBeInTheDocument();
@@ -222,8 +279,7 @@ describe('QRTool Component', () => {
     await waitFor(() => {
       expect(screen.queryByText(/SCAN_VALIDATION_FAILED/i)).not.toBeInTheDocument();
       const statuses = screen.getAllByRole('status');
-      const hasSuccess = statuses.some(s => s.textContent?.includes('QR code exported successfully as PNG!'));
-      expect(hasSuccess).toBe(true);
+      expect(statuses.some(s => s.textContent === 'PNG downloaded')).toBe(true);
     });
   });
 
@@ -238,13 +294,8 @@ describe('QRTool Component', () => {
       </ToastProvider>
     );
 
-    // 1. Open download dropdown menu
-    const menuButton = screen.getByRole('button', { name: /^Download$/ });
-    fireEvent.click(menuButton);
-
-    // 2. Click SVG option
-    const svgOption = screen.getByText('SVG (Vector)');
-    fireEvent.click(svgOption);
+    // 1-2. Start an SVG download
+    downloadAs('SVG');
 
     // 3. Scan Safety Warning modal opens
     expect(screen.getByText('Scan Safety Warning')).toBeInTheDocument();
@@ -264,8 +315,7 @@ describe('QRTool Component', () => {
     await waitFor(() => {
       expect(screen.queryByText(/SCAN_VALIDATION_FAILED/i)).not.toBeInTheDocument();
       const statuses = screen.getAllByRole('status');
-      const hasSuccess = statuses.some(s => s.textContent?.includes('QR code exported successfully as SVG!'));
-      expect(hasSuccess).toBe(true);
+      expect(statuses.some(s => s.textContent === 'SVG downloaded')).toBe(true);
     });
   });
 
@@ -307,8 +357,7 @@ describe('QRTool Component', () => {
       await waitFor(() => {
         expect(screen.queryByText(/SCAN_VALIDATION_FAILED/i)).not.toBeInTheDocument();
         const statuses = screen.getAllByRole('status');
-        const hasSuccess = statuses.some(s => s.textContent?.includes('QR code copied to clipboard!'));
-        expect(hasSuccess).toBe(true);
+        expect(statuses.some(s => s.textContent === 'Copied')).toBe(true);
       });
     } finally {
       Object.defineProperty(global.navigator, 'clipboard', {
@@ -364,8 +413,7 @@ describe('QRTool Component', () => {
       await waitFor(() => {
         expect(screen.queryByText(/SCAN_VALIDATION_FAILED/i)).not.toBeInTheDocument();
         const statuses = screen.getAllByRole('status');
-        const hasSuccess = statuses.some(s => s.textContent?.includes('QR code shared successfully!'));
-        expect(hasSuccess).toBe(true);
+        expect(statuses.some(s => s.textContent === 'Shared')).toBe(true);
       });
     } finally {
       Object.defineProperty(global.navigator, 'share', {
@@ -399,8 +447,7 @@ describe('QRTool Component', () => {
      // To verify click, we can spy on HTMLAnchorElement.prototype.click
      const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click');
 
-     fireEvent.click(screen.getByRole('button', { name: /^Download$/ }));
-     fireEvent.click(screen.getByText('PNG (High Quality)'));
+     downloadAs('PNG');
 
      expect(HTMLCanvasElement.prototype.toDataURL).toHaveBeenCalledWith('image/png');
 
@@ -430,11 +477,7 @@ describe('QRTool Component', () => {
     });
 
     render(<ToastProvider><QRTool /></ToastProvider>);
-    const downloadBtns = screen.getAllByText('Download');
-    fireEvent.click(downloadBtns[0]);
-
-    const pngOption = screen.getByText('PNG (High Quality)');
-    fireEvent.click(pngOption);
+    downloadAs('PNG');
 
     await waitFor(() => {
         expect(showSaveFilePicker).toHaveBeenCalled();
@@ -456,11 +499,7 @@ describe('QRTool Component', () => {
       const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click');
 
       render(<ToastProvider><QRTool /></ToastProvider>);
-      const downloadBtns = screen.getAllByText('Download');
-      fireEvent.click(downloadBtns[0]);
-
-      const pngOption = screen.getByText('PNG (High Quality)');
-      fireEvent.click(pngOption);
+      downloadAs('PNG');
 
       await waitFor(() => {
           expect(showSaveFilePicker).toHaveBeenCalled();
@@ -480,11 +519,7 @@ describe('QRTool Component', () => {
       const appendSpy = vi.spyOn(document.body, 'appendChild');
 
       render(<ToastProvider><QRTool /></ToastProvider>);
-      const downloadBtns = screen.getAllByText('Download');
-      fireEvent.click(downloadBtns[0]);
-
-      const pngOption = screen.getByText('PNG (High Quality)');
-      fireEvent.click(pngOption);
+      downloadAs('PNG');
 
       await waitFor(() => {
           expect(clickSpy).toHaveBeenCalled();
@@ -574,10 +609,7 @@ describe('QRTool Component', () => {
 
       // Let's test the path where showSaveFilePicker is available but blob creation fails
       render(<ToastProvider><QRTool /></ToastProvider>);
-      const downloadBtns = screen.getAllByText('Download');
-      fireEvent.click(downloadBtns[0]);
-      const pngOption = screen.getByText('PNG (High Quality)');
-      fireEvent.click(pngOption);
+      downloadAs('PNG');
 
       await waitFor(() => {
          // It should catch the error "Failed to create image blob" and log warning then fallback
@@ -599,7 +631,7 @@ describe('QRTool Component', () => {
   });
 
   describe('Accessibility - Focus Recovery and Toast Announcements', () => {
-    it('restores focus and triggers a polite success toast when copy QR code is triggered', async () => {
+    it('restores focus and confirms once on the button when copy QR code is triggered', async () => {
       // Mock Clipboard API for this test
       const mockWrite = vi.fn().mockResolvedValue(undefined);
       const originalClipboard = global.navigator.clipboard;
@@ -623,12 +655,12 @@ describe('QRTool Component', () => {
 
         fireEvent.click(copyBtn);
 
-        // Verify success toast exists with role="status" and message
+        // One confirmation: the button turns into "Copied" and the status region says so; no toast.
         await waitFor(() => {
-          const statuses = screen.getAllByRole('status');
-          const hasText = statuses.some(s => s.textContent?.includes('QR code copied to clipboard!'));
-          expect(hasText).toBe(true);
+          expect(screen.getByRole('button', { name: 'Copied' })).toBe(copyBtn);
         });
+        expect(exportStatus()).toBe('Copied');
+        expect(screen.queryByText(/copied to clipboard!/)).not.toBeInTheDocument();
 
         // Verify focus is recovered/preserved on the copy button
         expect(document.activeElement).toBe(copyBtn);
@@ -642,46 +674,38 @@ describe('QRTool Component', () => {
       }
     });
 
-    it('restores focus and triggers a polite success toast when PNG download is triggered from the menu', async () => {
+    it('restores focus and announces politely when a PNG download is triggered', async () => {
       render(<ToastProvider><QRTool /></ToastProvider>);
-      const downloadBtn = screen.getByRole('button', { name: /^Download$/ });
+      fireEvent.click(screen.getByRole('button', { name: 'Download options' }));
+      fireEvent.click(screen.getByRole('radio', { name: 'PNG' }));
+      const downloadBtn = downloadButton();
 
       downloadBtn.focus();
       expect(document.activeElement).toBe(downloadBtn);
 
       fireEvent.click(downloadBtn);
-      fireEvent.click(screen.getByText('PNG (High Quality)'));
 
-      // Verify success toast exists with role="status" and message
       await waitFor(() => {
-        const statuses = screen.getAllByRole('status');
-        const hasText = statuses.some(s => s.textContent?.includes('QR code exported successfully as PNG!'));
-        expect(hasText).toBe(true);
+        expect(exportStatus()).toBe('PNG downloaded');
       });
 
       // Verify focus is restored to the Download button
       expect(document.activeElement).toBe(downloadBtn);
     });
 
-    it('restores focus and triggers a polite success toast when SVG download is triggered from the menu', async () => {
+    it('restores focus and announces politely when an SVG download is triggered', async () => {
       render(<ToastProvider><QRTool /></ToastProvider>);
-      const downloadBtn = screen.getAllByText('Download')[0];
+      fireEvent.click(screen.getByRole('button', { name: 'Download options' }));
+      fireEvent.click(screen.getByRole('radio', { name: 'SVG' }));
+      const downloadBtn = downloadButton();
 
       // Set focus to the Download button
       downloadBtn.focus();
       expect(document.activeElement).toBe(downloadBtn);
-
-      // Open the dropdown menu
       fireEvent.click(downloadBtn);
 
-      const svgOption = screen.getByText('SVG (Vector)');
-      fireEvent.click(svgOption);
-
-      // Verify success toast exists with role="status" and message
       await waitFor(() => {
-        const statuses = screen.getAllByRole('status');
-        const hasText = statuses.some(s => s.textContent?.includes('QR code exported successfully as SVG!'));
-        expect(hasText).toBe(true);
+        expect(exportStatus()).toBe('SVG downloaded');
       });
 
       // Verify focus is returned to the main Download trigger button
@@ -699,13 +723,8 @@ describe('QRTool Component', () => {
           logoUrl: 'https://example.com/blocked-by-cors-logo.png',
         };
         render(<ToastProvider><QRTool initialConfig={initialConfig} /></ToastProvider>);
-        const downloadBtn = screen.getAllByText('Download')[0];
-
-        // Open the dropdown menu
-        fireEvent.click(downloadBtn);
-
-        const svgOption = screen.getByText('SVG (Vector)');
-        fireEvent.click(svgOption);
+        downloadAs('SVG');
+        const downloadBtn = downloadButton();
 
         // Verify warning toast exists with role="alert" and the expected warning message
         await waitFor(() => {
@@ -721,7 +740,7 @@ describe('QRTool Component', () => {
       }
     });
 
-    it('restores focus and triggers a success toast when Web Share API is triggered', async () => {
+    it('restores focus and confirms politely when Web Share API is triggered', async () => {
       const mockShare = vi.fn().mockResolvedValue(undefined);
       const mockCanShare = vi.fn().mockReturnValue(true);
       const originalShare = global.navigator.share;
@@ -749,9 +768,7 @@ describe('QRTool Component', () => {
         fireEvent.click(shareBtn);
 
         await waitFor(() => {
-          const statuses = screen.getAllByRole('status');
-          const hasText = statuses.some(s => s.textContent?.includes('QR code shared successfully!'));
-          expect(hasText).toBe(true);
+          expect(exportStatus()).toBe('Shared');
         });
 
         // Focus is returned/preserved on the share button
@@ -912,8 +929,8 @@ describe('Generator workspace structure (#795, #802)', { timeout: 20000 }, () =>
   it('has one export row that steps aside on phones while a text field has focus', async () => {
     render(<ToastProvider><QRTool initialConfig={{ value: 'https://example.com' }} /></ToastProvider>);
     const row = screen.getByTestId('export-actions');
-    expect(within(row).getAllByRole('button', { name: /^Download$/ })).toHaveLength(1);
-    expect(screen.getAllByRole('button', { name: /^Download$/ })).toHaveLength(1);
+    expect(within(row).getAllByRole('button', { name: /^Download (PNG|SVG|JPEG|WebP)$/ })).toHaveLength(1);
+    expect(screen.getAllByRole('button', { name: /^Download (PNG|SVG|JPEG|WebP)$/ })).toHaveLength(1);
     expect(row).not.toHaveClass('max-md:hidden');
 
     const field = document.createElement('input');

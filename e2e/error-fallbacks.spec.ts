@@ -21,7 +21,8 @@ import { test, expect, type Route } from '@playwright/test';
 /**
  * Text that only the lazily loaded StyleControls chunk contains. The home page
  * imports that chunk with `React.lazy` after hydration, so a chunk that fails to
- * evaluate throws during render and must be caught by the layout's ErrorBoundary.
+ * evaluate throws during render and must be caught by the Appearance panel's error
+ * boundary (#1055), leaving the rest of the generator working.
  * This exercises a real production failure mode (a broken or stale deploy chunk)
  * without any test-only hook in the shipped code (#983).
  */
@@ -31,7 +32,7 @@ test.describe('Error Fallbacks and Recovery E2E Tests', () => {
   // Service workers answer chunk requests from their cache, which bypasses page.route.
   test.use({ serviceWorkers: 'block' });
 
-  test('a lazily loaded chunk that fails to evaluate shows the fallback UI, and reload restores the app', async ({ page }) => {
+  test('a lazily loaded chunk that fails to evaluate shows the panel fallback, and reload restores the app', async ({ page }) => {
     let brokenChunks = 0;
     const breakLazyChunk = async (route: Route) => {
       const response = await route.fetch();
@@ -56,21 +57,18 @@ test.describe('Error Fallbacks and Recovery E2E Tests', () => {
     // 1. Load the generator; its Appearance panel lazily imports the broken chunk after hydration
     await page.goto('/');
 
-    // 2. The ErrorBoundary intercepts the render-time failure and shows the fallback layout
-    const fallbackTitle = page.getByText('Application Error');
+    // 2. The panel's error boundary intercepts the render-time failure; the rest of the page keeps working
+    const fallbackTitle = page.getByText('This panel hit a snag.');
     await expect(fallbackTitle).toBeVisible({ timeout: 15000 });
     expect(brokenChunks).toBeGreaterThan(0);
+    await expect(page.getByText('Application Error')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Reload panel' })).toBeVisible();
+    await expect(page.locator('#url-input')).toBeVisible();
 
-    const fallbackText = page.getByText("We're sorry, but something went wrong while rendering this page.");
-    await expect(fallbackText).toBeVisible();
-
-    // 3. The recovery interface must present a Reload Page button
-    const reloadButton = page.getByRole('button', { name: 'Reload Page' });
-    await expect(reloadButton).toBeVisible();
-
-    // 4. Once the chunk is served intact again (e.g. the deploy finished), reloading restores the app
-    await page.unroute('**/*.js', breakLazyChunk);
-    await reloadButton.click();
+    // 3. Once the chunk is served intact again (e.g. the deploy finished), reloading restores the app
+    // Wait for any chunk request still in the handler, so it can't fulfill an unrouted request.
+    await page.unrouteAll({ behavior: 'wait' });
+    await page.reload();
 
     const mainElement = page.locator('main[data-hydrated="true"]');
     await expect(mainElement).toBeVisible({ timeout: 15000 });

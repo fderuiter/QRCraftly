@@ -7,6 +7,7 @@ import { useCamera } from '../hooks/useCamera';
 import { useQrScanner } from '@/packages/optical-scanner/client';
 import { scan } from '@/packages/optical-scanner';
 import jsQR from 'jsqr';
+import { axe } from 'vitest-axe';
 
 // Mock hooks and external libraries
 vi.mock('../hooks/useCamera', () => ({
@@ -166,9 +167,11 @@ describe('QRScanner Component', () => {
     // Troubleshooting card should have specific instructions
     expect(screen.getByText(/Open iOS Settings|Open Android Settings|Open macOS System Settings|Open Windows Settings|Click the padlock/)).toBeInTheDocument();
     
-    // Switch to File Mode button is present
-    const switchBtn = screen.getByRole('button', { name: /switch to file mode/i });
-    expect(switchBtn).toBeInTheDocument();
+    // The image fallback leads (#1055): it is the first action, before the permission help.
+    const switchBtn = screen.getByRole('button', { name: 'Scan from an image instead' });
+    const retry = screen.getByRole('button', { name: /retry permission/i });
+    expect(switchBtn.compareDocumentPosition(retry) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(await axe(switchBtn.closest('div.flex.size-full') as HTMLElement)).toHaveNoViolations();
 
     // Clicking switches the mode to file
     fireEvent.click(switchBtn);

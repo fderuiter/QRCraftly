@@ -334,6 +334,21 @@ describe('useQRDownload', () => {
     expect(global.URL.revokeObjectURL).toHaveBeenCalled();
   });
 
+  it('names the SVG after the chosen file name and copies the SVG markup as text (#1052)', async () => {
+    const appendSpy = vi.spyOn(document.body, 'appendChild');
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(global.navigator, 'clipboard', { value: { writeText }, writable: true, configurable: true });
+    const { result } = renderHook(() => useQRDownload(mockQrRef, DEFAULT_CONFIG as QRConfig), { wrapper: ToastProvider });
+
+    await result.current.exportAsset('svg', { filename: 'menu card' });
+    const link = appendSpy.mock.calls.map((call) => call[0] as Element).find((el) => el.tagName === 'A') as HTMLAnchorElement;
+    expect(link.download).toBe('menu-card.svg');
+
+    const copied = await result.current.exportAsset('svg-copy');
+    expect(copied).toMatchObject({ success: true, format: 'svg-copy' });
+    expect(writeText).toHaveBeenCalledWith(expect.stringContaining('<svg'));
+  });
+
   it('handleSaveSvg catches and logs errors when Blob generation fails', async () => {
     // We mock the Blob constructor to throw an error to test the catch block.
     const originalBlob = global.Blob;

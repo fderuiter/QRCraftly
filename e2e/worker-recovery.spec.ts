@@ -131,17 +131,13 @@ test.describe('Isolated Web Worker Recovery & Export Bypass', () => {
     await expect(alertBadge).toContainText(/won't scan reliably/i, { timeout: 15000 });
     await expect(page.getByTestId('scannability-verdict')).toHaveText("Won't scan reliably");
 
-    // Click the download command to open export format menu
-    const downloadButton = page.getByRole('button', { name: 'Download', exact: true });
+    // The download command uses the error style for an unsafe code
+    const downloadButton = page.getByRole('button', { name: 'Download PNG' });
     await expect(downloadButton).toBeVisible();
     // Wait for the button to transition to the error variant style (bg-rose-50, bg-rose-700, or text-rose-700)
     await expect(downloadButton).toHaveClass(/bg-danger-action|bg-danger-soft|text-danger/);
+    // Downloading triggers the safety gate
     await downloadButton.click();
-
-    // Select export format to trigger safety gate
-    const pngOption = page.getByRole('menuitem', { name: 'PNG (High Quality)' });
-    await expect(pngOption).toBeVisible({ timeout: 15000 });
-    await pngOption.click();
 
     // Verify that the "Scan Safety Warning" warning dialog/modal is open
     const warningModalTitle = page.getByRole('heading', { name: 'Scan Safety Warning' });
