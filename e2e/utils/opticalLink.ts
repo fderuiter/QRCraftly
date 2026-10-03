@@ -18,6 +18,7 @@
 
 import { setTimeout as delay } from 'node:timers/promises';
 import type { BrowserContext, Page } from '@playwright/test';
+import { installFakeCamera, showOnCamera } from '../../tests/utils/fakeCamera';
 
 /**
  * Optical link test harness: stands in for "phone camera pointed at a screen".
@@ -41,65 +42,12 @@ export interface CameraCondition {
   scale?: number;
 }
 
-/** Installs the synthetic camera on every page of the context (run before navigation). */
+/**
+ * Installs the synthetic camera on every page of the context (run before navigation).
+ * It is the shared fake camera from `tests/utils/fakeCamera.ts` with a square 720 px view.
+ */
 export async function installSyntheticCamera(context: BrowserContext, options: { deny?: boolean } = {}): Promise<void> {
-  await context.addInitScript(({ deny }) => {
-    const w = window as unknown as Record<string, unknown>;
-    const size = 720;
-    let canvas: HTMLCanvasElement | null = null;
-
-    const ensureCanvas = (): HTMLCanvasElement => {
-      if (canvas) return canvas;
-      canvas = document.createElement('canvas');
-      canvas.width = size;
-      canvas.height = size;
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.fillStyle = '#6b7280';
-        ctx.fillRect(0, 0, size, size);
-      }
-      return canvas;
-    };
-
-    w.__cameraRequests = 0;
-    w.__paintCamera = async (dataUrl: string, cond: Record<string, number | undefined>) => {
-      const target = ensureCanvas();
-      const ctx = target.getContext('2d');
-      if (!ctx) return false;
-      const img = new Image();
-      img.src = dataUrl;
-      await img.decode();
-      ctx.filter = 'none';
-      ctx.fillStyle = '#6b7280';
-      ctx.fillRect(0, 0, size, size);
-      const filters: string[] = [];
-      if (cond.blurPx) filters.push(`blur(${cond.blurPx}px)`);
-      if (cond.brightness !== undefined) filters.push(`brightness(${cond.brightness})`);
-      if (cond.contrast !== undefined) filters.push(`contrast(${cond.contrast})`);
-      ctx.filter = filters.length ? filters.join(' ') : 'none';
-      const scale = cond.scale ?? 0.8;
-      const drawn = size * scale;
-      const offset = (size - drawn) / 2;
-      ctx.drawImage(img, offset, offset, drawn, drawn);
-      ctx.filter = 'none';
-      return true;
-    };
-
-    const mediaDevices = navigator.mediaDevices ?? ({} as MediaDevices);
-    Object.defineProperty(mediaDevices, 'getUserMedia', {
-      configurable: true,
-      value: async () => {
-        w.__cameraRequests = (w.__cameraRequests as number) + 1;
-        if (deny) {
-          throw new DOMException('Permission denied', 'NotAllowedError');
-        }
-        return ensureCanvas().captureStream(30);
-      },
-    });
-    if (!navigator.mediaDevices) {
-      Object.defineProperty(navigator, 'mediaDevices', { configurable: true, value: mediaDevices });
-    }
-  }, { deny: options.deny ?? false });
+  await installFakeCamera(context, { deny: options.deny, width: 720, height: 720 });
 }
 
 /** Reads the sender's current transfer frame as a PNG data URL, or null before the first frame. */
@@ -113,10 +61,13 @@ export async function grabSenderFrame(sender: Page): Promise<string | null> {
 
 /** Paints one frame onto the receiver's synthetic camera. */
 export async function paintCamera(receiver: Page, dataUrl: string, condition: CameraCondition = {}): Promise<void> {
-  await receiver.evaluate(
-    ([url, cond]) => (window as unknown as { __paintCamera: (u: string, c: CameraCondition) => Promise<boolean> }).__paintCamera(url, cond),
-    [dataUrl, condition] as const
-  );
+  await showOnCamera(receiver, {
+    image: dataUrl,
+    scale: condition.scale,
+    blur: condition.blurPx,
+    brightness: condition.brightness,
+    contrast: condition.contrast,
+  });
 }
 
 export interface RelayOptions {
