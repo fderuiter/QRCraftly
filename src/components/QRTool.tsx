@@ -480,9 +480,9 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
   );
 }
 
-export default function QRTool({ initialConfig, title, toolId = 'index' }: { initialConfig?: Partial<QRConfig>, title?: string, toolId?: string }) {
+export default function QRTool({ initialConfig, presetConfig, title, toolId = 'index' }: { initialConfig?: Partial<QRConfig>, presetConfig?: Partial<QRConfig>, title?: string, toolId?: string }) {
   return (
-    <QRProvider initialConfig={initialConfig} retainAppearance>
+    <QRProvider initialConfig={initialConfig} presetConfig={presetConfig} retainAppearance>
       <QRToolInner title={title} toolId={toolId} />
     </QRProvider>
   );

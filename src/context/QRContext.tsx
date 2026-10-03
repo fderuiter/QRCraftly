@@ -132,12 +132,13 @@ function stagedContentFor(type: QRConfig['type'] | undefined): Pick<QRConfig, 't
   return stagedContent && stagedContent.type === type ? stagedContent : null;
 }
 
-function createQRStore(initialConfig?: Partial<QRConfig>, retainAppearance = false): QRStore {
+function createQRStore(initialConfig?: Partial<QRConfig>, retainAppearance = false, presetConfig?: Partial<QRConfig>): QRStore {
   let state: QRState = {
     config: {
       ...DEFAULT_CONFIG,
       ...initialConfig,
       ...(retainAppearance ? retainedAppearance : null),
+      ...presetConfig,
       ...(retainAppearance ? stagedContentFor(initialConfig?.type ?? DEFAULT_CONFIG.type) : null),
     },
     moduleCount: 0,
@@ -210,10 +211,12 @@ function createQRStore(initialConfig?: Partial<QRConfig>, retainAppearance = fal
  * @param root0.initialConfig - Route-specific initial configuration (for example the QR type).
  * @param root0.retainAppearance - Carry appearance-only settings (never content) over from the
  *   previous generator route, in memory only.
+ * @param root0.presetConfig - Settings a landing page asks for (for example high error correction);
+ *   they win over appearance retained from earlier routes.
  * @returns The provider element.
  */
-export const QRProvider = ({ children, initialConfig, retainAppearance = false }: { children: React.ReactNode, initialConfig?: Partial<QRConfig>, retainAppearance?: boolean }) => {
-  const [store] = useState(() => createQRStore(initialConfig, retainAppearance));
+export const QRProvider = ({ children, initialConfig, retainAppearance = false, presetConfig }: { children: React.ReactNode, initialConfig?: Partial<QRConfig>, retainAppearance?: boolean, presetConfig?: Partial<QRConfig> }) => {
+  const [store] = useState(() => createQRStore(initialConfig, retainAppearance, presetConfig));
 
   // Staged content is read once: clear it after the first generator mounts with it. (Clearing
   // here, not in the state initialiser, keeps StrictMode's double initialiser call safe.)

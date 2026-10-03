@@ -205,14 +205,14 @@ QRCraftly is healthy and growing when all of the following trend in the right di
 
 ### Technical Quality
 
-| Metric                                             | Target                                                                                                              | Enforced in CI today                         |
-| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
-| Lighthouse Performance                             | >= 90                                                                                                               | >= 75 (`lighthouserc.json`)                  |
-| Lighthouse Accessibility                           | >= 95                                                                                                               | >= 90 (`lighthouserc.json`)                  |
-| Lighthouse SEO                                     | >= 90                                                                                                               | >= 95 (`lighthouserc.json`)                  |
-| Lighthouse Best Practices                          | >= 90                                                                                                               | >= 90 (`lighthouserc.json`)                  |
-| Page first load                                    | <= 260 KB gzipped per page (HTML, CSS and startup scripts); <= 900 KB for all of `dist/client` but the scanner wasm | Same limits (`scripts/check-bundle-size.js`) |
-| Scannability pass rate (Print Simulation Verified) | >= 95% across all pattern styles in CI visual regression                                                            | No CI check measures this rate               |
+| Metric                                             | Target                                                                                                               | Enforced in CI today                         |
+| -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| Lighthouse Performance                             | >= 90                                                                                                                | >= 75 (`lighthouserc.json`)                  |
+| Lighthouse Accessibility                           | >= 95                                                                                                                | >= 90 (`lighthouserc.json`)                  |
+| Lighthouse SEO                                     | >= 90                                                                                                                | >= 95 (`lighthouserc.json`)                  |
+| Lighthouse Best Practices                          | >= 90                                                                                                                | >= 90 (`lighthouserc.json`)                  |
+| Page first load                                    | <= 260 KB gzipped per page (HTML, CSS and startup scripts); <= 1000 KB for all of `dist/client` but the scanner wasm | Same limits (`scripts/check-bundle-size.js`) |
+| Scannability pass rate (Print Simulation Verified) | >= 95% across all pattern styles in CI visual regression                                                             | No CI check measures this rate               |
 
 ### Product Engagement
 

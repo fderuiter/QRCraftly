@@ -88,6 +88,18 @@ export const TOOL_LINKS: readonly (readonly [label: string, href: string])[] = [
   ['Send a File', '/file-transfer'],
   ['Receive a File', '/file-transfer/receive'],
   ['QR Arcade', '/arcade'],
+  ['QR Code Checker', '/qr-code-checker'],
+];
+
+/** The landing pages that open the generator with presets for one job (#1035, #1037), listed in the footer. */
+export const USE_CASE_LINKS: readonly (readonly [label: string, href: string])[] = [
+  ['Image QR Code', '/mosaic-qr-code'],
+  ['QR Code with Logo', '/qr-code-with-logo'],
+  ['Google Review QR Code', '/google-review-qr-code'],
+  ['Menu QR Code', '/menu-qr-code'],
+  ['Instagram QR Code', '/instagram-qr-code'],
+  ['WhatsApp QR Code', '/whatsapp-qr-code'],
+  ['PDF QR Code', '/pdf-qr-code'],
 ];
 
 const GENERATOR_PATHS = new Set<string>(Object.values(QR_TYPE_ROUTES));

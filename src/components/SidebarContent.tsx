@@ -1,4 +1,5 @@
 import { contentRegistry } from '@/data/contentRegistry';
+import { LANDING_GALLERIES } from '@/data/landingPages';
 import { getExampleImage, getRelatedTypePages } from '@/data/relatedPages';
 import { typeGuides } from '@/data/typeGuides';
 import { isDangerousUrl } from '@/utils/security';
@@ -62,6 +63,7 @@ export function SidebarContent({ toolId }: SidebarContentProps) {
 
   const example = getExampleImage(toolId);
   const related = getRelatedTypePages(toolId);
+  const gallery = LANDING_GALLERIES[toolId];
   const guide = typeGuides[toolId];
   const intro = content.intro ?? guide?.intro;
 
@@ -127,6 +129,35 @@ export function SidebarContent({ toolId }: SidebarContentProps) {
               </div>
             ))}
           </div>
+        </section>
+      )}
+
+      {gallery && (
+        <section className="mb-10" aria-labelledby="gallery-heading">
+          <h2 id="gallery-heading" className="mb-3 text-2xl font-bold text-fg">
+            Examples
+          </h2>
+          <ul className="grid list-none gap-4 sm:grid-cols-2">
+            {gallery.map((image) => (
+              <li key={image.src}>
+                <figure>
+                  <img
+                    src={image.src}
+                    alt={image.alt}
+                    width={396}
+                    height={396}
+                    loading="lazy"
+                    decoding="async"
+                    className="aspect-square w-full rounded-lg border border-line bg-surface"
+                  />
+                  <figcaption className="mt-2 text-sm text-fg-muted">{image.caption}</figcaption>
+                </figure>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-3 text-sm text-fg-muted">
+            Both are working codes for qrcraftly.com, made from a picture drawn in code. No AI was used.
+          </p>
         </section>
       )}
 

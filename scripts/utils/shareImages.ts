@@ -16,7 +16,8 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { createCanvas, drawText, drawable, encodePng, fillRect, lineHeight, textWidth, wrapText, type Rgb } from './pixelImage';
+import { planMosaic, rasterizeMosaic, type MosaicMode, type MosaicSource } from '../../src/packages/qr-matrix/mosaic';
+import { createCanvas, drawText, drawable, encodePng, encodeRgbPng, fillRect, lineHeight, textWidth, wrapText, type Rgb } from './pixelImage';
 
 /** The module grid of a QR code: its side length and whether a module is dark. */
 export interface ModuleGrid {
@@ -123,4 +124,49 @@ export function renderExampleSvg(grid: ModuleGrid): string {
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${total} ${total}" width="${total * 8}" height="${total * 8}" shape-rendering="crispEdges">` +
     `<rect width="${total}" height="${total}" fill="#fff"/><path d="${path}" fill="#0f172a"/></svg>`
   );
+}
+
+/** Side of the demonstration picture the mosaic examples are built from. */
+const DEMO_IMAGE_SIZE = 256;
+/** Pixels per module in the mosaic example PNGs (a multiple of 3, the halftone subdivision). */
+const MOSAIC_PIXELS_PER_MODULE = 12;
+
+/**
+ * Paints the picture behind the mosaic examples: a sun over a striped sea. It is drawn in code,
+ * so the examples need no photo, no AI and no licence.
+ * @returns An opaque RGBA image.
+ */
+export function createDemoImage(): MosaicSource {
+  const size = DEMO_IMAGE_SIZE;
+  const data = new Uint8ClampedArray(size * size * 4);
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const horizon = size * 0.62;
+      let rgb: Rgb;
+      if (y < horizon) {
+        const t = y / horizon;
+        rgb = [Math.round(250 - 90 * t), Math.round(130 + 50 * t), Math.round(40 + 140 * t)];
+      } else {
+        const stripe = Math.floor((y - horizon) / 9) % 2 === 0;
+        rgb = stripe ? [20, 60, 120] : [40, 110, 170];
+      }
+      if (Math.hypot(x - size * 0.5, y - size * 0.46) < size * 0.2) rgb = [255, 214, 70];
+      const at = (y * size + x) * 4;
+      data.set([rgb[0], rgb[1], rgb[2], 255], at);
+    }
+  }
+  return { width: size, height: size, data };
+}
+
+/**
+ * Renders a Mosaic QR example (ADR 0019) as a PNG: the demonstration picture tiled into the
+ * modules of the code, each module keeping its dark or light value.
+ * @param grid - Modules of the QR code.
+ * @param mode - Tile layout.
+ * @returns The PNG file bytes.
+ */
+export function renderMosaicExamplePng(grid: ModuleGrid, mode: MosaicMode): Buffer {
+  const plan = planMosaic(grid, createDemoImage(), { mode, contrast: 0.5 });
+  const { width, height, data } = rasterizeMosaic(plan, MOSAIC_PIXELS_PER_MODULE, QUIET_ZONE);
+  return encodeRgbPng(width, height, data);
 }

@@ -23,7 +23,7 @@ import { isDangerousUrl } from '@/utils/security';
 import { PrimaryNav } from './ui/PrimaryNav';
 import { ThemeToggle } from './ui/ThemeToggle';
 import { PLEDGE_TAGLINE } from '@/data/pledge';
-import { GENERATOR_FOOTER_LINKS, TOOL_LINKS } from '@/data/navigation';
+import { GENERATOR_FOOTER_LINKS, TOOL_LINKS, USE_CASE_LINKS } from '@/data/navigation';
 
 const FOOTER_LINK_CLASSES = 'transition-colors hover:text-accent';
 
@@ -105,10 +105,16 @@ export function AppFooter() {
           <SectionHeading eyebrow="Generators" tone="strong" className="mb-3" />
           <FooterLinks links={GENERATOR_FOOTER_LINKS} className="grid grid-cols-2 gap-x-5 gap-y-2 text-sm text-fg-muted" />
         </nav>
-        <nav aria-label="Tools">
-          <SectionHeading eyebrow="Tools" tone="strong" className="mb-3" />
-          <FooterLinks links={TOOL_LINKS} className="space-y-2 text-sm text-fg-muted" />
-        </nav>
+        <div>
+          <nav aria-label="Tools">
+            <SectionHeading eyebrow="Tools" tone="strong" className="mb-3" />
+            <FooterLinks links={TOOL_LINKS} className="space-y-2 text-sm text-fg-muted" />
+          </nav>
+          <nav aria-label="Popular uses" className="mt-6">
+            <SectionHeading eyebrow="Popular uses" tone="strong" className="mb-3" />
+            <FooterLinks links={USE_CASE_LINKS} className="space-y-2 text-sm text-fg-muted" />
+          </nav>
+        </div>
         <nav aria-label="Company">
           <SectionHeading eyebrow="Company" tone="strong" className="mb-3" />
           <FooterLinks links={COMPANY_LINKS} className="space-y-2 text-sm text-fg-muted" />

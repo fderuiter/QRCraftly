@@ -37,7 +37,7 @@ const { buildMatrix, loadQrEncoder } = await import('../src/packages/qr-matrix')
 const { getSamplePayload } = await import('../src/packages/qr-payload');
 const { QRType, QRErrorCorrectionLevel } = await import('../src/types');
 const { resolvePublicUrl } = await import('../src/utils/metadataEngine');
-const { renderExampleSvg, renderShareImage } = await import('./utils/shareImages');
+const { renderExampleSvg, renderMosaicExamplePng, renderShareImage } = await import('./utils/shareImages');
 
 const CLIENT_DIR = process.env.SHARE_IMAGES_DIST_DIR || path.resolve(__dirname, '../dist/client');
 const OG_PREFIX = '/og/';
@@ -74,7 +74,14 @@ async function main(): Promise<void> {
     );
     fs.writeFileSync(path.join(examplesDir, `${id}.svg`), renderExampleSvg(grid));
   }
-  console.log(`[ShareImages] Wrote ${shareCount} share images and ${Object.keys(TYPE_PAGE_TYPES).length} example SVGs.`);
+  const mosaicGrid = buildMatrix(
+    { type: QRType.URL, value: resolvePublicUrl('/'), errorCorrectionLevel: QRErrorCorrectionLevel.H },
+    encoder
+  );
+  for (const mode of ['halftone', 'tiles'] as const) {
+    fs.writeFileSync(path.join(examplesDir, `mosaic-${mode}.png`), renderMosaicExamplePng(mosaicGrid, mode));
+  }
+  console.log(`[ShareImages] Wrote ${shareCount} share images, ${Object.keys(TYPE_PAGE_TYPES).length} example SVGs and 2 mosaic examples.`);
 }
 
 await main();

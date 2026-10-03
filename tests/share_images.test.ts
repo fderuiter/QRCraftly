@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { buildMatrix, loadQrEncoder } from '@/packages/qr-matrix';
 import { QRErrorCorrectionLevel, QRType } from '@/types';
 import { drawable, textWidth, wrapText } from '../scripts/utils/pixelImage';
-import { SHARE_IMAGE_HEIGHT, SHARE_IMAGE_WIDTH, renderExampleSvg, renderShareImage } from '../scripts/utils/shareImages';
+import { SHARE_IMAGE_HEIGHT, SHARE_IMAGE_WIDTH, renderExampleSvg, renderMosaicExamplePng, renderShareImage } from '../scripts/utils/shareImages';
 
 /** Reads an indexed PNG written by encodePng back into RGBA pixels. */
 function decodeIndexedPng(png: Buffer): { width: number; height: number; rgba: Uint8ClampedArray } {
@@ -86,6 +86,57 @@ describe('example SVG', () => {
       }
     }
     expect(jsQR(rgba, side, side)?.data).toBe(payload);
+  });
+});
+
+/** Reads a truecolour PNG written by encodeRgbPng back into RGBA pixels. */
+function decodeRgbPng(png: Buffer): { width: number; height: number; rgba: Uint8ClampedArray } {
+  const data: Buffer[] = [];
+  let width = 0;
+  let height = 0;
+  for (let at = 8; at < png.length; ) {
+    const length = png.readUInt32BE(at);
+    const type = png.toString('ascii', at + 4, at + 8);
+    const body = png.subarray(at + 8, at + 8 + length);
+    if (type === 'IHDR') {
+      width = body.readUInt32BE(0);
+      height = body.readUInt32BE(4);
+      expect(body[9]).toBe(2);
+    }
+    if (type === 'IDAT') data.push(body);
+    at += length + 12;
+  }
+  const raw = zlib.inflateSync(Buffer.concat(data));
+  const rgba = new Uint8ClampedArray(width * height * 4);
+  for (let row = 0; row < height; row++) {
+    for (let col = 0; col < width; col++) {
+      const from = row * (width * 3 + 1) + 1 + col * 3;
+      rgba.set([raw[from], raw[from + 1], raw[from + 2], 255], (row * width + col) * 4);
+    }
+  }
+  return { width, height, rgba };
+}
+
+describe('mosaic examples (#1035)', () => {
+  const address = 'https://qrcraftly.com/';
+
+  it.each(['halftone', 'tiles'] as const)('draws a %s mosaic that still scans back to the address', async (mode) => {
+    const grid = buildMatrix({ type: QRType.URL, value: address, errorCorrectionLevel: QRErrorCorrectionLevel.H }, await loadQrEncoder());
+    const png = renderMosaicExamplePng(grid, mode);
+    const { width, height, rgba } = decodeRgbPng(png);
+    expect(width).toBe((grid.size + 8) * 12);
+    expect(height).toBe(width);
+    expect(jsQR(rgba, width, height)?.data).toBe(address);
+    // It is a picture, not a black and white code: many distinct colours.
+    const colours = new Set<number>();
+    for (let i = 0; i < rgba.length; i += 4) colours.add((rgba[i] << 16) | (rgba[i + 1] << 8) | rgba[i + 2]);
+    expect(colours.size).toBeGreaterThan(20);
+    expect(png.length).toBeLessThan(60_000);
+  });
+
+  it('is byte-for-byte reproducible', async () => {
+    const grid = buildMatrix({ type: QRType.URL, value: address, errorCorrectionLevel: QRErrorCorrectionLevel.H }, await loadQrEncoder());
+    expect(renderMosaicExamplePng(grid, 'tiles').equals(renderMosaicExamplePng(grid, 'tiles'))).toBe(true);
   });
 });
 

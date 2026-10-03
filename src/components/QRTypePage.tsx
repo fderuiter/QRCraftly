@@ -19,7 +19,8 @@
 import React from 'react';
 import QRTool from '@/components/QRTool';
 import { DEFAULT_CONFIG } from '@/constants';
-import { QRType } from '@/types';
+import { QRType, type QRConfig } from '@/types';
+import { PresetOpenSections } from '@/components/StyleControls';
 import { JsonLdScript } from '@/components/ui/JsonLdScript';
 
 interface QRTypePageProps {
@@ -31,13 +32,20 @@ interface QRTypePageProps {
   schemaData: unknown;
   /** The tool ID for loading content. */
   toolId: string;
+  /** Settings a landing page asks for; they win over appearance kept from earlier routes. */
+  presetConfig?: Partial<QRConfig>;
+  /** Appearance sections that start expanded. */
+  openSections?: readonly string[];
 }
+
+/** Appearance sections that start expanded when a page asks for none. */
+const NO_SECTIONS: readonly string[] = [];
 
 /**
  * A reusable page component for specific QR code type landing pages.
  * It sets up the QRTool with the correct type and injects the provided schema.org data.
  */
-export const QRTypePage: React.FC<QRTypePageProps> = ({ type, title, schemaData, toolId }) => {
+export const QRTypePage: React.FC<QRTypePageProps> = ({ type, title, schemaData, toolId, presetConfig, openSections = NO_SECTIONS }) => {
   const config = {
     ...DEFAULT_CONFIG,
     type,
@@ -46,7 +54,9 @@ export const QRTypePage: React.FC<QRTypePageProps> = ({ type, title, schemaData,
   return (
     <>
       <JsonLdScript data={schemaData} />
-      <QRTool initialConfig={config} title={title} toolId={toolId} />
+      <PresetOpenSections.Provider value={openSections}>
+        <QRTool initialConfig={config} presetConfig={presetConfig} title={title} toolId={toolId} />
+      </PresetOpenSections.Provider>
     </>
   );
 };

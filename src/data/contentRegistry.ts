@@ -1,5 +1,6 @@
 import { getPublicDomain, getSanitizedPath } from "../utils/metadataEngine";
 import { toolFaqs } from "./toolFaqs";
+import { landingPageContent } from "./landingPageContent";
 
 export enum SchemaType {
   SoftwareApplication = "SoftwareApplication",
@@ -92,6 +93,31 @@ export function isToolContent(item: unknown): item is ToolContent {
     typeof tool.image === 'string' && tool.image.trim().length > 0 &&
     typeof tool.imageAlt === 'string' && tool.imageAlt.trim().length > 0
   );
+}
+
+/**
+ * Builds the registry entry of a landing page from its copy (#1035, #1036, #1037). The page's
+ * share image, address and schema.org type come from here, so each page needs one copy block.
+ */
+function landingEntry(id: string): ToolContent {
+  const copy = landingPageContent[id];
+  return {
+    id,
+    name: copy.name,
+    url: getPublicDomain() + "/" + id,
+    description: copy.description,
+    seoTitle: copy.seoTitle,
+    heading: copy.heading,
+    image: `/og/${id}.png`,
+    imageAlt: copy.imageAlt,
+    features: copy.features,
+    schemaType: [SchemaType.SoftwareApplication, SchemaType.WebApplication],
+    schemaCategory: SchemaCategory.UtilitiesApplication,
+    personas: [TargetPersona.HealthcareLegal, TargetPersona.SecurityConsciousEnterprise],
+    valueProposition: StrategicValueCategory.ZeroTransitPrivacySovereignty,
+    howTo: copy.howTo,
+    faqs: copy.faqs,
+  };
 }
 
 export const contentRegistry: Record<string, ToolContent> = {
@@ -849,6 +875,14 @@ export const contentRegistry: Record<string, ToolContent> = {
       }
     ]
   },
+  "qr-code-checker": landingEntry("qr-code-checker"),
+  "mosaic-qr-code": landingEntry("mosaic-qr-code"),
+  "qr-code-with-logo": landingEntry("qr-code-with-logo"),
+  "google-review-qr-code": landingEntry("google-review-qr-code"),
+  "menu-qr-code": landingEntry("menu-qr-code"),
+  "instagram-qr-code": landingEntry("instagram-qr-code"),
+  "whatsapp-qr-code": landingEntry("whatsapp-qr-code"),
+  "pdf-qr-code": landingEntry("pdf-qr-code"),
   "security": {
     "id": "security",
     "name": "Security & Privacy",
