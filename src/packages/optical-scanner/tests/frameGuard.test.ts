@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createStaleFrameGuard } from '../lib/frameGuard';
+import { createStaleFrameGuard } from '../index';
 
 describe('stale-frame guard', () => {
   it('rejects a frame older than the newest one of the same session', () => {

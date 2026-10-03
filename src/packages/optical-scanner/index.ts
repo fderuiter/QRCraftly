@@ -18,6 +18,17 @@ export {
   type CameraFramePixels,
 } from './lib/cameraEngine';
 
+/** The camera-frame decoder: one bounded jsQR pass per frame, rotating strategies (#1096). */
+export {
+  decodeCameraFrame,
+  cameraStrategyFor,
+  estimateNoise,
+  type CameraDecodeStrategy,
+} from './lib/decodeSync';
+
+/** Per-session frame staleness, as the shared scanner worker judges it (#1095). */
+export { createStaleFrameGuard, type StaleFrameGuard } from './lib/frameGuard';
+
 export { type ScannerClock } from './lib/clock';
 
 export {

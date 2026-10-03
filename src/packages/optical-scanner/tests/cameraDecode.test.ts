@@ -3,7 +3,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderCorpusFrame } from '../../../../tests/utils/scannerCorpus';
-import { cameraStrategyFor, decodeCameraFrame, estimateNoise, type CameraDecodeStrategy } from '../lib/decodeSync';
+import { cameraStrategyFor, decodeCameraFrame, estimateNoise, type CameraDecodeStrategy } from '../index';
 
 const jsQRCalls = vi.hoisted(() => ({ count: 0 }));
 

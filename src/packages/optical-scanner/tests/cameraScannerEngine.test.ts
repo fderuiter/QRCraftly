@@ -7,6 +7,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   createCameraScannerEngine,
+  createStaleFrameGuard,
   type CameraFrameGrabber,
   type CameraFrameSource,
   type CameraScannerEngine,
@@ -17,7 +18,6 @@ import {
   type ScannerWorkerFactory,
   type ScannerWorkerHandlers,
 } from '../index';
-import { createStaleFrameGuard } from '../lib/frameGuard';
 
 /** Deterministic clock: timers and display frames fire only when the test advances time. */
 class FakeClock implements ScannerClock {
