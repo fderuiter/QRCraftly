@@ -21,6 +21,7 @@ import React from 'react';
 import { Download, Keyboard, QrCode } from 'lucide-react';
 import { PLEDGE_COMMITMENT, PLEDGE_HEADLINE } from '@/data/pledge';
 import { GENERATOR_FOOTER_LINKS, TOOL_LINKS } from '@/data/navigation';
+import { isDangerousUrl } from '@/utils/security';
 import { JsonLdScript } from '@/components/ui/JsonLdScript';
 import { contentRegistry } from '@/data/contentRegistry';
 import { generateSchema } from '@/utils/schemaGenerator';
@@ -128,11 +129,16 @@ export default function Page() {
         <section id="tools" aria-labelledby="tools-title" className="mb-10 scroll-mt-6">
           <ArticleHeading id="tools"><span id="tools-title">Every tool</span></ArticleHeading>
           <ul className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-3">
-            {[...GENERATOR_FOOTER_LINKS, ...TOOL_LINKS].map(([label, href]) => (
-              <li key={href}>
-                <a href={href} className={LINK_CLASSES}>{label}</a>
-              </li>
-            ))}
+            {[...GENERATOR_FOOTER_LINKS, ...TOOL_LINKS].map(([label, href]) => {
+              if (!isDangerousUrl(href)) {
+                return (
+                  <li key={href}>
+                    <a href={href} className={LINK_CLASSES}>{label}</a>
+                  </li>
+                );
+              }
+              return null;
+            })}
           </ul>
         </section>
 

@@ -18,6 +18,7 @@
 
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link2 } from 'lucide-react';
+import { isDangerousUrl } from '@/utils/security';
 import { AccordionItem } from './ui/Accordion';
 import { ButtonLink } from './ui/Button';
 import { Tooltip } from './ui/Tooltip';
@@ -75,17 +76,23 @@ function useActiveSection(ids: readonly string[]): string {
 function TocLinks({ sections, active }: { sections: readonly ArticleSection[]; active: string }) {
   return (
     <ol className="space-y-1 border-l border-line text-sm">
-      {sections.map(({ id, label }) => (
-        <li key={id}>
-          <a
-            href={`#${id}`}
-            aria-current={id === active ? 'location' : undefined}
-            className="-ml-px block border-l-2 border-transparent py-1 pl-3 text-fg-muted hover:text-fg aria-[current=location]:border-accent aria-[current=location]:font-semibold aria-[current=location]:text-accent"
-          >
-            {label}
-          </a>
-        </li>
-      ))}
+      {sections.map(({ id, label }) => {
+        const href = `#${id}`;
+        if (!isDangerousUrl(href)) {
+          return (
+            <li key={id}>
+              <a
+                href={href}
+                aria-current={id === active ? 'location' : undefined}
+                className="-ml-px block border-l-2 border-transparent py-1 pl-3 text-fg-muted hover:text-fg aria-[current=location]:border-accent aria-[current=location]:font-semibold aria-[current=location]:text-accent"
+              >
+                {label}
+              </a>
+            </li>
+          );
+        }
+        return null;
+      })}
     </ol>
   );
 }
