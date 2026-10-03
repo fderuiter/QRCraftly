@@ -29,7 +29,7 @@ import { Download, Share2, ChevronDown, CircleHelp, Copy, Check, AlertTriangle }
 import { ExportOptions as DownloadOptions, FORMAT_LABELS, clampSize, type DownloadFormat } from './ExportOptions';
 import { usePopoverDismiss } from '@/hooks/usePopoverDismiss';
 import { Modal } from './ui/Modal';
-import { useDebounce } from '@/hooks/useDebounce';
+import { useLeadingDebounce } from '@/hooks/useDebounce';
 import { useQRDownload, ExportStatus, AssetOptions, type ExportFormat } from '@/hooks/useQRDownload';
 import { getExportRiskPolicy } from '@/utils/exportRiskPolicy';
 import { useToast } from './ui/Toast';
@@ -213,7 +213,7 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
   }, [setModuleCount, checkScannability]);
 
   // Debounce the effective config for QRCanvas to prevent lag during rapid typing or style changes.
-  const debouncedConfig = useDebounce(effectiveConfig, 100);
+  const debouncedConfig = useLeadingDebounce(effectiveConfig, 100);
 
   /**
    * Returns focus to the button that started an export and reports the result: success

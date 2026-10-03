@@ -1,7 +1,7 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { SYSTEM_LIMITS } from '../src/constants';
-import { MAX_GZIPPED_SIZE_KB } from '../scripts/check-bundle-size.js';
+import { MAX_GZIPPED_SIZE_KB, MAX_PAGE_FIRST_LOAD_KB } from '../scripts/check-bundle-size.js';
 
 describe('Automated Unit Test Verification for Centralized Constants', () => {
   it('should document the correct file upload limits and formats in README.md', () => {
@@ -24,16 +24,19 @@ describe('Automated Unit Test Verification for Centralized Constants', () => {
     const scalingPath = join(__dirname, '../docs/public/SCALING.md');
     const scalingContent = readFileSync(scalingPath, 'utf8');
 
-    expect(scalingContent).toContain(`Worst Case Bundle Size:** ${MAX_GZIPPED_SIZE_KB} KB gzipped`);
-    expect(scalingContent).toContain(`CI enforces a **${MAX_GZIPPED_SIZE_KB} KB gzipped** limit`);
+    expect(scalingContent).toContain(`Worst Case First Load:** ${MAX_PAGE_FIRST_LOAD_KB} KB gzipped`);
+    expect(scalingContent).toContain(`CI enforces a **${MAX_PAGE_FIRST_LOAD_KB} KB gzipped first-load budget per page**`);
+    expect(scalingContent).toContain(`A loose **${MAX_GZIPPED_SIZE_KB} KB** ceiling`);
   });
 
   it('should document the CI bundle size limit from scripts/check-bundle-size.js in README.md and product.md', () => {
     const readmeContent = readFileSync(join(__dirname, '../README.md'), 'utf8');
     const productContent = readFileSync(join(__dirname, '../product.md'), 'utf8');
 
-    expect(readmeContent).toContain(`exceeds ${MAX_GZIPPED_SIZE_KB} KB`);
+    expect(readmeContent).toContain(`exceeds ${MAX_PAGE_FIRST_LOAD_KB} KB`);
+    expect(readmeContent).toContain(`exceed ${MAX_GZIPPED_SIZE_KB} KB`);
     expect(readmeContent).not.toMatch(/\b3 ?MB limit/);
-    expect(productContent).toContain(`<= ${MAX_GZIPPED_SIZE_KB} KB gzipped`);
+    expect(productContent).toContain(`<= ${MAX_PAGE_FIRST_LOAD_KB} KB gzipped`);
+    expect(productContent).toContain(`<= ${MAX_GZIPPED_SIZE_KB} KB`);
   });
 });

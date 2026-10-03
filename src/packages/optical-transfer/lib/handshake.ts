@@ -18,7 +18,8 @@
 
 import { QRConfig, QRStyle, SocialFormat, TemplateStyle } from '@/types';
 import { drawQRInternal } from '@/packages/qr-matrix';
-import { createScannabilityWorker, isWorkerResponse, performScannabilityCheck } from '@/packages/scannability';
+import { createScannabilityWorker, isWorkerResponse } from '@/packages/scannability';
+import { performScannabilityCheck } from '@/packages/scannability/checker';
 
 /** Side length, in CSS pixels, of the canvas the handshake frame is rendered onto for checking. */
 const DISPLAY_SIZE = 512;

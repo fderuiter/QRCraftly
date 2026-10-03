@@ -90,14 +90,14 @@ describe('useQRDownload', () => {
     }
   });
 
-  it('downloadToDevice creates a download link and clicks it', () => {
+  it('downloadToDevice creates a download link and clicks it', async () => {
     const { result } = renderHook(() => useQRDownload(mockQrRef, DEFAULT_CONFIG as QRConfig), { wrapper: ToastProvider });
 
     const appendSpy = vi.spyOn(document.body, 'appendChild');
     const removeSpy = vi.spyOn(document.body, 'removeChild');
     const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click');
 
-    result.current.downloadToDevice('png');
+    await result.current.downloadToDevice('png');
 
     expect(mockCanvas.toDataURL).toHaveBeenCalledWith('image/png');
     expect(appendSpy).toHaveBeenCalled();

@@ -19,14 +19,14 @@
 import { test, expect, type Route } from '@playwright/test';
 
 /**
- * Text that only the lazily loaded StyleControls chunk contains. The home page
- * imports that chunk with `React.lazy` after hydration, so a chunk that fails to
- * evaluate throws during render and must be caught by the Appearance panel's error
- * boundary (#1055), leaving the rest of the generator working.
+ * Text that only the lazily loaded scanner chunk contains. The scanner is imported with
+ * `React.lazy` when "Scan QR Code" is used, so a chunk that fails to evaluate throws during
+ * render and must be caught by the panel error boundary inside the dialog, leaving the rest
+ * of the generator working.
  * This exercises a real production failure mode (a broken or stale deploy chunk)
  * without any test-only hook in the shipped code (#983).
  */
-const LAZY_CHUNK_MARKER = 'Layout & Border';
+const LAZY_CHUNK_MARKER = 'Drop the image to scan it';
 
 test.describe('Error Fallbacks and Recovery E2E Tests', () => {
   // Service workers answer chunk requests from their cache, which bypasses page.route.
@@ -54,8 +54,10 @@ test.describe('Error Fallbacks and Recovery E2E Tests', () => {
     // Ignore the intentional chunk evaluation error
     page.on('pageerror', () => {});
 
-    // 1. Load the generator; its Appearance panel lazily imports the broken chunk after hydration
+    // 1. Load the generator and open the scanner, which lazily imports the broken chunk
     await page.goto('/');
+    await page.waitForSelector('main[data-hydrated="true"]');
+    await page.getByRole('button', { name: 'Scan QR Code' }).click();
 
     // 2. The panel's error boundary intercepts the render-time failure; the rest of the page keeps working
     const fallbackTitle = page.getByText('This panel hit a snag.');
@@ -63,6 +65,7 @@ test.describe('Error Fallbacks and Recovery E2E Tests', () => {
     expect(brokenChunks).toBeGreaterThan(0);
     await expect(page.getByText('Application Error')).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Reload panel' })).toBeVisible();
+    await page.getByRole('button', { name: 'Close scanner' }).click();
     await expect(page.locator('#url-input')).toBeVisible();
 
     // 3. Once the chunk is served intact again (e.g. the deploy finished), reloading restores the app

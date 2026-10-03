@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { getFiles, verifyBundleSize } from '../scripts/check-bundle-size.js';
+import { getFiles, measurePageLoads, verifyBundleSize } from '../scripts/check-bundle-size.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -67,5 +67,29 @@ describe('Bundle Size Verification Script Tests', () => {
     expect(result.reports).toHaveLength(2);
 
     expect(verifyBundleSize(TEMP_TEST_DIR, 1, 0.01).wasmExceeds).toBe(true);
+  });
+
+  it('measures the first load of a page from its HTML, stylesheet and startup scripts only (#1106)', () => {
+    const assets = path.join(TEMP_TEST_DIR, 'assets');
+    fs.mkdirSync(path.join(assets, 'entries'), { recursive: true });
+    fs.mkdirSync(path.join(assets, 'chunks'), { recursive: true });
+    fs.mkdirSync(path.join(TEMP_TEST_DIR, 'about'), { recursive: true });
+    fs.writeFileSync(
+      path.join(TEMP_TEST_DIR, 'index.html'),
+      '<link rel="stylesheet" href="/assets/s.css"><script src="/assets/entries/home.js"></script>'
+    );
+    fs.writeFileSync(path.join(TEMP_TEST_DIR, 'about', 'index.html'), '<script src="/assets/entries/about.js"></script>');
+    fs.writeFileSync(path.join(assets, 's.css'), 'body{}');
+    fs.writeFileSync(path.join(assets, 'entries', 'home.js'), 'import"../chunks/shared.js";const l=()=>import("../chunks/lazy.js");');
+    fs.writeFileSync(path.join(assets, 'entries', 'about.js'), 'console.log("about");');
+    fs.writeFileSync(path.join(assets, 'chunks', 'shared.js'), Math.random().toString(36).repeat(400));
+    fs.writeFileSync(path.join(assets, 'chunks', 'lazy.js'), Math.random().toString(36).repeat(4000));
+
+    const loads = measurePageLoads(TEMP_TEST_DIR);
+    expect(loads.map((load) => load.page)).toEqual(['index.html', 'about/index.html']);
+    // html + css + entry + shared chunk; the lazily imported chunk is not part of it.
+    expect(loads[0].files).toBe(4);
+    expect(loads[1].files).toBe(2);
+    expect(loads[0].gzipSize).toBeGreaterThan(loads[1].gzipSize);
   });
 });

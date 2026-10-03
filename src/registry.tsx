@@ -1,25 +1,9 @@
-import React, { Suspense } from 'react';
+import React from 'react';
 import InputPanel from '@/components/InputPanel';
 import { SidebarContent } from '@/components/SidebarContent';
 import { useQRStore, useQRStoreSelector } from '@/context/QRContext';
 import { SectionHeading } from '@/components/ui/SectionHeading';
-import { Skeleton } from '@/components/ui/Skeleton';
-
-/**
- * Stand-in for the appearance controls while their chunk loads: the open "Pattern & Colors"
- * section and the collapsed section headers below it, at their final heights.
- * @returns The loading placeholder.
- */
-const AppearanceSkeleton = () => (
-  <div className="space-y-4">
-    <Skeleton className="h-96" />
-    <Skeleton className="h-14" />
-    <Skeleton className="h-14" />
-    <Skeleton className="h-14" />
-  </div>
-);
-
-const StyleControls = React.lazy(() => import('@/components/StyleControls'));
+import StyleControls from '@/components/StyleControls';
 
 const ContentControl = () => {
   const store = useQRStore();
@@ -36,26 +20,19 @@ const ContentControl = () => {
   );
 };
 
+/**
+ * The appearance controls render with the page, so the pattern and colour pickers are in the
+ * static HTML (and the first paint) instead of a placeholder that waits for hydration (#1058).
+ * @returns The appearance section.
+ */
 const AppearanceControl = () => {
   const store = useQRStore();
   const config = useQRStoreSelector(state => state.config);
   const { updateConfig } = store;
-  const [isMounted, setIsMounted] = React.useState(false);
-  
-  React.useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
   return (
     <section>
       <SectionHeading eyebrow="Appearance" className="mb-4" />
-      {isMounted ? (
-        <Suspense fallback={<AppearanceSkeleton />}>
-          <StyleControls config={config} onChange={updateConfig} />
-        </Suspense>
-      ) : (
-        <AppearanceSkeleton />
-      )}
+      <StyleControls config={config} onChange={updateConfig} />
     </section>
   );
 };

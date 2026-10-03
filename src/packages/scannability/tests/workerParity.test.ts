@@ -6,7 +6,7 @@
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import QRCode from 'qrcode';
-import { performScannabilityCheck, type PixelFrame } from '../index';
+import { performScannabilityCheck, type PixelFrame } from '../checker';
 
 /** Rasterizes a QR code into RGBA pixels (black on white, 4-module quiet zone). */
 function renderQr(text: string, scale = 4): PixelFrame {
