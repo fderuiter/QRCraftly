@@ -833,6 +833,16 @@ export const contentRegistry: Record<string, ToolContent> = {
 };
 
 export const auxiliaryRegistry: Record<string, AuxiliaryContent> = {
+  "acknowledgements": {
+    "id": "acknowledgements",
+    "name": "Open-Source Acknowledgements",
+    "seoTitle": "Open-Source Acknowledgements and Licenses - QRCraftly",
+    "description": "Every open-source package whose code QRCraftly sends to your browser, with its version and full license text.",
+    "image": "/og-image.png?type=acknowledgements",
+    "imageAlt": "Open-source acknowledgements - QRCraftly",
+    "personas": [TargetPersona.SecurityConsciousEnterprise],
+    "valueProposition": StrategicValueCategory.ZeroTransitPrivacySovereignty
+  },
   "file-transfer/receive": {
     "id": "file-transfer/receive",
     "name": "Offline Animated QR File Receiver",
