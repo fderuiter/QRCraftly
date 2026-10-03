@@ -23,6 +23,7 @@ import react from '@vitejs/plugin-react';
 import vike from 'vike/plugin';
 import type { Plugin } from 'vite';
 import type { Connect } from 'vite';
+import { shippedPackages } from './scripts/vite/thirdPartyLicenses';
 
 /**
  * Applies the static rules in `public/_redirects` (the file Cloudflare serves them from) in
@@ -64,6 +65,7 @@ const redirectsFile = (): Plugin => ({
  * Configures the development server, plugins, environment variables, and path aliases.
  */
 export default defineConfig(() => {
+    const licenses = shippedPackages();
     const { version } = JSON.parse(fs.readFileSync(path.resolve(__dirname, 'package.json'), 'utf8')) as { version: string };
     return {
       define: {
@@ -82,6 +84,7 @@ export default defineConfig(() => {
         react(),
         vike(),
         redirectsFile(),
+        licenses.plugin,
       ],
       esbuild: {
         target: 'es2022'
@@ -90,6 +93,9 @@ export default defineConfig(() => {
         esbuildOptions: {
           target: 'es2022'
         }
+      },
+      worker: {
+        plugins: () => [licenses.workerPlugin()],
       },
       build: {
         target: "es2022",
