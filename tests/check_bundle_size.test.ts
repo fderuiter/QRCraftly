@@ -38,7 +38,7 @@ describe('Bundle Size Verification Script Tests', () => {
   });
 
   it('should verify gzipped bundle size limit checks within limit', () => {
-    fs.writeFileSync(path.join(TEMP_TEST_DIR, 'file1.txt'), 'Short text content.');
+    fs.writeFileSync(path.join(TEMP_TEST_DIR, 'file1.js'), 'Short text content.');
     
     const result = verifyBundleSize(TEMP_TEST_DIR, 10); // 10 KB limit
     expect(result.exceeds).toBe(false);
@@ -50,11 +50,21 @@ describe('Bundle Size Verification Script Tests', () => {
   it('should detect when gzipped size exceeds the specified limit', () => {
     // Write 5 KB of text to exceed a 1 KB limit (with compression, it will still exceed 1 KB)
     const bulkyContent = 'A'.repeat(5000);
-    fs.writeFileSync(path.join(TEMP_TEST_DIR, 'heavy.txt'), bulkyContent);
+    fs.writeFileSync(path.join(TEMP_TEST_DIR, 'heavy.js'), bulkyContent);
 
     const result = verifyBundleSize(TEMP_TEST_DIR, 0.01); // 10 bytes limit
     // Verify results
     expect(result.exceeds).toBe(true);
+  });
+
+  it('counts only JavaScript and CSS toward the site total, not pre-rendered HTML', () => {
+    fs.writeFileSync(path.join(TEMP_TEST_DIR, 'page.html'), 'H'.repeat(5000));
+    fs.writeFileSync(path.join(TEMP_TEST_DIR, 'app.js'), 'console.log(1);');
+
+    const result = verifyBundleSize(TEMP_TEST_DIR, 1);
+    expect(result.exceeds).toBe(false);
+    expect(result.reports).toHaveLength(2);
+    expect(verifyBundleSize(TEMP_TEST_DIR, 1).totalRawSize).toBe('console.log(1);'.length);
   });
 
   it('budgets the lazily loaded wasm reader separately from the site total (ADR 0023)', () => {
