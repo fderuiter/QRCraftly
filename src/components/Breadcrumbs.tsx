@@ -26,15 +26,17 @@ export function Breadcrumbs({ pageId }: BreadcrumbsProps) {
         {segments.map((segment, index) => {
           const last = index === segments.length - 1;
           const href = `/${segments.slice(0, index + 1).join('/')}`;
-          if (!last && !isDangerousUrl(href)) {
-            return (
-              <li key={segment} className="flex items-center gap-x-2">
-                <span aria-hidden="true">/</span>
-                <a href={href} className="underline-offset-2 hover:underline">
-                  {formatPathName(segment)}
-                </a>
-              </li>
-            );
+          if (!isDangerousUrl(href)) {
+            if (!last) {
+              return (
+                <li key={segment} className="flex items-center gap-x-2">
+                  <span aria-hidden="true">/</span>
+                  <a href={href} className="underline-offset-2 hover:underline">
+                    {formatPathName(segment)}
+                  </a>
+                </li>
+              );
+            }
           }
           return (
             <li key={segment} className="flex items-center gap-x-2">
