@@ -19,7 +19,7 @@ export const PatternControls: React.FC<PatternControlsProps> = ({ config, onChan
       
       {isLowReliability && (
         <div className="mb-4" data-testid="pattern-warning-slot">
-          <Alert variant="error" title="Scannability Warning" role="alert">
+          <Alert variant="error" title="Scannability Warning" role="note">
             The selected pattern ("{PATTERNS.find(p => p.id === config.style)?.label || ''}") is complex and may reduce scannability on older mobile devices or in poor lighting. Consider testing thoroughly before printing.
           </Alert>
         </div>

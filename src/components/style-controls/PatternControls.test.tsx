@@ -42,30 +42,25 @@ describe('PatternControls', () => {
     expect(standardRadio).toBeChecked();
   });
 
-  it('announces scannability warnings through one alert', () => {
+  it('shows the pattern warning as a static note that screen readers are not interrupted by', () => {
+    // The scannability verdict already announces "Scans, but fragile" for these patterns (#800),
+    // so the pattern warning is visible but never a second live announcement.
     const handleChange = vi.fn();
     const { rerender } = render(<PatternControls config={DEFAULT_CONFIG} onChange={handleChange} />);
 
-    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.queryByRole('note')).not.toBeInTheDocument();
 
-    const lowReliabilityConfig = {
-      ...DEFAULT_CONFIG,
-      style: QRStyle.GRUNGE,
-    };
-    rerender(<PatternControls config={lowReliabilityConfig} onChange={handleChange} />);
-    expect(screen.getByRole('alert')).toHaveTextContent(/Scannability Warning: The selected pattern \("Grunge"\) is complex and may reduce scannability/);
-    expect(screen.getAllByRole('alert')).toHaveLength(1);
+    rerender(<PatternControls config={{ ...DEFAULT_CONFIG, style: QRStyle.GRUNGE }} onChange={handleChange} />);
+    expect(screen.getByRole('note')).toHaveTextContent(/Scannability Warning: The selected pattern \("Grunge"\) is complex and may reduce scannability/);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
     expect(document.querySelector('[aria-live]')).not.toBeInTheDocument();
 
-    const circuitConfig = {
-      ...DEFAULT_CONFIG,
-      style: QRStyle.CIRCUIT,
-    };
-    rerender(<PatternControls config={circuitConfig} onChange={handleChange} />);
-    expect(screen.getByRole('alert')).toHaveTextContent(/Scannability Warning: The selected pattern \("Cyber Circuit"\) is complex and may reduce scannability/);
-    expect(screen.getAllByRole('alert')).toHaveLength(1);
+    rerender(<PatternControls config={{ ...DEFAULT_CONFIG, style: QRStyle.CIRCUIT }} onChange={handleChange} />);
+    expect(screen.getByRole('note')).toHaveTextContent(/Scannability Warning: The selected pattern \("Cyber Circuit"\) is complex and may reduce scannability/);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
 
     rerender(<PatternControls config={DEFAULT_CONFIG} onChange={handleChange} />);
-    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.queryByRole('note')).not.toBeInTheDocument();
   });
 });

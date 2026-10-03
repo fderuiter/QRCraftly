@@ -28,7 +28,7 @@ export const ColorControls: React.FC<ColorControlsProps> = ({ config, onChange }
     <div>
       <div className="mb-3 flex items-baseline justify-between">
         <h4 className="text-sm font-semibold text-fg-soft">Colors</h4>
-        <ContrastBadge isVisible={isLowContrast} contrastRatio={worstContrast} decimalPrecision={1} />
+        <ContrastBadge isVisible={isLowContrast} contrastRatio={worstContrast} decimalPrecision={1} announce={false} />
       </div>
 
 
@@ -88,7 +88,6 @@ export const ColorControls: React.FC<ColorControlsProps> = ({ config, onChange }
         contrastRatio={worstContrast}
         messageType="color"
         className="mt-3"
-        role="status"
         decimalPrecision={2}
       />
     </div>

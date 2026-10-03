@@ -127,13 +127,33 @@ describe('ScannabilityIndicator Component', () => {
     expect(event.defaultPrevented).toBe(false);
   });
 
-  it('keeps exactly one polite status region, including while idle', () => {
+  it('keeps exactly one polite status region and one silent alert region, including while idle', () => {
     const { rerender } = render(<ScannabilityIndicator status="idle" />);
     expect(screen.getAllByRole('status')).toHaveLength(1);
+    expect(screen.getAllByRole('alert')).toHaveLength(1);
 
     rerender(<ScannabilityIndicator status="checking" />);
     expect(screen.getAllByRole('status')).toHaveLength(1);
-    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent('');
+  });
+
+  it('does not re-announce a failure while a re-check of a still-failing design runs', () => {
+    const failing = { score: 40, warnings: ['Contrast ratio is low'] };
+    const { rerender } = render(<ScannabilityIndicator status="fail" health={failing} />);
+    const alert = screen.getByRole('alert');
+    const message = alert.textContent;
+    expect(message).toMatch(/Won't scan reliably/);
+
+    rerender(<ScannabilityIndicator status="checking" />);
+    expect(screen.getByRole('alert')).toBe(alert);
+    expect(alert.textContent).toBe(message);
+
+    rerender(<ScannabilityIndicator status="fail" health={failing} />);
+    expect(screen.getByRole('alert')).toBe(alert);
+    expect(alert.textContent).toBe(message);
+
+    rerender(<ScannabilityIndicator status="physical-pass" health={{ score: 100, warnings: [] }} />);
+    expect(alert.textContent).toBe('');
   });
 
   it('announces a failure once through a single alert, not through the polite region', () => {
@@ -157,9 +177,24 @@ describe('ScannabilityIndicator Component', () => {
     expect(screen.getByRole('alert')).toHaveTextContent(/camera could not read this design/i);
   });
 
+  it('raises the alert for a critical warning even when the camera check passed', () => {
+    const { rerender } = render(<ScannabilityIndicator status="checking" />);
+    rerender(
+      <ScannabilityIndicator status="physical-pass" health={{ score: 60, warnings: [], criticalWarnings: ['Contrast ratio is too low'] }} />,
+    );
+
+    expect(screen.getByTestId('scannability-verdict')).toHaveTextContent("Won't scan reliably");
+    expect(screen.getAllByRole('alert')).toHaveLength(1);
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
+    // Announced once, by the alert; the polite region stays silent.
+    expect(screen.getByRole('status').textContent).toBe('');
+  });
+
   it('does not raise an alert for a fragile pass', () => {
     render(<ScannabilityIndicator status="digital-pass" health={{ score: 85, warnings: ['Contrast ratio is low'] }} />);
-    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent('');
   });
 
   it('has no axe violations in pass, fail and open-panel states', async () => {
