@@ -14,7 +14,7 @@ describe('guides data', () => {
       const entry = auxiliaryRegistry[`guides/${guide.slug}`];
       expect(entry?.seoTitle).toBe(guide.seoTitle);
       expect(entry?.description).toBe(guide.description);
-      expect(entry?.name).toBe(guide.title);
+      expect(entry?.name).toBe(guide.shortTitle);
       expect(guide.sources.length).toBeGreaterThan(0);
       expect(guide.dateModified >= guide.datePublished).toBe(true);
       expect(readingMinutes(guide)).toBeGreaterThan(0);

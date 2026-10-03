@@ -256,7 +256,7 @@ export const guides: Guide[] = [
         supports: 'The quiet zone of four modules around the symbol.',
       },
     ],
-    related: ['static-vs-dynamic-qr-codes'],
+    related: ['static-vs-dynamic-qr-codes', 'how-to-print-a-qr-code-that-scans'],
   },
 
   {
@@ -445,6 +445,358 @@ export const guides: Guide[] = [
       },
     ],
     related: ['why-qr-codes-stop-working'],
+  },
+  {
+    slug: 'how-to-print-a-qr-code-that-scans',
+    title: 'How to print a QR code that scans every time',
+    shortTitle: 'Printing a QR code that scans',
+    seoTitle: 'How to Print a QR Code That Scans: Size, Margin and Contrast | QRCraftly',
+    description:
+      'The size, quiet zone, contrast and file format that decide whether a printed QR code scans, with a checklist you can run before you send anything to print.',
+    lead: 'Most QR codes that fail in the real world fail because of how they were printed, not how they were made. Four things decide it: how big the code is, the empty margin around it, the contrast of the squares, and what the paper or surface does to them. Here is how to get each one right before you print a thousand copies.',
+    datePublished: '2026-10-03',
+    dateModified: '2026-10-03',
+    sections: [
+      {
+        id: 'short-answer',
+        heading: 'The short answer',
+        blocks: [
+          {
+            type: 'ul',
+            items: [
+              'Keep a blank margin of at least four squares on every side. Cropping it is the most common mistake.',
+              'Use dark squares on a light background, with strong contrast. Do not invert the colours.',
+              'Print big enough for the distance it will be scanned from, and give a long address more room than a short one.',
+              'Export a vector file (SVG or PDF) for print, and test a proof with more than one phone before the full run.',
+            ],
+          },
+        ],
+      },
+      {
+        id: 'size',
+        heading: 'How big should it be?',
+        blocks: [
+          {
+            type: 'p',
+            text: 'Phones need to see each square as several pixels wide, so the right size depends on how far away the camera is and how many squares the code has. A code with a short address has fewer, larger squares and can be printed smaller. A long address needs more squares, so the same printed width makes each square smaller.',
+          },
+          {
+            type: 'table',
+            caption: 'Starting points for printed size',
+            head: ['Where it will be scanned', 'Typical distance', 'Start with a code at least'],
+            rows: [
+              ['Business card, ticket, product label', 'Hand held, 10 to 30 cm', '2 cm wide'],
+              ['Menu, flyer, poster at a counter', 'Arm’s length, up to 60 cm', '3 to 4 cm wide'],
+              ['Shop window, signage, shelf', '1 to 2 m', '8 to 15 cm wide'],
+              ['Billboard, vehicle, banner', 'Several metres', 'Roughly one tenth of the distance'],
+            ],
+          },
+          {
+            type: 'p',
+            text: 'These are starting points, not guarantees, and a rough rule of thumb is a code about one tenth as wide as the scanning distance. Shorten the address if you need a smaller code: a short, plain address makes a simpler code than a long one with tracking parameters on the end.',
+          },
+        ],
+      },
+      {
+        id: 'quiet-zone',
+        heading: 'Leave the margin alone',
+        blocks: [
+          {
+            type: 'p',
+            text: 'The standard asks for a blank border, called the quiet zone, four squares wide on every side. It is how a reader finds where the code starts. Designers crop it because it looks like wasted space, and then the code scans only sometimes. If your code sits on a coloured panel or an image, the margin must be a plain light area, not a busy photo. If you are unsure whether a design leaves enough room, check a photo of it with the [QR code checker](/qr-code-checker).',
+          },
+        ],
+      },
+      {
+        id: 'contrast',
+        heading: 'Contrast and colour',
+        blocks: [
+          {
+            type: 'p',
+            text: 'Dark squares on a light background is the arrangement every reader supports. Light squares on a dark background (an inverted code) work in some apps and fail in others, so avoid it for anything public. Colour is fine as long as the dark colour is much darker than the light one. Yellow on white, pale grey on white and red on black are common ways to lose it. Printing can reduce contrast further, because ink spreads and paper is never as white as a screen.',
+          },
+          {
+            type: 'note',
+            title: 'Test the colours before you print',
+            text: 'The [QR code checker](/qr-code-checker) reads a picture of your code after simulating a poor print, with blur and noise added, and tells you whether it still scans. Use it on the exact colours you plan to use.',
+          },
+        ],
+      },
+      {
+        id: 'surface',
+        heading: 'Paper, curves and glare',
+        blocks: [
+          {
+            type: 'ul',
+            items: [
+              'Matte paper scans better than glossy, which throws glare back at the camera.',
+              'Curved surfaces such as bottles and mugs distort the squares. Print larger and keep the code on the flattest part.',
+              'Embossed, engraved or textured finishes break up the squares. Test a sample of the real material.',
+              'Folds, creases and seams through the code damage it. Keep the code clear of them.',
+              'Keep the code away from edges that will be trimmed, and allow for the cutter’s tolerance.',
+            ],
+          },
+        ],
+      },
+      {
+        id: 'file',
+        heading: 'Export the right file',
+        blocks: [
+          {
+            type: 'p',
+            text: 'A QR code is a grid of squares, so it stays sharp at any size only as a vector file. Export SVG or PDF for anything printed, and send the printer that file, not a screenshot. If you must use PNG, export it large and at a size where each square is a whole number of pixels, so the edges stay crisp. Do not let a layout tool smooth or resample the image.',
+          },
+        ],
+      },
+      {
+        id: 'checklist',
+        heading: 'Before you print',
+        blocks: [
+          {
+            type: 'ol',
+            items: [
+              'Scan the final artwork on screen with two different phones.',
+              'Print one proof on the real material at the real size and scan it from the real distance.',
+              'Check it in poor light and at a slight angle.',
+              'Write the address next to the code as plain text, so a person can type it if the code fails.',
+              'Keep the file you printed from. A static code cannot be regenerated differently by accident, but you will want the original.',
+            ],
+          },
+          {
+            type: 'p',
+            text: 'Still unsure about a design? Drop a photo of the proof on the [QR code checker](/qr-code-checker). If your code carries a logo, read [error correction explained](/guides/qr-code-error-correction-explained) first, because a logo uses up some of the code’s safety margin.',
+          },
+        ],
+      },
+    ],
+    sources: [
+      {
+        label: 'Denso Wave (the inventor of QR Code), “Standardization”, qrcode.com',
+        url: 'https://www.qrcode.com/en/about/standards.html',
+        supports: 'QR Code is specified by ISO/IEC 18004, which also defines the quiet zone.',
+      },
+      {
+        label: 'ISO/IEC 18004:2015, “Information technology — Automatic identification and data capture techniques — QR Code bar code symbology specification”',
+        url: 'https://www.iso.org/standard/62021.html',
+        supports: 'The specification of the symbol, including its quiet zone and contrast requirements.',
+      },
+    ],
+    related: ['qr-code-error-correction-explained', 'why-qr-codes-stop-working'],
+  },
+  {
+    slug: 'qr-code-error-correction-explained',
+    title: 'QR code error correction explained: L, M, Q and H',
+    shortTitle: 'Error correction explained',
+    seoTitle: 'QR Code Error Correction Levels Explained (L, M, Q, H) | QRCraftly',
+    description:
+      'What the four QR code error correction levels recover, what each costs in size, and how to choose one when you add a logo or print on a rough surface.',
+    lead: 'Every QR code carries spare data so a reader can rebuild what a scratch, a smudge or a logo has covered. You choose how much spare data there is, from level L to level H. This guide explains what each level recovers, what it costs, and how to pick one.',
+    datePublished: '2026-10-03',
+    dateModified: '2026-10-03',
+    sections: [
+      {
+        id: 'short-answer',
+        heading: 'The short answer',
+        blocks: [
+          {
+            type: 'p',
+            text: 'There are four levels: L, M, Q and H. Each one adds more spare data, so it can recover from more damage, and each one makes the code bigger for the same content. Use M for most printed codes, H when the code carries a logo or will be scuffed, and L only for short-lived codes on a screen.',
+          },
+        ],
+      },
+      {
+        id: 'levels',
+        heading: 'What each level recovers',
+        blocks: [
+          {
+            type: 'table',
+            caption: 'The four error correction levels',
+            head: ['Level', 'Can restore up to', 'Good for'],
+            rows: [
+              ['L (low)', 'About 7% of the code’s data', 'Codes shown on a screen, clean surfaces, the smallest possible code'],
+              ['M (medium)', 'About 15%', 'Most printed codes. A sensible default'],
+              ['Q (quartile)', 'About 25%', 'Codes that may get dirty or scuffed'],
+              ['H (high)', 'About 30%', 'Codes with a logo, rough surfaces, heavy wear'],
+            ],
+          },
+          {
+            type: 'p',
+            text: 'These percentages describe the share of the code’s data that can be rebuilt, and the share of the printed area that can be lost is not the same thing. Damage to the three large corner squares, or to the thin timing lines between them, can stop a code reading even when the total damage is small, because a reader needs those to find and straighten the code.',
+          },
+        ],
+      },
+      {
+        id: 'how',
+        heading: 'How it works, briefly',
+        blocks: [
+          {
+            type: 'p',
+            text: 'The code’s data is split into blocks, and extra blocks of check data are added using a method called Reed–Solomon error correction, which is also used in CDs and satellite links. If some squares are unreadable, the reader uses the check data to work out what they should have been. The more check data, the more it can fix, and the more space the check data takes.',
+          },
+        ],
+      },
+      {
+        id: 'cost',
+        heading: 'What it costs',
+        blocks: [
+          {
+            type: 'p',
+            text: 'Spare data takes room. For the same content, a higher level needs a larger grid with more, smaller squares. A larger grid printed at the same width means smaller squares, which are harder to read from a distance. So a higher level is not always safer: past a point it trades damage tolerance for legibility.',
+          },
+          {
+            type: 'note',
+            title: 'A practical rule',
+            text: 'If your address is long, going up a level can push the code into a much denser grid. Shorten the address first, then pick the level. A short address at level M is usually easier to scan than a long one at level H.',
+          },
+        ],
+      },
+      {
+        id: 'logos',
+        heading: 'Adding a logo',
+        blocks: [
+          {
+            type: 'p',
+            text: 'A logo in the middle covers part of the code, and the reader treats that part as damage. That is why codes with logos should use level Q or H, and why the logo should stay small and sit in the centre, away from the corner squares. There is no safe percentage that works for every code, because it depends on the content and the grid, so test the result. QRCraftly’s [logo QR code](/qr-code-with-logo) page sets a high level for you and shows a scan badge that warns you when the logo covers too much, and the [QR code checker](/qr-code-checker) tests a finished picture.',
+          },
+        ],
+      },
+      {
+        id: 'choose',
+        heading: 'Choosing a level',
+        blocks: [
+          {
+            type: 'ul',
+            items: [
+              'Plain code on a clean, flat surface: M.',
+              'Code with a logo, or on packaging, outdoor signage or anything handled a lot: H.',
+              'Code that will be scanned straight off a screen, where a smaller grid helps: L or M.',
+              'Unsure: M, then test a printed proof as described in [printing a QR code that scans](/guides/how-to-print-a-qr-code-that-scans).',
+            ],
+          },
+        ],
+      },
+    ],
+    sources: [
+      {
+        label: 'Denso Wave (the inventor of QR Code), “Error correction feature”, qrcode.com',
+        url: 'https://www.qrcode.com/en/about/error_correction.html',
+        supports: 'The four levels and the approximate share of data each can restore (about 7%, 15%, 25% and 30%).',
+      },
+      {
+        label: 'ISO/IEC 18004:2015, “Information technology — Automatic identification and data capture techniques — QR Code bar code symbology specification”',
+        url: 'https://www.iso.org/standard/62021.html',
+        supports: 'The specification of the symbol, including the error correction levels and Reed–Solomon coding.',
+      },
+    ],
+    related: ['how-to-print-a-qr-code-that-scans', 'why-qr-codes-stop-working'],
+  },
+  {
+    slug: 'qr-code-scams-quishing',
+    title: 'QR code scams (quishing): how they work and how to stay safe',
+    shortTitle: 'QR code scams (quishing)',
+    seoTitle: 'QR Code Scams (Quishing): How They Work and How to Stay Safe | QRCraftly',
+    description:
+      'How fake QR codes steal logins and payments, the warning signs to look for before you scan, and what to do if you have already scanned one.',
+    lead: 'A QR code hides its destination, which is exactly what scammers rely on. Quishing is phishing done with a QR code: a fake code takes you to a fake page that asks for a password or a payment. This guide covers how it works, how to spot it and what to do.',
+    datePublished: '2026-10-03',
+    dateModified: '2026-10-03',
+    sections: [
+      {
+        id: 'short-answer',
+        heading: 'The short answer',
+        blocks: [
+          {
+            type: 'p',
+            text: 'A QR code is not dangerous in itself, because it only holds text, usually a web address. The risk is where it sends you and what you do when you get there. Before you scan a code in public, check that it has not been stuck over another one. After scanning, read the address your phone shows before you open it. Never enter a password or card number on a page you reached from a code you did not expect.',
+          },
+        ],
+      },
+      {
+        id: 'how',
+        heading: 'How quishing works',
+        blocks: [
+          {
+            type: 'ul',
+            items: [
+              'Sticker overlays: a fake code stuck over a real one on a parking meter, a restaurant table, a poster or a charging station.',
+              'Emails and letters: a message that says your account, parcel or payment has a problem and asks you to scan a code to fix it. Because the link is hidden in a picture, some email filters cannot read it.',
+              'Fake codes on flyers and posters that promise a prize, a discount or a free download.',
+              'Codes that open a payment page or ask you to log in to an account, copying a company’s real login screen.',
+            ],
+          },
+          {
+            type: 'p',
+            text: 'The pattern is always the same: a reason to hurry, a code instead of a link, and a page that asks for something valuable.',
+          },
+        ],
+      },
+      {
+        id: 'signs',
+        heading: 'Warning signs',
+        blocks: [
+          {
+            type: 'ul',
+            items: [
+              'The code looks like a sticker placed over something else, or its edges are lifting.',
+              'The address your phone shows does not match the business, or is a long string of letters and numbers, or uses a lookalike spelling.',
+              'You were not expecting it: an unprompted message with a deadline or a threat.',
+              'The page asks for your password, a one-time code, your card details or your bank login straight away.',
+              'It asks you to install an app that is not from your phone’s official store.',
+            ],
+          },
+        ],
+      },
+      {
+        id: 'protect',
+        heading: 'How to protect yourself',
+        blocks: [
+          {
+            type: 'ol',
+            items: [
+              'Look at the physical code first. If it is a sticker over another code, do not use it.',
+              'Scan, then read the address before you tap it. Your phone camera shows it. The [QR code scanner](/qr-code-scanner) on this site shows you what the code holds and leaves opening any link to you.',
+              'Go to the company’s own website or app by typing the address yourself, rather than using a code, for anything involving money or accounts.',
+              'Do not log in or pay from a page you reached through an unexpected code.',
+              'Turn on two-factor authentication for important accounts, so a stolen password alone is not enough.',
+              'If an email asks you to scan a code, contact the sender through a number or address you already know.',
+            ],
+          },
+        ],
+      },
+      {
+        id: 'already',
+        heading: 'If you have already scanned one',
+        blocks: [
+          {
+            type: 'p',
+            text: 'Scanning alone is usually harmless. What matters is what you did next. If you entered a password, change it on the real site at once, and anywhere else you used it. If you entered card details, call your bank using the number on your card. If you installed something, remove it and run your phone’s security check. You can report the scam to your national consumer protection agency. In the United States, that is the FTC at ReportFraud.ftc.gov.',
+          },
+        ],
+      },
+      {
+        id: 'makers',
+        heading: 'If you make QR codes',
+        blocks: [
+          {
+            type: 'p',
+            text: 'You can make your own codes easier to trust. Print the web address in plain text under the code so people can see where it goes. Point the code at a domain you own, so there is no third-party address in the middle. Keep codes in places you control, and check them from time to time for stickers placed over them. A static code made with QRCraftly holds your address itself, so there is no middleman server that could be switched or compromised. [Why a code stops working](/guides/why-qr-codes-stop-working) explains why that matters.',
+          },
+        ],
+      },
+    ],
+    sources: [
+      {
+        label: 'U.S. Federal Trade Commission, “Scammers hide harmful links in QR codes to steal your information”, consumer.ftc.gov (December 2023)',
+        url: 'https://consumer.ftc.gov/consumer-alerts/2023/12/scammers-hide-harmful-links-qr-codes-steal-your-information',
+        supports: 'Fake codes can lead to harmful pages; check the address before opening and be wary of codes in unexpected messages.',
+      },
+      {
+        label: 'FBI Internet Crime Complaint Center, “Cyber Criminals Tampering with QR Codes to Steal Victim Funds”, ic3.gov (January 2022)',
+        url: 'https://www.ic3.gov/PSA/2022/PSA220118',
+        supports: 'Criminals replace legitimate codes with tampered ones that lead to credential and payment theft.',
+      },
+    ],
+    related: ['static-vs-dynamic-qr-codes', 'why-qr-codes-stop-working'],
   },
 ];
 

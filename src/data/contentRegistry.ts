@@ -955,21 +955,51 @@ export const auxiliaryRegistry: Record<string, AuxiliaryContent> = {
   },
   "guides/why-qr-codes-stop-working": {
     "id": "guides/why-qr-codes-stop-working",
-    "name": "Why your QR code stopped working (and how to make one that never will)",
+    "name": "Why QR codes stop working",
     "seoTitle": "Why Your QR Code Stopped Working (and How to Fix It for Good) | QRCraftly",
     "description": "QR codes do not expire by themselves. Find out whether yours was switched off, points at a dead page or is just hard to scan, and how to make one that lasts.",
     "image": "/og/guides-why-qr-codes-stop-working.png",
-    "imageAlt": "Why QR codes stop working - QRCraftly",
+    "imageAlt": "Why QR codes stop working",
     "personas": [TargetPersona.SecurityConsciousEnterprise],
     "valueProposition": StrategicValueCategory.ZeroTransitPrivacySovereignty
   },
   "guides/static-vs-dynamic-qr-codes": {
     "id": "guides/static-vs-dynamic-qr-codes",
-    "name": "Static vs dynamic QR codes: what you give up and what you pay",
+    "name": "Static vs dynamic QR codes",
     "seoTitle": "Static vs Dynamic QR Codes: What You Give Up and What You Pay | QRCraftly",
     "description": "A plain comparison of static and dynamic QR codes: editing, scan counts, cost, privacy and what happens if the provider disappears, with a way to keep both.",
     "image": "/og/guides-static-vs-dynamic-qr-codes.png",
-    "imageAlt": "Static vs dynamic QR codes - QRCraftly",
+    "imageAlt": "Static vs dynamic QR codes",
+    "personas": [TargetPersona.SecurityConsciousEnterprise],
+    "valueProposition": StrategicValueCategory.ZeroTransitPrivacySovereignty
+  },
+  "guides/how-to-print-a-qr-code-that-scans": {
+    "id": "guides/how-to-print-a-qr-code-that-scans",
+    "name": "Printing a QR code that scans",
+    "seoTitle": "How to Print a QR Code That Scans: Size, Margin and Contrast | QRCraftly",
+    "description": "The size, quiet zone, contrast and file format that decide whether a printed QR code scans, with a checklist you can run before you send anything to print.",
+    "image": "/og/guides-how-to-print-a-qr-code-that-scans.png",
+    "imageAlt": "Printing a QR code that scans",
+    "personas": [TargetPersona.SecurityConsciousEnterprise],
+    "valueProposition": StrategicValueCategory.ZeroTransitPrivacySovereignty
+  },
+  "guides/qr-code-error-correction-explained": {
+    "id": "guides/qr-code-error-correction-explained",
+    "name": "Error correction explained",
+    "seoTitle": "QR Code Error Correction Levels Explained (L, M, Q, H) | QRCraftly",
+    "description": "What the four QR code error correction levels recover, what each costs in size, and how to choose one when you add a logo or print on a rough surface.",
+    "image": "/og/guides-qr-code-error-correction-explained.png",
+    "imageAlt": "Error correction explained",
+    "personas": [TargetPersona.SecurityConsciousEnterprise],
+    "valueProposition": StrategicValueCategory.ZeroTransitPrivacySovereignty
+  },
+  "guides/qr-code-scams-quishing": {
+    "id": "guides/qr-code-scams-quishing",
+    "name": "QR code scams (quishing)",
+    "seoTitle": "QR Code Scams (Quishing): How They Work and How to Stay Safe | QRCraftly",
+    "description": "How fake QR codes steal logins and payments, the warning signs to look for before you scan, and what to do if you have already scanned one.",
+    "image": "/og/guides-qr-code-scams-quishing.png",
+    "imageAlt": "QR code scams (quishing)",
     "personas": [TargetPersona.SecurityConsciousEnterprise],
     "valueProposition": StrategicValueCategory.ZeroTransitPrivacySovereignty
   },
