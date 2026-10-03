@@ -231,4 +231,43 @@ test.describe('Camera scanner with a scripted fake camera', () => {
       expect(inverted).toBeLessThan(3000);
     });
   });
+
+  test.describe('All browsers', () => {
+    test('leads with the image fallback when the camera is denied', async ({ page, context }) => {
+      await installFakeCamera(context, { deny: true });
+      await openGenerator(page);
+      await openScanner(page);
+
+      await expect(page.getByText('Camera Access Denied')).toBeVisible();
+      await expect(page.getByRole('button', { name: /retry permission/i })).toBeVisible();
+      await page.getByRole('button', { name: 'Scan from an image instead' }).click();
+      await expect(page.getByRole('radio', { name: /file upload/i })).toHaveAttribute('aria-checked', 'true');
+      expect(await liveCameraTracks(page)).toBe(0);
+    });
+
+    test('releases the camera while the tab is hidden and resumes when it is shown (#1097)', async ({ page, context }) => {
+      await installFakeCamera(context);
+      await openGenerator(page);
+      await showOnCamera(page, null);
+      await openScanner(page);
+      await expect.poll(() => liveCameraTracks(page)).toBe(1);
+
+      const setHidden = (hidden: boolean) =>
+        page.evaluate((value) => {
+          Object.defineProperty(document, 'hidden', { configurable: true, get: () => value });
+          Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => (value ? 'hidden' : 'visible') });
+          document.dispatchEvent(new Event('visibilitychange'));
+        }, hidden);
+
+      await setHidden(true);
+      await expect.poll(() => liveCameraTracks(page)).toBe(0);
+      await setHidden(false);
+      await expect.poll(() => liveCameraTracks(page)).toBe(1);
+
+      // The resumed camera still scans.
+      await showOnCamera(page, codeScene(CODE));
+      await expect(page.locator('#url-input')).toHaveValue(CODE, { timeout: 10_000 });
+      await expect.poll(() => liveCameraTracks(page)).toBe(0);
+    });
+  });
 });

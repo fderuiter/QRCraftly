@@ -65,6 +65,15 @@ Measured with the scanner test harness (#1103), the engine got slower exactly wh
 - **Pacing converges.** The sampling delay targets 1.2x the 5-frame median latency, closing half the gap per frame when rising and dropping to the target at once when decodes speed up. The old rule added 50ms on every slow frame and reached the 1000ms maximum (about 1 fps).
 - **The watchdog catches hangs only.** One 5000ms budget, measured from the worker's last answer, replaces the 1500ms / 3000ms / 6000ms backoff. A slow but answering worker is never restarted; after three consecutive hangs or crashes the engine still falls back to the main thread, where it runs the same one-pass rotation.
 
+### 6. One Owner for the Camera: the Camera Session (amendment, issue #1097)
+
+The camera stream used to be acquired by the app's `useCamera` hook and attached, played and torn down separately by each caller (the scanner component and the file-transfer receiver), with the engine started and stopped beside it. Under StrictMode or a quick remount these steps interleaved: the viewfinder could stay black, or a camera could keep running after the scanner closed.
+
+- **`lib/cameraSession.ts`** owns the whole lifecycle: `getUserMedia`, attaching the stream to the video element, `play()`, starting the engine, and on `stop()` stopping every track, detaching the element and stopping the engine. `start()` while requesting or streaming does nothing, and a request superseded by `stop()` or a newer `start()` stops its tracks as soon as the browser answers. The session releases the camera while the tab is hidden and reacquires it when the tab is shown.
+- **`useQrScanner`** returns `state` (`idle | requesting | streaming | denied | unavailable | error`, the last three with the error), `start(options?)`, `stop()` and `videoRef`. `startScanning` / `stopScanning` remain for a source the caller attaches itself (the receiver's recorded video file).
+- **`src/hooks/useCamera.ts` is deleted.** `QRScanner` and `useOpticalReceiver` use the session; the receiver no longer takes an injected `camera` and exposes `cameraError` instead.
+- **Tests**: `tests/cameraSession.test.ts` covers idempotency, superseded requests, error mapping and visibility; the component test checks one live track under StrictMode and none after unmount or 20 quick remounts; `e2e/scanner.spec.ts` checks the denied fallback and that hiding the tab releases the camera in every browser.
+
 ## Rationale
 
 - **Deep Module Principle**: Encapsulating high internal complexity (Web Workers, transferable buffers, canvas contexts, adaptive frame pacing, and demuxing) behind narrow public entry points (`scan`, `useQrScanner`) simplifies callers and eliminates abstraction leaks.

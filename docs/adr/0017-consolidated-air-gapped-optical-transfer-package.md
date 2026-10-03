@@ -61,7 +61,7 @@ Internal transfer mechanics are strictly encapsulated within `lib/`:
 The package no longer imports the app's React layers or app renderers. The file-transfer pages inject them:
 
 - `useOpticalSender` takes `renderFrame` (the page paints frames with the template renderer), `scannabilityFallbackActive` (read from the QR store by the page) and an optional `verifyFrame` gate.
-- `useOpticalReceiver` takes `camera` (the page passes `useCamera()`) and `saveFile` (the page passes the download manager). The adaptive scanner is imported from `@/packages/optical-scanner/client`.
+- `useOpticalReceiver` takes `saveFile` (the page passes the download manager). The adaptive scanner is imported from `@/packages/optical-scanner/client`, whose Camera Session owns the camera stream; the receiver exposes its failure as `cameraError` (amended by issue #1097, which replaced the injected `camera` and the app's `useCamera` hook).
 - `verifyHandshakeFrame` renders with `@/packages/qr-matrix`, checks with the Scannability Worker from `@/packages/scannability`, and takes injected worker, checker and canvas factories instead of detecting the test environment. The worker verdict wins whenever it arrives within the 1500ms watchdog; the main-thread check runs only when the worker is unavailable, fails, drops the request, or misses the watchdog.
 - The sender reports the real size of its preallocated frame pool (`transferStats.frameBufferMemory`) instead of an estimated heap figure.
 - dependency-cruiser forbids packages from importing app layers with no exemptions, and forbids relative imports from one package into another (`cross-package-imports-use-alias`).

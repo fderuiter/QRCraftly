@@ -67,24 +67,11 @@ export function senderOptions(overrides: Partial<UseOpticalSenderOptions> = {}):
 }
 
 /**
- * A fake camera whose `startStream` resolves to a stub stream.
- */
-export function createFakeCamera() {
-  const stream = { getTracks: () => [] } as unknown as MediaStream;
-  return {
-    stream: null,
-    startStream: vi.fn(async (): Promise<MediaStream | null> => stream),
-    stopStream: vi.fn(),
-  };
-}
-
-/**
- * Receiver options with a fake camera and a spy file saver.
+ * Receiver options with a spy file saver.
  * @param overrides Options to replace.
  */
 export function receiverOptions(overrides: Partial<UseOpticalReceiverOptions> = {}) {
   return {
-    camera: createFakeCamera(),
     saveFile: vi.fn(),
     ...overrides,
   } satisfies UseOpticalReceiverOptions;

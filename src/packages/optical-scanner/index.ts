@@ -18,6 +18,17 @@ export {
   type CameraFramePixels,
 } from './lib/cameraEngine';
 
+export {
+  createCameraSession,
+  type CameraSession,
+  type CameraSessionConfig,
+  type CameraSessionState,
+  type CameraSessionStartOptions,
+  type CameraVideoElement,
+  type CameraVisibilitySource,
+  type CameraFrameLoop,
+} from './lib/cameraSession';
+
 /** The camera-frame decoder: one bounded jsQR pass per frame, rotating strategies (#1096). */
 export {
   decodeCameraFrame,

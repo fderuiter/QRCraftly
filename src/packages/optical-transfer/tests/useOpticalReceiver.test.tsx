@@ -22,7 +22,7 @@ import { renderHook, act, waitFor } from '@testing-library/react';
 import React from 'react';
 import { useOpticalReceiver } from '../client';
 import { createFountainSession } from '../index';
-import { createFakeCamera, receiverOptions } from './fixtures';
+import { receiverOptions } from './fixtures';
 
 describe('useOpticalReceiver', () => {
 
@@ -414,33 +414,70 @@ describe('useOpticalReceiver', () => {
     });
   });
 
-  it('drives the injected camera when a camera session starts and stops', async () => {
-    const addToast = vi.fn();
-    const options = receiverOptions({ addToast });
-    const { result } = renderHook(() => useOpticalReceiver(options));
+  describe('camera session', () => {
+    let originalMediaDevices: MediaDevices | undefined;
+    let track: { stop: ReturnType<typeof vi.fn> };
+    let getUserMedia: ReturnType<typeof vi.fn>;
 
-    await act(async () => {
-      await result.current.startCameraSession();
+    beforeEach(() => {
+      originalMediaDevices = navigator.mediaDevices;
+      track = { stop: vi.fn() };
+      getUserMedia = vi.fn(async () => ({ getTracks: () => [track] }));
+      Object.defineProperty(navigator, 'mediaDevices', { value: { getUserMedia }, configurable: true, writable: true });
     });
-    expect(options.camera.startStream).toHaveBeenCalledTimes(1);
-    expect(result.current.isScanning).toBe(true);
-    expect(addToast).toHaveBeenCalledWith(expect.objectContaining({ message: 'Camera scanner activated.' }));
 
-    act(() => {
-      result.current.stopCameraSession();
+    afterEach(() => {
+      Object.defineProperty(navigator, 'mediaDevices', { value: originalMediaDevices, configurable: true, writable: true });
     });
-    expect(options.camera.stopStream).toHaveBeenCalled();
-    expect(result.current.isScanning).toBe(false);
-  });
 
-  it('does not start scanning when the camera stream is refused', async () => {
-    const camera = createFakeCamera();
-    camera.startStream.mockResolvedValueOnce(null);
-    const { result } = renderHook(() => useOpticalReceiver(receiverOptions({ camera })));
+    /** Renders the receiver with a video element to show the camera in. */
+    function renderReceiver(addToast = vi.fn()) {
+      const rendered = renderHook(() => useOpticalReceiver(receiverOptions({ addToast })));
+      const video = document.createElement('video');
+      video.play = vi.fn(async () => {});
+      rendered.result.current.videoRef.current = video;
+      return { ...rendered, video, addToast };
+    }
 
-    await act(async () => {
-      await result.current.startCameraSession();
+    it('opens the camera when a camera session starts and releases it when it stops', async () => {
+      const { result, video, addToast } = renderReceiver();
+
+      await act(async () => {
+        await result.current.startCameraSession();
+      });
+      expect(getUserMedia).toHaveBeenCalledTimes(1);
+      expect(result.current.isScanning).toBe(true);
+      expect(video.srcObject).not.toBeNull();
+      expect(addToast).toHaveBeenCalledWith(expect.objectContaining({ message: 'Camera scanner activated.' }));
+
+      act(() => {
+        result.current.stopCameraSession();
+      });
+      expect(track.stop).toHaveBeenCalled();
+      expect(video.srcObject).toBeNull();
+      expect(result.current.isScanning).toBe(false);
     });
-    expect(result.current.isScanning).toBe(false);
+
+    it('does not start scanning when the camera is refused, and reports why', async () => {
+      getUserMedia.mockRejectedValueOnce(new DOMException('Permission denied', 'NotAllowedError'));
+      const { result, addToast } = renderReceiver();
+
+      await act(async () => {
+        await result.current.startCameraSession();
+      });
+      expect(result.current.isScanning).toBe(false);
+      expect(getUserMedia).toHaveBeenCalledTimes(1);
+      expect(result.current.cameraError?.name).toBe('NotAllowedError');
+      expect(addToast).not.toHaveBeenCalledWith(expect.objectContaining({ message: 'Camera scanner activated.' }));
+    });
+
+    it('releases the camera on unmount', async () => {
+      const { result, unmount } = renderReceiver();
+      await act(async () => {
+        await result.current.startCameraSession();
+      });
+      unmount();
+      expect(track.stop).toHaveBeenCalled();
+    });
   });
 });

@@ -98,6 +98,10 @@ _Avoid_: Camera frame provider, QR scanner helper, scanner utility
 The headless component of the Optical Detection Engine that owns the live camera frame loop, adaptive sampling, backpressure, downscaling, and the private scanner worker (epochs, one bounded decode pass per frame, a 5000ms hang watchdog, three restarts, and main-thread fallback). React code reaches it only through the `useQrScanner` adapter hook.
 _Avoid_: Camera frame provider, scanner loop hook, worker ref
 
+**Camera Session**:
+The single owner of a live camera stream for scanning (`lib/cameraSession.ts`): it requests the camera, attaches it to the video element, runs the Camera Scanner Engine while streaming, and stops every track on `stop()`, unmount or when the tab is hidden. `start()` and `stop()` are idempotent, so React effects that run twice cannot leave a camera running. Its state is `idle`, `requesting`, `streaming`, `denied`, `unavailable` or `error`, exposed as `state`, `start` and `stop` by `useQrScanner`.
+_Avoid_: Camera hook, stream manager, useCamera
+
 **Adaptive Frame Scheduler**:
 A backpressure and pacing controller managing dynamic sleep intervals, in-flight frame sequencing, execution latency histories, and starvation watchdog recovery during continuous video capture.
 _Avoid_: Frame timer, scanner loop, camera ticker

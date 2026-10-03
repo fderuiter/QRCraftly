@@ -34,6 +34,5 @@ export {
 export {
   useOpticalReceiver,
   type UseOpticalReceiverOptions,
-  type ReceiverCamera,
   type ReceivedFileSaver,
 } from './lib/receiver/useOpticalReceiver';
