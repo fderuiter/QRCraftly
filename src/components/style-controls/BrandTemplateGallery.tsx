@@ -19,6 +19,7 @@ import { SegmentedControl } from '../ui/SegmentedControl';
 import { Tooltip } from '../ui/Tooltip';
 import { Modal } from '../ui/Modal';
 import { TextField } from '../ui/TextField';
+import { useUndoToast } from '../../hooks/useUndoToast';
 
 interface BrandTemplateGalleryProps {
   config: QRConfig;
@@ -26,6 +27,7 @@ interface BrandTemplateGalleryProps {
 }
 
 export const BrandTemplateGallery: React.FC<BrandTemplateGalleryProps> = ({ config, onChange }) => {
+  const notifyUndo = useUndoToast();
   const [activeTab, setActiveTab] = useState<'presets' | 'custom'>('presets');
   const [customTemplates, setCustomTemplates] = useState<BrandTemplate[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -60,6 +62,7 @@ export const BrandTemplateGallery: React.FC<BrandTemplateGalleryProps> = ({ conf
     onChange(styleUpdates);
     setSelectedId(template.id);
     showFeedback(`Applied "${template.name}" theme.`);
+    notifyUndo(`Applied "${template.name}"`);
   };
 
   const handleOpenSaveModal = () => {

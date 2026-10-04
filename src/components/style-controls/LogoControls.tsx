@@ -9,6 +9,7 @@ import { useImageUpload } from '../../hooks/useImageUpload';
 import { SYSTEM_LIMITS } from '../../constants';
 import { SegmentedControl } from '../ui/SegmentedControl';
 import { combineIds } from '../../utils/a11y';
+import { useUndoToast } from '../../hooks/useUndoToast';
 
 const LOGO_BORDER_STYLES: { id: LogoPaddingStyle; icon: typeof Square; label: string }[] = [
   { id: 'square', icon: Square, label: 'Square' },
@@ -26,6 +27,7 @@ export const LogoControls: React.FC<LogoControlsProps> = ({ config, onChange }) 
   const uploadButtonRef = useRef<HTMLButtonElement>(null);
   const prevLogoUrlRef = useRef<string | null>(config.logoUrl);
   const { error, handleUpload, setError } = useImageUpload();
+  const notifyUndo = useUndoToast();
 
   useEffect(() => {
     if (prevLogoUrlRef.current && !config.logoUrl) {
@@ -45,7 +47,7 @@ export const LogoControls: React.FC<LogoControlsProps> = ({ config, onChange }) 
       <div className="mb-3 flex items-center justify-between">
         <h4 className="text-sm font-semibold text-fg-soft">Logo</h4>
         {config.logoUrl && (
-          <Button variant="error" size="xs" onClick={() => { onChange({ logoUrl: null }); setError(null); }}>
+          <Button variant="error" size="xs" onClick={() => { onChange({ logoUrl: null }); setError(null); notifyUndo('Logo removed'); }}>
             <X className="size-3.5" aria-hidden="true" /> Remove
           </Button>
         )}

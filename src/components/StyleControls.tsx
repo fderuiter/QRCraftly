@@ -17,7 +17,7 @@
 */
 
 
-import React, { createContext, useContext } from 'react';
+import React, { createContext, lazy, Suspense, useContext, useState } from 'react';
 import { QRConfig } from '../types';
 import {
   BorderControls,
@@ -30,6 +30,11 @@ import {
   BrandTemplateGallery
 } from './style-controls';
 import { Accordion, AccordionItem } from './ui/Accordion';
+import { Skeleton } from './ui/Skeleton';
+
+// The gallery draws a thumbnail of the person's QR for every look, so it loads (and draws)
+// only once its section is first opened.
+const StyleGallery = lazy(() => import('./style-controls/StyleGallery'));
 
 /**
  * Appearance sections the person has expanded or collapsed during this visit. Held in memory
@@ -76,12 +81,24 @@ interface StyleControlsProps {
  */
 const StyleControls: React.FC<StyleControlsProps> = ({ config, onChange }) => {
   const presetOpen = useContext(PresetOpenSections);
+  const [galleryOpened, setGalleryOpened] = useState(false);
   return (
     <Accordion>
       {/* Brand Template Gallery */}
       <AccordionItem title="Brand Templates" headingLevel={3} defaultOpen={sectionOpenState.get('Brand Templates') ?? true} onOpenChange={rememberSection('Brand Templates')}>
         <div className="pt-1">
           <BrandTemplateGallery config={config} onChange={onChange} />
+        </div>
+      </AccordionItem>
+
+      {/* Live gallery: pattern and colour looks on the person's own QR code, loaded when first opened. */}
+      <AccordionItem title="Style Gallery" headingLevel={3} defaultOpen={false} onOpenChange={(open) => open && setGalleryOpened(true)}>
+        <div className="pt-1">
+          {galleryOpened && (
+            <Suspense fallback={<Skeleton className="h-40 w-full" />}>
+              <StyleGallery config={config} onChange={onChange} />
+            </Suspense>
+          )}
         </div>
       </AccordionItem>
 

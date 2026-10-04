@@ -44,6 +44,8 @@ import { ToolWorkspaceLayout, ToolWorkspaceHeader } from './ToolWorkspaceLayout'
 import { contentRegistry } from '@/data/contentRegistry';
 import { MiniPreview } from './MiniPreview';
 import { getScanVerdict, type ScanFix, type ScanVerdict } from '@/packages/scannability';
+import { GeneratorCommands } from './command/GeneratorCommands';
+import { useUndoToast } from '@/hooks/useUndoToast';
 
 /** One-line promise under every generator heading. */
 const GENERATOR_SUBTITLE = 'No sign-up, no ads, never expires.';
@@ -194,13 +196,15 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
     }
   }, [store]);
 
+  const notifyUndo = useUndoToast();
   const handleResetDefault = useCallback(() => {
     store.updateConfig({
       fgColor: DEFAULT_CONFIG.fgColor,
       bgColor: DEFAULT_CONFIG.bgColor,
       eyeColor: DEFAULT_CONFIG.eyeColor,
     });
-  }, [store]);
+    notifyUndo('Colors reset');
+  }, [store, notifyUndo]);
 
   
   const handleRendered = useCallback((info: { moduleCount: number, virtualImageData?: ImageData, virtualImageBitmap?: ImageBitmap } = { moduleCount: 0 }) => {
@@ -260,6 +264,16 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
   const onCopySvg = () => exportWith('svg-copy', optionsButtonRef, 'SVG code copied');
   const onShare = () => exportWith('share', shareButtonRef, 'Shared');
   const copied = done?.format === 'clipboard';
+  const commandActions = {
+    download: (target: DownloadFormat) => exportWith(target, downloadButtonRef, `${FORMAT_LABELS[target]} downloaded`),
+    copyImage: onCopy,
+    copySvg: onCopySvg,
+    share: canShare ? onShare : undefined,
+    jumpToPreview: () => {
+      document.getElementById(PREVIEW_ID)?.scrollIntoView?.({ block: 'start' });
+      downloadButtonRef.current?.focus();
+    },
+  };
 
   const notifyEmpty = () => {
     addToast({
@@ -461,6 +475,7 @@ function QRToolInner({ title, toolId = 'index' }: { title?: string, toolId?: str
              </Card>
         }
       />
+      <GeneratorCommands actions={commandActions} onDownload={onDownload} />
       <MiniPreview sourceRef={canvasRef} targetId={PREVIEW_ID} renderKey={debouncedConfig} />
       {/* Keeps the last content clear of the mobile action bar. */}
       <div aria-hidden="true" className="h-20 md:hidden" />

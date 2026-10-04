@@ -858,3 +858,16 @@ describe('Appearance sections remember their state during the visit (#802)', () 
     expect(screen.getByRole('button', { name: 'Layout & Border' })).toHaveAttribute('aria-expanded', 'false');
   });
 });
+
+describe('Style Gallery section (#1059)', () => {
+  it('starts collapsed and loads the gallery only when it is first opened', async () => {
+    render(<StyleControls config={DEFAULT_CONFIG as QRConfig} onChange={vi.fn()} />);
+    const toggle = screen.getByRole('button', { name: 'Style Gallery' });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('radiogroup', { name: 'Patterns' })).not.toBeInTheDocument();
+
+    fireEvent.click(toggle);
+    expect(await screen.findByRole('radiogroup', { name: 'Patterns' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Surprise me/ })).toBeInTheDocument();
+  });
+});
