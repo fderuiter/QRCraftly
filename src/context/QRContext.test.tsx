@@ -516,3 +516,121 @@ describe('presetConfig (#1035, #1037)', () => {
     clearRetainedAppearance();
   });
 });
+
+// ---------------------------------------------------------------------------
+// Tests: undo/redo history and previews
+// ---------------------------------------------------------------------------
+describe('QRStore appearance history', () => {
+  const setup = () => renderHook(() => useQRStore(), { wrapper }).result.current;
+
+  afterEach(() => {
+    vi.useRealTimers();
+    clearRetainedAppearance();
+  });
+
+  it('undoes and redoes an appearance change', () => {
+    const store = setup();
+    store.updateConfig({ fgColor: '#112233' });
+    expect(store.getState().canUndo).toBe(true);
+    expect(store.undo()).toBe(true);
+    expect(store.getState().config.fgColor).toBe(DEFAULT_CONFIG.fgColor);
+    expect(store.getState().canRedo).toBe(true);
+    expect(store.redo()).toBe(true);
+    expect(store.getState().config.fgColor).toBe('#112233');
+    expect(store.redo()).toBe(false);
+  });
+
+  it('never records or undoes content', () => {
+    const store = setup();
+    store.updateConfig({ value: 'https://example.com/a' });
+    expect(store.getState().canUndo).toBe(false);
+    store.updateConfig({ fgColor: '#112233' });
+    store.updateConfig({ value: 'https://example.com/b' });
+    store.undo();
+    expect(store.getState().config.value).toBe('https://example.com/b');
+    expect(store.getState().config.fgColor).toBe(DEFAULT_CONFIG.fgColor);
+  });
+
+  it('merges quick changes to the same field into one step', () => {
+    vi.useFakeTimers();
+    const store = setup();
+    store.updateConfig({ logoSize: 0.15 });
+    vi.advanceTimersByTime(100);
+    store.updateConfig({ logoSize: 0.2 });
+    vi.advanceTimersByTime(100);
+    store.updateConfig({ logoSize: 0.25 });
+    store.undo();
+    expect(store.getState().config.logoSize).toBe(DEFAULT_CONFIG.logoSize);
+    expect(store.getState().canUndo).toBe(false);
+  });
+
+  it('keeps separate steps for different fields and for pauses', () => {
+    vi.useFakeTimers();
+    const store = setup();
+    store.updateConfig({ fgColor: '#111111' });
+    store.updateConfig({ bgColor: '#eeeeee' });
+    vi.advanceTimersByTime(2000);
+    store.updateConfig({ bgColor: '#dddddd' });
+    store.undo();
+    expect(store.getState().config.bgColor).toBe('#eeeeee');
+    store.undo();
+    expect(store.getState().config.bgColor).toBe(DEFAULT_CONFIG.bgColor);
+    expect(store.getState().config.fgColor).toBe('#111111');
+  });
+
+  it('drops the redo steps when a new change is made', () => {
+    const store = setup();
+    store.updateConfig({ fgColor: '#111111' });
+    store.undo();
+    store.updateConfig({ eyeColor: '#222222' });
+    expect(store.getState().canRedo).toBe(false);
+  });
+
+  it('skips history for updates marked skip', () => {
+    const store = setup();
+    store.updateConfig({ fgColor: '#111111' }, { history: 'skip' });
+    expect(store.getState().canUndo).toBe(false);
+  });
+
+  it('keeps at most 50 steps', () => {
+    vi.useFakeTimers();
+    const store = setup();
+    for (let i = 0; i < 60; i += 1) {
+      store.updateConfig({ borderSize: i % 2 ? 0.05 : 0.06, isBorderEnabled: i % 2 === 0 });
+      vi.advanceTimersByTime(1000);
+    }
+    let undone = 0;
+    while (store.undo()) undone += 1;
+    expect(undone).toBe(50);
+  });
+
+  it('shows a preview without a history step and restores it', () => {
+    const store = setup();
+    store.preview({ fgColor: '#abcdef' });
+    expect(store.getState().config.fgColor).toBe('#abcdef');
+    expect(store.getState().canUndo).toBe(false);
+    store.preview(null);
+    expect(store.getState().config.fgColor).toBe(DEFAULT_CONFIG.fgColor);
+  });
+
+  it('commits one undo step that returns to the look before the preview', () => {
+    const store = setup();
+    store.preview({ fgColor: '#abcdef' });
+    store.preview(null);
+    store.updateConfig({ fgColor: '#abcdef' });
+    store.undo();
+    expect(store.getState().config.fgColor).toBe(DEFAULT_CONFIG.fgColor);
+  });
+
+  it('does not retain a preview as the remembered appearance', () => {
+    const { result } = renderHook(() => useQRStore(), {
+      wrapper: ({ children }: { children: React.ReactNode }) => <QRProvider retainAppearance>{children}</QRProvider>,
+    });
+    result.current.preview({ fgColor: '#abcdef' });
+    result.current.preview(null);
+    const next = renderHook(() => useQRStore(), {
+      wrapper: ({ children }: { children: React.ReactNode }) => <QRProvider retainAppearance>{children}</QRProvider>,
+    });
+    expect(next.result.current.getState().config.fgColor).toBe(DEFAULT_CONFIG.fgColor);
+  });
+});

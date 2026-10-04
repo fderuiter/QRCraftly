@@ -40,7 +40,20 @@ export type QRState = {
    * error correction level changes.
    */
   isScannabilityFallbackActive: boolean;
+  /** Whether an appearance change can be undone. */
+  canUndo: boolean;
+  /** Whether an undone appearance change can be redone. */
+  canRedo: boolean;
 };
+
+/** Options for {@link QRStore.updateConfig}. */
+export interface UpdateConfigOptions {
+  /**
+   * `push` (default) records an appearance change as an undo step; `skip` applies it without a
+   * step, for example a hover preview.
+   */
+  history?: 'push' | 'skip';
+}
 
 /**
  * External store API for one generator instance.
@@ -50,8 +63,20 @@ export interface QRStore {
   getState: () => QRState;
   /** Subscribes to changes; returns an unsubscribe function. */
   subscribe: (listener: () => void) => () => void;
-  /** Merges, sanitises and applies config updates. No-op updates do not notify. */
-  updateConfig: (updates: Partial<QRConfig>) => void;
+  /**
+   * Merges, sanitises and applies config updates. No-op updates do not notify. Changes to
+   * appearance fields become undo steps; content changes (type, value, text) never do.
+   */
+  updateConfig: (updates: Partial<QRConfig>, options?: UpdateConfigOptions) => void;
+  /** Undoes the last appearance change. Returns whether anything changed. */
+  undo: () => boolean;
+  /** Redoes the last undone appearance change. Returns whether anything changed. */
+  redo: () => boolean;
+  /**
+   * Shows appearance updates temporarily (a hover or focus preview) without an undo step.
+   * Pass null to restore what was showing before the preview.
+   */
+  preview: (updates: Partial<QRConfig> | null) => void;
   /** Records the rendered matrix module count. */
   setModuleCount: (count: number) => void;
   /** Sets the scannability fallback flag. */
@@ -132,6 +157,16 @@ function stagedContentFor(type: QRConfig['type'] | undefined): Pick<QRConfig, 't
   return stagedContent && stagedContent.type === type ? stagedContent : null;
 }
 
+/** Most undo steps kept per generator. */
+export const MAX_HISTORY_STEPS = 50;
+/** Changes to the same fields within this window merge into one undo step (slider drags, typing a colour). */
+const COALESCE_MS = 600;
+
+function sameAppearance(a: Partial<QRConfig>, b: Partial<QRConfig>): boolean {
+  const keys = Object.keys(a) as (keyof QRConfig)[];
+  return keys.every(key => Object.is(a[key], b[key]));
+}
+
 function createQRStore(initialConfig?: Partial<QRConfig>, retainAppearance = false, presetConfig?: Partial<QRConfig>): QRStore {
   let state: QRState = {
     config: {
@@ -143,7 +178,15 @@ function createQRStore(initialConfig?: Partial<QRConfig>, retainAppearance = fal
     },
     moduleCount: 0,
     isScannabilityFallbackActive: false,
+    canUndo: false,
+    canRedo: false,
   };
+
+  // Undo history holds appearance snapshots in memory only (never persisted).
+  let past: Partial<QRConfig>[] = [];
+  let future: Partial<QRConfig>[] = [];
+  let lastPush: { keys: string; at: number } | null = null;
+  let previewBase: Partial<QRConfig> | null = null;
 
   const listeners = new Set<() => void>();
   const signals: { [N in SignalName]: Set<SignalCallback<N>> } = {
@@ -163,16 +206,68 @@ function createQRStore(initialConfig?: Partial<QRConfig>, retainAppearance = fal
         listeners.delete(listener);
       };
     },
-    updateConfig: (updates) => {
+    updateConfig: (updates, options) => {
       const sanitized = sanitizeConfig({ ...state.config, ...updates });
       if (shallowEqualConfig(sanitized, state.config)) return;
-      if (retainAppearance) retainedAppearance = pickAppearance(sanitized);
+      const before = pickAppearance(state.config);
+      const after = pickAppearance(sanitized);
+      const appearanceChanged = !sameAppearance(before, after);
+      const recording = appearanceChanged && options?.history !== 'skip' && previewBase === null;
+      if (recording) {
+        const keys = Object.keys(updates).sort().join(',');
+        const now = Date.now();
+        const coalesce = lastPush !== null && lastPush.keys === keys && now - lastPush.at < COALESCE_MS && past.length > 0;
+        if (!coalesce) {
+          past = [...past.slice(-(MAX_HISTORY_STEPS - 1)), before];
+        }
+        lastPush = { keys, at: now };
+        future = [];
+      }
+      if (retainAppearance && previewBase === null) retainedAppearance = after;
       const resetsFallback = FALLBACK_RESET_FIELDS.some(key => !Object.is(sanitized[key], state.config[key]));
       setState({
         ...state,
         config: sanitized,
         isScannabilityFallbackActive: resetsFallback ? false : state.isScannabilityFallbackActive,
+        canUndo: past.length > 0,
+        canRedo: future.length > 0,
       });
+    },
+    undo: () => {
+      const target = past[past.length - 1];
+      if (!target) return false;
+      past = past.slice(0, -1);
+      future = [...future, pickAppearance(state.config)];
+      lastPush = null;
+      const sanitized = sanitizeConfig({ ...state.config, ...target });
+      if (retainAppearance) retainedAppearance = pickAppearance(sanitized);
+      setState({ ...state, config: sanitized, canUndo: past.length > 0, canRedo: true });
+      return true;
+    },
+    redo: () => {
+      const target = future[future.length - 1];
+      if (!target) return false;
+      future = future.slice(0, -1);
+      past = [...past, pickAppearance(state.config)];
+      lastPush = null;
+      const sanitized = sanitizeConfig({ ...state.config, ...target });
+      if (retainAppearance) retainedAppearance = pickAppearance(sanitized);
+      setState({ ...state, config: sanitized, canUndo: true, canRedo: future.length > 0 });
+      return true;
+    },
+    preview: (updates) => {
+      if (updates === null) {
+        if (previewBase === null) return;
+        const base = previewBase;
+        previewBase = null;
+        const restored = sanitizeConfig({ ...state.config, ...base });
+        if (!shallowEqualConfig(restored, state.config)) setState({ ...state, config: restored });
+        return;
+      }
+      const sanitized = sanitizeConfig({ ...state.config, ...updates });
+      if (shallowEqualConfig(sanitized, state.config)) return;
+      previewBase ??= pickAppearance(state.config);
+      setState({ ...state, config: sanitized });
     },
     setScannabilityFallbackActive: (active) => {
       if (state.isScannabilityFallbackActive !== active) {
@@ -264,6 +359,14 @@ export function useQRStoreSelector<T>(selector: (state: QRState) => T): T {
     () => selector(store.getState()),
     () => selector(store.getState())
   );
+}
+
+/**
+ * Returns the nearest QR store, or undefined outside a `QRProvider`.
+ * @returns The store, if any.
+ */
+export function useOptionalQRStore(): QRStore | undefined {
+  return useContext(QRStoreContext);
 }
 
 /**

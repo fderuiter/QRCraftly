@@ -30,6 +30,11 @@ Read the full pledge, and exactly what is and isn't collected, in [docs/PLEDGE.m
   - **Scannability Web Workers**: Real-time QR code scannability, module-aligned relative luminance audits, and orientation decoding run off-thread, passing pixel data as transferable `ArrayBuffer`s (zero-copy) so the UI stays responsive. The camera scanner recycles its frame buffers through a `DoubleBufferPool`.
   - **Client-Side SVG Export**: Features a custom `SvgContext` that mimics the Canvas 2D API to generate high-quality, resolution-independent vector graphics directly in the browser.
 - **Live Preview**: See your changes instantly as you edit.
+- **Power Features**:
+  - **Style Gallery**: Every pattern and colour preset drawn on your own QR code; hover to preview, click to apply, or press "Surprise me" for a look that is expected to scan.
+  - **Undo and redo**: Up to 50 appearance steps per generator, kept in memory only (never stored).
+  - **Command palette and shortcuts**: `Ctrl/Cmd+K` opens a searchable list of 30+ actions; `Ctrl/Cmd+Z`, `Ctrl/Cmd+S`, `Ctrl/Cmd+C` (on the preview) and `?` do the obvious things.
+  - **Style files**: Save the look to a `.qrcraftly.json` file and load it again (or drop it on the page). A style file holds colours and layout only: never your content or images.
 - **Download & Share**:
   - Save as high-quality PNG, JPEG, WebP, or vector SVG.
   - Native "Save As" support via File System Access API.
